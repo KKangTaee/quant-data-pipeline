@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Validation efficacy audit should affect selected-route gate
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 직전 audit board를 단순 표시에서 끝내지 않고 실전 후보 선정 조건에 반영한다.
+- Analysis result:
+  - `validation_efficacy` gate group을 추가했다.
+  - `VALIDATION_EFFICACY_NEEDS_INPUT` / `VALIDATION_EFFICACY_BLOCKED`는 selected-route blocker로 처리하고, `VALIDATION_EFFICACY_REVIEW`는 review-required로 처리한다.
+  - 보류 / 거절 / 재검토 판단은 계속 기록 가능하며, 새 저장 기능이나 실거래 동작은 추가하지 않았다.
+- Follow-up:
+  - 다음 개선은 Backtest Realism Hardening 또는 Data Coverage Hardening 중 하나가 적절하다.
+
 ### 2026-05-28 - Validation efficacy must be visible before final selection
 - User request:
   - 다음 단계 진행을 요청함.

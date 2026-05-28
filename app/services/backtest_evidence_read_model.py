@@ -45,6 +45,7 @@ GATE_POLICY_GROUP_LABELS = {
     "leveraged_inverse": "Leveraged / Inverse Suitability",
     "paper_observation": "Paper Observation",
     "final_review_evidence": "Final Review Evidence",
+    "validation_efficacy": "Validation Efficacy",
 }
 GATE_POLICY_GROUP_ACTIONS = {
     "data_trust": "원본 source, 가격, 비중, Data Trust blocker를 먼저 해소합니다.",
@@ -54,6 +55,7 @@ GATE_POLICY_GROUP_ACTIONS = {
     "leveraged_inverse": "leveraged / inverse 노출 목적, 보유 기간, 위험 한계를 명시합니다.",
     "paper_observation": "관찰 benchmark, active component, review trigger를 보강합니다.",
     "final_review_evidence": "Final Review evidence route가 ready가 되도록 validation / robustness / observation blocker를 해소합니다.",
+    "validation_efficacy": "runtime replay, benchmark parity, provider freshness, robustness, PIT / survivorship evidence gap을 보강합니다.",
 }
 GATE_POLICY_DOMAIN_GROUPS = {
     "input_evidence_layer": "data_trust",
@@ -78,6 +80,7 @@ GATE_POLICY_SECTION_GROUPS = {
     "robustness / stress": "stress_robustness",
     "paper observation": "paper_observation",
     "critical gaps": "final_review_evidence",
+    "validation efficacy audit": "validation_efficacy",
 }
 GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
     "conservative_defensive": {
@@ -88,6 +91,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "leveraged_inverse",
         "paper_observation",
         "final_review_evidence",
+        "validation_efficacy",
     },
     "balanced_core": {
         "data_trust",
@@ -97,6 +101,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "leveraged_inverse",
         "paper_observation",
         "final_review_evidence",
+        "validation_efficacy",
     },
     "growth_aggressive": {
         "data_trust",
@@ -105,6 +110,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "stress_robustness",
         "leveraged_inverse",
         "final_review_evidence",
+        "validation_efficacy",
     },
     "hedged_tactical": {
         "data_trust",
@@ -113,6 +119,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "stress_robustness",
         "leveraged_inverse",
         "final_review_evidence",
+        "validation_efficacy",
     },
     "custom": {
         "data_trust",
@@ -122,6 +129,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "leveraged_inverse",
         "paper_observation",
         "final_review_evidence",
+        "validation_efficacy",
     },
 }
 GATE_POLICY_REVIEW_GROUPS_BY_PROFILE = {
@@ -644,7 +652,11 @@ def build_investability_evidence_packet(
         {
             "Section": "Validation Efficacy Audit",
             "Ready": validation_efficacy_route == "VALIDATION_EFFICACY_READY",
-            "Current": validation_efficacy_audit.get("route_label") or validation_efficacy_route or "-",
+            "Current": (
+                f"{validation_efficacy_audit.get('route_label')} / {validation_efficacy_route}"
+                if validation_efficacy_audit.get("route_label") and validation_efficacy_route
+                else validation_efficacy_route or validation_efficacy_audit.get("route_label") or "-"
+            ),
             "Meaning": "PIT / replay / benchmark / provider / robustness evidence gap을 최종 선택 전에 분리해서 봅니다.",
         },
         {

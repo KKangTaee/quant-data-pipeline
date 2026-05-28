@@ -1163,6 +1163,74 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertFalse(selected_gate["Ready"])
         self.assertTrue(hold_gate["Ready"])
 
+    def test_gate_policy_blocks_selected_route_on_validation_efficacy_needs_input(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-efficacy-gap"},
+            validation={
+                "selection_source_id": "source-efficacy-gap",
+                "validation_id": "validation-efficacy-gap",
+                "validation_profile": {"profile_id": "balanced_core", "profile_label": "균형형"},
+                "diagnostic_summary": {
+                    "status_counts": {"PASS": 12, "REVIEW": 0, "BLOCKED": 0, "NOT_RUN": 0}
+                },
+                "checks": [
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "provider_coverage": {
+                    "coverage": {
+                        "holdings": {"diagnostic_status": "PASS"},
+                        "operability": {"diagnostic_status": "PASS"},
+                    }
+                },
+                "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+                "validation_efficacy_audit": {
+                    "route": "VALIDATION_EFFICACY_NEEDS_INPUT",
+                    "route_label": "Evidence Input Needed",
+                    "rows": [
+                        {
+                            "Criteria": "Runtime replay evidence",
+                            "Status": "NEEDS_INPUT",
+                            "Ready": False,
+                            "Current": "NOT_RUN",
+                            "Meaning": "runtime replay missing",
+                        }
+                    ],
+                },
+            },
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertFalse(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertTrue(
+            any(
+                row["Group"] == "validation_efficacy" and row["Severity"] == "BLOCK"
+                for row in packet["gate_policy_snapshot"]["policy_rows"]
+            )
+        )
+
     def test_gate_policy_blocks_selected_route_on_provider_review_for_balanced_profile(self) -> None:
         from app.services.backtest_evidence_read_model import (
             SELECT_FOR_PRACTICAL_PORTFOLIO,
@@ -1195,6 +1263,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     }
                 ],
                 "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+                "validation_efficacy_audit": {
+                    "route": "VALIDATION_EFFICACY_READY",
+                    "route_label": "Ready",
+                    "rows": [
+                        {
+                            "Criteria": "Provider / freshness evidence",
+                            "Status": "PASS",
+                            "Ready": True,
+                            "Current": "PASS",
+                            "Meaning": "validation efficacy ready",
+                        }
+                    ],
+                },
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},

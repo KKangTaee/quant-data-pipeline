@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-link-v1/`.
+- Validation Efficacy Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+- This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-hardening-v1/`.
 - Practical Validation and Final Review now show a read-only Validation Efficacy Audit for runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, and execution/storage boundary gaps.
 - The audit uses existing compact evidence only; no DB write, new JSONL registry, user memo, preset, approval, order, or rebalance behavior was added.
