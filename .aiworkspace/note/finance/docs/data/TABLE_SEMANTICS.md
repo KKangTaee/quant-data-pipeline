@@ -78,6 +78,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Invesco QQQ는 현재 expense ratio / inception만 있어 `partial`로 저장된다.
 - current snapshot이므로 historical point-in-time ETF 운용성 truth로 바로 해석하면 안 된다.
 - Practical Validation result JSONL에는 full row를 저장하지 않고 compact evidence / coverage status만 저장하는 방향이다.
+- `data-provenance-coverage-v1` 이후 Practical Validation provider context는 `source`, `source_type`, `coverage_status`, `as_of_date`, `collected_at`을 compact provenance로 요약한다.
+- provider snapshot freshness가 오래됐으면 충분한 coverage라도 `REVIEW`로 남긴다.
 
 ## `etf_holdings_snapshot`
 
@@ -117,6 +119,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - exposure는 원천 holdings coverage와 provider aggregate coverage에 의존한다.
 - sector가 없는 holdings source는 asset class / currency exposure만 만들 수 있다.
 - Practical Validation result JSONL에는 full exposure table이 아니라 compact summary만 저장하는 방향이다.
+- Practical Validation result JSONL에는 source mix / coverage status weight / stale symbol 같은 compact provenance만 저장하고 full holdings / exposure row는 저장하지 않는다.
 
 ## `macro_series_observation`
 
@@ -137,6 +140,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - macro / sentiment는 trade signal이 아니라 validation 기준일의 시장 환경 설명 자료다.
 - FRED value는 observation date 기준 데이터이며, 실제 발표 / 수정 vintage point-in-time truth와는 구분해야 한다.
 - Practical Validation result JSONL에는 full series를 저장하지 않고 compact snapshot / staleness만 저장하는 방향이다.
+- Practical Validation result JSONL에는 source mode / observation range / stale series 같은 compact macro provenance만 저장한다.
 
 ## `nyse_price_history`
 

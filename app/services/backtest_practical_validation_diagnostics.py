@@ -614,6 +614,26 @@ def build_practical_validation_result(
     provider_context = build_provider_context(provider_symbol_weights, as_of_date=provider_as_of)
     provider_coverage = dict(provider_context.get("coverage") or {})
     provider_display_rows = list(provider_context.get("display_rows") or [])
+
+    def _compact_provider_area(area_key: str) -> dict[str, Any]:
+        area = dict(provider_coverage.get(area_key) or {})
+        provenance = dict(area.get("provenance") or {})
+        out = {
+            "status": area.get("status"),
+            "diagnostic_status": area.get("diagnostic_status"),
+            "freshness_status": provenance.get("freshness_status"),
+            "source_mix": provenance.get("source_mix"),
+        }
+        if area_key == "macro":
+            out["series_count"] = area.get("series_count")
+            out["stale_count"] = area.get("stale_count")
+            out["observation_range"] = provenance.get("observation_range")
+        else:
+            out["coverage_weight"] = area.get("coverage_weight")
+            out["as_of_range"] = provenance.get("as_of_range")
+            out["stale_weight"] = provenance.get("stale_weight")
+        return out
+
     provider_statuses = {
         str(dict(item or {}).get("diagnostic_status") or "NOT_RUN")
         for item in provider_coverage.values()
@@ -1382,27 +1402,10 @@ def build_practical_validation_result(
             "provider_coverage": {
                 "as_of_date": provider_context.get("as_of_date"),
                 "symbols": list(provider_context.get("symbols") or []),
-                "operability": {
-                    "status": dict(provider_coverage.get("operability") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("operability") or {}).get("diagnostic_status"),
-                    "coverage_weight": dict(provider_coverage.get("operability") or {}).get("coverage_weight"),
-                },
-                "holdings": {
-                    "status": dict(provider_coverage.get("holdings") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("holdings") or {}).get("diagnostic_status"),
-                    "coverage_weight": dict(provider_coverage.get("holdings") or {}).get("coverage_weight"),
-                },
-                "exposure": {
-                    "status": dict(provider_coverage.get("exposure") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("exposure") or {}).get("diagnostic_status"),
-                    "coverage_weight": dict(provider_coverage.get("exposure") or {}).get("coverage_weight"),
-                },
-                "macro": {
-                    "status": dict(provider_coverage.get("macro") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("macro") or {}).get("diagnostic_status"),
-                    "series_count": dict(provider_coverage.get("macro") or {}).get("series_count"),
-                    "stale_count": dict(provider_coverage.get("macro") or {}).get("stale_count"),
-                },
+                "operability": _compact_provider_area("operability"),
+                "holdings": _compact_provider_area("holdings"),
+                "exposure": _compact_provider_area("exposure"),
+                "macro": _compact_provider_area("macro"),
             },
         },
         "component_rows": component_rows,

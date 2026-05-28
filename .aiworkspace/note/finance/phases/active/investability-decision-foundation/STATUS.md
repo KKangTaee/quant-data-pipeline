@@ -16,14 +16,15 @@ Last Updated: 2026-05-28
 - Final decision row stores a compact packet snapshot without adding a new JSONL registry.
 - `validation-gate-hardening-v1` implemented a profile-aware gate policy matrix and compact `gate_policy_snapshot`.
 - `storage-governance-audit-v1` classified JSONL write surfaces and added durable storage governance without rewriting registries.
+- `data-provenance-coverage-v1` added compact provider / macro provenance and freshness read models without adding storage.
 
 ## In Progress
 
-- Prepare `data-provenance-coverage-v1` as the next implementation slice.
+- Prepare `look-through-exposure-board-v1` as the next implementation slice.
 
 ## Next
 
-1. Use `data-provenance-coverage-v1` before strict look-through board work.
+1. Use `look-through-exposure-board-v1` to surface holdings / exposure coverage now that source / freshness fields are stable.
 2. Decide structured waiver policy before allowing selected-route override.
 3. Keep storage governance checklist mandatory before adding persistence.
 
@@ -35,3 +36,4 @@ Last Updated: 2026-05-28
 - Critical `NOT_RUN` is not pass.
 - Selected route means `실전 검토 통과 후보`, not live approval.
 - UI does not fetch provider or macro data directly.
+- Stale provider snapshot evidence is REVIEW, not PASS.

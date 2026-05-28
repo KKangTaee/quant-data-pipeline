@@ -17,7 +17,7 @@ Created: 2026-05-28
 
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
-| Provider data stale or partial | Operability / exposure evidence may mislead | Track collected_at, as_of_date, coverage_status, staleness |
+| Provider data stale or partial | Operability / exposure evidence may mislead | Track collected_at, as_of_date, coverage_status, staleness; stale snapshot downgrades PASS to REVIEW |
 | Current ETF snapshot treated as historical truth | Look-ahead / PIT interpretation weakens | Disclose current snapshot limits; future task can add as-of snapshot id |
 | Web crawler source changes | Ingestion breaks silently | Use source map, parser version, and failed-parse status |
 | Free API unavailable | Coverage gaps remain | Allow verified crawler through ingestion layer, not UI |

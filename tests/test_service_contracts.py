@@ -568,6 +568,167 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         )
 
 
+class ProviderContextProvenanceContractTests(unittest.TestCase):
+    def test_provider_context_exposes_compact_provenance_and_downgrades_stale_pass(self) -> None:
+        from app.services import backtest_practical_validation_provider_context as provider_context
+
+        operability = pd.DataFrame(
+            [
+                {
+                    "symbol": "SPY",
+                    "as_of_date": "2026-05-20",
+                    "source": "ishares",
+                    "source_type": "official",
+                    "coverage_status": "actual",
+                    "collected_at": "2026-05-21",
+                    "expense_ratio": 0.0009,
+                    "net_assets": 500_000_000_000,
+                    "avg_daily_dollar_volume": 3_000_000_000,
+                    "bid_ask_spread_pct": 0.0001,
+                    "premium_discount_pct": 0.0002,
+                },
+                {
+                    "symbol": "TLT",
+                    "as_of_date": "2026-03-01",
+                    "source": "ishares",
+                    "source_type": "official",
+                    "coverage_status": "actual",
+                    "collected_at": "2026-03-02",
+                    "expense_ratio": 0.0015,
+                    "net_assets": 50_000_000_000,
+                    "avg_daily_dollar_volume": 500_000_000,
+                    "bid_ask_spread_pct": 0.0002,
+                    "premium_discount_pct": 0.0001,
+                },
+            ]
+        )
+        holdings = pd.DataFrame(
+            [
+                {
+                    "fund_symbol": "SPY",
+                    "as_of_date": "2026-05-20",
+                    "source": "ishares",
+                    "source_type": "official",
+                    "coverage_status": "actual",
+                    "collected_at": "2026-05-21",
+                    "holding_id": "AAPL",
+                    "holding_symbol": "AAPL",
+                    "holding_name": "Apple Inc",
+                    "weight_pct": 5.0,
+                },
+                {
+                    "fund_symbol": "TLT",
+                    "as_of_date": "2026-05-20",
+                    "source": "ishares",
+                    "source_type": "official",
+                    "coverage_status": "actual",
+                    "collected_at": "2026-05-21",
+                    "holding_id": "UST",
+                    "holding_symbol": "UST",
+                    "holding_name": "US Treasury",
+                    "weight_pct": 5.0,
+                },
+            ]
+        )
+        exposure = pd.DataFrame(
+            [
+                {
+                    "fund_symbol": "SPY",
+                    "as_of_date": "2026-05-20",
+                    "source": "ishares",
+                    "source_type": "official",
+                    "coverage_status": "actual",
+                    "collected_at": "2026-05-21",
+                    "exposure_type": "asset_class",
+                    "exposure_name": "Equity",
+                    "weight_pct": 100.0,
+                },
+                {
+                    "fund_symbol": "TLT",
+                    "as_of_date": "2026-05-20",
+                    "source": "ishares",
+                    "source_type": "official",
+                    "coverage_status": "actual",
+                    "collected_at": "2026-05-21",
+                    "exposure_type": "asset_class",
+                    "exposure_name": "Treasury Bond",
+                    "weight_pct": 100.0,
+                },
+            ]
+        )
+        macro = pd.DataFrame(
+            [
+                {
+                    "series_id": "VIXCLS",
+                    "observation_date": "2026-05-27",
+                    "source": "fred",
+                    "source_type": "official",
+                    "source_mode": "csv",
+                    "coverage_status": "actual",
+                    "value": 18.0,
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                    "collected_at": "2026-05-28",
+                },
+                {
+                    "series_id": "T10Y3M",
+                    "observation_date": "2026-05-27",
+                    "source": "fred",
+                    "source_type": "official",
+                    "source_mode": "csv",
+                    "coverage_status": "actual",
+                    "value": 0.7,
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                    "collected_at": "2026-05-28",
+                },
+                {
+                    "series_id": "BAA10Y",
+                    "observation_date": "2026-05-27",
+                    "source": "fred",
+                    "source_type": "official",
+                    "source_mode": "csv",
+                    "coverage_status": "actual",
+                    "value": 2.0,
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                    "collected_at": "2026-05-28",
+                },
+            ]
+        )
+
+        with (
+            patch.object(provider_context, "load_etf_operability_snapshot", return_value=operability),
+            patch.object(provider_context, "load_etf_holdings_snapshot", return_value=holdings),
+            patch.object(provider_context, "load_etf_exposure_snapshot", return_value=exposure),
+            patch.object(provider_context, "load_macro_snapshot", return_value=macro),
+        ):
+            context = provider_context.build_provider_context(
+                {"SPY": 70.0, "TLT": 30.0},
+                as_of_date="2026-05-28",
+                max_provider_staleness_days=45,
+                max_macro_staleness_days=10,
+            )
+
+        self.assertEqual(context["schema_version"], 2)
+        operability_context = context["coverage"]["operability"]
+        provenance = operability_context["provenance"]
+        self.assertEqual(operability_context["status"], "actual")
+        self.assertEqual(operability_context["diagnostic_status"], "REVIEW")
+        self.assertEqual(provenance["freshness_status"], "stale")
+        self.assertEqual(provenance["stale_symbols"], ["TLT"])
+        self.assertEqual(provenance["stale_weight"], 30.0)
+        self.assertEqual(provenance["source_type_weights"], {"official": 100.0})
+        self.assertEqual(provenance["coverage_status_weights"], {"actual": 100.0})
+        self.assertEqual(provenance["as_of_range"], "2026-03-01..2026-05-20")
+
+        rows_by_area = {row["Area"]: row for row in context["display_rows"]}
+        self.assertEqual(rows_by_area["ETF Operability"]["Freshness"], "stale")
+        self.assertEqual(rows_by_area["ETF Operability"]["Source Mix"], "official 100.0%")
+        self.assertEqual(rows_by_area["Macro Context"]["Freshness"], "fresh")
+        self.assertIn("fred/csv", rows_by_area["Macro Context"]["Source Mix"])
+
+
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
     def test_status_display_uses_current_decision_routes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_status_display

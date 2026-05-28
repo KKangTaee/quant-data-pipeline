@@ -76,7 +76,7 @@ Last Verified: 2026-05-28
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics orchestration, component context assembly, 12개 diagnostic result 생성, public compatibility export |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
-| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to diagnostic evidence context adapter |
+| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, and diagnostic evidence context adapter |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, provider gaps display, provider gap / replay service result session state handoff |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |

@@ -21,6 +21,8 @@ This phase belongs to `main-dev`.
 | `app/services/backtest_evidence_read_model.py` | packet, gate, selected dashboard evidence read model share this service |
 | `app/web/backtest_final_review.py` | visible Final Review packet and decision entry UI |
 | `app/web/backtest_final_review_helpers.py` | final decision save evaluation and row construction |
+| `app/services/backtest_practical_validation_provider_context.py` | provider / macro provenance and freshness read model share this service |
+| `app/services/backtest_practical_validation_diagnostics.py` | Practical Validation result schema includes compact provider coverage summary |
 | `tests/test_service_contracts.py` | focused contract tests for read model / gate behavior |
 | `.aiworkspace/note/finance/docs/ROADMAP.md` | active work map |
 | `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` | user-facing workflow semantics |

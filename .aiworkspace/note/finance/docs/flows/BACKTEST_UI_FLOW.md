@@ -41,7 +41,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics service. component context assembly, 12개 Practical Diagnostics result, compatibility export를 만든다 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime 재검증 계획과 actual replay result를 만든다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize, compact curve records, curve provenance, benchmark parity helper |
-| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free P2 provider context adapter. DB에 저장된 ETF operability / holdings / exposure / FRED macro snapshot을 compact evidence로 바꿔 Practical Diagnostics에 연결 |
+| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free P2 provider context adapter. DB에 저장된 ETF operability / holdings / exposure / FRED macro snapshot을 compact coverage / provenance / freshness evidence로 바꿔 Practical Diagnostics에 연결 |
 | `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board, Provider Data Gaps 표시, service handoff 결과의 session state 반영을 담당 |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
@@ -84,6 +84,7 @@ Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로
 Stress / Sensitivity Interpretation은 계산된 숫자를 그대로 두지 않고, covered stress 중 daily replay가 필요한 구간, worst MDD / benchmark spread, rolling / window / component dependency / weight tilt / strategy runtime follow-up을 별도 해석 row로 요약한다.
 P2-5B부터 ETF asset allocation / concentration / leveraged-inverse / operability와 macro / sentiment 진단은 DB에 저장된 provider snapshot을 우선 사용하고, 없으면 proxy origin을 `REVIEW`로 남긴다.
 provider snapshot 조회 기준일은 저장된 backtest 종료일이 아니라 Practical Validation 실행일이다. 저장된 mix의 backtest 기간이 과거에 끝나도, 실전 투입 전 검증은 현재 수집된 ETF 운용성 / holdings / macro context로 확인한다.
+`data-provenance-coverage-v1`부터 Provider Coverage 표는 coverage status뿐 아니라 source mix, freshness, as-of range를 함께 보여준다. ETF provider snapshot이 오래됐으면 충분한 coverage라도 `PASS`가 아니라 `REVIEW`로 남긴다.
 Provider Coverage 아래에는 ETF별 Provider Data Gaps 표를 표시한다. 사용자는 어떤 ETF의 operability / holdings / exposure가 부족한지 보고, 수집 가능한 부족 데이터는 같은 화면에서 일괄 수집 / 보강할 수 있다. 이때 화면은 버튼과 결과 표시만 맡고, 수집 계획과 ingestion job orchestration은 Practical Validation service가 맡는다. 공식 source mapping이 없는 holdings / exposure는 먼저 `etf_provider_source_map` discovery를 실행해 verified endpoint를 찾고, 자동 탐색 후에도 없을 때만 수동 connector mapping 필요로 남긴다.
 사용자가 명시적으로 `전략 재검증 실행`을 누르면 Practical Validation replay service가 기존 strategy runtime으로 source를 다시 실행하고, 기본값은 DB의 최신 시장일까지 종료일을 확장한 재검증이다.
 보조 모드로 `저장 기간 그대로 재현`을 선택할 수 있으며, 화면은 저장 종료일, 재검증 종료일, 확장 일수, curve provenance와 benchmark parity를 표시해 결과가 최신 runtime 재검증인지, 저장 기간 재현인지, embedded snapshot인지, DB price proxy인지 구분한다.

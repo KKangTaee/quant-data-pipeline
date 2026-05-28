@@ -89,6 +89,7 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 - QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Operability`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 9번 / 10번 진단은 이 snapshot을 우선 읽는다. 공식 provider row가 부족하고 bridge / proxy만 있으면 `PASS`가 아니라 `REVIEW` 출처로 남긴다.
+- `data-provenance-coverage-v1`부터 provider context는 operability snapshot의 source mix, coverage status weight, as-of range, collected range, freshness를 compact provenance로 함께 저장한다. coverage가 충분해도 snapshot이 오래됐으면 diagnostic status는 `REVIEW`로 낮춘다.
 
 ## ETF holdings / exposure provider snapshot 흐름
 
@@ -118,6 +119,7 @@ Invesco official holdings / weighted sector API
 - `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
 - P2-5A부터 이 수집과 exposure 재집계는 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 2번 / 3번 진단은 이 holdings / exposure snapshot을 우선 읽고, JSONL에는 full row가 아니라 compact provider coverage와 top evidence만 저장한다.
+- `data-provenance-coverage-v1`부터 holdings / exposure context도 source mix, coverage status weight, freshness, stale symbols를 compact provenance로 제공한다. Full holdings / exposure row는 계속 DB에만 둔다.
 
 ## Macro / sentiment market-context 흐름
 
@@ -139,6 +141,7 @@ FRED API or FRED official CSV download
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
+- `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
 
 ## Broad fundamentals / factors 흐름
 

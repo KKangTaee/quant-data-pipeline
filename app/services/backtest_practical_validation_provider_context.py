@@ -12,8 +12,16 @@ from finance.loaders import (
 )
 
 
-PROVIDER_CONTEXT_SCHEMA_VERSION = 1
+PROVIDER_CONTEXT_SCHEMA_VERSION = 2
+DEFAULT_PROVIDER_STALENESS_DAYS = 45
 DEFAULT_MACRO_SERIES = ("VIXCLS", "T10Y3M", "BAA10Y")
+SOURCE_TYPE_RANK = {
+    "official": 3,
+    "database_bridge": 2,
+    "bridge": 2,
+    "computed_proxy": 1,
+    "proxy": 1,
+}
 ASSET_CLASS_BUCKETS = {
     "equity": "equity",
     "stock": "equity",
@@ -53,6 +61,70 @@ def _date_text(value: Any) -> str | None:
     if pd.isna(parsed):
         return None
     return pd.Timestamp(parsed).strftime("%Y-%m-%d")
+
+
+def _analysis_date(as_of_date: str | None) -> pd.Timestamp | None:
+    if as_of_date is None:
+        return None
+    parsed = pd.to_datetime(as_of_date, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    ts = pd.Timestamp(parsed)
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert(None)
+    return ts.normalize()
+
+
+def _days_old(*, analysis_date: pd.Timestamp | None, snapshot_date: Any) -> int | None:
+    if analysis_date is None:
+        return None
+    parsed = pd.to_datetime(snapshot_date, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    ts = pd.Timestamp(parsed)
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert(None)
+    return int((analysis_date - ts.normalize()).days)
+
+
+def _compact_unique(values: Any, *, limit: int = 4) -> list[str]:
+    out: list[str] = []
+    for value in list(values or []):
+        text = str(value or "").strip()
+        if not text or text.lower() in {"nan", "none"} or text in out:
+            continue
+        out.append(text)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _range_text(values: Any) -> str:
+    parsed = pd.to_datetime(pd.Series(list(values or [])), errors="coerce").dropna()
+    if parsed.empty:
+        return "-"
+    dates = sorted(pd.Timestamp(value).strftime("%Y-%m-%d") for value in parsed)
+    if dates[0] == dates[-1]:
+        return dates[0]
+    return f"{dates[0]}..{dates[-1]}"
+
+
+def _best_source_type(values: Any) -> str:
+    candidates = _compact_unique(values, limit=8)
+    if not candidates:
+        return "unknown"
+    return sorted(candidates, key=lambda value: SOURCE_TYPE_RANK.get(value.lower(), 0), reverse=True)[0]
+
+
+def _source_mix_label(source_type_weights: dict[str, float], sources: list[str]) -> str:
+    if source_type_weights:
+        return ", ".join(
+            f"{source_type} {weight:.1f}%"
+            for source_type, weight in sorted(source_type_weights.items(), key=lambda item: (-item[1], item[0]))
+        )
+    if sources:
+        return ", ".join(sources)
+    return "-"
 
 
 def _pct_text(value: Any) -> str:
@@ -181,6 +253,137 @@ def _coverage_quality(
     }
 
 
+def _provider_provenance_summary(
+    frame: pd.DataFrame,
+    *,
+    symbol_column: str,
+    symbol_weights: dict[str, float],
+    as_of_date: str | None,
+    max_staleness_days: int,
+    date_column: str = "as_of_date",
+) -> dict[str, Any]:
+    """Summarize provider row source and freshness without carrying raw holdings rows."""
+
+    symbols = list(symbol_weights)
+    if frame.empty or symbol_column not in frame.columns:
+        return {
+            "freshness_status": "not_run",
+            "source_mix": "-",
+            "source_type_weights": {},
+            "coverage_status_weights": {},
+            "as_of_range": "-",
+            "collected_range": "-",
+            "stale_symbols": [],
+            "stale_weight": 0.0,
+            "unknown_freshness_symbols": symbols,
+            "unknown_freshness_weight": round(sum(symbol_weights.get(symbol, 0.0) for symbol in symbols), 4),
+            "max_staleness_days": int(max_staleness_days),
+            "symbol_rows": [
+                {
+                    "Symbol": symbol,
+                    "Target Weight": round(symbol_weights.get(symbol, 0.0), 4),
+                    "Coverage": "not_run",
+                    "Source Type": "unknown",
+                    "Sources": "-",
+                    "As Of": None,
+                    "Collected": None,
+                    "Staleness Days": None,
+                    "Freshness": "not_run",
+                }
+                for symbol in symbols
+            ],
+        }
+
+    analysis_date = _analysis_date(as_of_date)
+    work = frame.copy()
+    work["_symbol"] = work[symbol_column].astype(str).str.upper()
+    stale_symbols: list[str] = []
+    unknown_freshness_symbols: list[str] = []
+    source_type_weights: dict[str, float] = {}
+    coverage_status_weights: dict[str, float] = {}
+    symbol_rows: list[dict[str, Any]] = []
+
+    for symbol in symbols:
+        group = work[work["_symbol"] == symbol]
+        weight = round(symbol_weights.get(symbol, 0.0), 4)
+        if group.empty:
+            coverage = "not_run"
+            best_source_type = "unknown"
+            sources: list[str] = []
+            latest_snapshot = None
+            latest_collected = None
+            staleness_days = None
+            freshness = "not_run"
+            coverage_status_weights[coverage] = coverage_status_weights.get(coverage, 0.0) + weight
+        else:
+            coverage = _quality_bucket_for_statuses(set(group.get("coverage_status", pd.Series(dtype=str)).dropna().astype(str)))
+            best_source_type = _best_source_type(group.get("source_type", pd.Series(dtype=str)).dropna().astype(str).tolist())
+            sources = _compact_unique(group.get("source", pd.Series(dtype=str)).dropna().astype(str).tolist(), limit=4)
+            latest_snapshot_series = pd.to_datetime(group.get(date_column, pd.Series(dtype=str)), errors="coerce").dropna()
+            latest_collected_series = pd.to_datetime(group.get("collected_at", pd.Series(dtype=str)), errors="coerce").dropna()
+            latest_snapshot = latest_snapshot_series.max() if not latest_snapshot_series.empty else None
+            latest_collected = latest_collected_series.max() if not latest_collected_series.empty else None
+            staleness_days = _days_old(analysis_date=analysis_date, snapshot_date=latest_snapshot)
+            if staleness_days is None:
+                freshness = "unknown"
+                unknown_freshness_symbols.append(symbol)
+            elif staleness_days > int(max_staleness_days):
+                freshness = "stale"
+                stale_symbols.append(symbol)
+            else:
+                freshness = "fresh"
+            source_type_weights[best_source_type] = source_type_weights.get(best_source_type, 0.0) + weight
+            coverage_status_weights[coverage] = coverage_status_weights.get(coverage, 0.0) + weight
+
+        symbol_rows.append(
+            {
+                "Symbol": symbol,
+                "Target Weight": weight,
+                "Coverage": coverage,
+                "Source Type": best_source_type,
+                "Sources": ", ".join(sources) if sources else "-",
+                "As Of": _date_text(latest_snapshot),
+                "Collected": _date_text(latest_collected),
+                "Staleness Days": staleness_days,
+                "Freshness": freshness,
+            }
+        )
+
+    source_type_weights = {key: round(value, 4) for key, value in source_type_weights.items() if value > 0.0}
+    coverage_status_weights = {key: round(value, 4) for key, value in coverage_status_weights.items() if value > 0.0}
+    stale_weight = round(sum(symbol_weights.get(symbol, 0.0) for symbol in stale_symbols), 4)
+    unknown_weight = round(sum(symbol_weights.get(symbol, 0.0) for symbol in unknown_freshness_symbols), 4)
+    if stale_symbols:
+        freshness_status = "stale"
+    elif unknown_freshness_symbols:
+        freshness_status = "unknown"
+    elif source_type_weights:
+        freshness_status = "fresh"
+    else:
+        freshness_status = "not_run"
+    return {
+        "freshness_status": freshness_status,
+        "source_mix": _source_mix_label(source_type_weights, _compact_unique(work.get("source", pd.Series(dtype=str)).dropna().astype(str).tolist(), limit=4)),
+        "source_type_weights": source_type_weights,
+        "coverage_status_weights": coverage_status_weights,
+        "as_of_range": _range_text(work.get(date_column, pd.Series(dtype=str)).dropna().tolist()),
+        "collected_range": _range_text(work.get("collected_at", pd.Series(dtype=str)).dropna().tolist()),
+        "stale_symbols": stale_symbols,
+        "stale_weight": stale_weight,
+        "unknown_freshness_symbols": unknown_freshness_symbols,
+        "unknown_freshness_weight": unknown_weight,
+        "max_staleness_days": int(max_staleness_days),
+        "symbol_rows": symbol_rows,
+    }
+
+
+def _downgrade_pass_for_freshness(diagnostic_status: str, provenance: dict[str, Any]) -> str:
+    status = str(diagnostic_status or "NOT_RUN").upper()
+    if status == "PASS" and str(provenance.get("freshness_status") or "") in {"stale", "unknown"}:
+        return "REVIEW"
+    return status
+
+
 def _supported_symbols(frame: pd.DataFrame, *, symbol_column: str) -> list[str]:
     """Return symbols with usable provider rows, excluding explicit missing/error rows."""
     if frame.empty or symbol_column not in frame.columns:
@@ -206,7 +409,7 @@ def _best_operability_rows(frame: pd.DataFrame) -> pd.DataFrame:
         return frame
     work = frame.copy()
     coverage_rank = {"actual": 5, "partial": 4, "bridge": 3, "proxy": 2, "missing": 1, "error": 0}
-    source_rank = {"official": 3, "bridge": 2, "proxy": 1}
+    source_rank = SOURCE_TYPE_RANK
     work["_coverage_rank"] = work["coverage_status"].astype(str).str.lower().map(coverage_rank).fillna(0)
     work["_source_rank"] = work["source_type"].astype(str).str.lower().map(source_rank).fillna(0)
     work["_as_of"] = pd.to_datetime(work["as_of_date"], errors="coerce")
@@ -281,7 +484,12 @@ def _canonical_asset_bucket(name: Any) -> str:
     return "other"
 
 
-def _build_exposure_context(symbol_weights: dict[str, float], as_of_date: str | None) -> dict[str, Any]:
+def _build_exposure_context(
+    symbol_weights: dict[str, float],
+    as_of_date: str | None,
+    *,
+    max_staleness_days: int,
+) -> dict[str, Any]:
     symbols = list(symbol_weights)
     frame, error = _safe_loader(
         load_etf_exposure_snapshot,
@@ -297,6 +505,13 @@ def _build_exposure_context(symbol_weights: dict[str, float], as_of_date: str | 
             "coverage_weight": 0.0,
             "missing_symbols": symbols,
             "asset_exposure": {},
+            "provenance": _provider_provenance_summary(
+                pd.DataFrame(),
+                symbol_column="fund_symbol",
+                symbol_weights=symbol_weights,
+                as_of_date=as_of_date,
+                max_staleness_days=max_staleness_days,
+            ),
             "evidence_rows": [],
         }
     if frame.empty:
@@ -307,6 +522,13 @@ def _build_exposure_context(symbol_weights: dict[str, float], as_of_date: str | 
             "coverage_weight": 0.0,
             "missing_symbols": symbols,
             "asset_exposure": {},
+            "provenance": _provider_provenance_summary(
+                frame,
+                symbol_column="fund_symbol",
+                symbol_weights=symbol_weights,
+                as_of_date=as_of_date,
+                max_staleness_days=max_staleness_days,
+            ),
             "evidence_rows": [],
         }
 
@@ -362,6 +584,14 @@ def _build_exposure_context(symbol_weights: dict[str, float], as_of_date: str | 
     quality = _coverage_quality(asset_rows, symbol_column="fund_symbol", symbol_weights=symbol_weights)
     status = str(quality.get("status") or _coverage_status_from_weight(coverage_weight))
     diagnostic_status = str(quality.get("diagnostic_status") or _result_status_from_coverage(coverage_weight))
+    provenance = _provider_provenance_summary(
+        asset_rows,
+        symbol_column="fund_symbol",
+        symbol_weights=symbol_weights,
+        as_of_date=as_of_date,
+        max_staleness_days=max_staleness_days,
+    )
+    diagnostic_status = _downgrade_pass_for_freshness(diagnostic_status, provenance)
     return {
         "status": status,
         "diagnostic_status": diagnostic_status,
@@ -375,11 +605,17 @@ def _build_exposure_context(symbol_weights: dict[str, float], as_of_date: str | 
         "missing_symbols": missing_symbols,
         "asset_exposure": asset_exposure,
         "bucket_weights": dict(quality.get("bucket_weights") or {}),
+        "provenance": provenance,
         "evidence_rows": evidence_rows,
     }
 
 
-def _build_holdings_context(symbol_weights: dict[str, float], as_of_date: str | None) -> dict[str, Any]:
+def _build_holdings_context(
+    symbol_weights: dict[str, float],
+    as_of_date: str | None,
+    *,
+    max_staleness_days: int,
+) -> dict[str, Any]:
     symbols = list(symbol_weights)
     frame, error = _safe_loader(
         load_etf_holdings_snapshot,
@@ -396,6 +632,13 @@ def _build_holdings_context(symbol_weights: dict[str, float], as_of_date: str | 
             "missing_symbols": symbols,
             "evidence_rows": [],
             "metrics": {},
+            "provenance": _provider_provenance_summary(
+                pd.DataFrame(),
+                symbol_column="fund_symbol",
+                symbol_weights=symbol_weights,
+                as_of_date=as_of_date,
+                max_staleness_days=max_staleness_days,
+            ),
         }
     if frame.empty:
         return {
@@ -406,6 +649,13 @@ def _build_holdings_context(symbol_weights: dict[str, float], as_of_date: str | 
             "missing_symbols": symbols,
             "evidence_rows": [],
             "metrics": {},
+            "provenance": _provider_provenance_summary(
+                frame,
+                symbol_column="fund_symbol",
+                symbol_weights=symbol_weights,
+                as_of_date=as_of_date,
+                max_staleness_days=max_staleness_days,
+            ),
         }
 
     work = frame.copy()
@@ -445,6 +695,14 @@ def _build_holdings_context(symbol_weights: dict[str, float], as_of_date: str | 
     if diagnostic_status == "PASS" and ((top_holding_weight or 0.0) > 25.0 or (top_overlap_weight or 0.0) > 20.0):
         diagnostic_status = "REVIEW"
     status = str(quality.get("status") or _coverage_status_from_weight(coverage_weight))
+    provenance = _provider_provenance_summary(
+        work,
+        symbol_column="fund_symbol",
+        symbol_weights=symbol_weights,
+        as_of_date=as_of_date,
+        max_staleness_days=max_staleness_days,
+    )
+    diagnostic_status = _downgrade_pass_for_freshness(diagnostic_status, provenance)
     evidence_rows = [
         {
             "Holding": row.get("Holding"),
@@ -469,6 +727,7 @@ def _build_holdings_context(symbol_weights: dict[str, float], as_of_date: str | 
         "missing_symbols": missing_symbols,
         "bucket_weights": dict(quality.get("bucket_weights") or {}),
         "evidence_rows": evidence_rows,
+        "provenance": provenance,
         "metrics": {
             "top_holding_weight": round(top_holding_weight or 0.0, 4),
             "top_overlap_weight": round(top_overlap_weight or 0.0, 4),
@@ -514,7 +773,12 @@ def _operability_judgment(row: pd.Series) -> tuple[str, str]:
     return ("REVIEW", "; ".join(reasons)) if reasons else ("PASS", "provider / bridge fields sufficient")
 
 
-def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str | None) -> dict[str, Any]:
+def _build_operability_context(
+    symbol_weights: dict[str, float],
+    as_of_date: str | None,
+    *,
+    max_staleness_days: int,
+) -> dict[str, Any]:
     symbols = list(symbol_weights)
     frame, error = _safe_loader(
         load_etf_operability_snapshot,
@@ -530,6 +794,13 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
             "coverage_weight": 0.0,
             "missing_symbols": symbols,
             "evidence_rows": [],
+            "provenance": _provider_provenance_summary(
+                pd.DataFrame(),
+                symbol_column="symbol",
+                symbol_weights=symbol_weights,
+                as_of_date=as_of_date,
+                max_staleness_days=max_staleness_days,
+            ),
             "leverage": {"diagnostic_status": "NOT_RUN", "flagged_exposure": 0.0, "evidence_rows": []},
         }
     if frame.empty:
@@ -540,10 +811,24 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
             "coverage_weight": 0.0,
             "missing_symbols": symbols,
             "evidence_rows": [],
+            "provenance": _provider_provenance_summary(
+                frame,
+                symbol_column="symbol",
+                symbol_weights=symbol_weights,
+                as_of_date=as_of_date,
+                max_staleness_days=max_staleness_days,
+            ),
             "leverage": {"diagnostic_status": "NOT_RUN", "flagged_exposure": 0.0, "evidence_rows": []},
         }
 
     best = _best_operability_rows(frame)
+    provenance = _provider_provenance_summary(
+        best,
+        symbol_column="symbol",
+        symbol_weights=symbol_weights,
+        as_of_date=as_of_date,
+        max_staleness_days=max_staleness_days,
+    )
     covered_symbols = _supported_symbols(best, symbol_column="symbol")
     coverage_weight = round(sum(symbol_weights.get(symbol, 0.0) for symbol in covered_symbols), 4)
     missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbols]
@@ -596,6 +881,7 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
         diagnostic_status = "PASS"
     elif diagnostic_status == "PASS" and review_count > 0:
         diagnostic_status = "REVIEW"
+    diagnostic_status = _downgrade_pass_for_freshness(diagnostic_status, provenance)
     status = str(quality.get("status") or _coverage_status_from_weight(coverage_weight))
     leverage_status = "REVIEW" if flagged_exposure > 0.0 else "PASS" if coverage_weight > 0.0 else "NOT_RUN"
     return {
@@ -610,6 +896,7 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
         "missing_symbols": missing_symbols,
         "bucket_weights": dict(quality.get("bucket_weights") or {}),
         "evidence_rows": evidence_rows,
+        "provenance": provenance,
         "metrics": {
             "review_count": review_count,
             "covered_symbols": len(covered_symbols),
@@ -627,6 +914,64 @@ def _macro_value(rows: dict[str, dict[str, Any]], series_id: str) -> float | Non
     return _optional_float(dict(rows.get(series_id) or {}).get("value"))
 
 
+def _macro_provenance_summary(frame: pd.DataFrame, *, max_staleness_days: int) -> dict[str, Any]:
+    if frame.empty:
+        return {
+            "freshness_status": "not_run",
+            "source_mix": "-",
+            "series_count": 0,
+            "stale_count": 0,
+            "observation_range": "-",
+            "collected_range": "-",
+            "stale_series": [],
+            "max_staleness_days": int(max_staleness_days),
+            "series_rows": [],
+        }
+    rows = [dict(row) for _, row in frame.iterrows()]
+    stale_series: list[str] = []
+    series_rows: list[dict[str, Any]] = []
+    source_labels: list[str] = []
+    for row in rows:
+        series_id = str(row.get("series_id") or "").upper()
+        source = _first_text(row.get("source"), "unknown")
+        source_type = _first_text(row.get("source_type"), "unknown")
+        source_mode = _first_text(row.get("source_mode"))
+        source_label = f"{source}/{source_mode}" if source_mode else f"{source}/{source_type}"
+        if source_label not in source_labels:
+            source_labels.append(source_label)
+        staleness_days = _optional_float(row.get("staleness_days"))
+        snapshot_status = str(row.get("snapshot_status") or "").lower()
+        freshness = "fresh"
+        if snapshot_status != "actual" or (staleness_days is not None and staleness_days > int(max_staleness_days)):
+            freshness = "stale"
+            stale_series.append(series_id)
+        series_rows.append(
+            {
+                "Series": series_id,
+                "Coverage": row.get("coverage_status"),
+                "Source": source,
+                "Source Type": source_type,
+                "Source Mode": source_mode or "-",
+                "Observation Date": _date_text(row.get("observation_date")),
+                "Collected": _date_text(row.get("collected_at")),
+                "Staleness Days": staleness_days,
+                "Freshness": freshness,
+            }
+        )
+    freshness_status = "stale" if stale_series else "fresh" if series_rows else "not_run"
+    return {
+        "freshness_status": freshness_status,
+        "source_mix": ", ".join(source_labels[:4]) if source_labels else "-",
+        "series_count": len(series_rows),
+        "stale_count": len(stale_series),
+        "observation_range": _range_text([row.get("observation_date") for row in rows]),
+        "collected_range": _range_text([row.get("collected_at") for row in rows]),
+        "stale_series": stale_series,
+        "max_staleness_days": int(max_staleness_days),
+        "series_rows": series_rows,
+    }
+
+
 def _build_macro_context(as_of_date: str | None, max_staleness_days: int = 10) -> dict[str, Any]:
     frame, error = _safe_loader(
         load_macro_snapshot,
@@ -642,6 +987,7 @@ def _build_macro_context(as_of_date: str | None, max_staleness_days: int = 10) -
             "series_count": 0,
             "stale_count": 0,
             "evidence_rows": [],
+            "provenance": _macro_provenance_summary(pd.DataFrame(), max_staleness_days=max_staleness_days),
             "regime": {"diagnostic_status": "NOT_RUN"},
             "sentiment": {"diagnostic_status": "NOT_RUN"},
         }
@@ -653,6 +999,7 @@ def _build_macro_context(as_of_date: str | None, max_staleness_days: int = 10) -
             "series_count": 0,
             "stale_count": 0,
             "evidence_rows": [],
+            "provenance": _macro_provenance_summary(frame, max_staleness_days=max_staleness_days),
             "regime": {"diagnostic_status": "NOT_RUN"},
             "sentiment": {"diagnostic_status": "NOT_RUN"},
         }
@@ -687,6 +1034,7 @@ def _build_macro_context(as_of_date: str | None, max_staleness_days: int = 10) -
     ]
     series_count = len(actual_rows)
     stale_count = len(stale_rows)
+    provenance = _macro_provenance_summary(frame, max_staleness_days=max_staleness_days)
     base_status = "actual" if series_count >= 3 and stale_count == 0 else "partial" if series_count > 0 else "not_run"
     regime_status = "NOT_RUN" if series_count == 0 else "REVIEW" if series_count < 3 or stale_count > 0 or risk_reasons else "PASS"
     sentiment_status = "NOT_RUN" if series_count == 0 else "REVIEW" if series_count < 2 or stale_count > 0 or risk_reasons else "PASS"
@@ -702,6 +1050,7 @@ def _build_macro_context(as_of_date: str | None, max_staleness_days: int = 10) -
         "series_count": series_count,
         "stale_count": stale_count,
         "evidence_rows": evidence_rows,
+        "provenance": provenance,
         "metrics": {"vix": vix, "yield_curve": curve, "credit_spread": credit, "risk_label": risk_label},
         "regime": {
             "diagnostic_status": regime_status,
@@ -725,11 +1074,15 @@ def build_provider_context(
     symbol_weights: dict[str, Any] | None,
     *,
     as_of_date: str | None = None,
+    max_provider_staleness_days: int = DEFAULT_PROVIDER_STALENESS_DAYS,
     max_macro_staleness_days: int = 10,
 ) -> dict[str, Any]:
     """Build compact provider evidence for Practical Validation without storing raw provider rows."""
     weights = _normalize_symbol_weights(symbol_weights)
     symbols = list(weights)
+    provider_staleness_days = int(max_provider_staleness_days)
+    if provider_staleness_days < 0:
+        raise ValueError("max_provider_staleness_days must be non-negative.")
     if not symbols:
         empty = {
             "status": "not_run",
@@ -738,6 +1091,13 @@ def build_provider_context(
             "coverage_weight": 0.0,
             "missing_symbols": [],
             "evidence_rows": [],
+            "provenance": _provider_provenance_summary(
+                pd.DataFrame(),
+                symbol_column="symbol",
+                symbol_weights={},
+                as_of_date=as_of_date,
+                max_staleness_days=provider_staleness_days,
+            ),
         }
         macro = _build_macro_context(as_of_date, max_staleness_days=max_macro_staleness_days)
         return {
@@ -754,9 +1114,9 @@ def build_provider_context(
             "display_rows": _provider_display_rows(empty, empty, empty, macro),
         }
 
-    exposure = _build_exposure_context(weights, as_of_date)
-    holdings = _build_holdings_context(weights, as_of_date)
-    operability = _build_operability_context(weights, as_of_date)
+    exposure = _build_exposure_context(weights, as_of_date, max_staleness_days=provider_staleness_days)
+    holdings = _build_holdings_context(weights, as_of_date, max_staleness_days=provider_staleness_days)
+    operability = _build_operability_context(weights, as_of_date, max_staleness_days=provider_staleness_days)
     macro = _build_macro_context(as_of_date, max_staleness_days=max_macro_staleness_days)
     return {
         "schema_version": PROVIDER_CONTEXT_SCHEMA_VERSION,
@@ -779,12 +1139,19 @@ def _provider_display_rows(
     exposure: dict[str, Any],
     macro: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    op_provenance = dict(operability.get("provenance") or {})
+    holdings_provenance = dict(holdings.get("provenance") or {})
+    exposure_provenance = dict(exposure.get("provenance") or {})
+    macro_provenance = dict(macro.get("provenance") or {})
     return [
         {
             "Area": "ETF Operability",
             "Coverage": operability.get("status"),
             "Diagnostic Status": operability.get("diagnostic_status"),
             "Coverage Weight": operability.get("coverage_weight"),
+            "Source Mix": op_provenance.get("source_mix") or "-",
+            "Freshness": op_provenance.get("freshness_status") or "-",
+            "As Of Range": op_provenance.get("as_of_range") or "-",
             "Summary": operability.get("summary"),
         },
         {
@@ -792,6 +1159,9 @@ def _provider_display_rows(
             "Coverage": holdings.get("status"),
             "Diagnostic Status": holdings.get("diagnostic_status"),
             "Coverage Weight": holdings.get("coverage_weight"),
+            "Source Mix": holdings_provenance.get("source_mix") or "-",
+            "Freshness": holdings_provenance.get("freshness_status") or "-",
+            "As Of Range": holdings_provenance.get("as_of_range") or "-",
             "Summary": holdings.get("summary"),
         },
         {
@@ -799,6 +1169,9 @@ def _provider_display_rows(
             "Coverage": exposure.get("status"),
             "Diagnostic Status": exposure.get("diagnostic_status"),
             "Coverage Weight": exposure.get("coverage_weight"),
+            "Source Mix": exposure_provenance.get("source_mix") or "-",
+            "Freshness": exposure_provenance.get("freshness_status") or "-",
+            "As Of Range": exposure_provenance.get("as_of_range") or "-",
             "Summary": exposure.get("summary"),
         },
         {
@@ -806,6 +1179,9 @@ def _provider_display_rows(
             "Coverage": macro.get("status"),
             "Diagnostic Status": macro.get("diagnostic_status"),
             "Coverage Weight": None,
+            "Source Mix": macro_provenance.get("source_mix") or "-",
+            "Freshness": macro_provenance.get("freshness_status") or "-",
+            "As Of Range": macro_provenance.get("observation_range") or "-",
             "Summary": macro.get("summary"),
         },
     ]

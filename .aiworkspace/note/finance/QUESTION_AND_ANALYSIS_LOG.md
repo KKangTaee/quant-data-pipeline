@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Provider evidence는 출처와 freshness를 함께 봐야 한다
+- User request:
+  - Investability Decision Foundation의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 새 저장소를 만들지 않고 DB-backed provider / macro evidence가 실제 판단에 충분한지 source / freshness / coverage로 더 엄격히 읽어야 함.
+- Analysis result:
+  - `data-provenance-coverage-v1` task를 열고 provider context schema v2를 구현했다.
+  - ETF operability / holdings / exposure context는 source mix, coverage status weight, as-of range, collected range, stale symbols, stale weight를 compact provenance로 제공한다.
+  - Macro context는 source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
+  - stale ETF provider snapshot은 pass가 아니라 `REVIEW`로 낮춘다.
+- Follow-up:
+  - 다음 구현은 `look-through-exposure-board-v1`로 holdings / exposure coverage를 사용자가 더 직접적으로 확인하게 만든다.
+
 ### 2026-05-28 - 새 저장은 stage handoff 또는 명시적 재사용일 때만 추가한다
 - User request:
   - Investability Decision Foundation의 다음 단계 진행을 요청함.

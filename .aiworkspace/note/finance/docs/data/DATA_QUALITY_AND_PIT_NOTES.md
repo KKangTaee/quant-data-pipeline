@@ -49,9 +49,12 @@
   AOR은 현재 1차 ETF holdings만 저장하고, 2차 Aggregate Underlying look-through는 후속이다.
   GLD는 row-level source가 bar list PDF 성격이라 synthetic holdings row를 만들지 않는다.
   holdings와 exposure 모두 과거 특정 검증일의 point-in-time truth로 쓰려면 해당 날짜의 provider snapshot이 DB에 있어야 한다.
+- `data-provenance-coverage-v1` 이후 Practical Validation provider context는 ETF provider snapshot의 source mix, as-of range, collected range, coverage status weight, freshness를 compact하게 보여준다.
+  기본 provider freshness threshold는 45일이며, coverage가 충분해도 threshold를 넘은 stale snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
 - `macro_series_observation`은 FRED observation date 기준 market-context series다.
   FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다.
   vintage / revision point-in-time까지 보장하는 ALFRED 계층은 아직 구현하지 않았다.
+  Macro freshness threshold는 기존 Practical Validation 기준인 10일을 유지한다.
 
 ## Fundamentals / factors
 
