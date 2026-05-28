@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Earnings calendar prototype는 bounded yfinance source로 시작한다
+- User request:
+  - overview-market-intelligence의 FOMC 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 무료 API / scraping 원칙을 유지하면서 실적 발표 일정을 `market_event_calendar`에 저장하고 Overview Events에서 확인할 수 있어야 함.
+- Analysis result:
+  - `Ticker.get_earnings_dates()`는 rich하지만 심볼당 수 초가 걸려 Overview 버튼에 부적합하다.
+  - 첫 prototype은 yfinance `Ticker.calendar`의 upcoming `Earnings Date`를 사용하고, 수집 대상을 manual symbols 또는 latest S&P 500 movers 일부로 제한한다.
+  - rows는 `event_type=EARNINGS`, `source=yfinance_calendar`, `confidence=0.65`로 저장하며 provider calendar payload를 raw evidence로 남긴다.
+- Follow-up:
+  - production 단계에서는 stale estimate cleanup, official company IR cross-check, 더 넓은 universe cadence를 별도 task로 설계한다.
+
 ### 2026-05-28 - FOMC calendar는 Fed 공식 HTML을 DB-first로 저장한다
 - User request:
   - overview-market-intelligence 다음 단계를 진행해 달라고 요청함.

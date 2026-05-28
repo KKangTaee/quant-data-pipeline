@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from collections.abc import Callable, Iterable, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from io import StringIO
 from typing import Any
 from urllib.parse import urljoin
@@ -25,6 +25,8 @@ SP500_SOURCE_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 SP500_SOURCE = "wikipedia_sp500_constituents"
 FOMC_CALENDAR_SOURCE_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
 FOMC_CALENDAR_SOURCE = "federal_reserve_fomc_calendar"
+EARNINGS_CALENDAR_SOURCE = "yfinance_calendar"
+EARNINGS_CALENDAR_SOURCE_URL = "https://finance.yahoo.com/calendar/earnings"
 DEFAULT_INTRADAY_INTERVAL = "5m"
 YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
@@ -227,6 +229,26 @@ def _normalize_event_type(value: Any) -> str:
 def _normalize_event_symbol(value: Any) -> str | None:
     symbol = _normalize_symbol(value)
     return symbol or None
+
+
+def _normalize_symbol_list(symbols: str | Sequence[Any] | None, *, max_symbols: int = 100) -> list[str]:
+    if symbols is None:
+        return []
+    if isinstance(symbols, str):
+        raw_items = re.split(r"[,\n\r\t ]+", symbols)
+    else:
+        raw_items = list(symbols)
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        symbol = _normalize_symbol(item)
+        if not symbol or symbol in seen:
+            continue
+        seen.add(symbol)
+        out.append(symbol)
+        if len(out) >= max(1, int(max_symbols or 100)):
+            break
+    return out
 
 
 def _json_payload(value: Any) -> str | None:
@@ -533,6 +555,261 @@ def collect_and_store_fomc_calendar(
         "years_requested": [int(year) for year in years] if years else None,
         "events_found": len(rows),
         "rows_written": rows_written,
+        "event_dates": event_dates,
+        "collected_at": collected_at,
+    }
+
+
+def load_latest_intraday_mover_symbols(
+    *,
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
+    interval: str = DEFAULT_INTRADAY_INTERVAL,
+    top_n: int = 20,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[str]:
+    """Return top positive movers from the latest stored intraday snapshot."""
+    normalized_universe, _ = _normalize_intraday_universe(universe_code, universe_limit)
+    bounded_top_n = max(1, min(int(top_n or 20), 200))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_PRICE)
+        sync_table_schema(
+            db,
+            "market_intraday_snapshot",
+            MARKET_INTELLIGENCE_SCHEMAS["market_intraday_snapshot"],
+            DB_PRICE,
+        )
+        rows = db.query(
+            """
+            SELECT s.symbol
+            FROM market_intraday_snapshot s
+            JOIN (
+                SELECT MAX(snapshot_time_utc) AS snapshot_time_utc
+                FROM market_intraday_snapshot
+                WHERE universe_code = %s
+                  AND interval_code = %s
+            ) latest
+              ON latest.snapshot_time_utc = s.snapshot_time_utc
+            WHERE s.universe_code = %s
+              AND s.interval_code = %s
+              AND s.provider_status = %s
+              AND s.return_pct IS NOT NULL
+            ORDER BY s.return_pct DESC, s.symbol ASC
+            LIMIT %s
+            """,
+            [normalized_universe, interval, normalized_universe, interval, "ok", bounded_top_n],
+        )
+    finally:
+        db.close()
+    return _normalize_symbol_list([row.get("symbol") for row in rows], max_symbols=bounded_top_n)
+
+
+def _calendar_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, pd.DataFrame):
+        return value.to_dict(orient="list")
+    if isinstance(value, pd.Series):
+        return value.to_dict()
+    if isinstance(value, dict):
+        return dict(value)
+    return {}
+
+
+def _calendar_value(mapping: dict[str, Any], *keys: str) -> Any:
+    for wanted in keys:
+        for key, value in mapping.items():
+            if str(key).strip().lower().replace(" ", "_") == wanted.lower().replace(" ", "_"):
+                return value
+    return None
+
+
+def _event_date_values(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str) and not value.strip():
+        return []
+    if isinstance(value, (pd.Series, pd.Index)):
+        values = list(value)
+    elif isinstance(value, (list, tuple, set)):
+        values = list(value)
+    else:
+        values = [value]
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in values:
+        event_date = _event_date_str(item)
+        if event_date and event_date not in seen:
+            seen.add(event_date)
+            out.append(event_date)
+    return out
+
+
+def _parse_window_date(value: Any, *, default: date) -> date:
+    parsed = _event_date_str(value)
+    if not parsed:
+        return default
+    return datetime.strptime(parsed, "%Y-%m-%d").date()
+
+
+def fetch_yfinance_earnings_calendar_events(
+    symbols: str | Sequence[Any],
+    *,
+    start_date: str | date | None = None,
+    end_date: str | date | None = None,
+    lookahead_days: int = 120,
+    max_symbols: int = 100,
+    ticker_factory: Callable[[str], Any] | None = None,
+) -> dict[str, Any]:
+    """Build normalized earnings event rows from yfinance's lightweight calendar field."""
+    today = datetime.now(UTC).date()
+    window_start = _parse_window_date(start_date, default=today)
+    window_end = _parse_window_date(
+        end_date,
+        default=window_start + timedelta(days=max(1, int(lookahead_days or 120))),
+    )
+    if window_end < window_start:
+        window_end = window_start
+
+    normalized_symbols = _normalize_symbol_list(symbols, max_symbols=max_symbols)
+    ticker_factory = ticker_factory or yf.Ticker
+    events: list[dict[str, Any]] = []
+    missing_symbols: list[str] = []
+    failed_symbols: list[str] = []
+
+    for symbol in normalized_symbols:
+        try:
+            ticker = ticker_factory(symbol)
+            calendar_value = getattr(ticker, "calendar", None)
+            calendar = _calendar_mapping(calendar_value() if callable(calendar_value) else calendar_value)
+            earnings_dates = _event_date_values(
+                _calendar_value(calendar, "Earnings Date", "earningsDate", "earnings_date")
+            )
+            in_window_dates = [
+                item
+                for item in earnings_dates
+                if window_start <= datetime.strptime(item, "%Y-%m-%d").date() <= window_end
+            ]
+            if not in_window_dates:
+                missing_symbols.append(symbol)
+                continue
+            for event_date in in_window_dates:
+                events.append(
+                    {
+                        "event_date": event_date,
+                        "event_type": "EARNINGS",
+                        "symbol": symbol,
+                        "title": f"{symbol} Earnings Release",
+                        "source": EARNINGS_CALENDAR_SOURCE,
+                        "source_url": f"https://finance.yahoo.com/quote/{symbol}/analysis",
+                        "confidence": 0.65,
+                        "raw_payload": {
+                            "provider": EARNINGS_CALENDAR_SOURCE,
+                            "provider_calendar": calendar,
+                            "provider_earnings_dates": earnings_dates,
+                            "event_date_basis": "yfinance_calendar_earnings_date",
+                            "window_start": window_start.isoformat(),
+                            "window_end": window_end.isoformat(),
+                            "source_url": EARNINGS_CALENDAR_SOURCE_URL,
+                        },
+                    }
+                )
+        except Exception as exc:
+            failed_symbols.append(f"{symbol}: {exc}")
+
+    return {
+        "source": EARNINGS_CALENDAR_SOURCE,
+        "source_url": EARNINGS_CALENDAR_SOURCE_URL,
+        "event_type": "EARNINGS",
+        "method": "yfinance_ticker_calendar",
+        "start_date": window_start.isoformat(),
+        "end_date": window_end.isoformat(),
+        "symbols_requested": len(normalized_symbols),
+        "symbols_processed": len(normalized_symbols) - len(failed_symbols),
+        "events": events,
+        "events_found": len(events),
+        "missing_symbols": missing_symbols,
+        "failed_symbols": failed_symbols,
+    }
+
+
+def collect_and_store_earnings_calendar(
+    *,
+    symbols: str | Sequence[Any] | None = None,
+    symbol_source: str = "latest_movers",
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
+    interval: str = DEFAULT_INTRADAY_INTERVAL,
+    top_movers_limit: int = 20,
+    lookahead_days: int = 120,
+    max_symbols: int = 100,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    source_symbols_loader: Callable[[], list[str]] | None = None,
+    earnings_fetcher: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect bounded upcoming earnings events and persist them to the common event calendar."""
+    collected_at = _timestamp_str()
+    normalized_source = str(symbol_source or "latest_movers").strip().lower()
+    if symbols is not None:
+        target_symbols = _normalize_symbol_list(symbols, max_symbols=max_symbols)
+        normalized_source = "manual"
+    else:
+        loader = source_symbols_loader or (
+            lambda: load_latest_intraday_mover_symbols(
+                universe_code=universe_code,
+                universe_limit=universe_limit,
+                interval=interval,
+                top_n=top_movers_limit,
+                host=host,
+                user=user,
+                password=password,
+                port=port,
+            )
+        )
+        target_symbols = _normalize_symbol_list(loader(), max_symbols=max_symbols)
+
+    if not target_symbols:
+        return {
+            "source": EARNINGS_CALENDAR_SOURCE,
+            "source_url": EARNINGS_CALENDAR_SOURCE_URL,
+            "event_type": "EARNINGS",
+            "method": "yfinance_ticker_calendar",
+            "symbol_source": normalized_source,
+            "universe_code": universe_code,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "events_found": 0,
+            "missing_symbols": [],
+            "failed_symbols": [],
+            "event_dates": [],
+            "collected_at": collected_at,
+            "message": "No target symbols were available for earnings calendar collection.",
+        }
+
+    fetcher = earnings_fetcher or fetch_yfinance_earnings_calendar_events
+    result = fetcher(
+        target_symbols,
+        lookahead_days=lookahead_days,
+        max_symbols=max_symbols,
+    )
+    events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
+    rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
+    event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
+    return {
+        **result,
+        "rows_written": rows_written,
+        "symbol_source": normalized_source,
+        "universe_code": universe_code,
+        "universe_limit": universe_limit,
+        "interval": interval,
+        "top_movers_limit": top_movers_limit,
+        "target_symbols": target_symbols,
         "event_dates": event_dates,
         "collected_at": collected_at,
     }

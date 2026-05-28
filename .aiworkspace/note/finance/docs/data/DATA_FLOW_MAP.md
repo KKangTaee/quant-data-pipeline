@@ -89,8 +89,8 @@ Federal Reserve official FOMC calendar HTML
   -> app.services.overview_market_intelligence.build_market_events_snapshot()
   -> Workspace > Overview > Events
 
-future earnings / market event source
-  -> normalized event rows
+Yahoo / yfinance ticker calendar, bounded symbols
+  -> finance.data.market_intelligence.collect_and_store_earnings_calendar()
   -> finance.data.market_intelligence.upsert_market_event_rows()
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
@@ -101,8 +101,9 @@ future earnings / market event source
 - `market_event_calendar`는 event collector별 normalized output을 저장하는 공통 table이다.
 - 반복 수집은 `event_key` 기준 UPSERT로 같은 event row를 갱신한다.
 - FOMC collector는 Fed 공식 `.gov` calendar page를 파싱한다. meeting range의 마지막 날을 `event_date`로 저장하고, 원본 month/date text와 link evidence는 `raw_payload_json`에 남긴다.
+- Earnings prototype collector는 yfinance ticker `calendar` field에서 upcoming `Earnings Date`를 읽고 `event_type=EARNINGS`, `source=yfinance_calendar`, `confidence=0.65`로 저장한다.
+- Earnings 수집 대상은 manual symbol list 또는 최신 S&P 500 movers snapshot 일부로 제한한다. Coverage 1000/2000 전체 earnings scan은 rate-limit 위험 때문에 production화 전까지 기본 path가 아니다.
 - Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, ingestion job wrapper를 통해 DB에 저장한 뒤 service read model로 읽는다.
-- Earnings collector는 후속 task이며, 같은 table contract를 재사용한다.
 
 ## ETF operability provider snapshot 흐름
 

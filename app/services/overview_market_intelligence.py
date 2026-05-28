@@ -742,7 +742,7 @@ def build_market_events_snapshot(
                 start_date=normalized_start,
                 end_date=normalized_end,
                 event_type=normalized_type,
-                message="No stored market events match the selected window. Run the FOMC calendar collector first.",
+                message="No stored market events match the selected window. Run a matching event calendar collector first.",
             )
         latest_collected_at = max(
             (_display_datetime(row.get("collected_at")) or "" for row in rows),

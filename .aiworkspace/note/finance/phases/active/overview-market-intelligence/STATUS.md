@@ -8,3 +8,4 @@
 - 2026-05-28: S&P 500 intraday daily slice implemented: universe collector, intraday snapshot table/job, yearly period, sector filter, diagnostics, Browser smoke.
 - 2026-05-28: Task 4 Market Event DB structure implemented: `finance_meta.market_event_calendar` schema plus common event UPSERT/read helpers. FOMC collector is next.
 - 2026-05-28: Task 5 FOMC Events implemented: Fed official calendar parser, `collect_fomc_calendar` ingestion job, DB-backed Overview Events display, and local DB smoke with 2026/2027 rows.
+- 2026-05-28: Task 6 Earnings Free Source Prototype implemented: bounded yfinance calendar collection for manual symbols or latest S&P 500 movers, `EARNINGS` event storage, Ingestion prototype tab, and Overview Events filter/refresh.

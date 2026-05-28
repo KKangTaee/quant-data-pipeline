@@ -107,12 +107,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - UI는 정상 render 때 외부 페이지를 직접 파싱하지 않고 이 table을 읽는다.
 - FOMC row의 `source`는 `federal_reserve_fomc_calendar`, `event_type`은 `FOMC_MEETING`이다.
 - FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
+- Earnings prototype row의 `source`는 `yfinance_calendar`, `event_type`은 `EARNINGS`이다.
+- Earnings row는 manual symbol list 또는 latest S&P 500 movers에서 파생된 bounded symbol set을 대상으로 한다.
 
 주의:
 
 - calendar row는 수집 시점의 provider snapshot이며 완전한 point-in-time historical event truth가 아니다.
 - FOMC의 `*` 표시는 Summary of Economic Projections 관련 meeting 의미이며 `raw_payload_json.has_summary_of_economic_projections`에 보존한다.
-- earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 `confidence`와 `raw_payload_json`을 함께 남겨야 한다.
+- earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 `confidence=0.65`와 `raw_payload_json.provider_calendar`를 함께 남긴다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 
 ## `etf_operability_snapshot`

@@ -18,6 +18,7 @@ from finance.data.etf_provider import (
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.market_intelligence import (
+    collect_and_store_earnings_calendar,
     collect_and_store_fomc_calendar,
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
@@ -877,6 +878,105 @@ def run_collect_fomc_calendar(
             rows_written=0,
             message=f"FOMC calendar collection failed: {exc}",
             details={"years": list(years or []), "source_url": source_url},
+        )
+
+
+def run_collect_earnings_calendar(
+    *,
+    symbols: str | Iterable[str] | None = None,
+    symbol_source: str = "latest_movers",
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
+    interval: str = "5m",
+    top_movers_limit: int = 20,
+    lookahead_days: int = 120,
+    max_symbols: int = 100,
+) -> JobResult:
+    job_name = "collect_earnings_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed_symbols: list[str] | None = None
+    invalid_symbols: list[str] = []
+    if symbols is not None:
+        parsed_symbols, invalid_symbols = split_valid_invalid_symbols(symbols)
+        if not parsed_symbols:
+            finished_at = _now_str()
+            return _build_result(
+                job_name=job_name,
+                status="failed",
+                started_at=started_at,
+                finished_at=finished_at,
+                duration_sec=perf_counter() - t0,
+                rows_written=0,
+                symbols_requested=0,
+                symbols_processed=0,
+                failed_symbols=invalid_symbols,
+                message="Earnings calendar collection needs at least one valid symbol.",
+                details={"symbol_source": "manual", "invalid_symbols": invalid_symbols},
+            )
+    try:
+        result = collect_and_store_earnings_calendar(
+            symbols=parsed_symbols,
+            symbol_source=symbol_source,
+            universe_code=universe_code,
+            universe_limit=universe_limit,
+            interval=interval,
+            top_movers_limit=top_movers_limit,
+            lookahead_days=lookahead_days,
+            max_symbols=max_symbols,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        symbols_requested = int(result.get("symbols_requested") or 0)
+        symbols_processed = int(result.get("symbols_processed") or 0)
+        missing_symbols = [str(item) for item in result.get("missing_symbols") or []]
+        failed_symbols = invalid_symbols + [str(item) for item in result.get("failed_symbols") or []]
+        surfaced_symbols = failed_symbols + [item for item in missing_symbols if item not in failed_symbols]
+        finished_at = _now_str()
+        if rows_written > 0 and not surfaced_symbols:
+            status = "success"
+        elif rows_written > 0:
+            status = "partial_success"
+        else:
+            status = "failed"
+        events_found = int(result.get("events_found") or 0)
+        message = (
+            f"Earnings calendar collected {events_found} events for {symbols_processed} / {symbols_requested} symbols."
+            if rows_written > 0
+            else "Earnings calendar collection wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=symbols_requested,
+            symbols_processed=symbols_processed,
+            failed_symbols=surfaced_symbols,
+            message=message,
+            details={**result, "invalid_symbols": invalid_symbols},
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed_symbols or []),
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message=f"Earnings calendar collection failed: {exc}",
+            details={
+                "symbol_source": symbol_source,
+                "universe_code": universe_code,
+                "top_movers_limit": top_movers_limit,
+                "lookahead_days": lookahead_days,
+                "invalid_symbols": invalid_symbols,
+            },
         )
 
 

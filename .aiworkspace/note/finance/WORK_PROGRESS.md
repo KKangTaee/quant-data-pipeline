@@ -22,10 +22,13 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed Task 6 under `.aiworkspace/note/finance/tasks/active/overview-earnings-prototype/`.
+- Added bounded yfinance earnings calendar collection into `market_event_calendar` as `EARNINGS`, wired Ingestion prototype controls and Overview Events filter/refresh.
+- Local smoke wrote 3 earnings rows for `AAPL`, `MSFT`, `NVDA`; service contract tests passed.
 - Completed Task 5 under `.aiworkspace/note/finance/tasks/active/overview-fomc-collector/`.
 - Added Fed official FOMC calendar collection into `finance.data.market_intelligence`, wrapped it as `collect_fomc_calendar`, and wired Ingestion / Overview Events to `market_event_calendar`.
 - Local smoke wrote 16 FOMC rows for 2026/2027; service contract tests passed.
-- Next overview-market-intelligence item is the earnings free-source prototype.
+- Next overview-market-intelligence item is production hardening / UX follow-up for Events or broader event sources.
 
 ### 2026-05-27
 - Completed Task 7-04 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.

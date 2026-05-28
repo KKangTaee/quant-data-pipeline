@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from app.jobs.ingestion_jobs import (
+    run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
@@ -584,14 +585,56 @@ def _render_sector_industry_tab() -> None:
 
 def _render_events_tab() -> None:
     st.markdown("### Events")
-    snapshot = load_overview_market_events_snapshot(event_type="FOMC_MEETING", horizon_days=540)
+    with st.container(border=True):
+        controls = st.columns([1.1, 1.4, 1.4, 2.1], gap="small", vertical_alignment="bottom")
+        event_filter = str(
+            controls[0].segmented_control(
+                "Type",
+                ["ALL", "FOMC_MEETING", "EARNINGS"],
+                default="ALL",
+                format_func=lambda value: {
+                    "ALL": "All",
+                    "FOMC_MEETING": "FOMC",
+                    "EARNINGS": "Earnings",
+                }[value],
+                key="overview_events_type_filter",
+            )
+        )
+        if controls[1].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
+            current_year = datetime.now().year
+            with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+                st.session_state["overview_fomc_calendar_result"] = run_collect_fomc_calendar(
+                    years=(current_year, current_year + 1)
+                )
+            st.rerun()
+        if controls[2].button(
+            "Refresh Earnings Calendar",
+            key="overview_events_refresh_earnings",
+            use_container_width=True,
+            help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
+        ):
+            with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
+                st.session_state["overview_earnings_calendar_result"] = run_collect_earnings_calendar(
+                    symbol_source="latest_movers",
+                    universe_code="SP500",
+                    top_movers_limit=20,
+                    lookahead_days=120,
+                    max_symbols=50,
+                )
+            st.rerun()
+        controls[3].caption(
+            "Overview reads stored rows from `finance_meta.market_event_calendar`; refresh writes through ingestion job wrappers."
+        )
+
+    selected_event_type = None if event_filter == "ALL" else event_filter
+    snapshot = load_overview_market_events_snapshot(event_type=selected_event_type, horizon_days=540)
     coverage = dict(snapshot.get("coverage") or {})
     render_status_card_grid(
         [
             {
-                "title": "FOMC Calendar",
+                "title": "Next Event",
                 "value": _snapshot_value(coverage.get("next_event_date")),
-                "detail": "next stored policy-decision date",
+                "detail": f"filter: {snapshot.get('event_type') or 'All'}",
                 "tone": "positive" if coverage.get("next_event_date") else "warning",
             },
             {
@@ -603,27 +646,18 @@ def _render_events_tab() -> None:
             {
                 "title": "Latest Collection",
                 "value": _snapshot_value(coverage.get("latest_collected_at")),
-                "detail": "source: official Fed HTML",
+                "detail": f"sources: {coverage.get('source_count') or 0}",
                 "tone": "neutral",
             },
         ]
     )
     _render_snapshot_warnings(snapshot)
-    cols = st.columns([1, 1, 2], gap="small")
-    if cols[0].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
-        current_year = datetime.now().year
-        with st.spinner("Collecting FOMC calendar from the official Fed page..."):
-            st.session_state["overview_fomc_calendar_result"] = run_collect_fomc_calendar(
-                years=(current_year, current_year + 1)
-            )
-        st.rerun()
-    cols[1].button("Refresh Earnings Calendar", key="overview_events_refresh_earnings_disabled", disabled=True)
-    cols[2].caption("Overview reads stored event rows from `finance_meta.market_event_calendar`; refresh writes through the ingestion job wrapper.")
     _render_market_job_result("overview_fomc_calendar_result")
+    _render_market_job_result("overview_earnings_calendar_result")
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:
-        st.info("FOMC calendar rows are not available yet. Run `Refresh FOMC Calendar` here or `Collect FOMC Calendar` in Ingestion.")
+        st.info("Stored market event rows are not available for the selected filter. Run the matching refresh here or from Ingestion.")
         return
     st.dataframe(rows, width="stretch", hide_index=True)
 

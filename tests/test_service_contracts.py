@@ -360,7 +360,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def _query_fn(self, db_name: str, sql: str, params=None) -> list[dict[str, object]]:
         del db_name
         if "FROM market_event_calendar" in sql:
-            return [
+            rows = [
                 {
                     "event_date": "2026-06-17",
                     "event_type": "FOMC_MEETING",
@@ -381,7 +381,25 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "confidence": 1.0,
                     "collected_at": "2026-05-28 02:00:00",
                 },
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_url": "https://finance.yahoo.com/quote/MSFT/analysis",
+                    "confidence": 0.65,
+                    "collected_at": "2026-05-28 03:00:00",
+                },
             ]
+            event_filter = None
+            for value in params or []:
+                if value in {"FOMC_MEETING", "EARNINGS"}:
+                    event_filter = value
+                    break
+            if event_filter:
+                return [row for row in rows if row["event_type"] == event_filter]
+            return rows
         if "FROM market_universe_member" in sql:
             return [
                 {
@@ -644,6 +662,21 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Type"], "FOMC_MEETING")
         self.assertEqual(snapshot["rows"].iloc[0]["Date"], "2026-06-17")
 
+    def test_market_events_snapshot_can_read_all_event_types(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["event_type"], "All")
+        self.assertEqual(snapshot["coverage"]["event_count"], 3)
+        self.assertEqual(set(snapshot["rows"]["Type"]), {"FOMC_MEETING", "EARNINGS"})
+
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
@@ -847,6 +880,95 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(result["events_found"], 1)
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-06-17"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_yfinance_earnings_calendar_builds_event_rows_for_window(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        calendars = {
+            "AAA": {
+                "Earnings Date": [date(2026, 7, 30)],
+                "Earnings Average": 1.23,
+                "Revenue Average": 1000000,
+            },
+            "BBB": {},
+        }
+
+        class FakeTicker:
+            def __init__(self, symbol: str) -> None:
+                self.calendar = calendars[symbol]
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["AAA", "BBB"],
+            start_date="2026-05-28",
+            lookahead_days=120,
+            ticker_factory=FakeTicker,
+        )
+
+        self.assertEqual(result["source"], mi.EARNINGS_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "EARNINGS")
+        self.assertEqual(result["events_found"], 1)
+        self.assertEqual(result["missing_symbols"], ["BBB"])
+        row = result["events"][0]
+        self.assertEqual(row["event_date"], "2026-07-30")
+        self.assertEqual(row["symbol"], "AAA")
+        self.assertEqual(row["event_type"], "EARNINGS")
+        self.assertEqual(row["confidence"], 0.65)
+        self.assertEqual(row["raw_payload"]["provider_calendar"]["Earnings Average"], 1.23)
+
+    def test_collect_earnings_calendar_writes_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        def fake_fetcher(symbols, **kwargs):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            self.assertEqual(kwargs["lookahead_days"], 90)
+            return {
+                "source": mi.EARNINGS_CALENDAR_SOURCE,
+                "source_url": mi.EARNINGS_CALENDAR_SOURCE_URL,
+                "event_type": "EARNINGS",
+                "method": "yfinance_ticker_calendar",
+                "start_date": "2026-05-28",
+                "end_date": "2026-08-26",
+                "symbols_requested": 2,
+                "symbols_processed": 2,
+                "events": [
+                    {
+                        "event_date": "2026-07-30",
+                        "event_type": "EARNINGS",
+                        "symbol": "AAA",
+                        "title": "AAA Earnings Release",
+                        "source": mi.EARNINGS_CALENDAR_SOURCE,
+                        "source_url": "https://finance.yahoo.com/quote/AAA/analysis",
+                        "confidence": 0.65,
+                        "raw_payload": {"provider": mi.EARNINGS_CALENDAR_SOURCE},
+                    }
+                ],
+                "events_found": 1,
+                "missing_symbols": ["BBB"],
+                "failed_symbols": [],
+            }
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_earnings_calendar(
+                symbols=["AAA", "BBB"],
+                lookahead_days=90,
+                earnings_fetcher=fake_fetcher,
+            )
+
+        self.assertEqual(result["source"], mi.EARNINGS_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "EARNINGS")
+        self.assertEqual(result["symbol_source"], "manual")
+        self.assertEqual(result["events_found"], 1)
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_dates"], ["2026-07-30"])
+        self.assertEqual(result["missing_symbols"], ["BBB"])
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
 
     def test_market_event_upsert_normalizes_payload_and_business_key(self) -> None:

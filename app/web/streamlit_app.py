@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.jobs.ingestion_jobs import (
+    run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
@@ -374,6 +375,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_collect_macro_market_context(**params)
     if action == "collect_fomc_calendar":
         return run_collect_fomc_calendar(**params)
+    if action == "collect_earnings_calendar":
+        return run_collect_earnings_calendar(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -1936,45 +1939,134 @@ def _render_ingestion_console() -> None:
 
             with st.expander("Overview Market Event Calendar", expanded=False):
                 st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
-                st.caption("현재 구현 대상: Federal Reserve 공식 FOMC meeting calendar.")
+                st.caption("현재 구현 대상: Federal Reserve 공식 FOMC calendar, yfinance 기반 earnings prototype.")
                 st.caption("저장 테이블: `finance_meta.market_event_calendar`")
-                current_year = date.today().year
-                fomc_year_options = list(range(current_year - 1, current_year + 3))
-                fomc_years = st.multiselect(
-                    "FOMC Years",
-                    options=fomc_year_options,
-                    default=[current_year, current_year + 1],
-                    key="overview_fomc_calendar_years",
-                    help="비워두면 Fed 페이지에서 파싱 가능한 모든 연도 row를 수집합니다.",
-                )
-                if st.button(
-                    "Collect FOMC Calendar",
-                    use_container_width=True,
-                    disabled=_has_running_job(),
-                ):
-                    _schedule_job(
-                        {
-                            "action": "collect_fomc_calendar",
-                            "job_name": "collect_fomc_calendar",
-                            "spinner_text": "Collecting FOMC calendar from the official Fed page...",
-                            "params": {
-                                "years": tuple(fomc_years) if fomc_years else None,
-                            },
-                            "run_metadata": _job_metadata(
-                                pipeline_type="overview_market_event_calendar",
-                                execution_mode="operational",
-                                symbol_source="Federal Reserve official FOMC calendar",
-                                symbol_count=None,
-                                execution_context=(
-                                    "Overview Events 탭에서 사용할 FOMC meeting calendar를 Fed 공식 HTML에서 파싱해 DB에 저장합니다."
-                                ),
-                                input_params={
+                fomc_tab, earnings_tab = st.tabs(["FOMC", "Earnings Prototype"])
+                with fomc_tab:
+                    current_year = date.today().year
+                    fomc_year_options = list(range(current_year - 1, current_year + 3))
+                    fomc_years = st.multiselect(
+                        "FOMC Years",
+                        options=fomc_year_options,
+                        default=[current_year, current_year + 1],
+                        key="overview_fomc_calendar_years",
+                        help="비워두면 Fed 페이지에서 파싱 가능한 모든 연도 row를 수집합니다.",
+                    )
+                    if st.button(
+                        "Collect FOMC Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job(),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_fomc_calendar",
+                                "job_name": "collect_fomc_calendar",
+                                "spinner_text": "Collecting FOMC calendar from the official Fed page...",
+                                "params": {
                                     "years": tuple(fomc_years) if fomc_years else None,
                                 },
-                            ),
-                        }
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="overview_market_event_calendar",
+                                    execution_mode="operational",
+                                    symbol_source="Federal Reserve official FOMC calendar",
+                                    symbol_count=None,
+                                    execution_context=(
+                                        "Overview Events 탭에서 사용할 FOMC meeting calendar를 Fed 공식 HTML에서 파싱해 DB에 저장합니다."
+                                    ),
+                                    input_params={
+                                        "years": tuple(fomc_years) if fomc_years else None,
+                                    },
+                                ),
+                            }
+                        )
+                with earnings_tab:
+                    earnings_source_mode = st.selectbox(
+                        "Symbol Source",
+                        ["Latest S&P 500 Movers", "Manual Symbols"],
+                        index=0,
+                        key="overview_earnings_symbol_source",
                     )
-                _render_inline_last_completed_result("collect_fomc_calendar")
+                    earnings_cols = st.columns(3, gap="small")
+                    earnings_top_movers_limit = int(
+                        earnings_cols[0].number_input(
+                            "Top Movers",
+                            min_value=5,
+                            max_value=100,
+                            value=20,
+                            step=5,
+                            key="overview_earnings_top_movers_limit",
+                            disabled=earnings_source_mode != "Latest S&P 500 Movers",
+                        )
+                    )
+                    earnings_lookahead_days = int(
+                        earnings_cols[1].number_input(
+                            "Lookahead Days",
+                            min_value=7,
+                            max_value=365,
+                            value=120,
+                            step=7,
+                            key="overview_earnings_lookahead_days",
+                        )
+                    )
+                    earnings_max_symbols = int(
+                        earnings_cols[2].number_input(
+                            "Max Symbols",
+                            min_value=5,
+                            max_value=100,
+                            value=50,
+                            step=5,
+                            key="overview_earnings_max_symbols",
+                        )
+                    )
+                    manual_earnings_text = ""
+                    if earnings_source_mode == "Manual Symbols":
+                        manual_earnings_text = st.text_area(
+                            "Symbols",
+                            value="AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA",
+                            key="overview_earnings_manual_symbols",
+                        )
+                    st.caption(
+                        "Latest movers mode uses the latest stored S&P 500 intraday snapshot; run Market Snapshot first if no movers are available."
+                    )
+                    if st.button(
+                        "Collect Earnings Calendar Prototype",
+                        use_container_width=True,
+                        disabled=_has_running_job(),
+                    ):
+                        manual_symbols = _parse_csv_items(manual_earnings_text)
+                        symbol_source = "manual" if earnings_source_mode == "Manual Symbols" else "latest_movers"
+                        _schedule_job(
+                            {
+                                "action": "collect_earnings_calendar",
+                                "job_name": "collect_earnings_calendar",
+                                "spinner_text": "Collecting earnings dates from yfinance calendar...",
+                                "params": {
+                                    "symbols": manual_symbols if symbol_source == "manual" else None,
+                                    "symbol_source": symbol_source,
+                                    "universe_code": "SP500",
+                                    "top_movers_limit": earnings_top_movers_limit,
+                                    "lookahead_days": earnings_lookahead_days,
+                                    "max_symbols": earnings_max_symbols,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="overview_market_event_calendar",
+                                    execution_mode="prototype",
+                                    symbol_source=symbol_source,
+                                    symbol_count=len(manual_symbols) if symbol_source == "manual" else earnings_top_movers_limit,
+                                    execution_context=(
+                                        "Overview Events 탭에서 사용할 upcoming earnings calendar prototype을 무료 yfinance calendar field로 수집합니다."
+                                    ),
+                                    input_params={
+                                        "symbol_source": symbol_source,
+                                        "universe_code": "SP500",
+                                        "top_movers_limit": earnings_top_movers_limit,
+                                        "lookahead_days": earnings_lookahead_days,
+                                        "max_symbols": earnings_max_symbols,
+                                    },
+                                ),
+                            }
+                        )
+                _render_inline_last_completed_result("collect_fomc_calendar", "collect_earnings_calendar")
 
             with st.expander("Practical Validation Provider Snapshots", expanded=False):
                 st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")
