@@ -5583,3 +5583,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Streamlit `fragment(run_every=300)`이 브라우저 세션 기반 heartbeat에 적합하며, provider 호출은 직접 하지 않고 기존 `overview_automation --profile browser_safe` 경로를 재사용하는 것이 안전함
 - Follow-up:
   - `browser_safe` profile과 Overview 상단 auto refresh toggle / status panel / heartbeat를 추가했다. 1차는 S&P 500 snapshot만 자동 check하며 Top1000 / Top2000 / Events는 후속 opt-in으로 남긴다
+
+### 2026-05-30 - Market Movers refresh UI에서 수동/자동 갱신을 통합한다
+- User request:
+  - 사용자가 자동 갱신 패널이 중복되어 보이고, 수동 refresh UI와 자동 refresh UI가 같은 데이터 갱신인데 분리되어 있어 헷갈린다고 지적함
+- Interpreted goal:
+  - 사용자가 먼저 수동/자동을 선택하고, 같은 Market Movers refresh surface에서 상태, 카운트다운, 수동 버튼을 함께 봐야 함
+- Analysis result:
+  - 별도 top-level auto panel을 제거하고 Market Movers `Data Refresh`에 통합하면 중복 렌더링과 개념 분리가 동시에 줄어든다
+  - 초 단위 countdown / progress는 브라우저 JS로만 갱신하고, provider collection은 기존 5분 cadence guard를 유지해야 한다
+- Follow-up:
+  - Market Movers `Data Refresh`에 `수동 갱신` / `자동 갱신` 모드를 추가하고, S&P 500 Daily 자동 모드에서 browser-side countdown과 기존 `browser_safe` heartbeat를 함께 사용하도록 정리했다

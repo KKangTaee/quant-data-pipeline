@@ -374,6 +374,54 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["title"], "미국 정규장 대기")
         self.assertEqual(timing["progress_pct"], 0)
 
+    def test_browser_auto_refresh_timing_rebases_success_to_next_cadence(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_timing
+
+        timing = _browser_auto_refresh_timing(
+            {
+                "status": "success",
+                "finished_at": "2026-05-29 10:03:00",
+                "plan": [
+                    {
+                        "label": "S&P 500 Daily Snapshot",
+                        "reason": "due",
+                        "should_run": True,
+                        "cadence_minutes": 5,
+                        "last_finished_at": "2026-05-29 09:58:00",
+                        "next_due_at": "2026-05-29 10:03:00",
+                    }
+                ],
+            },
+            now=datetime(2026, 5, 29, 10, 4, 0),
+        )
+
+        self.assertEqual(timing["title"], "방금 갱신됨. 다음 갱신까지 4분")
+        self.assertEqual(timing["next_due_at"], "2026-05-29 10:08:00")
+        self.assertEqual(timing["progress_pct"], 20)
+
+    def test_browser_auto_refresh_check_due_uses_next_due(self) -> None:
+        from app.web.overview_dashboard import _should_run_browser_auto_refresh_check
+
+        summary = {
+            "status": "skipped",
+            "plan": [
+                {
+                    "label": "S&P 500 Daily Snapshot",
+                    "reason": "cadence not due",
+                    "cadence_minutes": 5,
+                    "last_finished_at": "2026-05-29 10:00:00",
+                    "next_due_at": "2026-05-29 10:05:00",
+                }
+            ],
+        }
+
+        self.assertFalse(
+            _should_run_browser_auto_refresh_check(summary, now=datetime(2026, 5, 29, 10, 4, 59))
+        )
+        self.assertTrue(
+            _should_run_browser_auto_refresh_check(summary, now=datetime(2026, 5, 29, 10, 5, 0))
+        )
+
     def test_browser_auto_refresh_completion_label_uses_actionable_status(self) -> None:
         from app.web.overview_dashboard import _browser_auto_refresh_completion_label
 

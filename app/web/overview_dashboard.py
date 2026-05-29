@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import json
 from datetime import datetime
 from html import escape
 from inspect import signature
@@ -9,6 +10,7 @@ from typing import Any, Callable
 import altair as alt
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from app.jobs.run_history import append_run_history
 from app.jobs.overview_automation import run_overview_automation
@@ -851,6 +853,14 @@ def _browser_auto_refresh_timing(summary: dict[str, Any] | None, *, now: datetim
     now_ts = pd.Timestamp(now or datetime.now())
     last_finished = pd.to_datetime(row.get("last_finished_at"), errors="coerce")
     next_due = pd.to_datetime(row.get("next_due_at"), errors="coerce")
+    summary_status = str((summary or {}).get("status") or "").strip().lower()
+    completed_current_check = summary_status in {"success", "partial_success"} and bool(row.get("should_run"))
+    if completed_current_check:
+        finished_at = pd.to_datetime((summary or {}).get("finished_at"), errors="coerce")
+        if pd.notna(finished_at):
+            last_finished = finished_at
+            next_due = finished_at + pd.Timedelta(seconds=cadence_seconds)
+            reason = "cadence not due"
 
     remaining_seconds: int | None = None
     progress_pct = 100
@@ -867,7 +877,8 @@ def _browser_auto_refresh_timing(summary: dict[str, Any] | None, *, now: datetim
         detail = "장이 열리면 5분 주기 조건에 맞춰 S&P 500 스냅샷을 확인합니다."
         progress_pct = 0
     elif reason == "cadence not due":
-        title = f"다음 갱신까지 {_format_auto_refresh_remaining(remaining_seconds)}"
+        prefix = "방금 갱신됨. " if completed_current_check else ""
+        title = f"{prefix}다음 갱신까지 {_format_auto_refresh_remaining(remaining_seconds)}"
         detail = "5분 갱신 주기가 지나면 다음 확인에서 수집을 시도합니다."
     elif reason == "due":
         title = "갱신 조건 충족"
@@ -887,9 +898,29 @@ def _browser_auto_refresh_timing(summary: dict[str, Any] | None, *, now: datetim
         "detail": detail,
         "progress_pct": progress_pct,
         "remaining_seconds": remaining_seconds,
-        "next_due_at": row.get("next_due_at") or "-",
+        "cadence_seconds": cadence_seconds,
+        "next_due_at": next_due.strftime("%Y-%m-%d %H:%M:%S") if pd.notna(next_due) else row.get("next_due_at") or "-",
         "reason": reason or "-",
     }
+
+
+def _should_run_browser_auto_refresh_check(
+    summary: dict[str, Any] | None,
+    *,
+    checked_at: str | None = None,
+    now: datetime | None = None,
+) -> bool:
+    if not summary:
+        return True
+    now_ts = pd.Timestamp(now or datetime.now())
+    timing = _browser_auto_refresh_timing(summary, now=now)
+    next_due = pd.to_datetime(timing.get("next_due_at"), errors="coerce")
+    if pd.notna(next_due):
+        return bool(now_ts >= next_due)
+    checked_ts = pd.to_datetime(checked_at or summary.get("finished_at") or summary.get("started_at"), errors="coerce")
+    if pd.notna(checked_ts):
+        return bool((now_ts - checked_ts).total_seconds() >= BROWSER_AUTO_REFRESH_SECONDS)
+    return False
 
 
 def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at: str | None) -> list[dict[str, Any]]:
@@ -955,8 +986,91 @@ def _browser_auto_refresh_completion_label(summary: dict[str, Any]) -> str:
     return f"자동 갱신 상태: {_auto_refresh_status_label(status)}"
 
 
-def _render_browser_auto_refresh_timing(summary: dict[str, Any] | None) -> None:
+def _render_browser_auto_refresh_countdown(
+    timing: dict[str, Any],
+    *,
+    auto_reload: bool,
+    key_suffix: str,
+) -> None:
+    remaining = max(0, int(timing.get("remaining_seconds") or 0))
+    cadence_seconds = max(1, int(timing.get("cadence_seconds") or BROWSER_AUTO_REFRESH_SECONDS))
+    title = str(timing.get("title") or "자동 갱신 대기")
+    detail = str(timing.get("detail") or "")
+    next_due_at = str(timing.get("next_due_at") or "-")
+    progress_pct = max(0, min(100, int(timing.get("progress_pct") or 0)))
+    component_id = f"overview-refresh-countdown-{abs(hash(key_suffix))}"
+    components.html(
+        f"""
+        <div id="{component_id}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;background:#ffffff;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div data-countdown-title style="font-weight:700;color:#111827;">{escape(title)}</div>
+              <div style="font-size:0.86rem;color:#64748b;margin-top:2px;">{escape(detail)}</div>
+            </div>
+            <div style="font-size:0.84rem;color:#475569;">다음 가능 시각: {escape(next_due_at)}</div>
+          </div>
+          <div style="height:8px;border-radius:999px;background:#e5e7eb;margin-top:10px;overflow:hidden;">
+            <div data-countdown-bar style="height:100%;width:{progress_pct}%;background:#0f766e;border-radius:999px;transition:width 0.25s linear;"></div>
+          </div>
+        </div>
+        <script>
+        (() => {{
+          const root = document.getElementById({json.dumps(component_id)});
+          if (!root) return;
+          const titleNode = root.querySelector("[data-countdown-title]");
+          const barNode = root.querySelector("[data-countdown-bar]");
+          const startedRemaining = {remaining};
+          const cadenceSeconds = {cadence_seconds};
+          const autoReload = {json.dumps(bool(auto_reload and remaining > 0))};
+          const loadedAt = Date.now();
+          let didReload = false;
+          function formatRemaining(totalSeconds) {{
+            const safe = Math.max(0, Math.floor(totalSeconds));
+            const minutes = Math.floor(safe / 60);
+            const seconds = safe % 60;
+            if (minutes <= 0) return `${{seconds}}초`;
+            if (seconds === 0) return `${{minutes}}분`;
+            return `${{minutes}}분 ${{seconds}}초`;
+          }}
+          function tick() {{
+            const elapsed = Math.floor((Date.now() - loadedAt) / 1000);
+            const remainingNow = Math.max(0, startedRemaining - elapsed);
+            const elapsedWithinCadence = Math.max(0, cadenceSeconds - remainingNow);
+            const progress = Math.max(0, Math.min(100, Math.round((elapsedWithinCadence / cadenceSeconds) * 100)));
+            titleNode.textContent = `다음 갱신까지 ${{formatRemaining(remainingNow)}}`;
+            barNode.style.width = `${{progress}}%`;
+            if (autoReload && remainingNow <= 0 && !didReload) {{
+              didReload = true;
+              setTimeout(() => {{
+                try {{
+                  window.parent.location.reload();
+                }} catch (error) {{
+                  window.location.reload();
+                }}
+              }}, 500);
+            }}
+          }}
+          tick();
+          window.setInterval(tick, 1000);
+        }})();
+        </script>
+        """,
+        height=116,
+    )
+
+
+def _render_browser_auto_refresh_timing(
+    summary: dict[str, Any] | None,
+    *,
+    live_countdown: bool = False,
+    auto_reload: bool = False,
+    key_suffix: str = "default",
+) -> None:
     timing = _browser_auto_refresh_timing(summary)
+    if live_countdown and timing.get("reason") == "cadence not due" and timing.get("remaining_seconds") is not None:
+        _render_browser_auto_refresh_countdown(timing, auto_reload=auto_reload, key_suffix=key_suffix)
+        return
+
     progress_pct = int(timing.get("progress_pct") or 0)
     st.markdown(
         f"""
@@ -1015,47 +1129,6 @@ def _run_browser_auto_refresh_check() -> dict[str, Any]:
     st.session_state["overview_browser_auto_refresh_summary"] = summary
     st.session_state["overview_browser_auto_refresh_checked_at"] = checked_at
     return summary
-
-
-def _render_browser_auto_refresh_panel() -> None:
-    with st.container(border=True):
-        controls = st.columns([1.25, 1, 1.2], gap="small", vertical_alignment="bottom")
-        st.session_state.setdefault("overview_browser_auto_refresh_enabled", False)
-        enabled = controls[0].toggle(
-            "Auto refresh while Overview is open",
-            key="overview_browser_auto_refresh_enabled",
-            help="When enabled, this browser session checks the S&P 500 daily snapshot every 5 minutes. Closing the page stops it.",
-        )
-        controls[1].selectbox(
-            "Mode",
-            ["S&P 500 only"],
-            index=0,
-            key="overview_browser_auto_refresh_mode",
-            disabled=True,
-            help="The first browser-session profile intentionally collects only the S&P 500 daily snapshot.",
-        )
-        controls[2].caption("Runs only while this Overview page is open. Uses the existing cadence, market-hours, and lock guards.")
-
-        if enabled:
-            @st.fragment(run_every=BROWSER_AUTO_REFRESH_SECONDS)
-            def _browser_auto_refresh_heartbeat() -> None:
-                with st.spinner("S&P 500 자동 갱신 조건을 확인하는 중입니다..."):
-                    summary = _run_browser_auto_refresh_check()
-                _render_browser_auto_refresh_timing(summary)
-                checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
-                render_status_card_grid(_build_browser_auto_refresh_cards(summary, str(checked_at or "")))
-
-            _browser_auto_refresh_heartbeat()
-        else:
-            summary = st.session_state.get("overview_browser_auto_refresh_summary")
-            checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
-            _render_browser_auto_refresh_timing(summary if isinstance(summary, dict) else None)
-            render_status_card_grid(
-                _build_browser_auto_refresh_cards(
-                    summary if isinstance(summary, dict) else None,
-                    str(checked_at or "") if checked_at else None,
-                )
-            )
 
 
 def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> bool:
@@ -1199,6 +1272,66 @@ def _render_market_movers_refresh_status(
     )
 
 
+def _market_refresh_mode_label(value: str) -> str:
+    return {"manual": "수동 갱신", "auto": "자동 갱신"}.get(value, value)
+
+
+def _select_market_refresh_mode(container: Any, *, auto_supported: bool) -> str:
+    key = "overview_market_movers_refresh_mode"
+    options = ["manual", "auto"] if auto_supported else ["manual"]
+    if st.session_state.get(key) not in options:
+        st.session_state[key] = "manual"
+    segmented_control = getattr(container, "segmented_control", None)
+    if callable(segmented_control):
+        selected = segmented_control(
+            "갱신 방식",
+            options,
+            key=key,
+            format_func=_market_refresh_mode_label,
+            disabled=not auto_supported,
+            help="자동 갱신은 현재 S&P 500 Daily 일중 스냅샷에서만 지원합니다.",
+        )
+    else:
+        selected = container.radio(
+            "갱신 방식",
+            options,
+            key=key,
+            format_func=_market_refresh_mode_label,
+            horizontal=True,
+            disabled=not auto_supported,
+            help="자동 갱신은 현재 S&P 500 Daily 일중 스냅샷에서만 지원합니다.",
+        )
+    return str(selected or "manual")
+
+
+def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
+    summary = st.session_state.get("overview_browser_auto_refresh_summary")
+    checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
+    if not isinstance(summary, dict):
+        summary = None
+    _render_browser_auto_refresh_timing(
+        summary,
+        live_countdown=True,
+        auto_reload=universe_code == "SP500",
+        key_suffix=f"{universe_code}-{checked_at or 'new'}",
+    )
+    if summary:
+        jobs_due = summary.get("jobs_due")
+        jobs_run = summary.get("jobs_run")
+        render_badge_strip(
+            [
+                {"label": "자동 상태", "value": _auto_refresh_status_label(summary.get("status")), "tone": _status_tone(summary.get("status"))},
+                {"label": "마지막 확인", "value": str(checked_at or summary.get("finished_at") or "-"), "tone": "neutral"},
+                {"label": "실행", "value": f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}", "tone": "neutral"},
+            ]
+        )
+        message = str(summary.get("message") or _browser_auto_refresh_completion_label(summary))
+        if message:
+            st.caption(message)
+    else:
+        st.caption("자동 갱신을 켜면 현재 브라우저 세션에서 S&P 500 일중 스냅샷 갱신 조건을 확인합니다.")
+
+
 def _render_market_movers_refresh_bar(
     snapshot: dict[str, Any],
     *,
@@ -1213,14 +1346,16 @@ def _render_market_movers_refresh_bar(
     intraday_result_key = f"overview_{universe_code.lower()}_intraday_result"
     coverage = dict(snapshot.get("coverage") or {})
     state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
+    auto_supported = universe_code == "SP500" and period == "daily"
 
     with st.container(border=True):
-        if state is not None:
-            _render_refresh_state_dot(
-                color=str(state["dot_color"]),
-                label=str(state["label"]),
-                detail=str(state["detail"]),
-            )
+        header_cols = st.columns([1.1, 0.95, 1.15], gap="small", vertical_alignment="bottom")
+        header_cols[0].markdown("#### Data Refresh")
+        selected_mode = _select_market_refresh_mode(header_cols[1], auto_supported=auto_supported)
+        if auto_supported:
+            header_cols[2].caption("자동 모드는 Overview가 열려 있는 동안 S&P 500 일중 스냅샷만 5분 조건으로 확인합니다.")
+        else:
+            header_cols[2].caption("자동 갱신은 현재 S&P 500 Daily에서만 지원합니다. 이 화면은 수동 갱신으로 사용합니다.")
         refresh_state = dict(coverage.get("refresh_state") or {})
         returnable = coverage.get("returnable_count") or 0
         universe_count = coverage.get("universe_count") or 0
@@ -1239,17 +1374,26 @@ def _render_market_movers_refresh_bar(
                     ),
                     "tone": "positive" if universe_count and returnable == universe_count else "warning",
                 },
-                {"label": "Next Check", "value": next_check_text, "tone": "neutral"},
+                {"label": "다음 확인", "value": next_check_text, "tone": "neutral"},
             ]
         )
-        if refresh_state.get("recommended_action"):
+        if state is not None:
+            _render_refresh_state_dot(
+                color=str(state["dot_color"]),
+                label=str(state["label"]),
+                detail=str(state["detail"]),
+            )
+        if selected_mode == "auto" and auto_supported:
+            _render_market_auto_refresh_summary(universe_code=universe_code)
+        elif refresh_state.get("recommended_action"):
             st.caption(str(refresh_state.get("recommended_action")))
+
         cols = st.columns([1, 1, 1], gap="small", vertical_alignment="center")
         if cols[0].button(
-            "Update Daily Snapshot",
+            "일중 스냅샷 갱신",
             key=f"overview_{universe_code.lower()}_intraday_refresh",
             use_container_width=True,
-            help="Collect provider quotes and store a new DB snapshot. The timed status check only reloads stored DB rows.",
+            help="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
         ):
             with st.spinner(f"Updating {universe_label} quote snapshot..."):
                 _store_overview_job_result(
@@ -1261,7 +1405,7 @@ def _render_market_movers_refresh_bar(
                 )
             st.rerun()
         if universe_code == "SP500" and cols[1].button(
-            "Refresh Universe",
+            "유니버스 갱신",
             key="overview_sp500_universe_refresh",
             use_container_width=True,
         ):
@@ -1271,7 +1415,7 @@ def _render_market_movers_refresh_bar(
         if universe_code != "SP500":
             cols[1].caption("Universe is based on market-cap ranked asset profiles.")
         if cols[2].button(
-            "Reload View",
+            "화면 새로고침",
             key=f"overview_{universe_code.lower()}_market_movers_reload",
             use_container_width=True,
         ):
@@ -1317,7 +1461,7 @@ def _render_market_movers_snapshot_panel(
 def _render_market_movers_tab() -> None:
     st.markdown("### Market Movers")
     with st.container(border=True):
-        controls = st.columns([1.1, 1.2, 1.1, 0.8, 0.9], gap="small", vertical_alignment="bottom")
+        controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
         coverage = str(
             controls[0].selectbox(
                 "Coverage",
@@ -1368,16 +1512,6 @@ def _render_market_movers_tab() -> None:
                 key="overview_market_movers_top_n",
             )
         )
-        refresh_mode = str(
-            controls[4].selectbox(
-                "Status Check",
-                ["1 min", "5 min", "10 min"],
-                index=0,
-                key="overview_market_movers_status_check",
-                disabled=period != "daily",
-                help="Reloads the stored DB snapshot status. It does not collect provider data automatically.",
-            )
-        )
 
     reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
     if reloaded_at:
@@ -1385,15 +1519,27 @@ def _render_market_movers_tab() -> None:
     if period == "daily":
         st.caption(
             "Daily movers use the latest stored quote snapshot versus previous close when available. "
-            "Status Check reloads DB state only; provider refresh stays manual."
+            "Data refresh controls below decide whether collection is manual or browser-session automatic."
         )
 
-    refresh_seconds = {"1 min": 60, "5 min": 300, "10 min": 600}.get(refresh_mode)
-    if period != "daily":
-        refresh_seconds = None
-    if refresh_seconds:
-        @st.fragment(run_every=refresh_seconds)
-        def _auto_refresh_panel() -> None:
+    if coverage != "SP500" or period != "daily":
+        st.session_state["overview_market_movers_refresh_mode"] = "manual"
+    auto_refresh_enabled = (
+        coverage == "SP500"
+        and period == "daily"
+        and st.session_state.get("overview_market_movers_refresh_mode") == "auto"
+    )
+
+    if auto_refresh_enabled:
+        @st.fragment(run_every=BROWSER_AUTO_REFRESH_SECONDS)
+        def _market_movers_auto_refresh_panel() -> None:
+            summary = st.session_state.get("overview_browser_auto_refresh_summary")
+            checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
+            if not isinstance(summary, dict):
+                summary = None
+            if _should_run_browser_auto_refresh_check(summary, checked_at=str(checked_at or "")):
+                with st.spinner("S&P 500 자동 갱신 조건을 확인하는 중입니다..."):
+                    _run_browser_auto_refresh_check()
             snapshot = _load_market_movers_snapshot(
                 universe_code=coverage,
                 universe_limit=universe_limit,
@@ -1413,7 +1559,7 @@ def _render_market_movers_tab() -> None:
                 period=period,
             )
 
-        _auto_refresh_panel()
+        _market_movers_auto_refresh_panel()
     else:
         snapshot = _load_market_movers_snapshot(
             universe_code=coverage,
@@ -2446,7 +2592,6 @@ def render_overview_dashboard(
 
     st.title("Finance Console")
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
-    _render_browser_auto_refresh_panel()
 
     market_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
         ["Market Movers", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
