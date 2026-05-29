@@ -7,7 +7,8 @@ Last Verified: 2026-05-29
 
 | Track | Status | Notes |
 |---|---|---|
-| Phase 9 Cost / Slippage / Liquidity Realism | Next | Phase 8 closeout 후 다음 hardening target. cost / slippage / turnover / liquidity / capacity evidence를 Backtest Realism과 selected-route 판단에 연결 |
+| Phase 9 Cost / Slippage / Liquidity Realism | Active | `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`; cost / slippage / turnover / liquidity / capacity evidence를 Backtest Realism과 selected-route 판단에 연결 |
+| Phase 9 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase9-board-open/`; Phase 9 official board, task split, immediate next task 정리 |
 | Phase 8 Investability Data Evidence Expansion | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`; lifecycle / survivorship / historical membership evidence를 DB-backed로 강화 |
 | Lifecycle Audit Scoring V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/lifecycle-audit-scoring-v1/`; Data Coverage Audit lifecycle evidence를 current snapshot / SEC identity / computed partial / actual coverage / delisting actual로 분리해 metrics와 row evidence에 표시 |
 | Computed Snapshot Lifecycle V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/computed-snapshot-lifecycle-v1/`; existing current snapshot lifecycle rows를 repeated observation window로 요약하되 partial evidence로 저장하고, Data Coverage Audit은 actual coverage row만 survivorship PASS 후보로 보도록 보수화 |
@@ -110,5 +111,5 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 8은 closeout complete다. 다음 개발 단위는 Phase 9 cost / turnover / slippage / liquidity 실측 근거다.
+- Phase 9 is active. 다음 task는 `cost-model-source-contract-review-v1`로 현재 runtime / validation / Backtest Realism Audit의 cost evidence source contract를 먼저 정리한다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

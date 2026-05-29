@@ -12,10 +12,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Active Pointers
 
+- current phase board:
+  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/active/phase9-cost-slippage-liquidity-realism/PLAN.md)
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
-- next phase candidate:
-  - Phase 9 cost / slippage / turnover / liquidity realism
 - current candidate summary:
   - no active strategy-search candidate summary in `main-dev`; next work is hardening backtest realism cost evidence
 - historical full archive:
@@ -24,6 +24,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-29
+- Opened `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`.
+- Phase 9 focuses on cost / slippage / turnover / liquidity / capacity realism in Backtest Realism and selected-route decisions.
+- Next task is `cost-model-source-contract-review-v1`; start by mapping current cost metadata source and proof gaps before runtime changes.
 - Completed `.aiworkspace/note/finance/tasks/active/phase8-integrated-qa-closeout/`.
 - Phase 8 is closeout complete; summary added at `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`.
 - Integrated verification passed: lifecycle path compile check, full `tests.test_service_contracts` 79 tests, and `git diff --check`.

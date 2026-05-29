@@ -12,16 +12,28 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Active Pointers
 
+- current phase board:
+  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/active/phase9-cost-slippage-liquidity-realism/PLAN.md)
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
-- next phase candidate:
-  - Phase 9 cost / slippage / turnover / liquidity realism
 - current candidate summary:
   - no active strategy-search candidate summary in `main-dev`; next work is hardening backtest realism cost evidence
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 9 opens for cost / liquidity realism
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 8 closeout 이후 1차 hardening cycle의 다음 단계인 cost / slippage / turnover / liquidity realism을 공식 phase로 연다.
+- Analysis result:
+  - Phase 9 board를 `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`에 생성했다.
+  - 현재 Backtest Realism Audit은 cost / turnover / liquidity row를 갖고 있으나, cost assumption과 net-curve-applied proof를 더 분리해야 한다.
+  - Phase 9는 새 JSONL / memo / preset 저장이 아니라 existing metadata, DB provider / price snapshot, compact audit evidence를 우선 사용한다.
+- Follow-up:
+  - 다음 task는 `cost-model-source-contract-review-v1`로 current runtime / validation / audit cost source contract를 먼저 정리한다.
 
 ### 2026-05-29 - Phase 8 lifecycle evidence hardening closes
 - User request:
