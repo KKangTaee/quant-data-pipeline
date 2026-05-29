@@ -5,3 +5,5 @@
 - `standard` profile includes S&P 500, Top1000, Top2000 intraday snapshots plus S&P 500 universe, FOMC, macro, and earnings refresh.
 - `safe` profile excludes Top1000 / Top2000 intraday jobs for lower provider pressure.
 - Event jobs are DB-writing ingestion jobs, not UI scraping. BLS `.ics` manual import remains outside automatic refresh.
+- Data Health now separates scheduled vs manual run history through `run_metadata.execution_mode`.
+- Quote gap issue persistence is intentionally an operating history, not a delisting / trading halt fact table.

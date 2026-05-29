@@ -351,6 +351,38 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           KEY ix_event_source (source)
         );
     """,
+    "market_data_issue": """
+        CREATE TABLE IF NOT EXISTS market_data_issue (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          issue_key CHAR(64) NOT NULL,
+          issue_type VARCHAR(64) NOT NULL,
+          universe_code VARCHAR(32) NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          interval_code VARCHAR(10) NULL,
+
+          diagnosis VARCHAR(64) NOT NULL,
+          latest_status VARCHAR(32) NOT NULL DEFAULT 'active',
+          occurrence_count INT NOT NULL DEFAULT 1,
+
+          first_seen_at TIMESTAMP NULL,
+          last_seen_at TIMESTAMP NULL,
+          last_snapshot_time_utc DATETIME NULL,
+
+          latest_confidence DOUBLE NULL,
+          latest_evidence TEXT NULL,
+          latest_recommended_action TEXT NULL,
+          raw_payload_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_market_data_issue_key (issue_key),
+          KEY ix_issue_symbol (symbol, issue_type),
+          KEY ix_issue_universe_status (universe_code, latest_status),
+          KEY ix_issue_last_seen (last_seen_at)
+        );
+    """,
 }
 
 

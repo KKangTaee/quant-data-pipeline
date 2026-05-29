@@ -25,6 +25,7 @@ from finance.data.market_intelligence import (
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
     diagnose_market_quote_gaps,
+    persist_quote_gap_diagnostics,
 )
 
 
@@ -1092,6 +1093,14 @@ def run_diagnose_market_quote_gaps(
         )
         diagnostics = list(result.get("diagnostics") or [])
         counts = dict(result.get("diagnosis_counts") or {})
+        issue_persistence: dict[str, Any] = {"rows_written": 0, "issues": []}
+        if diagnostics:
+            issue_persistence = persist_quote_gap_diagnostics(
+                diagnostics,
+                universe_code=universe_code,
+                interval_code=interval_code,
+                snapshot_time_utc=snapshot_time_utc,
+            )
         finished_at = _now_str()
         status = "success" if diagnostics else "failed"
         message = (
@@ -1101,6 +1110,8 @@ def run_diagnose_market_quote_gaps(
         )
         if counts:
             message += " " + ", ".join(f"{key}: {value}" for key, value in counts.items()) + "."
+        if issue_persistence.get("rows_written"):
+            message += f" Persisted {issue_persistence['rows_written']} issue row(s)."
         return _build_result(
             job_name=job_name,
             status=status,
@@ -1112,7 +1123,12 @@ def run_diagnose_market_quote_gaps(
             symbols_processed=len(diagnostics),
             failed_symbols=invalid_symbols,
             message=message,
-            details={**result, "invalid_symbols": invalid_symbols},
+            details={
+                **result,
+                "invalid_symbols": invalid_symbols,
+                "issue_rows_written": issue_persistence.get("rows_written") or 0,
+                "issue_history": issue_persistence.get("issues") or [],
+            },
         )
     except Exception as exc:
         finished_at = _now_str()

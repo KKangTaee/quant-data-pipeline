@@ -195,6 +195,12 @@ def sync_market_intelligence_tables(
             MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
             DB_META,
         )
+        sync_table_schema(
+            meta_db,
+            "market_data_issue",
+            MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"],
+            DB_META,
+        )
         price_db.use_db(DB_PRICE)
         sync_table_schema(
             price_db,
@@ -2518,6 +2524,202 @@ def diagnose_market_quote_gaps(
         "symbols_processed": len(diagnostics),
         "diagnosis_counts": dict(counts),
         "diagnostics": diagnostics,
+    }
+
+
+def _market_data_issue_key(*, universe_code: str, symbol: str, issue_type: str) -> str:
+    parts = [
+        str(universe_code or "").strip().upper(),
+        _normalize_symbol(symbol),
+        str(issue_type or "").strip().lower(),
+    ]
+    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
+
+
+def build_quote_gap_issue_rows(
+    diagnostics: Sequence[dict[str, Any]],
+    *,
+    universe_code: str,
+    interval_code: str = DEFAULT_INTRADAY_INTERVAL,
+    snapshot_time_utc: str | None = None,
+    seen_at: str | None = None,
+) -> list[dict[str, Any]]:
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    normalized_interval = str(interval_code or DEFAULT_INTRADAY_INTERVAL).strip()
+    collected_at = seen_at or _timestamp_str()
+    rows: list[dict[str, Any]] = []
+    for item in diagnostics:
+        symbol = _normalize_symbol(item.get("Symbol") or item.get("symbol"))
+        diagnosis = str(item.get("Diagnosis") or item.get("diagnosis") or "").strip()
+        if not symbol or not diagnosis:
+            continue
+        issue_type = "quote_gap"
+        issue_key = _market_data_issue_key(
+            universe_code=normalized_universe,
+            symbol=symbol,
+            issue_type=issue_type,
+        )
+        rows.append(
+            {
+                "issue_key": issue_key,
+                "issue_type": issue_type,
+                "universe_code": normalized_universe,
+                "symbol": symbol,
+                "interval_code": normalized_interval,
+                "diagnosis": diagnosis,
+                "latest_status": "active",
+                "occurrence_count": 1,
+                "first_seen_at": collected_at,
+                "last_seen_at": collected_at,
+                "last_snapshot_time_utc": snapshot_time_utc,
+                "latest_confidence": _safe_float(item.get("Confidence") or item.get("confidence")),
+                "latest_evidence": item.get("Evidence Summary") or item.get("evidence_summary"),
+                "latest_recommended_action": item.get("Recommended Action") or item.get("recommended_action"),
+                "raw_payload_json": _json_payload(item),
+            }
+        )
+    return rows
+
+
+def upsert_market_data_issue_rows(
+    rows: Sequence[dict[str, Any]],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized_rows = [dict(row) for row in rows if row.get("issue_key")]
+    if not normalized_rows:
+        return 0
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_data_issue",
+            MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"],
+            DB_META,
+        )
+        sql = """
+        INSERT INTO market_data_issue (
+          issue_key, issue_type, universe_code, symbol, interval_code,
+          diagnosis, latest_status, occurrence_count,
+          first_seen_at, last_seen_at, last_snapshot_time_utc,
+          latest_confidence, latest_evidence, latest_recommended_action, raw_payload_json
+        ) VALUES (
+          %(issue_key)s, %(issue_type)s, %(universe_code)s, %(symbol)s, %(interval_code)s,
+          %(diagnosis)s, %(latest_status)s, %(occurrence_count)s,
+          %(first_seen_at)s, %(last_seen_at)s, %(last_snapshot_time_utc)s,
+          %(latest_confidence)s, %(latest_evidence)s, %(latest_recommended_action)s, %(raw_payload_json)s
+        )
+        ON DUPLICATE KEY UPDATE
+          universe_code = VALUES(universe_code),
+          symbol = VALUES(symbol),
+          interval_code = VALUES(interval_code),
+          diagnosis = VALUES(diagnosis),
+          latest_status = VALUES(latest_status),
+          occurrence_count = occurrence_count + 1,
+          last_seen_at = VALUES(last_seen_at),
+          last_snapshot_time_utc = VALUES(last_snapshot_time_utc),
+          latest_confidence = VALUES(latest_confidence),
+          latest_evidence = VALUES(latest_evidence),
+          latest_recommended_action = VALUES(latest_recommended_action),
+          raw_payload_json = VALUES(raw_payload_json)
+        """
+        db.executemany(sql, normalized_rows)
+        return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def load_market_data_issues(
+    *,
+    universe_code: str | None = None,
+    symbols: Sequence[Any] | None = None,
+    issue_type: str = "quote_gap",
+    limit: int = 100,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    clauses = ["issue_type = %s"]
+    params: list[Any] = [str(issue_type or "quote_gap").strip().lower()]
+    normalized_universe = str(universe_code or "").strip().upper()
+    if normalized_universe:
+        clauses.append("universe_code = %s")
+        params.append(normalized_universe)
+    normalized_symbols = _normalize_symbol_list(symbols, max_symbols=500) if symbols else []
+    if normalized_symbols:
+        placeholders = ",".join(["%s"] * len(normalized_symbols))
+        clauses.append(f"symbol IN ({placeholders})")
+        params.extend(normalized_symbols)
+    params.append(max(1, int(limit or 100)))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_data_issue",
+            MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"],
+            DB_META,
+        )
+        return db.query(
+            f"""
+            SELECT
+              universe_code, symbol, issue_type, diagnosis, latest_status,
+              occurrence_count, first_seen_at, last_seen_at, last_snapshot_time_utc,
+              latest_confidence, latest_evidence, latest_recommended_action
+            FROM market_data_issue
+            WHERE {" AND ".join(clauses)}
+            ORDER BY last_seen_at DESC, occurrence_count DESC, symbol ASC
+            LIMIT %s
+            """,
+            params,
+        )
+    finally:
+        db.close()
+
+
+def persist_quote_gap_diagnostics(
+    diagnostics: Sequence[dict[str, Any]],
+    *,
+    universe_code: str,
+    interval_code: str = DEFAULT_INTRADAY_INTERVAL,
+    snapshot_time_utc: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    issue_rows = build_quote_gap_issue_rows(
+        diagnostics,
+        universe_code=universe_code,
+        interval_code=interval_code,
+        snapshot_time_utc=snapshot_time_utc,
+    )
+    rows_written = upsert_market_data_issue_rows(
+        issue_rows,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    symbols = [row["symbol"] for row in issue_rows]
+    history = load_market_data_issues(
+        universe_code=universe_code,
+        symbols=symbols,
+        issue_type="quote_gap",
+        limit=max(len(symbols), 1),
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    return {
+        "rows_written": rows_written,
+        "issues": history,
     }
 
 

@@ -75,6 +75,7 @@ yfinance 5m OHLCV fallback
 missing quote rows
   -> finance.data.market_intelligence.diagnose_market_quote_gaps()
   -> app.jobs.ingestion_jobs.run_diagnose_market_quote_gaps()
+  -> finance_meta.market_data_issue
   -> Workspace > Overview > Market Movers > Coverage Diagnostics
 ```
 
@@ -84,7 +85,8 @@ missing quote rows
 - `market_intraday_snapshot`은 daily movers에서 전일 종가 대비 최신 quote / intraday 가격을 빠르게 읽기 위한 coverage별 snapshot이다.
 - 기본 refresh path는 Yahoo quote batch이며, S&P 500은 quote path 실패 시 기존 yfinance 5m OHLCV download로 fallback할 수 있다.
 - Top1000 / Top2000 daily movers도 저장된 quote snapshot을 우선 읽는다. 해당 universe는 `nyse_asset_profile.market_cap` current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
-- Missing quote diagnostics는 별도 fact table을 만들지 않는 1차 운영 진단이다. Yahoo single-symbol quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance `fast_info` evidence를 비교해 `provider_quote_gap` 같은 원인 후보를 job result로 표시한다.
+- Missing quote diagnostics는 Yahoo single-symbol quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance `fast_info` evidence를 비교해 `provider_quote_gap` 같은 원인 후보를 job result로 표시한다.
+- 진단 결과는 `market_data_issue`에 `issue_type=quote_gap`으로 누적 저장한다. 이는 반복 발생 횟수와 최신 evidence를 추적하기 위한 운영 table이며, 상장폐지 / 거래정지 확정 판정은 아니다.
 
 ## Overview market event calendar 흐름
 

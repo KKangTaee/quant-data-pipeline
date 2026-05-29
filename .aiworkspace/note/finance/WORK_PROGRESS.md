@@ -4085,4 +4085,5 @@ Detailed historical logs were archived on `2026-04-13`.
 - Overview scheduled refresh automation:
   - `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`에서 브라우저 없이 Overview ingestion job을 실행하는 1차 자동화 task를 열었다.
   - `app/jobs/overview_automation.py`는 profile별 cadence, US market-hours guard, lock, dry-run, scheduled run history metadata를 처리하는 run-once CLI다.
-  - cron / launchd / 외부 automation 연결은 다음 단계에서 이 CLI를 주기 호출하는 방식으로 붙일 수 있다.
+  - Data Health는 scheduled / manual run, next scheduled run, failure streak를 표시하고, quote gap 진단은 `market_data_issue`에 반복 issue로 누적된다.
+  - cron / launchd / 외부 automation 실제 등록은 다음 단계에서 이 CLI를 주기 호출하는 방식으로 붙일 수 있다.

@@ -22,5 +22,7 @@ Overview Market Intelligence는 Market Movers, Sector / Industry, Events, Data H
 1. Overview scheduled refresh orchestrator 추가.
 2. dry-run / force / profile / job filter CLI 옵션 추가.
 3. lock / cadence / scheduled metadata service contract test 추가.
-4. Overview runbook과 automation script guide 갱신.
-5. focused QA와 full service contract test 실행.
+4. Data Health에 scheduled / manual / next scheduled / failure streak 운영 컬럼을 추가한다.
+5. Quote gap 진단 결과를 반복 issue table에 누적하고 Coverage Diagnostics에서 history를 보여준다.
+6. Overview runbook과 automation script guide 갱신.
+7. focused QA와 full service contract test 실행.

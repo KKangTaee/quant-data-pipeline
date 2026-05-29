@@ -597,6 +597,28 @@ def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str)
             if column in rows[0]
         ]
         st.dataframe(pd.DataFrame(rows)[display_columns], width="stretch", hide_index=True)
+    issue_history = list(details.get("issue_history") or [])
+    if issue_history:
+        st.caption(
+            "Persistent issue history: "
+            f"{details.get('issue_rows_written') or 0} row(s) updated in market_data_issue."
+        )
+        issue_frame = pd.DataFrame(issue_history)
+        rename_map = {
+            "universe_code": "Universe",
+            "symbol": "Symbol",
+            "diagnosis": "Latest Diagnosis",
+            "latest_status": "Status",
+            "occurrence_count": "Occurrences",
+            "first_seen_at": "First Seen",
+            "last_seen_at": "Last Seen",
+            "last_snapshot_time_utc": "Last Snapshot",
+            "latest_confidence": "Confidence",
+            "latest_recommended_action": "Recommended Action",
+        }
+        issue_frame = issue_frame.rename(columns=rename_map)
+        issue_columns = [column for column in rename_map.values() if column in issue_frame]
+        st.dataframe(issue_frame[issue_columns], width="stretch", hide_index=True)
 
 
 def _render_missing_diagnostics(snapshot: dict[str, Any], *, universe_code: str, period: str) -> None:
@@ -1982,10 +2004,22 @@ def _render_collection_ops_tab() -> None:
                 "tone": "positive" if coverage.get("latest_success_at") else "neutral",
             },
             {
+                "title": "Latest Scheduled",
+                "value": _snapshot_value(coverage.get("latest_scheduled_at")),
+                "detail": "from automation runs",
+                "tone": "positive" if coverage.get("latest_scheduled_at") else "neutral",
+            },
+            {
                 "title": "Latest Issue",
                 "value": _snapshot_value(coverage.get("latest_issue_at")),
                 "detail": "failed or partial run",
                 "tone": "danger" if coverage.get("latest_issue_at") else "neutral",
+            },
+            {
+                "title": "Failure Streak",
+                "value": coverage.get("max_failure_streak") or 0,
+                "detail": "max consecutive issues",
+                "tone": "danger" if int(coverage.get("max_failure_streak") or 0) else "positive",
             },
         ]
     )

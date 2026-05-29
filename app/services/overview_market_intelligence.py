@@ -120,6 +120,10 @@ OPS_COLUMNS = [
     "Data Freshness",
     "Last Success",
     "Last Issue",
+    "Last Scheduled Run",
+    "Next Scheduled Run",
+    "Last Manual Run",
+    "Failure Streak",
     "Rows",
     "Processed",
     "Failed",
@@ -180,6 +184,15 @@ OPS_EVENT_TARGETS = [
         "due_action": "Refresh Macro Calendar from official schedules or import the BLS .ics file.",
     },
 ]
+OPS_SCHEDULE_CADENCE_MINUTES = {
+    "collect_sp500_universe": 24 * 60,
+    "collect_sp500_intraday_snapshot": 5,
+    "collect_top1000_intraday_snapshot": 15,
+    "collect_top2000_intraday_snapshot": 30,
+    "collect_fomc_calendar": 24 * 60,
+    "collect_earnings_calendar": 24 * 60,
+    "collect_macro_calendar": 24 * 60,
+}
 
 
 def _default_query(db_name: str, sql: str, params: Sequence[Any] | None = None) -> list[dict[str, Any]]:
@@ -1628,6 +1641,80 @@ def _latest_history_item_with_status(
     return max(matched, key=lambda row: _timestamp_sort_value(row.get("finished_at") or row.get("started_at")))
 
 
+def _history_execution_mode(row: dict[str, Any]) -> str:
+    metadata = row.get("run_metadata")
+    if isinstance(metadata, dict):
+        mode = str(metadata.get("execution_mode") or "").strip().lower()
+        if mode:
+            return mode
+    return str(row.get("execution_mode") or "").strip().lower() or "manual"
+
+
+def _latest_history_item_with_mode(
+    history_rows: Sequence[dict[str, Any]],
+    job_names: Sequence[str],
+    execution_mode: str,
+) -> dict[str, Any] | None:
+    job_name_set = set(job_names)
+    normalized_mode = str(execution_mode or "").strip().lower()
+    matched = [
+        row
+        for row in history_rows
+        if str(row.get("job_name") or "") in job_name_set
+        and _history_execution_mode(row) == normalized_mode
+    ]
+    if not matched:
+        return None
+    return max(matched, key=lambda row: _timestamp_sort_value(row.get("finished_at") or row.get("started_at")))
+
+
+def _failure_streak(history_rows: Sequence[dict[str, Any]], job_names: Sequence[str]) -> int:
+    job_name_set = set(job_names)
+    matched = [
+        row for row in history_rows
+        if str(row.get("job_name") or "") in job_name_set
+    ]
+    matched = sorted(
+        matched,
+        key=lambda row: _timestamp_sort_value(row.get("finished_at") or row.get("started_at")),
+        reverse=True,
+    )
+    streak = 0
+    for row in matched:
+        status = str(row.get("status") or "").lower()
+        if status == "success":
+            break
+        if status in {"failed", "partial_success"}:
+            streak += 1
+            continue
+        break
+    return streak
+
+
+def _next_scheduled_run_text(
+    latest_scheduled: dict[str, Any] | None,
+    job_names: Sequence[str],
+) -> str:
+    cadence_values = [
+        OPS_SCHEDULE_CADENCE_MINUTES[job_name]
+        for job_name in job_names
+        if job_name in OPS_SCHEDULE_CADENCE_MINUTES
+    ]
+    if not cadence_values:
+        return "-"
+    cadence_minutes = min(cadence_values)
+    if latest_scheduled is None:
+        return "Due now"
+    raw_time = latest_scheduled.get("finished_at") or latest_scheduled.get("started_at")
+    if raw_time in (None, ""):
+        return "Due now"
+    ts = pd.Timestamp(raw_time)
+    if pd.isna(ts):
+        return "Due now"
+    next_time = ts + pd.Timedelta(minutes=cadence_minutes)
+    return _display_datetime(next_time) or "Due now"
+
+
 def _history_status_overlay(
     base_status: str,
     *,
@@ -1651,6 +1738,10 @@ def _history_metrics(
     *,
     latest_run: dict[str, Any] | None,
     latest_success: dict[str, Any] | None,
+    latest_scheduled: dict[str, Any] | None,
+    latest_manual: dict[str, Any] | None,
+    job_names: Sequence[str],
+    failure_streak: int,
 ) -> dict[str, Any]:
     source = latest_run or latest_success or {}
     failed_symbols = source.get("failed_symbols") or []
@@ -1661,6 +1752,10 @@ def _history_metrics(
         "Last Issue": _display_run_time(source.get("finished_at") or source.get("started_at"))
         if str(source.get("status") or "").lower() in {"failed", "partial_success"}
         else "-",
+        "Last Scheduled Run": _display_run_time((latest_scheduled or {}).get("finished_at") or (latest_scheduled or {}).get("started_at")),
+        "Next Scheduled Run": _next_scheduled_run_text(latest_scheduled, job_names),
+        "Last Manual Run": _display_run_time((latest_manual or {}).get("finished_at") or (latest_manual or {}).get("started_at")),
+        "Failure Streak": failure_streak,
         "Rows": source.get("rows_written") if source else None,
         "Processed": source.get("symbols_processed") if source else None,
         "Failed": len(failed_symbols),
@@ -1832,8 +1927,18 @@ def _ops_row(
 ) -> dict[str, Any]:
     latest_run = _latest_history_item(history_rows, job_names)
     latest_success = _latest_history_item_with_status(history_rows, job_names, {"success"})
+    latest_scheduled = _latest_history_item_with_mode(history_rows, job_names, "scheduled")
+    latest_manual = _latest_history_item_with_mode(history_rows, job_names, "manual")
+    failure_streak = _failure_streak(history_rows, job_names)
     status = _history_status_overlay(base_status, latest_run=latest_run, latest_success=latest_success)
-    metrics = _history_metrics(latest_run=latest_run, latest_success=latest_success)
+    metrics = _history_metrics(
+        latest_run=latest_run,
+        latest_success=latest_success,
+        latest_scheduled=latest_scheduled,
+        latest_manual=latest_manual,
+        job_names=job_names,
+        failure_streak=failure_streak,
+    )
     if status == "OK":
         action = "No action needed."
     elif status == "Failed":
@@ -1855,6 +1960,14 @@ def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
     statuses = [str(row.get("Status") or "") for row in rows]
     success_times = [row.get("Last Success") for row in rows if row.get("Last Success") not in (None, "-")]
     issue_times = [row.get("Last Issue") for row in rows if row.get("Last Issue") not in (None, "-")]
+    scheduled_times = [
+        row.get("Last Scheduled Run") for row in rows
+        if row.get("Last Scheduled Run") not in (None, "-")
+    ]
+    failure_streaks = [
+        int(row.get("Failure Streak") or 0) for row in rows
+        if str(row.get("Failure Streak") or "").isdigit() or isinstance(row.get("Failure Streak"), int)
+    ]
     return {
         "job_count": len(rows),
         "ok_count": statuses.count("OK"),
@@ -1865,6 +1978,8 @@ def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "partial_count": statuses.count("Partial"),
         "latest_success_at": max(success_times) if success_times else None,
         "latest_issue_at": max(issue_times) if issue_times else None,
+        "latest_scheduled_at": max(scheduled_times) if scheduled_times else None,
+        "max_failure_streak": max(failure_streaks) if failure_streaks else 0,
     }
 
 

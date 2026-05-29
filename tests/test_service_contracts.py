@@ -1131,6 +1131,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "message": "S&P 500 universe collection completed.",
                 },
                 {
+                    "job_name": "collect_sp500_universe",
+                    "status": "success",
+                    "finished_at": "2026-05-28 01:05:00",
+                    "rows_written": 503,
+                    "symbols_processed": 503,
+                    "failed_symbols": [],
+                    "duration_sec": 1.1,
+                    "message": "S&P 500 universe scheduled collection completed.",
+                    "run_metadata": {"execution_mode": "scheduled"},
+                },
+                {
                     "job_name": "collect_earnings_calendar",
                     "status": "partial_success",
                     "finished_at": "2026-05-28 03:01:00",
@@ -1149,9 +1160,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         universe_row = rows[rows["Area"] == "S&P 500 Universe"].iloc[0]
         self.assertEqual(universe_row["Status"], "OK")
         self.assertEqual(universe_row["Rows"], 503)
+        self.assertEqual(universe_row["Last Scheduled Run"], "2026-05-28 01:05")
+        self.assertEqual(universe_row["Last Manual Run"], "2026-05-28 01:01")
+        self.assertEqual(universe_row["Next Scheduled Run"], "2026-05-29 01:05")
         earnings_row = rows[rows["Area"] == "Earnings Calendar"].iloc[0]
         self.assertEqual(earnings_row["Status"], "Partial")
         self.assertEqual(earnings_row["Failed"], 1)
+        self.assertEqual(earnings_row["Failure Streak"], 1)
         self.assertIn("Inspect failed symbols", earnings_row["Next Action"])
 
     def test_collection_ops_snapshot_supports_legacy_event_calendar_schema(self) -> None:
@@ -1404,6 +1419,75 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(row["History Status"], "ok")
         self.assertEqual(row["DB Price Status"], "ok")
 
+    def test_quote_gap_diagnostics_build_persistent_issue_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.build_quote_gap_issue_rows(
+            [
+                {
+                    "Symbol": "bbb",
+                    "Diagnosis": "provider_quote_gap",
+                    "Confidence": 0.82,
+                    "Evidence Summary": "Alternate price evidence exists.",
+                    "Recommended Action": "Rerun later.",
+                }
+            ],
+            universe_code="top1000",
+            interval_code="5m",
+            snapshot_time_utc="2026-05-29 13:30:00",
+            seen_at="2026-05-29 13:31:00",
+        )
+
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["issue_type"], "quote_gap")
+        self.assertEqual(row["universe_code"], "TOP1000")
+        self.assertEqual(row["symbol"], "BBB")
+        self.assertEqual(row["diagnosis"], "provider_quote_gap")
+        self.assertEqual(row["last_snapshot_time_utc"], "2026-05-29 13:30:00")
+        self.assertIn("provider_quote_gap", row["raw_payload_json"])
+
+    def test_quote_gap_job_persists_issue_history(self) -> None:
+        from app.jobs import ingestion_jobs
+
+        diagnosis = {
+            "universe_code": "TOP1000",
+            "interval_code": "5m",
+            "snapshot_time_utc": "2026-05-29 13:30:00",
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "diagnosis_counts": {"provider_quote_gap": 1},
+            "diagnostics": [{"Symbol": "BBB", "Diagnosis": "provider_quote_gap"}],
+        }
+        issue_history = [
+            {
+                "universe_code": "TOP1000",
+                "symbol": "BBB",
+                "diagnosis": "provider_quote_gap",
+                "occurrence_count": 3,
+            }
+        ]
+
+        with (
+            patch.object(ingestion_jobs, "diagnose_market_quote_gaps", return_value=diagnosis),
+            patch.object(
+                ingestion_jobs,
+                "persist_quote_gap_diagnostics",
+                return_value={"rows_written": 1, "issues": issue_history},
+            ) as persist,
+        ):
+            result = ingestion_jobs.run_diagnose_market_quote_gaps(
+                symbols=["BBB"],
+                universe_code="TOP1000",
+                snapshot_time_utc="2026-05-29 13:30:00",
+            )
+
+        persist.assert_called_once()
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["issue_rows_written"], 1)
+        self.assertEqual(result["details"]["issue_history"][0]["occurrence_count"], 3)
+        self.assertIn("Persisted 1 issue row", result["message"])
+
 
 class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
     def test_market_event_schema_contains_required_columns(self) -> None:
@@ -1429,6 +1513,27 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         ]:
             self.assertIn(column, schema_sql)
         self.assertIn("UNIQUE KEY uk_market_event_key", schema_sql)
+
+    def test_market_data_issue_schema_tracks_repeated_quote_gaps(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"]
+
+        for column in [
+            "issue_key",
+            "issue_type",
+            "universe_code",
+            "symbol",
+            "diagnosis",
+            "occurrence_count",
+            "first_seen_at",
+            "last_seen_at",
+            "latest_confidence",
+            "latest_recommended_action",
+            "raw_payload_json",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_market_data_issue_key", schema_sql)
 
     def test_fomc_calendar_parser_uses_final_meeting_day_and_official_links(self) -> None:
         from finance.data import market_intelligence as mi
@@ -1986,6 +2091,7 @@ END:VCALENDAR
         synced_tables = [call.args[1] for call in sync_schema.call_args_list]
         self.assertIn("market_universe_member", synced_tables)
         self.assertIn("market_event_calendar", synced_tables)
+        self.assertIn("market_data_issue", synced_tables)
         self.assertIn("market_intraday_snapshot", synced_tables)
 
 
