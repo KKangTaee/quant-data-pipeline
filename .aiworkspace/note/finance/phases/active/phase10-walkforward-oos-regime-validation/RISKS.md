@@ -13,9 +13,10 @@ Created: 2026-05-29
 | Benchmark parity is weak | strategy / benchmark 비교가 같은 기간을 보지 않을 수 있음 | split contract에 benchmark coverage와 aligned period 포함 |
 | Storage sprawl returns | 의미 없는 JSONL / memo / preset 저장이 늘어남 | compact evidence read model 우선, raw data는 DB boundary로 제한 |
 | User confuses selected-route with live trading approval | 검증 화면이 주문 승인처럼 보일 수 있음 | Final Review / Selected Dashboard는 live approval, order, rebalance가 아님을 유지 |
+| Proxy-only walk-forward evidence is over-trusted | DB price proxy can differ from actual strategy path | Carry curve source strength and avoid proxy-only PASS |
+| Runtime OOS metadata diverges from Practical Validation audit | Same candidate can show different temporal review semantics | Build a service-level compact temporal validation contract and reuse it |
 
 ## Residual Unknowns For 10-1
 
 - 현재 result bundle curve가 모든 후보 유형에서 enough monthly / daily returns를 제공하는지 확인이 필요하다.
-- Existing Robustness Lab rolling evidence를 walk-forward evidence로 재사용할 수 있는지 확인이 필요하다.
 - Macro regime bucket을 현재 loader만으로 만들 수 있는지, 추가 free API / public source가 필요한지 확인이 필요하다.

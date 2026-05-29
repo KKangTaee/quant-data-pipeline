@@ -10,17 +10,20 @@ Phase 10 board is open.
 Completed:
 
 - 10-0 `phase10-board-open`
+- 10-1 `walkforward-oos-source-map-v1`
 - Phase scope, task split, storage boundary, immediate next task 정리
-- Roadmap / root handoff log sync planned in the same board-open task
+- Current Practical Validation / Robustness Lab / runtime replay / Final Review gate source map and gap audit
 
 Next:
 
-- 10-1 `walkforward-oos-source-map-v1`
+- 10-2 `walkforward-split-contract-v1`
 
 ## Latest Decision
 
 Phase 10은 신규 저장 기능을 먼저 만들지 않는다.
-먼저 현재 Practical Validation / Robustness Lab / Validation Efficacy / Final Review source map을 확인하고, 기존 DB / loader / result bundle / compact evidence로 만들 수 있는 walk-forward / OOS / regime read model을 설계한다.
+10-1 source map 결과, 기존 curve / benchmark / replay / runtime metadata를 재사용할 수 있다.
+다음 구현은 OOS와 regime split을 한 번에 넣지 않고, benchmark-aligned walk-forward / rolling temporal validation contract부터 만든다.
+proxy-only, short-history, missing-benchmark evidence는 `PASS`로 처리하지 않는다.
 
 ## Storage Boundary Reminder
 

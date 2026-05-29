@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `walkforward-oos-source-map-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `walkforward-split-contract-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 10 source map chooses walk-forward contract first
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 첫 task로 current Practical Validation / Robustness Lab / runtime replay / Final Review gate source map과 gap을 확인한다.
+- Analysis result:
+  - Practical Validation에는 runtime replay, embedded source curve, component curve, DB price proxy를 읽는 curve source hierarchy가 이미 있다.
+  - Runtime backtest에는 benchmark-aligned rolling / OOS metadata가 있지만, Validation Efficacy Audit과 Final Review gate에 explicit temporal validation row로 연결되지는 않았다.
+  - Robustness Lab rolling evidence는 존재하지만 benchmark-relative rolling excess row가 부족하다.
+- Follow-up:
+  - 다음 task는 `walkforward-split-contract-v1`로 compact benchmark-aligned walk-forward / rolling validation contract를 먼저 구현한다.
 
 ### 2026-05-29 - Phase 10 opens for walk-forward / OOS / regime validation
 - User request:

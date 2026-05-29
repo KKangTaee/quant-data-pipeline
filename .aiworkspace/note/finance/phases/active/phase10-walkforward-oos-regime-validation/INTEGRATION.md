@@ -16,6 +16,7 @@ Created: 2026-05-29
 
 Implementation tasks may touch the following files after 10-1 confirms scope.
 
+- `app/services/backtest_temporal_validation.py` or an equivalent focused service helper
 - `app/services/backtest_practical_validation_stress_sensitivity.py`
 - `app/services/backtest_validation_efficacy.py`
 - `app/services/backtest_evidence_read_model.py`
@@ -23,6 +24,8 @@ Implementation tasks may touch the following files after 10-1 confirms scope.
 - `app/web/backtest_final_review.py`
 - `tests/test_service_contracts.py`
 - DB / macro loader files only if regime source requires loader-backed evidence
+
+10-1 confirmed that 10-2 should start with service-level temporal validation rather than UI-first changes.
 
 ## QA Gates
 
