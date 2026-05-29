@@ -9,3 +9,7 @@
 - `uv run python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/overview_dashboard_helpers.py` - pass after UI chart additions.
 - DB smoke: `SP500 monthly` returned 10 ranking rows / 120 trend rows / 190 ticker leader rows with `trend_window_label=Last 1Y`.
 - Browser smoke: restarted Streamlit on `http://localhost:8501`; Overview > Sector / Industry shows Trend Groups multiselect and Positive Group Detail bar/donut charts. Current page console errors: 0.
+- `uv run python -m unittest tests.test_service_contracts` - 56 tests pass after adding daily intraday group leadership.
+- `uv run python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/overview_dashboard_helpers.py` - pass after daily intraday group leadership.
+- DB smoke: `SP500 sector daily` returned `price_mode=Intraday Snapshot`, `snapshot_time_utc=2026-05-29 00:32`, 503 returnable rows, 10 group rows, 640 trend rows, and 150 ticker leader rows.
+- Browser smoke: restarted Streamlit and verified Overview > Sector / Industry > Daily shows `Effective Price Time=2026-05-29 00:32`, `Price Mode=Intraday Snapshot`, and `Return Window: Previous Close -> 2026-05-29 00:32`; console errors 0.

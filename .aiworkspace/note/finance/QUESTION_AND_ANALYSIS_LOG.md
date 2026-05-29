@@ -5532,3 +5532,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Streamlit chart click interaction보다 `Trend Groups` multiselect와 `Positive Group` selectbox가 더 안정적인 UX다
 - Follow-up:
   - trend horizon 확장, line filter, ticker leader bar / return-share donut을 추가했다. Positive Return Share는 cap-weighted attribution이 아니라 양수 ticker return share로 정의했다
+
+### 2026-05-29 - Sector / Industry Daily가 Market Movers refresh를 반영해야 한다
+- User request:
+  - 사용자가 Market Movers daily를 최신화했는데 Sector / Industry의 산업 Top N 티커가 2026-05-27 기준으로 보이는 이유를 묻고 개선 진행을 요청함
+- Interpreted goal:
+  - Daily leadership과 티커 리더는 Market Movers refresh 결과인 intraday snapshot을 공유해야 하며, Weekly / Monthly EOD 기준과 UI에서 구분되어야 함
+- Analysis result:
+  - 기존 Sector / Industry는 `nyse_price_history` EOD만 읽어서 `2026-05-28` sparse row를 버리고 `2026-05-27`을 effective date로 선택했다
+  - `market_intraday_snapshot`에는 S&P 500 / Top1000 / Top2000 previous-close snapshot이 이미 있으므로 Daily에만 우선 적용하면 된다
+- Follow-up:
+  - Daily group leadership은 intraday snapshot을 우선 사용하고 fallback으로 EOD DB를 유지한다. UI에 Return Window / Price Mode를 표시했다

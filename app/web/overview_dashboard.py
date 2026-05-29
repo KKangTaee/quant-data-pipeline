@@ -1114,6 +1114,12 @@ def _render_sector_industry_tab() -> None:
     )
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
+    coverage = dict(snapshot.get("coverage") or {})
+    date_window = dict(snapshot.get("date_window") or {})
+    price_mode = coverage.get("price_mode") or "EOD DB"
+    start_value = date_window.get("start_date") or "-"
+    end_value = coverage.get("snapshot_time_utc") or date_window.get("effective_end_date") or date_window.get("end_date") or "-"
+    st.caption(f"Return Window: {start_value} -> {end_value} · Price Mode: {price_mode}")
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:

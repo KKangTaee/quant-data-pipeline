@@ -983,6 +983,31 @@ def _group_trend_rows_frame(
     return pd.DataFrame(trend_rows, columns=GROUP_TREND_COLUMNS)
 
 
+def _group_trend_rows_from_group_rows(
+    *,
+    group_rows: list[dict[str, Any]],
+    groups: set[str],
+    date_value: str,
+) -> pd.DataFrame:
+    trend_rows = [
+        {
+            "Date": date_value,
+            "Group": row["group"],
+            "Group Type": row["group_type"],
+            "Symbols": row["symbols"],
+            "Equal Weight Return %": round(float(row["equal_weight_return"]), 2),
+            "Market Cap Weighted Return %": round(float(row["market_cap_weighted_return"]), 2),
+            "Top Symbol": row["top_symbol"],
+            "Top Symbol Return %": round(float(row["top_symbol_return"]), 2),
+            "Start Date": row["start_date"],
+            "End Date": row["end_date"],
+        }
+        for row in group_rows
+        if row["group"] in groups
+    ]
+    return pd.DataFrame(trend_rows, columns=GROUP_TREND_COLUMNS)
+
+
 def _group_ticker_leader_rows_frame(
     *,
     return_rows: list[dict[str, Any]],
@@ -2032,14 +2057,11 @@ def _load_intraday_snapshot_rows(
         return []
 
 
-def _build_intraday_movers_snapshot(
+def _build_intraday_return_payload(
     *,
     universe: list[dict[str, Any]],
     universe_code: str,
-    universe_limit: int,
     period: str,
-    top_n: int,
-    sector: str | None,
     interval: str,
     query_fn: QueryFn,
 ) -> dict[str, Any] | None:
@@ -2077,13 +2099,14 @@ def _build_intraday_movers_snapshot(
         previous_close = _safe_float(row.get("previous_close"))
         latest_price = _safe_float(row.get("latest_price"))
         return_pct = _safe_float(row.get("return_pct"))
+        quote_time = _display_datetime(row.get("quote_time_utc")) or snapshot_time
         if row.get("provider_status") != "ok" or previous_close is None or latest_price is None or return_pct is None:
             missing_rows.append(
                 _missing_row(
                     item=item,
                     reason=row.get("error_msg") or "missing intraday return",
                     start_date="Previous Close",
-                    end_date=_display_datetime(row.get("quote_time_utc")) or snapshot_time,
+                    end_date=quote_time,
                     start_price=previous_close,
                     end_price=latest_price,
                     latest_price_date=_iso_date(row.get("quote_time_utc")),
@@ -2101,7 +2124,7 @@ def _build_intraday_movers_snapshot(
                 "end_price": latest_price,
                 "return_pct": return_pct,
                 "start_date": "Previous Close",
-                "end_date": _display_datetime(row.get("quote_time_utc")) or snapshot_time,
+                "end_date": quote_time,
                 "price_source": "Yahoo Quote" if row.get("source") == "yahoo_quote" else f"Intraday {interval}",
             }
         )
@@ -2134,6 +2157,39 @@ def _build_intraday_movers_snapshot(
         period=period,
         coverage=coverage,
     )
+    return {
+        "snapshot_time": snapshot_time,
+        "return_rows": return_rows,
+        "missing_rows": missing_rows,
+        "date_window": date_window,
+        "coverage": coverage,
+    }
+
+
+def _build_intraday_movers_snapshot(
+    *,
+    universe: list[dict[str, Any]],
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+    top_n: int,
+    sector: str | None,
+    interval: str,
+    query_fn: QueryFn,
+) -> dict[str, Any] | None:
+    payload = _build_intraday_return_payload(
+        universe=universe,
+        universe_code=universe_code,
+        period=period,
+        interval=interval,
+        query_fn=query_fn,
+    )
+    if payload is None:
+        return None
+    return_rows = list(payload["return_rows"])
+    missing_rows = list(payload["missing_rows"])
+    date_window = dict(payload["date_window"])
+    coverage = dict(payload["coverage"])
     return {
         "status": "OK",
         "period": period,
@@ -2286,6 +2342,107 @@ def build_market_movers_snapshot(
         )
 
 
+def _build_intraday_group_leadership_snapshot(
+    *,
+    universe: list[dict[str, Any]],
+    universe_code: str,
+    universe_limit: int,
+    group_by: str,
+    period: str,
+    top_n: int,
+    min_group_size: int,
+    min_price_rows: int,
+    today: date | None,
+    interval: str,
+    query_fn: QueryFn,
+) -> dict[str, Any] | None:
+    payload = _build_intraday_return_payload(
+        universe=universe,
+        universe_code=universe_code,
+        period=period,
+        interval=interval,
+        query_fn=query_fn,
+    )
+    if payload is None:
+        return None
+
+    date_window = dict(payload["date_window"])
+    return_rows = list(payload["return_rows"])
+    missing_rows = list(payload["missing_rows"])
+    group_rows = _group_leadership_rows(
+        return_rows=return_rows,
+        group_by=group_by,
+        min_group_size=min_group_size,
+        start_date=str(date_window["start_date"]),
+        end_date=str(date_window["end_date"]),
+    )
+    ranked = _rank_group_rows(group_rows, top_n=top_n)
+    top_groups = {str(row["group"]) for row in ranked}
+    positive_groups = {
+        str(row["group"])
+        for row in ranked
+        if float(row.get("market_cap_weighted_return") or 0.0) > 0
+    }
+
+    trend_rows = pd.DataFrame(columns=GROUP_TREND_COLUMNS)
+    trend_warnings: list[str] = []
+    effective_min_rows = min(int(min_price_rows), max(50, int(len(universe) * 0.75)))
+    trend_date_window = resolve_group_trend_market_dates(
+        period=period,
+        min_price_rows=effective_min_rows,
+        today=today,
+        query_fn=query_fn,
+    )
+    if trend_date_window.get("status") == "OK":
+        trend_rows = _group_trend_rows_frame(
+            windows=list(trend_date_window.get("windows") or []),
+            universe=universe,
+            groups=top_groups,
+            group_by=group_by,
+            min_group_size=min_group_size,
+            query_fn=query_fn,
+        )
+    else:
+        trend_warnings.append(
+            str(trend_date_window.get("message") or "Historical daily trend windows are unavailable.")
+        )
+
+    current_trend_rows = _group_trend_rows_from_group_rows(
+        group_rows=group_rows,
+        groups=top_groups,
+        date_value=str(date_window["end_date"]),
+    )
+    if not current_trend_rows.empty:
+        trend_rows = pd.concat([trend_rows, current_trend_rows], ignore_index=True)
+
+    ticker_leader_rows = _group_ticker_leader_rows_frame(
+        return_rows=return_rows,
+        positive_groups=positive_groups,
+        group_by=group_by,
+    )
+    coverage = dict(payload["coverage"])
+    warnings = _coverage_warnings(coverage, date_window=date_window)
+    warnings.extend(trend_warnings)
+    return {
+        "status": "OK",
+        "group_by": group_by,
+        "universe_code": universe_code,
+        "universe_label": UNIVERSE_LABELS.get(universe_code, universe_code),
+        "universe_limit": universe_limit,
+        "period": period,
+        "period_label": PERIOD_LABELS[period],
+        "trend_window_label": GROUP_TREND_PERIODS[period]["window_label"],
+        "top_n": top_n,
+        "rows": _group_rows_frame(ranked),
+        "trend_rows": trend_rows,
+        "ticker_leader_rows": ticker_leader_rows,
+        "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
+        "date_window": date_window,
+        "coverage": coverage,
+        "warnings": warnings,
+    }
+
+
 def build_group_leadership_snapshot(
     *,
     universe_limit: int = 2000,
@@ -2296,6 +2453,8 @@ def build_group_leadership_snapshot(
     min_group_size: int = 5,
     min_price_rows: int = 1000,
     today: date | None = None,
+    prefer_intraday: bool = True,
+    intraday_interval: str = "5m",
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
     normalized_group = str(group_by or "sector").strip().lower()
@@ -2319,6 +2478,23 @@ def build_group_leadership_snapshot(
             universe_limit=normalized_limit,
             query_fn=query,
         )
+        if normalized_period == "daily" and prefer_intraday:
+            intraday_snapshot = _build_intraday_group_leadership_snapshot(
+                universe=universe,
+                universe_code=normalized_universe,
+                universe_limit=normalized_limit,
+                group_by=normalized_group,
+                period=normalized_period,
+                top_n=normalized_top_n,
+                min_group_size=min_group_size,
+                min_price_rows=min_price_rows,
+                today=today,
+                interval=intraday_interval,
+                query_fn=query,
+            )
+            if intraday_snapshot is not None:
+                return intraday_snapshot
+
         effective_min_rows = min(int(min_price_rows), max(50, int(len(universe) * 0.75)))
         date_window = resolve_group_trend_market_dates(
             period=normalized_period,
@@ -2388,6 +2564,15 @@ def build_group_leadership_snapshot(
             date_window=date_window,
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
+        if normalized_period == "daily" and prefer_intraday:
+            coverage["refresh_state"] = _intraday_refresh_state(
+                snapshot_status="OK",
+                period=normalized_period,
+                coverage=coverage,
+            )
+        warnings = _coverage_warnings(coverage, date_window=date_window)
+        if normalized_period == "daily" and prefer_intraday:
+            warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
         return {
             "status": "OK",
             "group_by": normalized_group,
@@ -2404,7 +2589,7 @@ def build_group_leadership_snapshot(
             "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,
-            "warnings": _coverage_warnings(coverage, date_window=date_window),
+            "warnings": warnings,
         }
     except Exception as exc:
         return _empty_group_snapshot(

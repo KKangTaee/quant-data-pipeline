@@ -4070,3 +4070,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Sector / Industry trend horizon을 Daily 3개월, Weekly 6개월, Monthly 1년으로 확장했다.
   - Trend Groups multiselect로 라인별 표시를 제어하고, 양수 그룹에는 티커 리더 bar / return-share donut 상세를 추가했다.
   - Service contract 56 tests, module compile, browser smoke를 통과했다.
+- Overview MI Sector / Industry daily intraday:
+  - Sector / Industry `Daily`는 Market Movers와 같은 `market_intraday_snapshot`을 우선 읽도록 연결했다.
+  - Latest Ranking / Positive Group Detail은 `Previous Close -> latest quote` 기준으로 계산하고, Weekly / Monthly는 기존 EOD DB 기준을 유지한다.
+  - UI에 Return Window와 Price Mode를 표시해 intraday / EOD 기준 차이를 드러냈다.
