@@ -463,7 +463,7 @@ def _load_universe(
             """
             SELECT
                 m.symbol,
-                COALESCE(p.long_name, m.name) AS long_name,
+                COALESCE(NULLIF(p.long_name, ''), NULLIF(m.name, ''), s.name) AS long_name,
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 p.market_cap,
@@ -478,6 +478,8 @@ def _load_universe(
             LEFT JOIN nyse_asset_profile p
               ON p.symbol = m.symbol
              AND p.kind = %s
+            LEFT JOIN nyse_stock s
+              ON s.symbol = m.symbol
             WHERE m.universe_code = %s
               AND m.active = 1
             ORDER BY COALESCE(p.market_cap, 0) DESC, m.symbol ASC
@@ -491,26 +493,28 @@ def _load_universe(
             "finance_meta",
             """
             SELECT
-                symbol,
-                long_name,
-                sector,
-                industry,
-                market_cap,
-                status,
-                error_msg,
-                last_collected_at,
+                p.symbol,
+                COALESCE(NULLIF(p.long_name, ''), s.name) AS long_name,
+                p.sector,
+                p.industry,
+                p.market_cap,
+                p.status,
+                p.error_msg,
+                p.last_collected_at,
                 NULL AS universe_as_of_date,
                 NULL AS universe_collected_at,
                 'nyse_asset_profile' AS universe_source,
                 NULL AS universe_source_url
-            FROM nyse_asset_profile
-            WHERE kind = %s
-              AND country = %s
-              AND market_cap IS NOT NULL
-              AND market_cap > 0
-              AND (is_spac IS NULL OR is_spac <> 1)
-              AND (status IS NULL OR LOWER(status) NOT IN ('dilist', 'delist', 'delisted'))
-            ORDER BY market_cap DESC, symbol ASC
+            FROM nyse_asset_profile p
+            LEFT JOIN nyse_stock s
+              ON s.symbol = p.symbol
+            WHERE p.kind = %s
+              AND p.country = %s
+              AND p.market_cap IS NOT NULL
+              AND p.market_cap > 0
+              AND (p.is_spac IS NULL OR p.is_spac <> 1)
+              AND (p.status IS NULL OR LOWER(p.status) NOT IN ('dilist', 'delist', 'delisted'))
+            ORDER BY p.market_cap DESC, p.symbol ASC
             LIMIT %s
             """,
             ["stock", "United States", int(universe_limit)],

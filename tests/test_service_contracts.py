@@ -683,6 +683,46 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
 
+    def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        observed_sql: dict[str, str] = {}
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            if "FROM nyse_asset_profile p" in sql:
+                observed_sql["universe"] = sql
+                return [
+                    {
+                        "symbol": "AAA",
+                        "long_name": "AAA LISTING INC",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 100,
+                    },
+                    {
+                        "symbol": "BBB",
+                        "long_name": "BBB LISTING INC",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 300,
+                    },
+                ]
+            return self._query_fn(db_name, sql, params)
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 28),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        self.assertIn("LEFT JOIN nyse_stock", observed_sql["universe"])
+        self.assertIn("COALESCE(NULLIF(p.long_name, ''), s.name)", observed_sql["universe"])
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["rows"].iloc[0]["Name"], "BBB LISTING INC")
+
     def test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns(self) -> None:
         from app.services.overview_market_intelligence import build_group_leadership_snapshot
 
