@@ -15,6 +15,21 @@ Created: 2026-05-29
 | Tests | `tests/test_service_contracts.py` | Contracts should prove `NOT_RUN` and assumption-only evidence do not pass |
 | Docs | `docs/flows/*`, `docs/data/*`, `docs/ROADMAP.md` | Must distinguish implemented behavior from future plans |
 
+## Integrated So Far
+
+### cost-model-source-contract-review-v1
+
+- Touched:
+  - `app/runtime/backtest.py`
+  - `app/runtime/history.py`
+  - `app/services/backtest_realism_audit.py`
+  - `app/services/backtest_practical_validation_source.py`
+  - `app/web/backtest_candidate_review_helpers.py`
+  - `tests/test_service_contracts.py`
+- Runtime cost application proof is now compact metadata, not a new persistence layer.
+- Backtest Realism Audit can expose `cost_model_contract` and does not pass cost bps without application proof.
+- Follow-up integration risk: weighted / saved mix sources may need per-component turnover and cost aggregation in Phase 9-2 / 9-3.
+
 ## Verification Plan
 
 - `git diff --check`

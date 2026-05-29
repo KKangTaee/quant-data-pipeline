@@ -89,6 +89,46 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertTrue(handoff.persisted)
         self.assertEqual(handoff.requested_panel, "Final Review")
 
+    def test_selection_source_preserves_cost_model_snapshot_without_new_registry(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
+
+        source = build_selection_source_from_candidate_draft(
+            {
+                "source_kind": "latest_backtest_run",
+                "strategy_key": "equal_weight",
+                "strategy_name": "Equal Weight",
+                "result_snapshot": {
+                    "start_date": "2020-01-31",
+                    "end_date": "2024-12-31",
+                    "cagr": 0.1,
+                    "maximum_drawdown": -0.2,
+                    "sharpe_ratio": 1.0,
+                    "end_balance": 1500.0,
+                },
+                "settings_snapshot": {
+                    "tickers": ["SPY", "TLT"],
+                    "rebalance_interval": 1,
+                    "transaction_cost_bps": 10.0,
+                },
+                "cost_model_snapshot": {
+                    "cost_model_contract_version": "cost_model_source_contract_v1",
+                    "cost_application_status": "applied_to_result_curve",
+                    "transaction_cost_bps": 10.0,
+                    "estimated_cost_total": 42.0,
+                },
+            }
+        )
+
+        self.assertEqual(
+            source["cost_model_snapshot"]["cost_application_status"],
+            "applied_to_result_curve",
+        )
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["cost_model_snapshot"]["estimated_cost_total"],
+            42.0,
+        )
+        self.assertEqual(source["construction"]["rebalance_cadence"], 1)
+
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
@@ -330,6 +370,16 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
             {
                 "selection_source_snapshot": {
                     "construction": {"rebalance_cadence": "monthly"},
+                    "cost_model_snapshot": {
+                        "cost_model_contract_version": "cost_model_source_contract_v1",
+                        "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
+                        "cost_application_status": "applied_to_result_curve",
+                        "cost_application_target": "result_df.Total Balance/Total Return",
+                        "cost_turnover_source": "estimated_from_end_and_next_holdings",
+                        "transaction_cost_bps": 10.0,
+                        "avg_turnover": 0.15,
+                        "estimated_cost_total": 125.0,
+                    },
                     "source_snapshot": {
                         "settings_snapshot": {
                             "transaction_cost_bps": 10.0,
@@ -365,10 +415,59 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         )
 
         self.assertEqual(audit["route"], BACKTEST_REALISM_READY)
+        self.assertEqual(audit["cost_model_contract"]["application_status"], "applied_to_result_curve")
         self.assertEqual(audit["metrics"]["pass"], 7)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_cost_assumption_without_application_proof_requires_review(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_REVIEW,
+            build_backtest_realism_audit,
+        )
+
+        audit = build_backtest_realism_audit(
+            {
+                "selection_source_snapshot": {
+                    "construction": {"rebalance_cadence": "monthly"},
+                    "source_snapshot": {
+                        "settings_snapshot": {
+                            "transaction_cost_bps": 10.0,
+                            "rebalance_interval": 1,
+                            "operator_tax_scope_acknowledged": True,
+                        },
+                        "meta": {
+                            "avg_turnover": 0.15,
+                            "max_turnover": 0.4,
+                            "net_cagr_spread": 0.03,
+                            "promotion_min_net_cagr_spread": -0.02,
+                        },
+                    },
+                },
+                "provider_coverage": {
+                    "coverage": {
+                        "operability": {
+                            "diagnostic_status": "PASS",
+                            "coverage_weight": 100.0,
+                            "summary": "official operability coverage",
+                        }
+                    }
+                },
+                "diagnostic_results": [
+                    {
+                        "domain": "operability_cost_liquidity",
+                        "status": "PASS",
+                        "metrics": {"one_way_cost_bps": 10.0},
+                    }
+                ],
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(rows_by_criteria["Transaction cost model"]["Status"], "REVIEW")
+        self.assertEqual(audit["cost_model_contract"]["application_status"], "assumption_only")
 
     def test_missing_cost_and_liquidity_evidence_are_not_passed(self) -> None:
         from app.services.backtest_realism_audit import (

@@ -24,6 +24,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/cost-model-source-contract-review-v1/`.
+- Runtime now emits compact `cost_model_source_contract_v1` metadata showing when transaction cost is applied to the net result curve.
+- Practical Validation source snapshots preserve cost model evidence, and Backtest Realism Audit treats cost bps without application proof as REVIEW.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
 - Opened `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`.
 - Phase 9 focuses on cost / slippage / turnover / liquidity / capacity realism in Backtest Realism and selected-route decisions.
 - Next task is `cost-model-source-contract-review-v1`; start by mapping current cost metadata source and proof gaps before runtime changes.

@@ -1776,6 +1776,12 @@ def _apply_real_money_hardening(
         {
             "warnings": warnings,
             "real_money_hardening": True,
+            "cost_model_contract_version": "cost_model_source_contract_v1",
+            "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
+            "cost_model_formula": "estimated_cost=pre_cost_balance*(transaction_cost_bps/10000)*estimated_turnover",
+            "cost_application_status": "applied_to_result_curve",
+            "cost_application_target": "result_df.Total Balance/Total Return",
+            "cost_turnover_source": "estimated_from_end_and_next_holdings",
             "min_price_filter": float(min_price_filter or 0.0),
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
@@ -1825,6 +1831,7 @@ def _apply_real_money_hardening(
             "estimated_cost_total": turnover_stats["estimated_cost_total"],
             "gross_start_balance": float(hardened_df["Gross Total Balance"].iloc[0]),
             "gross_end_balance": float(hardened_df["Gross Total Balance"].iloc[-1]),
+            "net_end_balance": float(hardened_df["Total Balance"].iloc[-1]),
         }
     )
     strategy_summary_df = bundle.get("summary_df")

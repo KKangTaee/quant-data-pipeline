@@ -156,7 +156,7 @@ def _provider_operability(validation: dict[str, Any]) -> dict[str, Any]:
     return dict(dict(input_context.get("coverage") or {}).get("operability") or {})
 
 
-def _transaction_cost_row(validation: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
+def _cost_model_contract_from_root(validation: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
     diagnostic = _find_diagnostic(validation, "operability_cost_liquidity")
     metrics = dict(diagnostic.get("metrics") or {})
     cost_bps = _first_non_none(
@@ -165,25 +165,118 @@ def _transaction_cost_row(validation: dict[str, Any], source: dict[str, Any]) ->
         _first_float(validation, "transaction_cost_bps"),
     )
     hardening = _truthy(_first_value(source, "real_money_hardening") or _first_value(validation, "real_money_hardening"))
+    raw_application_status = _safe_text(
+        _first_value(source, "cost_application_status")
+        or _first_value(source, "cost_applied_status")
+        or _first_value(validation, "cost_application_status"),
+        fallback="",
+    ).lower()
+    cost_source = _safe_text(
+        _first_value(source, "cost_model_source")
+        or _first_value(validation, "cost_model_source"),
+        fallback="",
+    )
+    estimated_cost_total = _first_non_none(
+        _first_float(source, "estimated_cost_total"),
+        _first_float(validation, "estimated_cost_total"),
+    )
+    avg_turnover = _first_non_none(_first_float(source, "avg_turnover"), _first_float(validation, "avg_turnover"))
+    gross_end_balance = _first_non_none(
+        _first_float(source, "gross_end_balance"),
+        _first_float(validation, "gross_end_balance"),
+    )
+    net_end_balance = _first_non_none(
+        _first_float(source, "net_end_balance"),
+        _first_float(validation, "net_end_balance"),
+    )
+
+    applied_statuses = {
+        "applied_to_result_curve",
+        "applied_to_net_curve",
+        "net_curve_applied",
+        "result_curve_net_of_cost",
+    }
+    if cost_bps is None:
+        application_status = "missing_cost_input"
+        evidence = "transaction_cost_bps not attached"
+    elif cost_bps <= 0:
+        application_status = "zero_or_non_positive_cost"
+        evidence = "zero or non-positive cost assumption"
+    elif raw_application_status in applied_statuses:
+        application_status = "applied_to_result_curve"
+        evidence = cost_source or "explicit cost_application_status attached"
+    elif hardening and cost_source and estimated_cost_total is not None and avg_turnover is not None:
+        application_status = "applied_to_result_curve_legacy_inferred"
+        evidence = "real_money_hardening plus cost source / estimated cost / turnover metadata"
+    elif hardening and estimated_cost_total is not None and gross_end_balance is not None:
+        application_status = "applied_to_result_curve_legacy_inferred"
+        evidence = "real_money_hardening plus gross/net cost metadata"
+    elif hardening:
+        application_status = "legacy_hardening_flag_only"
+        evidence = "real_money_hardening=True but cost application contract is incomplete"
+    else:
+        application_status = "assumption_only"
+        evidence = "cost assumption exists but result-curve application is not proven"
+
+    return {
+        "schema_version": "cost_model_source_contract_v1",
+        "transaction_cost_bps": cost_bps,
+        "application_status": application_status,
+        "cost_model_source": cost_source or None,
+        "cost_application_target": _first_value(source, "cost_application_target")
+        or _first_value(validation, "cost_application_target"),
+        "cost_turnover_source": _first_value(source, "cost_turnover_source")
+        or _first_value(validation, "cost_turnover_source"),
+        "estimated_cost_total": estimated_cost_total,
+        "avg_turnover": avg_turnover,
+        "gross_end_balance": gross_end_balance,
+        "net_end_balance": net_end_balance,
+        "real_money_hardening": hardening,
+        "evidence": evidence,
+    }
+
+
+def build_cost_model_source_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    """Extract the compact cost source contract used by Backtest Realism Audit."""
+
+    validation = dict(validation or {})
+    source = dict(validation.get("selection_source_snapshot") or {})
+    source_snapshot = dict(source.get("source_snapshot") or {})
+    evidence_root = {
+        "validation": validation,
+        "selection_source_snapshot": source,
+        "source_snapshot": source_snapshot,
+    }
+    return _cost_model_contract_from_root(validation, evidence_root)
+
+
+def _transaction_cost_row(
+    validation: dict[str, Any],
+    source: dict[str, Any],
+    cost_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = dict(cost_contract or _cost_model_contract_from_root(validation, source))
+    cost_bps = _optional_float(contract.get("transaction_cost_bps"))
+    application_status = str(contract.get("application_status") or "").strip()
     if cost_bps is None:
         status = "NEEDS_INPUT"
         current = "missing"
-        evidence = "transaction_cost_bps not attached"
+        evidence = contract.get("evidence") or "transaction_cost_bps not attached"
         next_action = "거래비용 bps와 적용 여부를 runtime metadata에 보강합니다."
     elif cost_bps <= 0:
         status = "REVIEW"
         current = f"{cost_bps:g} bps"
-        evidence = "zero or non-positive cost assumption"
+        evidence = contract.get("evidence") or "zero or non-positive cost assumption"
         next_action = "zero-cost backtest인지 의도적으로 확인하고 최종 판단 근거에 남깁니다."
-    elif hardening:
+    elif application_status.startswith("applied_to_result_curve"):
         status = "PASS"
-        current = f"{cost_bps:g} bps / net curve applied"
-        evidence = "real_money_hardening=True"
+        current = f"{cost_bps:g} bps / {application_status}"
+        evidence = contract.get("evidence") or "cost application contract attached"
         next_action = "추가 조치 없음"
     else:
         status = "REVIEW"
-        current = f"{cost_bps:g} bps / assumption only"
-        evidence = "cost assumption exists but net-curve application is not proven"
+        current = f"{cost_bps:g} bps / {application_status or 'assumption_only'}"
+        evidence = contract.get("evidence") or "cost assumption exists but net-curve application is not proven"
         next_action = "비용이 result curve에 실제 반영됐는지 runtime metadata를 확인합니다."
     return _row(
         criteria="Transaction cost model",
@@ -392,8 +485,9 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "selection_source_snapshot": source,
         "source_snapshot": source_snapshot,
     }
+    cost_model_contract = _cost_model_contract_from_root(validation, evidence_root)
     rows = [
-        _transaction_cost_row(validation, evidence_root),
+        _transaction_cost_row(validation, evidence_root, cost_model_contract),
         _turnover_row(validation, evidence_root),
         _liquidity_row(validation),
         _net_policy_row(validation, evidence_root),
@@ -425,6 +519,7 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "overall_status": route.replace("BACKTEST_REALISM_", ""),
         "conclusion": conclusion,
         "next_action": next_action,
+        "cost_model_contract": cost_model_contract,
         "rows": rows,
         "metrics": {
             "ready_rows": status_counts["PASS"],
@@ -452,5 +547,6 @@ __all__ = [
     "BACKTEST_REALISM_REVIEW",
     "BACKTEST_REALISM_NEEDS_INPUT",
     "BACKTEST_REALISM_BLOCKED",
+    "build_cost_model_source_contract",
     "build_backtest_realism_audit",
 ]

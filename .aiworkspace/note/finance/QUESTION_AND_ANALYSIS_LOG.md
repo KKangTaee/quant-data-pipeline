@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-29 - Cost model source contract distinguishes assumption from applied cost
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism Audit이 transaction cost bps를 단순 가정과 실제 result curve 적용 증거로 구분하게 한다.
+- Analysis result:
+  - `_apply_transaction_cost_postprocess`는 이미 net `Total Balance` / `Total Return`을 만들고 있었지만, Practical Validation source snapshot이 그 적용 증거를 명시적으로 보존하지 못했다.
+  - Runtime metadata, source snapshot, Backtest Realism Audit에 compact `cost_model_source_contract_v1` 경계를 추가했다.
+  - 비용 bps만 있고 application proof가 없으면 `Transaction cost model` row는 `REVIEW`다.
+- Follow-up:
+  - 다음 task는 `turnover-rebalance-evidence-v1`로 turnover estimate와 cadence-only evidence를 더 분리한다.
+
 ### 2026-05-29 - Phase 9 opens for cost / liquidity realism
 - User request:
   - 다음 단계 진행을 요청함.

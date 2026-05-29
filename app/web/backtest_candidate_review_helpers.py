@@ -813,6 +813,36 @@ def _candidate_review_summary_from_bundle(bundle: dict[str, Any]) -> dict[str, A
     return {}
 
 
+_COST_MODEL_SNAPSHOT_KEYS = (
+    "cost_model_contract_version",
+    "cost_model_source",
+    "cost_model_formula",
+    "cost_application_status",
+    "cost_application_target",
+    "cost_turnover_source",
+    "real_money_hardening",
+    "transaction_cost_bps",
+    "avg_turnover",
+    "max_turnover",
+    "estimated_cost_total",
+    "gross_start_balance",
+    "gross_end_balance",
+    "net_end_balance",
+    "net_cagr_spread",
+    "promotion_min_net_cagr_spread",
+    "liquidity_clean_coverage",
+    "promotion_min_liquidity_clean_coverage",
+)
+
+
+def _cost_model_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: data.get(key)
+        for key in _COST_MODEL_SNAPSHOT_KEYS
+        if data.get(key) is not None
+    }
+
+
 def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = dict(bundle.get("meta") or {})
     summary = _candidate_review_summary_from_bundle(bundle)
@@ -861,16 +891,21 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
             "malformed_price_row_count": len(list(meta.get("malformed_price_rows") or [])),
             "warning_count": len(list(meta.get("warnings") or [])),
         },
+        "cost_model_snapshot": _cost_model_snapshot_from_mapping(meta),
         "settings_snapshot": {
             "tickers": meta.get("tickers") or [],
             "universe_mode": meta.get("universe_mode"),
             "preset_name": meta.get("preset_name"),
             "universe_contract": meta.get("universe_contract"),
             "factor_freq": meta.get("factor_freq"),
+            "rebalance_interval": meta.get("rebalance_interval"),
             "rebalance_freq": meta.get("rebalance_freq"),
             "top": meta.get("top"),
+            "transaction_cost_bps": meta.get("transaction_cost_bps"),
             "benchmark_contract": meta.get("benchmark_contract"),
             "benchmark_ticker": meta.get("benchmark_ticker"),
+            "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
+            "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
         },
         "notes": (
             "This is a Candidate Review draft. It is not appended to "
@@ -928,16 +963,21 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
             "malformed_price_row_count": len(list(record.get("malformed_price_rows") or [])),
             "warning_count": len(list(record.get("warnings") or [])),
         },
+        "cost_model_snapshot": _cost_model_snapshot_from_mapping(record),
         "settings_snapshot": {
             "tickers": record.get("tickers") or [],
             "universe_mode": record.get("universe_mode"),
             "preset_name": record.get("preset_name"),
             "universe_contract": record.get("universe_contract"),
             "factor_freq": record.get("factor_freq"),
+            "rebalance_interval": record.get("rebalance_interval"),
             "rebalance_freq": record.get("rebalance_freq"),
             "top": record.get("top"),
+            "transaction_cost_bps": record.get("transaction_cost_bps"),
             "benchmark_contract": record.get("benchmark_contract"),
             "benchmark_ticker": record.get("benchmark_ticker"),
+            "promotion_min_net_cagr_spread": record.get("promotion_min_net_cagr_spread"),
+            "promotion_min_liquidity_clean_coverage": record.get("promotion_min_liquidity_clean_coverage"),
             "context_keys": sorted(context.keys()),
         },
         "notes": (
@@ -1214,6 +1254,7 @@ def _build_candidate_review_note_from_draft(
         "result_snapshot": dict(draft.get("result_snapshot") or {}),
         "real_money_signal": dict(draft.get("real_money_signal") or {}),
         "data_trust_snapshot": dict(draft.get("data_trust_snapshot") or {}),
+        "cost_model_snapshot": dict(draft.get("cost_model_snapshot") or {}),
         "settings_snapshot": dict(draft.get("settings_snapshot") or {}),
         "compare_readiness_evaluation": dict(draft.get("compare_readiness_evaluation") or {}),
         "notes": (

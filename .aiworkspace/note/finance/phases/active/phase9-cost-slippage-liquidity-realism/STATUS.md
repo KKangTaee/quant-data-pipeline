@@ -8,9 +8,17 @@ Created: 2026-05-29
 - [x] Phase 8 closeout confirmed.
 - [x] Phase 9 scope opened.
 - [x] Phase 9 task board created.
-- [ ] Cost model source contract review started.
+- [x] Cost model source contract review complete.
+- [ ] Turnover / rebalance evidence refinement started.
 
 ## Latest Update
+
+2026-05-29:
+
+- `cost-model-source-contract-review-v1` completed.
+- Runtime now marks transaction-cost postprocessing with a compact `cost_model_source_contract_v1` metadata contract.
+- Practical Validation source snapshots preserve the compact cost model snapshot, and Backtest Realism Audit treats cost bps without application proof as `REVIEW`.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
 
 2026-05-29:
 
@@ -20,5 +28,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `cost-model-source-contract-review-v1`.
-- Decide whether the first implementation should attach stronger net cost curve proof, turnover evidence, or liquidity/capacity evidence.
+- Start `turnover-rebalance-evidence-v1`.
+- Decide how to distinguish actual turnover estimates, rebalance cadence-only evidence, and missing turnover in weighted / saved mix sources.

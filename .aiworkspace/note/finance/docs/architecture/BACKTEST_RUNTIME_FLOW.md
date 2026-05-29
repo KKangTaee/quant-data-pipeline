@@ -146,6 +146,7 @@ runtime은 단순 성과표만 반환하지 않는다.
 
 - gross / net / cost result
 - turnover / cost assumption
+- `cost_model_source_contract_v1`: cost bps가 단순 assumption인지, `_apply_transaction_cost_postprocess`를 통해 `Total Balance` / `Total Return` 결과 곡선에 적용됐는지 나타내는 compact proof
 - benchmark overlay와 benchmark-relative diagnostics
 - investability filter 결과
 - liquidity / coverage policy status
@@ -154,6 +155,7 @@ runtime은 단순 성과표만 반환하지 않는다.
 
 Backtest Realism Audit은 이 metadata를 새로 계산하거나 저장하지 않는다.
 기존 result bundle / Practical Validation evidence에 붙어 있는 비용, turnover, liquidity, net spread, rebalance cadence 같은 값을 읽어 실전성 공백을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 표시한다.
+`transaction_cost_bps`만 있고 `cost_application_status=applied_to_result_curve` 또는 그에 준하는 cost application proof가 없으면 assumption-only `REVIEW`로 해석한다.
 metadata가 없으면 pass로 추정하지 않고 보강 필요로 남긴다.
 
 주의:
