@@ -1146,30 +1146,25 @@ def _market_movers_ui_css() -> str:
   letter-spacing: 0;
   text-transform: uppercase;
 }
-.ov-mm-refresh-head {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.1fr) minmax(280px, 2fr);
-  gap: 1rem;
-  align-items: center;
-  padding: 0.1rem 0 0.85rem 0;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
-}
-.ov-mm-refresh-title {
+.ov-mm-refresh-label {
+  margin: 0.85rem 0 0.42rem 0;
   color: inherit;
-  font-size: 1.05rem;
-  font-weight: 750;
-  line-height: 1.2;
+  font-size: 0.95rem;
+  font-weight: 760;
 }
-.ov-mm-refresh-subtitle {
-  margin-top: 0.22rem;
-  color: rgba(100, 116, 139, 0.95);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-.ov-mm-state-line {
+.ov-mm-status-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.54rem 0 0.62rem 0;
+  border-top: 1px solid rgba(100, 116, 139, 0.18);
+  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
+  margin-bottom: 0.55rem;
+}
+.ov-mm-state-cluster {
+  display: flex;
+  align-items: center;
   gap: 0.55rem;
   min-width: 0;
   flex-wrap: wrap;
@@ -1262,10 +1257,10 @@ def _market_movers_ui_css() -> str:
   margin: 0.1rem 0 0.35rem 0;
 }
 @media (max-width: 760px) {
-  .ov-mm-refresh-head {
-    grid-template-columns: 1fr;
+  .ov-mm-status-bar {
+    align-items: flex-start;
+    flex-direction: column;
   }
-  .ov-mm-state-line,
   .ov-mm-chip-row {
     justify-content: flex-start;
   }
@@ -1297,7 +1292,7 @@ def _market_refresh_state_detail(value: Any) -> str:
     return mapping.get(text, text)
 
 
-def _render_market_refresh_command_head(
+def _render_market_refresh_status_bar(
     *,
     universe_label: str,
     price_mode: Any,
@@ -1317,25 +1312,20 @@ def _render_market_refresh_command_head(
     st.markdown(
         _market_movers_ui_css()
         + f"""
-<div class="ov-mm-refresh-head">
-          <div>
-            <div class="ov-mm-refresh-title">데이터 갱신</div>
-            <div class="ov-mm-refresh-subtitle">데이터 상태를 먼저 확인하고, 필요한 경우 같은 줄에서 수동 또는 자동 갱신을 선택합니다.</div>
+<div class="ov-mm-refresh-label">데이터 갱신</div>
+<div class="ov-mm-status-bar">
+          <div class="ov-mm-state-cluster">
+            <span class="ov-mm-state-pill" style="--ov-mm-state-color:{escape(dot_color)};">
+              <span class="ov-mm-state-dot"></span>
+              <span class="ov-mm-state-label">{escape(label)}</span>
+              {detail_html}
+            </span>
           </div>
-          <div>
-            <div class="ov-mm-state-line">
-              <span class="ov-mm-state-pill" style="--ov-mm-state-color:{escape(dot_color)};">
-                <span class="ov-mm-state-dot"></span>
-                <span class="ov-mm-state-label">{escape(label)}</span>
-                {detail_html}
-              </span>
-            </div>
-            <div class="ov-mm-chip-row" style="margin-top:0.45rem;">
-              <span class="ov-mm-chip">범위 <strong>{escape(universe_label)}</strong></span>
-              <span class="ov-mm-chip">가격 <strong>{escape(str(price_mode or "-"))}</strong></span>
-              <span class="ov-mm-chip">커버리지 <strong>{escape(coverage_text)}</strong></span>
-              <span class="ov-mm-chip">다음 확인 <strong>{escape(next_check_text)}</strong></span>
-            </div>
+          <div class="ov-mm-chip-row">
+            <span class="ov-mm-chip">범위 <strong>{escape(universe_label)}</strong></span>
+            <span class="ov-mm-chip">가격 <strong>{escape(str(price_mode or "-"))}</strong></span>
+            <span class="ov-mm-chip">커버리지 <strong>{escape(coverage_text)}</strong></span>
+            <span class="ov-mm-chip">다음 확인 <strong>{escape(next_check_text)}</strong></span>
           </div>
         </div>""",
         unsafe_allow_html=True,
@@ -1518,7 +1508,7 @@ def _render_market_movers_refresh_bar(
     state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
     auto_supported = universe_code == "SP500" and period == "daily"
 
-    with st.container(border=True):
+    with st.container():
         refresh_state = dict(coverage.get("refresh_state") or {})
         returnable = coverage.get("returnable_count") or 0
         universe_count = coverage.get("universe_count") or 0
@@ -1526,7 +1516,7 @@ def _render_market_movers_refresh_bar(
         next_due = refresh_state.get("next_due_in_minutes")
         next_check_text = "now" if next_due in (None, 0) else f"{int(next_due)}m"
 
-        _render_market_refresh_command_head(
+        _render_market_refresh_status_bar(
             universe_label=universe_label,
             price_mode=coverage.get("price_mode") or "-",
             returnable=returnable,

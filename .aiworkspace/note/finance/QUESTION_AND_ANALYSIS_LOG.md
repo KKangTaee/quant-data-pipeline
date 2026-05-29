@@ -5590,10 +5590,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - 사용자가 먼저 수동/자동을 선택하고, 같은 Market Movers refresh surface에서 상태, 카운트다운, 수동 버튼을 함께 봐야 함
 - Analysis result:
-  - 별도 top-level auto panel을 제거하고 Market Movers `Data Refresh`에 통합하면 중복 렌더링과 개념 분리가 동시에 줄어든다
+  - 별도 top-level auto panel을 제거하고 Market Movers `데이터 갱신`에 통합하면 중복 렌더링과 개념 분리가 동시에 줄어든다
   - 초 단위 countdown / progress는 브라우저 JS로만 갱신하고, provider collection은 기존 5분 cadence guard를 유지해야 한다
 - Follow-up:
-  - Market Movers `Data Refresh`에 `수동 갱신` / `자동 갱신` 모드를 추가하고, S&P 500 Daily 자동 모드에서 browser-side countdown과 기존 `browser_safe` heartbeat를 함께 사용하도록 정리했다
+  - Market Movers `데이터 갱신`에 `수동 갱신` / `자동 갱신` 모드를 추가하고, S&P 500 Daily 자동 모드에서 browser-side countdown과 기존 `browser_safe` heartbeat를 함께 사용하도록 정리했다
 
 ### 2026-05-30 - 기존 UI 패턴 보존과 제품 본질 보존을 구분한다
 - User request:
@@ -5603,4 +5603,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - 보존해야 할 것은 백테스트와 시장 데이터로 포트폴리오 판단을 돕는 본질, 데이터 수집 guardrail, 근거 흐름이다. 기존 helper 시각 패턴은 필요할 때 바꿀 수 있다
 - Follow-up:
-  - Market Movers `데이터 갱신` 영역부터 반복 badge/card layout을 줄이고, 상태/모드/액션이 한 번에 읽히는 command surface로 재설계하는 1차 pass를 시작했다
+  - Market Movers `데이터 갱신` 영역부터 반복 badge/card layout을 줄이고, 상태/모드/액션이 한 번에 읽히는 명령 영역으로 재설계하는 1차 pass를 시작했다

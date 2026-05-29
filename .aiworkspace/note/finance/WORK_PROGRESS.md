@@ -4089,7 +4089,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - cron / launchd / 외부 automation 실제 등록은 다음 단계에서 이 CLI를 주기 호출하는 방식으로 붙일 수 있다.
 - Overview browser-session auto refresh:
   - `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`에서 OS scheduler 대신 Overview를 열어둔 동안만 작동하는 1차 자동 refresh를 시작했다.
-  - `browser_safe` profile은 S&P 500 daily snapshot만 선택하고, Market Movers `Data Refresh`의 자동 모드는 Streamlit fragment로 5분마다 해당 profile을 호출한다.
+  - `browser_safe` profile은 S&P 500 daily snapshot만 선택하고, Market Movers `데이터 갱신`의 자동 모드는 Streamlit fragment로 5분마다 해당 profile을 호출한다.
   - 브라우저 smoke에서 토글 ON 시 장 시간 밖 `skipped` 상태가 표시되고 console error 0개를 확인했다.
-  - 자동 check 중에는 전체 화면 blocking 대신 Market Movers `Data Refresh` 안에서 초 단위 countdown / cadence progress / completion 상태를 표시한다.
-  - UI redesign pass 1에서 Market Movers `데이터 갱신`을 반복 badge/card layout 대신 현재 상태, 수동/자동 모드, 주요 액션이 한 번에 읽히는 command surface로 정리했다.
+  - 자동 check 중에는 전체 화면 blocking 대신 Market Movers `데이터 갱신` 안에서 초 단위 countdown / cadence progress / completion 상태를 표시한다.
+  - UI redesign pass 1에서 Market Movers `데이터 갱신`을 반복 badge/card layout 대신 현재 상태, 수동/자동 모드, 주요 액션이 한 번에 읽히는 명령 영역으로 정리했다.
+  - UI redesign pass 2에서 `데이터 갱신` 외곽 카드 컨테이너를 제거하고, 현재 상태 pill / 메타 chip / 갱신 방식 / 수동 액션이 이어지는 status + action bar로 정리했다.
