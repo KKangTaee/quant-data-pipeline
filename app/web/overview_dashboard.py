@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 from datetime import datetime
 from html import escape
 from inspect import signature
@@ -1389,6 +1390,231 @@ def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
     )
 
 
+def _event_month_options(rows: pd.DataFrame) -> list[str]:
+    if rows.empty or "Month" not in rows:
+        return []
+    return sorted(value for value in rows["Month"].dropna().astype(str).unique().tolist() if value)
+
+
+def _default_event_month_index(month_options: list[str]) -> int:
+    if not month_options:
+        return 0
+    current_month = datetime.now().strftime("%Y-%m")
+    if current_month in month_options:
+        return month_options.index(current_month)
+    future_months = [month for month in month_options if month >= current_month]
+    if future_months:
+        return month_options.index(future_months[0])
+    return 0
+
+
+def _event_month_label(month_value: str) -> str:
+    try:
+        month_date = pd.Timestamp(f"{month_value}-01")
+    except ValueError:
+        return month_value
+    if pd.isna(month_date):
+        return month_value
+    return month_date.strftime("%B %Y")
+
+
+def _event_calendar_tone_class(row: pd.Series) -> str:
+    event_type = str(row.get("Type") or "").upper()
+    type_label = str(row.get("Type Label") or "").lower()
+    if event_type == "FOMC_MEETING" or type_label == "fomc":
+        return "fomc"
+    if event_type == "EARNINGS" or type_label == "earnings":
+        return "earnings"
+    if event_type == "MACRO" or event_type.startswith("MACRO_") or type_label in {"cpi", "ppi", "jobs", "gdp", "macro"}:
+        return "macro"
+    return "other"
+
+
+def _event_calendar_item_html(row: pd.Series) -> str:
+    type_label = str(row.get("Type Label") or row.get("Type") or "-")
+    symbol = str(row.get("Symbol Label") or row.get("Symbol") or "").strip()
+    if symbol == "-":
+        symbol = ""
+    title = str(row.get("Title") or "-")
+    importance = str(row.get("Importance") or "Low").lower()
+    detail = symbol or title
+    full_text = f"{type_label}: {symbol or title}"
+    return (
+        f'<div class="event-calendar-item event-calendar-{_event_calendar_tone_class(row)} '
+        f'event-calendar-importance-{escape(importance)}" title="{escape(full_text)}">'
+        f'<span class="event-calendar-type">{escape(type_label)}</span>'
+        f'<span class="event-calendar-text">{escape(detail)}</span>'
+        "</div>"
+    )
+
+
+def _render_event_month_grid(rows: pd.DataFrame) -> None:
+    valid_rows = rows.dropna(subset=["Date Parsed"]) if "Date Parsed" in rows else pd.DataFrame()
+    month_options = _event_month_options(valid_rows)
+    if not month_options:
+        st.info("No dated event rows match the selected calendar filters.")
+        return
+
+    selected_month = str(
+        st.selectbox(
+            "Month",
+            month_options,
+            index=_default_event_month_index(month_options),
+            format_func=_event_month_label,
+            key="overview_events_calendar_month",
+        )
+    )
+    month_start = pd.Timestamp(f"{selected_month}-01")
+    if pd.isna(month_start):
+        st.info("No dated event rows match the selected calendar filters.")
+        return
+
+    month_rows = valid_rows[valid_rows["Month"] == selected_month].copy()
+    month_rows["Date Key"] = month_rows["Date Parsed"].dt.strftime("%Y-%m-%d")
+    grouped_rows = {
+        date_key: day_rows.sort_values(["Importance", "Type Label", "Symbol"]).reset_index(drop=True)
+        for date_key, day_rows in month_rows.groupby("Date Key", sort=True)
+    }
+
+    today_value = datetime.now().date()
+    calendar_weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(int(month_start.year), int(month_start.month))
+    weekday_html = "".join(f'<div class="event-calendar-weekday">{label}</div>' for label in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+    day_cells: list[str] = []
+    for week in calendar_weeks:
+        for day_value in week:
+            date_key = day_value.isoformat()
+            day_rows = grouped_rows.get(date_key, pd.DataFrame())
+            muted_class = " event-calendar-muted" if day_value.month != int(month_start.month) else ""
+            today_class = " event-calendar-today" if day_value == today_value else ""
+            event_class = " event-calendar-has-events" if not day_rows.empty else ""
+            visible_rows = day_rows.head(3) if not day_rows.empty else pd.DataFrame()
+            event_html = "".join(_event_calendar_item_html(row) for _, row in visible_rows.iterrows())
+            extra_count = max(0, len(day_rows) - len(visible_rows))
+            if extra_count:
+                event_html += f'<div class="event-calendar-more">+{extra_count} more</div>'
+            day_cells.append(
+                f'<div class="event-calendar-day{muted_class}{today_class}{event_class}">'
+                f'<div class="event-calendar-date">{day_value.day}</div>'
+                f'<div class="event-calendar-items">{event_html}</div>'
+                "</div>"
+            )
+
+    event_count = len(month_rows)
+    high_impact_count = int((month_rows.get("Importance", pd.Series(dtype=str)) == "High").sum())
+    st.caption(f"{_event_month_label(selected_month)} | {event_count} events | {high_impact_count} high impact")
+    st.markdown(
+        f"""
+        <style>
+          .event-calendar-shell {{
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+          }}
+          .event-calendar-grid {{
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+          }}
+          .event-calendar-weekday {{
+            padding: 8px 10px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e5e7eb;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+          }}
+          .event-calendar-day {{
+            min-height: 126px;
+            padding: 8px;
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            background: #ffffff;
+          }}
+          .event-calendar-day:nth-child(7n) {{
+            border-right: 0;
+          }}
+          .event-calendar-muted {{
+            background: #f8fafc;
+            color: #94a3b8;
+          }}
+          .event-calendar-has-events {{
+            background: #fcfcfd;
+          }}
+          .event-calendar-today {{
+            box-shadow: inset 0 0 0 2px #2563eb;
+          }}
+          .event-calendar-date {{
+            color: #111827;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 8px;
+          }}
+          .event-calendar-items {{
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+          }}
+          .event-calendar-item {{
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 6px;
+            align-items: center;
+            border: 1px solid #e5e7eb;
+            border-left-width: 4px;
+            border-radius: 6px;
+            background: #ffffff;
+            padding: 4px 6px;
+            min-width: 0;
+          }}
+          .event-calendar-type {{
+            color: #475569;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+          }}
+          .event-calendar-text {{
+            color: #111827;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+          }}
+          .event-calendar-fomc {{ border-left-color: #2563eb; }}
+          .event-calendar-macro {{ border-left-color: #0f766e; }}
+          .event-calendar-earnings {{ border-left-color: #b45309; }}
+          .event-calendar-other {{ border-left-color: #64748b; }}
+          .event-calendar-importance-high {{
+            background: #f8fafc;
+          }}
+          .event-calendar-more {{
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+          }}
+          @media (max-width: 760px) {{
+            .event-calendar-weekday {{ padding: 6px 4px; font-size: 10px; }}
+            .event-calendar-day {{ min-height: 92px; padding: 5px; }}
+            .event-calendar-item {{ display: block; padding: 3px 4px; }}
+            .event-calendar-type {{ display: block; font-size: 9px; }}
+            .event-calendar-text {{ display: block; font-size: 10px; }}
+          }}
+        </style>
+        <div class="event-calendar-shell">
+          <div class="event-calendar-grid">
+            {weekday_html}
+            {"".join(day_cells)}
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _event_focus_display_columns(rows: pd.DataFrame) -> list[str]:
     return [
         column
@@ -1627,6 +1853,7 @@ def _render_events_tab() -> None:
     with focus_tab:
         _render_event_focus_panel(filtered_rows)
     with calendar_tab:
+        _render_event_month_grid(filtered_rows)
         st.altair_chart(_build_event_calendar_chart(filtered_rows), width="stretch")
         _render_event_date_groups(filtered_rows)
     with table_tab:

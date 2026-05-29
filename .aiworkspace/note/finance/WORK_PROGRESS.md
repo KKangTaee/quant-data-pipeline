@@ -4074,3 +4074,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Sector / Industry `Daily`는 Market Movers와 같은 `market_intraday_snapshot`을 우선 읽도록 연결했다.
   - Latest Ranking / Positive Group Detail은 `Previous Close -> latest quote` 기준으로 계산하고, Weekly / Monthly는 기존 EOD DB 기준을 유지한다.
   - UI에 Return Window와 Price Mode를 표시해 intraday / EOD 기준 차이를 드러냈다.
+- Overview MI Events calendar UX:
+  - Events `Calendar` 탭에 월 선택 가능한 7열 월간 달력 그리드를 추가했다.
+  - 기존 event count chart와 날짜별 리스트는 그대로 유지해 월간 조망과 세부 스캔을 함께 제공한다.
+  - Service contract 56 tests, module compile, desktop/mobile browser smoke를 통과했다.

@@ -5543,3 +5543,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `market_intraday_snapshot`에는 S&P 500 / Top1000 / Top2000 previous-close snapshot이 이미 있으므로 Daily에만 우선 적용하면 된다
 - Follow-up:
   - Daily group leadership은 intraday snapshot을 우선 사용하고 fallback으로 EOD DB를 유지한다. UI에 Return Window / Price Mode를 표시했다
+
+### 2026-05-29 - Events에 달력형 UI를 추가한다
+- User request:
+  - 사용자가 Events가 리스트로만 보이므로 달력 형태 UI도 함께 제공해 달라고 요청함
+- Interpreted goal:
+  - 기존 리스트의 세부 스캔 기능은 유지하면서, FOMC / earnings / macro 일정을 월간 달력으로 한눈에 봐야 함
+- Analysis result:
+  - 새 collector나 DB 변경 없이 `market_event_calendar` read model의 날짜 / 타입 / 중요도 필드만으로 월간 grid를 만들 수 있음
+- Follow-up:
+  - Events `Calendar` 탭에 월 선택형 달력 grid를 추가하고 기존 stacked chart와 날짜별 리스트는 아래에 유지했다

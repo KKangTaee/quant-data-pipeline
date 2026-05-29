@@ -6,3 +6,7 @@
 - 2026-05-28: `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` - PASS.
 - 2026-05-28: `git diff --check` - PASS.
 - 2026-05-28: Browser smoke at `http://localhost:8501` - PASS; Overview > Events rendered `Focus`, `Calendar`, `Table`, `Importance`, `High Impact`, and `Needs Review`.
+- 2026-05-29: `uv run python -m py_compile app/web/overview_dashboard.py app/services/overview_market_intelligence.py tests/test_service_contracts.py` - PASS.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts` - PASS, 56 tests.
+- 2026-05-29: `git diff --check` - PASS.
+- 2026-05-29: Browser smoke at `http://localhost:8501` - PASS; Overview > Events > Calendar rendered a month selector, month-grid calendar, existing event count chart, and existing date-group list. Mobile-width shell check showed no horizontal overflow.
