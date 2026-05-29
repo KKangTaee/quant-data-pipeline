@@ -10,8 +10,8 @@ Created: 2026-05-29
 3. 12-3 selected provider evidence staleness contract: Complete
 4. 12-4 recheck comparison / review signal policy: Complete
 5. 12-5 optional allocation drift evidence boundary: Complete
-6. 12-6 decision dossier / continuity operations refinement: Next
-7. 12-7 integrated QA / closeout: Pending
+6. 12-6 decision dossier / continuity operations refinement: Complete
+7. 12-7 integrated QA / closeout: Next
 
 ## Expected Touch Points
 
@@ -38,7 +38,8 @@ Review Signals now derives performance threshold rows from Recheck Comparison an
 12-5 touched `app/runtime/final_selected_portfolios.py`, `app/runtime/__init__.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
 Actual Allocation now exposes `selected_allocation_drift_evidence_boundary_v1` and keeps drift / alert preview evidence read-only and session-only.
 
-12-6 is expected to touch Decision Dossier / Continuity / Timeline source consistency rather than adding persistence.
+12-6 touched `app/runtime/final_selected_portfolios.py`, `app/runtime/__init__.py`, `app/services/backtest_evidence_read_model.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
+Decision Dossier, Continuity, Timeline, and Review Signals now expose `selected_decision_source_consistency_v1` without adding persistence.
 
 ## QA Gates
 

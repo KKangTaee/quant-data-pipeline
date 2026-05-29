@@ -59,6 +59,7 @@ SELECTED_RECHECK_OPERATIONS_PREFLIGHT_SCHEMA_VERSION = "selected_recheck_operati
 SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION = "selected_provider_evidence_v1"
 SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION = "selected_provider_evidence_staleness_contract_v1"
 SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION = "selected_review_signal_policy_v1"
+SELECTED_DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -179,6 +180,64 @@ def _selected_allocation_read_only_boundary(*, write_policy: str, notes: str) ->
         "auto_rebalance": False,
         "notes": notes,
     }
+
+
+def _selected_decision_source_contract(
+    row: dict[str, Any],
+    *,
+    surface: str,
+    session_sources: list[str] | None = None,
+) -> dict[str, Any]:
+    raw_decision = dict(row.get("raw_decision") or row or {})
+    decision_id = _clean_text(raw_decision.get("decision_id") or row.get("decision_id"), "")
+    source_type = _clean_text(raw_decision.get("source_type") or row.get("source_type"), "")
+    source_id = _clean_text(raw_decision.get("source_id") or row.get("source_id"), "")
+    selected_flag = (
+        raw_decision.get("selected_practical_portfolio") is True
+        or row.get("selected_practical_portfolio") is True
+        or _clean_text(raw_decision.get("decision_route") or row.get("decision_route"), "") == SELECTED_PRACTICAL_PORTFOLIO_ROUTE
+    )
+    normalized_session_sources = [
+        str(source).strip()
+        for source in list(session_sources or [])
+        if str(source or "").strip()
+    ]
+    return {
+        "schema_version": SELECTED_DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION,
+        "surface": _clean_text(surface, "selected_dashboard"),
+        "decision_id": decision_id,
+        "decision_route": _clean_text(raw_decision.get("decision_route") or row.get("decision_route"), ""),
+        "selected_practical_portfolio": selected_flag,
+        "source_type": source_type,
+        "source_id": source_id,
+        "source_title": _clean_text(raw_decision.get("source_title") or row.get("source_title"), ""),
+        "selection_source_id": _clean_text(raw_decision.get("selection_source_id") or row.get("selection_source_id"), ""),
+        "validation_id": _clean_text(raw_decision.get("validation_id") or row.get("validation_id"), ""),
+        "source_identity": f"{source_type}:{source_id}" if source_type or source_id else "",
+        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+        "registry_file": getattr(FINAL_SELECTION_DECISION_V2_FILE, "name", str(FINAL_SELECTION_DECISION_V2_FILE)),
+        "session_evidence_sources": normalized_session_sources,
+        "evidence_scope": "final_decision_v2_plus_session_state",
+        "execution_boundary": {
+            "write_policy": "read_only_selected_decision_source_contract",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "report_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Selected Dashboard read models share the Final Decision V2 row and optional session-state evidence only.",
+        },
+    }
+
+
+def _selected_decision_source_matches_contract(row: dict[str, Any], contract: dict[str, Any]) -> bool:
+    if not contract:
+        return False
+    expected = _selected_decision_source_contract(row, surface=str(contract.get("surface") or "selected_dashboard"))
+    fields = ("decision_id", "decision_route", "source_type", "source_id", "selection_source_id", "validation_id")
+    return all(_clean_text(expected.get(field), "") == _clean_text(contract.get(field), "") for field in fields)
 
 
 def _is_selected_practical_portfolio(row: dict[str, Any]) -> bool:
@@ -1098,6 +1157,18 @@ def build_selected_portfolio_monitoring_timeline(
     recheck = dict(recheck_result or {})
     drift = dict(drift_check or {})
     alert = dict(alert_preview or {})
+    session_sources: list[str] = []
+    if recheck:
+        session_sources.append("session_state.performance_recheck")
+    if drift:
+        session_sources.append("session_state.drift_check")
+    if alert:
+        session_sources.append("session_state.alert_preview")
+    source_contract = _selected_decision_source_contract(
+        selected,
+        surface="monitoring_timeline",
+        session_sources=session_sources,
+    )
     operation_status = str(selected.get("operation_status") or "").strip()
     operation_label = _clean_text(selected.get("operation_status_label") or operation_status)
     rows: list[dict[str, Any]] = [
@@ -1214,9 +1285,14 @@ def build_selected_portfolio_monitoring_timeline(
             "performance_recheck_present": bool(recheck),
             "drift_check_present": bool(drift),
             "alert_preview_present": bool(alert),
+            "source_contract_present": True,
         },
+        "source_contract": source_contract,
         "execution_boundary": {
             "write_policy": "read_only_timeline",
+            "db_write": False,
+            "registry_write": False,
+            "report_auto_write": False,
             "monitoring_log_auto_write": False,
             "live_approval": False,
             "order_instruction": False,
@@ -1276,6 +1352,13 @@ def build_selected_portfolio_continuity_check(
     ]
     timeline_boundary = dict(timeline.get("execution_boundary") or {})
     timeline_metrics = dict(timeline.get("metrics") or {})
+    timeline_source_contract = dict(timeline.get("source_contract") or {})
+    source_contract = _selected_decision_source_contract(
+        selected,
+        surface="continuity_check",
+        session_sources=list(timeline_source_contract.get("session_evidence_sources") or []),
+    )
+    source_contract_matches = _selected_decision_source_matches_contract(selected, timeline_source_contract)
     packet_route = _clean_text(packet.get("route"), "")
     evidence_route = _clean_text(evidence.get("route") or selected.get("evidence_route"), "")
     gate_outcome = _clean_text(gate_policy.get("outcome"), "")
@@ -1298,6 +1381,26 @@ def build_selected_portfolio_continuity_check(
                 "Selected Dashboard can read this row."
                 if selected_flag
                 else "Record a SELECT_FOR_PRACTICAL_PORTFOLIO decision in Final Review first."
+            ),
+            severity="block",
+        ),
+        _continuity_check_row(
+            check="Decision source consistency",
+            status="PASS" if source_contract_matches else "BLOCKED",
+            ready=source_contract_matches,
+            current=(
+                f"decision={timeline_source_contract.get('decision_id') or '-'} / "
+                f"source={timeline_source_contract.get('source_type') or '-'}:{timeline_source_contract.get('source_id') or '-'}"
+            ),
+            evidence=(
+                "Timeline, Continuity, and Dossier can use the same Final Decision V2 source"
+                if source_contract_matches
+                else "Timeline source contract is missing or does not match the selected decision row"
+            ),
+            next_action=(
+                "Use this selected decision row as the source for continuity, timeline, review signals, and dossier."
+                if source_contract_matches
+                else "Rebuild the monitoring timeline from the currently selected dashboard row before relying on continuity."
             ),
             severity="block",
         ),
@@ -1416,9 +1519,14 @@ def build_selected_portfolio_continuity_check(
             "needs_input_count": len(needs_input),
             "review_count": len(review),
             "pass_count": sum(1 for check in checks if check["Status"] == "PASS"),
+            "source_contract_consistent": source_contract_matches,
         },
+        "source_contract": source_contract,
         "execution_boundary": {
             "write_policy": "read_only_continuity_check",
+            "db_write": False,
+            "registry_write": False,
+            "report_auto_write": False,
             "monitoring_log_auto_write": False,
             "live_approval": False,
             "order_instruction": False,
@@ -1908,6 +2016,16 @@ def build_selected_portfolio_review_signal_policy(
     preflight = dict(recheck_preflight or {})
     provider = dict(provider_evidence or {})
     drift = dict(drift_check or {})
+    session_sources: list[str] = []
+    if recheck_result:
+        session_sources.append("session_state.performance_recheck")
+    if drift:
+        session_sources.append("session_state.drift_check")
+    source_contract = _selected_decision_source_contract(
+        selected,
+        surface="review_signal_policy",
+        session_sources=session_sources,
+    )
     blockers = [str(blocker) for blocker in list(selected.get("blockers") or []) if str(blocker)]
     evidence_route = _clean_text(selected.get("evidence_route"), "-")
     evidence_status = "CLEAR" if not blockers and evidence_route == "READY_FOR_FINAL_DECISION" else "WATCH"
@@ -2030,11 +2148,14 @@ def build_selected_portfolio_review_signal_policy(
             "provider_stale_count": provider_metrics.get("stale_count", 0),
             "provider_partial_coverage_count": provider_metrics.get("partial_coverage_count", 0),
             "provider_needs_input_count": provider_metrics.get("needs_input_count", 0),
+            "source_contract_present": True,
         },
+        "source_contract": source_contract,
         "execution_boundary": {
             "write_policy": "read_only_review_signal_policy",
             "db_write": False,
             "registry_write": False,
+            "report_auto_write": False,
             "monitoring_log_auto_write": False,
             "alert_persistence": False,
             "live_approval": False,

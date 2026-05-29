@@ -25,6 +25,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_recheck_preflight_table,
     build_selected_portfolio_recheck_readiness_table,
     build_selected_portfolio_review_signal_policy_table,
+    build_selected_portfolio_source_contract_table,
     build_selected_portfolio_symbol_freshness_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
@@ -559,6 +560,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
     continuity = build_selected_portfolio_continuity_check(row, monitoring_timeline=continuity_timeline)
     continuity_metrics = dict(continuity.get("metrics") or {})
     continuity_route = str(continuity.get("route") or "")
+    continuity_source_contract = dict(continuity.get("source_contract") or {})
     with st.container(border=True):
         st.markdown("##### Final Review -> Selected Dashboard Continuity")
         render_badge_strip(
@@ -583,6 +585,11 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
                     "value": continuity_metrics.get("blocked_count", 0),
                     "tone": "danger" if continuity_metrics.get("blocked_count") else "neutral",
                 },
+                {
+                    "label": "Source Contract",
+                    "value": "Consistent" if continuity_metrics.get("source_contract_consistent") else "Mismatch",
+                    "tone": "positive" if continuity_metrics.get("source_contract_consistent") else "danger",
+                },
                 {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
             ]
         )
@@ -594,6 +601,16 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
             st.success(str(continuity.get("next_action") or "-"))
         with st.expander("Continuity check rows", expanded=continuity_route != "CONTINUITY_READY"):
             st.dataframe(build_selected_portfolio_continuity_table(continuity), width="stretch", hide_index=True)
+        with st.expander("Selected decision source contract", expanded=not continuity_metrics.get("source_contract_consistent")):
+            st.caption(
+                "Continuity, Timeline, Review Signals, and Decision Dossier should read the same Final Decision V2 row. "
+                "Session evidence is read-only context, not durable monitoring history."
+            )
+            st.dataframe(
+                build_selected_portfolio_source_contract_table(continuity_source_contract),
+                width="stretch",
+                hide_index=True,
+            )
 
     timeline_tab, trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
         ["Timeline", "Review Signals", "Why Selected", "Actual Allocation", "Audit"]
@@ -782,6 +799,7 @@ def _render_decision_dossier(row: dict[str, Any]) -> None:
     dossier = build_decision_dossier(row, monitoring_timeline=_latest_monitoring_timeline(row))
     decision = dict(dossier.get("decision") or {})
     metrics = dict(dossier.get("metrics") or {})
+    source_contract = dict(dossier.get("source_contract") or {})
     boundary = dict(dossier.get("execution_boundary") or {})
     render_badge_strip(
         [
@@ -796,6 +814,11 @@ def _render_decision_dossier(row: dict[str, Any]) -> None:
                 "label": "Timeline",
                 "value": "Included" if metrics.get("monitoring_timeline_present") else "Not Included",
                 "tone": "neutral",
+            },
+            {
+                "label": "Source Contract",
+                "value": "Consistent" if metrics.get("source_contract_consistent") else "Check",
+                "tone": "positive" if metrics.get("source_contract_consistent") else "warning",
             },
             {"label": "Auto Write", "value": "Disabled", "tone": "neutral"},
         ]
@@ -813,7 +836,14 @@ def _render_decision_dossier(row: dict[str, Any]) -> None:
     with action_cols[1]:
         st.caption(
             f"Write policy: {boundary.get('write_policy') or '-'} / "
-            f"report auto write: {boundary.get('report_auto_write')}"
+            f"report auto write: {boundary.get('report_auto_write')} / "
+            f"monitoring auto write: {boundary.get('monitoring_log_auto_write')}"
+        )
+    with st.expander("Dossier source contract", expanded=not metrics.get("source_contract_consistent")):
+        st.dataframe(
+            build_selected_portfolio_source_contract_table(source_contract),
+            width="stretch",
+            hide_index=True,
         )
     with st.expander("Dossier preview", expanded=False):
         st.markdown(str(dossier.get("markdown") or "-"))

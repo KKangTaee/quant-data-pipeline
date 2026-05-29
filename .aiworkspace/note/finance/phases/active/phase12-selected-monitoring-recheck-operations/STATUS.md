@@ -21,20 +21,22 @@ Completed:
 - Review Signals now uses Recheck Comparison as the performance threshold policy owner and includes preflight / provider routes in the read-only signal board.
 - 12-5 `allocation-drift-evidence-boundary-v1`
 - Actual Allocation now has a read-only evidence boundary that explicitly disables DB writes, registry writes, monitoring log auto-write, raw input persistence, alert persistence, account / broker integration, order instruction, and auto rebalance.
+- 12-6 `decision-dossier-continuity-operations-v1`
+- Decision Dossier, Continuity, Timeline, and Review Signals now expose a shared selected decision source consistency contract, and continuity blocks mismatched timeline source contracts.
 
 Next:
 
-- 12-6 `decision-dossier-continuity-operations-v1`
+- 12-7 `phase12-integrated-qa-closeout`
 
 ## Latest Decision
 
-12-5 added `selected_allocation_drift_evidence_boundary_v1`.
-Actual Allocation remains optional and session-only; breached drift means manual review signal, not order draft or auto rebalance.
-The Dashboard now shows a boundary table and uses `Reflect Session Signal` for session-only signal reflection.
+12-6 added `selected_decision_source_consistency_v1`.
+Decision Dossier, Continuity, Timeline, and Review Signals now identify the same `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2` source row and keep session evidence as read-only context.
+Continuity now blocks missing or mismatched timeline source contracts, and Decision Dossier markdown shows source contract consistency plus disabled DB / registry writes.
 
 Immediate next target:
 
-- `decision-dossier-continuity-operations-v1`
+- `phase12-integrated-qa-closeout`
 
 ## Storage Boundary Reminder
 

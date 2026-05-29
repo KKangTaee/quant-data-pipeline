@@ -243,6 +243,30 @@ def build_selected_portfolio_continuity_table(continuity: dict[str, Any]) -> pd.
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_source_contract_table(contract: dict[str, Any]) -> pd.DataFrame:
+    boundary = dict(contract.get("execution_boundary") or {})
+    rows = [
+        {"Field": "Schema", "Value": contract.get("schema_version")},
+        {"Field": "Surface", "Value": contract.get("surface")},
+        {"Field": "Decision ID", "Value": contract.get("decision_id")},
+        {"Field": "Decision Route", "Value": contract.get("decision_route")},
+        {"Field": "Durable Source", "Value": contract.get("durable_source")},
+        {"Field": "Source Identity", "Value": contract.get("source_identity")},
+        {"Field": "Selection Source ID", "Value": contract.get("selection_source_id")},
+        {"Field": "Validation ID", "Value": contract.get("validation_id")},
+        {
+            "Field": "Session Evidence",
+            "Value": ", ".join(list(contract.get("session_evidence_sources") or [])) or "-",
+        },
+        {"Field": "Registry Write", "Value": boundary.get("registry_write")},
+        {"Field": "Monitoring Log Auto Write", "Value": boundary.get("monitoring_log_auto_write")},
+        {"Field": "Report Auto Write", "Value": boundary.get("report_auto_write")},
+        {"Field": "Order Instruction", "Value": boundary.get("order_instruction")},
+        {"Field": "Auto Rebalance", "Value": boundary.get("auto_rebalance")},
+    ]
+    return pd.DataFrame(rows)
+
+
 def build_selected_portfolio_recheck_comparison_table(comparison: dict[str, Any]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in list(comparison.get("rows") or []):

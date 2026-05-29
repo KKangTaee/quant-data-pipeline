@@ -5031,6 +5031,11 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
                 "updated_at": "2026-05-28T10:00:00",
                 "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
                 "selected_practical_portfolio": True,
+                "source_type": "practical_validation_result",
+                "source_id": "source-selected",
+                "source_title": "Selected portfolio source",
+                "selection_source_id": "source-selected",
+                "validation_id": "validation-selected",
                 "selected_components": [
                     {
                         "title": "Selected Component",
@@ -5167,6 +5172,12 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         ])
         self.assertFalse(timeline["execution_boundary"]["monitoring_log_auto_write"])
         self.assertEqual(timeline["execution_boundary"]["write_policy"], "read_only_timeline")
+        self.assertEqual(timeline["source_contract"]["schema_version"], "selected_decision_source_consistency_v1")
+        self.assertEqual(timeline["source_contract"]["decision_id"], "decision-selected")
+        self.assertEqual(timeline["source_contract"]["source_identity"], "practical_validation_result:source-selected")
+        self.assertEqual(timeline["source_contract"]["durable_source"], "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2")
+        self.assertFalse(timeline["source_contract"]["execution_boundary"]["registry_write"])
+        self.assertFalse(timeline["source_contract"]["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_monitoring_timeline_surfaces_recheck_breach_and_drift_watch(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
@@ -5314,10 +5325,34 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(continuity["route"], "CONTINUITY_NEEDS_INPUT")
         checks = {row["Check"]: row for row in continuity["checks"]}
         self.assertEqual(checks["Selected Final Review row"]["Status"], "PASS")
+        self.assertEqual(checks["Decision source consistency"]["Status"], "PASS")
         self.assertEqual(checks["Component target contract"]["Status"], "PASS")
         self.assertEqual(checks["Performance Recheck input"]["Status"], "NEEDS_INPUT")
+        self.assertTrue(continuity["metrics"]["source_contract_consistent"])
+        self.assertEqual(continuity["source_contract"]["decision_id"], "decision-selected")
         self.assertFalse(continuity["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(continuity["execution_boundary"]["registry_write"])
         self.assertFalse(continuity["execution_boundary"]["live_approval"])
+
+    def test_selected_continuity_check_blocks_mismatched_timeline_source_contract(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            build_selected_portfolio_continuity_check,
+            build_selected_portfolio_monitoring_timeline,
+        )
+
+        timeline = build_selected_portfolio_monitoring_timeline(self._selected_row())
+        timeline["source_contract"]["decision_id"] = "different-decision"
+
+        continuity = build_selected_portfolio_continuity_check(
+            self._selected_row(),
+            monitoring_timeline=timeline,
+        )
+
+        self.assertEqual(continuity["route"], "CONTINUITY_BLOCKED")
+        checks = {row["Check"]: row for row in continuity["checks"]}
+        self.assertEqual(checks["Decision source consistency"]["Status"], "BLOCKED")
+        self.assertFalse(continuity["metrics"]["source_contract_consistent"])
+        self.assertFalse(continuity["execution_boundary"]["registry_write"])
 
     def test_selected_continuity_check_blocks_non_selected_or_invalid_component_contract(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
@@ -5444,7 +5479,13 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["MDD vs selected baseline"]["Policy Owner"], "Recheck Comparison")
         self.assertEqual(rows["Benchmark spread"]["Policy Owner"], "Recheck Comparison")
         self.assertFalse(policy["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(policy["execution_boundary"]["report_auto_write"])
         self.assertFalse(policy["execution_boundary"]["order_instruction"])
+        self.assertEqual(policy["source_contract"]["decision_id"], "decision-selected")
+        self.assertEqual(
+            policy["source_contract"]["session_evidence_sources"],
+            ["session_state.performance_recheck"],
+        )
 
     def test_review_signal_policy_keeps_missing_recheck_and_data_gaps_out_of_clear(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
@@ -6154,42 +6195,67 @@ class DecisionDossierContractTests(unittest.TestCase):
         self.assertEqual(dossier["metrics"]["component_count"], 1)
         self.assertGreaterEqual(dossier["metrics"]["evidence_check_count"], 1)
         self.assertEqual(dossier["execution_boundary"]["write_policy"], "read_only_dossier")
+        self.assertFalse(dossier["execution_boundary"]["db_write"])
+        self.assertFalse(dossier["execution_boundary"]["registry_write"])
         self.assertFalse(dossier["execution_boundary"]["report_auto_write"])
         self.assertFalse(dossier["execution_boundary"]["live_approval"])
+        self.assertEqual(dossier["source_contract"]["schema_version"], "selected_decision_source_consistency_v1")
+        self.assertEqual(dossier["source_contract"]["source_identity"], "practical_validation_result:source-dossier")
+        self.assertTrue(dossier["metrics"]["source_contract_consistent"])
         self.assertIn("# Final Decision Dossier", dossier["markdown"])
+        self.assertIn("## Source Contract", dossier["markdown"])
         self.assertIn("decision-dossier", dossier["filename"])
         self.assertIn("not live approval", dossier["markdown"])
 
     def test_decision_dossier_can_include_selected_monitoring_timeline(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
         from app.services.backtest_evidence_read_model import build_decision_dossier
 
-        dossier = build_decision_dossier(
-            {"raw_decision": self._final_decision_row()},
-            monitoring_timeline={
-                "schema_version": "selected_monitoring_timeline_v1",
-                "timeline_status": "WATCH",
-                "timeline_label": "관찰",
-                "conclusion": "watch event가 있습니다.",
-                "rows": [
-                    {
-                        "order": 3,
-                        "event": "Performance Recheck",
-                        "timestamp": "2026-05-28",
-                        "status": "WATCH",
-                        "status_label": "관찰",
-                        "signal": "PARTIAL_RECHECK",
-                        "next_action": "다음 점검에서 확인",
-                        "source": "session_state.performance_recheck",
-                    }
-                ],
-                "metrics": {"row_count": 1},
+        selected_row = {"raw_decision": self._final_decision_row()}
+        timeline = build_selected_portfolio_monitoring_timeline(
+            selected_row,
+            recheck_result={
+                "status": "ok",
+                "verdict_route": "SELECTION_THESIS_HOLDS",
+                "verdict": "선정 근거가 유지됩니다.",
+                "period": {"start": "2026-01-01", "end": "2026-05-28"},
+                "change_summary": {"cagr_delta_vs_baseline": 0.01},
             },
+        )
+
+        dossier = build_decision_dossier(
+            selected_row,
+            monitoring_timeline=timeline,
         )
 
         self.assertTrue(dossier["monitoring_timeline"]["present"])
         self.assertTrue(dossier["metrics"]["monitoring_timeline_present"])
+        self.assertTrue(dossier["source_contract"]["timeline_contract_present"])
+        self.assertTrue(dossier["source_contract"]["timeline_contract_consistent"])
+        self.assertEqual(
+            dossier["source_contract"]["session_evidence_sources"],
+            ["session_state.performance_recheck"],
+        )
         self.assertIn("Performance Recheck", dossier["markdown"])
         self.assertFalse(dossier["execution_boundary"]["monitoring_log_auto_write"])
+
+    def test_decision_dossier_surfaces_mismatched_timeline_source_contract(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.services.backtest_evidence_read_model import build_decision_dossier
+
+        selected_row = {"raw_decision": self._final_decision_row()}
+        timeline = build_selected_portfolio_monitoring_timeline(selected_row)
+        timeline["source_contract"]["source_id"] = "different-source"
+
+        dossier = build_decision_dossier(
+            selected_row,
+            monitoring_timeline=timeline,
+        )
+
+        self.assertTrue(dossier["source_contract"]["timeline_contract_present"])
+        self.assertFalse(dossier["source_contract"]["timeline_contract_consistent"])
+        self.assertFalse(dossier["metrics"]["source_contract_consistent"])
+        self.assertIn("Timeline Contract Consistent: `False`", dossier["markdown"])
 
 
 if __name__ == "__main__":

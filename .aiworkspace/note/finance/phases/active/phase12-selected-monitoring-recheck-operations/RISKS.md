@@ -19,6 +19,8 @@ Created: 2026-05-29
 - 12-3 added selected provider evidence freshness / coverage policy so stale actual evidence, partial / proxy / bridge coverage, and missing required provider areas do not route to pass.
 - 12-4 added selected review signal policy so CAGR / MDD / benchmark spread thresholds are owned by Recheck Comparison and preflight / provider route gaps appear in Review Signals.
 - 12-5 added selected allocation drift evidence boundary so actual allocation drift / alert preview remains manual, session-only evidence with no storage, account, broker, order, or auto rebalance behavior.
+- 12-6 added selected decision source consistency so Decision Dossier, Continuity, Timeline, and Review Signals expose the same Final Decision V2 source and session evidence boundary.
+- Continuity blocks missing or mismatched timeline source contracts, and Decision Dossier markdown labels timeline contract consistency.
 - Keep Selected Portfolio Dashboard read-only unless a later task explicitly changes scope and user confirms it.
 - Treat missing / failed / stale / partial evidence as `NEEDS_INPUT`, `WATCH`, or `BREACHED`, not pass.
 - Keep all full provider / holdings / macro / price data in DB or runtime calculation boundaries.

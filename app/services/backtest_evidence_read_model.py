@@ -12,6 +12,7 @@ from app.services.backtest_validation_efficacy import build_validation_efficacy_
 
 SELECT_FOR_PRACTICAL_PORTFOLIO = "SELECT_FOR_PRACTICAL_PORTFOLIO"
 DECISION_DOSSIER_SCHEMA_VERSION = "decision_dossier_v1"
+DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
@@ -1097,7 +1098,12 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
 
 
 def _markdown_value(value: Any, default: str = "-") -> str:
-    text = _safe_text(value, default)
+    if value is None:
+        text = default
+    elif isinstance(value, str):
+        text = value.strip() or default
+    else:
+        text = str(value).strip() or default
     return text.replace("|", "\\|").replace("\n", "<br>")
 
 
@@ -1119,6 +1125,65 @@ def _decision_dossier_filename(decision_id: Any) -> str:
         for char in _safe_text(decision_id, "final_decision")
     )
     return f"{safe_id}_decision_dossier.md"
+
+
+def _decision_source_contract(
+    raw_decision: dict[str, Any],
+    *,
+    surface: str,
+    monitoring_timeline: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    timeline_contract = dict(dict(monitoring_timeline or {}).get("source_contract") or {})
+    session_sources = [
+        str(source).strip()
+        for source in list(timeline_contract.get("session_evidence_sources") or [])
+        if str(source or "").strip()
+    ]
+    decision_id = _safe_text(raw_decision.get("decision_id"), "")
+    source_type = _safe_text(raw_decision.get("source_type"), "")
+    source_id = _safe_text(raw_decision.get("source_id"), "")
+    return {
+        "schema_version": DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION,
+        "surface": _safe_text(surface, "decision_dossier"),
+        "decision_id": decision_id,
+        "decision_route": _safe_text(raw_decision.get("decision_route"), ""),
+        "selected_practical_portfolio": bool(raw_decision.get("selected_practical_portfolio")),
+        "source_type": source_type,
+        "source_id": source_id,
+        "source_title": _safe_text(raw_decision.get("source_title"), ""),
+        "selection_source_id": _safe_text(raw_decision.get("selection_source_id"), ""),
+        "validation_id": _safe_text(raw_decision.get("validation_id"), ""),
+        "source_identity": f"{source_type}:{source_id}" if source_type or source_id else "",
+        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+        "registry_file": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+        "timeline_contract_present": bool(timeline_contract),
+        "timeline_contract_consistent": _timeline_contract_matches_decision(raw_decision, timeline_contract)
+        if timeline_contract
+        else None,
+        "session_evidence_sources": session_sources,
+        "evidence_scope": "final_decision_v2_plus_optional_session_timeline",
+        "execution_boundary": {
+            "write_policy": "read_only_decision_source_contract",
+            "db_write": False,
+            "registry_write": False,
+            "report_auto_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Decision Dossier reads the saved Final Decision V2 row and optional Selected Dashboard session timeline only.",
+        },
+    }
+
+
+def _timeline_contract_matches_decision(raw_decision: dict[str, Any], timeline_contract: dict[str, Any]) -> bool:
+    if not timeline_contract:
+        return False
+    fields = ("decision_id", "decision_route", "source_type", "source_id", "selection_source_id", "validation_id")
+    return all(
+        _safe_text(raw_decision.get(field), "") == _safe_text(timeline_contract.get(field), "")
+        for field in fields
+    )
 
 
 def _decision_dossier_component_rows(raw_decision: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1146,6 +1211,7 @@ def _decision_dossier_markdown(dossier: dict[str, Any]) -> str:
     validation = dict(dossier.get("validation_summary") or {})
     gate_policy = dict(dossier.get("gate_policy") or {})
     monitoring = dict(dossier.get("monitoring_timeline") or {})
+    source_contract = dict(dossier.get("source_contract") or {})
     boundary = dict(dossier.get("execution_boundary") or {})
     metrics = dict(dossier.get("metrics") or {})
     lines = [
@@ -1160,6 +1226,13 @@ def _decision_dossier_markdown(dossier: dict[str, Any]) -> str:
         f"- Evidence Route: `{_markdown_value(decision.get('evidence_route'))}`",
         f"- Gate Outcome: `{_markdown_value(gate_policy.get('outcome'))}`",
         f"- Selected Practical Portfolio: `{_markdown_value(decision.get('selected_practical_portfolio'))}`",
+        "",
+        "## Source Contract",
+        f"- Durable Source: `{_markdown_value(source_contract.get('durable_source'))}`",
+        f"- Source Identity: `{_markdown_value(source_contract.get('source_identity'))}`",
+        f"- Timeline Contract Present: `{_markdown_value(source_contract.get('timeline_contract_present'))}`",
+        f"- Timeline Contract Consistent: `{_markdown_value(source_contract.get('timeline_contract_consistent'))}`",
+        f"- Session Evidence Sources: {_markdown_value(', '.join(source_contract.get('session_evidence_sources') or []))}",
         "",
         "## Operator Decision",
         f"- Reason: {_markdown_value(operator.get('reason'))}",
@@ -1211,6 +1284,8 @@ def _decision_dossier_markdown(dossier: dict[str, Any]) -> str:
             *_markdown_table(
                 [
                     {"Boundary": "Write Policy", "Value": boundary.get("write_policy")},
+                    {"Boundary": "DB Write", "Value": boundary.get("db_write")},
+                    {"Boundary": "Registry Write", "Value": boundary.get("registry_write")},
                     {"Boundary": "Report Auto Write", "Value": boundary.get("report_auto_write")},
                     {"Boundary": "Monitoring Log Auto Write", "Value": boundary.get("monitoring_log_auto_write")},
                     {"Boundary": "Live Approval", "Value": boundary.get("live_approval")},
@@ -1251,6 +1326,11 @@ def build_decision_dossier(
     evidence_checks = build_final_decision_evidence_rows(raw_decision)
     not_ready_count = sum(1 for check in evidence_checks if not bool(check.get("Ready")))
     timeline = dict(monitoring_timeline or {})
+    source_contract = _decision_source_contract(
+        raw_decision,
+        surface="decision_dossier",
+        monitoring_timeline=timeline,
+    )
     monitoring_payload = {
         "present": bool(timeline),
         "schema_version": timeline.get("schema_version"),
@@ -1309,15 +1389,23 @@ def build_decision_dossier(
             "policy_rows": list(gate_policy.get("policy_rows") or []),
         },
         "monitoring_timeline": monitoring_payload,
+        "source_contract": source_contract,
         "metrics": {
             "component_count": len(raw_decision.get("selected_components") or []),
             "evidence_check_count": len(evidence_checks),
             "not_ready_evidence_check_count": not_ready_count,
             "gate_policy_row_count": len(gate_policy.get("policy_rows") or []),
             "monitoring_timeline_present": bool(timeline),
+            "source_contract_present": True,
+            "timeline_source_contract_present": source_contract.get("timeline_contract_present"),
+            "source_contract_consistent": source_contract.get("timeline_contract_consistent")
+            if source_contract.get("timeline_contract_present")
+            else True,
         },
         "execution_boundary": {
             "write_policy": "read_only_dossier",
+            "db_write": False,
+            "registry_write": False,
             "report_auto_write": False,
             "monitoring_log_auto_write": False,
             "live_approval": False,
@@ -1333,6 +1421,7 @@ def build_decision_dossier(
 
 __all__ = [
     "DECISION_DOSSIER_SCHEMA_VERSION",
+    "DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION",
     "FINAL_REVIEW_DECISION_LABELS",
     "FINAL_REVIEW_STATUS_DISPLAY",
     "SELECT_FOR_PRACTICAL_PORTFOLIO",

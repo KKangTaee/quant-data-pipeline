@@ -4234,3 +4234,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/recheck-comparison-review-signal-policy-v1/`에서 `selected_review_signal_policy_v1`을 구현했다.
   - Review Signals의 CAGR / MDD / benchmark spread rows는 Recheck Comparison에서 파생되고, preflight / provider route도 같은 signal board에 반영된다.
   - 다음 작업은 `allocation-drift-evidence-boundary-v1`이며 Phase 12 문서에서 12-5로 이어진다.
+- Phase 12 Decision Dossier Continuity Operations V1:
+  - `.aiworkspace/note/finance/tasks/active/decision-dossier-continuity-operations-v1/`에서 `selected_decision_source_consistency_v1`을 구현했다.
+  - Decision Dossier, Continuity, Timeline, Review Signals가 같은 Final Decision V2 source contract를 표시하고, session evidence는 read-only context로 남긴다.
+  - 다음 작업은 `phase12-integrated-qa-closeout`이며 Phase 12 문서에서 12-7로 이어진다.

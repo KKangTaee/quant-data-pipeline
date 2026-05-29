@@ -188,6 +188,38 @@ The contract adds no JSONL registry, monitoring log auto write, raw holding inpu
 
 Implementation order now moves to 12-6 decision dossier / continuity operations refinement.
 
+## 12-6 Decision Dossier / Continuity Operations Result
+
+12-6 added `selected_decision_source_consistency_v1`.
+
+The contract is attached to:
+
+- Monitoring Timeline
+- Continuity Check
+- Review Signal Policy
+- Decision Dossier
+
+The contract identifies the selected source with:
+
+- `decision_id`
+- `decision_route`
+- `source_type`
+- `source_id`
+- `selection_source_id`
+- `validation_id`
+- `source_identity`
+- `durable_source = FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`
+
+Continuity now has a `Decision source consistency` row.
+If a supplied timeline has no source contract or points to a different decision row, continuity routes to `CONTINUITY_BLOCKED`.
+
+Decision Dossier markdown now includes a `Source Contract` section and explicit DB / registry write rows in the execution boundary.
+Session evidence sources such as Performance Recheck, drift check, and alert preview are labeled as session context rather than durable monitoring history.
+
+The contract adds no JSONL registry, monitoring log auto write, report auto write, user memo, preset, approval, order, or auto rebalance path.
+
+Implementation order now moves to 12-7 integrated QA / closeout.
+
 ## Route Semantics
 
 | State | Meaning |

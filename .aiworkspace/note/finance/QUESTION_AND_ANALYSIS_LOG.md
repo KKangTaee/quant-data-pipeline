@@ -6070,3 +6070,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - preflight / provider / comparison route를 하나의 read-only signal board로 묶으면 missing, stale, partial, failed recheck가 Clear로 숨지 않는다
 - Follow-up:
   - `selected_review_signal_policy_v1`을 구현했고, 다음은 allocation drift evidence boundary다
+
+### 2026-05-29 - Dossier / Continuity / Timeline source를 같은 Final Decision V2 row로 고정한다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Decision Dossier, Continuity, Timeline, Review Signals가 서로 다른 source처럼 보이거나 session evidence를 durable monitoring history처럼 보이게 하는 gap을 줄여야 함
+- Analysis result:
+  - 새 저장소가 아니라 read model metadata로 `selected_decision_source_consistency_v1`을 붙이는 것이 가장 작은 안전한 구현 단위다
+  - timeline source contract가 현재 selected decision row와 다르면 Continuity는 blocked issue로 표시해야 한다
+- Follow-up:
+  - 12-6 구현은 완료했고, 다음은 Phase 12 integrated QA / closeout이다

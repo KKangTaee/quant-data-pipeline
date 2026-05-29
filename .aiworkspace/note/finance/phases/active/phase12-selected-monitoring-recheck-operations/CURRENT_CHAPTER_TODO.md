@@ -5,14 +5,14 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `decision-dossier-continuity-operations-v1`
+Next task: `phase12-integrated-qa-closeout`
 
 ## TODO
 
-- Confirm Decision Dossier, Continuity, Timeline, and Review Signals read the same selected decision source.
-- Check whether dossier / continuity labels still imply legacy Phase36 or monitoring history persistence.
-- Ensure session-state recheck / drift / alert evidence is not described as durable monitoring history.
-- Add focused contract tests if source consistency or boundary behavior changes.
+- Run full Phase 12 compile / service contract / boundary / hygiene checks.
+- Confirm no new JSONL registry, monitoring log auto-write, user memo, preset, report auto-write, order, approval, or auto rebalance path was added.
+- Verify 12-1~12-6 task docs and phase board point to the correct closeout target.
+- Prepare Phase 12 closeout summary or handoff if integrated QA passes.
 
 ## Stop Conditions
 
