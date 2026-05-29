@@ -14,15 +14,17 @@ Completed:
 - 10-2 `walkforward-split-contract-v1`
 - 10-3 `oos-holdout-validation-contract-v1`
 - 10-4 `regime-split-validation-v1`
+- 10-5 `validation-efficacy-gate-policy-refinement-v2`
 - Phase scope, task split, storage boundary, immediate next task 정리
 - Current Practical Validation / Robustness Lab / runtime replay / Final Review gate source map and gap audit
 - Benchmark-aligned walk-forward temporal validation contract
 - Benchmark-aligned OOS holdout validation contract
 - DB-backed macro regime split validation contract
+- Temporal / OOS / regime Validation Efficacy row-level gap selected-route gate policy connection
 
 Next:
 
-- 10-5 `validation-efficacy-gate-policy-refinement-v2`
+- 10-6 `phase10-integrated-qa-closeout`
 
 ## Latest Decision
 
@@ -31,8 +33,9 @@ Phase 10은 신규 저장 기능을 먼저 만들지 않는다.
 10-2에서 benchmark-aligned walk-forward / rolling temporal validation contract를 추가했다.
 10-3에서 in-sample / out-sample OOS holdout contract를 추가했다.
 10-4에서 DB-backed macro history를 사용한 historical regime split contract를 추가했다.
+10-5에서 walk-forward / OOS / regime row-level gap을 Final Review gate policy evidence에 병합했다.
 proxy-only, short-history, missing-benchmark, missing-macro evidence는 `PASS`로 처리하지 않는다.
-다음 구현은 temporal / OOS / regime gap을 selected-route gate policy에 반영한다.
+다음 구현은 Phase 10 integrated QA / closeout이다.
 
 ## Storage Boundary Reminder
 

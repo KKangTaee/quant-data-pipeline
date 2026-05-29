@@ -99,6 +99,18 @@ The contract:
 - downgrades missing / short / proxy-only macro evidence instead of passing it
 - writes no DB rows, no new JSONL registry, no memo, and no preset state
 
+## 10-5 Implemented Contract
+
+`validation-efficacy-gate-policy-refinement-v2` extended `app/services/backtest_evidence_read_model.py`.
+
+The contract:
+
+- merges non-PASS Validation Efficacy Audit rows into the `validation_efficacy` gate policy group
+- surfaces `Walk-forward temporal validation`, `OOS holdout validation`, and `Regime split validation` criteria in Final Review selected-route evidence
+- maps `NEEDS_INPUT` / `BLOCKED` to selected-route blockers and `REVIEW` to hold / re-review requirements
+- reuses the existing investability packet / selected-route gate contract
+- writes no DB rows, no new JSONL registry, no memo, and no preset state
+
 ## User Flow Target
 
 사용자는 기존 흐름을 유지한다.

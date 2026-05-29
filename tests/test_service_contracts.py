@@ -3611,6 +3611,124 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             )
         )
 
+    def test_gate_policy_surfaces_temporal_oos_and_regime_review_rows(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_efficacy_audit"] = {
+            "route": "VALIDATION_EFFICACY_REVIEW",
+            "route_label": "Review Required",
+            "rows": [
+                {
+                    "Criteria": "Walk-forward temporal validation",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "windows=6 / negative share=0.33",
+                    "Meaning": "rolling excess return is unstable",
+                },
+                {
+                    "Criteria": "OOS holdout validation",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "out=12 / excess change=-0.08",
+                    "Meaning": "holdout performance deteriorated",
+                },
+                {
+                    "Criteria": "Regime split validation",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "risk_off bucket short history",
+                    "Meaning": "regime evidence needs review",
+                },
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-temporal-review"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "validation_efficacy"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "REVIEW_REQUIRED")
+        self.assertIn("Walk-forward temporal validation", policy_row["Evidence"])
+        self.assertIn("OOS holdout validation", policy_row["Evidence"])
+        self.assertIn("Regime split validation", policy_row["Evidence"])
+        self.assertIn("REVIEW", policy_row["Current"])
+
+    def test_gate_policy_blocks_selected_route_on_temporal_oos_needs_input(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_efficacy_audit"] = {
+            "route": "VALIDATION_EFFICACY_NEEDS_INPUT",
+            "route_label": "Evidence Input Needed",
+            "rows": [
+                {
+                    "Criteria": "OOS holdout validation",
+                    "Status": "NEEDS_INPUT",
+                    "Ready": False,
+                    "Current": "out_sample_months=0",
+                    "Meaning": "holdout period is missing",
+                },
+                {
+                    "Criteria": "Regime split validation",
+                    "Status": "NEEDS_INPUT",
+                    "Ready": False,
+                    "Current": "macro history missing",
+                    "Meaning": "regime macro evidence is missing",
+                },
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-temporal-gap"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "validation_efficacy"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "BLOCK")
+        self.assertIn("OOS holdout validation", policy_row["Evidence"])
+        self.assertIn("Regime split validation", policy_row["Evidence"])
+        self.assertIn("NEEDS_INPUT", policy_row["Current"])
+
     def test_gate_policy_blocks_selected_route_on_backtest_realism_needs_input(self) -> None:
         from app.services.backtest_evidence_read_model import (
             SELECT_FOR_PRACTICAL_PORTFOLIO,

@@ -22,7 +22,7 @@ Last Verified: 2026-05-29
 
 - [Phase 10 Walk-forward / OOS / Regime Validation](../phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
 - Current task pointer: [Phase 10 Current Chapter TODO](../phases/active/phase10-walkforward-oos-regime-validation/CURRENT_CHAPTER_TODO.md)
-- Current implementation focus: Validation Efficacy gate policy refinement after temporal / OOS / regime evidence contracts.
+- Current implementation focus: Phase 10 integrated QA / closeout after temporal / OOS / regime evidence and gate policy contracts.
 
 ## By Purpose
 

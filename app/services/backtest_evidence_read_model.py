@@ -59,7 +59,7 @@ GATE_POLICY_GROUP_ACTIONS = {
     "leveraged_inverse": "leveraged / inverse 노출 목적, 보유 기간, 위험 한계를 명시합니다.",
     "paper_observation": "관찰 benchmark, active component, review trigger를 보강합니다.",
     "final_review_evidence": "Final Review evidence route가 ready가 되도록 validation / robustness / observation blocker를 해소합니다.",
-    "validation_efficacy": "runtime replay, benchmark parity, provider freshness, robustness, PIT / survivorship evidence gap을 보강합니다.",
+    "validation_efficacy": "runtime replay, benchmark parity, walk-forward / OOS / regime, provider freshness, robustness, PIT / survivorship evidence gap을 보강합니다.",
     "data_coverage": "DB price window, provider freshness, PIT replay, universe / survivorship evidence gap을 보강합니다.",
     "backtest_realism": "거래비용, turnover, liquidity, net performance, tax/account scope 같은 실전성 근거를 보강합니다.",
 }
@@ -452,6 +452,13 @@ def build_investability_gate_policy(
         )
     _merge_audit_rows_into_policy(
         states,
+        audit=dict(validation.get("validation_efficacy_audit") or {}),
+        group="validation_efficacy",
+        critical_groups=critical_groups,
+        review_groups=review_groups,
+    )
+    _merge_audit_rows_into_policy(
+        states,
         audit=dict(validation.get("backtest_realism_audit") or {}),
         group="backtest_realism",
         critical_groups=critical_groups,
@@ -737,7 +744,7 @@ def build_investability_evidence_packet(
                 if validation_efficacy_audit.get("route_label") and validation_efficacy_route
                 else validation_efficacy_route or validation_efficacy_audit.get("route_label") or "-"
             ),
-            "Meaning": "PIT / replay / benchmark / provider / robustness evidence gap을 최종 선택 전에 분리해서 봅니다.",
+            "Meaning": "walk-forward / OOS / regime / PIT / replay / benchmark / provider / robustness evidence gap을 최종 선택 전에 분리해서 봅니다.",
         },
         {
             "Section": "Data Coverage Audit",
@@ -766,8 +773,10 @@ def build_investability_evidence_packet(
             "Meaning": "이 packet은 투자 판단 보조 근거이며 주문이나 자동매매가 아닙니다.",
         },
     ]
+    validation_for_gate_policy = dict(validation)
+    validation_for_gate_policy.setdefault("validation_efficacy_audit", validation_efficacy_audit)
     gate_policy = build_investability_gate_policy(
-        validation=validation,
+        validation=validation_for_gate_policy,
         paper_observation=paper_observation,
         decision_evidence=decision_evidence,
         packet_checks=checks,

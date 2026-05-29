@@ -65,8 +65,9 @@
   holdings와 exposure 모두 과거 특정 검증일의 point-in-time truth로 쓰려면 해당 날짜의 provider snapshot이 DB에 있어야 한다.
 - `data-provenance-coverage-v1` 이후 Practical Validation provider context는 ETF provider snapshot의 source mix, as-of range, collected range, coverage status weight, freshness를 compact하게 보여준다.
   기본 provider freshness threshold는 45일이며, coverage가 충분해도 threshold를 넘은 stale snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
-- `validation-efficacy-hardening-v1` 이후 Practical Validation과 Final Review는 Validation Efficacy Audit에서 PIT / look-ahead / survivorship / provider freshness gap을 별도 row로 노출한다.
+- `validation-efficacy-hardening-v1` 이후 Practical Validation과 Final Review는 Validation Efficacy Audit에서 PIT / look-ahead / survivorship / provider freshness / temporal / OOS / regime gap을 별도 row로 노출한다.
   이 audit은 기존 compact evidence를 읽는 read model이며, historical universe / delisting evidence가 명시되지 않으면 survivorship / universe row를 `REVIEW`로 남긴다.
+- `validation-efficacy-gate-policy-refinement-v2` 이후 temporal / OOS / regime non-PASS row는 Final Review selected-route gate evidence에도 병합된다. `REVIEW`는 hold / re-review 요구이고, `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker다.
 - `look-through-exposure-board-v1` 이후 holdings / exposure snapshot은 compact board로만 workflow에 전달된다.
   이 board는 1차 ETF holdings / exposure 기준이며, ETF-of-ETF 2차 look-through는 아직 보장하지 않는다.
 - `macro_series_observation`은 FRED observation date 기준 market-context series다.

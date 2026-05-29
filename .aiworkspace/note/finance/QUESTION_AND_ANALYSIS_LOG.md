@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `validation-efficacy-gate-policy-refinement-v2`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase10-integrated-qa-closeout`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Validation efficacy temporal gaps become selected-route gate evidence
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-5로 walk-forward / OOS / regime gap이 Final Review selected-route gate에서 blocker 또는 review-required 근거로 드러나게 한다.
+- Analysis result:
+  - `build_investability_gate_policy()`가 Validation Efficacy Audit non-PASS row를 `validation_efficacy` gate policy group에 병합한다.
+  - `REVIEW` temporal row는 hold / re-review 요구이며, `NEEDS_INPUT` / `BLOCKED` temporal row는 selected-route blocker다.
+  - 이 변경은 기존 investability packet / selected-route gate를 재사용하는 read-only evidence 정렬이며 새 JSONL registry, user memo, preset, approval, order, auto rebalance를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `phase10-integrated-qa-closeout`으로 Phase 10 전체 compile / service contracts / boundary / hygiene 검증과 closeout을 수행한다.
 
 ### 2026-05-29 - Regime split validation becomes compact audit evidence
 - User request:

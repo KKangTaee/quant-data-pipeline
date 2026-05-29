@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `validation-efficacy-gate-policy-refinement-v2`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase10-integrated-qa-closeout`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-refinement-v2/`.
+- Final Review selected-route gate policy now surfaces Validation Efficacy row-level walk-forward / OOS / regime gaps as blocker or review-required evidence.
+- This is read-only gate evidence refinement; no new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Next task is `phase10-integrated-qa-closeout`.
 - Completed `.aiworkspace/note/finance/tasks/active/regime-split-validation-v1/`.
 - Added DB-backed FRED macro history regime split evidence and connected `regime_split_validation` to Practical Validation / Validation Efficacy Audit.
 - Missing / short / proxy-only regime evidence is not treated as PASS; no new DB schema, JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
