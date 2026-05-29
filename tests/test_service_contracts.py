@@ -334,7 +334,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(
             _browser_auto_refresh_completion_label({"status": "success"}),
-            "S&P 500 snapshot updated",
+            "S&P 500 스냅샷 갱신이 완료되었습니다.",
         )
         self.assertEqual(
             _browser_auto_refresh_completion_label(
@@ -343,11 +343,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
                     "plan": [{"label": "S&P 500 Daily Snapshot", "reason": "outside US market hours"}],
                 }
             ),
-            "S&P 500 Daily Snapshot: outside US market hours",
+            "S&P 500 일중 스냅샷: 미국 정규장 시간이 아니라 수집하지 않았습니다.",
         )
         self.assertEqual(
             _browser_auto_refresh_completion_label({"status": "locked"}),
-            "Another Overview refresh is already running",
+            "다른 Overview 갱신 작업이 이미 실행 중입니다.",
         )
 
     def test_browser_auto_refresh_cards_describe_skipped_plan(self) -> None:
@@ -371,9 +371,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "2026-05-29 10:05:00",
         )
 
-        self.assertEqual(cards[0]["value"], "skipped")
+        self.assertEqual(cards[0]["value"], "건너뜀")
         self.assertEqual(cards[0]["tone"], "warning")
-        self.assertIn("S&P 500 Daily Snapshot", cards[0]["detail"])
+        self.assertIn("아직 5분 갱신 주기가 지나지 않았습니다.", cards[0]["detail"])
         self.assertEqual(cards[1]["detail"], "Profile: browser_safe")
         self.assertEqual(cards[2]["value"], "0 / 0")
 

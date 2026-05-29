@@ -786,9 +786,42 @@ def _summarize_auto_refresh_plan(summary: dict[str, Any]) -> str:
     if not isinstance(plan, list) or not plan:
         return "-"
     row = dict(plan[0] or {})
-    label = row.get("label") or row.get("job_id") or "-"
-    reason = row.get("reason") or "-"
+    label = _auto_refresh_job_label(row.get("label") or row.get("job_id") or "-")
+    reason = _auto_refresh_reason_label(row.get("reason") or "-")
     return f"{label}: {reason}"
+
+
+def _auto_refresh_job_label(value: Any) -> str:
+    text = str(value or "-")
+    mapping = {
+        "S&P 500 Daily Snapshot": "S&P 500 일중 스냅샷",
+        "sp500_intraday": "S&P 500 일중 스냅샷",
+    }
+    return mapping.get(text, text)
+
+
+def _auto_refresh_reason_label(value: Any) -> str:
+    reason = str(value or "-").strip().lower()
+    mapping = {
+        "cadence not due": "아직 5분 갱신 주기가 지나지 않았습니다.",
+        "outside us market hours": "미국 정규장 시간이 아니라 수집하지 않았습니다.",
+        "due": "수집 조건이 충족되었습니다.",
+        "forced": "강제 실행으로 수집을 진행합니다.",
+    }
+    return mapping.get(reason, str(value or "-"))
+
+
+def _auto_refresh_status_label(value: Any) -> str:
+    status = str(value or "-").strip().lower()
+    mapping = {
+        "success": "완료",
+        "partial_success": "부분 완료",
+        "skipped": "건너뜀",
+        "locked": "대기 중",
+        "failed": "실패",
+        "dry_run": "Dry run",
+    }
+    return mapping.get(status, str(value or "-"))
 
 
 def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at: str | None) -> list[dict[str, Any]]:
@@ -796,12 +829,12 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
         return [
             {
                 "title": "Auto Refresh",
-                "value": "Ready",
-                "detail": "Enable to check the S&P 500 daily snapshot every 5 minutes while this page is open.",
+                "value": "대기 중",
+                "detail": "토글을 켜면 Overview가 열려 있는 동안 5분마다 S&P 500 스냅샷 갱신 조건을 확인합니다.",
                 "tone": "neutral",
             },
-            {"title": "Last Check", "value": "-", "detail": "No browser-session check yet.", "tone": "neutral"},
-            {"title": "Jobs", "value": "-", "detail": "Waiting for the first check.", "tone": "neutral"},
+            {"title": "Last Check", "value": "-", "detail": "아직 브라우저 세션 자동 확인 기록이 없습니다.", "tone": "neutral"},
+            {"title": "Jobs", "value": "-", "detail": "첫 자동 확인을 기다리는 중입니다.", "tone": "neutral"},
         ]
 
     status = str(summary.get("status") or "-")
@@ -812,11 +845,15 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
         for result in (summary.get("results") or [])
         if isinstance(result, dict)
     ]
-    detail = result_messages[0] if result_messages else str(summary.get("message") or _summarize_auto_refresh_plan(summary))
+    detail = (
+        result_messages[0]
+        if result_messages and status in {"failed", "partial_success"}
+        else str(summary.get("message") or _browser_auto_refresh_completion_label(summary))
+    )
     return [
         {
             "title": "Auto Refresh",
-            "value": status,
+            "value": _auto_refresh_status_label(status),
             "detail": detail,
             "tone": _status_tone(status),
         },
@@ -829,7 +866,7 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
         {
             "title": "Jobs",
             "value": f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}",
-            "detail": "Due / run in this browser-session check.",
+            "detail": "이번 브라우저 자동 확인에서 실행 대상 / 실제 실행 수입니다.",
             "tone": "positive" if jobs_run else "neutral",
         },
     ]
@@ -838,20 +875,20 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
 def _browser_auto_refresh_completion_label(summary: dict[str, Any]) -> str:
     status = str(summary.get("status") or "-")
     if status == "success":
-        return "S&P 500 snapshot updated"
+        return "S&P 500 스냅샷 갱신이 완료되었습니다."
     if status == "skipped":
         return _summarize_auto_refresh_plan(summary)
     if status == "locked":
-        return "Another Overview refresh is already running"
+        return "다른 Overview 갱신 작업이 이미 실행 중입니다."
     if status == "partial_success":
-        return "S&P 500 snapshot completed with issues"
+        return "S&P 500 스냅샷 갱신이 일부 이슈와 함께 완료되었습니다."
     if status == "failed":
-        return "S&P 500 snapshot refresh failed"
-    return f"Auto refresh {status}"
+        return "S&P 500 스냅샷 갱신에 실패했습니다."
+    return f"자동 갱신 상태: {_auto_refresh_status_label(status)}"
 
 
 def _render_browser_auto_refresh_loading(summary: dict[str, Any] | None = None) -> None:
-    label = "Checking S&P 500 daily snapshot..."
+    label = "S&P 500 자동 갱신 조건 확인 중..."
     state = "running"
     if summary is not None:
         label = _browser_auto_refresh_completion_label(summary)
@@ -861,12 +898,12 @@ def _render_browser_auto_refresh_loading(summary: dict[str, Any] | None = None) 
         st.progress(
             100 if summary is not None else 35,
             text=(
-                "Done. Updating the Overview status cards."
+                "자동 갱신 확인이 완료되었습니다."
                 if summary is not None
-                else "Collecting only if cadence and US market-hours guards allow it."
+                else "미국 장중이고 5분 갱신 주기가 지났을 때만 수집합니다."
             ),
         )
-        st.caption("The rest of the Overview remains usable; this does not block the full screen.")
+        st.caption("전체 화면을 막지 않으므로, 확인 중에도 다른 Overview 정보를 계속 볼 수 있습니다.")
 
 
 def _run_browser_auto_refresh_check() -> dict[str, Any]:
