@@ -18,11 +18,12 @@ Last Verified: 2026-05-29
 3. [Project Map](./PROJECT_MAP.md)
 4. [Glossary](./GLOSSARY.md)
 
-## Current Phase Handoff
+## Current Active Phase
 
+- [Phase 11 Portfolio Construction Risk Controls](../phases/active/phase11-portfolio-construction-risk-controls/PLAN.md)
+- Current task pointer: [Phase 11 Current Chapter TODO](../phases/active/phase11-portfolio-construction-risk-controls/CURRENT_CHAPTER_TODO.md)
 - Latest completed phase: [Phase 10 Walk-forward / OOS / Regime Validation](../phases/done/phase10-walkforward-oos-regime-validation.md)
-- Previous active board: [Phase 10 Active Board](../phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
-- Current implementation focus: open Phase 11 portfolio construction risk controls with `phase11-board-open`.
+- Current implementation focus: construction risk source map before Phase 11 implementation.
 
 ## By Purpose
 

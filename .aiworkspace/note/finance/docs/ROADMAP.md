@@ -7,7 +7,8 @@ Last Verified: 2026-05-29
 
 | Track | Status | Notes |
 |---|---|---|
-| Phase 11 Portfolio Construction Risk Controls | Planned | Next hardening target; open board with `phase11-board-open` before implementation |
+| Phase 11 Portfolio Construction Risk Controls | Active | `.aiworkspace/note/finance/phases/active/phase11-portfolio-construction-risk-controls/`; next task is `construction-risk-source-map-v1` |
+| Phase 11 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase11-board-open/`; Phase 11 official board, task split, immediate next task, storage boundary 정리 |
 | Phase 10 Walk-forward / OOS / Regime Validation | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase10-walkforward-oos-regime-validation.md`; walk-forward / OOS / regime evidence now feeds Validation Efficacy and selected-route gate policy |
 | Phase 10 Integrated QA Closeout | Complete | `.aiworkspace/note/finance/tasks/active/phase10-integrated-qa-closeout/`; compile, full service contracts, boundary, hygiene, diff, docs, storage boundary checks passed |
 | Validation Efficacy Gate Policy Refinement V2 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-refinement-v2/`; walk-forward / OOS / regime row-level gaps now surface in Final Review selected-route gate evidence |
@@ -128,5 +129,5 @@ P2에서 정상화하는 주요 진단:
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
 - Phase 9 is complete. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`, `backtest-realism-gate-policy-refinement-v1`, `phase9-integrated-qa-closeout`을 완료했다.
 - Phase 10 is complete. `walkforward-split-contract-v1`, `oos-holdout-validation-contract-v1`, `regime-split-validation-v1`, `validation-efficacy-gate-policy-refinement-v2`, and `phase10-integrated-qa-closeout` added benchmark-aligned temporal / holdout / macro regime evidence, connected non-PASS row-level gaps to Final Review selected-route gate evidence, and passed integrated QA.
-- Next hardening target is Phase 11 portfolio construction risk controls. Start with `phase11-board-open` before implementation.
+- Phase 11 is active. `phase11-board-open` created the official portfolio construction risk controls board. Next task is `construction-risk-source-map-v1`.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

@@ -13,17 +13,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
+  - [Phase 11 Portfolio Construction Risk Controls](./phases/active/phase11-portfolio-construction-risk-controls/PLAN.md)
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-board-open`
+  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-source-map-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Opened `.aiworkspace/note/finance/phases/active/phase11-portfolio-construction-risk-controls/`.
+- Phase 11 focuses on portfolio construction risk controls: concentration, overlap, correlation, risk contribution, component role, and profile-aware weight discipline.
+- Next task is `construction-risk-source-map-v1`; start by mapping current Practical Validation / Look-through / Robustness Lab / Final Review gate construction risk sources before implementation.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/phase10-integrated-qa-closeout/`.
 - Phase 10 closeout summary added at `.aiworkspace/note/finance/phases/done/phase10-walkforward-oos-regime-validation.md`.
 - Integrated verification passed: Phase 10 service / loader compile, full `tests.test_service_contracts` 98 tests, UI / engine boundary checker, finance refinement hygiene, and `git diff --check`.

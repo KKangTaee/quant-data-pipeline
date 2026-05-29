@@ -13,15 +13,27 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
+  - [Phase 11 Portfolio Construction Risk Controls](./phases/active/phase11-portfolio-construction-risk-controls/PLAN.md)
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-board-open`
+  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-source-map-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 11 opens for portfolio construction risk controls
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10 closeout 이후 다음 hardening target인 portfolio construction risk controls를 공식 phase로 연다.
+- Analysis result:
+  - Phase 11 board를 `.aiworkspace/note/finance/phases/active/phase11-portfolio-construction-risk-controls/`에 생성했다.
+  - 이번 phase는 concentration, overlap, correlation, risk contribution, component role / weight discipline이 selected-route 판단에서 숨지 않도록 만드는 방향이다.
+  - 새 JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `construction-risk-source-map-v1`로 current Practical Validation / Look-through / Robustness Lab / Final Review gate source map과 gap을 확인한다.
 
 ### 2026-05-29 - Phase 10 validation efficacy hardening closes
 - User request:
