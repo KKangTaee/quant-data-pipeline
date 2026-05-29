@@ -737,6 +737,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["date_window"]["period"], "monthly")
+        self.assertEqual(snapshot["period"], "monthly")
+        self.assertFalse(snapshot["trend_rows"].empty)
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
         first_row = snapshot["rows"].iloc[0]
         self.assertEqual(first_row["Group"], "Technology")
@@ -744,6 +746,28 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(first_row["Equal Weight Return %"], 20.0)
         self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
         self.assertEqual(first_row["Top Symbol"], "BBB")
+
+    def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
+        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+
+        snapshot = build_group_leadership_snapshot(
+            universe_code="SP500",
+            universe_limit=500,
+            group_by="sector",
+            period="daily",
+            top_n=5,
+            min_group_size=1,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "SP500")
+        self.assertEqual(snapshot["period"], "daily")
+        self.assertEqual(snapshot["trend_window_label"], "Last 1M")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
+        self.assertFalse(snapshot["rows"].empty)
+        self.assertFalse(snapshot["trend_rows"].empty)
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot

@@ -175,6 +175,12 @@ def _symmetric_return_domain(values: pd.Series) -> list[float]:
     return [-max_abs, 0, max_abs]
 
 
+def _signed_return_axis_domain(values: pd.Series) -> list[float]:
+    numeric = pd.to_numeric(values, errors="coerce").dropna()
+    max_abs = max(1.0, float(numeric.abs().max()) if not numeric.empty else 1.0)
+    return [-max_abs * 1.12, max_abs * 1.12]
+
+
 def _symmetric_return_scale(values: pd.Series) -> alt.Scale:
     return alt.Scale(domain=_symmetric_return_domain(values), range=["#b91c1c", "#f8fafc", "#0f766e"])
 
@@ -365,6 +371,79 @@ def _build_group_leadership_heatmap(rows: pd.DataFrame) -> alt.Chart:
         )
     )
     return (base + text).properties(height=max(240, min(620, 30 * len(group_order))))
+
+
+def _build_group_leadership_rank_chart(rows: pd.DataFrame) -> alt.Chart:
+    chart_rows = rows.copy()
+    metric = "Market Cap Weighted Return %"
+    if not chart_rows.empty and metric in chart_rows:
+        chart_rows[metric] = pd.to_numeric(chart_rows[metric], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=[metric])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [{"Rank": 1, "Group": "No Data", metric: 0.0, "Equal Weight Return %": 0.0, "Symbols": 0, "Top Symbol": "-"}]
+        )
+    chart_rows = chart_rows.sort_values("Rank") if "Rank" in chart_rows else chart_rows
+    chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
+    group_order = chart_rows["Group"].drop_duplicates().tolist()
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X(
+            f"{metric}:Q",
+            title="Cap Weighted Return %",
+            stack=None,
+            scale=alt.Scale(domain=_signed_return_axis_domain(chart_rows[metric])),
+        ),
+        y=alt.Y("Group:N", sort=group_order, title=None, axis=alt.Axis(labelLimit=220)),
+        tooltip=[
+            "Rank:O",
+            "Group:N",
+            "Symbols:Q",
+            "Return Label:N",
+            "Equal Weight Return %:Q",
+            "Top Symbol:N",
+            "Top Symbol Return %:Q",
+        ],
+    )
+    bars = (
+        base
+        .mark_bar(cornerRadiusEnd=3)
+        .encode(
+            color=alt.condition(
+                f"datum['{metric}'] < 0",
+                alt.value("#dc2626"),
+                alt.value("#0f766e"),
+            )
+        )
+    )
+    labels = (
+        base
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .encode(text=alt.Text("Return Label:N"))
+    )
+    return (bars + labels).properties(height=max(320, min(680, 34 * len(chart_rows))))
+
+
+def _build_group_leadership_trend_chart(rows: pd.DataFrame) -> alt.Chart:
+    metric = "Market Cap Weighted Return %"
+    chart_rows = rows.copy()
+    if not chart_rows.empty and metric in chart_rows and "Date" in chart_rows:
+        chart_rows["Date"] = pd.to_datetime(chart_rows["Date"], errors="coerce")
+        chart_rows[metric] = pd.to_numeric(chart_rows[metric], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Date", metric])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame([{"Date": pd.Timestamp.today().normalize(), "Group": "No Data", metric: 0.0}])
+    chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
+    line = (
+        alt.Chart(chart_rows)
+        .mark_line(point=True, strokeWidth=2)
+        .encode(
+            x=alt.X("Date:T", title=None),
+            y=alt.Y(f"{metric}:Q", title="Cap Weighted Return %"),
+            color=alt.Color("Group:N", legend=alt.Legend(title=None, orient="bottom")),
+            tooltip=["Date:T", "Group:N", "Return Label:N", "Symbols:Q", "Top Symbol:N"],
+        )
+    )
+    return line.properties(height=420)
 
 
 def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
@@ -856,27 +935,45 @@ def _render_market_movers_tab() -> None:
 
 def _render_sector_industry_tab() -> None:
     st.markdown("### Sector / Industry Leadership")
-    controls = st.columns([1, 1.1, 1, 1], gap="small")
-    universe_limit = int(
+    controls = st.columns([1.1, 1, 1, 0.8, 0.9], gap="small", vertical_alignment="bottom")
+    coverage = str(
         controls[0].selectbox(
             "Coverage",
-            [1000, 2000],
-            index=1,
-            key="overview_group_leadership_coverage",
+            ["SP500", "TOP1000", "TOP2000"],
+            index=0,
+            format_func=lambda value: {
+                "SP500": "S&P 500",
+                "TOP1000": "Top 1000",
+                "TOP2000": "Top 2000",
+            }[value],
+            key="overview_group_leadership_coverage_code",
         )
     )
+    universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
     group_by = str(
-        controls[1].radio(
+        controls[1].selectbox(
             "Group",
             ["sector", "industry"],
             index=0,
-            horizontal=True,
             format_func=lambda value: {"sector": "Sector", "industry": "Industry"}[value],
             key="overview_group_leadership_group",
         )
     )
+    period = str(
+        controls[2].selectbox(
+            "Period",
+            ["daily", "weekly", "monthly"],
+            index=2,
+            format_func=lambda value: {
+                "daily": "Daily",
+                "weekly": "Weekly",
+                "monthly": "Monthly",
+            }[value],
+            key="overview_group_leadership_period",
+        )
+    )
     top_n = int(
-        controls[2].number_input(
+        controls[3].number_input(
             "Top N",
             min_value=5,
             max_value=100,
@@ -886,7 +983,7 @@ def _render_sector_industry_tab() -> None:
         )
     )
     min_group_size = int(
-        controls[3].number_input(
+        controls[4].number_input(
             "Min Symbols",
             min_value=1,
             max_value=50,
@@ -898,7 +995,9 @@ def _render_sector_industry_tab() -> None:
 
     snapshot = load_overview_group_leadership_snapshot(
         universe_limit=universe_limit,
+        universe_code=coverage,
         group_by=group_by,
+        period=period,
         top_n=top_n,
         min_group_size=min_group_size,
     )
@@ -909,11 +1008,18 @@ def _render_sector_industry_tab() -> None:
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("DB-backed group leadership rows are not available for the selected controls.")
         return
-    heatmap_tab, table_tab = st.tabs(["Heatmap", "Table"])
-    with heatmap_tab:
-        st.altair_chart(_build_group_leadership_heatmap(rows), width="stretch")
+    trend_rows = snapshot.get("trend_rows")
+    chart_tab, table_tab = st.tabs(["Trend", "Table"])
+    with chart_tab:
+        st.markdown("#### Latest Ranking")
+        st.altair_chart(_build_group_leadership_rank_chart(rows), width="stretch")
+        if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
+            st.markdown("#### Trend")
+            st.altair_chart(_build_group_leadership_trend_chart(trend_rows), width="stretch")
     with table_tab:
         st.dataframe(rows, width="stretch", hide_index=True)
+        if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
+            st.dataframe(trend_rows, width="stretch", hide_index=True)
 
 
 def _event_type_label(value: Any) -> str:

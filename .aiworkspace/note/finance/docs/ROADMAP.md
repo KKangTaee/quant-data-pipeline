@@ -24,6 +24,7 @@ Last Verified: 2026-05-28
 | Overview Market Intelligence Earnings Quality | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-earnings-quality-hardening/`; earnings missing/failure symbol diagnostics, reason counts, Events Quality Action 표시 완료 |
 | Overview Market Intelligence Events UX | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`; Events Focus view, Importance filter, event type stacked calendar, Days Until / Importance / Focus read model 완료 |
 | Overview Market Intelligence Market Movers Ops | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`; daily snapshot coverage %, SP500/TOP1000/TOP2000 DB status auto-check, refresh guidance / snapshot diagnostics 완료 |
+| Overview Market Intelligence Sector / Industry Trend | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`; S&P 500 / Top1000 / Top2000 coverage, Daily / Weekly / Monthly latest ranking + trend chart 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
@@ -81,5 +82,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Overview Market Intelligence는 production baseline, 5차 ops hardening, 6차 macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics, Events calendar UX 고도화, Market Movers ops hardening을 완료했다. 다음 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion 중 하나로 별도 phase/task에서 결정한다.
+- Overview Market Intelligence는 production baseline, 5차 ops hardening, 6차 macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics, Events calendar UX 고도화, Market Movers ops hardening, Sector / Industry trend 개편을 완료했다. 다음 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion 중 하나로 별도 phase/task에서 결정한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

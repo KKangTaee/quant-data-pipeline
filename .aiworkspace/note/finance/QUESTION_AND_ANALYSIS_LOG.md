@@ -5511,3 +5511,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - BEA release schedule은 live parse와 저장이 가능하지만, BLS schedule page는 현재 환경에서 HTTP 403을 반환하므로 partial failure로 드러내는 것이 맞다
 - Follow-up:
   - `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, `MACRO_GDP` event type과 Overview `Macro` filter를 추가했다. BLS 접근성 보강은 별도 후속 후보로 남긴다
+
+### 2026-05-29 - Sector / Industry Leadership을 추세 중심으로 개편한다
+- User request:
+  - 사용자가 Sector / Industry Leadership에 S&P 500 coverage, Group dropdown, Daily / Weekly / Monthly trend graph, heatmap UX 개선을 요청함
+- Interpreted goal:
+  - 월간 단면 히트맵 대신 현재 강한 섹터/산업과 최근 흐름을 함께 읽을 수 있어야 함
+- Analysis result:
+  - 기존 DB의 universe/profile/price history만으로 Daily 1개월, Weekly 3개월, Monthly 6개월 non-overlap trend를 계산할 수 있음
+- Follow-up:
+  - 최신 Top N ranking과 해당 그룹들의 trend chart를 Overview UI에 추가했고, S&P 500 / Top1000 / Top2000 coverage를 지원한다

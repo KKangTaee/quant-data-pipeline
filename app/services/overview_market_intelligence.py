@@ -12,6 +12,11 @@ QueryFn = Callable[[str, str, Sequence[Any] | None], list[dict[str, Any]]]
 VALID_PERIODS = {"daily": 1, "weekly": 5, "monthly": 21, "yearly": 252}
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 VALID_GROUPS = {"sector", "industry"}
+GROUP_TREND_PERIODS = {
+    "daily": {"step": 1, "windows": 21, "window_label": "Last 1M"},
+    "weekly": {"step": 5, "windows": 13, "window_label": "Last 3M"},
+    "monthly": {"step": 21, "windows": 6, "window_label": "Last 6M"},
+}
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 MARKET_INTRADAY_STALE_MINUTES = 15
 EVENT_ESTIMATE_STALE_DAYS = 14
@@ -52,6 +57,18 @@ MISSING_COLUMNS = [
 ]
 GROUP_COLUMNS = [
     "Rank",
+    "Group",
+    "Group Type",
+    "Symbols",
+    "Equal Weight Return %",
+    "Market Cap Weighted Return %",
+    "Top Symbol",
+    "Top Symbol Return %",
+    "Start Date",
+    "End Date",
+]
+GROUP_TREND_COLUMNS = [
+    "Date",
     "Group",
     "Group Type",
     "Symbols",
@@ -287,16 +304,24 @@ def _empty_group_snapshot(
     *,
     status: str,
     group_by: str,
+    universe_code: str,
     universe_limit: int,
+    period: str,
     top_n: int,
     message: str,
 ) -> dict[str, Any]:
     return {
         "status": status,
         "group_by": group_by,
+        "universe_code": universe_code,
+        "universe_label": UNIVERSE_LABELS.get(universe_code, universe_code),
         "universe_limit": universe_limit,
+        "period": period,
+        "period_label": PERIOD_LABELS.get(period, period),
+        "trend_window_label": GROUP_TREND_PERIODS.get(period, {}).get("window_label"),
         "top_n": top_n,
         "rows": pd.DataFrame(columns=GROUP_COLUMNS),
+        "trend_rows": pd.DataFrame(columns=GROUP_TREND_COLUMNS),
         "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
@@ -374,6 +399,39 @@ def _query_latest_raw_date(query_fn: QueryFn) -> str | None:
     return _iso_date(rows[0].get("latest_raw_date"))
 
 
+def _eligible_market_dates(
+    *,
+    min_price_rows: int,
+    limit: int,
+    query_fn: QueryFn,
+) -> tuple[str | None, list[dict[str, Any]]]:
+    latest_raw_date = _query_latest_raw_date(query_fn)
+    rows = query_fn(
+        "finance_price",
+        """
+        SELECT
+            `date`,
+            SUM(CASE WHEN COALESCE(adj_close, close) IS NOT NULL THEN 1 ELSE 0 END) AS usable_rows
+        FROM nyse_price_history
+        WHERE timeframe = %s
+        GROUP BY `date`
+        HAVING usable_rows >= %s
+        ORDER BY `date` DESC
+        LIMIT %s
+        """,
+        ["1d", int(min_price_rows), int(limit)],
+    )
+    eligible = [
+        {
+            "date": _iso_date(row.get("date")),
+            "usable_rows": int(row.get("usable_rows") or 0),
+        }
+        for row in rows
+        if _iso_date(row.get("date"))
+    ]
+    return latest_raw_date, eligible
+
+
 def resolve_effective_market_dates(
     *,
     period: str = "daily",
@@ -388,31 +446,11 @@ def resolve_effective_market_dates(
 
     query = query_fn or _default_query
     offset = VALID_PERIODS[normalized_period]
-    latest_raw_date = _query_latest_raw_date(query)
-    rows = query(
-        "finance_price",
-        """
-        SELECT
-            `date`,
-            SUM(CASE WHEN COALESCE(adj_close, close) IS NOT NULL THEN 1 ELSE 0 END) AS usable_rows
-        FROM nyse_price_history
-        WHERE timeframe = %s
-        GROUP BY `date`
-        HAVING usable_rows >= %s
-        ORDER BY `date` DESC
-        LIMIT %s
-        """,
-        ["1d", int(min_price_rows), offset + 1],
+    latest_raw_date, eligible = _eligible_market_dates(
+        min_price_rows=min_price_rows,
+        limit=offset + 1,
+        query_fn=query,
     )
-
-    eligible = [
-        {
-            "date": _iso_date(row.get("date")),
-            "usable_rows": int(row.get("usable_rows") or 0),
-        }
-        for row in rows
-        if _iso_date(row.get("date"))
-    ]
     if len(eligible) <= offset:
         return {
             "status": "INSUFFICIENT_DATA",
@@ -439,6 +477,74 @@ def resolve_effective_market_dates(
         "effective_end_date": end_row["date"],
         "eligible_dates": eligible,
         "stale_days": _stale_days(end_row["date"], today=today),
+        "message": "",
+    }
+
+
+def resolve_group_trend_market_dates(
+    *,
+    period: str = "monthly",
+    min_price_rows: int = 1000,
+    today: date | None = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, Any]:
+    """Resolve non-overlapping windows for sector / industry leadership trends."""
+    normalized_period = str(period or "monthly").strip().lower()
+    if normalized_period not in GROUP_TREND_PERIODS:
+        raise ValueError(f"Unsupported group trend period: {period!r}")
+
+    query = query_fn or _default_query
+    spec = GROUP_TREND_PERIODS[normalized_period]
+    step = int(spec["step"])
+    requested_windows = int(spec["windows"])
+    latest_raw_date, eligible = _eligible_market_dates(
+        min_price_rows=min_price_rows,
+        limit=(step * requested_windows) + 1,
+        query_fn=query,
+    )
+    available_windows = min(requested_windows, max(0, (len(eligible) - 1) // step))
+    if available_windows <= 0:
+        return {
+            "status": "INSUFFICIENT_DATA",
+            "period": normalized_period,
+            "period_label": PERIOD_LABELS[normalized_period],
+            "trend_window_label": spec["window_label"],
+            "start_date": None,
+            "end_date": eligible[0]["date"] if eligible else None,
+            "latest_raw_date": latest_raw_date,
+            "effective_end_date": eligible[0]["date"] if eligible else None,
+            "eligible_dates": eligible,
+            "windows": [],
+            "stale_days": _stale_days(eligible[0]["date"] if eligible else None, today=today),
+            "message": "Not enough eligible daily price rows to resolve group trend windows.",
+        }
+
+    windows: list[dict[str, Any]] = []
+    for index in range(available_windows):
+        end_row = eligible[index * step]
+        start_row = eligible[(index + 1) * step]
+        windows.append(
+            {
+                "start_date": start_row["date"],
+                "end_date": end_row["date"],
+                "label": end_row["date"],
+                "usable_rows": end_row["usable_rows"],
+            }
+        )
+    windows.reverse()
+    latest_window = windows[-1]
+    return {
+        "status": "OK",
+        "period": normalized_period,
+        "period_label": PERIOD_LABELS[normalized_period],
+        "trend_window_label": spec["window_label"],
+        "start_date": latest_window["start_date"],
+        "end_date": latest_window["end_date"],
+        "latest_raw_date": latest_raw_date,
+        "effective_end_date": latest_window["end_date"],
+        "eligible_dates": eligible,
+        "windows": windows,
+        "stale_days": _stale_days(latest_window["end_date"], today=today),
         "message": "",
     }
 
@@ -703,6 +809,161 @@ def _build_return_rows(
             }
         )
     return return_rows, missing_rows
+
+
+def _build_return_rows_from_price_map(
+    *,
+    universe: list[dict[str, Any]],
+    start_date: str,
+    end_date: str,
+    price_map: dict[tuple[str, str], float],
+) -> list[dict[str, Any]]:
+    return_rows: list[dict[str, Any]] = []
+    for item in universe:
+        symbol = str(item.get("symbol") or "").strip().upper()
+        start_price = price_map.get((symbol, start_date))
+        end_price = price_map.get((symbol, end_date))
+        if start_price is None or end_price is None or start_price <= 0:
+            continue
+        return_rows.append(
+            {
+                "symbol": symbol,
+                "name": item.get("long_name") or "",
+                "sector": item.get("sector") or "Unknown",
+                "industry": item.get("industry") or "Unknown",
+                "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "start_price": start_price,
+                "end_price": end_price,
+                "return_pct": (float(end_price) / float(start_price) - 1.0) * 100.0,
+                "start_date": start_date,
+                "end_date": end_date,
+                "price_source": "EOD DB",
+            }
+        )
+    return return_rows
+
+
+def _group_leadership_rows(
+    *,
+    return_rows: list[dict[str, Any]],
+    group_by: str,
+    min_group_size: int,
+    start_date: str,
+    end_date: str,
+) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in return_rows:
+        group_name = str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        grouped.setdefault(group_name, []).append(row)
+
+    group_rows: list[dict[str, Any]] = []
+    for group_name, rows in grouped.items():
+        if len(rows) < int(min_group_size):
+            continue
+        equal_weight_return = sum(float(row["return_pct"]) for row in rows) / len(rows)
+        weighted_denominator = sum(max(float(row.get("market_cap") or 0.0), 0.0) for row in rows)
+        if weighted_denominator > 0:
+            weighted_return = (
+                sum(max(float(row.get("market_cap") or 0.0), 0.0) * float(row["return_pct"]) for row in rows)
+                / weighted_denominator
+            )
+        else:
+            weighted_return = equal_weight_return
+        top_symbol = max(rows, key=lambda row: float(row["return_pct"]))
+        group_rows.append(
+            {
+                "group": group_name,
+                "group_type": group_by.title(),
+                "symbols": len(rows),
+                "equal_weight_return": equal_weight_return,
+                "market_cap_weighted_return": weighted_return,
+                "top_symbol": top_symbol["symbol"],
+                "top_symbol_return": top_symbol["return_pct"],
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+        )
+    return group_rows
+
+
+def _rank_group_rows(group_rows: list[dict[str, Any]], *, top_n: int | None = None) -> list[dict[str, Any]]:
+    ranked = sorted(
+        group_rows,
+        key=lambda row: (
+            -float(row["market_cap_weighted_return"]),
+            -float(row["equal_weight_return"]),
+            row["group"],
+        ),
+    )
+    return ranked[:top_n] if top_n is not None else ranked
+
+
+def _group_rows_frame(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
+    rows = [
+        {
+            "Rank": index,
+            "Group": row["group"],
+            "Group Type": row["group_type"],
+            "Symbols": row["symbols"],
+            "Equal Weight Return %": round(float(row["equal_weight_return"]), 2),
+            "Market Cap Weighted Return %": round(float(row["market_cap_weighted_return"]), 2),
+            "Top Symbol": row["top_symbol"],
+            "Top Symbol Return %": round(float(row["top_symbol_return"]), 2),
+            "Start Date": row["start_date"],
+            "End Date": row["end_date"],
+        }
+        for index, row in enumerate(group_rows, start=1)
+    ]
+    return pd.DataFrame(rows, columns=GROUP_COLUMNS)
+
+
+def _group_trend_rows_frame(
+    *,
+    windows: list[dict[str, Any]],
+    universe: list[dict[str, Any]],
+    groups: set[str],
+    group_by: str,
+    min_group_size: int,
+    query_fn: QueryFn,
+) -> pd.DataFrame:
+    if not windows or not groups:
+        return pd.DataFrame(columns=GROUP_TREND_COLUMNS)
+    symbols = [str(row.get("symbol") or "").strip().upper() for row in universe if row.get("symbol")]
+    dates = sorted({str(window["start_date"]) for window in windows} | {str(window["end_date"]) for window in windows})
+    price_map = _load_prices_for_dates(symbols=symbols, dates=dates, query_fn=query_fn)
+    trend_rows: list[dict[str, Any]] = []
+    for window in windows:
+        return_rows = _build_return_rows_from_price_map(
+            universe=universe,
+            start_date=str(window["start_date"]),
+            end_date=str(window["end_date"]),
+            price_map=price_map,
+        )
+        group_rows = _group_leadership_rows(
+            return_rows=return_rows,
+            group_by=group_by,
+            min_group_size=min_group_size,
+            start_date=str(window["start_date"]),
+            end_date=str(window["end_date"]),
+        )
+        for row in group_rows:
+            if row["group"] not in groups:
+                continue
+            trend_rows.append(
+                {
+                    "Date": window["end_date"],
+                    "Group": row["group"],
+                    "Group Type": row["group_type"],
+                    "Symbols": row["symbols"],
+                    "Equal Weight Return %": round(float(row["equal_weight_return"]), 2),
+                    "Market Cap Weighted Return %": round(float(row["market_cap_weighted_return"]), 2),
+                    "Top Symbol": row["top_symbol"],
+                    "Top Symbol Return %": round(float(row["top_symbol_return"]), 2),
+                    "Start Date": row["start_date"],
+                    "End Date": row["end_date"],
+                }
+            )
+    return pd.DataFrame(trend_rows, columns=GROUP_TREND_COLUMNS)
 
 
 def _coverage(
@@ -1952,7 +2213,9 @@ def build_market_movers_snapshot(
 def build_group_leadership_snapshot(
     *,
     universe_limit: int = 2000,
+    universe_code: str | None = None,
     group_by: str = "sector",
+    period: str = "monthly",
     top_n: int = 10,
     min_group_size: int = 5,
     min_price_rows: int = 1000,
@@ -1962,16 +2225,28 @@ def build_group_leadership_snapshot(
     normalized_group = str(group_by or "sector").strip().lower()
     if normalized_group not in VALID_GROUPS:
         raise ValueError(f"Unsupported group_by: {group_by!r}")
+    normalized_period = str(period or "monthly").strip().lower()
+    if normalized_period not in GROUP_TREND_PERIODS:
+        raise ValueError(f"Unsupported group leadership period: {period!r}")
 
-    normalized_limit = _normalize_limit(universe_limit, default=2000, min_value=100, max_value=3000)
+    normalized_universe = _normalize_universe_code(universe_code, universe_limit)
+    normalized_limit = _universe_limit_from_code(
+        normalized_universe,
+        _normalize_limit(universe_limit, default=2000, min_value=100, max_value=3000),
+    )
     normalized_top_n = _normalize_limit(top_n, default=10, min_value=5, max_value=100)
     query = query_fn or _default_query
 
     try:
-        universe = _load_universe(universe_code="TOP2000", universe_limit=normalized_limit, query_fn=query)
-        date_window = resolve_effective_market_dates(
-            period="monthly",
-            min_price_rows=min(min_price_rows, max(50, int(len(universe) * 0.75))),
+        universe = _load_universe(
+            universe_code=normalized_universe,
+            universe_limit=normalized_limit,
+            query_fn=query,
+        )
+        effective_min_rows = min(int(min_price_rows), max(50, int(len(universe) * 0.75)))
+        date_window = resolve_group_trend_market_dates(
+            period=normalized_period,
+            min_price_rows=effective_min_rows,
             today=today,
             query_fn=query,
         )
@@ -1979,7 +2254,9 @@ def build_group_leadership_snapshot(
             snapshot = _empty_group_snapshot(
                 status="INSUFFICIENT_DATA",
                 group_by=normalized_group,
+                universe_code=normalized_universe,
                 universe_limit=normalized_limit,
+                period=normalized_period,
                 top_n=normalized_top_n,
                 message=str(date_window.get("message") or ""),
             )
@@ -1990,6 +2267,7 @@ def build_group_leadership_snapshot(
                     "latest_raw_date": date_window.get("latest_raw_date"),
                     "effective_end_date": date_window.get("effective_end_date"),
                     "stale_days": date_window.get("stale_days"),
+                    **_universe_metadata(universe, universe_code=normalized_universe),
                 }
             )
             return snapshot
@@ -2001,73 +2279,41 @@ def build_group_leadership_snapshot(
             query_fn=query,
         )
 
-        grouped: dict[str, list[dict[str, Any]]] = {}
-        for row in return_rows:
-            group_name = str(row.get(normalized_group) or "Unknown").strip() or "Unknown"
-            grouped.setdefault(group_name, []).append(row)
-
-        group_rows: list[dict[str, Any]] = []
-        for group_name, rows in grouped.items():
-            if len(rows) < int(min_group_size):
-                continue
-            equal_weight_return = sum(float(row["return_pct"]) for row in rows) / len(rows)
-            weighted_denominator = sum(max(float(row.get("market_cap") or 0.0), 0.0) for row in rows)
-            if weighted_denominator > 0:
-                weighted_return = (
-                    sum(max(float(row.get("market_cap") or 0.0), 0.0) * float(row["return_pct"]) for row in rows)
-                    / weighted_denominator
-                )
-            else:
-                weighted_return = equal_weight_return
-            top_symbol = max(rows, key=lambda row: float(row["return_pct"]))
-            group_rows.append(
-                {
-                    "group": group_name,
-                    "group_type": normalized_group.title(),
-                    "symbols": len(rows),
-                    "equal_weight_return": equal_weight_return,
-                    "market_cap_weighted_return": weighted_return,
-                    "top_symbol": top_symbol["symbol"],
-                    "top_symbol_return": top_symbol["return_pct"],
-                    "start_date": date_window["start_date"],
-                    "end_date": date_window["end_date"],
-                }
-            )
-
-        ranked = sorted(
-            group_rows,
-            key=lambda row: (
-                -float(row["market_cap_weighted_return"]),
-                -float(row["equal_weight_return"]),
-                row["group"],
-            ),
-        )[:normalized_top_n]
-        rows = [
-            {
-                "Rank": index,
-                "Group": row["group"],
-                "Group Type": row["group_type"],
-                "Symbols": row["symbols"],
-                "Equal Weight Return %": round(float(row["equal_weight_return"]), 2),
-                "Market Cap Weighted Return %": round(float(row["market_cap_weighted_return"]), 2),
-                "Top Symbol": row["top_symbol"],
-                "Top Symbol Return %": round(float(row["top_symbol_return"]), 2),
-                "Start Date": row["start_date"],
-                "End Date": row["end_date"],
-            }
-            for index, row in enumerate(ranked, start=1)
-        ]
+        group_rows = _group_leadership_rows(
+            return_rows=return_rows,
+            group_by=normalized_group,
+            min_group_size=min_group_size,
+            start_date=str(date_window["start_date"]),
+            end_date=str(date_window["end_date"]),
+        )
+        ranked = _rank_group_rows(group_rows, top_n=normalized_top_n)
+        top_groups = {str(row["group"]) for row in ranked}
+        trend_rows = _group_trend_rows_frame(
+            windows=list(date_window.get("windows") or []),
+            universe=universe,
+            groups=top_groups,
+            group_by=normalized_group,
+            min_group_size=min_group_size,
+            query_fn=query,
+        )
         coverage = _coverage(
             universe_count=len(universe),
             returnable_count=len(return_rows),
             date_window=date_window,
+            extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
         return {
             "status": "OK",
             "group_by": normalized_group,
+            "universe_code": normalized_universe,
+            "universe_label": UNIVERSE_LABELS.get(normalized_universe, normalized_universe),
             "universe_limit": normalized_limit,
+            "period": normalized_period,
+            "period_label": PERIOD_LABELS[normalized_period],
+            "trend_window_label": GROUP_TREND_PERIODS[normalized_period]["window_label"],
             "top_n": normalized_top_n,
-            "rows": pd.DataFrame(rows, columns=GROUP_COLUMNS),
+            "rows": _group_rows_frame(ranked),
+            "trend_rows": trend_rows,
             "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,
@@ -2077,7 +2323,9 @@ def build_group_leadership_snapshot(
         return _empty_group_snapshot(
             status="ERROR",
             group_by=normalized_group,
+            universe_code=normalized_universe,
             universe_limit=normalized_limit,
+            period=normalized_period,
             top_n=normalized_top_n,
             message=f"Group leadership snapshot failed: {exc}",
         )

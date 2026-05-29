@@ -394,13 +394,17 @@ def load_overview_market_mover_sectors(
 def load_overview_group_leadership_snapshot(
     *,
     universe_limit: int = 2000,
+    universe_code: str | None = None,
     group_by: str = "sector",
+    period: str = "monthly",
     top_n: int = 10,
     min_group_size: int = 5,
 ) -> dict[str, Any]:
     return build_group_leadership_snapshot(
         universe_limit=universe_limit,
+        universe_code=universe_code,
         group_by=group_by,
+        period=period,
         top_n=top_n,
         min_group_size=min_group_size,
     )
