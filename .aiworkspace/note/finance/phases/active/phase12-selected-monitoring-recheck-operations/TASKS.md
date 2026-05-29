@@ -1,6 +1,6 @@
 # Phase 12 Selected Monitoring / Recheck Operations Tasks
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Task Board
@@ -14,17 +14,17 @@ Created: 2026-05-29
 | 12-4 | `recheck-comparison-review-signal-policy-v1` | `finance-backtest-web-workflow` | recheck baseline deterioration, review signal severity, failed / missing recheck handling | Complete |
 | 12-5 | `allocation-drift-evidence-boundary-v1` | `finance-backtest-web-workflow` | optional actual allocation / drift evidence read-only boundary and alert preview | Complete |
 | 12-6 | `decision-dossier-continuity-operations-v1` | `finance-backtest-web-workflow` | selected decision dossier / continuity / timeline operations evidence consistency | Complete |
-| 12-7 | `phase12-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, storage boundary, phase closeout | Next |
+| 12-7 | `phase12-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, storage boundary, phase closeout | Complete |
 
 ## Next Target
 
-`phase12-integrated-qa-closeout`
+Phase 13 first-cycle hardening closeout
 
 Goal:
 
-- Phase 12 전체 변경이 compile / service contract / boundary / hygiene 검증을 통과하는지 확인한다.
-- 새 JSONL registry, monitoring log 자동 저장, user memo / preset persistence가 추가되지 않았는지 확인한다.
-- 완료된 12-1~12-6 결과를 phase closeout 기준으로 정리한다.
+- Phase 8 through Phase 12 hardening results를 한 번 더 묶어 gate / docs / runbook / carry-forward 기준을 정리한다.
+- Phase 12에서 남긴 residual risk와 Phase 13 handoff를 확인한다.
+- 새 구현은 Phase 13 board를 열 때 별도 task로 분리한다.
 
 Out of scope:
 

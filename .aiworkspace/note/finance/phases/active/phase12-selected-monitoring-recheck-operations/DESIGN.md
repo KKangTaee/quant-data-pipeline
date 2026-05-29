@@ -1,6 +1,6 @@
 # Phase 12 Selected Monitoring / Recheck Operations Design
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Design Principle
@@ -218,7 +218,22 @@ Session evidence sources such as Performance Recheck, drift check, and alert pre
 
 The contract adds no JSONL registry, monitoring log auto write, report auto write, user memo, preset, approval, order, or auto rebalance path.
 
-Implementation order now moves to 12-7 integrated QA / closeout.
+12-6 handed off to 12-7 integrated QA / closeout.
+
+## 12-7 Integrated QA / Closeout Result
+
+12-7 completed Phase 12 integrated QA.
+
+Closeout confirmed:
+
+- Phase 12 runtime / service / web / test touchpoints compile.
+- Full service contract suite passes.
+- UI / engine boundary remains clean.
+- Finance refinement hygiene passes.
+- Registry / saved setup / run history / run artifact / Playwright output paths were not modified.
+- Only `finance/.DS_Store` remains as an unstaged generated artifact.
+
+Phase 12 is complete and hands off to Phase 13 first-cycle hardening closeout.
 
 ## Route Semantics
 

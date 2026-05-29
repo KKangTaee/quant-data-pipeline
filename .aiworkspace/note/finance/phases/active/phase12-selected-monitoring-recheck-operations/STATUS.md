@@ -1,11 +1,11 @@
 # Phase 12 Selected Monitoring / Recheck Operations Status
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Current State
 
-Phase 12 selected monitoring source map is complete.
+Phase 12 selected monitoring / recheck operations hardening is complete.
 
 Completed:
 
@@ -23,20 +23,22 @@ Completed:
 - Actual Allocation now has a read-only evidence boundary that explicitly disables DB writes, registry writes, monitoring log auto-write, raw input persistence, alert persistence, account / broker integration, order instruction, and auto rebalance.
 - 12-6 `decision-dossier-continuity-operations-v1`
 - Decision Dossier, Continuity, Timeline, and Review Signals now expose a shared selected decision source consistency contract, and continuity blocks mismatched timeline source contracts.
+- 12-7 `phase12-integrated-qa-closeout`
+- Compile, full service contracts, boundary, hygiene, diff, docs, and storage boundary checks completed.
 
 Next:
 
-- 12-7 `phase12-integrated-qa-closeout`
+- Phase 13 first-cycle hardening closeout / final QA alignment.
 
 ## Latest Decision
 
-12-6 added `selected_decision_source_consistency_v1`.
-Decision Dossier, Continuity, Timeline, and Review Signals now identify the same `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2` source row and keep session evidence as read-only context.
-Continuity now blocks missing or mismatched timeline source contracts, and Decision Dossier markdown shows source contract consistency plus disabled DB / registry writes.
+12-7 closed Phase 12.
+Selected Dashboard now has read-only checks for selected source map, recheck preflight, DB symbol freshness, provider staleness / coverage, recheck comparison, review signals, allocation drift boundary, and dossier / continuity source consistency.
+No new JSONL registry, monitoring log auto-write, user memo / preset persistence, report auto-write, broker order, live approval, or auto rebalance path was added.
 
-Immediate next target:
+Next target:
 
-- `phase12-integrated-qa-closeout`
+- Phase 13 first-cycle hardening closeout.
 
 ## Storage Boundary Reminder
 

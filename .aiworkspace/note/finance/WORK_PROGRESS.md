@@ -4238,3 +4238,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/decision-dossier-continuity-operations-v1/`에서 `selected_decision_source_consistency_v1`을 구현했다.
   - Decision Dossier, Continuity, Timeline, Review Signals가 같은 Final Decision V2 source contract를 표시하고, session evidence는 read-only context로 남긴다.
   - 다음 작업은 `phase12-integrated-qa-closeout`이며 Phase 12 문서에서 12-7로 이어진다.
+- Phase 12 Integrated QA Closeout:
+  - `.aiworkspace/note/finance/tasks/active/phase12-integrated-qa-closeout/`에서 Phase 12 전체 compile / service contract / boundary / hygiene / diff / storage boundary 검증을 완료했다.
+  - closeout summary는 `.aiworkspace/note/finance/phases/done/phase12-selected-monitoring-recheck-operations.md`에 남겼다.
+  - 다음 대상은 Phase 13 first-cycle hardening closeout이다.

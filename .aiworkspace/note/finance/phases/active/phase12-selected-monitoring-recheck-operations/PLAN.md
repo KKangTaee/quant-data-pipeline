@@ -1,6 +1,6 @@
 # Phase 12 Selected Monitoring / Recheck Operations Plan
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## 이걸 하는 이유?
@@ -69,7 +69,7 @@ full price history, provider holdings, exposure, macro series, raw broker/accoun
 | 12-4 | Recheck comparison / review signal policy | Complete |
 | 12-5 | Optional allocation drift evidence boundary | Complete |
 | 12-6 | Decision dossier / continuity operations refinement | Complete |
-| 12-7 | Phase 12 integrated QA / closeout | Next |
+| 12-7 | Phase 12 integrated QA / closeout | Complete |
 
 ## Done Criteria
 

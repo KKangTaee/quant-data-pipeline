@@ -1,6 +1,6 @@
 # Phase 12 Selected Monitoring / Recheck Operations Integration
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Integration Order
@@ -11,7 +11,7 @@ Created: 2026-05-29
 4. 12-4 recheck comparison / review signal policy: Complete
 5. 12-5 optional allocation drift evidence boundary: Complete
 6. 12-6 decision dossier / continuity operations refinement: Complete
-7. 12-7 integrated QA / closeout: Next
+7. 12-7 integrated QA / closeout: Complete
 
 ## Expected Touch Points
 
@@ -41,6 +41,9 @@ Actual Allocation now exposes `selected_allocation_drift_evidence_boundary_v1` a
 12-6 touched `app/runtime/final_selected_portfolios.py`, `app/runtime/__init__.py`, `app/services/backtest_evidence_read_model.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
 Decision Dossier, Continuity, Timeline, and Review Signals now expose `selected_decision_source_consistency_v1` without adding persistence.
 
+12-7 added no runtime code.
+Integrated QA passed for compile, full service contracts, UI / engine boundary, finance hygiene, diff check, and storage boundary.
+
 ## QA Gates
 
 For implementation tasks, run the smallest relevant set first, then broaden for shared read model changes.
@@ -53,4 +56,4 @@ For implementation tasks, run the smallest relevant set first, then broaden for 
 
 ## Storage Gate
 
-Before closeout, confirm no new workflow JSONL registry, monitoring log automatic append, user memo, preset persistence, account integration, approval, order, or auto rebalance path was added.
+Closeout confirmed no new workflow JSONL registry, monitoring log automatic append, user memo, preset persistence, account integration, approval, order, or auto rebalance path was added.
