@@ -384,14 +384,15 @@ def _build_group_leadership_rank_chart(rows: pd.DataFrame) -> alt.Chart:
             [{"Rank": 1, "Group": "No Data", metric: 0.0, "Equal Weight Return %": 0.0, "Symbols": 0, "Top Symbol": "-"}]
         )
     chart_rows = chart_rows.sort_values("Rank") if "Rank" in chart_rows else chart_rows
+    chart_rows["Return Magnitude %"] = chart_rows[metric].abs()
     chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
     group_order = chart_rows["Group"].drop_duplicates().tolist()
     base = alt.Chart(chart_rows).encode(
         x=alt.X(
-            f"{metric}:Q",
+            "Return Magnitude %:Q",
             title="Cap Weighted Return %",
             stack=None,
-            scale=alt.Scale(domain=_signed_return_axis_domain(chart_rows[metric])),
+            scale=alt.Scale(domain=_positive_return_domain(chart_rows["Return Magnitude %"])),
         ),
         y=alt.Y("Group:N", sort=group_order, title=None, axis=alt.Axis(labelLimit=220)),
         tooltip=[
@@ -444,6 +445,116 @@ def _build_group_leadership_trend_chart(rows: pd.DataFrame) -> alt.Chart:
         )
     )
     return line.properties(height=420)
+
+
+def _build_group_ticker_leader_bar_chart(rows: pd.DataFrame) -> alt.Chart:
+    metric = "Return %"
+    chart_rows = rows.copy()
+    if not chart_rows.empty and metric in chart_rows:
+        chart_rows[metric] = pd.to_numeric(chart_rows[metric], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=[metric])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [
+                {
+                    "Symbol": "No Data",
+                    "Name": "-",
+                    metric: 0.0,
+                    "Positive Return Share %": 0.0,
+                    "Sector": "-",
+                    "Industry": "-",
+                }
+            ]
+        )
+    elif "Positive Return Share %" not in chart_rows:
+        chart_rows["Positive Return Share %"] = None
+    chart_rows = chart_rows.sort_values("Rank") if "Rank" in chart_rows else chart_rows
+    chart_rows["Return Magnitude %"] = chart_rows[metric].abs()
+    chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
+    chart_rows["Share Label"] = chart_rows["Positive Return Share %"].map(
+        lambda value: f"{float(value):.2f}%" if pd.notna(value) else "-"
+    )
+    symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X(
+            "Return Magnitude %:Q",
+            title="Ticker Return %",
+            scale=alt.Scale(domain=_positive_return_domain(chart_rows["Return Magnitude %"])),
+        ),
+        y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=120)),
+        tooltip=[
+            "Symbol:N",
+            "Name:N",
+            "Return Label:N",
+            "Share Label:N",
+            "Sector:N",
+            "Industry:N",
+        ],
+    )
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.value("#0f766e"))
+    labels = (
+        base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .encode(text=alt.Text("Return Label:N"))
+    )
+    return (bars + labels).properties(height=max(260, min(560, 34 * len(chart_rows))))
+
+
+def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) -> alt.Chart:
+    source_rows = rows.copy()
+    if "Positive Return Share %" not in source_rows:
+        source_rows = pd.DataFrame()
+    elif not source_rows.empty:
+        source_rows["Positive Return Share %"] = pd.to_numeric(
+            source_rows["Positive Return Share %"],
+            errors="coerce",
+        )
+        source_rows = source_rows.dropna(subset=["Positive Return Share %"])
+    if not source_rows.empty and "Return %" in source_rows:
+        source_rows["Return %"] = pd.to_numeric(source_rows["Return %"], errors="coerce")
+    source_rows = source_rows[source_rows["Positive Return Share %"] > 0] if not source_rows.empty else source_rows
+
+    if source_rows.empty:
+        chart_rows = pd.DataFrame([{"Label": "No Data", "Share %": 1.0, "Return Label": "-"}])
+    else:
+        visible = source_rows.sort_values("Rank").head(int(top_n))
+        chart_values = [
+            {
+                "Label": str(row.get("Symbol") or "-"),
+                "Share %": float(row.get("Positive Return Share %") or 0.0),
+                "Return Label": f"{float(row.get('Return %') or 0.0):+.2f}%",
+            }
+            for _, row in visible.iterrows()
+        ]
+        visible_share = sum(float(item["Share %"]) for item in chart_values)
+        remaining_share = max(0.0, 100.0 - visible_share)
+        if remaining_share >= 0.05:
+            chart_values.append({"Label": "Etc", "Share %": remaining_share, "Return Label": "-"})
+        chart_rows = pd.DataFrame(chart_values)
+
+    return (
+        alt.Chart(chart_rows)
+        .mark_arc(innerRadius=64, outerRadius=104, stroke="#ffffff")
+        .encode(
+            theta=alt.Theta("Share %:Q", stack=True),
+            color=alt.Color(
+                "Label:N",
+                scale=alt.Scale(
+                    range=[
+                        "#0f766e",
+                        "#2563eb",
+                        "#b45309",
+                        "#7c3aed",
+                        "#0891b2",
+                        "#65a30d",
+                        "#64748b",
+                    ]
+                ),
+                legend=alt.Legend(title=None, orient="bottom"),
+            ),
+            tooltip=["Label:N", alt.Tooltip("Share %:Q", format=".2f"), "Return Label:N"],
+        )
+        .properties(height=300)
+    )
 
 
 def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
@@ -1009,17 +1120,86 @@ def _render_sector_industry_tab() -> None:
         st.info("DB-backed group leadership rows are not available for the selected controls.")
         return
     trend_rows = snapshot.get("trend_rows")
+    ticker_leader_rows = snapshot.get("ticker_leader_rows")
     chart_tab, table_tab = st.tabs(["Trend", "Table"])
     with chart_tab:
         st.markdown("#### Latest Ranking")
         st.altair_chart(_build_group_leadership_rank_chart(rows), width="stretch")
         if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
             st.markdown("#### Trend")
-            st.altair_chart(_build_group_leadership_trend_chart(trend_rows), width="stretch")
+            group_options = rows["Group"].dropna().astype(str).drop_duplicates().tolist()
+            default_groups = group_options[: min(5, len(group_options))]
+            selected_groups = st.multiselect(
+                "Trend Groups",
+                options=group_options,
+                default=default_groups,
+                key=(
+                    "overview_group_leadership_trend_groups_"
+                    f"{coverage}_{group_by}_{period}_{top_n}_{min_group_size}"
+                ),
+            )
+            visible_trend_rows = (
+                trend_rows[trend_rows["Group"].astype(str).isin(selected_groups)]
+                if selected_groups
+                else trend_rows.iloc[0:0]
+            )
+            st.altair_chart(_build_group_leadership_trend_chart(visible_trend_rows), width="stretch")
+        if isinstance(ticker_leader_rows, pd.DataFrame) and not ticker_leader_rows.empty:
+            st.markdown("#### Positive Group Detail")
+            positive_group_set = set(ticker_leader_rows["Group"].dropna().astype(str).tolist())
+            positive_groups = [
+                group_name
+                for group_name in rows["Group"].dropna().astype(str).drop_duplicates().tolist()
+                if group_name in positive_group_set
+            ]
+            if not positive_groups:
+                positive_groups = ticker_leader_rows["Group"].dropna().astype(str).drop_duplicates().tolist()
+            detail_controls = st.columns([1.4, 0.7], gap="small", vertical_alignment="bottom")
+            selected_detail_group = str(
+                detail_controls[0].selectbox(
+                    "Positive Group",
+                    positive_groups,
+                    index=0,
+                    key=(
+                        "overview_group_leadership_positive_group_"
+                        f"{coverage}_{group_by}_{period}_{top_n}_{min_group_size}"
+                    ),
+                )
+            )
+            ticker_top_n = int(
+                detail_controls[1].selectbox(
+                    "Ticker Top N",
+                    [5, 10, 15, 20],
+                    index=1,
+                    key=(
+                        "overview_group_leadership_ticker_top_n_"
+                        f"{coverage}_{group_by}_{period}_{top_n}_{min_group_size}"
+                    ),
+                )
+            )
+            detail_rows = ticker_leader_rows[
+                ticker_leader_rows["Group"].astype(str) == selected_detail_group
+            ].copy()
+            detail_rows = detail_rows.sort_values("Rank").head(ticker_top_n)
+            detail_bar, detail_share = st.columns([1.25, 0.75], gap="medium")
+            with detail_bar:
+                st.altair_chart(_build_group_ticker_leader_bar_chart(detail_rows), width="stretch")
+            with detail_share:
+                st.altair_chart(
+                    _build_group_ticker_contribution_donut(
+                        ticker_leader_rows[
+                            ticker_leader_rows["Group"].astype(str) == selected_detail_group
+                        ],
+                        top_n=ticker_top_n,
+                    ),
+                    width="stretch",
+                )
     with table_tab:
         st.dataframe(rows, width="stretch", hide_index=True)
         if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
             st.dataframe(trend_rows, width="stretch", hide_index=True)
+        if isinstance(ticker_leader_rows, pd.DataFrame) and not ticker_leader_rows.empty:
+            st.dataframe(ticker_leader_rows, width="stretch", hide_index=True)
 
 
 def _event_type_label(value: Any) -> str:

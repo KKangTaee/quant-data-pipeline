@@ -5521,3 +5521,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 DB의 universe/profile/price history만으로 Daily 1개월, Weekly 3개월, Monthly 6개월 non-overlap trend를 계산할 수 있음
 - Follow-up:
   - 최신 Top N ranking과 해당 그룹들의 trend chart를 Overview UI에 추가했고, S&P 500 / Top1000 / Top2000 coverage를 지원한다
+
+### 2026-05-29 - Sector / Industry trend를 더 길고 조작 가능하게 만든다
+- User request:
+  - 사용자가 Trend 기간을 Daily 3개월 / Weekly 6개월 / Monthly 1년으로 늘리고, 산업별 라인 on/off와 양수 그룹의 대표 티커 상세를 요청함
+- Interpreted goal:
+  - 현재 강한 섹터/산업뿐 아니라 최근 동향과 내부 주도 종목을 한 화면에서 조절해 봐야 함
+- Analysis result:
+  - DB price history 기반 non-overlap window 수를 늘리면 추가 source 없이 구현 가능하다
+  - Streamlit chart click interaction보다 `Trend Groups` multiselect와 `Positive Group` selectbox가 더 안정적인 UX다
+- Follow-up:
+  - trend horizon 확장, line filter, ticker leader bar / return-share donut을 추가했다. Positive Return Share는 cap-weighted attribution이 아니라 양수 ticker return share로 정의했다

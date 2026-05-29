@@ -13,9 +13,9 @@ VALID_PERIODS = {"daily": 1, "weekly": 5, "monthly": 21, "yearly": 252}
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 VALID_GROUPS = {"sector", "industry"}
 GROUP_TREND_PERIODS = {
-    "daily": {"step": 1, "windows": 21, "window_label": "Last 1M"},
-    "weekly": {"step": 5, "windows": 13, "window_label": "Last 3M"},
-    "monthly": {"step": 21, "windows": 6, "window_label": "Last 6M"},
+    "daily": {"step": 1, "windows": 63, "window_label": "Last 3M"},
+    "weekly": {"step": 5, "windows": 26, "window_label": "Last 6M"},
+    "monthly": {"step": 21, "windows": 12, "window_label": "Last 1Y"},
 }
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 MARKET_INTRADAY_STALE_MINUTES = 15
@@ -76,6 +76,22 @@ GROUP_TREND_COLUMNS = [
     "Market Cap Weighted Return %",
     "Top Symbol",
     "Top Symbol Return %",
+    "Start Date",
+    "End Date",
+]
+GROUP_TICKER_LEADER_COLUMNS = [
+    "Group",
+    "Group Type",
+    "Rank",
+    "Symbol",
+    "Name",
+    "Return %",
+    "Positive Return Share %",
+    "Sector",
+    "Industry",
+    "Market Cap",
+    "Start Price",
+    "End Price",
     "Start Date",
     "End Date",
 ]
@@ -322,6 +338,7 @@ def _empty_group_snapshot(
         "top_n": top_n,
         "rows": pd.DataFrame(columns=GROUP_COLUMNS),
         "trend_rows": pd.DataFrame(columns=GROUP_TREND_COLUMNS),
+        "ticker_leader_rows": pd.DataFrame(columns=GROUP_TICKER_LEADER_COLUMNS),
         "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
@@ -964,6 +981,65 @@ def _group_trend_rows_frame(
                 }
             )
     return pd.DataFrame(trend_rows, columns=GROUP_TREND_COLUMNS)
+
+
+def _group_ticker_leader_rows_frame(
+    *,
+    return_rows: list[dict[str, Any]],
+    positive_groups: set[str],
+    group_by: str,
+) -> pd.DataFrame:
+    if not return_rows or not positive_groups:
+        return pd.DataFrame(columns=GROUP_TICKER_LEADER_COLUMNS)
+
+    normalized_groups = {str(group).strip() for group in positive_groups if str(group).strip()}
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in return_rows:
+        group_name = str(row.get(group_by) or "Unknown").strip() or "Unknown"
+        if group_name not in normalized_groups:
+            continue
+        return_pct = _safe_float(row.get("return_pct"))
+        if return_pct is None or return_pct <= 0:
+            continue
+        grouped.setdefault(group_name, []).append(row)
+
+    leader_rows: list[dict[str, Any]] = []
+    for group_name in sorted(grouped):
+        rows = sorted(
+            grouped[group_name],
+            key=lambda row: (
+                -float(row.get("return_pct") or 0.0),
+                str(row.get("symbol") or ""),
+            ),
+        )
+        positive_return_total = sum(max(float(row.get("return_pct") or 0.0), 0.0) for row in rows)
+        for rank, row in enumerate(rows, start=1):
+            return_pct = float(row.get("return_pct") or 0.0)
+            leader_rows.append(
+                {
+                    "Group": group_name,
+                    "Group Type": group_by.title(),
+                    "Rank": rank,
+                    "Symbol": str(row.get("symbol") or "").strip().upper(),
+                    "Name": row.get("name") or "-",
+                    "Return %": round(return_pct, 2),
+                    "Positive Return Share %": round(
+                        (return_pct / positive_return_total) * 100.0,
+                        2,
+                    )
+                    if positive_return_total > 0
+                    else None,
+                    "Sector": row.get("sector") or "Unknown",
+                    "Industry": row.get("industry") or "Unknown",
+                    "Market Cap": round(float(row.get("market_cap") or 0.0), 2),
+                    "Start Price": round(float(row.get("start_price") or 0.0), 4),
+                    "End Price": round(float(row.get("end_price") or 0.0), 4),
+                    "Start Date": row.get("start_date"),
+                    "End Date": row.get("end_date"),
+                }
+            )
+
+    return pd.DataFrame(leader_rows, columns=GROUP_TICKER_LEADER_COLUMNS)
 
 
 def _coverage(
@@ -2288,6 +2364,11 @@ def build_group_leadership_snapshot(
         )
         ranked = _rank_group_rows(group_rows, top_n=normalized_top_n)
         top_groups = {str(row["group"]) for row in ranked}
+        positive_groups = {
+            str(row["group"])
+            for row in ranked
+            if float(row.get("market_cap_weighted_return") or 0.0) > 0
+        }
         trend_rows = _group_trend_rows_frame(
             windows=list(date_window.get("windows") or []),
             universe=universe,
@@ -2295,6 +2376,11 @@ def build_group_leadership_snapshot(
             group_by=normalized_group,
             min_group_size=min_group_size,
             query_fn=query,
+        )
+        ticker_leader_rows = _group_ticker_leader_rows_frame(
+            return_rows=return_rows,
+            positive_groups=positive_groups,
+            group_by=normalized_group,
         )
         coverage = _coverage(
             universe_count=len(universe),
@@ -2314,6 +2400,7 @@ def build_group_leadership_snapshot(
             "top_n": normalized_top_n,
             "rows": _group_rows_frame(ranked),
             "trend_rows": trend_rows,
+            "ticker_leader_rows": ticker_leader_rows,
             "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,

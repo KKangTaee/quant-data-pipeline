@@ -738,7 +738,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["date_window"]["period"], "monthly")
         self.assertEqual(snapshot["period"], "monthly")
+        self.assertEqual(snapshot["trend_window_label"], "Last 1Y")
         self.assertFalse(snapshot["trend_rows"].empty)
+        self.assertFalse(snapshot["ticker_leader_rows"].empty)
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
         first_row = snapshot["rows"].iloc[0]
         self.assertEqual(first_row["Group"], "Technology")
@@ -746,6 +748,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(first_row["Equal Weight Return %"], 20.0)
         self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
         self.assertEqual(first_row["Top Symbol"], "BBB")
+        technology_leaders = snapshot["ticker_leader_rows"][
+            snapshot["ticker_leader_rows"]["Group"] == "Technology"
+        ].sort_values("Rank")
+        self.assertEqual(technology_leaders["Symbol"].tolist(), ["BBB", "AAA"])
+        self.assertEqual(technology_leaders.iloc[0]["Positive Return Share %"], 75.0)
 
     def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
         from app.services.overview_market_intelligence import build_group_leadership_snapshot
@@ -764,7 +771,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["universe_code"], "SP500")
         self.assertEqual(snapshot["period"], "daily")
-        self.assertEqual(snapshot["trend_window_label"], "Last 1M")
+        self.assertEqual(snapshot["trend_window_label"], "Last 3M")
         self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
         self.assertFalse(snapshot["rows"].empty)
         self.assertFalse(snapshot["trend_rows"].empty)

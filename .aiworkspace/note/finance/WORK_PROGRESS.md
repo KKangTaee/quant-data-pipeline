@@ -4066,3 +4066,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`에서 Sector / Industry Leadership을 최신 랭킹 + 기간별 추세 화면으로 개편했다.
   - Coverage는 S&P 500 / Top1000 / Top2000을 지원하고, Period는 Daily / Weekly / Monthly로 선택한다.
   - Daily 1개월, Weekly 3개월, Monthly 6개월 trend rows를 DB price history에서 계산하며 browser smoke와 service contract 56 tests를 통과했다.
+- Overview MI Sector / Industry detail polish:
+  - Sector / Industry trend horizon을 Daily 3개월, Weekly 6개월, Monthly 1년으로 확장했다.
+  - Trend Groups multiselect로 라인별 표시를 제어하고, 양수 그룹에는 티커 리더 bar / return-share donut 상세를 추가했다.
+  - Service contract 56 tests, module compile, browser smoke를 통과했다.
