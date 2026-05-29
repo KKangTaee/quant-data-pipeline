@@ -322,12 +322,11 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-events-source-lane {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--ov-mi-gap-xs);
-  margin: 0.2rem 0 0.58rem 0;
-  padding: 0.42rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+  margin: 0.24rem 0 0.64rem 0;
+  padding: 0.48rem;
   border: 1px solid var(--ov-mi-border-faint);
   border-radius: var(--ov-mi-radius-panel);
   background:
@@ -335,27 +334,19 @@ def overview_ui_css() -> str:
     var(--ov-mi-color-surface-subtle);
 }
 .ov-events-source {
-  display: flex;
-  align-items: center;
-  gap: 0.42rem;
-  flex: 1 1 15.5rem;
-  min-width: 14rem;
+  position: relative;
+  min-width: 0;
   border: 1px solid var(--ov-mi-border-subtle);
-  border-radius: var(--ov-mi-radius-pill);
+  border-left: 4px solid var(--ov-event-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
   background: var(--ov-mi-color-surface);
-  padding: 0.36rem 0.5rem;
-}
-.ov-events-source-dot {
-  width: 0.48rem;
-  height: 0.48rem;
-  border-radius: var(--ov-mi-radius-pill);
-  background: var(--ov-event-tone, var(--ov-mi-color-neutral));
-  flex: 0 0 auto;
+  padding: 0.54rem 0.6rem 0.5rem 0.66rem;
 }
 .ov-events-source-head {
   display: flex;
   align-items: center;
-  gap: var(--ov-mi-gap-xs);
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
   min-width: 0;
 }
 .ov-events-source-title {
@@ -365,14 +356,15 @@ def overview_ui_css() -> str:
   white-space: nowrap;
 }
 .ov-events-source-state {
+  flex: 0 0 auto;
   color: var(--ov-event-tone, var(--ov-mi-color-neutral));
-  font-size: 0.7rem;
+  font-size: var(--ov-mi-font-caption);
   font-weight: var(--ov-mi-weight-label);
   white-space: nowrap;
   border: 1px solid color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-neutral)) 36%, transparent);
   border-radius: var(--ov-mi-radius-pill);
   background: color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-neutral)) 9%, transparent);
-  padding: 0.08rem 0.36rem;
+  padding: 0.12rem 0.42rem;
 }
 .ov-events-source-detail {
   color: var(--ov-mi-color-text-muted);
@@ -381,18 +373,30 @@ def overview_ui_css() -> str:
   margin-top: 0.2rem;
   overflow-wrap: anywhere;
 }
-.ov-events-source-meta {
-  color: var(--ov-mi-color-text-muted);
-  font-size: 0.7rem;
-  font-weight: var(--ov-mi-weight-label);
-  line-height: 1.15;
-  white-space: nowrap;
+.ov-events-source-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.42rem;
+  padding-top: 0.42rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
 }
-.ov-events-source-meta::before {
+.ov-events-source-field {
+  min-width: 0;
+}
+.ov-events-source-field-label {
   color: var(--ov-mi-color-text-muted);
-  content: "·";
-  margin-right: 0.42rem;
-  opacity: 0.7;
+  font-size: 0.68rem;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-events-source-field-value {
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: var(--ov-mi-weight-strong);
+  line-height: 1.18;
+  margin-top: 0.12rem;
+  overflow-wrap: anywhere;
 }
 .ov-events-warning-stack {
   display: grid;
@@ -536,12 +540,6 @@ def overview_ui_css() -> str:
   .ov-events-source-lane {
     grid-template-columns: 1fr;
   }
-  .ov-events-source {
-    flex-basis: 100%;
-  }
-  .ov-events-source-meta-latest {
-    display: none;
-  }
   .ov-events-row {
     grid-template-columns: 1fr;
     gap: var(--ov-mi-gap-sm);
@@ -660,23 +658,33 @@ def render_event_source_lane(sources: list[dict[str, Any]]) -> None:
     source_html: list[str] = []
     for source in sources:
         tone_color = _overview_tone_color(source.get("tone"))
-        meta_html = ""
+        body_html = ""
         if any(key in source for key in ("rows", "latest", "review_count")):
-            meta_html = (
-                f'<span class="ov-events-source-meta">{escape(_display_value(source.get("rows")))} rows</span>'
-                f'<span class="ov-events-source-meta ov-events-source-meta-latest">latest {escape(_display_value(source.get("latest")))}</span>'
-                f'<span class="ov-events-source-meta">review {escape(_display_value(source.get("review_count")))}</span>'
+            body_html = (
+                '<div class="ov-events-source-body">'
+                '<div class="ov-events-source-field">'
+                '<div class="ov-events-source-field-label">Rows</div>'
+                f'<div class="ov-events-source-field-value">{escape(_display_value(source.get("rows")))}</div>'
+                "</div>"
+                '<div class="ov-events-source-field">'
+                '<div class="ov-events-source-field-label">Latest</div>'
+                f'<div class="ov-events-source-field-value">{escape(_display_value(source.get("latest")))}</div>'
+                "</div>"
+                '<div class="ov-events-source-field">'
+                '<div class="ov-events-source-field-label">Review</div>'
+                f'<div class="ov-events-source-field-value">{escape(_display_value(source.get("review_count")))}</div>'
+                "</div>"
+                "</div>"
             )
         elif source.get("detail") not in (None, ""):
-            meta_html = f'<span class="ov-events-source-meta">{escape(_display_value(source.get("detail")))}</span>'
+            body_html = f'<div class="ov-events-source-detail">{escape(_display_value(source.get("detail")))}</div>'
         source_html.append(
             f'<div class="ov-events-source" style="--ov-event-tone:{escape(tone_color)};">'
-            '<span class="ov-events-source-dot"></span>'
             '<div class="ov-events-source-head">'
             f'<span class="ov-events-source-title">{escape(str(source.get("title") or "-"))}</span>'
             f'<span class="ov-events-source-state">{escape(_display_value(source.get("status")))}</span>'
             "</div>"
-            f"{meta_html}"
+            f"{body_html}"
             "</div>"
         )
     st.markdown(

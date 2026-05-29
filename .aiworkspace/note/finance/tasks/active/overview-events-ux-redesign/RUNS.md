@@ -18,3 +18,7 @@
 - 2026-05-30: Browser smoke at 1500px and 1000px viewports - PASS; Refresh popover rendered, FOMC/Earnings/Macro actions visible inside popover, old large refresh buttons absent, compact source strip rendered, no horizontal overflow, console errors 0.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
 - 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_ui_components.py app/web/overview_dashboard.py` - PASS.
+- 2026-05-30: Browser smoke at 1500px and 1000px viewports - PASS; source mini cards rendered without card clipping, no horizontal overflow, no leaked HTML, console errors 0.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `git diff --check` - PASS.
