@@ -4091,3 +4091,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`에서 OS scheduler 대신 Overview를 열어둔 동안만 작동하는 1차 자동 refresh를 시작했다.
   - `browser_safe` profile은 S&P 500 daily snapshot만 선택하고, Overview 상단 토글은 Streamlit fragment로 5분마다 해당 profile을 호출한다.
   - 브라우저 smoke에서 토글 ON 시 장 시간 밖 `skipped` 상태가 표시되고 console error 0개를 확인했다.
+  - 자동 check 중에는 전체 화면 blocking 대신 상단 패널 안에서 checking / progress / completion 상태를 표시한다.

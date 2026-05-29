@@ -812,7 +812,7 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
         for result in (summary.get("results") or [])
         if isinstance(result, dict)
     ]
-    detail = result_messages[0] if result_messages else _summarize_auto_refresh_plan(summary)
+    detail = result_messages[0] if result_messages else str(summary.get("message") or _summarize_auto_refresh_plan(summary))
     return [
         {
             "title": "Auto Refresh",
@@ -833,6 +833,40 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
             "tone": "positive" if jobs_run else "neutral",
         },
     ]
+
+
+def _browser_auto_refresh_completion_label(summary: dict[str, Any]) -> str:
+    status = str(summary.get("status") or "-")
+    if status == "success":
+        return "S&P 500 snapshot updated"
+    if status == "skipped":
+        return _summarize_auto_refresh_plan(summary)
+    if status == "locked":
+        return "Another Overview refresh is already running"
+    if status == "partial_success":
+        return "S&P 500 snapshot completed with issues"
+    if status == "failed":
+        return "S&P 500 snapshot refresh failed"
+    return f"Auto refresh {status}"
+
+
+def _render_browser_auto_refresh_loading(summary: dict[str, Any] | None = None) -> None:
+    label = "Checking S&P 500 daily snapshot..."
+    state = "running"
+    if summary is not None:
+        label = _browser_auto_refresh_completion_label(summary)
+        state = "error" if str(summary.get("status") or "").lower() == "failed" else "complete"
+
+    with st.status(label, state=state, expanded=False):
+        st.progress(
+            100 if summary is not None else 35,
+            text=(
+                "Done. Updating the Overview status cards."
+                if summary is not None
+                else "Collecting only if cadence and US market-hours guards allow it."
+            ),
+        )
+        st.caption("The rest of the Overview remains usable; this does not block the full screen.")
 
 
 def _run_browser_auto_refresh_check() -> dict[str, Any]:
@@ -897,7 +931,10 @@ def _render_browser_auto_refresh_panel() -> None:
         if enabled:
             @st.fragment(run_every=BROWSER_AUTO_REFRESH_SECONDS)
             def _browser_auto_refresh_heartbeat() -> None:
-                summary = _run_browser_auto_refresh_check()
+                _render_browser_auto_refresh_loading()
+                with st.spinner("Collecting S&P 500 snapshot when due..."):
+                    summary = _run_browser_auto_refresh_check()
+                _render_browser_auto_refresh_loading(summary)
                 checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
                 render_status_card_grid(_build_browser_auto_refresh_cards(summary, str(checked_at or "")))
 

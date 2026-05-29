@@ -103,6 +103,7 @@ http://localhost:8501
    - 1차 browser-safe mode는 S&P 500 daily snapshot만 수집 대상으로 둔다.
    - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.
    - 실제 실행 여부는 `overview_automation`의 cadence, US market-hours guard, lock file이 판단한다.
+   - 자동 check 중에는 상단 패널 안에서 checking / collecting 상태와 progress indicator만 표시하며, 전체 화면을 blocking하지 않는다.
 
 ## CLI Smoke Checks
 

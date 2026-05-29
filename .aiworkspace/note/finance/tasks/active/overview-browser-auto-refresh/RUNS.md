@@ -14,3 +14,7 @@
 - 2026-05-29: `uv run python -m unittest tests.test_service_contracts` - PASS, 69 tests.
 - 2026-05-29: `uv run python -m app.jobs.overview_automation --profile browser_safe --dry-run --json` - PASS.
 - 2026-05-29: Browser smoke Data Health tab - PASS; `Latest Auto` card rendered, console errors 0.
+- 2026-05-29: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 10 tests.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts` - PASS, 70 tests.
+- 2026-05-29: Restarted Streamlit on `http://localhost:8501` after module import changes, then browser smoke auto-refresh toggle - PASS; soft checking / completion status rendered, outside-hours skip displayed, console errors 0. Toggle was turned back off after smoke.

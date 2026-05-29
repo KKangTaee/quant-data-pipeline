@@ -329,6 +329,27 @@ class JobResultArtifactContractTests(unittest.TestCase):
 
 
 class OverviewAutomationContractTests(unittest.TestCase):
+    def test_browser_auto_refresh_completion_label_uses_actionable_status(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_completion_label
+
+        self.assertEqual(
+            _browser_auto_refresh_completion_label({"status": "success"}),
+            "S&P 500 snapshot updated",
+        )
+        self.assertEqual(
+            _browser_auto_refresh_completion_label(
+                {
+                    "status": "skipped",
+                    "plan": [{"label": "S&P 500 Daily Snapshot", "reason": "outside US market hours"}],
+                }
+            ),
+            "S&P 500 Daily Snapshot: outside US market hours",
+        )
+        self.assertEqual(
+            _browser_auto_refresh_completion_label({"status": "locked"}),
+            "Another Overview refresh is already running",
+        )
+
     def test_browser_auto_refresh_cards_describe_skipped_plan(self) -> None:
         from app.web.overview_dashboard import _build_browser_auto_refresh_cards
 
@@ -355,6 +376,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("S&P 500 Daily Snapshot", cards[0]["detail"])
         self.assertEqual(cards[1]["detail"], "Profile: browser_safe")
         self.assertEqual(cards[2]["value"], "0 / 0")
+
+    def test_browser_auto_refresh_cards_show_failure_message(self) -> None:
+        from app.web.overview_dashboard import _build_browser_auto_refresh_cards
+
+        cards = _build_browser_auto_refresh_cards(
+            {
+                "status": "failed",
+                "profile": "browser_safe",
+                "message": "unexpected provider error",
+                "jobs_due": None,
+                "jobs_run": 0,
+                "plan": [],
+                "results": [],
+            },
+            "2026-05-29 10:05:00",
+        )
+
+        self.assertEqual(cards[0]["tone"], "danger")
+        self.assertEqual(cards[0]["detail"], "unexpected provider error")
 
     def test_run_history_append_serializes_provider_date_payload(self) -> None:
         from app.jobs import run_history
