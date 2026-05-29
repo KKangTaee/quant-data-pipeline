@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 from typing import Any
 
 from app.workspace_paths import RUN_HISTORY_DIR
@@ -90,11 +91,17 @@ def _normalize_history_record(record: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _json_safe(value: Any) -> str:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return str(value)
+
+
 def append_run_history(result: dict[str, Any]) -> None:
     record = _normalize_history_record(result)
     HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     with HISTORY_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        f.write(json.dumps(record, ensure_ascii=False, default=_json_safe) + "\n")
 
 
 def load_run_history(limit: int = 50) -> list[dict[str, Any]]:

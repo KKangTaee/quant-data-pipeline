@@ -329,6 +329,41 @@ class JobResultArtifactContractTests(unittest.TestCase):
 
 
 class OverviewAutomationContractTests(unittest.TestCase):
+    def test_run_history_append_serializes_provider_date_payload(self) -> None:
+        from app.jobs import run_history
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            history_file = Path(tmp_dir) / "WEB_APP_RUN_HISTORY.jsonl"
+            with patch.object(run_history, "HISTORY_FILE", history_file):
+                run_history.append_run_history(
+                    {
+                        "job_name": "collect_earnings_calendar",
+                        "status": "success",
+                        "started_at": "2026-05-29 10:00:00",
+                        "finished_at": "2026-05-29 10:00:02",
+                        "duration_sec": 2.0,
+                        "rows_written": 1,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "earnings calendar completed",
+                        "details": {
+                            "symbol_diagnostics": [
+                                {
+                                    "symbol": "AAA",
+                                    "provider_dates": [date(2026, 7, 30)],
+                                }
+                            ]
+                        },
+                    }
+                )
+                loaded = run_history.load_run_history(limit=1)
+
+        self.assertEqual(
+            loaded[0]["details"]["symbol_diagnostics"][0]["provider_dates"],
+            ["2026-07-30"],
+        )
+
     def test_intraday_plan_skips_outside_market_hours_unless_allowed(self) -> None:
         from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
 
