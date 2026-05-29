@@ -1,6 +1,6 @@
 # Phase 8 Investability Data Evidence Expansion Risks
 
-Status: Active
+Status: Complete
 Created: 2026-05-28
 
 ## Risks
@@ -22,6 +22,11 @@ Created: 2026-05-28
 - Which free / official source should supply historical membership or ticker action events after Form 25?
 - Should future computed snapshot coverage ever be marked `actual`, and what archive / continuity contract would justify that?
 - How should old ticker -> new ticker mapping affect backtest replay symbols?
+
+## Carry Forward
+
+- These open questions move to Phase 9+ planning, not Phase 8 implementation.
+- Phase 9 should focus on cost / slippage / turnover / liquidity realism before reopening corporate-action source expansion.
 
 ## Source Review Result
 

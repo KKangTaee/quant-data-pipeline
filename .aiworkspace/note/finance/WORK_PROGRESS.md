@@ -12,14 +12,22 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Active Pointers
 
-- current phase board:
-  - [Phase 8 Investability Data Evidence Expansion](./phases/active/phase8-investability-data-evidence-expansion/PLAN.md)
+- latest completed phase:
+  - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
+- next phase candidate:
+  - Phase 9 cost / slippage / turnover / liquidity realism
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; current work is lifecycle evidence hardening
+  - no active strategy-search candidate summary in `main-dev`; next work is hardening backtest realism cost evidence
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/phase8-integrated-qa-closeout/`.
+- Phase 8 is closeout complete; summary added at `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`.
+- Integrated verification passed: lifecycle path compile check, full `tests.test_service_contracts` 79 tests, and `git diff --check`.
+- Next hardening target is Phase 9: cost / slippage / turnover / liquidity realism.
 
 ### 2026-05-28
 - Completed `.aiworkspace/note/finance/tasks/active/lifecycle-audit-scoring-v1/`.

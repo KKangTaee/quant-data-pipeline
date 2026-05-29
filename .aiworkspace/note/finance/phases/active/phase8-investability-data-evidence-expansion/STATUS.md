@@ -1,6 +1,6 @@
 # Phase 8 Investability Data Evidence Expansion Status
 
-Status: Active
+Status: Complete
 Created: 2026-05-28
 
 ## Current Status
@@ -14,7 +14,7 @@ Created: 2026-05-28
 - [x] SEC CIK / exchange cross-check implemented.
 - [x] Computed snapshot lifecycle implemented.
 - [x] Lifecycle audit scoring implemented.
-- [ ] Phase 8 integrated QA closeout started.
+- [x] Phase 8 integrated QA closeout complete.
 
 ## Latest Update
 
@@ -30,8 +30,9 @@ Created: 2026-05-28
 - `computed-snapshot-lifecycle-v1` added a DB-only computed row builder / job wrapper that summarizes repeated current snapshot observations as partial `computed_from_snapshots` evidence.
 - Data Coverage Audit now requires `coverage_status=actual` before a lifecycle row can make survivorship PASS.
 - `lifecycle-audit-scoring-v1` refined Data Coverage Audit lifecycle evidence so current snapshot, SEC identity cross-check, computed partial, actual coverage, and delisting actual symbols are separated in metrics and evidence strings.
+- `phase8-integrated-qa-closeout` verified the integrated lifecycle path with compile checks, full service contracts, and storage boundary review.
 
 ## Next
 
-- Start `phase8-integrated-qa-closeout`.
-- Run Phase 8 integrated verification and prepare phase closeout / Phase 9 handoff.
+- Open Phase 9 for cost / slippage / turnover / liquidity realism hardening.
+- Keep Phase 8 lifecycle evidence limitations visible: no complete free historical membership feed has been implemented.

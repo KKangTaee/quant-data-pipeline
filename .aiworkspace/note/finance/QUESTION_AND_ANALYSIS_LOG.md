@@ -12,14 +12,28 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Active Pointers
 
-- latest phase board:
-  - [Phase 8 Investability Data Evidence Expansion](./phases/active/phase8-investability-data-evidence-expansion/PLAN.md)
+- latest completed phase:
+  - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
+- next phase candidate:
+  - Phase 9 cost / slippage / turnover / liquidity realism
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; current work is lifecycle evidence hardening
+  - no active strategy-search candidate summary in `main-dev`; next work is hardening backtest realism cost evidence
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 8 lifecycle evidence hardening closes
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 8 전체 lifecycle evidence path를 통합 검증하고 closeout / Phase 9 handoff를 정리한다.
+- Analysis result:
+  - Phase 8 closeout summary를 `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`에 추가했다.
+  - lifecycle schema / collectors / loader / ingestion wrapper / Data Coverage Audit compile check와 full service contracts가 통과했다.
+  - Phase 8은 complete이며, complete free historical membership feed는 residual risk로 남긴다.
+- Follow-up:
+  - 다음 hardening target은 Phase 9 cost / slippage / turnover / liquidity realism이다.
 
 ### 2026-05-28 - Lifecycle audit scoring separates evidence strength
 - User request:

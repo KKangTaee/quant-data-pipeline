@@ -1,6 +1,6 @@
 # Phase 8 Investability Data Evidence Expansion Integration
 
-Status: Active
+Status: Complete
 Created: 2026-05-28
 
 ## Integration Boundaries
@@ -22,3 +22,12 @@ Created: 2026-05-28
 - `python -m py_compile finance/data/db/schema.py finance/data/nyse_db.py finance/data/sec_delisting.py finance/data/computed_lifecycle.py finance/loaders/universe.py app/services/backtest_data_coverage_audit.py`
 - focused service contracts around lifecycle / Form 25 / Data Coverage Audit scoring
 - docs status review
+
+## Closeout Result
+
+2026-05-29:
+
+- Phase 8 integrated compile check passed for lifecycle schema, collectors, loader, ingestion job wrapper, and Data Coverage Audit.
+- Full `tests.test_service_contracts` passed.
+- `git diff --check` passed.
+- Only existing local artifact `finance/.DS_Store` remains outside the closeout commit.

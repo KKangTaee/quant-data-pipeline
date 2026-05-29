@@ -1,6 +1,6 @@
 # Phase 8 Investability Data Evidence Expansion Design
 
-Status: Active
+Status: Complete
 Created: 2026-05-28
 
 ## Design Boundary

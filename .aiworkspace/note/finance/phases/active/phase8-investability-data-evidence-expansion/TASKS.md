@@ -1,6 +1,6 @@
 # Phase 8 Investability Data Evidence Expansion Tasks
 
-Status: Active
+Status: Complete
 Created: 2026-05-28
 
 ## Task Board
@@ -14,7 +14,7 @@ Created: 2026-05-28
 | 8-4 | `sec-cik-exchange-crosscheck-v1` | `finance-db-pipeline` | SEC current CIK / ticker / exchange association을 lifecycle evidence 보조 source로 연결 | Implementation complete |
 | 8-5 | `computed-snapshot-lifecycle-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | repeated current snapshots 기반 computed lifecycle evidence 설계 / scoring | Implementation complete |
 | 8-6 | `lifecycle-audit-scoring-v1` | `finance-backtest-web-workflow` | Data Coverage Audit evidence scoring refinement | Implementation complete |
-| 8-7 | `phase8-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Pending |
+| 8-7 | `phase8-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Complete |
 
 ## Previous Work Folded Into Phase 8
 
@@ -26,13 +26,12 @@ Created: 2026-05-28
 
 ## Immediate Next Task
 
-`phase8-integrated-qa-closeout`
+Phase 8 is complete.
 
 Goal:
 
-- Phase 8 전체 lifecycle evidence path를 통합 QA한다.
-- service contracts, compile, docs consistency, storage boundary를 최종 확인한다.
-- Phase 8 완료 요약과 Phase 9 handoff를 정리한다.
+- Next phase candidate is Phase 9: cost / slippage / turnover / liquidity realism.
+- Open a new phase/task before implementation.
 
 Out of scope:
 
