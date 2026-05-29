@@ -24,7 +24,7 @@ active 폴더에 남아 있는 완료 phase board는 과거 task 추적과 hando
 
 | Phase | Status | Notes |
 |---|---|---|
-| No active second-cycle phase | Pending user direction | Phase 13까지의 1차 hardening cycle은 완료됐다. 다음 phase는 carry-forward matrix에서 사용자가 방향을 선택한 뒤 연다. |
+| `phase14-second-cycle-prioritization` | Active | Phase 13 carry-forward 후보를 우선순위화하고 2차 cycle의 첫 구현 slice를 확정하는 phase. 다음 task는 `phase14-candidate-prioritization-v1`. |
 | `ui-engine-boundary-foundation` | Implementation complete | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입한 phase. audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료. |
 | `ui-engine-boundary-cleanup` | Complete | Task 6~9 cleanup 완료. boundary lint는 `app.services/app.runtime -> app.web` import hard fail 기준으로 유지. |
 | `investability-decision-foundation` | Implementation complete | Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 검토 가능한 decision workflow로 강화하기 위한 저장 / gate / 데이터 수집 / task 순서 기준선. 후속은 structured waiver policy 또는 Practical Validation V2 P2 closeout. |

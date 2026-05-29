@@ -13,15 +13,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - no active phase; [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md) completed the first hardening cycle
+  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work requires user-approved second-cycle direction from the Phase 13 carry-forward matrix
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase14-candidate-prioritization-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-30 - Phase 14 opens second-cycle prioritization
+- User request:
+  - Phase 13 완료 후 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13 carry-forward 후보를 바로 무작정 구현하지 않고, 2차 cycle의 첫 구현 slice를 정하기 위한 Phase 14를 연다.
+- Analysis result:
+  - High-priority 후보가 여러 개이므로 `selected replay contract hardening`, `weighted mix cost / turnover aggregation`, `profile-specific threshold policy`, historical membership/source review, broker-grade execution realism design을 impact / dependency / effort / source uncertainty / storage risk / QA 기준으로 먼저 비교해야 한다.
+  - Phase 14는 구현 phase가 아니라 prioritization / handoff phase이며, code / DB schema / new JSONL / broker automation 변경을 포함하지 않는다.
+- Follow-up:
+  - 다음 task는 `phase14-candidate-prioritization-v1`로 후보 matrix를 만들고 첫 구현 후보와 owner skill을 확정한다.
 
 ### 2026-05-30 - Phase 13 closes the first hardening cycle
 - User request:

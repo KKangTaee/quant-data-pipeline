@@ -84,7 +84,11 @@ These items must not be claimed as complete in 13-6.
 
 ## Next Step
 
-Next task: `phase13-integrated-qa-final-closeout`
+Phase 13 final closeout is complete.
+Use this matrix as the input to Phase 14:
+
+- active phase: `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`
+- next task: `phase14-candidate-prioritization-v1`
 
 Use this matrix with:
 

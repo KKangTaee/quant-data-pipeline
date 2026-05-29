@@ -22,8 +22,8 @@ Last Verified: 2026-05-30
 
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
-- Current active phase: none; the next phase should be opened only after the user chooses a second-cycle direction.
-- Current implementation focus: first hardening cycle complete; use `phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md` for next-cycle planning.
+- Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
+- Current implementation focus: `phase14-candidate-prioritization-v1`; rank Phase 13 carry-forward candidates before opening the next implementation slice.
 
 ## By Purpose
 

@@ -13,17 +13,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - no active phase; [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md) completed the first hardening cycle
+  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work requires user-approved second-cycle direction from the Phase 13 carry-forward matrix
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase14-candidate-prioritization-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-30
+- Opened `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`.
+- Phase 14 is a second-cycle prioritization phase: rank Phase 13 carry-forward candidates and select the first implementation slice before code changes.
+- Completed `.aiworkspace/note/finance/tasks/active/phase14-board-open/`; next task is `phase14-candidate-prioritization-v1`.
+- No code, DB schema, JSONL registry, user memo / preset storage, monitoring log auto-write, broker order, live approval, account sync, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-integrated-qa-final-closeout/`.
 - Phase 13 closeout summary added at `.aiworkspace/note/finance/phases/done/phase13-hardening-cycle-closeout.md`.
 - First hardening cycle is complete as an investability evidence workflow; it is not broker-grade trading, live approval, account sync, order, or auto rebalance readiness.
