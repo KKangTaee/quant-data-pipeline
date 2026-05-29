@@ -1,11 +1,11 @@
 # Phase 11 Portfolio Construction Risk Controls Status
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Current State
 
-Phase 11 construction risk selected-route gate policy is complete.
+Phase 11 integrated QA closeout is complete.
 
 Completed:
 
@@ -21,20 +21,21 @@ Completed:
 - Read-only Component Role / Weight Audit V1 for role source coverage, profile-aware weight discipline, role concentration, profile intent fit, weight rationale coverage, and storage boundary
 - 11-5 `construction-risk-gate-policy-v1`
 - Final Review selected-route gate policy now treats Construction Risk / Risk Contribution / Component Role / Weight audit non-PASS rows as blocker or review-required evidence
+- 11-6 `phase11-integrated-qa-closeout`
+- Compile, service contract, boundary, hygiene, diff, docs, and storage boundary checks completed
 
 Next:
 
-- 11-6 `phase11-integrated-qa-closeout`
+- Phase 12 board open for selected monitoring / recheck operations
 
 ## Latest Decision
 
-11-5 connected `construction_risk_audit`, `risk_contribution_audit`, and `component_role_weight_audit` to the profile-aware selected-route gate policy.
-`NEEDS_INPUT` / `BLOCKED` now blocks selected-route and `REVIEW` requires hold / re-review.
-Failing row criteria are included in gate evidence instead of being hidden behind generic route labels.
+11-6 verified Phase 11 end to end and added the closeout summary.
+The phase strengthened portfolio construction risk evidence without adding new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior.
 
-Immediate next task:
+Immediate next target:
 
-- `phase11-integrated-qa-closeout`
+- `phase12-board-open`
 
 ## Storage Boundary Reminder
 

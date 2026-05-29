@@ -14,3 +14,4 @@ Last Verified: 2026-05-29
 - [Phase 8 Investability Data Evidence Expansion](./phase8-investability-data-evidence-expansion.md)
 - [Phase 9 Cost / Slippage / Liquidity Realism](./phase9-cost-slippage-liquidity-realism.md)
 - [Phase 10 Walk-forward / OOS / Regime Validation](./phase10-walkforward-oos-regime-validation.md)
+- [Phase 11 Portfolio Construction Risk Controls](./phase11-portfolio-construction-risk-controls.md)

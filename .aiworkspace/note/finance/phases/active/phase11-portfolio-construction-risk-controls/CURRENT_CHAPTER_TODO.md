@@ -1,6 +1,6 @@
 # Phase 11 Current Chapter TODO
 
-Status: Active
+Status: Complete
 Last Updated: 2026-05-29
 
 ## Current Position
@@ -11,15 +11,14 @@ Last Updated: 2026-05-29
 - 11-3 `correlation-risk-contribution-contract-v1`: Complete
 - 11-4 `component-role-weight-discipline-v1`: Complete
 - 11-5 `construction-risk-gate-policy-v1`: Complete
-- 11-6 `phase11-integrated-qa-closeout`: Next
+- 11-6 `phase11-integrated-qa-closeout`: Complete
 
-## Next Task
+## Next Target
 
-`phase11-integrated-qa-closeout`
+`phase12-board-open`
 
 Focus:
 
-- Phase 11 전체 변경을 통합 검증한다.
-- compile, full service contract, boundary, hygiene, diff checks를 실행한다.
-- Phase 11 docs / roadmap / handoff log를 closeout 상태로 정리한다.
+- selected monitoring / recheck operations를 다음 hardening phase로 공식 board화한다.
+- 이미 존재하는 Selected Portfolio Dashboard read-only surfaces와 남은 운영 검증 gap을 다시 source map으로 확인한다.
 - 새 JSONL registry, user memo, preset, approval, order, auto rebalance behavior는 추가하지 않는다.

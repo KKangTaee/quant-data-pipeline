@@ -1,6 +1,6 @@
 # Phase 11 Portfolio Construction Risk Controls Plan
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## 이걸 하는 이유?
@@ -58,12 +58,12 @@ Phase 11은 우선 기존 selection source, result curve, DB provider / holdings
 | Phase Slice | Goal | Status |
 | --- | --- | --- |
 | 11-0 | Phase 11 board open / scope and task split | Complete |
-| 11-1 | Current construction risk source map / gap audit | Next |
-| 11-2 | Concentration / overlap / exposure contract | Planned |
-| 11-3 | Correlation / risk contribution contract | Planned |
-| 11-4 | Component role / weight discipline contract | Planned |
-| 11-5 | Practical Validation / Final Review construction risk gate integration | Planned |
-| 11-6 | Phase 11 integrated QA / closeout | Planned |
+| 11-1 | Current construction risk source map / gap audit | Complete |
+| 11-2 | Concentration / overlap / exposure contract | Complete |
+| 11-3 | Correlation / risk contribution contract | Complete |
+| 11-4 | Component role / weight discipline contract | Complete |
+| 11-5 | Practical Validation / Final Review construction risk gate integration | Complete |
+| 11-6 | Phase 11 integrated QA / closeout | Complete |
 
 ## Done Criteria
 

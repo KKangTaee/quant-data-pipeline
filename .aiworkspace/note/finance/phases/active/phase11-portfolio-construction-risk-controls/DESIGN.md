@@ -1,6 +1,6 @@
 # Phase 11 Portfolio Construction Risk Controls Design
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Design Principle
@@ -150,7 +150,20 @@ Route handling:
 - `*_NEEDS_INPUT` and `*_BLOCKED` create selected-route blockers.
 
 Non-PASS row criteria are merged into the policy evidence so Final Review can show which construction row caused the blocker or review-required state.
-Next work is 11-6 integrated QA / closeout.
+
+## 11-6 Closeout Result
+
+11-6 completed integrated QA and phase closeout.
+
+Verification passed:
+
+- Phase 11 service / web touchpoint compile
+- full `tests.test_service_contracts`
+- UI / engine boundary checker
+- finance refinement hygiene checker
+- `git diff --check`
+
+Phase 11 remains a read-only evidence and selected-route gate hardening phase. It does not add approval, order, auto rebalance, user memo, preset, raw holdings artifact, or raw return matrix persistence.
 
 ## Data Boundary
 

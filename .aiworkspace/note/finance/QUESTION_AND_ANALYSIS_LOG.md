@@ -13,15 +13,27 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 11 Portfolio Construction Risk Controls](./phases/active/phase11-portfolio-construction-risk-controls/PLAN.md)
+  - no active phase board; next target is Phase 12 board open
 - latest completed phase:
-  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
+  - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-integrated-qa-closeout`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase12-board-open`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 11 construction risk controls close out
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 마지막 task로 construction risk controls 전체를 통합 검증하고 완료 상태로 정리한다.
+- Analysis result:
+  - Phase 11 integrated QA passed: service / web compile, full service contracts 112 tests, UI / engine boundary checker, finance refinement hygiene, and diff check.
+  - Phase 11 closeout summary was added under `phases/done/`.
+  - This phase strengthened portfolio construction risk evidence and selected-route gate policy without adding new JSONL registry, memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - Next hardening target is Phase 12 selected monitoring / recheck operations. Start with `phase12-board-open`.
 
 ### 2026-05-29 - Construction risk gate policy feeds selected-route evidence
 - User request:

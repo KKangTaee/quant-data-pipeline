@@ -13,17 +13,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 11 Portfolio Construction Risk Controls](./phases/active/phase11-portfolio-construction-risk-controls/PLAN.md)
+  - no active phase board; next target is Phase 12 board open
 - latest completed phase:
-  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
+  - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-integrated-qa-closeout`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase12-board-open`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/phase11-integrated-qa-closeout/`.
+- Phase 11 closeout summary added at `.aiworkspace/note/finance/phases/done/phase11-portfolio-construction-risk-controls.md`.
+- Integrated verification passed: Phase 11 service / web compile, full `tests.test_service_contracts` 112 tests, UI / engine boundary checker, finance refinement hygiene, and `git diff --check`.
+- Next hardening target is Phase 12 selected monitoring / recheck operations.
 - Completed `.aiworkspace/note/finance/tasks/active/construction-risk-gate-policy-v1/`.
 - Final Review selected-route gate policy now treats Construction Risk / Risk Contribution / Component Role / Weight audit routes and non-PASS row criteria as blocker or review-required evidence.
 - Verification passed: targeted py_compile, `FinalReviewEvidenceReadModelContractTests` 24 tests, and full `tests.test_service_contracts` 112 tests.

@@ -1,6 +1,6 @@
 # Phase 11 Portfolio Construction Risk Controls Risks
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Risks
@@ -22,4 +22,11 @@ Created: 2026-05-29
 - component curve가 없는 후보는 11-3 risk contribution에서 `NEEDS_INPUT` 또는 `REVIEW`로 남긴다.
 - component role metadata는 11-4에서 existing `proposal_role` / `weight_reason` source를 읽는 read-only contract로 분리했다.
 - 11-5에서 Final Review gate group ownership을 `construction_risk`, `risk_contribution`, `component_role_weight`로 명확히 했다.
-- 남은 작업은 11-6 integrated QA / closeout에서 전체 검증과 phase 종료 기록을 정리하는 것이다.
+- 11-6 integrated QA / closeout에서 전체 검증과 phase 종료 기록을 정리했다.
+
+## Residual After Closeout
+
+- Phase 11 does not implement a full optimizer, issuer / sector taxonomy engine, covariance model, or broker-grade construction platform.
+- Construction risk thresholds are compact evidence heuristics and may need profile-specific tuning.
+- Provider holdings / exposure and component return matrix quality still depend on DB-backed source availability.
+- Next hardening target is Phase 12 selected monitoring / recheck operations.
