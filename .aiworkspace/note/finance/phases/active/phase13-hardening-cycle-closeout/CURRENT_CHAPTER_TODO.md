@@ -5,13 +5,13 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `phase13-gate-validation-qa-matrix-v1`
+Next task: `phase13-storage-data-boundary-audit-v1`
 
 ## TODO
 
-- Build Practical Validation / Final Review / Selected Dashboard gate QA matrix.
-- Confirm non-PASS states are not treated as pass or hidden behind generic route labels.
-- Use `phase13-cycle-inventory-v1/INVENTORY.md` as the source map.
+- Audit DB-backed data versus workflow JSONL compact evidence boundaries.
+- Confirm registries / saved setup / monitoring log / reports / run artifacts did not drift during Phase 8~12 and Phase 13 closeout.
+- Use `phase13-cycle-inventory-v1/INVENTORY.md` and `phase13-gate-validation-qa-matrix-v1/QA_MATRIX.md` as source maps.
 - Do not introduce new storage or trading automation.
 
 ## Stop Conditions

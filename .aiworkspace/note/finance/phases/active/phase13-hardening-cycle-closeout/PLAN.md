@@ -52,8 +52,8 @@ Phase 13은 아래 질문에 답한다.
 | --- | --- | --- |
 | 13-0 | Phase 13 board open / scope and task split | Complete |
 | 13-1 | Phase 8~12 improvement inventory | Complete |
-| 13-2 | Gate / validation QA matrix | Next |
-| 13-3 | Storage / data boundary audit | Pending |
+| 13-2 | Gate / validation QA matrix | Complete |
+| 13-3 | Storage / data boundary audit | Next |
 | 13-4 | Docs / runbook alignment | Pending |
 | 13-5 | Residual risk / carry-forward triage | Pending |
 | 13-6 | Phase 13 integrated QA / final closeout | Pending |

@@ -13,10 +13,12 @@ Completed:
 - Phase scope, task split, storage boundary, immediate next task 정리
 - 13-1 `phase13-cycle-inventory-v1`
 - Phase 8~12 improvement inventory, evidence surface map, residual carry-forward map 정리
+- 13-2 `phase13-gate-validation-qa-matrix-v1`
+- Practical Validation / Final Review / Selected Dashboard gate QA matrix complete; full service contracts passed, 126 tests
 
 Next:
 
-- 13-2 `phase13-gate-validation-qa-matrix-v1`
+- 13-3 `phase13-storage-data-boundary-audit-v1`
 
 ## Latest Decision
 
@@ -25,7 +27,7 @@ It should close Phase 8~12 into a coherent product / validation state before any
 
 Immediate next target:
 
-- `phase13-gate-validation-qa-matrix-v1`
+- `phase13-storage-data-boundary-audit-v1`
 
 ## Storage Boundary Reminder
 

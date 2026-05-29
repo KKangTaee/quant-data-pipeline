@@ -60,11 +60,24 @@ Phase 13 should not update:
 
 The inventory is stored at `.aiworkspace/note/finance/tasks/active/phase13-cycle-inventory-v1/INVENTORY.md`.
 
-## Next Review Task
+## Gate QA Output
 
-`phase13-gate-validation-qa-matrix-v1` should use the inventory to verify:
+`phase13-gate-validation-qa-matrix-v1` used the inventory to verify:
 
 - non-PASS evidence route consistency
 - Practical Validation / Final Review / Selected Dashboard severity consistency
 - selected-route blocker and review-required visibility
 - whether any QA finding should become a separately scoped implementation task
+
+The QA matrix is stored at `.aiworkspace/note/finance/tasks/active/phase13-gate-validation-qa-matrix-v1/QA_MATRIX.md`.
+No immediate code defect was identified.
+
+## Next Review Task
+
+`phase13-storage-data-boundary-audit-v1` should verify:
+
+- DB-backed evidence versus workflow JSONL compact evidence boundary
+- registry / saved setup preservation
+- no automatic monitoring log append
+- no user memo / preset persistence expansion
+- generated artifacts and run history remain uncommitted

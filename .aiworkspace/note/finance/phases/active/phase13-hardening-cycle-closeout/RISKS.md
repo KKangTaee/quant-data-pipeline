@@ -22,5 +22,6 @@ Created: 2026-05-29
 ## Current Risk Posture
 
 - 13-1 inventory is complete and should now be treated as the source map for QA.
-- Main remaining risk is gate / severity drift: a non-PASS state could still be displayed too weakly across Practical Validation, Final Review, or Selected Dashboard.
+- 13-2 gate / validation QA matrix found no immediate code defect; service contracts passed, 126 tests.
+- Main remaining risk is now storage / data boundary drift: DB-backed raw evidence, workflow JSONL compact evidence, saved setup, monitoring log, report, and generated artifacts could be confused if not audited before closeout.
 - Storage boundary still needs a separate 13-3 audit before final closeout.

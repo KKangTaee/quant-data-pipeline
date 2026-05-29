@@ -6,8 +6,8 @@ Created: 2026-05-29
 ## Integration Order
 
 1. 13-1 Phase 8~12 improvement inventory: Complete
-2. 13-2 Gate / validation QA matrix: Next
-3. 13-3 Storage / data boundary audit: Pending
+2. 13-2 Gate / validation QA matrix: Complete
+3. 13-3 Storage / data boundary audit: Next
 4. 13-4 Docs / runbook alignment: Pending
 5. 13-5 Residual risk / carry-forward triage: Pending
 6. 13-6 integrated QA / final closeout: Pending
