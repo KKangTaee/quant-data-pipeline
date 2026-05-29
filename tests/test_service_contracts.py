@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -326,6 +326,168 @@ class JobResultArtifactContractTests(unittest.TestCase):
                 ("BBB", "earnings_failed", "provider_error"),
             ],
         )
+
+
+class OverviewAutomationContractTests(unittest.TestCase):
+    def test_intraday_plan_skips_outside_market_hours_unless_allowed(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
+
+        spec = ScheduledJobSpec(
+            job_id="fake_intraday",
+            job_name="fake_intraday_job",
+            label="Fake Intraday",
+            cadence_minutes=5,
+            profiles=("test",),
+            market_hours_only=True,
+            runner=lambda _: {},
+            description="fake provider run",
+        )
+        outside_market_hours = datetime(2026, 5, 29, 23, 0, tzinfo=timezone.utc)
+
+        plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=[],
+            now=outside_market_hours,
+            specs=(spec,),
+        )
+        self.assertFalse(plan[0]["should_run"])
+        self.assertEqual(plan[0]["reason"], "outside US market hours")
+
+        allowed_plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=[],
+            now=outside_market_hours,
+            allow_outside_market_hours=True,
+            specs=(spec,),
+        )
+        self.assertTrue(allowed_plan[0]["should_run"])
+        self.assertEqual(allowed_plan[0]["reason"], "due")
+
+    def test_plan_uses_cadence_from_latest_accepted_history(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
+
+        spec = ScheduledJobSpec(
+            job_id="fake_calendar",
+            job_name="fake_calendar_job",
+            label="Fake Calendar",
+            cadence_minutes=60,
+            profiles=("test",),
+            market_hours_only=False,
+            runner=lambda _: {},
+            description="fake calendar run",
+        )
+        history_rows = [
+            {
+                "job_name": "fake_calendar_job",
+                "status": "success",
+                "finished_at": "2026-05-29 10:00:00",
+            }
+        ]
+
+        early_plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=history_rows,
+            now=datetime(2026, 5, 29, 10, 30),
+            specs=(spec,),
+        )
+        self.assertFalse(early_plan[0]["should_run"])
+        self.assertEqual(early_plan[0]["reason"], "cadence not due")
+
+        due_plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=history_rows,
+            now=datetime(2026, 5, 29, 11, 1),
+            specs=(spec,),
+        )
+        self.assertTrue(due_plan[0]["should_run"])
+        self.assertEqual(due_plan[0]["reason"], "due")
+
+    def test_run_appends_scheduled_metadata_and_releases_lock(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
+
+        calls: list[datetime] = []
+
+        def fake_runner(value: datetime) -> dict:
+            calls.append(value)
+            return {
+                "job_name": "fake_calendar_job",
+                "status": "success",
+                "started_at": "2026-05-29 10:00:00",
+                "finished_at": "2026-05-29 10:00:01",
+                "duration_sec": 1.0,
+                "rows_written": 3,
+                "symbols_requested": None,
+                "symbols_processed": None,
+                "failed_symbols": [],
+                "message": "fake completed",
+                "details": {"source": "fake"},
+            }
+
+        spec = ScheduledJobSpec(
+            job_id="fake_calendar",
+            job_name="fake_calendar_job",
+            label="Fake Calendar",
+            cadence_minutes=60,
+            profiles=("test",),
+            market_hours_only=False,
+            runner=fake_runner,
+            description="fake calendar run",
+        )
+        appended: list[dict] = []
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            lock_path = Path(tmp_dir) / "overview.lock"
+            summary = run_overview_automation(
+                profile="test",
+                history_rows=[],
+                history_appender=appended.append,
+                lock_path=lock_path,
+                now=datetime(2026, 5, 29, 10, 0),
+                specs=(spec,),
+            )
+            self.assertFalse(lock_path.exists())
+
+        self.assertEqual(summary["status"], "success")
+        self.assertEqual(summary["jobs_run"], 1)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(appended), 1)
+        metadata = appended[0]["run_metadata"]
+        self.assertEqual(metadata["execution_mode"], "scheduled")
+        self.assertEqual(metadata["automation_profile"], "test")
+        self.assertEqual(metadata["automation_job_id"], "fake_calendar")
+        self.assertEqual(appended[0]["details"]["automation"]["profile"], "test")
+
+    def test_dry_run_does_not_call_runner_or_append_history(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
+
+        def fake_runner(_: datetime) -> dict:
+            raise AssertionError("dry-run should not execute the runner")
+
+        spec = ScheduledJobSpec(
+            job_id="fake_calendar",
+            job_name="fake_calendar_job",
+            label="Fake Calendar",
+            cadence_minutes=60,
+            profiles=("test",),
+            market_hours_only=False,
+            runner=fake_runner,
+            description="fake calendar run",
+        )
+        appended: list[dict] = []
+
+        summary = run_overview_automation(
+            profile="test",
+            dry_run=True,
+            history_rows=[],
+            history_appender=appended.append,
+            now=datetime(2026, 5, 29, 10, 0),
+            specs=(spec,),
+        )
+
+        self.assertEqual(summary["status"], "dry_run")
+        self.assertEqual(summary["jobs_due"], 1)
+        self.assertEqual(summary["jobs_run"], 0)
+        self.assertEqual(appended, [])
 
 
 class BacktestRuntimeContractTests(unittest.TestCase):

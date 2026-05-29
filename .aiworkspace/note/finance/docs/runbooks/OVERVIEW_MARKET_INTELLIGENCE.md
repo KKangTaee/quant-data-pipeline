@@ -5,7 +5,7 @@ Last Verified: 2026-05-28
 
 ## Purpose
 
-이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Events 데이터를 운영자가 수동으로 refresh하고 정상 여부를 확인하는 절차를 정리한다.
+이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Events 데이터를 수동 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
 
 ## When To Use
 
@@ -14,6 +14,7 @@ Last Verified: 2026-05-28
 - CPI / PPI / Employment Situation / GDP 같은 macro release calendar row를 갱신해야 할 때
 - latest S&P 500 movers 또는 수동 ticker의 upcoming earnings event를 갱신해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
+- 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
 ## App Startup
 
@@ -97,6 +98,32 @@ http://localhost:8501
 
 ## CLI Smoke Checks
 
+Overview scheduled refresh dry-run:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile standard --dry-run
+```
+
+브라우저 없이 due job만 실제 실행:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile standard
+```
+
+무료 provider 압력을 낮춘 안전 profile:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile safe
+```
+
+캘린더만 갱신:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile events
+```
+
+운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다.
+
 작은 수동 earnings smoke:
 
 ```bash
@@ -161,6 +188,7 @@ PY
 - Overview Events `Latest Collection` updates after a successful collector run.
 - Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, and next-action table.
 - Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
+- Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
 ## Failure Handling
 
@@ -176,12 +204,13 @@ PY
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
 | Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
+| Scheduled refresh exits as locked | A previous automation run is still active, or a stale lock file remains | Wait for the run to finish; if the process is gone and the lock is older than the stale threshold, rerun after the CLI clears it |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |
 
 ## Verification Commands
 
 ```bash
-uv run python -m py_compile app/web/overview_dashboard.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py finance/data/market_intelligence.py
+uv run python -m py_compile app/web/overview_dashboard.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/market_intelligence.py
 uv run python -m unittest tests.test_service_contracts
 uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 git diff --check

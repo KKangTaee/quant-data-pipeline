@@ -14,6 +14,7 @@
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` / `app/runtime` Streamlit-free boundary, `app.web` import 금지, staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
+| `app/jobs/overview_automation.py` | 브라우저 없이 Overview Market Intelligence 수집 job을 cadence / market-hours / lock 기준으로 실행하는 run-once CLI |
 
 ## Phase bundle bootstrap
 
@@ -135,6 +136,31 @@ python3 .aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_cand
 - `manage_pre_live_candidate_registry.py`는 그 후보를 실전 전 어떻게 관찰하거나 보류할지 관리한다.
 - `draft-from-current`는 current candidate를 Pre-Live 기록 초안으로 바꾼다.
   기본값은 출력만 하며, `--append`를 붙일 때만 실제 registry에 저장한다.
+
+## Overview scheduled refresh helper
+
+사용 시점:
+
+- Streamlit 브라우저를 켜지 않고 Overview Market Movers / Events 데이터를 주기적으로 갱신할 때
+- cron, macOS launchd, Codex automation 같은 외부 scheduler가 5분 단위로 호출할 run-once entry point가 필요할 때
+- 실제 provider 호출 없이 어떤 job이 due인지 먼저 확인하고 싶을 때
+
+대표 명령:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile standard --dry-run
+uv run python -m app.jobs.overview_automation --profile standard
+uv run python -m app.jobs.overview_automation --profile safe
+uv run python -m app.jobs.overview_automation --profile events
+```
+
+운영 기준:
+
+- `standard`는 S&P 500 / Top1000 / Top2000 intraday snapshot과 S&P 500 universe, FOMC, macro, earnings refresh를 평가한다.
+- `safe`는 Top1000 / Top2000 intraday snapshot을 제외해 무료 provider 압력을 낮춘다.
+- `events`는 FOMC / macro / earnings calendar만 평가한다.
+- Intraday snapshot은 기본적으로 미국 정규장 시간에만 실행된다.
+- 실행 결과는 각 ingestion job result로 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`에 남고, Data Health가 그 기록을 읽는다.
 
 ## 새 script를 추가할 때 기록 기준
 

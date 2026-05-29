@@ -5563,3 +5563,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Yahoo quote batch 누락만으로 거래정지 / 상장폐지를 확정할 수 없으므로 `provider_quote_gap`, `batch_only_gap`, `history_gap_quote_available`, `missing_previous_close`, `possible_stale_universe` 같은 evidence-based diagnosis가 안전함
 - Follow-up:
   - Overview `Coverage Diagnostics`에서 missing quote row만 대상으로 수동 진단을 실행하고, 결과를 job result table로 표시하도록 구현했다
+
+### 2026-05-29 - Overview 자동 수집 운영을 시작한다
+- User request:
+  - 사용자가 브라우저를 켜지 않아도 자동으로 데이터를 수집하는 운영 레이어 개발을 요청함
+- Interpreted goal:
+  - 기존 Overview refresh button이 호출하던 ingestion job들을 cron / launchd / 외부 runner가 대신 호출할 수 있어야 하며, 중복 실행과 provider 과부하를 피해야 함
+- Analysis result:
+  - 1차 자동화는 long-running daemon보다 run-once CLI가 안전하다. CLI가 cadence, US market-hours, lock, scheduled run history metadata를 처리하면 로컬 scheduler와 Codex automation 양쪽에 붙이기 쉽다
+- Follow-up:
+  - `app.jobs.overview_automation`을 추가했다. 다음 단계는 실제 macOS launchd / cron 등록 또는 Codex automation 연결 여부를 선택하는 것이다

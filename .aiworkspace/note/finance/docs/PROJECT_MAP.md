@@ -61,6 +61,7 @@ Last Verified: 2026-05-28
 | Final Review | `app/web/backtest_final_review.py` |
 | Selected Portfolio Dashboard | `app/web/final_selected_portfolio_dashboard.py` |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
+| Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
 | DB schema | `finance/data/db/schema.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
@@ -131,6 +132,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 |---|---|
 | Overview market movers / sector leadership 수정 | `app/services/overview_market_intelligence.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py` |
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
+| Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |

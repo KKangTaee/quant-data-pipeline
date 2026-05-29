@@ -4082,3 +4082,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `missing quote row` 심볼만 대상으로 Yahoo single quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance fast_info evidence를 비교하는 1차 진단을 추가했다.
   - Overview `Coverage Diagnostics`에 `Diagnose Missing Quotes` 버튼과 diagnosis / confidence / recommended action 테이블을 연결했다.
   - 1차는 evidence-based hint이며 별도 delisting / halt 확정 판정은 하지 않는다.
+- Overview scheduled refresh automation:
+  - `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`에서 브라우저 없이 Overview ingestion job을 실행하는 1차 자동화 task를 열었다.
+  - `app/jobs/overview_automation.py`는 profile별 cadence, US market-hours guard, lock, dry-run, scheduled run history metadata를 처리하는 run-once CLI다.
+  - cron / launchd / 외부 automation 연결은 다음 단계에서 이 CLI를 주기 호출하는 방식으로 붙일 수 있다.
