@@ -88,6 +88,8 @@ external source
   `finance/loaders/macro.py`가 validation 기준일 근처 snapshot과 staleness를 읽는다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,
   stale ETF provider snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
+  `liquidity-capacity-evidence-v1`부터 provider operability context는 min net assets, min average daily dollar volume, max bid-ask spread, max expense, max premium/discount, review symbols 같은 compact capacity metrics도 제공한다.
+  Bridge / proxy liquidity evidence는 coverage가 높아도 official actual provider evidence처럼 PASS 처리하지 않고 REVIEW로 남긴다.
   `look-through-exposure-board-v1`부터 같은 provider context가 holdings / exposure snapshot을 compact board로 접어 asset bucket, top holding, overlap, ETF별 coverage를 보여준다.
   이 board도 full holdings row를 JSONL에 저장하지 않고 DB-backed loader 결과에서 만든 summary / top rows만 저장한다.
   `data-coverage-hardening-v1`부터 `finance/loaders/price.py`는 requested validation window의 symbol별 first / latest / row count summary를 제공한다.

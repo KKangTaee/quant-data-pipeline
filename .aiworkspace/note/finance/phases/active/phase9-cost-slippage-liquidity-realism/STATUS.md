@@ -11,9 +11,17 @@ Created: 2026-05-29
 - [x] Cost model source contract review complete.
 - [x] Turnover / rebalance evidence refinement complete.
 - [x] Net cost curve application proof complete.
-- [ ] Liquidity / capacity evidence refinement not started.
+- [x] Liquidity / capacity evidence refinement complete.
+- [ ] Cost / slippage sensitivity audit not started.
 
 ## Latest Update
+
+2026-05-29:
+
+- `liquidity-capacity-evidence-v1` completed.
+- Provider operability context now exposes compact capacity metrics and keeps bridge / proxy evidence in `REVIEW` even when coverage is high.
+- Backtest Realism Audit now reads `liquidity_capacity_contract_v1`; fresh official actual capacity evidence is the strong PASS path, while stale / partial / weak source / legacy pass evidence remains REVIEW or NEEDS_INPUT.
+- No new JSONL registry, user memo, preset, approval, order, auto rebalance, DB schema, or UI direct provider fetch was added.
 
 2026-05-29:
 
@@ -44,5 +52,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `liquidity-capacity-evidence-v1`.
-- Keep liquidity evidence DB/provider/loader-backed and avoid UI direct fetch or new workflow persistence.
+- Start `cost-slippage-sensitivity-audit-v1`.
+- Keep the first slice read-only: audit the presence and quality of sensitivity evidence before adding any new run artifact.

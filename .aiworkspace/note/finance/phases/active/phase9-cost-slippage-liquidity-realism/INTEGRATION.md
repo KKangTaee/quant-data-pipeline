@@ -56,6 +56,17 @@ Created: 2026-05-29
 - Backtest Realism Audit exposes `net_cost_curve_contract` and adds a separate `Net cost curve proof` row.
 - Follow-up integration risk: weighted / saved mix sources may need component-level net curve proof aggregation before final Phase 9 closeout.
 
+### liquidity-capacity-evidence-v1
+
+- Touched:
+  - `app/services/backtest_practical_validation_provider_context.py`
+  - `app/services/backtest_realism_audit.py`
+  - `tests/test_service_contracts.py`
+- Provider context now emits compact liquidity / capacity metrics without carrying raw provider rows into workflow JSONL.
+- Backtest Realism Audit exposes `liquidity_capacity_contract` and treats fresh official actual evidence as the strong PASS path.
+- Bridge / proxy, stale / unknown freshness, partial coverage, and legacy pass-only evidence remain `REVIEW` or `NEEDS_INPUT`.
+- Follow-up integration risk: cost / slippage sensitivity remains separate from liquidity capacity and starts in Phase 9-5.
+
 ## Verification Plan
 
 - `git diff --check`

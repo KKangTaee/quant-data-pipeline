@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is hardening backtest realism cost evidence
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 cost / slippage sensitivity audit
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Liquidity capacity evidence requires fresh official provider proof
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism Audit이 liquidity / capacity evidence를 legacy `PASS` 문자열이 아니라 provider coverage, freshness, source strength, capacity metric으로 판단하게 한다.
+- Analysis result:
+  - Provider operability context에 compact capacity metrics를 추가했다.
+  - Backtest Realism Audit에 `liquidity_capacity_contract_v1`을 추가해 fresh official actual evidence는 PASS 후보로 보고, stale / partial / bridge-proxy / legacy pass-only evidence는 REVIEW 또는 NEEDS_INPUT으로 남긴다.
+  - 이 작업은 기존 Ingestion -> DB -> Loader -> UI 흐름만 읽으며 새 JSONL, memo, preset, DB schema, UI direct fetch를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `cost-slippage-sensitivity-audit-v1`로 cost / slippage sensitivity evidence 공백을 read-only audit으로 분리한다.
 
 ### 2026-05-29 - Net cost curve proof separates applied cost from measurable impact
 - User request:

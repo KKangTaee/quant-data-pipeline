@@ -531,6 +531,22 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
                             "diagnostic_status": "PASS",
                             "coverage_weight": 100.0,
                             "summary": "official operability coverage",
+                            "provenance": {
+                                "freshness_status": "fresh",
+                                "source_mix": "official 100.0%",
+                                "source_type_weights": {"official": 100.0},
+                                "coverage_status_weights": {"actual": 100.0},
+                                "as_of_range": "2026-05-20",
+                                "stale_weight": 0.0,
+                                "unknown_freshness_weight": 0.0,
+                            },
+                            "metrics": {
+                                "review_count": 0,
+                                "review_symbols": [],
+                                "min_net_assets": 50_000_000_000,
+                                "min_avg_daily_dollar_volume": 500_000_000,
+                                "max_bid_ask_spread_pct": 0.0002,
+                            },
                         }
                     }
                 },
@@ -548,10 +564,87 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertEqual(audit["cost_model_contract"]["application_status"], "applied_to_result_curve")
         self.assertEqual(audit["net_cost_curve_contract"]["proof_status"], "applied_with_measurable_cost")
         self.assertEqual(audit["turnover_evidence_contract"]["evidence_strength"], "actual_estimate")
+        self.assertEqual(audit["liquidity_capacity_contract"]["proof_status"], "official_fresh_capacity_evidence")
         self.assertEqual(audit["metrics"]["pass"], 8)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_legacy_provider_pass_without_capacity_contract_requires_review(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_REVIEW,
+            build_backtest_realism_audit,
+        )
+
+        audit = build_backtest_realism_audit(
+            {
+                "selection_source_snapshot": {
+                    "construction": {"rebalance_cadence": "monthly"},
+                    "cost_model_snapshot": {
+                        "cost_model_contract_version": "cost_model_source_contract_v1",
+                        "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
+                        "cost_application_status": "applied_to_result_curve",
+                        "transaction_cost_bps": 10.0,
+                        "estimated_cost_total": 125.0,
+                    },
+                    "turnover_evidence_snapshot": {
+                        "turnover_model_contract_version": "turnover_evidence_contract_v1",
+                        "turnover_estimation_status": "estimated_from_holdings",
+                        "turnover_source": "end_next_holdings_weight_delta",
+                        "turnover_observation_count": 24,
+                        "turnover_rebalance_rows": 24,
+                        "avg_turnover": 0.15,
+                    },
+                    "net_cost_curve_snapshot": {
+                        "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+                        "net_cost_curve_status": "applied_with_measurable_cost",
+                        "total_balance_is_net_of_cost": True,
+                        "net_cost_curve_rows": 24,
+                        "estimated_cost_total": 125.0,
+                        "estimated_cost_positive_rows": 12,
+                        "gross_end_balance": 1200.0,
+                        "net_end_balance": 1075.0,
+                        "gross_net_end_balance_delta": 125.0,
+                    },
+                    "source_snapshot": {
+                        "settings_snapshot": {
+                            "transaction_cost_bps": 10.0,
+                            "rebalance_interval": 1,
+                            "operator_tax_scope_acknowledged": True,
+                        },
+                        "meta": {
+                            "real_money_hardening": True,
+                            "net_cagr_spread": 0.03,
+                            "promotion_min_net_cagr_spread": -0.02,
+                        },
+                    },
+                },
+                "provider_coverage": {
+                    "coverage": {
+                        "operability": {
+                            "diagnostic_status": "PASS",
+                            "coverage_weight": 100.0,
+                            "summary": "legacy pass without provenance",
+                        }
+                    }
+                },
+                "diagnostic_results": [
+                    {
+                        "domain": "operability_cost_liquidity",
+                        "status": "PASS",
+                        "metrics": {"one_way_cost_bps": 10.0},
+                    }
+                ],
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(rows_by_criteria["Liquidity / operability evidence"]["Status"], "REVIEW")
+        self.assertEqual(
+            audit["liquidity_capacity_contract"]["proof_status"],
+            "legacy_provider_pass_without_capacity_contract",
+        )
 
     def test_cost_assumption_without_application_proof_requires_review(self) -> None:
         from app.services.backtest_realism_audit import (
@@ -2304,6 +2397,10 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
         provenance = operability_context["provenance"]
         self.assertEqual(operability_context["status"], "actual")
         self.assertEqual(operability_context["diagnostic_status"], "REVIEW")
+        self.assertEqual(operability_context["metrics"]["review_count"], 0)
+        self.assertEqual(operability_context["metrics"]["min_net_assets"], 50_000_000_000)
+        self.assertEqual(operability_context["metrics"]["min_avg_daily_dollar_volume"], 500_000_000)
+        self.assertEqual(operability_context["metrics"]["max_bid_ask_spread_pct"], 0.0002)
         self.assertEqual(provenance["freshness_status"], "stale")
         self.assertEqual(provenance["stale_symbols"], ["TLT"])
         self.assertEqual(provenance["stale_weight"], 30.0)
@@ -2331,6 +2428,46 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
         self.assertEqual(rows_by_area["ETF Operability"]["Source Mix"], "official 100.0%")
         self.assertEqual(rows_by_area["Macro Context"]["Freshness"], "fresh")
         self.assertIn("fred/csv", rows_by_area["Macro Context"]["Source Mix"])
+
+    def test_provider_context_keeps_bridge_liquidity_evidence_in_review(self) -> None:
+        from app.services import backtest_practical_validation_provider_context as provider_context
+
+        operability = pd.DataFrame(
+            [
+                {
+                    "symbol": "SPY",
+                    "as_of_date": "2026-05-20",
+                    "source": "local_db_bridge",
+                    "source_type": "database_bridge",
+                    "coverage_status": "bridge",
+                    "collected_at": "2026-05-21",
+                    "expense_ratio": 0.0009,
+                    "net_assets": 500_000_000_000,
+                    "avg_daily_dollar_volume": 3_000_000_000,
+                    "bid_ask_spread_pct": 0.0001,
+                    "premium_discount_pct": 0.0002,
+                }
+            ]
+        )
+
+        with (
+            patch.object(provider_context, "load_etf_operability_snapshot", return_value=operability),
+            patch.object(provider_context, "load_etf_holdings_snapshot", return_value=pd.DataFrame()),
+            patch.object(provider_context, "load_etf_exposure_snapshot", return_value=pd.DataFrame()),
+            patch.object(provider_context, "load_macro_snapshot", return_value=pd.DataFrame()),
+        ):
+            context = provider_context.build_provider_context(
+                {"SPY": 100.0},
+                as_of_date="2026-05-28",
+                max_provider_staleness_days=45,
+                max_macro_staleness_days=10,
+            )
+
+        operability_context = context["coverage"]["operability"]
+        self.assertEqual(operability_context["status"], "bridge")
+        self.assertEqual(operability_context["diagnostic_status"], "REVIEW")
+        self.assertEqual(operability_context["provenance"]["source_type_weights"], {"database_bridge": 100.0})
+        self.assertEqual(operability_context["metrics"]["review_count"], 0)
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):

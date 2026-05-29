@@ -156,6 +156,15 @@ def _provider_operability(validation: dict[str, Any]) -> dict[str, Any]:
     return dict(dict(input_context.get("coverage") or {}).get("operability") or {})
 
 
+def _weight_from_mapping(mapping: dict[str, Any], *keys: str) -> float:
+    total = 0.0
+    lowered = {str(key).lower() for key in keys}
+    for raw_key, raw_value in dict(mapping or {}).items():
+        if str(raw_key or "").strip().lower() in lowered:
+            total += _optional_float(raw_value) or 0.0
+    return float(total)
+
+
 def _cost_model_contract_from_root(validation: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
     diagnostic = _find_diagnostic(validation, "operability_cost_liquidity")
     metrics = dict(diagnostic.get("metrics") or {})
@@ -518,6 +527,104 @@ def build_turnover_evidence_contract(validation: dict[str, Any]) -> dict[str, An
     return _turnover_evidence_contract_from_root(validation, evidence_root)
 
 
+def _liquidity_capacity_contract_from_validation(validation: dict[str, Any]) -> dict[str, Any]:
+    diagnostic = _find_diagnostic(validation, "operability_cost_liquidity")
+    provider = _provider_operability(validation)
+    provider_status = provider.get("diagnostic_status") or diagnostic.get("status")
+    normalized_status = _status(provider_status)
+    coverage_weight = _optional_float(provider.get("coverage_weight"))
+    metrics = dict(provider.get("metrics") or {})
+    provenance = dict(provider.get("provenance") or {})
+    source_type_weights = dict(provenance.get("source_type_weights") or {})
+    coverage_status_weights = dict(provenance.get("coverage_status_weights") or {})
+    freshness_status = str(provenance.get("freshness_status") or "").strip().lower()
+    stale_weight = _optional_float(provenance.get("stale_weight")) or 0.0
+    unknown_freshness_weight = _optional_float(provenance.get("unknown_freshness_weight")) or 0.0
+    official_weight = _weight_from_mapping(source_type_weights, "official")
+    actual_weight = _weight_from_mapping(coverage_status_weights, "actual")
+    supported_weight = sum((_optional_float(value) or 0.0) for value in coverage_status_weights.values())
+    weak_source_weight = _weight_from_mapping(
+        source_type_weights,
+        "bridge",
+        "database_bridge",
+        "computed_proxy",
+        "proxy",
+        "unknown",
+    )
+    weak_coverage_weight = _weight_from_mapping(
+        coverage_status_weights,
+        "bridge",
+        "proxy",
+        "missing",
+        "error",
+        "not_run",
+    )
+    missing_symbols = _as_list(provider.get("missing_symbols"))
+    review_symbols = _as_list(metrics.get("review_symbols"))
+    review_count = int(_optional_float(metrics.get("review_count")) or len(review_symbols or []))
+    has_provider_context = bool(provider)
+    has_provenance = bool(provenance)
+
+    if normalized_status == "BLOCKED":
+        proof_status = "blocked_provider_operability"
+    elif not has_provider_context and not diagnostic:
+        proof_status = "missing_provider_operability"
+    elif normalized_status == "NEEDS_INPUT" or coverage_weight is None or coverage_weight <= 0.0:
+        proof_status = "missing_provider_operability"
+    elif not has_provenance:
+        proof_status = "legacy_provider_pass_without_capacity_contract"
+    elif freshness_status in {"stale", "unknown"} or stale_weight > 0.0 or unknown_freshness_weight > 0.0:
+        proof_status = "stale_or_unknown_provider_snapshot"
+    elif coverage_weight < 80.0:
+        proof_status = "partial_liquidity_coverage"
+    elif official_weight < 80.0 or actual_weight < 80.0 or weak_source_weight > 0.0 or weak_coverage_weight > 0.0:
+        proof_status = "weak_source_or_proxy_liquidity_evidence"
+    elif normalized_status == "PASS" and review_count <= 0:
+        proof_status = "official_fresh_capacity_evidence"
+    elif normalized_status == "REVIEW" or review_count > 0:
+        proof_status = "provider_operability_review"
+    else:
+        proof_status = "incomplete_liquidity_capacity_evidence"
+
+    return {
+        "schema_version": "liquidity_capacity_contract_v1",
+        "proof_status": proof_status,
+        "provider_status": provider_status,
+        "diagnostic_status": normalized_status,
+        "coverage_weight": coverage_weight,
+        "freshness_status": freshness_status or None,
+        "source_type_weights": source_type_weights,
+        "coverage_status_weights": coverage_status_weights,
+        "official_source_weight": round(official_weight, 4),
+        "actual_coverage_weight": round(actual_weight, 4),
+        "supported_coverage_weight": round(supported_weight, 4),
+        "weak_source_weight": round(weak_source_weight, 4),
+        "weak_coverage_weight": round(weak_coverage_weight, 4),
+        "stale_weight": round(stale_weight, 4),
+        "unknown_freshness_weight": round(unknown_freshness_weight, 4),
+        "missing_symbols": missing_symbols,
+        "review_symbols": review_symbols,
+        "review_count": review_count,
+        "min_net_assets": _optional_float(metrics.get("min_net_assets")),
+        "min_avg_daily_dollar_volume": _optional_float(metrics.get("min_avg_daily_dollar_volume")),
+        "max_bid_ask_spread_pct": _optional_float(metrics.get("max_bid_ask_spread_pct")),
+        "max_expense_ratio": _optional_float(metrics.get("max_expense_ratio")),
+        "max_abs_premium_discount_pct": _optional_float(metrics.get("max_abs_premium_discount_pct")),
+        "as_of_range": provenance.get("as_of_range"),
+        "source_mix": provenance.get("source_mix"),
+        "evidence": provider.get("summary")
+        or diagnostic.get("summary")
+        or provenance.get("source_mix")
+        or "provider operability evidence",
+    }
+
+
+def build_liquidity_capacity_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    """Extract compact liquidity / capacity evidence used by Backtest Realism Audit."""
+
+    return _liquidity_capacity_contract_from_validation(dict(validation or {}))
+
+
 def _turnover_row(
     validation: dict[str, Any],
     source: dict[str, Any],
@@ -563,28 +670,37 @@ def _turnover_row(
     )
 
 
-def _liquidity_row(validation: dict[str, Any]) -> dict[str, Any]:
-    diagnostic = _find_diagnostic(validation, "operability_cost_liquidity")
-    provider = _provider_operability(validation)
-    provider_status = provider.get("diagnostic_status") or diagnostic.get("status")
-    status = _status(provider_status)
-    if status == "PASS":
-        evidence = provider.get("summary") or diagnostic.get("summary") or "provider operability PASS"
+def _liquidity_row(
+    validation: dict[str, Any],
+    liquidity_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = dict(liquidity_contract or _liquidity_capacity_contract_from_validation(validation))
+    proof_status = str(contract.get("proof_status") or "").strip()
+    coverage_weight = contract.get("coverage_weight")
+    if proof_status == "official_fresh_capacity_evidence":
+        status = "PASS"
+        evidence = contract.get("evidence") or "fresh official provider capacity evidence"
         next_action = "추가 조치 없음"
-    elif status == "REVIEW":
-        evidence = provider.get("summary") or diagnostic.get("summary") or "operability review"
-        next_action = "expense / AUM / ADV / spread / premium-discount gap을 확인합니다."
-    elif status == "BLOCKED":
-        evidence = provider.get("summary") or diagnostic.get("summary") or "operability blocked"
+    elif proof_status == "blocked_provider_operability":
+        status = "BLOCKED"
+        evidence = contract.get("evidence") or "provider operability blocked"
         next_action = "가격 / provider blocker를 먼저 해소합니다."
-    else:
-        evidence = provider.get("summary") or diagnostic.get("summary") or "provider operability missing"
+    elif proof_status == "missing_provider_operability":
+        status = "NEEDS_INPUT"
+        evidence = contract.get("evidence") or "provider operability missing"
         next_action = "ETF operability / liquidity provider snapshot을 보강합니다."
-    coverage_weight = provider.get("coverage_weight")
+    else:
+        status = "REVIEW"
+        evidence = contract.get("evidence") or "operability evidence requires review"
+        next_action = "fresh official coverage, AUM, ADV, spread, premium-discount gap을 확인합니다."
+    current = (
+        f"{proof_status or 'missing'} / coverage={coverage_weight if coverage_weight is not None else '-'} / "
+        f"freshness={contract.get('freshness_status') or '-'}"
+    )
     return _row(
         criteria="Liquidity / operability evidence",
         status=status,
-        current=f"{provider_status or 'NOT_RUN'} / coverage={coverage_weight if coverage_weight is not None else '-'}",
+        current=current,
         evidence=evidence,
         next_action=next_action,
         meaning="ETF AUM, spread, 거래대금, price/volume proxy가 실전 운용성에 충분한지 확인합니다.",
@@ -729,11 +845,12 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
     cost_model_contract = _cost_model_contract_from_root(validation, evidence_root)
     net_cost_curve_contract = _net_cost_curve_contract_from_root(validation, evidence_root)
     turnover_evidence_contract = _turnover_evidence_contract_from_root(validation, evidence_root)
+    liquidity_capacity_contract = _liquidity_capacity_contract_from_validation(validation)
     rows = [
         _transaction_cost_row(validation, evidence_root, cost_model_contract),
         _net_cost_curve_row(validation, evidence_root, net_cost_curve_contract),
         _turnover_row(validation, evidence_root, turnover_evidence_contract),
-        _liquidity_row(validation),
+        _liquidity_row(validation, liquidity_capacity_contract),
         _net_policy_row(validation, evidence_root),
         _rebalance_row(validation, evidence_root),
         _tax_account_row(validation, evidence_root),
@@ -766,6 +883,7 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "cost_model_contract": cost_model_contract,
         "net_cost_curve_contract": net_cost_curve_contract,
         "turnover_evidence_contract": turnover_evidence_contract,
+        "liquidity_capacity_contract": liquidity_capacity_contract,
         "rows": rows,
         "metrics": {
             "ready_rows": status_counts["PASS"],
@@ -796,5 +914,6 @@ __all__ = [
     "build_cost_model_source_contract",
     "build_net_cost_curve_contract",
     "build_turnover_evidence_contract",
+    "build_liquidity_capacity_contract",
     "build_backtest_realism_audit",
 ]

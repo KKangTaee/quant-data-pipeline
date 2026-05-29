@@ -1023,12 +1023,35 @@ def _build_operability_context(
     missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbols]
     evidence_rows: list[dict[str, Any]] = []
     review_count = 0
+    review_symbols: list[str] = []
+    asset_values: list[float] = []
+    adv_values: list[float] = []
+    spread_values: list[float] = []
+    expense_values: list[float] = []
+    premium_values: list[float] = []
     flagged_exposure = 0.0
     leverage_rows: list[dict[str, Any]] = []
     for _, row in best.iterrows():
         symbol = str(row.get("symbol") or "").upper()
         judgment, reason = _operability_judgment(row)
         review_count += 1 if judgment == "REVIEW" else 0
+        if judgment == "REVIEW":
+            review_symbols.append(symbol)
+        net_assets = _first_optional_float(row.get("net_assets"), row.get("total_assets"))
+        adv = _optional_float(row.get("avg_daily_dollar_volume"))
+        spread = _first_optional_float(row.get("bid_ask_spread_pct"), row.get("median_bid_ask_spread_pct"))
+        expense = _optional_float(row.get("expense_ratio"))
+        premium = _optional_float(row.get("premium_discount_pct"))
+        if net_assets is not None:
+            asset_values.append(net_assets)
+        if adv is not None:
+            adv_values.append(adv)
+        if spread is not None:
+            spread_values.append(spread)
+        if expense is not None:
+            expense_values.append(expense)
+        if premium is not None:
+            premium_values.append(abs(premium))
         leverage_factor = _optional_float(row.get("leverage_factor"))
         is_inverse = bool(_optional_float(row.get("is_inverse")) or 0.0)
         daily_objective = bool(_optional_float(row.get("has_daily_objective")) or 0.0)
@@ -1066,12 +1089,12 @@ def _build_operability_context(
 
     quality = _coverage_quality(best, symbol_column="symbol", symbol_weights=symbol_weights)
     diagnostic_status = str(quality.get("diagnostic_status") or _result_status_from_coverage(coverage_weight))
-    if coverage_weight >= 80.0 and review_count == 0:
+    status = str(quality.get("status") or _coverage_status_from_weight(coverage_weight))
+    if status == "actual" and coverage_weight >= 80.0 and review_count == 0:
         diagnostic_status = "PASS"
     elif diagnostic_status == "PASS" and review_count > 0:
         diagnostic_status = "REVIEW"
     diagnostic_status = _downgrade_pass_for_freshness(diagnostic_status, provenance)
-    status = str(quality.get("status") or _coverage_status_from_weight(coverage_weight))
     leverage_status = "REVIEW" if flagged_exposure > 0.0 else "PASS" if coverage_weight > 0.0 else "NOT_RUN"
     return {
         "status": status,
@@ -1088,8 +1111,14 @@ def _build_operability_context(
         "provenance": provenance,
         "metrics": {
             "review_count": review_count,
-            "covered_symbols": len(covered_symbols),
-            "missing_symbols": len(missing_symbols),
+            "review_symbols": review_symbols,
+            "covered_symbol_count": len(covered_symbols),
+            "missing_symbol_count": len(missing_symbols),
+            "min_net_assets": min(asset_values) if asset_values else None,
+            "min_avg_daily_dollar_volume": min(adv_values) if adv_values else None,
+            "max_bid_ask_spread_pct": max(spread_values) if spread_values else None,
+            "max_expense_ratio": max(expense_values) if expense_values else None,
+            "max_abs_premium_discount_pct": max(premium_values) if premium_values else None,
         },
         "leverage": {
             "diagnostic_status": leverage_status,

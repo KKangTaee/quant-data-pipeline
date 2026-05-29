@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is hardening backtest realism cost evidence
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 cost / slippage sensitivity audit
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/liquidity-capacity-evidence-v1/`.
+- Provider operability context now emits compact capacity metrics, and Backtest Realism Audit reads `liquidity_capacity_contract_v1`.
+- Fresh official actual provider evidence is the strong liquidity PASS path; stale / partial / bridge-proxy / legacy pass-only evidence stays REVIEW or NEEDS_INPUT.
+- No new JSONL registry, memo, preset, DB schema, UI direct provider fetch, approval, order, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/net-cost-curve-application-v1/`.
 - Runtime now emits compact `net_cost_curve_contract_v1` metadata, and Practical Validation / Backtest Realism Audit preserve gross-net cost proof without new workflow persistence.
 - Backtest Realism Audit now separates measurable net cost impact from zero-cost, missing-turnover, legacy-flag-only, and missing-proof cases.
