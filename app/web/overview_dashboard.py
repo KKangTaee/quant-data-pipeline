@@ -52,6 +52,7 @@ from app.web.overview_ui_components import (
     render_auto_refresh_timing_static,
     render_event_agenda_sections,
     render_event_source_lane,
+    render_event_warning_strip,
     render_events_summary_strip,
     render_market_auto_message,
     render_market_auto_waiting_panel,
@@ -1327,7 +1328,7 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
 
 def _render_event_refresh_toolbar() -> str:
     render_overview_toolbar_label("일정 타입")
-    controls = st.columns([0.85, 1, 1, 1], gap="small", vertical_alignment="bottom")
+    controls = st.columns([0.95, 2.9, 0.9], gap="small", vertical_alignment="bottom")
     event_options = list(EVENT_TYPE_LABELS.keys())
     event_filter = str(
         controls[0].selectbox(
@@ -1341,46 +1342,51 @@ def _render_event_refresh_toolbar() -> str:
             key="overview_events_type_filter",
         )
     )
-    if controls[1].button("Refresh FOMC", key="overview_events_refresh_fomc", use_container_width=True):
-        current_year = datetime.now().year
-        with st.spinner("Collecting FOMC calendar from the official Fed page..."):
-            _store_overview_job_result(
-                "overview_fomc_calendar_result",
-                run_collect_fomc_calendar(years=(current_year, current_year + 1)),
-            )
-        st.rerun()
-    if controls[2].button(
-        "Refresh Earnings",
-        key="overview_events_refresh_earnings",
+    with controls[2].popover(
+        "Refresh",
+        icon=":material/sync:",
         use_container_width=True,
-        help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
     ):
-        with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
-            _store_overview_job_result(
-                "overview_earnings_calendar_result",
-                run_collect_earnings_calendar(
-                    symbol_source="latest_movers",
-                    universe_code="SP500",
-                    top_movers_limit=20,
-                    lookahead_days=120,
-                    max_symbols=50,
-                    validate_with_nasdaq=True,
-                ),
-            )
-        st.rerun()
-    if controls[3].button(
-        "Refresh Macro",
-        key="overview_events_refresh_macro",
-        use_container_width=True,
-        help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
-    ):
-        current_year = datetime.now().year
-        with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
-            _store_overview_job_result(
-                "overview_macro_calendar_result",
-                run_collect_macro_calendar(years=(current_year, current_year + 1)),
-            )
-        st.rerun()
+        if st.button("FOMC", key="overview_events_refresh_fomc", use_container_width=True):
+            current_year = datetime.now().year
+            with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+                _store_overview_job_result(
+                    "overview_fomc_calendar_result",
+                    run_collect_fomc_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
+        if st.button(
+            "Earnings",
+            key="overview_events_refresh_earnings",
+            use_container_width=True,
+            help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
+        ):
+            with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
+                _store_overview_job_result(
+                    "overview_earnings_calendar_result",
+                    run_collect_earnings_calendar(
+                        symbol_source="latest_movers",
+                        universe_code="SP500",
+                        top_movers_limit=20,
+                        lookahead_days=120,
+                        max_symbols=50,
+                        validate_with_nasdaq=True,
+                    ),
+                )
+            st.rerun()
+        if st.button(
+            "Macro",
+            key="overview_events_refresh_macro",
+            use_container_width=True,
+            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
+        ):
+            current_year = datetime.now().year
+            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
+                _store_overview_job_result(
+                    "overview_macro_calendar_result",
+                    run_collect_macro_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
     return event_filter
 
 
@@ -2060,6 +2066,12 @@ def _latest_collected_at(rows: pd.DataFrame) -> str:
     return values.max() if not values.empty else "-"
 
 
+def _compact_event_timestamp(value: str) -> str:
+    if len(value) >= 16 and value[:4].isdigit():
+        return value[5:16]
+    return value
+
+
 def _event_source_items(rows: pd.DataFrame, *, event_filter: str) -> list[dict[str, Any]]:
     source_specs = [
         ("FOMC", "FOMC_MEETING", lambda frame: frame["Type"].astype(str).str.upper() == "FOMC_MEETING", "fomc"),
@@ -2082,13 +2094,14 @@ def _event_source_items(rows: pd.DataFrame, *, event_filter: str) -> list[dict[s
         else:
             status = "OK"
             tone = base_tone
+        latest = _latest_collected_at(subset)
         items.append(
             {
                 "title": title,
                 "status": status,
-                "detail": f"{len(subset)} rows · latest {_latest_collected_at(subset)} · review {review_count}",
+                "detail": f"{len(subset)} rows · latest {latest} · review {review_count}",
                 "rows": len(subset),
-                "latest": _latest_collected_at(subset),
+                "latest": _compact_event_timestamp(latest),
                 "review_count": review_count,
                 "tone": tone,
             }
@@ -2540,21 +2553,20 @@ def _render_events_tab() -> None:
     coverage = dict(snapshot.get("coverage") or {})
     rows = snapshot.get("rows")
     calendar_rows = _prepare_event_calendar_frame(rows) if isinstance(rows, pd.DataFrame) else pd.DataFrame()
-    render_event_source_lane(_event_source_items(calendar_rows, event_filter=event_filter))
     if _has_event_refresh_result():
         with st.expander("Refresh Results", expanded=False):
             _render_market_job_result("overview_fomc_calendar_result")
             _render_market_job_result("overview_earnings_calendar_result")
             _render_market_job_result("overview_macro_calendar_result")
-    _render_snapshot_warnings(snapshot)
+    render_events_summary_strip(_event_summary_items(calendar_rows, coverage, event_type=snapshot.get("event_type")))
+    render_event_source_lane(_event_source_items(calendar_rows, event_filter=event_filter))
+    render_event_warning_strip(list(snapshot.get("warnings") or []))
 
     if not isinstance(rows, pd.DataFrame) or rows.empty:
-        render_events_summary_strip(_event_summary_items(calendar_rows, coverage, event_type=snapshot.get("event_type")))
         st.info("Stored market event rows are not available for the selected filter. Run the matching refresh here or from Ingestion.")
         return
 
     filtered_rows = _filter_event_rows_for_calendar(calendar_rows)
-    render_events_summary_strip(_event_summary_items(filtered_rows, coverage, event_type=snapshot.get("event_type")))
 
     agenda_tab, calendar_tab, quality_tab, raw_tab = st.tabs(["Agenda", "Calendar", "Quality", "Raw"])
     with agenda_tab:

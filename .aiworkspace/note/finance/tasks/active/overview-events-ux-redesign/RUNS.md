@@ -14,3 +14,7 @@
 - 2026-05-30: Browser smoke at 1300px and 1000px viewports - PASS; top summary, source lane metrics, calendar topbar, legend, event count badges rendered; no leaked HTML, no horizontal overflow, console errors 0.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
 - 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py` - PASS.
+- 2026-05-30: Browser smoke at 1500px and 1000px viewports - PASS; Refresh popover rendered, FOMC/Earnings/Macro actions visible inside popover, old large refresh buttons absent, compact source strip rendered, no horizontal overflow, console errors 0.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `git diff --check` - PASS.

@@ -6,3 +6,4 @@
 - 2026-05-30: Verified compile, service contract tests, diff hygiene, and browser smoke for the redesigned Events tab.
 - 2026-05-30: Follow-up polish converted Events Type and Window controls from segmented controls to selectboxes so reduced-width layouts no longer wrap control options awkwardly.
 - 2026-05-30: Follow-up polish improved only the Events top summary, source lane, and calendar visuals; Agenda and Quality views intentionally stayed unchanged.
+- 2026-05-30: Follow-up polish moved event collection buttons into a compact Refresh popover, promoted summary cards above source status, and changed source status cards into a one-line strip.
