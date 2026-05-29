@@ -72,6 +72,19 @@ The contract:
 - downgrades missing / short / proxy-only evidence instead of passing it
 - writes no DB rows, no new JSONL registry, no memo, and no preset state
 
+## 10-3 Implemented Contract
+
+`oos-holdout-validation-contract-v1` extended `app/services/backtest_temporal_validation.py`.
+
+The contract:
+
+- reuses benchmark-aligned monthly portfolio / benchmark curves
+- splits common history into in-sample and out-sample periods
+- computes in-sample excess return, out-sample excess return, excess deterioration, and out-sample drawdown gap
+- returns compact rows and metrics under `oos_holdout_validation`
+- downgrades missing / short / proxy-only evidence instead of passing it
+- writes no DB rows, no new JSONL registry, no memo, and no preset state
+
 ## User Flow Target
 
 사용자는 기존 흐름을 유지한다.

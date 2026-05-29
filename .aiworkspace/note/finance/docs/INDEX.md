@@ -18,6 +18,11 @@ Last Verified: 2026-05-29
 3. [Project Map](./PROJECT_MAP.md)
 4. [Glossary](./GLOSSARY.md)
 
+## Current Active Phase
+
+- [Phase 10 Walk-forward / OOS / Regime Validation](../phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
+- Current task pointer: [Phase 10 Current Chapter TODO](../phases/active/phase10-walkforward-oos-regime-validation/CURRENT_CHAPTER_TODO.md)
+
 ## By Purpose
 
 | 목적 | 먼저 볼 문서 |

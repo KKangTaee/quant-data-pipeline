@@ -7,7 +7,8 @@ Last Verified: 2026-05-29
 
 | Track | Status | Notes |
 |---|---|---|
-| Phase 10 Walk-forward / OOS / Regime Validation | Active | `.aiworkspace/note/finance/phases/active/phase10-walkforward-oos-regime-validation/`; next task is `oos-holdout-validation-contract-v1` |
+| Phase 10 Walk-forward / OOS / Regime Validation | Active | `.aiworkspace/note/finance/phases/active/phase10-walkforward-oos-regime-validation/`; next task is `regime-split-validation-v1` |
+| OOS Holdout Validation Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/oos-holdout-validation-contract-v1/`; benchmark-aligned in-sample / out-sample holdout evidence and Validation Efficacy Audit row added |
 | Walk-forward Split Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/walkforward-split-contract-v1/`; benchmark-aligned walk-forward temporal validation helper and Validation Efficacy Audit row added |
 | Walk-forward / OOS Source Map V1 | Complete | `.aiworkspace/note/finance/tasks/active/walkforward-oos-source-map-v1/`; Practical Validation curve / runtime OOS / Robustness Lab / Final Review gate source map and gap audit completed |
 | Phase 10 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase10-board-open/`; Phase 10 official board, task split, immediate next task, storage boundary 정리 |
@@ -122,5 +123,5 @@ P2에서 정상화하는 주요 진단:
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
 - Phase 9 is complete. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`, `backtest-realism-gate-policy-refinement-v1`, `phase9-integrated-qa-closeout`을 완료했다.
-- Phase 10 is active. `walkforward-split-contract-v1` added benchmark-aligned walk-forward temporal validation and connected it to Validation Efficacy Audit. Next task is `oos-holdout-validation-contract-v1`.
+- Phase 10 is active. `walkforward-split-contract-v1` and `oos-holdout-validation-contract-v1` added benchmark-aligned temporal / holdout evidence and connected them to Validation Efficacy Audit. Next task is `regime-split-validation-v1`.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

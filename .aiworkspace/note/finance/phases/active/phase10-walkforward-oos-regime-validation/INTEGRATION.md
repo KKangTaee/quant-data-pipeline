@@ -7,8 +7,8 @@ Created: 2026-05-29
 
 1. 10-1 source map / gap audit
 2. 10-2 walk-forward split contract - complete
-3. 10-3 OOS holdout validation contract - next
-4. 10-4 regime split validation
+3. 10-3 OOS holdout validation contract - complete
+4. 10-4 regime split validation - next
 5. 10-5 selected-route gate policy refinement
 6. 10-6 integrated QA / closeout
 
@@ -27,6 +27,7 @@ Implementation tasks may touch the following files after 10-1 confirms scope.
 
 10-1 confirmed that 10-2 should start with service-level temporal validation rather than UI-first changes.
 10-2 added that service helper and connected it to Practical Validation and Validation Efficacy Audit.
+10-3 extended the same helper with OOS holdout evidence and connected it to Practical Validation and Validation Efficacy Audit.
 
 ## QA Gates
 
@@ -34,7 +35,7 @@ For implementation tasks, run the smallest relevant set first, then broaden for 
 
 - `git diff --check`
 - targeted `py_compile` for touched service / web files
-- `.venv/bin/python -m pytest tests/test_service_contracts.py`
+- `.venv/bin/python -m unittest tests.test_service_contracts`
 - `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
 - `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
 

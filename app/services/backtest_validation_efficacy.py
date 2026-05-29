@@ -249,6 +249,41 @@ def _walkforward_temporal_row(validation: dict[str, Any]) -> dict[str, Any] | No
     )
 
 
+def _oos_holdout_evidence(validation: dict[str, Any]) -> dict[str, Any]:
+    evidence = dict(validation.get("oos_holdout_validation") or {})
+    if evidence:
+        return evidence
+    curve_evidence = dict(validation.get("curve_evidence") or {})
+    return dict(curve_evidence.get("oos_holdout_validation") or {})
+
+
+def _oos_holdout_row(validation: dict[str, Any]) -> dict[str, Any] | None:
+    evidence = _oos_holdout_evidence(validation)
+    if not evidence:
+        return None
+    metrics = dict(evidence.get("metrics") or {})
+    status = _status(evidence.get("status"), default="NEEDS_INPUT")
+    current = (
+        f"{evidence.get('status') or 'NOT_RUN'} / "
+        f"in={metrics.get('in_sample_months', '-')} / "
+        f"out={metrics.get('out_sample_months', '-')}"
+    )
+    detail = (
+        f"out excess={metrics.get('out_sample_excess_return', '-')} / "
+        f"change={metrics.get('excess_change', '-')} / "
+        f"out drawdown gap={metrics.get('out_sample_drawdown_gap', '-')}"
+    )
+    return _row(
+        criteria="OOS holdout validation",
+        status=status,
+        current=current,
+        evidence=evidence.get("summary") or detail,
+        next_action=evidence.get("next_action")
+        or ("추가 조치 없음" if status == "PASS" else "OOS holdout / benchmark-aligned evidence를 보강합니다."),
+        meaning="뒤쪽 holdout 구간에서 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
+    )
+
+
 def _provider_display_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [dict(row or {}) for row in _as_list(validation.get("provider_coverage_display_rows")) if isinstance(row, dict)]
     if rows:
@@ -476,6 +511,9 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
     temporal_row = _walkforward_temporal_row(validation)
     if temporal_row is not None:
         rows.insert(5, temporal_row)
+    oos_row = _oos_holdout_row(validation)
+    if oos_row is not None:
+        rows.insert(6 if temporal_row is not None else 5, oos_row)
     route = _route_from_rows(rows)
     status_counts = {
         status: sum(1 for row in rows if row.get("Status") == status)

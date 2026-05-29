@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `oos-holdout-validation-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `regime-split-validation-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - OOS holdout validation becomes compact audit evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-3으로 in-sample / out-sample holdout evidence를 Practical Validation과 Final Review 판단 경로에 연결한다.
+- Analysis result:
+  - `app/services/backtest_temporal_validation.py`에 `build_oos_holdout_validation()`을 추가해 benchmark-aligned OOS excess, split deterioration, out-sample drawdown gap을 compact evidence로 계산한다.
+  - Practical Validation result가 `oos_holdout_validation` evidence를 가지며, Validation Efficacy Audit이 `OOS holdout validation` row를 읽는다.
+  - missing / short / proxy-only evidence는 `PASS`가 아니라 `NEEDS_INPUT` 또는 `REVIEW`로 남긴다.
+- Follow-up:
+  - 다음 task는 `regime-split-validation-v1`로 DB / macro loader source를 기준으로 historical regime split evidence를 추가한다.
 
 ### 2026-05-29 - Walk-forward temporal validation becomes compact audit evidence
 - User request:

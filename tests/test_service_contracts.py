@@ -294,6 +294,17 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
                         "portfolio_curve_source": "actual_runtime_replay",
                     },
                 },
+                "oos_holdout_validation": {
+                    "status": "PASS",
+                    "summary": "OOS holdout: out excess 3.00%, drawdown gap 0.00%.",
+                    "metrics": {
+                        "in_sample_months": 30,
+                        "out_sample_months": 30,
+                        "out_sample_excess_return": 0.03,
+                        "excess_change": 0.0,
+                        "out_sample_drawdown_gap": 0.0,
+                    },
+                },
                 "provider_coverage_display_rows": [
                     {"Area": "ETF Operability", "Diagnostic Status": "PASS", "Freshness": "fresh"},
                     {"Area": "ETF Holdings", "Diagnostic Status": "PASS", "Freshness": "fresh"},
@@ -310,7 +321,7 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         )
 
         self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
-        self.assertEqual(audit["metrics"]["pass"], 11)
+        self.assertEqual(audit["metrics"]["pass"], 12)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
@@ -392,6 +403,83 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
             benchmark_curve_source="db_price_proxy",
             benchmark_parity={"status": "PASS"},
             window_months=12,
+        )
+
+        self.assertEqual(proxy_evidence["status"], "REVIEW")
+        self.assertTrue(proxy_evidence["metrics"]["proxy_evidence"])
+
+    def test_oos_holdout_validation_uses_out_sample_evidence(self) -> None:
+        from app.services.backtest_temporal_validation import build_oos_holdout_validation
+
+        dates = pd.date_range("2020-01-31", periods=60, freq="ME")
+        portfolio = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.012 ** idx) for idx in range(len(dates))],
+            }
+        )
+        benchmark = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.006 ** idx) for idx in range(len(dates))],
+            }
+        )
+
+        evidence = build_oos_holdout_validation(
+            portfolio,
+            benchmark,
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            benchmark_parity={"status": "PASS"},
+        )
+
+        self.assertEqual(evidence["schema_version"], "oos_holdout_validation_contract_v1")
+        self.assertEqual(evidence["status"], "PASS")
+        self.assertEqual(evidence["metrics"]["in_sample_months"], 30)
+        self.assertEqual(evidence["metrics"]["out_sample_months"], 30)
+        self.assertGreaterEqual(evidence["metrics"]["out_sample_excess_return"], 0.0)
+        self.assertFalse(evidence["registry_write"])
+        self.assertFalse(evidence["memo_persistence"])
+
+    def test_oos_holdout_validation_does_not_pass_short_or_proxy_only_evidence(self) -> None:
+        from app.services.backtest_temporal_validation import build_oos_holdout_validation
+
+        short_dates = pd.date_range("2023-01-31", periods=10, freq="ME")
+        short_curve = pd.DataFrame(
+            {
+                "Date": short_dates,
+                "Total Balance": [100.0 + idx for idx in range(len(short_dates))],
+            }
+        )
+        short_evidence = build_oos_holdout_validation(
+            short_curve,
+            short_curve,
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            benchmark_parity={"status": "PASS"},
+        )
+
+        self.assertEqual(short_evidence["status"], "NEEDS_INPUT")
+
+        dates = pd.date_range("2020-01-31", periods=60, freq="ME")
+        proxy_portfolio = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.012 ** idx) for idx in range(len(dates))],
+            }
+        )
+        proxy_benchmark = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.006 ** idx) for idx in range(len(dates))],
+            }
+        )
+        proxy_evidence = build_oos_holdout_validation(
+            proxy_portfolio,
+            proxy_benchmark,
+            portfolio_curve_source="component_curve_weighted_proxy",
+            benchmark_curve_source="db_price_proxy",
+            benchmark_parity={"status": "PASS"},
         )
 
         self.assertEqual(proxy_evidence["status"], "REVIEW")
