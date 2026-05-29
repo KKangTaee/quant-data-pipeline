@@ -11,3 +11,4 @@
 - 2026-05-30: Completed Market Movers UI redesign pass 2: changed `데이터 갱신` from a bordered card into a status / action bar with current data state, chips, refresh-mode selection, and manual actions in one command row.
 - 2026-05-30: Completed UI redesign pass 3 for Market Movers: removed redundant wrapper containers around scan controls / refresh actions and replaced snapshot status cards with a compact metadata strip.
 - 2026-05-30: Completed UI redesign pass 4: split Overview-only Market Movers visual components into `app/web/overview_ui_components.py`, leaving `overview_dashboard.py` focused on data state and page flow.
+- 2026-05-30: Completed UI redesign pass 5: centralized Overview visual tokens for colors / surfaces / spacing / typography and routed Market Movers, Sector / Industry, Events chart colors through those tokens.

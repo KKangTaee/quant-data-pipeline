@@ -12,3 +12,4 @@
 - UI stability means preserving the investment research workflow and data guardrails, not repeating the same `container / badge / card` visual pattern. Market Movers `데이터 갱신` should behave like a status / action bar, with internal run details hidden behind an expander.
 - Container reduction pass applies first to Market Movers only: wrapper containers that only grouped controls were removed, while columns / tabs / expanders that provide real interaction structure remain.
 - Overview-specific HTML/CSS components now live in `app/web/overview_ui_components.py`; data shaping and orchestration stay in `app/web/overview_dashboard.py`.
+- Visual token pass keeps the no-new-library direction: shared Overview colors, chart ranges, status colors, surfaces, spacing, font sizes, and radii are centralized in `overview_ui_components.py` before considering extra Streamlit UI packages.

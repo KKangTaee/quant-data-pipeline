@@ -8,6 +8,85 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 
+OVERVIEW_COLOR_POSITIVE = "#0f766e"
+OVERVIEW_COLOR_PRIMARY = "#2563eb"
+OVERVIEW_COLOR_WARNING = "#b45309"
+OVERVIEW_COLOR_DANGER = "#dc2626"
+OVERVIEW_COLOR_DANGER_DARK = "#b91c1c"
+OVERVIEW_COLOR_NEUTRAL = "#64748b"
+OVERVIEW_COLOR_TEXT = "#111827"
+OVERVIEW_COLOR_TEXT_SUBTLE = "#475569"
+OVERVIEW_COLOR_TEXT_MUTED = "#94a3b8"
+OVERVIEW_COLOR_TEXT_INVERSE = "#ffffff"
+OVERVIEW_COLOR_SURFACE = "#ffffff"
+OVERVIEW_COLOR_SURFACE_SUBTLE = "#f8fafc"
+OVERVIEW_COLOR_SURFACE_ALT = "#fcfcfd"
+OVERVIEW_COLOR_BORDER = "#e5e7eb"
+OVERVIEW_COLOR_PURPLE = "#7c3aed"
+OVERVIEW_COLOR_CYAN = "#0891b2"
+OVERVIEW_COLOR_LIME = "#65a30d"
+OVERVIEW_COLOR_SOFT = "#cbd5e1"
+
+OVERVIEW_DIVERGING_RANGE = [
+    OVERVIEW_COLOR_DANGER_DARK,
+    OVERVIEW_COLOR_SURFACE_SUBTLE,
+    OVERVIEW_COLOR_POSITIVE,
+]
+OVERVIEW_SERIES_COLORS = [
+    OVERVIEW_COLOR_POSITIVE,
+    OVERVIEW_COLOR_PRIMARY,
+    OVERVIEW_COLOR_WARNING,
+    OVERVIEW_COLOR_PURPLE,
+    OVERVIEW_COLOR_CYAN,
+    OVERVIEW_COLOR_LIME,
+    OVERVIEW_COLOR_NEUTRAL,
+]
+
+_CSS_TOKENS = {
+    "color-positive": OVERVIEW_COLOR_POSITIVE,
+    "color-primary": OVERVIEW_COLOR_PRIMARY,
+    "color-warning": OVERVIEW_COLOR_WARNING,
+    "color-danger": OVERVIEW_COLOR_DANGER,
+    "color-neutral": OVERVIEW_COLOR_NEUTRAL,
+    "color-text": OVERVIEW_COLOR_TEXT,
+    "color-text-inverse": OVERVIEW_COLOR_TEXT_INVERSE,
+    "color-surface-subtle": OVERVIEW_COLOR_SURFACE_SUBTLE,
+    "color-text-muted": "rgba(100, 116, 139, 0.95)",
+    "color-text-soft": "rgba(100, 116, 139, 0.98)",
+    "border-faint": "rgba(100, 116, 139, 0.14)",
+    "border-subtle": "rgba(100, 116, 139, 0.18)",
+    "border-control": "rgba(100, 116, 139, 0.24)",
+    "fill-control": "rgba(148, 163, 184, 0.10)",
+    "fill-subtle": "rgba(148, 163, 184, 0.08)",
+    "track-fill": "rgba(100, 116, 139, 0.18)",
+    "radius-panel": "8px",
+    "radius-pill": "999px",
+    "font-xs": "0.74rem",
+    "font-caption": "0.75rem",
+    "font-chip": "0.76rem",
+    "font-label": "0.78rem",
+    "font-body": "0.82rem",
+    "font-title": "0.95rem",
+    "font-value": "1rem",
+    "weight-label": "720",
+    "weight-strong": "750",
+    "weight-heading": "760",
+    "weight-value": "780",
+    "gap-xs": "0.28rem",
+    "gap-sm": "0.35rem",
+    "gap-md": "0.55rem",
+    "gap-lg": "0.75rem",
+}
+
+
+def _css_token_block() -> str:
+    return "\n".join(f"  --ov-mi-{name}: {value};" for name, value in _CSS_TOKENS.items())
+
+
+def _style_token_block() -> str:
+    return f":root {{\n{_css_token_block()}\n}}\n"
+
+
 def _display_value(value: Any) -> str:
     if value in (None, ""):
         return "-"
@@ -15,36 +94,38 @@ def _display_value(value: Any) -> str:
 
 
 def market_movers_ui_css() -> str:
-    return """
-<style>
+    return (
+        "<style>\n"
+        + _style_token_block()
+        + """
 .ov-mm-toolbar-label {
   margin: 0.2rem 0 0.45rem 0;
-  color: rgba(100, 116, 139, 0.95);
-  font-size: 0.78rem;
-  font-weight: 700;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-label);
+  font-weight: var(--ov-mi-weight-label);
   letter-spacing: 0;
   text-transform: uppercase;
 }
 .ov-mm-refresh-label {
   margin: 0.85rem 0 0.42rem 0;
   color: inherit;
-  font-size: 0.95rem;
-  font-weight: 760;
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
 }
 .ov-mm-status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--ov-mi-gap-lg);
   padding: 0.54rem 0 0.62rem 0;
-  border-top: 1px solid rgba(100, 116, 139, 0.18);
-  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
-  margin-bottom: 0.55rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  margin-bottom: var(--ov-mi-gap-md);
 }
 .ov-mm-state-cluster {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: var(--ov-mi-gap-md);
   min-width: 0;
   flex-wrap: wrap;
 }
@@ -54,84 +135,84 @@ def market_movers_ui_css() -> str:
   gap: 0.45rem;
   min-height: 2rem;
   padding: 0.34rem 0.64rem;
-  border-radius: 999px;
-  border: 1px solid rgba(100, 116, 139, 0.24);
-  background: rgba(148, 163, 184, 0.10);
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid var(--ov-mi-border-control);
+  background: var(--ov-mi-fill-control);
 }
 .ov-mm-state-dot {
   width: 0.52rem;
   height: 0.52rem;
-  border-radius: 999px;
-  background: var(--ov-mm-state-color, #64748b);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-mm-state-color, #64748b) 18%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: var(--ov-mm-state-color, var(--ov-mi-color-neutral));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-mm-state-color, var(--ov-mi-color-neutral)) 18%, transparent);
 }
 .ov-mm-state-label {
   color: inherit;
-  font-weight: 750;
+  font-weight: var(--ov-mi-weight-strong);
   white-space: nowrap;
 }
 .ov-mm-state-detail {
-  color: rgba(100, 116, 139, 0.95);
-  font-size: 0.82rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-body);
 }
 .ov-mm-chip-row {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.35rem;
+  gap: var(--ov-mi-gap-sm);
   flex-wrap: wrap;
 }
 .ov-mm-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.28rem;
+  gap: var(--ov-mi-gap-xs);
   min-height: 1.7rem;
   padding: 0.25rem 0.52rem;
-  border-radius: 999px;
-  border: 1px solid rgba(100, 116, 139, 0.20);
-  background: rgba(148, 163, 184, 0.08);
-  color: rgba(100, 116, 139, 0.98);
-  font-size: 0.76rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid var(--ov-mi-border-subtle);
+  background: var(--ov-mi-fill-subtle);
+  color: var(--ov-mi-color-text-soft);
+  font-size: var(--ov-mi-font-chip);
   line-height: 1.2;
 }
 .ov-mm-chip strong {
   color: inherit;
-  font-weight: 750;
+  font-weight: var(--ov-mi-weight-strong);
 }
 .ov-mm-auto-static {
-  border: 1px solid rgba(100, 116, 139, 0.24);
-  border-radius: 8px;
+  border: 1px solid var(--ov-mi-border-control);
+  border-radius: var(--ov-mi-radius-panel);
   padding: 0.65rem 0.75rem;
   margin: 0.35rem 0 0.45rem 0;
-  background: rgba(148, 163, 184, 0.08);
+  background: var(--ov-mi-fill-subtle);
 }
 .ov-mm-auto-static-title {
-  font-weight: 750;
+  font-weight: var(--ov-mi-weight-strong);
   color: inherit;
 }
 .ov-mm-auto-static-detail,
 .ov-mm-auto-static-due {
-  color: rgba(100, 116, 139, 0.95);
-  font-size: 0.82rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-body);
 }
 .ov-mm-auto-static-detail {
   margin-top: 0.15rem;
 }
 .ov-mm-auto-static-track {
   height: 6px;
-  border-radius: 999px;
-  background: rgba(100, 116, 139, 0.18);
-  margin-top: 0.55rem;
+  border-radius: var(--ov-mi-radius-pill);
+  background: var(--ov-mi-track-fill);
+  margin-top: var(--ov-mi-gap-md);
   overflow: hidden;
 }
 .ov-mm-auto-static-bar {
   height: 100%;
-  background: #0f766e;
-  border-radius: 999px;
+  background: var(--ov-mi-color-positive);
+  border-radius: var(--ov-mi-radius-pill);
 }
 .ov-mm-auto-message {
-  color: rgba(100, 116, 139, 0.98);
-  font-size: 0.82rem;
+  color: var(--ov-mi-color-text-soft);
+  font-size: var(--ov-mi-font-body);
   line-height: 1.35;
   margin: 0.1rem 0 0.35rem 0;
 }
@@ -139,36 +220,36 @@ def market_movers_ui_css() -> str:
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border-top: 1px solid rgba(100, 116, 139, 0.18);
-  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
   margin: 0.25rem 0 0.9rem 0;
 }
 .ov-mm-meta-item {
   min-width: 0;
   padding: 0.58rem 0.8rem;
-  border-left: 1px solid rgba(100, 116, 139, 0.14);
+  border-left: 1px solid var(--ov-mi-border-faint);
 }
 .ov-mm-meta-item:first-child {
   border-left: 0;
   padding-left: 0;
 }
 .ov-mm-meta-label {
-  color: rgba(100, 116, 139, 0.95);
-  font-size: 0.74rem;
-  font-weight: 720;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
   letter-spacing: 0;
 }
 .ov-mm-meta-value {
   color: inherit;
-  font-size: 1rem;
-  font-weight: 780;
+  font-size: var(--ov-mi-font-value);
+  font-weight: var(--ov-mi-weight-value);
   line-height: 1.25;
   margin-top: 0.12rem;
   overflow-wrap: anywhere;
 }
 .ov-mm-meta-detail {
-  color: rgba(100, 116, 139, 0.95);
-  font-size: 0.75rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
   line-height: 1.28;
   margin-top: 0.1rem;
   overflow-wrap: anywhere;
@@ -191,6 +272,7 @@ def market_movers_ui_css() -> str:
 }
 </style>
 """.strip()
+    )
 
 
 def render_market_movers_toolbar_label(label: str) -> None:
@@ -261,7 +343,7 @@ def render_market_refresh_status_bar(
 ) -> None:
     label = _market_refresh_state_label((state or {}).get("label") or "Unknown")
     detail = _market_refresh_state_detail((state or {}).get("detail") or "")
-    dot_color = str((state or {}).get("dot_color") or "#64748b")
+    dot_color = str((state or {}).get("dot_color") or OVERVIEW_COLOR_NEUTRAL)
     coverage_text = f"{returnable} / {universe_count}"
     if returnable_pct is not None:
         coverage_text += f" ({float(returnable_pct):.1f}%)"
@@ -345,9 +427,11 @@ def render_auto_refresh_countdown(
     next_due_at = str(timing.get("next_due_at") or "-")
     progress_pct = max(0, min(100, int(timing.get("progress_pct") or 0)))
     component_id = f"overview-refresh-countdown-{abs(hash(key_suffix))}"
+    style_tokens = _style_token_block()
     components.html(
         f"""
         <style>
+          {style_tokens}
           html, body {{
             margin: 0;
             background: transparent;
@@ -355,26 +439,26 @@ def render_auto_refresh_countdown(
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           }}
           .ov-auto-countdown {{
-            border: 1px solid rgba(100, 116, 139, 0.24);
-            border-radius: 8px;
+            border: 1px solid var(--ov-mi-border-control);
+            border-radius: var(--ov-mi-radius-panel);
             padding: 10px 12px;
-            background: rgba(148, 163, 184, 0.10);
+            background: var(--ov-mi-fill-control);
           }}
-          .ov-auto-countdown-title {{ font-weight: 700; color: #111827; }}
-          .ov-auto-countdown-detail {{ font-size: 0.82rem; color: #64748b; margin-top: 2px; }}
-          .ov-auto-countdown-due {{ font-size: 0.8rem; color: #475569; }}
+          .ov-auto-countdown-title {{ font-weight: var(--ov-mi-weight-strong); color: var(--ov-mi-color-text); }}
+          .ov-auto-countdown-detail {{ font-size: var(--ov-mi-font-body); color: var(--ov-mi-color-neutral); margin-top: 2px; }}
+          .ov-auto-countdown-due {{ font-size: var(--ov-mi-font-caption); color: var(--ov-mi-color-text-soft); }}
           .ov-auto-countdown-track {{
             height: 6px;
-            border-radius: 999px;
-            background: rgba(100, 116, 139, 0.18);
+            border-radius: var(--ov-mi-radius-pill);
+            background: var(--ov-mi-track-fill);
             margin-top: 9px;
             overflow: hidden;
           }}
           .ov-auto-countdown-bar {{
             height: 100%;
             width: {progress_pct}%;
-            background: #0f766e;
-            border-radius: 999px;
+            background: var(--ov-mi-color-positive);
+            border-radius: var(--ov-mi-radius-pill);
             transition: width 0.25s linear;
           }}
           @media (prefers-color-scheme: dark) {{
@@ -382,8 +466,8 @@ def render_auto_refresh_countdown(
               border-color: rgba(148, 163, 184, 0.28);
               background: rgba(148, 163, 184, 0.08);
             }}
-            .ov-auto-countdown-title {{ color: #f8fafc; }}
-            .ov-auto-countdown-detail, .ov-auto-countdown-due {{ color: #cbd5e1; }}
+            .ov-auto-countdown-title {{ color: var(--ov-mi-color-surface-subtle); }}
+            .ov-auto-countdown-detail, .ov-auto-countdown-due {{ color: {OVERVIEW_COLOR_SOFT}; }}
             .ov-auto-countdown-track {{ background: rgba(203, 213, 225, 0.16); }}
           }}
         </style>

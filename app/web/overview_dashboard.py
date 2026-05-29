@@ -30,6 +30,23 @@ from app.web.overview_dashboard_helpers import (
     load_overview_market_movers_snapshot,
 )
 from app.web.overview_ui_components import (
+    OVERVIEW_COLOR_DANGER,
+    OVERVIEW_COLOR_BORDER,
+    OVERVIEW_COLOR_NEUTRAL,
+    OVERVIEW_COLOR_POSITIVE,
+    OVERVIEW_COLOR_PRIMARY,
+    OVERVIEW_COLOR_PURPLE,
+    OVERVIEW_COLOR_SOFT,
+    OVERVIEW_COLOR_SURFACE,
+    OVERVIEW_COLOR_SURFACE_ALT,
+    OVERVIEW_COLOR_SURFACE_SUBTLE,
+    OVERVIEW_COLOR_TEXT,
+    OVERVIEW_COLOR_TEXT_MUTED,
+    OVERVIEW_COLOR_TEXT_SUBTLE,
+    OVERVIEW_COLOR_TEXT_INVERSE,
+    OVERVIEW_COLOR_WARNING,
+    OVERVIEW_DIVERGING_RANGE,
+    OVERVIEW_SERIES_COLORS,
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
     render_market_auto_message,
@@ -83,13 +100,19 @@ def _build_funnel_chart(funnel_rows: pd.DataFrame) -> alt.Chart:
     total_count = max(1, int(chart_rows["Count"].sum()))
     return (
         alt.Chart(chart_rows)
-        .mark_arc(innerRadius=58, outerRadius=96, stroke="#ffffff")
+        .mark_arc(innerRadius=58, outerRadius=96, stroke=OVERVIEW_COLOR_TEXT_INVERSE)
         .encode(
             theta=alt.Theta("Count:Q", stack=True, scale=alt.Scale(domain=[0, total_count])),
             color=alt.Color(
                 "Stage:N",
                 scale=alt.Scale(
-                    range=["#0f766e", "#2563eb", "#b45309", "#64748b", "#cbd5e1"]
+                    range=[
+                        OVERVIEW_COLOR_POSITIVE,
+                        OVERVIEW_COLOR_PRIMARY,
+                        OVERVIEW_COLOR_WARNING,
+                        OVERVIEW_COLOR_NEUTRAL,
+                        OVERVIEW_COLOR_SOFT,
+                    ]
                 ),
                 legend=alt.Legend(title=None, orient="bottom"),
             ),
@@ -198,7 +221,7 @@ def _signed_return_axis_domain(values: pd.Series) -> list[float]:
 
 
 def _symmetric_return_scale(values: pd.Series) -> alt.Scale:
-    return alt.Scale(domain=_symmetric_return_domain(values), range=["#b91c1c", "#f8fafc", "#0f766e"])
+    return alt.Scale(domain=_symmetric_return_domain(values), range=OVERVIEW_DIVERGING_RANGE)
 
 
 def _positive_return_domain(values: pd.Series) -> list[float]:
@@ -249,14 +272,14 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
         .encode(
             color=alt.condition(
                 "datum['Return %'] < 0",
-                alt.value("#dc2626"),
-                alt.value("#0f766e"),
+                alt.value(OVERVIEW_COLOR_DANGER),
+                alt.value(OVERVIEW_COLOR_POSITIVE),
             )
         )
     )
     labels = (
         base
-        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
         .encode(
             text=alt.Text("Return Label:N"),
         )
@@ -312,14 +335,14 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
         .encode(
             color=alt.condition(
                 "datum['Average Return %'] < 0",
-                alt.value("#dc2626"),
-                alt.value("#0f766e"),
+                alt.value(OVERVIEW_COLOR_DANGER),
+                alt.value(OVERVIEW_COLOR_POSITIVE),
             )
         )
     )
     labels = (
         base
-        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
         .encode(
             text=alt.Text("Average Return Label:N"),
         )
@@ -383,7 +406,11 @@ def _build_group_leadership_heatmap(rows: pd.DataFrame) -> alt.Chart:
             x=alt.X("Metric:N", title=None),
             y=alt.Y("Group:N", sort=group_order, title=None),
             text=alt.Text("Return Label:N"),
-            color=alt.condition("datum['Return %'] >= 8 || datum['Return %'] <= -8", alt.value("#ffffff"), alt.value("#111827")),
+            color=alt.condition(
+                "datum['Return %'] >= 8 || datum['Return %'] <= -8",
+                alt.value(OVERVIEW_COLOR_TEXT_INVERSE),
+                alt.value(OVERVIEW_COLOR_TEXT),
+            ),
         )
     )
     return (base + text).properties(height=max(240, min(620, 30 * len(group_order))))
@@ -427,14 +454,14 @@ def _build_group_leadership_rank_chart(rows: pd.DataFrame) -> alt.Chart:
         .encode(
             color=alt.condition(
                 f"datum['{metric}'] < 0",
-                alt.value("#dc2626"),
-                alt.value("#0f766e"),
+                alt.value(OVERVIEW_COLOR_DANGER),
+                alt.value(OVERVIEW_COLOR_POSITIVE),
             )
         )
     )
     labels = (
         base
-        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
         .encode(text=alt.Text("Return Label:N"))
     )
     return (bars + labels).properties(height=max(320, min(680, 34 * len(chart_rows))))
@@ -456,7 +483,11 @@ def _build_group_leadership_trend_chart(rows: pd.DataFrame) -> alt.Chart:
         .encode(
             x=alt.X("Date:T", title=None),
             y=alt.Y(f"{metric}:Q", title="Cap Weighted Return %"),
-            color=alt.Color("Group:N", legend=alt.Legend(title=None, orient="bottom")),
+            color=alt.Color(
+                "Group:N",
+                scale=alt.Scale(range=OVERVIEW_SERIES_COLORS),
+                legend=alt.Legend(title=None, orient="bottom"),
+            ),
             tooltip=["Date:T", "Group:N", "Return Label:N", "Symbols:Q", "Top Symbol:N"],
         )
     )
@@ -507,9 +538,9 @@ def _build_group_ticker_leader_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             "Industry:N",
         ],
     )
-    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.value("#0f766e"))
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.value(OVERVIEW_COLOR_POSITIVE))
     labels = (
-        base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
         .encode(text=alt.Text("Return Label:N"))
     )
     return (bars + labels).properties(height=max(260, min(560, 34 * len(chart_rows))))
@@ -549,21 +580,13 @@ def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) ->
 
     return (
         alt.Chart(chart_rows)
-        .mark_arc(innerRadius=64, outerRadius=104, stroke="#ffffff")
+        .mark_arc(innerRadius=64, outerRadius=104, stroke=OVERVIEW_COLOR_TEXT_INVERSE)
         .encode(
             theta=alt.Theta("Share %:Q", stack=True),
             color=alt.Color(
                 "Label:N",
                 scale=alt.Scale(
-                    range=[
-                        "#0f766e",
-                        "#2563eb",
-                        "#b45309",
-                        "#7c3aed",
-                        "#0891b2",
-                        "#65a30d",
-                        "#64748b",
-                    ]
+                    range=OVERVIEW_SERIES_COLORS
                 ),
                 legend=alt.Legend(title=None, orient="bottom"),
             ),
@@ -1069,12 +1092,12 @@ def _get_market_movers_refresh_state(
     if service_state:
         status = str(service_state.get("status") or "unknown")
         dot_color = {
-            "fresh": "#0f766e",
-            "partial": "#b45309",
-            "due": "#b45309",
-            "stale": "#dc2626",
-            "failed": "#dc2626",
-        }.get(status, "#64748b")
+            "fresh": OVERVIEW_COLOR_POSITIVE,
+            "partial": OVERVIEW_COLOR_WARNING,
+            "due": OVERVIEW_COLOR_WARNING,
+            "stale": OVERVIEW_COLOR_DANGER,
+            "failed": OVERVIEW_COLOR_DANGER,
+        }.get(status, OVERVIEW_COLOR_NEUTRAL)
         return {
             "dot_color": dot_color,
             "label": str(service_state.get("label") or status.title()),
@@ -1086,15 +1109,15 @@ def _get_market_movers_refresh_state(
     stale_minutes = coverage.get("snapshot_stale_minutes")
     refresh_due = _is_daily_intraday_refresh_due(snapshot, period=period)
     if price_mode != "Intraday Snapshot":
-        dot_color = "#dc2626"
+        dot_color = OVERVIEW_COLOR_DANGER
         label = "Update needed"
         detail = "using EOD fallback"
     elif refresh_due:
-        dot_color = "#dc2626"
+        dot_color = OVERVIEW_COLOR_DANGER
         label = "Update needed"
         detail = f"{int(stale_minutes or 0)}m old"
     else:
-        dot_color = "#0f766e"
+        dot_color = OVERVIEW_COLOR_POSITIVE
         label = "Fresh"
         detail = f"{int(stale_minutes or 0)}m old"
     return {
@@ -1737,7 +1760,16 @@ def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
                 "Type Label:N",
                 title=None,
                 legend=alt.Legend(orient="bottom"),
-                scale=alt.Scale(range=["#2563eb", "#0f766e", "#b45309", "#7c3aed", "#475569", "#cbd5e1"]),
+                scale=alt.Scale(
+                    range=[
+                        OVERVIEW_COLOR_PRIMARY,
+                        OVERVIEW_COLOR_POSITIVE,
+                        OVERVIEW_COLOR_WARNING,
+                        OVERVIEW_COLOR_PURPLE,
+                        OVERVIEW_COLOR_NEUTRAL,
+                        OVERVIEW_COLOR_SOFT,
+                    ]
+                ),
             ),
             tooltip=["Date Parsed:T", "Type Label:N", "Count:Q"],
         )
@@ -1861,10 +1893,10 @@ def _render_event_month_grid(rows: pd.DataFrame) -> None:
         f"""
         <style>
           .event-calendar-shell {{
-            border: 1px solid #e5e7eb;
+            border: 1px solid {OVERVIEW_COLOR_BORDER};
             border-radius: 8px;
             overflow: hidden;
-            background: #ffffff;
+            background: {OVERVIEW_COLOR_SURFACE};
           }}
           .event-calendar-grid {{
             display: grid;
@@ -1872,9 +1904,9 @@ def _render_event_month_grid(rows: pd.DataFrame) -> None:
           }}
           .event-calendar-weekday {{
             padding: 8px 10px;
-            background: #f8fafc;
-            border-bottom: 1px solid #e5e7eb;
-            color: #64748b;
+            background: {OVERVIEW_COLOR_SURFACE_SUBTLE};
+            border-bottom: 1px solid {OVERVIEW_COLOR_BORDER};
+            color: {OVERVIEW_COLOR_NEUTRAL};
             font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
@@ -1882,25 +1914,25 @@ def _render_event_month_grid(rows: pd.DataFrame) -> None:
           .event-calendar-day {{
             min-height: 126px;
             padding: 8px;
-            border-right: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
-            background: #ffffff;
+            border-right: 1px solid {OVERVIEW_COLOR_BORDER};
+            border-bottom: 1px solid {OVERVIEW_COLOR_BORDER};
+            background: {OVERVIEW_COLOR_SURFACE};
           }}
           .event-calendar-day:nth-child(7n) {{
             border-right: 0;
           }}
           .event-calendar-muted {{
-            background: #f8fafc;
-            color: #94a3b8;
+            background: {OVERVIEW_COLOR_SURFACE_SUBTLE};
+            color: {OVERVIEW_COLOR_TEXT_MUTED};
           }}
           .event-calendar-has-events {{
-            background: #fcfcfd;
+            background: {OVERVIEW_COLOR_SURFACE_ALT};
           }}
           .event-calendar-today {{
-            box-shadow: inset 0 0 0 2px #2563eb;
+            box-shadow: inset 0 0 0 2px {OVERVIEW_COLOR_PRIMARY};
           }}
           .event-calendar-date {{
-            color: #111827;
+            color: {OVERVIEW_COLOR_TEXT};
             font-size: 13px;
             font-weight: 700;
             line-height: 1;
@@ -1916,37 +1948,37 @@ def _render_event_month_grid(rows: pd.DataFrame) -> None:
             grid-template-columns: auto minmax(0, 1fr);
             gap: 6px;
             align-items: center;
-            border: 1px solid #e5e7eb;
+            border: 1px solid {OVERVIEW_COLOR_BORDER};
             border-left-width: 4px;
             border-radius: 6px;
-            background: #ffffff;
+            background: {OVERVIEW_COLOR_SURFACE};
             padding: 4px 6px;
             min-width: 0;
           }}
           .event-calendar-type {{
-            color: #475569;
+            color: {OVERVIEW_COLOR_TEXT_SUBTLE};
             font-size: 10px;
             font-weight: 800;
             text-transform: uppercase;
             white-space: nowrap;
           }}
           .event-calendar-text {{
-            color: #111827;
+            color: {OVERVIEW_COLOR_TEXT};
             font-size: 11px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             min-width: 0;
           }}
-          .event-calendar-fomc {{ border-left-color: #2563eb; }}
-          .event-calendar-macro {{ border-left-color: #0f766e; }}
-          .event-calendar-earnings {{ border-left-color: #b45309; }}
-          .event-calendar-other {{ border-left-color: #64748b; }}
+          .event-calendar-fomc {{ border-left-color: {OVERVIEW_COLOR_PRIMARY}; }}
+          .event-calendar-macro {{ border-left-color: {OVERVIEW_COLOR_POSITIVE}; }}
+          .event-calendar-earnings {{ border-left-color: {OVERVIEW_COLOR_WARNING}; }}
+          .event-calendar-other {{ border-left-color: {OVERVIEW_COLOR_NEUTRAL}; }}
           .event-calendar-importance-high {{
-            background: #f8fafc;
+            background: {OVERVIEW_COLOR_SURFACE_SUBTLE};
           }}
           .event-calendar-more {{
-            color: #64748b;
+            color: {OVERVIEW_COLOR_NEUTRAL};
             font-size: 11px;
             font-weight: 700;
             padding: 2px 6px;
