@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `selected-monitoring-source-map-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `recheck-readiness-freshness-contract-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Selected monitoring source map chooses recheck readiness / freshness first
+- User request:
+  - Phase 12 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 12의 첫 task로 current Selected Portfolio Dashboard / Final Review / runtime monitoring evidence source map과 gap을 확인한다.
+- Analysis result:
+  - Selected Dashboard는 Final Review V2 decision row를 canonical source로 읽고, readiness / freshness / provider / timeline / comparison / drift / dossier evidence를 read-only로 제공한다.
+  - 주요 gap은 Performance Recheck / symbol freshness가 Current Candidate Registry replay contract에 의존한다는 점, readiness와 symbol freshness가 policy상 분리되어 있다는 점, Review Signals와 Recheck Comparison이 CAGR / MDD / benchmark spread threshold를 중복 계산한다는 점이다.
+  - 새 JSONL registry, automatic monitoring log append, user memo, preset, account integration, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `recheck-readiness-freshness-contract-v1`로 Final Review V2 selected row, replay contract, DB latest market date, symbol freshness를 하나의 operations preflight contract로 정리한다.
 
 ### 2026-05-29 - Phase 12 opens for selected monitoring / recheck operations
 - User request:

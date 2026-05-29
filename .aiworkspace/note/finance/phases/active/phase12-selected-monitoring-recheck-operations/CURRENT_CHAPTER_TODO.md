@@ -5,15 +5,15 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `selected-monitoring-source-map-v1`
+Next task: `recheck-readiness-freshness-contract-v1`
 
 ## TODO
 
-- Map current Selected Portfolio Dashboard read models.
-- Identify which evidence comes from final decision row, DB loaders, runtime replay, session state, and optional user input.
-- Confirm whether `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` is the canonical selected dashboard source in all relevant paths.
-- Identify gaps where stale / missing / failed / partial evidence can look too permissive.
-- Confirm no new persistence is required before implementation tasks.
+- Define replay contract source priority for selected recheck readiness.
+- Combine selected component contract, candidate replay contract, DB latest market date, default period, and symbol freshness into one operations preflight result or equivalent shared contract.
+- Ensure missing / stale / failed / partial readiness evidence cannot look like pass.
+- Keep price freshness as DB read-only evidence.
+- Add focused contract tests for missing registry contract, stale / missing symbol freshness, and read-only execution boundary.
 
 ## Stop Conditions
 

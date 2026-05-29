@@ -5,25 +5,27 @@ Created: 2026-05-29
 
 ## Current State
 
-Phase 12 board open is complete.
+Phase 12 selected monitoring source map is complete.
 
 Completed:
 
 - 12-0 `phase12-board-open`
 - Phase scope, task split, storage boundary, immediate next task 정리
+- 12-1 `selected-monitoring-source-map-v1`
+- Current Selected Dashboard / Final Review / runtime monitoring source ownership and gap audit
 
 Next:
 
-- 12-1 `selected-monitoring-source-map-v1`
+- 12-2 `recheck-readiness-freshness-contract-v1`
 
 ## Latest Decision
 
-Phase 12 focuses on selected monitoring / recheck operations after Final Review selection.
-The phase starts with a source map because the product already has Selected Portfolio Dashboard surfaces for recheck readiness, symbol freshness, provider evidence, continuity check, timeline, review signals, recheck comparison, and optional allocation drift.
+12-1 confirmed that Phase 12 can start from existing read-only dashboard evidence rather than new persistence.
+The main gaps are replay contract dependency on Current Candidate Registry, readiness / freshness policy split, Review Signals / Recheck Comparison threshold duplication, and session-only monitoring evidence clarity.
 
 Immediate next target:
 
-- `selected-monitoring-source-map-v1`
+- `recheck-readiness-freshness-contract-v1`
 
 ## Storage Boundary Reminder
 

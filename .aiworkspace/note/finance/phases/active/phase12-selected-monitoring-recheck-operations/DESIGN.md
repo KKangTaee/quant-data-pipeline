@@ -20,7 +20,7 @@ Selected Portfolio Dashboard는 선정 이후 운영 확인 surface이지만, li
 
 | Layer | Purpose | Initial Source |
 | --- | --- | --- |
-| Source map | 현재 Selected Dashboard evidence와 runtime read model의 source ownership 확인 | Next: `selected-monitoring-source-map-v1` |
+| Source map | 현재 Selected Dashboard evidence와 runtime read model의 source ownership 확인 | Complete: `selected-monitoring-source-map-v1` |
 | Recheck readiness | DB latest market date, benchmark, replay contract, default period 확인 | Existing `app/runtime/final_selected_portfolios.py` readiness read model |
 | Symbol freshness | portfolio / benchmark ticker별 DB latest date, row count, stale status 확인 | Existing selected dashboard symbol freshness table |
 | Provider evidence | selected component ticker weight 기준 provider holdings / exposure / operability context 확인 | Existing DB provider loader / dashboard provider evidence |
@@ -28,6 +28,27 @@ Selected Portfolio Dashboard는 선정 이후 운영 확인 surface이지만, li
 | Review signals | recheck, provider, drift, continuity 상태를 hold / watch / re-review signal로 번역 | Existing Review Signals surface, policy refinement pending |
 | Allocation drift | 사용자가 명시 입력한 current value / holding 기반 drift 확인 | Existing optional input, read-only boundary refinement pending |
 | Continuity / dossier | Final Review evidence packet, selected route, timeline, trigger, dossier 연결 확인 | Existing continuity check and Decision Dossier |
+
+## 12-1 Source Map Result
+
+12-1 found that Phase 12 should start from existing read-only evidence rather than new monitoring persistence.
+
+Reusable sources:
+
+- `load_final_selected_portfolio_dashboard()` already reads `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` through the V2 final decision loader.
+- `build_selected_portfolio_recheck_readiness()` already checks selected component contract, Current Candidate Registry replay contract, DB latest market date, default period, and storage boundary.
+- `build_selected_portfolio_recheck_symbol_freshness()` already reads DB price freshness metadata for portfolio and benchmark symbols.
+- `build_selected_portfolio_provider_evidence()` already reads selected provider evidence from existing provider DB snapshots through `build_provider_context()`.
+- `build_selected_portfolio_recheck_comparison()`, `build_selected_portfolio_monitoring_timeline()`, `build_selected_portfolio_continuity_check()`, and `build_decision_dossier()` already expose read-only monitoring / dossier evidence.
+
+Main gaps:
+
+- Performance Recheck and symbol freshness depend on Current Candidate Registry replay contracts even though Final Review V2 decision row is the canonical selected source.
+- Recheck readiness and symbol freshness are separate surfaces; stale / missing price should influence the same operations preflight route.
+- Review Signals duplicates CAGR / MDD / benchmark spread thresholds already present in Recheck Comparison.
+- Timeline, recheck result, drift check, and alert preview are session-state evidence, not durable monitoring history.
+
+Implementation order now moves to 12-2 recheck readiness / freshness operations contract.
 
 ## Route Semantics
 

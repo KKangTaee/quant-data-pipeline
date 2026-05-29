@@ -63,8 +63,8 @@ full price history, provider holdings, exposure, macro series, raw broker/accoun
 | Phase Slice | Goal | Status |
 | --- | --- | --- |
 | 12-0 | Phase 12 board open / scope and task split | Complete |
-| 12-1 | Selected monitoring source map / gap audit | Next |
-| 12-2 | Recheck readiness / freshness operations contract | Pending |
+| 12-1 | Selected monitoring source map / gap audit | Complete |
+| 12-2 | Recheck readiness / freshness operations contract | Next |
 | 12-3 | Provider evidence staleness and coverage contract | Pending |
 | 12-4 | Recheck comparison / review signal policy | Pending |
 | 12-5 | Optional allocation drift evidence boundary | Pending |

@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `selected-monitoring-source-map-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `recheck-readiness-freshness-contract-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/selected-monitoring-source-map-v1/`.
+- Source map confirmed Selected Dashboard already has read-only readiness / freshness / provider / timeline / comparison / drift / dossier evidence.
+- Main gaps: Current Candidate Registry replay dependency, readiness / freshness policy split, Review Signals / Recheck Comparison threshold duplication, and session-only monitoring evidence clarity.
+- Next task is `recheck-readiness-freshness-contract-v1`.
 - Opened `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`.
 - Phase 12 focuses on selected monitoring / recheck operations after Final Review selection.
 - Next task is `selected-monitoring-source-map-v1`; start by mapping current Selected Portfolio Dashboard readiness / freshness / provider / timeline / signal / comparison / drift / continuity sources.
