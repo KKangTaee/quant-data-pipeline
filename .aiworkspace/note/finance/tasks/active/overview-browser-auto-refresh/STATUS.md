@@ -6,3 +6,4 @@
 - 2026-05-29: Step 4 complete: browser auto runs now record `execution_mode=browser_auto`, and Data Health displays `Last Auto Run`, `Auto Source`, and `Next Auto Due`.
 - 2026-05-29: Added soft-loading UX for browser auto refresh: checking / collecting status and progress indicator inside the Overview auto-refresh panel.
 - 2026-05-30: Localized browser auto-refresh status / progress messages and internal skip reasons to Korean.
+- 2026-05-30: Replaced expandable loading status/progress with a compact next-refresh timing panel and cadence progress bar.

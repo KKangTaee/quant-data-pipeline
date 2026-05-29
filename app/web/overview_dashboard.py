@@ -824,6 +824,74 @@ def _auto_refresh_status_label(value: Any) -> str:
     return mapping.get(status, str(value or "-"))
 
 
+def _browser_auto_refresh_plan_row(summary: dict[str, Any] | None) -> dict[str, Any]:
+    plan = (summary or {}).get("plan")
+    if isinstance(plan, list) and plan:
+        return dict(plan[0] or {})
+    return {}
+
+
+def _format_auto_refresh_remaining(seconds: int | None) -> str:
+    if seconds is None:
+        return "-"
+    remaining = max(0, int(seconds))
+    minutes, secs = divmod(remaining, 60)
+    if minutes <= 0:
+        return f"{secs}초"
+    if secs == 0:
+        return f"{minutes}분"
+    return f"{minutes}분 {secs}초"
+
+
+def _browser_auto_refresh_timing(summary: dict[str, Any] | None, *, now: datetime | None = None) -> dict[str, Any]:
+    row = _browser_auto_refresh_plan_row(summary)
+    reason = str(row.get("reason") or "").strip().lower()
+    cadence_minutes = int(row.get("cadence_minutes") or MARKET_INTRADAY_REFRESH_MINUTES)
+    cadence_seconds = max(1, cadence_minutes * 60)
+    now_ts = pd.Timestamp(now or datetime.now())
+    last_finished = pd.to_datetime(row.get("last_finished_at"), errors="coerce")
+    next_due = pd.to_datetime(row.get("next_due_at"), errors="coerce")
+
+    remaining_seconds: int | None = None
+    progress_pct = 100
+    if pd.notna(next_due):
+        remaining_seconds = max(0, int((next_due - now_ts).total_seconds()))
+        if pd.notna(last_finished):
+            elapsed = max(0, int((now_ts - last_finished).total_seconds()))
+            progress_pct = max(0, min(100, int(round((elapsed / cadence_seconds) * 100))))
+        elif remaining_seconds:
+            progress_pct = max(0, min(100, int(round(((cadence_seconds - remaining_seconds) / cadence_seconds) * 100))))
+
+    if reason == "outside us market hours":
+        title = "미국 정규장 대기"
+        detail = "장이 열리면 5분 주기 조건에 맞춰 S&P 500 스냅샷을 확인합니다."
+        progress_pct = 0
+    elif reason == "cadence not due":
+        title = f"다음 갱신까지 {_format_auto_refresh_remaining(remaining_seconds)}"
+        detail = "5분 갱신 주기가 지나면 다음 확인에서 수집을 시도합니다."
+    elif reason == "due":
+        title = "갱신 조건 충족"
+        detail = "이번 확인에서 S&P 500 스냅샷 수집을 시도합니다."
+        progress_pct = 100
+    elif reason == "forced":
+        title = "강제 실행"
+        detail = "수동/강제 실행으로 갱신 조건을 건너뛰고 수집합니다."
+        progress_pct = 100
+    else:
+        title = "자동 갱신 대기"
+        detail = "토글을 켜면 5분마다 수집 조건을 확인합니다."
+        progress_pct = 0
+
+    return {
+        "title": title,
+        "detail": detail,
+        "progress_pct": progress_pct,
+        "remaining_seconds": remaining_seconds,
+        "next_due_at": row.get("next_due_at") or "-",
+        "reason": reason or "-",
+    }
+
+
 def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at: str | None) -> list[dict[str, Any]]:
     if not summary:
         return [
@@ -887,23 +955,26 @@ def _browser_auto_refresh_completion_label(summary: dict[str, Any]) -> str:
     return f"자동 갱신 상태: {_auto_refresh_status_label(status)}"
 
 
-def _render_browser_auto_refresh_loading(summary: dict[str, Any] | None = None) -> None:
-    label = "S&P 500 자동 갱신 조건 확인 중..."
-    state = "running"
-    if summary is not None:
-        label = _browser_auto_refresh_completion_label(summary)
-        state = "error" if str(summary.get("status") or "").lower() == "failed" else "complete"
-
-    with st.status(label, state=state, expanded=False):
-        st.progress(
-            100 if summary is not None else 35,
-            text=(
-                "자동 갱신 확인이 완료되었습니다."
-                if summary is not None
-                else "미국 장중이고 5분 갱신 주기가 지났을 때만 수집합니다."
-            ),
-        )
-        st.caption("전체 화면을 막지 않으므로, 확인 중에도 다른 Overview 정보를 계속 볼 수 있습니다.")
+def _render_browser_auto_refresh_timing(summary: dict[str, Any] | None) -> None:
+    timing = _browser_auto_refresh_timing(summary)
+    progress_pct = int(timing.get("progress_pct") or 0)
+    st.markdown(
+        f"""
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:4px 0 14px 0;background:#ffffff;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-weight:700;color:#111827;">{escape(str(timing["title"]))}</div>
+              <div style="font-size:0.86rem;color:#64748b;margin-top:2px;">{escape(str(timing["detail"]))}</div>
+            </div>
+            <div style="font-size:0.84rem;color:#475569;">다음 가능 시각: {escape(str(timing["next_due_at"]))}</div>
+          </div>
+          <div style="height:8px;border-radius:999px;background:#e5e7eb;margin-top:10px;overflow:hidden;">
+            <div style="height:100%;width:{progress_pct}%;background:#0f766e;border-radius:999px;"></div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _run_browser_auto_refresh_check() -> dict[str, Any]:
@@ -968,10 +1039,9 @@ def _render_browser_auto_refresh_panel() -> None:
         if enabled:
             @st.fragment(run_every=BROWSER_AUTO_REFRESH_SECONDS)
             def _browser_auto_refresh_heartbeat() -> None:
-                _render_browser_auto_refresh_loading()
-                with st.spinner("Collecting S&P 500 snapshot when due..."):
+                with st.spinner("S&P 500 자동 갱신 조건을 확인하는 중입니다..."):
                     summary = _run_browser_auto_refresh_check()
-                _render_browser_auto_refresh_loading(summary)
+                _render_browser_auto_refresh_timing(summary)
                 checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
                 render_status_card_grid(_build_browser_auto_refresh_cards(summary, str(checked_at or "")))
 
@@ -979,6 +1049,7 @@ def _render_browser_auto_refresh_panel() -> None:
         else:
             summary = st.session_state.get("overview_browser_auto_refresh_summary")
             checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
+            _render_browser_auto_refresh_timing(summary if isinstance(summary, dict) else None)
             render_status_card_grid(
                 _build_browser_auto_refresh_cards(
                     summary if isinstance(summary, dict) else None,

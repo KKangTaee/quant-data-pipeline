@@ -329,6 +329,51 @@ class JobResultArtifactContractTests(unittest.TestCase):
 
 
 class OverviewAutomationContractTests(unittest.TestCase):
+    def test_browser_auto_refresh_timing_shows_remaining_cadence(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_timing
+
+        timing = _browser_auto_refresh_timing(
+            {
+                "status": "skipped",
+                "plan": [
+                    {
+                        "label": "S&P 500 Daily Snapshot",
+                        "reason": "cadence not due",
+                        "cadence_minutes": 5,
+                        "last_finished_at": "2026-05-29 10:00:00",
+                        "next_due_at": "2026-05-29 10:05:00",
+                    }
+                ],
+            },
+            now=datetime(2026, 5, 29, 10, 2, 30),
+        )
+
+        self.assertEqual(timing["title"], "다음 갱신까지 2분 30초")
+        self.assertEqual(timing["progress_pct"], 50)
+        self.assertEqual(timing["next_due_at"], "2026-05-29 10:05:00")
+
+    def test_browser_auto_refresh_timing_waits_outside_market_hours(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_timing
+
+        timing = _browser_auto_refresh_timing(
+            {
+                "status": "skipped",
+                "plan": [
+                    {
+                        "label": "S&P 500 Daily Snapshot",
+                        "reason": "outside US market hours",
+                        "cadence_minutes": 5,
+                        "last_finished_at": "2026-05-29 10:00:00",
+                        "next_due_at": "2026-05-29 10:05:00",
+                    }
+                ],
+            },
+            now=datetime(2026, 5, 29, 10, 2, 30),
+        )
+
+        self.assertEqual(timing["title"], "미국 정규장 대기")
+        self.assertEqual(timing["progress_pct"], 0)
+
     def test_browser_auto_refresh_completion_label_uses_actionable_status(self) -> None:
         from app.web.overview_dashboard import _browser_auto_refresh_completion_label
 
