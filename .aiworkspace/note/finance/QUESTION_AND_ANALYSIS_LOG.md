@@ -17,11 +17,24 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-source-map-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `concentration-overlap-exposure-contract-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 11 source map chooses concentration / overlap first
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 첫 task로 current construction risk evidence source map과 gap을 확인한다.
+- Analysis result:
+  - Practical Validation already emits concentration / overlap / exposure and correlation / risk contribution diagnostics.
+  - Provider look-through board already emits holdings coverage, exposure coverage, top holding, top overlap, dominant asset, and unknown exposure as compact evidence.
+  - Robustness Lab already has drop-one and weight tilt dependency evidence, but Final Review has no explicit construction risk gate group yet.
+  - 새 JSONL registry, user memo, preset, raw holdings artifact, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `concentration-overlap-exposure-contract-v1`로 기존 provider look-through evidence를 read-only Construction Risk Audit contract로 묶는다.
 
 ### 2026-05-29 - Phase 11 opens for portfolio construction risk controls
 - User request:

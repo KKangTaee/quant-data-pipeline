@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-source-map-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `concentration-overlap-exposure-contract-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/construction-risk-source-map-v1/`.
+- Source map confirmed existing Practical Validation diagnostics, provider look-through board, Robustness Lab sensitivity, and Final Review gate can seed Phase 11 without new storage.
+- Main gap is ownership / selected-route visibility: construction risk is currently split across provider coverage and stress robustness evidence.
+- Next task is `concentration-overlap-exposure-contract-v1`; start by wrapping existing component weight, top holding, top overlap, dominant asset, unknown exposure, and provider coverage evidence into a read-only contract.
 - Opened `.aiworkspace/note/finance/phases/active/phase11-portfolio-construction-risk-controls/`.
 - Phase 11 focuses on portfolio construction risk controls: concentration, overlap, correlation, risk contribution, component role, and profile-aware weight discipline.
 - Next task is `construction-risk-source-map-v1`; start by mapping current Practical Validation / Look-through / Robustness Lab / Final Review gate construction risk sources before implementation.

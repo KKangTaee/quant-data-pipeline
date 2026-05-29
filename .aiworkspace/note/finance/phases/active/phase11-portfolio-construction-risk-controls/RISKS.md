@@ -14,8 +14,10 @@ Created: 2026-05-29
 | Storage sprawl returns | raw holdings / matrix / memo-like 저장이 늘어남 | compact evidence read model 우선, raw data는 DB / runtime boundary로 제한 |
 | User confuses construction gate with live trading approval | 검증 화면이 주문 승인처럼 보일 수 있음 | Final Review / Selected Dashboard는 live approval, order, rebalance가 아님을 유지 |
 
-## Residual Unknowns For 11-1
+## Residual Unknowns After 11-1
 
-- 현재 source별 component curve가 모든 후보 유형에서 risk contribution 계산에 충분한지 확인이 필요하다.
-- holdings / exposure snapshot coverage가 construction risk audit PASS 후보로 쓰기에 충분한지 확인이 필요하다.
-- current Practical Diagnostics의 concentration / correlation proxy와 Phase 11 신규 contract의 ownership 분리가 필요하다.
+- holdings / exposure snapshot coverage는 후보마다 달라질 수 있으므로 11-2에서 partial / missing provider evidence를 `PASS`로 올리지 않아야 한다.
+- current concentration / exposure proxy는 fallback으로만 써야 하며, source strength를 row에 표시해야 한다.
+- component curve가 없는 후보는 11-3 risk contribution에서 `NEEDS_INPUT` 또는 `REVIEW`로 남겨야 한다.
+- component role metadata의 canonical source는 아직 없으므로 11-4에서 먼저 결정해야 한다.
+- Final Review gate group은 11-5까지 `provider_coverage` / `stress_robustness`에 흩어져 있으므로 construction risk ownership을 명확히 해야 한다.

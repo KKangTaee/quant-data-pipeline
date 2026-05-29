@@ -5,8 +5,8 @@ Created: 2026-05-29
 
 ## Integration Order
 
-1. 11-1 construction risk source map / gap audit
-2. 11-2 concentration / overlap / exposure contract
+1. 11-1 construction risk source map / gap audit: Complete
+2. 11-2 concentration / overlap / exposure contract: Next
 3. 11-3 correlation / risk contribution contract
 4. 11-4 component role / weight discipline contract
 5. 11-5 selected-route construction risk gate policy
@@ -25,7 +25,9 @@ Implementation tasks may touch the following files after 11-1 confirms scope.
 - `finance/loaders/provider.py`
 - `tests/test_service_contracts.py`
 
-11-1 should confirm whether the first implementation slice should start with holdings/exposure concentration or component return matrix risk contribution.
+11-1 confirmed the first implementation slice should start with holdings / exposure concentration.
+The current provider look-through board already supplies top holding, top overlap, dominant asset, unknown exposure, holdings coverage, and exposure coverage.
+11-2 should wrap those into a read-only construction risk contract before adding any new DB collector.
 
 ## QA Gates
 
