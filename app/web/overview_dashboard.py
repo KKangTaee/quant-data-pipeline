@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+from dataclasses import dataclass
 from datetime import datetime
 from html import escape
 from inspect import signature
@@ -51,7 +52,7 @@ from app.web.overview_ui_components import (
     render_auto_refresh_timing_static,
     render_market_auto_message,
     render_market_auto_waiting_panel,
-    render_market_movers_toolbar_label,
+    render_overview_toolbar_label,
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
 )
@@ -66,6 +67,76 @@ MARKET_COVERAGE_LABELS = {
     "TOP1000": "Top 1000",
     "TOP2000": "Top 2000",
 }
+MARKET_COVERAGE_OPTIONS = tuple(MARKET_COVERAGE_LABELS.keys())
+MARKET_UNIVERSE_LIMITS = {
+    "SP500": 500,
+    "TOP1000": 1000,
+    "TOP2000": 2000,
+}
+MARKET_MOVER_PERIOD_LABELS = {
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+}
+GROUP_LEADERSHIP_PERIOD_LABELS = {
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+}
+GROUP_BY_LABELS = {
+    "sector": "Sector",
+    "industry": "Industry",
+}
+EVENT_TYPE_LABELS = {
+    "ALL": "All",
+    "FOMC_MEETING": "FOMC",
+    "EARNINGS": "Earnings",
+    "MACRO": "Macro",
+}
+
+
+@dataclass(frozen=True)
+class MarketMoverControls:
+    coverage: str
+    universe_limit: int
+    period: str
+    sector: str
+    top_n: int
+
+
+@dataclass(frozen=True)
+class GroupLeadershipControls:
+    coverage: str
+    universe_limit: int
+    group_by: str
+    period: str
+    top_n: int
+    min_group_size: int
+
+
+def _coverage_label(value: str) -> str:
+    return MARKET_COVERAGE_LABELS.get(value, value)
+
+
+def _universe_limit(value: str) -> int:
+    return MARKET_UNIVERSE_LIMITS.get(value, 500)
+
+
+def _market_mover_period_label(value: str) -> str:
+    return MARKET_MOVER_PERIOD_LABELS.get(value, value.title())
+
+
+def _group_leadership_period_label(value: str) -> str:
+    return GROUP_LEADERSHIP_PERIOD_LABELS.get(value, value.title())
+
+
+def _group_by_label(value: str) -> str:
+    return GROUP_BY_LABELS.get(value, value.title())
+
+
+def _event_filter_label(value: str) -> str:
+    return EVENT_TYPE_LABELS.get(value, value.replace("_", " ").title())
 
 
 # Render one ranked candidate card in the Overview priority section.
@@ -1132,6 +1203,176 @@ def _market_refresh_mode_label(value: str) -> str:
     return {"manual": "수동 갱신", "auto": "자동 갱신"}.get(value, value)
 
 
+def _render_market_movers_controls() -> MarketMoverControls:
+    render_overview_toolbar_label("스캔 조건")
+    controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
+    coverage = str(
+        controls[0].selectbox(
+            "Coverage",
+            list(MARKET_COVERAGE_OPTIONS),
+            index=0,
+            format_func=_coverage_label,
+            key="overview_market_movers_coverage",
+        )
+    )
+    universe_limit = _universe_limit(coverage)
+    period = str(
+        controls[1].selectbox(
+            "Period",
+            list(MARKET_MOVER_PERIOD_LABELS.keys()),
+            index=0,
+            format_func=_market_mover_period_label,
+            key="overview_market_movers_period",
+        )
+    )
+    sector_options = ["All"] + load_overview_market_mover_sectors(
+        universe_code=coverage,
+        universe_limit=universe_limit,
+    )
+    sector = str(
+        controls[2].selectbox(
+            "Sector",
+            sector_options,
+            index=0,
+            key="overview_market_movers_sector",
+        )
+    )
+    top_n = int(
+        controls[3].number_input(
+            "Top N",
+            min_value=5,
+            max_value=100,
+            value=20,
+            step=5,
+            key="overview_market_movers_top_n",
+        )
+    )
+    return MarketMoverControls(
+        coverage=coverage,
+        universe_limit=universe_limit,
+        period=period,
+        sector=sector,
+        top_n=top_n,
+    )
+
+
+def _render_group_leadership_controls() -> GroupLeadershipControls:
+    controls = st.columns([1.1, 1, 1, 0.8, 0.9], gap="small", vertical_alignment="bottom")
+    coverage = str(
+        controls[0].selectbox(
+            "Coverage",
+            list(MARKET_COVERAGE_OPTIONS),
+            index=0,
+            format_func=_coverage_label,
+            key="overview_group_leadership_coverage_code",
+        )
+    )
+    group_by = str(
+        controls[1].selectbox(
+            "Group",
+            list(GROUP_BY_LABELS.keys()),
+            index=0,
+            format_func=_group_by_label,
+            key="overview_group_leadership_group",
+        )
+    )
+    period = str(
+        controls[2].selectbox(
+            "Period",
+            list(GROUP_LEADERSHIP_PERIOD_LABELS.keys()),
+            index=2,
+            format_func=_group_leadership_period_label,
+            key="overview_group_leadership_period",
+        )
+    )
+    top_n = int(
+        controls[3].number_input(
+            "Top N",
+            min_value=5,
+            max_value=100,
+            value=10,
+            step=5,
+            key="overview_group_leadership_top_n",
+        )
+    )
+    min_group_size = int(
+        controls[4].number_input(
+            "Min Symbols",
+            min_value=1,
+            max_value=50,
+            value=5,
+            step=1,
+            key="overview_group_leadership_min_symbols",
+        )
+    )
+    return GroupLeadershipControls(
+        coverage=coverage,
+        universe_limit=_universe_limit(coverage),
+        group_by=group_by,
+        period=period,
+        top_n=top_n,
+        min_group_size=min_group_size,
+    )
+
+
+def _render_event_refresh_toolbar() -> str:
+    with st.container(border=True):
+        controls = st.columns([1.1, 1.25, 1.25, 1.25, 1.8], gap="small", vertical_alignment="bottom")
+        event_filter = str(
+            controls[0].segmented_control(
+                "Type",
+                list(EVENT_TYPE_LABELS.keys()),
+                default="ALL",
+                format_func=_event_filter_label,
+                key="overview_events_type_filter",
+            )
+        )
+        if controls[1].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
+            current_year = datetime.now().year
+            with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+                _store_overview_job_result(
+                    "overview_fomc_calendar_result",
+                    run_collect_fomc_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
+        if controls[2].button(
+            "Refresh Earnings Calendar",
+            key="overview_events_refresh_earnings",
+            use_container_width=True,
+            help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
+        ):
+            with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
+                _store_overview_job_result(
+                    "overview_earnings_calendar_result",
+                    run_collect_earnings_calendar(
+                        symbol_source="latest_movers",
+                        universe_code="SP500",
+                        top_movers_limit=20,
+                        lookahead_days=120,
+                        max_symbols=50,
+                        validate_with_nasdaq=True,
+                    ),
+                )
+            st.rerun()
+        if controls[3].button(
+            "Refresh Macro Calendar",
+            key="overview_events_refresh_macro",
+            use_container_width=True,
+            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
+        ):
+            current_year = datetime.now().year
+            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
+                _store_overview_job_result(
+                    "overview_macro_calendar_result",
+                    run_collect_macro_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
+        controls[4].caption(
+            "Overview reads stored rows from `finance_meta.market_event_calendar`; refresh writes through ingestion job wrappers."
+        )
+    return event_filter
+
+
 def _select_market_refresh_mode(container: Any, *, auto_supported: bool) -> str:
     key = "overview_market_movers_refresh_mode"
     options = ["manual", "auto"] if auto_supported else ["manual"]
@@ -1303,72 +1544,21 @@ def _render_market_movers_snapshot_panel(
 
 def _render_market_movers_tab() -> None:
     st.markdown("### Market Movers")
-    render_market_movers_toolbar_label("스캔 조건")
-    controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
-    coverage = str(
-        controls[0].selectbox(
-            "Coverage",
-            ["SP500", "TOP1000", "TOP2000"],
-            index=0,
-            format_func=lambda value: {
-                "SP500": "S&P 500",
-                "TOP1000": "Top 1000",
-                "TOP2000": "Top 2000",
-            }[value],
-            key="overview_market_movers_coverage",
-        )
-    )
-    universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
-    period = str(
-        controls[1].selectbox(
-            "Period",
-            ["daily", "weekly", "monthly", "yearly"],
-            index=0,
-            format_func=lambda value: {
-                "daily": "Daily",
-                "weekly": "Weekly",
-                "monthly": "Monthly",
-                "yearly": "Yearly",
-            }[value],
-            key="overview_market_movers_period",
-        )
-    )
-    sector_options = ["All"] + load_overview_market_mover_sectors(
-        universe_code=coverage,
-        universe_limit=universe_limit,
-    )
-    sector = str(
-        controls[2].selectbox(
-            "Sector",
-            sector_options,
-            index=0,
-            key="overview_market_movers_sector",
-        )
-    )
-    top_n = int(
-        controls[3].number_input(
-            "Top N",
-            min_value=5,
-            max_value=100,
-            value=20,
-            step=5,
-            key="overview_market_movers_top_n",
-        )
-    )
+    controls = _render_market_movers_controls()
 
     reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
     if reloaded_at:
         st.caption(f"Last DB snapshot reload request: {reloaded_at}")
-    if period == "daily":
+    if controls.period == "daily":
         st.caption(
             "Daily는 저장된 quote snapshot을 previous close와 비교합니다. 갱신 방식은 아래 데이터 갱신 영역에서 선택합니다."
         )
 
-    if coverage != "SP500" or period != "daily":
+    if controls.coverage != "SP500" or controls.period != "daily":
         st.session_state["overview_market_movers_refresh_mode"] = "manual"
     auto_refresh_enabled = (
-        coverage == "SP500"
-        and period == "daily"
+        controls.coverage == "SP500"
+        and controls.period == "daily"
         and st.session_state.get("overview_market_movers_refresh_mode") == "auto"
     )
 
@@ -1383,113 +1573,57 @@ def _render_market_movers_tab() -> None:
                 with st.spinner("S&P 500 자동 갱신 조건을 확인하는 중입니다..."):
                     _run_browser_auto_refresh_check()
             snapshot = _load_market_movers_snapshot(
-                universe_code=coverage,
-                universe_limit=universe_limit,
-                period=period,
-                top_n=top_n,
-                sector=sector,
+                universe_code=controls.coverage,
+                universe_limit=controls.universe_limit,
+                period=controls.period,
+                top_n=controls.top_n,
+                sector=controls.sector,
             )
             _render_market_movers_refresh_bar(
                 snapshot,
-                universe_code=coverage,
-                universe_limit=universe_limit,
-                period=period,
+                universe_code=controls.coverage,
+                universe_limit=controls.universe_limit,
+                period=controls.period,
             )
             _render_market_movers_snapshot_panel(
                 snapshot,
-                universe_code=coverage,
-                period=period,
+                universe_code=controls.coverage,
+                period=controls.period,
             )
 
         _market_movers_auto_refresh_panel()
     else:
         snapshot = _load_market_movers_snapshot(
-            universe_code=coverage,
-            universe_limit=universe_limit,
-            period=period,
-            top_n=top_n,
-            sector=sector,
+            universe_code=controls.coverage,
+            universe_limit=controls.universe_limit,
+            period=controls.period,
+            top_n=controls.top_n,
+            sector=controls.sector,
         )
         _render_market_movers_refresh_bar(
             snapshot,
-            universe_code=coverage,
-            universe_limit=universe_limit,
-            period=period,
+            universe_code=controls.coverage,
+            universe_limit=controls.universe_limit,
+            period=controls.period,
         )
         _render_market_movers_snapshot_panel(
             snapshot,
-            universe_code=coverage,
-            period=period,
+            universe_code=controls.coverage,
+            period=controls.period,
         )
 
 
 def _render_sector_industry_tab() -> None:
     st.markdown("### Sector / Industry Leadership")
-    controls = st.columns([1.1, 1, 1, 0.8, 0.9], gap="small", vertical_alignment="bottom")
-    coverage = str(
-        controls[0].selectbox(
-            "Coverage",
-            ["SP500", "TOP1000", "TOP2000"],
-            index=0,
-            format_func=lambda value: {
-                "SP500": "S&P 500",
-                "TOP1000": "Top 1000",
-                "TOP2000": "Top 2000",
-            }[value],
-            key="overview_group_leadership_coverage_code",
-        )
-    )
-    universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
-    group_by = str(
-        controls[1].selectbox(
-            "Group",
-            ["sector", "industry"],
-            index=0,
-            format_func=lambda value: {"sector": "Sector", "industry": "Industry"}[value],
-            key="overview_group_leadership_group",
-        )
-    )
-    period = str(
-        controls[2].selectbox(
-            "Period",
-            ["daily", "weekly", "monthly"],
-            index=2,
-            format_func=lambda value: {
-                "daily": "Daily",
-                "weekly": "Weekly",
-                "monthly": "Monthly",
-            }[value],
-            key="overview_group_leadership_period",
-        )
-    )
-    top_n = int(
-        controls[3].number_input(
-            "Top N",
-            min_value=5,
-            max_value=100,
-            value=10,
-            step=5,
-            key="overview_group_leadership_top_n",
-        )
-    )
-    min_group_size = int(
-        controls[4].number_input(
-            "Min Symbols",
-            min_value=1,
-            max_value=50,
-            value=5,
-            step=1,
-            key="overview_group_leadership_min_symbols",
-        )
-    )
+    controls = _render_group_leadership_controls()
 
     snapshot = load_overview_group_leadership_snapshot(
-        universe_limit=universe_limit,
-        universe_code=coverage,
-        group_by=group_by,
-        period=period,
-        top_n=top_n,
-        min_group_size=min_group_size,
+        universe_limit=controls.universe_limit,
+        universe_code=controls.coverage,
+        group_by=controls.group_by,
+        period=controls.period,
+        top_n=controls.top_n,
+        min_group_size=controls.min_group_size,
     )
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
@@ -1520,7 +1654,7 @@ def _render_sector_industry_tab() -> None:
                 default=default_groups,
                 key=(
                     "overview_group_leadership_trend_groups_"
-                    f"{coverage}_{group_by}_{period}_{top_n}_{min_group_size}"
+                    f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
                 ),
             )
             visible_trend_rows = (
@@ -1547,7 +1681,7 @@ def _render_sector_industry_tab() -> None:
                     index=0,
                     key=(
                         "overview_group_leadership_positive_group_"
-                        f"{coverage}_{group_by}_{period}_{top_n}_{min_group_size}"
+                        f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
                     ),
                 )
             )
@@ -1558,7 +1692,7 @@ def _render_sector_industry_tab() -> None:
                     index=1,
                     key=(
                         "overview_group_leadership_ticker_top_n_"
-                        f"{coverage}_{group_by}_{period}_{top_n}_{min_group_size}"
+                        f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
                     ),
                 )
             )
@@ -2128,65 +2262,7 @@ def _render_event_date_groups(rows: pd.DataFrame) -> None:
 
 def _render_events_tab() -> None:
     st.markdown("### Events")
-    with st.container(border=True):
-        controls = st.columns([1.1, 1.25, 1.25, 1.25, 1.8], gap="small", vertical_alignment="bottom")
-        event_filter = str(
-            controls[0].segmented_control(
-                "Type",
-                ["ALL", "FOMC_MEETING", "EARNINGS", "MACRO"],
-                default="ALL",
-                format_func=lambda value: {
-                    "ALL": "All",
-                    "FOMC_MEETING": "FOMC",
-                    "EARNINGS": "Earnings",
-                    "MACRO": "Macro",
-                }[value],
-                key="overview_events_type_filter",
-            )
-        )
-        if controls[1].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
-            current_year = datetime.now().year
-            with st.spinner("Collecting FOMC calendar from the official Fed page..."):
-                _store_overview_job_result(
-                    "overview_fomc_calendar_result",
-                    run_collect_fomc_calendar(years=(current_year, current_year + 1)),
-                )
-            st.rerun()
-        if controls[2].button(
-            "Refresh Earnings Calendar",
-            key="overview_events_refresh_earnings",
-            use_container_width=True,
-            help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
-        ):
-            with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
-                _store_overview_job_result(
-                    "overview_earnings_calendar_result",
-                    run_collect_earnings_calendar(
-                        symbol_source="latest_movers",
-                        universe_code="SP500",
-                        top_movers_limit=20,
-                        lookahead_days=120,
-                        max_symbols=50,
-                        validate_with_nasdaq=True,
-                    ),
-                )
-            st.rerun()
-        if controls[3].button(
-            "Refresh Macro Calendar",
-            key="overview_events_refresh_macro",
-            use_container_width=True,
-            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
-        ):
-            current_year = datetime.now().year
-            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
-                _store_overview_job_result(
-                    "overview_macro_calendar_result",
-                    run_collect_macro_calendar(years=(current_year, current_year + 1)),
-                )
-            st.rerun()
-        controls[4].caption(
-            "Overview reads stored rows from `finance_meta.market_event_calendar`; refresh writes through ingestion job wrappers."
-        )
+    event_filter = _render_event_refresh_toolbar()
 
     selected_event_type = None if event_filter == "ALL" else event_filter
     snapshot = load_overview_market_events_snapshot(event_type=selected_event_type, horizon_days=540)

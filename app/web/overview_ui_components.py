@@ -93,7 +93,7 @@ def _display_value(value: Any) -> str:
     return str(value)
 
 
-def market_movers_ui_css() -> str:
+def overview_ui_css() -> str:
     return (
         "<style>\n"
         + _style_token_block()
@@ -275,14 +275,22 @@ def market_movers_ui_css() -> str:
     )
 
 
-def render_market_movers_toolbar_label(label: str) -> None:
+def market_movers_ui_css() -> str:
+    return overview_ui_css()
+
+
+def render_overview_toolbar_label(label: str) -> None:
     st.markdown(
-        f'{market_movers_ui_css()}<div class="ov-mm-toolbar-label">{escape(label)}</div>',
+        f'{overview_ui_css()}<div class="ov-mm-toolbar-label">{escape(label)}</div>',
         unsafe_allow_html=True,
     )
 
 
-def render_market_snapshot_meta_strip(items: list[dict[str, Any]]) -> None:
+def render_market_movers_toolbar_label(label: str) -> None:
+    render_overview_toolbar_label(label)
+
+
+def render_overview_meta_strip(items: list[dict[str, Any]]) -> None:
     item_html: list[str] = []
     for item in items:
         detail = item.get("detail")
@@ -299,13 +307,17 @@ def render_market_snapshot_meta_strip(items: list[dict[str, Any]]) -> None:
             "</div>"
         )
     st.markdown(
-        market_movers_ui_css()
+        overview_ui_css()
         + f"""
 <div class="ov-mm-meta-strip">
           {"".join(item_html)}
         </div>""",
         unsafe_allow_html=True,
     )
+
+
+def render_market_snapshot_meta_strip(items: list[dict[str, Any]]) -> None:
+    render_overview_meta_strip(items)
 
 
 def _market_refresh_state_label(value: Any) -> str:
@@ -349,7 +361,7 @@ def render_market_refresh_status_bar(
         coverage_text += f" ({float(returnable_pct):.1f}%)"
     detail_html = f'<span class="ov-mm-state-detail">{escape(detail)}</span>' if detail else ""
     st.markdown(
-        market_movers_ui_css()
+        overview_ui_css()
         + f"""
 <div class="ov-mm-refresh-label">데이터 갱신</div>
 <div class="ov-mm-status-bar">
@@ -382,7 +394,7 @@ def render_market_auto_message(message: Any) -> None:
 
 def render_market_auto_waiting_panel() -> None:
     st.markdown(
-        market_movers_ui_css()
+        overview_ui_css()
         + """
 <div class="ov-mm-auto-static">
           <div class="ov-mm-auto-static-title">자동 갱신 대기</div>
@@ -395,7 +407,7 @@ def render_market_auto_waiting_panel() -> None:
 def render_auto_refresh_timing_static(timing: dict[str, Any]) -> None:
     progress_pct = int(timing.get("progress_pct") or 0)
     st.markdown(
-        market_movers_ui_css()
+        overview_ui_css()
         + f"""
 <div class="ov-mm-auto-static">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">

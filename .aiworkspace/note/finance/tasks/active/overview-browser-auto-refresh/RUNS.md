@@ -55,3 +55,8 @@
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
 - 2026-05-30: `git diff --check` - PASS.
 - 2026-05-30: Browser smoke at `http://localhost:8501` Overview visual tokens - PASS; Market Movers, `데이터 갱신`, refresh bar, metadata strip, CSS token values, no leaked HTML, console errors 0.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Overview structure-first pass - PASS; Market Movers / Sector-Industry / Events controls rendered after helper extraction, no leaked HTML, console errors 0.

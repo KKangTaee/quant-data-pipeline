@@ -13,3 +13,4 @@
 - Container reduction pass applies first to Market Movers only: wrapper containers that only grouped controls were removed, while columns / tabs / expanders that provide real interaction structure remain.
 - Overview-specific HTML/CSS components now live in `app/web/overview_ui_components.py`; data shaping and orchestration stay in `app/web/overview_dashboard.py`.
 - Visual token pass keeps the no-new-library direction: shared Overview colors, chart ranges, status colors, surfaces, spacing, font sizes, and radii are centralized in `overview_ui_components.py` before considering extra Streamlit UI packages.
+- Structure-first pass keeps UI options / labels / universe limits in typed local control models. This makes the current Streamlit implementation easier to evolve without adding a new UI library just to remove duplication.

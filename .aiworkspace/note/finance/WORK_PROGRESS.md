@@ -4097,3 +4097,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - UI redesign pass 3에서 Market Movers의 단순 wrapper container를 줄이고, snapshot status cards를 얇은 metadata strip으로 바꿔 ranking/table과의 시각적 거리를 줄였다.
   - UI redesign pass 4에서 Market Movers 전용 HTML/CSS 렌더러를 `app/web/overview_ui_components.py`로 분리해 `overview_dashboard.py`의 화면 흐름과 시각 컴포넌트 책임을 나눴다.
   - UI redesign pass 5에서 Overview 전용 색상 / 표면 / 차트 팔레트 / spacing / typography 토큰을 `overview_ui_components.py`로 모아 반복 하드코딩을 줄였다.
+  - UI redesign pass 6에서 새 UI 라이브러리 도입 전 단계로 Coverage / Period / Group / Events control 구성을 내부 model / helper로 정리했다.
