@@ -142,6 +142,13 @@ def _event_filter_label(value: str) -> str:
     return EVENT_TYPE_LABELS.get(value, value.replace("_", " ").title())
 
 
+def _option_index(options: list[str], current: Any, *, default: int = 0) -> int:
+    try:
+        return options.index(str(current))
+    except ValueError:
+        return default
+
+
 # Render one ranked candidate card in the Overview priority section.
 def _render_priority_candidate_card(candidate: dict[str, Any], rank: int) -> None:
     cagr = candidate.get("cagr")
@@ -1320,12 +1327,16 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
 
 def _render_event_refresh_toolbar() -> str:
     render_overview_toolbar_label("일정 타입")
-    controls = st.columns([1.1, 1.25, 1.25, 1.25], gap="small", vertical_alignment="bottom")
+    controls = st.columns([0.85, 1, 1, 1], gap="small", vertical_alignment="bottom")
+    event_options = list(EVENT_TYPE_LABELS.keys())
     event_filter = str(
-        controls[0].segmented_control(
+        controls[0].selectbox(
             "Type",
-            list(EVENT_TYPE_LABELS.keys()),
-            default="ALL",
+            event_options,
+            index=_option_index(
+                event_options,
+                st.session_state.get("overview_events_type_filter", "ALL"),
+            ),
             format_func=_event_filter_label,
             key="overview_events_type_filter",
         )
@@ -1809,10 +1820,14 @@ def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
         value for value in ["High", "Medium", "Low"] if value in importance_values
     ]
     window = str(
-        filter_cols[0].segmented_control(
+        filter_cols[0].selectbox(
             "Window",
             ["30D", "90D", "All"],
-            default="90D",
+            index=_option_index(
+                ["30D", "90D", "All"],
+                st.session_state.get("overview_events_window_filter", "90D"),
+                default=1,
+            ),
             key="overview_events_window_filter",
         )
     )
