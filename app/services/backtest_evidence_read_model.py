@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
@@ -676,6 +677,9 @@ def build_investability_evidence_packet(
         validation.get("validation_efficacy_audit") or build_validation_efficacy_audit(validation_for_efficacy)
     )
     validation_efficacy_route = str(validation_efficacy_audit.get("route") or "")
+    construction_risk_audit = dict(
+        validation.get("construction_risk_audit") or build_construction_risk_audit(validation)
+    )
     backtest_realism_audit = dict(validation.get("backtest_realism_audit") or build_backtest_realism_audit(validation))
     backtest_realism_route = str(backtest_realism_audit.get("route") or "")
     source_chain = {
@@ -826,6 +830,7 @@ def build_investability_evidence_packet(
         "assumptions_and_limits": assumptions,
         "validation_efficacy_audit": validation_efficacy_audit,
         "data_coverage_audit": data_coverage_audit,
+        "construction_risk_audit": construction_risk_audit,
         "backtest_realism_audit": backtest_realism_audit,
         "summary": {
             "pass": int(status_counts.get("PASS", 0) or 0),
@@ -838,6 +843,7 @@ def build_investability_evidence_packet(
             "gate_policy_outcome": gate_policy.get("outcome"),
             "validation_efficacy_route": validation_efficacy_audit.get("route"),
             "data_coverage_route": data_coverage_audit.get("route"),
+            "construction_risk_route": construction_risk_audit.get("route"),
             "backtest_realism_route": backtest_realism_audit.get("route"),
         },
     }
@@ -970,6 +976,9 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
         risk_snapshot.get("validation_efficacy_audit") or packet.get("validation_efficacy_audit") or {}
     )
     data_coverage = dict(risk_snapshot.get("data_coverage_audit") or packet.get("data_coverage_audit") or {})
+    construction_risk = dict(
+        risk_snapshot.get("construction_risk_audit") or packet.get("construction_risk_audit") or {}
+    )
     backtest_realism = dict(risk_snapshot.get("backtest_realism_audit") or packet.get("backtest_realism_audit") or {})
     _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
     _append_check_rows(display_rows, area="Investability Packet", checks=list(packet.get("checks") or []))
@@ -977,6 +986,7 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
     _append_check_rows(display_rows, area="Validation Efficacy", checks=list(validation_efficacy.get("rows") or []))
     _append_check_rows(display_rows, area="Data Coverage", checks=list(data_coverage.get("rows") or []))
+    _append_check_rows(display_rows, area="Construction Risk", checks=list(construction_risk.get("rows") or []))
     _append_check_rows(display_rows, area="Backtest Realism", checks=list(backtest_realism.get("rows") or []))
     _append_check_rows(display_rows, area="Look-through Exposure", checks=list(look_through.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness Lab", checks=list(robustness_lab.get("summary_rows") or []))

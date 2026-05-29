@@ -452,6 +452,8 @@ def _build_final_review_decision_row(
             "validation_efficacy_display_rows": list(validation.get("validation_efficacy_display_rows") or []),
             "data_coverage_audit": dict(validation.get("data_coverage_audit") or {}),
             "data_coverage_display_rows": list(validation.get("data_coverage_display_rows") or []),
+            "construction_risk_audit": dict(validation.get("construction_risk_audit") or {}),
+            "construction_risk_display_rows": list(validation.get("construction_risk_display_rows") or []),
             "backtest_realism_audit": dict(validation.get("backtest_realism_audit") or {}),
             "backtest_realism_display_rows": list(validation.get("backtest_realism_display_rows") or []),
             "profile_score_rows": list(validation.get("profile_score_rows") or []),

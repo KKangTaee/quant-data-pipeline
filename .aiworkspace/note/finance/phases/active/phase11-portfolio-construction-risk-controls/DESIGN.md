@@ -19,8 +19,8 @@ Phase 11은 "좋은 component를 조합했는가?"가 아니라 "조합 결과�
 | Layer | Purpose | Initial Source |
 | --- | --- | --- |
 | Source map | 현재 concentration / overlap / correlation / risk contribution evidence가 어디에 있는지 확인 | Complete: Practical Validation diagnostics, provider context, look-through board, robustness lab, final review gate |
-| Concentration contract | component weight, asset bucket, sector / theme, top holding concentration 확인 | selection source weights, DB holdings / exposure loader |
-| Overlap contract | ETF 내부 top holding / issuer / exposure overlap 확인 | provider holdings / exposure snapshot |
+| Concentration contract | component weight, asset bucket, sector / theme, top holding concentration 확인 | Complete: `construction_risk_audit_v1` |
+| Overlap contract | ETF 내부 top holding / issuer / exposure overlap 확인 | Complete: `construction_risk_audit_v1` provider holdings compact metrics |
 | Risk contribution contract | component return correlation, volatility contribution, drop-one dependency 확인 | result curve / component curve / DB price proxy |
 | Role / weight discipline | hedge / diversifier / growth role과 profile-aware max weight 확인 | proposal source, validation profile, component metadata |
 | Gate policy | selected-route 가능 여부에 construction risk gap 반영 | investability packet / selected-route gate |
@@ -45,6 +45,27 @@ Main gaps:
 
 Implementation order remains 11-2 concentration / overlap / exposure first, then 11-3 correlation / risk contribution, 11-4 role / weight discipline, and 11-5 gate policy.
 
+## 11-2 Contract Result
+
+11-2 added `app/services/backtest_construction_risk_audit.py`.
+
+The new audit reads existing compact evidence:
+
+- active component count, target weight total, max component weight
+- provider look-through board status
+- holdings coverage and exposure coverage
+- top holding weight and top overlap weight
+- dominant asset bucket and unknown exposure
+
+The audit exposes:
+
+- `CONSTRUCTION_RISK_READY`
+- `CONSTRUCTION_RISK_REVIEW`
+- `CONSTRUCTION_RISK_NEEDS_INPUT`
+- `CONSTRUCTION_RISK_BLOCKED`
+
+Provider holdings / exposure absence is not treated as PASS. The contract is displayed in Practical Validation and Final Review, preserved in final decision snapshots, and kept out of selected-route gate enforcement until 11-5.
+
 ## Route Semantics
 
 | State | Meaning |
@@ -67,7 +88,7 @@ Implementation order remains 11-2 concentration / overlap / exposure first, then
 - `finance/loaders/provider.py`: holdings / exposure source 확인 후보
 - `tests/test_service_contracts.py`: service contract 고정
 
-11-1 source map result: first code change should start with a read-only concentration / overlap / exposure contract that reuses existing provider look-through evidence.
+11-2 result: the first code change is complete. Next code change should start with correlation / risk contribution contract wrapping existing component return matrix evidence.
 
 ## Data Boundary
 

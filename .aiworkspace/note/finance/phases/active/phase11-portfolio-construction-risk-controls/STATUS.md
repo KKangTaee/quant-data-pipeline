@@ -5,7 +5,7 @@ Created: 2026-05-29
 
 ## Current State
 
-Phase 11 source map is complete.
+Phase 11 concentration / overlap / exposure contract is complete.
 
 Completed:
 
@@ -13,20 +13,23 @@ Completed:
 - Phase scope, task split, storage boundary, immediate next task 정리
 - 11-1 `construction-risk-source-map-v1`
 - Current Practical Validation / provider look-through / Robustness Lab / Final Review gate source map and gap audit
+- 11-2 `concentration-overlap-exposure-contract-v1`
+- Read-only Construction Risk Audit V1 for component weight concentration, provider look-through coverage, top holding, holdings overlap, and asset bucket exposure
 
 Next:
 
-- 11-2 `concentration-overlap-exposure-contract-v1`
+- 11-3 `correlation-risk-contribution-contract-v1`
 
 ## Latest Decision
 
-11-1 결과, data source 자체보다 ownership과 gate visibility가 더 큰 gap이다.
-concentration / overlap / exposure는 이미 Practical Validation diagnostics와 provider look-through board에 존재한다.
-다음 구현은 새 저장 기능이 아니라 기존 compact evidence를 읽는 read-only Construction Risk Audit contract부터 시작한다.
+11-2 implemented `construction_risk_audit_v1` as a read-only contract.
+Provider holdings / exposure missing or partial evidence does not become `PASS`.
+The audit is visible in Practical Validation and Final Review, and Final Review snapshots preserve it.
+Selected-route gate enforcement remains 11-5 scope.
 
 Immediate next task:
 
-- `concentration-overlap-exposure-contract-v1`
+- `correlation-risk-contribution-contract-v1`
 
 ## Storage Boundary Reminder
 

@@ -17,13 +17,18 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `concentration-overlap-exposure-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `correlation-risk-contribution-contract-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/concentration-overlap-exposure-contract-v1/`.
+- Added read-only `construction_risk_audit_v1` for component weight concentration, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure.
+- Practical Validation and Final Review now display the Construction Risk Audit and preserve it in final decision snapshots; selected-route gate enforcement remains 11-5 scope.
+- Verification passed: targeted py_compile, `ConstructionRiskAuditContractTests` 3 tests, and full `tests.test_service_contracts` 101 tests.
+- Next task is `correlation-risk-contribution-contract-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/construction-risk-source-map-v1/`.
 - Source map confirmed existing Practical Validation diagnostics, provider look-through board, Robustness Lab sensitivity, and Final Review gate can seed Phase 11 without new storage.
 - Main gap is ownership / selected-route visibility: construction risk is currently split across provider coverage and stress robustness evidence.

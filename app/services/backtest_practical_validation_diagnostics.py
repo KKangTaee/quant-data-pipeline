@@ -15,6 +15,7 @@ from app.services.backtest_data_coverage_audit import (
     build_data_coverage_audit,
     build_db_data_coverage_context,
 )
+from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_practical_validation_curve_context import (
     _combine_component_curves,
     _format_date,
@@ -1653,6 +1654,9 @@ def build_practical_validation_result(
     data_coverage_audit = build_data_coverage_audit(result)
     result["data_coverage_audit"] = data_coverage_audit
     result["data_coverage_display_rows"] = list(data_coverage_audit.get("rows") or [])
+    construction_risk_audit = build_construction_risk_audit(result)
+    result["construction_risk_audit"] = construction_risk_audit
+    result["construction_risk_display_rows"] = list(construction_risk_audit.get("rows") or [])
     backtest_realism_audit = build_backtest_realism_audit(result)
     result["backtest_realism_audit"] = backtest_realism_audit
     result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])

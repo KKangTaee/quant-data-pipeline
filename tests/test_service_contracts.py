@@ -204,6 +204,7 @@ import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
 import app.runtime.backtest_result_bundle
+import app.services.backtest_construction_risk_audit
 import app.services.backtest_data_coverage_audit
 import app.services.backtest_realism_audit
 import app.services.backtest_evidence_read_model
@@ -249,6 +250,7 @@ import importlib.util
 import sys
 import app.services.backtest_data_coverage_audit
 import app.services.backtest_realism_audit
+import app.services.backtest_construction_risk_audit
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
@@ -268,6 +270,121 @@ print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors
         )
 
         self.assertEqual(result.stdout.splitlines(), ["False", "True", "True"])
+
+
+class ConstructionRiskAuditContractTests(unittest.TestCase):
+    def _validation_with_board(self, board: dict) -> dict:
+        return {
+            "validation_profile": {
+                "profile_id": "balanced_core",
+                "thresholds": {"max_weight_review": 75.0},
+            },
+            "metrics": {
+                "active_components": 2,
+                "weight_total": 100.0,
+                "max_weight": 60.0,
+            },
+            "diagnostic_results": [
+                {
+                    "domain": "concentration_overlap_exposure",
+                    "status": "PASS",
+                    "summary": "component concentration and provider look-through available",
+                }
+            ],
+            "provider_coverage": {
+                "look_through_board": board,
+            },
+        }
+
+    def test_ready_audit_uses_provider_look_through_without_writes(self) -> None:
+        from app.services.backtest_construction_risk_audit import (
+            CONSTRUCTION_RISK_READY,
+            build_construction_risk_audit,
+        )
+
+        audit = build_construction_risk_audit(
+            self._validation_with_board(
+                {
+                    "schema_version": "look_through_board_v1",
+                    "status": "PASS",
+                    "summary": "Provider look-through board status PASS.",
+                    "holdings_coverage_weight": 100.0,
+                    "exposure_coverage_weight": 100.0,
+                    "top_holding_weight": 3.5,
+                    "top_overlap_weight": 2.0,
+                    "dominant_asset_bucket": "equity",
+                    "dominant_asset_weight": 60.0,
+                    "unknown_exposure_weight": 0.0,
+                }
+            )
+        )
+
+        self.assertEqual(audit["route"], CONSTRUCTION_RISK_READY)
+        self.assertEqual(audit["source_strength"], "provider_backed")
+        self.assertEqual(audit["metrics"]["pass"], 6)
+        self.assertEqual(audit["metrics"]["holdings_coverage_weight"], 100.0)
+        self.assertFalse(audit["execution_boundary"]["db_write"])
+        self.assertFalse(audit["execution_boundary"]["registry_write"])
+        self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_missing_provider_coverage_is_not_ready_even_with_proxy_diagnostic(self) -> None:
+        from app.services.backtest_construction_risk_audit import (
+            CONSTRUCTION_RISK_NEEDS_INPUT,
+            build_construction_risk_audit,
+        )
+
+        audit = build_construction_risk_audit(
+            {
+                "metrics": {
+                    "active_components": 2,
+                    "weight_total": 100.0,
+                    "max_weight": 50.0,
+                },
+                "diagnostic_results": [
+                    {
+                        "domain": "concentration_overlap_exposure",
+                        "status": "PASS",
+                        "summary": "proxy concentration did not exceed threshold",
+                    }
+                ],
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], CONSTRUCTION_RISK_NEEDS_INPUT)
+        self.assertEqual(audit["source_strength"], "proxy_only")
+        self.assertEqual(rows_by_criteria["Provider look-through coverage"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Top holding concentration"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Asset bucket exposure"]["Status"], "NEEDS_INPUT")
+
+    def test_top_holding_overlap_and_unknown_exposure_trigger_review(self) -> None:
+        from app.services.backtest_construction_risk_audit import (
+            CONSTRUCTION_RISK_REVIEW,
+            build_construction_risk_audit,
+        )
+
+        audit = build_construction_risk_audit(
+            self._validation_with_board(
+                {
+                    "schema_version": "look_through_board_v1",
+                    "status": "PASS",
+                    "summary": "Provider look-through board status PASS.",
+                    "holdings_coverage_weight": 100.0,
+                    "exposure_coverage_weight": 100.0,
+                    "top_holding_weight": 30.0,
+                    "top_overlap_weight": 22.0,
+                    "dominant_asset_bucket": "equity",
+                    "dominant_asset_weight": 70.0,
+                    "unknown_exposure_weight": 4.0,
+                }
+            )
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], CONSTRUCTION_RISK_REVIEW)
+        self.assertEqual(rows_by_criteria["Top holding concentration"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Holdings overlap"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Asset bucket exposure"]["Status"], "REVIEW")
 
 
 class ValidationEfficacyAuditContractTests(unittest.TestCase):

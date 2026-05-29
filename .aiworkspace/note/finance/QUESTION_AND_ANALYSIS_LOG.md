@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `concentration-overlap-exposure-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `correlation-risk-contribution-contract-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Construction risk audit V1 covers concentration / overlap / exposure
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-2로 provider look-through evidence를 read-only Construction Risk Audit contract로 묶는다.
+- Analysis result:
+  - `construction_risk_audit_v1` now reads component max weight, provider holdings / exposure coverage, top holding, top overlap, dominant asset, and unknown exposure.
+  - Missing or partial provider holdings / exposure does not become `PASS`; it remains `NEEDS_INPUT` or `REVIEW`.
+  - Practical Validation and Final Review display the audit, and final decision snapshots preserve it without adding JSONL registry, user memo, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `correlation-risk-contribution-contract-v1`로 component return correlation / risk contribution evidence를 construction risk 관점으로 분리한다.
 
 ### 2026-05-29 - Phase 11 source map chooses concentration / overlap first
 - User request:

@@ -18,6 +18,7 @@ Created: 2026-05-29
 
 - holdings / exposure snapshot coverage는 후보마다 달라질 수 있으므로 11-2에서 partial / missing provider evidence를 `PASS`로 올리지 않아야 한다.
 - current concentration / exposure proxy는 fallback으로만 써야 하며, source strength를 row에 표시해야 한다.
+- 11-2는 완료됐고, provider missing / partial evidence는 `CONSTRUCTION_RISK_NEEDS_INPUT` 또는 `CONSTRUCTION_RISK_REVIEW`로 남긴다.
 - component curve가 없는 후보는 11-3 risk contribution에서 `NEEDS_INPUT` 또는 `REVIEW`로 남겨야 한다.
 - component role metadata의 canonical source는 아직 없으므로 11-4에서 먼저 결정해야 한다.
 - Final Review gate group은 11-5까지 `provider_coverage` / `stress_robustness`에 흩어져 있으므로 construction risk ownership을 명확히 해야 한다.
