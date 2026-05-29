@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 backtest realism gate policy refinement
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 integrated QA / closeout
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Backtest realism gate policy surfaces row-level gaps
+- User request:
+  - Phase 9 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 9에서 추가한 Backtest Realism row-level gap이 Final Review selected-route gate에서 의도한 severity와 evidence로 보이게 한다.
+- Analysis result:
+  - `build_investability_gate_policy()`가 failing Backtest Realism Audit row criteria를 `backtest_realism` policy evidence에 병합한다.
+  - cost / slippage sensitivity와 liquidity row-level REVIEW는 review-required, NEEDS_INPUT은 blocker severity로 고정했다.
+  - 이 작업은 read-only gate evidence refinement이며 새 JSONL, memo, preset, waiver persistence, approval, order, auto rebalance를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `phase9-integrated-qa-closeout`으로 Phase 9 전체 통합 검증과 Phase 10 handoff를 정리한다.
 
 ### 2026-05-29 - Cost / slippage sensitivity requires explicit evidence
 - User request:

@@ -17,13 +17,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 backtest realism gate policy refinement
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 integrated QA / closeout
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-refinement-v1/`.
+- Final Review gate policy now surfaces failing Backtest Realism row criteria, including cost / slippage sensitivity and liquidity gaps, in selected-route evidence.
+- Row-level `NEEDS_INPUT` maps to blocker severity and `REVIEW` maps to review-required; no waiver, memo, preset, approval, order, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/cost-slippage-sensitivity-audit-v1/`.
 - Backtest Realism Audit now reads `cost_slippage_sensitivity_contract_v1` and shows a separate cost / slippage sensitivity row.
 - Explicit cost / slippage sensitivity can PASS; generic robustness-only sensitivity stays REVIEW, and missing cost / net curve baseline stays NEEDS_INPUT.

@@ -13,18 +13,18 @@ Created: 2026-05-29
 | 9-3 | `net-cost-curve-application-v1` | `finance-strategy-implementation` | prove when transaction cost is actually reflected in net result curve | Complete |
 | 9-4 | `liquidity-capacity-evidence-v1` | `finance-backtest-web-workflow` + `finance-db-pipeline` | DB provider / price based liquidity and capacity evidence refinement | Complete |
 | 9-5 | `cost-slippage-sensitivity-audit-v1` | `finance-backtest-web-workflow` | read-only cost / slippage sensitivity rows in Backtest Realism Audit | Complete |
-| 9-6 | `backtest-realism-gate-policy-refinement-v1` | `finance-backtest-web-workflow` | selected-route policy treatment for cost / liquidity gaps | Pending |
+| 9-6 | `backtest-realism-gate-policy-refinement-v1` | `finance-backtest-web-workflow` | selected-route policy treatment for cost / liquidity gaps | Complete |
 | 9-7 | `phase9-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Pending |
 
 ## Immediate Next Task
 
-`backtest-realism-gate-policy-refinement-v1`
+`phase9-integrated-qa-closeout`
 
 Goal:
 
-- Backtest Realism Audit의 cost / net curve / turnover / sensitivity / liquidity gap이 Final Review selected-route gate에서 의도한 severity로 처리되는지 확인한다.
-- `BACKTEST_REALISM_NEEDS_INPUT` / `BLOCKED`는 selected-route blocker, `REVIEW`는 review-required로 남기는 현재 정책이 Phase 9 보강 후에도 충분한지 contract test로 고정한다.
-- gate policy refinement도 read-only evidence interpretation으로 진행하고, live approval / order / auto rebalance로 확장하지 않는다.
+- Phase 9 전체 cost / slippage / turnover / liquidity realism 변경을 통합 검증한다.
+- Backtest Realism Audit, Final Review gate policy, docs, storage boundary를 마지막으로 점검한다.
+- 1차 hardening cycle 다음 Phase 10 handoff에 필요한 남은 risk와 follow-up을 정리한다.
 
 Out of scope:
 

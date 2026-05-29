@@ -76,6 +76,15 @@ Created: 2026-05-29
 - Explicit cost / slippage sensitivity can PASS, generic robustness-only sensitivity stays `REVIEW`, and missing cost / net curve baseline stays `NEEDS_INPUT`.
 - Follow-up integration risk: selected-route gate policy should be checked against the new row in Phase 9-6.
 
+### backtest-realism-gate-policy-refinement-v1
+
+- Touched:
+  - `app/services/backtest_evidence_read_model.py`
+  - `tests/test_service_contracts.py`
+- Final Review gate policy now merges failing Backtest Realism row criteria into the `backtest_realism` policy row evidence.
+- Cost / slippage sensitivity and liquidity row-level gaps are visible in selected-route gate evidence.
+- Row-level `NEEDS_INPUT` maps to blocker severity and `REVIEW` maps to review-required without adding waiver, memo, or live execution behavior.
+
 ## Verification Plan
 
 - `git diff --check`

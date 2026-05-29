@@ -3675,6 +3675,109 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             )
         )
 
+    def test_gate_policy_surfaces_cost_slippage_and_liquidity_review_rows(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["backtest_realism_audit"] = {
+            "route": "BACKTEST_REALISM_REVIEW",
+            "route_label": "Review Required",
+            "rows": [
+                {
+                    "Criteria": "Cost / slippage sensitivity evidence",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "generic robustness only",
+                    "Meaning": "cost / slippage axis is missing",
+                    "Next Action": "비용 bps / spread / slippage 축의 sensitivity evidence를 확인합니다.",
+                },
+                {
+                    "Criteria": "Liquidity / operability evidence",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "weak_source_or_proxy_liquidity_evidence",
+                    "Meaning": "fresh official capacity evidence missing",
+                },
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "backtest-realism-sensitivity-review"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "backtest_realism"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "REVIEW_REQUIRED")
+        self.assertIn("Cost / slippage sensitivity evidence", policy_row["Evidence"])
+        self.assertIn("Liquidity / operability evidence", policy_row["Evidence"])
+
+    def test_gate_policy_blocks_selected_route_on_cost_slippage_sensitivity_needs_input(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["backtest_realism_audit"] = {
+            "route": "BACKTEST_REALISM_NEEDS_INPUT",
+            "route_label": "Realism Input Needed",
+            "rows": [
+                {
+                    "Criteria": "Cost / slippage sensitivity evidence",
+                    "Status": "NEEDS_INPUT",
+                    "Ready": False,
+                    "Current": "cost=- / net=missing_net_cost_curve_proof",
+                    "Meaning": "cost input or net cost curve proof missing",
+                    "Next Action": "거래비용 입력과 net cost curve proof를 먼저 보강합니다.",
+                }
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "backtest-realism-sensitivity-gap"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "backtest_realism"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "BLOCK")
+        self.assertIn("Cost / slippage sensitivity evidence", policy_row["Evidence"])
+        self.assertIn("NEEDS_INPUT", policy_row["Current"])
+
     def test_gate_policy_blocks_selected_route_on_provider_review_for_balanced_profile(self) -> None:
         from app.services.backtest_evidence_read_model import (
             SELECT_FOR_PRACTICAL_PORTFOLIO,

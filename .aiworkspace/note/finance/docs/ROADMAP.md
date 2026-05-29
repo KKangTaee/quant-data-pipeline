@@ -8,6 +8,7 @@ Last Verified: 2026-05-29
 | Track | Status | Notes |
 |---|---|---|
 | Phase 9 Cost / Slippage / Liquidity Realism | Active | `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`; cost / slippage / turnover / liquidity / capacity evidence를 Backtest Realism과 selected-route 판단에 연결 |
+| Backtest Realism Gate Policy Refinement V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-refinement-v1/`; Backtest Realism row-level gaps를 Final Review selected-route gate evidence에 연결 |
 | Cost Slippage Sensitivity Audit V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/cost-slippage-sensitivity-audit-v1/`; Backtest Realism Audit `cost_slippage_sensitivity_contract_v1`과 별도 sensitivity row 연결 |
 | Liquidity Capacity Evidence V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/liquidity-capacity-evidence-v1/`; provider operability context의 compact capacity metrics와 Backtest Realism Audit `liquidity_capacity_contract_v1` 연결 |
 | Net Cost Curve Application V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/net-cost-curve-application-v1/`; gross / net / estimated cost curve proof를 runtime metadata, source snapshot, Backtest Realism Audit row로 연결 |
@@ -116,5 +117,5 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 9 is active. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`은 완료됐다. 다음 task는 `backtest-realism-gate-policy-refinement-v1`로 Phase 9 보강 후 selected-route gate severity를 고정한다.
+- Phase 9 is active. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`, `backtest-realism-gate-policy-refinement-v1`은 완료됐다. 다음 task는 `phase9-integrated-qa-closeout`으로 통합 검증과 Phase 10 handoff를 정리한다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

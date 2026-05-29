@@ -55,7 +55,7 @@ Backtest Realism Audit과 selected-route gate가 비용 / 회전율 / 유동성 
 | 9-3 | Net cost curve application proof | Complete |
 | 9-4 | Liquidity / capacity evidence refinement | Complete |
 | 9-5 | Cost / slippage sensitivity audit | Complete |
-| 9-6 | Backtest Realism gate policy refinement | Pending |
+| 9-6 | Backtest Realism gate policy refinement | Complete |
 | 9-7 | Phase 9 integrated QA / closeout | Pending |
 
 ## Done Criteria

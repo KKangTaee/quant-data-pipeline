@@ -242,7 +242,7 @@ def _policy_severity(
     review_groups: set[str],
 ) -> str:
     normalized = str(status or "").upper()
-    if normalized in {"BLOCKED", "BLOCK", "NOT_RUN"}:
+    if normalized in {"BLOCKED", "BLOCK", "NOT_RUN", "NEEDS_INPUT", "MISSING"}:
         return "BLOCK" if group in critical_groups else "REVIEW_REQUIRED"
     if normalized == "REVIEW":
         if group in critical_groups:
@@ -310,6 +310,53 @@ def _merge_policy_state(
         state["evidence"].append(evidence_text)
     if required_action:
         state["required_action"] = required_action
+
+
+def _merge_audit_rows_into_policy(
+    states: dict[str, dict[str, Any]],
+    *,
+    audit: dict[str, Any],
+    group: str,
+    critical_groups: set[str],
+    review_groups: set[str],
+) -> None:
+    for raw_row in _as_list(dict(audit or {}).get("rows")):
+        if not isinstance(raw_row, dict):
+            continue
+        row = dict(raw_row or {})
+        raw_status = row.get("Status") or row.get("status")
+        status = str(raw_status or "").strip().upper()
+        if not status and not _ready_from_check(row):
+            status = _policy_status_from_current(
+                ready=False,
+                current=row.get("Current") or row.get("current") or "-",
+            )
+        if status in {"", "PASS", "OK", "READY"}:
+            continue
+        severity = _policy_severity(
+            group=group,
+            status=status,
+            critical_groups=critical_groups,
+            review_groups=review_groups,
+        )
+        criteria = _safe_text(row.get("Criteria") or row.get("criteria"), "Audit row")
+        evidence = _safe_text(
+            row.get("Meaning")
+            or row.get("Evidence")
+            or row.get("evidence")
+            or row.get("Current")
+            or row.get("current"),
+            "audit evidence gap",
+        )
+        current = _safe_text(row.get("Current") or row.get("current") or status)
+        _merge_policy_state(
+            states,
+            group=group,
+            severity=severity,
+            current=f"{criteria}: {status} / {current}",
+            evidence=f"{criteria}: {evidence}",
+            required_action=row.get("Next Action") or row.get("Required Action") or GATE_POLICY_GROUP_ACTIONS.get(group),
+        )
 
 
 def build_investability_gate_policy(
@@ -403,6 +450,13 @@ def build_investability_gate_policy(
             evidence=gap_row.get("Gap") or gap_row.get("Area"),
             required_action=gap_row.get("Required Action") or GATE_POLICY_GROUP_ACTIONS.get(group),
         )
+    _merge_audit_rows_into_policy(
+        states,
+        audit=dict(validation.get("backtest_realism_audit") or {}),
+        group="backtest_realism",
+        critical_groups=critical_groups,
+        review_groups=review_groups,
+    )
     if decision_evidence.get("route") not in {"READY_FOR_FINAL_DECISION", None, ""}:
         _merge_policy_state(
             states,

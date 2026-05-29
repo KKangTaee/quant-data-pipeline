@@ -13,9 +13,17 @@ Created: 2026-05-29
 - [x] Net cost curve application proof complete.
 - [x] Liquidity / capacity evidence refinement complete.
 - [x] Cost / slippage sensitivity audit complete.
-- [ ] Backtest Realism gate policy refinement not started.
+- [x] Backtest Realism gate policy refinement complete.
+- [ ] Phase 9 integrated QA / closeout not started.
 
 ## Latest Update
+
+2026-05-29:
+
+- `backtest-realism-gate-policy-refinement-v1` completed.
+- Final Review gate policy now merges failing Backtest Realism row-level evidence into the `backtest_realism` policy row.
+- Cost / slippage sensitivity and liquidity gaps are visible in selected-route gate evidence; row-level `NEEDS_INPUT` maps to blocker severity and `REVIEW` maps to review-required.
+- No new JSONL registry, user memo, preset, waiver persistence, approval, order, or auto rebalance behavior was added.
 
 2026-05-29:
 
@@ -60,5 +68,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `backtest-realism-gate-policy-refinement-v1`.
-- Confirm selected-route gate behavior after the new cost / slippage sensitivity row: NEEDS_INPUT / BLOCKED should block selection, REVIEW should require explicit review before selection.
+- Start `phase9-integrated-qa-closeout`.
+- Run integrated service contracts and close Phase 9 with residual risks / Phase 10 handoff.
