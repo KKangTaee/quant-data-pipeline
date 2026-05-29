@@ -1,5 +1,8 @@
 # Web Backtest UI Flow
 
+Status: Active
+Last Verified: 2026-05-30
+
 ## 목적
 
 이 문서는 Streamlit Backtest 화면의 single strategy, compare, candidate review, Pre-Live 운영 기록, portfolio proposal, final review, Operations-owned backtest history, Candidate Library, saved weighted portfolio 흐름을 설명한다.
@@ -206,7 +209,7 @@ Backtest workflow는 Final Review에서 끝나고,
 
 ```text
 Backtest > Final Review
-  -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl
+  -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl
   -> Operations > Selected Portfolio Dashboard
 ```
 
@@ -222,7 +225,7 @@ Backtest > Final Review
 
 데이터 기준:
 
-- source-of-truth: `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+- source-of-truth: `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`
 - selected filter:
   - `decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO`
   - 또는 `selected_practical_portfolio == true`
@@ -795,7 +798,7 @@ Current Candidate 또는 Saved Portfolio Proposal
      -> 별도 Save Paper Tracking Ledger 없이 최종 검토 기록 안에 포함
   -> 5. 최종 판단 및 테스트 검증
      -> 최종 검토 결과 기록
-     -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
+     -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl append
   -> 6. 기록된 최종 검토 결과 확인
      -> Phase35 handoff inspect
 ```
@@ -809,7 +812,7 @@ Current Candidate 또는 Saved Portfolio Proposal
 - `Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았다는 뜻이다.
 - Paper Observation은 별도 ledger 저장 버튼으로 노출하지 않고, benchmark / review cadence / trigger / baseline을 최종 검토 기록 안에 포함한다.
 - Candidate Review와 Portfolio Proposal의 판단 field는 준비 기록이고, Final Review의 `최종 판단`만 실전 후보 선정 / 보류 / 거절 / 재검토를 명시하는 주 decision surface다.
-- `최종 검토 결과 기록`은 `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
+- `최종 검토 결과 기록`은 `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
 - Final Review 기록은 `최종 판단 완료` 기록이지 live approval, broker order, 자동매매 지시가 아니다.
 
 ## Final Review 완료 흐름

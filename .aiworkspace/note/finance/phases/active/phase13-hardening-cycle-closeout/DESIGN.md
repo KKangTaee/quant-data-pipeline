@@ -72,7 +72,7 @@ The inventory is stored at `.aiworkspace/note/finance/tasks/active/phase13-cycle
 The QA matrix is stored at `.aiworkspace/note/finance/tasks/active/phase13-gate-validation-qa-matrix-v1/QA_MATRIX.md`.
 No immediate code defect was identified.
 
-## Next Review Task
+## Storage Audit Output
 
 `phase13-storage-data-boundary-audit-v1` verified:
 
@@ -85,11 +85,23 @@ No immediate code defect was identified.
 The audit is stored at `.aiworkspace/note/finance/tasks/active/phase13-storage-data-boundary-audit-v1/STORAGE_AUDIT.md`.
 No immediate code defect was identified.
 
-## Next Review Task
+## Docs / Runbook Alignment Output
 
-`phase13-docs-runbook-alignment-v1` should align:
+`phase13-docs-runbook-alignment-v1` aligned:
 
 - docs index / roadmap current focus
 - storage governance and relevant runbook references
 - phase handoff state for residual risk triage and final closeout
 - durable explanation of runtime-defined JSONL paths versus present local files
+
+The alignment matrix is stored at `.aiworkspace/note/finance/tasks/active/phase13-docs-runbook-alignment-v1/DOC_ALIGNMENT.md`.
+The repeatable QA procedure is stored at `.aiworkspace/note/finance/docs/runbooks/PHASE_CLOSEOUT_QA.md`.
+
+## Next Review Task
+
+`phase13-residual-risk-carry-forward-v1` should separate:
+
+- current limitations that remain true after 1차 cycle
+- second-cycle implementation candidates
+- explicit out-of-scope broker-grade / production operations items
+- anything that must be stated carefully in 13-6 final closeout

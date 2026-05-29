@@ -8,8 +8,8 @@ Created: 2026-05-29
 1. 13-1 Phase 8~12 improvement inventory: Complete
 2. 13-2 Gate / validation QA matrix: Complete
 3. 13-3 Storage / data boundary audit: Complete
-4. 13-4 Docs / runbook alignment: Next
-5. 13-5 Residual risk / carry-forward triage: Pending
+4. 13-4 Docs / runbook alignment: Complete
+5. 13-5 Residual risk / carry-forward triage: Next
 6. 13-6 integrated QA / final closeout: Pending
 
 ## Expected Touch Points

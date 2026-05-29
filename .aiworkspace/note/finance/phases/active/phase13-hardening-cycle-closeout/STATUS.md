@@ -17,10 +17,12 @@ Completed:
 - Practical Validation / Final Review / Selected Dashboard gate QA matrix complete; full service contracts passed, 126 tests
 - 13-3 `phase13-storage-data-boundary-audit-v1`
 - DB-backed data, workflow JSONL compact evidence, saved setup, generated artifacts, and Selected Dashboard read-only boundaries audited; no immediate code defect found
+- 13-4 `phase13-docs-runbook-alignment-v1`
+- Durable data / flow / glossary docs and Phase Closeout QA runbook aligned with Phase 13 inventory, QA matrix, and storage audit
 
 Next:
 
-- 13-4 `phase13-docs-runbook-alignment-v1`
+- 13-5 `phase13-residual-risk-carry-forward-v1`
 
 ## Latest Decision
 
@@ -29,7 +31,7 @@ It should close Phase 8~12 into a coherent product / validation state before any
 
 Immediate next target:
 
-- `phase13-docs-runbook-alignment-v1`
+- `phase13-residual-risk-carry-forward-v1`
 
 ## Storage Boundary Reminder
 

@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-docs-runbook-alignment-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-residual-risk-carry-forward-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-30 - Phase 13 docs and runbooks align with current boundaries
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-4로 13-1 inventory, 13-2 gate QA, 13-3 storage audit 결과를 durable docs와 runbook에 맞춘다.
+- Analysis result:
+  - Current user flow docs now identify `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` as the selected dashboard source, while legacy V1 remains history / compatibility.
+  - Storage docs clarify runtime-defined JSONL paths, DB-backed full evidence, workflow compact evidence, saved setup, generated artifacts, and selected monitoring read-only boundaries.
+  - Added a reusable Phase Closeout QA runbook for future phase/task verification and artifact hygiene.
+- Follow-up:
+  - 다음 task는 `phase13-residual-risk-carry-forward-v1`로 남은 limitations, second-cycle candidates, and out-of-scope broker-grade items를 분리한다.
 
 ### 2026-05-30 - Phase 13 storage boundary audit finds no drift
 - User request:

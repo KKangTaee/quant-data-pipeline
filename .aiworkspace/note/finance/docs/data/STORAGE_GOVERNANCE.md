@@ -1,7 +1,7 @@
 # Finance Storage Governance
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-30
 
 ## Purpose
 
@@ -35,6 +35,18 @@ Last Verified: 2026-05-28
 | `.aiworkspace/note/finance/run_artifacts/` | Generated job result artifacts | Local/generated unless promoted to a report. |
 | `.aiworkspace/note/finance/reports/backtests/` | Human-readable strategy / validation / decision reports | Reports may cite evidence, but do not replace registries. |
 | MySQL finance DBs | Provider, holdings, exposure, macro, price, factor data | Source-of-truth for full structured data. |
+
+## Phase 13 Alignment Notes
+
+Phase 13 13-3 rechecked the storage boundary after the Phase 8~12 hardening cycle.
+The current rule is:
+
+- DB-backed collectors may store full structured lifecycle / provider / macro / price evidence.
+- Workflow JSONL stores only compact stage handoff, validation result, and final decision evidence.
+- V2 registry paths are runtime-defined and may not exist locally until the first workflow write. Absence of a runtime-defined file is not drift.
+- `SAVED_PORTFOLIOS.jsonl` and `SAVED_PORTFOLIO_MIXES.jsonl` are reusable setup, not validation / approval / monitoring evidence.
+- Selected Portfolio Dashboard read models do not auto-append monitoring logs, write registry rows, approve trades, create orders, or rebalance.
+- `run_history/*.jsonl`, `run_artifacts/`, `.playwright-mcp/`, and `.DS_Store` are generated / local artifacts and should stay unstaged unless explicitly requested.
 
 ## Legacy Registry Boundary
 

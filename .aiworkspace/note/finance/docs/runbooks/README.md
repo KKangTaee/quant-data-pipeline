@@ -1,7 +1,7 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-05-27
+Last Verified: 2026-05-30
 
 ## Local App
 
@@ -14,6 +14,16 @@ streamlit run app/web/streamlit_app.py
 이미 실행 중인 포트가 있으면 다른 포트를 사용한다.
 
 ## Focused Checks
+
+Phase closeout / docs alignment:
+
+```bash
+git status --short
+git diff --check
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py
+```
+
+자세한 반복 절차는 [Phase Closeout QA Runbook](./PHASE_CLOSEOUT_QA.md)을 본다.
 
 문서 변경:
 
@@ -133,6 +143,10 @@ UI에서 provider / FRED / 웹페이지를 직접 fetch하지 않는다.
 ## Automation Helpers
 
 Repo-local helper script 사용 기준은 [AUTOMATION_SCRIPTS.md](./AUTOMATION_SCRIPTS.md)를 본다.
+
+## Phase Closeout
+
+- [PHASE_CLOSEOUT_QA.md](./PHASE_CLOSEOUT_QA.md): phase / task closeout, docs alignment, service contract, storage artifact hygiene 확인 절차.
 
 ## Templates
 

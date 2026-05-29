@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-30
 
 ## Purpose
 
@@ -54,6 +54,7 @@ Last Verified: 2026-05-28
 
 앱 코드는 이 위치들을 `app/workspace_paths.py`의 canonical path 상수로 읽는다.
 새 registry / saved / run-history helper를 만들 때는 `.note/finance` 경로를 직접 만들지 않는다.
+runtime-defined V2 JSONL 파일은 첫 workflow write 전에는 로컬에 없을 수 있으며, 파일 부재 자체는 저장 경계 drift가 아니다.
 
 ## Data Integrity Rules
 
@@ -63,6 +64,7 @@ Last Verified: 2026-05-28
 - Practical Validation JSONL에는 compact evidence와 reason만 저장하고, full provider raw data는 DB에 둔다.
 - 새 JSONL registry는 기본적으로 만들지 않고, stage handoff나 명시적 reusable setup이 아닌 저장은 피한다.
 - static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
+- Selected Portfolio Dashboard read model은 monitoring log 자동 저장, live approval, broker order, auto rebalance를 수행하지 않는다.
 
 ## Code Flow 문서와의 차이
 

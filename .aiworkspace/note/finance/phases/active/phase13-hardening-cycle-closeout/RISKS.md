@@ -24,4 +24,5 @@ Created: 2026-05-29
 - 13-1 inventory is complete and should now be treated as the source map for QA.
 - 13-2 gate / validation QA matrix found no immediate code defect; service contracts passed, 126 tests.
 - 13-3 storage / data boundary audit found no immediate code defect or task-created registry / saved / run history / run artifact / Playwright output drift.
-- Main remaining risk is now docs / runbook drift: future readers could confuse DB-backed data, runtime-defined JSONL paths, saved setup, reports, and generated artifacts if durable docs are not aligned before closeout.
+- 13-4 docs / runbook alignment updated durable data / flow / glossary docs and added a Phase Closeout QA runbook.
+- Main remaining risk is now closeout overstatement: unresolved broker-grade, optimizer, paid data, production alerting, and statistical validation gaps must be triaged before 13-6 final closeout.
