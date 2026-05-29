@@ -13,15 +13,27 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - no active phase board; next target is Phase 12 board open
+  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/active/phase12-selected-monitoring-recheck-operations/PLAN.md)
 - latest completed phase:
   - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase12-board-open`
+  - no active strategy-search candidate summary in `main-dev`; next work is `selected-monitoring-source-map-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 12 opens for selected monitoring / recheck operations
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 11 closeout 이후 다음 hardening target인 selected monitoring / recheck operations를 공식 phase로 연다.
+- Analysis result:
+  - Phase 12 board를 `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`에 생성했다.
+  - 이번 phase는 Final Review 선정 이후에도 recheck readiness, symbol freshness, provider evidence, timeline, review signals, recheck comparison, optional allocation drift, continuity evidence가 재검토 필요 상태를 숨기지 않도록 정리하는 방향이다.
+  - 새 JSONL registry, automatic monitoring log append, user memo, preset, account integration, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `selected-monitoring-source-map-v1`로 current Selected Portfolio Dashboard / Final Review / runtime source map과 gap을 확인한다.
 
 ### 2026-05-29 - Phase 11 construction risk controls close out
 - User request:

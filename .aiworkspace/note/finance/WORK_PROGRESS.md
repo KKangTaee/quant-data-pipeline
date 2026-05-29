@@ -13,17 +13,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - no active phase board; next target is Phase 12 board open
+  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/active/phase12-selected-monitoring-recheck-operations/PLAN.md)
 - latest completed phase:
   - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase12-board-open`
+  - no active strategy-search candidate summary in `main-dev`; next work is `selected-monitoring-source-map-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Opened `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`.
+- Phase 12 focuses on selected monitoring / recheck operations after Final Review selection.
+- Next task is `selected-monitoring-source-map-v1`; start by mapping current Selected Portfolio Dashboard readiness / freshness / provider / timeline / signal / comparison / drift / continuity sources.
+- No new JSONL registry, automatic monitoring log append, user memo, preset, account integration, approval, order, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/phase11-integrated-qa-closeout/`.
 - Phase 11 closeout summary added at `.aiworkspace/note/finance/phases/done/phase11-portfolio-construction-risk-controls.md`.
 - Integrated verification passed: Phase 11 service / web compile, full `tests.test_service_contracts` 112 tests, UI / engine boundary checker, finance refinement hygiene, and `git diff --check`.
