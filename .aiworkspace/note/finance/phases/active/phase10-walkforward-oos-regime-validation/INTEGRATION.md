@@ -8,8 +8,8 @@ Created: 2026-05-29
 1. 10-1 source map / gap audit
 2. 10-2 walk-forward split contract - complete
 3. 10-3 OOS holdout validation contract - complete
-4. 10-4 regime split validation - next
-5. 10-5 selected-route gate policy refinement
+4. 10-4 regime split validation - complete
+5. 10-5 selected-route gate policy refinement - next
 6. 10-6 integrated QA / closeout
 
 ## Expected Touch Points
@@ -28,6 +28,7 @@ Implementation tasks may touch the following files after 10-1 confirms scope.
 10-1 confirmed that 10-2 should start with service-level temporal validation rather than UI-first changes.
 10-2 added that service helper and connected it to Practical Validation and Validation Efficacy Audit.
 10-3 extended the same helper with OOS holdout evidence and connected it to Practical Validation and Validation Efficacy Audit.
+10-4 extended the helper with DB-backed macro regime split evidence and connected it to Practical Validation and Validation Efficacy Audit.
 
 ## QA Gates
 

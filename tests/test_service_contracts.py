@@ -11,6 +11,36 @@ from unittest.mock import patch
 import pandas as pd
 
 
+def _macro_regime_rows(
+    dates: pd.DatetimeIndex,
+    *,
+    source_type: str = "official",
+    coverage_status: str = "actual",
+) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for idx, date in enumerate(dates):
+        if idx < 24:
+            vix, curve, credit = 15.0, 1.2, 2.0
+        elif idx < 42:
+            vix, curve, credit = 22.0, 0.4, 2.6
+        else:
+            vix, curve, credit = 35.0, -0.2, 3.2
+        for series_id, value in (("VIXCLS", vix), ("T10Y3M", curve), ("BAA10Y", credit)):
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": date,
+                    "source": "fred",
+                    "source_type": source_type,
+                    "source_mode": "csv_download",
+                    "category": "market_context",
+                    "coverage_status": coverage_status,
+                    "value": value,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 class PracticalValidationServiceContractTests(unittest.TestCase):
     def test_source_handoff_without_persistence_is_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation as service
@@ -305,6 +335,18 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
                         "out_sample_drawdown_gap": 0.0,
                     },
                 },
+                "regime_split_validation": {
+                    "status": "PASS",
+                    "summary": "Regime split 3 buckets / 59 months: worst excess 1.00%.",
+                    "metrics": {
+                        "regime_bucket_count": 3,
+                        "common_months": 59,
+                        "stress_regime_months": 36,
+                        "worst_regime_excess_return": 0.01,
+                        "worst_regime_drawdown_gap": 0.0,
+                        "macro_source": "finance.loaders.macro.load_macro_series_observations",
+                    },
+                },
                 "provider_coverage_display_rows": [
                     {"Area": "ETF Operability", "Diagnostic Status": "PASS", "Freshness": "fresh"},
                     {"Area": "ETF Holdings", "Diagnostic Status": "PASS", "Freshness": "fresh"},
@@ -321,7 +363,7 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         )
 
         self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
-        self.assertEqual(audit["metrics"]["pass"], 12)
+        self.assertEqual(audit["metrics"]["pass"], 13)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
@@ -479,6 +521,84 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
             proxy_benchmark,
             portfolio_curve_source="component_curve_weighted_proxy",
             benchmark_curve_source="db_price_proxy",
+            benchmark_parity={"status": "PASS"},
+        )
+
+        self.assertEqual(proxy_evidence["status"], "REVIEW")
+        self.assertTrue(proxy_evidence["metrics"]["proxy_evidence"])
+
+    def test_regime_split_validation_uses_macro_bucket_evidence(self) -> None:
+        from app.services.backtest_temporal_validation import build_regime_split_validation
+
+        dates = pd.date_range("2020-01-31", periods=60, freq="ME")
+        portfolio = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.012 ** idx) for idx in range(len(dates))],
+            }
+        )
+        benchmark = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.006 ** idx) for idx in range(len(dates))],
+            }
+        )
+        macro = _macro_regime_rows(dates)
+
+        evidence = build_regime_split_validation(
+            portfolio,
+            benchmark,
+            macro,
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            macro_source="finance.loaders.macro.load_macro_series_observations",
+            benchmark_parity={"status": "PASS"},
+        )
+
+        self.assertEqual(evidence["schema_version"], "regime_split_validation_contract_v1")
+        self.assertEqual(evidence["status"], "PASS")
+        self.assertEqual(evidence["metrics"]["regime_bucket_count"], 3)
+        self.assertGreaterEqual(evidence["metrics"]["stress_regime_months"], 3)
+        self.assertGreaterEqual(evidence["metrics"]["worst_regime_excess_return"], 0.0)
+        self.assertFalse(evidence["registry_write"])
+        self.assertFalse(evidence["memo_persistence"])
+
+    def test_regime_split_validation_does_not_pass_missing_or_proxy_macro(self) -> None:
+        from app.services.backtest_temporal_validation import build_regime_split_validation
+
+        dates = pd.date_range("2020-01-31", periods=60, freq="ME")
+        portfolio = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.012 ** idx) for idx in range(len(dates))],
+            }
+        )
+        benchmark = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.006 ** idx) for idx in range(len(dates))],
+            }
+        )
+        missing_evidence = build_regime_split_validation(
+            portfolio,
+            benchmark,
+            pd.DataFrame(),
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            macro_source="missing",
+            benchmark_parity={"status": "PASS"},
+        )
+
+        self.assertEqual(missing_evidence["status"], "NEEDS_INPUT")
+
+        proxy_macro = _macro_regime_rows(dates, source_type="computed_proxy", coverage_status="proxy")
+        proxy_evidence = build_regime_split_validation(
+            portfolio,
+            benchmark,
+            proxy_macro,
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            macro_source="computed_proxy_macro",
             benchmark_parity={"status": "PASS"},
         )
 

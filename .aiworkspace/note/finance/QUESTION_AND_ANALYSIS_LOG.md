@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `regime-split-validation-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `validation-efficacy-gate-policy-refinement-v2`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Regime split validation becomes compact audit evidence
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-4로 DB-backed macro history를 사용한 historical regime split evidence를 Practical Validation과 Final Review 판단 경로에 연결한다.
+- Analysis result:
+  - `app/services/backtest_temporal_validation.py`에 `build_regime_split_validation()`을 추가해 VIX / yield curve / credit spread 기반 monthly regime bucket별 portfolio / benchmark excess와 drawdown gap을 compact evidence로 계산한다.
+  - Practical Validation result가 `regime_split_validation` evidence를 가지며, Validation Efficacy Audit이 `Regime split validation` row를 읽는다.
+  - missing / short / proxy-only macro evidence는 `PASS`가 아니라 `NEEDS_INPUT` 또는 `REVIEW`로 남긴다.
+- Follow-up:
+  - 다음 task는 `validation-efficacy-gate-policy-refinement-v2`로 temporal / OOS / regime gap이 selected-route gate policy에 미치는 영향을 정리한다.
 
 ### 2026-05-29 - OOS holdout validation becomes compact audit evidence
 - User request:

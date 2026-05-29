@@ -86,6 +86,8 @@ external source
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
   `macro_series_observation`은 FRED market-context observation을 long-form으로 저장하고,
   `finance/loaders/macro.py`가 validation 기준일 근처 snapshot과 staleness를 읽는다.
+  `regime-split-validation-v1`부터 Practical Validation은 같은 loader의 historical observation read path를 사용해
+  VIX / yield curve / credit spread 월별 regime bucket evidence를 read-only로 계산한다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,
   stale ETF provider snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
   `liquidity-capacity-evidence-v1`부터 provider operability context는 min net assets, min average daily dollar volume, max bid-ask spread, max expense, max premium/discount, review symbols 같은 compact capacity metrics도 제공한다.

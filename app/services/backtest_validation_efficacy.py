@@ -284,6 +284,41 @@ def _oos_holdout_row(validation: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
+def _regime_split_evidence(validation: dict[str, Any]) -> dict[str, Any]:
+    evidence = dict(validation.get("regime_split_validation") or {})
+    if evidence:
+        return evidence
+    curve_evidence = dict(validation.get("curve_evidence") or {})
+    return dict(curve_evidence.get("regime_split_validation") or {})
+
+
+def _regime_split_row(validation: dict[str, Any]) -> dict[str, Any] | None:
+    evidence = _regime_split_evidence(validation)
+    if not evidence:
+        return None
+    metrics = dict(evidence.get("metrics") or {})
+    status = _status(evidence.get("status"), default="NEEDS_INPUT")
+    current = (
+        f"{evidence.get('status') or 'NOT_RUN'} / "
+        f"buckets={metrics.get('regime_bucket_count', '-')} / "
+        f"months={metrics.get('common_months', '-')}"
+    )
+    detail = (
+        f"worst excess={metrics.get('worst_regime_excess_return', '-')} / "
+        f"drawdown gap={metrics.get('worst_regime_drawdown_gap', '-')} / "
+        f"macro={metrics.get('macro_source', '-')}"
+    )
+    return _row(
+        criteria="Regime split validation",
+        status=status,
+        current=current,
+        evidence=evidence.get("summary") or detail,
+        next_action=evidence.get("next_action")
+        or ("추가 조치 없음" if status == "PASS" else "macro history / regime split evidence를 보강합니다."),
+        meaning="macro regime bucket별로 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
+    )
+
+
 def _provider_display_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [dict(row or {}) for row in _as_list(validation.get("provider_coverage_display_rows")) if isinstance(row, dict)]
     if rows:
@@ -514,6 +549,10 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
     oos_row = _oos_holdout_row(validation)
     if oos_row is not None:
         rows.insert(6 if temporal_row is not None else 5, oos_row)
+    regime_row = _regime_split_row(validation)
+    if regime_row is not None:
+        insert_at = 5 + int(temporal_row is not None) + int(oos_row is not None)
+        rows.insert(insert_at, regime_row)
     route = _route_from_rows(rows)
     status_counts = {
         status: sum(1 for row in rows if row.get("Status") == status)

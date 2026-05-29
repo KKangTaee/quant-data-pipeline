@@ -85,6 +85,20 @@ The contract:
 - downgrades missing / short / proxy-only evidence instead of passing it
 - writes no DB rows, no new JSONL registry, no memo, and no preset state
 
+## 10-4 Implemented Contract
+
+`regime-split-validation-v1` extended `app/services/backtest_temporal_validation.py`.
+
+The contract:
+
+- reads DB-backed FRED macro observation history through `finance.loaders.macro.load_macro_series_observations()`
+- classifies monthly macro history into `neutral`, `caution`, and `risk_off` buckets using VIX / yield curve / credit spread thresholds
+- aggregates portfolio and benchmark monthly returns by regime bucket
+- computes bucket excess return and drawdown gap
+- returns compact rows and metrics under `regime_split_validation`
+- downgrades missing / short / proxy-only macro evidence instead of passing it
+- writes no DB rows, no new JSONL registry, no memo, and no preset state
+
 ## User Flow Target
 
 사용자는 기존 흐름을 유지한다.

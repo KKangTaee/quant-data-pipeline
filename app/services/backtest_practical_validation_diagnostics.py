@@ -56,8 +56,13 @@ from app.services.backtest_practical_validation_stress_sensitivity import (
     _stress_window_rows,
     build_robustness_lab_board,
 )
-from app.services.backtest_temporal_validation import build_oos_holdout_validation, build_walkforward_validation
-from finance.loaders import load_price_history
+from app.services.backtest_temporal_validation import (
+    REGIME_MACRO_SERIES,
+    build_oos_holdout_validation,
+    build_regime_split_validation,
+    build_walkforward_validation,
+)
+from finance.loaders import load_macro_series_observations, load_price_history
 
 
 PRIMARY_TICKER_BUCKETS = {
@@ -562,6 +567,18 @@ def _operability_rows(active_components: list[dict[str, Any]], source_period: di
     return rows
 
 
+def _load_macro_regime_history(start: Any, end: Any) -> tuple[pd.DataFrame, str | None]:
+    try:
+        frame = load_macro_series_observations(
+            REGIME_MACRO_SERIES,
+            start=_format_date(start),
+            end=_format_date(end),
+        )
+    except Exception as exc:
+        return pd.DataFrame(), str(exc)
+    return frame if isinstance(frame, pd.DataFrame) else pd.DataFrame(), None
+
+
 def build_practical_validation_result(
     source: dict[str, Any],
     validation_profile: dict[str, Any] | None = None,
@@ -793,6 +810,36 @@ def build_practical_validation_result(
         or dict(curve_context.get("benchmark_meta") or {}).get("status"),
         benchmark_parity=benchmark_parity,
     )
+    macro_history_start = (
+        portfolio_curve["Date"].min()
+        if not portfolio_curve.empty
+        else source_period.get("actual_start") or source_period.get("start")
+    )
+    macro_history_end = (
+        portfolio_curve["Date"].max()
+        if not portfolio_curve.empty
+        else source_period.get("actual_end") or source_period.get("end")
+    )
+    macro_history, macro_history_error = _load_macro_regime_history(macro_history_start, macro_history_end)
+    regime_split_macro_source = (
+        "macro_loader_error"
+        if macro_history_error
+        else "finance.loaders.macro.load_macro_series_observations"
+    )
+    regime_split_validation = build_regime_split_validation(
+        portfolio_curve,
+        benchmark_curve,
+        macro_history,
+        portfolio_curve_source=curve_context.get("portfolio_curve_source"),
+        benchmark_curve_source=dict(curve_context.get("benchmark_meta") or {}).get("source")
+        or dict(curve_context.get("benchmark_meta") or {}).get("status"),
+        macro_source=regime_split_macro_source,
+        benchmark_parity=benchmark_parity,
+    )
+    if macro_history_error:
+        regime_split_validation["limitations"] = list(regime_split_validation.get("limitations") or []) + [
+            f"Macro history loader failed: {macro_history_error}"
+        ]
 
     input_status = "BLOCKED" if hard_blockers else "REVIEW" if review_gaps else "PASS"
     diagnostics: list[dict[str, Any]] = [
@@ -983,6 +1030,16 @@ def build_practical_validation_result(
         regime_rows = list(regime_evidence.get("rows") or [])
         regime_limitations = ["현재는 benchmark recent return/drawdown/vol proxy이며, FRED macro connector data가 없으면 proxy로만 표시합니다."]
         regime_next_action = "Workspace > Ingestion에서 Macro Context Snapshot을 수집합니다."
+    if regime_split_validation.get("status") in {"PASS", "REVIEW"}:
+        regime_summary = f"{regime_summary} Historical split: {regime_split_validation.get('summary')}"
+        regime_metrics = {
+            **regime_metrics,
+            "historical_regime_split": dict(regime_split_validation.get("metrics") or {}),
+        }
+        regime_rows = regime_rows + list(regime_split_validation.get("rows") or [])
+        regime_limitations = regime_limitations + [
+            "Historical regime split은 월별 compact evidence이며 full macro series / raw curve는 workflow JSONL에 저장하지 않습니다."
+        ]
     diagnostics.append(
         _domain_result(
             domain="regime_macro_suitability",
@@ -1420,6 +1477,7 @@ def build_practical_validation_result(
             "data_coverage_context": data_coverage_context,
             "temporal_validation": walkforward_validation,
             "oos_holdout_validation": oos_holdout_validation,
+            "regime_split_validation": regime_split_validation,
         },
         "provider_coverage": provider_context,
         "provider_coverage_display_rows": provider_display_rows,
@@ -1457,6 +1515,7 @@ def build_practical_validation_result(
             "rolling_validation": rolling_evidence.get("metrics") or {},
             "walkforward_validation": dict(walkforward_validation.get("metrics") or {}),
             "oos_holdout_validation": dict(oos_holdout_validation.get("metrics") or {}),
+            "regime_split_validation": dict(regime_split_validation.get("metrics") or {}),
             "runtime_recheck_status": replay_row.get("status") or "NOT_RUN",
             "runtime_recheck_mode": replay_row.get("recheck_mode"),
             "runtime_recheck_extension_days": replay_row.get("extension_days"),
@@ -1562,6 +1621,7 @@ def build_practical_validation_result(
         "temporal_validation": walkforward_validation,
         "walkforward_validation": walkforward_validation,
         "oos_holdout_validation": oos_holdout_validation,
+        "regime_split_validation": regime_split_validation,
         "curve_evidence": {
             "portfolio_curve_source": curve_context.get("portfolio_curve_source"),
             "portfolio_curve_rows": len(portfolio_curve),
@@ -1575,6 +1635,7 @@ def build_practical_validation_result(
             "period_coverage": period_coverage,
             "temporal_validation": walkforward_validation,
             "oos_holdout_validation": oos_holdout_validation,
+            "regime_split_validation": regime_split_validation,
         },
         "final_review_handoff": {
             "route": route,
