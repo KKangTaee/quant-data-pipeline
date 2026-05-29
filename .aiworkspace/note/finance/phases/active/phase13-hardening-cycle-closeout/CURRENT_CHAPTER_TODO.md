@@ -5,13 +5,13 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `phase13-cycle-inventory-v1`
+Next task: `phase13-gate-validation-qa-matrix-v1`
 
 ## TODO
 
-- Build Phase 8~12 improvement inventory.
-- Map each improvement to evidence surface, validation status, and remaining risk.
-- Keep the summary factual: implemented behavior versus carry-forward candidate.
+- Build Practical Validation / Final Review / Selected Dashboard gate QA matrix.
+- Confirm non-PASS states are not treated as pass or hidden behind generic route labels.
+- Use `phase13-cycle-inventory-v1/INVENTORY.md` as the source map.
 - Do not introduce new storage or trading automation.
 
 ## Stop Conditions

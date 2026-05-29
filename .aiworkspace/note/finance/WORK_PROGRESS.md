@@ -13,17 +13,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/active/phase12-selected-monitoring-recheck-operations/PLAN.md)
+  - [Phase 13 First-Cycle Hardening Closeout](./phases/active/phase13-hardening-cycle-closeout/PLAN.md)
 - latest completed phase:
-  - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
+  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `decision-dossier-continuity-operations-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-gate-validation-qa-matrix-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-cycle-inventory-v1/`.
+- Phase 8~12 1차 hardening cycle을 weakness / mitigation / evidence surface / service contract / verification / residual risk inventory로 정리했다.
+- No code, DB schema, new JSONL registry, user memo / preset storage, monitoring log auto-write, account integration, order, approval, or auto rebalance behavior was added.
+- Next task is `phase13-gate-validation-qa-matrix-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/allocation-drift-evidence-boundary-v1/`.
 - Added `selected_allocation_drift_evidence_boundary_v1` and Dashboard boundary display for optional Actual Allocation.
 - Actual Allocation remains manual / session-only evidence with no raw input persistence, alert persistence, monitoring log auto-write, account / broker integration, order, or auto rebalance.

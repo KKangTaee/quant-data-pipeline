@@ -23,7 +23,7 @@ Last Verified: 2026-05-29
 - Latest completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Previous completed phase: [Phase 11 Portfolio Construction Risk Controls](../phases/done/phase11-portfolio-construction-risk-controls.md)
 - Current active phase: [Phase 13 First-Cycle Hardening Closeout](../phases/active/phase13-hardening-cycle-closeout/PLAN.md)
-- Current implementation focus: `phase13-cycle-inventory-v1`.
+- Current implementation focus: `phase13-gate-validation-qa-matrix-v1`.
 
 ## By Purpose
 

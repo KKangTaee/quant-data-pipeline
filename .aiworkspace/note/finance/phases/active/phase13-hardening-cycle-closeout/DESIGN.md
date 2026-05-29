@@ -47,9 +47,9 @@ Phase 13 should not update:
 - generated artifacts
 - finance runtime / UI code unless a QA bug requires a separately scoped implementation task
 
-## First Next Task
+## Inventory Output
 
-`phase13-cycle-inventory-v1` should build a compact matrix:
+`phase13-cycle-inventory-v1` produced a compact matrix:
 
 - original weakness
 - Phase 8~12 mitigation
@@ -57,3 +57,14 @@ Phase 13 should not update:
 - validation / test coverage
 - remaining risk
 - carry-forward owner
+
+The inventory is stored at `.aiworkspace/note/finance/tasks/active/phase13-cycle-inventory-v1/INVENTORY.md`.
+
+## Next Review Task
+
+`phase13-gate-validation-qa-matrix-v1` should use the inventory to verify:
+
+- non-PASS evidence route consistency
+- Practical Validation / Final Review / Selected Dashboard severity consistency
+- selected-route blocker and review-required visibility
+- whether any QA finding should become a separately scoped implementation task

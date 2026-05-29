@@ -13,15 +13,27 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/active/phase12-selected-monitoring-recheck-operations/PLAN.md)
+  - [Phase 13 First-Cycle Hardening Closeout](./phases/active/phase13-hardening-cycle-closeout/PLAN.md)
 - latest completed phase:
-  - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
+  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `decision-dossier-continuity-operations-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-gate-validation-qa-matrix-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 13 inventory sets the QA source map
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-1로 Phase 8~12 1차 hardening cycle이 어떤 약점을 줄였고 무엇을 남겼는지 하나의 inventory로 정리한다.
+- Analysis result:
+  - Phase 8~12는 lifecycle / survivorship, cost / liquidity realism, temporal validation, construction risk, selected monitoring evidence를 순차적으로 보강했다.
+  - 현재 제품은 단순 backtest exploration보다 investability evidence workflow에 가까워졌지만, broker-grade execution, account reconciliation, optimizer, production alerting, auto rebalance는 아직 구현된 기능이 아니다.
+  - No new JSONL registry, user memo / preset storage, monitoring log auto-write, account sync, approval, order, or auto rebalance behavior was added.
+- Follow-up:
+  - 다음 task는 `phase13-gate-validation-qa-matrix-v1`로 Practical Validation / Final Review / Selected Dashboard gate와 severity consistency를 확인한다.
 
 ### 2026-05-29 - Actual allocation drift remains session-only evidence
 - User request:

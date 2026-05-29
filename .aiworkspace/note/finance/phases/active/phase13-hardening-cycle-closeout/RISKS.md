@@ -13,8 +13,14 @@ Created: 2026-05-29
 
 ## Mitigation
 
-- Use a phase-by-phase improvement inventory before writing conclusions.
+- Use the phase-by-phase improvement inventory before writing conclusions.
 - Keep gate / validation QA and storage boundary audit as separate tasks.
 - Mark broker/account/order/auto rebalance as out of scope unless a future phase explicitly approves it.
 - Keep residual risk and second-cycle candidates separate from completed behavior.
 - Use service contracts and hygiene checks as final closeout criteria.
+
+## Current Risk Posture
+
+- 13-1 inventory is complete and should now be treated as the source map for QA.
+- Main remaining risk is gate / severity drift: a non-PASS state could still be displayed too weakly across Practical Validation, Final Review, or Selected Dashboard.
+- Storage boundary still needs a separate 13-3 audit before final closeout.
