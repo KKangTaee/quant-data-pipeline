@@ -13,17 +13,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 13 First-Cycle Hardening Closeout](./phases/active/phase13-hardening-cycle-closeout/PLAN.md)
+  - no active phase; [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md) completed the first hardening cycle
 - latest completed phase:
-  - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
+  - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-integrated-qa-final-closeout`
+  - no active strategy-search candidate summary in `main-dev`; next work requires user-approved second-cycle direction from the Phase 13 carry-forward matrix
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-integrated-qa-final-closeout/`.
+- Phase 13 closeout summary added at `.aiworkspace/note/finance/phases/done/phase13-hardening-cycle-closeout.md`.
+- First hardening cycle is complete as an investability evidence workflow; it is not broker-grade trading, live approval, account sync, order, or auto rebalance readiness.
+- Next work should open only after the user chooses a second-cycle direction from `phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md`.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-residual-risk-carry-forward-v1/`.
 - Remaining Phase 8~12 / Phase 13 risks are now split into current limitations, second-cycle candidates, explicit first-cycle out-of-scope items, and safe / unsafe final closeout wording.
 - Next task is `phase13-integrated-qa-final-closeout`.

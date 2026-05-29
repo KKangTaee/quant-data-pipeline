@@ -1,7 +1,8 @@
 # Phase 13 First-Cycle Hardening Closeout Plan
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
+Completed: 2026-05-30
 
 ## 이걸 하는 이유?
 
@@ -56,7 +57,7 @@ Phase 13은 아래 질문에 답한다.
 | 13-3 | Storage / data boundary audit | Complete |
 | 13-4 | Docs / runbook alignment | Complete |
 | 13-5 | Residual risk / carry-forward triage | Complete |
-| 13-6 | Phase 13 integrated QA / final closeout | Next |
+| 13-6 | Phase 13 integrated QA / final closeout | Complete |
 
 ## Done Criteria
 
@@ -70,4 +71,4 @@ Phase 13은 아래 질문에 답한다.
 ## Carry Forward To Later Cycles
 
 - broker/account integration, tax-lot handling, optimizer, broker-grade rebalance, production monitoring alerts, paid / premium data source는 Phase 13의 구현 대상이 아니다.
-- 필요한 경우 Phase 13 closeout 이후 2차 개선 cycle로 별도 phase를 연다.
+- Phase 13 closeout 이후에는 사용자가 2차 개선 방향을 승인한 뒤 별도 phase를 연다.

@@ -1,7 +1,8 @@
 # Phase 13 First-Cycle Hardening Closeout Integration
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
+Completed: 2026-05-30
 
 ## Integration Order
 
@@ -10,7 +11,7 @@ Created: 2026-05-29
 3. 13-3 Storage / data boundary audit: Complete
 4. 13-4 Docs / runbook alignment: Complete
 5. 13-5 Residual risk / carry-forward triage: Complete
-6. 13-6 integrated QA / final closeout: Next
+6. 13-6 integrated QA / final closeout: Complete
 
 ## Expected Touch Points
 
@@ -39,4 +40,4 @@ For Phase 13 documentation / integration tasks:
 ## Storage Gate
 
 13-3 confirmed no new workflow JSONL registry, monitoring log automatic append, user memo, preset persistence, account integration, approval, order, or auto rebalance path was added.
-Keep this gate active through 13-6 final closeout.
+13-6 confirmed this boundary again during final closeout.

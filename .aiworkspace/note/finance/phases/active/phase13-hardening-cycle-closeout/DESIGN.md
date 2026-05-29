@@ -1,7 +1,8 @@
 # Phase 13 First-Cycle Hardening Closeout Design
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
+Completed: 2026-05-30
 
 ## Design Principle
 
@@ -97,7 +98,7 @@ No immediate code defect was identified.
 The alignment matrix is stored at `.aiworkspace/note/finance/tasks/active/phase13-docs-runbook-alignment-v1/DOC_ALIGNMENT.md`.
 The repeatable QA procedure is stored at `.aiworkspace/note/finance/docs/runbooks/PHASE_CLOSEOUT_QA.md`.
 
-## Next Review Task
+## Residual Risk Output
 
 `phase13-residual-risk-carry-forward-v1` separated:
 
@@ -108,11 +109,11 @@ The repeatable QA procedure is stored at `.aiworkspace/note/finance/docs/runbook
 
 The carry-forward matrix is stored at `.aiworkspace/note/finance/tasks/active/phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md`.
 
-## Next Review Task
+## Final Closeout Output
 
-`phase13-integrated-qa-final-closeout` should:
+`phase13-integrated-qa-final-closeout`:
 
-- run the final QA command set from `docs/runbooks/PHASE_CLOSEOUT_QA.md`
-- create a Phase 13 closeout summary
-- mark the first hardening cycle complete only within the evidence-workflow boundary
-- hand off second-cycle candidates without opening implementation scope
+- ran the final QA command set from `docs/runbooks/PHASE_CLOSEOUT_QA.md`
+- created a Phase 13 closeout summary
+- marked the first hardening cycle complete only within the evidence-workflow boundary
+- handed off second-cycle candidates without opening implementation scope

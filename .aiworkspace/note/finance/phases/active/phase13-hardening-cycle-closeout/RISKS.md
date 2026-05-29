@@ -1,7 +1,8 @@
 # Phase 13 First-Cycle Hardening Closeout Risks
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
+Completed: 2026-05-30
 
 ## Risks
 
@@ -26,4 +27,5 @@ Created: 2026-05-29
 - 13-3 storage / data boundary audit found no immediate code defect or task-created registry / saved / run history / run artifact / Playwright output drift.
 - 13-4 docs / runbook alignment updated durable data / flow / glossary docs and added a Phase Closeout QA runbook.
 - 13-5 residual risk / carry-forward triage separated current limitations, second-cycle candidates, explicit out-of-scope items, and safe / unsafe final closeout wording.
-- Main remaining risk is final QA drift: 13-6 must rerun the closeout checks and avoid claiming broker-grade / production trading readiness.
+- 13-6 final closeout reran the closeout checks and recorded Phase 13 completion without claiming broker-grade / production trading readiness.
+- Remaining risks are now carry-forward candidates, not Phase 13 blockers.

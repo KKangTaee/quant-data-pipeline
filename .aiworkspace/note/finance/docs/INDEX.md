@@ -20,10 +20,10 @@ Last Verified: 2026-05-30
 
 ## Current Phase State
 
-- Latest completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
-- Previous completed phase: [Phase 11 Portfolio Construction Risk Controls](../phases/done/phase11-portfolio-construction-risk-controls.md)
-- Current active phase: [Phase 13 First-Cycle Hardening Closeout](../phases/active/phase13-hardening-cycle-closeout/PLAN.md)
-- Current implementation focus: `phase13-integrated-qa-final-closeout`.
+- Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
+- Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
+- Current active phase: none; the next phase should be opened only after the user chooses a second-cycle direction.
+- Current implementation focus: first hardening cycle complete; use `phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md` for next-cycle planning.
 
 ## By Purpose
 

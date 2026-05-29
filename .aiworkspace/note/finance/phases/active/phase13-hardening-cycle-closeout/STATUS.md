@@ -1,11 +1,12 @@
 # Phase 13 First-Cycle Hardening Closeout Status
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
+Completed: 2026-05-30
 
 ## Current State
 
-Phase 13 board is open.
+Phase 13 board is complete.
 
 Completed:
 
@@ -21,19 +22,18 @@ Completed:
 - Durable data / flow / glossary docs and Phase Closeout QA runbook aligned with Phase 13 inventory, QA matrix, and storage audit
 - 13-5 `phase13-residual-risk-carry-forward-v1`
 - Current limitations, second-cycle candidates, explicit out-of-scope items, and safe / unsafe final closeout wording triaged
+- 13-6 `phase13-integrated-qa-final-closeout`
+- Final QA and first-cycle hardening closeout summary completed
 
 Next:
 
-- 13-6 `phase13-integrated-qa-final-closeout`
+- No active Phase 13 task remains.
+- Future work should open a second-cycle phase only after the user chooses a direction from the carry-forward matrix.
 
 ## Latest Decision
 
-Phase 13 is the final closeout phase for the first hardening cycle.
-It should close Phase 8~12 into a coherent product / validation state before any second-cycle implementation starts.
-
-Immediate next target:
-
-- `phase13-integrated-qa-final-closeout`
+Phase 13 completed the first hardening cycle as an investability evidence workflow closeout.
+This is not a broker-grade trading, live approval, account sync, order, or auto rebalance completion.
 
 ## Storage Boundary Reminder
 

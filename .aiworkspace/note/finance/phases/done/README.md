@@ -1,7 +1,7 @@
 # Completed Finance Phases
 
 Status: Active
-Last Verified: 2026-05-29
+Last Verified: 2026-05-30
 
 이 폴더는 완료된 phase의 짧은 closeout summary를 둔다.
 
@@ -15,3 +15,5 @@ Last Verified: 2026-05-29
 - [Phase 9 Cost / Slippage / Liquidity Realism](./phase9-cost-slippage-liquidity-realism.md)
 - [Phase 10 Walk-forward / OOS / Regime Validation](./phase10-walkforward-oos-regime-validation.md)
 - [Phase 11 Portfolio Construction Risk Controls](./phase11-portfolio-construction-risk-controls.md)
+- [Phase 12 Selected Monitoring / Recheck Operations](./phase12-selected-monitoring-recheck-operations.md)
+- [Phase 13 First-Cycle Hardening Closeout](./phase13-hardening-cycle-closeout.md)
