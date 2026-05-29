@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-29
 
 ## Purpose
 
@@ -31,7 +31,7 @@ Backtest > Backtest Analysis
 |---|---|---|
 | Backtest Analysis | 후보 생성, 전략 비교, saved mix replay, 비중 조합 | 최종 판단 |
 | Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모 |
-| Final Review | 최종 후보 판단, investability evidence packet 확인, validation efficacy / data coverage / backtest realism 근거 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
+| Final Review | 최종 후보 판단, investability evidence packet 확인, construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
 | Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check | broker order, live approval, auto rebalance |
 
 ## Source Contract
@@ -54,7 +54,7 @@ PORTFOLIO_SELECTION_SOURCES
 - `NOT_RUN`은 pass가 아니다. 데이터나 구현이 부족해 검증하지 못했다는 뜻이다.
 - Final Review가 최종 판단 위치다. 중간 단계에서 최종 메모를 반복해서 저장하지 않는다.
 - Final Review의 investability packet은 새 저장 단계를 만들지 않고 기존 validation evidence를 compact하게 읽는다.
-- Final Review의 profile-aware gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation, validation efficacy, data coverage, backtest realism group을 판정한다.
+- Final Review의 profile-aware gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation, construction risk, risk contribution, component role / weight, validation efficacy, data coverage, backtest realism group을 판정한다.
 - Decision Dossier는 Final Review row와 Selected Dashboard timeline을 사람이 읽는 markdown으로 묶는 read-only export다. 자동 report 저장이나 새 판단 row를 만들지 않는다.
 - critical `NOT_RUN`, hard blocker, evidence blocker, selected-route policy blocker가 남아 있으면 실전 검토 통과 후보 선정은 차단하고, 보류 / 거절 / 재검토 판단으로 기록할 수 있다.
 - Structured waiver는 현재 구현하지 않는다. 향후 구현해도 `BLOCK` severity는 waiver 불가이고, 일부 `REVIEW_REQUIRED` gap만 expiry / review trigger / scope를 가진 구조화 waiver로 검토할 수 있다.
@@ -63,12 +63,13 @@ PORTFOLIO_SELECTION_SOURCES
 - Construction Risk Audit은 component max weight, provider look-through coverage, top holding, holdings overlap, dominant asset bucket, unknown exposure를 별도 row로 본다. provider holdings / exposure가 없거나 partial이면 ready로 보지 않는다.
 - Risk Contribution Audit은 component return matrix coverage, pairwise correlation, max risk contribution proxy, drop-one dependency, source strength를 별도 row로 본다. component matrix나 drop-one evidence가 없으면 ready로 보지 않고, DB price proxy / mixed source evidence는 `REVIEW`로 남긴다.
 - Component Role / Weight Audit은 explicit role source coverage, profile-aware weight discipline, role concentration, profile intent fit, weight rationale coverage를 별도 row로 본다. role source가 없거나 partial이면 ready로 보지 않고, role preset이나 user memo 저장을 만들지 않는다.
+- Construction Risk / Risk Contribution / Component Role / Weight Audit의 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. Final Review gate policy는 failing row criteria를 evidence에 표시한다.
 - Robustness Lab은 stress / rolling / sensitivity / overfit evidence를 compact summary로 묶어 Practical Validation과 Final Review가 같은 근거를 읽게 한다. Strategy-specific perturbation follow-up이나 `NOT_RUN` row는 pass가 아니다.
 - Validation Efficacy Audit은 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, storage boundary를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다.
 - Data Coverage Audit은 DB price window, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. 현재 listing / asset profile row는 current listing evidence일 뿐이므로 historical universe나 delisting coverage가 없으면 survivorship PASS로 보지 않는다.
 - Data Coverage Audit의 lifecycle metrics는 current snapshot, SEC identity cross-check, computed partial, actual coverage, delisting actual을 분리한다. 표시가 구체화돼도 partial evidence는 selected-route PASS 근거가 아니다.
 - Backtest Realism Audit은 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. Final Review gate policy는 failing Backtest Realism row criteria도 policy evidence로 보여주므로 cost / slippage sensitivity나 liquidity gap이 generic route label 뒤에 숨지 않는다. 이 연결은 core strategy runtime이나 새 저장소를 만들지 않는다.
-- Integrated Investability Gate QA는 세 audit과 provider / robustness / paper observation / final evidence gate가 함께 작동할 때 ready는 selected-route를 허용하고, 다중 `REVIEW`는 hold / re-review로 보내며, 다중 blocker는 selected-route를 차단하는 service contract를 유지한다.
+- Integrated Investability Gate QA는 construction risk 계열 audit, validation / coverage / realism audit, provider / robustness / paper observation / final evidence gate가 함께 작동할 때 ready는 selected-route를 허용하고, 다중 `REVIEW`는 hold / re-review로 보내며, 다중 blocker는 selected-route를 차단하는 service contract를 유지한다.
 - Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. Recheck Readiness는 Performance Recheck 실행 전 DB latest market date와 selected component replay contract를 read-only로 확인한다. Symbol Freshness는 replay portfolio ticker와 benchmark ticker의 DB price latest date / row count / lag를 read-only로 확인한다. Provider Evidence는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN`, partial coverage, stale evidence를 pass로 처리하지 않는다. Continuity check는 Final Review selected row가 evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽는다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. Recheck Comparison은 최신 Performance Recheck가 기존 Final Review baseline을 계속 지지하는지 read-only로 비교하며, 미실행이나 오류를 pass로 처리하지 않는다. 주문이나 자동 리밸런싱을 만들지 않는다.
 
 ## Storage Boundary

@@ -9,8 +9,8 @@ Created: 2026-05-29
 2. 11-2 concentration / overlap / exposure contract: Complete
 3. 11-3 correlation / risk contribution contract: Complete
 4. 11-4 component role / weight discipline contract: Complete
-5. 11-5 selected-route construction risk gate policy: Next
-6. 11-6 integrated QA / closeout
+5. 11-5 selected-route construction risk gate policy: Complete
+6. 11-6 integrated QA / closeout: Next
 
 ## Expected Touch Points
 
@@ -29,7 +29,7 @@ Implementation tasks may touch the following files after 11-1 confirms scope.
 The new contract is read-only and does not add DB collectors or JSONL registries.
 11-3 wrapped component return correlation / volatility contribution proxy / drop-one dependency evidence into `risk_contribution_audit_v1`.
 11-4 wrapped explicit proposal role / target weight / weight reason / profile intent evidence into `component_role_weight_audit_v1`.
-11-5 should connect the three construction risk audit routes to selected-route gate policy next.
+11-5 connected the three construction risk audit routes and non-PASS row-level criteria to selected-route gate policy.
 
 ## QA Gates
 

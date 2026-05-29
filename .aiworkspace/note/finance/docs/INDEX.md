@@ -23,7 +23,7 @@ Last Verified: 2026-05-29
 - [Phase 11 Portfolio Construction Risk Controls](../phases/active/phase11-portfolio-construction-risk-controls/PLAN.md)
 - Current task pointer: [Phase 11 Current Chapter TODO](../phases/active/phase11-portfolio-construction-risk-controls/CURRENT_CHAPTER_TODO.md)
 - Latest completed phase: [Phase 10 Walk-forward / OOS / Regime Validation](../phases/done/phase10-walkforward-oos-regime-validation.md)
-- Current implementation focus: construction risk selected-route gate policy.
+- Current implementation focus: Phase 11 integrated QA closeout.
 
 ## By Purpose
 

@@ -5,7 +5,7 @@ Created: 2026-05-29
 
 ## Current State
 
-Phase 11 component role / weight discipline contract is complete.
+Phase 11 construction risk selected-route gate policy is complete.
 
 Completed:
 
@@ -19,22 +19,22 @@ Completed:
 - Read-only Risk Contribution Audit V1 for component return matrix coverage, pairwise correlation, volatility contribution proxy, drop-one dependency, and storage boundary
 - 11-4 `component-role-weight-discipline-v1`
 - Read-only Component Role / Weight Audit V1 for role source coverage, profile-aware weight discipline, role concentration, profile intent fit, weight rationale coverage, and storage boundary
+- 11-5 `construction-risk-gate-policy-v1`
+- Final Review selected-route gate policy now treats Construction Risk / Risk Contribution / Component Role / Weight audit non-PASS rows as blocker or review-required evidence
 
 Next:
 
-- 11-5 `construction-risk-gate-policy-v1`
+- 11-6 `phase11-integrated-qa-closeout`
 
 ## Latest Decision
 
-11-4 implemented `component_role_weight_audit_v1` as a read-only contract.
-Missing or partial role metadata does not become `PASS`.
-Explicit proposal role metadata can become ready evidence; single-component or inferred-only role evidence remains `REVIEW` or `NEEDS_INPUT`.
-The audit is visible in Practical Validation and Final Review, and Final Review snapshots preserve it.
-Selected-route gate enforcement remains 11-5 scope.
+11-5 connected `construction_risk_audit`, `risk_contribution_audit`, and `component_role_weight_audit` to the profile-aware selected-route gate policy.
+`NEEDS_INPUT` / `BLOCKED` now blocks selected-route and `REVIEW` requires hold / re-review.
+Failing row criteria are included in gate evidence instead of being hidden behind generic route labels.
 
 Immediate next task:
 
-- `construction-risk-gate-policy-v1`
+- `phase11-integrated-qa-closeout`
 
 ## Storage Boundary Reminder
 

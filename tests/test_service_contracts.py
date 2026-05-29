@@ -3430,6 +3430,33 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 current="100.0% / symbols=2",
                 meaning="data coverage attached",
             ),
+            "construction_risk_audit": self._gate_audit(
+                route="CONSTRUCTION_RISK_READY",
+                label="Ready",
+                criteria="Provider look-through coverage",
+                status="PASS",
+                ready=True,
+                current="holdings 100.0% / exposure 100.0%",
+                meaning="construction risk evidence attached",
+            ),
+            "risk_contribution_audit": self._gate_audit(
+                route="RISK_CONTRIBUTION_READY",
+                label="Ready",
+                criteria="Risk contribution concentration",
+                status="PASS",
+                ready=True,
+                current="max 35.0%",
+                meaning="risk contribution evidence attached",
+            ),
+            "component_role_weight_audit": self._gate_audit(
+                route="COMPONENT_ROLE_WEIGHT_READY",
+                label="Ready",
+                criteria="Component role source coverage",
+                status="PASS",
+                ready=True,
+                current="explicit role weight 100.0%",
+                meaning="component role and weight evidence attached",
+            ),
             "backtest_realism_audit": self._gate_audit(
                 route="BACKTEST_REALISM_READY",
                 label="Ready",
@@ -3464,6 +3491,37 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     "Meaning": meaning,
                 }
             ],
+        }
+
+    def _construction_gate_ready_audits(self) -> dict:
+        return {
+            "construction_risk_audit": self._gate_audit(
+                route="CONSTRUCTION_RISK_READY",
+                label="Ready",
+                criteria="Provider look-through coverage",
+                status="PASS",
+                ready=True,
+                current="holdings 100.0% / exposure 100.0%",
+                meaning="construction risk evidence attached",
+            ),
+            "risk_contribution_audit": self._gate_audit(
+                route="RISK_CONTRIBUTION_READY",
+                label="Ready",
+                criteria="Risk contribution concentration",
+                status="PASS",
+                ready=True,
+                current="max 35.0%",
+                meaning="risk contribution evidence attached",
+            ),
+            "component_role_weight_audit": self._gate_audit(
+                route="COMPONENT_ROLE_WEIGHT_READY",
+                label="Ready",
+                criteria="Component role source coverage",
+                status="PASS",
+                ready=True,
+                current="explicit role weight 100.0%",
+                meaning="component role and weight evidence attached",
+            ),
         }
 
     def _gate_policy_severities(self, packet: dict) -> dict:
@@ -3706,6 +3764,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 ],
             },
         }
+        validation.update(self._construction_gate_ready_audits())
 
         packet = build_investability_evidence_packet(
             source={"source_type": "practical_validation_result", "source_id": "validation-ready"},
@@ -3724,9 +3783,15 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         sections = [row["Section"] for row in packet["checks"]]
         self.assertIn("Validation Efficacy Audit", sections)
         self.assertIn("Data Coverage Audit", sections)
+        self.assertIn("Construction Risk Audit", sections)
+        self.assertIn("Risk Contribution Audit", sections)
+        self.assertIn("Component Role / Weight Audit", sections)
         self.assertIn("Backtest Realism Audit", sections)
         self.assertEqual(packet["summary"]["validation_efficacy_route"], "VALIDATION_EFFICACY_READY")
         self.assertEqual(packet["summary"]["data_coverage_route"], "DATA_COVERAGE_READY")
+        self.assertEqual(packet["summary"]["construction_risk_route"], "CONSTRUCTION_RISK_READY")
+        self.assertEqual(packet["summary"]["risk_contribution_route"], "RISK_CONTRIBUTION_READY")
+        self.assertEqual(packet["summary"]["component_role_weight_route"], "COMPONENT_ROLE_WEIGHT_READY")
         self.assertEqual(packet["summary"]["backtest_realism_route"], "BACKTEST_REALISM_READY")
         assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
         self.assertIn("Hypothetical backtest", assumptions)
@@ -3759,6 +3824,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         severities = self._gate_policy_severities(packet)
         self.assertEqual(severities["validation_efficacy"], "PASS")
         self.assertEqual(severities["data_coverage"], "PASS")
+        self.assertEqual(severities["construction_risk"], "PASS")
+        self.assertEqual(severities["risk_contribution"], "PASS")
+        self.assertEqual(severities["component_role_weight"], "PASS")
         self.assertEqual(severities["backtest_realism"], "PASS")
         execution_boundary = next(row for row in packet["checks"] if row["Section"] == "Execution Boundary")
         self.assertEqual(execution_boundary["Current"], "live approval disabled / order disabled")
@@ -3902,6 +3970,154 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(severities["backtest_realism"], "BLOCK")
         self.assertGreaterEqual(len(packet["gate_policy_snapshot"]["blockers"]), 3)
 
+    def test_gate_policy_blocks_selected_route_on_construction_risk_needs_input(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["construction_risk_audit"] = {
+            "route": "CONSTRUCTION_RISK_NEEDS_INPUT",
+            "route_label": "Evidence Input Needed",
+            "rows": [
+                {
+                    "Criteria": "Provider look-through coverage",
+                    "Status": "NEEDS_INPUT",
+                    "Ready": False,
+                    "Current": "holdings 0.0% / exposure 0.0%",
+                    "Meaning": "provider holdings / exposure evidence missing",
+                    "Next Action": "ETF holdings / exposure provider snapshot을 먼저 보강합니다.",
+                }
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "construction-risk-gap"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "construction_risk"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "BLOCK")
+        self.assertIn("Provider look-through coverage", policy_row["Evidence"])
+        self.assertIn("NEEDS_INPUT", policy_row["Current"])
+
+    def test_gate_policy_requires_review_on_risk_contribution_review(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["risk_contribution_audit"] = {
+            "route": "RISK_CONTRIBUTION_REVIEW",
+            "route_label": "Review Required",
+            "rows": [
+                {
+                    "Criteria": "Pairwise correlation",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "avg 0.72 / max 0.91",
+                    "Meaning": "component correlation is high",
+                },
+                {
+                    "Criteria": "Risk contribution concentration",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "max 86.0%",
+                    "Meaning": "one component dominates volatility contribution",
+                },
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "risk-contribution-review"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "risk_contribution"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "REVIEW_REQUIRED")
+        self.assertIn("Pairwise correlation", policy_row["Evidence"])
+        self.assertIn("Risk contribution concentration", policy_row["Evidence"])
+
+    def test_gate_policy_blocks_selected_route_on_component_role_weight_blocked(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["component_role_weight_audit"] = {
+            "route": "COMPONENT_ROLE_WEIGHT_BLOCKED",
+            "route_label": "Blocked",
+            "rows": [
+                {
+                    "Criteria": "Component role source coverage",
+                    "Status": "BLOCKED",
+                    "Ready": False,
+                    "Current": "components 0 / explicit role weight 0.0%",
+                    "Meaning": "active component role contract is unavailable",
+                    "Next Action": "active component가 있는 source를 다시 선택합니다.",
+                }
+            ],
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "component-role-blocked"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "component_role_weight"
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "BLOCK")
+        self.assertIn("Component role source coverage", policy_row["Evidence"])
+
     def test_investability_packet_blocks_selected_route_on_critical_not_run(self) -> None:
         from app.services.backtest_evidence_read_model import (
             SELECT_FOR_PRACTICAL_PORTFOLIO,
@@ -4020,6 +4236,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                **self._construction_gate_ready_audits(),
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
@@ -4232,6 +4449,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                **self._construction_gate_ready_audits(),
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
@@ -4326,6 +4544,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                **self._construction_gate_ready_audits(),
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
@@ -4420,6 +4639,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                **self._construction_gate_ready_audits(),
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
@@ -4509,6 +4729,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                **self._construction_gate_ready_audits(),
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
@@ -4703,6 +4924,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                **self._construction_gate_ready_audits(),
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},

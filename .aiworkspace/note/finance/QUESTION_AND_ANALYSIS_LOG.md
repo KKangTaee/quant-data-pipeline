@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-gate-policy-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-integrated-qa-closeout`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Construction risk gate policy feeds selected-route evidence
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-5로 세 construction risk audit route와 row-level non-PASS evidence를 Final Review selected-route gate policy에 연결한다.
+- Analysis result:
+  - `construction_risk`, `risk_contribution`, `component_role_weight` are now first-class critical gate groups.
+  - `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+  - Failing row criteria are merged into gate policy evidence without adding JSONL registry, user memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `phase11-integrated-qa-closeout`로 Phase 11 전체 compile / service contract / boundary / hygiene / docs closeout을 수행한다.
 
 ### 2026-05-29 - Component role / weight audit V1 covers role discipline
 - User request:

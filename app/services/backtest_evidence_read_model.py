@@ -52,6 +52,9 @@ GATE_POLICY_GROUP_LABELS = {
     "final_review_evidence": "Final Review Evidence",
     "validation_efficacy": "Validation Efficacy",
     "data_coverage": "Data Coverage",
+    "construction_risk": "Construction Risk",
+    "risk_contribution": "Risk Contribution",
+    "component_role_weight": "Component Role / Weight",
     "backtest_realism": "Backtest Realism",
 }
 GATE_POLICY_GROUP_ACTIONS = {
@@ -64,13 +67,16 @@ GATE_POLICY_GROUP_ACTIONS = {
     "final_review_evidence": "Final Review evidence route가 ready가 되도록 validation / robustness / observation blocker를 해소합니다.",
     "validation_efficacy": "runtime replay, benchmark parity, walk-forward / OOS / regime, provider freshness, robustness, PIT / survivorship evidence gap을 보강합니다.",
     "data_coverage": "DB price window, provider freshness, PIT replay, universe / survivorship evidence gap을 보강합니다.",
+    "construction_risk": "component weight, provider look-through coverage, top holding / overlap, asset exposure evidence gap을 보강합니다.",
+    "risk_contribution": "component return matrix, correlation, risk contribution, drop-one dependency evidence gap을 보강합니다.",
+    "component_role_weight": "component role source, profile intent, target weight, weight rationale evidence gap을 보강합니다.",
     "backtest_realism": "거래비용, turnover, liquidity, net performance, tax/account scope 같은 실전성 근거를 보강합니다.",
 }
 GATE_POLICY_DOMAIN_GROUPS = {
     "input_evidence_layer": "data_trust",
     "asset_allocation_fit": "provider_coverage",
-    "concentration_overlap_exposure": "provider_coverage",
-    "correlation_diversification_risk_contribution": "stress_robustness",
+    "concentration_overlap_exposure": "construction_risk",
+    "correlation_diversification_risk_contribution": "risk_contribution",
     "regime_macro_suitability": "provider_coverage",
     "sentiment_risk_on_off_overlay": "provider_coverage",
     "stress_scenario_diagnostics": "stress_robustness",
@@ -91,6 +97,9 @@ GATE_POLICY_SECTION_GROUPS = {
     "critical gaps": "final_review_evidence",
     "validation efficacy audit": "validation_efficacy",
     "data coverage audit": "data_coverage",
+    "construction risk audit": "construction_risk",
+    "risk contribution audit": "risk_contribution",
+    "component role / weight audit": "component_role_weight",
     "backtest realism audit": "backtest_realism",
 }
 GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
@@ -104,6 +113,9 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "final_review_evidence",
         "validation_efficacy",
         "data_coverage",
+        "construction_risk",
+        "risk_contribution",
+        "component_role_weight",
         "backtest_realism",
     },
     "balanced_core": {
@@ -116,6 +128,9 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "final_review_evidence",
         "validation_efficacy",
         "data_coverage",
+        "construction_risk",
+        "risk_contribution",
+        "component_role_weight",
         "backtest_realism",
     },
     "growth_aggressive": {
@@ -127,6 +142,9 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "final_review_evidence",
         "validation_efficacy",
         "data_coverage",
+        "construction_risk",
+        "risk_contribution",
+        "component_role_weight",
         "backtest_realism",
     },
     "hedged_tactical": {
@@ -138,6 +156,9 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "final_review_evidence",
         "validation_efficacy",
         "data_coverage",
+        "construction_risk",
+        "risk_contribution",
+        "component_role_weight",
         "backtest_realism",
     },
     "custom": {
@@ -150,6 +171,9 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "final_review_evidence",
         "validation_efficacy",
         "data_coverage",
+        "construction_risk",
+        "risk_contribution",
+        "component_role_weight",
         "backtest_realism",
     },
 }
@@ -462,6 +486,27 @@ def build_investability_gate_policy(
     )
     _merge_audit_rows_into_policy(
         states,
+        audit=dict(validation.get("construction_risk_audit") or {}),
+        group="construction_risk",
+        critical_groups=critical_groups,
+        review_groups=review_groups,
+    )
+    _merge_audit_rows_into_policy(
+        states,
+        audit=dict(validation.get("risk_contribution_audit") or {}),
+        group="risk_contribution",
+        critical_groups=critical_groups,
+        review_groups=review_groups,
+    )
+    _merge_audit_rows_into_policy(
+        states,
+        audit=dict(validation.get("component_role_weight_audit") or {}),
+        group="component_role_weight",
+        critical_groups=critical_groups,
+        review_groups=review_groups,
+    )
+    _merge_audit_rows_into_policy(
+        states,
         audit=dict(validation.get("backtest_realism_audit") or {}),
         group="backtest_realism",
         critical_groups=critical_groups,
@@ -682,12 +727,15 @@ def build_investability_evidence_packet(
     construction_risk_audit = dict(
         validation.get("construction_risk_audit") or build_construction_risk_audit(validation)
     )
+    construction_risk_route = str(construction_risk_audit.get("route") or "")
     risk_contribution_audit = dict(
         validation.get("risk_contribution_audit") or build_risk_contribution_audit(validation)
     )
+    risk_contribution_route = str(risk_contribution_audit.get("route") or "")
     component_role_weight_audit = dict(
         validation.get("component_role_weight_audit") or build_component_role_weight_audit(validation)
     )
+    component_role_weight_route = str(component_role_weight_audit.get("route") or "")
     backtest_realism_audit = dict(validation.get("backtest_realism_audit") or build_backtest_realism_audit(validation))
     backtest_realism_route = str(backtest_realism_audit.get("route") or "")
     source_chain = {
@@ -769,6 +817,36 @@ def build_investability_evidence_packet(
             "Meaning": "DB price window, provider freshness, PIT replay, universe / survivorship evidence를 분리해서 봅니다.",
         },
         {
+            "Section": "Construction Risk Audit",
+            "Ready": construction_risk_route == "CONSTRUCTION_RISK_READY",
+            "Current": (
+                f"{construction_risk_audit.get('route_label')} / {construction_risk_route}"
+                if construction_risk_audit.get("route_label") and construction_risk_route
+                else construction_risk_route or construction_risk_audit.get("route_label") or "-"
+            ),
+            "Meaning": "component weight concentration, provider look-through, top holding / overlap, asset exposure risk를 분리해서 봅니다.",
+        },
+        {
+            "Section": "Risk Contribution Audit",
+            "Ready": risk_contribution_route == "RISK_CONTRIBUTION_READY",
+            "Current": (
+                f"{risk_contribution_audit.get('route_label')} / {risk_contribution_route}"
+                if risk_contribution_audit.get("route_label") and risk_contribution_route
+                else risk_contribution_route or risk_contribution_audit.get("route_label") or "-"
+            ),
+            "Meaning": "component return matrix, correlation, risk contribution proxy, drop-one dependency risk를 분리해서 봅니다.",
+        },
+        {
+            "Section": "Component Role / Weight Audit",
+            "Ready": component_role_weight_route == "COMPONENT_ROLE_WEIGHT_READY",
+            "Current": (
+                f"{component_role_weight_audit.get('route_label')} / {component_role_weight_route}"
+                if component_role_weight_audit.get("route_label") and component_role_weight_route
+                else component_role_weight_route or component_role_weight_audit.get("route_label") or "-"
+            ),
+            "Meaning": "component role source, profile intent, target weight, weight rationale discipline을 분리해서 봅니다.",
+        },
+        {
             "Section": "Backtest Realism Audit",
             "Ready": backtest_realism_route == "BACKTEST_REALISM_READY",
             "Current": (
@@ -787,6 +865,9 @@ def build_investability_evidence_packet(
     ]
     validation_for_gate_policy = dict(validation)
     validation_for_gate_policy.setdefault("validation_efficacy_audit", validation_efficacy_audit)
+    validation_for_gate_policy.setdefault("construction_risk_audit", construction_risk_audit)
+    validation_for_gate_policy.setdefault("risk_contribution_audit", risk_contribution_audit)
+    validation_for_gate_policy.setdefault("component_role_weight_audit", component_role_weight_audit)
     gate_policy = build_investability_gate_policy(
         validation=validation_for_gate_policy,
         paper_observation=paper_observation,

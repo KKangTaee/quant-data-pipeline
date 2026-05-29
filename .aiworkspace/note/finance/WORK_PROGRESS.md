@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-gate-policy-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-integrated-qa-closeout`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/construction-risk-gate-policy-v1/`.
+- Final Review selected-route gate policy now treats Construction Risk / Risk Contribution / Component Role / Weight audit routes and non-PASS row criteria as blocker or review-required evidence.
+- Verification passed: targeted py_compile, `FinalReviewEvidenceReadModelContractTests` 24 tests, and full `tests.test_service_contracts` 112 tests.
+- Next task is `phase11-integrated-qa-closeout`.
 - Completed `.aiworkspace/note/finance/tasks/active/component-role-weight-discipline-v1/`.
 - Added read-only `component_role_weight_audit_v1` for explicit role source coverage, profile-aware max weight, role concentration, profile intent fit, weight rationale coverage, and storage boundary.
 - Practical Validation and Final Review now display the Component Role / Weight Audit and preserve it in final decision snapshots / evidence rows; selected-route gate enforcement remains 11-5 scope.
