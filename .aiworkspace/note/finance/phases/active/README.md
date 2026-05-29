@@ -24,6 +24,7 @@ phases/active/<phase-name>/
 
 | Phase | Status | Notes |
 |---|---|---|
+| `phase10-walkforward-oos-regime-validation` | Active | Phase 9 이후 walk-forward / out-of-sample / regime split validation을 강화하는 phase. 다음 task는 `walkforward-oos-source-map-v1`. |
 | `ui-engine-boundary-foundation` | Implementation complete | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입한 phase. audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료. |
 | `ui-engine-boundary-cleanup` | Complete | Task 6~9 cleanup 완료. boundary lint는 `app.services/app.runtime -> app.web` import hard fail 기준으로 유지. |
 | `investability-decision-foundation` | Implementation complete | Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 검토 가능한 decision workflow로 강화하기 위한 저장 / gate / 데이터 수집 / task 순서 기준선. 후속은 structured waiver policy 또는 Practical Validation V2 P2 closeout. |

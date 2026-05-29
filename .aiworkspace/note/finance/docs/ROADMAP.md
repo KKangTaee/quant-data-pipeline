@@ -7,7 +7,8 @@ Last Verified: 2026-05-29
 
 | Track | Status | Notes |
 |---|---|---|
-| Phase 10 Walk-forward / OOS / Regime Validation | Planned | Next hardening target; board not opened yet |
+| Phase 10 Walk-forward / OOS / Regime Validation | Active | `.aiworkspace/note/finance/phases/active/phase10-walkforward-oos-regime-validation/`; next task is `walkforward-oos-source-map-v1` |
+| Phase 10 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase10-board-open/`; Phase 10 official board, task split, immediate next task, storage boundary 정리 |
 | Phase 9 Cost / Slippage / Liquidity Realism | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase9-cost-slippage-liquidity-realism.md`; cost / slippage / turnover / liquidity / capacity evidence를 Backtest Realism과 selected-route 판단에 연결 |
 | Backtest Realism Gate Policy Refinement V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-refinement-v1/`; Backtest Realism row-level gaps를 Final Review selected-route gate evidence에 연결 |
 | Cost Slippage Sensitivity Audit V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/cost-slippage-sensitivity-audit-v1/`; Backtest Realism Audit `cost_slippage_sensitivity_contract_v1`과 별도 sensitivity row 연결 |
@@ -118,5 +119,6 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 9 is complete. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`, `backtest-realism-gate-policy-refinement-v1`, `phase9-integrated-qa-closeout`을 완료했다. 다음 hardening target은 Phase 10 walk-forward / out-of-sample / regime split validation이다.
+- Phase 9 is complete. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`, `backtest-realism-gate-policy-refinement-v1`, `phase9-integrated-qa-closeout`을 완료했다.
+- Phase 10 is active. Next task is `walkforward-oos-source-map-v1`: current Practical Validation / Robustness Lab / replay / result metadata source map을 확인하고, walk-forward / OOS / regime split 구현 경계를 결정한다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

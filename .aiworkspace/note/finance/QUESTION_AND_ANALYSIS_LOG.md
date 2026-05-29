@@ -13,15 +13,27 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/active/phase9-cost-slippage-liquidity-realism/PLAN.md)
+  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is Phase 10 walk-forward / out-of-sample / regime split validation
+  - no active strategy-search candidate summary in `main-dev`; next work is `walkforward-oos-source-map-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 10 opens for walk-forward / OOS / regime validation
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 9 closeout 이후 다음 hardening target인 walk-forward / out-of-sample / regime split validation을 공식 phase로 연다.
+- Analysis result:
+  - Phase 10 board를 `.aiworkspace/note/finance/phases/active/phase10-walkforward-oos-regime-validation/`에 생성했다.
+  - 이번 phase는 전체기간 백테스트 성과를 과대 신뢰하지 않도록 OOS / walk-forward / regime evidence를 Practical Validation과 Final Review gate에 연결하는 방향이다.
+  - 새 JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `walkforward-oos-source-map-v1`로 current Practical Validation / Robustness Lab / replay / result metadata source map과 gap을 확인한다.
 
 ### 2026-05-29 - Phase 9 cost / slippage / liquidity realism closes
 - User request:
