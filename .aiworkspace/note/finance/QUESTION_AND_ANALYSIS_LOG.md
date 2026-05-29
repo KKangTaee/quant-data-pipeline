@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-storage-data-boundary-audit-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-docs-runbook-alignment-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-30 - Phase 13 storage boundary audit finds no drift
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-3으로 DB-backed data, workflow JSONL compact evidence, saved setup, run artifact, and selected monitoring read-only boundaries를 감사한다.
+- Analysis result:
+  - Lifecycle / survivorship collectors write DB-backed `finance_meta.nyse_symbol_lifecycle` evidence with `registry_write: False`.
+  - Practical Validation / Final Review persistence remains compact workflow handoff / validation / decision evidence, while saved portfolio rows remain reusable setup rather than approval or monitoring evidence.
+  - Selected Dashboard read models expose no DB write, registry write, monitoring log auto-write, live approval, order instruction, or auto rebalance behavior. No task-created registry / saved / run history / run artifact / Playwright output drift was found.
+- Follow-up:
+  - 다음 task는 `phase13-docs-runbook-alignment-v1`로 13-1 inventory, 13-2 QA matrix, and 13-3 storage audit를 durable docs / runbooks / roadmap에 맞춘다.
 
 ### 2026-05-30 - Phase 13 gate validation QA finds no immediate code defect
 - User request:

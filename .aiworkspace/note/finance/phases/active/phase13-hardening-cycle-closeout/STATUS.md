@@ -15,10 +15,12 @@ Completed:
 - Phase 8~12 improvement inventory, evidence surface map, residual carry-forward map 정리
 - 13-2 `phase13-gate-validation-qa-matrix-v1`
 - Practical Validation / Final Review / Selected Dashboard gate QA matrix complete; full service contracts passed, 126 tests
+- 13-3 `phase13-storage-data-boundary-audit-v1`
+- DB-backed data, workflow JSONL compact evidence, saved setup, generated artifacts, and Selected Dashboard read-only boundaries audited; no immediate code defect found
 
 Next:
 
-- 13-3 `phase13-storage-data-boundary-audit-v1`
+- 13-4 `phase13-docs-runbook-alignment-v1`
 
 ## Latest Decision
 
@@ -27,7 +29,7 @@ It should close Phase 8~12 into a coherent product / validation state before any
 
 Immediate next target:
 
-- `phase13-storage-data-boundary-audit-v1`
+- `phase13-docs-runbook-alignment-v1`
 
 ## Storage Boundary Reminder
 

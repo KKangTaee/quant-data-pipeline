@@ -17,16 +17,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-storage-data-boundary-audit-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-docs-runbook-alignment-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-storage-data-boundary-audit-v1/`.
+- DB-backed data / workflow JSONL compact evidence / saved setup / run artifact / Selected Dashboard read-only storage boundaries were audited with no immediate code defect found.
+- No registry / saved / run history / run artifact / Playwright output change was created by this task; next task is `phase13-docs-runbook-alignment-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-gate-validation-qa-matrix-v1/`.
 - Practical Validation / Final Review / Selected Dashboard gate severity QA found no immediate code defect; full `tests.test_service_contracts` passed, 126 tests.
-- Next task is `phase13-storage-data-boundary-audit-v1`.
+- This handed off to `phase13-storage-data-boundary-audit-v1`, now complete.
 
 ### 2026-05-29
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-cycle-inventory-v1/`.

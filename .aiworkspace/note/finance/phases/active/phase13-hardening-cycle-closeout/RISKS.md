@@ -23,5 +23,5 @@ Created: 2026-05-29
 
 - 13-1 inventory is complete and should now be treated as the source map for QA.
 - 13-2 gate / validation QA matrix found no immediate code defect; service contracts passed, 126 tests.
-- Main remaining risk is now storage / data boundary drift: DB-backed raw evidence, workflow JSONL compact evidence, saved setup, monitoring log, report, and generated artifacts could be confused if not audited before closeout.
-- Storage boundary still needs a separate 13-3 audit before final closeout.
+- 13-3 storage / data boundary audit found no immediate code defect or task-created registry / saved / run history / run artifact / Playwright output drift.
+- Main remaining risk is now docs / runbook drift: future readers could confuse DB-backed data, runtime-defined JSONL paths, saved setup, reports, and generated artifacts if durable docs are not aligned before closeout.

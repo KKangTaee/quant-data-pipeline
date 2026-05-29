@@ -74,10 +74,22 @@ No immediate code defect was identified.
 
 ## Next Review Task
 
-`phase13-storage-data-boundary-audit-v1` should verify:
+`phase13-storage-data-boundary-audit-v1` verified:
 
 - DB-backed evidence versus workflow JSONL compact evidence boundary
 - registry / saved setup preservation
 - no automatic monitoring log append
 - no user memo / preset persistence expansion
 - generated artifacts and run history remain uncommitted
+
+The audit is stored at `.aiworkspace/note/finance/tasks/active/phase13-storage-data-boundary-audit-v1/STORAGE_AUDIT.md`.
+No immediate code defect was identified.
+
+## Next Review Task
+
+`phase13-docs-runbook-alignment-v1` should align:
+
+- docs index / roadmap current focus
+- storage governance and relevant runbook references
+- phase handoff state for residual risk triage and final closeout
+- durable explanation of runtime-defined JSONL paths versus present local files

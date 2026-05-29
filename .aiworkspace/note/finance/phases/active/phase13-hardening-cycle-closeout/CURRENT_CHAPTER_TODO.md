@@ -5,13 +5,13 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `phase13-storage-data-boundary-audit-v1`
+Next task: `phase13-docs-runbook-alignment-v1`
 
 ## TODO
 
-- Audit DB-backed data versus workflow JSONL compact evidence boundaries.
-- Confirm registries / saved setup / monitoring log / reports / run artifacts did not drift during Phase 8~12 and Phase 13 closeout.
-- Use `phase13-cycle-inventory-v1/INVENTORY.md` and `phase13-gate-validation-qa-matrix-v1/QA_MATRIX.md` as source maps.
+- Align durable docs / runbooks / roadmap / index with Phase 13 13-1 inventory, 13-2 QA matrix, and 13-3 storage audit.
+- Clarify DB-backed data versus workflow JSONL compact evidence boundaries in durable docs.
+- Keep generated artifacts, run history, saved setup, reports, and selected monitoring read-only boundaries distinct.
 - Do not introduce new storage or trading automation.
 
 ## Stop Conditions
