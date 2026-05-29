@@ -534,6 +534,53 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(metadata["automation_profile"], "test")
         self.assertEqual(metadata["automation_job_id"], "fake_calendar")
         self.assertEqual(appended[0]["details"]["automation"]["profile"], "test")
+        self.assertEqual(appended[0]["details"]["automation"]["execution_mode"], "scheduled")
+
+    def test_run_can_append_browser_auto_metadata(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
+
+        def fake_runner(_: datetime) -> dict:
+            return {
+                "job_name": "fake_intraday_job",
+                "status": "success",
+                "started_at": "2026-05-29 10:00:00",
+                "finished_at": "2026-05-29 10:00:02",
+                "duration_sec": 2.0,
+                "rows_written": 503,
+                "symbols_requested": 503,
+                "symbols_processed": 503,
+                "failed_symbols": [],
+                "message": "fake intraday completed",
+                "details": {},
+            }
+
+        spec = ScheduledJobSpec(
+            job_id="fake_intraday",
+            job_name="fake_intraday_job",
+            label="Fake Intraday",
+            cadence_minutes=5,
+            profiles=("browser_safe",),
+            market_hours_only=False,
+            runner=fake_runner,
+            description="fake browser auto run",
+        )
+        appended: list[dict] = []
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            summary = run_overview_automation(
+                profile="browser_safe",
+                execution_mode="browser_auto",
+                history_rows=[],
+                history_appender=appended.append,
+                lock_path=Path(tmp_dir) / "overview.lock",
+                now=datetime(2026, 5, 29, 10, 0),
+                specs=(spec,),
+            )
+
+        self.assertEqual(summary["execution_mode"], "browser_auto")
+        self.assertEqual(appended[0]["run_metadata"]["execution_mode"], "browser_auto")
+        self.assertIn("Browser-session Overview automation", appended[0]["run_metadata"]["execution_context"])
+        self.assertEqual(appended[0]["details"]["automation"]["execution_mode"], "browser_auto")
 
     def test_dry_run_does_not_call_runner_or_append_history(self) -> None:
         from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
@@ -1220,6 +1267,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "run_metadata": {"execution_mode": "scheduled"},
                 },
                 {
+                    "job_name": "collect_sp500_intraday_snapshot",
+                    "status": "success",
+                    "finished_at": "2026-05-28 04:05:00",
+                    "rows_written": 503,
+                    "symbols_processed": 503,
+                    "failed_symbols": [],
+                    "duration_sec": 5.1,
+                    "message": "S&P 500 browser auto snapshot completed.",
+                    "run_metadata": {
+                        "execution_mode": "browser_auto",
+                        "automation_profile": "browser_safe",
+                    },
+                },
+                {
                     "job_name": "collect_earnings_calendar",
                     "status": "partial_success",
                     "finished_at": "2026-05-28 03:01:00",
@@ -1238,9 +1299,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         universe_row = rows[rows["Area"] == "S&P 500 Universe"].iloc[0]
         self.assertEqual(universe_row["Status"], "OK")
         self.assertEqual(universe_row["Rows"], 503)
-        self.assertEqual(universe_row["Last Scheduled Run"], "2026-05-28 01:05")
+        self.assertEqual(universe_row["Last Auto Run"], "2026-05-28 01:05")
+        self.assertEqual(universe_row["Auto Source"], "Scheduled")
         self.assertEqual(universe_row["Last Manual Run"], "2026-05-28 01:01")
-        self.assertEqual(universe_row["Next Scheduled Run"], "2026-05-29 01:05")
+        self.assertEqual(universe_row["Next Auto Due"], "2026-05-29 01:05")
+        sp500_intraday_row = rows[rows["Area"] == "S&P 500 Daily Snapshot"].iloc[0]
+        self.assertEqual(sp500_intraday_row["Last Auto Run"], "2026-05-28 04:05")
+        self.assertEqual(sp500_intraday_row["Auto Source"], "Browser Auto")
+        self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
+        self.assertEqual(snapshot["coverage"]["latest_auto_at"], "2026-05-28 04:05")
         earnings_row = rows[rows["Area"] == "Earnings Calendar"].iloc[0]
         self.assertEqual(earnings_row["Status"], "Partial")
         self.assertEqual(earnings_row["Failed"], 1)

@@ -120,8 +120,9 @@ OPS_COLUMNS = [
     "Data Freshness",
     "Last Success",
     "Last Issue",
-    "Last Scheduled Run",
-    "Next Scheduled Run",
+    "Last Auto Run",
+    "Auto Source",
+    "Next Auto Due",
     "Last Manual Run",
     "Failure Streak",
     "Rows",
@@ -1655,17 +1656,36 @@ def _latest_history_item_with_mode(
     job_names: Sequence[str],
     execution_mode: str,
 ) -> dict[str, Any] | None:
+    return _latest_history_item_with_modes(history_rows, job_names, {execution_mode})
+
+
+def _latest_history_item_with_modes(
+    history_rows: Sequence[dict[str, Any]],
+    job_names: Sequence[str],
+    execution_modes: set[str],
+) -> dict[str, Any] | None:
     job_name_set = set(job_names)
-    normalized_mode = str(execution_mode or "").strip().lower()
+    normalized_modes = {str(mode or "").strip().lower() for mode in execution_modes if str(mode or "").strip()}
     matched = [
         row
         for row in history_rows
         if str(row.get("job_name") or "") in job_name_set
-        and _history_execution_mode(row) == normalized_mode
+        and _history_execution_mode(row) in normalized_modes
     ]
     if not matched:
         return None
     return max(matched, key=lambda row: _timestamp_sort_value(row.get("finished_at") or row.get("started_at")))
+
+
+def _automation_source_label(row: dict[str, Any] | None) -> str:
+    mode = _history_execution_mode(row or {}) if row else ""
+    if mode == "browser_auto":
+        return "Browser Auto"
+    if mode == "scheduled":
+        return "Scheduled"
+    if not mode:
+        return "-"
+    return mode.replace("_", " ").title()
 
 
 def _failure_streak(history_rows: Sequence[dict[str, Any]], job_names: Sequence[str]) -> int:
@@ -1691,8 +1711,8 @@ def _failure_streak(history_rows: Sequence[dict[str, Any]], job_names: Sequence[
     return streak
 
 
-def _next_scheduled_run_text(
-    latest_scheduled: dict[str, Any] | None,
+def _next_auto_due_text(
+    latest_auto: dict[str, Any] | None,
     job_names: Sequence[str],
 ) -> str:
     cadence_values = [
@@ -1703,9 +1723,9 @@ def _next_scheduled_run_text(
     if not cadence_values:
         return "-"
     cadence_minutes = min(cadence_values)
-    if latest_scheduled is None:
+    if latest_auto is None:
         return "Due now"
-    raw_time = latest_scheduled.get("finished_at") or latest_scheduled.get("started_at")
+    raw_time = latest_auto.get("finished_at") or latest_auto.get("started_at")
     if raw_time in (None, ""):
         return "Due now"
     ts = pd.Timestamp(raw_time)
@@ -1738,7 +1758,7 @@ def _history_metrics(
     *,
     latest_run: dict[str, Any] | None,
     latest_success: dict[str, Any] | None,
-    latest_scheduled: dict[str, Any] | None,
+    latest_auto: dict[str, Any] | None,
     latest_manual: dict[str, Any] | None,
     job_names: Sequence[str],
     failure_streak: int,
@@ -1752,8 +1772,9 @@ def _history_metrics(
         "Last Issue": _display_run_time(source.get("finished_at") or source.get("started_at"))
         if str(source.get("status") or "").lower() in {"failed", "partial_success"}
         else "-",
-        "Last Scheduled Run": _display_run_time((latest_scheduled or {}).get("finished_at") or (latest_scheduled or {}).get("started_at")),
-        "Next Scheduled Run": _next_scheduled_run_text(latest_scheduled, job_names),
+        "Last Auto Run": _display_run_time((latest_auto or {}).get("finished_at") or (latest_auto or {}).get("started_at")),
+        "Auto Source": _automation_source_label(latest_auto),
+        "Next Auto Due": _next_auto_due_text(latest_auto, job_names),
         "Last Manual Run": _display_run_time((latest_manual or {}).get("finished_at") or (latest_manual or {}).get("started_at")),
         "Failure Streak": failure_streak,
         "Rows": source.get("rows_written") if source else None,
@@ -1927,14 +1948,14 @@ def _ops_row(
 ) -> dict[str, Any]:
     latest_run = _latest_history_item(history_rows, job_names)
     latest_success = _latest_history_item_with_status(history_rows, job_names, {"success"})
-    latest_scheduled = _latest_history_item_with_mode(history_rows, job_names, "scheduled")
+    latest_auto = _latest_history_item_with_modes(history_rows, job_names, {"scheduled", "browser_auto"})
     latest_manual = _latest_history_item_with_mode(history_rows, job_names, "manual")
     failure_streak = _failure_streak(history_rows, job_names)
     status = _history_status_overlay(base_status, latest_run=latest_run, latest_success=latest_success)
     metrics = _history_metrics(
         latest_run=latest_run,
         latest_success=latest_success,
-        latest_scheduled=latest_scheduled,
+        latest_auto=latest_auto,
         latest_manual=latest_manual,
         job_names=job_names,
         failure_streak=failure_streak,
@@ -1960,9 +1981,9 @@ def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
     statuses = [str(row.get("Status") or "") for row in rows]
     success_times = [row.get("Last Success") for row in rows if row.get("Last Success") not in (None, "-")]
     issue_times = [row.get("Last Issue") for row in rows if row.get("Last Issue") not in (None, "-")]
-    scheduled_times = [
-        row.get("Last Scheduled Run") for row in rows
-        if row.get("Last Scheduled Run") not in (None, "-")
+    auto_times = [
+        row.get("Last Auto Run") for row in rows
+        if row.get("Last Auto Run") not in (None, "-")
     ]
     failure_streaks = [
         int(row.get("Failure Streak") or 0) for row in rows
@@ -1978,7 +1999,7 @@ def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "partial_count": statuses.count("Partial"),
         "latest_success_at": max(success_times) if success_times else None,
         "latest_issue_at": max(issue_times) if issue_times else None,
-        "latest_scheduled_at": max(scheduled_times) if scheduled_times else None,
+        "latest_auto_at": max(auto_times) if auto_times else None,
         "max_failure_streak": max(failure_streaks) if failure_streaks else 0,
     }
 

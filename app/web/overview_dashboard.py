@@ -838,12 +838,16 @@ def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at
 def _run_browser_auto_refresh_check() -> dict[str, Any]:
     checked_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        summary = run_overview_automation(profile=BROWSER_AUTO_REFRESH_PROFILE)
+        summary = run_overview_automation(
+            profile=BROWSER_AUTO_REFRESH_PROFILE,
+            execution_mode="browser_auto",
+        )
     except RuntimeError as exc:
         summary = {
             "job_name": "overview_automation",
             "status": "locked",
             "profile": BROWSER_AUTO_REFRESH_PROFILE,
+            "execution_mode": "browser_auto",
             "started_at": checked_at,
             "finished_at": checked_at,
             "jobs_due": 1,
@@ -857,6 +861,7 @@ def _run_browser_auto_refresh_check() -> dict[str, Any]:
             "job_name": "overview_automation",
             "status": "failed",
             "profile": BROWSER_AUTO_REFRESH_PROFILE,
+            "execution_mode": "browser_auto",
             "started_at": checked_at,
             "finished_at": checked_at,
             "jobs_due": None,
@@ -2145,10 +2150,10 @@ def _render_collection_ops_tab() -> None:
                 "tone": "positive" if coverage.get("latest_success_at") else "neutral",
             },
             {
-                "title": "Latest Scheduled",
-                "value": _snapshot_value(coverage.get("latest_scheduled_at")),
-                "detail": "from automation runs",
-                "tone": "positive" if coverage.get("latest_scheduled_at") else "neutral",
+                "title": "Latest Auto",
+                "value": _snapshot_value(coverage.get("latest_auto_at")),
+                "detail": "scheduled or browser auto",
+                "tone": "positive" if coverage.get("latest_auto_at") else "neutral",
             },
             {
                 "title": "Latest Issue",

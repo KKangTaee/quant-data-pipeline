@@ -5572,7 +5572,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - 1차 자동화는 long-running daemon보다 run-once CLI가 안전하다. CLI가 cadence, US market-hours, lock, scheduled run history metadata를 처리하면 로컬 scheduler와 Codex automation 양쪽에 붙이기 쉽다
 - Follow-up:
-  - `app.jobs.overview_automation`을 추가했고, Data Health scheduled/manual/failure-streak 표시와 quote gap issue persistence까지 보강했다. 다음 단계는 실제 macOS launchd / cron 등록 또는 Codex automation 연결 여부를 선택하는 것이다
+  - `app.jobs.overview_automation`을 추가했고, Data Health auto/manual/failure-streak 표시와 quote gap issue persistence까지 보강했다. 다음 단계는 실제 macOS launchd / cron 등록 또는 Codex automation 연결 여부를 선택하는 것이다
 
 ### 2026-05-29 - 자동 수집을 브라우저가 열렸을 때만 작동하게 한다
 - User request:

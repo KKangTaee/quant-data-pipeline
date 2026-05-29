@@ -25,7 +25,7 @@ Last Verified: 2026-05-28
 | Overview Market Intelligence Events UX | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`; Events Focus view, Importance filter, event type stacked calendar, Days Until / Importance / Focus read model 완료 |
 | Overview Market Intelligence Market Movers Ops | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`; daily snapshot coverage %, SP500/TOP1000/TOP2000 DB status auto-check, refresh guidance / snapshot diagnostics 완료 |
 | Overview Market Intelligence Sector / Industry Trend | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`; S&P 500 / Top1000 / Top2000 coverage, Daily / Weekly / Monthly latest ranking + trend chart 완료 |
-| Overview Scheduled Refresh Automation | Complete | `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`; 브라우저 없는 run-once orchestrator, Data Health scheduled/manual/failure-streak 표시, quote gap issue persistence 완료 |
+| Overview Scheduled Refresh Automation | Complete | `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`; 브라우저 없는 run-once orchestrator, Data Health auto/manual/failure-streak 표시, quote gap issue persistence 완료 |
 | Overview Browser Auto Refresh | Active | `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`; Overview를 열어둔 동안만 `browser_safe` S&P 500 snapshot check를 5분마다 실행하는 UI / heartbeat 작업 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |

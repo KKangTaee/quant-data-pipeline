@@ -336,14 +336,23 @@ class OverviewAutomationLock:
         return _as_local_naive(self.now) - created_at > timedelta(minutes=max(1, self.stale_after_minutes))
 
 
-def _with_scheduled_metadata(
+def _automation_context_prefix(execution_mode: str) -> str:
+    normalized = str(execution_mode or "").strip().lower()
+    if normalized == "browser_auto":
+        return "Browser-session Overview automation"
+    return "Scheduled Overview automation"
+
+
+def _with_automation_metadata(
     result: JobResult,
     *,
     profile: str,
     spec: ScheduledJobSpec,
     plan_row: dict[str, Any],
+    execution_mode: str,
 ) -> JobResult:
     out = dict(result)
+    normalized_execution_mode = str(execution_mode or "scheduled").strip().lower() or "scheduled"
     metadata = dict(out.get("run_metadata") or {})
     input_params = dict(metadata.get("input_params") or {})
     input_params.update(
@@ -356,11 +365,11 @@ def _with_scheduled_metadata(
     )
     metadata.update(
         {
-            "execution_mode": "scheduled",
+            "execution_mode": normalized_execution_mode,
             "automation_profile": profile,
             "automation_job_id": spec.job_id,
             "input_params": input_params,
-            "execution_context": f"Scheduled Overview automation: {spec.description}",
+            "execution_context": f"{_automation_context_prefix(normalized_execution_mode)}: {spec.description}",
         }
     )
     out["run_metadata"] = metadata
@@ -368,6 +377,7 @@ def _with_scheduled_metadata(
     details["automation"] = {
         "profile": profile,
         "job_id": spec.job_id,
+        "execution_mode": normalized_execution_mode,
         "cadence_minutes": spec.cadence_minutes,
         "planned_reason": plan_row.get("reason"),
     }
@@ -401,11 +411,13 @@ def run_overview_automation(
     history_loader: Callable[..., list[dict[str, Any]]] = load_run_history,
     history_appender: Callable[[dict[str, Any]], None] = append_run_history,
     specs: Sequence[ScheduledJobSpec] = OVERVIEW_AUTOMATION_JOB_SPECS,
+    execution_mode: str = "scheduled",
 ) -> dict[str, Any]:
     started_at = _now_str(now)
     t0 = perf_counter()
     now_value = now or datetime.now()
     normalized_profile = str(profile or "standard").strip().lower()
+    normalized_execution_mode = str(execution_mode or "scheduled").strip().lower() or "scheduled"
     if history_rows is None:
         history = history_loader(limit=500)
     else:
@@ -428,6 +440,7 @@ def run_overview_automation(
             "job_name": "overview_automation",
             "status": status,
             "profile": normalized_profile,
+            "execution_mode": normalized_execution_mode,
             "started_at": started_at,
             "finished_at": _now_str(),
             "duration_sec": round(perf_counter() - t0, 3),
@@ -458,14 +471,15 @@ def run_overview_automation(
                     "symbols_requested": None,
                     "symbols_processed": None,
                     "failed_symbols": [],
-                    "message": f"Scheduled Overview job failed: {exc}",
+                    "message": f"Overview automation job failed: {exc}",
                     "details": {"automation_job_id": spec.job_id},
                 }
-            annotated = _with_scheduled_metadata(
+            annotated = _with_automation_metadata(
                 result,
                 profile=normalized_profile,
                 spec=spec,
                 plan_row=row,
+                execution_mode=normalized_execution_mode,
             )
             history_appender(annotated)
             results.append(annotated)
@@ -475,6 +489,7 @@ def run_overview_automation(
         "job_name": "overview_automation",
         "status": status,
         "profile": normalized_profile,
+        "execution_mode": normalized_execution_mode,
         "started_at": started_at,
         "finished_at": _now_str(),
         "duration_sec": round(perf_counter() - t0, 3),

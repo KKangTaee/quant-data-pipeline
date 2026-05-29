@@ -94,7 +94,7 @@ http://localhost:8501
    - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, FOMC calendar, Macro calendar, Earnings calendar다.
    - 상태는 `OK`, `Due`, `Stale`, `Missing`, `Failed`, `Partial`로 표시된다.
    - `Latest Success`, `Latest Issue`, `Rows`, `Processed`, `Failed`, `Duration Sec`은 Overview refresh button이 남긴 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`의 local run history를 읽는다.
-   - `Last Scheduled Run`, `Next Scheduled Run`, `Last Manual Run`, `Failure Streak`은 scheduled automation과 수동 refresh가 섞여 있을 때 실행 경로를 구분하기 위한 운영 지표다.
+   - `Last Auto Run`, `Auto Source`, `Next Auto Due`, `Last Manual Run`, `Failure Streak`은 scheduled automation, browser-session auto refresh, 수동 refresh가 섞여 있을 때 실행 경로를 구분하기 위한 운영 지표다.
    - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
@@ -201,7 +201,7 @@ PY
 - Overview Events calendar chart is stacked by event type, not a single aggregate line.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, scheduled/manual run columns, failure streak, and next-action table.
+- Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
 - Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
