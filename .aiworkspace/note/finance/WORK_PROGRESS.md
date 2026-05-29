@@ -4078,3 +4078,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Events `Calendar` 탭에 월 선택 가능한 7열 월간 달력 그리드를 추가했다.
   - 기존 event count chart와 날짜별 리스트는 그대로 유지해 월간 조망과 세부 스캔을 함께 제공한다.
   - Service contract 56 tests, module compile, desktop/mobile browser smoke를 통과했다.
+- Overview Market Movers quote gap diagnostics:
+  - `missing quote row` 심볼만 대상으로 Yahoo single quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance fast_info evidence를 비교하는 1차 진단을 추가했다.
+  - Overview `Coverage Diagnostics`에 `Diagnose Missing Quotes` 버튼과 diagnosis / confidence / recommended action 테이블을 연결했다.
+  - 1차는 evidence-based hint이며 별도 delisting / halt 확정 판정은 하지 않는다.

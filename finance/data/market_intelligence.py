@@ -5,6 +5,7 @@ import json
 import re
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import UTC, date, datetime, timedelta
 from io import StringIO
 from inspect import Parameter, signature
@@ -2207,6 +2208,317 @@ def _fetch_yahoo_quote_rows(symbols: list[str], *, timeout: int = 15) -> list[di
         timeout=timeout,
     )
     return list(data.get("quoteResponse", {}).get("result", []) or [])
+
+
+def _fast_info_value(info: Any, *keys: str) -> Any:
+    for key in keys:
+        try:
+            if hasattr(info, "get"):
+                value = info.get(key)
+                if value not in (None, ""):
+                    return value
+        except Exception:
+            pass
+        try:
+            value = info[key]
+            if value not in (None, ""):
+                return value
+        except Exception:
+            pass
+        attr_name = key.replace("-", "_")
+        try:
+            value = getattr(info, attr_name)
+            if value not in (None, ""):
+                return value
+        except Exception:
+            pass
+    return None
+
+
+def _fetch_fast_info_evidence(
+    symbol: str,
+    *,
+    ticker_factory: Callable[[str], Any] | None = None,
+) -> dict[str, Any]:
+    factory = ticker_factory or yf.Ticker
+    try:
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            ticker = factory(symbol)
+            info = getattr(ticker, "fast_info", None)
+            latest_price = _safe_float(_fast_info_value(info, "lastPrice", "last_price", "lastPrice"))
+            previous_close = _safe_float(
+                _fast_info_value(info, "previousClose", "previous_close", "regularMarketPreviousClose")
+            )
+        status = "ok" if latest_price is not None or previous_close is not None else "missing"
+        return {
+            "status": status,
+            "latest_price": latest_price,
+            "previous_close": previous_close,
+            "detail": None if status == "ok" else "fast_info returned no price fields",
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "latest_price": None,
+            "previous_close": None,
+            "detail": str(exc),
+        }
+
+
+def _history_evidence_from_frame(symbol: str, frame: pd.DataFrame) -> dict[str, Any]:
+    symbol_history = _symbol_frame(frame, symbol)
+    quote_time, latest_price, _volume = _latest_close_row(symbol_history)
+    previous_close = _previous_close(symbol_history, quote_time)
+    status = "ok" if latest_price is not None else "missing"
+    return {
+        "status": status,
+        "latest_price": latest_price,
+        "previous_close": previous_close,
+        "latest_price_date": quote_time,
+        "detail": None if status == "ok" else "5d daily history returned no close rows",
+    }
+
+
+def _fetch_history_evidence_map(
+    symbols: Sequence[str],
+    *,
+    downloader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    price_downloader = downloader or _download_prices
+    normalized_symbols = [_normalize_symbol(item) for item in symbols if _normalize_symbol(item)]
+    if not normalized_symbols:
+        return {}
+    try:
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            frame = price_downloader(normalized_symbols, period="5d", interval="1d", progress=False)
+        return {item: _history_evidence_from_frame(item, frame) for item in normalized_symbols}
+    except Exception as exc:
+        return {
+            item: {
+                "status": "error",
+                "latest_price": None,
+                "previous_close": None,
+                "latest_price_date": None,
+                "detail": str(exc),
+            }
+            for item in normalized_symbols
+        }
+
+
+def _load_asset_profile_evidence_map(
+    symbols: Sequence[str],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        rows = db.query(
+            f"""
+            SELECT symbol, long_name, quote_type, exchange, status, error_msg, last_collected_at
+            FROM nyse_asset_profile
+            WHERE symbol IN ({placeholders})
+              AND kind = %s
+            """,
+            list(symbols) + ["stock"],
+        )
+    finally:
+        db.close()
+    return {
+        _normalize_symbol(row.get("symbol")): {
+            "long_name": row.get("long_name"),
+            "quote_type": row.get("quote_type"),
+            "exchange": row.get("exchange"),
+            "status": row.get("status"),
+            "error_msg": row.get("error_msg"),
+            "last_collected_at": row.get("last_collected_at"),
+        }
+        for row in rows
+        if _normalize_symbol(row.get("symbol"))
+    }
+
+
+def _quote_gap_recommended_action(diagnosis: str) -> str:
+    return {
+        "batch_only_gap": "Rerun Update Daily Snapshot; if it repeats, use smaller batches or a single-symbol retry fallback.",
+        "provider_quote_gap": "Treat as Yahoo quote endpoint coverage gap; use yfinance history/fast_info evidence or rerun later.",
+        "history_gap_quote_available": "Quote-like price exists but short OHLCV history is weak; inspect yfinance history coverage before using fallback.",
+        "missing_previous_close": "Refresh daily OHLCV history or inspect previous-close coverage before calculating daily return.",
+        "possible_stale_universe": "Refresh universe/profile data and inspect whether the symbol should remain in the coverage universe.",
+        "provider_endpoint_issue": "Provider evidence is inconclusive; rerun later and inspect alternate sources before excluding the symbol.",
+    }.get(diagnosis, "Inspect provider data and rerun the relevant refresh.")
+
+
+def _classify_quote_gap_diagnostic(
+    *,
+    quote_status: str,
+    quote_latest_price: float | None,
+    quote_previous_close: float | None,
+    fast_info: dict[str, Any],
+    history: dict[str, Any],
+    db_price: dict[str, Any],
+    profile: dict[str, Any],
+) -> tuple[str, float, str]:
+    fast_latest = _safe_float(fast_info.get("latest_price"))
+    fast_previous = _safe_float(fast_info.get("previous_close"))
+    history_latest = _safe_float(history.get("latest_price"))
+    history_previous = _safe_float(history.get("previous_close"))
+    db_latest = _safe_float(db_price.get("previous_close"))
+    has_latest = any(value is not None for value in [quote_latest_price, fast_latest, history_latest, db_latest])
+    has_previous = any(value is not None for value in [quote_previous_close, fast_previous, history_previous, db_latest])
+    profile_status = str(profile.get("status") or "").lower()
+
+    if quote_status == "ok" and quote_latest_price is not None and has_previous:
+        diagnosis = "batch_only_gap"
+        confidence = 0.9
+        evidence = "Single-symbol Yahoo quote returned enough price fields; the original batch response likely missed this symbol."
+    elif fast_latest is not None and history_latest is None and quote_latest_price is None:
+        diagnosis = "history_gap_quote_available"
+        confidence = 0.78
+        evidence = "fast_info has current price evidence, but short daily history / quote endpoint evidence is missing."
+    elif has_latest and not has_previous:
+        diagnosis = "missing_previous_close"
+        confidence = 0.76
+        evidence = "A latest/current price exists, but previous-close evidence is missing."
+    elif has_latest:
+        diagnosis = "provider_quote_gap"
+        confidence = 0.82
+        evidence = "Yahoo quote endpoint did not return a complete row, but another price source still has evidence."
+    elif profile_status in {"delisted", "not_found", "error"}:
+        diagnosis = "possible_stale_universe"
+        confidence = 0.7
+        evidence = f"Asset profile status is `{profile_status or 'unknown'}` and no current price evidence was found."
+    else:
+        diagnosis = "provider_endpoint_issue"
+        confidence = 0.58
+        evidence = "No alternate price evidence was found in the quick free-source diagnostic."
+    return diagnosis, confidence, evidence
+
+
+def diagnose_market_quote_gaps(
+    symbols: str | Sequence[Any],
+    *,
+    universe_code: str = "SP500",
+    interval_code: str = DEFAULT_INTRADAY_INTERVAL,
+    snapshot_time_utc: str | None = None,
+    max_symbols: int = 50,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    ticker_factory: Callable[[str], Any] | None = None,
+    history_downloader: Callable[..., pd.DataFrame] | None = None,
+    db_previous_close_map: dict[str, dict[str, Any]] | None = None,
+    profile_map: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    normalized_symbols = _normalize_symbol_list(symbols, max_symbols=max_symbols)
+    if not normalized_symbols:
+        return {
+            "universe_code": universe_code,
+            "interval_code": interval_code,
+            "snapshot_time_utc": snapshot_time_utc,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "diagnosis_counts": {},
+            "diagnostics": [],
+        }
+
+    fetcher = quote_fetcher or _fetch_yahoo_quote_rows
+    db_map = db_previous_close_map
+    if db_map is None:
+        db_map = _load_db_previous_close_map(normalized_symbols, host=host, user=user, password=password, port=port)
+    normalized_db_map = {_normalize_symbol(key): dict(value or {}) for key, value in db_map.items()}
+    profiles = profile_map
+    if profiles is None:
+        profiles = _load_asset_profile_evidence_map(normalized_symbols, host=host, user=user, password=password, port=port)
+    normalized_profiles = {_normalize_symbol(key): dict(value or {}) for key, value in profiles.items()}
+    history_map = _fetch_history_evidence_map(normalized_symbols, downloader=history_downloader)
+
+    diagnostics: list[dict[str, Any]] = []
+    for symbol in normalized_symbols:
+        try:
+            quote_rows = fetcher([symbol])
+            quote_row = next((row for row in quote_rows if _normalize_symbol(row.get("symbol")) == symbol), None)
+            quote_error = None
+        except Exception as exc:
+            quote_row = None
+            quote_error = str(exc)
+        quote_latest_price = _safe_float((quote_row or {}).get("regularMarketPrice"))
+        quote_previous_close = _safe_float((quote_row or {}).get("regularMarketPreviousClose"))
+        quote_status = "ok" if quote_row and quote_latest_price is not None else "missing"
+        if quote_error:
+            quote_status = "error"
+
+        history = history_map.get(
+            symbol,
+            {
+                "status": "missing",
+                "latest_price": None,
+                "previous_close": None,
+                "latest_price_date": None,
+                "detail": "5d daily history was not checked",
+            },
+        )
+        db_price = normalized_db_map.get(symbol, {})
+        needs_fast_info = (
+            quote_latest_price is None
+            and history.get("latest_price") is None
+            and db_price.get("previous_close") is None
+        )
+        fast_info = (
+            _fetch_fast_info_evidence(symbol, ticker_factory=ticker_factory)
+            if needs_fast_info
+            else {"status": "skipped", "latest_price": None, "previous_close": None, "detail": "alternate price evidence already found"}
+        )
+        profile = normalized_profiles.get(symbol, {})
+        diagnosis, confidence, evidence_summary = _classify_quote_gap_diagnostic(
+            quote_status=quote_status,
+            quote_latest_price=quote_latest_price,
+            quote_previous_close=quote_previous_close,
+            fast_info=fast_info,
+            history=history,
+            db_price=db_price,
+            profile=profile,
+        )
+        diagnostics.append(
+            {
+                "Symbol": symbol,
+                "Diagnosis": diagnosis,
+                "Confidence": round(confidence, 2),
+                "Evidence Summary": evidence_summary,
+                "Recommended Action": _quote_gap_recommended_action(diagnosis),
+                "Quote Single Status": quote_status,
+                "Fast Info Status": fast_info.get("status") or "-",
+                "History Status": history.get("status") or "-",
+                "DB Price Status": "ok" if db_price.get("previous_close") is not None else "missing",
+                "Profile Status": profile.get("status") or "-",
+                "Quote Price": quote_latest_price,
+                "Fast Info Price": fast_info.get("latest_price"),
+                "History Price": history.get("latest_price"),
+                "DB Latest Price": db_price.get("previous_close"),
+                "DB Latest Date": db_price.get("previous_close_date"),
+                "Profile Error": profile.get("error_msg") or "-",
+                "Provider Detail": quote_error or fast_info.get("detail") or history.get("detail") or "-",
+            }
+        )
+
+    counts = Counter(str(row.get("Diagnosis") or "unknown") for row in diagnostics)
+    return {
+        "universe_code": universe_code,
+        "interval_code": interval_code,
+        "snapshot_time_utc": snapshot_time_utc,
+        "symbols_requested": len(normalized_symbols),
+        "symbols_processed": len(diagnostics),
+        "diagnosis_counts": dict(counts),
+        "diagnostics": diagnostics,
+    }
 
 
 def _symbol_frame(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:

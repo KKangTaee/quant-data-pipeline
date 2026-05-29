@@ -5553,3 +5553,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 collector나 DB 변경 없이 `market_event_calendar` read model의 날짜 / 타입 / 중요도 필드만으로 월간 grid를 만들 수 있음
 - Follow-up:
   - Events `Calendar` 탭에 월 선택형 달력 grid를 추가하고 기존 stacked chart와 날짜별 리스트는 아래에 유지했다
+
+### 2026-05-29 - Market Movers missing quote row의 1차 원인 진단을 추가한다
+- User request:
+  - 사용자가 반복 refresh 후에도 남는 `missing quote row` 티커의 원인을 더 명확히 알 수 있는 기능을 요청함
+- Interpreted goal:
+  - 유료 API 없이 기존 Yahoo / yfinance / 내부 DB evidence를 조합해 사용자가 다음 조치를 판단할 수 있는 원인 후보와 confidence를 보여줘야 함
+- Analysis result:
+  - Yahoo quote batch 누락만으로 거래정지 / 상장폐지를 확정할 수 없으므로 `provider_quote_gap`, `batch_only_gap`, `history_gap_quote_available`, `missing_previous_close`, `possible_stale_universe` 같은 evidence-based diagnosis가 안전함
+- Follow-up:
+  - Overview `Coverage Diagnostics`에서 missing quote row만 대상으로 수동 진단을 실행하고, 결과를 job result table로 표시하도록 구현했다

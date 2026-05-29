@@ -24,6 +24,7 @@ from finance.data.market_intelligence import (
     collect_and_store_macro_calendar,
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
+    diagnose_market_quote_gaps,
 )
 
 
@@ -1050,6 +1051,87 @@ def run_collect_macro_calendar(
                 "years": list(years or []),
                 "include_bls": include_bls,
                 "include_bea": include_bea,
+            },
+        )
+
+
+def run_diagnose_market_quote_gaps(
+    *,
+    symbols: str | Iterable[str] | None = None,
+    universe_code: str = "SP500",
+    interval_code: str = "5m",
+    snapshot_time_utc: str | None = None,
+    max_symbols: int = 50,
+) -> JobResult:
+    job_name = "diagnose_market_quote_gaps"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="Quote gap diagnosis needs at least one valid missing symbol.",
+            details={"invalid_symbols": invalid_symbols, "universe_code": universe_code},
+        )
+    try:
+        result = diagnose_market_quote_gaps(
+            parsed,
+            universe_code=universe_code,
+            interval_code=interval_code,
+            snapshot_time_utc=snapshot_time_utc,
+            max_symbols=max_symbols,
+        )
+        diagnostics = list(result.get("diagnostics") or [])
+        counts = dict(result.get("diagnosis_counts") or {})
+        finished_at = _now_str()
+        status = "success" if diagnostics else "failed"
+        message = (
+            f"Quote gap diagnosis completed for {len(diagnostics)} / {len(parsed)} symbols."
+            if diagnostics
+            else "Quote gap diagnosis produced no rows."
+        )
+        if counts:
+            message += " " + ", ".join(f"{key}: {value}" for key, value in counts.items()) + "."
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=len(diagnostics),
+            failed_symbols=invalid_symbols,
+            message=message,
+            details={**result, "invalid_symbols": invalid_symbols},
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=invalid_symbols + parsed,
+            message=f"Quote gap diagnosis failed: {exc}",
+            details={
+                "invalid_symbols": invalid_symbols,
+                "universe_code": universe_code,
+                "interval_code": interval_code,
+                "snapshot_time_utc": snapshot_time_utc,
             },
         )
 

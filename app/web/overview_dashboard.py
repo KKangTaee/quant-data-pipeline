@@ -12,6 +12,7 @@ import streamlit as st
 
 from app.jobs.run_history import append_run_history
 from app.jobs.ingestion_jobs import (
+    run_diagnose_market_quote_gaps,
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_macro_calendar,
@@ -558,7 +559,47 @@ def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) ->
     )
 
 
-def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
+def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str) -> None:
+    result = st.session_state.get(result_key)
+    if not isinstance(result, dict):
+        return
+    details = dict(result.get("details") or {})
+    if details.get("universe_code") and str(details.get("universe_code")) != universe_code:
+        return
+    status = str(result.get("status") or "unknown")
+    message = str(result.get("message") or "")
+    if status in {"success", "partial_success"}:
+        st.success(message or "Quote gap diagnosis completed.")
+    elif status == "failed":
+        st.error(message or "Quote gap diagnosis failed.")
+    else:
+        st.info(message or f"Quote gap diagnosis status: {status}")
+    counts = dict(details.get("diagnosis_counts") or {})
+    if counts:
+        st.caption("Diagnosis counts: " + ", ".join(f"{key} ({value})" for key, value in counts.items()))
+    rows = list(details.get("diagnostics") or [])
+    if rows:
+        display_columns = [
+            column
+            for column in [
+                "Symbol",
+                "Diagnosis",
+                "Confidence",
+                "Evidence Summary",
+                "Recommended Action",
+                "Quote Single Status",
+                "Fast Info Status",
+                "History Status",
+                "DB Price Status",
+                "Profile Status",
+                "DB Latest Date",
+            ]
+            if column in rows[0]
+        ]
+        st.dataframe(pd.DataFrame(rows)[display_columns], width="stretch", hide_index=True)
+
+
+def _render_missing_diagnostics(snapshot: dict[str, Any], *, universe_code: str, period: str) -> None:
     missing_rows = snapshot.get("missing_rows")
     if not isinstance(missing_rows, pd.DataFrame) or missing_rows.empty:
         return
@@ -570,6 +611,42 @@ def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
                 + ", ".join(f"{reason} ({count})" for reason, count in reason_counts.items())
             )
         st.dataframe(missing_rows, width="stretch", hide_index=True)
+        coverage = dict(snapshot.get("coverage") or {})
+        if period == "daily" and coverage.get("price_mode") == "Intraday Snapshot" and "Symbol" in missing_rows:
+            symbols = (
+                missing_rows["Symbol"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .replace("", pd.NA)
+                .dropna()
+                .head(50)
+                .tolist()
+            )
+            result_key = f"overview_{universe_code.lower()}_quote_gap_diagnostic_result"
+            cols = st.columns([1, 2], gap="small", vertical_alignment="center")
+            if cols[0].button(
+                "Diagnose Missing Quotes",
+                key=f"overview_{universe_code.lower()}_quote_gap_diagnose",
+                use_container_width=True,
+                disabled=not symbols,
+                help="Runs a bounded diagnostic for missing daily quote rows using single-symbol Yahoo quote, yfinance fast_info/history, DB price, and asset profile evidence.",
+            ):
+                with st.spinner(f"Diagnosing {len(symbols)} missing quote row(s)..."):
+                    _store_overview_job_result(
+                        result_key,
+                        run_diagnose_market_quote_gaps(
+                            symbols=symbols,
+                            universe_code=universe_code,
+                            interval_code=str(coverage.get("intraday_interval") or "5m"),
+                            snapshot_time_utc=coverage.get("snapshot_time_utc"),
+                            max_symbols=50,
+                        ),
+                    )
+            cols[1].caption(
+                "Evidence-based hint only: quote endpoint, 5D history, DB EOD price, profile, and fast_info when needed."
+            )
+            _render_quote_gap_diagnostics_result(result_key, universe_code=universe_code)
 
 
 def _render_market_job_result(result_key: str) -> None:
@@ -901,7 +978,7 @@ def _render_market_movers_snapshot_panel(
 ) -> None:
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
-    _render_missing_diagnostics(snapshot)
+    _render_missing_diagnostics(snapshot, universe_code=universe_code, period=period)
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:

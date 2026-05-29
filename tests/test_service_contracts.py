@@ -1176,6 +1176,72 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(written_rows[0]["universe_code"], "TOP1000")
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
 
+    def test_quote_gap_diagnostics_explain_batch_only_gap(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class EmptyTicker:
+            fast_info = {}
+
+            def __init__(self, symbol: str) -> None:
+                self.symbol = symbol
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                }
+            ]
+
+        result = mi.diagnose_market_quote_gaps(
+            ["AAA"],
+            quote_fetcher=quote_fetcher,
+            ticker_factory=EmptyTicker,
+            history_downloader=lambda *args, **kwargs: pd.DataFrame(),
+            db_previous_close_map={},
+            profile_map={"AAA": {"status": "active"}},
+        )
+
+        self.assertEqual(result["diagnosis_counts"], {"batch_only_gap": 1})
+        row = result["diagnostics"][0]
+        self.assertEqual(row["Diagnosis"], "batch_only_gap")
+        self.assertEqual(row["Quote Single Status"], "ok")
+        self.assertIn("Single-symbol", row["Evidence Summary"])
+
+    def test_quote_gap_diagnostics_explain_provider_quote_gap(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class EmptyTicker:
+            fast_info = {}
+
+            def __init__(self, symbol: str) -> None:
+                self.symbol = symbol
+
+        def history_downloader(symbols, **kwargs):
+            self.assertEqual(symbols, ["BBB"])
+            del kwargs
+            return pd.DataFrame(
+                {"Close": [100.0, 105.0], "Volume": [1000, 1200]},
+                index=pd.to_datetime(["2026-05-27", "2026-05-28"]),
+            )
+
+        result = mi.diagnose_market_quote_gaps(
+            ["BBB"],
+            quote_fetcher=lambda symbols: [],
+            ticker_factory=EmptyTicker,
+            history_downloader=history_downloader,
+            db_previous_close_map={"BBB": {"previous_close": 105.0, "previous_close_date": "2026-05-28"}},
+            profile_map={"BBB": {"status": "active"}},
+        )
+
+        self.assertEqual(result["diagnosis_counts"], {"provider_quote_gap": 1})
+        row = result["diagnostics"][0]
+        self.assertEqual(row["Diagnosis"], "provider_quote_gap")
+        self.assertEqual(row["History Status"], "ok")
+        self.assertEqual(row["DB Price Status"], "ok")
+
 
 class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
     def test_market_event_schema_contains_required_columns(self) -> None:

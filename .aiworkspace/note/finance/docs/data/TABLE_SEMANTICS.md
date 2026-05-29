@@ -90,6 +90,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - 무료 provider 기반이므로 지연, rate limit, ticker별 missing이 발생할 수 있다.
 - `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
+- Market Movers의 1차 quote gap diagnosis는 이 table의 missing row를 대상으로 추가 evidence를 조회해 job result로 보여준다. 별도 table fact나 상장폐지 확정 판정은 아직 만들지 않는다.
 - `TOP1000` / `TOP2000` UI refresh는 quote fast path만 사용하고, 광범위한 yfinance OHLCV fallback은 오래 걸릴 수 있어 자동 fallback하지 않는다.
 
 ## `market_event_calendar`
