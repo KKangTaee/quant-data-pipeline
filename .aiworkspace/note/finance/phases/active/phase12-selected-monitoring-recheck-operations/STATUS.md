@@ -17,20 +17,22 @@ Completed:
 - Readiness, selected replay contract source, DB latest market date, and symbol freshness are now combined into a read-only operations preflight contract.
 - 12-3 `selected-provider-evidence-staleness-contract-v1`
 - Provider evidence now applies selected-monitoring policy to diagnostic status, coverage, coverage weight, freshness, required provider areas, and look-through coverage.
+- 12-4 `recheck-comparison-review-signal-policy-v1`
+- Review Signals now uses Recheck Comparison as the performance threshold policy owner and includes preflight / provider routes in the read-only signal board.
 
 Next:
 
-- 12-4 `recheck-comparison-review-signal-policy-v1`
+- 12-5 `allocation-drift-evidence-boundary-v1`
 
 ## Latest Decision
 
-12-3 added `selected_provider_evidence_staleness_contract_v1`.
-Selected Provider Evidence now downgrades stale actual evidence and partial / bridge / proxy coverage to review, and required operability / holdings / exposure gaps to needs-input.
-Provider evidence remains DB-backed and read-only.
+12-4 added `selected_review_signal_policy_v1`.
+Review Signals no longer owns duplicate CAGR / MDD / benchmark spread threshold logic; those rows are derived from Recheck Comparison.
+Recheck Preflight and Provider Evidence routes now feed the same read-only signal board.
 
 Immediate next target:
 
-- `recheck-comparison-review-signal-policy-v1`
+- `allocation-drift-evidence-boundary-v1`
 
 ## Storage Boundary Reminder
 

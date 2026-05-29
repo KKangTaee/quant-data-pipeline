@@ -118,6 +118,44 @@ The contract adds no provider collection, JSONL registry, monitoring log auto wr
 
 Implementation order now moves to 12-4 recheck comparison / review signal policy.
 
+## 12-4 Recheck Comparison / Review Signal Policy Result
+
+12-4 added `selected_review_signal_policy_v1`.
+
+Review Signals now reads performance deterioration rows from Recheck Comparison instead of recalculating CAGR / MDD / benchmark spread thresholds in the Streamlit layer.
+
+Policy inputs:
+
+- Final Review evidence route and blockers
+- Recheck Operations Preflight route
+- Selected Provider Evidence route
+- Recheck Comparison rows
+- optional Actual Allocation drift check
+
+Performance threshold ownership:
+
+| Review Signals Row | Policy Owner |
+| --- | --- |
+| Performance Recheck input | Recheck Comparison |
+| CAGR vs selected baseline | Recheck Comparison |
+| MDD vs selected baseline | Recheck Comparison |
+| Benchmark spread | Recheck Comparison |
+| Component evidence coverage | Recheck Comparison |
+| Recheck period coverage | Recheck Comparison |
+
+Route mapping:
+
+| Source | Route / Status | Review Signal Status |
+| --- | --- | --- |
+| Recheck Preflight | ready / review / needs data / blocked | `CLEAR` / `WATCH` / `NEEDS_INPUT` / `BREACHED` |
+| Provider Evidence | ready / review / needs data / blocked | `CLEAR` / `WATCH` / `NEEDS_INPUT` / `BREACHED` |
+| Recheck Comparison row | pass / watch / needs input / breached | `CLEAR` / `WATCH` / `NEEDS_INPUT` / `BREACHED` |
+| Actual Allocation drift | not checked | `OPTIONAL` |
+
+The policy adds no JSONL registry, monitoring log auto write, user memo, preset, approval, order, or auto rebalance path.
+
+Implementation order now moves to 12-5 optional allocation drift evidence boundary.
+
 ## Route Semantics
 
 | State | Meaning |

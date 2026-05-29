@@ -4226,3 +4226,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/selected-provider-evidence-staleness-contract-v1/`에서 provider evidence freshness / coverage policy를 구현했다.
   - stale actual evidence, partial / missing look-through coverage, missing required provider areas가 PASS처럼 보이지 않도록 Dashboard와 service contract를 강화했다.
   - 다음 작업은 `recheck-comparison-review-signal-policy-v1`이며 Phase 12 문서에서 12-4로 이어진다.
+- Phase 12 Recheck Comparison Review Signal Policy V1:
+  - `.aiworkspace/note/finance/tasks/active/recheck-comparison-review-signal-policy-v1/`에서 `selected_review_signal_policy_v1`을 구현했다.
+  - Review Signals의 CAGR / MDD / benchmark spread rows는 Recheck Comparison에서 파생되고, preflight / provider route도 같은 signal board에 반영된다.
+  - 다음 작업은 `allocation-drift-evidence-boundary-v1`이며 Phase 12 문서에서 12-5로 이어진다.

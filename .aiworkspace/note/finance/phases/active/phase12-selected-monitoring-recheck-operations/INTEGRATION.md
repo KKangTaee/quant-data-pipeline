@@ -8,8 +8,8 @@ Created: 2026-05-29
 1. 12-1 selected monitoring source map / gap audit: Complete
 2. 12-2 recheck readiness / freshness operations contract: Complete
 3. 12-3 selected provider evidence staleness contract: Complete
-4. 12-4 recheck comparison / review signal policy: Next
-5. 12-5 optional allocation drift evidence boundary: Pending
+4. 12-4 recheck comparison / review signal policy: Complete
+5. 12-5 optional allocation drift evidence boundary: Next
 6. 12-6 decision dossier / continuity operations refinement: Pending
 7. 12-7 integrated QA / closeout: Pending
 
@@ -32,7 +32,10 @@ DB loader changes were not required; the existing latest market date and price f
 12-3 touched `app/runtime/final_selected_portfolios.py`, `app/runtime/__init__.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
 Provider loader changes were not required; selected monitoring policy was applied above the existing provider context read model.
 
-12-4 is expected to touch recheck comparison / review signal runtime and UI policy code.
+12-4 touched `app/runtime/final_selected_portfolios.py`, `app/runtime/__init__.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
+Review Signals now derives performance threshold rows from Recheck Comparison and includes preflight / provider routes.
+
+12-5 is expected to touch optional allocation drift / alert preview runtime and UI boundary code.
 
 ## QA Gates
 

@@ -5074,6 +5074,83 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             }
         }
 
+    def _ready_recheck_preflight(self) -> dict:
+        return {
+            "schema_version": "selected_recheck_operations_preflight_v1",
+            "route": "RECHECK_PREFLIGHT_READY",
+            "route_label": "재검증 preflight 준비 완료",
+            "conclusion": "ready",
+            "metrics": {
+                "missing_symbol_count": 0,
+                "stale_symbol_count": 0,
+                "watch_symbol_count": 0,
+            },
+        }
+
+    def _needs_data_recheck_preflight(self) -> dict:
+        return {
+            "schema_version": "selected_recheck_operations_preflight_v1",
+            "route": "RECHECK_PREFLIGHT_NEEDS_DATA",
+            "route_label": "재검증 preflight 데이터 확인 필요",
+            "conclusion": "needs data",
+            "metrics": {
+                "missing_symbol_count": 1,
+                "stale_symbol_count": 0,
+                "watch_symbol_count": 0,
+            },
+        }
+
+    def _ready_provider_evidence(self) -> dict:
+        return {
+            "schema_version": "selected_provider_evidence_v1",
+            "route": "SELECTED_PROVIDER_READY",
+            "route_label": "Provider 근거 준비 완료",
+            "conclusion": "ready",
+            "metrics": {
+                "stale_count": 0,
+                "partial_coverage_count": 0,
+                "needs_input_count": 0,
+            },
+        }
+
+    def _needs_data_provider_evidence(self) -> dict:
+        return {
+            "schema_version": "selected_provider_evidence_v1",
+            "route": "SELECTED_PROVIDER_NEEDS_DATA",
+            "route_label": "Provider DB 확인 필요",
+            "conclusion": "needs data",
+            "metrics": {
+                "stale_count": 1,
+                "partial_coverage_count": 1,
+                "needs_input_count": 2,
+            },
+        }
+
+    def _ready_recheck_result(self) -> dict:
+        return {
+            "status": "ok",
+            "verdict_route": "SELECTION_THESIS_HOLDS",
+            "verdict": "선택한 재검증 기간에서 기존 선정 근거가 유지됩니다.",
+            "period": {
+                "start": "2024-01-01",
+                "end": "2026-05-28",
+                "baseline_start": "2020-01-01",
+                "baseline_end": "2024-12-31",
+                "added_days_vs_baseline": 513,
+            },
+            "portfolio_summary": {"cagr": 0.12, "mdd": -0.12},
+            "baseline_summary": {"cagr": 0.10, "mdd": -0.14, "start": "2020-01-01", "end": "2024-12-31"},
+            "benchmark_summary": {"cagr": 0.08},
+            "change_summary": {
+                "cagr_delta_vs_baseline": 0.02,
+                "mdd_delta_vs_baseline": 0.02,
+                "benchmark_cagr": 0.08,
+                "net_cagr_spread": 0.04,
+            },
+            "component_rows": [{"Component": "Selected Component", "Registry ID": "candidate-selected"}],
+            "blockers": [],
+        }
+
     def test_monitoring_timeline_is_read_only_and_requires_recheck_input(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 
@@ -5248,6 +5325,74 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(comparison["metrics"]["breached_count"], 0)
         self.assertEqual(comparison["metrics"]["watch_count"], 0)
         self.assertEqual(comparison["metrics"]["needs_input_count"], 0)
+
+    def test_review_signal_policy_ready_uses_recheck_comparison_rows(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+
+        policy = build_selected_portfolio_review_signal_policy(
+            self._selected_row(),
+            recheck_result=self._ready_recheck_result(),
+            recheck_preflight=self._ready_recheck_preflight(),
+            provider_evidence=self._ready_provider_evidence(),
+        )
+
+        self.assertEqual(policy["schema_version"], "selected_review_signal_policy_v1")
+        self.assertEqual(policy["route"], "REVIEW_SIGNAL_CLEAR")
+        self.assertEqual(policy["overall_status"], "CLEAR")
+        rows = {row["Trigger"]: row for row in policy["rows"]}
+        self.assertEqual(rows["CAGR vs selected baseline"]["Status"], "CLEAR")
+        self.assertEqual(rows["CAGR vs selected baseline"]["Policy Owner"], "Recheck Comparison")
+        self.assertEqual(rows["MDD vs selected baseline"]["Policy Owner"], "Recheck Comparison")
+        self.assertEqual(rows["Benchmark spread"]["Policy Owner"], "Recheck Comparison")
+        self.assertFalse(policy["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(policy["execution_boundary"]["order_instruction"])
+
+    def test_review_signal_policy_keeps_missing_recheck_and_data_gaps_out_of_clear(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+
+        policy = build_selected_portfolio_review_signal_policy(
+            self._selected_row(),
+            recheck_preflight=self._needs_data_recheck_preflight(),
+            provider_evidence=self._needs_data_provider_evidence(),
+        )
+
+        self.assertEqual(policy["route"], "REVIEW_SIGNAL_NEEDS_INPUT")
+        self.assertEqual(policy["overall_status"], "NEEDS_INPUT")
+        rows = {row["Trigger"]: row for row in policy["rows"]}
+        self.assertEqual(rows["Recheck operations preflight"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows["Provider evidence freshness / coverage"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows["Performance Recheck input"]["Status"], "NEEDS_INPUT")
+        self.assertGreaterEqual(policy["metrics"]["needs_input_count"], 3)
+        self.assertFalse(policy["execution_boundary"]["registry_write"])
+
+    def test_review_signal_policy_surfaces_comparison_breach(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+
+        breached_result = self._ready_recheck_result()
+        breached_result["verdict_route"] = "PERFORMANCE_WEAKENED"
+        breached_result["portfolio_summary"] = {"cagr": 0.04, "mdd": -0.22}
+        breached_result["benchmark_summary"] = {"cagr": 0.06}
+        breached_result["change_summary"] = {
+            "cagr_delta_vs_baseline": -0.06,
+            "mdd_delta_vs_baseline": -0.08,
+            "benchmark_cagr": 0.06,
+            "net_cagr_spread": -0.02,
+        }
+
+        policy = build_selected_portfolio_review_signal_policy(
+            self._selected_row(),
+            recheck_result=breached_result,
+            recheck_preflight=self._ready_recheck_preflight(),
+            provider_evidence=self._ready_provider_evidence(),
+        )
+
+        self.assertEqual(policy["route"], "REVIEW_SIGNAL_BREACHED")
+        self.assertEqual(policy["overall_status"], "BREACHED")
+        self.assertEqual(policy["recheck_comparison"]["route"], "RECHECK_COMPARISON_BREACHED")
+        rows = {row["Trigger"]: row for row in policy["rows"]}
+        self.assertEqual(rows["CAGR vs selected baseline"]["Status"], "BREACHED")
+        self.assertEqual(rows["Benchmark spread"]["Policy Owner"], "Recheck Comparison")
+        self.assertFalse(policy["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_readiness_blocks_missing_replay_contract_without_writing(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness

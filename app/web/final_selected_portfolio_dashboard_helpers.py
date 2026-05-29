@@ -243,6 +243,23 @@ def build_selected_portfolio_recheck_comparison_table(comparison: dict[str, Any]
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_review_signal_policy_table(policy: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(policy.get("rows") or []):
+        display_rows.append(
+            {
+                "Trigger": row.get("Trigger"),
+                "Status": row.get("Status Label") or row.get("Status"),
+                "Current Signal": row.get("Current Signal"),
+                "Policy Owner": row.get("Policy Owner"),
+                "Why It Matters": row.get("Why It Matters"),
+                "Suggested Action": row.get("Suggested Action"),
+                "Source": row.get("Source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def build_selected_portfolio_recheck_readiness_table(readiness: dict[str, Any]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in list(readiness.get("rows") or []):

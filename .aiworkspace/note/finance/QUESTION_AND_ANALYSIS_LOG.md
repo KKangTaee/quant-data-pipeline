@@ -6047,3 +6047,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - missing required provider area와 partial / stale evidence는 투자 가능 근거가 아니라 review 또는 needs input으로 표시되어야 한다
 - Follow-up:
   - `selected_provider_evidence_staleness_contract_v1`을 구현했고, 다음은 recheck comparison review signal policy다
+
+### 2026-05-29 - Review Signals의 성과 threshold owner를 Recheck Comparison으로 고정한다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Review Signals와 Recheck Comparison이 CAGR / MDD / benchmark spread threshold를 중복 계산하지 않게 해야 함
+- Analysis result:
+  - Review Signals는 signal board이고, 성과 약화 판단의 policy owner는 Recheck Comparison으로 두는 것이 맞다
+  - preflight / provider / comparison route를 하나의 read-only signal board로 묶으면 missing, stale, partial, failed recheck가 Clear로 숨지 않는다
+- Follow-up:
+  - `selected_review_signal_policy_v1`을 구현했고, 다음은 allocation drift evidence boundary다

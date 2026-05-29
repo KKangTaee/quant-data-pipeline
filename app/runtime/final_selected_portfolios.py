@@ -57,6 +57,7 @@ SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION = "selected_recheck_symbol_fres
 SELECTED_RECHECK_OPERATIONS_PREFLIGHT_SCHEMA_VERSION = "selected_recheck_operations_preflight_v1"
 SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION = "selected_provider_evidence_v1"
 SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION = "selected_provider_evidence_staleness_contract_v1"
+SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION = "selected_review_signal_policy_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -102,6 +103,12 @@ SELECTED_PROVIDER_EVIDENCE_ROUTE_LABELS = {
     "SELECTED_PROVIDER_REVIEW": "Provider 근거 검토 필요",
     "SELECTED_PROVIDER_NEEDS_DATA": "Provider DB 확인 필요",
     "SELECTED_PROVIDER_BLOCKED": "Provider 근거 차단",
+}
+SELECTED_REVIEW_SIGNAL_POLICY_ROUTE_LABELS = {
+    "REVIEW_SIGNAL_CLEAR": "운영 신호 정상",
+    "REVIEW_SIGNAL_WATCH": "운영 신호 관찰",
+    "REVIEW_SIGNAL_NEEDS_INPUT": "운영 신호 입력 필요",
+    "REVIEW_SIGNAL_BREACHED": "운영 신호 재검토",
 }
 _SELECTED_PROVIDER_REQUIRED_AREAS = {"ETF Operability", "ETF Holdings", "ETF Exposure"}
 _SELECTED_PROVIDER_STATUS_RANK = {
@@ -1536,6 +1543,242 @@ def build_selected_portfolio_recheck_comparison(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Recheck comparison reads existing decision and session recheck evidence; it does not save monitoring logs.",
+        },
+    }
+
+
+def _review_signal_status_label(status: str) -> str:
+    return SELECTED_MONITORING_TIMELINE_STATUS_LABELS.get(status, status)
+
+
+def _review_signal_overall_status(rows: list[dict[str, Any]]) -> str:
+    statuses = [str(row.get("Status") or "OPTIONAL") for row in rows]
+    if not statuses:
+        return "NEEDS_INPUT"
+    return max(statuses, key=lambda status: _TIMELINE_STATUS_RANK.get(status, 0))
+
+
+def _review_signal_route(status: str) -> str:
+    if status == "BREACHED":
+        return "REVIEW_SIGNAL_BREACHED"
+    if status == "NEEDS_INPUT":
+        return "REVIEW_SIGNAL_NEEDS_INPUT"
+    if status == "WATCH":
+        return "REVIEW_SIGNAL_WATCH"
+    return "REVIEW_SIGNAL_CLEAR"
+
+
+def _review_signal_row(
+    *,
+    trigger: str,
+    status: str,
+    current_signal: Any,
+    why_it_matters: str,
+    suggested_action: str,
+    policy_owner: str,
+    source: str,
+) -> dict[str, Any]:
+    return {
+        "Trigger": _clean_text(trigger),
+        "Status": status,
+        "Status Label": _review_signal_status_label(status),
+        "Current Signal": _clean_text(current_signal),
+        "Why It Matters": _clean_text(why_it_matters),
+        "Suggested Action": _clean_text(suggested_action),
+        "Policy Owner": _clean_text(policy_owner),
+        "Source": _clean_text(source),
+    }
+
+
+def _review_signal_status_from_comparison_status(status: Any) -> str:
+    normalized = str(status or "").strip().upper()
+    if normalized == "PASS":
+        return "CLEAR"
+    if normalized == "WATCH":
+        return "WATCH"
+    if normalized == "BREACHED":
+        return "BREACHED"
+    if normalized == "NEEDS_INPUT":
+        return "NEEDS_INPUT"
+    return "NEEDS_INPUT"
+
+
+def _review_signal_status_from_preflight_route(route: str) -> str:
+    if route == "RECHECK_PREFLIGHT_READY":
+        return "CLEAR"
+    if route == "RECHECK_PREFLIGHT_REVIEW":
+        return "WATCH"
+    if route == "RECHECK_PREFLIGHT_NEEDS_DATA":
+        return "NEEDS_INPUT"
+    if route == "RECHECK_PREFLIGHT_BLOCKED":
+        return "BREACHED"
+    return "NEEDS_INPUT"
+
+
+def _review_signal_status_from_provider_route(route: str) -> str:
+    if route == "SELECTED_PROVIDER_READY":
+        return "CLEAR"
+    if route == "SELECTED_PROVIDER_REVIEW":
+        return "WATCH"
+    if route == "SELECTED_PROVIDER_NEEDS_DATA":
+        return "NEEDS_INPUT"
+    if route == "SELECTED_PROVIDER_BLOCKED":
+        return "BREACHED"
+    return "NEEDS_INPUT"
+
+
+def build_selected_portfolio_review_signal_policy(
+    row: dict[str, Any],
+    *,
+    recheck_result: dict[str, Any] | None = None,
+    recheck_comparison: dict[str, Any] | None = None,
+    recheck_preflight: dict[str, Any] | None = None,
+    provider_evidence: dict[str, Any] | None = None,
+    drift_check: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Translate selected monitoring read models into one read-only Review Signals policy board."""
+
+    selected = dict(row or {})
+    comparison = dict(
+        recheck_comparison
+        or build_selected_portfolio_recheck_comparison(selected, recheck_result=recheck_result)
+    )
+    preflight = dict(recheck_preflight or {})
+    provider = dict(provider_evidence or {})
+    drift = dict(drift_check or {})
+    blockers = [str(blocker) for blocker in list(selected.get("blockers") or []) if str(blocker)]
+    evidence_route = _clean_text(selected.get("evidence_route"), "-")
+    evidence_status = "CLEAR" if not blockers and evidence_route == "READY_FOR_FINAL_DECISION" else "WATCH"
+    rows: list[dict[str, Any]] = [
+        _review_signal_row(
+            trigger="Final Review evidence",
+            status=evidence_status,
+            current_signal=evidence_route,
+            why_it_matters="선정 당시 검증 근거가 아직 운영 대상 조건을 만족하는지 확인합니다.",
+            suggested_action=(
+                "남은 blocker가 없으므로 성과와 보유 상태를 계속 점검합니다."
+                if evidence_status == "CLEAR"
+                else "Why Selected tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
+            ),
+            policy_owner="Final Review evidence packet",
+            source="FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+        )
+    ]
+
+    preflight_route = str(preflight.get("route") or "").strip()
+    preflight_metrics = dict(preflight.get("metrics") or {})
+    preflight_status = _review_signal_status_from_preflight_route(preflight_route)
+    rows.append(
+        _review_signal_row(
+            trigger="Recheck operations preflight",
+            status=preflight_status,
+            current_signal=preflight.get("route_label") or preflight_route or "not evaluated",
+            why_it_matters="Performance Recheck가 최신 운영 근거로 쓰일 수 있는지 실행 전 조건을 확인합니다.",
+            suggested_action=(
+                "Performance Recheck 결과를 comparison policy에 연결합니다."
+                if preflight_status == "CLEAR"
+                else "Preflight row의 replay contract, DB latest date, symbol freshness gap을 먼저 확인합니다."
+            ),
+            policy_owner="Recheck Operations Preflight",
+            source=preflight.get("schema_version") or SELECTED_RECHECK_OPERATIONS_PREFLIGHT_SCHEMA_VERSION,
+        )
+    )
+
+    provider_route = str(provider.get("route") or "").strip()
+    provider_metrics = dict(provider.get("metrics") or {})
+    provider_status = _review_signal_status_from_provider_route(provider_route)
+    rows.append(
+        _review_signal_row(
+            trigger="Provider evidence freshness / coverage",
+            status=provider_status,
+            current_signal=provider.get("route_label") or provider_route or "not evaluated",
+            why_it_matters="Provider holdings / exposure / operability evidence가 stale하거나 partial이면 선정 thesis 유지 근거가 약합니다.",
+            suggested_action=(
+                "Provider evidence가 현재 selected monitoring 기준을 통과했습니다."
+                if provider_status == "CLEAR"
+                else "Provider Evidence row에서 stale / partial / missing required area를 확인합니다."
+            ),
+            policy_owner="Selected Provider Evidence",
+            source=provider.get("schema_version") or SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION,
+        )
+    )
+
+    comparison_rows = [dict(item or {}) for item in list(comparison.get("rows") or [])]
+    for comparison_row in comparison_rows:
+        rows.append(
+            _review_signal_row(
+                trigger=_clean_text(comparison_row.get("Check")),
+                status=_review_signal_status_from_comparison_status(comparison_row.get("Status")),
+                current_signal=comparison_row.get("Current"),
+                why_it_matters=comparison_row.get("Evidence"),
+                suggested_action=comparison_row.get("Next Action"),
+                policy_owner="Recheck Comparison",
+                source=comparison.get("schema_version") or SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION,
+            )
+        )
+
+    drift_status, drift_signal, drift_evidence, drift_action = _status_from_drift_check(drift)
+    rows.append(
+        _review_signal_row(
+            trigger="Actual allocation drift",
+            status=drift_status,
+            current_signal=drift_signal,
+            why_it_matters="전략 성과가 아니라 실제 또는 가정 보유금액 배분이 target allocation에서 벗어났는지 봅니다.",
+            suggested_action=drift_action,
+            policy_owner="Allocation Drift Check",
+            source="session_state.drift_check",
+        )
+    )
+
+    overall_status = _review_signal_overall_status(rows)
+    route = _review_signal_route(overall_status)
+    if overall_status == "BREACHED":
+        conclusion = "재검토가 필요한 monitoring signal이 있습니다. BREACHED row의 Suggested Action부터 확인합니다."
+    elif overall_status == "NEEDS_INPUT":
+        conclusion = "Performance Recheck, preflight, provider evidence 중 입력 또는 데이터 보강이 필요한 항목이 있습니다."
+    elif overall_status == "WATCH":
+        conclusion = "큰 차단은 없지만 watch signal이 있습니다. 다음 점검에서 같은 항목이 악화되는지 확인합니다."
+    else:
+        conclusion = "현재 Review Signals 기준으로 선정 thesis와 운영 점검 상태가 유지됩니다."
+
+    return {
+        "schema_version": SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_REVIEW_SIGNAL_POLICY_ROUTE_LABELS.get(route, route),
+        "overall_status": overall_status,
+        "overall_label": _review_signal_status_label(overall_status),
+        "conclusion": conclusion,
+        "rows": rows,
+        "recheck_comparison": comparison,
+        "metrics": {
+            "row_count": len(rows),
+            "clear_count": sum(1 for item in rows if item.get("Status") == "CLEAR"),
+            "watch_count": sum(1 for item in rows if item.get("Status") == "WATCH"),
+            "breached_count": sum(1 for item in rows if item.get("Status") == "BREACHED"),
+            "needs_input_count": sum(1 for item in rows if item.get("Status") == "NEEDS_INPUT"),
+            "optional_count": sum(1 for item in rows if item.get("Status") == "OPTIONAL"),
+            "stored_trigger_count": len(list(selected.get("review_triggers") or [])),
+            "preflight_route": preflight_route or None,
+            "provider_route": provider_route or None,
+            "comparison_route": comparison.get("route"),
+            "comparison_overall_status": comparison.get("overall_status"),
+            "recheck_present": bool(dict(comparison.get("metrics") or {}).get("recheck_present")),
+            "preflight_missing_symbol_count": preflight_metrics.get("missing_symbol_count", 0),
+            "preflight_stale_symbol_count": preflight_metrics.get("stale_symbol_count", 0),
+            "provider_stale_count": provider_metrics.get("stale_count", 0),
+            "provider_partial_coverage_count": provider_metrics.get("partial_coverage_count", 0),
+            "provider_needs_input_count": provider_metrics.get("needs_input_count", 0),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_review_signal_policy",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "alert_persistence": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Review signal policy reads existing selected decision, preflight, provider, comparison, and optional session drift evidence; it does not save monitoring records.",
         },
     }
 

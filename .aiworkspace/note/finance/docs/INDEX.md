@@ -23,7 +23,7 @@ Last Verified: 2026-05-29
 - Latest completed phase: [Phase 11 Portfolio Construction Risk Controls](../phases/done/phase11-portfolio-construction-risk-controls.md)
 - Previous completed phase: [Phase 10 Walk-forward / OOS / Regime Validation](../phases/done/phase10-walkforward-oos-regime-validation.md)
 - Current active phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/active/phase12-selected-monitoring-recheck-operations/PLAN.md)
-- Current implementation focus: `recheck-comparison-review-signal-policy-v1`.
+- Current implementation focus: `allocation-drift-evidence-boundary-v1`.
 
 ## By Purpose
 

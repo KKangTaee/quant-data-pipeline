@@ -5,18 +5,17 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `recheck-comparison-review-signal-policy-v1`
+Next task: `allocation-drift-evidence-boundary-v1`
 
 ## TODO
 
-- Make Recheck Comparison the policy owner for review signal performance thresholds.
-- Remove or align duplicated CAGR / MDD / benchmark spread threshold logic in Review Signals.
-- Ensure missing, failed, partial, or stale recheck evidence cannot become `Clear`.
-- Keep Review Signals read-only and session evidence clearly separate from durable monitoring logs.
-- Add focused contract tests for ready / watch / breached / needs-input signal mapping.
+- Confirm current value / shares x price / current weight inputs remain optional read-only drift evidence.
+- Ensure drift alert preview cannot be read as broker order, approval, or auto rebalance guidance.
+- Keep Update Review Signals as session-state reflection, not durable monitoring log append.
+- Add focused contract tests for drift aligned / watch / rebalance / incomplete input boundary.
 
 ## Stop Conditions
 
 - Do not implement account integration, order draft, approval, auto rebalance, or automatic monitoring log append.
 - Do not add a new JSONL registry for monitoring notes or presets.
-- Do not let `NOT_RUN`, stale, missing, or failed recheck evidence become pass.
+- Do not let Actual Allocation input imply account integration, order draft, approval, or auto rebalance.
