@@ -75,6 +75,8 @@ from .portfolio_selection_v2 import (
     load_selected_portfolio_monitoring_logs,
 )
 from .final_selected_portfolios import (
+    SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS,
+    SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION,
     FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS,
     FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
@@ -99,6 +101,7 @@ from .final_selected_portfolios import (
     SELECTED_REVIEW_SIGNAL_POLICY_ROUTE_LABELS,
     SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION,
     build_final_selected_portfolio_dashboard_row,
+    build_selected_portfolio_allocation_drift_boundary,
     build_selected_portfolio_continuity_check,
     build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_performance_recheck,
@@ -144,6 +147,8 @@ __all__ = [
     "FINAL_SELECTED_PORTFOLIO_STATUS_ORDER",
     "FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS",
     "SELECTED_PRACTICAL_PORTFOLIO_ROUTE",
+    "SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS",
+    "SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION",
     "SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION",
     "SELECTED_CONTINUITY_ROUTE_LABELS",
     "SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION",
@@ -177,6 +182,7 @@ __all__ = [
     "archive_legacy_portfolio_workflow_files",
     "build_backtest_result_bundle",
     "build_final_selected_portfolio_dashboard_row",
+    "build_selected_portfolio_allocation_drift_boundary",
     "build_selected_portfolio_continuity_check",
     "build_selected_portfolio_monitoring_timeline",
     "build_selected_portfolio_performance_recheck",

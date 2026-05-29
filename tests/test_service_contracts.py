@@ -5206,6 +5206,105 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(by_event["Review trigger preview"]["status"], "WATCH")
         self.assertFalse(timeline["execution_boundary"]["auto_rebalance"])
 
+    def test_allocation_drift_boundary_is_read_only_and_session_only(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION,
+            build_selected_portfolio_allocation_drift_boundary,
+            build_selected_portfolio_current_weight_inputs,
+            build_selected_portfolio_drift_alert_preview,
+            build_selected_portfolio_drift_check,
+        )
+
+        weight_inputs = build_selected_portfolio_current_weight_inputs(
+            self._selected_row(),
+            component_inputs={"candidate-selected": {"current_value": 10_000.0}},
+            cash_value=0.0,
+            input_mode="current_value",
+        )
+        drift_check = build_selected_portfolio_drift_check(
+            self._selected_row(),
+            current_weights=weight_inputs["current_weights"],
+        )
+        alert_preview = build_selected_portfolio_drift_alert_preview(
+            self._selected_row(),
+            drift_check=drift_check,
+        )
+        boundary = build_selected_portfolio_allocation_drift_boundary(
+            self._selected_row(),
+            weight_inputs=weight_inputs,
+            drift_check=drift_check,
+            alert_preview=alert_preview,
+            input_mode="current_value",
+        )
+
+        self.assertEqual(boundary["schema_version"], SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION)
+        self.assertEqual(boundary["route"], "ALLOCATION_DRIFT_BOUNDARY_READY")
+        self.assertEqual(boundary["metrics"]["boundary_violation_count"], 0)
+        rows = {row["Check"]: row for row in boundary["rows"]}
+        self.assertEqual(rows["Current weight input source"]["Status"], "PASS")
+        self.assertEqual(rows["Drift evidence"]["Status"], "PASS")
+        self.assertEqual(rows["Alert preview evidence"]["Status"], "PASS")
+        for contract in (weight_inputs, drift_check, alert_preview, boundary):
+            execution_boundary = dict(contract.get("execution_boundary") or {})
+            self.assertFalse(execution_boundary["db_write"])
+            self.assertFalse(execution_boundary["registry_write"])
+            self.assertFalse(execution_boundary["monitoring_log_auto_write"])
+            self.assertFalse(execution_boundary["input_persistence"])
+            self.assertFalse(execution_boundary["alert_persistence"])
+            self.assertFalse(execution_boundary["account_connection"])
+            self.assertFalse(execution_boundary["broker_sync"])
+            self.assertFalse(execution_boundary["live_approval"])
+            self.assertFalse(execution_boundary["order_instruction"])
+            self.assertFalse(execution_boundary["auto_rebalance"])
+
+    def test_allocation_drift_boundary_surfaces_breach_without_rebalance_action(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            build_selected_portfolio_allocation_drift_boundary,
+            build_selected_portfolio_drift_alert_preview,
+            build_selected_portfolio_drift_check,
+        )
+
+        row = self._selected_row()
+        row["raw_decision"]["selected_components"] = [
+            {
+                "title": "Selected Component A",
+                "registry_id": "candidate-a",
+                "target_weight": 50.0,
+                "benchmark": "SPY",
+                "period_start": "2020-01-01",
+                "period_end": "2024-12-31",
+            },
+            {
+                "title": "Selected Component B",
+                "registry_id": "candidate-b",
+                "target_weight": 50.0,
+                "benchmark": "QQQ",
+                "period_start": "2020-01-01",
+                "period_end": "2024-12-31",
+            },
+        ]
+        drift_check = build_selected_portfolio_drift_check(
+            row,
+            current_weights={"candidate-a": 60.0, "candidate-b": 40.0},
+        )
+        alert_preview = build_selected_portfolio_drift_alert_preview(row, drift_check=drift_check)
+        boundary = build_selected_portfolio_allocation_drift_boundary(
+            row,
+            drift_check=drift_check,
+            alert_preview=alert_preview,
+            input_mode="current_weight",
+        )
+
+        self.assertEqual(drift_check["route"], "REBALANCE_NEEDED")
+        self.assertEqual(boundary["route"], "ALLOCATION_DRIFT_BOUNDARY_BREACHED")
+        rows = {row["Check"]: row for row in boundary["rows"]}
+        self.assertEqual(rows["Drift evidence"]["Status"], "BREACHED")
+        self.assertEqual(rows["Alert preview evidence"]["Status"], "BREACHED")
+        self.assertFalse(boundary["execution_boundary"]["order_instruction"])
+        self.assertFalse(boundary["execution_boundary"]["auto_rebalance"])
+        self.assertFalse(boundary["execution_boundary"]["account_connection"])
+        self.assertFalse(boundary["execution_boundary"]["broker_sync"])
+
     def test_selected_continuity_check_requires_recheck_input_without_writing(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
 

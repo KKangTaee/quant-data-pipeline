@@ -18,6 +18,7 @@ Created: 2026-05-29
 - 12-2 added a shared recheck operations preflight so missing replay contract, stale / missing price, and DB latest date errors do not route to ready.
 - 12-3 added selected provider evidence freshness / coverage policy so stale actual evidence, partial / proxy / bridge coverage, and missing required provider areas do not route to pass.
 - 12-4 added selected review signal policy so CAGR / MDD / benchmark spread thresholds are owned by Recheck Comparison and preflight / provider route gaps appear in Review Signals.
+- 12-5 added selected allocation drift evidence boundary so actual allocation drift / alert preview remains manual, session-only evidence with no storage, account, broker, order, or auto rebalance behavior.
 - Keep Selected Portfolio Dashboard read-only unless a later task explicitly changes scope and user confirms it.
 - Treat missing / failed / stale / partial evidence as `NEEDS_INPUT`, `WATCH`, or `BREACHED`, not pass.
 - Keep all full provider / holdings / macro / price data in DB or runtime calculation boundaries.

@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `recheck-readiness-freshness-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `decision-dossier-continuity-operations-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Actual allocation drift remains session-only evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 12의 12-5로 optional Actual Allocation / drift check가 저장, 주문, 자동 리밸런싱 기능처럼 보이지 않도록 경계를 명확히 한다.
+- Analysis result:
+  - Existing Dashboard behavior was already session-only, but runtime boundary fields were not explicit enough.
+  - Added `selected_allocation_drift_evidence_boundary_v1` with DB / registry / monitoring log / raw input / alert persistence and account / broker / order / auto rebalance all disabled.
+  - Breached drift now means manual review signal only; Dashboard action is labeled `Reflect Session Signal`.
+- Follow-up:
+  - 다음 task는 `decision-dossier-continuity-operations-v1`로 Decision Dossier, Continuity, Timeline, Review Signals source consistency를 정리한다.
 
 ### 2026-05-29 - Selected monitoring source map chooses recheck readiness / freshness first
 - User request:

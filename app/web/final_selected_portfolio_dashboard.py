@@ -10,6 +10,7 @@ import streamlit as st
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_portfolio_allocation_drift_boundary_table,
     build_selected_portfolio_continuity_table,
     build_selected_portfolio_current_weight_input_table,
     build_selected_portfolio_drift_alert_table,
@@ -37,6 +38,7 @@ from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
+    build_selected_portfolio_allocation_drift_boundary,
     build_selected_portfolio_continuity_check,
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
@@ -69,6 +71,16 @@ def _alert_tone(alert_route: str) -> str:
     if alert_route in {"WATCH_ALERT", "INPUT_REVIEW_ALERT"}:
         return "warning"
     if alert_route == "REBALANCE_REVIEW_ALERT":
+        return "danger"
+    return "neutral"
+
+
+def _allocation_boundary_tone(route: str) -> str:
+    if route in {"ALLOCATION_DRIFT_BOUNDARY_READY", "ALLOCATION_DRIFT_BOUNDARY_OPTIONAL"}:
+        return "positive"
+    if route in {"ALLOCATION_DRIFT_BOUNDARY_WATCH", "ALLOCATION_DRIFT_BOUNDARY_NEEDS_INPUT"}:
+        return "warning"
+    if route in {"ALLOCATION_DRIFT_BOUNDARY_BREACHED", "ALLOCATION_DRIFT_BOUNDARY_BLOCKED"}:
         return "danger"
     return "neutral"
 
@@ -1586,12 +1598,22 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         for blocker in list(drift_check.get("blockers") or []):
             st.warning(str(blocker))
     alert_preview = build_selected_portfolio_drift_alert_preview(row, drift_check=drift_check)
+    allocation_boundary = build_selected_portfolio_allocation_drift_boundary(
+        row,
+        weight_inputs=value_input_contract,
+        drift_check=drift_check,
+        alert_preview=alert_preview,
+        input_mode=input_mode,
+    )
     apply_cols = st.columns([0.62, 0.38], gap="small")
     with apply_cols[0]:
-        st.caption("이 결과를 Review Signals에 반영하려면 오른쪽 버튼을 누릅니다. 입력값과 주문은 저장하지 않습니다.")
+        st.caption(
+            "이 결과는 현재 session의 Review Signals에만 반영됩니다. "
+            "입력값, alert record, monitoring log, 주문은 저장하지 않습니다."
+        )
     with apply_cols[1]:
         if st.button(
-            "Update Review Signals",
+            "Reflect Session Signal",
             key=f"selected_portfolio_update_allocation_signal_{row.get('decision_id')}",
             width="stretch",
         ):
@@ -1627,6 +1649,37 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
             st.info("표시할 allocation review row가 없습니다.")
         else:
             st.dataframe(alert_df, width="stretch", hide_index=True)
+    boundary_metrics = dict(allocation_boundary.get("metrics") or {})
+    boundary_expanded = allocation_boundary.get("route") in {
+        "ALLOCATION_DRIFT_BOUNDARY_BREACHED",
+        "ALLOCATION_DRIFT_BOUNDARY_BLOCKED",
+    }
+    with st.expander("Allocation evidence boundary", expanded=boundary_expanded):
+        st.caption(
+            "Actual Allocation 결과가 수동/session 증거인지 확인합니다. "
+            "이 boundary는 DB 저장, registry 저장, 계좌 연결, 주문, 자동 리밸런싱을 허용하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Boundary",
+                    "value": allocation_boundary.get("route_label"),
+                    "tone": _allocation_boundary_tone(str(allocation_boundary.get("route") or "")),
+                },
+                {"label": "Raw Input Save", "value": "Disabled", "tone": "neutral"},
+                {"label": "Alert Save", "value": "Disabled", "tone": "neutral"},
+                {
+                    "label": "Boundary Violations",
+                    "value": boundary_metrics.get("boundary_violation_count", 0),
+                    "tone": "danger" if boundary_metrics.get("boundary_violation_count") else "neutral",
+                },
+                {"label": "Order / Rebalance", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        st.caption(str(allocation_boundary.get("conclusion") or "-"))
+        boundary_df = build_selected_portfolio_allocation_drift_boundary_table(allocation_boundary)
+        if not boundary_df.empty:
+            st.dataframe(boundary_df, width="stretch", hide_index=True)
     st.info(str(drift_check.get("next_action") or "-"))
     st.info(str(alert_preview.get("next_action") or "-"))
 

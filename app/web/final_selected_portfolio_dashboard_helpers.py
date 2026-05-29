@@ -188,6 +188,23 @@ def build_selected_portfolio_drift_alert_table(alert_preview: dict[str, Any]) ->
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_allocation_drift_boundary_table(boundary: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(boundary.get("rows") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+                "Source": row.get("Source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def build_selected_portfolio_evidence_table(row: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(build_final_decision_evidence_rows(row))
 

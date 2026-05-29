@@ -67,8 +67,8 @@ full price history, provider holdings, exposure, macro series, raw broker/accoun
 | 12-2 | Recheck readiness / freshness operations contract | Complete |
 | 12-3 | Provider evidence staleness and coverage contract | Complete |
 | 12-4 | Recheck comparison / review signal policy | Complete |
-| 12-5 | Optional allocation drift evidence boundary | Next |
-| 12-6 | Decision dossier / continuity operations refinement | Pending |
+| 12-5 | Optional allocation drift evidence boundary | Complete |
+| 12-6 | Decision dossier / continuity operations refinement | Next |
 | 12-7 | Phase 12 integrated QA / closeout | Pending |
 
 ## Done Criteria

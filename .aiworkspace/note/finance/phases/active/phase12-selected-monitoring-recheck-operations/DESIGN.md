@@ -156,6 +156,38 @@ The policy adds no JSONL registry, monitoring log auto write, user memo, preset,
 
 Implementation order now moves to 12-5 optional allocation drift evidence boundary.
 
+## 12-5 Optional Allocation Drift Evidence Boundary Result
+
+12-5 added `selected_allocation_drift_evidence_boundary_v1`.
+
+The boundary combines:
+
+- current weight input source
+- drift evidence
+- alert preview evidence
+- storage boundary
+- execution boundary
+
+Boundary false fields are explicit:
+
+- `db_write`
+- `registry_write`
+- `monitoring_log_auto_write`
+- `input_persistence`
+- `alert_persistence`
+- `account_connection`
+- `broker_sync`
+- `live_approval`
+- `order_instruction`
+- `auto_rebalance`
+
+Actual Allocation can still surface `WATCH` or `BREACHED` drift evidence, but breached drift means manual review signal only.
+The Dashboard now labels the session-only action as `Reflect Session Signal` and shows an Allocation evidence boundary table.
+
+The contract adds no JSONL registry, monitoring log auto write, raw holding input persistence, user memo, preset, account connection, broker sync, approval, order, or auto rebalance path.
+
+Implementation order now moves to 12-6 decision dossier / continuity operations refinement.
+
 ## Route Semantics
 
 | State | Meaning |

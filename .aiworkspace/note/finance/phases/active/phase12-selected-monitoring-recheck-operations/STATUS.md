@@ -19,20 +19,22 @@ Completed:
 - Provider evidence now applies selected-monitoring policy to diagnostic status, coverage, coverage weight, freshness, required provider areas, and look-through coverage.
 - 12-4 `recheck-comparison-review-signal-policy-v1`
 - Review Signals now uses Recheck Comparison as the performance threshold policy owner and includes preflight / provider routes in the read-only signal board.
+- 12-5 `allocation-drift-evidence-boundary-v1`
+- Actual Allocation now has a read-only evidence boundary that explicitly disables DB writes, registry writes, monitoring log auto-write, raw input persistence, alert persistence, account / broker integration, order instruction, and auto rebalance.
 
 Next:
 
-- 12-5 `allocation-drift-evidence-boundary-v1`
+- 12-6 `decision-dossier-continuity-operations-v1`
 
 ## Latest Decision
 
-12-4 added `selected_review_signal_policy_v1`.
-Review Signals no longer owns duplicate CAGR / MDD / benchmark spread threshold logic; those rows are derived from Recheck Comparison.
-Recheck Preflight and Provider Evidence routes now feed the same read-only signal board.
+12-5 added `selected_allocation_drift_evidence_boundary_v1`.
+Actual Allocation remains optional and session-only; breached drift means manual review signal, not order draft or auto rebalance.
+The Dashboard now shows a boundary table and uses `Reflect Session Signal` for session-only signal reflection.
 
 Immediate next target:
 
-- `allocation-drift-evidence-boundary-v1`
+- `decision-dossier-continuity-operations-v1`
 
 ## Storage Boundary Reminder
 

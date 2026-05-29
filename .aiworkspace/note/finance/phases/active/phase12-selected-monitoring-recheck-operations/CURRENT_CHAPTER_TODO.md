@@ -5,17 +5,17 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `allocation-drift-evidence-boundary-v1`
+Next task: `decision-dossier-continuity-operations-v1`
 
 ## TODO
 
-- Confirm current value / shares x price / current weight inputs remain optional read-only drift evidence.
-- Ensure drift alert preview cannot be read as broker order, approval, or auto rebalance guidance.
-- Keep Update Review Signals as session-state reflection, not durable monitoring log append.
-- Add focused contract tests for drift aligned / watch / rebalance / incomplete input boundary.
+- Confirm Decision Dossier, Continuity, Timeline, and Review Signals read the same selected decision source.
+- Check whether dossier / continuity labels still imply legacy Phase36 or monitoring history persistence.
+- Ensure session-state recheck / drift / alert evidence is not described as durable monitoring history.
+- Add focused contract tests if source consistency or boundary behavior changes.
 
 ## Stop Conditions
 
 - Do not implement account integration, order draft, approval, auto rebalance, or automatic monitoring log append.
 - Do not add a new JSONL registry for monitoring notes or presets.
-- Do not let Actual Allocation input imply account integration, order draft, approval, or auto rebalance.
+- Do not let Decision Dossier or Continuity imply live approval, saved monitoring history, order draft, or auto rebalance.

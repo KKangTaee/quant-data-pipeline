@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 11 Portfolio Construction Risk Controls](./phases/done/phase11-portfolio-construction-risk-controls.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `recheck-readiness-freshness-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `decision-dossier-continuity-operations-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/allocation-drift-evidence-boundary-v1/`.
+- Added `selected_allocation_drift_evidence_boundary_v1` and Dashboard boundary display for optional Actual Allocation.
+- Actual Allocation remains manual / session-only evidence with no raw input persistence, alert persistence, monitoring log auto-write, account / broker integration, order, or auto rebalance.
+- Next task is `decision-dossier-continuity-operations-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/selected-monitoring-source-map-v1/`.
 - Source map confirmed Selected Dashboard already has read-only readiness / freshness / provider / timeline / comparison / drift / dossier evidence.
 - Main gaps: Current Candidate Registry replay dependency, readiness / freshness policy split, Review Signals / Recheck Comparison threshold duplication, and session-only monitoring evidence clarity.

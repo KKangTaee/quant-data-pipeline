@@ -49,6 +49,7 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
     "REBALANCE_REVIEW_ALERT": "리밸런싱 검토 경고",
     "INPUT_REVIEW_ALERT": "입력 확인 경고",
 }
+SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION = "selected_allocation_drift_evidence_boundary_v1"
 SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION = "selected_monitoring_timeline_v1"
 SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
 SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION = "selected_recheck_comparison_v1"
@@ -110,6 +111,14 @@ SELECTED_REVIEW_SIGNAL_POLICY_ROUTE_LABELS = {
     "REVIEW_SIGNAL_NEEDS_INPUT": "운영 신호 입력 필요",
     "REVIEW_SIGNAL_BREACHED": "운영 신호 재검토",
 }
+SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS = {
+    "ALLOCATION_DRIFT_BOUNDARY_OPTIONAL": "비중 근거 선택 점검",
+    "ALLOCATION_DRIFT_BOUNDARY_READY": "비중 근거 정상",
+    "ALLOCATION_DRIFT_BOUNDARY_WATCH": "비중 근거 관찰",
+    "ALLOCATION_DRIFT_BOUNDARY_NEEDS_INPUT": "비중 근거 입력 필요",
+    "ALLOCATION_DRIFT_BOUNDARY_BREACHED": "비중 근거 재검토",
+    "ALLOCATION_DRIFT_BOUNDARY_BLOCKED": "비중 근거 경계 위반",
+}
 _SELECTED_PROVIDER_REQUIRED_AREAS = {"ETF Operability", "ETF Holdings", "ETF Exposure"}
 _SELECTED_PROVIDER_STATUS_RANK = {
     "PASS": 0,
@@ -124,6 +133,18 @@ _TIMELINE_STATUS_RANK = {
     "NEEDS_INPUT": 3,
     "BREACHED": 4,
 }
+_ALLOCATION_DRIFT_DISABLED_FIELDS = (
+    "db_write",
+    "registry_write",
+    "monitoring_log_auto_write",
+    "input_persistence",
+    "alert_persistence",
+    "account_connection",
+    "broker_sync",
+    "live_approval",
+    "order_instruction",
+    "auto_rebalance",
+)
 
 
 def _optional_float(value: Any) -> float | None:
@@ -141,6 +162,23 @@ def _optional_float(value: Any) -> float | None:
 def _clean_text(value: Any, default: str = "-") -> str:
     text = str(value or "").strip()
     return text or default
+
+
+def _selected_allocation_read_only_boundary(*, write_policy: str, notes: str) -> dict[str, Any]:
+    return {
+        "write_policy": write_policy,
+        "db_write": False,
+        "registry_write": False,
+        "monitoring_log_auto_write": False,
+        "input_persistence": False,
+        "alert_persistence": False,
+        "account_connection": False,
+        "broker_sync": False,
+        "live_approval": False,
+        "order_instruction": False,
+        "auto_rebalance": False,
+        "notes": notes,
+    }
 
 
 def _is_selected_practical_portfolio(row: dict[str, Any]) -> bool:
@@ -422,7 +460,7 @@ def build_selected_portfolio_drift_check(
     elif rebalancing_components:
         route = "REBALANCE_NEEDED"
         verdict = "목표 비중 대비 drift가 커서 리밸런싱 검토가 필요합니다."
-        next_action = "주문 지시가 아니라, drift가 큰 component를 검토 목록에 올립니다."
+        next_action = "주문 지시가 아니라, drift가 큰 component를 수동 운영 검토 대상으로 봅니다."
     elif watch_components:
         route = "DRIFT_WATCH"
         verdict = "목표 비중에서 일부 벗어났지만 즉시 리밸런싱 판단 전 관찰이 필요합니다."
@@ -451,12 +489,10 @@ def build_selected_portfolio_drift_check(
             "total_weight_tolerance_pct": round(float(total_weight_tolerance_pct), 4),
             "active_components": len(active_components),
         },
-        "execution_boundary": {
-            "live_approval": False,
-            "order_instruction": False,
-            "auto_rebalance": False,
-            "notes": "This drift check is read-only and does not create broker orders.",
-        },
+        "execution_boundary": _selected_allocation_read_only_boundary(
+            write_policy="read_only_drift_check",
+            notes="This drift check is read-only and does not write monitoring logs, broker orders, or rebalance actions.",
+        ),
     }
 
 
@@ -554,12 +590,10 @@ def build_selected_portfolio_current_weight_inputs(
             "current_weight_total": round(sum(current_weights.values()), 4),
             "active_components": len(active_components),
         },
-        "execution_boundary": {
-            "live_approval": False,
-            "order_instruction": False,
-            "auto_rebalance": False,
-            "notes": "Value and holding inputs only estimate current weights; they do not create broker orders.",
-        },
+        "execution_boundary": _selected_allocation_read_only_boundary(
+            write_policy="read_only_current_weight_inputs",
+            notes="Value and holding inputs only estimate current weights in memory; they do not persist inputs or create broker orders.",
+        ),
     }
 
 
@@ -604,7 +638,7 @@ def build_selected_portfolio_drift_alert_preview(
         alert_route = "REBALANCE_REVIEW_ALERT"
         alert_level = "high"
         verdict = "목표 비중 대비 drift가 리밸런싱 검토 기준을 넘었습니다."
-        next_action = "주문 생성이 아니라, drift가 큰 component를 운영 검토 목록에 올립니다."
+        next_action = "주문 생성이 아니라, drift가 큰 component를 수동 운영 검토 대상으로 봅니다."
         for component_id in rebalancing_components:
             component_row = dict(drift_row_by_id.get(component_id) or {})
             alert_rows.append(
@@ -666,12 +700,240 @@ def build_selected_portfolio_drift_alert_preview(
             "max_abs_drift": metrics.get("max_abs_drift"),
             "current_weight_total": metrics.get("current_weight_total"),
         },
-        "execution_boundary": {
-            "live_approval": False,
-            "order_instruction": False,
-            "alert_persistence": False,
-            "notes": "This preview is read-only and does not save alert records or create orders.",
+        "execution_boundary": _selected_allocation_read_only_boundary(
+            write_policy="read_only_drift_alert_preview",
+            notes="This preview is read-only and does not save alert records, monitoring logs, or create orders.",
+        ),
+    }
+
+
+def _allocation_boundary_row(
+    *,
+    check: str,
+    status: str,
+    current: Any,
+    evidence: str,
+    next_action: str,
+    source: str,
+    ready: bool | None = None,
+) -> dict[str, Any]:
+    if ready is None:
+        ready = status == "PASS"
+    return {
+        "Check": check,
+        "Status": status,
+        "Ready": bool(ready),
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+        "Source": _clean_text(source),
+    }
+
+
+def _allocation_boundary_status_from_drift_route(route: str) -> str:
+    if not route:
+        return "OPTIONAL"
+    if route == "DRIFT_ALIGNED":
+        return "PASS"
+    if route == "DRIFT_WATCH":
+        return "WATCH"
+    if route == "REBALANCE_NEEDED":
+        return "BREACHED"
+    return "NEEDS_INPUT"
+
+
+def _allocation_boundary_status_from_alert_route(route: str) -> str:
+    if not route:
+        return "OPTIONAL"
+    if route == "NO_ALERT":
+        return "PASS"
+    if route == "WATCH_ALERT":
+        return "WATCH"
+    if route == "REBALANCE_REVIEW_ALERT":
+        return "BREACHED"
+    return "NEEDS_INPUT"
+
+
+def _boundary_flags_current(boundary: dict[str, Any], fields: tuple[str, ...]) -> str:
+    return " / ".join(f"{field}={boundary.get(field)}" for field in fields)
+
+
+def build_selected_portfolio_allocation_drift_boundary(
+    row: dict[str, Any],
+    *,
+    weight_inputs: dict[str, Any] | None = None,
+    drift_check: dict[str, Any] | None = None,
+    alert_preview: dict[str, Any] | None = None,
+    input_mode: str | None = None,
+) -> dict[str, Any]:
+    """Describe the read-only evidence boundary for optional actual allocation checks."""
+
+    selected = dict(row or {})
+    weight_input_contract = dict(weight_inputs or {})
+    drift = dict(drift_check or {})
+    alert = dict(alert_preview or {})
+    normalized_input_mode = str(input_mode or weight_input_contract.get("input_mode") or "current_weight").strip()
+    input_mode_label = FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(
+        normalized_input_mode,
+        normalized_input_mode or "manual current weight",
+    )
+    weight_metrics = dict(weight_input_contract.get("metrics") or {})
+    drift_metrics = dict(drift.get("metrics") or {})
+    alert_metrics = dict(alert.get("metrics") or {})
+    weight_blockers = [str(item) for item in list(weight_input_contract.get("blockers") or []) if str(item)]
+    drift_route = str(drift.get("route") or "").strip()
+    alert_route = str(alert.get("alert_route") or "").strip()
+    execution_boundary = _selected_allocation_read_only_boundary(
+        write_policy="read_only_allocation_drift_evidence_boundary",
+        notes=(
+            "Allocation drift evidence uses manual/session inputs and optional DB price read assistance only; "
+            "it does not persist inputs, alerts, monitoring logs, account links, broker sync, orders, or rebalance actions."
+        ),
+    )
+
+    boundary_sources: list[tuple[str, dict[str, Any]]] = [
+        ("boundary", execution_boundary),
+    ]
+    if weight_input_contract:
+        boundary_sources.append(("current_weight_inputs", dict(weight_input_contract.get("execution_boundary") or {})))
+    if drift:
+        boundary_sources.append(("drift_check", dict(drift.get("execution_boundary") or {})))
+    if alert:
+        boundary_sources.append(("alert_preview", dict(alert.get("execution_boundary") or {})))
+
+    boundary_violations = [
+        f"{source}.{field}={source_boundary.get(field)}"
+        for source, source_boundary in boundary_sources
+        for field in _ALLOCATION_DRIFT_DISABLED_FIELDS
+        if source_boundary.get(field) is not False
+    ]
+
+    input_status = "NEEDS_INPUT" if weight_blockers else "PASS"
+    if not drift and not weight_input_contract:
+        input_status = "OPTIONAL"
+    drift_status = _allocation_boundary_status_from_drift_route(drift_route)
+    alert_status = _allocation_boundary_status_from_alert_route(alert_route)
+    storage_fields = ("db_write", "registry_write", "monitoring_log_auto_write", "input_persistence", "alert_persistence")
+    execution_fields = ("account_connection", "broker_sync", "live_approval", "order_instruction", "auto_rebalance")
+    rows = [
+        _allocation_boundary_row(
+            check="Current weight input source",
+            status=input_status,
+            ready=input_status in {"PASS", "OPTIONAL"},
+            current=(
+                f"{input_mode_label} / current_weight_total={weight_metrics.get('current_weight_total', '-')}"
+                if weight_input_contract
+                else f"{input_mode_label} / session input only"
+            ),
+            evidence=(
+                "manual value or holding inputs are converted to weights in memory"
+                if weight_input_contract
+                else "manual current weight values are used only for this session check"
+            ),
+            next_action=(
+                "입력 blocker를 해결한 뒤 drift check를 다시 계산합니다."
+                if weight_blockers
+                else "원시 보유값을 저장하지 않고 필요할 때 다시 입력합니다."
+            ),
+            source="streamlit.session_state.manual_input",
+        ),
+        _allocation_boundary_row(
+            check="Drift evidence",
+            status=drift_status,
+            ready=drift_status in {"PASS", "OPTIONAL"},
+            current=(
+                f"{drift.get('route_label') or drift_route or '-'} / max_abs_drift={drift_metrics.get('max_abs_drift', '-')}"
+            ),
+            evidence=drift.get("verdict") or "Actual Allocation drift check has not been applied.",
+            next_action=drift.get("next_action") or "보유 배분까지 점검할 때만 Actual Allocation check를 실행합니다.",
+            source=drift.get("schema_version") or "build_selected_portfolio_drift_check",
+        ),
+        _allocation_boundary_row(
+            check="Alert preview evidence",
+            status=alert_status,
+            ready=alert_status in {"PASS", "OPTIONAL"},
+            current=(
+                f"{alert.get('alert_route_label') or alert_route or '-'} / rows={alert_metrics.get('alert_row_count', 0)}"
+            ),
+            evidence=alert.get("verdict") or "Drift alert preview has not been applied.",
+            next_action=alert.get("next_action") or "필요할 때만 현재 session의 Review Signals에 반영합니다.",
+            source=alert.get("schema_version") or "build_selected_portfolio_drift_alert_preview",
+        ),
+        _allocation_boundary_row(
+            check="Storage boundary",
+            status="BLOCKED" if boundary_violations else "PASS",
+            current=_boundary_flags_current(execution_boundary, storage_fields),
+            evidence=(
+                "No DB, registry, monitoring log, input, or alert persistence"
+                if not boundary_violations
+                else "; ".join(boundary_violations[:5])
+            ),
+            next_action=(
+                "저장 경계 위반을 제거하기 전에는 allocation evidence를 신뢰하지 않습니다."
+                if boundary_violations
+                else "결과는 화면/session 신호로만 읽고 원시 입력은 다시 입력합니다."
+            ),
+            source="allocation_drift_evidence_boundary",
+        ),
+        _allocation_boundary_row(
+            check="Execution boundary",
+            status="BLOCKED" if boundary_violations else "PASS",
+            current=_boundary_flags_current(execution_boundary, execution_fields),
+            evidence=(
+                "No account connection, broker sync, live approval, order, or auto rebalance"
+                if not boundary_violations
+                else "; ".join(boundary_violations[:5])
+            ),
+            next_action=(
+                "주문/계좌/자동 리밸런싱 경계 위반을 제거합니다."
+                if boundary_violations
+                else "주문 판단은 이 화면 밖의 별도 수동 절차로만 다룹니다."
+            ),
+            source="allocation_drift_evidence_boundary",
+        ),
+    ]
+
+    statuses = [str(item.get("Status") or "OPTIONAL") for item in rows]
+    if "BLOCKED" in statuses:
+        route = "ALLOCATION_DRIFT_BOUNDARY_BLOCKED"
+        conclusion = "Actual Allocation evidence boundary에 저장 또는 실행 경계 위반이 있습니다."
+    elif "BREACHED" in statuses:
+        route = "ALLOCATION_DRIFT_BOUNDARY_BREACHED"
+        conclusion = "비중 drift가 재검토 기준을 넘었지만, 이 결과는 주문이 아니라 수동 검토 신호입니다."
+    elif "NEEDS_INPUT" in statuses:
+        route = "ALLOCATION_DRIFT_BOUNDARY_NEEDS_INPUT"
+        conclusion = "비중 근거를 읽으려면 현재 배분 입력을 먼저 보강해야 합니다."
+    elif "WATCH" in statuses:
+        route = "ALLOCATION_DRIFT_BOUNDARY_WATCH"
+        conclusion = "비중 drift가 관찰 기준을 넘었고, 다음 점검에서 확대 여부를 확인합니다."
+    elif drift or alert:
+        route = "ALLOCATION_DRIFT_BOUNDARY_READY"
+        conclusion = "현재 Actual Allocation evidence는 읽기 전용 session 신호로만 정상 연결되어 있습니다."
+    else:
+        route = "ALLOCATION_DRIFT_BOUNDARY_OPTIONAL"
+        conclusion = "Actual Allocation은 선택 점검이며 실행하지 않아도 selected monitoring source를 저장하지 않습니다."
+
+    return {
+        "schema_version": SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION,
+        "decision_id": selected.get("decision_id"),
+        "route": route,
+        "route_label": SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "rows": rows,
+        "metrics": {
+            "row_count": len(rows),
+            "pass_count": sum(1 for item in rows if item.get("Status") == "PASS"),
+            "watch_count": sum(1 for item in rows if item.get("Status") == "WATCH"),
+            "breached_count": sum(1 for item in rows if item.get("Status") == "BREACHED"),
+            "needs_input_count": sum(1 for item in rows if item.get("Status") == "NEEDS_INPUT"),
+            "optional_count": sum(1 for item in rows if item.get("Status") == "OPTIONAL"),
+            "boundary_violation_count": len(boundary_violations),
+            "drift_route": drift_route or None,
+            "alert_route": alert_route or None,
+            "input_mode": normalized_input_mode,
+            "raw_input_persisted": False,
         },
+        "execution_boundary": execution_boundary,
     }
 
 
@@ -797,7 +1059,7 @@ def _status_from_alert_preview(alert_preview: dict[str, Any]) -> tuple[str, str,
             "OPTIONAL",
             "Alert preview not applied",
             "drift alert preview는 session state에 반영될 때 timeline에 표시됩니다.",
-            "Actual Allocation에서 Update Review Signals를 누르면 preview를 반영합니다.",
+            "Actual Allocation에서 Reflect Session Signal을 누르면 preview를 session에만 반영합니다.",
         )
     route = str(alert_preview.get("alert_route") or "").strip()
     if route == "NO_ALERT":
