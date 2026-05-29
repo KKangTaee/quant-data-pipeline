@@ -9,3 +9,4 @@
 - 2026-05-30: Replaced expandable loading status/progress with a compact next-refresh timing panel and cadence progress bar.
 - 2026-05-30: Integrated browser auto refresh into the Market Movers `데이터 갱신` area, removed the separate top panel, and added browser-side second-by-second countdown/progress updates.
 - 2026-05-30: Completed Market Movers UI redesign pass 2: changed `데이터 갱신` from a bordered card into a status / action bar with current data state, chips, refresh-mode selection, and manual actions in one command row.
+- 2026-05-30: Completed UI redesign pass 3 for Market Movers: removed redundant wrapper containers around scan controls / refresh actions and replaced snapshot status cards with a compact metadata strip.

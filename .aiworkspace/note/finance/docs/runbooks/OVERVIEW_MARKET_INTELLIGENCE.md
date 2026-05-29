@@ -185,6 +185,7 @@ PY
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
 - Market Movers daily `데이터 갱신` status / action bar shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.
+- Market Movers snapshot metadata is shown as a compact strip rather than a separate card grid, so the ranking chart and table stay closer to the controls.
 - Market Movers `자동 갱신` is limited to S&P 500 Daily browser sessions; Top1000 / Top2000 remain manual unless a broader profile is explicitly added later.
 - Market Movers refresh results expose `Snapshot Diagnostics` with snapshot time, rows written, failed count, method, and provider diagnostics when available.
 - Market Movers displays both `Rank` and `Sector Pulse` chart tabs.

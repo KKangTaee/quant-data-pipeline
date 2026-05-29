@@ -115,7 +115,7 @@ def _snapshot_value(value: Any) -> str:
     return str(value)
 
 
-def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
+def _snapshot_status_items(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     coverage = dict(snapshot.get("coverage") or {})
     refresh_state = dict(coverage.get("refresh_state") or {})
     stale_days = coverage.get("stale_days")
@@ -141,34 +141,36 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
     status_value = refresh_state.get("label") or snapshot.get("status") or "-"
     status_detail = refresh_state.get("detail") or coverage.get("coverage_basis") or snapshot.get("universe_label") or "-"
     status_tone = refresh_state.get("tone") or ("positive" if snapshot.get("status") == "OK" else "warning")
-    render_status_card_grid(
-        [
-            {
-                "title": "Effective Price Time",
-                "value": _snapshot_value(effective_value),
-                "detail": raw_detail,
-                "tone": "positive" if effective_value else "warning",
-            },
-            {
-                "title": "Returnable Coverage",
-                "value": coverage_text,
-                "detail": coverage_detail or f"missing: {missing_count}, failed: {failed_count}",
-                "tone": "positive" if returnable else "warning",
-            },
-            {
-                "title": "Snapshot Age",
-                "value": age_value,
-                "detail": age_detail,
-                "tone": age_tone,
-            },
-            {
-                "title": status_title,
-                "value": status_value,
-                "detail": status_detail,
-                "tone": status_tone,
-            },
-        ]
-    )
+    return [
+        {
+            "title": "Effective Price Time",
+            "value": _snapshot_value(effective_value),
+            "detail": raw_detail,
+            "tone": "positive" if effective_value else "warning",
+        },
+        {
+            "title": "Returnable Coverage",
+            "value": coverage_text,
+            "detail": coverage_detail or f"missing: {missing_count}, failed: {failed_count}",
+            "tone": "positive" if returnable else "warning",
+        },
+        {
+            "title": "Snapshot Age",
+            "value": age_value,
+            "detail": age_detail,
+            "tone": age_tone,
+        },
+        {
+            "title": status_title,
+            "value": status_value,
+            "detail": status_detail,
+            "tone": status_tone,
+        },
+    ]
+
+
+def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
+    render_status_card_grid(_snapshot_status_items(snapshot))
 
 
 def _render_snapshot_warnings(snapshot: dict[str, Any]) -> None:
@@ -1256,6 +1258,44 @@ def _market_movers_ui_css() -> str:
   line-height: 1.35;
   margin: 0.1rem 0 0.35rem 0;
 }
+.ov-mm-meta-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid rgba(100, 116, 139, 0.18);
+  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
+  margin: 0.25rem 0 0.9rem 0;
+}
+.ov-mm-meta-item {
+  min-width: 0;
+  padding: 0.58rem 0.8rem;
+  border-left: 1px solid rgba(100, 116, 139, 0.14);
+}
+.ov-mm-meta-item:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+.ov-mm-meta-label {
+  color: rgba(100, 116, 139, 0.95);
+  font-size: 0.74rem;
+  font-weight: 720;
+  letter-spacing: 0;
+}
+.ov-mm-meta-value {
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 780;
+  line-height: 1.25;
+  margin-top: 0.12rem;
+  overflow-wrap: anywhere;
+}
+.ov-mm-meta-detail {
+  color: rgba(100, 116, 139, 0.95);
+  font-size: 0.75rem;
+  line-height: 1.28;
+  margin-top: 0.1rem;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 760px) {
   .ov-mm-status-bar {
     align-items: flex-start;
@@ -1264,9 +1304,42 @@ def _market_movers_ui_css() -> str:
   .ov-mm-chip-row {
     justify-content: flex-start;
   }
+  .ov-mm-meta-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-mm-meta-item:nth-child(odd) {
+    border-left: 0;
+    padding-left: 0;
+  }
 }
 </style>
 """.strip()
+
+
+def _render_market_snapshot_meta_strip(snapshot: dict[str, Any]) -> None:
+    item_html: list[str] = []
+    for item in _snapshot_status_items(snapshot):
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-mm-meta-detail">{escape(str(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        item_html.append(
+            '<div class="ov-mm-meta-item">'
+            f'<div class="ov-mm-meta-label">{escape(str(item.get("title") or "-"))}</div>'
+            f'<div class="ov-mm-meta-value">{escape(_snapshot_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    st.markdown(
+        _market_movers_ui_css()
+        + f"""
+<div class="ov-mm-meta-strip">
+          {"".join(item_html)}
+        </div>""",
+        unsafe_allow_html=True,
+    )
 
 
 def _market_refresh_state_label(value: Any) -> str:
@@ -1508,67 +1581,66 @@ def _render_market_movers_refresh_bar(
     state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
     auto_supported = universe_code == "SP500" and period == "daily"
 
-    with st.container():
-        refresh_state = dict(coverage.get("refresh_state") or {})
-        returnable = coverage.get("returnable_count") or 0
-        universe_count = coverage.get("universe_count") or 0
-        returnable_pct = coverage.get("returnable_pct")
-        next_due = refresh_state.get("next_due_in_minutes")
-        next_check_text = "now" if next_due in (None, 0) else f"{int(next_due)}m"
+    refresh_state = dict(coverage.get("refresh_state") or {})
+    returnable = coverage.get("returnable_count") or 0
+    universe_count = coverage.get("universe_count") or 0
+    returnable_pct = coverage.get("returnable_pct")
+    next_due = refresh_state.get("next_due_in_minutes")
+    next_check_text = "now" if next_due in (None, 0) else f"{int(next_due)}m"
 
-        _render_market_refresh_status_bar(
-            universe_label=universe_label,
-            price_mode=coverage.get("price_mode") or "-",
-            returnable=returnable,
-            universe_count=universe_count,
-            returnable_pct=returnable_pct,
-            next_check_text=next_check_text,
-            state=state,
-        )
+    _render_market_refresh_status_bar(
+        universe_label=universe_label,
+        price_mode=coverage.get("price_mode") or "-",
+        returnable=returnable,
+        universe_count=universe_count,
+        returnable_pct=returnable_pct,
+        next_check_text=next_check_text,
+        state=state,
+    )
 
-        control_cols = st.columns([0.95, 1.1, 0.95, 0.95], gap="small", vertical_alignment="bottom")
-        selected_mode = _select_market_refresh_mode(control_cols[0], auto_supported=auto_supported)
-        if control_cols[1].button(
-            "일중 스냅샷 갱신",
-            key=f"overview_{universe_code.lower()}_intraday_refresh",
-            use_container_width=True,
-            type="primary",
-            help="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
-        ):
-            with st.spinner(f"Updating {universe_label} quote snapshot..."):
-                _store_overview_job_result(
-                    intraday_result_key,
-                    _run_collect_market_intraday_snapshot_compat(
-                        universe_code=universe_code,
-                        universe_limit=universe_limit,
-                    ),
-                )
-            st.rerun()
-        if universe_code == "SP500" and control_cols[2].button(
-            "유니버스 갱신",
-            key="overview_sp500_universe_refresh",
-            use_container_width=True,
-        ):
-            with st.spinner("Refreshing S&P 500 universe..."):
-                _store_overview_job_result("overview_sp500_universe_result", run_collect_sp500_universe())
-            st.rerun()
-        if universe_code != "SP500":
-            control_cols[2].caption("Top universe는 market-cap ranked asset profile 기준입니다.")
-        if control_cols[3].button(
-            "화면 새로고침",
-            key=f"overview_{universe_code.lower()}_market_movers_reload",
-            use_container_width=True,
-        ):
-            st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            st.rerun()
-
-        if selected_mode == "auto" and auto_supported:
-            _render_market_auto_refresh_summary(universe_code=universe_code)
-        elif refresh_state.get("recommended_action"):
-            st.markdown(
-                f'<div class="ov-mm-auto-message">{escape(str(refresh_state.get("recommended_action")))}</div>',
-                unsafe_allow_html=True,
+    control_cols = st.columns([0.95, 1.1, 0.95, 0.95], gap="small", vertical_alignment="bottom")
+    selected_mode = _select_market_refresh_mode(control_cols[0], auto_supported=auto_supported)
+    if control_cols[1].button(
+        "일중 스냅샷 갱신",
+        key=f"overview_{universe_code.lower()}_intraday_refresh",
+        use_container_width=True,
+        type="primary",
+        help="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
+    ):
+        with st.spinner(f"Updating {universe_label} quote snapshot..."):
+            _store_overview_job_result(
+                intraday_result_key,
+                _run_collect_market_intraday_snapshot_compat(
+                    universe_code=universe_code,
+                    universe_limit=universe_limit,
+                ),
             )
+        st.rerun()
+    if universe_code == "SP500" and control_cols[2].button(
+        "유니버스 갱신",
+        key="overview_sp500_universe_refresh",
+        use_container_width=True,
+    ):
+        with st.spinner("Refreshing S&P 500 universe..."):
+            _store_overview_job_result("overview_sp500_universe_result", run_collect_sp500_universe())
+        st.rerun()
+    if universe_code != "SP500":
+        control_cols[2].caption("Top universe는 market-cap ranked asset profile 기준입니다.")
+    if control_cols[3].button(
+        "화면 새로고침",
+        key=f"overview_{universe_code.lower()}_market_movers_reload",
+        use_container_width=True,
+    ):
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+
+    if selected_mode == "auto" and auto_supported:
+        _render_market_auto_refresh_summary(universe_code=universe_code)
+    elif refresh_state.get("recommended_action"):
+        st.markdown(
+            f'<div class="ov-mm-auto-message">{escape(str(refresh_state.get("recommended_action")))}</div>',
+            unsafe_allow_html=True,
+        )
 
     if universe_code == "SP500":
         _render_market_job_result("overview_sp500_universe_result")
@@ -1581,7 +1653,7 @@ def _render_market_movers_snapshot_panel(
     universe_code: str,
     period: str,
 ) -> None:
-    _render_snapshot_status_cards(snapshot)
+    _render_market_snapshot_meta_strip(snapshot)
     _render_snapshot_warnings(snapshot)
     _render_missing_diagnostics(snapshot, universe_code=universe_code, period=period)
 
@@ -1612,58 +1684,57 @@ def _render_market_movers_tab() -> None:
         f"{_market_movers_ui_css()}<div class=\"ov-mm-toolbar-label\">스캔 조건</div>",
         unsafe_allow_html=True,
     )
-    with st.container():
-        controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
-        coverage = str(
-            controls[0].selectbox(
-                "Coverage",
-                ["SP500", "TOP1000", "TOP2000"],
-                index=0,
-                format_func=lambda value: {
-                    "SP500": "S&P 500",
-                    "TOP1000": "Top 1000",
-                    "TOP2000": "Top 2000",
-                }[value],
-                key="overview_market_movers_coverage",
-            )
+    controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
+    coverage = str(
+        controls[0].selectbox(
+            "Coverage",
+            ["SP500", "TOP1000", "TOP2000"],
+            index=0,
+            format_func=lambda value: {
+                "SP500": "S&P 500",
+                "TOP1000": "Top 1000",
+                "TOP2000": "Top 2000",
+            }[value],
+            key="overview_market_movers_coverage",
         )
-        universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
-        period = str(
-            controls[1].selectbox(
-                "Period",
-                ["daily", "weekly", "monthly", "yearly"],
-                index=0,
-                format_func=lambda value: {
-                    "daily": "Daily",
-                    "weekly": "Weekly",
-                    "monthly": "Monthly",
-                    "yearly": "Yearly",
-                }[value],
-                key="overview_market_movers_period",
-            )
+    )
+    universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
+    period = str(
+        controls[1].selectbox(
+            "Period",
+            ["daily", "weekly", "monthly", "yearly"],
+            index=0,
+            format_func=lambda value: {
+                "daily": "Daily",
+                "weekly": "Weekly",
+                "monthly": "Monthly",
+                "yearly": "Yearly",
+            }[value],
+            key="overview_market_movers_period",
         )
-        sector_options = ["All"] + load_overview_market_mover_sectors(
-            universe_code=coverage,
-            universe_limit=universe_limit,
+    )
+    sector_options = ["All"] + load_overview_market_mover_sectors(
+        universe_code=coverage,
+        universe_limit=universe_limit,
+    )
+    sector = str(
+        controls[2].selectbox(
+            "Sector",
+            sector_options,
+            index=0,
+            key="overview_market_movers_sector",
         )
-        sector = str(
-            controls[2].selectbox(
-                "Sector",
-                sector_options,
-                index=0,
-                key="overview_market_movers_sector",
-            )
+    )
+    top_n = int(
+        controls[3].number_input(
+            "Top N",
+            min_value=5,
+            max_value=100,
+            value=20,
+            step=5,
+            key="overview_market_movers_top_n",
         )
-        top_n = int(
-            controls[3].number_input(
-                "Top N",
-                min_value=5,
-                max_value=100,
-                value=20,
-                step=5,
-                key="overview_market_movers_top_n",
-            )
-        )
+    )
 
     reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
     if reloaded_at:

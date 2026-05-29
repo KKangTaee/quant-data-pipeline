@@ -10,3 +10,4 @@
 - The separate top Overview auto-refresh panel was removed after user feedback; manual and browser-auto refresh now share one Market Movers refresh surface.
 - The countdown / cadence bar updates every second in browser-side JS, while provider collection still goes through the 5-minute cadence guard.
 - UI stability means preserving the investment research workflow and data guardrails, not repeating the same `container / badge / card` visual pattern. Market Movers `데이터 갱신` should behave like a status / action bar, with internal run details hidden behind an expander.
+- Container reduction pass applies first to Market Movers only: wrapper containers that only grouped controls were removed, while columns / tabs / expanders that provide real interaction structure remain.

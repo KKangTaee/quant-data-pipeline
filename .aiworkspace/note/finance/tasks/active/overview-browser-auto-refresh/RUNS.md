@@ -40,3 +40,8 @@
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
 - 2026-05-30: `git diff --check` - PASS.
 - 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers - PASS; `데이터 갱신` rendered as a non-bordered status / action bar, manual / auto buttons each resolved to one control, auto countdown rendered, and console errors were 0. Returned mode to manual after smoke.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers container reduction - PASS; scan controls and refresh actions render without extra wrapper borders, snapshot metadata strip is present, HTML did not leak, console errors 0.

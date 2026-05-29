@@ -4094,3 +4094,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - 자동 check 중에는 전체 화면 blocking 대신 Market Movers `데이터 갱신` 안에서 초 단위 countdown / cadence progress / completion 상태를 표시한다.
   - UI redesign pass 1에서 Market Movers `데이터 갱신`을 반복 badge/card layout 대신 현재 상태, 수동/자동 모드, 주요 액션이 한 번에 읽히는 명령 영역으로 정리했다.
   - UI redesign pass 2에서 `데이터 갱신` 외곽 카드 컨테이너를 제거하고, 현재 상태 pill / 메타 chip / 갱신 방식 / 수동 액션이 이어지는 status + action bar로 정리했다.
+  - UI redesign pass 3에서 Market Movers의 단순 wrapper container를 줄이고, snapshot status cards를 얇은 metadata strip으로 바꿔 ranking/table과의 시각적 거리를 줄였다.
