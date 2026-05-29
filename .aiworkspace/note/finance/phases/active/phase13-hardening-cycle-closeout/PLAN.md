@@ -55,8 +55,8 @@ Phase 13은 아래 질문에 답한다.
 | 13-2 | Gate / validation QA matrix | Complete |
 | 13-3 | Storage / data boundary audit | Complete |
 | 13-4 | Docs / runbook alignment | Complete |
-| 13-5 | Residual risk / carry-forward triage | Next |
-| 13-6 | Phase 13 integrated QA / final closeout | Pending |
+| 13-5 | Residual risk / carry-forward triage | Complete |
+| 13-6 | Phase 13 integrated QA / final closeout | Next |
 
 ## Done Criteria
 

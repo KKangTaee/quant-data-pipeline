@@ -17,16 +17,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-residual-risk-carry-forward-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-integrated-qa-final-closeout`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-residual-risk-carry-forward-v1/`.
+- Remaining Phase 8~12 / Phase 13 risks are now split into current limitations, second-cycle candidates, explicit first-cycle out-of-scope items, and safe / unsafe final closeout wording.
+- Next task is `phase13-integrated-qa-final-closeout`.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-docs-runbook-alignment-v1/`.
 - Durable data / flow / glossary docs now point to Final Decision V2 and the Phase 13 storage boundary; added `.aiworkspace/note/finance/docs/runbooks/PHASE_CLOSEOUT_QA.md`.
-- Next task is `phase13-residual-risk-carry-forward-v1`.
+- This handed off to `phase13-residual-risk-carry-forward-v1`, now complete.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-storage-data-boundary-audit-v1/`.
 - DB-backed data / workflow JSONL compact evidence / saved setup / run artifact / Selected Dashboard read-only storage boundaries were audited with no immediate code defect found.
 - No registry / saved / run history / run artifact / Playwright output change was created by this task; this handed off to `phase13-docs-runbook-alignment-v1`, now complete.

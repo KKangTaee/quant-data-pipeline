@@ -99,9 +99,20 @@ The repeatable QA procedure is stored at `.aiworkspace/note/finance/docs/runbook
 
 ## Next Review Task
 
-`phase13-residual-risk-carry-forward-v1` should separate:
+`phase13-residual-risk-carry-forward-v1` separated:
 
 - current limitations that remain true after 1차 cycle
 - second-cycle implementation candidates
 - explicit out-of-scope broker-grade / production operations items
 - anything that must be stated carefully in 13-6 final closeout
+
+The carry-forward matrix is stored at `.aiworkspace/note/finance/tasks/active/phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md`.
+
+## Next Review Task
+
+`phase13-integrated-qa-final-closeout` should:
+
+- run the final QA command set from `docs/runbooks/PHASE_CLOSEOUT_QA.md`
+- create a Phase 13 closeout summary
+- mark the first hardening cycle complete only within the evidence-workflow boundary
+- hand off second-cycle candidates without opening implementation scope

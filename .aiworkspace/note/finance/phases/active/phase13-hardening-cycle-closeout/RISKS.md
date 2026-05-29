@@ -25,4 +25,5 @@ Created: 2026-05-29
 - 13-2 gate / validation QA matrix found no immediate code defect; service contracts passed, 126 tests.
 - 13-3 storage / data boundary audit found no immediate code defect or task-created registry / saved / run history / run artifact / Playwright output drift.
 - 13-4 docs / runbook alignment updated durable data / flow / glossary docs and added a Phase Closeout QA runbook.
-- Main remaining risk is now closeout overstatement: unresolved broker-grade, optimizer, paid data, production alerting, and statistical validation gaps must be triaged before 13-6 final closeout.
+- 13-5 residual risk / carry-forward triage separated current limitations, second-cycle candidates, explicit out-of-scope items, and safe / unsafe final closeout wording.
+- Main remaining risk is final QA drift: 13-6 must rerun the closeout checks and avoid claiming broker-grade / production trading readiness.

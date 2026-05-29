@@ -19,10 +19,12 @@ Completed:
 - DB-backed data, workflow JSONL compact evidence, saved setup, generated artifacts, and Selected Dashboard read-only boundaries audited; no immediate code defect found
 - 13-4 `phase13-docs-runbook-alignment-v1`
 - Durable data / flow / glossary docs and Phase Closeout QA runbook aligned with Phase 13 inventory, QA matrix, and storage audit
+- 13-5 `phase13-residual-risk-carry-forward-v1`
+- Current limitations, second-cycle candidates, explicit out-of-scope items, and safe / unsafe final closeout wording triaged
 
 Next:
 
-- 13-5 `phase13-residual-risk-carry-forward-v1`
+- 13-6 `phase13-integrated-qa-final-closeout`
 
 ## Latest Decision
 
@@ -31,7 +33,7 @@ It should close Phase 8~12 into a coherent product / validation state before any
 
 Immediate next target:
 
-- `phase13-residual-risk-carry-forward-v1`
+- `phase13-integrated-qa-final-closeout`
 
 ## Storage Boundary Reminder
 

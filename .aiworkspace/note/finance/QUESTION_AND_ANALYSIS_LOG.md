@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 12 Selected Monitoring / Recheck Operations](./phases/done/phase12-selected-monitoring-recheck-operations.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-residual-risk-carry-forward-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase13-integrated-qa-final-closeout`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-30 - Phase 13 residual risks separated for final closeout
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-5로 Phase 8~12와 Phase 13 13-1~13-4에서 남은 한계를 current limitation, second-cycle candidate, explicit out-of-scope로 분리한다.
+- Analysis result:
+  - 1차 cycle은 investability evidence workflow 개선으로 closeout할 수 있지만 broker-grade trading / account reconciliation / optimizer / production monitoring system으로 표현하면 안 된다.
+  - Key carry-forward candidates are historical membership coverage expansion, broker-grade execution realism design, weighted mix cost / turnover aggregation, profile-specific thresholds, formal validation statistics, construction taxonomy / covariance, provider operations hardening, and selected replay contract hardening.
+  - Live approval, broker orders, account sync, tax-lot handling, auto rebalance, paid source adoption, user memo / preset expansion, and automatic monitoring log append remain explicit first-cycle out-of-scope items.
+- Follow-up:
+  - 다음 task는 `phase13-integrated-qa-final-closeout`로 final QA와 1차 hardening cycle closeout summary를 작성한다.
 
 ### 2026-05-30 - Phase 13 docs and runbooks align with current boundaries
 - User request:
