@@ -1,6 +1,6 @@
 # Phase 10 Current Chapter TODO
 
-Status: Active
+Status: Complete
 Last Updated: 2026-05-29
 
 ## Current Position
@@ -10,15 +10,15 @@ Last Updated: 2026-05-29
 - 10-3 `oos-holdout-validation-contract-v1`: Complete
 - 10-4 `regime-split-validation-v1`: Complete
 - 10-5 `validation-efficacy-gate-policy-refinement-v2`: Complete
-- 10-6 `phase10-integrated-qa-closeout`: Next
+- 10-6 `phase10-integrated-qa-closeout`: Complete
 
 ## Next Task
 
-`phase10-integrated-qa-closeout`
+`phase11-board-open`
 
 Focus:
 
-- Phase 10에서 추가한 walk-forward / OOS / regime evidence와 selected-route gate policy 연결을 통합 검증한다.
-- compile, full service contracts, boundary checker, hygiene checker, diff checks를 실행한다.
-- Phase 10 closeout summary와 다음 작업 handoff를 정리한다.
+- Phase 11 portfolio construction risk controls의 official board를 연다.
+- concentration, overlap, correlation, risk contribution, role / weight discipline source map을 시작한다.
+- Phase 10의 deployable-fit 검증 이후 portfolio construction 자체의 risk gate를 설계한다.
 - 새 JSONL registry, user memo, preset, approval, order, auto rebalance behavior는 추가하지 않는다.

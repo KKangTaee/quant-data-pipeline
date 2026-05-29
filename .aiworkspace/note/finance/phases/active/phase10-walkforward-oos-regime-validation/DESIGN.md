@@ -1,6 +1,6 @@
 # Phase 10 Walk-forward / OOS / Regime Validation Design
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Design Principle
@@ -110,6 +110,18 @@ The contract:
 - maps `NEEDS_INPUT` / `BLOCKED` to selected-route blockers and `REVIEW` to hold / re-review requirements
 - reuses the existing investability packet / selected-route gate contract
 - writes no DB rows, no new JSONL registry, no memo, and no preset state
+
+## 10-6 Closeout Result
+
+`phase10-integrated-qa-closeout` completed integrated verification and added the done summary.
+
+The closeout:
+
+- passed targeted compile for Phase 10 service / loader touch points
+- passed full `tests.test_service_contracts`
+- passed UI / engine boundary and finance refinement hygiene checks
+- recorded residual risks and Phase 11 handoff
+- added no DB rows, no new JSONL registry, no memo, and no preset state
 
 ## User Flow Target
 

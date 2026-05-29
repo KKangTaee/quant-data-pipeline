@@ -18,11 +18,11 @@ Last Verified: 2026-05-29
 3. [Project Map](./PROJECT_MAP.md)
 4. [Glossary](./GLOSSARY.md)
 
-## Current Active Phase
+## Current Phase Handoff
 
-- [Phase 10 Walk-forward / OOS / Regime Validation](../phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
-- Current task pointer: [Phase 10 Current Chapter TODO](../phases/active/phase10-walkforward-oos-regime-validation/CURRENT_CHAPTER_TODO.md)
-- Current implementation focus: Phase 10 integrated QA / closeout after temporal / OOS / regime evidence and gate policy contracts.
+- Latest completed phase: [Phase 10 Walk-forward / OOS / Regime Validation](../phases/done/phase10-walkforward-oos-regime-validation.md)
+- Previous active board: [Phase 10 Active Board](../phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
+- Current implementation focus: open Phase 11 portfolio construction risk controls with `phase11-board-open`.
 
 ## By Purpose
 

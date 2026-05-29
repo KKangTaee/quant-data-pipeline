@@ -1,6 +1,6 @@
 # Phase 10 Walk-forward / OOS / Regime Validation Risks
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Risks
@@ -16,7 +16,9 @@ Created: 2026-05-29
 | Proxy-only walk-forward evidence is over-trusted | DB price proxy can differ from actual strategy path | Carry curve source strength and avoid proxy-only PASS |
 | Runtime OOS metadata diverges from Practical Validation audit | Same candidate can show different temporal review semantics | Build a service-level compact temporal validation contract and reuse it |
 
-## Residual Unknowns For 10-1
+## Closeout Residual Risks
 
-- 현재 result bundle curve가 모든 후보 유형에서 enough monthly / daily returns를 제공하는지 확인이 필요하다.
-- Macro regime bucket을 현재 loader만으로 만들 수 있는지, 추가 free API / public source가 필요한지 확인이 필요하다.
+- Phase 10 does not implement a full walk-forward optimizer or formal statistical significance layer.
+- OOS and regime thresholds are compact evidence heuristics and may need profile-specific tuning.
+- Macro regime split depends on available DB-backed macro observation history and current threshold choices.
+- Phase 11 should address portfolio construction risk controls before treating selected candidates as operationally robust.

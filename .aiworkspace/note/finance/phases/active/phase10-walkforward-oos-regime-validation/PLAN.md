@@ -1,6 +1,6 @@
 # Phase 10 Walk-forward / OOS / Regime Validation Plan
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## 이걸 하는 이유?
@@ -54,12 +54,12 @@ Phase 10은 우선 기존 result bundle, DB price / macro loader, compact valida
 | Phase Slice | Goal | Status |
 | --- | --- | --- |
 | 10-0 | Phase 10 board open / scope and task split | Complete |
-| 10-1 | Current validation source map / gap audit | Next |
-| 10-2 | Walk-forward split contract | Planned |
-| 10-3 | Out-of-sample holdout validation contract | Planned |
-| 10-4 | Regime split / market condition robustness | Planned |
-| 10-5 | Practical Validation / Final Review gate integration | Planned |
-| 10-6 | Phase 10 integrated QA / closeout | Planned |
+| 10-1 | Current validation source map / gap audit | Complete |
+| 10-2 | Walk-forward split contract | Complete |
+| 10-3 | Out-of-sample holdout validation contract | Complete |
+| 10-4 | Regime split / market condition robustness | Complete |
+| 10-5 | Practical Validation / Final Review gate integration | Complete |
+| 10-6 | Phase 10 integrated QA / closeout | Complete |
 
 ## Done Criteria
 
@@ -74,3 +74,9 @@ Phase 10은 우선 기존 result bundle, DB price / macro loader, compact valida
 - Phase 11: portfolio construction risk controls를 강화한다.
 - Phase 12: selected monitoring / recheck operations를 정리한다.
 - Phase 13: 전체 1차 hardening cycle closeout을 진행한다.
+
+## Closeout
+
+Phase 10 closeout summary:
+
+- `.aiworkspace/note/finance/phases/done/phase10-walkforward-oos-regime-validation.md`

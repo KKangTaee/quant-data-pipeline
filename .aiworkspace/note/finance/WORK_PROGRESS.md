@@ -15,15 +15,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - current phase board:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
 - latest completed phase:
-  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
+  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase10-integrated-qa-closeout`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-board-open`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/phase10-integrated-qa-closeout/`.
+- Phase 10 closeout summary added at `.aiworkspace/note/finance/phases/done/phase10-walkforward-oos-regime-validation.md`.
+- Integrated verification passed: Phase 10 service / loader compile, full `tests.test_service_contracts` 98 tests, UI / engine boundary checker, finance refinement hygiene, and `git diff --check`.
+- Next hardening target is Phase 11 portfolio construction risk controls.
 - Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-refinement-v2/`.
 - Final Review selected-route gate policy now surfaces Validation Efficacy row-level walk-forward / OOS / regime gaps as blocker or review-required evidence.
 - This is read-only gate evidence refinement; no new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.

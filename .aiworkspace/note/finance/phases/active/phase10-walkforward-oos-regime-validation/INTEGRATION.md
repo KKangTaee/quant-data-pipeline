@@ -1,6 +1,6 @@
 # Phase 10 Walk-forward / OOS / Regime Validation Integration
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Integration Order
@@ -10,7 +10,7 @@ Created: 2026-05-29
 3. 10-3 OOS holdout validation contract - complete
 4. 10-4 regime split validation - complete
 5. 10-5 selected-route gate policy refinement - complete
-6. 10-6 integrated QA / closeout - next
+6. 10-6 integrated QA / closeout - complete
 
 ## Expected Touch Points
 
@@ -30,6 +30,7 @@ Implementation tasks may touch the following files after 10-1 confirms scope.
 10-3 extended the same helper with OOS holdout evidence and connected it to Practical Validation and Validation Efficacy Audit.
 10-4 extended the helper with DB-backed macro regime split evidence and connected it to Practical Validation and Validation Efficacy Audit.
 10-5 connected non-PASS Validation Efficacy row-level temporal / OOS / regime gaps to Final Review selected-route gate policy evidence.
+10-6 verified compile, full service contracts, UI / engine boundary, refinement hygiene, diff check, and closeout docs.
 
 ## QA Gates
 

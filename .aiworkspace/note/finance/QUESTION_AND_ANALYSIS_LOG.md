@@ -15,13 +15,25 @@ Detailed historical analysis was archived on `2026-04-13`.
 - current phase board:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/active/phase10-walkforward-oos-regime-validation/PLAN.md)
 - latest completed phase:
-  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
+  - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase10-integrated-qa-closeout`
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase11-board-open`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 10 validation efficacy hardening closes
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 walk-forward / OOS / regime validation work를 통합 검증하고 closeout한다.
+- Analysis result:
+  - Phase 10 integrated QA passed: targeted service / loader compile, full service contracts 98 tests, UI / engine boundary checker, finance refinement hygiene, and diff check.
+  - Phase 10 closeout summary was added under `phases/done/`.
+  - This phase strengthened Validation Efficacy and selected-route gate evidence without adding new JSONL registry, memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - Next hardening target is Phase 11 portfolio construction risk controls. Start with `phase11-board-open`.
 
 ### 2026-05-29 - Validation efficacy temporal gaps become selected-route gate evidence
 - User request:
