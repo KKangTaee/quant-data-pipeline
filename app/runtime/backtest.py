@@ -274,7 +274,17 @@ def _build_weight_map(
     return weights
 
 
+_TURNOVER_INPUT_COLUMNS = {"End Ticker", "End Balance", "Next Ticker", "Next Balance"}
+
+
+def _missing_turnover_input_columns(result_df: pd.DataFrame) -> list[str]:
+    return sorted(column for column in _TURNOVER_INPUT_COLUMNS if column not in result_df.columns)
+
+
 def _estimate_turnover_series(result_df: pd.DataFrame) -> pd.Series:
+    if _missing_turnover_input_columns(result_df):
+        return pd.Series([np.nan] * len(result_df), index=result_df.index, dtype=float)
+
     turnovers: list[float] = []
     for _, row in result_df.iterrows():
         if "Rebalancing" in result_df.columns and bool(row.get("Rebalancing")) is False:
@@ -316,11 +326,45 @@ def _estimate_turnover_series(result_df: pd.DataFrame) -> pd.Series:
     return pd.Series(turnovers, index=result_df.index, dtype=float)
 
 
+def _turnover_diagnostics_from_result(working: pd.DataFrame) -> dict[str, Any]:
+    missing_columns = _missing_turnover_input_columns(working)
+    turnover = pd.to_numeric(working.get("Turnover"), errors="coerce")
+    observed = turnover.dropna()
+    if "Rebalancing" in working.columns:
+        rebalance_mask = working["Rebalancing"].fillna(False).astype(bool)
+    else:
+        rebalance_mask = pd.Series(True, index=working.index)
+    rebalance_turnover = turnover[rebalance_mask].dropna()
+
+    if missing_columns:
+        estimation_status = "not_estimated_missing_holdings"
+        turnover_source = "missing_result_holding_columns"
+    elif observed.empty:
+        estimation_status = "not_estimated_no_observations"
+        turnover_source = "end_next_holdings_weight_delta"
+    else:
+        estimation_status = "estimated_from_holdings"
+        turnover_source = "end_next_holdings_weight_delta"
+
+    return {
+        "turnover_model_contract_version": "turnover_evidence_contract_v1",
+        "turnover_estimation_status": estimation_status,
+        "turnover_source": turnover_source,
+        "turnover_input_missing_columns": missing_columns,
+        "turnover_observation_count": int(observed.count()),
+        "turnover_rebalance_rows": int(rebalance_mask.sum()) if not working.empty else 0,
+        "turnover_nonzero_count": int((observed > 0).sum()),
+        "avg_turnover": float(observed.mean()) if not observed.empty else None,
+        "max_turnover": float(observed.max()) if not observed.empty else None,
+        "avg_rebalance_turnover": float(rebalance_turnover.mean()) if not rebalance_turnover.empty else None,
+    }
+
+
 def _apply_transaction_cost_postprocess(
     result_df: pd.DataFrame,
     *,
     transaction_cost_bps: float,
-) -> tuple[pd.DataFrame, dict[str, float]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     working = result_df.copy()
     working["Gross Total Balance"] = pd.to_numeric(working["Total Balance"], errors="coerce")
     working["Gross Total Return"] = pd.to_numeric(working["Total Return"], errors="coerce")
@@ -366,11 +410,12 @@ def _apply_transaction_cost_postprocess(
     working["Total Balance"] = working["Net Total Balance"]
     working["Total Return"] = working["Net Total Return"]
 
-    diagnostics = {
-        "avg_turnover": float(working["Turnover"].mean()) if not working.empty else 0.0,
-        "max_turnover": float(working["Turnover"].max()) if not working.empty else 0.0,
-        "estimated_cost_total": float(working["Estimated Cost"].sum()) if not working.empty else 0.0,
-    }
+    diagnostics = _turnover_diagnostics_from_result(working)
+    diagnostics.update(
+        {
+            "estimated_cost_total": float(working["Estimated Cost"].sum()) if not working.empty else 0.0,
+        }
+    )
     return working, diagnostics
 
 
@@ -1781,7 +1826,7 @@ def _apply_real_money_hardening(
             "cost_model_formula": "estimated_cost=pre_cost_balance*(transaction_cost_bps/10000)*estimated_turnover",
             "cost_application_status": "applied_to_result_curve",
             "cost_application_target": "result_df.Total Balance/Total Return",
-            "cost_turnover_source": "estimated_from_end_and_next_holdings",
+            "cost_turnover_source": turnover_stats["turnover_source"],
             "min_price_filter": float(min_price_filter or 0.0),
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
@@ -1828,6 +1873,14 @@ def _apply_real_money_hardening(
             ),
             "avg_turnover": turnover_stats["avg_turnover"],
             "max_turnover": turnover_stats["max_turnover"],
+            "avg_rebalance_turnover": turnover_stats["avg_rebalance_turnover"],
+            "turnover_model_contract_version": turnover_stats["turnover_model_contract_version"],
+            "turnover_estimation_status": turnover_stats["turnover_estimation_status"],
+            "turnover_source": turnover_stats["turnover_source"],
+            "turnover_input_missing_columns": turnover_stats["turnover_input_missing_columns"],
+            "turnover_observation_count": turnover_stats["turnover_observation_count"],
+            "turnover_rebalance_rows": turnover_stats["turnover_rebalance_rows"],
+            "turnover_nonzero_count": turnover_stats["turnover_nonzero_count"],
             "estimated_cost_total": turnover_stats["estimated_cost_total"],
             "gross_start_balance": float(hardened_df["Gross Total Balance"].iloc[0]),
             "gross_end_balance": float(hardened_df["Gross Total Balance"].iloc[-1]),

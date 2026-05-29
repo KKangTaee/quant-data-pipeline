@@ -89,7 +89,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertTrue(handoff.persisted)
         self.assertEqual(handoff.requested_panel, "Final Review")
 
-    def test_selection_source_preserves_cost_model_snapshot_without_new_registry(self) -> None:
+    def test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry(self) -> None:
         from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
 
         source = build_selection_source_from_candidate_draft(
@@ -116,6 +116,14 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
                     "transaction_cost_bps": 10.0,
                     "estimated_cost_total": 42.0,
                 },
+                "turnover_evidence_snapshot": {
+                    "turnover_model_contract_version": "turnover_evidence_contract_v1",
+                    "turnover_estimation_status": "estimated_from_holdings",
+                    "turnover_source": "end_next_holdings_weight_delta",
+                    "turnover_observation_count": 12,
+                    "turnover_rebalance_rows": 12,
+                    "avg_turnover": 0.2,
+                },
             }
         )
 
@@ -126,6 +134,14 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(
             source["components"][0]["replay_contract"]["cost_model_snapshot"]["estimated_cost_total"],
             42.0,
+        )
+        self.assertEqual(
+            source["turnover_evidence_snapshot"]["turnover_estimation_status"],
+            "estimated_from_holdings",
+        )
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["turnover_evidence_snapshot"]["avg_turnover"],
+            0.2,
         )
         self.assertEqual(source["construction"]["rebalance_cadence"], 1)
 
@@ -360,6 +376,68 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
 
 
 class BacktestRealismAuditContractTests(unittest.TestCase):
+    def test_turnover_postprocess_marks_missing_holding_columns(self) -> None:
+        from app.runtime.backtest import _apply_transaction_cost_postprocess
+
+        result_df = pd.DataFrame(
+            [
+                {"Date": "2020-01-31", "Total Balance": 1000.0, "Total Return": None},
+                {"Date": "2020-02-29", "Total Balance": 1010.0, "Total Return": 0.01},
+            ]
+        )
+
+        hardened, diagnostics = _apply_transaction_cost_postprocess(
+            result_df,
+            transaction_cost_bps=10.0,
+        )
+
+        self.assertEqual(diagnostics["turnover_estimation_status"], "not_estimated_missing_holdings")
+        self.assertIn("End Ticker", diagnostics["turnover_input_missing_columns"])
+        self.assertTrue(hardened["Turnover"].isna().all())
+        self.assertEqual(diagnostics["estimated_cost_total"], 0.0)
+
+    def test_turnover_postprocess_estimates_from_holdings(self) -> None:
+        from app.runtime.backtest import _apply_transaction_cost_postprocess
+
+        result_df = pd.DataFrame(
+            [
+                {
+                    "Date": "2020-01-31",
+                    "Total Balance": 1000.0,
+                    "Total Return": None,
+                    "End Ticker": [],
+                    "End Balance": [],
+                    "Next Ticker": ["SPY"],
+                    "Next Balance": [1000.0],
+                    "Cash": 0.0,
+                    "Rebalancing": True,
+                },
+                {
+                    "Date": "2020-02-29",
+                    "Total Balance": 1010.0,
+                    "Total Return": 0.01,
+                    "End Ticker": ["SPY"],
+                    "End Balance": [1010.0],
+                    "Next Ticker": ["TLT"],
+                    "Next Balance": [1010.0],
+                    "Cash": 0.0,
+                    "Rebalancing": True,
+                },
+            ]
+        )
+
+        hardened, diagnostics = _apply_transaction_cost_postprocess(
+            result_df,
+            transaction_cost_bps=10.0,
+        )
+
+        self.assertEqual(diagnostics["turnover_estimation_status"], "estimated_from_holdings")
+        self.assertEqual(diagnostics["turnover_observation_count"], 2)
+        self.assertEqual(diagnostics["turnover_rebalance_rows"], 2)
+        self.assertEqual(diagnostics["max_turnover"], 1.0)
+        self.assertGreater(diagnostics["estimated_cost_total"], 0.0)
+        self.assertIn("Turnover", hardened.columns)
+
     def test_ready_audit_uses_cost_turnover_and_liquidity_metadata_without_writes(self) -> None:
         from app.services.backtest_realism_audit import (
             BACKTEST_REALISM_READY,
@@ -375,10 +453,21 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
                         "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
                         "cost_application_status": "applied_to_result_curve",
                         "cost_application_target": "result_df.Total Balance/Total Return",
-                        "cost_turnover_source": "estimated_from_end_and_next_holdings",
+                        "cost_turnover_source": "end_next_holdings_weight_delta",
                         "transaction_cost_bps": 10.0,
                         "avg_turnover": 0.15,
                         "estimated_cost_total": 125.0,
+                    },
+                    "turnover_evidence_snapshot": {
+                        "turnover_model_contract_version": "turnover_evidence_contract_v1",
+                        "turnover_estimation_status": "estimated_from_holdings",
+                        "turnover_source": "end_next_holdings_weight_delta",
+                        "turnover_observation_count": 24,
+                        "turnover_rebalance_rows": 24,
+                        "turnover_nonzero_count": 12,
+                        "avg_turnover": 0.15,
+                        "max_turnover": 0.4,
+                        "avg_rebalance_turnover": 0.15,
                     },
                     "source_snapshot": {
                         "settings_snapshot": {
@@ -416,6 +505,7 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
 
         self.assertEqual(audit["route"], BACKTEST_REALISM_READY)
         self.assertEqual(audit["cost_model_contract"]["application_status"], "applied_to_result_curve")
+        self.assertEqual(audit["turnover_evidence_contract"]["evidence_strength"], "actual_estimate")
         self.assertEqual(audit["metrics"]["pass"], 7)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
@@ -468,6 +558,66 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
         self.assertEqual(rows_by_criteria["Transaction cost model"]["Status"], "REVIEW")
         self.assertEqual(audit["cost_model_contract"]["application_status"], "assumption_only")
+
+    def test_rebalance_cadence_without_turnover_estimate_requires_review(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_REVIEW,
+            build_backtest_realism_audit,
+        )
+
+        audit = build_backtest_realism_audit(
+            {
+                "selection_source_snapshot": {
+                    "construction": {"rebalance_cadence": "monthly"},
+                    "cost_model_snapshot": {
+                        "cost_model_contract_version": "cost_model_source_contract_v1",
+                        "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
+                        "cost_application_status": "applied_to_result_curve",
+                        "transaction_cost_bps": 10.0,
+                        "estimated_cost_total": 0.0,
+                    },
+                    "turnover_evidence_snapshot": {
+                        "turnover_model_contract_version": "turnover_evidence_contract_v1",
+                        "turnover_estimation_status": "not_estimated_missing_holdings",
+                        "turnover_source": "missing_result_holding_columns",
+                        "turnover_input_missing_columns": ["End Ticker", "Next Ticker"],
+                    },
+                    "source_snapshot": {
+                        "settings_snapshot": {
+                            "transaction_cost_bps": 10.0,
+                            "rebalance_interval": 1,
+                            "operator_tax_scope_acknowledged": True,
+                        },
+                        "meta": {
+                            "real_money_hardening": True,
+                            "net_cagr_spread": 0.03,
+                            "promotion_min_net_cagr_spread": -0.02,
+                        },
+                    },
+                },
+                "provider_coverage": {
+                    "coverage": {
+                        "operability": {
+                            "diagnostic_status": "PASS",
+                            "coverage_weight": 100.0,
+                            "summary": "official operability coverage",
+                        }
+                    }
+                },
+                "diagnostic_results": [
+                    {
+                        "domain": "operability_cost_liquidity",
+                        "status": "PASS",
+                        "metrics": {"one_way_cost_bps": 10.0},
+                    }
+                ],
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(rows_by_criteria["Turnover evidence"]["Status"], "REVIEW")
+        self.assertEqual(audit["turnover_evidence_contract"]["evidence_strength"], "missing_estimate")
 
     def test_missing_cost_and_liquidity_evidence_are_not_passed(self) -> None:
         from app.services.backtest_realism_audit import (

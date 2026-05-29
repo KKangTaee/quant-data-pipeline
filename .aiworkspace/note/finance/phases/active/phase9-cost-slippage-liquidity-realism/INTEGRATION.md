@@ -30,6 +30,19 @@ Created: 2026-05-29
 - Backtest Realism Audit can expose `cost_model_contract` and does not pass cost bps without application proof.
 - Follow-up integration risk: weighted / saved mix sources may need per-component turnover and cost aggregation in Phase 9-2 / 9-3.
 
+### turnover-rebalance-evidence-v1
+
+- Touched:
+  - `app/runtime/backtest.py`
+  - `app/runtime/history.py`
+  - `app/services/backtest_realism_audit.py`
+  - `app/services/backtest_practical_validation_source.py`
+  - `app/web/backtest_candidate_review_helpers.py`
+  - `tests/test_service_contracts.py`
+- Runtime turnover evidence is now explicit compact metadata.
+- Backtest Realism Audit exposes `turnover_evidence_contract` and treats cadence-only evidence as `REVIEW`.
+- Follow-up integration risk: weighted / saved mix sources still need per-component turnover aggregation if the source is not a single strategy.
+
 ## Verification Plan
 
 - `git diff --check`

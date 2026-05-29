@@ -8,6 +8,7 @@ Last Verified: 2026-05-29
 | Track | Status | Notes |
 |---|---|---|
 | Phase 9 Cost / Slippage / Liquidity Realism | Active | `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`; cost / slippage / turnover / liquidity / capacity evidence를 Backtest Realism과 selected-route 판단에 연결 |
+| Turnover Rebalance Evidence V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/turnover-rebalance-evidence-v1/`; holdings-derived turnover estimate와 cadence-only evidence를 Backtest Realism Audit에서 분리 |
 | Cost Model Source Contract Review V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/cost-model-source-contract-review-v1/`; runtime cost application proof를 compact metadata / source snapshot / Backtest Realism Audit contract로 연결 |
 | Phase 9 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase9-board-open/`; Phase 9 official board, task split, immediate next task 정리 |
 | Phase 8 Investability Data Evidence Expansion | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`; lifecycle / survivorship / historical membership evidence를 DB-backed로 강화 |
@@ -112,5 +113,5 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 9 is active. `cost-model-source-contract-review-v1`은 완료됐다. 다음 task는 `turnover-rebalance-evidence-v1`로 actual turnover estimate와 cadence-only evidence를 더 명확히 분리한다.
+- Phase 9 is active. `cost-model-source-contract-review-v1`과 `turnover-rebalance-evidence-v1`은 완료됐다. 다음 task는 `net-cost-curve-application-v1`로 gross / net cost curve proof를 더 명확히 연결한다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

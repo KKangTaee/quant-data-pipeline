@@ -9,9 +9,17 @@ Created: 2026-05-29
 - [x] Phase 9 scope opened.
 - [x] Phase 9 task board created.
 - [x] Cost model source contract review complete.
-- [ ] Turnover / rebalance evidence refinement started.
+- [x] Turnover / rebalance evidence refinement complete.
+- [ ] Net cost curve application proof started.
 
 ## Latest Update
+
+2026-05-29:
+
+- `turnover-rebalance-evidence-v1` completed.
+- Runtime now emits compact `turnover_evidence_contract_v1` metadata and avoids fake turnover estimates when holdings columns are missing.
+- Practical Validation source snapshots preserve turnover evidence, and Backtest Realism Audit separates actual holdings-derived turnover, legacy estimate, cadence-only, and missing evidence.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
 
 2026-05-29:
 
@@ -28,5 +36,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `turnover-rebalance-evidence-v1`.
-- Decide how to distinguish actual turnover estimates, rebalance cadence-only evidence, and missing turnover in weighted / saved mix sources.
+- Start `net-cost-curve-application-v1`.
+- Confirm gross / net cost result curve metadata and legacy source treatment before liquidity / capacity work.

@@ -24,6 +24,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/turnover-rebalance-evidence-v1/`.
+- Runtime now emits compact `turnover_evidence_contract_v1` metadata and does not fabricate turnover when holdings columns are missing.
+- Backtest Realism Audit separates holdings-derived turnover, legacy estimate, cadence-only, and missing turnover evidence.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/cost-model-source-contract-review-v1/`.
 - Runtime now emits compact `cost_model_source_contract_v1` metadata showing when transaction cost is applied to the net result curve.
 - Practical Validation source snapshots preserve cost model evidence, and Backtest Realism Audit treats cost bps without application proof as REVIEW.

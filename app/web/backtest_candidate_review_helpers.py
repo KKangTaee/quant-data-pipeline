@@ -835,10 +835,35 @@ _COST_MODEL_SNAPSHOT_KEYS = (
 )
 
 
+_TURNOVER_EVIDENCE_SNAPSHOT_KEYS = (
+    "turnover_model_contract_version",
+    "turnover_estimation_status",
+    "turnover_source",
+    "turnover_input_missing_columns",
+    "turnover_observation_count",
+    "turnover_rebalance_rows",
+    "turnover_nonzero_count",
+    "avg_turnover",
+    "max_turnover",
+    "avg_rebalance_turnover",
+    "rebalance_interval",
+    "rebalance_freq",
+    "factor_freq",
+)
+
+
 def _cost_model_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
     return {
         key: data.get(key)
         for key in _COST_MODEL_SNAPSHOT_KEYS
+        if data.get(key) is not None
+    }
+
+
+def _turnover_evidence_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: data.get(key)
+        for key in _TURNOVER_EVIDENCE_SNAPSHOT_KEYS
         if data.get(key) is not None
     }
 
@@ -892,6 +917,7 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
             "warning_count": len(list(meta.get("warnings") or [])),
         },
         "cost_model_snapshot": _cost_model_snapshot_from_mapping(meta),
+        "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(meta),
         "settings_snapshot": {
             "tickers": meta.get("tickers") or [],
             "universe_mode": meta.get("universe_mode"),
@@ -964,6 +990,7 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
             "warning_count": len(list(record.get("warnings") or [])),
         },
         "cost_model_snapshot": _cost_model_snapshot_from_mapping(record),
+        "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(record),
         "settings_snapshot": {
             "tickers": record.get("tickers") or [],
             "universe_mode": record.get("universe_mode"),
@@ -1255,6 +1282,7 @@ def _build_candidate_review_note_from_draft(
         "real_money_signal": dict(draft.get("real_money_signal") or {}),
         "data_trust_snapshot": dict(draft.get("data_trust_snapshot") or {}),
         "cost_model_snapshot": dict(draft.get("cost_model_snapshot") or {}),
+        "turnover_evidence_snapshot": dict(draft.get("turnover_evidence_snapshot") or {}),
         "settings_snapshot": dict(draft.get("settings_snapshot") or {}),
         "compare_readiness_evaluation": dict(draft.get("compare_readiness_evaluation") or {}),
         "notes": (

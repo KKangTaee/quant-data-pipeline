@@ -288,29 +288,128 @@ def _transaction_cost_row(
     )
 
 
-def _turnover_row(validation: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
+def _turnover_evidence_contract_from_root(validation: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
     avg_turnover = _first_non_none(_first_float(source, "avg_turnover"), _first_float(validation, "avg_turnover"))
     max_turnover = _first_non_none(_first_float(source, "max_turnover"), _first_float(validation, "max_turnover"))
+    avg_rebalance_turnover = _first_non_none(
+        _first_float(source, "avg_rebalance_turnover"),
+        _first_float(validation, "avg_rebalance_turnover"),
+    )
+    observation_count = _first_non_none(
+        _first_float(source, "turnover_observation_count"),
+        _first_float(validation, "turnover_observation_count"),
+    )
+    rebalance_rows = _first_non_none(
+        _first_float(source, "turnover_rebalance_rows"),
+        _first_float(validation, "turnover_rebalance_rows"),
+    )
+    nonzero_count = _first_non_none(
+        _first_float(source, "turnover_nonzero_count"),
+        _first_float(validation, "turnover_nonzero_count"),
+    )
+    estimation_status = _safe_text(
+        _first_value(source, "turnover_estimation_status")
+        or _first_value(validation, "turnover_estimation_status"),
+        fallback="",
+    ).lower()
+    turnover_source = _safe_text(
+        _first_value(source, "turnover_source")
+        or _first_value(source, "cost_turnover_source")
+        or _first_value(validation, "turnover_source"),
+        fallback="",
+    )
+    missing_columns = _first_value(source, "turnover_input_missing_columns") or _first_value(
+        validation,
+        "turnover_input_missing_columns",
+    )
     rebalance = (
         _first_value(source, "rebalance_interval")
         or _first_value(source, "rebalance_freq")
         or _first_value(source, "factor_freq")
         or dict(dict(validation.get("selection_source_snapshot") or {}).get("construction") or {}).get("rebalance_cadence")
     )
-    if avg_turnover is not None or max_turnover is not None:
+
+    if estimation_status == "estimated_from_holdings":
+        evidence_strength = "actual_estimate"
+        evidence = turnover_source or "turnover estimated from holdings delta"
+    elif estimation_status.startswith("not_estimated"):
+        evidence_strength = "missing_estimate"
+        evidence = estimation_status
+    elif avg_turnover is not None or max_turnover is not None:
+        evidence_strength = "legacy_estimate"
+        evidence = "legacy turnover metadata attached without explicit source contract"
+    elif rebalance:
+        evidence_strength = "cadence_only"
+        evidence = "rebalance cadence exists but turnover estimate missing"
+    else:
+        evidence_strength = "missing"
+        evidence = "turnover / rebalance metadata missing"
+
+    return {
+        "schema_version": "turnover_evidence_contract_v1",
+        "evidence_strength": evidence_strength,
+        "turnover_estimation_status": estimation_status or None,
+        "turnover_source": turnover_source or None,
+        "avg_turnover": avg_turnover,
+        "max_turnover": max_turnover,
+        "avg_rebalance_turnover": avg_rebalance_turnover,
+        "turnover_observation_count": int(observation_count) if observation_count is not None else None,
+        "turnover_rebalance_rows": int(rebalance_rows) if rebalance_rows is not None else None,
+        "turnover_nonzero_count": int(nonzero_count) if nonzero_count is not None else None,
+        "turnover_input_missing_columns": missing_columns,
+        "rebalance_cadence": rebalance,
+        "evidence": evidence,
+    }
+
+
+def build_turnover_evidence_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    """Extract the compact turnover evidence contract used by Backtest Realism Audit."""
+
+    validation = dict(validation or {})
+    source = dict(validation.get("selection_source_snapshot") or {})
+    source_snapshot = dict(source.get("source_snapshot") or {})
+    evidence_root = {
+        "validation": validation,
+        "selection_source_snapshot": source,
+        "source_snapshot": source_snapshot,
+    }
+    return _turnover_evidence_contract_from_root(validation, evidence_root)
+
+
+def _turnover_row(
+    validation: dict[str, Any],
+    source: dict[str, Any],
+    turnover_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = dict(turnover_contract or _turnover_evidence_contract_from_root(validation, source))
+    avg_turnover = _optional_float(contract.get("avg_turnover"))
+    max_turnover = _optional_float(contract.get("max_turnover"))
+    avg_rebalance_turnover = _optional_float(contract.get("avg_rebalance_turnover"))
+    evidence_strength = str(contract.get("evidence_strength") or "").strip()
+    rebalance = contract.get("rebalance_cadence")
+    if evidence_strength == "actual_estimate":
         status = "PASS"
-        current = f"avg={avg_turnover if avg_turnover is not None else '-'} / max={max_turnover if max_turnover is not None else '-'}"
-        evidence = "turnover metadata attached"
+        current = (
+            f"avg={avg_turnover if avg_turnover is not None else '-'} / "
+            f"max={max_turnover if max_turnover is not None else '-'} / "
+            f"rebalance_avg={avg_rebalance_turnover if avg_rebalance_turnover is not None else '-'}"
+        )
+        evidence = contract.get("evidence") or "turnover estimate contract attached"
         next_action = "turnover가 높으면 비용 민감도 sweep을 후속으로 확인합니다."
+    elif evidence_strength == "legacy_estimate":
+        status = "REVIEW"
+        current = f"avg={avg_turnover if avg_turnover is not None else '-'} / max={max_turnover if max_turnover is not None else '-'}"
+        evidence = contract.get("evidence") or "legacy turnover metadata attached"
+        next_action = "turnover source contract를 확인한 뒤 비용 민감도와 연결합니다."
     elif rebalance:
         status = "REVIEW"
         current = f"rebalance={rebalance}"
-        evidence = "rebalance cadence exists but turnover estimate missing"
+        evidence = contract.get("evidence") or "rebalance cadence exists but turnover estimate missing"
         next_action = "rebalance별 turnover 추정치를 result metadata에 보강합니다."
     else:
         status = "NEEDS_INPUT"
         current = "missing"
-        evidence = "turnover / rebalance metadata missing"
+        evidence = contract.get("evidence") or "turnover / rebalance metadata missing"
         next_action = "turnover 또는 rebalance cadence evidence를 보강합니다."
     return _row(
         criteria="Turnover evidence",
@@ -486,9 +585,10 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "source_snapshot": source_snapshot,
     }
     cost_model_contract = _cost_model_contract_from_root(validation, evidence_root)
+    turnover_evidence_contract = _turnover_evidence_contract_from_root(validation, evidence_root)
     rows = [
         _transaction_cost_row(validation, evidence_root, cost_model_contract),
-        _turnover_row(validation, evidence_root),
+        _turnover_row(validation, evidence_root, turnover_evidence_contract),
         _liquidity_row(validation),
         _net_policy_row(validation, evidence_root),
         _rebalance_row(validation, evidence_root),
@@ -520,6 +620,7 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "conclusion": conclusion,
         "next_action": next_action,
         "cost_model_contract": cost_model_contract,
+        "turnover_evidence_contract": turnover_evidence_contract,
         "rows": rows,
         "metrics": {
             "ready_rows": status_counts["PASS"],
@@ -548,5 +649,6 @@ __all__ = [
     "BACKTEST_REALISM_NEEDS_INPUT",
     "BACKTEST_REALISM_BLOCKED",
     "build_cost_model_source_contract",
+    "build_turnover_evidence_contract",
     "build_backtest_realism_audit",
 ]

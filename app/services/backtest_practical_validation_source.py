@@ -262,6 +262,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
     settings = dict(draft.get("settings_snapshot") or {})
     data_trust = dict(draft.get("data_trust_snapshot") or {})
     cost_model = dict(draft.get("cost_model_snapshot") or {})
+    turnover_evidence = dict(draft.get("turnover_evidence_snapshot") or {})
     real_money = dict(draft.get("real_money_signal") or {})
     return {
         "schema_version": PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
@@ -290,6 +291,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
             "excluded_tickers": list(data_trust.get("excluded_tickers") or []),
         },
         "cost_model_snapshot": cost_model,
+        "turnover_evidence_snapshot": turnover_evidence,
         "real_money_signal": real_money,
         "components": [
             {
@@ -314,6 +316,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
                 "replay_contract": {
                     "settings_snapshot": settings,
                     "cost_model_snapshot": cost_model,
+                    "turnover_evidence_snapshot": turnover_evidence,
                     "source_kind": source_kind,
                 },
             }

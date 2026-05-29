@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-29 - Turnover evidence separates holdings-derived estimates from cadence-only
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 거래비용 realism이 turnover 근거에 의존하므로, actual estimate와 cadence-only evidence를 분리한다.
+- Analysis result:
+  - Runtime turnover estimate는 holdings delta 기반이지만, holdings column이 없을 때도 audit이 강한 근거처럼 읽을 수 있는 공백이 있었다.
+  - `turnover_evidence_contract_v1`을 runtime metadata, source snapshot, Backtest Realism Audit에 연결했다.
+  - holdings-derived estimate는 PASS 후보, legacy estimate / cadence-only는 REVIEW, missing은 NEEDS_INPUT으로 해석한다.
+- Follow-up:
+  - 다음 task는 `net-cost-curve-application-v1`로 gross / net cost result curve proof를 더 명확히 연결한다.
+
 ### 2026-05-29 - Cost model source contract distinguishes assumption from applied cost
 - User request:
   - Phase 9 다음 단계 진행을 요청함.
