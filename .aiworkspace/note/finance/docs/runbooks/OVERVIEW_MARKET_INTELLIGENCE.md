@@ -230,7 +230,7 @@ PY
 ## Verification Commands
 
 ```bash
-uv run python -m py_compile app/web/overview_dashboard.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py
+uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py
 uv run python -m unittest tests.test_service_contracts
 uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 git diff --check
