@@ -510,6 +510,22 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
                         "gross_net_end_balance_delta": 125.0,
                         "turnover_estimation_status": "estimated_from_holdings",
                     },
+                    "cost_slippage_sensitivity": {
+                        "schema_version": "cost_slippage_sensitivity_contract_v1",
+                        "status": "PASS",
+                        "computed_count": 3,
+                        "review_count": 0,
+                        "not_run_count": 0,
+                        "runtime_followup_count": 0,
+                        "summary": "Cost bps 5/10/25 and slippage spread shock passed.",
+                        "rows": [
+                            {
+                                "Scenario": "Transaction cost bps sweep",
+                                "Scope": "cost / slippage",
+                                "Result Status": "PASS",
+                            }
+                        ],
+                    },
                     "source_snapshot": {
                         "settings_snapshot": {
                             "transaction_cost_bps": 10.0,
@@ -564,11 +580,175 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertEqual(audit["cost_model_contract"]["application_status"], "applied_to_result_curve")
         self.assertEqual(audit["net_cost_curve_contract"]["proof_status"], "applied_with_measurable_cost")
         self.assertEqual(audit["turnover_evidence_contract"]["evidence_strength"], "actual_estimate")
+        self.assertEqual(
+            audit["cost_slippage_sensitivity_contract"]["evidence_strength"],
+            "explicit_cost_slippage_sensitivity",
+        )
         self.assertEqual(audit["liquidity_capacity_contract"]["proof_status"], "official_fresh_capacity_evidence")
-        self.assertEqual(audit["metrics"]["pass"], 8)
+        self.assertEqual(audit["metrics"]["pass"], 9)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def _ready_realism_validation_without_sensitivity(self):
+        return {
+            "selection_source_snapshot": {
+                "construction": {"rebalance_cadence": "monthly"},
+                "cost_model_snapshot": {
+                    "cost_model_contract_version": "cost_model_source_contract_v1",
+                    "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
+                    "cost_application_status": "applied_to_result_curve",
+                    "cost_application_target": "result_df.Total Balance/Total Return",
+                    "cost_turnover_source": "end_next_holdings_weight_delta",
+                    "transaction_cost_bps": 10.0,
+                    "avg_turnover": 0.15,
+                    "estimated_cost_total": 125.0,
+                },
+                "turnover_evidence_snapshot": {
+                    "turnover_model_contract_version": "turnover_evidence_contract_v1",
+                    "turnover_estimation_status": "estimated_from_holdings",
+                    "turnover_source": "end_next_holdings_weight_delta",
+                    "turnover_observation_count": 24,
+                    "turnover_rebalance_rows": 24,
+                    "turnover_nonzero_count": 12,
+                    "avg_turnover": 0.15,
+                    "max_turnover": 0.4,
+                    "avg_rebalance_turnover": 0.15,
+                },
+                "net_cost_curve_snapshot": {
+                    "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+                    "net_cost_curve_status": "applied_with_measurable_cost",
+                    "net_cost_curve_application_target": "result_df.Total Balance/Total Return",
+                    "total_balance_is_net_of_cost": True,
+                    "net_cost_curve_rows": 24,
+                    "estimated_cost_total": 125.0,
+                    "estimated_cost_positive_rows": 12,
+                    "gross_end_balance": 1200.0,
+                    "net_end_balance": 1075.0,
+                    "gross_net_end_balance_delta": 125.0,
+                    "turnover_estimation_status": "estimated_from_holdings",
+                },
+                "source_snapshot": {
+                    "settings_snapshot": {
+                        "transaction_cost_bps": 10.0,
+                        "rebalance_interval": 1,
+                        "operator_tax_scope_acknowledged": True,
+                    },
+                    "meta": {
+                        "real_money_hardening": True,
+                        "avg_turnover": 0.15,
+                        "max_turnover": 0.4,
+                        "net_cagr_spread": 0.03,
+                        "promotion_min_net_cagr_spread": -0.02,
+                    },
+                },
+            },
+            "provider_coverage": {
+                "coverage": {
+                    "operability": {
+                        "diagnostic_status": "PASS",
+                        "coverage_weight": 100.0,
+                        "summary": "official operability coverage",
+                        "provenance": {
+                            "freshness_status": "fresh",
+                            "source_mix": "official 100.0%",
+                            "source_type_weights": {"official": 100.0},
+                            "coverage_status_weights": {"actual": 100.0},
+                            "as_of_range": "2026-05-20",
+                            "stale_weight": 0.0,
+                            "unknown_freshness_weight": 0.0,
+                        },
+                        "metrics": {
+                            "review_count": 0,
+                            "review_symbols": [],
+                            "min_net_assets": 50_000_000_000,
+                            "min_avg_daily_dollar_volume": 500_000_000,
+                            "max_bid_ask_spread_pct": 0.0002,
+                        },
+                    }
+                }
+            },
+            "diagnostic_results": [
+                {
+                    "domain": "operability_cost_liquidity",
+                    "status": "PASS",
+                    "metrics": {"one_way_cost_bps": 10.0},
+                    "evidence_rows": [
+                        {
+                            "Check": "One-way cost bps assumption",
+                            "Status": "PASS",
+                            "Evidence": "cost bps exists but this is not sensitivity evidence",
+                        }
+                    ],
+                }
+            ],
+        }
+
+    def test_missing_cost_slippage_sensitivity_requires_review_despite_ready_costs(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_REVIEW,
+            build_backtest_realism_audit,
+        )
+
+        audit = build_backtest_realism_audit(self._ready_realism_validation_without_sensitivity())
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(rows_by_criteria["Cost / slippage sensitivity evidence"]["Status"], "REVIEW")
+        self.assertEqual(
+            audit["cost_slippage_sensitivity_contract"]["evidence_strength"],
+            "missing_sensitivity_evidence",
+        )
+
+    def test_generic_robustness_sensitivity_without_cost_axis_requires_review(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_REVIEW,
+            build_backtest_realism_audit,
+        )
+
+        validation = self._ready_realism_validation_without_sensitivity()
+        validation["sensitivity_interpretation"] = {
+            "status": "PASS",
+            "summary": "2 curve sensitivity checks computed.",
+            "computed_count": 2,
+            "review_count": 0,
+            "runtime_followup_count": 0,
+            "rows": [
+                {
+                    "Check": "Weight tilt sensitivity",
+                    "Status": "PASS",
+                    "Finding": "component weights stable",
+                }
+            ],
+        }
+        validation["robustness_validation"] = {
+            "robustness_lab_board": {
+                "status": "PASS",
+                "metrics": {
+                    "computed_sensitivity_checks": 2,
+                    "sensitivity_review_count": 0,
+                    "runtime_followup_count": 0,
+                },
+                "summary_rows": [
+                    {
+                        "Check": "Sensitivity coverage",
+                        "Status": "PASS",
+                        "Current": "computed 2",
+                        "Evidence": "weight and drop-one checks",
+                    }
+                ],
+            }
+        }
+
+        audit = build_backtest_realism_audit(validation)
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(rows_by_criteria["Cost / slippage sensitivity evidence"]["Status"], "REVIEW")
+        self.assertEqual(
+            audit["cost_slippage_sensitivity_contract"]["evidence_strength"],
+            "generic_sensitivity_only",
+        )
 
     def test_legacy_provider_pass_without_capacity_contract_requires_review(self) -> None:
         from app.services.backtest_realism_audit import (

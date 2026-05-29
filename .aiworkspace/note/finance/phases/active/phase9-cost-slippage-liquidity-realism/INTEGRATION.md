@@ -67,6 +67,15 @@ Created: 2026-05-29
 - Bridge / proxy, stale / unknown freshness, partial coverage, and legacy pass-only evidence remain `REVIEW` or `NEEDS_INPUT`.
 - Follow-up integration risk: cost / slippage sensitivity remains separate from liquidity capacity and starts in Phase 9-5.
 
+### cost-slippage-sensitivity-audit-v1
+
+- Touched:
+  - `app/services/backtest_realism_audit.py`
+  - `tests/test_service_contracts.py`
+- Backtest Realism Audit exposes `cost_slippage_sensitivity_contract` and adds a separate `Cost / slippage sensitivity evidence` row.
+- Explicit cost / slippage sensitivity can PASS, generic robustness-only sensitivity stays `REVIEW`, and missing cost / net curve baseline stays `NEEDS_INPUT`.
+- Follow-up integration risk: selected-route gate policy should be checked against the new row in Phase 9-6.
+
 ## Verification Plan
 
 - `git diff --check`

@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 cost / slippage sensitivity audit
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 backtest realism gate policy refinement
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Cost / slippage sensitivity requires explicit evidence
+- User request:
+  - Phase 9 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism Audit이 단일 transaction cost bps나 일반 robustness sensitivity만으로 cost / slippage robustness를 PASS 처리하지 않게 한다.
+- Analysis result:
+  - `cost_slippage_sensitivity_contract_v1`과 `Cost / slippage sensitivity evidence` row를 추가했다.
+  - explicit cost / slippage sensitivity evidence만 PASS 후보이고, generic robustness-only sensitivity는 REVIEW, cost / net curve baseline missing은 NEEDS_INPUT으로 남긴다.
+  - 이 작업은 기존 validation payload를 읽는 read-only audit이며 새 JSONL, memo, preset, raw artifact, DB schema, provider fetch를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `backtest-realism-gate-policy-refinement-v1`로 selected-route gate severity를 Phase 9 보강 후 기준에 맞게 고정한다.
 
 ### 2026-05-29 - Liquidity capacity evidence requires fresh official provider proof
 - User request:

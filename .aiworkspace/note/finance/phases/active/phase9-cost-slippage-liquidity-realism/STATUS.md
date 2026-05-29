@@ -12,9 +12,17 @@ Created: 2026-05-29
 - [x] Turnover / rebalance evidence refinement complete.
 - [x] Net cost curve application proof complete.
 - [x] Liquidity / capacity evidence refinement complete.
-- [ ] Cost / slippage sensitivity audit not started.
+- [x] Cost / slippage sensitivity audit complete.
+- [ ] Backtest Realism gate policy refinement not started.
 
 ## Latest Update
+
+2026-05-29:
+
+- `cost-slippage-sensitivity-audit-v1` completed.
+- Backtest Realism Audit now reads read-only `cost_slippage_sensitivity_contract_v1` and displays a separate `Cost / slippage sensitivity evidence` row.
+- Explicit cost / slippage sensitivity can PASS; generic robustness sensitivity without a cost / slippage axis remains REVIEW, and missing cost / net curve baseline remains NEEDS_INPUT.
+- No new JSONL registry, user memo, preset, raw run artifact, DB schema, provider fetch, approval, order, or auto rebalance behavior was added.
 
 2026-05-29:
 
@@ -52,5 +60,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `cost-slippage-sensitivity-audit-v1`.
-- Keep the first slice read-only: audit the presence and quality of sensitivity evidence before adding any new run artifact.
+- Start `backtest-realism-gate-policy-refinement-v1`.
+- Confirm selected-route gate behavior after the new cost / slippage sensitivity row: NEEDS_INPUT / BLOCKED should block selection, REVIEW should require explicit review before selection.

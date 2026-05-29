@@ -24,6 +24,19 @@ _STATUS_RANK = {
     "BLOCKED": 3,
 }
 
+_COST_SLIPPAGE_KEYWORDS = (
+    "cost",
+    "transaction cost",
+    "one_way_cost",
+    "one-way",
+    "slippage",
+    "spread",
+    "bid_ask",
+    "bid-ask",
+    "bps",
+    "commission",
+)
+
 
 def _safe_text(value: Any, fallback: str = "-") -> str:
     text = str(value or "").strip()
@@ -137,6 +150,59 @@ def _first_non_none(*values: Any) -> Any:
         if value is not None:
             return value
     return None
+
+
+def _optional_int(value: Any) -> int | None:
+    numeric = _optional_float(value)
+    if numeric is None:
+        return None
+    return int(numeric)
+
+
+def _iter_nested_dicts(value: Any, *, limit: int = 80) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    def _walk(node: Any) -> None:
+        if len(rows) >= limit:
+            return
+        if isinstance(node, dict):
+            rows.append(dict(node))
+            for child in node.values():
+                if isinstance(child, (dict, list)):
+                    _walk(child)
+                    if len(rows) >= limit:
+                        return
+        elif isinstance(node, list):
+            for item in node:
+                if isinstance(item, (dict, list)):
+                    _walk(item)
+                    if len(rows) >= limit:
+                        return
+
+    _walk(value)
+    return rows
+
+
+def _contains_keywords(value: Any, keywords: tuple[str, ...]) -> bool:
+    text_parts: list[str] = []
+
+    def _walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, child in node.items():
+                text_parts.append(str(key or ""))
+                if isinstance(child, (dict, list)):
+                    _walk(child)
+                elif child is not None:
+                    text_parts.append(str(child))
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item)
+        elif node is not None:
+            text_parts.append(str(node))
+
+    _walk(value)
+    text = " ".join(text_parts).lower()
+    return any(keyword in text for keyword in keywords)
 
 
 def _find_diagnostic(validation: dict[str, Any], domain: str) -> dict[str, Any]:
@@ -356,6 +422,217 @@ def build_net_cost_curve_contract(validation: dict[str, Any]) -> dict[str, Any]:
     return _net_cost_curve_contract_from_root(validation, evidence_root)
 
 
+def _status_values_from_evidence(value: Any) -> list[str]:
+    statuses: list[str] = []
+    for row in _iter_nested_dicts(value):
+        raw_status = (
+            row.get("status")
+            or row.get("Status")
+            or row.get("result_status")
+            or row.get("Result Status")
+            or row.get("diagnostic_status")
+            or row.get("proof_status")
+        )
+        if raw_status is None:
+            continue
+        raw_text = str(raw_status or "").strip().upper()
+        if raw_text == "FOLLOW_UP":
+            statuses.append("REVIEW")
+        elif raw_text == "NOT_RUN":
+            statuses.append("NOT_RUN")
+        else:
+            statuses.append(_status(raw_status, default="REVIEW"))
+    return statuses
+
+
+def _count_status(statuses: list[str], expected: str) -> int:
+    return sum(1 for status in statuses if str(status or "").upper() == expected)
+
+
+def _sensitivity_metrics_from_values(values: list[Any]) -> dict[str, Any]:
+    statuses: list[str] = []
+    computed_count = 0
+    review_count = 0
+    not_run_count = 0
+    runtime_followup_count = 0
+    summaries: list[str] = []
+
+    for value in values:
+        for row in _iter_nested_dicts(value):
+            row_statuses = _status_values_from_evidence(row)
+            statuses.extend(row_statuses)
+            explicit_computed = _first_non_none(
+                _optional_int(row.get("computed_count")),
+                _optional_int(row.get("computed_sensitivity_checks")),
+                _optional_int(row.get("cost_slippage_computed_count")),
+                _optional_int(row.get("scenario_count")),
+            )
+            if explicit_computed is not None:
+                computed_count = max(computed_count, explicit_computed)
+            explicit_review = _first_non_none(
+                _optional_int(row.get("review_count")),
+                _optional_int(row.get("sensitivity_review_count")),
+                _optional_int(row.get("cost_slippage_review_count")),
+            )
+            if explicit_review is not None:
+                review_count = max(review_count, explicit_review)
+            explicit_not_run = _first_non_none(
+                _optional_int(row.get("not_run_count")),
+                _optional_int(row.get("runtime_not_run_count")),
+                _optional_int(row.get("uncomputed_count")),
+            )
+            if explicit_not_run is not None:
+                not_run_count = max(not_run_count, explicit_not_run)
+            explicit_followup = _first_non_none(
+                _optional_int(row.get("runtime_followup_count")),
+                _optional_int(row.get("follow_up_count")),
+            )
+            if explicit_followup is not None:
+                runtime_followup_count = max(runtime_followup_count, explicit_followup)
+            for summary_key in ("summary", "evidence", "Evidence", "Finding"):
+                summary = str(row.get(summary_key) or "").strip()
+                if summary:
+                    summaries.append(summary)
+                    break
+
+    row_computed = _count_status(statuses, "PASS") + _count_status(statuses, "REVIEW")
+    computed_count = max(computed_count, row_computed)
+    review_count = max(review_count, _count_status(statuses, "REVIEW"))
+    not_run_count = max(not_run_count, _count_status(statuses, "NOT_RUN") + _count_status(statuses, "NEEDS_INPUT"))
+    if runtime_followup_count and not_run_count == 0:
+        not_run_count = runtime_followup_count
+
+    return {
+        "statuses": statuses,
+        "computed_count": computed_count,
+        "review_count": review_count,
+        "not_run_count": not_run_count,
+        "runtime_followup_count": runtime_followup_count,
+        "summary": summaries[0] if summaries else None,
+    }
+
+
+def _explicit_cost_slippage_evidence_values(validation: dict[str, Any]) -> list[Any]:
+    values: list[Any] = []
+    explicit_keys = [
+        "cost_slippage_sensitivity",
+        "cost_slippage_sensitivity_snapshot",
+        "cost_slippage_sensitivity_rows",
+        "cost_sensitivity",
+        "cost_sensitivity_rows",
+        "slippage_sensitivity",
+        "slippage_sensitivity_rows",
+        "execution_cost_sensitivity",
+        "execution_cost_sensitivity_rows",
+    ]
+    for key in explicit_keys:
+        values.extend(_nested_values_for_key(validation, key, limit=10))
+
+    for candidate in _nested_values_for_key(validation, "sensitivity_rows", limit=20):
+        if isinstance(candidate, list):
+            values.extend(row for row in candidate if _contains_keywords(row, _COST_SLIPPAGE_KEYWORDS))
+        elif _contains_keywords(candidate, _COST_SLIPPAGE_KEYWORDS):
+            values.append(candidate)
+    return values
+
+
+def _generic_sensitivity_evidence_values(validation: dict[str, Any]) -> list[Any]:
+    values: list[Any] = []
+    for key in ("sensitivity_interpretation", "robustness_lab_board", "sensitivity_rows"):
+        values.extend(_nested_values_for_key(validation, key, limit=20))
+    diagnostic = _find_diagnostic(validation, "robustness_sensitivity_overfit")
+    if diagnostic:
+        values.append(diagnostic)
+    return values
+
+
+def _cost_slippage_sensitivity_contract_from_root(
+    validation: dict[str, Any],
+    cost_contract: dict[str, Any],
+    net_cost_curve_contract: dict[str, Any],
+) -> dict[str, Any]:
+    explicit_values = _explicit_cost_slippage_evidence_values(validation)
+    generic_values = _generic_sensitivity_evidence_values(validation)
+    explicit_metrics = _sensitivity_metrics_from_values(explicit_values)
+    generic_metrics = _sensitivity_metrics_from_values(generic_values)
+    cost_bps = _optional_float(cost_contract.get("transaction_cost_bps"))
+    net_proof_status = str(net_cost_curve_contract.get("proof_status") or "").strip()
+    missing_net_proof = net_proof_status in {
+        "",
+        "missing_cost_input",
+        "missing_net_cost_curve_proof",
+        "zero_cost_assumption",
+    }
+    missing_baseline = cost_bps is None or cost_bps <= 0 or missing_net_proof
+
+    if missing_baseline:
+        evidence_strength = "missing_cost_or_net_curve_input"
+        proof_status = "missing_cost_or_net_curve_input"
+        evidence = "cost input or net cost curve proof missing"
+    elif explicit_values:
+        explicit_statuses = explicit_metrics["statuses"]
+        explicit_has_blocker = "BLOCKED" in explicit_statuses
+        explicit_has_review = (
+            explicit_metrics["review_count"] > 0
+            or explicit_metrics["not_run_count"] > 0
+            or explicit_metrics["runtime_followup_count"] > 0
+        )
+        if explicit_has_blocker:
+            evidence_strength = "explicit_cost_slippage_blocked"
+            proof_status = "blocked"
+        elif explicit_metrics["computed_count"] > 0 and not explicit_has_review:
+            evidence_strength = "explicit_cost_slippage_sensitivity"
+            proof_status = "computed_pass"
+        else:
+            evidence_strength = "explicit_cost_slippage_review"
+            proof_status = "review_or_not_run"
+        evidence = explicit_metrics.get("summary") or "explicit cost / slippage sensitivity evidence attached"
+    elif generic_metrics["computed_count"] > 0 or generic_metrics["statuses"]:
+        evidence_strength = "generic_sensitivity_only"
+        proof_status = "generic_without_cost_slippage_axis"
+        evidence = generic_metrics.get("summary") or "generic robustness sensitivity exists without cost / slippage axis"
+    else:
+        evidence_strength = "missing_sensitivity_evidence"
+        proof_status = "missing_sensitivity_evidence"
+        evidence = "cost / slippage sensitivity evidence missing"
+
+    return {
+        "schema_version": "cost_slippage_sensitivity_contract_v1",
+        "evidence_strength": evidence_strength,
+        "proof_status": proof_status,
+        "transaction_cost_bps": cost_bps,
+        "net_cost_curve_proof_status": net_proof_status or None,
+        "explicit_axis_count": len(explicit_values),
+        "explicit_computed_count": explicit_metrics["computed_count"],
+        "explicit_review_count": explicit_metrics["review_count"],
+        "explicit_not_run_count": explicit_metrics["not_run_count"],
+        "explicit_runtime_followup_count": explicit_metrics["runtime_followup_count"],
+        "generic_computed_count": generic_metrics["computed_count"],
+        "generic_review_count": generic_metrics["review_count"],
+        "generic_not_run_count": generic_metrics["not_run_count"],
+        "generic_runtime_followup_count": generic_metrics["runtime_followup_count"],
+        "evidence": evidence,
+    }
+
+
+def build_cost_slippage_sensitivity_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    """Extract read-only cost / slippage sensitivity evidence for Backtest Realism Audit."""
+
+    validation = dict(validation or {})
+    source = dict(validation.get("selection_source_snapshot") or {})
+    source_snapshot = dict(source.get("source_snapshot") or {})
+    evidence_root = {
+        "validation": validation,
+        "selection_source_snapshot": source,
+        "source_snapshot": source_snapshot,
+    }
+    return _cost_slippage_sensitivity_contract_from_root(
+        validation,
+        _cost_model_contract_from_root(validation, evidence_root),
+        _net_cost_curve_contract_from_root(validation, evidence_root),
+    )
+
+
 def _transaction_cost_row(
     validation: dict[str, Any],
     source: dict[str, Any],
@@ -436,6 +713,61 @@ def _net_cost_curve_row(
         evidence=evidence,
         next_action=next_action,
         meaning="거래비용이 단순 가정이 아니라 결과 곡선의 net 성과에 실제 반영됐는지 확인합니다.",
+    )
+
+
+def _cost_slippage_sensitivity_row(
+    sensitivity_contract: dict[str, Any],
+) -> dict[str, Any]:
+    contract = dict(sensitivity_contract or {})
+    evidence_strength = str(contract.get("evidence_strength") or "").strip()
+    proof_status = str(contract.get("proof_status") or "").strip()
+    if evidence_strength == "explicit_cost_slippage_sensitivity":
+        status = "PASS"
+        current = (
+            f"explicit={contract.get('explicit_computed_count', 0)} / "
+            f"review={contract.get('explicit_review_count', 0)} / "
+            f"not_run={contract.get('explicit_not_run_count', 0)}"
+        )
+        next_action = "추가 조치 없음"
+    elif evidence_strength == "explicit_cost_slippage_blocked":
+        status = "BLOCKED"
+        current = proof_status or "blocked"
+        next_action = "차단된 cost / slippage sensitivity evidence를 먼저 해소합니다."
+    elif evidence_strength == "missing_cost_or_net_curve_input":
+        status = "NEEDS_INPUT"
+        current = (
+            f"cost={contract.get('transaction_cost_bps') if contract.get('transaction_cost_bps') is not None else '-'} / "
+            f"net={contract.get('net_cost_curve_proof_status') or '-'}"
+        )
+        next_action = "거래비용 입력과 net cost curve proof를 먼저 보강한 뒤 민감도를 해석합니다."
+    elif evidence_strength == "generic_sensitivity_only":
+        status = "REVIEW"
+        current = (
+            f"generic={contract.get('generic_computed_count', 0)} / "
+            f"runtime follow-up={contract.get('generic_runtime_followup_count', 0)}"
+        )
+        next_action = "비용 bps / spread / slippage 축의 sensitivity evidence를 별도로 확인합니다."
+    elif evidence_strength == "explicit_cost_slippage_review":
+        status = "REVIEW"
+        current = (
+            f"explicit={contract.get('explicit_computed_count', 0)} / "
+            f"review={contract.get('explicit_review_count', 0)} / "
+            f"not_run={contract.get('explicit_not_run_count', 0)} / "
+            f"runtime follow-up={contract.get('explicit_runtime_followup_count', 0)}"
+        )
+        next_action = "NOT_RUN / REVIEW cost-slippage scenario를 Final Review 판단 근거로 남깁니다."
+    else:
+        status = "REVIEW"
+        current = proof_status or "missing"
+        next_action = "cost / slippage sensitivity sweep 또는 compact evidence를 보강합니다."
+    return _row(
+        criteria="Cost / slippage sensitivity evidence",
+        status=status,
+        current=current,
+        evidence=contract.get("evidence") or "cost / slippage sensitivity evidence missing",
+        next_action=next_action,
+        meaning="단일 거래비용 가정만으로 충분한지, 비용 bps나 slippage가 바뀌어도 후보가 버티는지 확인합니다.",
     )
 
 
@@ -846,10 +1178,16 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
     net_cost_curve_contract = _net_cost_curve_contract_from_root(validation, evidence_root)
     turnover_evidence_contract = _turnover_evidence_contract_from_root(validation, evidence_root)
     liquidity_capacity_contract = _liquidity_capacity_contract_from_validation(validation)
+    cost_slippage_sensitivity_contract = _cost_slippage_sensitivity_contract_from_root(
+        validation,
+        cost_model_contract,
+        net_cost_curve_contract,
+    )
     rows = [
         _transaction_cost_row(validation, evidence_root, cost_model_contract),
         _net_cost_curve_row(validation, evidence_root, net_cost_curve_contract),
         _turnover_row(validation, evidence_root, turnover_evidence_contract),
+        _cost_slippage_sensitivity_row(cost_slippage_sensitivity_contract),
         _liquidity_row(validation, liquidity_capacity_contract),
         _net_policy_row(validation, evidence_root),
         _rebalance_row(validation, evidence_root),
@@ -883,6 +1221,7 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "cost_model_contract": cost_model_contract,
         "net_cost_curve_contract": net_cost_curve_contract,
         "turnover_evidence_contract": turnover_evidence_contract,
+        "cost_slippage_sensitivity_contract": cost_slippage_sensitivity_contract,
         "liquidity_capacity_contract": liquidity_capacity_contract,
         "rows": rows,
         "metrics": {
@@ -914,6 +1253,7 @@ __all__ = [
     "build_cost_model_source_contract",
     "build_net_cost_curve_contract",
     "build_turnover_evidence_contract",
+    "build_cost_slippage_sensitivity_contract",
     "build_liquidity_capacity_contract",
     "build_backtest_realism_audit",
 ]
