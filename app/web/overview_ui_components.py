@@ -254,6 +254,178 @@ def overview_ui_css() -> str:
   margin-top: 0.1rem;
   overflow-wrap: anywhere;
 }
+.ov-events-summary {
+  display: grid;
+  grid-template-columns: minmax(1.4fr, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  margin: 0.35rem 0 0.75rem 0;
+}
+.ov-events-summary-item {
+  min-width: 0;
+  padding: 0.68rem 0.85rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-events-summary-item:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+.ov-events-summary-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0;
+}
+.ov-events-summary-value {
+  color: inherit;
+  font-size: 1.06rem;
+  font-weight: var(--ov-mi-weight-value);
+  line-height: 1.2;
+  margin-top: 0.16rem;
+  overflow-wrap: anywhere;
+}
+.ov-events-summary-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin-top: 0.14rem;
+  overflow-wrap: anywhere;
+}
+.ov-events-source-lane {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-md);
+  margin: 0.35rem 0 0.5rem 0;
+}
+.ov-events-source {
+  min-width: 0;
+  border-top: 3px solid var(--ov-event-tone, var(--ov-mi-color-neutral));
+  padding: 0.55rem 0 0.2rem 0;
+}
+.ov-events-source-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-events-source-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-strong);
+}
+.ov-events-source-state {
+  color: var(--ov-event-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  white-space: nowrap;
+}
+.ov-events-source-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+}
+.ov-events-agenda {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.35rem;
+}
+.ov-events-section {
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  padding-top: 0.68rem;
+}
+.ov-events-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.ov-events-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin-bottom: 0.48rem;
+}
+.ov-events-section-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+}
+.ov-events-section-meta {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-events-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 2.2fr) minmax(8rem, 1fr);
+  gap: var(--ov-mi-gap-md);
+  align-items: center;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-events-row:first-of-type {
+  border-top: 0;
+}
+.ov-events-date {
+  min-width: 0;
+}
+.ov-events-day {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-strong);
+  line-height: 1.2;
+}
+.ov-events-countdown {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.2;
+  margin-top: 0.12rem;
+}
+.ov-events-main {
+  min-width: 0;
+}
+.ov-events-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-strong);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ov-events-subtitle {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin-top: 0.15rem;
+  overflow-wrap: anywhere;
+}
+.ov-events-badges {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ov-mi-gap-xs);
+  flex-wrap: wrap;
+}
+.ov-events-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-neutral)) 34%, transparent);
+  background: color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-event-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-events-empty {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-body);
+  padding: 0.7rem 0;
+}
 @media (max-width: 760px) {
   .ov-mm-status-bar {
     align-items: flex-start;
@@ -268,6 +440,26 @@ def overview_ui_css() -> str:
   .ov-mm-meta-item:nth-child(odd) {
     border-left: 0;
     padding-left: 0;
+  }
+  .ov-events-summary,
+  .ov-events-source-lane {
+    grid-template-columns: 1fr;
+  }
+  .ov-events-summary-item,
+  .ov-events-summary-item:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+    padding-left: 0;
+  }
+  .ov-events-summary-item:first-child {
+    border-top: 0;
+  }
+  .ov-events-row {
+    grid-template-columns: 1fr;
+    gap: var(--ov-mi-gap-sm);
+  }
+  .ov-events-badges {
+    justify-content: flex-start;
   }
 }
 </style>
@@ -318,6 +510,127 @@ def render_overview_meta_strip(items: list[dict[str, Any]]) -> None:
 
 def render_market_snapshot_meta_strip(items: list[dict[str, Any]]) -> None:
     render_overview_meta_strip(items)
+
+
+def _overview_tone_color(tone: Any) -> str:
+    normalized = str(tone or "").lower()
+    if normalized in {"positive", "official", "macro"}:
+        return OVERVIEW_COLOR_POSITIVE
+    if normalized in {"primary", "fomc"}:
+        return OVERVIEW_COLOR_PRIMARY
+    if normalized in {"warning", "earnings", "estimate"}:
+        return OVERVIEW_COLOR_WARNING
+    if normalized in {"danger", "review", "failed"}:
+        return OVERVIEW_COLOR_DANGER
+    if normalized in {"purple"}:
+        return OVERVIEW_COLOR_PURPLE
+    if normalized in {"cyan"}:
+        return OVERVIEW_COLOR_CYAN
+    return OVERVIEW_COLOR_NEUTRAL
+
+
+def _badge_html(label: Any, tone: Any = None) -> str:
+    return (
+        f'<span class="ov-events-badge" style="--ov-event-tone:{escape(_overview_tone_color(tone))};">'
+        f"{escape(_display_value(label))}"
+        "</span>"
+    )
+
+
+def render_events_summary_strip(items: list[dict[str, Any]]) -> None:
+    item_html: list[str] = []
+    for item in items:
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-events-summary-detail">{escape(str(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        item_html.append(
+            '<div class="ov-events-summary-item">'
+            f'<div class="ov-events-summary-label">{escape(str(item.get("label") or "-"))}</div>'
+            f'<div class="ov-events-summary-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-events-summary">
+          {"".join(item_html)}
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_event_source_lane(sources: list[dict[str, Any]]) -> None:
+    source_html: list[str] = []
+    for source in sources:
+        tone_color = _overview_tone_color(source.get("tone"))
+        source_html.append(
+            f'<div class="ov-events-source" style="--ov-event-tone:{escape(tone_color)};">'
+            '<div class="ov-events-source-head">'
+            f'<span class="ov-events-source-title">{escape(str(source.get("title") or "-"))}</span>'
+            f'<span class="ov-events-source-state">{escape(_display_value(source.get("status")))}</span>'
+            "</div>"
+            f'<div class="ov-events-source-detail">{escape(_display_value(source.get("detail")))}</div>'
+            "</div>"
+        )
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-events-source-lane">
+          {"".join(source_html)}
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_event_agenda_sections(
+    sections: list[dict[str, Any]],
+    *,
+    empty_message: str = "No event rows match the selected filters.",
+) -> None:
+    section_html: list[str] = []
+    for section in sections:
+        rows = list(section.get("rows") or [])
+        if not rows:
+            continue
+        row_html: list[str] = []
+        for row in rows:
+            badges = "".join(_badge_html(badge.get("label"), badge.get("tone")) for badge in row.get("badges") or [])
+            row_html.append(
+                '<div class="ov-events-row">'
+                '<div class="ov-events-date">'
+                f'<div class="ov-events-day">{escape(_display_value(row.get("date")))}</div>'
+                f'<div class="ov-events-countdown">{escape(_display_value(row.get("countdown")))}</div>'
+                "</div>"
+                '<div class="ov-events-main">'
+                f'<div class="ov-events-title">{escape(_display_value(row.get("title")))}</div>'
+                f'<div class="ov-events-subtitle">{escape(_display_value(row.get("subtitle")))}</div>'
+                "</div>"
+                f'<div class="ov-events-badges">{badges}</div>'
+                "</div>"
+            )
+        section_html.append(
+            '<div class="ov-events-section">'
+            '<div class="ov-events-section-head">'
+            f'<span class="ov-events-section-title">{escape(str(section.get("title") or "-"))}</span>'
+            f'<span class="ov-events-section-meta">{escape(str(section.get("meta") or f"{len(rows)} events"))}</span>'
+            "</div>"
+            f"{''.join(row_html)}"
+            "</div>"
+        )
+    if not section_html:
+        section_html.append(f'<div class="ov-events-empty">{escape(empty_message)}</div>')
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-events-agenda">
+          {"".join(section_html)}
+        </div>""",
+        unsafe_allow_html=True,
+    )
 
 
 def _market_refresh_state_label(value: Any) -> str:

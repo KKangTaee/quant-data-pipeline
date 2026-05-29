@@ -4098,3 +4098,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - UI redesign pass 4에서 Market Movers 전용 HTML/CSS 렌더러를 `app/web/overview_ui_components.py`로 분리해 `overview_dashboard.py`의 화면 흐름과 시각 컴포넌트 책임을 나눴다.
   - UI redesign pass 5에서 Overview 전용 색상 / 표면 / 차트 팔레트 / spacing / typography 토큰을 `overview_ui_components.py`로 모아 반복 하드코딩을 줄였다.
   - UI redesign pass 6에서 새 UI 라이브러리 도입 전 단계로 Coverage / Period / Group / Events control 구성을 내부 model / helper로 정리했다.
+- Overview Events UX redesign:
+  - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 Events 탭을 Agenda / Calendar / Quality / Raw 구조로 개편했다.
+  - Source lane, event summary strip, agenda list 렌더러를 추가해 다음 일정 / source 상태 / review 필요 row가 먼저 읽히도록 했다.
+  - DB schema / collector 변경 없이 기존 `market_event_calendar` read model만 사용했다.

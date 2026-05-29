@@ -50,6 +50,9 @@ from app.web.overview_ui_components import (
     OVERVIEW_SERIES_COLORS,
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
+    render_event_agenda_sections,
+    render_event_source_lane,
+    render_events_summary_strip,
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_overview_toolbar_label,
@@ -1316,60 +1319,57 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
 
 
 def _render_event_refresh_toolbar() -> str:
-    with st.container(border=True):
-        controls = st.columns([1.1, 1.25, 1.25, 1.25, 1.8], gap="small", vertical_alignment="bottom")
-        event_filter = str(
-            controls[0].segmented_control(
-                "Type",
-                list(EVENT_TYPE_LABELS.keys()),
-                default="ALL",
-                format_func=_event_filter_label,
-                key="overview_events_type_filter",
+    render_overview_toolbar_label("일정 타입")
+    controls = st.columns([1.1, 1.25, 1.25, 1.25], gap="small", vertical_alignment="bottom")
+    event_filter = str(
+        controls[0].segmented_control(
+            "Type",
+            list(EVENT_TYPE_LABELS.keys()),
+            default="ALL",
+            format_func=_event_filter_label,
+            key="overview_events_type_filter",
+        )
+    )
+    if controls[1].button("Refresh FOMC", key="overview_events_refresh_fomc", use_container_width=True):
+        current_year = datetime.now().year
+        with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+            _store_overview_job_result(
+                "overview_fomc_calendar_result",
+                run_collect_fomc_calendar(years=(current_year, current_year + 1)),
             )
-        )
-        if controls[1].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
-            current_year = datetime.now().year
-            with st.spinner("Collecting FOMC calendar from the official Fed page..."):
-                _store_overview_job_result(
-                    "overview_fomc_calendar_result",
-                    run_collect_fomc_calendar(years=(current_year, current_year + 1)),
-                )
-            st.rerun()
-        if controls[2].button(
-            "Refresh Earnings Calendar",
-            key="overview_events_refresh_earnings",
-            use_container_width=True,
-            help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
-        ):
-            with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
-                _store_overview_job_result(
-                    "overview_earnings_calendar_result",
-                    run_collect_earnings_calendar(
-                        symbol_source="latest_movers",
-                        universe_code="SP500",
-                        top_movers_limit=20,
-                        lookahead_days=120,
-                        max_symbols=50,
-                        validate_with_nasdaq=True,
-                    ),
-                )
-            st.rerun()
-        if controls[3].button(
-            "Refresh Macro Calendar",
-            key="overview_events_refresh_macro",
-            use_container_width=True,
-            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
-        ):
-            current_year = datetime.now().year
-            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
-                _store_overview_job_result(
-                    "overview_macro_calendar_result",
-                    run_collect_macro_calendar(years=(current_year, current_year + 1)),
-                )
-            st.rerun()
-        controls[4].caption(
-            "Overview reads stored rows from `finance_meta.market_event_calendar`; refresh writes through ingestion job wrappers."
-        )
+        st.rerun()
+    if controls[2].button(
+        "Refresh Earnings",
+        key="overview_events_refresh_earnings",
+        use_container_width=True,
+        help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
+    ):
+        with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
+            _store_overview_job_result(
+                "overview_earnings_calendar_result",
+                run_collect_earnings_calendar(
+                    symbol_source="latest_movers",
+                    universe_code="SP500",
+                    top_movers_limit=20,
+                    lookahead_days=120,
+                    max_symbols=50,
+                    validate_with_nasdaq=True,
+                ),
+            )
+        st.rerun()
+    if controls[3].button(
+        "Refresh Macro",
+        key="overview_events_refresh_macro",
+        use_container_width=True,
+        help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
+    ):
+        current_year = datetime.now().year
+        with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
+            _store_overview_job_result(
+                "overview_macro_calendar_result",
+                run_collect_macro_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
     return event_filter
 
 
@@ -1796,6 +1796,7 @@ def _prepare_event_calendar_frame(rows: pd.DataFrame) -> pd.DataFrame:
 def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
     if rows.empty:
         return rows
+    render_overview_toolbar_label("보기 조건")
     filter_cols = st.columns([1, 1, 1, 1], gap="small")
     source_options = ["All"] + sorted(
         value for value in rows.get("Source Type", pd.Series(dtype=str)).dropna().unique().tolist() if value != "-"
@@ -1851,6 +1852,227 @@ def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
     if importance_filter != "All" and "Importance" in filtered:
         filtered = filtered[filtered["Importance"] == importance_filter]
     return filtered
+
+
+def _event_tone(value: Any) -> str:
+    text = str(value or "").lower()
+    if text in {"fomc", "fomc_meeting"}:
+        return "fomc"
+    if text in {"macro", "cpi", "ppi", "jobs", "gdp"} or text.startswith("macro"):
+        return "macro"
+    if text == "earnings":
+        return "earnings"
+    if text in {"high", "needs review", "not confirmed", "conflict", "stale estimate"}:
+        return "review"
+    if text in {"official", "cross-checked", "no action"}:
+        return "official"
+    if text in {"estimate only", "provider estimate", "medium", "current estimate"}:
+        return "estimate"
+    return "neutral"
+
+
+def _event_days_text(value: Any) -> str:
+    if value in (None, "") or pd.isna(value):
+        return "date pending"
+    day_number = int(value)
+    if day_number < 0:
+        return f"{abs(day_number)}d ago"
+    if day_number == 0:
+        return "today"
+    if day_number == 1:
+        return "tomorrow"
+    return f"in {day_number}d"
+
+
+def _event_main_title(row: pd.Series) -> str:
+    symbol = str(row.get("Symbol Label") or row.get("Symbol") or "").strip()
+    if symbol == "-":
+        symbol = ""
+    title = str(row.get("Title") or "-")
+    return f"{symbol} · {title}" if symbol else title
+
+
+def _event_subtitle(row: pd.Series) -> str:
+    parts = [
+        str(row.get("Type Label") or row.get("Type") or "-"),
+        str(row.get("Source Type") or "-"),
+        str(row.get("Freshness") or "-"),
+    ]
+    action = str(row.get("Quality Action") or "")
+    if action and action != "No action":
+        parts.append(action)
+    return " · ".join(part for part in parts if part and part != "-")
+
+
+def _event_agenda_item(row: pd.Series) -> dict[str, Any]:
+    return {
+        "date": str(row.get("Date") or "-"),
+        "countdown": _event_days_text(row.get("Days Until")),
+        "title": _event_main_title(row),
+        "subtitle": _event_subtitle(row),
+        "badges": [
+            {"label": row.get("Type Label") or row.get("Type") or "-", "tone": _event_tone(row.get("Type Label"))},
+            {"label": row.get("Importance") or "-", "tone": _event_tone(row.get("Importance"))},
+            {"label": row.get("Validation") or "-", "tone": _event_tone(row.get("Validation"))},
+            {"label": row.get("Focus") or "-", "tone": _event_tone(row.get("Focus"))},
+        ],
+    }
+
+
+def _event_agenda_sections(rows: pd.DataFrame) -> list[dict[str, Any]]:
+    if rows.empty:
+        return []
+    focus_rows = rows.copy()
+    focus_rows["Days Until"] = pd.to_numeric(focus_rows.get("Days Until"), errors="coerce")
+    future_rows = focus_rows[focus_rows["Days Until"].isna() | (focus_rows["Days Until"] >= 0)].sort_values(
+        ["Date Parsed", "Importance", "Type Label", "Symbol"],
+        ascending=[True, True, True, True],
+    )
+    section_specs = [
+        ("Today", future_rows["Days Until"] == 0, 8),
+        ("This Week", (future_rows["Days Until"] > 0) & (future_rows["Days Until"] <= 7), 10),
+        ("Next 30D", (future_rows["Days Until"] > 7) & (future_rows["Days Until"] <= 30), 12),
+        ("Later", future_rows["Days Until"] > 30, 12),
+    ]
+    sections: list[dict[str, Any]] = []
+    for title, mask, limit in section_specs:
+        section_rows = future_rows[mask].head(limit)
+        if section_rows.empty:
+            continue
+        sections.append(
+            {
+                "title": title,
+                "meta": f"{len(section_rows)} shown",
+                "rows": [_event_agenda_item(row) for _, row in section_rows.iterrows()],
+            }
+        )
+    unknown_rows = future_rows[future_rows["Days Until"].isna()].head(6)
+    if not unknown_rows.empty:
+        sections.append(
+            {
+                "title": "Date Pending",
+                "meta": f"{len(unknown_rows)} shown",
+                "rows": [_event_agenda_item(row) for _, row in unknown_rows.iterrows()],
+            }
+        )
+    return sections
+
+
+def _event_quality_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    if rows.empty:
+        return rows
+    return rows[
+        (rows.get("Focus") == "Needs Review")
+        | ((rows.get("Quality Action") != "No action") & rows.get("Quality Action").notna())
+        | (rows.get("Validation").isin(["Estimate only", "Not confirmed", "Conflict"]))
+        | (rows.get("Freshness").isin(["Stale estimate", "Stale source"]))
+    ].sort_values(["Date Parsed", "Type Label", "Symbol"])
+
+
+def _event_quality_sections(rows: pd.DataFrame) -> list[dict[str, Any]]:
+    quality_rows = _event_quality_rows(rows)
+    if quality_rows.empty:
+        return []
+    review_mask = (quality_rows.get("Focus") == "Needs Review") | (
+        (quality_rows.get("Quality Action") != "No action") & quality_rows.get("Quality Action").notna()
+    )
+    estimate_mask = quality_rows.get("Validation").isin(["Estimate only", "Not confirmed", "Conflict"])
+    freshness_mask = quality_rows.get("Freshness").isin(["Stale estimate", "Stale source"])
+    section_specs = [
+        ("Action Required", quality_rows[review_mask].head(18)),
+        ("Estimate Validation", quality_rows[estimate_mask].head(18)),
+        ("Freshness", quality_rows[freshness_mask].head(18)),
+    ]
+    sections: list[dict[str, Any]] = []
+    seen_keys: set[tuple[Any, Any, Any]] = set()
+    for title, section_rows in section_specs:
+        if section_rows.empty:
+            continue
+        deduped_rows = []
+        for _, row in section_rows.iterrows():
+            key = (row.get("Date"), row.get("Type"), row.get("Symbol"), row.get("Title"))
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            deduped_rows.append(_event_agenda_item(row))
+        if deduped_rows:
+            sections.append({"title": title, "meta": f"{len(deduped_rows)} shown", "rows": deduped_rows})
+    return sections
+
+
+def _event_summary_items(rows: pd.DataFrame, coverage: dict[str, Any], *, event_type: Any) -> list[dict[str, Any]]:
+    if rows.empty:
+        next_value = _snapshot_value(coverage.get("next_event_date"))
+        next_detail = f"filter: {event_type or 'All'}"
+    else:
+        rows_with_days = rows.copy()
+        rows_with_days["Days Until"] = pd.to_numeric(rows_with_days.get("Days Until"), errors="coerce")
+        upcoming = rows_with_days[rows_with_days["Days Until"].isna() | (rows_with_days["Days Until"] >= 0)].sort_values(
+            ["Date Parsed", "Type Label", "Symbol"],
+            ascending=[True, True, True],
+        )
+        next_row = upcoming.iloc[0] if not upcoming.empty else rows_with_days.sort_values("Date Parsed").iloc[0]
+        next_value = str(next_row.get("Date") or _snapshot_value(coverage.get("next_event_date")))
+        next_detail = f"{_event_days_text(next_row.get('Days Until'))} · {_event_main_title(next_row)}"
+    needs_review_count = int(len(_event_quality_rows(rows))) if not rows.empty else int(coverage.get("needs_review_count") or 0)
+    return [
+        {"label": "Next Event", "value": next_value, "detail": next_detail},
+        {
+            "label": "This Week",
+            "value": coverage.get("this_week_count") or 0,
+            "detail": "today through 7D",
+        },
+        {
+            "label": "Next 30D",
+            "value": coverage.get("next_30d_count") or 0,
+            "detail": f"stored rows: {coverage.get('event_count') or 0}",
+        },
+        {
+            "label": "Needs Review",
+            "value": needs_review_count,
+            "detail": f"latest: {_snapshot_value(coverage.get('latest_collected_at'))}",
+        },
+    ]
+
+
+def _latest_collected_at(rows: pd.DataFrame) -> str:
+    if rows.empty or "Collected At" not in rows:
+        return "-"
+    values = rows["Collected At"].replace("-", pd.NA).dropna().astype(str)
+    return values.max() if not values.empty else "-"
+
+
+def _event_source_items(rows: pd.DataFrame, *, event_filter: str) -> list[dict[str, Any]]:
+    source_specs = [
+        ("FOMC", "FOMC_MEETING", lambda frame: frame["Type"].astype(str).str.upper() == "FOMC_MEETING", "fomc"),
+        ("Earnings", "EARNINGS", lambda frame: frame["Type"].astype(str).str.upper() == "EARNINGS", "earnings"),
+        ("Macro", "MACRO", lambda frame: frame["Type"].astype(str).str.upper().str.startswith("MACRO"), "macro"),
+    ]
+    selected_filter = str(event_filter or "ALL").upper()
+    items: list[dict[str, Any]] = []
+    for title, source_filter, mask_fn, base_tone in source_specs:
+        if selected_filter != "ALL" and source_filter != selected_filter:
+            continue
+        subset = rows[mask_fn(rows)] if not rows.empty and "Type" in rows else pd.DataFrame()
+        review_count = len(_event_quality_rows(subset)) if not subset.empty else 0
+        if subset.empty:
+            status = "Missing"
+            tone = "danger"
+        elif review_count:
+            status = "Review"
+            tone = "review"
+        else:
+            status = "OK"
+            tone = base_tone
+        items.append(
+            {
+                "title": title,
+                "status": status,
+                "detail": f"{len(subset)} rows · latest {_latest_collected_at(subset)} · review {review_count}",
+                "tone": tone,
+            }
+        )
+    return items
 
 
 def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
@@ -2155,109 +2377,15 @@ def _event_focus_display_columns(rows: pd.DataFrame) -> list[str]:
     ]
 
 
-def _render_event_focus_table(rows: pd.DataFrame, *, empty_message: str) -> None:
-    if rows.empty:
-        st.info(empty_message)
-        return
-    st.dataframe(
-        rows[_event_focus_display_columns(rows)].head(20),
-        width="stretch",
-        hide_index=True,
-    )
-
-
-def _render_event_focus_panel(rows: pd.DataFrame) -> None:
-    if rows.empty:
-        st.info("No stored event rows match the selected filters.")
-        return
-    focus_rows = rows.copy()
-    focus_rows["Days Until"] = pd.to_numeric(focus_rows.get("Days Until"), errors="coerce")
-    upcoming_rows = focus_rows[focus_rows["Days Until"].isna() | (focus_rows["Days Until"] >= 0)].sort_values(
-        ["Date Parsed", "Importance", "Type Label", "Symbol"],
-        ascending=[True, True, True, True],
-    )
-    needs_review_rows = focus_rows[
-        (focus_rows.get("Focus") == "Needs Review")
-        | ((focus_rows.get("Quality Action") != "No action") & focus_rows.get("Quality Action").notna())
-    ].sort_values(["Date Parsed", "Type Label", "Symbol"])
-    high_impact_rows = focus_rows[focus_rows.get("Importance") == "High"].sort_values(
-        ["Date Parsed", "Type Label", "Symbol"]
-    )
-    this_week_count = int(focus_rows.get("Focus", pd.Series(dtype=str)).isin(["Today", "This Week"]).sum())
-    next_30d_count = int(((focus_rows["Days Until"] >= 0) & (focus_rows["Days Until"] <= 30)).sum())
-    render_status_card_grid(
-        [
-            {
-                "title": "This Week",
-                "value": this_week_count,
-                "detail": "today through 7D",
-                "tone": "positive" if this_week_count else "neutral",
-            },
-            {
-                "title": "Next 30D",
-                "value": next_30d_count,
-                "detail": "upcoming stored events",
-                "tone": "positive" if next_30d_count else "neutral",
-            },
-            {
-                "title": "High Impact",
-                "value": len(high_impact_rows),
-                "detail": "FOMC and macro rows",
-                "tone": "warning" if len(high_impact_rows) else "neutral",
-            },
-            {
-                "title": "Needs Review",
-                "value": len(needs_review_rows),
-                "detail": "estimate or source action",
-                "tone": "danger" if len(needs_review_rows) else "positive",
-            },
+def _has_event_refresh_result() -> bool:
+    return any(
+        isinstance(st.session_state.get(key), dict)
+        for key in [
+            "overview_fomc_calendar_result",
+            "overview_earnings_calendar_result",
+            "overview_macro_calendar_result",
         ]
     )
-    upcoming_tab, review_tab, impact_tab = st.tabs(["Upcoming", "Needs Review", "High Impact"])
-    with upcoming_tab:
-        _render_event_focus_table(upcoming_rows, empty_message="No upcoming event rows match the selected filters.")
-    with review_tab:
-        _render_event_focus_table(needs_review_rows, empty_message="No rows currently require source or validation action.")
-    with impact_tab:
-        _render_event_focus_table(high_impact_rows, empty_message="No high impact FOMC or macro rows match the selected filters.")
-
-
-def _render_event_date_groups(rows: pd.DataFrame) -> None:
-    if rows.empty:
-        st.info("No stored event rows match the selected calendar filters.")
-        return
-    display_columns = [
-        column
-        for column in [
-            "Type Label",
-            "Symbol",
-            "Title",
-            "Importance",
-            "Focus",
-            "Source Type",
-            "Validation",
-            "Freshness",
-            "Quality Action",
-            "Age Days",
-        ]
-        if column in rows.columns
-    ]
-    for date_value, day_rows in rows.sort_values(["Date Parsed", "Type Label", "Symbol"]).groupby("Date", sort=True):
-        day_count = len(day_rows)
-        days_until = day_rows["Days Until"].dropna()
-        days_text = "-"
-        if not days_until.empty:
-            day_number = int(days_until.iloc[0])
-            days_text = "today" if day_number == 0 else f"{day_number}d"
-        type_counts = day_rows["Type Label"].value_counts().to_dict()
-        with st.container(border=True):
-            header_cols = st.columns([1, 2], gap="small", vertical_alignment="center")
-            header_cols[0].markdown(f"##### {date_value}")
-            header_cols[1].caption(
-                f"{days_text} | {day_count} events | "
-                + ", ".join(f"{key}: {value}" for key, value in type_counts.items())
-            )
-            st.dataframe(day_rows[display_columns], width="stretch", hide_index=True)
 
 
 def _render_events_tab() -> None:
@@ -2267,59 +2395,46 @@ def _render_events_tab() -> None:
     selected_event_type = None if event_filter == "ALL" else event_filter
     snapshot = load_overview_market_events_snapshot(event_type=selected_event_type, horizon_days=540)
     coverage = dict(snapshot.get("coverage") or {})
-    render_status_card_grid(
-        [
-            {
-                "title": "Next Event",
-                "value": _snapshot_value(coverage.get("next_event_date")),
-                "detail": f"filter: {snapshot.get('event_type') or 'All'}",
-                "tone": "positive" if coverage.get("next_event_date") else "warning",
-            },
-            {
-                "title": "Stored Events",
-                "value": coverage.get("event_count") or 0,
-                "detail": (
-                    f"official: {coverage.get('official_count') or 0}, "
-                    f"estimates: {coverage.get('estimate_count') or 0}"
-                ),
-                "tone": "positive" if coverage.get("event_count") else "warning",
-            },
-            {
-                "title": "Latest Collection",
-                "value": _snapshot_value(coverage.get("latest_collected_at")),
-                "detail": (
-                    f"high impact: {coverage.get('high_importance_count') or 0}, "
-                    f"needs review: {coverage.get('needs_review_count') or 0}"
-                ),
-                "tone": "warning" if coverage.get("stale_estimate_count") or coverage.get("not_confirmed_count") else "neutral",
-            },
-            {
-                "title": "Upcoming Focus",
-                "value": coverage.get("next_30d_count") or 0,
-                "detail": f"this week: {coverage.get('this_week_count') or 0}",
-                "tone": "positive" if coverage.get("next_30d_count") else "neutral",
-            },
-        ]
-    )
-    _render_snapshot_warnings(snapshot)
-    _render_market_job_result("overview_fomc_calendar_result")
-    _render_market_job_result("overview_earnings_calendar_result")
-    _render_market_job_result("overview_macro_calendar_result")
-
     rows = snapshot.get("rows")
+    calendar_rows = _prepare_event_calendar_frame(rows) if isinstance(rows, pd.DataFrame) else pd.DataFrame()
+    render_event_source_lane(_event_source_items(calendar_rows, event_filter=event_filter))
+    if _has_event_refresh_result():
+        with st.expander("Refresh Results", expanded=False):
+            _render_market_job_result("overview_fomc_calendar_result")
+            _render_market_job_result("overview_earnings_calendar_result")
+            _render_market_job_result("overview_macro_calendar_result")
+    _render_snapshot_warnings(snapshot)
+
     if not isinstance(rows, pd.DataFrame) or rows.empty:
+        render_events_summary_strip(_event_summary_items(calendar_rows, coverage, event_type=snapshot.get("event_type")))
         st.info("Stored market event rows are not available for the selected filter. Run the matching refresh here or from Ingestion.")
         return
-    calendar_rows = _prepare_event_calendar_frame(rows)
+
     filtered_rows = _filter_event_rows_for_calendar(calendar_rows)
-    focus_tab, calendar_tab, table_tab = st.tabs(["Focus", "Calendar", "Table"])
-    with focus_tab:
-        _render_event_focus_panel(filtered_rows)
+    render_events_summary_strip(_event_summary_items(filtered_rows, coverage, event_type=snapshot.get("event_type")))
+
+    agenda_tab, calendar_tab, quality_tab, raw_tab = st.tabs(["Agenda", "Calendar", "Quality", "Raw"])
+    with agenda_tab:
+        render_event_agenda_sections(
+            _event_agenda_sections(filtered_rows),
+            empty_message="No upcoming event rows match the selected filters.",
+        )
     with calendar_tab:
         _render_event_month_grid(filtered_rows)
         st.altair_chart(_build_event_calendar_chart(filtered_rows), width="stretch")
-        _render_event_date_groups(filtered_rows)
-    with table_tab:
+    with quality_tab:
+        render_event_agenda_sections(
+            _event_quality_sections(filtered_rows),
+            empty_message="No event rows currently need source or validation review.",
+        )
+        quality_rows = _event_quality_rows(filtered_rows)
+        if not quality_rows.empty:
+            st.dataframe(
+                quality_rows[_event_focus_display_columns(quality_rows)],
+                width="stretch",
+                hide_index=True,
+            )
+    with raw_tab:
         st.dataframe(filtered_rows.drop(columns=["Date Parsed"], errors="ignore"), width="stretch", hide_index=True)
 
 
