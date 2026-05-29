@@ -28,6 +28,7 @@ from app.services.backtest_practical_validation_curve_context import (
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
 from app.services.backtest_realism_audit import build_backtest_realism_audit
+from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
@@ -1657,6 +1658,9 @@ def build_practical_validation_result(
     construction_risk_audit = build_construction_risk_audit(result)
     result["construction_risk_audit"] = construction_risk_audit
     result["construction_risk_display_rows"] = list(construction_risk_audit.get("rows") or [])
+    risk_contribution_audit = build_risk_contribution_audit(result)
+    result["risk_contribution_audit"] = risk_contribution_audit
+    result["risk_contribution_display_rows"] = list(risk_contribution_audit.get("rows") or [])
     backtest_realism_audit = build_backtest_realism_audit(result)
     result["backtest_realism_audit"] = backtest_realism_audit
     result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])

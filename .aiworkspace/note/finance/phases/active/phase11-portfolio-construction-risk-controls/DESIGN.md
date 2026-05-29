@@ -21,7 +21,7 @@ Phase 11은 "좋은 component를 조합했는가?"가 아니라 "조합 결과�
 | Source map | 현재 concentration / overlap / correlation / risk contribution evidence가 어디에 있는지 확인 | Complete: Practical Validation diagnostics, provider context, look-through board, robustness lab, final review gate |
 | Concentration contract | component weight, asset bucket, sector / theme, top holding concentration 확인 | Complete: `construction_risk_audit_v1` |
 | Overlap contract | ETF 내부 top holding / issuer / exposure overlap 확인 | Complete: `construction_risk_audit_v1` provider holdings compact metrics |
-| Risk contribution contract | component return correlation, volatility contribution, drop-one dependency 확인 | result curve / component curve / DB price proxy |
+| Risk contribution contract | component return correlation, volatility contribution, drop-one dependency 확인 | Complete: `risk_contribution_audit_v1` |
 | Role / weight discipline | hedge / diversifier / growth role과 profile-aware max weight 확인 | proposal source, validation profile, component metadata |
 | Gate policy | selected-route 가능 여부에 construction risk gap 반영 | investability packet / selected-route gate |
 
@@ -43,7 +43,7 @@ Main gaps:
 - Proxy-only source can look too strong unless source strength and provider coverage are explicit.
 - Component role / weight discipline has no first-class metadata source yet.
 
-Implementation order remains 11-2 concentration / overlap / exposure first, then 11-3 correlation / risk contribution, 11-4 role / weight discipline, and 11-5 gate policy.
+Implementation order remains 11-4 role / weight discipline, then 11-5 gate policy.
 
 ## 11-2 Contract Result
 
@@ -65,6 +65,27 @@ The audit exposes:
 - `CONSTRUCTION_RISK_BLOCKED`
 
 Provider holdings / exposure absence is not treated as PASS. The contract is displayed in Practical Validation and Final Review, preserved in final decision snapshots, and kept out of selected-route gate enforcement until 11-5.
+
+## 11-3 Contract Result
+
+11-3 added `app/services/backtest_risk_contribution_audit.py`.
+
+The new audit reads existing compact evidence:
+
+- component return matrix coverage from component curve evidence and correlation diagnostic monthly rows
+- pairwise average / max correlation
+- max risk contribution proxy
+- Robustness Lab `Component dependency` drop-one row
+- read-only storage / execution boundary
+
+The audit exposes:
+
+- `RISK_CONTRIBUTION_READY`
+- `RISK_CONTRIBUTION_REVIEW`
+- `RISK_CONTRIBUTION_NEEDS_INPUT`
+- `RISK_CONTRIBUTION_BLOCKED`
+
+Missing component matrix or missing drop-one dependency is not treated as PASS. DB price proxy or mixed component curve source is displayed as source strength and remains `REVIEW`. The contract is displayed in Practical Validation and Final Review, preserved in final decision snapshots and evidence rows, and kept out of selected-route gate enforcement until 11-5.
 
 ## Route Semantics
 
@@ -88,7 +109,7 @@ Provider holdings / exposure absence is not treated as PASS. The contract is dis
 - `finance/loaders/provider.py`: holdings / exposure source 확인 후보
 - `tests/test_service_contracts.py`: service contract 고정
 
-11-2 result: the first code change is complete. Next code change should start with correlation / risk contribution contract wrapping existing component return matrix evidence.
+11-3 result: correlation / risk contribution contract is complete. Next code change should start with component role / weight discipline source ownership and compact row semantics.
 
 ## Data Boundary
 

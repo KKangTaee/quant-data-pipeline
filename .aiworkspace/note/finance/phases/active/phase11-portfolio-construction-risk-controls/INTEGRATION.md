@@ -7,8 +7,8 @@ Created: 2026-05-29
 
 1. 11-1 construction risk source map / gap audit: Complete
 2. 11-2 concentration / overlap / exposure contract: Complete
-3. 11-3 correlation / risk contribution contract: Next
-4. 11-4 component role / weight discipline contract
+3. 11-3 correlation / risk contribution contract: Complete
+4. 11-4 component role / weight discipline contract: Next
 5. 11-5 selected-route construction risk gate policy
 6. 11-6 integrated QA / closeout
 
@@ -27,7 +27,8 @@ Implementation tasks may touch the following files after 11-1 confirms scope.
 
 11-2 wrapped existing provider look-through evidence into `construction_risk_audit_v1`.
 The new contract is read-only and does not add DB collectors or JSONL registries.
-11-3 should wrap component return correlation / risk contribution evidence next.
+11-3 wrapped component return correlation / volatility contribution proxy / drop-one dependency evidence into `risk_contribution_audit_v1`.
+11-4 should decide component role / profile-aware weight discipline evidence source next.
 
 ## QA Gates
 

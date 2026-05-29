@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `correlation-risk-contribution-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `component-role-weight-discipline-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Risk contribution audit V1 covers correlation / risk contribution
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-3으로 component return correlation / risk contribution evidence를 read-only construction risk contract로 묶는다.
+- Analysis result:
+  - `risk_contribution_audit_v1` now reads component return matrix coverage, average / max correlation, max risk contribution proxy, Robustness Lab drop-one dependency, and storage boundary.
+  - Missing component matrix or missing drop-one evidence does not become `PASS`; DB price proxy / mixed source evidence remains `REVIEW`.
+  - Practical Validation and Final Review display the audit, and final decision snapshots / evidence rows preserve it without adding JSONL registry, user memo, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `component-role-weight-discipline-v1`로 role source와 profile-aware weight discipline을 분리한다.
 
 ### 2026-05-29 - Construction risk audit V1 covers concentration / overlap / exposure
 - User request:

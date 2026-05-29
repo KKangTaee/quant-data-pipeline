@@ -8,15 +8,16 @@ Last Updated: 2026-05-29
 - 11-0 `phase11-board-open`: Complete
 - 11-1 `construction-risk-source-map-v1`: Complete
 - 11-2 `concentration-overlap-exposure-contract-v1`: Complete
-- 11-3 `correlation-risk-contribution-contract-v1`: Next
+- 11-3 `correlation-risk-contribution-contract-v1`: Complete
+- 11-4 `component-role-weight-discipline-v1`: Next
 
 ## Next Task
 
-`correlation-risk-contribution-contract-v1`
+`component-role-weight-discipline-v1`
 
 Focus:
 
-- 기존 component return correlation / volatility contribution proxy와 drop-one dependency evidence를 construction risk audit contract로 분리한다.
-- average / max correlation, max risk contribution, component return matrix coverage, source strength를 compact row로 제공한다.
-- component curve가 없으면 risk contribution을 `PASS`로 올리지 않는다.
+- component role / hedge / diversifier / growth evidence source를 확인한다.
+- profile-aware weight discipline 기준을 existing validation profile과 component weights에서 먼저 읽는다.
+- 역할 근거가 없거나 특정 role에 과도하게 몰리면 `PASS`로 올리지 않는다.
 - 새 JSONL registry, user memo, preset, approval, order, auto rebalance behavior는 추가하지 않는다.

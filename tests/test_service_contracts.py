@@ -214,6 +214,7 @@ import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
 import app.services.backtest_practical_validation_source
+import app.services.backtest_risk_contribution_audit
 import app.services.backtest_validation_efficacy
 print("streamlit" in sys.modules)
 """
@@ -256,6 +257,7 @@ import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_stress_sensitivity
 import app.services.backtest_practical_validation_source
+import app.services.backtest_risk_contribution_audit
 import app.services.backtest_temporal_validation
 import app.services.backtest_validation_efficacy
 print("streamlit" in sys.modules)
@@ -385,6 +387,160 @@ class ConstructionRiskAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Top holding concentration"]["Status"], "REVIEW")
         self.assertEqual(rows_by_criteria["Holdings overlap"]["Status"], "REVIEW")
         self.assertEqual(rows_by_criteria["Asset bucket exposure"]["Status"], "REVIEW")
+
+
+class RiskContributionAuditContractTests(unittest.TestCase):
+    def _validation(
+        self,
+        *,
+        diagnostic_status: str = "PASS",
+        average_correlation: float | None = 0.25,
+        max_correlation: float | None = 0.45,
+        max_risk_contribution: float | None = 0.55,
+        monthly_return_rows: int = 48,
+        curve_source: str = "actual_runtime_replay",
+        curve_rows: int = 120,
+        dependency_status: str = "PASS",
+    ) -> dict:
+        diagnostic_metrics: dict[str, object] = {"monthly_return_rows": monthly_return_rows}
+        if average_correlation is not None:
+            diagnostic_metrics["average_correlation"] = average_correlation
+        if max_correlation is not None:
+            diagnostic_metrics["max_correlation"] = max_correlation
+        if max_risk_contribution is not None:
+            diagnostic_metrics["max_risk_contribution"] = max_risk_contribution
+        return {
+            "metrics": {"active_components": 2},
+            "curve_evidence": {
+                "component_curve_rows": [
+                    {
+                        "Component": "Core",
+                        "Weight": 60.0,
+                        "Curve Source": curve_source,
+                        "Rows": curve_rows,
+                    },
+                    {
+                        "Component": "Defense",
+                        "Weight": 40.0,
+                        "Curve Source": curve_source,
+                        "Rows": curve_rows,
+                    },
+                ]
+            },
+            "diagnostic_results": [
+                {
+                    "domain": "correlation_diversification_risk_contribution",
+                    "status": diagnostic_status,
+                    "summary": "Correlation and risk contribution evidence available.",
+                    "metrics": diagnostic_metrics,
+                    "evidence_rows": [
+                        {
+                            "Component": "Core",
+                            "Weight": 60.0,
+                            "Risk Contribution Proxy": 0.55,
+                        },
+                        {
+                            "Component": "Defense",
+                            "Weight": 40.0,
+                            "Risk Contribution Proxy": 0.45,
+                        },
+                    ],
+                }
+            ],
+            "sensitivity_interpretation": {
+                "rows": [
+                    {
+                        "Check": "Component dependency",
+                        "Status": dependency_status,
+                        "Finding": "Drop-one dependency is contained.",
+                        "Why It Matters": "No single component explains the portfolio.",
+                    }
+                ]
+            },
+        }
+
+    def test_ready_audit_uses_runtime_component_curves_without_writes(self) -> None:
+        from app.services.backtest_risk_contribution_audit import (
+            RISK_CONTRIBUTION_READY,
+            build_risk_contribution_audit,
+        )
+
+        audit = build_risk_contribution_audit(self._validation())
+
+        self.assertEqual(audit["route"], RISK_CONTRIBUTION_READY)
+        self.assertEqual(audit["source_strength"], "runtime_component_curves")
+        self.assertEqual(audit["metrics"]["pass"], 5)
+        self.assertEqual(audit["metrics"]["monthly_return_rows"], 48)
+        self.assertFalse(audit["execution_boundary"]["db_write"])
+        self.assertFalse(audit["execution_boundary"]["registry_write"])
+        self.assertFalse(audit["execution_boundary"]["raw_matrix_persistence"])
+
+    def test_missing_component_matrix_needs_input(self) -> None:
+        from app.services.backtest_risk_contribution_audit import (
+            RISK_CONTRIBUTION_NEEDS_INPUT,
+            build_risk_contribution_audit,
+        )
+
+        audit = build_risk_contribution_audit(
+            {
+                "metrics": {"active_components": 2},
+                "diagnostic_results": [
+                    {
+                        "domain": "correlation_diversification_risk_contribution",
+                        "status": "NOT_RUN",
+                        "summary": "component return matrix missing",
+                        "metrics": {"monthly_return_rows": 0},
+                    }
+                ],
+                "sensitivity_interpretation": {
+                    "rows": [{"Check": "Component dependency", "Status": "NOT_RUN"}]
+                },
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], RISK_CONTRIBUTION_NEEDS_INPUT)
+        self.assertEqual(audit["source_strength"], "missing_component_matrix")
+        self.assertEqual(rows_by_criteria["Component return matrix coverage"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Pairwise correlation"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Risk contribution concentration"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Drop-one component dependency"]["Status"], "NEEDS_INPUT")
+
+    def test_high_correlation_and_risk_contribution_trigger_review(self) -> None:
+        from app.services.backtest_risk_contribution_audit import (
+            RISK_CONTRIBUTION_REVIEW,
+            build_risk_contribution_audit,
+        )
+
+        audit = build_risk_contribution_audit(
+            self._validation(
+                average_correlation=0.76,
+                max_correlation=0.92,
+                max_risk_contribution=0.85,
+                curve_source="embedded_result_curve",
+                dependency_status="REVIEW",
+            )
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], RISK_CONTRIBUTION_REVIEW)
+        self.assertEqual(audit["source_strength"], "embedded_component_curves")
+        self.assertEqual(rows_by_criteria["Pairwise correlation"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Risk contribution concentration"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Drop-one component dependency"]["Status"], "REVIEW")
+
+    def test_db_price_proxy_source_triggers_review(self) -> None:
+        from app.services.backtest_risk_contribution_audit import (
+            RISK_CONTRIBUTION_REVIEW,
+            build_risk_contribution_audit,
+        )
+
+        audit = build_risk_contribution_audit(self._validation(curve_source="db_price_proxy"))
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], RISK_CONTRIBUTION_REVIEW)
+        self.assertEqual(audit["source_strength"], "db_price_proxy")
+        self.assertEqual(rows_by_criteria["Component return matrix coverage"]["Status"], "REVIEW")
 
 
 class ValidationEfficacyAuditContractTests(unittest.TestCase):
