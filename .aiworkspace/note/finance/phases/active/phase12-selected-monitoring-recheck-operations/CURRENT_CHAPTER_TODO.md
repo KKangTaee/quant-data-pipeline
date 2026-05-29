@@ -5,15 +5,15 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `selected-provider-evidence-staleness-contract-v1`
+Next task: `recheck-comparison-review-signal-policy-v1`
 
 ## TODO
 
-- Define selected provider evidence staleness route for selected portfolios.
-- Keep provider holdings / exposure / operability evidence DB-backed and read-only.
-- Ensure stale provider snapshot, partial coverage, fallback symbol source, and missing holdings / exposure cannot look like pass.
-- Connect provider evidence route to Phase 12 monitoring semantics without adding automatic monitoring log writes.
-- Add focused contract tests for fresh actual provider evidence, stale evidence, partial coverage, missing provider DB, and read-only execution boundary.
+- Make Recheck Comparison the policy owner for review signal performance thresholds.
+- Remove or align duplicated CAGR / MDD / benchmark spread threshold logic in Review Signals.
+- Ensure missing, failed, partial, or stale recheck evidence cannot become `Clear`.
+- Keep Review Signals read-only and session evidence clearly separate from durable monitoring logs.
+- Add focused contract tests for ready / watch / breached / needs-input signal mapping.
 
 ## Stop Conditions
 

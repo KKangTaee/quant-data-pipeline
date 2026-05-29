@@ -16,6 +16,7 @@ Created: 2026-05-29
 
 - Start with `selected-monitoring-source-map-v1` before implementation.
 - 12-2 added a shared recheck operations preflight so missing replay contract, stale / missing price, and DB latest date errors do not route to ready.
+- 12-3 added selected provider evidence freshness / coverage policy so stale actual evidence, partial / proxy / bridge coverage, and missing required provider areas do not route to pass.
 - Keep Selected Portfolio Dashboard read-only unless a later task explicitly changes scope and user confirms it.
 - Treat missing / failed / stale / partial evidence as `NEEDS_INPUT`, `WATCH`, or `BREACHED`, not pass.
 - Keep all full provider / holdings / macro / price data in DB or runtime calculation boundaries.

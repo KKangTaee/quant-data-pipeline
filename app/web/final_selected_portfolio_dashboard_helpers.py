@@ -307,6 +307,7 @@ def build_selected_portfolio_provider_evidence_table(evidence: dict[str, Any]) -
                 "Freshness": row.get("Freshness"),
                 "As Of Range": row.get("As Of Range"),
                 "Source Mix": row.get("Source Mix"),
+                "Policy Reason": row.get("Policy Reason"),
                 "Summary": row.get("Summary"),
                 "Next Action": row.get("Next Action"),
             }

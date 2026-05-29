@@ -84,6 +84,40 @@ The contract adds no JSONL registry, monitoring log auto write, user memo, prese
 
 Implementation order now moves to 12-3 selected provider evidence staleness contract.
 
+## 12-3 Selected Provider Evidence Staleness Contract Result
+
+12-3 added `selected_provider_evidence_staleness_contract_v1` under the existing `selected_provider_evidence_v1` result.
+
+Selected provider evidence now evaluates each provider row by the maximum severity of:
+
+- diagnostic status
+- coverage source
+- coverage weight
+- freshness
+
+Required selected provider areas:
+
+- `ETF Operability`
+- `ETF Holdings`
+- `ETF Exposure`
+
+Policy mapping:
+
+| Evidence | Selected Monitoring Status |
+| --- | --- |
+| fresh actual evidence with sufficient coverage | `PASS` |
+| stale actual evidence | `REVIEW` |
+| partial / bridge / proxy / mixed coverage | `REVIEW` |
+| positive but less than 80% required coverage | `REVIEW` |
+| missing required provider area or zero required coverage | `NEEDS_INPUT` |
+| error / blocked provider evidence | `BLOCKED` |
+
+The selected provider evidence result also adds a Look-through Coverage policy row so holdings / exposure board gaps cannot be hidden behind otherwise passing provider display rows.
+
+The contract adds no provider collection, JSONL registry, monitoring log auto write, user memo, preset, approval, order, or auto rebalance path.
+
+Implementation order now moves to 12-4 recheck comparison / review signal policy.
+
 ## Route Semantics
 
 | State | Meaning |

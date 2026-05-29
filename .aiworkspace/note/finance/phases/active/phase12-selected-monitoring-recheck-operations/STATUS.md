@@ -15,20 +15,22 @@ Completed:
 - Current Selected Dashboard / Final Review / runtime monitoring source ownership and gap audit
 - 12-2 `recheck-readiness-freshness-contract-v1`
 - Readiness, selected replay contract source, DB latest market date, and symbol freshness are now combined into a read-only operations preflight contract.
+- 12-3 `selected-provider-evidence-staleness-contract-v1`
+- Provider evidence now applies selected-monitoring policy to diagnostic status, coverage, coverage weight, freshness, required provider areas, and look-through coverage.
 
 Next:
 
-- 12-3 `selected-provider-evidence-staleness-contract-v1`
+- 12-4 `recheck-comparison-review-signal-policy-v1`
 
 ## Latest Decision
 
-12-2 added `selected_recheck_operations_preflight_v1`.
-Performance Recheck preflight now combines selected replay contract readiness and DB price freshness, and uses Final Review embedded contract before Current Candidate Registry fallback.
-Missing replay contracts, stale / missing price, and DB latest date errors cannot route to ready.
+12-3 added `selected_provider_evidence_staleness_contract_v1`.
+Selected Provider Evidence now downgrades stale actual evidence and partial / bridge / proxy coverage to review, and required operability / holdings / exposure gaps to needs-input.
+Provider evidence remains DB-backed and read-only.
 
 Immediate next target:
 
-- `selected-provider-evidence-staleness-contract-v1`
+- `recheck-comparison-review-signal-policy-v1`
 
 ## Storage Boundary Reminder
 

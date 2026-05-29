@@ -1233,6 +1233,16 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
                     "value": provider_metrics.get("needs_input_count", 0),
                     "tone": "warning" if provider_metrics.get("needs_input_count") else "neutral",
                 },
+                {
+                    "label": "Stale",
+                    "value": provider_metrics.get("stale_count", 0),
+                    "tone": "warning" if provider_metrics.get("stale_count") else "neutral",
+                },
+                {
+                    "label": "Partial",
+                    "value": provider_metrics.get("partial_coverage_count", 0),
+                    "tone": "warning" if provider_metrics.get("partial_coverage_count") else "neutral",
+                },
                 {"label": "Writes", "value": "Disabled", "tone": "neutral"},
             ]
         )

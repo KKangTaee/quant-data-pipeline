@@ -56,6 +56,7 @@ SELECTED_RECHECK_READINESS_SCHEMA_VERSION = "selected_recheck_readiness_v1"
 SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION = "selected_recheck_symbol_freshness_v1"
 SELECTED_RECHECK_OPERATIONS_PREFLIGHT_SCHEMA_VERSION = "selected_recheck_operations_preflight_v1"
 SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION = "selected_provider_evidence_v1"
+SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION = "selected_provider_evidence_staleness_contract_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -101,6 +102,13 @@ SELECTED_PROVIDER_EVIDENCE_ROUTE_LABELS = {
     "SELECTED_PROVIDER_REVIEW": "Provider 근거 검토 필요",
     "SELECTED_PROVIDER_NEEDS_DATA": "Provider DB 확인 필요",
     "SELECTED_PROVIDER_BLOCKED": "Provider 근거 차단",
+}
+_SELECTED_PROVIDER_REQUIRED_AREAS = {"ETF Operability", "ETF Holdings", "ETF Exposure"}
+_SELECTED_PROVIDER_STATUS_RANK = {
+    "PASS": 0,
+    "REVIEW": 1,
+    "NEEDS_INPUT": 2,
+    "BLOCKED": 3,
 }
 _TIMELINE_STATUS_RANK = {
     "OPTIONAL": 0,
@@ -2500,66 +2508,28 @@ def _selected_provider_symbol_weights(
 ) -> dict[str, Any]:
     """Resolve selected portfolio ETF weights for provider evidence without writing user state."""
 
-    raw_decision = dict(row.get("raw_decision") or row)
-    active_components = _active_components(raw_decision)
-    if candidate_rows_by_id is None:
-        try:
-            candidate_rows = _find_candidate_rows_by_registry_id()
-            candidate_load_error = ""
-        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
-            candidate_rows = {}
-            candidate_load_error = str(exc)
-    else:
-        candidate_rows = dict(candidate_rows_by_id)
-        candidate_load_error = ""
-
-    try:
-        from .candidate_library import build_candidate_replay_payload
-
-        replay_builder_error = ""
-    except Exception as exc:  # pragma: no cover - defensive import boundary
-        build_candidate_replay_payload = None  # type: ignore[assignment]
-        replay_builder_error = str(exc)
-
+    contract_evidence = _resolve_selected_recheck_contracts(row, candidate_rows_by_id=candidate_rows_by_id)
     symbol_weights: dict[str, float] = {}
     component_rows: list[dict[str, Any]] = []
-    valid_contract_count = 0
     fallback_contracts: list[str] = []
-    missing_contracts: list[str] = []
-    invalid_contracts: list[str] = []
 
-    for index, component in enumerate(active_components):
-        identity = _component_identity(component, index)
-        title = _clean_text(component.get("title") or identity)
-        registry_id = _clean_text(component.get("registry_id"), "")
+    for contract_row in list(contract_evidence.get("contracts") or []):
+        component = dict(contract_row.get("component") or {})
+        identity = _clean_text(contract_row.get("identity") or component.get("registry_id") or component.get("title"))
+        title = _clean_text(contract_row.get("title") or component.get("title") or identity)
+        registry_id = _clean_text(contract_row.get("registry_id") or component.get("registry_id"), "")
         component_weight = _optional_float(component.get("target_weight")) or 0.0
-        current_row = dict(candidate_rows.get(registry_id) or {}) if registry_id else {}
-        source = "candidate_replay_contract"
-        evidence = "Candidate replay contract provided portfolio tickers."
-        status = "PASS"
+        source = _clean_text(contract_row.get("source"), "unresolved")
+        evidence = _clean_text(contract_row.get("evidence"), "Selected replay contract provided portfolio tickers.")
+        status = "PASS" if contract_row.get("status") == "PASS" else "BLOCKED"
         tickers: list[str] = []
 
-        if not registry_id:
-            missing_contracts.append(f"{identity}: registry_id 없음")
-        elif not current_row:
-            missing_contracts.append(f"{identity}: current candidate row 없음")
-
-        if registry_id and current_row and build_candidate_replay_payload is not None:
-            try:
-                payload = build_candidate_replay_payload(current_row)
-                tickers = _provider_symbol_candidates_from_value(payload.get("tickers"))
-                if tickers:
-                    valid_contract_count += 1
-            except Exception as exc:
-                invalid_contracts.append(f"{identity}: {exc}")
-        elif registry_id and current_row and build_candidate_replay_payload is None:
-            invalid_contracts.append(f"{identity}: replay helper import 실패")
+        if contract_row.get("status") == "PASS":
+            payload = dict(contract_row.get("payload") or {})
+            tickers = _provider_symbol_candidates_from_value(payload.get("tickers"))
 
         if not tickers:
             tickers = _fallback_provider_symbols_from_component(component)
-            if not tickers and current_row:
-                contract = dict(current_row.get("contract") or {})
-                tickers = _provider_symbol_candidates_from_value(contract.get("tickers"))
             if tickers:
                 source = "selected_component_fallback"
                 status = "REVIEW"
@@ -2588,13 +2558,15 @@ def _selected_provider_symbol_weights(
     return {
         "symbol_weights": {symbol: round(weight, 4) for symbol, weight in sorted(symbol_weights.items()) if weight > 0.0},
         "component_rows": component_rows,
-        "active_component_count": len(active_components),
-        "valid_contract_count": valid_contract_count,
+        "active_component_count": contract_evidence.get("active_component_count", 0),
+        "valid_contract_count": contract_evidence.get("valid_contract_count", 0),
+        "embedded_contract_count": contract_evidence.get("embedded_contract_count", 0),
+        "candidate_registry_fallback_count": contract_evidence.get("candidate_registry_fallback_count", 0),
         "fallback_contract_count": len(fallback_contracts),
-        "missing_contracts": missing_contracts,
-        "invalid_contracts": invalid_contracts,
-        "candidate_load_error": candidate_load_error,
-        "replay_builder_error": replay_builder_error,
+        "missing_contracts": list(contract_evidence.get("missing_contracts") or []),
+        "invalid_contracts": list(contract_evidence.get("invalid_contracts") or []),
+        "candidate_load_error": contract_evidence.get("candidate_load_error", ""),
+        "replay_builder_error": contract_evidence.get("replay_builder_error", ""),
     }
 
 
@@ -2609,6 +2581,56 @@ def _selected_provider_status(value: Any) -> str:
     return "NEEDS_INPUT"
 
 
+def _provider_status_max(*statuses: str) -> str:
+    normalized = [status for status in statuses if status in _SELECTED_PROVIDER_STATUS_RANK]
+    if not normalized:
+        return "NEEDS_INPUT"
+    return max(normalized, key=lambda status: _SELECTED_PROVIDER_STATUS_RANK[status])
+
+
+def _provider_area_is_required(area: str) -> bool:
+    return area in _SELECTED_PROVIDER_REQUIRED_AREAS
+
+
+def _provider_freshness_status(area: str, freshness: Any) -> tuple[str, str]:
+    normalized = str(freshness or "").strip().lower()
+    if normalized in {"fresh", "current", "ready", "pass"}:
+        return "PASS", ""
+    if normalized in {"stale", "watch", "aging", "old", "review"}:
+        return "REVIEW", f"freshness={normalized}"
+    if normalized in {"error", "blocked"}:
+        return "BLOCKED", f"freshness={normalized}"
+    if _provider_area_is_required(area):
+        return "NEEDS_INPUT", f"freshness={normalized or 'missing'}"
+    return "REVIEW", f"freshness={normalized or 'missing'}"
+
+
+def _provider_coverage_status(
+    area: str,
+    *,
+    coverage: Any,
+    coverage_weight: float | None,
+) -> tuple[str, str]:
+    normalized = str(coverage or "").strip().lower()
+    if coverage_weight is not None and coverage_weight <= 0.0:
+        if _provider_area_is_required(area):
+            return "NEEDS_INPUT", f"coverage_weight={coverage_weight:.1f}%"
+        return "REVIEW", f"coverage_weight={coverage_weight:.1f}%"
+    if normalized in {"actual", "official", "provider_backed", "full"}:
+        if coverage_weight is not None and coverage_weight < 80.0:
+            return "REVIEW", f"coverage_weight={coverage_weight:.1f}%"
+        return "PASS", ""
+    if normalized in {"partial", "bridge", "proxy", "mixed"}:
+        return "REVIEW", f"coverage={normalized}"
+    if normalized in {"error", "blocked"}:
+        return "BLOCKED", f"coverage={normalized}"
+    if normalized in {"missing", "not_run", "not run", "-", ""}:
+        if _provider_area_is_required(area):
+            return "NEEDS_INPUT", f"coverage={normalized or 'missing'}"
+        return "REVIEW", f"coverage={normalized or 'missing'}"
+    return "REVIEW", f"coverage={normalized}"
+
+
 def _provider_evidence_next_action(status: str, *, area: str) -> str:
     if status == "PASS":
         return "Use this provider evidence as a current selected portfolio check."
@@ -2621,18 +2643,174 @@ def _provider_evidence_next_action(status: str, *, area: str) -> str:
 
 def _provider_evidence_row_from_display(row: dict[str, Any]) -> dict[str, Any]:
     area = _clean_text(row.get("Area"))
-    status = _selected_provider_status(row.get("Diagnostic Status"))
+    diagnostic_status = _selected_provider_status(row.get("Diagnostic Status"))
+    coverage_weight = _optional_float(row.get("Coverage Weight"))
+    coverage_status, coverage_reason = _provider_coverage_status(
+        area,
+        coverage=row.get("Coverage"),
+        coverage_weight=coverage_weight,
+    )
+    freshness_status, freshness_reason = _provider_freshness_status(area, row.get("Freshness"))
+    status = _provider_status_max(diagnostic_status, coverage_status, freshness_status)
+    policy_reasons = [
+        reason
+        for reason in [
+            f"diagnostic={_clean_text(row.get('Diagnostic Status'))}" if diagnostic_status != "PASS" else "",
+            coverage_reason,
+            freshness_reason,
+        ]
+        if reason
+    ]
     return {
         "Area": area,
         "Status": status,
         "Diagnostic Status": _clean_text(row.get("Diagnostic Status")),
         "Coverage": _clean_text(row.get("Coverage")),
-        "Coverage Weight": _optional_float(row.get("Coverage Weight")),
+        "Coverage Weight": coverage_weight,
         "Freshness": _clean_text(row.get("Freshness")),
         "As Of Range": _clean_text(row.get("As Of Range")),
         "Source Mix": _clean_text(row.get("Source Mix")),
         "Summary": _clean_text(row.get("Summary")),
+        "Policy Reason": "; ".join(policy_reasons) if policy_reasons else "fresh actual provider evidence",
         "Next Action": _provider_evidence_next_action(status, area=area),
+    }
+
+
+def _missing_selected_provider_area_rows(existing_areas: set[str]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for area in sorted(_SELECTED_PROVIDER_REQUIRED_AREAS - existing_areas):
+        rows.append(
+            {
+                "Area": area,
+                "Status": "NEEDS_INPUT",
+                "Diagnostic Status": "NOT_RUN",
+                "Coverage": "missing",
+                "Coverage Weight": 0.0,
+                "Freshness": "missing",
+                "As Of Range": "-",
+                "Source Mix": "-",
+                "Summary": "Required selected provider evidence area is missing from provider context.",
+                "Policy Reason": "required_provider_area_missing",
+                "Next Action": _provider_evidence_next_action("NEEDS_INPUT", area=area),
+            }
+        )
+    return rows
+
+
+def _provider_look_through_policy_row(board: dict[str, Any]) -> dict[str, Any]:
+    if not board:
+        return {
+            "Area": "Look-through Coverage",
+            "Status": "NEEDS_INPUT",
+            "Diagnostic Status": "NOT_RUN",
+            "Coverage": "missing",
+            "Coverage Weight": 0.0,
+            "Freshness": "-",
+            "As Of Range": "-",
+            "Source Mix": "-",
+            "Summary": "Look-through board is unavailable for selected provider evidence.",
+            "Policy Reason": "look_through_board_missing",
+            "Next Action": _provider_evidence_next_action("NEEDS_INPUT", area="Look-through Coverage"),
+        }
+
+    holdings_coverage = _optional_float(board.get("holdings_coverage_weight"))
+    exposure_coverage = _optional_float(board.get("exposure_coverage_weight"))
+    unknown_exposure = _optional_float(board.get("unknown_exposure_weight"))
+    top_holding = _optional_float(board.get("top_holding_weight"))
+    board_status = _selected_provider_status(board.get("status"))
+    policy_reasons: list[str] = []
+    coverage_values = [value for value in [holdings_coverage, exposure_coverage] if value is not None]
+    min_coverage = min(coverage_values) if coverage_values else None
+    coverage_status = "PASS"
+    if holdings_coverage is None or exposure_coverage is None:
+        coverage_status = "NEEDS_INPUT"
+        policy_reasons.append("look_through_coverage_missing")
+    elif holdings_coverage <= 0.0 or exposure_coverage <= 0.0:
+        coverage_status = "NEEDS_INPUT"
+        policy_reasons.append(
+            f"holdings={holdings_coverage:.1f}% / exposure={exposure_coverage:.1f}%"
+        )
+    elif holdings_coverage < 80.0 or exposure_coverage < 80.0:
+        coverage_status = "REVIEW"
+        policy_reasons.append(
+            f"holdings={holdings_coverage:.1f}% / exposure={exposure_coverage:.1f}%"
+        )
+    if unknown_exposure is not None and unknown_exposure > 20.0:
+        coverage_status = _provider_status_max(coverage_status, "REVIEW")
+        policy_reasons.append(f"unknown_exposure={unknown_exposure:.1f}%")
+    if top_holding is not None and top_holding > 25.0:
+        coverage_status = _provider_status_max(coverage_status, "REVIEW")
+        policy_reasons.append(f"top_holding={top_holding:.1f}%")
+    status = _provider_status_max(board_status, coverage_status)
+    if board_status != "PASS":
+        policy_reasons.append(f"board_status={board.get('status') or '-'}")
+
+    return {
+        "Area": "Look-through Coverage",
+        "Status": status,
+        "Diagnostic Status": _clean_text(board.get("status")),
+        "Coverage": "selected_look_through",
+        "Coverage Weight": min_coverage,
+        "Freshness": "-",
+        "As Of Range": "-",
+        "Source Mix": "provider_holdings / provider_exposure",
+        "Summary": _clean_text(board.get("summary") or "Selected look-through coverage policy check."),
+        "Policy Reason": "; ".join(policy_reasons) if policy_reasons else "holdings and exposure coverage are sufficient",
+        "Next Action": _provider_evidence_next_action(status, area="Look-through Coverage"),
+    }
+
+
+def _selected_provider_staleness_contract(
+    *,
+    route: str,
+    rows: list[dict[str, Any]],
+    contract_evidence: dict[str, Any],
+    max_provider_staleness_days: int,
+) -> dict[str, Any]:
+    stale_count = sum(1 for row in rows if str(row.get("Freshness") or "").strip().lower() == "stale")
+    missing_freshness_count = sum(
+        1
+        for row in rows
+        if str(row.get("Freshness") or "").strip().lower() in {"missing", "not_run", "not run"}
+    )
+    partial_coverage_count = sum(
+        1
+        for row in rows
+        if str(row.get("Coverage") or "").strip().lower() in {"partial", "bridge", "proxy", "mixed"}
+    )
+    missing_coverage_count = sum(
+        1
+        for row in rows
+        if str(row.get("Coverage") or "").strip().lower() in {"missing", "not_run", "not run", "error"}
+        or (_optional_float(row.get("Coverage Weight")) is not None and (_optional_float(row.get("Coverage Weight")) or 0.0) <= 0.0)
+    )
+    required_area_status = {
+        row.get("Area"): row.get("Status")
+        for row in rows
+        if str(row.get("Area") or "") in _SELECTED_PROVIDER_REQUIRED_AREAS
+    }
+    return {
+        "schema_version": SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION,
+        "route": route,
+        "required_areas": sorted(_SELECTED_PROVIDER_REQUIRED_AREAS),
+        "required_area_status": required_area_status,
+        "stale_count": stale_count,
+        "missing_freshness_count": missing_freshness_count,
+        "partial_coverage_count": partial_coverage_count,
+        "missing_coverage_count": missing_coverage_count,
+        "fallback_contract_count": int(contract_evidence.get("fallback_contract_count") or 0),
+        "embedded_contract_count": int(contract_evidence.get("embedded_contract_count") or 0),
+        "candidate_registry_fallback_count": int(contract_evidence.get("candidate_registry_fallback_count") or 0),
+        "max_provider_staleness_days": max_provider_staleness_days,
+        "execution_boundary": {
+            "db_write": False,
+            "registry_write": False,
+            "provider_collection": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
     }
 
 
@@ -2674,9 +2852,16 @@ def build_selected_portfolio_provider_evidence(
                 "As Of Range": "-",
                 "Source Mix": "-",
                 "Summary": "; ".join(contract_blockers[:3]) if contract_blockers else "No selected provider symbols were resolved.",
+                "Policy Reason": "selected_provider_symbol_contract_blocked",
                 "Next Action": "Fix selected component replay contracts before checking provider evidence.",
             }
         ]
+        staleness_contract = _selected_provider_staleness_contract(
+            route="SELECTED_PROVIDER_BLOCKED",
+            rows=rows,
+            contract_evidence=contract_evidence,
+            max_provider_staleness_days=max_provider_staleness_days,
+        )
         return {
             "schema_version": SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION,
             "route": "SELECTED_PROVIDER_BLOCKED",
@@ -2687,16 +2872,23 @@ def build_selected_portfolio_provider_evidence(
             "component_rows": contract_component_rows,
             "provider_context": {},
             "look_through_board": {},
+            "staleness_contract": staleness_contract,
             "metrics": {
                 "area_count": len(rows),
                 "pass_count": 0,
                 "review_count": 0,
                 "needs_input_count": 0,
                 "blocked_count": 1,
+                "stale_count": staleness_contract.get("stale_count", 0),
+                "missing_freshness_count": staleness_contract.get("missing_freshness_count", 0),
+                "partial_coverage_count": staleness_contract.get("partial_coverage_count", 0),
+                "missing_coverage_count": staleness_contract.get("missing_coverage_count", 0),
                 "provider_symbol_count": 0,
                 "total_symbol_weight": 0.0,
                 "active_component_count": contract_evidence.get("active_component_count", 0),
                 "valid_contract_count": contract_evidence.get("valid_contract_count", 0),
+                "embedded_contract_count": contract_evidence.get("embedded_contract_count", 0),
+                "candidate_registry_fallback_count": contract_evidence.get("candidate_registry_fallback_count", 0),
                 "fallback_contract_count": contract_evidence.get("fallback_contract_count", 0),
                 "max_provider_staleness_days": max_provider_staleness_days,
             },
@@ -2775,11 +2967,21 @@ def build_selected_portfolio_provider_evidence(
                 "As Of Range": "-",
                 "Source Mix": "-",
                 "Summary": context_error,
+                "Policy Reason": "provider_context_error",
                 "Next Action": "Check provider loader / DB connectivity, then refresh this view.",
             }
         )
     else:
-        rows.extend(_provider_evidence_row_from_display(dict(item or {})) for item in list(context.get("display_rows") or []))
+        provider_rows = [
+            _provider_evidence_row_from_display(dict(item or {}))
+            for item in list(context.get("display_rows") or [])
+        ]
+        existing_areas = {str(item.get("Area") or "") for item in provider_rows}
+        rows.extend(provider_rows)
+        rows.extend(_missing_selected_provider_area_rows(existing_areas))
+
+    board = dict(context.get("look_through_board") or {})
+    rows.append(_provider_look_through_policy_row(board))
 
     pass_count = sum(1 for item in rows if item.get("Status") == "PASS")
     review_count = sum(1 for item in rows if item.get("Status") == "REVIEW")
@@ -2798,7 +3000,12 @@ def build_selected_portfolio_provider_evidence(
         route = "SELECTED_PROVIDER_READY"
         conclusion = "selected portfolio의 provider / holdings / exposure 근거가 현재 읽기 기준을 통과했습니다."
 
-    board = dict(context.get("look_through_board") or {})
+    staleness_contract = _selected_provider_staleness_contract(
+        route=route,
+        rows=rows,
+        contract_evidence=contract_evidence,
+        max_provider_staleness_days=max_provider_staleness_days,
+    )
     return {
         "schema_version": SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION,
         "route": route,
@@ -2809,16 +3016,23 @@ def build_selected_portfolio_provider_evidence(
         "component_rows": contract_component_rows,
         "provider_context": context,
         "look_through_board": board,
+        "staleness_contract": staleness_contract,
         "metrics": {
             "area_count": len(rows),
             "pass_count": pass_count,
             "review_count": review_count,
             "needs_input_count": needs_input_count,
             "blocked_count": blocked_count,
+            "stale_count": staleness_contract.get("stale_count", 0),
+            "missing_freshness_count": staleness_contract.get("missing_freshness_count", 0),
+            "partial_coverage_count": staleness_contract.get("partial_coverage_count", 0),
+            "missing_coverage_count": staleness_contract.get("missing_coverage_count", 0),
             "provider_symbol_count": len(symbol_weights),
             "total_symbol_weight": round(sum(float(value or 0.0) for value in symbol_weights.values()), 4),
             "active_component_count": contract_evidence.get("active_component_count", 0),
             "valid_contract_count": contract_evidence.get("valid_contract_count", 0),
+            "embedded_contract_count": contract_evidence.get("embedded_contract_count", 0),
+            "candidate_registry_fallback_count": contract_evidence.get("candidate_registry_fallback_count", 0),
             "fallback_contract_count": contract_evidence.get("fallback_contract_count", 0),
             "max_provider_staleness_days": max_provider_staleness_days,
             "look_through_status": board.get("status"),

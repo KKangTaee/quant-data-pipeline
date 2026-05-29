@@ -6036,3 +6036,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - stale / missing price, missing replay contract, DB latest date error는 ready가 아니며 각각 review / needs data / blocked로 드러나야 한다
 - Follow-up:
   - `selected_recheck_operations_preflight_v1`을 구현했고, 다음은 selected provider evidence staleness / coverage contract다
+
+### 2026-05-29 - Selected provider evidence의 stale / partial 상태를 PASS에서 분리한다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Selected Dashboard의 provider evidence가 오래되었거나 부분 coverage일 때도 충분한 근거처럼 보이는 문제를 차단해야 함
+- Analysis result:
+  - freshness date, source type, coverage mode, coverage weight, required evidence area를 하나의 staleness contract로 묶는 것이 가장 작은 read-only 강화 단위다
+  - missing required provider area와 partial / stale evidence는 투자 가능 근거가 아니라 review 또는 needs input으로 표시되어야 한다
+- Follow-up:
+  - `selected_provider_evidence_staleness_contract_v1`을 구현했고, 다음은 recheck comparison review signal policy다

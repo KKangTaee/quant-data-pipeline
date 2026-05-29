@@ -4222,3 +4222,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/recheck-readiness-freshness-contract-v1/`에서 Selected Dashboard recheck operations preflight를 구현했다.
   - Final Review embedded replay contract를 우선 사용하고 Current Candidate Registry를 fallback으로 쓰는 resolver를 추가했다.
   - 다음 작업은 `selected-provider-evidence-staleness-contract-v1`이며 `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`에서 이어서 본다.
+- Phase 12 Selected Provider Evidence Staleness Contract V1:
+  - `.aiworkspace/note/finance/tasks/active/selected-provider-evidence-staleness-contract-v1/`에서 provider evidence freshness / coverage policy를 구현했다.
+  - stale actual evidence, partial / missing look-through coverage, missing required provider areas가 PASS처럼 보이지 않도록 Dashboard와 service contract를 강화했다.
+  - 다음 작업은 `recheck-comparison-review-signal-policy-v1`이며 Phase 12 문서에서 12-4로 이어진다.
