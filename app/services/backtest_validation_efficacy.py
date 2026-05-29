@@ -214,6 +214,41 @@ def _benchmark_parity_row(validation: dict[str, Any], checks: list[dict[str, Any
     )
 
 
+def _temporal_validation_evidence(validation: dict[str, Any]) -> dict[str, Any]:
+    evidence = dict(validation.get("temporal_validation") or validation.get("walkforward_validation") or {})
+    if evidence:
+        return evidence
+    curve_evidence = dict(validation.get("curve_evidence") or {})
+    return dict(curve_evidence.get("temporal_validation") or curve_evidence.get("walkforward_validation") or {})
+
+
+def _walkforward_temporal_row(validation: dict[str, Any]) -> dict[str, Any] | None:
+    evidence = _temporal_validation_evidence(validation)
+    if not evidence:
+        return None
+    metrics = dict(evidence.get("metrics") or {})
+    status = _status(evidence.get("status"), default="NEEDS_INPUT")
+    current = (
+        f"{evidence.get('status') or 'NOT_RUN'} / "
+        f"windows={metrics.get('window_count', '-')} / "
+        f"source={metrics.get('portfolio_curve_source') or '-'}"
+    )
+    detail = (
+        f"worst excess={metrics.get('worst_rolling_excess_return', '-')} / "
+        f"negative share={metrics.get('negative_excess_window_share', '-')} / "
+        f"drawdown gap={metrics.get('worst_drawdown_gap', '-')}"
+    )
+    return _row(
+        criteria="Walk-forward temporal validation",
+        status=status,
+        current=current,
+        evidence=evidence.get("summary") or detail,
+        next_action=evidence.get("next_action")
+        or ("추가 조치 없음" if status == "PASS" else "walk-forward / benchmark-aligned evidence를 보강합니다."),
+        meaning="rolling window 기준으로 benchmark 대비 성과와 drawdown gap이 유지되는지 확인합니다.",
+    )
+
+
 def _provider_display_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [dict(row or {}) for row in _as_list(validation.get("provider_coverage_display_rows")) if isinstance(row, dict)]
     if rows:
@@ -438,6 +473,9 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
         _survivorship_row(validation),
         _execution_boundary_row(validation),
     ]
+    temporal_row = _walkforward_temporal_row(validation)
+    if temporal_row is not None:
+        rows.insert(5, temporal_row)
     route = _route_from_rows(rows)
     status_counts = {
         status: sum(1 for row in rows if row.get("Status") == status)

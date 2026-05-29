@@ -56,6 +56,7 @@ from app.services.backtest_practical_validation_stress_sensitivity import (
     _stress_window_rows,
     build_robustness_lab_board,
 )
+from app.services.backtest_temporal_validation import build_walkforward_validation
 from finance.loaders import load_price_history
 
 
@@ -775,6 +776,15 @@ def build_practical_validation_result(
         window_months=int(thresholds.get("rolling_window_months") or 36),
         mdd_review_line=float(thresholds.get("mdd_review_line") or -25.0),
     )
+    walkforward_validation = build_walkforward_validation(
+        portfolio_curve,
+        benchmark_curve,
+        portfolio_curve_source=curve_context.get("portfolio_curve_source"),
+        benchmark_curve_source=dict(curve_context.get("benchmark_meta") or {}).get("source")
+        or dict(curve_context.get("benchmark_meta") or {}).get("status"),
+        benchmark_parity=benchmark_parity,
+        window_months=int(thresholds.get("rolling_window_months") or 36),
+    )
 
     input_status = "BLOCKED" if hard_blockers else "REVIEW" if review_gaps else "PASS"
     diagnostics: list[dict[str, Any]] = [
@@ -1400,6 +1410,7 @@ def build_practical_validation_result(
             "benchmark_parity": benchmark_parity,
             "provider_coverage": provider_context,
             "data_coverage_context": data_coverage_context,
+            "temporal_validation": walkforward_validation,
         },
         "provider_coverage": provider_context,
         "provider_coverage_display_rows": provider_display_rows,
@@ -1435,6 +1446,7 @@ def build_practical_validation_result(
             "benchmark_parity_status": benchmark_parity.get("status"),
             "benchmark_parity": benchmark_parity.get("metrics") or {},
             "rolling_validation": rolling_evidence.get("metrics") or {},
+            "walkforward_validation": dict(walkforward_validation.get("metrics") or {}),
             "runtime_recheck_status": replay_row.get("status") or "NOT_RUN",
             "runtime_recheck_mode": replay_row.get("recheck_mode"),
             "runtime_recheck_extension_days": replay_row.get("extension_days"),
@@ -1537,6 +1549,8 @@ def build_practical_validation_result(
         "alternative_baseline_rows": alternative_rows,
         "sensitivity_rows": sensitivity_rows,
         "rolling_validation": rolling_evidence,
+        "temporal_validation": walkforward_validation,
+        "walkforward_validation": walkforward_validation,
         "curve_evidence": {
             "portfolio_curve_source": curve_context.get("portfolio_curve_source"),
             "portfolio_curve_rows": len(portfolio_curve),
@@ -1548,6 +1562,7 @@ def build_practical_validation_result(
             "benchmark_parity": benchmark_parity,
             "replay_attempt": replay_row,
             "period_coverage": period_coverage,
+            "temporal_validation": walkforward_validation,
         },
         "final_review_handoff": {
             "route": route,

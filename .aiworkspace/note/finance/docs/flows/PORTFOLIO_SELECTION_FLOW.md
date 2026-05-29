@@ -83,7 +83,7 @@ PORTFOLIO_SELECTION_SOURCES
 |---|---|
 | Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/pages/backtest.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
-| Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
+| Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
 | Final Review | `app/web/backtest_final_review*.py`, `app/services/backtest_evidence_read_model.py` |
 | Selected Dashboard | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/final_selected_portfolios.py` |
 | Selection V2 persistence | `app/runtime/portfolio_selection_v2.py` |

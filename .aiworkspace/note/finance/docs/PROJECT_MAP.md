@@ -52,6 +52,7 @@ Last Verified: 2026-05-29
 | Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
 | Practical Validation curve context service helper | `app/services/backtest_practical_validation_curve_context.py` |
 | Practical Validation stress/sensitivity service helper | `app/services/backtest_practical_validation_stress_sensitivity.py` |
+| Backtest temporal validation service | `app/services/backtest_temporal_validation.py` |
 | Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
 | Practical Validation efficacy audit service | `app/services/backtest_validation_efficacy.py` |
 | Data coverage audit service | `app/services/backtest_data_coverage_audit.py` |
@@ -80,11 +81,12 @@ Last Verified: 2026-05-29
 | `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder / source component table helper |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free compact curve snapshot, result curve normalize, DB price proxy curve, component curve combination, window perturbation / monthly returns helper |
 | `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit, Robustness Lab board helper |
+| `app/services/backtest_temporal_validation.py` | Streamlit-free benchmark-aligned temporal validation helper. Walk-forward rolling excess return, drawdown gap, curve source strength, and compact storage boundary evidence를 만든다 |
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics orchestration, component context assembly, 12개 diagnostic result 생성, public compatibility export |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
-| `app/services/backtest_validation_efficacy.py` | Streamlit-free validation efficacy audit read model. Existing compact evidence를 읽어 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_validation_efficacy.py` | Streamlit-free validation efficacy audit read model. Existing compact evidence를 읽어 runtime replay, period coverage, benchmark parity, walk-forward temporal validation, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_data_coverage_audit.py` | Streamlit-free data coverage audit read model. DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 compact `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, look-through board, Robustness Lab board, provider gaps display, provider gap / replay service result session state handoff |

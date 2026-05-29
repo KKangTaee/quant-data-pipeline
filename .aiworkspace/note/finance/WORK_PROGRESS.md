@@ -17,13 +17,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `walkforward-split-contract-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `oos-holdout-validation-contract-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/walkforward-split-contract-v1/`.
+- Added `app/services/backtest_temporal_validation.py` and connected compact walk-forward evidence to Practical Validation / Validation Efficacy Audit.
+- Missing / short / proxy-only walk-forward evidence is not treated as PASS; no new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Next task is `oos-holdout-validation-contract-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/walkforward-oos-source-map-v1/`.
 - Source map found reusable Practical Validation curve / benchmark / replay plumbing and existing runtime rolling / OOS metadata.
 - Main gap: temporal evidence is not yet an explicit Validation Efficacy / Final Review gate row; next task is `walkforward-split-contract-v1`.

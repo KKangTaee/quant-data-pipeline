@@ -224,6 +224,7 @@ import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_stress_sensitivity
 import app.services.backtest_practical_validation_source
+import app.services.backtest_temporal_validation
 import app.services.backtest_validation_efficacy
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_curve") is None)
@@ -282,6 +283,17 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
                         "metrics": {"coverage_ratio": 1.0, "same_period": True, "same_frequency": True},
                     },
                 },
+                "temporal_validation": {
+                    "status": "PASS",
+                    "summary": "36M walk-forward 12 windows: worst excess 2.00%.",
+                    "metrics": {
+                        "window_count": 12,
+                        "worst_rolling_excess_return": 0.02,
+                        "negative_excess_window_share": 0.0,
+                        "worst_drawdown_gap": 0.0,
+                        "portfolio_curve_source": "actual_runtime_replay",
+                    },
+                },
                 "provider_coverage_display_rows": [
                     {"Area": "ETF Operability", "Diagnostic Status": "PASS", "Freshness": "fresh"},
                     {"Area": "ETF Holdings", "Diagnostic Status": "PASS", "Freshness": "fresh"},
@@ -298,10 +310,92 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         )
 
         self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
-        self.assertEqual(audit["metrics"]["pass"], 10)
+        self.assertEqual(audit["metrics"]["pass"], 11)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_walkforward_temporal_validation_uses_benchmark_aligned_windows(self) -> None:
+        from app.services.backtest_temporal_validation import build_walkforward_validation
+
+        dates = pd.date_range("2020-01-31", periods=60, freq="ME")
+        portfolio = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.012 ** idx) for idx in range(len(dates))],
+            }
+        )
+        benchmark = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.006 ** idx) for idx in range(len(dates))],
+            }
+        )
+        portfolio["Total Return"] = portfolio["Total Balance"].pct_change().fillna(0.0)
+        benchmark["Total Return"] = benchmark["Total Balance"].pct_change().fillna(0.0)
+
+        evidence = build_walkforward_validation(
+            portfolio,
+            benchmark,
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            benchmark_parity={"status": "PASS"},
+            window_months=12,
+        )
+
+        self.assertEqual(evidence["schema_version"], "walkforward_validation_contract_v1")
+        self.assertEqual(evidence["status"], "PASS")
+        self.assertGreater(evidence["metrics"]["window_count"], 3)
+        self.assertGreaterEqual(evidence["metrics"]["worst_rolling_excess_return"], 0.0)
+        self.assertFalse(evidence["registry_write"])
+        self.assertFalse(evidence["memo_persistence"])
+
+    def test_walkforward_temporal_validation_does_not_pass_short_or_proxy_only_evidence(self) -> None:
+        from app.services.backtest_temporal_validation import build_walkforward_validation
+
+        short_dates = pd.date_range("2023-01-31", periods=10, freq="ME")
+        short_curve = pd.DataFrame(
+            {
+                "Date": short_dates,
+                "Total Balance": [100.0 + idx for idx in range(len(short_dates))],
+                "Total Return": [0.0] + [0.01] * (len(short_dates) - 1),
+            }
+        )
+        short_evidence = build_walkforward_validation(
+            short_curve,
+            short_curve,
+            portfolio_curve_source="actual_runtime_replay",
+            benchmark_curve_source="actual_runtime_replay",
+            benchmark_parity={"status": "PASS"},
+            window_months=12,
+        )
+
+        self.assertEqual(short_evidence["status"], "NEEDS_INPUT")
+
+        dates = pd.date_range("2020-01-31", periods=60, freq="ME")
+        proxy_portfolio = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.012 ** idx) for idx in range(len(dates))],
+            }
+        )
+        proxy_benchmark = pd.DataFrame(
+            {
+                "Date": dates,
+                "Total Balance": [100.0 * (1.006 ** idx) for idx in range(len(dates))],
+            }
+        )
+        proxy_evidence = build_walkforward_validation(
+            proxy_portfolio,
+            proxy_benchmark,
+            portfolio_curve_source="component_curve_weighted_proxy",
+            benchmark_curve_source="db_price_proxy",
+            benchmark_parity={"status": "PASS"},
+            window_months=12,
+        )
+
+        self.assertEqual(proxy_evidence["status"], "REVIEW")
+        self.assertTrue(proxy_evidence["metrics"]["proxy_evidence"])
 
     def test_missing_runtime_and_provider_evidence_are_not_passed(self) -> None:
         from app.services.backtest_validation_efficacy import (
