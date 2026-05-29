@@ -27,6 +27,7 @@
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
 - 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers redesign - PASS; `데이터 갱신` command surface rendered as HTML, manual / auto modes worked, countdown stayed dark-theme aligned, console errors 0. Returned mode to manual after smoke.
 - 2026-05-30: Restarted Streamlit on `http://localhost:8501`, browser smoke auto-refresh toggle - PASS; compact timing panel showed remaining time and next due time, console errors 0. Toggle was turned back off after smoke.
 - 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 14 tests.
@@ -34,3 +35,7 @@
 - 2026-05-30: `git diff --check` - PASS.
 - 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers - PASS; separate top auto panel absent, `Data Refresh` shows manual/auto modes, auto mode renders second-by-second countdown/progress and no console errors. Returned mode to manual after smoke.
 - 2026-05-30: Re-ran `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` and `uv run python -m unittest tests.test_service_contracts` after removing obsolete top-panel helper - PASS, 75 tests.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.

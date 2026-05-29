@@ -9,3 +9,4 @@
 - The cadence bar represents elapsed time toward the next 5-minute refresh opportunity, not provider fetch progress.
 - The separate top Overview auto-refresh panel was removed after user feedback; manual and browser-auto refresh now share one Market Movers refresh surface.
 - The countdown / cadence bar updates every second in browser-side JS, while provider collection still goes through the 5-minute cadence guard.
+- UI stability means preserving the investment research workflow and data guardrails, not repeating the same `container / badge / card` visual pattern. Market Movers `데이터 갱신` should behave like a command surface, with internal run details hidden behind an expander.

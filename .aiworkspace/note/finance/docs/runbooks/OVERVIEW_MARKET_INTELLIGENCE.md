@@ -39,10 +39,10 @@ http://localhost:8501
 
 2. `Workspace > Overview > Market Movers`
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
-   - daily period의 `Data Refresh` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
+   - daily period의 `데이터 갱신` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
    - `수동 갱신`에서는 `일중 스냅샷 갱신`을 눌러 새 snapshot을 저장하고, `화면 새로고침`으로 stored DB state를 다시 읽는다.
    - `자동 갱신`은 현재 `S&P 500` + `Daily`에서만 활성화되며, Overview가 열려 있는 브라우저 세션에서 `browser_safe` profile을 5분 cadence 조건으로 확인한다.
-   - refresh bar에서 Universe, Mode, Coverage %, 다음 확인, recommended action을 확인한다.
+   - refresh command surface에서 현재 상태, Universe, Mode, Coverage %, 다음 확인을 먼저 확인하고, 자동 실행 상세는 `자동 갱신 세부 정보`를 펼쳐 본다.
    - `Rank` 탭에서 symbol-level return ranking을 확인한다.
    - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
@@ -184,7 +184,7 @@ PY
 
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
-- Market Movers daily `Data Refresh` panel shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.
+- Market Movers daily `데이터 갱신` panel shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.
 - Market Movers `자동 갱신` is limited to S&P 500 Daily browser sessions; Top1000 / Top2000 remain manual unless a broader profile is explicitly added later.
 - Market Movers refresh results expose `Snapshot Diagnostics` with snapshot time, rows written, failed count, method, and provider diagnostics when available.
 - Market Movers displays both `Rank` and `Sector Pulse` chart tabs.

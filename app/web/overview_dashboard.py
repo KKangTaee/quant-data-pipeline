@@ -923,54 +923,6 @@ def _should_run_browser_auto_refresh_check(
     return False
 
 
-def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at: str | None) -> list[dict[str, Any]]:
-    if not summary:
-        return [
-            {
-                "title": "Auto Refresh",
-                "value": "대기 중",
-                "detail": "토글을 켜면 Overview가 열려 있는 동안 5분마다 S&P 500 스냅샷 갱신 조건을 확인합니다.",
-                "tone": "neutral",
-            },
-            {"title": "Last Check", "value": "-", "detail": "아직 브라우저 세션 자동 확인 기록이 없습니다.", "tone": "neutral"},
-            {"title": "Jobs", "value": "-", "detail": "첫 자동 확인을 기다리는 중입니다.", "tone": "neutral"},
-        ]
-
-    status = str(summary.get("status") or "-")
-    jobs_due = summary.get("jobs_due")
-    jobs_run = summary.get("jobs_run")
-    result_messages = [
-        str(result.get("message") or result.get("status") or "")
-        for result in (summary.get("results") or [])
-        if isinstance(result, dict)
-    ]
-    detail = (
-        result_messages[0]
-        if result_messages and status in {"failed", "partial_success"}
-        else str(summary.get("message") or _browser_auto_refresh_completion_label(summary))
-    )
-    return [
-        {
-            "title": "Auto Refresh",
-            "value": _auto_refresh_status_label(status),
-            "detail": detail,
-            "tone": _status_tone(status),
-        },
-        {
-            "title": "Last Check",
-            "value": checked_at or summary.get("finished_at") or "-",
-            "detail": f"Profile: {summary.get('profile') or BROWSER_AUTO_REFRESH_PROFILE}",
-            "tone": "neutral",
-        },
-        {
-            "title": "Jobs",
-            "value": f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}",
-            "detail": "이번 브라우저 자동 확인에서 실행 대상 / 실제 실행 수입니다.",
-            "tone": "positive" if jobs_run else "neutral",
-        },
-    ]
-
-
 def _browser_auto_refresh_completion_label(summary: dict[str, Any]) -> str:
     status = str(summary.get("status") or "-")
     if status == "success":
@@ -1001,16 +953,56 @@ def _render_browser_auto_refresh_countdown(
     component_id = f"overview-refresh-countdown-{abs(hash(key_suffix))}"
     components.html(
         f"""
-        <div id="{component_id}" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;background:#ffffff;">
+        <style>
+          html, body {{
+            margin: 0;
+            background: transparent;
+            color-scheme: light dark;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }}
+          .ov-auto-countdown {{
+            border: 1px solid rgba(100, 116, 139, 0.24);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: rgba(148, 163, 184, 0.10);
+          }}
+          .ov-auto-countdown-title {{ font-weight: 700; color: #111827; }}
+          .ov-auto-countdown-detail {{ font-size: 0.82rem; color: #64748b; margin-top: 2px; }}
+          .ov-auto-countdown-due {{ font-size: 0.8rem; color: #475569; }}
+          .ov-auto-countdown-track {{
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(100, 116, 139, 0.18);
+            margin-top: 9px;
+            overflow: hidden;
+          }}
+          .ov-auto-countdown-bar {{
+            height: 100%;
+            width: {progress_pct}%;
+            background: #0f766e;
+            border-radius: 999px;
+            transition: width 0.25s linear;
+          }}
+          @media (prefers-color-scheme: dark) {{
+            .ov-auto-countdown {{
+              border-color: rgba(148, 163, 184, 0.28);
+              background: rgba(148, 163, 184, 0.08);
+            }}
+            .ov-auto-countdown-title {{ color: #f8fafc; }}
+            .ov-auto-countdown-detail, .ov-auto-countdown-due {{ color: #cbd5e1; }}
+            .ov-auto-countdown-track {{ background: rgba(203, 213, 225, 0.16); }}
+          }}
+        </style>
+        <div id="{component_id}" class="ov-auto-countdown">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
-              <div data-countdown-title style="font-weight:700;color:#111827;">{escape(title)}</div>
-              <div style="font-size:0.86rem;color:#64748b;margin-top:2px;">{escape(detail)}</div>
+              <div data-countdown-title class="ov-auto-countdown-title">{escape(title)}</div>
+              <div class="ov-auto-countdown-detail">{escape(detail)}</div>
             </div>
-            <div style="font-size:0.84rem;color:#475569;">다음 가능 시각: {escape(next_due_at)}</div>
+            <div class="ov-auto-countdown-due">다음 가능 시각: {escape(next_due_at)}</div>
           </div>
-          <div style="height:8px;border-radius:999px;background:#e5e7eb;margin-top:10px;overflow:hidden;">
-            <div data-countdown-bar style="height:100%;width:{progress_pct}%;background:#0f766e;border-radius:999px;transition:width 0.25s linear;"></div>
+          <div class="ov-auto-countdown-track">
+            <div data-countdown-bar class="ov-auto-countdown-bar"></div>
           </div>
         </div>
         <script>
@@ -1055,7 +1047,7 @@ def _render_browser_auto_refresh_countdown(
         }})();
         </script>
         """,
-        height=116,
+        height=86,
     )
 
 
@@ -1073,20 +1065,20 @@ def _render_browser_auto_refresh_timing(
 
     progress_pct = int(timing.get("progress_pct") or 0)
     st.markdown(
-        f"""
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin:4px 0 14px 0;background:#ffffff;">
+        _market_movers_ui_css()
+        + f"""
+<div class="ov-mm-auto-static">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
-              <div style="font-weight:700;color:#111827;">{escape(str(timing["title"]))}</div>
-              <div style="font-size:0.86rem;color:#64748b;margin-top:2px;">{escape(str(timing["detail"]))}</div>
+              <div class="ov-mm-auto-static-title">{escape(str(timing["title"]))}</div>
+              <div class="ov-mm-auto-static-detail">{escape(str(timing["detail"]))}</div>
             </div>
-            <div style="font-size:0.84rem;color:#475569;">다음 가능 시각: {escape(str(timing["next_due_at"]))}</div>
+            <div class="ov-mm-auto-static-due">다음 가능 시각: {escape(str(timing["next_due_at"]))}</div>
           </div>
-          <div style="height:8px;border-radius:999px;background:#e5e7eb;margin-top:10px;overflow:hidden;">
-            <div style="height:100%;width:{progress_pct}%;background:#0f766e;border-radius:999px;"></div>
+          <div class="ov-mm-auto-static-track">
+            <div class="ov-mm-auto-static-bar" style="width:{progress_pct}%;"></div>
           </div>
-        </div>
-        """,
+        </div>""",
         unsafe_allow_html=True,
     )
 
@@ -1143,28 +1135,209 @@ def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> 
     return int(stale_minutes) >= MARKET_INTRADAY_REFRESH_MINUTES
 
 
-def _render_refresh_state_dot(*, color: str, label: str, detail: str) -> None:
+def _market_movers_ui_css() -> str:
+    return """
+<style>
+.ov-mm-toolbar-label {
+  margin: 0.2rem 0 0.45rem 0;
+  color: rgba(100, 116, 139, 0.95);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.ov-mm-refresh-head {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(280px, 2fr);
+  gap: 1rem;
+  align-items: center;
+  padding: 0.1rem 0 0.85rem 0;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
+}
+.ov-mm-refresh-title {
+  color: inherit;
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.ov-mm-refresh-subtitle {
+  margin-top: 0.22rem;
+  color: rgba(100, 116, 139, 0.95);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.ov-mm-state-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ov-mm-state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  padding: 0.34rem 0.64rem;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  background: rgba(148, 163, 184, 0.10);
+}
+.ov-mm-state-dot {
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 999px;
+  background: var(--ov-mm-state-color, #64748b);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-mm-state-color, #64748b) 18%, transparent);
+}
+.ov-mm-state-label {
+  color: inherit;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.ov-mm-state-detail {
+  color: rgba(100, 116, 139, 0.95);
+  font-size: 0.82rem;
+}
+.ov-mm-chip-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.ov-mm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 1.7rem;
+  padding: 0.25rem 0.52rem;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.20);
+  background: rgba(148, 163, 184, 0.08);
+  color: rgba(100, 116, 139, 0.98);
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+.ov-mm-chip strong {
+  color: inherit;
+  font-weight: 750;
+}
+.ov-mm-auto-static {
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin: 0.35rem 0 0.45rem 0;
+  background: rgba(148, 163, 184, 0.08);
+}
+.ov-mm-auto-static-title {
+  font-weight: 750;
+  color: inherit;
+}
+.ov-mm-auto-static-detail,
+.ov-mm-auto-static-due {
+  color: rgba(100, 116, 139, 0.95);
+  font-size: 0.82rem;
+}
+.ov-mm-auto-static-detail {
+  margin-top: 0.15rem;
+}
+.ov-mm-auto-static-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.18);
+  margin-top: 0.55rem;
+  overflow: hidden;
+}
+.ov-mm-auto-static-bar {
+  height: 100%;
+  background: #0f766e;
+  border-radius: 999px;
+}
+.ov-mm-auto-message {
+  color: rgba(100, 116, 139, 0.98);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  margin: 0.1rem 0 0.35rem 0;
+}
+@media (max-width: 760px) {
+  .ov-mm-refresh-head {
+    grid-template-columns: 1fr;
+  }
+  .ov-mm-state-line,
+  .ov-mm-chip-row {
+    justify-content: flex-start;
+  }
+}
+</style>
+""".strip()
+
+
+def _market_refresh_state_label(value: Any) -> str:
+    text = str(value or "-").strip()
+    mapping = {
+        "Fresh": "최신",
+        "Update needed": "갱신 필요",
+        "Update due": "갱신 필요",
+        "Stale": "오래됨",
+        "Partial": "부분 누락",
+        "Failed": "실패",
+    }
+    return mapping.get(text, text)
+
+
+def _market_refresh_state_detail(value: Any) -> str:
+    text = str(value or "").strip()
+    mapping = {
+        "No action needed yet.": "아직 조치가 필요하지 않습니다.",
+        "Run Update Daily Snapshot.": "일중 스냅샷 갱신을 실행하면 최신 quote로 갱신됩니다.",
+        "using EOD fallback": "일중 스냅샷 대신 EOD fallback을 사용 중입니다.",
+    }
+    return mapping.get(text, text)
+
+
+def _render_market_refresh_command_head(
+    *,
+    universe_label: str,
+    price_mode: Any,
+    returnable: Any,
+    universe_count: Any,
+    returnable_pct: Any,
+    next_check_text: str,
+    state: dict[str, str | bool] | None,
+) -> None:
+    label = _market_refresh_state_label((state or {}).get("label") or "Unknown")
+    detail = _market_refresh_state_detail((state or {}).get("detail") or "")
+    dot_color = str((state or {}).get("dot_color") or "#64748b")
+    coverage_text = f"{returnable} / {universe_count}"
+    if returnable_pct is not None:
+        coverage_text += f" ({float(returnable_pct):.1f}%)"
+    detail_html = f'<span class="ov-mm-state-detail">{escape(detail)}</span>' if detail else ""
     st.markdown(
-        f"""
-        <div style="
-            display:flex;
-            align-items:center;
-            gap:10px;
-            min-height:38px;
-            padding:7px 10px;
-            border:1px solid #e5e7eb;
-            border-radius:8px;
-            background:#ffffff;">
-            <span style="
-                width:10px;
-                height:10px;
-                border-radius:999px;
-                background:{color};
-                box-shadow:0 0 0 3px color-mix(in srgb, {color} 18%, transparent);"></span>
-            <span style="font-weight:600;color:#111827;">{escape(label)}</span>
-            <span style="color:#64748b;font-size:0.875rem;">{escape(detail)}</span>
-        </div>
-        """,
+        _market_movers_ui_css()
+        + f"""
+<div class="ov-mm-refresh-head">
+          <div>
+            <div class="ov-mm-refresh-title">데이터 갱신</div>
+            <div class="ov-mm-refresh-subtitle">데이터 상태를 먼저 확인하고, 필요한 경우 같은 줄에서 수동 또는 자동 갱신을 선택합니다.</div>
+          </div>
+          <div>
+            <div class="ov-mm-state-line">
+              <span class="ov-mm-state-pill" style="--ov-mm-state-color:{escape(dot_color)};">
+                <span class="ov-mm-state-dot"></span>
+                <span class="ov-mm-state-label">{escape(label)}</span>
+                {detail_html}
+              </span>
+            </div>
+            <div class="ov-mm-chip-row" style="margin-top:0.45rem;">
+              <span class="ov-mm-chip">범위 <strong>{escape(universe_label)}</strong></span>
+              <span class="ov-mm-chip">가격 <strong>{escape(str(price_mode or "-"))}</strong></span>
+              <span class="ov-mm-chip">커버리지 <strong>{escape(coverage_text)}</strong></span>
+              <span class="ov-mm-chip">다음 확인 <strong>{escape(next_check_text)}</strong></span>
+            </div>
+          </div>
+        </div>""",
         unsafe_allow_html=True,
     )
 
@@ -1255,23 +1428,6 @@ def _get_market_movers_refresh_state(
     }
 
 
-def _render_market_movers_refresh_status(
-    snapshot: dict[str, Any],
-    *,
-    universe_code: str,
-    period: str,
-) -> None:
-    state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
-    if state is None:
-        return
-
-    _render_refresh_state_dot(
-        color=str(state["dot_color"]),
-        label=str(state["label"]),
-        detail=str(state["detail"]),
-    )
-
-
 def _market_refresh_mode_label(value: str) -> str:
     return {"manual": "수동 갱신", "auto": "자동 갱신"}.get(value, value)
 
@@ -1309,27 +1465,41 @@ def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
     checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
     if not isinstance(summary, dict):
         summary = None
-    _render_browser_auto_refresh_timing(
-        summary,
-        live_countdown=True,
-        auto_reload=universe_code == "SP500",
-        key_suffix=f"{universe_code}-{checked_at or 'new'}",
-    )
     if summary:
-        jobs_due = summary.get("jobs_due")
-        jobs_run = summary.get("jobs_run")
-        render_badge_strip(
-            [
-                {"label": "자동 상태", "value": _auto_refresh_status_label(summary.get("status")), "tone": _status_tone(summary.get("status"))},
-                {"label": "마지막 확인", "value": str(checked_at or summary.get("finished_at") or "-"), "tone": "neutral"},
-                {"label": "실행", "value": f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}", "tone": "neutral"},
-            ]
+        _render_browser_auto_refresh_timing(
+            summary,
+            live_countdown=True,
+            auto_reload=universe_code == "SP500",
+            key_suffix=f"{universe_code}-{checked_at or 'new'}",
         )
         message = str(summary.get("message") or _browser_auto_refresh_completion_label(summary))
         if message:
-            st.caption(message)
-    else:
-        st.caption("자동 갱신을 켜면 현재 브라우저 세션에서 S&P 500 일중 스냅샷 갱신 조건을 확인합니다.")
+            st.markdown(
+                f'<div class="ov-mm-auto-message">{escape(message)}</div>',
+                unsafe_allow_html=True,
+            )
+        with st.expander("자동 갱신 세부 정보", expanded=False):
+            jobs_due = summary.get("jobs_due")
+            jobs_run = summary.get("jobs_run")
+            detail_cols = st.columns(3, gap="small")
+            detail_cols[0].metric("상태", _auto_refresh_status_label(summary.get("status")))
+            detail_cols[1].metric("마지막 확인", str(checked_at or summary.get("finished_at") or "-"))
+            detail_cols[2].metric(
+                "실행",
+                f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}",
+            )
+            st.caption(f"Profile: {summary.get('profile') or BROWSER_AUTO_REFRESH_PROFILE}")
+        return
+
+    st.markdown(
+        _market_movers_ui_css()
+        + """
+<div class="ov-mm-auto-static">
+          <div class="ov-mm-auto-static-title">자동 갱신 대기</div>
+          <div class="ov-mm-auto-static-detail">자동 갱신을 켜면 현재 브라우저 세션에서 S&P 500 일중 스냅샷 갱신 조건을 확인합니다.</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
 
 
 def _render_market_movers_refresh_bar(
@@ -1349,50 +1519,30 @@ def _render_market_movers_refresh_bar(
     auto_supported = universe_code == "SP500" and period == "daily"
 
     with st.container(border=True):
-        header_cols = st.columns([1.1, 0.95, 1.15], gap="small", vertical_alignment="bottom")
-        header_cols[0].markdown("#### Data Refresh")
-        selected_mode = _select_market_refresh_mode(header_cols[1], auto_supported=auto_supported)
-        if auto_supported:
-            header_cols[2].caption("자동 모드는 Overview가 열려 있는 동안 S&P 500 일중 스냅샷만 5분 조건으로 확인합니다.")
-        else:
-            header_cols[2].caption("자동 갱신은 현재 S&P 500 Daily에서만 지원합니다. 이 화면은 수동 갱신으로 사용합니다.")
         refresh_state = dict(coverage.get("refresh_state") or {})
         returnable = coverage.get("returnable_count") or 0
         universe_count = coverage.get("universe_count") or 0
         returnable_pct = coverage.get("returnable_pct")
         next_due = refresh_state.get("next_due_in_minutes")
         next_check_text = "now" if next_due in (None, 0) else f"{int(next_due)}m"
-        render_badge_strip(
-            [
-                {"label": "Universe", "value": universe_label, "tone": "neutral"},
-                {"label": "Mode", "value": coverage.get("price_mode") or "-", "tone": "neutral"},
-                {
-                    "label": "Coverage",
-                    "value": (
-                        f"{returnable} / {universe_count}"
-                        + (f" ({float(returnable_pct):.1f}%)" if returnable_pct is not None else "")
-                    ),
-                    "tone": "positive" if universe_count and returnable == universe_count else "warning",
-                },
-                {"label": "다음 확인", "value": next_check_text, "tone": "neutral"},
-            ]
-        )
-        if state is not None:
-            _render_refresh_state_dot(
-                color=str(state["dot_color"]),
-                label=str(state["label"]),
-                detail=str(state["detail"]),
-            )
-        if selected_mode == "auto" and auto_supported:
-            _render_market_auto_refresh_summary(universe_code=universe_code)
-        elif refresh_state.get("recommended_action"):
-            st.caption(str(refresh_state.get("recommended_action")))
 
-        cols = st.columns([1, 1, 1], gap="small", vertical_alignment="center")
-        if cols[0].button(
+        _render_market_refresh_command_head(
+            universe_label=universe_label,
+            price_mode=coverage.get("price_mode") or "-",
+            returnable=returnable,
+            universe_count=universe_count,
+            returnable_pct=returnable_pct,
+            next_check_text=next_check_text,
+            state=state,
+        )
+
+        control_cols = st.columns([0.95, 1.1, 0.95, 0.95], gap="small", vertical_alignment="bottom")
+        selected_mode = _select_market_refresh_mode(control_cols[0], auto_supported=auto_supported)
+        if control_cols[1].button(
             "일중 스냅샷 갱신",
             key=f"overview_{universe_code.lower()}_intraday_refresh",
             use_container_width=True,
+            type="primary",
             help="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
         ):
             with st.spinner(f"Updating {universe_label} quote snapshot..."):
@@ -1404,7 +1554,7 @@ def _render_market_movers_refresh_bar(
                     ),
                 )
             st.rerun()
-        if universe_code == "SP500" and cols[1].button(
+        if universe_code == "SP500" and control_cols[2].button(
             "유니버스 갱신",
             key="overview_sp500_universe_refresh",
             use_container_width=True,
@@ -1413,14 +1563,22 @@ def _render_market_movers_refresh_bar(
                 _store_overview_job_result("overview_sp500_universe_result", run_collect_sp500_universe())
             st.rerun()
         if universe_code != "SP500":
-            cols[1].caption("Universe is based on market-cap ranked asset profiles.")
-        if cols[2].button(
+            control_cols[2].caption("Top universe는 market-cap ranked asset profile 기준입니다.")
+        if control_cols[3].button(
             "화면 새로고침",
             key=f"overview_{universe_code.lower()}_market_movers_reload",
             use_container_width=True,
         ):
             st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.rerun()
+
+        if selected_mode == "auto" and auto_supported:
+            _render_market_auto_refresh_summary(universe_code=universe_code)
+        elif refresh_state.get("recommended_action"):
+            st.markdown(
+                f'<div class="ov-mm-auto-message">{escape(str(refresh_state.get("recommended_action")))}</div>',
+                unsafe_allow_html=True,
+            )
 
     if universe_code == "SP500":
         _render_market_job_result("overview_sp500_universe_result")
@@ -1460,7 +1618,11 @@ def _render_market_movers_snapshot_panel(
 
 def _render_market_movers_tab() -> None:
     st.markdown("### Market Movers")
-    with st.container(border=True):
+    st.markdown(
+        f"{_market_movers_ui_css()}<div class=\"ov-mm-toolbar-label\">스캔 조건</div>",
+        unsafe_allow_html=True,
+    )
+    with st.container():
         controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
         coverage = str(
             controls[0].selectbox(
@@ -1518,8 +1680,7 @@ def _render_market_movers_tab() -> None:
         st.caption(f"Last DB snapshot reload request: {reloaded_at}")
     if period == "daily":
         st.caption(
-            "Daily movers use the latest stored quote snapshot versus previous close when available. "
-            "Data refresh controls below decide whether collection is manual or browser-session automatic."
+            "Daily는 저장된 quote snapshot을 previous close와 비교합니다. 갱신 방식은 아래 데이터 갱신 영역에서 선택합니다."
         )
 
     if coverage != "SP500" or period != "daily":

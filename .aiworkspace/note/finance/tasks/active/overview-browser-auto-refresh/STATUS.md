@@ -8,3 +8,4 @@
 - 2026-05-30: Localized browser auto-refresh status / progress messages and internal skip reasons to Korean.
 - 2026-05-30: Replaced expandable loading status/progress with a compact next-refresh timing panel and cadence progress bar.
 - 2026-05-30: Integrated browser auto refresh into the Market Movers `Data Refresh` panel, removed the separate top panel, and added browser-side second-by-second countdown/progress updates.
+- 2026-05-30: Started Market Movers UI redesign pass 1: replaced repeated badge/card refresh layout with a compact `데이터 갱신` command surface that prioritizes current data status, refresh mode, and actions.

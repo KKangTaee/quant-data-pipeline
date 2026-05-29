@@ -443,52 +443,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "다른 Overview 갱신 작업이 이미 실행 중입니다.",
         )
 
-    def test_browser_auto_refresh_cards_describe_skipped_plan(self) -> None:
-        from app.web.overview_dashboard import _build_browser_auto_refresh_cards
-
-        cards = _build_browser_auto_refresh_cards(
-            {
-                "status": "skipped",
-                "profile": "browser_safe",
-                "finished_at": "2026-05-29 10:05:00",
-                "jobs_due": 0,
-                "jobs_run": 0,
-                "plan": [
-                    {
-                        "label": "S&P 500 Daily Snapshot",
-                        "reason": "cadence not due",
-                    }
-                ],
-                "results": [],
-            },
-            "2026-05-29 10:05:00",
-        )
-
-        self.assertEqual(cards[0]["value"], "건너뜀")
-        self.assertEqual(cards[0]["tone"], "warning")
-        self.assertIn("아직 5분 갱신 주기가 지나지 않았습니다.", cards[0]["detail"])
-        self.assertEqual(cards[1]["detail"], "Profile: browser_safe")
-        self.assertEqual(cards[2]["value"], "0 / 0")
-
-    def test_browser_auto_refresh_cards_show_failure_message(self) -> None:
-        from app.web.overview_dashboard import _build_browser_auto_refresh_cards
-
-        cards = _build_browser_auto_refresh_cards(
-            {
-                "status": "failed",
-                "profile": "browser_safe",
-                "message": "unexpected provider error",
-                "jobs_due": None,
-                "jobs_run": 0,
-                "plan": [],
-                "results": [],
-            },
-            "2026-05-29 10:05:00",
-        )
-
-        self.assertEqual(cards[0]["tone"], "danger")
-        self.assertEqual(cards[0]["detail"], "unexpected provider error")
-
     def test_run_history_append_serializes_provider_date_payload(self) -> None:
         from app.jobs import run_history
 

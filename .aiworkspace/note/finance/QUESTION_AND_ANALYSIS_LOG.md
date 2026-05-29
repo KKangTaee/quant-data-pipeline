@@ -5594,3 +5594,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 초 단위 countdown / progress는 브라우저 JS로만 갱신하고, provider collection은 기존 5분 cadence guard를 유지해야 한다
 - Follow-up:
   - Market Movers `Data Refresh`에 `수동 갱신` / `자동 갱신` 모드를 추가하고, S&P 500 Daily 자동 모드에서 browser-side countdown과 기존 `browser_safe` heartbeat를 함께 사용하도록 정리했다
+
+### 2026-05-30 - 기존 UI 패턴 보존과 제품 본질 보존을 구분한다
+- User request:
+  - 사용자가 기존 Streamlit 패턴 반복으로 화면 품질이 낮아지고, "기존 프로젝트 패턴 보존"이 UI 고정을 뜻한 것이 아니라고 지적함
+- Interpreted goal:
+  - 데이터 안정성과 투자 연구 workflow는 유지하되, `container / badge / card` 반복을 제품 UI 원칙으로 착각하지 않아야 함
+- Analysis result:
+  - 보존해야 할 것은 백테스트와 시장 데이터로 포트폴리오 판단을 돕는 본질, 데이터 수집 guardrail, 근거 흐름이다. 기존 helper 시각 패턴은 필요할 때 바꿀 수 있다
+- Follow-up:
+  - Market Movers `데이터 갱신` 영역부터 반복 badge/card layout을 줄이고, 상태/모드/액션이 한 번에 읽히는 command surface로 재설계하는 1차 pass를 시작했다
