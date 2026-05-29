@@ -13,19 +13,22 @@ Completed:
 - Phase scope, task split, storage boundary, immediate next task 정리
 - 12-1 `selected-monitoring-source-map-v1`
 - Current Selected Dashboard / Final Review / runtime monitoring source ownership and gap audit
+- 12-2 `recheck-readiness-freshness-contract-v1`
+- Readiness, selected replay contract source, DB latest market date, and symbol freshness are now combined into a read-only operations preflight contract.
 
 Next:
 
-- 12-2 `recheck-readiness-freshness-contract-v1`
+- 12-3 `selected-provider-evidence-staleness-contract-v1`
 
 ## Latest Decision
 
-12-1 confirmed that Phase 12 can start from existing read-only dashboard evidence rather than new persistence.
-The main gaps are replay contract dependency on Current Candidate Registry, readiness / freshness policy split, Review Signals / Recheck Comparison threshold duplication, and session-only monitoring evidence clarity.
+12-2 added `selected_recheck_operations_preflight_v1`.
+Performance Recheck preflight now combines selected replay contract readiness and DB price freshness, and uses Final Review embedded contract before Current Candidate Registry fallback.
+Missing replay contracts, stale / missing price, and DB latest date errors cannot route to ready.
 
 Immediate next target:
 
-- `recheck-readiness-freshness-contract-v1`
+- `selected-provider-evidence-staleness-contract-v1`
 
 ## Storage Boundary Reminder
 

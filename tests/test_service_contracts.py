@@ -5262,7 +5262,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(readiness["route"], "RECHECK_READINESS_BLOCKED")
         rows = {row["Check"]: row for row in readiness["rows"]}
         self.assertEqual(rows["Selected component contract"]["Status"], "PASS")
-        self.assertEqual(rows["Candidate replay contract"]["Status"], "BLOCKED")
+        self.assertEqual(rows["Selected replay contract"]["Status"], "BLOCKED")
         self.assertFalse(readiness["execution_boundary"]["db_write"])
         self.assertFalse(readiness["execution_boundary"]["registry_write"])
         self.assertFalse(readiness["execution_boundary"]["monitoring_log_auto_write"])
@@ -5298,6 +5298,33 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         rows = {row["Check"]: row for row in readiness["rows"]}
         self.assertEqual(rows["DB latest market date"]["Status"], "PASS")
         self.assertEqual(rows["Default recheck period"]["Status"], "PASS")
+
+    def test_recheck_readiness_uses_embedded_final_decision_contract_without_registry(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+
+        row = self._selected_row()
+        row["raw_decision"]["selected_components"][0]["strategy_key"] = "equal_weight"
+        row["raw_decision"]["selected_components"][0]["replay_contract"] = {
+            "settings_snapshot": {
+                "tickers": ["SPY", "QQQ"],
+                "benchmark_ticker": "SPY",
+                "start": "2020-01-01",
+                "end": "2024-12-31",
+                "rebalance_interval": 12,
+            }
+        }
+
+        readiness = build_selected_portfolio_recheck_readiness(
+            row,
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id={},
+        )
+
+        self.assertEqual(readiness["route"], "RECHECK_READINESS_READY")
+        self.assertEqual(readiness["metrics"]["embedded_replay_contract_count"], 1)
+        self.assertEqual(readiness["metrics"]["candidate_registry_fallback_count"], 0)
+        rows = {row["Check"]: row for row in readiness["rows"]}
+        self.assertEqual(rows["Selected replay contract"]["Status"], "PASS")
 
     def test_recheck_symbol_freshness_detects_missing_and_stale_without_writing(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
@@ -5376,6 +5403,71 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         rows = {row["Symbol"]: row for row in freshness["rows"]}
         self.assertIn("benchmark", rows["SPY"]["Role"])
         self.assertFalse(freshness["execution_boundary"]["order_instruction"])
+
+    def test_recheck_operations_preflight_ready_when_readiness_and_freshness_are_ready(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+
+        preflight = build_selected_portfolio_recheck_operations_preflight(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id=self._candidate_rows_by_id(),
+            freshness_df=pd.DataFrame(
+                [
+                    {"symbol": "SPY", "latest_date": "2026-05-28", "row_count": 1000},
+                    {"symbol": "QQQ", "latest_date": "2026-05-27", "row_count": 999},
+                ]
+            ),
+        )
+
+        self.assertEqual(preflight["schema_version"], "selected_recheck_operations_preflight_v1")
+        self.assertEqual(preflight["route"], "RECHECK_PREFLIGHT_READY")
+        self.assertEqual(preflight["metrics"]["replay_contract_count"], 1)
+        self.assertEqual(preflight["metrics"]["missing_symbol_count"], 0)
+        self.assertEqual(preflight["metrics"]["stale_symbol_count"], 0)
+        self.assertEqual(preflight["readiness"]["route"], "RECHECK_READINESS_READY")
+        self.assertEqual(preflight["symbol_freshness"]["route"], "SYMBOL_FRESHNESS_READY")
+        self.assertFalse(preflight["execution_boundary"]["db_write"])
+        self.assertFalse(preflight["execution_boundary"]["registry_write"])
+        self.assertFalse(preflight["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(preflight["execution_boundary"]["order_instruction"])
+        self.assertFalse(preflight["execution_boundary"]["auto_rebalance"])
+
+    def test_recheck_operations_preflight_routes_missing_price_to_needs_data(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+
+        preflight = build_selected_portfolio_recheck_operations_preflight(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id=self._candidate_rows_by_id(),
+            freshness_df=pd.DataFrame(
+                [
+                    {"symbol": "SPY", "latest_date": "2026-05-28", "row_count": 1000},
+                ]
+            ),
+        )
+
+        self.assertEqual(preflight["route"], "RECHECK_PREFLIGHT_NEEDS_DATA")
+        self.assertEqual(preflight["symbol_freshness"]["route"], "SYMBOL_FRESHNESS_MISSING")
+        self.assertEqual(preflight["metrics"]["missing_symbol_count"], 1)
+        rows = {row["Area"]: row for row in preflight["rows"]}
+        self.assertEqual(rows["Symbol Freshness"]["Status"], "NEEDS_INPUT")
+
+    def test_recheck_operations_preflight_blocks_missing_replay_contract(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+
+        preflight = build_selected_portfolio_recheck_operations_preflight(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id={},
+            freshness_df=pd.DataFrame(),
+        )
+
+        self.assertEqual(preflight["route"], "RECHECK_PREFLIGHT_BLOCKED")
+        self.assertEqual(preflight["readiness"]["route"], "RECHECK_READINESS_BLOCKED")
+        self.assertEqual(preflight["symbol_freshness"]["route"], "SYMBOL_FRESHNESS_BLOCKED")
+        rows = {row["Area"]: row for row in preflight["rows"]}
+        self.assertEqual(rows["Recheck Readiness"]["Status"], "BLOCKED")
+        self.assertEqual(rows["Symbol Freshness"]["Status"], "BLOCKED")
 
     def test_selected_provider_evidence_ready_from_injected_provider_context(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence

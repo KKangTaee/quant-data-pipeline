@@ -259,6 +259,22 @@ def build_selected_portfolio_recheck_readiness_table(readiness: dict[str, Any]) 
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_recheck_preflight_table(preflight: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(preflight.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("Area"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def build_selected_portfolio_symbol_freshness_table(freshness: dict[str, Any]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in list(freshness.get("rows") or []):

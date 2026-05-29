@@ -5,15 +5,15 @@ Created: 2026-05-29
 
 ## Current Chapter
 
-Next task: `recheck-readiness-freshness-contract-v1`
+Next task: `selected-provider-evidence-staleness-contract-v1`
 
 ## TODO
 
-- Define replay contract source priority for selected recheck readiness.
-- Combine selected component contract, candidate replay contract, DB latest market date, default period, and symbol freshness into one operations preflight result or equivalent shared contract.
-- Ensure missing / stale / failed / partial readiness evidence cannot look like pass.
-- Keep price freshness as DB read-only evidence.
-- Add focused contract tests for missing registry contract, stale / missing symbol freshness, and read-only execution boundary.
+- Define selected provider evidence staleness route for selected portfolios.
+- Keep provider holdings / exposure / operability evidence DB-backed and read-only.
+- Ensure stale provider snapshot, partial coverage, fallback symbol source, and missing holdings / exposure cannot look like pass.
+- Connect provider evidence route to Phase 12 monitoring semantics without adding automatic monitoring log writes.
+- Add focused contract tests for fresh actual provider evidence, stale evidence, partial coverage, missing provider DB, and read-only execution boundary.
 
 ## Stop Conditions
 

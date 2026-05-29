@@ -4218,3 +4218,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`를 열고 Final Review evidence packet / selected-route gate를 구현했다.
   - 새 JSONL registry는 만들지 않고, 기존 Final Review decision row에 compact packet snapshot만 연결했다.
   - service contract 26 tests, UI-engine boundary check, Browser smoke를 통과했다.
+- Phase 12 Recheck Readiness / Freshness Contract V1:
+  - `.aiworkspace/note/finance/tasks/active/recheck-readiness-freshness-contract-v1/`에서 Selected Dashboard recheck operations preflight를 구현했다.
+  - Final Review embedded replay contract를 우선 사용하고 Current Candidate Registry를 fallback으로 쓰는 resolver를 추가했다.
+  - 다음 작업은 `selected-provider-evidence-staleness-contract-v1`이며 `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`에서 이어서 본다.

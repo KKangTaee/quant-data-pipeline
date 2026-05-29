@@ -6025,3 +6025,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 validation / robustness / paper observation evidence를 Streamlit-free packet read model로 묶고, critical gap이 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장을 차단하는 V1이 가장 작은 안전한 구현 단위다
 - Follow-up:
   - 구현 기록과 검증 결과는 `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`에서 확인한다
+
+### 2026-05-29 - Selected Dashboard recheck 전 preflight를 하나로 묶는다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Performance Recheck 실행 전 readiness와 symbol freshness가 따로 보이는 문제를 하나의 read-only operations preflight로 정리해야 함
+- Analysis result:
+  - Final Review embedded replay contract를 우선 사용하고 Current Candidate Registry를 fallback으로 쓰는 source priority가 필요하다
+  - stale / missing price, missing replay contract, DB latest date error는 ready가 아니며 각각 review / needs data / blocked로 드러나야 한다
+- Follow-up:
+  - `selected_recheck_operations_preflight_v1`을 구현했고, 다음은 selected provider evidence staleness / coverage contract다

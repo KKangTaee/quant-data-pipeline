@@ -21,6 +21,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_provider_evidence_table,
     build_selected_portfolio_provider_symbol_weight_table,
     build_selected_portfolio_recheck_comparison_table,
+    build_selected_portfolio_recheck_preflight_table,
     build_selected_portfolio_recheck_readiness_table,
     build_selected_portfolio_symbol_freshness_table,
     filter_selected_portfolio_rows,
@@ -43,8 +44,7 @@ from app.runtime import (
     build_selected_portfolio_performance_recheck,
     build_selected_portfolio_provider_evidence,
     build_selected_portfolio_recheck_comparison,
-    build_selected_portfolio_recheck_readiness,
-    build_selected_portfolio_recheck_symbol_freshness,
+    build_selected_portfolio_recheck_operations_preflight,
     build_selected_portfolio_recheck_defaults,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
@@ -98,6 +98,16 @@ def _recheck_readiness_tone(route: str) -> str:
     if route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
         return "warning"
     if route == "RECHECK_READINESS_BLOCKED":
+        return "danger"
+    return "neutral"
+
+
+def _recheck_preflight_tone(route: str) -> str:
+    if route == "RECHECK_PREFLIGHT_READY":
+        return "positive"
+    if route in {"RECHECK_PREFLIGHT_REVIEW", "RECHECK_PREFLIGHT_NEEDS_DATA"}:
+        return "warning"
+    if route == "RECHECK_PREFLIGHT_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -1006,15 +1016,76 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
     if defaults.get("latest_market_date_error"):
         st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
 
-    decision_id = str(row.get("decision_id") or "selected_portfolio")
-    readiness = build_selected_portfolio_recheck_readiness(
+    latest_market_result = {
+        "status": defaults.get("latest_market_date_status"),
+        "latest_market_date": defaults.get("latest_market_date"),
+        "error": defaults.get("latest_market_date_error"),
+    }
+    preflight = build_selected_portfolio_recheck_operations_preflight(
         row,
-        latest_market_result={
-            "status": defaults.get("latest_market_date_status"),
-            "latest_market_date": defaults.get("latest_market_date"),
-            "error": defaults.get("latest_market_date_error"),
-        },
+        latest_market_result=latest_market_result,
     )
+    preflight_metrics = dict(preflight.get("metrics") or {})
+    preflight_boundary = dict(preflight.get("execution_boundary") or {})
+    preflight_route = str(preflight.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Recheck Operations Preflight")
+        st.caption(
+            "Performance Recheck 실행 전 replay contract readiness와 DB 가격 최신성을 하나의 운영 사전 점검으로 봅니다. "
+            "이 확인은 read-only이며 자동 저장, 승인, 주문, 리밸런싱을 만들지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Preflight",
+                    "value": preflight.get("route_label"),
+                    "tone": _recheck_preflight_tone(preflight_route),
+                },
+                {
+                    "label": "DB Latest",
+                    "value": preflight_metrics.get("latest_market_date") or "-",
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Replay Contracts",
+                    "value": f"{preflight_metrics.get('replay_contract_count', 0)}/{preflight_metrics.get('active_component_count', 0)}",
+                    "tone": "positive"
+                    if preflight_metrics.get("replay_contract_count") == preflight_metrics.get("active_component_count")
+                    and preflight_metrics.get("active_component_count")
+                    else "warning",
+                },
+                {"label": "Symbols", "value": preflight_metrics.get("symbol_count", 0), "tone": "neutral"},
+                {
+                    "label": "Missing/Stale",
+                    "value": f"{preflight_metrics.get('missing_symbol_count', 0)}/{preflight_metrics.get('stale_symbol_count', 0)}",
+                    "tone": "warning"
+                    if preflight_metrics.get("missing_symbol_count") or preflight_metrics.get("stale_symbol_count")
+                    else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if preflight_route == "RECHECK_PREFLIGHT_BLOCKED":
+            st.warning(str(preflight.get("conclusion") or "-"))
+        elif preflight_route in {"RECHECK_PREFLIGHT_REVIEW", "RECHECK_PREFLIGHT_NEEDS_DATA"}:
+            st.info(str(preflight.get("conclusion") or "-"))
+        else:
+            st.success(str(preflight.get("conclusion") or "-"))
+        with st.expander("Preflight rows", expanded=preflight_route != "RECHECK_PREFLIGHT_READY"):
+            preflight_df = build_selected_portfolio_recheck_preflight_table(preflight)
+            if preflight_df.empty:
+                st.info("표시할 preflight row가 없습니다.")
+            else:
+                st.dataframe(preflight_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {preflight_boundary.get('write_policy') or '-'} / "
+                f"DB write: {preflight_boundary.get('db_write')} / "
+                f"registry write: {preflight_boundary.get('registry_write')} / "
+                f"monitoring log auto write: {preflight_boundary.get('monitoring_log_auto_write')}"
+            )
+
+    decision_id = str(row.get("decision_id") or "selected_portfolio")
+    readiness = dict(preflight.get("readiness") or {})
     readiness_metrics = dict(readiness.get("metrics") or {})
     readiness_boundary = dict(readiness.get("execution_boundary") or {})
     readiness_route = str(readiness.get("route") or "")
@@ -1070,14 +1141,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
                 f"registry write: {readiness_boundary.get('registry_write')}"
             )
 
-    symbol_freshness = build_selected_portfolio_recheck_symbol_freshness(
-        row,
-        latest_market_result={
-            "status": defaults.get("latest_market_date_status"),
-            "latest_market_date": defaults.get("latest_market_date"),
-            "error": defaults.get("latest_market_date_error"),
-        },
-    )
+    symbol_freshness = dict(preflight.get("symbol_freshness") or {})
     freshness_metrics = dict(symbol_freshness.get("metrics") or {})
     freshness_boundary = dict(symbol_freshness.get("execution_boundary") or {})
     freshness_route = str(symbol_freshness.get("route") or "")

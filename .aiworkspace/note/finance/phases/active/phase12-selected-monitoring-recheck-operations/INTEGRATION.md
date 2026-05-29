@@ -6,8 +6,8 @@ Created: 2026-05-29
 ## Integration Order
 
 1. 12-1 selected monitoring source map / gap audit: Complete
-2. 12-2 recheck readiness / freshness operations contract: Next
-3. 12-3 selected provider evidence staleness contract: Pending
+2. 12-2 recheck readiness / freshness operations contract: Complete
+3. 12-3 selected provider evidence staleness contract: Next
 4. 12-4 recheck comparison / review signal policy: Pending
 5. 12-5 optional allocation drift evidence boundary: Pending
 6. 12-6 decision dossier / continuity operations refinement: Pending
@@ -26,8 +26,10 @@ Implementation tasks may touch the following files after 12-1 confirms scope.
 - `finance/loaders/provider.py`
 - `tests/test_service_contracts.py`
 
-12-1 confirmed that the immediate implementation touch points are likely `app/runtime/final_selected_portfolios.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
-DB loader changes are not required for 12-2 unless the existing price freshness / latest market loader contract proves insufficient.
+12-2 touched `app/runtime/final_selected_portfolios.py`, `app/runtime/__init__.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`, and `tests/test_service_contracts.py`.
+DB loader changes were not required; the existing latest market date and price freshness loaders were sufficient.
+
+12-3 is expected to stay in the Selected Dashboard runtime / helper / test surface unless provider loader contract gaps appear.
 
 ## QA Gates
 

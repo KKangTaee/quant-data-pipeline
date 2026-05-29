@@ -50,6 +50,40 @@ Main gaps:
 
 Implementation order now moves to 12-2 recheck readiness / freshness operations contract.
 
+## 12-2 Recheck Readiness / Freshness Contract Result
+
+12-2 added `selected_recheck_operations_preflight_v1`.
+
+The contract combines:
+
+- selected replay contract readiness
+- DB latest market date
+- default recheck period
+- portfolio / benchmark symbol freshness
+- read-only execution boundary
+
+Replay contract source priority is now:
+
+1. Final Review selected component embedded contract
+2. Current Candidate Registry fallback by `registry_id`
+3. Blocked when neither source can build a replay payload
+
+The same resolver feeds readiness, symbol freshness symbol resolution, and Performance Recheck execution.
+This prevents a preflight route from reporting ready when the later recheck execution cannot use the same contract.
+
+Preflight route mapping:
+
+| Route | Meaning |
+| --- | --- |
+| `RECHECK_PREFLIGHT_READY` | readiness and symbol freshness are ready |
+| `RECHECK_PREFLIGHT_REVIEW` | recheck can run but stale / watch / review evidence needs confirmation |
+| `RECHECK_PREFLIGHT_NEEDS_DATA` | missing price, DB latest date error, or data input gap needs action |
+| `RECHECK_PREFLIGHT_BLOCKED` | selected replay contract or symbol resolution is blocked |
+
+The contract adds no JSONL registry, monitoring log auto write, user memo, preset, approval, order, or auto rebalance path.
+
+Implementation order now moves to 12-3 selected provider evidence staleness contract.
+
 ## Route Semantics
 
 | State | Meaning |

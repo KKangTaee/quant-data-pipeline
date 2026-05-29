@@ -54,6 +54,7 @@ SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
 SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION = "selected_recheck_comparison_v1"
 SELECTED_RECHECK_READINESS_SCHEMA_VERSION = "selected_recheck_readiness_v1"
 SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION = "selected_recheck_symbol_freshness_v1"
+SELECTED_RECHECK_OPERATIONS_PREFLIGHT_SCHEMA_VERSION = "selected_recheck_operations_preflight_v1"
 SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION = "selected_provider_evidence_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
@@ -88,6 +89,12 @@ SELECTED_RECHECK_SYMBOL_FRESHNESS_ROUTE_LABELS = {
     "SYMBOL_FRESHNESS_MISSING": "가격 데이터 누락",
     "SYMBOL_FRESHNESS_NEEDS_DATA": "가격 DB 확인 필요",
     "SYMBOL_FRESHNESS_BLOCKED": "symbol 확인 차단",
+}
+SELECTED_RECHECK_OPERATIONS_PREFLIGHT_ROUTE_LABELS = {
+    "RECHECK_PREFLIGHT_READY": "재검증 preflight 준비 완료",
+    "RECHECK_PREFLIGHT_REVIEW": "재검증 preflight 확인 필요",
+    "RECHECK_PREFLIGHT_NEEDS_DATA": "재검증 preflight 데이터 확인 필요",
+    "RECHECK_PREFLIGHT_BLOCKED": "재검증 preflight 차단",
 }
 SELECTED_PROVIDER_EVIDENCE_ROUTE_LABELS = {
     "SELECTED_PROVIDER_READY": "Provider 근거 준비 완료",
@@ -1555,6 +1562,193 @@ def _safe_date_compare(left: Any, right: Any) -> int | None:
     return 0
 
 
+def _merge_non_empty(target: dict[str, Any], source: dict[str, Any]) -> None:
+    for key, value in source.items():
+        if value is None or value == "" or value == []:
+            continue
+        target[key] = value
+
+
+def _component_embedded_candidate_row(component: dict[str, Any], identity: str) -> dict[str, Any]:
+    replay_contract = dict(component.get("replay_contract") or {})
+    settings_snapshot = dict(replay_contract.get("settings_snapshot") or {})
+    nested_contract = dict(replay_contract.get("contract") or {})
+    component_contract = dict(component.get("contract") or {})
+    contract: dict[str, Any] = {}
+    _merge_non_empty(contract, settings_snapshot)
+    _merge_non_empty(contract, nested_contract)
+    _merge_non_empty(contract, component_contract)
+
+    tickers = _provider_symbol_candidates_from_value(contract.get("tickers"))
+    if not tickers:
+        tickers = _provider_symbol_candidates_from_value(component.get("universe"))
+    if not tickers:
+        tickers = _provider_symbol_candidates_from_value(settings_snapshot.get("tickers"))
+    if tickers:
+        contract["tickers"] = tickers
+
+    benchmark = (
+        contract.get("benchmark_ticker")
+        or settings_snapshot.get("benchmark_ticker")
+        or component.get("benchmark")
+    )
+    if benchmark:
+        contract["benchmark_ticker"] = benchmark
+
+    period = dict(component.get("period") or {})
+    if component.get("period_start") and not period.get("start"):
+        period["start"] = component.get("period_start")
+    if component.get("period_end") and not period.get("end"):
+        period["end"] = component.get("period_end")
+    if contract.get("start") and not period.get("start"):
+        period["start"] = contract.get("start")
+    if contract.get("end") and not period.get("end"):
+        period["end"] = contract.get("end")
+
+    execution_context = dict(component.get("execution_context") or {})
+    if period.get("start") and not execution_context.get("start"):
+        execution_context["start"] = period.get("start")
+    if period.get("end") and not execution_context.get("end"):
+        execution_context["end"] = period.get("end")
+    if contract.get("timeframe") and not execution_context.get("timeframe"):
+        execution_context["timeframe"] = contract.get("timeframe")
+
+    strategy_key = component.get("strategy_key") or contract.get("strategy_key") or settings_snapshot.get("strategy_key")
+    strategy_family = strategy_key or component.get("strategy_family")
+    compare_prefill = dict(component.get("compare_prefill") or {})
+    if strategy_key:
+        compare_prefill["strategy_key"] = strategy_key
+
+    if not contract and not tickers:
+        return {}
+
+    return {
+        "registry_id": component.get("registry_id") or identity,
+        "title": component.get("title") or component.get("strategy_name") or identity,
+        "strategy_family": strategy_family,
+        "strategy_name": component.get("strategy_name") or component.get("title") or identity,
+        "contract": contract,
+        "execution_context": execution_context,
+        "period": period,
+        "compare_prefill": compare_prefill,
+    }
+
+
+def _resolve_selected_recheck_contracts(
+    row: dict[str, Any],
+    *,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    raw_decision = dict(row.get("raw_decision") or row)
+    active_components = _active_components(raw_decision)
+    if candidate_rows_by_id is None:
+        try:
+            candidate_rows = _find_candidate_rows_by_registry_id()
+            candidate_load_error = ""
+        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
+            candidate_rows = {}
+            candidate_load_error = str(exc)
+    else:
+        candidate_rows = dict(candidate_rows_by_id)
+        candidate_load_error = ""
+
+    try:
+        from .candidate_library import build_candidate_replay_payload
+
+        replay_builder_error = ""
+    except Exception as exc:  # pragma: no cover - defensive import boundary
+        build_candidate_replay_payload = None  # type: ignore[assignment]
+        replay_builder_error = str(exc)
+
+    contracts: list[dict[str, Any]] = []
+    missing_contracts: list[str] = []
+    invalid_contracts: list[str] = []
+    embedded_contract_count = 0
+    candidate_registry_fallback_count = 0
+
+    for index, component in enumerate(active_components):
+        component_row = dict(component or {})
+        identity = _component_identity(component_row, index)
+        title = _clean_text(component_row.get("title") or identity)
+        registry_id = _clean_text(component_row.get("registry_id"), "")
+        current_row = dict(candidate_rows.get(registry_id) or {}) if registry_id else {}
+        embedded_row = _component_embedded_candidate_row(component_row, identity)
+        payload: dict[str, Any] | None = None
+        resolved_row: dict[str, Any] = {}
+        source = "unresolved"
+        evidence_parts: list[str] = []
+
+        if build_candidate_replay_payload is None:
+            evidence_parts.append("replay helper import 실패")
+        else:
+            if embedded_row:
+                try:
+                    payload = build_candidate_replay_payload(embedded_row)
+                    resolved_row = embedded_row
+                    source = "final_decision_embedded_contract"
+                    embedded_contract_count += 1
+                    evidence_parts.append("Final Review selected component embedded contract is replayable.")
+                except Exception as exc:
+                    evidence_parts.append(f"embedded_contract_error={exc}")
+            if payload is None and current_row:
+                try:
+                    payload = build_candidate_replay_payload(current_row)
+                    resolved_row = current_row
+                    source = "candidate_registry_fallback"
+                    candidate_registry_fallback_count += 1
+                    evidence_parts.append("Current Candidate Registry fallback contract is replayable.")
+                except Exception as exc:
+                    evidence_parts.append(f"candidate_registry_error={exc}")
+
+        if payload is None:
+            if not registry_id and not embedded_row:
+                missing_contracts.append(f"{identity}: registry_id 및 embedded replay contract 없음")
+            elif registry_id and not current_row and not embedded_row:
+                missing_contracts.append(f"{identity}: current candidate row 및 embedded replay contract 없음")
+            else:
+                invalid_contracts.append(f"{identity}: {'; '.join(evidence_parts) or 'replay contract invalid'}")
+            contracts.append(
+                {
+                    "component": component_row,
+                    "identity": identity,
+                    "title": title,
+                    "registry_id": registry_id,
+                    "source": source,
+                    "status": "BLOCKED",
+                    "payload": {},
+                    "candidate_row": resolved_row,
+                    "evidence": "; ".join(evidence_parts) or "No replayable selected component contract was resolved.",
+                }
+            )
+            continue
+
+        contracts.append(
+            {
+                "component": component_row,
+                "identity": identity,
+                "title": title,
+                "registry_id": registry_id,
+                "source": source,
+                "status": "PASS",
+                "payload": payload,
+                "candidate_row": resolved_row,
+                "evidence": "; ".join(evidence_parts) or "Replay contract is available.",
+            }
+        )
+
+    return {
+        "contracts": contracts,
+        "active_component_count": len(active_components),
+        "valid_contract_count": sum(1 for item in contracts if item.get("status") == "PASS"),
+        "embedded_contract_count": embedded_contract_count,
+        "candidate_registry_fallback_count": candidate_registry_fallback_count,
+        "missing_contracts": missing_contracts,
+        "invalid_contracts": invalid_contracts,
+        "candidate_load_error": candidate_load_error,
+        "replay_builder_error": replay_builder_error,
+    }
+
+
 def build_selected_portfolio_recheck_readiness(
     row: dict[str, Any],
     *,
@@ -1595,51 +1789,23 @@ def build_selected_portfolio_recheck_readiness(
         )
     )
 
-    if candidate_rows_by_id is None:
-        try:
-            candidate_rows = _find_candidate_rows_by_registry_id()
-            candidate_load_error = ""
-        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
-            candidate_rows = {}
-            candidate_load_error = str(exc)
-    else:
-        candidate_rows = dict(candidate_rows_by_id)
-        candidate_load_error = ""
-
-    try:
-        from .candidate_library import build_candidate_replay_payload
-
-        replay_builder_error = ""
-    except Exception as exc:  # pragma: no cover - defensive import boundary
-        build_candidate_replay_payload = None  # type: ignore[assignment]
-        replay_builder_error = str(exc)
-
-    valid_contracts = 0
-    missing_contracts: list[str] = []
-    invalid_contracts: list[str] = []
+    contract_evidence = _resolve_selected_recheck_contracts(row, candidate_rows_by_id=candidate_rows_by_id)
+    valid_contracts = int(contract_evidence.get("valid_contract_count") or 0)
+    missing_contracts = [str(item) for item in list(contract_evidence.get("missing_contracts") or [])]
+    invalid_contracts = [str(item) for item in list(contract_evidence.get("invalid_contracts") or [])]
+    candidate_load_error = str(contract_evidence.get("candidate_load_error") or "")
+    replay_builder_error = str(contract_evidence.get("replay_builder_error") or "")
+    embedded_contract_count = int(contract_evidence.get("embedded_contract_count") or 0)
+    candidate_registry_fallback_count = int(contract_evidence.get("candidate_registry_fallback_count") or 0)
     replay_symbols: set[str] = set()
     replay_benchmarks: set[str] = set()
     replay_periods: list[str] = []
 
-    for index, component in enumerate(active_components):
-        identity = _component_identity(component, index)
-        registry_id = _clean_text(component.get("registry_id"), "")
-        if not registry_id:
-            missing_contracts.append(f"{identity}: registry_id 없음")
+    for contract_row in list(contract_evidence.get("contracts") or []):
+        if contract_row.get("status") != "PASS":
             continue
-        current_row = dict(candidate_rows.get(registry_id) or {})
-        if not current_row:
-            missing_contracts.append(f"{identity}: current candidate row 없음")
-            continue
-        if build_candidate_replay_payload is None:
-            invalid_contracts.append(f"{identity}: replay helper import 실패")
-            continue
-        try:
-            payload = build_candidate_replay_payload(current_row)
-        except Exception as exc:
-            invalid_contracts.append(f"{identity}: {exc}")
-            continue
-        valid_contracts += 1
+        payload = dict(contract_row.get("payload") or {})
+        component = dict(contract_row.get("component") or {})
         replay_symbols.update(str(symbol).strip().upper() for symbol in list(payload.get("tickers") or []) if str(symbol).strip())
         benchmark = str(payload.get("benchmark_ticker") or component.get("benchmark") or "").strip().upper()
         if benchmark:
@@ -1647,7 +1813,9 @@ def build_selected_portfolio_recheck_readiness(
         replay_periods.append(f"{payload.get('start') or '-'} -> {payload.get('end') or '-'}")
 
     expected_contracts = len(active_components)
-    if candidate_load_error or replay_builder_error:
+    if replay_builder_error:
+        replay_status = "NEEDS_INPUT"
+    elif candidate_load_error and valid_contracts < expected_contracts:
         replay_status = "NEEDS_INPUT"
     elif expected_contracts <= 0:
         replay_status = "BLOCKED"
@@ -1658,6 +1826,10 @@ def build_selected_portfolio_recheck_readiness(
     else:
         replay_status = "BLOCKED"
     replay_evidence_parts = []
+    if embedded_contract_count:
+        replay_evidence_parts.append(f"embedded_contracts={embedded_contract_count}")
+    if candidate_registry_fallback_count:
+        replay_evidence_parts.append(f"candidate_registry_fallbacks={candidate_registry_fallback_count}")
     if replay_symbols:
         replay_evidence_parts.append(f"symbols={len(replay_symbols)}")
     if replay_benchmarks:
@@ -1672,16 +1844,16 @@ def build_selected_portfolio_recheck_readiness(
         replay_evidence_parts.append(f"replay_builder_error={replay_builder_error}")
     rows.append(
         _readiness_check_row(
-            check="Candidate replay contract",
+            check="Selected replay contract",
             status=replay_status,
             current=f"{valid_contracts}/{expected_contracts} contracts",
-            evidence=" / ".join(replay_evidence_parts) if replay_evidence_parts else "Replay contracts are available.",
+            evidence=" / ".join(replay_evidence_parts) if replay_evidence_parts else "Selected replay contracts are available.",
             next_action=(
                 "Performance Recheck can rebuild selected component payloads."
                 if replay_status == "PASS"
                 else "Review partial replay contract coverage before relying on recheck output."
                 if replay_status == "REVIEW"
-                else "Fix Candidate Registry replay contracts or selected component registry ids."
+                else "Fix Final Review embedded contracts, Candidate Registry fallback, or selected component registry ids."
                 if replay_status == "BLOCKED"
                 else "Resolve candidate registry or replay helper availability before running recheck."
             ),
@@ -1796,6 +1968,8 @@ def build_selected_portfolio_recheck_readiness(
             "blocked_count": len(blocked),
             "active_component_count": len(active_components),
             "replay_contract_count": valid_contracts,
+            "embedded_replay_contract_count": embedded_contract_count,
+            "candidate_registry_fallback_count": candidate_registry_fallback_count,
             "missing_replay_contract_count": len(missing_contracts),
             "invalid_replay_contract_count": len(invalid_contracts),
             "symbol_count": len(replay_symbols),
@@ -1821,53 +1995,15 @@ def _selected_recheck_symbols_from_contracts(
     *,
     candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    raw_decision = dict(row.get("raw_decision") or row)
-    active_components = _active_components(raw_decision)
-    if candidate_rows_by_id is None:
-        try:
-            candidate_rows = _find_candidate_rows_by_registry_id()
-            candidate_load_error = ""
-        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
-            candidate_rows = {}
-            candidate_load_error = str(exc)
-    else:
-        candidate_rows = dict(candidate_rows_by_id)
-        candidate_load_error = ""
-
-    try:
-        from .candidate_library import build_candidate_replay_payload
-
-        replay_builder_error = ""
-    except Exception as exc:  # pragma: no cover - defensive import boundary
-        build_candidate_replay_payload = None  # type: ignore[assignment]
-        replay_builder_error = str(exc)
-
+    contract_evidence = _resolve_selected_recheck_contracts(row, candidate_rows_by_id=candidate_rows_by_id)
     symbol_roles: dict[str, set[str]] = {}
     symbol_components: dict[str, set[str]] = {}
-    missing_contracts: list[str] = []
-    invalid_contracts: list[str] = []
-    valid_contract_count = 0
-
-    for index, component in enumerate(active_components):
-        identity = _component_identity(component, index)
-        title = _clean_text(component.get("title") or identity)
-        registry_id = _clean_text(component.get("registry_id"), "")
-        if not registry_id:
-            missing_contracts.append(f"{identity}: registry_id 없음")
+    for contract_row in list(contract_evidence.get("contracts") or []):
+        if contract_row.get("status") != "PASS":
             continue
-        current_row = dict(candidate_rows.get(registry_id) or {})
-        if not current_row:
-            missing_contracts.append(f"{identity}: current candidate row 없음")
-            continue
-        if build_candidate_replay_payload is None:
-            invalid_contracts.append(f"{identity}: replay helper import 실패")
-            continue
-        try:
-            payload = build_candidate_replay_payload(current_row)
-        except Exception as exc:
-            invalid_contracts.append(f"{identity}: {exc}")
-            continue
-        valid_contract_count += 1
+        payload = dict(contract_row.get("payload") or {})
+        component = dict(contract_row.get("component") or {})
+        title = _clean_text(contract_row.get("title") or component.get("title") or contract_row.get("identity"))
         for symbol in list(payload.get("tickers") or []):
             cleaned = str(symbol or "").strip().upper()
             if not cleaned:
@@ -1883,12 +2019,14 @@ def _selected_recheck_symbols_from_contracts(
         "symbols": sorted(symbol_roles),
         "symbol_roles": {symbol: sorted(roles) for symbol, roles in symbol_roles.items()},
         "symbol_components": {symbol: sorted(components) for symbol, components in symbol_components.items()},
-        "active_component_count": len(active_components),
-        "valid_contract_count": valid_contract_count,
-        "missing_contracts": missing_contracts,
-        "invalid_contracts": invalid_contracts,
-        "candidate_load_error": candidate_load_error,
-        "replay_builder_error": replay_builder_error,
+        "active_component_count": contract_evidence.get("active_component_count", 0),
+        "valid_contract_count": contract_evidence.get("valid_contract_count", 0),
+        "embedded_contract_count": contract_evidence.get("embedded_contract_count", 0),
+        "candidate_registry_fallback_count": contract_evidence.get("candidate_registry_fallback_count", 0),
+        "missing_contracts": list(contract_evidence.get("missing_contracts") or []),
+        "invalid_contracts": list(contract_evidence.get("invalid_contracts") or []),
+        "candidate_load_error": contract_evidence.get("candidate_load_error", ""),
+        "replay_builder_error": contract_evidence.get("replay_builder_error", ""),
     }
 
 
@@ -2148,6 +2286,173 @@ def build_selected_portfolio_recheck_symbol_freshness(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Symbol freshness reads DB price metadata only; it does not ingest data or save monitoring records.",
+        },
+    }
+
+
+def _preflight_status_from_readiness(route: str) -> str:
+    if route == "RECHECK_READINESS_READY":
+        return "PASS"
+    if route == "RECHECK_READINESS_REVIEW":
+        return "REVIEW"
+    if route == "RECHECK_READINESS_NEEDS_DATA":
+        return "NEEDS_INPUT"
+    if route == "RECHECK_READINESS_BLOCKED":
+        return "BLOCKED"
+    return "NEEDS_INPUT"
+
+
+def _preflight_status_from_freshness(route: str) -> str:
+    if route == "SYMBOL_FRESHNESS_READY":
+        return "PASS"
+    if route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE"}:
+        return "REVIEW"
+    if route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
+        return "NEEDS_INPUT"
+    if route == "SYMBOL_FRESHNESS_BLOCKED":
+        return "BLOCKED"
+    return "NEEDS_INPUT"
+
+
+def _preflight_row(
+    *,
+    area: str,
+    status: str,
+    current: Any,
+    evidence: str,
+    next_action: str,
+) -> dict[str, Any]:
+    return {
+        "Area": area,
+        "Status": status,
+        "Ready": status == "PASS",
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+    }
+
+
+def build_selected_portfolio_recheck_operations_preflight(
+    row: dict[str, Any],
+    *,
+    latest_market_result: dict[str, Any] | None = None,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+    freshness_df: pd.DataFrame | None = None,
+    timeframe: str = "1d",
+) -> dict[str, Any]:
+    """Combine recheck contract readiness and price freshness into one read-only operations gate."""
+
+    readiness = build_selected_portfolio_recheck_readiness(
+        row,
+        latest_market_result=latest_market_result,
+        candidate_rows_by_id=candidate_rows_by_id,
+    )
+    symbol_freshness = build_selected_portfolio_recheck_symbol_freshness(
+        row,
+        latest_market_result=latest_market_result,
+        candidate_rows_by_id=candidate_rows_by_id,
+        freshness_df=freshness_df,
+        timeframe=timeframe,
+    )
+    readiness_route = str(readiness.get("route") or "")
+    freshness_route = str(symbol_freshness.get("route") or "")
+    readiness_metrics = dict(readiness.get("metrics") or {})
+    freshness_metrics = dict(symbol_freshness.get("metrics") or {})
+
+    rows = [
+        _preflight_row(
+            area="Recheck Readiness",
+            status=_preflight_status_from_readiness(readiness_route),
+            current=readiness.get("route_label") or readiness_route,
+            evidence=str(readiness.get("conclusion") or "-"),
+            next_action=(
+                "Use the resolved replay contracts and DB latest market date for Performance Recheck."
+                if readiness_route == "RECHECK_READINESS_READY"
+                else "Resolve readiness review / data / blocker rows before treating the next recheck as latest evidence."
+            ),
+        ),
+        _preflight_row(
+            area="Symbol Freshness",
+            status=_preflight_status_from_freshness(freshness_route),
+            current=(
+                f"symbols={freshness_metrics.get('symbol_count', 0)} / "
+                f"missing={freshness_metrics.get('missing_count', 0)} / "
+                f"stale={freshness_metrics.get('stale_count', 0)} / "
+                f"watch={freshness_metrics.get('watch_count', 0)}"
+            ),
+            evidence=str(symbol_freshness.get("conclusion") or "-"),
+            next_action=(
+                "Use these symbols for Performance Recheck."
+                if freshness_route == "SYMBOL_FRESHNESS_READY"
+                else "Refresh or verify DB price metadata before treating recheck output as current."
+            ),
+        ),
+        _preflight_row(
+            area="Execution Boundary",
+            status="PASS",
+            current="read_only / writes disabled / no order",
+            evidence="Preflight reads selected row, Candidate Registry fallback, and DB price metadata only.",
+            next_action="Run Performance Recheck manually when ready; no monitoring log, approval, order, or rebalance is created.",
+        ),
+    ]
+
+    if readiness_route == "RECHECK_READINESS_BLOCKED" or freshness_route == "SYMBOL_FRESHNESS_BLOCKED":
+        route = "RECHECK_PREFLIGHT_BLOCKED"
+        conclusion = "Performance Recheck 실행 전 차단 항목을 먼저 해결해야 합니다."
+    elif readiness_route == "RECHECK_READINESS_NEEDS_DATA" or freshness_route in {
+        "SYMBOL_FRESHNESS_MISSING",
+        "SYMBOL_FRESHNESS_NEEDS_DATA",
+    }:
+        route = "RECHECK_PREFLIGHT_NEEDS_DATA"
+        conclusion = "Performance Recheck를 최신 evidence로 보려면 DB 데이터 또는 replay 입력을 보강해야 합니다."
+    elif readiness_route == "RECHECK_READINESS_REVIEW" or freshness_route in {
+        "SYMBOL_FRESHNESS_WATCH",
+        "SYMBOL_FRESHNESS_STALE",
+    }:
+        route = "RECHECK_PREFLIGHT_REVIEW"
+        conclusion = "Performance Recheck 실행은 가능하지만 최신성 또는 일부 근거를 확인해야 합니다."
+    else:
+        route = "RECHECK_PREFLIGHT_READY"
+        conclusion = "Performance Recheck 실행 전 readiness와 symbol freshness가 준비되어 있습니다."
+
+    return {
+        "schema_version": SELECTED_RECHECK_OPERATIONS_PREFLIGHT_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_RECHECK_OPERATIONS_PREFLIGHT_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "rows": rows,
+        "readiness": readiness,
+        "symbol_freshness": symbol_freshness,
+        "metrics": {
+            "readiness_route": readiness_route,
+            "freshness_route": freshness_route,
+            "active_component_count": readiness_metrics.get("active_component_count", 0),
+            "replay_contract_count": readiness_metrics.get("replay_contract_count", 0),
+            "embedded_replay_contract_count": readiness_metrics.get("embedded_replay_contract_count", 0),
+            "candidate_registry_fallback_count": readiness_metrics.get("candidate_registry_fallback_count", 0),
+            "symbol_count": freshness_metrics.get("symbol_count", readiness_metrics.get("symbol_count", 0)),
+            "portfolio_symbol_count": freshness_metrics.get("portfolio_symbol_count", 0),
+            "benchmark_symbol_count": freshness_metrics.get("benchmark_symbol_count", 0),
+            "missing_symbol_count": freshness_metrics.get("missing_count", 0),
+            "stale_symbol_count": freshness_metrics.get("stale_count", 0),
+            "watch_symbol_count": freshness_metrics.get("watch_count", 0),
+            "readiness_blocked_count": readiness_metrics.get("blocked_count", 0),
+            "readiness_needs_input_count": readiness_metrics.get("needs_input_count", 0),
+            "freshness_needs_input_count": freshness_metrics.get("needs_input_count", 0),
+            "freshness_blocked_count": freshness_metrics.get("blocked_count", 0),
+            "latest_market_date": readiness_metrics.get("latest_market_date")
+            or freshness_metrics.get("latest_market_date"),
+            "timeframe": freshness_metrics.get("timeframe", timeframe),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_recheck_operations_preflight",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Operations preflight combines existing readiness and DB price freshness read models; it does not ingest data or save monitoring records.",
         },
     }
 
@@ -2718,14 +3023,11 @@ def build_selected_portfolio_performance_recheck(
         return {"status": "error", "error": "재검증할 active component가 없습니다."}
 
     try:
-        from .candidate_library import (
-            build_candidate_replay_payload,
-            run_candidate_replay_payload,
-        )
+        from .candidate_library import run_candidate_replay_payload
     except Exception as exc:  # pragma: no cover - defensive import boundary
         return {"status": "error", "error": f"candidate replay helper import failed: {exc}"}
 
-    candidate_by_id = _find_candidate_rows_by_registry_id()
+    contract_evidence = _resolve_selected_recheck_contracts(raw_decision)
     component_dfs: list[pd.DataFrame] = []
     ratios: list[float] = []
     component_rows: list[dict[str, Any]] = []
@@ -2733,19 +3035,27 @@ def build_selected_portfolio_performance_recheck(
     first_benchmark_df = pd.DataFrame()
     first_benchmark_label = "-"
 
-    for index, component in enumerate(active_components):
-        identity = _component_identity(component, index)
-        title = _clean_text(component.get("title") or identity)
+    if (
+        contract_evidence.get("candidate_load_error")
+        and int(contract_evidence.get("valid_contract_count") or 0) < int(contract_evidence.get("active_component_count") or 0)
+    ):
+        blockers.append(str(contract_evidence.get("candidate_load_error")))
+    if contract_evidence.get("replay_builder_error"):
+        blockers.append(str(contract_evidence.get("replay_builder_error")))
+
+    for contract_row in list(contract_evidence.get("contracts") or []):
+        component = dict(contract_row.get("component") or {})
+        title = _clean_text(contract_row.get("title") or component.get("title") or contract_row.get("identity"))
         weight = (_optional_float(component.get("target_weight")) or 0.0) / 100.0
-        registry_id = _clean_text(component.get("registry_id"), "")
-        current_row = candidate_by_id.get(registry_id)
-        if not current_row:
-            blockers.append(f"{title}: Candidate Registry row를 찾지 못했습니다. registry_id={registry_id or '-'}")
+        registry_id = _clean_text(contract_row.get("registry_id") or component.get("registry_id"), "")
+        if contract_row.get("status") != "PASS":
+            blockers.append(f"{title}: replay contract 확인 실패 - {contract_row.get('evidence') or '-'}")
             continue
         try:
-            payload = build_candidate_replay_payload(current_row)
+            payload = dict(contract_row.get("payload") or {})
             payload["start"] = start_ts.strftime("%Y-%m-%d")
             payload["end"] = end_ts.strftime("%Y-%m-%d")
+            current_row = dict(contract_row.get("candidate_row") or {})
             bundle = run_candidate_replay_payload(payload, current_row=current_row)
         except Exception as exc:
             blockers.append(f"{title}: 재검증 실행 실패 - {exc}")
