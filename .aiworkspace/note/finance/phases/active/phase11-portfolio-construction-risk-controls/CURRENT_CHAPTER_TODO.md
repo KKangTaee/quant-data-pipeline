@@ -9,15 +9,16 @@ Last Updated: 2026-05-29
 - 11-1 `construction-risk-source-map-v1`: Complete
 - 11-2 `concentration-overlap-exposure-contract-v1`: Complete
 - 11-3 `correlation-risk-contribution-contract-v1`: Complete
-- 11-4 `component-role-weight-discipline-v1`: Next
+- 11-4 `component-role-weight-discipline-v1`: Complete
+- 11-5 `construction-risk-gate-policy-v1`: Next
 
 ## Next Task
 
-`component-role-weight-discipline-v1`
+`construction-risk-gate-policy-v1`
 
 Focus:
 
-- component role / hedge / diversifier / growth evidence source를 확인한다.
-- profile-aware weight discipline 기준을 existing validation profile과 component weights에서 먼저 읽는다.
-- 역할 근거가 없거나 특정 role에 과도하게 몰리면 `PASS`로 올리지 않는다.
+- Construction Risk / Risk Contribution / Component Role Weight audit route를 selected-route gate policy에 연결한다.
+- `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker로, `REVIEW`는 review-required 근거로 표시한다.
+- non-PASS row criteria를 Final Review gate evidence에 병합한다.
 - 새 JSONL registry, user memo, preset, approval, order, auto rebalance behavior는 추가하지 않는다.

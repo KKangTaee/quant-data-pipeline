@@ -22,7 +22,7 @@ Phase 11은 "좋은 component를 조합했는가?"가 아니라 "조합 결과�
 | Concentration contract | component weight, asset bucket, sector / theme, top holding concentration 확인 | Complete: `construction_risk_audit_v1` |
 | Overlap contract | ETF 내부 top holding / issuer / exposure overlap 확인 | Complete: `construction_risk_audit_v1` provider holdings compact metrics |
 | Risk contribution contract | component return correlation, volatility contribution, drop-one dependency 확인 | Complete: `risk_contribution_audit_v1` |
-| Role / weight discipline | hedge / diversifier / growth role과 profile-aware max weight 확인 | proposal source, validation profile, component metadata |
+| Role / weight discipline | hedge / diversifier / growth role과 profile-aware max weight 확인 | Complete: `component_role_weight_audit_v1` |
 | Gate policy | selected-route 가능 여부에 construction risk gap 반영 | investability packet / selected-route gate |
 
 ## 11-1 Source Map Result
@@ -43,7 +43,7 @@ Main gaps:
 - Proxy-only source can look too strong unless source strength and provider coverage are explicit.
 - Component role / weight discipline has no first-class metadata source yet.
 
-Implementation order remains 11-4 role / weight discipline, then 11-5 gate policy.
+Implementation order now moves to 11-5 gate policy, then 11-6 integrated QA.
 
 ## 11-2 Contract Result
 
@@ -87,6 +87,28 @@ The audit exposes:
 
 Missing component matrix or missing drop-one dependency is not treated as PASS. DB price proxy or mixed component curve source is displayed as source strength and remains `REVIEW`. The contract is displayed in Practical Validation and Final Review, preserved in final decision snapshots and evidence rows, and kept out of selected-route gate enforcement until 11-5.
 
+## 11-4 Contract Result
+
+11-4 added `app/services/backtest_component_role_weight_audit.py`.
+
+The new audit reads existing compact evidence:
+
+- explicit `proposal_role` / role metadata from selection source components
+- target weights and validation profile `max_weight_review`
+- normalized role category concentration
+- validation profile intent and primary goal
+- existing component `weight_reason`
+- read-only storage / execution boundary
+
+The audit exposes:
+
+- `COMPONENT_ROLE_WEIGHT_READY`
+- `COMPONENT_ROLE_WEIGHT_REVIEW`
+- `COMPONENT_ROLE_WEIGHT_NEEDS_INPUT`
+- `COMPONENT_ROLE_WEIGHT_BLOCKED`
+
+Missing / partial role metadata does not become PASS. Single-component or inferred-only role evidence is visible as source weakness rather than creating a saved role preset. The contract is displayed in Practical Validation and Final Review, preserved in final decision snapshots and evidence rows, and kept out of selected-route gate enforcement until 11-5.
+
 ## Route Semantics
 
 | State | Meaning |
@@ -109,7 +131,7 @@ Missing component matrix or missing drop-one dependency is not treated as PASS. 
 - `finance/loaders/provider.py`: holdings / exposure source 확인 후보
 - `tests/test_service_contracts.py`: service contract 고정
 
-11-3 result: correlation / risk contribution contract is complete. Next code change should start with component role / weight discipline source ownership and compact row semantics.
+11-4 result: component role / weight discipline contract is complete. Next code change should start with selected-route gate policy ownership for the three construction risk audits.
 
 ## Data Boundary
 

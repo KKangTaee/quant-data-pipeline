@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 10 Walk-forward / OOS / Regime Validation](./phases/done/phase10-walkforward-oos-regime-validation.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `component-role-weight-discipline-v1`
+  - no active strategy-search candidate summary in `main-dev`; next work is `construction-risk-gate-policy-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Component role / weight audit V1 covers role discipline
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-4로 component role / target weight / validation profile evidence를 read-only construction risk contract로 묶는다.
+- Analysis result:
+  - `component_role_weight_audit_v1` now reads explicit proposal role source coverage, target weights, profile-aware max weight, role concentration, profile intent fit, weight reason, and storage boundary.
+  - Missing or partial role metadata does not become `PASS`; inferred or single-component role evidence remains `REVIEW` or `NEEDS_INPUT`.
+  - Practical Validation and Final Review display the audit, and final decision snapshots / evidence rows preserve it without adding role preset, user memo, saved setup, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `construction-risk-gate-policy-v1`로 세 construction risk audit route와 row-level non-PASS evidence를 selected-route gate policy에 연결한다.
 
 ### 2026-05-29 - Risk contribution audit V1 covers correlation / risk contribution
 - User request:

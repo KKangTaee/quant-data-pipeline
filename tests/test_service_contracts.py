@@ -204,6 +204,7 @@ import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
 import app.runtime.backtest_result_bundle
+import app.services.backtest_component_role_weight_audit
 import app.services.backtest_construction_risk_audit
 import app.services.backtest_data_coverage_audit
 import app.services.backtest_realism_audit
@@ -249,6 +250,7 @@ print(importlib.util.find_spec("app.web.runtime") is None)
         script = """
 import importlib.util
 import sys
+import app.services.backtest_component_role_weight_audit
 import app.services.backtest_data_coverage_audit
 import app.services.backtest_realism_audit
 import app.services.backtest_construction_risk_audit
@@ -541,6 +543,165 @@ class RiskContributionAuditContractTests(unittest.TestCase):
         self.assertEqual(audit["route"], RISK_CONTRIBUTION_REVIEW)
         self.assertEqual(audit["source_strength"], "db_price_proxy")
         self.assertEqual(rows_by_criteria["Component return matrix coverage"]["Status"], "REVIEW")
+
+
+class ComponentRoleWeightAuditContractTests(unittest.TestCase):
+    def _validation(
+        self,
+        *,
+        profile_id: str = "balanced_core",
+        primary_goal: str = "balanced",
+        max_weight_review: float = 75.0,
+        components: list[dict] | None = None,
+    ) -> dict:
+        components = list(
+            components
+            or [
+                {
+                    "title": "Core Trend",
+                    "strategy_name": "GTAA",
+                    "proposal_role": "core_anchor",
+                    "target_weight": 50.0,
+                    "weight_reason": "Core allocation",
+                },
+                {
+                    "title": "Defense",
+                    "strategy_name": "Risk Parity",
+                    "proposal_role": "defensive_sleeve",
+                    "target_weight": 30.0,
+                    "weight_reason": "Drawdown dampener",
+                },
+                {
+                    "title": "Diversifier",
+                    "strategy_name": "Equal Weight",
+                    "proposal_role": "diversifier",
+                    "target_weight": 20.0,
+                    "weight_reason": "Diversification sleeve",
+                },
+            ]
+        )
+        return {
+            "validation_profile": {
+                "profile_id": profile_id,
+                "profile_label": "균형형",
+                "answers": {"primary_goal": primary_goal},
+                "thresholds": {"max_weight_review": max_weight_review},
+            },
+            "metrics": {
+                "active_components": len(components),
+                "weight_total": sum(float(component.get("target_weight") or 0.0) for component in components),
+                "max_weight": max([float(component.get("target_weight") or 0.0) for component in components], default=0.0),
+            },
+            "selection_source_snapshot": {
+                "source_kind": "weighted_portfolio_mix",
+                "components": components,
+            },
+        }
+
+    def test_ready_audit_uses_explicit_roles_without_writes(self) -> None:
+        from app.services.backtest_component_role_weight_audit import (
+            COMPONENT_ROLE_WEIGHT_READY,
+            build_component_role_weight_audit,
+        )
+
+        audit = build_component_role_weight_audit(self._validation())
+
+        self.assertEqual(audit["route"], COMPONENT_ROLE_WEIGHT_READY)
+        self.assertEqual(audit["source_strength"], "explicit_role_metadata")
+        self.assertEqual(audit["metrics"]["pass"], 6)
+        self.assertEqual(audit["metrics"]["explicit_role_weight"], 100.0)
+        self.assertFalse(audit["execution_boundary"]["db_write"])
+        self.assertFalse(audit["execution_boundary"]["registry_write"])
+        self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+        self.assertFalse(audit["execution_boundary"]["role_preset_persistence"])
+
+    def test_missing_multi_component_roles_need_input(self) -> None:
+        from app.services.backtest_component_role_weight_audit import (
+            COMPONENT_ROLE_WEIGHT_NEEDS_INPUT,
+            build_component_role_weight_audit,
+        )
+
+        audit = build_component_role_weight_audit(
+            self._validation(
+                components=[
+                    {"title": "A", "strategy_name": "GTAA", "target_weight": 60.0},
+                    {"title": "B", "strategy_name": "Equal Weight", "target_weight": 40.0},
+                ]
+            )
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], COMPONENT_ROLE_WEIGHT_NEEDS_INPUT)
+        self.assertEqual(audit["source_strength"], "missing_role_metadata")
+        self.assertEqual(rows_by_criteria["Component role source coverage"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Role concentration discipline"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Weight rationale coverage"]["Status"], "NEEDS_INPUT")
+
+    def test_profile_weight_and_role_concentration_trigger_review(self) -> None:
+        from app.services.backtest_component_role_weight_audit import (
+            COMPONENT_ROLE_WEIGHT_REVIEW,
+            build_component_role_weight_audit,
+        )
+
+        audit = build_component_role_weight_audit(
+            self._validation(
+                components=[
+                    {
+                        "title": "Core",
+                        "strategy_name": "GTAA",
+                        "proposal_role": "core_anchor",
+                        "target_weight": 90.0,
+                        "weight_reason": "High conviction core",
+                    },
+                    {
+                        "title": "Diversifier",
+                        "strategy_name": "Equal Weight",
+                        "proposal_role": "diversifier",
+                        "target_weight": 10.0,
+                        "weight_reason": "Small diversifier",
+                    },
+                ]
+            )
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], COMPONENT_ROLE_WEIGHT_REVIEW)
+        self.assertEqual(rows_by_criteria["Profile-aware weight discipline"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Role concentration discipline"]["Status"], "REVIEW")
+
+    def test_hedged_profile_without_matching_role_triggers_review(self) -> None:
+        from app.services.backtest_component_role_weight_audit import (
+            COMPONENT_ROLE_WEIGHT_REVIEW,
+            build_component_role_weight_audit,
+        )
+
+        audit = build_component_role_weight_audit(
+            self._validation(
+                profile_id="hedged_tactical",
+                primary_goal="hedged_tactical",
+                max_weight_review=70.0,
+                components=[
+                    {
+                        "title": "Core",
+                        "strategy_name": "Equal Weight",
+                        "proposal_role": "core_anchor",
+                        "target_weight": 60.0,
+                        "weight_reason": "Core exposure",
+                    },
+                    {
+                        "title": "Growth",
+                        "strategy_name": "Quality Growth",
+                        "proposal_role": "growth_sleeve",
+                        "target_weight": 40.0,
+                        "weight_reason": "Growth exposure",
+                    },
+                ],
+            )
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], COMPONENT_ROLE_WEIGHT_REVIEW)
+        self.assertEqual(rows_by_criteria["Profile intent role fit"]["Status"], "REVIEW")
 
 
 class ValidationEfficacyAuditContractTests(unittest.TestCase):

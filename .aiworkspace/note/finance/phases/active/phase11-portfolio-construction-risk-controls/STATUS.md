@@ -5,7 +5,7 @@ Created: 2026-05-29
 
 ## Current State
 
-Phase 11 correlation / risk contribution contract is complete.
+Phase 11 component role / weight discipline contract is complete.
 
 Completed:
 
@@ -17,22 +17,24 @@ Completed:
 - Read-only Construction Risk Audit V1 for component weight concentration, provider look-through coverage, top holding, holdings overlap, and asset bucket exposure
 - 11-3 `correlation-risk-contribution-contract-v1`
 - Read-only Risk Contribution Audit V1 for component return matrix coverage, pairwise correlation, volatility contribution proxy, drop-one dependency, and storage boundary
+- 11-4 `component-role-weight-discipline-v1`
+- Read-only Component Role / Weight Audit V1 for role source coverage, profile-aware weight discipline, role concentration, profile intent fit, weight rationale coverage, and storage boundary
 
 Next:
 
-- 11-4 `component-role-weight-discipline-v1`
+- 11-5 `construction-risk-gate-policy-v1`
 
 ## Latest Decision
 
-11-3 implemented `risk_contribution_audit_v1` as a read-only contract.
-Missing component return matrix or missing drop-one dependency does not become `PASS`.
-Runtime component curves can become ready evidence; DB price proxy / mixed source evidence remains `REVIEW`.
+11-4 implemented `component_role_weight_audit_v1` as a read-only contract.
+Missing or partial role metadata does not become `PASS`.
+Explicit proposal role metadata can become ready evidence; single-component or inferred-only role evidence remains `REVIEW` or `NEEDS_INPUT`.
 The audit is visible in Practical Validation and Final Review, and Final Review snapshots preserve it.
 Selected-route gate enforcement remains 11-5 scope.
 
 Immediate next task:
 
-- `component-role-weight-discipline-v1`
+- `construction-risk-gate-policy-v1`
 
 ## Storage Boundary Reminder
 

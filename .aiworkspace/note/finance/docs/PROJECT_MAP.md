@@ -56,6 +56,7 @@ Last Verified: 2026-05-29
 | Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
 | Construction risk audit service | `app/services/backtest_construction_risk_audit.py` |
 | Risk contribution audit service | `app/services/backtest_risk_contribution_audit.py` |
+| Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
 | Practical Validation efficacy audit service | `app/services/backtest_validation_efficacy.py` |
 | Data coverage audit service | `app/services/backtest_data_coverage_audit.py` |
 | Backtest realism audit service | `app/services/backtest_realism_audit.py` |
@@ -90,6 +91,7 @@ Last Verified: 2026-05-29
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
 | `app/services/backtest_construction_risk_audit.py` | Streamlit-free construction risk audit read model. Existing component weight, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure evidence를 읽어 concentration / overlap / exposure risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Existing component return matrix, pairwise correlation, max risk contribution proxy, drop-one dependency, and storage boundary evidence를 읽어 risk contribution construction risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Existing proposal role, target weight, validation profile, role concentration, profile intent, weight reason, and storage boundary evidence를 읽어 role / weight discipline risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_validation_efficacy.py` | Streamlit-free validation efficacy audit read model. Existing compact evidence를 읽어 runtime replay, period coverage, benchmark parity, walk-forward temporal validation, OOS holdout validation, regime split validation, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_data_coverage_audit.py` | Streamlit-free data coverage audit read model. DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 compact `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
@@ -122,8 +124,8 @@ Backtest Analysis
 역할:
 
 - Backtest Analysis는 후보 source를 만든다.
-- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Validation Efficacy / Data Coverage / Backtest Realism 근거를 compact하게 보여준다.
-- Final Review는 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, select / hold / reject / re-review 판단을 기록하며, 저장된 판단을 read-only dossier로 다시 보여준다.
+- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거를 compact하게 보여준다.
+- Final Review는 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, select / hold / reject / re-review 판단을 기록하며, 저장된 판단을 read-only dossier로 다시 보여준다.
 - Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison을 확인한다.
 
 ## Data Boundary

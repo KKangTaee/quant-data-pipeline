@@ -27,6 +27,7 @@ from app.services.backtest_practical_validation_curve_context import (
     compact_curve_snapshot_from_bundle,
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
+from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
@@ -1661,6 +1662,9 @@ def build_practical_validation_result(
     risk_contribution_audit = build_risk_contribution_audit(result)
     result["risk_contribution_audit"] = risk_contribution_audit
     result["risk_contribution_display_rows"] = list(risk_contribution_audit.get("rows") or [])
+    component_role_weight_audit = build_component_role_weight_audit(result)
+    result["component_role_weight_audit"] = component_role_weight_audit
+    result["component_role_weight_display_rows"] = list(component_role_weight_audit.get("rows") or [])
     backtest_realism_audit = build_backtest_realism_audit(result)
     result["backtest_realism_audit"] = backtest_realism_audit
     result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])

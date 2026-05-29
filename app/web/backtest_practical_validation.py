@@ -579,6 +579,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     _render_data_coverage_audit(validation_result)
     _render_construction_risk_audit(validation_result)
     _render_risk_contribution_audit(validation_result)
+    _render_component_role_weight_audit(validation_result)
     _render_backtest_realism_audit(validation_result)
     st.markdown("##### Practical Diagnostics")
     diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
@@ -815,6 +816,46 @@ def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
     component_rows = list(audit.get("component_rows") or [])
     if component_rows:
         with st.expander("Risk contribution component rows", expanded=False):
+            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
+def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("component_role_weight_audit") or {})
+    rows = list(validation_result.get("component_role_weight_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Component Role / Weight Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {
+                "label": "Writes",
+                "value": "Disabled"
+                if not boundary.get("db_write")
+                and not boundary.get("registry_write")
+                and not boundary.get("memo_persistence")
+                and not boundary.get("role_preset_persistence")
+                else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    component_rows = list(audit.get("component_rows") or [])
+    if component_rows:
+        with st.expander("Component role / weight rows", expanded=False):
             st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))

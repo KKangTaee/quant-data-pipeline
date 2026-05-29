@@ -300,6 +300,37 @@ def _render_risk_contribution_summary(validation: dict[str, Any]) -> None:
             st.caption(str(audit.get("next_action")))
 
 
+def _render_component_role_weight_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("component_role_weight_audit") or {})
+    rows = list(validation.get("component_role_weight_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Component Role / Weight")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Component role / weight rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        component_rows = list(audit.get("component_rows") or [])
+        if component_rows:
+            st.markdown("Component role source rows")
+            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
 def _render_validation_summary(validation: dict[str, Any]) -> None:
     metrics = dict(validation.get("metrics") or {})
     route = str(validation.get("validation_route") or "-")
@@ -329,6 +360,7 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
     _render_data_coverage_summary(validation)
     _render_construction_risk_summary(validation)
     _render_risk_contribution_summary(validation)
+    _render_component_role_weight_summary(validation)
     _render_backtest_realism_summary(validation)
     diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
