@@ -124,6 +124,18 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
                     "turnover_rebalance_rows": 12,
                     "avg_turnover": 0.2,
                 },
+                "net_cost_curve_snapshot": {
+                    "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+                    "net_cost_curve_status": "applied_with_measurable_cost",
+                    "net_cost_curve_application_target": "result_df.Total Balance/Total Return",
+                    "total_balance_is_net_of_cost": True,
+                    "net_cost_curve_rows": 12,
+                    "estimated_cost_total": 42.0,
+                    "estimated_cost_positive_rows": 12,
+                    "gross_end_balance": 1542.0,
+                    "net_end_balance": 1500.0,
+                    "gross_net_end_balance_delta": 42.0,
+                },
             }
         )
 
@@ -142,6 +154,16 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(
             source["components"][0]["replay_contract"]["turnover_evidence_snapshot"]["avg_turnover"],
             0.2,
+        )
+        self.assertEqual(
+            source["net_cost_curve_snapshot"]["net_cost_curve_status"],
+            "applied_with_measurable_cost",
+        )
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["net_cost_curve_snapshot"][
+                "gross_net_end_balance_delta"
+            ],
+            42.0,
         )
         self.assertEqual(source["construction"]["rebalance_cadence"], 1)
 
@@ -395,6 +417,9 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertIn("End Ticker", diagnostics["turnover_input_missing_columns"])
         self.assertTrue(hardened["Turnover"].isna().all())
         self.assertEqual(diagnostics["estimated_cost_total"], 0.0)
+        self.assertEqual(diagnostics["net_cost_curve_status"], "applied_without_turnover_estimate")
+        self.assertTrue(diagnostics["total_balance_is_net_of_cost"])
+        self.assertEqual(diagnostics["estimated_cost_positive_rows"], 0)
 
     def test_turnover_postprocess_estimates_from_holdings(self) -> None:
         from app.runtime.backtest import _apply_transaction_cost_postprocess
@@ -436,6 +461,9 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertEqual(diagnostics["turnover_rebalance_rows"], 2)
         self.assertEqual(diagnostics["max_turnover"], 1.0)
         self.assertGreater(diagnostics["estimated_cost_total"], 0.0)
+        self.assertEqual(diagnostics["net_cost_curve_status"], "applied_with_measurable_cost")
+        self.assertGreater(diagnostics["estimated_cost_positive_rows"], 0)
+        self.assertGreater(diagnostics["gross_net_end_balance_delta"], 0.0)
         self.assertIn("Turnover", hardened.columns)
 
     def test_ready_audit_uses_cost_turnover_and_liquidity_metadata_without_writes(self) -> None:
@@ -468,6 +496,19 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
                         "avg_turnover": 0.15,
                         "max_turnover": 0.4,
                         "avg_rebalance_turnover": 0.15,
+                    },
+                    "net_cost_curve_snapshot": {
+                        "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+                        "net_cost_curve_status": "applied_with_measurable_cost",
+                        "net_cost_curve_application_target": "result_df.Total Balance/Total Return",
+                        "total_balance_is_net_of_cost": True,
+                        "net_cost_curve_rows": 24,
+                        "estimated_cost_total": 125.0,
+                        "estimated_cost_positive_rows": 12,
+                        "gross_end_balance": 1200.0,
+                        "net_end_balance": 1075.0,
+                        "gross_net_end_balance_delta": 125.0,
+                        "turnover_estimation_status": "estimated_from_holdings",
                     },
                     "source_snapshot": {
                         "settings_snapshot": {
@@ -505,15 +546,16 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
 
         self.assertEqual(audit["route"], BACKTEST_REALISM_READY)
         self.assertEqual(audit["cost_model_contract"]["application_status"], "applied_to_result_curve")
+        self.assertEqual(audit["net_cost_curve_contract"]["proof_status"], "applied_with_measurable_cost")
         self.assertEqual(audit["turnover_evidence_contract"]["evidence_strength"], "actual_estimate")
-        self.assertEqual(audit["metrics"]["pass"], 7)
+        self.assertEqual(audit["metrics"]["pass"], 8)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
 
     def test_cost_assumption_without_application_proof_requires_review(self) -> None:
         from app.services.backtest_realism_audit import (
-            BACKTEST_REALISM_REVIEW,
+            BACKTEST_REALISM_NEEDS_INPUT,
             build_backtest_realism_audit,
         )
 
@@ -555,8 +597,9 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         )
 
         rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
-        self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(audit["route"], BACKTEST_REALISM_NEEDS_INPUT)
         self.assertEqual(rows_by_criteria["Transaction cost model"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Net cost curve proof"]["Status"], "NEEDS_INPUT")
         self.assertEqual(audit["cost_model_contract"]["application_status"], "assumption_only")
 
     def test_rebalance_cadence_without_turnover_estimate_requires_review(self) -> None:
@@ -581,6 +624,17 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
                         "turnover_estimation_status": "not_estimated_missing_holdings",
                         "turnover_source": "missing_result_holding_columns",
                         "turnover_input_missing_columns": ["End Ticker", "Next Ticker"],
+                    },
+                    "net_cost_curve_snapshot": {
+                        "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+                        "net_cost_curve_status": "applied_without_turnover_estimate",
+                        "net_cost_curve_application_target": "result_df.Total Balance/Total Return",
+                        "total_balance_is_net_of_cost": True,
+                        "net_cost_curve_rows": 24,
+                        "estimated_cost_total": 0.0,
+                        "estimated_cost_positive_rows": 0,
+                        "gross_net_end_balance_delta": 0.0,
+                        "turnover_estimation_status": "not_estimated_missing_holdings",
                     },
                     "source_snapshot": {
                         "settings_snapshot": {
@@ -616,7 +670,9 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
 
         rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
         self.assertEqual(audit["route"], BACKTEST_REALISM_REVIEW)
+        self.assertEqual(rows_by_criteria["Net cost curve proof"]["Status"], "REVIEW")
         self.assertEqual(rows_by_criteria["Turnover evidence"]["Status"], "REVIEW")
+        self.assertEqual(audit["net_cost_curve_contract"]["proof_status"], "applied_without_turnover_estimate")
         self.assertEqual(audit["turnover_evidence_contract"]["evidence_strength"], "missing_estimate")
 
     def test_missing_cost_and_liquidity_evidence_are_not_passed(self) -> None:

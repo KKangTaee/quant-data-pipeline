@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-29 - Net cost curve proof separates applied cost from measurable impact
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - cost application proof와 turnover evidence가 실제 net result curve에 연결됐는지 더 직접적으로 확인한다.
+- Analysis result:
+  - `cost_application_status=applied_to_result_curve`만으로는 measurable cost impact를 증명하기 부족했다.
+  - Runtime metadata, candidate/history snapshot, Practical Validation source, Backtest Realism Audit에 compact `net_cost_curve_contract_v1`을 연결했다.
+  - measurable gross-net delta와 positive estimated-cost rows는 PASS 후보, zero-cost / turnover 미추정 / legacy flag only / missing proof는 REVIEW 또는 NEEDS_INPUT으로 해석한다.
+- Follow-up:
+  - 다음 task는 `liquidity-capacity-evidence-v1`로 DB provider / price 기반 liquidity와 capacity evidence를 강화한다.
+
 ### 2026-05-29 - Turnover evidence separates holdings-derived estimates from cadence-only
 - User request:
   - Phase 9 다음 단계 진행을 요청함.

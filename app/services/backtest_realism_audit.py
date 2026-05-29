@@ -250,6 +250,103 @@ def build_cost_model_source_contract(validation: dict[str, Any]) -> dict[str, An
     return _cost_model_contract_from_root(validation, evidence_root)
 
 
+def _net_cost_curve_contract_from_root(validation: dict[str, Any], source: dict[str, Any]) -> dict[str, Any]:
+    cost_bps = _first_non_none(
+        _first_float(source, "transaction_cost_bps", "one_way_cost_bps"),
+        _first_float(validation, "transaction_cost_bps"),
+    )
+    cost_application_status = _safe_text(
+        _first_value(source, "cost_application_status")
+        or _first_value(validation, "cost_application_status"),
+        fallback="",
+    ).lower()
+    net_curve_status = _safe_text(
+        _first_value(source, "net_cost_curve_status")
+        or _first_value(validation, "net_cost_curve_status"),
+        fallback="",
+    ).lower()
+    estimated_cost_total = _first_non_none(
+        _first_float(source, "estimated_cost_total"),
+        _first_float(validation, "estimated_cost_total"),
+    )
+    estimated_cost_positive_rows = _first_non_none(
+        _first_float(source, "estimated_cost_positive_rows"),
+        _first_float(validation, "estimated_cost_positive_rows"),
+    )
+    gross_end_balance = _first_non_none(
+        _first_float(source, "gross_end_balance"),
+        _first_float(validation, "gross_end_balance"),
+    )
+    net_end_balance = _first_non_none(
+        _first_float(source, "net_end_balance"),
+        _first_float(validation, "net_end_balance"),
+    )
+    gross_net_delta = _first_non_none(
+        _first_float(source, "gross_net_end_balance_delta"),
+        _first_float(validation, "gross_net_end_balance_delta"),
+    )
+    if gross_net_delta is None and gross_end_balance is not None and net_end_balance is not None:
+        gross_net_delta = float(gross_end_balance - net_end_balance)
+    rows = _first_non_none(
+        _first_float(source, "net_cost_curve_rows"),
+        _first_float(validation, "net_cost_curve_rows"),
+    )
+    turnover_status = _safe_text(
+        _first_value(source, "turnover_estimation_status")
+        or _first_value(validation, "turnover_estimation_status"),
+        fallback="",
+    ).lower()
+    total_balance_is_net = _truthy(
+        _first_value(source, "total_balance_is_net_of_cost")
+        or _first_value(validation, "total_balance_is_net_of_cost")
+    )
+
+    if net_curve_status:
+        proof_status = net_curve_status
+    elif cost_bps is None:
+        proof_status = "missing_cost_input"
+    elif cost_bps <= 0:
+        proof_status = "applied_zero_cost_bps" if cost_application_status else "zero_cost_assumption"
+    elif estimated_cost_total and estimated_cost_total > 0 and gross_net_delta and gross_net_delta > 0:
+        proof_status = "applied_with_measurable_cost_legacy_inferred"
+    elif cost_application_status == "applied_to_result_curve":
+        proof_status = "legacy_application_flag_only"
+    else:
+        proof_status = "missing_net_cost_curve_proof"
+
+    return {
+        "schema_version": "net_cost_curve_contract_v1",
+        "proof_status": proof_status,
+        "cost_application_status": cost_application_status or None,
+        "transaction_cost_bps": cost_bps,
+        "estimated_cost_total": estimated_cost_total,
+        "estimated_cost_positive_rows": int(estimated_cost_positive_rows) if estimated_cost_positive_rows is not None else None,
+        "gross_end_balance": gross_end_balance,
+        "net_end_balance": net_end_balance,
+        "gross_net_end_balance_delta": gross_net_delta,
+        "net_cost_curve_rows": int(rows) if rows is not None else None,
+        "total_balance_is_net_of_cost": total_balance_is_net,
+        "turnover_estimation_status": turnover_status or None,
+        "evidence": _first_value(source, "net_cost_curve_application_target")
+        or _first_value(validation, "net_cost_curve_application_target")
+        or "net cost curve proof metadata",
+    }
+
+
+def build_net_cost_curve_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    """Extract the compact net cost curve proof used by Backtest Realism Audit."""
+
+    validation = dict(validation or {})
+    source = dict(validation.get("selection_source_snapshot") or {})
+    source_snapshot = dict(source.get("source_snapshot") or {})
+    evidence_root = {
+        "validation": validation,
+        "selection_source_snapshot": source,
+        "source_snapshot": source_snapshot,
+    }
+    return _net_cost_curve_contract_from_root(validation, evidence_root)
+
+
 def _transaction_cost_row(
     validation: dict[str, Any],
     source: dict[str, Any],
@@ -285,6 +382,51 @@ def _transaction_cost_row(
         evidence=evidence,
         next_action=next_action,
         meaning="성과가 거래비용 / spread / slippage 영향을 반영했는지 확인합니다.",
+    )
+
+
+def _net_cost_curve_row(
+    validation: dict[str, Any],
+    source: dict[str, Any],
+    curve_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    contract = dict(curve_contract or _net_cost_curve_contract_from_root(validation, source))
+    proof_status = str(contract.get("proof_status") or "").strip()
+    estimated_cost_total = _optional_float(contract.get("estimated_cost_total"))
+    gross_net_delta = _optional_float(contract.get("gross_net_end_balance_delta"))
+    positive_rows = contract.get("estimated_cost_positive_rows")
+    if proof_status.startswith("applied_with_measurable_cost"):
+        status = "PASS"
+        current = f"cost={estimated_cost_total if estimated_cost_total is not None else '-'} / gross-net={gross_net_delta if gross_net_delta is not None else '-'}"
+        evidence = contract.get("evidence") or "net cost curve proof attached"
+        next_action = "추가 조치 없음"
+    elif proof_status in {"applied_without_turnover_estimate", "legacy_application_flag_only", "applied_no_cost_impact"}:
+        status = "REVIEW"
+        current = f"{proof_status} / positive_rows={positive_rows if positive_rows is not None else '-'}"
+        evidence = contract.get("evidence") or "net curve application proof is incomplete"
+        next_action = "gross / net / estimated cost proof와 turnover estimate를 함께 확인합니다."
+    elif proof_status in {"applied_zero_cost_bps", "zero_cost_assumption"}:
+        status = "REVIEW"
+        current = proof_status
+        evidence = "zero or non-positive cost impact"
+        next_action = "zero-cost run인지 의도적으로 확인하고 최종 판단 사유에 남깁니다."
+    elif proof_status == "missing_cost_input":
+        status = "NEEDS_INPUT"
+        current = "missing cost input"
+        evidence = "transaction_cost_bps missing"
+        next_action = "거래비용 입력과 net curve proof를 보강합니다."
+    else:
+        status = "NEEDS_INPUT"
+        current = proof_status or "missing"
+        evidence = contract.get("evidence") or "net cost curve proof missing"
+        next_action = "gross / net / estimated cost curve metadata를 보강합니다."
+    return _row(
+        criteria="Net cost curve proof",
+        status=status,
+        current=current,
+        evidence=evidence,
+        next_action=next_action,
+        meaning="거래비용이 단순 가정이 아니라 결과 곡선의 net 성과에 실제 반영됐는지 확인합니다.",
     )
 
 
@@ -585,9 +727,11 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "source_snapshot": source_snapshot,
     }
     cost_model_contract = _cost_model_contract_from_root(validation, evidence_root)
+    net_cost_curve_contract = _net_cost_curve_contract_from_root(validation, evidence_root)
     turnover_evidence_contract = _turnover_evidence_contract_from_root(validation, evidence_root)
     rows = [
         _transaction_cost_row(validation, evidence_root, cost_model_contract),
+        _net_cost_curve_row(validation, evidence_root, net_cost_curve_contract),
         _turnover_row(validation, evidence_root, turnover_evidence_contract),
         _liquidity_row(validation),
         _net_policy_row(validation, evidence_root),
@@ -620,6 +764,7 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "conclusion": conclusion,
         "next_action": next_action,
         "cost_model_contract": cost_model_contract,
+        "net_cost_curve_contract": net_cost_curve_contract,
         "turnover_evidence_contract": turnover_evidence_contract,
         "rows": rows,
         "metrics": {
@@ -649,6 +794,7 @@ __all__ = [
     "BACKTEST_REALISM_NEEDS_INPUT",
     "BACKTEST_REALISM_BLOCKED",
     "build_cost_model_source_contract",
+    "build_net_cost_curve_contract",
     "build_turnover_evidence_contract",
     "build_backtest_realism_audit",
 ]

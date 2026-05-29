@@ -43,6 +43,19 @@ Created: 2026-05-29
 - Backtest Realism Audit exposes `turnover_evidence_contract` and treats cadence-only evidence as `REVIEW`.
 - Follow-up integration risk: weighted / saved mix sources still need per-component turnover aggregation if the source is not a single strategy.
 
+### net-cost-curve-application-v1
+
+- Touched:
+  - `app/runtime/backtest.py`
+  - `app/runtime/history.py`
+  - `app/services/backtest_realism_audit.py`
+  - `app/services/backtest_practical_validation_source.py`
+  - `app/web/backtest_candidate_review_helpers.py`
+  - `tests/test_service_contracts.py`
+- Runtime net cost curve proof is compact metadata flowing through existing source snapshots.
+- Backtest Realism Audit exposes `net_cost_curve_contract` and adds a separate `Net cost curve proof` row.
+- Follow-up integration risk: weighted / saved mix sources may need component-level net curve proof aggregation before final Phase 9 closeout.
+
 ## Verification Plan
 
 - `git diff --check`

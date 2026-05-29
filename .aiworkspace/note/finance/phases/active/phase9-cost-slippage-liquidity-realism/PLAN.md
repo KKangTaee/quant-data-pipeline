@@ -50,9 +50,9 @@ Backtest Realism Audit과 selected-route gate가 비용 / 회전율 / 유동성 
 | Phase Slice | Goal | Status |
 | --- | --- | --- |
 | 9-0 | Phase 9 board open / scope and task split | Complete |
-| 9-1 | Cost model source contract review | Pending |
-| 9-2 | Turnover / rebalance evidence read model | Pending |
-| 9-3 | Net cost curve application proof | Pending |
+| 9-1 | Cost model source contract review | Complete |
+| 9-2 | Turnover / rebalance evidence read model | Complete |
+| 9-3 | Net cost curve application proof | Complete |
 | 9-4 | Liquidity / capacity evidence refinement | Pending |
 | 9-5 | Cost / slippage sensitivity audit | Pending |
 | 9-6 | Backtest Realism gate policy refinement | Pending |

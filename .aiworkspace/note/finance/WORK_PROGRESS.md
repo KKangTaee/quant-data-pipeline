@@ -24,6 +24,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/net-cost-curve-application-v1/`.
+- Runtime now emits compact `net_cost_curve_contract_v1` metadata, and Practical Validation / Backtest Realism Audit preserve gross-net cost proof without new workflow persistence.
+- Backtest Realism Audit now separates measurable net cost impact from zero-cost, missing-turnover, legacy-flag-only, and missing-proof cases.
+- Next Phase 9 task is `liquidity-capacity-evidence-v1`; keep it DB/provider/loader-backed and avoid UI direct fetch.
 - Completed `.aiworkspace/note/finance/tasks/active/turnover-rebalance-evidence-v1/`.
 - Runtime now emits compact `turnover_evidence_contract_v1` metadata and does not fabricate turnover when holdings columns are missing.
 - Backtest Realism Audit separates holdings-derived turnover, legacy estimate, cadence-only, and missing turnover evidence.

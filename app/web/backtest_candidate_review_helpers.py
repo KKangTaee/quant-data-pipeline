@@ -852,6 +852,23 @@ _TURNOVER_EVIDENCE_SNAPSHOT_KEYS = (
 )
 
 
+_NET_COST_CURVE_SNAPSHOT_KEYS = (
+    "net_cost_curve_contract_version",
+    "net_cost_curve_status",
+    "net_cost_curve_application_target",
+    "total_balance_is_net_of_cost",
+    "net_cost_curve_rows",
+    "estimated_cost_total",
+    "estimated_cost_positive_rows",
+    "gross_start_balance",
+    "gross_end_balance",
+    "net_end_balance",
+    "gross_net_end_balance_delta",
+    "transaction_cost_bps",
+    "turnover_estimation_status",
+)
+
+
 def _cost_model_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
     return {
         key: data.get(key)
@@ -864,6 +881,14 @@ def _turnover_evidence_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, 
     return {
         key: data.get(key)
         for key in _TURNOVER_EVIDENCE_SNAPSHOT_KEYS
+        if data.get(key) is not None
+    }
+
+
+def _net_cost_curve_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: data.get(key)
+        for key in _NET_COST_CURVE_SNAPSHOT_KEYS
         if data.get(key) is not None
     }
 
@@ -918,6 +943,7 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
         },
         "cost_model_snapshot": _cost_model_snapshot_from_mapping(meta),
         "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(meta),
+        "net_cost_curve_snapshot": _net_cost_curve_snapshot_from_mapping(meta),
         "settings_snapshot": {
             "tickers": meta.get("tickers") or [],
             "universe_mode": meta.get("universe_mode"),
@@ -991,6 +1017,7 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
         },
         "cost_model_snapshot": _cost_model_snapshot_from_mapping(record),
         "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(record),
+        "net_cost_curve_snapshot": _net_cost_curve_snapshot_from_mapping(record),
         "settings_snapshot": {
             "tickers": record.get("tickers") or [],
             "universe_mode": record.get("universe_mode"),
@@ -1283,6 +1310,7 @@ def _build_candidate_review_note_from_draft(
         "data_trust_snapshot": dict(draft.get("data_trust_snapshot") or {}),
         "cost_model_snapshot": dict(draft.get("cost_model_snapshot") or {}),
         "turnover_evidence_snapshot": dict(draft.get("turnover_evidence_snapshot") or {}),
+        "net_cost_curve_snapshot": dict(draft.get("net_cost_curve_snapshot") or {}),
         "settings_snapshot": dict(draft.get("settings_snapshot") or {}),
         "compare_readiness_evaluation": dict(draft.get("compare_readiness_evaluation") or {}),
         "notes": (

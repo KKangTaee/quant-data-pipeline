@@ -10,9 +10,17 @@ Created: 2026-05-29
 - [x] Phase 9 task board created.
 - [x] Cost model source contract review complete.
 - [x] Turnover / rebalance evidence refinement complete.
-- [ ] Net cost curve application proof started.
+- [x] Net cost curve application proof complete.
+- [ ] Liquidity / capacity evidence refinement not started.
 
 ## Latest Update
+
+2026-05-29:
+
+- `net-cost-curve-application-v1` completed.
+- Runtime now emits compact `net_cost_curve_contract_v1` metadata proving whether gross / net / estimated cost curve evidence is measurable.
+- Practical Validation source snapshots preserve net cost curve proof, and Backtest Realism Audit separates measurable cost impact, zero-cost, missing turnover estimate, and missing proof.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
 
 2026-05-29:
 
@@ -36,5 +44,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `net-cost-curve-application-v1`.
-- Confirm gross / net cost result curve metadata and legacy source treatment before liquidity / capacity work.
+- Start `liquidity-capacity-evidence-v1`.
+- Keep liquidity evidence DB/provider/loader-backed and avoid UI direct fetch or new workflow persistence.

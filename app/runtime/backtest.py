@@ -411,9 +411,30 @@ def _apply_transaction_cost_postprocess(
     working["Total Return"] = working["Net Total Return"]
 
     diagnostics = _turnover_diagnostics_from_result(working)
+    estimated_cost_series = pd.to_numeric(working["Estimated Cost"], errors="coerce").fillna(0.0)
+    gross_end_balance = float(working["Gross Total Balance"].iloc[-1]) if not working.empty else 0.0
+    net_end_balance = float(working["Total Balance"].iloc[-1]) if not working.empty else 0.0
+    estimated_cost_total = float(estimated_cost_series.sum()) if not working.empty else 0.0
+    estimated_cost_positive_rows = int((estimated_cost_series > 0).sum())
+    gross_net_end_balance_delta = float(gross_end_balance - net_end_balance)
+    if float(transaction_cost_bps or 0.0) <= 0:
+        net_curve_status = "applied_zero_cost_bps"
+    elif diagnostics.get("turnover_estimation_status") != "estimated_from_holdings":
+        net_curve_status = "applied_without_turnover_estimate"
+    elif estimated_cost_total > 0 and gross_net_end_balance_delta > 0 and estimated_cost_positive_rows > 0:
+        net_curve_status = "applied_with_measurable_cost"
+    else:
+        net_curve_status = "applied_no_cost_impact"
     diagnostics.update(
         {
-            "estimated_cost_total": float(working["Estimated Cost"].sum()) if not working.empty else 0.0,
+            "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+            "net_cost_curve_status": net_curve_status,
+            "net_cost_curve_application_target": "result_df.Total Balance/Total Return",
+            "total_balance_is_net_of_cost": True,
+            "net_cost_curve_rows": int(len(working)),
+            "estimated_cost_total": estimated_cost_total,
+            "estimated_cost_positive_rows": estimated_cost_positive_rows,
+            "gross_net_end_balance_delta": gross_net_end_balance_delta,
         }
     )
     return working, diagnostics
@@ -1827,6 +1848,11 @@ def _apply_real_money_hardening(
             "cost_application_status": "applied_to_result_curve",
             "cost_application_target": "result_df.Total Balance/Total Return",
             "cost_turnover_source": turnover_stats["turnover_source"],
+            "net_cost_curve_contract_version": turnover_stats["net_cost_curve_contract_version"],
+            "net_cost_curve_status": turnover_stats["net_cost_curve_status"],
+            "net_cost_curve_application_target": turnover_stats["net_cost_curve_application_target"],
+            "total_balance_is_net_of_cost": turnover_stats["total_balance_is_net_of_cost"],
+            "net_cost_curve_rows": turnover_stats["net_cost_curve_rows"],
             "min_price_filter": float(min_price_filter or 0.0),
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
@@ -1882,9 +1908,11 @@ def _apply_real_money_hardening(
             "turnover_rebalance_rows": turnover_stats["turnover_rebalance_rows"],
             "turnover_nonzero_count": turnover_stats["turnover_nonzero_count"],
             "estimated_cost_total": turnover_stats["estimated_cost_total"],
+            "estimated_cost_positive_rows": turnover_stats["estimated_cost_positive_rows"],
             "gross_start_balance": float(hardened_df["Gross Total Balance"].iloc[0]),
             "gross_end_balance": float(hardened_df["Gross Total Balance"].iloc[-1]),
             "net_end_balance": float(hardened_df["Total Balance"].iloc[-1]),
+            "gross_net_end_balance_delta": turnover_stats["gross_net_end_balance_delta"],
         }
     )
     strategy_summary_df = bundle.get("summary_df")
