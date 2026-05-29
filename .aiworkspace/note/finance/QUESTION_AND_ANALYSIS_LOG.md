@@ -15,13 +15,25 @@ Detailed historical analysis was archived on `2026-04-13`.
 - current phase board:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/active/phase9-cost-slippage-liquidity-realism/PLAN.md)
 - latest completed phase:
-  - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
+  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 integrated QA / closeout
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 10 walk-forward / out-of-sample / regime split validation
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-29 - Phase 9 cost / slippage / liquidity realism closes
+- User request:
+  - Phase 9 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 9의 cost / turnover / net curve / liquidity / sensitivity / gate policy 변경을 통합 검증하고 closeout한다.
+- Analysis result:
+  - Phase 9 integrated QA passed: touched service compile, UI / engine boundary checker, full service contracts 90 tests, refinement hygiene, and diff check.
+  - Phase 9 closeout summary was added under `phases/done/`.
+  - This phase strengthened Backtest Realism and selected-route evidence gates without adding new JSONL registry, memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - Next hardening target is Phase 10 walk-forward / out-of-sample / regime split validation.
 
 ### 2026-05-29 - Backtest realism gate policy surfaces row-level gaps
 - User request:

@@ -15,15 +15,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - current phase board:
   - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/active/phase9-cost-slippage-liquidity-realism/PLAN.md)
 - latest completed phase:
-  - [Phase 8 Investability Data Evidence Expansion](./phases/done/phase8-investability-data-evidence-expansion.md)
+  - [Phase 9 Cost / Slippage / Liquidity Realism](./phases/done/phase9-cost-slippage-liquidity-realism.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is Phase 9 integrated QA / closeout
+  - no active strategy-search candidate summary in `main-dev`; next work is Phase 10 walk-forward / out-of-sample / regime split validation
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/phase9-integrated-qa-closeout/`.
+- Phase 9 closeout summary added at `.aiworkspace/note/finance/phases/done/phase9-cost-slippage-liquidity-realism.md`.
+- Integrated verification passed: Phase 9 touched service compile, UI / engine boundary checker, full `tests.test_service_contracts` 90 tests, finance refinement hygiene, and `git diff --check`.
+- Next hardening target is Phase 10: walk-forward / out-of-sample / regime split validation.
 - Completed `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-refinement-v1/`.
 - Final Review gate policy now surfaces failing Backtest Realism row criteria, including cost / slippage sensitivity and liquidity gaps, in selected-route evidence.
 - Row-level `NEEDS_INPUT` maps to blocker severity and `REVIEW` maps to review-required; no waiver, memo, preset, approval, order, or auto rebalance behavior was added.

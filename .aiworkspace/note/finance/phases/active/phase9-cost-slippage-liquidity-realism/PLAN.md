@@ -1,6 +1,6 @@
 # Phase 9 Cost / Slippage / Liquidity Realism Plan
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## 이걸 하는 이유?
@@ -56,7 +56,7 @@ Backtest Realism Audit과 selected-route gate가 비용 / 회전율 / 유동성 
 | 9-4 | Liquidity / capacity evidence refinement | Complete |
 | 9-5 | Cost / slippage sensitivity audit | Complete |
 | 9-6 | Backtest Realism gate policy refinement | Complete |
-| 9-7 | Phase 9 integrated QA / closeout | Pending |
+| 9-7 | Phase 9 integrated QA / closeout | Complete |
 
 ## Done Criteria
 

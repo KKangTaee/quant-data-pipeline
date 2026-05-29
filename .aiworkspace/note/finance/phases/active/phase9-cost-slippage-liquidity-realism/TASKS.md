@@ -1,6 +1,6 @@
 # Phase 9 Cost / Slippage / Liquidity Realism Tasks
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Task Board
@@ -14,17 +14,17 @@ Created: 2026-05-29
 | 9-4 | `liquidity-capacity-evidence-v1` | `finance-backtest-web-workflow` + `finance-db-pipeline` | DB provider / price based liquidity and capacity evidence refinement | Complete |
 | 9-5 | `cost-slippage-sensitivity-audit-v1` | `finance-backtest-web-workflow` | read-only cost / slippage sensitivity rows in Backtest Realism Audit | Complete |
 | 9-6 | `backtest-realism-gate-policy-refinement-v1` | `finance-backtest-web-workflow` | selected-route policy treatment for cost / liquidity gaps | Complete |
-| 9-7 | `phase9-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Pending |
+| 9-7 | `phase9-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Complete |
 
 ## Immediate Next Task
 
-`phase9-integrated-qa-closeout`
+Phase 9 is complete.
 
 Goal:
 
-- Phase 9 전체 cost / slippage / turnover / liquidity realism 변경을 통합 검증한다.
-- Backtest Realism Audit, Final Review gate policy, docs, storage boundary를 마지막으로 점검한다.
-- 1차 hardening cycle 다음 Phase 10 handoff에 필요한 남은 risk와 follow-up을 정리한다.
+- Next phase candidate: Phase 10 walk-forward / out-of-sample / regime split validation.
+- Do not start Phase 10 inside this closeout task.
+- Keep storage boundary unchanged: no new JSONL registry, user memo, preset, approval, order, or auto rebalance.
 
 Out of scope:
 

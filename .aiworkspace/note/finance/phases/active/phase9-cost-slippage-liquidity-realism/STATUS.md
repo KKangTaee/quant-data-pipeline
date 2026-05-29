@@ -1,6 +1,6 @@
 # Phase 9 Cost / Slippage / Liquidity Realism Status
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Current Status
@@ -14,9 +14,16 @@ Created: 2026-05-29
 - [x] Liquidity / capacity evidence refinement complete.
 - [x] Cost / slippage sensitivity audit complete.
 - [x] Backtest Realism gate policy refinement complete.
-- [ ] Phase 9 integrated QA / closeout not started.
+- [x] Phase 9 integrated QA / closeout complete.
 
 ## Latest Update
+
+2026-05-29:
+
+- `phase9-integrated-qa-closeout` completed.
+- Integrated QA passed: Phase 9 touched service compile, UI / engine boundary checker, full `tests.test_service_contracts` 90 tests, refinement hygiene check, and `git diff --check`.
+- Phase 9 closeout summary was added under `phases/done/`; next hardening target is Phase 10 walk-forward / out-of-sample / regime split validation.
+- `finance/.DS_Store` remains a local generated artifact and is not part of the phase commit.
 
 2026-05-29:
 
@@ -68,5 +75,5 @@ Created: 2026-05-29
 
 ## Next
 
-- Start `phase9-integrated-qa-closeout`.
-- Run integrated service contracts and close Phase 9 with residual risks / Phase 10 handoff.
+- Phase 9 complete.
+- Next: open Phase 10 walk-forward / out-of-sample / regime split validation when implementation resumes.

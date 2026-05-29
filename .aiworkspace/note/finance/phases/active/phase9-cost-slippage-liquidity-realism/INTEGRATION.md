@@ -1,6 +1,6 @@
 # Phase 9 Cost / Slippage / Liquidity Realism Integration
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Integration Boundaries
@@ -87,8 +87,15 @@ Created: 2026-05-29
 
 ## Verification Plan
 
+Completed on 2026-05-29:
+
+- `.venv/bin/python -m py_compile app/services/backtest_realism_audit.py app/services/backtest_evidence_read_model.py app/services/backtest_practical_validation_provider_context.py tests/test_service_contracts.py`
+- `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
+- `.venv/bin/python -m unittest tests.test_service_contracts` (90 tests)
+- `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
 - `git diff --check`
-- compile touched service/runtime modules
-- focused Backtest Realism Audit service contracts
-- full `tests.test_service_contracts`
-- storage boundary review before commit
+
+Storage boundary:
+
+- No registry JSONL, saved setup, run history, run artifact, user memo, approval, order, or auto rebalance artifact is part of Phase 9 closeout.
+- `finance/.DS_Store` remains an unstaged local generated artifact.

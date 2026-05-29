@@ -1,7 +1,7 @@
 # Active Finance Phases
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-29
 
 이 폴더는 Main phase worktree가 관리하는 active phase 기록을 둔다.
 
@@ -27,3 +27,10 @@ phases/active/<phase-name>/
 | `ui-engine-boundary-foundation` | Implementation complete | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입한 phase. audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료. |
 | `ui-engine-boundary-cleanup` | Complete | Task 6~9 cleanup 완료. boundary lint는 `app.services/app.runtime -> app.web` import hard fail 기준으로 유지. |
 | `investability-decision-foundation` | Implementation complete | Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 검토 가능한 decision workflow로 강화하기 위한 저장 / gate / 데이터 수집 / task 순서 기준선. 후속은 structured waiver policy 또는 Practical Validation V2 P2 closeout. |
+
+## Recently Closed Boards Retained In Active Folder
+
+| Phase | Closeout |
+|---|---|
+| `phase8-investability-data-evidence-expansion` | [Phase 8 closeout](../done/phase8-investability-data-evidence-expansion.md) |
+| `phase9-cost-slippage-liquidity-realism` | [Phase 9 closeout](../done/phase9-cost-slippage-liquidity-realism.md) |

@@ -1,6 +1,6 @@
 # Phase 9 Cost / Slippage / Liquidity Realism Risks
 
-Status: Active
+Status: Complete
 Created: 2026-05-29
 
 ## Risks
@@ -14,9 +14,15 @@ Created: 2026-05-29
 | Sensitivity NOT_RUN is hidden | over-trusts point estimate | expose NOT_RUN / missing sensitivity in Backtest Realism Audit |
 | New storage sprawl | user concern regression | no new JSONL registry; keep raw evidence in DB and compact evidence in existing workflow |
 
-## Open Questions
+## Resolved In Phase 9
 
-- Which strategies currently apply `transaction_cost_bps` to the actual result curve?
-- Can turnover be computed from existing portfolio weights without adding a new persistence path?
-- Which liquidity threshold should differ by profile or strategy type?
-- Should capacity be based on portfolio notional, target weight, ADV, AUM, or a conservative blend?
+- Runtime cost application is now exposed through compact cost / net curve proof contracts.
+- Turnover evidence is holdings-derived when possible and cadence-only evidence remains review.
+- Liquidity / capacity evidence reads compact provider context and keeps bridge / proxy / stale / partial evidence out of strong PASS.
+
+## Carry Forward
+
+- Profile-specific liquidity / capacity thresholds remain a future refinement.
+- Full market impact / execution simulation is out of scope for Phase 9.
+- Weighted / saved mix component-level aggregation may need deeper proof in later phases.
+- Phase 10 should strengthen walk-forward / out-of-sample / regime split validation.
