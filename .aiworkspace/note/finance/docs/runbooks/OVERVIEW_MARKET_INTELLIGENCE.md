@@ -98,6 +98,12 @@ http://localhost:8501
    - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
+9. `Workspace > Overview > Browser Auto Refresh`
+   - Overview 상단의 `Auto refresh while Overview is open` 토글은 브라우저 세션이 살아 있을 때만 `browser_safe` profile을 5분마다 호출한다.
+   - 1차 browser-safe mode는 S&P 500 daily snapshot만 수집 대상으로 둔다.
+   - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.
+   - 실제 실행 여부는 `overview_automation`의 cadence, US market-hours guard, lock file이 판단한다.
+
 ## CLI Smoke Checks
 
 Overview scheduled refresh dry-run:

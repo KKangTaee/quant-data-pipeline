@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from app.jobs.run_history import append_run_history
+from app.jobs.overview_automation import run_overview_automation
 from app.jobs.ingestion_jobs import (
     run_diagnose_market_quote_gaps,
     run_collect_earnings_calendar,
@@ -31,6 +32,8 @@ from app.web.overview_dashboard_helpers import (
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
+BROWSER_AUTO_REFRESH_SECONDS = 300
+BROWSER_AUTO_REFRESH_PROFILE = "browser_safe"
 MARKET_MOVER_TABLE_CHROME_HEIGHT = 44
 MARKET_COVERAGE_LABELS = {
     "SP500": "S&P 500",
@@ -765,6 +768,144 @@ def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
         append_run_history(result)
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
+
+
+def _status_tone(status: Any) -> str:
+    normalized = str(status or "").lower()
+    if normalized in {"success", "dry_run"}:
+        return "positive"
+    if normalized in {"partial_success", "skipped", "locked"}:
+        return "warning"
+    if normalized in {"failed", "error"}:
+        return "danger"
+    return "neutral"
+
+
+def _summarize_auto_refresh_plan(summary: dict[str, Any]) -> str:
+    plan = summary.get("plan")
+    if not isinstance(plan, list) or not plan:
+        return "-"
+    row = dict(plan[0] or {})
+    label = row.get("label") or row.get("job_id") or "-"
+    reason = row.get("reason") or "-"
+    return f"{label}: {reason}"
+
+
+def _build_browser_auto_refresh_cards(summary: dict[str, Any] | None, checked_at: str | None) -> list[dict[str, Any]]:
+    if not summary:
+        return [
+            {
+                "title": "Auto Refresh",
+                "value": "Ready",
+                "detail": "Enable to check the S&P 500 daily snapshot every 5 minutes while this page is open.",
+                "tone": "neutral",
+            },
+            {"title": "Last Check", "value": "-", "detail": "No browser-session check yet.", "tone": "neutral"},
+            {"title": "Jobs", "value": "-", "detail": "Waiting for the first check.", "tone": "neutral"},
+        ]
+
+    status = str(summary.get("status") or "-")
+    jobs_due = summary.get("jobs_due")
+    jobs_run = summary.get("jobs_run")
+    result_messages = [
+        str(result.get("message") or result.get("status") or "")
+        for result in (summary.get("results") or [])
+        if isinstance(result, dict)
+    ]
+    detail = result_messages[0] if result_messages else _summarize_auto_refresh_plan(summary)
+    return [
+        {
+            "title": "Auto Refresh",
+            "value": status,
+            "detail": detail,
+            "tone": _status_tone(status),
+        },
+        {
+            "title": "Last Check",
+            "value": checked_at or summary.get("finished_at") or "-",
+            "detail": f"Profile: {summary.get('profile') or BROWSER_AUTO_REFRESH_PROFILE}",
+            "tone": "neutral",
+        },
+        {
+            "title": "Jobs",
+            "value": f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}",
+            "detail": "Due / run in this browser-session check.",
+            "tone": "positive" if jobs_run else "neutral",
+        },
+    ]
+
+
+def _run_browser_auto_refresh_check() -> dict[str, Any]:
+    checked_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        summary = run_overview_automation(profile=BROWSER_AUTO_REFRESH_PROFILE)
+    except RuntimeError as exc:
+        summary = {
+            "job_name": "overview_automation",
+            "status": "locked",
+            "profile": BROWSER_AUTO_REFRESH_PROFILE,
+            "started_at": checked_at,
+            "finished_at": checked_at,
+            "jobs_due": 1,
+            "jobs_run": 0,
+            "plan": [],
+            "results": [],
+            "message": str(exc),
+        }
+    except Exception as exc:  # pragma: no cover - UI resilience only
+        summary = {
+            "job_name": "overview_automation",
+            "status": "failed",
+            "profile": BROWSER_AUTO_REFRESH_PROFILE,
+            "started_at": checked_at,
+            "finished_at": checked_at,
+            "jobs_due": None,
+            "jobs_run": 0,
+            "plan": [],
+            "results": [],
+            "message": str(exc),
+        }
+    st.session_state["overview_browser_auto_refresh_summary"] = summary
+    st.session_state["overview_browser_auto_refresh_checked_at"] = checked_at
+    return summary
+
+
+def _render_browser_auto_refresh_panel() -> None:
+    with st.container(border=True):
+        controls = st.columns([1.25, 1, 1.2], gap="small", vertical_alignment="bottom")
+        st.session_state.setdefault("overview_browser_auto_refresh_enabled", False)
+        enabled = controls[0].toggle(
+            "Auto refresh while Overview is open",
+            key="overview_browser_auto_refresh_enabled",
+            help="When enabled, this browser session checks the S&P 500 daily snapshot every 5 minutes. Closing the page stops it.",
+        )
+        controls[1].selectbox(
+            "Mode",
+            ["S&P 500 only"],
+            index=0,
+            key="overview_browser_auto_refresh_mode",
+            disabled=True,
+            help="The first browser-session profile intentionally collects only the S&P 500 daily snapshot.",
+        )
+        controls[2].caption("Runs only while this Overview page is open. Uses the existing cadence, market-hours, and lock guards.")
+
+        if enabled:
+            @st.fragment(run_every=BROWSER_AUTO_REFRESH_SECONDS)
+            def _browser_auto_refresh_heartbeat() -> None:
+                summary = _run_browser_auto_refresh_check()
+                checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
+                render_status_card_grid(_build_browser_auto_refresh_cards(summary, str(checked_at or "")))
+
+            _browser_auto_refresh_heartbeat()
+        else:
+            summary = st.session_state.get("overview_browser_auto_refresh_summary")
+            checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
+            render_status_card_grid(
+                _build_browser_auto_refresh_cards(
+                    summary if isinstance(summary, dict) else None,
+                    str(checked_at or "") if checked_at else None,
+                )
+            )
 
 
 def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> bool:
@@ -2155,6 +2296,7 @@ def render_overview_dashboard(
 
     st.title("Finance Console")
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
+    _render_browser_auto_refresh_panel()
 
     market_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
         ["Market Movers", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]

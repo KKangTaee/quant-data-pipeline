@@ -5573,3 +5573,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 1차 자동화는 long-running daemon보다 run-once CLI가 안전하다. CLI가 cadence, US market-hours, lock, scheduled run history metadata를 처리하면 로컬 scheduler와 Codex automation 양쪽에 붙이기 쉽다
 - Follow-up:
   - `app.jobs.overview_automation`을 추가했고, Data Health scheduled/manual/failure-streak 표시와 quote gap issue persistence까지 보강했다. 다음 단계는 실제 macOS launchd / cron 등록 또는 Codex automation 연결 여부를 선택하는 것이다
+
+### 2026-05-29 - 자동 수집을 브라우저가 열렸을 때만 작동하게 한다
+- User request:
+  - 사용자가 아직은 프로그램을 보고 있지 않을 때 수집할 필요가 없으므로, 브라우저가 열렸을 때만 스케줄러가 작동하는 방향을 제안하고 1차 작업 진행을 요청함
+- Interpreted goal:
+  - OS 상시 scheduler 대신 Overview 페이지가 열려 있는 세션에서만 S&P 500 daily snapshot을 주기적으로 확인해야 함
+- Analysis result:
+  - Streamlit `fragment(run_every=300)`이 브라우저 세션 기반 heartbeat에 적합하며, provider 호출은 직접 하지 않고 기존 `overview_automation --profile browser_safe` 경로를 재사용하는 것이 안전함
+- Follow-up:
+  - `browser_safe` profile과 Overview 상단 auto refresh toggle / status panel / heartbeat를 추가했다. 1차는 S&P 500 snapshot만 자동 check하며 Top1000 / Top2000 / Events는 후속 opt-in으로 남긴다
