@@ -368,15 +368,35 @@ strategy 선택
 - 복원 후 결과를 갱신하려면 사용자가 다시 실행해야 한다.
 - selection history가 있는 전략은 latest result의 `Selection History Table` / `Interpretation Summary`에서 상세를 본다.
 
-## Real-Money Compare 진입 평가 흐름
+## Stage / Checkpoint 용어 기준
 
-`Real-Money > 현재 판단`에는 `5단계 Compare 진입 평가` 박스를 둔다.
+Backtest 제품 흐름의 `Stage`와 화면 안의 검증 기준은 분리해 부른다.
+
+Stage:
+
+- `Backtest Analysis`: 후보 생성
+- `Practical Validation`: 실전 투입 전 검증
+- `Final Review`: 최종 선택 / 보류 / 거절 / 재검토
+- `Operations > Selected Portfolio Dashboard`: 선정 이후 모니터링 / 재확인
+
+검증 체크포인트:
+
+- `Result Integrity`: Data Trust, 기간, 가격 최신성, excluded ticker
+- `Performance Shape`: Summary, Equity Curve, extremes
+- `Candidate Readiness`: Real-Money signal, Promotion, Deployment, blocker
+- `Practical Evidence`: provider / data coverage / realism / robustness / construction evidence
+- `Final Decision Gate`: selected-route blocker와 최종 판단
+- `Monitoring Check`: 선정 이후 recheck readiness, freshness, provider evidence, review signal
+
+## Real-Money Candidate Readiness 흐름
+
+`Real-Money > 현재 판단`에는 `Candidate Readiness Checkpoint` 박스를 둔다.
 
 목적:
 
 - `Promotion`, `Deployment`, blocker 정보를 10점 척도로 요약한다.
-- 사용자가 4단계 Hold 해결을 마치고 5단계 Compare로 넘어갈 수 있는지 먼저 판단하게 한다.
-- 이 평가는 live trading approval이나 주문 지시가 아니라 Compare 진입 보조 신호다.
+- 사용자가 이 결과를 Compare 또는 Practical Validation 후보로 넘겨도 되는지 먼저 판단하게 한다.
+- 이 평가는 live trading approval이나 주문 지시가 아니라 후보 검토 보조 신호다.
 
 기준:
 
@@ -386,15 +406,15 @@ strategy 선택
 
 점수 해석:
 
-- `8.0 / 10` 이상이면 깔끔하게 5단계 Compare로 진행 가능한 상태다.
-- `8.0 / 10` 미만이어도 위 핵심 기준을 만족하면 Compare로는 넘길 수 있지만, 개선 항목을 같이 확인한다.
-- 위 핵심 기준을 만족하지 못하면 점수와 무관하게 4단계에서 blocker를 먼저 해결한다.
+- `8.0 / 10` 이상이면 깔끔하게 후보 검토가 가능한 상태다.
+- `8.0 / 10` 미만이어도 위 핵심 기준을 만족하면 조건부 후보 검토가 가능하지만, 개선 항목을 같이 확인한다.
+- 위 핵심 기준을 만족하지 못하면 점수와 무관하게 blocker를 먼저 해결한다.
 
 표시:
 
-- `Readiness Score`: 10점 만점의 Compare 진입 점수
-- `판정`: `5단계 Compare 진행 가능`, `5단계 Compare 진행 가능, 개선 항목 동시 확인`, `4단계에서 먼저 blocker 해결`
-- `다음 행동`: Compare로 넘길지, blocker를 먼저 해결할지 설명
+- `Candidate Readiness`: 10점 만점의 후보 검토 점수
+- `판정`: `후보 검토 진행 가능`, `후보 검토 가능, 개선 항목 동시 확인`, `후보 보류: blocker 먼저 해결`
+- `다음 행동`: Compare / Practical Validation으로 넘길지, blocker를 먼저 해결할지 설명
 - `점수 계산 기준 보기`: Promotion / Deployment / Core Blocker별 점수 근거
 
 ## Compare 흐름
@@ -405,7 +425,7 @@ strategy multi-select
   -> strategy별 box에서 variant / advanced inputs 설정
   -> Run Strategy Comparison
   -> strategy별 result bundle 실행
-  -> 5단계 Compare 검증 보드
+  -> 개별 후보 Compare 검증 보드
   -> comparison table / overlay / focused strategy 표시
   -> Weighted Portfolio Builder로 전달
 ```
@@ -520,7 +540,7 @@ registry snapshot과 실제 재실행 결과가 같은 설정으로 복원되는
 ```text
 Backtest > Compare & Portfolio Builder
   -> 개별 전략 비교 화면
-  -> 개별 전략 5단계 Compare 결과
+  -> 개별 전략 Compare 결과
   -> compare result bundles
   -> weight 입력
   -> optional GTAA 70 / Equal Weight 30 quick mix

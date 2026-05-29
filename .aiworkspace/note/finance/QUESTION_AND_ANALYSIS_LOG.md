@@ -6186,3 +6186,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - broker/account/order/auto rebalance와 memo-like storage는 Phase 13 범위 밖으로 유지한다
 - Follow-up:
   - Phase 13 board를 열었고 다음 작업은 `phase13-cycle-inventory-v1`이다
+
+### 2026-05-30 - Backtest Analysis는 Stage와 검증 체크포인트를 분리해서 읽는다
+- User request:
+  - 사용자가 Backtest Analysis 결과 화면에서 Runtime Payload, Data Trust, Practical Validation handoff, Real-Money의 legacy 단계 표현이 혼란스럽다고 지적하고 1~6단계 개선을 요청함
+- Interpreted goal:
+  - 새 저장 기능을 늘리지 않고, Backtest Analysis를 후보 생성 화면답게 정리하며 검증 기준은 `검증 체크포인트` 언어로 분리해야 함
+- Analysis result:
+  - `Stage`는 Backtest Analysis / Practical Validation / Final Review / Selected Dashboard로 유지하고, Result Integrity / Candidate Readiness 같은 검증 기준은 별도 checkpoint로 표시하는 것이 맞다
+  - Practical Validation handoff는 검증 metric이 아니라 Next Action으로 배치해야 한다
+- Follow-up:
+  - 구현 기록은 `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`에서 확인한다

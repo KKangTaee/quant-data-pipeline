@@ -214,7 +214,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             {
                 "checkpoint": "Practical Validation source로 저장됐는가",
                 "detail": "후보는 Review Note가 아니라 Clean V2 selection source로 넘어가야 다음 검증에서 같은 계약으로 읽힙니다.",
-                "screen": "Backtest Analysis > Practical Validation Handoff",
+                "screen": "Backtest Analysis > Next Action: 검증 후보로 보내기",
             },
             {
                 "checkpoint": "실전 검증 blocker가 없는가",
@@ -256,8 +256,8 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
                 "screen": "Compare & Portfolio Builder > 저장된 비중 조합",
             },
             {
-                "checkpoint": "개별 5단계 검증으로 오해하지 않는가",
-                "detail": "5단계 Compare 보드는 개별 전략 후보용이고, 저장 mix는 Portfolio Mix 검증 보드에서 판단합니다.",
+                "checkpoint": "개별 후보 검증으로 오해하지 않는가",
+                "detail": "개별 후보 Compare 보드는 단일 전략 후보용이고, 저장 mix는 Portfolio Mix 검증 보드에서 판단합니다.",
                 "screen": "저장된 비중 조합 > Portfolio Mix 검증 보드",
             },
             {

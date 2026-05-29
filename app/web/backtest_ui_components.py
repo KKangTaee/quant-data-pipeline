@@ -245,6 +245,102 @@ def render_badge_strip(items: list[dict[str, Any]]) -> None:
     )
 
 
+# Render workflow checkpoints as a compact visual strip without implying stored stages.
+def render_checkpoint_strip(checkpoints: list[dict[str, Any]]) -> None:
+    html_items: list[str] = []
+    for checkpoint in checkpoints:
+        label = escape(str(checkpoint.get("label") or ""))
+        title = escape(str(checkpoint.get("title") or ""))
+        detail = escape(str(checkpoint.get("detail") or ""))
+        status = escape(_display_value(checkpoint.get("status")))
+        tone = escape(str(checkpoint.get("tone") or "neutral"))
+        html_items.append(
+            f'<div class="bt-checkpoint-item bt-checkpoint-{tone}">'
+            f'<div class="bt-checkpoint-marker">{label}</div>'
+            f'<div class="bt-checkpoint-body">'
+            f'<div class="bt-checkpoint-title">{title}</div>'
+            f'<div class="bt-checkpoint-detail">{detail}</div>'
+            f'<div class="bt-checkpoint-status">{status}</div>'
+            f"</div>"
+            f"</div>"
+        )
+    st.markdown(
+        """
+        <style>
+          .bt-checkpoint-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 0.65rem;
+            margin: 0.45rem 0 0.85rem 0;
+          }
+          .bt-checkpoint-item {
+            display: grid;
+            grid-template-columns: 2.15rem 1fr;
+            gap: 0.7rem;
+            min-height: 128px;
+            padding: 0.85rem 0.9rem;
+            border: 1px solid rgba(49, 51, 63, 0.16);
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+          }
+          .bt-checkpoint-positive { border-top: 4px solid #0f766e; }
+          .bt-checkpoint-warning { border-top: 4px solid #b45309; }
+          .bt-checkpoint-danger { border-top: 4px solid #b91c1c; }
+          .bt-checkpoint-neutral { border-top: 4px solid #475569; }
+          .bt-checkpoint-marker {
+            width: 2.05rem;
+            height: 2.05rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #475569;
+            color: #ffffff;
+            font-weight: 820;
+            font-size: 0.86rem;
+          }
+          .bt-checkpoint-positive .bt-checkpoint-marker { background: #0f766e; }
+          .bt-checkpoint-warning .bt-checkpoint-marker { background: #b45309; }
+          .bt-checkpoint-danger .bt-checkpoint-marker { background: #b91c1c; }
+          .bt-checkpoint-body {
+            min-width: 0;
+          }
+          .bt-checkpoint-title {
+            font-size: 0.98rem;
+            font-weight: 780;
+            line-height: 1.25;
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
+          .bt-checkpoint-detail {
+            margin-top: 0.35rem;
+            font-size: 0.84rem;
+            line-height: 1.35;
+            color: #475569;
+            overflow-wrap: anywhere;
+          }
+          .bt-checkpoint-status {
+            display: inline-flex;
+            margin-top: 0.58rem;
+            padding: 0.2rem 0.52rem;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 0.76rem;
+            font-weight: 760;
+            overflow-wrap: anywhere;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="bt-checkpoint-strip">{"".join(html_items)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 # Render a thin purpose/result strip so section meaning is visible without a card grid.
 def render_stage_brief(*, purpose: str, result: str) -> None:
     st.markdown(

@@ -12,7 +12,12 @@ from app.services.backtest_result_read_model import (
     data_trust_status_label,
 )
 from app.web.backtest_common import *  # noqa: F401,F403
-from app.web.backtest_ui_components import render_status_card_grid
+from app.web.backtest_ui_components import (
+    render_badge_strip,
+    render_checkpoint_strip,
+    render_readiness_route_panel,
+    render_status_card_grid,
+)
 
 
 def _render_compare_altair_chart(
@@ -76,30 +81,109 @@ def _render_compare_altair_chart(
     st.altair_chart(chart + end_points + end_labels, use_container_width=True)
 
 
+def _data_trust_result_integrity(meta: dict[str, Any]) -> dict[str, str]:
+    price_freshness = meta.get("price_freshness") or {}
+    status = str(price_freshness.get("status") or "").strip().lower()
+    excluded_tickers = list(meta.get("excluded_tickers") or [])
+    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+    warnings = list(meta.get("warnings") or [])
+
+    if status == "error":
+        return {
+            "label": "BLOCKED",
+            "tone": "danger",
+            "detail": "가격 최신성 오류가 있어 결과 해석 전에 데이터 보강이 필요합니다.",
+        }
+    if status == "warning" or excluded_tickers or malformed_price_rows or warnings:
+        return {
+            "label": "REVIEW",
+            "tone": "warning",
+            "detail": "결과는 읽을 수 있지만 기간, 제외 ticker, warning을 함께 확인해야 합니다.",
+        }
+    if status == "ok":
+        return {
+            "label": "OK",
+            "tone": "positive",
+            "detail": "요청 기간과 가격 최신성 기준에서 큰 차단 신호가 없습니다.",
+        }
+    return {
+        "label": "UNKNOWN",
+        "tone": "neutral",
+        "detail": "가격 최신성 metadata가 제한적입니다. 결과 기간과 row 수를 먼저 확인합니다.",
+    }
+
+
+def _price_freshness_display(status: str | None) -> tuple[str, str]:
+    normalized = str(status or "").strip().lower()
+    if normalized == "ok":
+        return "OK", "positive"
+    if normalized == "warning":
+        return "WARNING", "warning"
+    if normalized == "error":
+        return "ERROR", "danger"
+    return "NOT ATTACHED", "neutral"
+
+
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
     price_freshness = meta.get("price_freshness") or {}
     freshness_details = price_freshness.get("details") or {}
     excluded_tickers = list(meta.get("excluded_tickers") or [])
     malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+    integrity = _data_trust_result_integrity(meta)
+    freshness_label, freshness_tone = _price_freshness_display(price_freshness.get("status"))
 
     st.markdown("#### Data Trust Summary")
     st.caption(
-        "이번 결과가 어떤 데이터 범위에서 계산됐는지 먼저 확인하는 요약입니다. "
-        "성과 해석 전에 요청 기간과 실제 결과 기간, 가격 최신성, 제외 ticker를 같이 봅니다."
+        "Checkpoint A · Result Integrity. 성과를 보기 전에 이 백테스트 결과가 어떤 데이터 범위에서 계산됐는지 확인합니다."
     )
 
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("Requested End", meta.get("end") or "-")
-    metric_cols[1].metric("Actual Result End", meta.get("actual_result_end") or "-")
-    metric_cols[2].metric("Result Rows", meta.get("result_rows", "-"))
-    metric_cols[3].metric("Excluded Tickers", len(excluded_tickers))
+    render_status_card_grid(
+        [
+            {
+                "title": "Result Integrity",
+                "value": integrity["label"],
+                "detail": integrity["detail"],
+                "tone": integrity["tone"],
+            },
+            {
+                "title": "Price Freshness",
+                "value": freshness_label,
+                "detail": price_freshness.get("message") or "가격 최신성 metadata 기준",
+                "tone": freshness_tone,
+            },
+            {
+                "title": "Result Window",
+                "value": meta.get("actual_result_end") or "-",
+                "detail": f"Requested end: {meta.get('end') or '-'}",
+                "tone": "neutral",
+            },
+            {
+                "title": "Excluded Tickers",
+                "value": len(excluded_tickers),
+                "detail": "전략 계산에서 제외된 ticker 수",
+                "tone": "warning" if excluded_tickers else "positive",
+            },
+        ]
+    )
+
+    render_badge_strip(
+        [
+            {"label": "Requested End", "value": meta.get("end") or "-", "tone": "neutral"},
+            {"label": "Actual Result End", "value": meta.get("actual_result_end") or "-", "tone": "neutral"},
+            {"label": "Result Rows", "value": meta.get("result_rows", "-"), "tone": "neutral"},
+            {"label": "Malformed Rows", "value": len(malformed_price_rows), "tone": "warning" if malformed_price_rows else "positive"},
+        ]
+    )
 
     if freshness_details:
-        fresh_cols = st.columns(4)
-        fresh_cols[0].metric("Effective Trading End", freshness_details.get("effective_end_date") or "-")
-        fresh_cols[1].metric("Common Latest Price", freshness_details.get("common_latest_date") or "-")
-        fresh_cols[2].metric("Newest Latest Price", freshness_details.get("newest_latest_date") or "-")
-        fresh_cols[3].metric("Latest-Date Spread", f"{freshness_details.get('spread_days', 0)}d")
+        render_badge_strip(
+            [
+                {"label": "Effective Trading End", "value": freshness_details.get("effective_end_date") or "-", "tone": "neutral"},
+                {"label": "Common Latest Price", "value": freshness_details.get("common_latest_date") or "-", "tone": "neutral"},
+                {"label": "Newest Latest Price", "value": freshness_details.get("newest_latest_date") or "-", "tone": "neutral"},
+                {"label": "Latest-Date Spread", "value": f"{freshness_details.get('spread_days', 0)}d", "tone": freshness_tone},
+            ]
+        )
         status = str(price_freshness.get("status") or "").strip().lower()
         message = price_freshness.get("message")
         if status == "ok":
@@ -195,6 +279,88 @@ def _render_strategy_data_trust_snapshot(
         _render_strategy_data_trust_details(bundles)
     return rows
 
+
+def _availability_tone(is_available: bool) -> str:
+    return "positive" if is_available else "warning"
+
+
+def _render_latest_run_orientation(
+    *,
+    has_selection_history: bool,
+    has_dynamic_details: bool,
+    has_real_money_details: bool,
+) -> None:
+    st.caption(
+        "Backtest Analysis는 후보를 만드는 화면입니다. 아래 체크포인트는 결과 해석 순서이며, "
+        "최종 검증과 선택은 Practical Validation과 Final Review에서 이어집니다."
+    )
+    render_checkpoint_strip(
+        [
+            {
+                "label": "A",
+                "title": "Result Integrity",
+                "detail": "Data Trust로 기간, 가격 최신성, 제외 ticker를 먼저 확인합니다.",
+                "status": "Data Trust",
+                "tone": "positive",
+            },
+            {
+                "label": "B",
+                "title": "Performance Shape",
+                "detail": "Summary와 Equity Curve에서 수익률, 낙폭, 회복 구간을 봅니다.",
+                "status": "Summary / Curve",
+                "tone": "neutral",
+            },
+            {
+                "label": "C",
+                "title": "Candidate Readiness",
+                "detail": "Real-Money 신호와 blocker로 후보 검토 가능성을 봅니다.",
+                "status": "Real-Money" if has_real_money_details else "Not available",
+                "tone": _availability_tone(has_real_money_details),
+            },
+            {
+                "label": "D",
+                "title": "Next Action",
+                "detail": "필요하면 Compare로 비교하거나 Practical Validation 후보로 보냅니다.",
+                "status": "Action after metrics",
+                "tone": "neutral",
+            },
+        ]
+    )
+    render_badge_strip(
+        [
+            {"label": "Selection History", "value": "Available" if has_selection_history else "Strategy-specific", "tone": _availability_tone(has_selection_history)},
+            {"label": "Dynamic Universe", "value": "Available" if has_dynamic_details else "Not included", "tone": "positive" if has_dynamic_details else "neutral"},
+            {"label": "Real-Money", "value": "Available" if has_real_money_details else "Not included", "tone": _availability_tone(has_real_money_details)},
+            {"label": "Meta", "value": "Available", "tone": "positive"},
+        ]
+    )
+    if not has_selection_history:
+        st.caption(
+            "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
+            "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Real-Money에서 실행 조건을 확인합니다."
+        )
+
+
+def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
+    with st.container(border=True):
+        st.markdown("##### Next Action: Practical Validation 후보로 보내기")
+        st.caption(
+            "이 액션은 사용자 메모나 preset 저장이 아니라, 방금 실행한 결과를 Practical Validation이 읽을 "
+            "Clean V2 source로 등록하는 workflow handoff입니다."
+        )
+        handoff_cols = st.columns([0.3, 0.7], gap="small")
+        with handoff_cols[0]:
+            if st.button("검증 후보로 보내기", key="latest_run_candidate_review_draft", use_container_width=True):
+                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+                st.rerun()
+        with handoff_cols[1]:
+            st.markdown(
+                "`Practical Validation`에서 provider / data coverage / realism / robustness를 확인하고, "
+                "`Final Review`에서 최종 선택 / 보류 / 거절 / 재검토를 판단합니다."
+            )
+            st.caption("최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -231,48 +397,13 @@ def _render_last_run() -> None:
     )
     has_real_money_details = bool(meta.get("real_money_hardening"))
 
-    st.info(
-        "가장 최근 실행한 백테스트 결과입니다. "
-        "먼저 `Summary`에서 핵심 숫자를 보고, `Equity Curve`에서 흐름을 확인한 뒤, "
-        "`Real-Money`와 `Meta`에서 실전형 해석과 실행 조건을 읽으면 가장 자연스럽습니다."
+    _render_latest_run_orientation(
+        has_selection_history=has_selection_history,
+        has_dynamic_details=has_dynamic_details,
+        has_real_money_details=has_real_money_details,
     )
 
-    guide_left, guide_right = st.columns([1.4, 1.0], gap="small")
-    with guide_left:
-        st.markdown("##### 결과 읽는 순서")
-        st.markdown(
-            "- `Summary`: 수익률과 위험의 핵심 숫자 확인\n"
-            "- `Equity Curve`: 전략 흐름과 회복 구간 확인\n"
-            "- `Selection History`: 각 리밸런싱에서 실제로 어떤 종목이 선택되고 어떻게 처리됐는지 확인\n"
-            "- `Real-Money`: 실전 후보 해석, 검토 근거, 실행 부담 확인\n"
-            "- `Meta`: 이번 실행의 계약과 세부 설정 재확인"
-        )
-    with guide_right:
-        st.markdown("##### 이번 실행에 포함된 보기")
-        availability_lines = [
-            f"- `Selection History`: {'있음' if has_selection_history else '없음'}",
-            f"- `Dynamic Universe`: {'있음' if has_dynamic_details else '없음'}",
-            f"- `Real-Money`: {'있음' if has_real_money_details else '없음'}",
-        ]
-        st.markdown("\n".join(availability_lines))
-
     _render_data_trust_summary(meta)
-
-    with st.expander("Practical Validation Handoff", expanded=False):
-        st.caption(
-            "이번 실행 결과를 Clean V2 source로 저장하고 Practical Validation에서 실전 검증 자료로 읽어봅니다. "
-            "이 동작은 최종 선택, 투자 추천, live 승인, 주문 지시가 아닙니다."
-        )
-        handoff_cols = st.columns([0.28, 0.72], gap="small")
-        with handoff_cols[0]:
-            if st.button("Practical Validation으로 보내기", key="latest_run_candidate_review_draft", use_container_width=True):
-                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
-                st.rerun()
-        with handoff_cols[1]:
-            st.caption(
-                "`Practical Validation`에서 Data Trust, Real-Money signal, 구성 / 비중 조건을 확인한 뒤 "
-                "`Final Review`에서 최종 선택 / 보류 / 거절 / 재검토를 판단합니다."
-            )
 
     if warnings:
         warning_lines = "\n".join(f"- {warning}" for warning in warnings)
@@ -283,6 +414,7 @@ def _render_last_run() -> None:
 
     st.markdown(f"#### {bundle['strategy_name']}")
     _render_summary_metrics(summary_df)
+    _render_practical_validation_next_action(bundle)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
@@ -943,16 +1075,19 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
     )
 
     if can_move_to_compare and score >= 8.0:
-        verdict = "5단계 Compare 진행 가능"
+        verdict = "후보 검토 진행 가능"
         tone = "success"
-        next_action = "Compare에서 다른 후보와 성과, data trust, Real-Money 상태를 비교합니다."
+        route_label = "Compare 또는 Practical Validation"
+        next_action = "Compare에서 상대 후보와 비교하거나 Practical Validation으로 보내 실전 검증 근거를 확인합니다."
     elif can_move_to_compare:
-        verdict = "5단계 Compare 진행 가능, 개선 항목 동시 확인"
+        verdict = "후보 검토 가능, 개선 항목 동시 확인"
         tone = "warning"
-        next_action = "Compare로 넘기되 watch / checklist 항목을 같이 열어보고 후보 등록은 보수적으로 판단합니다."
+        route_label = "조건부 후보 검토"
+        next_action = "Compare 또는 Practical Validation으로 넘기기 전에 watch / checklist 항목을 함께 확인합니다."
     else:
-        verdict = "4단계에서 먼저 blocker 해결"
+        verdict = "후보 보류: blocker 먼저 해결"
         tone = "error"
+        route_label = "Hold / Review"
         next_action = "Hold 해결 가이드, Deployment checklist, 실행 부담 / 검토 근거의 caution 항목을 먼저 정리합니다."
 
     blocking_reasons: list[str] = []
@@ -1002,6 +1137,7 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         "score": score,
         "verdict": verdict,
         "tone": tone,
+        "route_label": route_label,
         "next_action": next_action,
         "can_move_to_compare": can_move_to_compare,
         "criteria_rows": criteria_rows,
@@ -1015,22 +1151,24 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
     tone = str(evaluation["tone"])
 
     with st.container(border=True):
-        st.markdown("##### 5단계 Compare 진입 평가")
+        st.markdown("##### Candidate Readiness Checkpoint")
         st.caption(
-            "이 박스는 투자 승인 기준이 아니라, `Hold 해결`을 마치고 "
-            "`Compare`에서 다른 후보와 비교해 볼 수 있는지 빠르게 판단하는 표지입니다."
+            "이 체크포인트는 투자 승인 기준이 아니라, 이 결과를 후보 비교나 Practical Validation으로 "
+            "넘겨도 되는지 빠르게 보는 진단입니다."
         )
-        metric_cols = st.columns([0.24, 0.76], gap="small")
-        metric_cols[0].metric("Readiness Score", f"{score:.1f} / 10")
-        with metric_cols[1]:
-            st.caption("판정")
-            st.markdown(f"**{evaluation['verdict']}**")
-            st.caption("다음 행동")
-            st.markdown(str(evaluation["next_action"]))
+        render_readiness_route_panel(
+            route_label=str(evaluation["route_label"]),
+            score=score,
+            blockers_count=len(evaluation["blocking_reasons"]),
+            verdict=str(evaluation["verdict"]),
+            next_action=str(evaluation["next_action"]),
+            route_title="Next Route",
+            score_title="Candidate Readiness",
+        )
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 진행, `8.0점 미만`이어도 핵심 3조건을 만족하면 조건부 진행, "
-            "핵심 3조건을 만족하지 못하면 점수와 무관하게 4단계에서 먼저 멈춥니다."
+            "점수 기준: `8.0점 이상`은 깔끔한 후보 검토, `8.0점 미만`이어도 핵심 3조건을 만족하면 조건부 검토, "
+            "핵심 3조건을 만족하지 못하면 점수와 무관하게 blocker 해결이 먼저입니다."
         )
 
         message = (
@@ -1049,13 +1187,13 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
         elif evaluation["review_reasons"]:
             st.caption("같이 볼 개선 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
         else:
-            st.caption("핵심 blocker가 보이지 않습니다. Compare로 넘겨 상대 후보와 비교해도 되는 상태입니다.")
+            st.caption("핵심 blocker가 보이지 않습니다. 비교 또는 Practical Validation 후보로 검토해도 되는 상태입니다.")
 
         with st.expander("점수 계산 기준 보기", expanded=False):
             st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
             st.caption(
                 "`real_money_candidate`는 가장 강한 Compare 진입 신호이고, "
-                "`production_candidate`는 Compare에는 올릴 수 있지만 후보 등록 전 추가 검토가 필요한 상태입니다."
+                "`production_candidate`는 후보 검토는 가능하지만 최종 판단 전 추가 검토가 필요한 상태입니다."
             )
 
 def _render_real_money_details(bundle: dict[str, Any]) -> None:

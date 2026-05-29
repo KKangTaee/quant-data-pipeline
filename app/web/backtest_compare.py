@@ -499,7 +499,7 @@ def _build_candidate_draft_readiness_evaluation(
         next_action = "Practical Validation으로 넘기되 비교 약점과 확인 항목을 검증 gap으로 같이 봅니다."
     else:
         stage_status = "FAIL"
-        verdict = "FAIL: 5단계 Compare 보강 필요"
+        verdict = "FAIL: Compare 후보 보강 필요"
         tone = "error"
         next_action = "아래 Summary / Data Trust / Real-Money / Strategy Highlights를 다시 확인합니다."
 
@@ -1099,13 +1099,13 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
     default_index = strategy_names.index(default_strategy) if default_strategy in strategy_names else 0
 
     with st.container(border=True):
-        st.markdown("##### 개별 후보 5단계 Compare 검증 보드")
+        st.markdown("##### 개별 후보 Compare 검증 보드")
         st.caption(
-            "이 보드는 개별 전략 후보의 5단계 stop/go 판단입니다. "
+            "이 보드는 개별 전략 후보를 Practical Validation으로 넘겨도 되는지 보는 stop/go 판단입니다. "
             "mix 자체 검증은 `저장된 비중 조합` 화면의 Portfolio Mix 검증 보드에서 확인합니다."
         )
         candidate_strategy = st.selectbox(
-            "5단계에서 검증할 개별 후보",
+            "검증할 개별 후보",
             options=strategy_names,
             index=default_index,
             key="compare_candidate_draft_readiness_strategy",
@@ -1122,7 +1122,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         stage_status = str(evaluation.get("stage_status") or "-")
 
         metric_cols = st.columns([0.18, 0.18, 0.2, 0.44], gap="small")
-        metric_cols[0].metric("5단계 판정", stage_status)
+        metric_cols[0].metric("후보 판정", stage_status)
         metric_cols[1].metric("Readiness", f"{score:.1f} / 10")
         metric_cols[2].metric("Data Trust", data_gate_status)
         with metric_cols[3]:
@@ -1152,7 +1152,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             blocked_text = ", ".join(str(item) for item in data_gate.get("reasons") or []) or str(data_gate.get("judgment"))
             st.error(f"Data Trust Blocked: {blocked_text}")
 
-        st.markdown("**5단계 검증 기준**")
+        st.markdown("**후보 검증 기준**")
         st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
 
         if evaluation["blocking_reasons"]:
@@ -1397,7 +1397,7 @@ def _render_compare_results() -> None:
 
     st.markdown("### 개별 전략 비교 상세")
     st.caption(
-        "5단계 Compare의 상세 근거입니다. Summary, Data Trust, Real-Money / Guardrail, "
+        "개별 후보 Compare의 상세 근거입니다. Summary, Data Trust, Real-Money / Guardrail, "
         "Strategy Highlights, Focused Strategy를 탭별로 확인합니다."
     )
     if any((bundle.get("meta") or {}).get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE for bundle in bundles):
@@ -2451,7 +2451,7 @@ def _render_saved_portfolio_workspace() -> None:
     st.markdown("### 저장된 비중 조합")
     st.caption(
         "저장한 weighted portfolio mix를 다시 실행하고 mix-level 검증으로 읽습니다. "
-        "개별 후보 5단계 검증이 아니라 Practical Validation으로 이어지는 비중 조합 작업 공간입니다."
+        "개별 후보 검증이 아니라 Practical Validation으로 이어지는 비중 조합 작업 공간입니다."
     )
 
     saved_portfolios = load_saved_portfolios(limit=100)
@@ -3938,11 +3938,11 @@ def _render_strategy_compare_workspace() -> None:
         if _is_saved_mix_replay_context():
             st.info(
                 "최근 `Mix 재실행 및 검증` 결과는 `저장된 비중 조합` 화면에서 바로 확인합니다. "
-                "새로운 개별 전략 5단계 비교를 하려면 아래 입력을 조정한 뒤 `Run Strategy Comparison`을 실행하세요."
+                "새로운 개별 전략 비교를 하려면 아래 입력을 조정한 뒤 `Run Strategy Comparison`을 실행하세요."
             )
         else:
             with st.container(border=True):
-                st.markdown("### 개별 전략 5단계 Compare 결과")
+                st.markdown("### 개별 전략 Compare 결과")
                 st.caption(
                     "최근 실행한 개별 전략 Compare 결과입니다. 여기서 Summary, Data Trust, Real-Money gate, "
                     "상대 비교 근거를 보고 단일 후보를 Practical Validation으로 넘길 수 있는지 확인합니다. "

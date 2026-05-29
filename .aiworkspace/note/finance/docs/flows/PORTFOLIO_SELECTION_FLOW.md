@@ -34,6 +34,20 @@ Backtest > Backtest Analysis
 | Final Review | 최종 후보 판단, investability evidence packet 확인, construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
 | Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary | broker order, live approval, auto rebalance |
 
+## Verification Checkpoints
+
+검증 기준은 제품 `Stage` 번호로 부르지 않는다.
+화면 흐름과 검증 기준이 섞이면 Backtest Analysis 안의 Real-Money / Compare 보조 신호가 별도 단계처럼 보이기 때문이다.
+
+| Checkpoint | Primary Surface | Meaning |
+|---|---|---|
+| Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
+| Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
+| Candidate Readiness | Backtest Analysis > Real-Money | 후보 비교 또는 Practical Validation으로 넘겨도 되는지 확인 |
+| Practical Evidence | Practical Validation | provider, data coverage, realism, robustness, construction risk 검증 |
+| Final Decision Gate | Final Review | selected-route blocker와 최종 선택 가능 여부 판단 |
+| Monitoring Check | Selected Portfolio Dashboard | 선정 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
+
 ## Source Contract
 
 Portfolio Selection V2의 기준 id는 `selection_source_id`다.
