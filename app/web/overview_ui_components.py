@@ -256,20 +256,45 @@ def overview_ui_css() -> str:
 }
 .ov-events-summary {
   display: grid;
-  grid-template-columns: minmax(1.4fr, 2fr) repeat(3, minmax(0, 1fr));
-  gap: 0;
-  border-top: 1px solid var(--ov-mi-border-subtle);
-  border-bottom: 1px solid var(--ov-mi-border-subtle);
-  margin: 0.35rem 0 0.75rem 0;
+  grid-template-columns: minmax(14rem, 1.45fr) repeat(3, minmax(8rem, 1fr));
+  gap: var(--ov-mi-gap-md);
+  margin: 0.45rem 0 0.85rem 0;
 }
 .ov-events-summary-item {
+  position: relative;
   min-width: 0;
-  padding: 0.68rem 0.85rem;
-  border-left: 1px solid var(--ov-mi-border-faint);
+  overflow: hidden;
+  padding: 0.72rem 0.82rem 0.72rem 0.9rem;
+  border: 1px solid var(--ov-mi-border-subtle);
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.72)),
+    var(--ov-mi-color-surface-subtle);
 }
-.ov-events-summary-item:first-child {
-  border-left: 0;
-  padding-left: 0;
+.ov-events-summary-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--ov-event-tone, var(--ov-mi-color-neutral));
+}
+.ov-events-summary-primary {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-primary)) 10%, transparent), rgba(255, 255, 255, 0.92)),
+    var(--ov-mi-color-surface-subtle);
+}
+.ov-events-summary-label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ov-mi-gap-xs);
+  min-width: 0;
+}
+.ov-events-summary-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: var(--ov-mi-radius-pill);
+  background: var(--ov-event-tone, var(--ov-mi-color-neutral));
+  flex: 0 0 auto;
 }
 .ov-events-summary-label {
   color: var(--ov-mi-color-text-muted);
@@ -279,11 +304,14 @@ def overview_ui_css() -> str:
 }
 .ov-events-summary-value {
   color: inherit;
-  font-size: 1.06rem;
+  font-size: 1.08rem;
   font-weight: var(--ov-mi-weight-value);
   line-height: 1.2;
   margin-top: 0.16rem;
   overflow-wrap: anywhere;
+}
+.ov-events-summary-primary .ov-events-summary-value {
+  font-size: 1.18rem;
 }
 .ov-events-summary-detail {
   color: var(--ov-mi-color-text-muted);
@@ -295,13 +323,24 @@ def overview_ui_css() -> str:
 .ov-events-source-lane {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--ov-mi-gap-md);
-  margin: 0.35rem 0 0.5rem 0;
+  gap: var(--ov-mi-gap-sm);
+  margin: 0.35rem 0 0.72rem 0;
+  padding: 0.52rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.86), rgba(255, 255, 255, 0.92)),
+    var(--ov-mi-color-surface-subtle);
 }
 .ov-events-source {
+  position: relative;
   min-width: 0;
-  border-top: 3px solid var(--ov-event-tone, var(--ov-mi-color-neutral));
-  padding: 0.55rem 0 0.2rem 0;
+  overflow: hidden;
+  border: 1px solid var(--ov-mi-border-subtle);
+  border-left: 4px solid var(--ov-event-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background: var(--ov-mi-color-surface-subtle);
+  padding: 0.58rem 0.62rem 0.62rem 0.66rem;
 }
 .ov-events-source-head {
   display: flex;
@@ -319,12 +358,41 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-caption);
   font-weight: var(--ov-mi-weight-label);
   white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-neutral)) 36%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-event-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  padding: 0.14rem 0.42rem;
 }
 .ov-events-source-detail {
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-caption);
   line-height: 1.28;
   margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+}
+.ov-events-source-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.46rem;
+}
+.ov-events-source-metric {
+  min-width: 0;
+  padding-top: 0.36rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-events-source-metric-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.68rem;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-events-source-metric-value {
+  color: inherit;
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-strong);
+  line-height: 1.15;
+  margin-top: 0.12rem;
   overflow-wrap: anywhere;
 }
 .ov-events-agenda {
@@ -445,15 +513,6 @@ def overview_ui_css() -> str:
   .ov-events-source-lane {
     grid-template-columns: 1fr;
   }
-  .ov-events-summary-item,
-  .ov-events-summary-item:first-child {
-    border-left: 0;
-    border-top: 1px solid var(--ov-mi-border-faint);
-    padding-left: 0;
-  }
-  .ov-events-summary-item:first-child {
-    border-top: 0;
-  }
   .ov-events-row {
     grid-template-columns: 1fr;
     gap: var(--ov-mi-gap-sm);
@@ -539,16 +598,21 @@ def _badge_html(label: Any, tone: Any = None) -> str:
 
 def render_events_summary_strip(items: list[dict[str, Any]]) -> None:
     item_html: list[str] = []
-    for item in items:
+    for index, item in enumerate(items):
         detail = item.get("detail")
         detail_html = (
             f'<div class="ov-events-summary-detail">{escape(str(detail))}</div>'
             if detail not in (None, "")
             else ""
         )
+        tone = escape(_overview_tone_color(item.get("tone") or ("primary" if index == 0 else "neutral")))
+        class_name = "ov-events-summary-item ov-events-summary-primary" if index == 0 else "ov-events-summary-item"
         item_html.append(
-            '<div class="ov-events-summary-item">'
-            f'<div class="ov-events-summary-label">{escape(str(item.get("label") or "-"))}</div>'
+            f'<div class="{class_name}" style="--ov-event-tone:{tone};">'
+            '<div class="ov-events-summary-label-row">'
+            '<span class="ov-events-summary-dot"></span>'
+            f'<span class="ov-events-summary-label">{escape(str(item.get("label") or "-"))}</span>'
+            "</div>"
             f'<div class="ov-events-summary-value">{escape(_display_value(item.get("value")))}</div>'
             f"{detail_html}"
             "</div>"
@@ -567,13 +631,35 @@ def render_event_source_lane(sources: list[dict[str, Any]]) -> None:
     source_html: list[str] = []
     for source in sources:
         tone_color = _overview_tone_color(source.get("tone"))
+        if any(key in source for key in ("rows", "latest", "review_count")):
+            metrics_html = (
+                '<div class="ov-events-source-metrics">'
+                '<div class="ov-events-source-metric">'
+                '<div class="ov-events-source-metric-label">Rows</div>'
+                f'<div class="ov-events-source-metric-value">{escape(_display_value(source.get("rows")))}</div>'
+                "</div>"
+                '<div class="ov-events-source-metric">'
+                '<div class="ov-events-source-metric-label">Latest</div>'
+                f'<div class="ov-events-source-metric-value">{escape(_display_value(source.get("latest")))}</div>'
+                "</div>"
+                '<div class="ov-events-source-metric">'
+                '<div class="ov-events-source-metric-label">Review</div>'
+                f'<div class="ov-events-source-metric-value">{escape(_display_value(source.get("review_count")))}</div>'
+                "</div>"
+                "</div>"
+            )
+            detail_html = ""
+        else:
+            metrics_html = ""
+            detail_html = f'<div class="ov-events-source-detail">{escape(_display_value(source.get("detail")))}</div>'
         source_html.append(
             f'<div class="ov-events-source" style="--ov-event-tone:{escape(tone_color)};">'
             '<div class="ov-events-source-head">'
             f'<span class="ov-events-source-title">{escape(str(source.get("title") or "-"))}</span>'
             f'<span class="ov-events-source-state">{escape(_display_value(source.get("status")))}</span>'
             "</div>"
-            f'<div class="ov-events-source-detail">{escape(_display_value(source.get("detail")))}</div>'
+            f"{detail_html}"
+            f"{metrics_html}"
             "</div>"
         )
     st.markdown(
