@@ -112,6 +112,12 @@ uv run python -m app.jobs.overview_automation --profile standard --dry-run
 uv run python -m app.jobs.overview_automation --profile standard
 ```
 
+Overview를 열어둔 동안만 호출할 1차 browser-safe profile:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile browser_safe
+```
+
 무료 provider 압력을 낮춘 안전 profile:
 
 ```bash
@@ -124,7 +130,7 @@ uv run python -m app.jobs.overview_automation --profile safe
 uv run python -m app.jobs.overview_automation --profile events
 ```
 
-운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다.
+운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다. `browser_safe` profile은 OS scheduler가 아니라 Overview 브라우저 세션이 열려 있을 때 호출하는 용도이며, S&P 500 daily snapshot만 선택한다.
 
 작은 수동 earnings smoke:
 

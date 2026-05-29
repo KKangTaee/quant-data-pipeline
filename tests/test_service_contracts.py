@@ -364,6 +364,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ["2026-07-30"],
         )
 
+    def test_browser_safe_profile_only_selects_sp500_intraday_snapshot(self) -> None:
+        from app.jobs.overview_automation import VALID_PROFILES, build_overview_automation_plan
+
+        self.assertIn("browser_safe", VALID_PROFILES)
+
+        plan = build_overview_automation_plan(
+            profile="browser_safe",
+            history_rows=[],
+            now=datetime(2026, 5, 29, 15, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual([row["job_id"] for row in plan], ["sp500_intraday"])
+        self.assertTrue(plan[0]["should_run"])
+        self.assertEqual(plan[0]["cadence_minutes"], 5)
+        self.assertTrue(plan[0]["market_hours_only"])
+
     def test_intraday_plan_skips_outside_market_hours_unless_allowed(self) -> None:
         from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
 

@@ -142,7 +142,7 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         job_name="collect_sp500_intraday_snapshot",
         label="S&P 500 Daily Snapshot",
         cadence_minutes=5,
-        profiles=("safe", "standard", "broad", "intraday"),
+        profiles=("safe", "standard", "broad", "intraday", "browser_safe"),
         market_hours_only=True,
         runner=_run_intraday_snapshot("SP500", 500, fallback_to_yfinance=True),
         description="Collect S&P 500 quote-fast daily movers snapshot during US market hours.",
