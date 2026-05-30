@@ -6706,3 +6706,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 치명적 gate 결함은 발견하지 못했고, 주요 gap은 raw table 우선 노출, blocker action의 낮은 시각 우선순위, board map의 내부 구현 표식 느낌이었다
 - Follow-up:
   - Control Center / Fix Queue / summary-first Evidence Workspace / Provider Action Center를 추가하고 raw table은 상세 영역으로 낮췄다
+
+### 2026-05-31 - Practical Validation 저장 기록과 Final Review 후보 노출을 분리한다
+- User request:
+  - 사용자가 검증 결과 저장이 Final Review 이동과 별개로 보이고, Final Review에는 현재 단계에서 통과한 후보만 보여야 하며, 탭 최초 진입 시 과거 replay cache가 자동 노출되지 않아야 한다고 지적함
+- Interpreted goal:
+  - 저장-only는 audit trail로 유지하되 Gate 미통과 validation row는 Final Review 후보가 아니어야 하고, Practical Validation Step 3은 현재 세션에서 사용자가 실행한 replay evidence만 보여야 함
+- Analysis result:
+  - `final_review_gate.can_save_and_move=True`가 Final Review source picker eligibility 기준이다. 이전 session replay state가 자동 표시되면 `NOT_RUN`과 실제 재검증 실행의 의미가 흐려진다
+- Follow-up:
+  - Final Review source option을 Gate 통과 Practical Validation result로 제한하고, Practical Validation 신규 진입 / source 변경 / recheck mode 변경 시 replay display state를 초기화하도록 조정했다. Step 1~7 경계 surface도 복원했다

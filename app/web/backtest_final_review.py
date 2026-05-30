@@ -21,6 +21,7 @@ from app.web.backtest_final_review_helpers import (
     _build_final_review_source_options,
     _build_final_review_status_display,
     _build_final_review_validation,
+    _is_final_review_eligible_validation_result,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
     _build_final_selection_decision_component_rows,
@@ -666,13 +667,18 @@ def render_final_review_workspace() -> None:
     st.markdown("### Final Review")
     st.caption(
         "최종 실전 후보로 선정할지 판단하는 공간입니다. Proposal 작성과 분리해서 Validation, Robustness, "
-        "Paper Observation 기준, 최종 판단을 한 화면에서 확인합니다."
+        "Paper Observation 기준, 최종 판단을 한 화면에서 확인합니다. 검토 대상은 Practical Validation Gate를 통과한 후보만 표시합니다."
     )
 
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     pre_live_rows = load_pre_live_candidate_registry_latest()
     practical_validation_rows = load_practical_validation_results()
+    eligible_practical_validation_rows = [
+        row
+        for row in practical_validation_rows
+        if _is_final_review_eligible_validation_result(dict(row or {}))
+    ]
     final_decision_rows = load_final_selection_decisions_v2()
     session_practical_source = st.session_state.pop("final_review_practical_validation_source", None)
     final_practical_notice = st.session_state.pop("final_review_practical_validation_notice", None)
@@ -685,19 +691,34 @@ def render_final_review_workspace() -> None:
 
     render_status_card_grid(
         [
-            {"title": "Current Candidates", "value": len(current_rows), "tone": "positive" if current_rows else "neutral"},
-            {"title": "Practical Validations", "value": len(practical_validation_rows), "tone": "positive" if practical_validation_rows else "neutral"},
+            {
+                "title": "Saved PV Records",
+                "value": len(practical_validation_rows),
+                "detail": "기록용 저장 포함",
+                "tone": "positive" if practical_validation_rows else "neutral",
+            },
+            {
+                "title": "Final Review Eligible",
+                "value": f"{len(eligible_practical_validation_rows)} / {len(practical_validation_rows)}",
+                "detail": "통과 / 전체 Practical Validation",
+                "tone": "positive" if eligible_practical_validation_rows else "neutral",
+            },
             {"title": "Final Review Records", "value": len(final_decision_rows), "tone": "positive" if final_decision_rows else "neutral"},
             {"title": "Paper Ledger Save", "value": "Not Required", "detail": "관찰 기준은 최종 검토 기록 안에 포함합니다.", "tone": "neutral"},
             {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
         ]
     )
+    hidden_validation_count = len(practical_validation_rows) - len(eligible_practical_validation_rows)
+    if hidden_validation_count > 0:
+        st.caption(
+            f"Practical Validation 저장 기록 {hidden_validation_count}개는 Final Review Gate를 통과하지 않아 검토 대상 목록에서 숨겼습니다."
+        )
 
     with st.container(border=True):
         st.markdown("#### 최종 검토 흐름")
         render_artifact_pipeline(
             [
-                {"title": "검토 대상", "detail": "단일 후보 또는 저장된 proposal", "status": "선택", "tone": "neutral"},
+                {"title": "검토 대상", "detail": "Practical Validation Gate 통과 후보", "status": "선택", "tone": "neutral"},
                 {"title": "검증 근거", "detail": "Validation / Robustness / Stress", "status": "자동 계산", "tone": "neutral"},
                 {"title": "관찰 기준", "detail": "별도 ledger 저장 없이 최종 기록에 포함", "status": "Inline", "tone": "positive"},
                 {"title": "최종 판단", "detail": "선정 / 보류 / 거절 / 재검토", "status": "명시 기록", "tone": "warning"},
@@ -707,18 +728,20 @@ def render_final_review_workspace() -> None:
     source_options = _build_final_review_source_options(
         current_rows,
         proposal_rows,
-        practical_validation_rows=practical_validation_rows,
+        practical_validation_rows=eligible_practical_validation_rows,
         session_practical_source=session_practical_source if isinstance(session_practical_source, dict) else None,
+        include_legacy_sources=False,
     )
     if not source_options:
-        st.info("최종 검토할 Practical Validation result, current candidate, saved proposal이 없습니다.")
+        st.info("Final Review Gate를 통과한 Practical Validation 후보가 없습니다.")
+        st.caption("검증 결과만 저장한 blocked / needs input / not run 후보는 기록으로 남지만, Final Review 검토 대상에는 표시되지 않습니다.")
         return
 
     st.divider()
     st.markdown("#### 1. 최종 검토 대상 선택")
     with st.container(border=True):
         render_stage_brief(
-            purpose="Proposal 작성 탭에서 만든 포트폴리오 초안 또는 단일 후보를 최종 검토 대상으로 고릅니다.",
+            purpose="Practical Validation에서 필수 검증 Gate를 통과한 후보만 최종 검토 대상으로 고릅니다.",
             result="Final review source",
         )
         labels = [str(option["label"]) for option in source_options]

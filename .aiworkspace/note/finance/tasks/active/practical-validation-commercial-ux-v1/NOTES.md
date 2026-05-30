@@ -15,3 +15,6 @@
 
 - 저장 오류의 1차 원인은 `input_evidence.data_coverage_context.price_window_rows[].window_row_count`에 MySQL / pandas 경계에서 넘어온 `Decimal` 값이 포함되어 `json.dumps`가 실패한 것이다.
 - 해결은 Practical Validation 전용 계산을 바꾸지 않고 `app/runtime/portfolio_selection_v2.py`의 append-only JSONL write 경계에서 JSON-safe 정규화를 적용하는 방식으로 제한했다.
+- 저장-only와 Final Review 이동은 다른 의미다. 저장-only는 audit trail이며, Final Review source picker에는 Gate 통과 validation result만 노출한다.
+- Practical Validation replay evidence는 과거 session state를 증거처럼 보이면 안 된다. 탭 신규 진입, source 변경, recheck mode 변경 시 replay output state를 비워 현재 세션에서 사용자가 실행한 결과만 표시한다.
+- 상용 UX shell의 어두운 section header는 시각적 품질을 올렸지만 step 경계가 약해질 수 있다. 이번 보완은 본문 surface를 다시 분리하되, 검증 module / evidence board / action board 분리 구조는 유지한다.

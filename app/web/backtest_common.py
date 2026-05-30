@@ -79,6 +79,7 @@ from app.web.backtest_workflow_routes import (
     BACKTEST_ANALYSIS_MODE_SINGLE,
     BACKTEST_LEGACY_PANEL_OPTIONS,
     BACKTEST_STAGE_ANALYSIS,
+    BACKTEST_STAGE_PRACTICAL_VALIDATION,
     BACKTEST_STAGE_OPTIONS,
     PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE,
     _route_target_to_stage_and_mode,
@@ -686,6 +687,8 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_active_stage = requested_stage
         st.session_state.backtest_active_panel = requested_stage
         st.session_state.backtest_workflow_active_panel = requested_stage
+        if requested_stage == BACKTEST_STAGE_PRACTICAL_VALIDATION:
+            st.session_state.practical_validation_reset_replay_on_entry = True
         if route.get("analysis_mode"):
             st.session_state.backtest_analysis_mode = route["analysis_mode"]
         if route.get("practical_mode"):
@@ -1024,8 +1027,11 @@ def _request_backtest_panel(panel: str) -> None:
 def _activate_backtest_workflow_panel() -> None:
     selected_panel = st.session_state.get("backtest_workflow_active_panel")
     if selected_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
+        previous_panel = st.session_state.get("backtest_active_panel")
         st.session_state.backtest_active_stage = selected_panel
         st.session_state.backtest_active_panel = selected_panel
+        if selected_panel == BACKTEST_STAGE_PRACTICAL_VALIDATION and previous_panel != selected_panel:
+            st.session_state.practical_validation_reset_replay_on_entry = True
 
 
 def _parse_manual_tickers(text: str) -> list[str]:

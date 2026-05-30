@@ -4451,3 +4451,5 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-commercial-ux-v1/`에서 Practical Validation의 표시 계층을 summary-first로 개편했다.
   - Control Center / Fix Queue / Evidence Workspace / Provider Action Center를 추가하고, raw module / evidence / provider table은 상세 영역으로 낮췄다.
   - service contract 193 tests와 Browser QA를 통과했으며, 검증 module / Final Review gate 정책은 변경하지 않았다.
+  - 저장-only는 audit trail로 유지하되 Gate 미통과 validation row는 Final Review 후보 목록에서 숨기도록 정리했다.
+  - Practical Validation 신규 진입 / source 변경 시 이전 replay 표시 state를 비우고, Step 1~7 본문 경계 surface를 복원했다.

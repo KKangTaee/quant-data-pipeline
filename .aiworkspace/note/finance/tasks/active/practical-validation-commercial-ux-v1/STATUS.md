@@ -16,3 +16,6 @@
 
 - `저장하고 Final Review로 이동`에서 Practical Validation result 저장 시 DB coverage의 `Decimal` 값이 JSON 직렬화를 막는 문제를 재현하고 수정.
 - Clean V2 registry append 경계에서 Decimal / date / datetime / numpy scalar / DataFrame fallback을 JSON-safe primitive로 정규화하도록 보강.
+- `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동`의 의미를 분리. 저장-only row는 audit trail로 남지만 Final Review Gate를 통과하지 않으면 Final Review source picker에 표시하지 않도록 필터링.
+- Practical Validation 탭 신규 진입 / source 변경 시 이전 runtime replay 표시 state를 비워, 현재 세션에서 사용자가 `전략 재검증 실행`을 누른 결과만 Step 3에 표시하도록 조정.
+- 상용 visual overhaul에서 흐려진 step 경계를 보완하기 위해 Step 1~7 본문을 bordered surface로 다시 묶고, 상단 7-step rail을 추가.

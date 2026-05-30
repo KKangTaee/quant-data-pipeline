@@ -122,6 +122,34 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertTrue(handoff.persisted)
         self.assertEqual(handoff.requested_panel, "Final Review")
 
+    def test_final_review_source_options_hide_blocked_practical_validation_results(self) -> None:
+        from app.web.backtest_final_review_helpers import _build_final_review_source_options
+
+        blocked = {
+            "validation_id": "validation-blocked",
+            "selection_source_id": "source-blocked",
+            "source_title": "Blocked source",
+            "final_review_gate": {"can_save_and_move": False},
+        }
+        ready = {
+            "validation_id": "validation-ready",
+            "selection_source_id": "source-ready",
+            "source_title": "Ready source",
+            "final_review_gate": {"can_save_and_move": True},
+        }
+
+        options = _build_final_review_source_options(
+            [{"registry_id": "legacy-candidate", "title": "Legacy candidate"}],
+            [{"proposal_id": "legacy-proposal"}],
+            practical_validation_rows=[blocked, ready],
+            session_practical_source={"validation_result": blocked},
+            include_legacy_sources=False,
+        )
+
+        self.assertEqual(len(options), 1)
+        self.assertEqual(options[0]["source_type"], "practical_validation_result")
+        self.assertEqual(options[0]["source_id"], "validation-ready")
+
     def test_practical_validation_registry_serializes_db_scalar_payloads(self) -> None:
         from app.runtime import portfolio_selection_v2
 

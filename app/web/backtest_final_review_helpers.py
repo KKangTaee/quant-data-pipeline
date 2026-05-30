@@ -65,17 +65,34 @@ def _final_review_practical_validation_label(row: dict[str, Any]) -> str:
     return f"Clean V2 검증 결과 | {route} | {source_title} | id={validation_id}"
 
 
+def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
+    """Return whether a saved Practical Validation result may appear in Final Review."""
+
+    validation = dict(row or {})
+    gate = dict(validation.get("final_review_gate") or {})
+    if "can_save_and_move" in gate:
+        return bool(gate.get("can_save_and_move"))
+    handoff = dict(validation.get("final_review_handoff") or {})
+    if "allowed" in handoff:
+        return bool(handoff.get("allowed"))
+    return (
+        str(validation.get("validation_route") or "").strip().upper() == "READY_FOR_FINAL_REVIEW"
+        and not list(validation.get("hard_blockers") or [])
+    )
+
+
 def _build_final_review_source_options(
     current_rows: list[dict[str, Any]],
     proposal_rows: list[dict[str, Any]],
     practical_validation_rows: list[dict[str, Any]] | None = None,
     session_practical_source: dict[str, Any] | None = None,
+    include_legacy_sources: bool = True,
 ) -> list[dict[str, Any]]:
     """Build selectable final-review sources from V2 validation, current candidates, and saved proposals."""
     options: list[dict[str, Any]] = []
     session_practical_source = dict(session_practical_source or {})
     session_validation = dict(session_practical_source.get("validation_result") or {})
-    if session_validation:
+    if session_validation and _is_final_review_eligible_validation_result(session_validation):
         options.append(
             {
                 "label": "현재 Practical Validation source | "
@@ -95,6 +112,8 @@ def _build_final_review_source_options(
             continue
         if not validation_id:
             continue
+        if not _is_final_review_eligible_validation_result(row):
+            continue
         options.append(
             {
                 "label": _final_review_practical_validation_label(row),
@@ -104,32 +123,33 @@ def _build_final_review_source_options(
                 "row": dict(row),
             }
         )
-    for row in current_rows:
-        registry_id = str(row.get("registry_id") or "").strip()
-        if not registry_id:
-            continue
-        options.append(
-            {
-                "label": _final_review_current_label(row),
-                "source_type": "single_candidate",
-                "source_id": registry_id,
-                "source_title": row.get("title") or registry_id,
-                "row": dict(row),
-            }
-        )
-    for row in proposal_rows:
-        proposal_id = str(row.get("proposal_id") or "").strip()
-        if not proposal_id:
-            continue
-        options.append(
-            {
-                "label": _final_review_proposal_label(row),
-                "source_type": "portfolio_proposal",
-                "source_id": proposal_id,
-                "source_title": proposal_id,
-                "row": dict(row),
-            }
-        )
+    if include_legacy_sources:
+        for row in current_rows:
+            registry_id = str(row.get("registry_id") or "").strip()
+            if not registry_id:
+                continue
+            options.append(
+                {
+                    "label": _final_review_current_label(row),
+                    "source_type": "single_candidate",
+                    "source_id": registry_id,
+                    "source_title": row.get("title") or registry_id,
+                    "row": dict(row),
+                }
+            )
+        for row in proposal_rows:
+            proposal_id = str(row.get("proposal_id") or "").strip()
+            if not proposal_id:
+                continue
+            options.append(
+                {
+                    "label": _final_review_proposal_label(row),
+                    "source_type": "portfolio_proposal",
+                    "source_id": proposal_id,
+                    "source_title": proposal_id,
+                    "row": dict(row),
+                }
+            )
     return options
 
 
