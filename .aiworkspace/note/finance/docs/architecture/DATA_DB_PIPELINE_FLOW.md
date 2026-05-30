@@ -52,7 +52,7 @@ external source
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
-| `app/jobs/overview_automation.py` | 브라우저 없이 Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner가 호출하며 cadence, US market-hours guard, lock, scheduled run history metadata를 처리한다 |
+| `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
 | `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / market intelligence snapshot 실행 화면. FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate, ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
 
 ## Loader 계층

@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Overview는 DB-first production baseline으로 병합 준비한다
+- User request:
+  - Overview Market Intelligence 개발 세션의 흐름을 정리하고 master 병합 전에 문서 / 개발 추적 상태를 업데이트해 달라고 요청함.
+- Interpreted goal:
+  - 추가 기능 개발이 아니라, Market Movers / Sector-Industry / Events / Data Health / 자동 갱신 / 시장 세션 배너가 어떤 기준으로 동작하는지 다음 작업자가 잃어버리지 않도록 정리해야 함.
+- Analysis result:
+  - Overview의 핵심 원칙은 `Ingestion or job wrapper -> DB -> service read model -> UI`다. UI render 중 직접 외부 provider를 fetch하지 않는다.
+  - Daily Market Movers와 Sector / Industry daily leadership은 저장된 `market_intraday_snapshot`을 공유하고, Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용한다. 최신 raw EOD row가 sparse하면 UI는 `Effective EOD Date`와 fallback reason을 표시한다.
+  - 브라우저 자동 갱신은 OS scheduler가 아니라 Overview 페이지가 열려 있을 때만 작동하는 1차 운영 모드다. 현재 범위는 `S&P 500 + Daily` snapshot이며, 5분 cadence / US market-hours / lock guard를 통과할 때만 실제 provider 수집을 실행한다.
+  - Events는 FOMC / macro / earnings row를 `market_event_calendar`에서 읽고, source / validation / quality action을 UI에서 분리해 보여준다. Earnings는 아직 yfinance provider estimate + Nasdaq cross-check 기반이며 official company IR parsing은 후속 후보다.
+- Follow-up:
+  - master 병합 후 우선순위 후보는 실제 사용 중 발견되는 Overview polish, official earnings IR source 확대, OS scheduler 연결 여부 결정, Practical Validation V2 P2/P3 재개다.
+
 ### 2026-05-28 - Market Movers ops는 DB status check와 provider refresh를 분리한다
 - User request:
   - 남은 3번 작업, Market Movers 운영 고도화를 진행해 달라고 요청함.

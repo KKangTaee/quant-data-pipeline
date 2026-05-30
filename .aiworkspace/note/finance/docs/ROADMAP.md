@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-30
 
 ## Current Work
 
@@ -28,7 +28,7 @@ Last Verified: 2026-05-28
 | Overview Market Intelligence Market Movers Ops | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`; daily snapshot coverage %, SP500/TOP1000/TOP2000 DB status auto-check, refresh guidance / snapshot diagnostics 완료 |
 | Overview Market Intelligence Sector / Industry Trend | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`; S&P 500 / Top1000 / Top2000 coverage, Daily / Weekly / Monthly latest ranking + trend chart 완료 |
 | Overview Scheduled Refresh Automation | Complete | `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`; 브라우저 없는 run-once orchestrator, Data Health auto/manual/failure-streak 표시, quote gap issue persistence 완료 |
-| Overview Browser Auto Refresh | Active | `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`; Overview를 열어둔 동안만 `browser_safe` S&P 500 snapshot check를 5분마다 실행하는 UI / heartbeat 작업 |
+| Overview Browser Auto Refresh | Complete | `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`; Overview를 열어둔 동안만 `browser_safe` S&P 500 Daily snapshot check를 5분 cadence 조건으로 실행하는 Market Movers `데이터 갱신` UI / heartbeat 작업 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
@@ -86,5 +86,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Overview Market Intelligence는 production baseline, 5차 ops hardening, 6차 macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics, Events calendar UX 고도화, Market Movers ops hardening, Sector / Industry trend 개편, scheduled refresh automation, quote gap issue persistence를 완료했다. 현재는 OS scheduler 대신 Overview 브라우저 세션이 열려 있을 때만 S&P 500 snapshot을 갱신하는 browser auto refresh를 먼저 적용 중이다.
+- Overview Market Intelligence는 production baseline, ops hardening, macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics, Events UX redesign, Market Movers refresh/action UI, Sector / Industry trend 개편, scheduled refresh CLI, quote gap issue persistence, browser-session gated S&P 500 Daily auto refresh, NYSE market session banner까지 완료했다. 다음 후보는 실제 사용 중 발견되는 polish, official earnings IR source 확대, OS scheduler 연결 여부 결정이다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

@@ -12,14 +12,24 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Active Pointers
 
-- current phase board:
-  - [PHASE34_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md)
-- current candidate summary:
-  - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
-- historical full archive:
-  - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
+- current roadmap:
+  - [.aiworkspace/note/finance/docs/ROADMAP.md](/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/.aiworkspace/note/finance/docs/ROADMAP.md)
+- overview operations runbook:
+  - [.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md](/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md)
+- current code map:
+  - [.aiworkspace/note/finance/docs/PROJECT_MAP.md](/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/.aiworkspace/note/finance/docs/PROJECT_MAP.md)
+- historical archive:
+  - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-05-30
+- Completed the Overview browser-session auto refresh workstream under `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`.
+- Market Movers refresh UX is now a unified `데이터 갱신` status / action bar with manual vs browser-auto mode, second-by-second countdown UI, compact snapshot metadata, S&P 500 Daily-only browser-safe auto refresh, and Overview visual tokens / components split into `app/web/overview_ui_components.py`.
+- Completed Events UX redesign under `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`: source summary, refresh popover, mini source status cards, Agenda / Calendar / Quality / Raw views, and reduced-width-safe filters.
+- Completed market session banner under `.aiworkspace/note/finance/tasks/active/overview-market-session-banner/`: Overview now shows NYSE open / close in KST first, ET second, with weekend / holiday / early-close handling.
+- Completed Sector / Industry trend polish under `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`: S&P 500 / Top1000 / Top2000 leadership, longer trend windows, positive group ticker leaders, intraday daily path, EOD fallback explanation, loading spinner, and short cache.
+- Merge handoff: Overview Market Intelligence is now a production baseline for daily use. Remaining local dirty state is generated run history only; do not stage `.aiworkspace/note/finance/run_history/*.jsonl` unless explicitly requested.
 
 ### 2026-05-28
 - Completed `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`.

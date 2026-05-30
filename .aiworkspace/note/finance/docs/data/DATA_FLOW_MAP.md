@@ -72,6 +72,10 @@ yfinance 5m OHLCV fallback
   -> app.services.overview_market_intelligence.build_market_movers_snapshot()
   -> Workspace > Overview > Market Movers
 
+finance_price.market_intraday_snapshot or finance_price.nyse_price_history
+  -> app.services.overview_market_intelligence.build_group_leadership_snapshot()
+  -> Workspace > Overview > Sector / Industry
+
 missing quote rows
   -> finance.data.market_intelligence.diagnose_market_quote_gaps()
   -> app.jobs.ingestion_jobs.run_diagnose_market_quote_gaps()
@@ -87,6 +91,7 @@ missing quote rows
 - Top1000 / Top2000 daily movers도 저장된 quote snapshot을 우선 읽는다. 해당 universe는 `nyse_asset_profile.market_cap` current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
 - Missing quote diagnostics는 Yahoo single-symbol quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance `fast_info` evidence를 비교해 `provider_quote_gap` 같은 원인 후보를 job result로 표시한다.
 - 진단 결과는 `market_data_issue`에 `issue_type=quote_gap`으로 누적 저장한다. 이는 반복 발생 횟수와 최신 evidence를 추적하기 위한 운영 table이며, 상장폐지 / 거래정지 확정 판정은 아니다.
+- Sector / Industry daily leadership은 저장된 intraday snapshot이 있으면 `Previous Close -> latest quote` 기준을 사용한다. Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용하며, 최신 raw row가 sparse하면 prior eligible date로 fallback한다.
 
 ## Overview market event calendar 흐름
 
@@ -102,6 +107,11 @@ Yahoo / yfinance ticker calendar, bounded symbols
   -> finance.data.market_intelligence.upsert_market_event_rows()
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
+
+BLS / BEA official release schedules or BLS .ics import
+  -> finance.data.market_intelligence.collect_and_store_macro_calendar()
+  -> finance_meta.market_event_calendar
+  -> Workspace > Overview > Events
 ```
 
 의미:
@@ -114,6 +124,7 @@ Yahoo / yfinance ticker calendar, bounded symbols
 - 날짜가 바뀐 같은 symbol/source의 이전 active estimate는 `event_status=superseded`로 남겨 audit trail을 유지한다.
 - Earnings 수집 대상은 manual symbol list 또는 최신 S&P 500 movers snapshot 일부로 제한한다. Coverage 1000/2000 전체 earnings scan은 rate-limit 위험 때문에 production화 전까지 기본 path가 아니다.
 - Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, ingestion job wrapper를 통해 DB에 저장한 뒤 service read model로 읽는다.
+- Macro calendar collector는 official BLS / BEA schedules를 사용한다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
 
 ## ETF operability provider snapshot 흐름
 

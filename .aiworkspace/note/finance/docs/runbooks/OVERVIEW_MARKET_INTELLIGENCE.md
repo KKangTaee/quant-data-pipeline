@@ -1,11 +1,11 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-30
 
 ## Purpose
 
-이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Events 데이터를 수동 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
+이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
 
 ## When To Use
 
@@ -50,9 +50,12 @@ http://localhost:8501
    - daily intraday missing row는 `Diagnose Missing Quotes`로 원인 후보를 확인한다. 결과는 `finance_meta.market_data_issue`에 반복 issue로 누적된다.
 
 3. `Workspace > Overview > Sector / Industry`
-   - `Coverage`, `Group`, `Top N`, `Min Symbols`를 선택한다.
-   - `Heatmap` 탭에서 Equal Weight, Cap Weighted, Top Symbol return을 함께 비교한다.
-   - `Table` 탭에서 구성 종목 수, 대표 symbol, raw return column을 확인한다.
+   - `Coverage`, `Group`, `Period`, `Top N`, `Min Symbols`를 선택한다.
+   - `Latest Ranking`에서 equal-weight / cap-weighted return, 구성 종목 수, 대표 symbol을 확인한다.
+   - `Trend`에서 Daily 3M, Weekly 6M, Monthly 1Y window의 group 흐름을 보고, `Trend Groups`로 표시할 line을 좁힌다.
+   - daily period는 저장된 `market_intraday_snapshot`이 있으면 `Previous Close -> latest quote` 기준을 사용한다.
+   - weekly / monthly period는 EOD DB 기준이다. 최신 raw EOD row가 sparse하면 `Effective EOD Date`와 fallback reason이 status에 표시된다.
+   - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다.
 
 4. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
@@ -83,11 +86,15 @@ http://localhost:8501
 7. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
    - `Window`, `Source Type`, `Validation`, `Importance` filter로 캘린더 범위와 source quality를 좁힌다.
-   - `Focus` 탭에서 upcoming, needs review, high impact row를 먼저 확인한다.
-   - `Calendar` 탭에서 event type별 stacked event count와 날짜별 grouped cards를 확인한다.
-   - `Table` 탭에서 DB row-level detail을 확인한다.
+   - 상단 summary strip에서 next event, this week, next 30D, needs review counts를 먼저 확인한다.
+   - source lane의 FOMC / Earnings / Macro mini card에서 row count, latest collection, review count를 확인한다.
+   - `Refresh` popover에서 FOMC / Earnings / Macro refresh button을 실행한다.
+   - `Agenda` 탭에서 upcoming / needs review / high impact row를 먼저 확인한다.
+   - `Calendar` 탭에서 월별 calendar grid와 event type별 marker를 확인한다.
+   - `Quality` 탭에서 source / validation issue와 next action을 확인한다.
+   - `Raw` 탭에서 DB row-level detail을 확인한다.
    - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
-   - `Importance`, `Focus`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
+   - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
 8. `Workspace > Overview > Data Health`
@@ -99,7 +106,7 @@ http://localhost:8501
    - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
-9. `Workspace > Overview > Browser Auto Refresh`
+9. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
    - `Market Movers > 데이터 갱신`의 `자동 갱신` 모드는 브라우저 세션이 살아 있을 때만 `browser_safe` profile을 5분마다 호출한다.
    - 1차 browser-safe mode는 S&P 500 daily snapshot만 수집 대상으로 둔다.
    - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.
@@ -189,7 +196,9 @@ PY
 - Market Movers `자동 갱신` is limited to S&P 500 Daily browser sessions; Top1000 / Top2000 remain manual unless a broader profile is explicitly added later.
 - Market Movers refresh results expose `Snapshot Diagnostics` with snapshot time, rows written, failed count, method, and provider diagnostics when available.
 - Market Movers displays both `Rank` and `Sector Pulse` chart tabs.
-- Sector / Industry displays both `Heatmap` and `Table` tabs.
+- Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
+- Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
+- Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
@@ -200,9 +209,9 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
-- Overview Events displays `Focus`, `Calendar`, and `Table` tabs with Window / Source Type / Validation / Importance filters.
-- Overview Events read model includes `Days Until`, `Importance`, and `Focus`; FOMC / macro rows are `High`, earnings rows are `Medium`, and rows with source / validation action show `Needs Review`.
-- Overview Events calendar chart is stacked by event type, not a single aggregate line.
+- Overview Events displays summary cards, source mini cards, refresh popover, and `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters.
+- Overview Events read model includes `Days Until`, `Importance`, quality / validation fields, and source status summaries; FOMC / macro rows are `High`, earnings rows are `Medium`, and rows with source / validation action show `Needs Review`.
+- Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
 - Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.

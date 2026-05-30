@@ -152,6 +152,7 @@ uv run python -m app.jobs.overview_automation --profile standard --dry-run
 uv run python -m app.jobs.overview_automation --profile standard
 uv run python -m app.jobs.overview_automation --profile safe
 uv run python -m app.jobs.overview_automation --profile events
+uv run python -m app.jobs.overview_automation --profile browser_safe
 ```
 
 운영 기준:
@@ -159,6 +160,7 @@ uv run python -m app.jobs.overview_automation --profile events
 - `standard`는 S&P 500 / Top1000 / Top2000 intraday snapshot과 S&P 500 universe, FOMC, macro, earnings refresh를 평가한다.
 - `safe`는 Top1000 / Top2000 intraday snapshot을 제외해 무료 provider 압력을 낮춘다.
 - `events`는 FOMC / macro / earnings calendar만 평가한다.
+- `browser_safe`는 Overview가 열린 브라우저 세션에서 호출하는 1차 auto refresh profile이며 S&P 500 Daily intraday snapshot만 평가한다.
 - Intraday snapshot은 기본적으로 미국 정규장 시간에만 실행된다.
 - 실행 결과는 각 ingestion job result로 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`에 남고, Data Health가 그 기록을 읽는다.
 

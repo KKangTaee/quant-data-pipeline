@@ -13,3 +13,4 @@
 - 2026-05-30: Completed UI redesign pass 4: split Overview-only Market Movers visual components into `app/web/overview_ui_components.py`, leaving `overview_dashboard.py` focused on data state and page flow.
 - 2026-05-30: Completed UI redesign pass 5: centralized Overview visual tokens for colors / surfaces / spacing / typography and routed Market Movers, Sector / Industry, Events chart colors through those tokens.
 - 2026-05-30: Completed UI redesign pass 6: kept the no-new-library direction and reorganized Overview controls into local control models / render helpers before considering external UI packages.
+- 2026-05-30: Task complete for current scope. Browser-session auto refresh is intentionally limited to S&P 500 Daily and is surfaced inside Market Movers `데이터 갱신`; broader unattended scheduling remains a separate operating decision.
