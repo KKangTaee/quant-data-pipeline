@@ -4102,3 +4102,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 Events 탭을 Agenda / Calendar / Quality / Raw 구조로 개편했다.
   - Source lane, event summary strip, agenda list 렌더러를 추가해 다음 일정 / source 상태 / review 필요 row가 먼저 읽히도록 했다.
   - DB schema / collector 변경 없이 기존 `market_event_calendar` read model만 사용했다.
+- Overview Market Session Banner:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-session-banner/`에서 Overview 상단 미국장 세션 배너를 추가했다.
+  - NYSE 거래일이면 Open / Close ET와 KST 시간을 표시하고, 휴장이면 주말 / 주요 휴장일 사유와 다음 세션 시간을 표시한다.
+  - 외부 API 없이 rules-based NYSE calendar로 처리하며, one-off exchange closure는 범위 밖으로 명시했다.

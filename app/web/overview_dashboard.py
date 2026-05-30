@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import calendar
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from html import escape
 from inspect import signature
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import altair as alt
 import pandas as pd
@@ -54,6 +55,7 @@ from app.web.overview_ui_components import (
     render_event_source_lane,
     render_event_warning_strip,
     render_events_summary_strip,
+    render_market_session_banner,
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_overview_toolbar_label,
@@ -98,6 +100,24 @@ EVENT_TYPE_LABELS = {
     "EARNINGS": "Earnings",
     "MACRO": "Macro",
 }
+US_EASTERN_TZ = ZoneInfo("America/New_York")
+KOREA_TZ = ZoneInfo("Asia/Seoul")
+US_MARKET_OPEN_TIME = time(9, 30)
+US_MARKET_CLOSE_TIME = time(16, 0)
+US_MARKET_EARLY_CLOSE_TIME = time(13, 0)
+
+
+@dataclass(frozen=True)
+class MarketSessionInfo:
+    session_date: date
+    is_trading_day: bool
+    phase: str
+    reason: str
+    open_at: datetime | None
+    close_at: datetime | None
+    next_open_at: datetime | None = None
+    next_close_at: datetime | None = None
+    early_close_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -141,6 +161,200 @@ def _group_by_label(value: str) -> str:
 
 def _event_filter_label(value: str) -> str:
     return EVENT_TYPE_LABELS.get(value, value.replace("_", " ").title())
+
+
+def _nth_weekday(year: int, month: int, weekday: int, occurrence: int) -> date:
+    current = date(year, month, 1)
+    days_until_weekday = (weekday - current.weekday()) % 7
+    return current + timedelta(days=days_until_weekday + 7 * (occurrence - 1))
+
+
+def _last_weekday(year: int, month: int, weekday: int) -> date:
+    if month == 12:
+        current = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        current = date(year, month + 1, 1) - timedelta(days=1)
+    return current - timedelta(days=(current.weekday() - weekday) % 7)
+
+
+def _observed_fixed_holiday(year: int, month: int, day: int) -> date:
+    holiday = date(year, month, day)
+    if holiday.weekday() == 5:
+        return holiday - timedelta(days=1)
+    if holiday.weekday() == 6:
+        return holiday + timedelta(days=1)
+    return holiday
+
+
+def _easter_date(year: int) -> date:
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return date(year, month, day)
+
+
+def _nyse_holidays(year: int) -> dict[date, str]:
+    holidays: dict[date, str] = {
+        _nth_weekday(year, 1, 0, 3): "Martin Luther King Jr. Day",
+        _nth_weekday(year, 2, 0, 3): "Washington's Birthday",
+        _easter_date(year) - timedelta(days=2): "Good Friday",
+        _last_weekday(year, 5, 0): "Memorial Day",
+        _nth_weekday(year, 9, 0, 1): "Labor Day",
+        _nth_weekday(year, 11, 3, 4): "Thanksgiving Day",
+    }
+    for holiday_year, label, month, day in [
+        (year, "New Year's Day", 1, 1),
+        (year + 1, "New Year's Day", 1, 1),
+        (year, "Juneteenth National Independence Day", 6, 19),
+        (year, "Independence Day", 7, 4),
+        (year, "Christmas Day", 12, 25),
+    ]:
+        observed = _observed_fixed_holiday(holiday_year, month, day)
+        if observed.year == year:
+            suffix = " (observed)" if observed != date(holiday_year, month, day) else ""
+            holidays[observed] = f"{label}{suffix}"
+    return holidays
+
+
+def _nyse_early_closes(year: int) -> dict[date, str]:
+    holidays = _nyse_holidays(year)
+    thanksgiving = _nth_weekday(year, 11, 3, 4)
+    candidates = {
+        thanksgiving + timedelta(days=1): "Day after Thanksgiving",
+        date(year, 7, 3): "Independence Day early close",
+        date(year, 12, 24): "Christmas Eve",
+    }
+    return {
+        value: reason
+        for value, reason in candidates.items()
+        if value.weekday() < 5 and value not in holidays
+    }
+
+
+def _market_datetime(session_date: date, session_time: time) -> datetime:
+    return datetime.combine(session_date, session_time, tzinfo=US_EASTERN_TZ)
+
+
+def _market_session_for_date(session_date: date) -> MarketSessionInfo:
+    if session_date.weekday() >= 5:
+        return MarketSessionInfo(
+            session_date=session_date,
+            is_trading_day=False,
+            phase="휴장",
+            reason="주말",
+            open_at=None,
+            close_at=None,
+        )
+    holidays = _nyse_holidays(session_date.year)
+    if session_date in holidays:
+        return MarketSessionInfo(
+            session_date=session_date,
+            is_trading_day=False,
+            phase="휴장",
+            reason=holidays[session_date],
+            open_at=None,
+            close_at=None,
+        )
+    early_close_reason = _nyse_early_closes(session_date.year).get(session_date)
+    close_time = US_MARKET_EARLY_CLOSE_TIME if early_close_reason else US_MARKET_CLOSE_TIME
+    return MarketSessionInfo(
+        session_date=session_date,
+        is_trading_day=True,
+        phase="거래일",
+        reason="조기 종료" if early_close_reason else "정규장",
+        open_at=_market_datetime(session_date, US_MARKET_OPEN_TIME),
+        close_at=_market_datetime(session_date, close_time),
+        early_close_reason=early_close_reason,
+    )
+
+
+def _next_market_session(start_date: date) -> MarketSessionInfo:
+    for offset in range(1, 15):
+        candidate = _market_session_for_date(start_date + timedelta(days=offset))
+        if candidate.is_trading_day:
+            return candidate
+    return _market_session_for_date(start_date)
+
+
+def _current_market_session_info(now: datetime | None = None) -> MarketSessionInfo:
+    now_et = (now or datetime.now(tz=US_EASTERN_TZ)).astimezone(US_EASTERN_TZ)
+    session = _market_session_for_date(now_et.date())
+    if not session.is_trading_day:
+        next_session = _next_market_session(session.session_date)
+        return MarketSessionInfo(
+            session_date=session.session_date,
+            is_trading_day=False,
+            phase="휴장",
+            reason=session.reason,
+            open_at=None,
+            close_at=None,
+            next_open_at=next_session.open_at,
+            next_close_at=next_session.close_at,
+        )
+    if session.open_at and now_et < session.open_at:
+        phase = "장 시작 전"
+    elif session.close_at and now_et <= session.close_at:
+        phase = "장중"
+    else:
+        phase = "장 종료"
+    return MarketSessionInfo(
+        session_date=session.session_date,
+        is_trading_day=True,
+        phase=phase,
+        reason=session.reason,
+        open_at=session.open_at,
+        close_at=session.close_at,
+        early_close_reason=session.early_close_reason,
+    )
+
+
+def _format_et_time(value: datetime | None) -> str:
+    return value.strftime("%H:%M ET") if value else "-"
+
+
+def _format_kst_time(value: datetime | None) -> str:
+    return value.astimezone(KOREA_TZ).strftime("%m-%d %H:%M KST") if value else "-"
+
+
+def _market_session_banner_model(now: datetime | None = None) -> dict[str, Any]:
+    session = _current_market_session_info(now)
+    if session.is_trading_day:
+        detail = session.reason
+        if session.early_close_reason:
+            detail = f"{detail}: {session.early_close_reason}"
+        return {
+            "tone": "positive" if session.phase == "장중" else "neutral",
+            "status": session.phase,
+            "title": f"미국장 세션 · {session.session_date.isoformat()} ET",
+            "detail": detail,
+            "items": [
+                {"label": "Open", "value": _format_et_time(session.open_at), "detail": _format_kst_time(session.open_at)},
+                {"label": "Close", "value": _format_et_time(session.close_at), "detail": _format_kst_time(session.close_at)},
+                {"label": "Calendar", "value": "NYSE", "detail": "regular session"},
+            ],
+        }
+    return {
+        "tone": "warning",
+        "status": "휴장",
+        "title": f"미국장 휴장 · {session.session_date.isoformat()} ET",
+        "detail": f"사유: {session.reason}",
+        "items": [
+            {"label": "Reason", "value": session.reason, "detail": "NYSE closed"},
+            {"label": "Next Open", "value": _format_et_time(session.next_open_at), "detail": _format_kst_time(session.next_open_at)},
+            {"label": "Next Close", "value": _format_et_time(session.next_close_at), "detail": _format_kst_time(session.next_close_at)},
+        ],
+    }
 
 
 def _option_index(options: list[str], current: Any, *, default: int = 0) -> int:
@@ -2789,6 +3003,7 @@ def render_overview_dashboard(
 
     st.title("Finance Console")
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
+    render_market_session_banner(_market_session_banner_model())
 
     market_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
         ["Market Movers", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]

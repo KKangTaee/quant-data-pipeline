@@ -107,6 +107,77 @@ def overview_ui_css() -> str:
   letter-spacing: 0;
   text-transform: uppercase;
 }
+.ov-market-session {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1.4fr) repeat(3, minmax(8rem, 1fr));
+  gap: var(--ov-mi-gap-md);
+  align-items: stretch;
+  margin: 0.35rem 0 0.92rem 0;
+  padding: 0.52rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 4px solid var(--ov-session-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ov-session-tone, var(--ov-mi-color-neutral)) 7%, transparent), rgba(255, 255, 255, 0.95)),
+    var(--ov-mi-color-surface);
+}
+.ov-market-session-main {
+  min-width: 0;
+  padding: 0.18rem 0.35rem 0.18rem 0.2rem;
+}
+.ov-market-session-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.38rem;
+  padding: 0.14rem 0.46rem;
+  border: 1px solid color-mix(in srgb, var(--ov-session-tone, var(--ov-mi-color-neutral)) 34%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-session-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-session-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-market-session-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.22;
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+}
+.ov-market-session-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin-top: 0.15rem;
+  overflow-wrap: anywhere;
+}
+.ov-market-session-item {
+  min-width: 0;
+  padding: 0.52rem 0.62rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-market-session-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-market-session-value {
+  color: inherit;
+  font-size: var(--ov-mi-font-value);
+  font-weight: var(--ov-mi-weight-value);
+  line-height: 1.2;
+  margin-top: 0.13rem;
+  overflow-wrap: anywhere;
+}
+.ov-market-session-item-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.22;
+  margin-top: 0.12rem;
+  overflow-wrap: anywhere;
+}
 .ov-mm-refresh-label {
   margin: 0.85rem 0 0.42rem 0;
   color: inherit;
@@ -532,6 +603,13 @@ def overview_ui_css() -> str:
   .ov-mm-meta-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .ov-market-session {
+    grid-template-columns: 1fr;
+  }
+  .ov-market-session-item {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
   .ov-mm-meta-item:nth-child(odd) {
     border-left: 0;
     padding-left: 0;
@@ -620,6 +698,38 @@ def _badge_html(label: Any, tone: Any = None) -> str:
         f'<span class="ov-events-badge" style="--ov-event-tone:{escape(_overview_tone_color(tone))};">'
         f"{escape(_display_value(label))}"
         "</span>"
+    )
+
+
+def render_market_session_banner(model: dict[str, Any]) -> None:
+    tone_color = escape(_overview_tone_color(model.get("tone")))
+    item_html: list[str] = []
+    for item in list(model.get("items") or [])[:3]:
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-market-session-item-detail">{escape(str(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        item_html.append(
+            '<div class="ov-market-session-item">'
+            f'<div class="ov-market-session-label">{escape(str(item.get("label") or "-"))}</div>'
+            f'<div class="ov-market-session-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-market-session" style="--ov-session-tone:{tone_color};">
+  <div class="ov-market-session-main">
+    <span class="ov-market-session-status">{escape(_display_value(model.get("status")))}</span>
+    <div class="ov-market-session-title">{escape(_display_value(model.get("title")))}</div>
+    <div class="ov-market-session-detail">{escape(_display_value(model.get("detail")))}</div>
+  </div>
+  {"".join(item_html)}
+</div>""",
+        unsafe_allow_html=True,
     )
 
 

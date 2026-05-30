@@ -329,6 +329,34 @@ class JobResultArtifactContractTests(unittest.TestCase):
 
 
 class OverviewAutomationContractTests(unittest.TestCase):
+    def test_market_session_banner_reports_open_day_times(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+
+        model = _market_session_banner_model(now=datetime(2026, 5, 29, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["status"], "장중")
+        self.assertIn("2026-05-29 ET", model["title"])
+        self.assertEqual(model["items"][0]["value"], "09:30 ET")
+        self.assertEqual(model["items"][0]["detail"], "05-29 22:30 KST")
+        self.assertEqual(model["items"][1]["value"], "16:00 ET")
+
+    def test_market_session_banner_reports_weekend_closure(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+
+        model = _market_session_banner_model(now=datetime(2026, 5, 30, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["status"], "휴장")
+        self.assertIn("주말", model["detail"])
+        self.assertEqual(model["items"][1]["value"], "09:30 ET")
+
+    def test_market_session_banner_reports_observed_holiday_closure(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+
+        model = _market_session_banner_model(now=datetime(2026, 7, 3, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["status"], "휴장")
+        self.assertIn("Independence Day", model["detail"])
+
     def test_browser_auto_refresh_timing_shows_remaining_cadence(self) -> None:
         from app.web.overview_dashboard import _browser_auto_refresh_timing
 
