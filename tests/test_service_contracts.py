@@ -277,10 +277,20 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual([row["module_id"] for row in gate["blocking_modules"]], ["latest_replay"])
         self.assertEqual(gate["blocking_modules"][0]["gate_effect"], "Blocks Final Review")
         self.assertIn("전략 재검증", gate["blocking_modules"][0]["gate_reason"])
+        self.assertEqual(
+            gate["blocking_modules"][0]["resolution_surface"],
+            "3. 최신 데이터 기준 전략 재검증",
+        )
+        self.assertIn("전략 재검증 실행", gate["blocking_modules"][0]["resolution_action"])
         modules = {row["module_id"]: row for row in plan["modules"]}
         self.assertFalse(modules["risk_contribution"]["applies"])
         self.assertEqual(modules["risk_contribution"]["status"], "NOT_APPLICABLE")
         self.assertEqual(modules["risk_contribution"]["gate_effect"], "Not applicable")
+        display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
+        self.assertEqual(
+            display_rows["Latest Runtime Replay"]["Fix Location"],
+            "3. 최신 데이터 기준 전략 재검증",
+        )
 
     def test_validation_board_map_marks_single_gtaa_conditional_boards(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -348,6 +358,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(display_rows["Risk Contribution"]["Module Type"], "Conditional")
         self.assertEqual(display_rows["Risk Contribution"]["Applies"], "No")
         self.assertIn("Risk Contribution Audit", display_rows["Risk Contribution"]["Evidence Boards"])
+        self.assertEqual(display_rows["Risk Contribution"]["Fix Location"], "Risk Contribution Audit")
 
         board_rows = {row["Board"]: row for row in plan["board_display_rows"]}
         self.assertEqual(board_rows["Provider Coverage"]["Applies"], "Yes")

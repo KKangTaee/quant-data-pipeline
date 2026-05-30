@@ -53,6 +53,33 @@ DIAGNOSTIC_EXPLANATIONS = {
     "monitoring_baseline_seed": "선정 이후 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
 }
 
+GATE_FIX_GUIDANCE = {
+    "latest_replay": {
+        "location": "3. 최신 데이터 기준 전략 재검증",
+        "action": "`전략 재검증 실행` 버튼을 누른 뒤 Recheck가 PASS 또는 REVIEW이고 Coverage가 PASS인지 확인합니다.",
+    },
+    "Latest Runtime Replay": {
+        "location": "3. 최신 데이터 기준 전략 재검증",
+        "action": "`전략 재검증 실행` 버튼을 누른 뒤 Recheck가 PASS 또는 REVIEW이고 Coverage가 PASS인지 확인합니다.",
+    },
+    "validation_efficacy": {
+        "location": "Validation Efficacy Audit",
+        "action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+    },
+    "Validation Efficacy": {
+        "location": "Validation Efficacy Audit",
+        "action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+    },
+    "data_coverage": {
+        "location": "Data Coverage Audit / Provider Data Gaps",
+        "action": "가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+    },
+    "Data Coverage": {
+        "location": "Data Coverage Audit / Provider Data Gaps",
+        "action": "가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+    },
+}
+
 
 def _diagnostic_explanation(diagnostic: dict[str, Any]) -> str:
     domain = str(diagnostic.get("domain") or "").strip()
@@ -771,6 +798,32 @@ def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
             )
 
 
+def _gate_module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    display_rows: list[dict[str, Any]] = []
+    for row in modules:
+        module_id = str(row.get("module_id") or "").strip()
+        label = str(row.get("label") or module_id or "-").strip()
+        guidance = dict(GATE_FIX_GUIDANCE.get(module_id) or GATE_FIX_GUIDANCE.get(label) or {})
+        fix_location = row.get("resolution_surface") or guidance.get("location") or "-"
+        fix_action = (
+            row.get("resolution_action")
+            or guidance.get("action")
+            or row.get("next_action")
+            or "-"
+        )
+        display_rows.append(
+            {
+                "Module": label,
+                "Status": row.get("status") or "-",
+                "Fix Location": fix_location,
+                "Fix Action": fix_action,
+                "Gate Effect": row.get("gate_effect") or "-",
+                "Gate Reason": row.get("gate_reason") or "-",
+            }
+        )
+    return display_rows
+
+
 def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     gate = dict(validation_result.get("final_review_gate") or {})
     summary = dict(validation_result.get("validation_module_summary") or {})
@@ -839,11 +892,11 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     blocking_modules = list(gate.get("blocking_modules") or [])
     if blocking_modules:
         st.error("Final Review 이동 전에 보강해야 할 필수 검증 모듈이 있습니다.")
-        st.dataframe(pd.DataFrame(blocking_modules), width="stretch", hide_index=True)
+        st.dataframe(pd.DataFrame(_gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
     review_modules = list(gate.get("review_modules") or [])
     if review_modules:
         with st.expander("Final Review에서 확인할 REVIEW 모듈", expanded=False):
-            st.dataframe(pd.DataFrame(review_modules), width="stretch", hide_index=True)
+            st.dataframe(pd.DataFrame(_gate_module_display_rows(review_modules)), width="stretch", hide_index=True)
 
     if module_rows:
         required_rows = [row for row in module_rows if row.get("Group") == "Required for Final Review"]

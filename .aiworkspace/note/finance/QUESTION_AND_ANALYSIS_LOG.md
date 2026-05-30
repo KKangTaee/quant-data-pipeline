@@ -6643,3 +6643,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - module은 gate / 검증 의미 단위이고 board는 화면 근거 묶음이다. 두 개념을 분리하고 board registry를 두면 새 검증 추가 시 UI 설명과 적용 여부를 한 곳에서 관리할 수 있다
 - Follow-up:
   - Practical Validation board registry, module evidence board mapping, Applied Validation Map, board badge, 단일 component 조건부 board의 Not applicable 표시를 추가했다
+
+### 2026-05-30 - Practical Validation blocker 해결 위치를 표시한다
+- User request:
+  - 사용자가 Final Review Gate blocker 3개 중 `latest_replay`가 화면 어디에서 해결되는지 보이지 않는다고 지적하고 개선을 승인함
+- Interpreted goal:
+  - blocker table이 내부 module id가 아니라 사용자가 이동할 화면 위치와 실행할 액션을 바로 알려줘야 함
+- Analysis result:
+  - `latest_replay`는 별도 audit board가 아니라 `3. 최신 데이터 기준 전략 재검증`의 runtime recheck / period coverage evidence를 의미한다
+- Follow-up:
+  - module gate row에 `resolution_surface` / `resolution_action`을 추가하고 UI blocker / review table을 `Fix Location` / `Fix Action` 중심으로 표시했다

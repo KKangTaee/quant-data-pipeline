@@ -217,6 +217,8 @@ def _module(
     evidence: str = "",
     profile_effect: str = "-",
     applicability_reason: str = "",
+    resolution_surface: str = "",
+    resolution_action: str = "",
 ) -> dict[str, Any]:
     normalized_status = _status(status) if applies else "NOT_APPLICABLE"
     requirement_text = str(requirement or "").upper()
@@ -234,6 +236,8 @@ def _module(
         ),
         "reason": reason,
         "next_action": next_action,
+        "resolution_surface": resolution_surface or "-",
+        "resolution_action": resolution_action or next_action or "-",
         "evidence": evidence,
         "profile_effect": profile_effect or "-",
     }
@@ -291,6 +295,8 @@ def _module_gate_row(module: dict[str, Any]) -> dict[str, Any]:
         "status": module.get("status"),
         "gate_effect": module.get("gate_effect") or _module_gate_effect(module),
         "gate_reason": module.get("gate_reason") or _module_gate_reason(module),
+        "resolution_surface": module.get("resolution_surface"),
+        "resolution_action": module.get("resolution_action") or module.get("next_action"),
         "reason": module.get("reason"),
         "next_action": module.get("next_action"),
     }
@@ -314,6 +320,8 @@ def _module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 if board.get("label")
             )
             or "-",
+            "Fix Location": module.get("resolution_surface"),
+            "Fix Action": module.get("resolution_action"),
             "Reason": module.get("reason"),
             "Next Action": module.get("next_action"),
             "Profile / Traits": module.get("profile_effect"),
@@ -413,6 +421,8 @@ def build_validation_module_plan(
             reason="Backtest Analysis에서 넘어온 source가 식별 가능하고 active component, target weight, Data Trust, execution boundary, curve evidence를 갖춘 검증 가능한 후보인지 확인합니다.",
             next_action="source 자격이 부족하면 Backtest Analysis에서 source를 다시 구성하거나 handoff evidence를 보강합니다.",
             profile_effect=profile_label,
+            resolution_surface="1. 선택 후보 확인 / Backtest Analysis handoff",
+            resolution_action="source id, active component, target weight, Data Trust, curve evidence를 확인하고 부족하면 Backtest Analysis에서 후보를 다시 보냅니다.",
         ),
         _module(
             module_id="latest_replay",
@@ -424,6 +434,8 @@ def build_validation_module_plan(
             reason="저장 당시 성과가 아니라 현재 DB 최신 시장일까지 같은 전략이 재현되는지 확인합니다.",
             next_action="Practical Validation의 전략 재검증을 실행하고 runtime period coverage를 확인합니다.",
             profile_effect="all profiles require current replay evidence",
+            resolution_surface="3. 최신 데이터 기준 전략 재검증",
+            resolution_action="`전략 재검증 실행` 버튼을 누른 뒤 Recheck가 PASS 또는 REVIEW이고 Coverage가 PASS인지 확인합니다.",
         ),
         _module(
             module_id="benchmark_parity",
@@ -435,6 +447,8 @@ def build_validation_module_plan(
             reason="후보와 benchmark, cash, simple baseline, custom comparator 같은 비교 기준이 같은 기간 / frequency / coverage로 비교되는지 확인합니다.",
             next_action="비교 기준 curve coverage가 부족하면 source comparator나 replay evidence를 보강합니다.",
             profile_effect=profile_label,
+            resolution_surface="Input Evidence / Curve / Recheck Evidence",
+            resolution_action="benchmark 또는 comparator curve가 후보와 같은 기간 / coverage / frequency로 만들어졌는지 확인합니다.",
         ),
         _module(
             module_id="validation_efficacy",
@@ -446,6 +460,8 @@ def build_validation_module_plan(
             reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
             next_action="검증 효력의 NEEDS_INPUT row를 보강하고 REVIEW row는 Final Review 판단 근거로 넘깁니다.",
             profile_effect=profile_label,
+            resolution_surface="Validation Efficacy Audit",
+            resolution_action="NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
         ),
         _module(
             module_id="data_coverage",
@@ -457,6 +473,8 @@ def build_validation_module_plan(
             reason="최신 가격, provider freshness, PIT window, universe / survivorship coverage가 Practical Validation 판단에 충분한지 확인합니다.",
             next_action="가격 / provider / lifecycle / replay coverage 부족분을 보강합니다.",
             profile_effect=profile_label,
+            resolution_surface="Data Coverage Audit / Provider Data Gaps",
+            resolution_action="가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
         ),
         _module(
             module_id="construction_risk",
@@ -468,6 +486,8 @@ def build_validation_module_plan(
             reason="단일 후보와 mix 후보 모두 실제 보유 관점의 비중 집중, look-through, top holding, overlap, asset bucket exposure를 확인합니다.",
             next_action="REVIEW row는 Final Review에서 선택 근거 또는 보류 근거로 확인합니다.",
             profile_effect=f"max weight {traits.get('max_component_weight')}%",
+            resolution_surface="Construction Risk Audit / Look-through Exposure Board",
+            resolution_action="비중 집중, holdings / exposure coverage, top holding, overlap, unknown exposure row를 확인합니다.",
         ),
         _module(
             module_id="backtest_realism",
@@ -479,6 +499,8 @@ def build_validation_module_plan(
             reason="비용, turnover, liquidity, net performance, rebalance timing이 실전 해석에 충분한지 확인합니다.",
             next_action="비용 / turnover / 유동성 / net curve evidence가 부족하면 보강하고 assumption-only row는 Final Review review 근거로 넘깁니다.",
             profile_effect=profile_label,
+            resolution_surface="Backtest Realism Audit",
+            resolution_action="cost / turnover / liquidity / net performance / rebalance timing row 중 blocker를 보강합니다.",
         ),
         _module(
             module_id="stress_robustness",
@@ -490,6 +512,8 @@ def build_validation_module_plan(
             reason="최소 실전 stress window, rolling, sensitivity, overfit warning 근거가 있는지 확인합니다.",
             next_action="최소 stress / rolling / sensitivity 근거가 부족하면 보강하고 고급 parameter perturbation은 REVIEW 또는 후속 검증으로 남깁니다.",
             profile_effect="stricter for defensive / tactical profiles",
+            resolution_surface="Robustness Lab",
+            resolution_action="stress, rolling, sensitivity, overfit summary에서 NOT_RUN / NEEDS_INPUT row를 확인합니다.",
         ),
         _module(
             module_id="provider_investability",
@@ -507,6 +531,8 @@ def build_validation_module_plan(
                 if traits.get("is_etf_like")
                 else "ETF-like source가 아니므로 provider 전용 검증은 적용하지 않습니다."
             ),
+            resolution_surface="Provider Coverage / Provider Data Gaps",
+            resolution_action="ETF provider operability / holdings / exposure gap을 확인하고 수집 가능한 부족분을 보강합니다.",
         ),
         _module(
             module_id="leverage_inverse",
@@ -526,6 +552,8 @@ def build_validation_module_plan(
                 if traits.get("has_leveraged_or_inverse_symbols")
                 else "현재 universe에 레버리지 / 인버스 ticker가 없어 이 조건부 검증은 적용하지 않습니다."
             ),
+            resolution_surface="Practical Diagnostics / Final Review",
+            resolution_action="레버리지 / 인버스 노출이 있으면 목적, 보유기간, 손실 감내 기준을 Final Review 판단 근거로 남깁니다.",
         ),
         _module(
             module_id="risk_contribution",
@@ -543,6 +571,8 @@ def build_validation_module_plan(
                 if traits.get("is_weighted_mix")
                 else "single component 후보이므로 component 간 risk contribution 검증은 적용하지 않습니다."
             ),
+            resolution_surface="Risk Contribution Audit",
+            resolution_action="weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency row를 확인합니다.",
         ),
         _module(
             module_id="component_role_weight",
@@ -560,6 +590,8 @@ def build_validation_module_plan(
                 if traits.get("is_weighted_mix")
                 else "single component 후보이므로 mix role / weight 검증은 적용하지 않습니다."
             ),
+            resolution_surface="Component Role / Weight Audit",
+            resolution_action="weighted mix의 role source, target weight, profile intent, weight rationale row를 확인합니다.",
         ),
         _module(
             module_id="macro_regime",
@@ -577,6 +609,8 @@ def build_validation_module_plan(
                 if traits.get("is_tactical") or profile_id == "hedged_tactical"
                 else "전술형 source가 아니므로 macro / regime 조건부 검증은 적용하지 않습니다."
             ),
+            resolution_surface="Practical Diagnostics / Macro / Regime",
+            resolution_action="macro regime, risk-on/off context, FRED snapshot, regime split evidence를 확인합니다.",
         ),
         _module(
             module_id="monitoring_baseline",
@@ -588,6 +622,8 @@ def build_validation_module_plan(
             reason="선정 이후 recheck / monitoring seed를 구성합니다.",
             next_action="Final Review 이후 Selected Dashboard에서 운영 확인 근거로 사용합니다.",
             profile_effect="downstream",
+            resolution_surface="Selected Portfolio Dashboard",
+            resolution_action="Final Review 이후 recheck / monitoring baseline으로 확인합니다.",
         ),
         _module(
             module_id="tax_account_scope",
@@ -599,6 +635,8 @@ def build_validation_module_plan(
             reason="세금, 계좌 유형, 최소 주문 단위는 Stage 2 계산이 아니라 최종 판단 메모 성격입니다.",
             next_action="Final Review에서 선택 / 보류 사유로 남깁니다.",
             profile_effect="final review",
+            resolution_surface="Final Review",
+            resolution_action="세금, 계좌 유형, 주문 단위는 최종 판단의 보류 / 선택 사유로 남깁니다.",
         ),
     ]
 
