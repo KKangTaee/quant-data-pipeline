@@ -211,14 +211,14 @@ def _candidate_review_next_step(row: dict[str, Any]) -> str:
     deployment = str(result.get("deployment") or "").strip().lower()
 
     if record_type == "current_candidate" and promotion == "real_money_candidate":
-        return "Compare에서 다른 family 후보와 같이 본 뒤, 유지 후보라면 Candidate Review 안에서 Pre-Live 운영 상태를 기록합니다."
+        return "Portfolio Mix Builder에서 다른 family 후보와 같이 본 뒤, 유지 후보라면 Candidate Review 안에서 Pre-Live 운영 상태를 기록합니다."
     if record_type == "near_miss":
-        return "낙폭을 줄이는 대안이 필요한 상황에서 Compare로 주 후보와 비교합니다. 기본 후보로 자동 승격하지 않습니다."
+        return "낙폭을 줄이는 대안이 필요한 상황에서 Portfolio Mix Builder로 주 후보와 같이 검토합니다. 기본 후보로 자동 승격하지 않습니다."
     if record_type == "scenario":
         return "설정 차이를 확인하는 비교 대상으로 사용합니다. 필요할 때만 Pre-Live 후보로 넘깁니다."
     if shortlist == "watchlist" or deployment == "review_required":
         return "Watchlist 후보로 두고 다음 비교나 데이터 업데이트 후 재검토합니다."
-    return "후보 역할과 Real-Money 신호를 확인한 뒤 compare 또는 Pre-Live 운영 기록 중 하나로 넘깁니다."
+    return "후보 역할과 Real-Money 신호를 확인한 뒤 Portfolio Mix Builder 또는 Pre-Live 운영 기록 중 하나로 넘깁니다."
 
 
 def _build_candidate_review_board_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -294,8 +294,8 @@ def _build_candidate_board_operating_evaluation(row: dict[str, Any]) -> dict[str
         next_action = "Candidate Review 안에서 paper tracking / watchlist / hold 같은 운영 상태를 저장합니다."
     elif can_move_to_compare:
         route_label = "COMPARE_REVIEW_READY"
-        verdict = "Candidate Packaging 확인 완료: Compare에서 다시 비교할 후보"
-        next_action = "Compare 후보 선택 목록에서 비교할 다른 후보를 추가한 뒤 실행합니다."
+        verdict = "Candidate Packaging 확인 완료: Portfolio Mix Builder에서 다시 검토할 후보"
+        next_action = "Portfolio Mix Builder 후보 선택 목록에서 함께 섞거나 검토할 다른 후보를 추가한 뒤 실행합니다."
     else:
         route_label = "BOARD_HOLD"
         verdict = "Candidate Packaging 보류: Board에서 역할과 근거를 먼저 보강"
@@ -325,7 +325,7 @@ def _build_candidate_board_operating_evaluation(row: dict[str, Any]) -> dict[str
             "ready": contract_ready,
             "points": 2.0,
             "current": _current_candidate_registry_contract_summary(row),
-            "judgment": "Compare 또는 Pre-Live에서 재진입 가능" if contract_ready else "설정 snapshot 부족",
+            "judgment": "Portfolio Mix Builder 또는 Pre-Live에서 재진입 가능" if contract_ready else "설정 snapshot 부족",
         },
         {
             "criteria": "Review Context",
@@ -1190,7 +1190,7 @@ def _build_candidate_intake_readiness_evaluation(
         next_step = "Save Candidate Review Note를 누른 뒤 같은 Candidate Packaging 안에서 registry 후보 범위를 정합니다."
     else:
         verdict = "Candidate Packaging 저장 전 Draft 보강 필요"
-        next_step = "막힌 항목을 보강하거나, Latest / History / Compare에서 후보 초안을 다시 보내 확인합니다."
+        next_step = "막힌 항목을 보강하거나, Latest / History / Portfolio Mix Builder에서 후보 초안을 다시 보내 확인합니다."
 
     return {
         "ready": ready,

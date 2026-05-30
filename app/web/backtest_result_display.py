@@ -350,7 +350,7 @@ def _render_latest_run_orientation(
             {
                 "label": "D",
                 "title": "Next Action",
-                "detail": "필요하면 Compare로 비교하거나 Practical Validation 후보로 보냅니다.",
+                "detail": "필요하면 Portfolio Mix Builder에서 조합하거나 Practical Validation 후보로 보냅니다.",
                 "status": "Action after metrics",
                 "tone": "neutral",
             },
@@ -1359,13 +1359,13 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
     if can_move_to_compare and score >= 8.0:
         verdict = "후보 검토 진행 가능"
         tone = "success"
-        route_label = "Compare 또는 Practical Validation"
-        next_action = "Compare에서 상대 후보와 비교하거나 Practical Validation으로 보내 실전 검증 근거를 확인합니다."
+        route_label = "Portfolio Mix Builder 또는 Practical Validation"
+        next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 실전 검증 근거를 확인합니다."
     elif can_move_to_compare:
         verdict = "후보 검토 가능, 개선 항목 동시 확인"
         tone = "warning"
         route_label = "조건부 후보 검토"
-        next_action = "Compare 또는 Practical Validation으로 넘기기 전에 watch / preview 항목을 함께 확인합니다."
+        next_action = "Portfolio Mix Builder 또는 Practical Validation으로 넘기기 전에 watch / preview 항목을 함께 확인합니다."
     else:
         verdict = "후보 보류: blocker 먼저 해결"
         tone = "error"

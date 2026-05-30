@@ -23,6 +23,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Portfolio Mix Builder replaces mixed compare/build flow
+- User request:
+  - Backtest Analysis의 `Compare & Portfolio Builder`가 비교와 조합을 섞고 있어, 여러 전략을 하나의 mix 후보로 만드는 화면으로 재정의하고 후보 비교는 별도 위치를 검토해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis는 단일 후보 또는 Portfolio Mix 후보를 만들어 2차 Practical Validation으로 보내는 1차 후보 생성 단계로 고정한다.
+- Analysis result:
+  - Visible mode is now `Portfolio Mix Builder`; legacy `Compare & Portfolio Builder` route remains compatible.
+  - Component runs remain as evidence for weight selection, but the handoff button evaluates and sends the weighted mix as one Clean V2 source.
+  - Mix handoff requires mix result, 100% / multi-component weight discipline, component data trust, and component first-stage readiness with no hard blocker.
+  - Candidate-to-candidate read-only comparison is intentionally left as a future separate tool rather than kept inside the mix builder.
+- Follow-up:
+  - User review should run a GTAA + Equal Weight mix and confirm that the screen reads as "여러 전략을 하나의 후보로 만들기" rather than "개별 전략 비교 후 하나 고르기".
+
 ### 2026-05-30 - Practical Validation handoff requires first-stage readiness
 - User request:
   - `검증 후보로 보내기`는 다음 단계로 넘기는 버튼이므로 1차 후보 판단을 통과했다는 의미로 읽히게 하고, 통과하지 못하면 비활성화와 근거 표시가 필요하다고 요청함.

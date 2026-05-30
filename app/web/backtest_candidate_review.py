@@ -601,7 +601,7 @@ def render_candidate_review_workspace() -> None:
                 if board_evaluation["can_move_to_pre_live"]:
                     st.success("이 후보는 운영 기록을 저장할 수 있는 current candidate입니다.")
                 elif board_evaluation["can_move_to_compare"]:
-                    st.info("이 후보는 운영 기록보다 Compare 재검토가 먼저인 후보입니다.")
+                    st.info("이 후보는 운영 기록보다 Portfolio Mix Builder 재검토가 먼저인 후보입니다.")
                 else:
                     st.error("운영 기록으로 넘기기 전 확인 필요: " + ", ".join(str(item) for item in board_evaluation["blocking_reasons"]))
                 if board_evaluation["warning_reasons"]:
@@ -813,7 +813,7 @@ def render_candidate_review_workspace() -> None:
 
             if board_evaluation["can_move_to_compare"]:
                 if st.button(
-                    "Open Compare Picker For Selected Candidate",
+                    "Open Portfolio Mix Builder For Selected Candidate",
                     key="candidate_board_open_compare_picker",
                     disabled=not bool(board_evaluation["can_move_to_compare"]),
                     use_container_width=True,
@@ -821,9 +821,9 @@ def render_candidate_review_workspace() -> None:
                     st.session_state["current_candidate_bundle_selection"] = [selected_board_label]
                     st.session_state.backtest_compare_prefill_notice = (
                         f"`{selected_board_row.get('title') or selected_board_row.get('registry_id')}` 후보를 "
-                        "Compare 후보 선택 목록에 표시했습니다. Compare 실행 전 비교할 후보를 하나 이상 더 고르세요."
+                        "Portfolio Mix Builder 후보 선택 목록에 표시했습니다. mix 실행 전 함께 섞을 후보를 하나 이상 더 고르세요."
                     )
-                    _request_backtest_panel("Compare & Portfolio Builder")
+                    _request_backtest_panel("Portfolio Mix Builder")
                     st.rerun()
 
             if not board_evaluation["can_move_to_pre_live"]:
@@ -876,13 +876,13 @@ def render_candidate_review_workspace() -> None:
         else:
             st.info("아직 저장된 Pre-Live 운영 기록이 없습니다.")
 
-    with st.expander("보조 도구: Send Candidates To Compare", expanded=False):
+    with st.expander("보조 도구: Send Candidates To Portfolio Mix Builder", expanded=False):
         st.caption(
-            "대표 후보나 near-miss 후보를 compare form에 다시 채워 넣습니다. "
-            "이 단계는 compare 실행이 아니라 입력값 prefill입니다."
+            "대표 후보나 near-miss 후보를 Portfolio Mix Builder form에 다시 채워 넣습니다. "
+            "이 단계는 component 실행이 아니라 입력값 prefill입니다."
         )
         if not rows:
-            st.info("Compare로 보낼 active current candidate가 없습니다.")
+            st.info("Portfolio Mix Builder로 보낼 active current candidate가 없습니다.")
         else:
             display_df = _build_current_candidate_registry_rows_for_display(rows)
             anchor_rows = [row for row in rows if str(row.get("record_type") or "") == "current_candidate"]
@@ -900,7 +900,7 @@ def render_candidate_review_workspace() -> None:
                         st.rerun()
                     except Exception as exc:
                         st.error(str(exc))
-                st.caption(f"대표 후보 `{len(anchor_rows)}`개를 compare form에 채웁니다.")
+                st.caption(f"대표 후보 `{len(anchor_rows)}`개를 Portfolio Mix Builder form에 채웁니다.")
             with quick_action_cols[1]:
                 if st.button(
                     "Load Lower-MDD Alternatives",
@@ -912,17 +912,17 @@ def render_candidate_review_workspace() -> None:
                         st.rerun()
                     except Exception as exc:
                         st.error(str(exc))
-                st.caption(f"대안 / scenario 후보 `{len(near_miss_rows)}`개를 compare form에 채웁니다.")
+                st.caption(f"대안 / scenario 후보 `{len(near_miss_rows)}`개를 Portfolio Mix Builder form에 채웁니다.")
             st.dataframe(display_df, use_container_width=True, hide_index=True)
             selected_labels = st.multiselect(
-                "Choose Specific Candidates To Load Into Compare",
+                "Choose Specific Candidates To Load Into Portfolio Mix Builder",
                 options=list(label_to_row.keys()),
                 max_selections=4,
-                help="최소 2개 후보를 고르면 compare form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
+                help="최소 2개 후보를 고르면 Portfolio Mix Builder form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
                 key="candidate_review_current_candidate_bundle_selection",
             )
             if st.button(
-                "Load Selected Candidates Into Compare",
+                "Load Selected Candidates Into Portfolio Mix Builder",
                 key="candidate_review_load_selected_candidate_bundle",
                 use_container_width=True,
             ):

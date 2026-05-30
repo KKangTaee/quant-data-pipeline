@@ -917,7 +917,7 @@ def render_practical_validation_workspace() -> None:
 
     with st.container(border=True):
         render_stage_brief(
-            purpose="선택된 단일 전략, Compare 후보, 저장 Mix를 같은 Clean V2 source로 읽습니다.",
+            purpose="선택된 단일 전략 후보와 Portfolio Mix 후보를 같은 Clean V2 source로 읽습니다.",
             result="Practical Validation result",
         )
         st.caption(f"Sources: `{PORTFOLIO_SELECTION_SOURCE_FILE}`")
@@ -935,7 +935,7 @@ def render_practical_validation_workspace() -> None:
 
     if not selectable_sources:
         st.info("아직 Practical Validation으로 보낸 Clean V2 source가 없습니다.")
-        st.caption("Backtest Analysis에서 Single / Compare / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
+        st.caption("Backtest Analysis에서 Single / Portfolio Mix / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
         return
 
     labels = [_source_label(row) for row in selectable_sources]

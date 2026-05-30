@@ -115,7 +115,7 @@ strict annual family는 현재 여러 operator-facing contract를 가진다.
 제품 전략으로 보려면 아래 surface를 확인한다.
 
 - Single Strategy에서 실행 가능
-- Compare에서 선택 가능
+- Portfolio Mix Builder에서 선택 가능
 - strategy-specific advanced inputs가 payload에 보존
 - History record에 설정이 저장
 - History Replay / Load Parity Snapshot에서 저장 상태가 읽힘
@@ -123,8 +123,8 @@ strict annual family는 현재 여러 operator-facing contract를 가진다.
 - `Run Again`으로 재실행
 - Saved Portfolio replay에서 override 복원
 - Saved Portfolio Replay / Load Parity Snapshot에서 weight와 override 저장 상태가 읽힘
-- Compare / Weighted Portfolio에서 component별 Data Trust가 읽힘
-- Compare / History / Saved Portfolio에서 Real-Money / Guardrail scope가 strategy별로 구분됨
+- Portfolio Mix Builder / Weighted Portfolio에서 component별 Data Trust가 읽힘
+- Portfolio Mix Builder / History / Saved Portfolio에서 Real-Money / Guardrail scope가 strategy별로 구분됨
 - result warning / metadata가 사용자에게 보임
 - checklist가 실제 UI 위치를 기준으로 작성됨
 

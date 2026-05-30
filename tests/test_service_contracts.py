@@ -2999,6 +2999,156 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["실행 원천"]["value"], "통과")
         self.assertEqual(criteria["검증 원천"]["value"], "통과")
 
+    def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
+        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+
+        def _bundle(strategy_name: str) -> dict:
+            return {
+                "strategy_name": strategy_name,
+                "summary_df": pd.DataFrame([{"End Balance": 110.0}]),
+                "result_df": pd.DataFrame(
+                    [
+                        {"Date": "2024-12-31", "Total Balance": 100.0},
+                        {"Date": "2025-12-31", "Total Balance": 110.0},
+                    ]
+                ),
+                "meta": {
+                    "strategy_name": strategy_name,
+                    "end": "2025-12-31",
+                    "promotion_decision": "real_money_candidate",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                },
+            }
+
+        weighted_bundle = {
+            "summary_df": pd.DataFrame([{"End Balance": 112.0}]),
+            "result_df": pd.DataFrame(
+                [
+                    {"Date": "2024-12-31", "Total Balance": 100.0},
+                    {"Date": "2025-12-31", "Total Balance": 112.0},
+                ]
+            ),
+            "component_strategy_names": ["GTAA", "Equal Weight"],
+            "component_input_weights": [70.0, 30.0],
+            "component_data_trust_rows": [
+                {"Strategy": "GTAA", "Price Freshness": "ok", "Interpretation": "눈에 띄는 데이터 이슈 없음"},
+                {"Strategy": "Equal Weight", "Price Freshness": "ok", "Interpretation": "눈에 띄는 데이터 이슈 없음"},
+            ],
+            "date_policy": "intersection",
+        }
+
+        evaluation = _build_weighted_mix_candidate_readiness_evaluation(
+            weighted_bundle,
+            [_bundle("GTAA"), _bundle("Equal Weight")],
+        )
+
+        self.assertTrue(evaluation["can_send_to_practical_validation"])
+        self.assertEqual(evaluation["stage_status"], "PASS")
+        criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}
+        self.assertEqual(criteria["Weight Discipline"]["상태"], "PASS")
+        self.assertEqual(criteria["Component 1차 후보 판단"]["상태"], "PASS")
+
+    def test_portfolio_mix_candidate_gate_blocks_hold_component(self) -> None:
+        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+
+        ready_meta = {
+            "end": "2025-12-31",
+            "promotion_decision": "real_money_candidate",
+            "benchmark_available": True,
+            "validation_status": "normal",
+            "benchmark_policy_status": "normal",
+            "liquidity_policy_status": "normal",
+            "validation_policy_status": "normal",
+            "guardrail_policy_status": "normal",
+            "etf_operability_status": "normal",
+            "price_freshness": {"status": "ok"},
+        }
+        result_df = pd.DataFrame(
+            [
+                {"Date": "2024-12-31", "Total Balance": 100.0},
+                {"Date": "2025-12-31", "Total Balance": 110.0},
+            ]
+        )
+        bundles = [
+            {"strategy_name": "GTAA", "summary_df": pd.DataFrame([{"End Balance": 110.0}]), "result_df": result_df, "meta": dict(ready_meta)},
+            {
+                "strategy_name": "Equal Weight",
+                "summary_df": pd.DataFrame([{"End Balance": 108.0}]),
+                "result_df": result_df,
+                "meta": {**ready_meta, "promotion_decision": "hold"},
+            },
+        ]
+        weighted_bundle = {
+            "summary_df": pd.DataFrame([{"End Balance": 112.0}]),
+            "result_df": result_df,
+            "component_strategy_names": ["GTAA", "Equal Weight"],
+            "component_input_weights": [50.0, 50.0],
+            "component_data_trust_rows": [
+                {"Strategy": "GTAA", "Price Freshness": "ok", "Interpretation": "눈에 띄는 데이터 이슈 없음"},
+                {"Strategy": "Equal Weight", "Price Freshness": "ok", "Interpretation": "눈에 띄는 데이터 이슈 없음"},
+            ],
+            "date_policy": "intersection",
+        }
+
+        evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, bundles)
+
+        self.assertFalse(evaluation["can_send_to_practical_validation"])
+        self.assertEqual(evaluation["stage_status"], "HOLD")
+        self.assertTrue(any("Promotion Decision" in reason for reason in evaluation["blocking_reasons"]))
+        criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}
+        self.assertEqual(criteria["Component 1차 후보 판단"]["상태"], "FAIL")
+
+    def test_portfolio_mix_candidate_gate_blocks_non_100_weight_total(self) -> None:
+        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+
+        meta = {
+            "end": "2025-12-31",
+            "promotion_decision": "real_money_candidate",
+            "benchmark_available": True,
+            "validation_status": "normal",
+            "benchmark_policy_status": "normal",
+            "liquidity_policy_status": "normal",
+            "validation_policy_status": "normal",
+            "guardrail_policy_status": "normal",
+            "etf_operability_status": "normal",
+            "price_freshness": {"status": "ok"},
+        }
+        result_df = pd.DataFrame(
+            [
+                {"Date": "2024-12-31", "Total Balance": 100.0},
+                {"Date": "2025-12-31", "Total Balance": 110.0},
+            ]
+        )
+        bundles = [
+            {"strategy_name": "GTAA", "summary_df": pd.DataFrame([{"End Balance": 110.0}]), "result_df": result_df, "meta": meta},
+            {"strategy_name": "Equal Weight", "summary_df": pd.DataFrame([{"End Balance": 108.0}]), "result_df": result_df, "meta": meta},
+        ]
+        weighted_bundle = {
+            "summary_df": pd.DataFrame([{"End Balance": 112.0}]),
+            "result_df": result_df,
+            "component_strategy_names": ["GTAA", "Equal Weight"],
+            "component_input_weights": [70.0, 20.0],
+            "component_data_trust_rows": [
+                {"Strategy": "GTAA", "Price Freshness": "ok", "Interpretation": "눈에 띄는 데이터 이슈 없음"},
+                {"Strategy": "Equal Weight", "Price Freshness": "ok", "Interpretation": "눈에 띄는 데이터 이슈 없음"},
+            ],
+            "date_policy": "intersection",
+        }
+
+        evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, bundles)
+
+        self.assertFalse(evaluation["can_send_to_practical_validation"])
+        criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}
+        self.assertEqual(criteria["Weight Discipline"]["상태"], "FAIL")
+        self.assertIn("target weight 합계가 100%가 아님", criteria["Weight Discipline"]["판단"])
+
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime
         from app.runtime import backtest as runtime_backtest

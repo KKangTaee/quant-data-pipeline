@@ -125,7 +125,7 @@ def _candidate_priority_row(row: dict[str, Any], pre_live_row: dict[str, Any] | 
     elif str(row.get("record_type") or "") == "current_candidate":
         next_action = "Candidate Review에서 Pre-Live 운영 기록 확인"
     else:
-        next_action = "Compare에서 상대 근거 재확인"
+        next_action = "Portfolio Mix Builder에서 조합 근거 재확인"
     return {
         "registry_id": registry_id,
         "title": row.get("title") or registry_id or "-",
@@ -236,7 +236,7 @@ def build_overview_next_actions(
             {
                 "priority": "Medium",
                 "title": "Backtest run history 생성",
-                "detail": "최근 실행 기록이 없습니다. Single Strategy 또는 Compare 실행 후 History에서 재현성을 확인하세요.",
+                "detail": "최근 실행 기록이 없습니다. Single Strategy 또는 Portfolio Mix Builder 실행 후 History에서 재현성을 확인하세요.",
                 "target": "Backtest",
             }
         )

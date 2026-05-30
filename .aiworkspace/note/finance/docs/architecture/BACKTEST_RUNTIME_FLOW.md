@@ -23,9 +23,9 @@ app/web/streamlit_app.py
   -> Backtest UI latest result / history
 ```
 
-Compare / weighted portfolio 흐름은 일부 service layer로 이동했다.
-수동 Compare 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했고,
-strategy별 runner catalog와 compare default / universe resolution은 `app/services/backtest_compare_catalog.py`로 이동했다.
+Portfolio Mix / weighted portfolio 흐름은 일부 service layer로 이동했다.
+수동 multi-strategy component 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했고,
+strategy별 runner catalog와 mix builder default / universe resolution은 `app/services/backtest_compare_catalog.py`로 이동했다.
 weighted portfolio bundle construction은 `app/services/backtest_weighted_portfolio.py`로 이동했다.
 saved portfolio replay execution / data assembly는 `app/services/backtest_saved_portfolio_replay.py`로 이동했다.
 UI는 session state, history append call, notice, render side effect를 유지한다.
@@ -38,7 +38,7 @@ app/web/streamlit_app.py
   -> app/services/backtest_compare_catalog.py
   -> app/runtime/backtest.py
   -> finance/loaders/* / finance strategy runtime
-  -> compare result
+  -> component result
   -> app/services/backtest_weighted_portfolio.py
   -> finance/performance.py / app/runtime/backtest.py
   -> weighted portfolio result
@@ -51,11 +51,11 @@ app/web/streamlit_app.py
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console navigation entry |
-| `app/web/pages/backtest.py` | form, panel, result surface, history, compare, saved portfolio UI |
+| `app/web/pages/backtest.py` | form, panel, result surface, history, Portfolio Mix Builder, saved portfolio UI |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, Streamlit spinner, session state / history append |
 | `app/services/backtest_execution.py` | Single Strategy runtime dispatch, elapsed timing, input/data/system error normalization |
-| `app/services/backtest_compare_execution.py` | Manual Compare execution loop, elapsed timing, input/data/system error normalization |
-| `app/services/backtest_compare_catalog.py` | Compare strategy runner catalog, default parameter, preset/manual universe resolution, runtime dispatch |
+| `app/services/backtest_compare_execution.py` | Manual multi-strategy component execution loop, elapsed timing, input/data/system error normalization |
+| `app/services/backtest_compare_catalog.py` | Portfolio Mix Builder strategy runner catalog, default parameter, preset/manual universe resolution, runtime dispatch |
 | `app/services/backtest_result_read_model.py` | Strategy data trust rows, weighted component contribution amount/share views |
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |

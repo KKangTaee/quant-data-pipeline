@@ -13,7 +13,7 @@ import streamlit as st
 GUIDE_ROUTE_OPTIONS = [
     "단일 후보",
     "여러 후보 묶음",
-    "저장된 비중 조합",
+    "저장된 Mix",
     "보류 / 재검토",
 ]
 
@@ -41,14 +41,14 @@ def _route_cards() -> dict[str, dict[str, Any]]:
         },
         "여러 후보 묶음": {
             "headline": "여러 후보를 하나의 portfolio source로 묶기",
-            "summary": "Compare에서 후보들을 비교하고 target weight가 있는 Clean V2 source로 저장하는 경로입니다.",
-            "goal": "여러 전략의 역할과 target weight를 Backtest Analysis에서 정한 뒤 Practical Validation으로 보냅니다.",
-            "sequence": "Backtest Analysis compare / weight builder -> Practical Validation -> Final Review",
+            "summary": "Portfolio Mix Builder에서 여러 component를 실행하고 target weight가 있는 하나의 Clean V2 source로 저장하는 경로입니다.",
+            "goal": "여러 전략의 역할과 target weight를 Backtest Analysis에서 정한 뒤 mix 후보로 Practical Validation에 보냅니다.",
+            "sequence": "Backtest Analysis Portfolio Mix Builder -> Practical Validation -> Final Review",
             "caution": "Portfolio Proposal의 legacy weight builder는 compatibility 경로입니다. 새 조합 실험은 Backtest Analysis가 맡습니다.",
             "records": "Portfolio Selection Source, Practical Validation Result, Final Decision V2",
             "dot": [
-                ("compare", "1A\\nCompare", "compare"),
-                ("weights", "1B\\nRole + Weight", "proposal"),
+                ("compare", "1A\\nComponents", "compare"),
+                ("weights", "1B\\nMix Weight", "proposal"),
                 ("validation", "2\\nPractical Validation", "gate"),
                 ("final", "3\\nFinal Review V2", "final"),
                 ("dashboard", "4\\nSelected Dashboard", "compare"),
@@ -60,11 +60,11 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("final", "dashboard", "선정 row"),
             ],
         },
-        "저장된 비중 조합": {
+        "저장된 Mix": {
             "headline": "이미 저장된 weight setup을 workflow 기록으로 연결",
-            "summary": "Compare에서 저장한 mix를 재실행한 뒤 Practical Validation source로 연결합니다.",
+            "summary": "Portfolio Mix Builder에서 저장한 mix를 재실행한 뒤 Practical Validation source로 연결합니다.",
             "goal": "Saved Portfolio에 저장된 재사용 weight setup을 다시 검토해 Clean V2 source로 연결합니다.",
-            "sequence": "저장된 비중 조합 선택 -> Mix 재실행 및 검증 -> Practical Validation -> Final Review",
+            "sequence": "저장된 Mix 선택 -> Mix 재실행 및 검증 -> Practical Validation -> Final Review",
             "caution": "Saved Portfolio는 후보 registry가 아닙니다. Candidate Review / legacy Proposal 저장을 필수로 거치지 않습니다.",
             "records": "Saved Portfolio, Portfolio Selection Source, Practical Validation Result, Final Decision V2",
             "dot": [
@@ -144,7 +144,7 @@ def _stage_timeline_rows() -> list[dict[str, str]]:
             "phase": "분석",
             "screen": "Backtest Analysis",
             "title": "후보 source 만들기",
-            "check": "Single Strategy, Compare, 저장 mix replay에서 성과 / Data Trust / 비중 근거를 확인합니다.",
+            "check": "Single Strategy, Portfolio Mix Builder, 저장 mix replay에서 성과 / Data Trust / 비중 근거를 확인합니다.",
             "output": "Portfolio Selection Source",
         },
         {
@@ -188,7 +188,7 @@ def _route_stage_status() -> dict[str, dict[str, str]]:
             "3": "필수",
             "4": "선정 후",
         },
-        "저장된 비중 조합": {
+        "저장된 Mix": {
             "1": "재실행",
             "2": "필수",
             "3": "필수",
@@ -230,13 +230,13 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
         "여러 후보 묶음": [
             {
                 "checkpoint": "후보마다 같은 기준으로 검토했는가",
-                "detail": "각 후보는 최소한 성과, Data Trust, Real-Money signal, benchmark 기준이 비교 가능해야 합니다.",
-                "screen": "Backtest Analysis > Compare",
+                "detail": "각 component는 최소한 성과, Data Trust, Real-Money signal, benchmark 기준을 확인할 수 있어야 합니다.",
+                "screen": "Backtest Analysis > Portfolio Mix Builder",
             },
             {
                 "checkpoint": "역할이 겹치지 않는가",
                 "detail": "성장, 방어, 현금성, 리밸런싱 보조처럼 mix 안의 역할을 분리해야 합니다.",
-                "screen": "Backtest Analysis > Compare Weight Builder",
+                "screen": "Backtest Analysis > Portfolio Mix Builder > Mix Weight",
             },
             {
                 "checkpoint": "비중 합계와 이유가 명확한가",
@@ -249,21 +249,21 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
                 "screen": "Final Review",
             },
         ],
-        "저장된 비중 조합": [
+        "저장된 Mix": [
             {
                 "checkpoint": "저장된 mix가 재현되는가",
                 "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 `Mix 재실행 및 검증` 결과부터 확인합니다.",
-                "screen": "Compare & Portfolio Builder > 저장된 비중 조합",
+                "screen": "Portfolio Mix Builder > 저장된 Mix",
             },
             {
                 "checkpoint": "개별 후보 검증으로 오해하지 않는가",
-                "detail": "개별 후보 Compare 보드는 단일 전략 후보용이고, 저장 mix는 Portfolio Mix 검증 보드에서 판단합니다.",
-                "screen": "저장된 비중 조합 > Portfolio Mix 검증 보드",
+                "detail": "저장 mix는 component 개별 후보가 아니라 mix 전체 기준의 Portfolio Mix 검증 보드에서 판단합니다.",
+                "screen": "저장된 Mix > Portfolio Mix 검증 보드",
             },
             {
                 "checkpoint": "Practical Validation으로 직접 보내는가",
                 "detail": "저장 mix는 개별 current candidate가 아니므로 Candidate Review / legacy Proposal을 필수로 거치지 않습니다.",
-                "screen": "저장된 비중 조합",
+                "screen": "저장된 Mix",
             },
             {
                 "checkpoint": "Final Review에서 V2 검증 결과로 읽히는가",
@@ -284,7 +284,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             },
             {
                 "checkpoint": "되돌아갈 화면이 명확한가",
-                "detail": "데이터면 ingestion / 실행 설정, 상대 근거면 Compare, 비중이면 Backtest Analysis의 weight builder로 돌아갑니다.",
+                "detail": "데이터면 ingestion / 실행 설정, component 근거면 Portfolio Mix Builder, 비중이면 Backtest Analysis의 weight builder로 돌아갑니다.",
                 "screen": "해당 원인 화면",
             },
             {
@@ -305,7 +305,7 @@ def _concept_rows() -> list[dict[str, str]]:
         },
         {
             "개념": "Backtest Analysis",
-            "제품 안에서의 의미": "Single Strategy, Compare, 저장 mix replay로 후보 source를 만드는 1단계",
+            "제품 안에서의 의미": "Single Strategy, Portfolio Mix Builder, 저장 mix replay로 후보 source를 만드는 1단계",
             "사용자가 볼 곳": "Backtest > Backtest Analysis",
         },
         {
@@ -335,7 +335,7 @@ def _storage_rows() -> list[dict[str, str]]:
     return [
         {
             "기록": "Portfolio Selection Source",
-            "담는 내용": "Backtest Analysis에서 선택한 단일 / 비교 / mix 후보 source",
+            "담는 내용": "Backtest Analysis에서 선택한 단일 / Portfolio Mix 후보 source",
             "생성 화면": "Backtest Analysis",
         },
         {
@@ -345,8 +345,8 @@ def _storage_rows() -> list[dict[str, str]]:
         },
         {
             "기록": "Saved Portfolio",
-            "담는 내용": "Compare에서 저장한 재사용 weight setup",
-            "생성 화면": "Compare & Portfolio Builder",
+            "담는 내용": "Portfolio Mix Builder에서 저장한 재사용 weight setup",
+            "생성 화면": "Portfolio Mix Builder",
         },
         {
             "기록": "Final Selection Decision V2",
@@ -421,7 +421,7 @@ def _registry_detail_rows() -> list[dict[str, str]]:
         {
             "흐름 단계": "1단계 Backtest Analysis",
             "파일": "PORTFOLIO_SELECTION_SOURCES.jsonl",
-            "담는 데이터": "단일 전략, Compare 후보, 저장 mix replay를 Clean V2 source로 변환한 기록",
+            "담는 데이터": "단일 전략 후보, Portfolio Mix 후보, 저장 mix replay를 Clean V2 source로 변환한 기록",
             "화면 위치": "Backtest > Backtest Analysis",
             "읽는 법": "실전 후보 검증의 입력 source입니다. live approval이나 주문 지시가 아닙니다.",
         },
@@ -473,8 +473,8 @@ def _runtime_artifact_rows() -> list[dict[str, str]]:
         {
             "파일": "SAVED_PORTFOLIOS.jsonl",
             "폴더": ".aiworkspace/note/finance/saved/",
-            "담는 데이터": "Compare에서 만든 재사용 가능한 portfolio mix setup",
-            "화면 위치": "Backtest > Compare & Portfolio Builder > 저장된 비중 조합",
+            "담는 데이터": "Portfolio Mix Builder에서 만든 재사용 가능한 portfolio mix setup",
+            "화면 위치": "Backtest > Portfolio Mix Builder > 저장된 Mix",
         },
     ]
 
@@ -957,7 +957,7 @@ def _render_reference_drawer() -> None:
         with st.expander("1~4단계 전체를 어떻게 읽나", expanded=False):
             st.markdown(
                 """
-                - `1`: Backtest Analysis에서 단일 / Compare / 저장 mix 후보 source를 만든다.
+                - `1`: Backtest Analysis에서 단일 / Portfolio Mix / 저장 mix 후보 source를 만든다.
                 - `2`: Practical Validation에서 검증 프로필, Input Evidence, 12개 Practical Diagnostics를 확인한다.
                 - `3`: Final Review에서 최종 판단과 이유를 V2 decision으로 남긴다.
                 - `4`: Selected Portfolio Dashboard에서 선정 row를 read-only로 관찰한다.
@@ -967,7 +967,7 @@ def _render_reference_drawer() -> None:
         st.dataframe(pd.DataFrame(_storage_rows()), width="stretch", hide_index=True)
         st.info(
             "Saved Portfolio는 재사용 setup이고, Clean V2 source는 검증 입력입니다. "
-            "저장된 비중 조합은 Candidate Review나 legacy Proposal을 필수로 거치지 않고 Practical Validation으로 연결합니다. "
+            "저장된 Mix는 Candidate Review나 legacy Proposal을 필수로 거치지 않고 Practical Validation으로 연결합니다. "
             "Selected Portfolio Dashboard는 새 저장소가 아니라 Final Selection Decision V2를 읽는 운영 화면입니다."
         )
     with tabs[3]:

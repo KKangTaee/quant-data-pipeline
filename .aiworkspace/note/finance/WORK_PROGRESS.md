@@ -24,6 +24,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-flow-v1/`.
+- Backtest Analysis now shows `Portfolio Mix Builder`; legacy `Compare & Portfolio Builder` routes still normalize to the new mode.
+- The mix builder now treats component runs as inputs, then gates the weighted mix as one 1차 후보 before Practical Validation handoff; individual strategy handoff is no longer the main action in this flow.
+- Verification passed: py_compile, full `tests.test_service_contracts` 133 tests, `git diff --check`, and Browser smoke on `http://127.0.0.1:8502/backtest`.
 - Completed `.aiworkspace/note/finance/tasks/active/backtest-practical-validation-handoff-gate-v1/`.
 - Backtest `실전성 검증으로 보내기` now requires first-stage Candidate Readiness to have no Promotion / execution source / validation source blocker.
 - Disabled handoff now shows concise blocker reasons, and the handoff area is displayed as a status card; no live approval, order, auto rebalance, or new storage model was added.

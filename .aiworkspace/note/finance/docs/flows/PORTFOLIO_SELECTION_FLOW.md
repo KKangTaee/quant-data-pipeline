@@ -20,7 +20,7 @@ Backtest > Backtest Analysis
 
 | Step | Screen | What It Does | Durable Record |
 |---|---|---|---|
-| 1 | Backtest Analysis | 단일 전략 실행, compare, saved mix replay, 비중 조합을 수행하고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
+| 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
 | 2 | Practical Validation | 선택된 source를 12개 practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
 | 3 | Final Review | Practical Validation evidence를 investability packet으로 확인하고 최종 select / hold / reject / re-review 판단을 남기며, 저장된 판단을 read-only dossier로 다시 읽는다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
 | 4 | Selected Portfolio Dashboard | 선정된 포트폴리오를 최신 기간, recheck readiness, symbol freshness, provider evidence, timeline, review signal, recheck comparison, 가상 투자금 / optional actual allocation boundary 기준으로 다시 확인한다 | 사용자가 명시적으로 저장할 때만 monitoring log |
@@ -29,7 +29,7 @@ Backtest > Backtest Analysis
 
 | Stage | Owns | Does Not Own |
 |---|---|---|
-| Backtest Analysis | 후보 생성, 전략 비교, saved mix replay, 비중 조합 | 최종 판단 |
+| Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness | 최종 판단, 별도 후보 간 read-only 비교 |
 | Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모 |
 | Final Review | 최종 후보 판단, investability evidence packet 확인, construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
 | Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary | broker order, live approval, auto rebalance |
@@ -37,13 +37,13 @@ Backtest > Backtest Analysis
 ## Verification Checkpoints
 
 검증 기준은 제품 `Stage` 번호로 부르지 않는다.
-화면 흐름과 검증 기준이 섞이면 Backtest Analysis 안의 Real-Money / Compare 보조 신호가 별도 단계처럼 보이기 때문이다.
+화면 흐름과 검증 기준이 섞이면 Backtest Analysis 안의 Real-Money / Portfolio Mix 보조 신호가 별도 단계처럼 보이기 때문이다.
 
 | Checkpoint | Primary Surface | Meaning |
 |---|---|---|
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
-| Candidate Readiness | Backtest Analysis > Real-Money | 후보 비교 또는 Practical Validation으로 넘겨도 되는지 확인 |
+| Candidate Readiness | Backtest Analysis > Real-Money / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
 | Practical Evidence | Practical Validation | provider, data coverage, realism, robustness, construction risk 검증 |
 | Final Decision Gate | Final Review | selected-route blocker와 최종 선택 가능 여부 판단 |
 | Monitoring Check | Selected Portfolio Dashboard | 선정 이후 recheck readiness, freshness, provider evidence, review signal 확인 |

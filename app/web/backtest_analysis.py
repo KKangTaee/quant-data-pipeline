@@ -8,15 +8,21 @@ from app.web.backtest_workflow_routes import (
     BACKTEST_ANALYSIS_MODE_COMPARE,
     BACKTEST_ANALYSIS_MODE_OPTIONS,
     BACKTEST_ANALYSIS_MODE_SINGLE,
+    BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE,
 )
 
 
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
-        "Single Strategy 실행, Compare, 저장된 비중 조합 replay를 통해 후보를 만들고 "
-        "Practical Validation으로 보낼 source를 선택합니다."
+        "Single Strategy 또는 Portfolio Mix Builder로 1차 후보를 만들고, "
+        "통과한 후보만 Practical Validation source로 보냅니다."
     )
+    current_mode = st.session_state.get("backtest_analysis_mode")
+    if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
+        st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE
+    elif current_mode not in BACKTEST_ANALYSIS_MODE_OPTIONS:
+        st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
     mode = st.radio(
         "Analysis Mode",
         options=BACKTEST_ANALYSIS_MODE_OPTIONS,
