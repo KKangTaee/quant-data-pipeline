@@ -449,6 +449,35 @@ def _snapshot_value(value: Any) -> str:
     return str(value)
 
 
+def _price_basis_status_item(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    price_mode = str(coverage.get("price_mode") or "")
+    latest_raw = coverage.get("latest_raw_date")
+    effective_end = coverage.get("effective_end_date")
+    snapshot_time = coverage.get("snapshot_time_utc")
+
+    if snapshot_time or price_mode == "Intraday Snapshot":
+        title = "Effective Quote Time"
+        value = snapshot_time or effective_end
+        detail = f"{price_mode or 'Intraday Snapshot'} · previous close basis"
+    else:
+        title = "Effective EOD Date"
+        value = effective_end
+        if latest_raw and effective_end and str(latest_raw) != str(effective_end):
+            detail = f"latest raw {latest_raw} is sparse; using {effective_end}"
+        elif latest_raw:
+            detail = f"latest raw {latest_raw}"
+        else:
+            detail = price_mode or "EOD DB"
+
+    return {
+        "title": title,
+        "value": _snapshot_value(value),
+        "detail": detail,
+        "tone": "positive" if value else "warning",
+    }
+
+
 def _snapshot_status_items(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     coverage = dict(snapshot.get("coverage") or {})
     refresh_state = dict(coverage.get("refresh_state") or {})
@@ -469,19 +498,12 @@ def _snapshot_status_items(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     coverage_detail = f"{float(returnable_pct):.2f}% returnable" if returnable_pct is not None else None
     missing_count = coverage.get("missing_count") or 0
     failed_count = coverage.get("failed_count") or missing_count
-    effective_value = coverage.get("snapshot_time_utc") or coverage.get("effective_end_date")
-    raw_detail = coverage.get("price_mode") or f"raw latest: {_snapshot_value(coverage.get('latest_raw_date'))}"
     status_title = "Refresh State" if refresh_state else "Snapshot Status"
     status_value = refresh_state.get("label") or snapshot.get("status") or "-"
     status_detail = refresh_state.get("detail") or coverage.get("coverage_basis") or snapshot.get("universe_label") or "-"
     status_tone = refresh_state.get("tone") or ("positive" if snapshot.get("status") == "OK" else "warning")
     return [
-        {
-            "title": "Effective Price Time",
-            "value": _snapshot_value(effective_value),
-            "detail": raw_detail,
-            "tone": "positive" if effective_value else "warning",
-        },
+        _price_basis_status_item(snapshot),
         {
             "title": "Returnable Coverage",
             "value": coverage_text,
@@ -1856,14 +1878,20 @@ def _render_sector_industry_tab() -> None:
     st.markdown("### Sector / Industry Leadership")
     controls = _render_group_leadership_controls()
 
-    snapshot = load_overview_group_leadership_snapshot(
-        universe_limit=controls.universe_limit,
-        universe_code=controls.coverage,
-        group_by=controls.group_by,
-        period=controls.period,
-        top_n=controls.top_n,
-        min_group_size=controls.min_group_size,
+    loading_label = (
+        "Sector / Industry leadership 계산 중..."
+        if controls.group_by == "sector"
+        else "Industry leadership 계산 중..."
     )
+    with st.spinner(f"{loading_label} DB 가격, 그룹 랭킹, 트렌드, 티커 리더를 계산하고 있습니다."):
+        snapshot = load_overview_group_leadership_snapshot(
+            universe_limit=controls.universe_limit,
+            universe_code=controls.coverage,
+            group_by=controls.group_by,
+            period=controls.period,
+            top_n=controls.top_n,
+            min_group_size=controls.min_group_size,
+        )
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
     coverage = dict(snapshot.get("coverage") or {})

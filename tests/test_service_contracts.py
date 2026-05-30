@@ -359,6 +359,45 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["status"], "휴장")
         self.assertIn("Independence Day", model["detail"])
 
+    def test_snapshot_status_labels_intraday_quote_time(self) -> None:
+        from app.web.overview_dashboard import _snapshot_status_items
+
+        items = _snapshot_status_items(
+            {
+                "status": "OK",
+                "coverage": {
+                    "price_mode": "Intraday Snapshot",
+                    "snapshot_time_utc": "2026-05-29 21:32",
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                },
+            }
+        )
+
+        self.assertEqual(items[0]["title"], "Effective Quote Time")
+        self.assertEqual(items[0]["value"], "2026-05-29 21:32")
+        self.assertIn("previous close", items[0]["detail"])
+
+    def test_snapshot_status_labels_sparse_eod_date(self) -> None:
+        from app.web.overview_dashboard import _snapshot_status_items
+
+        items = _snapshot_status_items(
+            {
+                "status": "OK",
+                "coverage": {
+                    "price_mode": "EOD DB",
+                    "latest_raw_date": "2026-05-28",
+                    "effective_end_date": "2026-05-27",
+                    "returnable_count": 500,
+                    "universe_count": 503,
+                },
+            }
+        )
+
+        self.assertEqual(items[0]["title"], "Effective EOD Date")
+        self.assertEqual(items[0]["value"], "2026-05-27")
+        self.assertIn("latest raw 2026-05-28 is sparse", items[0]["detail"])
+
     def test_browser_auto_refresh_timing_shows_remaining_cadence(self) -> None:
         from app.web.overview_dashboard import _browser_auto_refresh_timing
 

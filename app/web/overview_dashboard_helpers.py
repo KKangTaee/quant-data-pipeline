@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
+import streamlit as st
 
 from app.jobs.run_history import load_run_history
 from app.runtime import (
@@ -391,6 +392,7 @@ def load_overview_market_mover_sectors(
 
 
 # Load the DB-backed sector / industry leadership snapshot for the Overview group tab.
+@st.cache_data(ttl=120, show_spinner=False)
 def load_overview_group_leadership_snapshot(
     *,
     universe_limit: int = 2000,

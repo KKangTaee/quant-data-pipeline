@@ -13,3 +13,7 @@
 - `uv run python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/overview_dashboard_helpers.py` - pass after daily intraday group leadership.
 - DB smoke: `SP500 sector daily` returned `price_mode=Intraday Snapshot`, `snapshot_time_utc=2026-05-29 00:32`, 503 returnable rows, 10 group rows, 640 trend rows, and 150 ticker leader rows.
 - Browser smoke: restarted Streamlit and verified Overview > Sector / Industry > Daily shows `Effective Price Time=2026-05-29 00:32`, `Price Mode=Intraday Snapshot`, and `Return Window: Previous Close -> 2026-05-29 00:32`; console errors 0.
+- `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_dashboard_helpers.py tests/test_service_contracts.py` - pass after price-basis label and loading UX update.
+- `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` - 31 tests pass.
+- `uv run python -m unittest tests.test_service_contracts` - 78 tests pass.
+- Browser smoke: `http://localhost:8501` Overview > Sector / Industry shows `Effective EOD Date`, no old `Effective Price Time`, sparse-date detail present, no persistent completion status, no horizontal overflow, and no app traceback. Streamlit telemetry fetch errors were observed in console but no app-rendering exception appeared.
