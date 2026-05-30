@@ -54,7 +54,7 @@ http://localhost:8501
 3. `Workspace > Overview > Sector / Industry`
    - `Coverage`, `Group`, `Period`, `Top N`, `Min Symbols`를 선택한다.
    - `Latest Ranking`에서 equal-weight / cap-weighted return, 구성 종목 수, 대표 symbol, breadth / concentration summary를 확인한다.
-   - `Trend`에서 Daily 3M, Weekly 6M, Monthly 1Y window의 group 흐름을 보고, `Trend Groups`로 표시할 group을 좁힌다.
+   - `Trend`에서 Daily 1M, Weekly 3M, Monthly 12M window의 group 흐름을 보고, `Trend Groups`로 표시할 group을 좁힌다.
    - 같은 `Group` mode 안에서는 `Coverage`, `Period`, `Top N`, `Min Symbols`를 바꿔도 유효한 `Trend Groups` 선택을 유지한다. `Sector`와 `Industry` 선택 기억은 분리된다.
    - Trend chart는 `Heatmap`, `Line`, `Latest Delta` 하위 탭으로 본다. Heatmap은 구간별 양/음 흐름, Line은 경로, Latest Delta는 latest window와 previous window의 변화폭을 빠르게 확인하는 용도다.
    - daily period는 저장된 `market_intraday_snapshot`이 있으면 `Previous Close -> latest quote` 기준을 사용한다.

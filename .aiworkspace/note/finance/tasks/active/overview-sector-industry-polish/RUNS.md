@@ -6,3 +6,4 @@
 - 2026-05-30: Chart JSON smoke for Sector / Industry heatmap, latest delta, and ticker leader chart passed with `sector-industry-chart-json-ok`.
 - 2026-05-30: `git diff --check` passed.
 - 2026-05-30: Browser QA verified Sector / Industry renders insight cards, Trend Groups, `Heatmap / Line / Latest Delta`, and Positive Group Detail charts; final QA screenshot: `/tmp/overview-sector-industry-final-qa.png`.
+- 2026-05-30: Follow-up compact horizon verification passed: `py_compile`, focused Overview service tests 16, full `tests.test_service_contracts` 81, `git diff --check`, and Browser QA screenshot `/tmp/overview-sector-industry-daily-heatmap-qa.png`.

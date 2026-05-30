@@ -13,9 +13,9 @@ VALID_PERIODS = {"daily": 1, "weekly": 5, "monthly": 21, "yearly": 252}
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 VALID_GROUPS = {"sector", "industry"}
 GROUP_TREND_PERIODS = {
-    "daily": {"step": 1, "windows": 63, "window_label": "Last 3M"},
-    "weekly": {"step": 5, "windows": 26, "window_label": "Last 6M"},
-    "monthly": {"step": 21, "windows": 12, "window_label": "Last 1Y"},
+    "daily": {"step": 1, "windows": 21, "window_label": "Last 1M"},
+    "weekly": {"step": 5, "windows": 13, "window_label": "Last 3M"},
+    "monthly": {"step": 21, "windows": 12, "window_label": "Last 12M"},
 }
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 MARKET_INTRADAY_STALE_MINUTES = 15

@@ -1094,6 +1094,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(window["start_date"], "2026-05-15")
         self.assertEqual(window["stale_days"], 10)
 
+    def test_group_trend_window_contract_uses_compact_horizons(self) -> None:
+        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+
+        market_dates = [
+            item.strftime("%Y-%m-%d")
+            for item in reversed(pd.bdate_range(end="2026-05-29", periods=320).tolist())
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "MAX(`date`) AS latest_raw_date" in sql:
+                return [{"latest_raw_date": market_dates[0]}]
+            if "GROUP BY `date`" in sql:
+                return [{"date": item, "usable_rows": 1200} for item in market_dates]
+            return []
+
+        daily = resolve_group_trend_market_dates(period="daily", query_fn=query_fn)
+        weekly = resolve_group_trend_market_dates(period="weekly", query_fn=query_fn)
+        monthly = resolve_group_trend_market_dates(period="monthly", query_fn=query_fn)
+
+        self.assertEqual(daily["trend_window_label"], "Last 1M")
+        self.assertEqual(len(daily["windows"]), 21)
+        self.assertEqual(weekly["trend_window_label"], "Last 3M")
+        self.assertEqual(len(weekly["windows"]), 13)
+        self.assertEqual(monthly["trend_window_label"], "Last 12M")
+        self.assertEqual(len(monthly["windows"]), 12)
+
     def test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
 
@@ -1268,7 +1295,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["date_window"]["period"], "monthly")
         self.assertEqual(snapshot["period"], "monthly")
-        self.assertEqual(snapshot["trend_window_label"], "Last 1Y")
+        self.assertEqual(snapshot["trend_window_label"], "Last 12M")
         self.assertFalse(snapshot["trend_rows"].empty)
         self.assertFalse(snapshot["ticker_leader_rows"].empty)
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
@@ -1308,7 +1335,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["universe_code"], "SP500")
         self.assertEqual(snapshot["period"], "daily")
-        self.assertEqual(snapshot["trend_window_label"], "Last 3M")
+        self.assertEqual(snapshot["trend_window_label"], "Last 1M")
         self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
         self.assertEqual(snapshot["coverage"]["snapshot_time_utc"], "2026-05-18 15:35")
         self.assertEqual(snapshot["date_window"]["start_date"], "Previous Close")

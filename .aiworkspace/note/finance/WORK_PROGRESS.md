@@ -4126,3 +4126,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-sector-industry-polish/`에서 Trend Groups 유지, Heatmap / Line / Latest Delta trend view, insight cards, Positive Group Detail marker 개선을 완료했다.
   - Service read model은 breadth, cap-vs-equal gap, concentration, ticker previous return, momentum delta를 제공한다.
   - `tests.test_service_contracts` 80개, chart JSON smoke, `git diff --check`, Browser QA screenshot을 통과했다.
+  - 후속 QA에서 Daily heatmap이 과밀하다는 문제를 확인해 Trend horizon을 Daily 1M / Weekly 3M / Monthly 12M으로 조정했다.

@@ -5649,3 +5649,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이전 기간 수익률은 모멘텀 참고 지표로 쓸 수 있지만 예측 신호가 아니라 latest window와 previous window의 비교 맥락으로 표시하는 것이 안전함
 - Follow-up:
   - Sector / Industry에 insight cards, Heatmap / Line / Latest Delta tabs, Positive ticker sector-colored bars, previous-period marker를 추가했고 Browser QA screenshot까지 확인했다
+
+### 2026-05-30 - Daily Heatmap 과밀도를 줄인다
+- User request:
+  - 사용자가 Daily heatmap이 너무 촘촘해서 알아보기 어렵다고 지적하고 Daily 1개월, Weekly 3개월, Monthly 12개월 범위를 요청함
+- Interpreted goal:
+  - Trend horizon은 분석 의미보다 화면 판독성이 우선이며, 특히 Daily heatmap은 약 1개월 거래일만 보여야 함
+- Analysis result:
+  - 기존 Daily 3M / Weekly 6M / Monthly 1Y는 line chart에는 괜찮지만 heatmap에는 daily cell 수가 많아 과밀해진다
+- Follow-up:
+  - Trend window contract를 Daily 21 거래일 / Weekly 13주 / Monthly 12개월로 조정하고 서비스 계약 테스트와 Browser QA screenshot으로 확인했다
