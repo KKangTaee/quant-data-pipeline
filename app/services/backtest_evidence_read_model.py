@@ -45,7 +45,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
 GATE_POLICY_SCHEMA_VERSION = "investability_gate_policy_v1"
 GATE_POLICY_GROUP_LABELS = {
     "data_trust": "Data Trust / Source Contract",
-    "benchmark": "Benchmark Parity",
+    "benchmark": "Benchmark / Comparator Parity",
     "provider_coverage": "Provider / Look-through",
     "stress_robustness": "Stress / Robustness",
     "leveraged_inverse": "Leveraged / Inverse Suitability",
@@ -773,10 +773,10 @@ def build_investability_evidence_packet(
             "Meaning": "ETF 운용성 / holdings / exposure / macro coverage가 검증에 연결됐는지 봅니다.",
         },
         {
-            "Section": "Benchmark Parity",
+            "Section": "Benchmark / Comparator Parity",
             "Ready": _ready_from_check(benchmark_check) if benchmark_check else False,
             "Current": benchmark_check.get("Current") or "-",
-            "Meaning": "후보와 benchmark가 같은 기간 / coverage / frequency로 비교되는지 봅니다.",
+            "Meaning": "후보와 benchmark / comparator가 같은 기간 / coverage / frequency로 비교되는지 봅니다.",
         },
         {
             "Section": "Robustness / Stress",

@@ -4428,3 +4428,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-module-gate-v1/`에서 Practical Validation 개편을 구현했다.
   - source traits 기반 validation module planner와 Final Review gate를 추가해 필수 module `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`이면 save-and-move를 막는다.
   - UI는 Final Review Gate / 필수 / 조건부 / 후속 참고 module board를 먼저 보여주고, 기존 상세 diagnostics는 그대로 유지한다.
+- Practical Validation Required Module Polish V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-required-module-polish-v1/`에서 필수검증 8개 표시를 보강했다.
+  - `Benchmark Parity` 사용자-facing label을 `Benchmark / Comparator Parity`로 확장하고, module row에 `Gate Effect` / `Gate Reason`을 추가했다.
+  - Source Integrity, Data Coverage, Latest Runtime Replay, Stress / Robustness, Backtest Realism 설명을 실제 gate 의미에 맞게 다듬었다.

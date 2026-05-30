@@ -649,7 +649,7 @@ def build_practical_validation_result(
     benchmark_parity = build_benchmark_parity(portfolio_curve, benchmark_curve)
     curve_provenance = build_curve_provenance(curve_context=curve_context, replay_result=replay_row)
     if benchmark_parity.get("status") == "REVIEW":
-        review_gaps.append("Benchmark parity review 필요")
+        review_gaps.append("Benchmark / comparator parity review 필요")
     # Provider snapshots answer "what can be verified at validation time", not the saved backtest end.
     provider_as_of = _format_date(now) or _format_date(source_row.get("created_at"))
     if provider_as_of is None:
@@ -746,7 +746,7 @@ def build_practical_validation_result(
             "Criteria": "Benchmark parity",
             "Ready": benchmark_parity.get("status") == "PASS",
             "Current": benchmark_parity.get("status") or "NOT_RUN",
-            "Meaning": "후보와 benchmark가 같은 기간 / coverage / frequency로 비교되는지 봅니다.",
+            "Meaning": "후보와 benchmark / comparator가 같은 기간 / coverage / frequency로 비교되는지 봅니다.",
         },
         {
             "Criteria": "Provider coverage",

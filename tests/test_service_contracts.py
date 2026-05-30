@@ -275,9 +275,12 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertFalse(gate["can_save_and_move"])
         self.assertEqual(gate["route"], "BLOCKED_FOR_FINAL_REVIEW")
         self.assertEqual([row["module_id"] for row in gate["blocking_modules"]], ["latest_replay"])
+        self.assertEqual(gate["blocking_modules"][0]["gate_effect"], "Blocks Final Review")
+        self.assertIn("전략 재검증", gate["blocking_modules"][0]["gate_reason"])
         modules = {row["module_id"]: row for row in plan["modules"]}
         self.assertFalse(modules["risk_contribution"]["applies"])
         self.assertEqual(modules["risk_contribution"]["status"], "NOT_APPLICABLE")
+        self.assertEqual(modules["risk_contribution"]["gate_effect"], "Not applicable")
 
     def test_validation_module_gate_allows_ready_with_review_modules(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -328,6 +331,12 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
             {row["module_id"] for row in gate["review_modules"]}
             >= {"construction_risk", "backtest_realism"}
         )
+        self.assertTrue(
+            all(row["gate_effect"] == "Final Review review" for row in gate["review_modules"])
+        )
+        display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
+        self.assertIn("Benchmark / Comparator Parity", display_rows)
+        self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Gate Effect"], "Ready")
 
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """

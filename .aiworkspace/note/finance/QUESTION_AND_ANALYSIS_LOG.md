@@ -6621,3 +6621,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 공격적 profile은 evidence를 생략하는 설정이 아니라 손실 허용선과 판단 threshold를 넓히는 설정이다. 최신 runtime replay, data coverage, validation efficacy, realism 같은 core evidence는 profile과 무관하게 필요하다
 - Follow-up:
   - Practical Validation result에 source traits, validation modules, final review gate를 추가했다. 필수 module `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`은 save-and-move를 차단하고, 조건부 / 후속 참고 module은 source 성격에 맞게 적용 여부를 분리한다
+
+### 2026-05-30 - Practical Validation 필수검증 8개는 유지하되 gate 설명을 정리한다
+- User request:
+  - 사용자가 필수검증 8개 리뷰 후 어떤 항목을 수정하면 되는지 확인했고, 해당 개편 진행을 승인함
+- Interpreted goal:
+  - 필수검증을 줄이지 않고, 사용자 화면에서 무엇이 Final Review 이동을 막고 무엇이 Final Review 판단 근거인지 더 명확하게 보여줘야 함
+- Analysis result:
+  - `Benchmark Parity`는 비교 기준을 benchmark에만 한정하지 않도록 `Benchmark / Comparator Parity`로 해석을 넓히는 것이 맞다
+  - Source Integrity는 source 자격, Data Coverage는 최신 evidence coverage로 구분해야 한다
+  - Stress / Robustness는 최소 실전 stress 근거를 필수로 두고 고급 parameter perturbation은 후속 / review 근거로 남기는 것이 적절하다
+- Follow-up:
+  - module row에 `Gate Effect`와 `Gate Reason`을 추가하고 필수검증 설명 / next action을 정리했다. 내부 `Benchmark parity` check key는 호환성을 위해 유지한다

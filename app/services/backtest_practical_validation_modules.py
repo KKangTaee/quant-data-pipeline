@@ -240,6 +240,45 @@ def _module_needs_review(module: dict[str, Any]) -> bool:
     return _status(module.get("status")) in REVIEW_STATUSES
 
 
+def _module_gate_effect(module: dict[str, Any]) -> str:
+    if not module.get("applies"):
+        return "Not applicable"
+    if _module_blocks_gate(module):
+        return "Blocks Final Review"
+    if _module_needs_review(module):
+        return "Final Review review"
+    requirement = str(module.get("requirement") or "").upper()
+    if requirement == "REFERENCE":
+        return "Reference only"
+    return "Ready"
+
+
+def _module_gate_reason(module: dict[str, Any]) -> str:
+    if not module.get("applies"):
+        return "후보 특성상 이 검증은 적용하지 않습니다."
+    status = _status(module.get("status"))
+    if _module_blocks_gate(module):
+        return f"Final Review 이동 전 보강 필요: {module.get('next_action') or module.get('reason') or status}"
+    if _module_needs_review(module):
+        return f"이동 가능하지만 Final Review 판단 근거로 확인: {module.get('next_action') or module.get('reason') or status}"
+    requirement = str(module.get("requirement") or "").upper()
+    if requirement == "REFERENCE":
+        return "Practical Validation 이동 차단 기준은 아니며 후속 화면의 참고 근거입니다."
+    return "필수 이동 기준을 충족했습니다."
+
+
+def _module_gate_row(module: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "module_id": module.get("module_id"),
+        "label": module.get("label"),
+        "status": module.get("status"),
+        "gate_effect": module.get("gate_effect") or _module_gate_effect(module),
+        "gate_reason": module.get("gate_reason") or _module_gate_reason(module),
+        "reason": module.get("reason"),
+        "next_action": module.get("next_action"),
+    }
+
+
 def _module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
@@ -248,6 +287,8 @@ def _module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "Applies": "Yes" if module.get("applies") else "No",
             "Requirement": module.get("requirement"),
             "Status": module.get("status"),
+            "Gate Effect": module.get("gate_effect") or _module_gate_effect(module),
+            "Gate Reason": module.get("gate_reason") or _module_gate_reason(module),
             "Reason": module.get("reason"),
             "Next Action": module.get("next_action"),
             "Profile / Traits": module.get("profile_effect"),
@@ -344,8 +385,8 @@ def build_validation_module_plan(
             status=source_integrity_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="source id, active component, weight, Data Trust, execution boundary를 확인합니다.",
-            next_action="BLOCKED / NEEDS_INPUT이면 Backtest Analysis에서 source를 다시 구성합니다.",
+            reason="Backtest Analysis에서 넘어온 source가 식별 가능하고 active component, target weight, Data Trust, execution boundary, curve evidence를 갖춘 검증 가능한 후보인지 확인합니다.",
+            next_action="source 자격이 부족하면 Backtest Analysis에서 source를 다시 구성하거나 handoff evidence를 보강합니다.",
             profile_effect=profile_label,
         ),
         _module(
@@ -355,19 +396,19 @@ def build_validation_module_plan(
             status=latest_replay_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="Stage 2 진입일과 검증일 차이를 최신 DB 기준 replay로 확인합니다.",
-            next_action="전략 재검증 실행 후 period coverage를 확인합니다.",
+            reason="저장 당시 성과가 아니라 현재 DB 최신 시장일까지 같은 전략이 재현되는지 확인합니다.",
+            next_action="Practical Validation의 전략 재검증을 실행하고 runtime period coverage를 확인합니다.",
             profile_effect="all profiles require current replay evidence",
         ),
         _module(
             module_id="benchmark_parity",
-            label="Benchmark Parity",
+            label="Benchmark / Comparator Parity",
             group="Required for Final Review",
             status=benchmark_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="후보와 benchmark가 같은 기간 / frequency / coverage로 비교되는지 확인합니다.",
-            next_action="benchmark curve coverage가 부족하면 source benchmark나 replay를 보강합니다.",
+            reason="후보와 benchmark, cash, simple baseline, custom comparator 같은 비교 기준이 같은 기간 / frequency / coverage로 비교되는지 확인합니다.",
+            next_action="비교 기준 curve coverage가 부족하면 source comparator나 replay evidence를 보강합니다.",
             profile_effect=profile_label,
         ),
         _module(
@@ -377,8 +418,8 @@ def build_validation_module_plan(
             status=validation_efficacy_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 효력이 충분한지 봅니다.",
-            next_action="NEEDS_INPUT row를 보강하고 REVIEW row는 Final Review 판단 근거로 넘깁니다.",
+            reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
+            next_action="검증 효력의 NEEDS_INPUT row를 보강하고 REVIEW row는 Final Review 판단 근거로 넘깁니다.",
             profile_effect=profile_label,
         ),
         _module(
@@ -388,8 +429,8 @@ def build_validation_module_plan(
             status=data_coverage_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="가격 DB, provider freshness, PIT coverage, universe / survivorship evidence를 확인합니다.",
-            next_action="provider / lifecycle / replay coverage 부족분을 보강합니다.",
+            reason="최신 가격, provider freshness, PIT window, universe / survivorship coverage가 Practical Validation 판단에 충분한지 확인합니다.",
+            next_action="가격 / provider / lifecycle / replay coverage 부족분을 보강합니다.",
             profile_effect=profile_label,
         ),
         _module(
@@ -399,7 +440,7 @@ def build_validation_module_plan(
             status=construction_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="비중 집중, look-through, top holding, overlap, asset bucket exposure를 확인합니다.",
+            reason="단일 후보와 mix 후보 모두 실제 보유 관점의 비중 집중, look-through, top holding, overlap, asset bucket exposure를 확인합니다.",
             next_action="REVIEW row는 Final Review에서 선택 근거 또는 보류 근거로 확인합니다.",
             profile_effect=f"max weight {traits.get('max_component_weight')}%",
         ),
@@ -411,7 +452,7 @@ def build_validation_module_plan(
             requirement="REQUIRED",
             stage_owner="practical_validation",
             reason="비용, turnover, liquidity, net performance, rebalance timing이 실전 해석에 충분한지 확인합니다.",
-            next_action="NEEDS_INPUT이면 비용 / 유동성 / replay evidence를 보강합니다.",
+            next_action="비용 / turnover / 유동성 / net curve evidence가 부족하면 보강하고 assumption-only row는 Final Review review 근거로 넘깁니다.",
             profile_effect=profile_label,
         ),
         _module(
@@ -421,8 +462,8 @@ def build_validation_module_plan(
             status=robustness_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="stress window, rolling, sensitivity, overfit evidence를 확인합니다.",
-            next_action="NOT_RUN / NEEDS_INPUT이면 최신 replay나 stress evidence를 보강합니다.",
+            reason="최소 실전 stress window, rolling, sensitivity, overfit warning 근거가 있는지 확인합니다.",
+            next_action="최소 stress / rolling / sensitivity 근거가 부족하면 보강하고 고급 parameter perturbation은 REVIEW 또는 후속 검증으로 남깁니다.",
             profile_effect="stricter for defensive / tactical profiles",
         ),
         _module(
@@ -511,6 +552,10 @@ def build_validation_module_plan(
         ),
     ]
 
+    for module in modules:
+        module["gate_effect"] = _module_gate_effect(module)
+        module["gate_reason"] = _module_gate_reason(module)
+
     blockers = [module for module in modules if _module_blocks_gate(module)]
     review_modules = [module for module in modules if _module_needs_review(module)]
     required_modules = [module for module in modules if module.get("requirement") == "REQUIRED"]
@@ -550,23 +595,11 @@ def build_validation_module_plan(
             "verdict": gate_verdict,
             "next_action": next_action,
             "blocking_modules": [
-                {
-                    "module_id": module.get("module_id"),
-                    "label": module.get("label"),
-                    "status": module.get("status"),
-                    "reason": module.get("reason"),
-                    "next_action": module.get("next_action"),
-                }
+                _module_gate_row(module)
                 for module in blockers
             ],
             "review_modules": [
-                {
-                    "module_id": module.get("module_id"),
-                    "label": module.get("label"),
-                    "status": module.get("status"),
-                    "reason": module.get("reason"),
-                    "next_action": module.get("next_action"),
-                }
+                _module_gate_row(module)
                 for module in review_modules
             ],
         },

@@ -644,6 +644,10 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
         ]
     )
     st.caption(str(gate.get("verdict") or ""))
+    st.caption(
+        "Gate Effect는 Final Review 이동 영향입니다. `Blocks Final Review`는 먼저 보강하고, "
+        "`Final Review review`는 이동 후 최종 판단 근거로 확인합니다."
+    )
     render_badge_strip(
         [
             {
@@ -776,7 +780,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             render_badge_strip(
                 [
                     {
-                        "label": "Benchmark Parity",
+                        "label": "Benchmark / Comparator Parity",
                         "value": benchmark_parity.get("status") or "-",
                         "tone": _status_tone(benchmark_parity.get("status")),
                     },
