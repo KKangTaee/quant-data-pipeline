@@ -614,6 +614,13 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows["Previous Return Label"] = chart_rows["Previous Return %"].map(
         lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
     )
+    chart_rows["Previous Marker Color"] = chart_rows["Previous Return %"].map(
+        lambda value: OVERVIEW_COLOR_DANGER
+        if pd.notna(value) and float(value) < 0
+        else OVERVIEW_COLOR_POSITIVE
+        if pd.notna(value) and float(value) > 0
+        else OVERVIEW_COLOR_TEXT_MUTED
+    )
     if "Momentum Delta pp" in chart_rows:
         chart_rows["Momentum Delta pp"] = pd.to_numeric(chart_rows["Momentum Delta pp"], errors="coerce")
     else:
@@ -653,8 +660,11 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     previous_markers = (
         base
         .transform_filter("isValid(datum['Previous Return Magnitude %'])")
-        .mark_tick(thickness=2, size=16, color=OVERVIEW_COLOR_TEXT_MUTED)
-        .encode(x=alt.X("Previous Return Magnitude %:Q"))
+        .mark_tick(thickness=2, size=16)
+        .encode(
+            x=alt.X("Previous Return Magnitude %:Q"),
+            color=alt.Color("Previous Marker Color:N", scale=None, legend=None),
+        )
     )
     labels = (
         base

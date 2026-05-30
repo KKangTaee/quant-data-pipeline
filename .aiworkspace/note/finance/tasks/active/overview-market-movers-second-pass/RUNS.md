@@ -13,3 +13,6 @@
 - 2026-05-30: Actual DB timing after optimization: Top2000 weekly about 2.66s, monthly about 3.07s, yearly about 20.57s for Market Movers snapshot build; yearly remains dominated by eligible-date resolution.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts` passed, 80 tests.
 - 2026-05-30: Browser QA on fresh Streamlit server `http://localhost:8510` confirmed `Volume Rank` and `Volume Table` render dedicated daily volume rows with console error count 0; screenshot saved to `/tmp/overview-volume-rank-period-aware-fresh.png`.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py` passed after Healthcare color / previous marker update.
+- 2026-05-30: Focused Overview service / automation tests passed, 33 tests.
+- 2026-05-30: Browser QA on `http://localhost:8501` confirmed Healthcare filtered bars are teal and previous-return negative markers are red; screenshot saved to `/tmp/overview-healthcare-chart-color-marker-qa.png`.
