@@ -440,10 +440,10 @@ def _render_provider_gap_collection_results(results: list[dict[str, Any]]) -> No
     )
 
 
-def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
+def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     gap_rows = build_provider_gap_rows(validation_result)
     if not gap_rows:
-        return
+        return False
 
     st.markdown("##### Provider Data Gaps")
     _render_board_context_badges(validation_result, "provider_data_gaps")
@@ -454,7 +454,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
     st.dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
     if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
         st.success("현재 ETF provider gap은 없습니다.")
-        return
+        return True
 
     plan = build_provider_gap_collection_plan(validation_result)
     if plan["operability_bridge"] or plan["operability_official"]:
@@ -527,13 +527,14 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
     )
     if not has_collectable:
         st.info("현재 버튼으로 수집 가능한 provider gap은 없습니다. 남은 부족 ETF는 connector source mapping 추가가 필요합니다.")
-        return
+        return True
 
     if st.button("부족한 Provider 데이터 일괄 수집 / 보강", key=f"{result_key}_run", width="stretch"):
         with st.spinner("현재 source에 필요한 provider snapshot을 수집 / 보강 중입니다..."):
             results = run_provider_gap_collection(validation_result)
         st.session_state[result_key] = results
         st.rerun()
+    return True
 
 
 def _provider_look_through_board(validation_result: dict[str, Any]) -> dict[str, Any]:
@@ -914,7 +915,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
         st.json(traits)
 
 
-def _render_validation_result(validation_result: dict[str, Any]) -> None:
+def _render_validation_gate_section(validation_result: dict[str, Any]) -> None:
     profile = dict(validation_result.get("validation_profile") or {})
     gate = dict(validation_result.get("final_review_gate") or {})
     status_counts = dict(dict(validation_result.get("diagnostic_summary") or {}).get("status_counts") or {})
@@ -937,6 +938,9 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
         ]
     )
     _render_validation_module_board(validation_result)
+
+
+def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
     st.markdown("##### Input Evidence")
     _render_board_context_badges(validation_result, "input_evidence")
     st.dataframe(pd.DataFrame(validation_result.get("checks") or []), width="stretch", hide_index=True)
@@ -963,7 +967,6 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
         )
         st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
         _render_provider_look_through_board(validation_result)
-        _render_provider_gap_section(validation_result)
 
     _render_stress_sensitivity_interpretation(validation_result)
 
@@ -1054,6 +1057,13 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     if profile_score_rows:
         with st.expander("Profile-aware score breakdown", expanded=False):
             st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
+
+
+def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
+    provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
+    rendered = _render_provider_gap_section(validation_result) if provider_rows else False
+    if not rendered:
+        st.info("현재 후보에서 실행할 provider 보강 액션이 없습니다.")
 
 
 def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None:
@@ -1336,11 +1346,19 @@ def render_practical_validation_workspace() -> None:
         validation_profile=validation_profile,
         replay_result=replay_result,
     )
-    st.markdown("#### 4. 실전 진단 보드")
+    st.markdown("#### 4. Final Review Gate / 검증 모듈")
     with st.container(border=True):
-        _render_validation_result(validation_result)
+        _render_validation_gate_section(validation_result)
 
-    st.markdown("#### 5. 다음 단계")
+    st.markdown("#### 5. 검증 근거 보드")
+    with st.container(border=True):
+        _render_validation_evidence_boards(validation_result)
+
+    st.markdown("#### 6. 보강 액션")
+    with st.container(border=True):
+        _render_validation_action_boards(validation_result)
+
+    st.markdown("#### 7. 저장 & Final Review 이동")
     with st.container(border=True):
         gate = dict(validation_result.get("final_review_gate") or {})
         can_save_and_move = bool(gate.get("can_save_and_move"))
@@ -1372,7 +1390,7 @@ def render_practical_validation_workspace() -> None:
             st.caption(str(gate.get("next_action")))
         blocking_modules = list(gate.get("blocking_modules") or [])
         if blocking_modules:
-            st.dataframe(pd.DataFrame(blocking_modules), width="stretch", hide_index=True)
+            st.dataframe(pd.DataFrame(_gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
         action_cols = st.columns(2, gap="small")
         with action_cols[0]:
             if st.button("검증 결과만 저장", key="practical_validation_save_result", width="stretch"):

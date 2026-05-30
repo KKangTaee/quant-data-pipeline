@@ -6653,3 +6653,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `latest_replay`는 별도 audit board가 아니라 `3. 최신 데이터 기준 전략 재검증`의 runtime recheck / period coverage evidence를 의미한다
 - Follow-up:
   - module gate row에 `resolution_surface` / `resolution_action`을 추가하고 UI blocker / review table을 `Fix Location` / `Fix Action` 중심으로 표시했다
+
+### 2026-05-30 - Practical Validation module / evidence / action 화면을 분리한다
+- User request:
+  - 사용자가 `Look-through Exposure Board`, `Provider Data Gaps`가 검증 모듈처럼 보여 혼동된다고 지적하고 화면 분리 개편을 승인함
+- Interpreted goal:
+  - 사용자는 먼저 검증 리스트와 통과 여부를 보고, 그 다음 검증 근거와 데이터 보강 액션을 별도 흐름으로 봐야 함
+- Analysis result:
+  - evidence board와 action board는 검증 결과를 판단하거나 보강하는 화면이지 검증 module 자체가 아니므로 같은 섹션 안에 섞으면 module처럼 오해된다
+- Follow-up:
+  - Practical Validation을 `4. Final Review Gate / 검증 모듈`, `5. 검증 근거 보드`, `6. 보강 액션`, `7. 저장 & Final Review 이동`으로 분리했다

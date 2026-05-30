@@ -4437,3 +4437,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Applied Validation Map`은 적용 보드 / 비적용 보드 / 모듈 연결을 보여주고, 각 board title 아래에 `Board Type`, `Applies`, `Feeds`, `Gate` badge를 표시한다.
   - 단일 component GTAA 후보에서는 weighted-mix 전용 Risk Contribution / Component Role / Weight board가 collapsed `Not applicable`로 내려간다.
   - blocker / review module table에 `Fix Location`과 `Fix Action`을 추가해 `Latest Runtime Replay`가 `3. 최신 데이터 기준 전략 재검증`에서 해결된다는 점을 바로 표시한다.
+  - Practical Validation 화면을 `4. Final Review Gate / 검증 모듈`, `5. 검증 근거 보드`, `6. 보강 액션`, `7. 저장 & Final Review 이동`으로 나눠 module / evidence / action 혼동을 줄였다.

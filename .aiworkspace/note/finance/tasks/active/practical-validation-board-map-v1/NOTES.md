@@ -7,3 +7,4 @@
 - Provider Coverage / Look-through / Provider Data Gaps는 ETF provider investability module이 적용될 때 보드로 표시한다.
 - Risk Contribution / Component Role / Weight는 weighted mix 전용 조건부 보드로 유지한다.
 - `latest_replay`는 별도 audit board가 아니라 `3. 최신 데이터 기준 전략 재검증` 섹션의 `전략 재검증 실행`과 `Runtime period coverage`를 의미하므로 blocker table에서 해결 위치를 명시한다.
+- 화면 구조 원칙: 검증 module은 gate / pass 여부를 판단하는 4번에 두고, evidence board는 5번, provider 보강 action은 6번에 둔다.

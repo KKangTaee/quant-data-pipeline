@@ -10,3 +10,4 @@
 - 단일 component 후보에서는 Risk Contribution / Component Role / Weight board를 collapsed `Not applicable` 보드로 낮춤.
 - 상단 Practical Validation route panel도 legacy diagnostic route가 아니라 Final Review Gate route를 표시하도록 맞춤.
 - blocker / review module table에 `Fix Location`과 `Fix Action`을 추가해 `latest_replay` 같은 내부 id가 어느 화면에서 해결되는지 바로 보이게 함.
+- `4. 실전 진단 보드`를 `4. Final Review Gate / 검증 모듈`, `5. 검증 근거 보드`, `6. 보강 액션`, `7. 저장 & Final Review 이동`으로 분리해 module / evidence / action 혼동을 줄임.

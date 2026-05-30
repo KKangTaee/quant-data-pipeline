@@ -16,3 +16,9 @@ Commands and verification notes will be recorded during implementation.
 - Browser QA on `http://127.0.0.1:8502/backtest` PASS after blocker guidance update: blocker table shows `Fix Location` / `Fix Action`, and `Latest Runtime Replay` points to `3. 최신 데이터 기준 전략 재검증`; browser console error log is empty.
 - `.venv/bin/python -m unittest tests.test_service_contracts` PASS, 193 tests, after blocker guidance update.
 - `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` PASS after blocker guidance update.
+- `.venv/bin/python -m py_compile app/web/backtest_practical_validation.py` PASS after section split.
+- `git diff --check` PASS after section split.
+- `.venv/bin/python -m unittest tests.test_service_contracts` PASS, 193 tests, after section split.
+- `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` PASS after section split.
+- `.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` PASS after section split.
+- Browser QA on `http://127.0.0.1:8502/backtest` PASS after section split: `4. Final Review Gate / 검증 모듈`, `5. 검증 근거 보드`, `6. 보강 액션`, `7. 저장 & Final Review 이동` headings render separately; console error log is empty.
