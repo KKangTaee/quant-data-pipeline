@@ -15,6 +15,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.jobs.ingestion_jobs import (
+    run_collect_earnings_calendar,
+    run_collect_fomc_calendar,
+    run_collect_macro_calendar,
+    run_import_bls_macro_calendar_ics,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
     run_collect_sec_form25_delistings,
@@ -375,6 +379,14 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_collect_macro_market_context(**params)
     if action == "collect_sec_form25_delistings":
         return run_collect_sec_form25_delistings(**params)
+    if action == "collect_fomc_calendar":
+        return run_collect_fomc_calendar(**params)
+    if action == "collect_earnings_calendar":
+        return run_collect_earnings_calendar(**params)
+    if action == "collect_macro_calendar":
+        return run_collect_macro_calendar(**params)
+    if action == "import_bls_macro_calendar_ics":
+        return run_import_bls_macro_calendar_ics(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -592,6 +604,45 @@ def _render_inline_last_completed_result(*job_names: str) -> None:
     st.session_state.last_completed_result = None
 
 
+def _render_earnings_diagnostics(details: dict[str, Any]) -> None:
+    diagnostics = [item for item in details.get("symbol_diagnostics") or [] if isinstance(item, dict)]
+    if not diagnostics:
+        return
+    issue_rows = [
+        {
+            "Symbol": item.get("symbol") or "-",
+            "Status": item.get("status") or "-",
+            "Reason": item.get("reason") or "-",
+            "Detail": item.get("detail") or "-",
+            "Provider Dates": ", ".join(str(value) for value in item.get("provider_dates") or []),
+            "Event Dates": ", ".join(str(value) for value in item.get("event_dates") or []),
+        }
+        for item in diagnostics
+        if item.get("status") != "event_found"
+    ]
+    with st.expander(f"Earnings Diagnostics ({len(issue_rows)} issue symbols)", expanded=False):
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("With Events", details.get("symbols_with_events") or 0)
+        metric_cols[1].metric("Missing", details.get("symbols_missing_count") or len(details.get("missing_symbols") or []))
+        metric_cols[2].metric("Failed", details.get("symbols_failed_count") or len(details.get("failed_symbols") or []))
+        metric_cols[3].metric("Events Found", details.get("events_found") or 0)
+        reason_rows = [
+            {"Status": "missing", "Reason": key, "Count": value}
+            for key, value in (details.get("missing_reason_counts") or {}).items()
+        ] + [
+            {"Status": "failed", "Reason": key, "Count": value}
+            for key, value in (details.get("failed_reason_counts") or {}).items()
+        ]
+        if reason_rows:
+            st.caption("Issue reason counts")
+            st.dataframe(pd.DataFrame(reason_rows), width="stretch", hide_index=True)
+        if issue_rows:
+            st.caption("Symbol-level issues")
+            st.dataframe(pd.DataFrame(issue_rows), width="stretch", hide_index=True)
+        else:
+            st.success("All requested symbols had at least one earnings date in the selected window.")
+
+
 def _render_result_summary(result: JobResult) -> None:
     banner = _status_to_banner(result["status"])
     banner(f'[{result["job_name"]}] {result["message"]}')
@@ -622,6 +673,8 @@ def _render_result_summary(result: JobResult) -> None:
 
     if failed_count:
         st.write("Failed Symbols:", ", ".join((result.get("failed_symbols") or [])[:20]))
+
+    _render_earnings_diagnostics(result.get("details") or {})
 
     with st.expander("Result Details", expanded=False):
         st.json(result)
@@ -1934,6 +1987,287 @@ def _render_ingestion_console() -> None:
                         label="Metadata Refresh",
                     )
                 _render_inline_last_completed_result("metadata_refresh")
+
+            with st.expander("Overview Market Event Calendar", expanded=False):
+                st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
+                st.caption(
+                    "현재 구현 대상: Federal Reserve FOMC, BLS/BEA macro release schedule, "
+                    "yfinance + Nasdaq cross-check 기반 earnings estimate."
+                )
+                st.caption("저장 테이블: `finance_meta.market_event_calendar`")
+                fomc_tab, macro_event_tab, earnings_tab = st.tabs(["FOMC", "Macro", "Earnings"])
+                with fomc_tab:
+                    current_year = date.today().year
+                    fomc_year_options = list(range(current_year - 1, current_year + 3))
+                    fomc_years = st.multiselect(
+                        "FOMC Years",
+                        options=fomc_year_options,
+                        default=[current_year, current_year + 1],
+                        key="overview_fomc_calendar_years",
+                        help="비워두면 Fed 페이지에서 파싱 가능한 모든 연도 row를 수집합니다.",
+                    )
+                    if st.button(
+                        "Collect FOMC Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job(),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_fomc_calendar",
+                                "job_name": "collect_fomc_calendar",
+                                "spinner_text": "Collecting FOMC calendar from the official Fed page...",
+                                "params": {
+                                    "years": tuple(fomc_years) if fomc_years else None,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="overview_market_event_calendar",
+                                    execution_mode="operational",
+                                    symbol_source="Federal Reserve official FOMC calendar",
+                                    symbol_count=None,
+                                    execution_context=(
+                                        "Overview Events 탭에서 사용할 FOMC meeting calendar를 Fed 공식 HTML에서 파싱해 DB에 저장합니다."
+                                    ),
+                                    input_params={
+                                        "years": tuple(fomc_years) if fomc_years else None,
+                                    },
+                                ),
+                            }
+                        )
+                with macro_event_tab:
+                    current_year = date.today().year
+                    macro_year_options = list(range(current_year - 1, current_year + 3))
+                    macro_years = st.multiselect(
+                        "Macro Calendar Years",
+                        options=macro_year_options,
+                        default=[current_year, current_year + 1],
+                        key="overview_macro_calendar_years",
+                        help="BLS는 선택 연도별 schedule page를, BEA는 full release schedule에서 일치하는 연도를 수집합니다.",
+                    )
+                    macro_source_cols = st.columns(2, gap="small")
+                    macro_include_bls = macro_source_cols[0].checkbox(
+                        "BLS CPI / PPI / Jobs",
+                        value=True,
+                        key="overview_macro_include_bls",
+                    )
+                    macro_include_bea = macro_source_cols[1].checkbox(
+                        "BEA GDP",
+                        value=True,
+                        key="overview_macro_include_bea",
+                    )
+                    st.caption(
+                        "BLS request는 네트워크/정책에 따라 차단될 수 있습니다. 실패하면 job result와 Data Health에서 확인합니다."
+                    )
+                    if st.button(
+                        "Collect Macro Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job() or not (macro_include_bls or macro_include_bea),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_macro_calendar",
+                                "job_name": "collect_macro_calendar",
+                                "spinner_text": "Collecting CPI / PPI / Jobs / GDP release dates from official schedules...",
+                                "params": {
+                                    "years": tuple(macro_years) if macro_years else None,
+                                    "include_bls": macro_include_bls,
+                                    "include_bea": macro_include_bea,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="overview_market_event_calendar",
+                                    execution_mode="operational_low_frequency",
+                                    symbol_source="BLS and BEA official release schedules",
+                                    symbol_count=None,
+                                    execution_context=(
+                                        "Overview Events 탭에서 사용할 CPI, PPI, Employment Situation, GDP release calendar를 공식 HTML schedule에서 파싱해 DB에 저장합니다."
+                                    ),
+                                    input_params={
+                                        "years": tuple(macro_years) if macro_years else None,
+                                        "include_bls": macro_include_bls,
+                                        "include_bea": macro_include_bea,
+                                    },
+                                ),
+                            }
+                        )
+                    st.divider()
+                    bls_ics_file = st.file_uploader(
+                        "BLS Calendar .ics File",
+                        type=["ics"],
+                        key="overview_macro_bls_ics_file",
+                        help="BLS 공식 release schedule 캘린더 파일을 브라우저에서 내려받은 뒤 업로드합니다.",
+                    )
+                    if st.button(
+                        "Import BLS .ics Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job() or bls_ics_file is None,
+                    ):
+                        try:
+                            bls_ics_text = bls_ics_file.getvalue().decode("utf-8-sig", errors="replace")
+                        except Exception as exc:
+                            st.error(f"BLS .ics file could not be read: {exc}")
+                        else:
+                            _schedule_job(
+                                {
+                                    "action": "import_bls_macro_calendar_ics",
+                                    "job_name": "import_bls_macro_calendar_ics",
+                                    "spinner_text": "Importing BLS CPI / PPI / Jobs release dates from the uploaded .ics file...",
+                                    "params": {
+                                        "ics_text": bls_ics_text,
+                                        "years": tuple(macro_years) if macro_years else None,
+                                        "source_name": bls_ics_file.name,
+                                    },
+                                    "run_metadata": _job_metadata(
+                                        pipeline_type="overview_macro_calendar_collection",
+                                        execution_mode="manual_official_file_import",
+                                        symbol_source="BLS official release schedule ICS file",
+                                        symbol_count=None,
+                                        execution_context=(
+                                            "BLS backend request 차단 시 사용자가 내려받은 공식 .ics 파일에서 CPI, PPI, Employment Situation 일정을 파싱해 DB에 저장합니다."
+                                        ),
+                                        input_params={
+                                            "years": tuple(macro_years) if macro_years else None,
+                                            "source_name": bls_ics_file.name,
+                                        },
+                                    ),
+                                }
+                            )
+                with earnings_tab:
+                    earnings_source_mode = st.selectbox(
+                        "Symbol Source",
+                        ["Latest S&P 500 Movers", "S&P 500 Universe Batch", "Top1000 Batch", "Top2000 Batch", "Manual Symbols"],
+                        index=0,
+                        key="overview_earnings_symbol_source",
+                    )
+                    earnings_cols = st.columns(4, gap="small")
+                    earnings_top_movers_limit = int(
+                        earnings_cols[0].number_input(
+                            "Top Movers",
+                            min_value=5,
+                            max_value=100,
+                            value=20,
+                            step=5,
+                            key="overview_earnings_top_movers_limit",
+                            disabled=earnings_source_mode != "Latest S&P 500 Movers",
+                        )
+                    )
+                    earnings_lookahead_days = int(
+                        earnings_cols[1].number_input(
+                            "Lookahead Days",
+                            min_value=7,
+                            max_value=365,
+                            value=120 if earnings_source_mode == "Latest S&P 500 Movers" else 30,
+                            step=7,
+                            key="overview_earnings_lookahead_days",
+                        )
+                    )
+                    earnings_max_symbols = int(
+                        earnings_cols[2].number_input(
+                            "Max Symbols",
+                            min_value=5,
+                            max_value=200,
+                            value=50 if earnings_source_mode == "Latest S&P 500 Movers" else 100,
+                            step=5,
+                            key="overview_earnings_max_symbols",
+                        )
+                    )
+                    earnings_batch_offset = int(
+                        earnings_cols[3].number_input(
+                            "Batch Offset",
+                            min_value=0,
+                            max_value=2000,
+                            value=0,
+                            step=50,
+                            key="overview_earnings_batch_offset",
+                            disabled=earnings_source_mode in {"Latest S&P 500 Movers", "Manual Symbols"},
+                        )
+                    )
+                    earnings_validation_cols = st.columns(2, gap="small")
+                    earnings_validate_with_nasdaq = earnings_validation_cols[0].checkbox(
+                        "Nasdaq cross-check",
+                        value=True,
+                        key="overview_earnings_validate_with_nasdaq",
+                        help="Cross-check yfinance earnings dates against Nasdaq's free earnings calendar endpoint when possible.",
+                    )
+                    earnings_request_sleep_sec = float(
+                        earnings_validation_cols[1].number_input(
+                            "Ticker Cooldown Sec",
+                            min_value=0.0,
+                            max_value=2.0,
+                            value=0.1 if earnings_source_mode != "Latest S&P 500 Movers" else 0.0,
+                            step=0.1,
+                            key="overview_earnings_request_sleep_sec",
+                        )
+                    )
+                    manual_earnings_text = ""
+                    if earnings_source_mode == "Manual Symbols":
+                        manual_earnings_text = st.text_area(
+                            "Symbols",
+                            value="AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA",
+                            key="overview_earnings_manual_symbols",
+                        )
+                    st.caption(
+                        "Latest movers mode uses the latest stored S&P 500 intraday snapshot. Universe batch modes are low-frequency sweeps; keep Max Symbols bounded and use Batch Offset to continue later."
+                    )
+                    if st.button(
+                        "Collect Earnings Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job(),
+                    ):
+                        manual_symbols = _parse_csv_items(manual_earnings_text)
+                        symbol_source = {
+                            "Latest S&P 500 Movers": "latest_movers",
+                            "S&P 500 Universe Batch": "sp500_universe",
+                            "Top1000 Batch": "top1000",
+                            "Top2000 Batch": "top2000",
+                            "Manual Symbols": "manual",
+                        }[earnings_source_mode]
+                        earnings_universe_code = {
+                            "top1000": "TOP1000",
+                            "top2000": "TOP2000",
+                        }.get(symbol_source, "SP500")
+                        earnings_universe_limit = {
+                            "top1000": 1000,
+                            "top2000": 2000,
+                        }.get(symbol_source)
+                        _schedule_job(
+                            {
+                                "action": "collect_earnings_calendar",
+                                "job_name": "collect_earnings_calendar",
+                                "spinner_text": "Collecting earnings dates from yfinance calendar and optional Nasdaq cross-check...",
+                                "params": {
+                                    "symbols": manual_symbols if symbol_source == "manual" else None,
+                                    "symbol_source": symbol_source,
+                                    "universe_code": earnings_universe_code,
+                                    "universe_limit": earnings_universe_limit,
+                                    "top_movers_limit": earnings_top_movers_limit,
+                                    "lookahead_days": earnings_lookahead_days,
+                                    "max_symbols": earnings_max_symbols,
+                                    "batch_offset": earnings_batch_offset,
+                                    "validate_with_nasdaq": earnings_validate_with_nasdaq,
+                                    "request_sleep_sec": earnings_request_sleep_sec,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="overview_market_event_calendar",
+                                    execution_mode="operational_low_frequency",
+                                    symbol_source=symbol_source,
+                                    symbol_count=len(manual_symbols) if symbol_source == "manual" else earnings_max_symbols,
+                                    execution_context=(
+                                        "Overview Events 탭에서 사용할 upcoming earnings calendar estimate를 무료 provider source로 수집하고 source validation metadata를 저장합니다."
+                                    ),
+                                    input_params={
+                                        "symbol_source": symbol_source,
+                                        "universe_code": earnings_universe_code,
+                                        "universe_limit": earnings_universe_limit,
+                                        "top_movers_limit": earnings_top_movers_limit,
+                                        "lookahead_days": earnings_lookahead_days,
+                                        "max_symbols": earnings_max_symbols,
+                                        "batch_offset": earnings_batch_offset,
+                                        "validate_with_nasdaq": earnings_validate_with_nasdaq,
+                                        "request_sleep_sec": earnings_request_sleep_sec,
+                                    },
+                                ),
+                            }
+                        )
+                _render_inline_last_completed_result("collect_fomc_calendar", "collect_macro_calendar", "collect_earnings_calendar")
 
             with st.expander("Practical Validation Provider Snapshots", expanded=False):
                 st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")

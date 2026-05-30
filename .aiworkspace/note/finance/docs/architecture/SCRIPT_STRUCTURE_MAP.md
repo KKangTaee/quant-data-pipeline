@@ -27,8 +27,9 @@
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`의 후보 Top 3, funnel chart, next actions, recent activity, system snapshot dashboard render |
-| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, funnel / activity table helper |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Sector / Industry, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Sector / Industry ranking/trend, Events view routing을 조정 |
+| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, cached market intelligence service wrapper |
+| `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
@@ -76,6 +77,7 @@
 | `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Practical Validation의 component return matrix, correlation, max risk contribution proxy, drop-one dependency, storage boundary evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Practical Validation의 proposal role, target weight, validation profile, role concentration, profile intent, weight reason evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / investability evidence packet / profile-aware gate policy snapshot / selected-route gate / saved decision table row / Selected Dashboard evidence check row / Decision Dossier markdown read model과 selected decision source consistency contract를 담당. Validation Efficacy Audit의 walk-forward / OOS / regime non-PASS row를 gate policy evidence에 병합한다 |
+| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, Sector / Industry ranking/trend/ticker leaders, market event calendar payload, collection ops snapshot을 담당 |
 
 ## App / Runtime
 
@@ -97,7 +99,8 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion`에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion` 또는 Overview 수동 refresh에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리 |
 
 ## Finance Core
 
@@ -137,6 +140,7 @@
 | `finance/data/nyse_db.py` | NYSE universe DB persistence. current listing master와 `nyse_symbol_lifecycle` bridge row UPSERT를 담당 |
 | `finance/data/sec_delisting.py` | SEC EDGAR Form 25 / 25-NSE filing metadata를 읽어 `nyse_symbol_lifecycle` delisting_feed evidence row로 UPSERT |
 | `finance/data/asset_profile.py` | Asset profile 수집. ETF operability snapshot의 bridge source로 일부 field를 제공 |
+| `finance/data/market_intelligence.py` | S&P 500 current constituent parsing / 저장, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot 수집 / 저장, quote gap diagnostics / issue persistence, Fed 공식 FOMC calendar parsing / 저장, BLS / BEA macro calendar 수집 및 BLS `.ics` import, yfinance earnings estimate 수집, Nasdaq earnings cross-check, earnings lifecycle cleanup, Overview market event calendar persistence helper |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
 | `finance/data/macro.py` | FRED market-context series 수집. VIX / yield curve / credit spread series를 `macro_series_observation`에 UPSERT 저장 |
 | `finance/data/fundamentals.py` | Fundamentals 수집 |

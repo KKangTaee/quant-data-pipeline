@@ -3,6 +3,12 @@
 Status: Active
 Last Verified: 2026-05-30
 
+## Feature Runbooks
+
+| Runbook | Use When |
+|---|---|
+| [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview Market Movers / Sector / Events refresh 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
+
 ## Local App
 
 기존 Streamlit app은 보통 아래 방식으로 실행한다.

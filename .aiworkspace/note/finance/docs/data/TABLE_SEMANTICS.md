@@ -85,6 +85,102 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - current provider endpoint 검증 cache이므로 과거 특정 시점의 provider URL truth가 아니다.
 - 운용사 사이트 구조가 바뀌면 discovery를 다시 실행하거나 adapter를 보강해야 한다.
 
+## `market_universe_member`
+
+역할:
+
+- Overview Market Movers에서 쓰는 관리형 universe membership을 저장한다.
+- 초기 구현은 S&P 500 current constituents를 `universe_code=SP500`으로 저장한다.
+
+성격:
+
+- current universe snapshot table이다.
+- source는 Wikipedia S&P 500 constituents table이며, ticker는 Yahoo Finance 호환을 위해 `.`을 `-`로 정규화한다.
+- Top1000 / Top2000 coverage는 이 table이 아니라 `nyse_asset_profile.market_cap` current snapshot을 직접 사용한다.
+
+주의:
+
+- historical S&P 500 membership이나 point-in-time constituent truth가 아니다.
+- 상장폐지 / 편입변경의 과거 재현이 필요한 backtest universe로 바로 쓰면 survivorship bias가 생길 수 있다.
+
+## `market_intraday_snapshot`
+
+역할:
+
+- Overview Market Movers의 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 coverage별로 저장한다.
+- 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`이다.
+
+성격:
+
+- provider snapshot table이다.
+- 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
+- `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
+- UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
+- `TOP1000` / `TOP2000`은 `nyse_asset_profile.market_cap` current snapshot으로 universe를 구성해 저장한다.
+
+주의:
+
+- 무료 provider 기반이므로 지연, rate limit, ticker별 missing이 발생할 수 있다.
+- `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
+- Market Movers quote gap diagnosis는 이 table의 missing row를 대상으로 추가 evidence를 조회해 job result로 보여주고, 반복 추적용으로 `market_data_issue`에도 누적 저장한다.
+- `TOP1000` / `TOP2000` UI refresh는 quote fast path만 사용하고, 광범위한 yfinance OHLCV fallback은 오래 걸릴 수 있어 자동 fallback하지 않는다.
+
+## `market_data_issue`
+
+역할:
+
+- Overview Market Movers에서 반복되는 quote gap / coverage issue를 symbol / universe 단위로 누적 추적한다.
+- 현재 1차 사용처는 `issue_type=quote_gap`이다.
+
+성격:
+
+- 운영 issue tracking table이다.
+- `issue_key`는 `universe_code`, `symbol`, `issue_type` 조합에서 만든 내부 business key다.
+- 같은 symbol / universe에서 다시 진단되면 `occurrence_count`를 증가시키고 최신 diagnosis, confidence, evidence, recommended action을 갱신한다.
+- `raw_payload_json`에는 마지막 진단 row의 compact evidence를 저장한다.
+
+주의:
+
+- 이 table은 투자 신호나 official corporate action fact가 아니다.
+- `possible_stale_universe`도 상장폐지 / 거래정지 확정 판정이 아니라 profile / price evidence가 약하다는 운영 힌트다.
+- issue가 사라졌다는 자동 resolve lifecycle은 아직 없다. 현재는 반복 발생을 빠르게 알아보는 목적이다.
+
+## `market_event_calendar`
+
+역할:
+
+- Overview Events 탭에서 보여줄 시장 이벤트 calendar row를 저장한다.
+- FOMC, earnings, 기타 macro / market schedule collector가 같은 table contract를 재사용한다.
+
+성격:
+
+- provider snapshot table이다.
+- `event_date`, `event_type`, `symbol`, `title`, `source`, `source_type`, `validation_status`, `event_status`, `source_url`, `confidence`, `collected_at`, `raw_payload_json`을 공통 컬럼으로 둔다.
+- `event_key`는 반복 수집이 같은 event row를 UPSERT하도록 만든 내부 business key다.
+- UI는 정상 render 때 외부 페이지를 직접 파싱하지 않고 이 table을 읽는다.
+- FOMC row의 `source`는 `federal_reserve_fomc_calendar`, `event_type`은 `FOMC_MEETING`이다.
+- FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
+- Macro row는 공식 release schedule에서 온 event timing metadata다.
+- BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation을 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
+- BLS 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있고, 이 row는 같은 source와 `raw_payload_json.import_method=official_ics_file`로 저장된다.
+- BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP release를 `MACRO_GDP`로 저장한다.
+- Earnings row의 primary `source`는 `yfinance_calendar`, `event_type`은 `EARNINGS`, `source_type`은 `provider_estimate`이다.
+- Earnings row는 manual symbol list, latest S&P 500 movers, 또는 S&P 500 / Top1000 / Top2000 low-frequency batch에서 파생된 bounded symbol set을 대상으로 한다.
+- Nasdaq earnings calendar는 같은 symbol/date를 확인하는 alternate free provider cross-check로만 사용한다. `validation_status=cross_checked`는 official row를 뜻하지 않는다.
+- 날짜가 변경된 같은 symbol/source의 이전 active earnings estimate는 `event_status=superseded`로 남긴다.
+- 요청 ticker 중 저장 row가 없는 symbol의 missing / failure reason은 `market_event_calendar`에 별도 row로 쓰지 않고 job result의 `symbol_diagnostics`와 generated failure CSV에 남긴다.
+- Overview read model은 `Validation`, `Freshness`, `Quality Action`을 계산해 estimate-only / not-confirmed / stale row의 다음 조치를 표시한다.
+
+주의:
+
+- calendar row는 수집 시점의 provider snapshot이며 완전한 point-in-time historical event truth가 아니다.
+- FOMC의 `*` 표시는 Summary of Economic Projections 관련 meeting 의미이며 `raw_payload_json.has_summary_of_economic_projections`에 보존한다.
+- BLS schedule page는 공식 source지만 자동 요청이 HTTP 403으로 차단될 수 있다. 이 경우 macro collector는 가능한 source만 저장하고 partial failure를 job result에 남기며, BLS `.ics` import fallback으로 CPI / PPI / Jobs row를 보강한다.
+- earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 yfinance-only row는 `confidence=0.65`, Nasdaq cross-checked row는 `confidence=0.75`를 사용한다.
+- `symbol_diagnostics.reason`의 주요 값은 `no_provider_earnings_date`, `outside_window`, `provider_error`다. 이는 수집 운영 진단이며 event calendar fact row는 아니다.
+- generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
+- `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
+
 ## `etf_operability_snapshot`
 
 역할:

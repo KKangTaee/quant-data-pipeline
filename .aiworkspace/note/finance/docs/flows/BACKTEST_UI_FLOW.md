@@ -15,8 +15,10 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/streamlit_app.py` | top navigation과 page entry |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Backtest registry 기반 후보 Top 3, candidate funnel, next actions, recent activity dashboard render |
-| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계와 candidate priority scoring helper |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Market Movers, Sector / Industry, Events, Data Health, Candidate Ops dashboard render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Sector / Industry ranking/trend, Events agenda/calendar/quality/raw views를 조정한다 |
+| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, candidate priority scoring, cached market intelligence service wrapper |
+| `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
+| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, Sector / Industry leadership ranking/trend/ticker leaders, intraday snapshot read path, missing diagnostics, event calendar snapshot, collection ops snapshot을 만든다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset, session state, 3단계 stage routing compatibility, universe / real-money / guardrail input, status label helper |
 | `app/web/backtest_workflow_routes.py` | `Backtest Analysis`, `Practical Validation`, `Final Review` visible stage와 legacy panel route mapping |
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Single Strategy와 Portfolio Mix Builder를 submode로 렌더링 |

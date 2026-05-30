@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -217,6 +218,7 @@ import app.services.backtest_practical_validation_replay
 import app.services.backtest_practical_validation_source
 import app.services.backtest_risk_contribution_audit
 import app.services.backtest_validation_efficacy
+import app.services.overview_market_intelligence
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -2883,6 +2885,490 @@ class FinanceWorkspacePathContractTests(unittest.TestCase):
             self.assertNotIn("/.note/finance/", path_text)
 
 
+class JobResultArtifactContractTests(unittest.TestCase):
+    def test_earnings_symbol_diagnostics_become_failure_rows(self) -> None:
+        from app.jobs.result_artifacts import _extract_failure_rows
+
+        rows = _extract_failure_rows(
+            {
+                "job_name": "collect_earnings_calendar",
+                "status": "partial_success",
+                "started_at": "2026-05-28 10:00:00",
+                "finished_at": "2026-05-28 10:00:01",
+                "failed_symbols": ["AAA", "BBB"],
+                "message": "Earnings calendar completed with issues.",
+                "details": {
+                    "missing_symbols": ["AAA"],
+                    "symbol_diagnostics": [
+                        {
+                            "symbol": "AAA",
+                            "status": "missing",
+                            "reason": "outside_window",
+                            "detail": "Provider date was outside the selected window.",
+                        },
+                        {
+                            "symbol": "BBB",
+                            "status": "failed",
+                            "reason": "provider_error",
+                            "detail": "provider unavailable",
+                        },
+                    ]
+                },
+            }
+        )
+
+        self.assertEqual(
+            [(row["symbol"], row["kind"], row["detail"]) for row in rows],
+            [
+                ("AAA", "earnings_missing", "outside_window"),
+                ("BBB", "earnings_failed", "provider_error"),
+            ],
+        )
+
+
+class OverviewAutomationContractTests(unittest.TestCase):
+    def test_market_session_banner_reports_open_day_times(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+
+        model = _market_session_banner_model(now=datetime(2026, 5, 29, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["status"], "장중")
+        self.assertIn("2026-05-29 ET", model["title"])
+        self.assertEqual(model["items"][0]["value"], "05-29 22:30 KST")
+        self.assertEqual(model["items"][0]["detail"], "09:30 ET")
+        self.assertEqual(model["items"][1]["value"], "05-30 05:00 KST")
+        self.assertEqual(model["items"][1]["detail"], "16:00 ET")
+
+    def test_market_session_banner_reports_weekend_closure(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+
+        model = _market_session_banner_model(now=datetime(2026, 5, 30, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["status"], "휴장")
+        self.assertIn("주말", model["detail"])
+        self.assertEqual(model["items"][1]["value"], "06-01 22:30 KST")
+        self.assertEqual(model["items"][1]["detail"], "09:30 ET")
+
+    def test_market_session_banner_reports_observed_holiday_closure(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+
+        model = _market_session_banner_model(now=datetime(2026, 7, 3, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["status"], "휴장")
+        self.assertIn("Independence Day", model["detail"])
+
+    def test_snapshot_status_labels_intraday_quote_time(self) -> None:
+        from app.web.overview_dashboard import _snapshot_status_items
+
+        items = _snapshot_status_items(
+            {
+                "status": "OK",
+                "coverage": {
+                    "price_mode": "Intraday Snapshot",
+                    "snapshot_time_utc": "2026-05-29 21:32",
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                },
+            }
+        )
+
+        self.assertEqual(items[0]["title"], "Effective Quote Time")
+        self.assertEqual(items[0]["value"], "2026-05-29 21:32")
+        self.assertIn("previous close", items[0]["detail"])
+
+    def test_snapshot_status_labels_sparse_eod_date(self) -> None:
+        from app.web.overview_dashboard import _snapshot_status_items
+
+        items = _snapshot_status_items(
+            {
+                "status": "OK",
+                "coverage": {
+                    "price_mode": "EOD DB",
+                    "latest_raw_date": "2026-05-28",
+                    "effective_end_date": "2026-05-27",
+                    "returnable_count": 500,
+                    "universe_count": 503,
+                },
+            }
+        )
+
+        self.assertEqual(items[0]["title"], "Effective EOD Date")
+        self.assertEqual(items[0]["value"], "2026-05-27")
+        self.assertIn("latest raw 2026-05-28 is sparse", items[0]["detail"])
+
+    def test_browser_auto_refresh_timing_shows_remaining_cadence(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_timing
+
+        timing = _browser_auto_refresh_timing(
+            {
+                "status": "skipped",
+                "plan": [
+                    {
+                        "label": "S&P 500 Daily Snapshot",
+                        "reason": "cadence not due",
+                        "cadence_minutes": 5,
+                        "last_finished_at": "2026-05-29 10:00:00",
+                        "next_due_at": "2026-05-29 10:05:00",
+                    }
+                ],
+            },
+            now=datetime(2026, 5, 29, 10, 2, 30),
+        )
+
+        self.assertEqual(timing["title"], "다음 갱신까지 2분 30초")
+        self.assertEqual(timing["progress_pct"], 50)
+        self.assertEqual(timing["next_due_at"], "2026-05-29 10:05:00")
+
+    def test_browser_auto_refresh_timing_waits_outside_market_hours(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_timing
+
+        timing = _browser_auto_refresh_timing(
+            {
+                "status": "skipped",
+                "plan": [
+                    {
+                        "label": "S&P 500 Daily Snapshot",
+                        "reason": "outside US market hours",
+                        "cadence_minutes": 5,
+                        "last_finished_at": "2026-05-29 10:00:00",
+                        "next_due_at": "2026-05-29 10:05:00",
+                    }
+                ],
+            },
+            now=datetime(2026, 5, 29, 10, 2, 30),
+        )
+
+        self.assertEqual(timing["title"], "미국 정규장 대기")
+        self.assertEqual(timing["progress_pct"], 0)
+
+    def test_browser_auto_refresh_timing_rebases_success_to_next_cadence(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_timing
+
+        timing = _browser_auto_refresh_timing(
+            {
+                "status": "success",
+                "finished_at": "2026-05-29 10:03:00",
+                "plan": [
+                    {
+                        "label": "S&P 500 Daily Snapshot",
+                        "reason": "due",
+                        "should_run": True,
+                        "cadence_minutes": 5,
+                        "last_finished_at": "2026-05-29 09:58:00",
+                        "next_due_at": "2026-05-29 10:03:00",
+                    }
+                ],
+            },
+            now=datetime(2026, 5, 29, 10, 4, 0),
+        )
+
+        self.assertEqual(timing["title"], "방금 갱신됨. 다음 갱신까지 4분")
+        self.assertEqual(timing["next_due_at"], "2026-05-29 10:08:00")
+        self.assertEqual(timing["progress_pct"], 20)
+
+    def test_browser_auto_refresh_check_due_uses_next_due(self) -> None:
+        from app.web.overview_dashboard import _should_run_browser_auto_refresh_check
+
+        summary = {
+            "status": "skipped",
+            "plan": [
+                {
+                    "label": "S&P 500 Daily Snapshot",
+                    "reason": "cadence not due",
+                    "cadence_minutes": 5,
+                    "last_finished_at": "2026-05-29 10:00:00",
+                    "next_due_at": "2026-05-29 10:05:00",
+                }
+            ],
+        }
+
+        self.assertFalse(
+            _should_run_browser_auto_refresh_check(summary, now=datetime(2026, 5, 29, 10, 4, 59))
+        )
+        self.assertTrue(
+            _should_run_browser_auto_refresh_check(summary, now=datetime(2026, 5, 29, 10, 5, 0))
+        )
+
+    def test_browser_auto_refresh_completion_label_uses_actionable_status(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_completion_label
+
+        self.assertEqual(
+            _browser_auto_refresh_completion_label({"status": "success"}),
+            "S&P 500 스냅샷 갱신이 완료되었습니다.",
+        )
+        self.assertEqual(
+            _browser_auto_refresh_completion_label(
+                {
+                    "status": "skipped",
+                    "plan": [{"label": "S&P 500 Daily Snapshot", "reason": "outside US market hours"}],
+                }
+            ),
+            "S&P 500 일중 스냅샷: 미국 정규장 시간이 아니라 수집하지 않았습니다.",
+        )
+        self.assertEqual(
+            _browser_auto_refresh_completion_label({"status": "locked"}),
+            "다른 Overview 갱신 작업이 이미 실행 중입니다.",
+        )
+
+    def test_run_history_append_serializes_provider_date_payload(self) -> None:
+        from app.jobs import run_history
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            history_file = Path(tmp_dir) / "WEB_APP_RUN_HISTORY.jsonl"
+            with patch.object(run_history, "HISTORY_FILE", history_file):
+                run_history.append_run_history(
+                    {
+                        "job_name": "collect_earnings_calendar",
+                        "status": "success",
+                        "started_at": "2026-05-29 10:00:00",
+                        "finished_at": "2026-05-29 10:00:02",
+                        "duration_sec": 2.0,
+                        "rows_written": 1,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "earnings calendar completed",
+                        "details": {
+                            "symbol_diagnostics": [
+                                {
+                                    "symbol": "AAA",
+                                    "provider_dates": [date(2026, 7, 30)],
+                                }
+                            ]
+                        },
+                    }
+                )
+                loaded = run_history.load_run_history(limit=1)
+
+        self.assertEqual(
+            loaded[0]["details"]["symbol_diagnostics"][0]["provider_dates"],
+            ["2026-07-30"],
+        )
+
+    def test_browser_safe_profile_only_selects_sp500_intraday_snapshot(self) -> None:
+        from app.jobs.overview_automation import VALID_PROFILES, build_overview_automation_plan
+
+        self.assertIn("browser_safe", VALID_PROFILES)
+
+        plan = build_overview_automation_plan(
+            profile="browser_safe",
+            history_rows=[],
+            now=datetime(2026, 5, 29, 15, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual([row["job_id"] for row in plan], ["sp500_intraday"])
+        self.assertTrue(plan[0]["should_run"])
+        self.assertEqual(plan[0]["cadence_minutes"], 5)
+        self.assertTrue(plan[0]["market_hours_only"])
+
+    def test_intraday_plan_skips_outside_market_hours_unless_allowed(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
+
+        spec = ScheduledJobSpec(
+            job_id="fake_intraday",
+            job_name="fake_intraday_job",
+            label="Fake Intraday",
+            cadence_minutes=5,
+            profiles=("test",),
+            market_hours_only=True,
+            runner=lambda _: {},
+            description="fake provider run",
+        )
+        outside_market_hours = datetime(2026, 5, 29, 23, 0, tzinfo=timezone.utc)
+
+        plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=[],
+            now=outside_market_hours,
+            specs=(spec,),
+        )
+        self.assertFalse(plan[0]["should_run"])
+        self.assertEqual(plan[0]["reason"], "outside US market hours")
+
+        allowed_plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=[],
+            now=outside_market_hours,
+            allow_outside_market_hours=True,
+            specs=(spec,),
+        )
+        self.assertTrue(allowed_plan[0]["should_run"])
+        self.assertEqual(allowed_plan[0]["reason"], "due")
+
+    def test_plan_uses_cadence_from_latest_accepted_history(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, build_overview_automation_plan
+
+        spec = ScheduledJobSpec(
+            job_id="fake_calendar",
+            job_name="fake_calendar_job",
+            label="Fake Calendar",
+            cadence_minutes=60,
+            profiles=("test",),
+            market_hours_only=False,
+            runner=lambda _: {},
+            description="fake calendar run",
+        )
+        history_rows = [
+            {
+                "job_name": "fake_calendar_job",
+                "status": "success",
+                "finished_at": "2026-05-29 10:00:00",
+            }
+        ]
+
+        early_plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=history_rows,
+            now=datetime(2026, 5, 29, 10, 30),
+            specs=(spec,),
+        )
+        self.assertFalse(early_plan[0]["should_run"])
+        self.assertEqual(early_plan[0]["reason"], "cadence not due")
+
+        due_plan = build_overview_automation_plan(
+            profile="test",
+            history_rows=history_rows,
+            now=datetime(2026, 5, 29, 11, 1),
+            specs=(spec,),
+        )
+        self.assertTrue(due_plan[0]["should_run"])
+        self.assertEqual(due_plan[0]["reason"], "due")
+
+    def test_run_appends_scheduled_metadata_and_releases_lock(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
+
+        calls: list[datetime] = []
+
+        def fake_runner(value: datetime) -> dict:
+            calls.append(value)
+            return {
+                "job_name": "fake_calendar_job",
+                "status": "success",
+                "started_at": "2026-05-29 10:00:00",
+                "finished_at": "2026-05-29 10:00:01",
+                "duration_sec": 1.0,
+                "rows_written": 3,
+                "symbols_requested": None,
+                "symbols_processed": None,
+                "failed_symbols": [],
+                "message": "fake completed",
+                "details": {"source": "fake"},
+            }
+
+        spec = ScheduledJobSpec(
+            job_id="fake_calendar",
+            job_name="fake_calendar_job",
+            label="Fake Calendar",
+            cadence_minutes=60,
+            profiles=("test",),
+            market_hours_only=False,
+            runner=fake_runner,
+            description="fake calendar run",
+        )
+        appended: list[dict] = []
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            lock_path = Path(tmp_dir) / "overview.lock"
+            summary = run_overview_automation(
+                profile="test",
+                history_rows=[],
+                history_appender=appended.append,
+                lock_path=lock_path,
+                now=datetime(2026, 5, 29, 10, 0),
+                specs=(spec,),
+            )
+            self.assertFalse(lock_path.exists())
+
+        self.assertEqual(summary["status"], "success")
+        self.assertEqual(summary["jobs_run"], 1)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(appended), 1)
+        metadata = appended[0]["run_metadata"]
+        self.assertEqual(metadata["execution_mode"], "scheduled")
+        self.assertEqual(metadata["automation_profile"], "test")
+        self.assertEqual(metadata["automation_job_id"], "fake_calendar")
+        self.assertEqual(appended[0]["details"]["automation"]["profile"], "test")
+        self.assertEqual(appended[0]["details"]["automation"]["execution_mode"], "scheduled")
+
+    def test_run_can_append_browser_auto_metadata(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
+
+        def fake_runner(_: datetime) -> dict:
+            return {
+                "job_name": "fake_intraday_job",
+                "status": "success",
+                "started_at": "2026-05-29 10:00:00",
+                "finished_at": "2026-05-29 10:00:02",
+                "duration_sec": 2.0,
+                "rows_written": 503,
+                "symbols_requested": 503,
+                "symbols_processed": 503,
+                "failed_symbols": [],
+                "message": "fake intraday completed",
+                "details": {},
+            }
+
+        spec = ScheduledJobSpec(
+            job_id="fake_intraday",
+            job_name="fake_intraday_job",
+            label="Fake Intraday",
+            cadence_minutes=5,
+            profiles=("browser_safe",),
+            market_hours_only=False,
+            runner=fake_runner,
+            description="fake browser auto run",
+        )
+        appended: list[dict] = []
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            summary = run_overview_automation(
+                profile="browser_safe",
+                execution_mode="browser_auto",
+                history_rows=[],
+                history_appender=appended.append,
+                lock_path=Path(tmp_dir) / "overview.lock",
+                now=datetime(2026, 5, 29, 10, 0),
+                specs=(spec,),
+            )
+
+        self.assertEqual(summary["execution_mode"], "browser_auto")
+        self.assertEqual(appended[0]["run_metadata"]["execution_mode"], "browser_auto")
+        self.assertIn("Browser-session Overview automation", appended[0]["run_metadata"]["execution_context"])
+        self.assertEqual(appended[0]["details"]["automation"]["execution_mode"], "browser_auto")
+
+    def test_dry_run_does_not_call_runner_or_append_history(self) -> None:
+        from app.jobs.overview_automation import ScheduledJobSpec, run_overview_automation
+
+        def fake_runner(_: datetime) -> dict:
+            raise AssertionError("dry-run should not execute the runner")
+
+        spec = ScheduledJobSpec(
+            job_id="fake_calendar",
+            job_name="fake_calendar_job",
+            label="Fake Calendar",
+            cadence_minutes=60,
+            profiles=("test",),
+            market_hours_only=False,
+            runner=fake_runner,
+            description="fake calendar run",
+        )
+        appended: list[dict] = []
+
+        summary = run_overview_automation(
+            profile="test",
+            dry_run=True,
+            history_rows=[],
+            history_appender=appended.append,
+            now=datetime(2026, 5, 29, 10, 0),
+            specs=(spec,),
+        )
+
+        self.assertEqual(summary["status"], "dry_run")
+        self.assertEqual(summary["jobs_due"], 1)
+        self.assertEqual(summary["jobs_run"], 0)
+        self.assertEqual(appended, [])
+
+
 class BacktestRuntimeContractTests(unittest.TestCase):
     def test_execution_preview_ignores_later_stage_probation_monitoring_fields(self) -> None:
         from app.runtime.backtest import _build_deployment_readiness_contract
@@ -3215,6 +3701,1562 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 strategy_key="equal_weight",
                 input_params={},
             )
+
+
+class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
+    def _query_fn(self, db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+        del db_name
+        if "FROM market_event_calendar" in sql:
+            rows = [
+                {
+                    "event_date": "2026-06-17",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: June 16-17*, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-05-28 02:00:00",
+                },
+                {
+                    "event_date": "2026-07-29",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: July 28-29, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-05-28 02:00:00",
+                },
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_url": "https://finance.yahoo.com/quote/MSFT/analysis",
+                    "confidence": 0.65,
+                    "collected_at": "2026-05-28 03:00:00",
+                },
+            ]
+            event_filter = None
+            for value in params or []:
+                if value in {"FOMC_MEETING", "EARNINGS"}:
+                    event_filter = value
+                    break
+            if event_filter:
+                return [row for row in rows if row["event_type"] == event_filter]
+            return rows
+        if "FROM market_universe_member" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "long_name": "AAA Corp",
+                    "sector": "Technology",
+                    "industry": "Software",
+                    "market_cap": 100,
+                    "status": "active",
+                    "error_msg": None,
+                    "last_collected_at": "2026-05-18 10:00:00",
+                    "universe_as_of_date": "2026-05-28",
+                    "universe_collected_at": "2026-05-28 11:00:00",
+                    "universe_source": "wikipedia_sp500_constituents",
+                    "universe_source_url": "https://example.test/sp500",
+                },
+                {
+                    "symbol": "BBB",
+                    "long_name": "BBB Corp",
+                    "sector": "Healthcare",
+                    "industry": "Medical Devices",
+                    "market_cap": 200,
+                    "status": "active",
+                    "error_msg": None,
+                    "last_collected_at": "2026-05-18 10:00:00",
+                    "universe_as_of_date": "2026-05-28",
+                    "universe_collected_at": "2026-05-28 11:00:00",
+                    "universe_source": "wikipedia_sp500_constituents",
+                    "universe_source_url": "https://example.test/sp500",
+                },
+            ]
+        if "MAX(snapshot_time_utc) AS snapshot_time_utc" in sql:
+            return [{"snapshot_time_utc": "2026-05-18 15:35:00"}]
+        if "FROM market_intraday_snapshot s" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "interval_code": "5m",
+                    "snapshot_time_utc": "2026-05-18 15:35:00",
+                    "quote_time_utc": "2026-05-18 15:30:00",
+                    "previous_close": 100.0,
+                    "latest_price": 112.0,
+                    "return_pct": 12.0,
+                    "volume": 1000,
+                    "provider_status": "ok",
+                    "error_msg": None,
+                    "source": "yfinance",
+                    "source_ref": "test",
+                },
+                {
+                    "symbol": "BBB",
+                    "interval_code": "5m",
+                    "snapshot_time_utc": "2026-05-18 15:35:00",
+                    "quote_time_utc": None,
+                    "previous_close": None,
+                    "latest_price": None,
+                    "return_pct": None,
+                    "volume": None,
+                    "provider_status": "missing",
+                    "error_msg": "missing latest price",
+                    "source": "yfinance",
+                    "source_ref": "test",
+                },
+            ]
+        if "MAX(`date`) AS latest_raw_date" in sql:
+            return [{"latest_raw_date": "2026-05-19"}]
+        if "MAX(`date`) AS latest_price_date" in sql:
+            return [
+                {"symbol": "AAA", "latest_price_date": "2026-05-18"},
+                {"symbol": "BBB", "latest_price_date": "2026-05-18"},
+                {"symbol": "CCC", "latest_price_date": "2026-05-18"},
+                {"symbol": "DDD", "latest_price_date": "2026-05-18"},
+            ]
+        if "GROUP BY `date`" in sql:
+            dates = [
+                "2026-05-18",
+                "2026-05-15",
+                "2026-05-14",
+                "2026-05-13",
+                "2026-05-12",
+                "2026-05-11",
+                "2026-05-08",
+                "2026-05-07",
+                "2026-05-06",
+                "2026-05-05",
+                "2026-05-04",
+                "2026-05-01",
+                "2026-04-30",
+                "2026-04-29",
+                "2026-04-28",
+                "2026-04-27",
+                "2026-04-24",
+                "2026-04-23",
+                "2026-04-22",
+                "2026-04-21",
+                "2026-04-20",
+                "2026-04-17",
+            ]
+            return [{"date": item, "usable_rows": 1200} for item in dates]
+        if "FROM nyse_asset_profile" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "long_name": "AAA Corp",
+                    "sector": "Technology",
+                    "industry": "Software",
+                    "market_cap": 100,
+                },
+                {
+                    "symbol": "BBB",
+                    "long_name": "BBB Corp",
+                    "sector": "Technology",
+                    "industry": "Software",
+                    "market_cap": 300,
+                },
+                {
+                    "symbol": "CCC",
+                    "long_name": "CCC Corp",
+                    "sector": "Healthcare",
+                    "industry": "Medical Devices",
+                    "market_cap": 200,
+                },
+                {
+                    "symbol": "DDD",
+                    "long_name": "DDD Corp",
+                    "sector": "Energy",
+                    "industry": "Oil & Gas",
+                    "market_cap": 100,
+                },
+            ]
+        if "COALESCE(adj_close, close) AS price" in sql:
+            return [
+                {"symbol": "AAA", "date": "2026-05-15", "price": 100.0},
+                {"symbol": "AAA", "date": "2026-05-18", "price": 110.0},
+                {"symbol": "AAA", "date": "2026-04-17", "price": 100.0},
+                {"symbol": "BBB", "date": "2026-05-15", "price": 100.0},
+                {"symbol": "BBB", "date": "2026-05-18", "price": 130.0},
+                {"symbol": "BBB", "date": "2026-04-17", "price": 100.0},
+                {"symbol": "CCC", "date": "2026-05-15", "price": 100.0},
+                {"symbol": "CCC", "date": "2026-05-18", "price": 120.0},
+                {"symbol": "CCC", "date": "2026-04-17", "price": 100.0},
+                {"symbol": "DDD", "date": "2026-05-18", "price": 140.0},
+            ]
+        return []
+
+    def test_effective_market_date_skips_sparse_latest_raw_date(self) -> None:
+        from app.services.overview_market_intelligence import resolve_effective_market_dates
+
+        window = resolve_effective_market_dates(
+            period="daily",
+            min_price_rows=1000,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(window["status"], "OK")
+        self.assertEqual(window["latest_raw_date"], "2026-05-19")
+        self.assertEqual(window["effective_end_date"], "2026-05-18")
+        self.assertEqual(window["start_date"], "2026-05-15")
+        self.assertEqual(window["stale_days"], 10)
+
+    def test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_limit=100,
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 28),
+            prefer_intraday=False,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["universe_count"], 4)
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
+        self.assertEqual(snapshot["coverage"]["missing_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 30.0)
+        self.assertIn("Latest raw price date is sparse", snapshot["warnings"][0])
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "DDD")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing start price")
+        self.assertEqual(
+            snapshot["missing_rows"].iloc[0]["Recommended Action"],
+            "Refresh daily OHLCV history or inspect previous-close coverage.",
+        )
+
+    def test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="SP500",
+            period="daily",
+            top_n=5,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "SP500")
+        self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
+        self.assertEqual(snapshot["coverage"]["failed_count"], 1)
+        self.assertEqual(snapshot["coverage"]["returnable_pct"], 50.0)
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["status"], "stale")
+        self.assertTrue(snapshot["coverage"]["refresh_state"]["refresh_due"])
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["check_interval_minutes"], 5)
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["stale_after_minutes"], 15)
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["next_due_in_minutes"], 0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+        self.assertEqual(
+            snapshot["missing_rows"].iloc[0]["Recommended Action"],
+            "Refresh the daily snapshot; if it persists, inspect provider quote coverage.",
+        )
+
+    def test_market_movers_snapshot_uses_top1000_intraday_returns(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "TOP1000")
+        self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
+        self.assertEqual(snapshot["coverage"]["returnable_pct"], 25.0)
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["universe_count"], 4)
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["returnable_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        observed_sql: dict[str, str] = {}
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            if "FROM nyse_asset_profile p" in sql:
+                observed_sql["universe"] = sql
+                return [
+                    {
+                        "symbol": "AAA",
+                        "long_name": "AAA LISTING INC",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 100,
+                    },
+                    {
+                        "symbol": "BBB",
+                        "long_name": "BBB LISTING INC",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 300,
+                    },
+                ]
+            return self._query_fn(db_name, sql, params)
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 28),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        self.assertIn("LEFT JOIN nyse_stock", observed_sql["universe"])
+        self.assertIn("COALESCE(NULLIF(p.long_name, ''), s.name)", observed_sql["universe"])
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["rows"].iloc[0]["Name"], "BBB LISTING INC")
+
+    def test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns(self) -> None:
+        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+
+        snapshot = build_group_leadership_snapshot(
+            universe_limit=100,
+            group_by="sector",
+            top_n=5,
+            min_group_size=1,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["date_window"]["period"], "monthly")
+        self.assertEqual(snapshot["period"], "monthly")
+        self.assertEqual(snapshot["trend_window_label"], "Last 1Y")
+        self.assertFalse(snapshot["trend_rows"].empty)
+        self.assertFalse(snapshot["ticker_leader_rows"].empty)
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
+        first_row = snapshot["rows"].iloc[0]
+        self.assertEqual(first_row["Group"], "Technology")
+        self.assertEqual(first_row["Symbols"], 2)
+        self.assertEqual(first_row["Equal Weight Return %"], 20.0)
+        self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
+        self.assertEqual(first_row["Top Symbol"], "BBB")
+        technology_leaders = snapshot["ticker_leader_rows"][
+            snapshot["ticker_leader_rows"]["Group"] == "Technology"
+        ].sort_values("Rank")
+        self.assertEqual(technology_leaders["Symbol"].tolist(), ["BBB", "AAA"])
+        self.assertEqual(technology_leaders.iloc[0]["Positive Return Share %"], 75.0)
+
+    def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
+        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+
+        snapshot = build_group_leadership_snapshot(
+            universe_code="SP500",
+            universe_limit=500,
+            group_by="sector",
+            period="daily",
+            top_n=5,
+            min_group_size=1,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "SP500")
+        self.assertEqual(snapshot["period"], "daily")
+        self.assertEqual(snapshot["trend_window_label"], "Last 3M")
+        self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
+        self.assertEqual(snapshot["coverage"]["snapshot_time_utc"], "2026-05-18 15:35")
+        self.assertEqual(snapshot["date_window"]["start_date"], "Previous Close")
+        self.assertEqual(snapshot["rows"].iloc[0]["Top Symbol"], "AAA")
+        self.assertEqual(snapshot["rows"].iloc[0]["Top Symbol Return %"], 12.0)
+        self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["End Date"], "2026-05-18 15:30")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
+        self.assertFalse(snapshot["rows"].empty)
+        self.assertFalse(snapshot["trend_rows"].empty)
+
+    def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        snapshot = build_market_events_snapshot(
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["next_event_date"], "2026-06-17")
+        self.assertEqual(snapshot["coverage"]["latest_collected_at"], "2026-05-28 02:00")
+        self.assertEqual(snapshot["coverage"]["official_count"], 2)
+        self.assertEqual(snapshot["coverage"]["estimate_count"], 0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Type"], "FOMC_MEETING")
+        self.assertEqual(snapshot["rows"].iloc[0]["Date"], "2026-06-17")
+        self.assertEqual(snapshot["rows"].iloc[0]["Days Until"], 20)
+        self.assertEqual(snapshot["rows"].iloc[0]["Importance"], "High")
+        self.assertEqual(snapshot["rows"].iloc[0]["Focus"], "Next 30D")
+        self.assertEqual(snapshot["rows"].iloc[0]["Source Type"], "Official")
+        self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Official")
+
+    def test_market_events_snapshot_can_read_all_event_types(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["event_type"], "All")
+        self.assertEqual(snapshot["coverage"]["event_count"], 3)
+        self.assertEqual(snapshot["coverage"]["official_count"], 2)
+        self.assertEqual(snapshot["coverage"]["estimate_count"], 1)
+        self.assertEqual(snapshot["coverage"]["estimate_only_count"], 1)
+        self.assertEqual(snapshot["coverage"]["action_required_count"], 1)
+        self.assertEqual(snapshot["coverage"]["high_importance_count"], 2)
+        self.assertEqual(snapshot["coverage"]["needs_review_count"], 1)
+        self.assertEqual(snapshot["coverage"]["this_week_count"], 0)
+        self.assertEqual(snapshot["coverage"]["next_30d_count"], 1)
+        self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 0)
+        self.assertEqual(set(snapshot["rows"]["Type"]), {"FOMC_MEETING", "EARNINGS"})
+        earnings_row = snapshot["rows"][snapshot["rows"]["Type"] == "EARNINGS"].iloc[0]
+        self.assertEqual(earnings_row["Importance"], "Medium")
+        self.assertEqual(earnings_row["Focus"], "Needs Review")
+        self.assertEqual(earnings_row["Source Type"], "Provider Estimate")
+        self.assertEqual(earnings_row["Freshness"], "Current estimate")
+        self.assertEqual(earnings_row["Quality Action"], "Enable cross-check or refresh closer to date")
+
+    def test_market_events_snapshot_macro_filter_reads_macro_prefix_rows(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name
+            self.assertIn("event_type LIKE %s", sql)
+            self.assertIn("MACRO_%", params or [])
+            return [
+                {
+                    "event_date": "2026-06-10",
+                    "event_type": "MACRO_CPI",
+                    "symbol": None,
+                    "title": "CPI: Consumer Price Index for May 2026",
+                    "source": "bureau_labor_statistics_release_schedule",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.bls.gov/schedule/2026/",
+                    "confidence": 0.95,
+                    "collected_at": "2026-05-28 04:00:00",
+                },
+                {
+                    "event_date": "2026-06-25",
+                    "event_type": "MACRO_GDP",
+                    "symbol": None,
+                    "title": "GDP: Gross Domestic Product, 1st Quarter 2026",
+                    "source": "bureau_economic_analysis_release_schedule",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.bea.gov/index.php/news/schedule/full",
+                    "confidence": 0.95,
+                    "collected_at": "2026-05-28 04:00:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type="MACRO",
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["event_type"], "MACRO")
+        self.assertEqual(snapshot["coverage"]["event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["official_count"], 2)
+        self.assertEqual(set(snapshot["rows"]["Type"]), {"MACRO_CPI", "MACRO_GDP"})
+
+    def test_market_events_snapshot_warns_on_stale_earnings_estimates(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return [
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_url": "https://finance.yahoo.com/quote/MSFT/analysis",
+                    "confidence": 0.65,
+                    "collected_at": "2026-05-01 03:00:00",
+                }
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type="EARNINGS",
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["estimate_count"], 1)
+        self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Stale estimate")
+        self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
+        self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
+
+    def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return [
+                    {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                    {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                ]
+            if "FROM market_universe_member" in sql:
+                return [
+                    {
+                        "universe_code": "SP500",
+                        "active_symbols": 503,
+                        "latest_collected_at": "2026-05-28 01:00:00",
+                        "latest_as_of_date": "2026-05-28",
+                    }
+                ]
+            if "FROM market_event_calendar" in sql:
+                return [
+                    {
+                        "event_type": "FOMC_MEETING",
+                        "active_events": 12,
+                        "future_events": 12,
+                        "next_event_date": "2026-06-17",
+                        "latest_collected_at": "2026-05-28 02:00:00",
+                    },
+                    {
+                        "event_type": "EARNINGS",
+                        "active_events": 3,
+                        "future_events": 3,
+                        "next_event_date": "2026-07-30",
+                        "latest_collected_at": "2026-05-28 03:00:00",
+                    },
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(
+            today=date(2026, 5, 28),
+            query_fn=query_fn,
+            history_rows=[
+                {
+                    "job_name": "collect_sp500_universe",
+                    "status": "success",
+                    "finished_at": "2026-05-28 01:01:00",
+                    "rows_written": 503,
+                    "symbols_processed": 503,
+                    "failed_symbols": [],
+                    "duration_sec": 1.2,
+                    "message": "S&P 500 universe collection completed.",
+                },
+                {
+                    "job_name": "collect_sp500_universe",
+                    "status": "success",
+                    "finished_at": "2026-05-28 01:05:00",
+                    "rows_written": 503,
+                    "symbols_processed": 503,
+                    "failed_symbols": [],
+                    "duration_sec": 1.1,
+                    "message": "S&P 500 universe scheduled collection completed.",
+                    "run_metadata": {"execution_mode": "scheduled"},
+                },
+                {
+                    "job_name": "collect_sp500_intraday_snapshot",
+                    "status": "success",
+                    "finished_at": "2026-05-28 04:05:00",
+                    "rows_written": 503,
+                    "symbols_processed": 503,
+                    "failed_symbols": [],
+                    "duration_sec": 5.1,
+                    "message": "S&P 500 browser auto snapshot completed.",
+                    "run_metadata": {
+                        "execution_mode": "browser_auto",
+                        "automation_profile": "browser_safe",
+                    },
+                },
+                {
+                    "job_name": "collect_earnings_calendar",
+                    "status": "partial_success",
+                    "finished_at": "2026-05-28 03:01:00",
+                    "rows_written": 2,
+                    "symbols_processed": 2,
+                    "failed_symbols": ["AAA"],
+                    "duration_sec": 2.5,
+                    "message": "Earnings calendar completed with missing symbols.",
+                },
+            ],
+        )
+
+        rows = snapshot["rows"]
+        self.assertEqual(snapshot["status"], "REVIEW")
+        self.assertEqual(snapshot["coverage"]["partial_count"], 1)
+        universe_row = rows[rows["Area"] == "S&P 500 Universe"].iloc[0]
+        self.assertEqual(universe_row["Status"], "OK")
+        self.assertEqual(universe_row["Rows"], 503)
+        self.assertEqual(universe_row["Last Auto Run"], "2026-05-28 01:05")
+        self.assertEqual(universe_row["Auto Source"], "Scheduled")
+        self.assertEqual(universe_row["Last Manual Run"], "2026-05-28 01:01")
+        self.assertEqual(universe_row["Next Auto Due"], "2026-05-29 01:05")
+        sp500_intraday_row = rows[rows["Area"] == "S&P 500 Daily Snapshot"].iloc[0]
+        self.assertEqual(sp500_intraday_row["Last Auto Run"], "2026-05-28 04:05")
+        self.assertEqual(sp500_intraday_row["Auto Source"], "Browser Auto")
+        self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
+        self.assertEqual(snapshot["coverage"]["latest_auto_at"], "2026-05-28 04:05")
+        earnings_row = rows[rows["Area"] == "Earnings Calendar"].iloc[0]
+        self.assertEqual(earnings_row["Status"], "Partial")
+        self.assertEqual(earnings_row["Failed"], 1)
+        self.assertEqual(earnings_row["Failure Streak"], 1)
+        self.assertIn("Inspect failed symbols", earnings_row["Next Action"])
+
+    def test_collection_ops_snapshot_supports_legacy_event_calendar_schema(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        event_query_count = 0
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            nonlocal event_query_count
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return [
+                    {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                    {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                    {"universe_code": "TOP2000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                ]
+            if "FROM market_universe_member" in sql:
+                return [
+                    {
+                        "universe_code": "SP500",
+                        "active_symbols": 503,
+                        "latest_collected_at": "2026-05-28 01:00:00",
+                        "latest_as_of_date": "2026-05-28",
+                    }
+                ]
+            if "FROM market_event_calendar" in sql:
+                event_query_count += 1
+                if "event_status" in sql:
+                    raise RuntimeError("Unknown column 'event_status'")
+                return [
+                    {
+                        "event_type": "FOMC_MEETING",
+                        "active_events": 12,
+                        "future_events": 12,
+                        "next_event_date": "2026-06-17",
+                        "latest_collected_at": "2026-05-28 02:00:00",
+                    }
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(today=date(2026, 5, 28), query_fn=query_fn)
+
+        self.assertEqual(event_query_count, 2)
+        fomc_row = snapshot["rows"][snapshot["rows"]["Area"] == "FOMC Calendar"].iloc[0]
+        self.assertEqual(fomc_row["Status"], "OK")
+        self.assertIn("next 2026-06-17", fomc_row["Data Freshness"])
+
+    def test_collection_ops_snapshot_marks_macro_calendar_due_when_some_macro_types_missing(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return []
+            if "FROM market_universe_member" in sql:
+                return []
+            if "FROM market_event_calendar" in sql:
+                return [
+                    {
+                        "event_type": "MACRO_GDP",
+                        "active_events": 2,
+                        "future_events": 2,
+                        "next_event_date": "2026-06-25",
+                        "latest_collected_at": "2026-05-28 04:00:00",
+                    }
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(today=date(2026, 5, 28), query_fn=query_fn)
+
+        macro_row = snapshot["rows"][snapshot["rows"]["Area"] == "Macro Calendar"].iloc[0]
+        self.assertEqual(macro_row["Status"], "Due")
+        self.assertIn("covered 1/4", macro_row["Data Freshness"])
+
+
+class MarketIntelligenceIngestionContractTests(unittest.TestCase):
+    def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [
+            {"symbol": "AAA"},
+            {"symbol": "BBB"},
+        ]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912000,
+                    "regularMarketVolume": 1000,
+                    "marketState": "REGULAR",
+                },
+                {
+                    "symbol": "BBB",
+                    "regularMarketPrice": 96.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912001,
+                    "regularMarketVolume": 2000,
+                    "marketState": "REGULAR",
+                },
+            ]
+
+        written_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "_load_db_previous_close_map", return_value={}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_sp500_intraday_snapshot(
+                universe_loader=lambda: members,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["source"], "yahoo_quote")
+        self.assertEqual(result["method"], "quote_fast")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_processed"], 2)
+        self.assertEqual(written_rows[0]["source"], "yahoo_quote")
+        self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
+        self.assertAlmostEqual(float(written_rows[1]["return_pct"]), -4.0)
+
+    def test_top_universe_snapshot_writes_top1000_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [{"symbol": "AAA"}, {"symbol": "BBB"}]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912000,
+                    "regularMarketVolume": 1000,
+                },
+                {
+                    "symbol": "BBB",
+                    "regularMarketPrice": 96.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912001,
+                    "regularMarketVolume": 2000,
+                },
+            ]
+
+        written_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "_load_db_previous_close_map", return_value={}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                universe_loader=lambda: members,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["universe_code"], "TOP1000")
+        self.assertEqual(result["universe_limit"], 1000)
+        self.assertEqual(result["source"], "yahoo_quote")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(written_rows[0]["universe_code"], "TOP1000")
+        self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
+
+    def test_quote_gap_diagnostics_explain_batch_only_gap(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class EmptyTicker:
+            fast_info = {}
+
+            def __init__(self, symbol: str) -> None:
+                self.symbol = symbol
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                }
+            ]
+
+        result = mi.diagnose_market_quote_gaps(
+            ["AAA"],
+            quote_fetcher=quote_fetcher,
+            ticker_factory=EmptyTicker,
+            history_downloader=lambda *args, **kwargs: pd.DataFrame(),
+            db_previous_close_map={},
+            profile_map={"AAA": {"status": "active"}},
+        )
+
+        self.assertEqual(result["diagnosis_counts"], {"batch_only_gap": 1})
+        row = result["diagnostics"][0]
+        self.assertEqual(row["Diagnosis"], "batch_only_gap")
+        self.assertEqual(row["Quote Single Status"], "ok")
+        self.assertIn("Single-symbol", row["Evidence Summary"])
+
+    def test_quote_gap_diagnostics_explain_provider_quote_gap(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class EmptyTicker:
+            fast_info = {}
+
+            def __init__(self, symbol: str) -> None:
+                self.symbol = symbol
+
+        def history_downloader(symbols, **kwargs):
+            self.assertEqual(symbols, ["BBB"])
+            del kwargs
+            return pd.DataFrame(
+                {"Close": [100.0, 105.0], "Volume": [1000, 1200]},
+                index=pd.to_datetime(["2026-05-27", "2026-05-28"]),
+            )
+
+        result = mi.diagnose_market_quote_gaps(
+            ["BBB"],
+            quote_fetcher=lambda symbols: [],
+            ticker_factory=EmptyTicker,
+            history_downloader=history_downloader,
+            db_previous_close_map={"BBB": {"previous_close": 105.0, "previous_close_date": "2026-05-28"}},
+            profile_map={"BBB": {"status": "active"}},
+        )
+
+        self.assertEqual(result["diagnosis_counts"], {"provider_quote_gap": 1})
+        row = result["diagnostics"][0]
+        self.assertEqual(row["Diagnosis"], "provider_quote_gap")
+        self.assertEqual(row["History Status"], "ok")
+        self.assertEqual(row["DB Price Status"], "ok")
+
+    def test_quote_gap_diagnostics_build_persistent_issue_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.build_quote_gap_issue_rows(
+            [
+                {
+                    "Symbol": "bbb",
+                    "Diagnosis": "provider_quote_gap",
+                    "Confidence": 0.82,
+                    "Evidence Summary": "Alternate price evidence exists.",
+                    "Recommended Action": "Rerun later.",
+                }
+            ],
+            universe_code="top1000",
+            interval_code="5m",
+            snapshot_time_utc="2026-05-29 13:30:00",
+            seen_at="2026-05-29 13:31:00",
+        )
+
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["issue_type"], "quote_gap")
+        self.assertEqual(row["universe_code"], "TOP1000")
+        self.assertEqual(row["symbol"], "BBB")
+        self.assertEqual(row["diagnosis"], "provider_quote_gap")
+        self.assertEqual(row["last_snapshot_time_utc"], "2026-05-29 13:30:00")
+        self.assertIn("provider_quote_gap", row["raw_payload_json"])
+
+    def test_quote_gap_job_persists_issue_history(self) -> None:
+        from app.jobs import ingestion_jobs
+
+        diagnosis = {
+            "universe_code": "TOP1000",
+            "interval_code": "5m",
+            "snapshot_time_utc": "2026-05-29 13:30:00",
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "diagnosis_counts": {"provider_quote_gap": 1},
+            "diagnostics": [{"Symbol": "BBB", "Diagnosis": "provider_quote_gap"}],
+        }
+        issue_history = [
+            {
+                "universe_code": "TOP1000",
+                "symbol": "BBB",
+                "diagnosis": "provider_quote_gap",
+                "occurrence_count": 3,
+            }
+        ]
+
+        with (
+            patch.object(ingestion_jobs, "diagnose_market_quote_gaps", return_value=diagnosis),
+            patch.object(
+                ingestion_jobs,
+                "persist_quote_gap_diagnostics",
+                return_value={"rows_written": 1, "issues": issue_history},
+            ) as persist,
+        ):
+            result = ingestion_jobs.run_diagnose_market_quote_gaps(
+                symbols=["BBB"],
+                universe_code="TOP1000",
+                snapshot_time_utc="2026-05-29 13:30:00",
+            )
+
+        persist.assert_called_once()
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["issue_rows_written"], 1)
+        self.assertEqual(result["details"]["issue_history"][0]["occurrence_count"], 3)
+        self.assertIn("Persisted 1 issue row", result["message"])
+
+
+class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
+    def test_market_event_schema_contains_required_columns(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"]
+
+        for column in [
+            "event_date",
+            "event_type",
+            "symbol",
+            "title",
+            "source",
+            "source_type",
+            "validation_status",
+            "event_status",
+            "superseded_by_event_key",
+            "superseded_at",
+            "source_url",
+            "confidence",
+            "collected_at",
+            "raw_payload_json",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_market_event_key", schema_sql)
+
+    def test_market_data_issue_schema_tracks_repeated_quote_gaps(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_data_issue"]
+
+        for column in [
+            "issue_key",
+            "issue_type",
+            "universe_code",
+            "symbol",
+            "diagnosis",
+            "occurrence_count",
+            "first_seen_at",
+            "last_seen_at",
+            "latest_confidence",
+            "latest_recommended_action",
+            "raw_payload_json",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_market_data_issue_key", schema_sql)
+
+    def test_fomc_calendar_parser_uses_final_meeting_day_and_official_links(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <div class="panel panel-default">
+          <div class="panel-heading"><h4><a id="42828">2026 FOMC Meetings</a></h4></div>
+          <div class="row fomc-meeting">
+            <div class="fomc-meeting__month"><strong>June</strong></div>
+            <div class="fomc-meeting__date">16-17*</div>
+            <a href="/newsevents/pressreleases/monetary20260617a.htm">HTML</a>
+          </div>
+          <div class="row fomc-meeting">
+            <div class="fomc-meeting__month"><strong>Apr/May</strong></div>
+            <div class="fomc-meeting__date">30-1</div>
+          </div>
+        </div>
+        """
+
+        rows = mi._parse_fomc_calendar_events_from_html(  # noqa: SLF001
+            html,
+            source_url="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["event_date"], "2026-06-17")
+        self.assertEqual(rows[0]["event_type"], "FOMC_MEETING")
+        self.assertTrue(rows[0]["raw_payload"]["has_summary_of_economic_projections"])
+        self.assertEqual(
+            rows[0]["raw_payload"]["links"][0]["url"],
+            "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260617a.htm",
+        )
+        self.assertEqual(rows[1]["event_date"], "2026-05-01")
+
+    def test_collect_fomc_calendar_writes_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(
+                mi,
+                "fetch_fomc_calendar_events",
+                return_value=[
+                    {
+                        "event_date": "2026-06-17",
+                        "event_type": "FOMC_MEETING",
+                        "symbol": None,
+                        "title": "FOMC Meeting: June 16-17*, 2026",
+                        "source": mi.FOMC_CALENDAR_SOURCE,
+                        "source_url": mi.FOMC_CALENDAR_SOURCE_URL,
+                        "confidence": 1.0,
+                        "raw_payload": {"meeting_range": "June 16-17*"},
+                    }
+                ],
+            ),
+            patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_fomc_calendar(years=[2026])
+
+        self.assertEqual(result["source"], mi.FOMC_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "FOMC_MEETING")
+        self.assertEqual(result["events_found"], 1)
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_dates"], ["2026-06-17"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_bls_macro_calendar_parser_builds_official_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Date Time</th><th>Release</th></tr></thead>
+          <tbody>
+            <tr><td>Wednesday, June 10, 2026 08:30 AM</td><td>Consumer Price Index for May 2026</td></tr>
+            <tr><td>Thursday, June 11, 2026 08:30 AM</td><td>Producer Price Index for May 2026</td></tr>
+            <tr><td>Friday, June 5, 2026 08:30 AM</td><td>Employment Situation for May 2026</td></tr>
+            <tr><td>Friday, June 5, 2026 10:00 AM</td><td>Other Release for May 2026</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bls_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bls.gov/schedule/2026/",
+            year=2026,
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual(rows[0]["event_date"], "2026-06-10")
+        self.assertEqual(rows[0]["source_type"], "official")
+        self.assertEqual(rows[0]["validation_status"], "official")
+        self.assertEqual(rows[0]["raw_payload"]["reference_period"], "May 2026")
+        self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+
+    def test_bls_macro_calendar_ics_parser_builds_official_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        ics_text = """
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:cpi-20260610@bls.gov
+DTSTART:20260610T123000Z
+SUMMARY:Consumer Price Index for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:ppi-20260611@bls.gov
+DTSTART;TZID=America/New_York:20260611T083000
+SUMMARY:Producer Price Index for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:jobs-20260605@bls.gov
+DTSTART;VALUE=DATE:20260605
+SUMMARY:Employment Situation for May
+  2026
+END:VEVENT
+BEGIN:VEVENT
+UID:other-20260605@bls.gov
+DTSTART:20260605T140000Z
+SUMMARY:Other Release for May 2026
+END:VEVENT
+END:VCALENDAR
+        """
+
+        rows = mi.parse_bls_macro_calendar_events_from_ics(
+            ics_text,
+            years=[2026],
+            source_name="bls.ics",
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual([row["event_date"] for row in rows], ["2026-06-10", "2026-06-11", "2026-06-05"])
+        self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+        self.assertEqual(rows[0]["raw_payload"]["import_method"], "official_ics_file")
+        self.assertEqual(rows[0]["raw_payload"]["source_file_name"], "bls.ics")
+        self.assertEqual(rows[2]["raw_payload"]["reference_period"], "May 2026")
+
+    def test_collect_bls_macro_calendar_ics_writes_events(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        ics_text = """
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:cpi-20260610@bls.gov
+DTSTART:20260610T123000Z
+SUMMARY:Consumer Price Index for May 2026
+END:VEVENT
+END:VCALENDAR
+        """
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_bls_macro_calendar_ics(
+                ics_text,
+                years=[2026],
+                source_name="bls.ics",
+            )
+
+        self.assertEqual(result["source"], mi.BLS_MACRO_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "MACRO")
+        self.assertEqual(result["method"], "official_ics_file")
+        self.assertEqual(result["event_types"], ["MACRO_CPI"])
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_bea_gdp_calendar_parser_excludes_state_and_county_gdp(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Year 2026</th><th>Type</th><th>Release</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>June 25 8:30 AM</td><td>News</td><td>Gross Domestic Product, 1st Quarter 2026 (Third Estimate)</td><td></td></tr>
+            <tr><td>June 30 8:30 AM</td><td>News</td><td>Gross Domestic Product by State, 1st Quarter 2026</td><td>View</td></tr>
+            <tr><td>July 30 8:30 AM</td><td>News</td><td>GDP (Advance Estimate), 2nd Quarter 2026</td><td>View</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bea_gdp_calendar_events_from_html(
+            html,
+            source_url="https://www.bea.gov/index.php/news/schedule/full",
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([row["event_date"] for row in rows], ["2026-06-25", "2026-07-30"])
+        self.assertTrue(all(row["event_type"] == "MACRO_GDP" for row in rows))
+        self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+        self.assertIsNone(rows[0]["raw_payload"]["source_row"]["Unnamed: 3"])
+
+    def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        def fake_fetcher(**kwargs):
+            self.assertEqual(kwargs["years"], [2026])
+            return {
+                "source": mi.MACRO_CALENDAR_SOURCE,
+                "source_url": "https://example.test/macro",
+                "event_type": "MACRO",
+                "method": "official_html",
+                "events": [
+                    {
+                        "event_date": "2026-06-10",
+                        "event_type": "MACRO_CPI",
+                        "title": "CPI: Consumer Price Index for May 2026",
+                        "source": mi.BLS_MACRO_CALENDAR_SOURCE,
+                        "source_type": "official",
+                        "validation_status": "official",
+                        "source_url": "https://www.bls.gov/schedule/2026/",
+                        "confidence": 0.95,
+                    }
+                ],
+                "events_found": 1,
+                "failed_sources": ["BEA: temporary failure"],
+            }
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_macro_calendar(years=[2026], macro_fetcher=fake_fetcher)
+
+        self.assertEqual(result["source"], mi.MACRO_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "MACRO")
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_types"], ["MACRO_CPI"])
+        self.assertEqual(result["failed_sources"], ["BEA: temporary failure"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_yfinance_earnings_calendar_builds_event_rows_for_window(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        calendars = {
+            "AAA": {
+                "Earnings Date": [date(2026, 7, 30)],
+                "Earnings Average": 1.23,
+                "Revenue Average": 1000000,
+            },
+            "BBB": {},
+        }
+
+        class FakeTicker:
+            def __init__(self, symbol: str) -> None:
+                self.calendar = calendars[symbol]
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["AAA", "BBB"],
+            start_date="2026-05-28",
+            lookahead_days=120,
+            ticker_factory=FakeTicker,
+        )
+
+        self.assertEqual(result["source"], mi.EARNINGS_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "EARNINGS")
+        self.assertEqual(result["events_found"], 1)
+        self.assertEqual(result["missing_symbols"], ["BBB"])
+        row = result["events"][0]
+        self.assertEqual(row["event_date"], "2026-07-30")
+        self.assertEqual(row["symbol"], "AAA")
+        self.assertEqual(row["event_type"], "EARNINGS")
+        self.assertEqual(row["confidence"], 0.65)
+        self.assertEqual(row["source_type"], "provider_estimate")
+        self.assertEqual(row["validation_status"], "estimate_only")
+        self.assertEqual(row["raw_payload"]["provider_calendar"]["Earnings Average"], 1.23)
+        self.assertEqual(result["symbols_with_events"], 1)
+        self.assertEqual(result["missing_reason_counts"], {"no_provider_earnings_date": 1})
+        self.assertEqual(result["symbol_diagnostics"][0]["status"], "event_found")
+        self.assertEqual(result["symbol_diagnostics"][1]["reason"], "no_provider_earnings_date")
+        self.assertEqual(row["raw_payload"]["collection_quality"]["in_window_date_count"], 1)
+
+    def test_yfinance_earnings_calendar_diagnostics_explain_outside_window_and_errors(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        calendars = {
+            "AAA": {"Earnings Date": [date(2026, 12, 30)]},
+            "BBB": RuntimeError("provider unavailable"),
+        }
+
+        class FakeTicker:
+            def __init__(self, symbol: str) -> None:
+                value = calendars[symbol]
+                if isinstance(value, Exception):
+                    raise value
+                self.calendar = value
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["AAA", "BBB"],
+            start_date="2026-05-28",
+            lookahead_days=30,
+            ticker_factory=FakeTicker,
+        )
+
+        self.assertEqual(result["events_found"], 0)
+        self.assertEqual(result["missing_symbols"], ["AAA"])
+        self.assertEqual(result["failed_symbols"], ["BBB"])
+        self.assertEqual(result["missing_reason_counts"], {"outside_window": 1})
+        self.assertEqual(result["failed_reason_counts"], {"provider_error": 1})
+        self.assertEqual(result["symbol_diagnostics"][0]["provider_dates"], ["2026-12-30"])
+        self.assertEqual(result["symbol_diagnostics"][1]["detail"], "provider unavailable")
+
+    def test_yfinance_earnings_calendar_can_cross_check_nasdaq_source(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeTicker:
+            def __init__(self, symbol: str) -> None:
+                self.calendar = {"Earnings Date": [date(2026, 7, 30)]}
+
+        def fake_nasdaq_fetcher(dates, **kwargs):
+            del kwargs
+            self.assertEqual(dates, ["2026-07-30"])
+            return {
+                "2026-07-30": {
+                    "symbols": ["AAA", "MSFT"],
+                    "source": mi.NASDAQ_EARNINGS_CALENDAR_SOURCE,
+                    "source_url": "https://api.nasdaq.test/calendar?date=2026-07-30",
+                    "status": "ok",
+                }
+            }
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["AAA"],
+            start_date="2026-05-28",
+            lookahead_days=120,
+            validate_with_nasdaq=True,
+            nasdaq_fetcher=fake_nasdaq_fetcher,
+            ticker_factory=FakeTicker,
+        )
+
+        row = result["events"][0]
+        self.assertEqual(result["validation_source"], mi.NASDAQ_EARNINGS_CALENDAR_SOURCE)
+        self.assertEqual(row["validation_status"], "cross_checked")
+        self.assertEqual(row["confidence"], 0.75)
+        self.assertTrue(row["raw_payload"]["source_validation"]["fallback_order"][1]["matched"])
+
+    def test_collect_earnings_calendar_writes_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        def fake_fetcher(symbols, **kwargs):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            self.assertEqual(kwargs["lookahead_days"], 90)
+            return {
+                "source": mi.EARNINGS_CALENDAR_SOURCE,
+                "source_url": mi.EARNINGS_CALENDAR_SOURCE_URL,
+                "event_type": "EARNINGS",
+                "method": "yfinance_ticker_calendar",
+                "start_date": "2026-05-28",
+                "end_date": "2026-08-26",
+                "symbols_requested": 2,
+                "symbols_processed": 2,
+                "events": [
+                    {
+                        "event_date": "2026-07-30",
+                        "event_type": "EARNINGS",
+                        "symbol": "AAA",
+                        "title": "AAA Earnings Release",
+                        "source": mi.EARNINGS_CALENDAR_SOURCE,
+                        "source_type": "provider_estimate",
+                        "validation_status": "estimate_only",
+                        "source_url": "https://finance.yahoo.com/quote/AAA/analysis",
+                        "confidence": 0.65,
+                        "raw_payload": {"provider": mi.EARNINGS_CALENDAR_SOURCE},
+                    }
+                ],
+                "events_found": 1,
+                "missing_symbols": ["BBB"],
+                "failed_symbols": [],
+            }
+
+        with (
+            patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows),
+            patch.object(mi, "mark_superseded_earnings_events", return_value=0),
+            patch.object(mi, "mark_stale_earnings_estimates", return_value=0),
+        ):
+            result = mi.collect_and_store_earnings_calendar(
+                symbols=["AAA", "BBB"],
+                lookahead_days=90,
+                earnings_fetcher=fake_fetcher,
+            )
+
+        self.assertEqual(result["source"], mi.EARNINGS_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "EARNINGS")
+        self.assertEqual(result["symbol_source"], "manual")
+        self.assertEqual(result["events_found"], 1)
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_dates"], ["2026-07-30"])
+        self.assertEqual(result["missing_symbols"], ["BBB"])
+        self.assertEqual(result["superseded_rows_marked"], 0)
+        self.assertEqual(result["stale_rows_marked"], 0)
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_resolve_earnings_collection_symbols_supports_universe_batches(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        symbols, source = mi.resolve_earnings_collection_symbols(
+            symbol_source="top1000",
+            max_symbols=2,
+            batch_offset=1,
+            source_symbols_loader=lambda: ["AAA", "BBB", "CCC", "DDD"],
+        )
+
+        self.assertEqual(source, "top1000")
+        self.assertEqual(symbols, ["BBB", "CCC"])
+
+    def test_mark_superseded_earnings_events_marks_prior_active_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.executes: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [{"event_key": "old-key"}]
+
+            def execute(self, sql: str, params=None) -> None:
+                self.executes.append((sql, list(params or [])))
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            marked = mi.mark_superseded_earnings_events(
+                [
+                    {
+                        "event_date": "2026-07-30",
+                        "event_type": "EARNINGS",
+                        "symbol": "AAA",
+                        "title": "AAA Earnings Release",
+                        "source": mi.EARNINGS_CALENDAR_SOURCE,
+                    }
+                ],
+                superseded_at="2026-05-28 04:00:00",
+            )
+
+        self.assertEqual(marked, 1)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sync_schema.assert_called_once()
+        self.assertEqual(fake_db.executes[0][1][0], "superseded")
+        self.assertEqual(fake_db.executes[0][1][-1], "old-key")
+        self.assertTrue(fake_db.closed)
+
+    def test_market_event_upsert_normalizes_payload_and_business_key(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            rows_written = mi.upsert_market_event_rows(
+                [
+                    {
+                        "event_date": "2026-06-17",
+                        "event_type": "fomc meeting",
+                        "symbol": "",
+                        "title": "FOMC Meeting",
+                        "source": "federal_reserve",
+                        "source_url": "https://example.test/fomc",
+                        "confidence": "0.95",
+                        "raw_payload": {"meeting": "June"},
+                    }
+                ]
+            )
+
+        self.assertEqual(rows_written, 1)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sync_schema.assert_called_once()
+        _, captured_rows = fake_db.executemany_calls[0]
+        captured = captured_rows[0]
+        self.assertEqual(captured["event_date"], "2026-06-17")
+        self.assertEqual(captured["event_type"], "FOMC_MEETING")
+        self.assertIsNone(captured["symbol"])
+        self.assertEqual(captured["source_type"], "unknown")
+        self.assertEqual(captured["validation_status"], "unknown")
+        self.assertEqual(captured["event_status"], "active")
+        self.assertEqual(captured["confidence"], 0.95)
+        self.assertEqual(captured["raw_payload_json"], '{"meeting":"June"}')
+        self.assertEqual(len(str(captured["event_key"])), 64)
+        self.assertTrue(fake_db.closed)
+
+    def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def close(self) -> None:
+                pass
+
+        dbs = [FakeDb(), FakeDb()]
+
+        def fake_db(*args, **kwargs):
+            del args, kwargs
+            return dbs.pop(0)
+
+        with (
+            patch.object(mi, "_db", side_effect=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            mi.sync_market_intelligence_tables()
+
+        synced_tables = [call.args[1] for call in sync_schema.call_args_list]
+        self.assertIn("market_universe_member", synced_tables)
+        self.assertIn("market_event_calendar", synced_tables)
+        self.assertIn("market_data_issue", synced_tables)
+        self.assertIn("market_intraday_snapshot", synced_tables)
 
 
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):

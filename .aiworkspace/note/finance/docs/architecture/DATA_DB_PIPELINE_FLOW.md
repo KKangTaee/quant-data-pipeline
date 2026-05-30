@@ -31,6 +31,11 @@ external source
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
 | FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
+| Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
+| BLS official release schedule HTML / `.ics` file | Overview Events macro calendar source. CPI / PPI / Employment Situation release dates를 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장. 네트워크 정책상 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있다 |
+| BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |
+| Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장하고, row가 없는 ticker는 job result의 `symbol_diagnostics`에 missing / failure reason을 남긴다 |
+| Nasdaq earnings calendar web endpoint | Overview Events earnings alternate free provider cross-check source. yfinance estimate의 같은 symbol/date 확인에만 사용하며 official source로 보지 않는다 |
 
 ## Persistence 계층
 
@@ -44,14 +49,16 @@ external source
 | `finance/data/symbol_directory.py` | Nasdaq public Symbol Directory `nasdaqlisted.txt` / `otherlisted.txt` current snapshot을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
 | `finance/data/computed_lifecycle.py` | 기존 current snapshot lifecycle rows를 읽어 repeated observation window를 `computed_from_snapshots` partial row로 요약 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
+| `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
-| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence collector 결과를 표준 `JobResult`로 변환한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence snapshot 실행 화면. ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence 수집 버튼을 제공한다 |
+| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
+| `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
 
 ## Loader 계층
 

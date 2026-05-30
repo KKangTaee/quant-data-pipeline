@@ -1,0 +1,21 @@
+# Runs
+
+- `uv run python -m py_compile finance/data/market_intelligence.py app/jobs/ingestion_jobs.py app/jobs/run_history.py app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/streamlit_app.py tests/test_service_contracts.py`
+  - Result: PASS
+- `uv run python -m unittest tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: PASS, 25 tests
+- `uv run python -m unittest tests.test_service_contracts`
+  - Result: PASS, 50 tests
+- `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
+  - Result: PASS, hard violations none, advisories none
+- `uv run python - <<'PY' ... run_collect_macro_calendar(years=(2026,), include_bls=False, include_bea=True) ... PY`
+  - Result: PASS, 13 BEA GDP rows written
+- `uv run python - <<'PY' ... run_collect_macro_calendar(years=(2026,), include_bls=True, include_bea=True) ... PY`
+  - Result: PARTIAL, 13 BEA GDP rows written, BLS failed with HTTP 403
+- `uv run python - <<'PY' ... load_overview_market_events_snapshot(event_type='MACRO') ... PY`
+  - Result: PASS, Macro snapshot status OK, 8 upcoming GDP rows in 365-day window
+- `git diff --check`
+  - Result: PASS
+- Browser smoke on `http://localhost:8501`
+  - Result: PASS
+  - Verified Overview Events `Macro` filter, `Refresh Macro Calendar` button, macro GDP rows, and Data Health Macro status.

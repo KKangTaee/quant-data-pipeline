@@ -16,10 +16,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
+- current roadmap:
+  - [Finance Roadmap](./docs/ROADMAP.md)
+- overview operations runbook:
+  - [Overview Market Intelligence Runbook](./docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md)
+- current code map:
+  - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - no active strategy-search candidate summary in `main-dev`; next work is `phase14-candidate-prioritization-v1`
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
+- historical archive note:
+  - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
 
@@ -286,6 +294,41 @@ Detailed historical logs were archived on `2026-04-13`.
 - Added profile-aware gate policy snapshot to `app/services/backtest_evidence_read_model.py` and Final Review display.
 - Final decision rows now keep compact `gate_policy_snapshot`; no new JSONL registry was added.
 - Next investability foundation choice is storage governance audit versus data provenance / coverage.
+- Completed the Overview browser-session auto refresh workstream under `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`.
+- Market Movers refresh UX is now a unified `데이터 갱신` status / action bar with manual vs browser-auto mode, second-by-second countdown UI, compact snapshot metadata, S&P 500 Daily-only browser-safe auto refresh, and Overview visual tokens / components split into `app/web/overview_ui_components.py`.
+- Completed Events UX redesign under `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`: source summary, refresh popover, mini source status cards, Agenda / Calendar / Quality / Raw views, and reduced-width-safe filters.
+- Completed market session banner under `.aiworkspace/note/finance/tasks/active/overview-market-session-banner/`: Overview now shows NYSE open / close in KST first, ET second, with weekend / holiday / early-close handling.
+- Completed Sector / Industry trend polish under `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`: S&P 500 / Top1000 / Top2000 leadership, longer trend windows, positive group ticker leaders, intraday daily path, EOD fallback explanation, loading spinner, and short cache.
+- Merge handoff: Overview Market Intelligence is now a production baseline for daily use. Remaining local dirty state is generated run history only; do not stage `.aiworkspace/note/finance/run_history/*.jsonl` unless explicitly requested.
+
+### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`.
+- Added Market Movers daily snapshot coverage %, richer refresh-state fields, and DB-only status auto-check for SP500 / TOP1000 / TOP2000.
+- Moved the Market Movers refresh bar into the timed DB reload fragment so stale / due guidance can update without automatic provider collection.
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`.
+- Added Events `Days Until`, `Importance`, and `Focus` read-model fields, plus Focus / Calendar / Table tabs with an Importance filter.
+- Events calendar now stacks counts by event type so FOMC, Macro, and Earnings rows are distinguishable at a glance.
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-earnings-quality-hardening/`.
+- Added earnings symbol diagnostics for missing / outside-window / provider-error cases, surfaced diagnostics in Ingestion and Overview refresh results, and added Events `Quality Action` read-model guidance.
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-bls-ics-import/`.
+- Added official BLS `.ics` file import fallback for Macro Calendar so CPI / PPI / Employment Situation rows can be stored when backend BLS requests return HTTP 403.
+- Ingestion Macro tab now exposes `.ics` upload/import; Data Health treats `import_bls_macro_calendar_ics` as a Macro Calendar refresh path.
+- Completed 4차 production UX for `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`.
+- Added Market Movers Rank / Sector Pulse tabs, Sector / Industry Heatmap / Table tabs, and Events Calendar / Table views with window/source/validation filters.
+- Updated runbook, phase acceptance notes, roadmap, and task handoff docs. Remaining future candidates are macro calendar sources, official earnings IR parsing, and scheduled refresh automation.
+- Opened `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`.
+- Recommended formalization path: 1차 prototype complete, 2차 production baseline, 3차 earnings/events production, 4차 UX/automation polish.
+- Next implementation task is `Task 2-01 Refresh State And Diagnostics Baseline`.
+- Completed phase closeout under `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-closeout/`.
+- Added `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` for Market Movers, FOMC, and earnings prototype refresh operations.
+- Updated phase plan/design/integration wording so Events is no longer described as a placeholder; closeout QA passed.
+- Completed Task 6 under `.aiworkspace/note/finance/tasks/active/overview-earnings-prototype/`.
+- Added bounded yfinance earnings calendar collection into `market_event_calendar` as `EARNINGS`, wired Ingestion prototype controls and Overview Events filter/refresh.
+- Local smoke wrote 3 earnings rows for `AAPL`, `MSFT`, `NVDA`; service contract tests passed.
+- Completed Task 5 under `.aiworkspace/note/finance/tasks/active/overview-fomc-collector/`.
+- Added Fed official FOMC calendar collection into `finance.data.market_intelligence`, wrapped it as `collect_fomc_calendar`, and wired Ingestion / Overview Events to `market_event_calendar`.
+- Local smoke wrote 16 FOMC rows for 2026/2027; service contract tests passed.
+- Next overview-market-intelligence item is production hardening / UX follow-up for Events or broader event sources.
 
 ### 2026-05-27
 - Completed Task 7-04 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
@@ -4299,3 +4342,83 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`에서 Backtest Analysis 결과 화면의 Stage / 검증 체크포인트 언어를 분리했다.
   - Runtime payload를 접힌 Developer Payload로 낮추고, Latest Backtest Run / Data Trust / Next Action / Real-Money Candidate Readiness UI를 정리했다.
   - 새 DB / JSONL / 사용자 메모 저장 없이 기존 Clean V2 handoff만 더 명확하게 표시했다.
+- Overview Market Intelligence research:
+  - `.aiworkspace/note/finance/researches/active/2026-05-overview-market-intelligence/`를 열고 Overview 개편 feasibility를 조사했다.
+  - Coverage 1000/2000 top movers와 sector / industry leadership은 기존 DB price/profile로 가능하다는 결론을 남겼다.
+  - FOMC calendar는 low-risk next slice, earnings calendar는 provider/API/persistence 결정 이후로 분리했다.
+- Overview Market Intelligence first slice:
+  - `.aiworkspace/note/finance/phases/active/overview-market-intelligence/`와 `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-first-slice/`에서 scope lock 후 구현했다.
+  - `app/services/overview_market_intelligence.py`가 local DB 기반 market movers와 sector / industry leadership snapshot을 생성한다.
+  - Overview는 Market Movers / Sector-Industry / Events / Candidate Ops 탭 구조로 바뀌었고, calendar ingestion은 후속 task로 남겼다.
+- Overview Market Intelligence S&P 500 intraday slice:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-sp500-intraday/`에서 S&P 500 current universe와 daily previous-close snapshot 방향을 구현했다.
+  - `finance/data/market_intelligence.py`와 `finance_price.market_intraday_snapshot` / `finance_meta.market_universe_member`가 추가됐다.
+  - Market Movers는 S&P 500 / Top1000 / Top2000, yearly period, sector filter, missing diagnostics를 제공한다.
+  - 상단 controls를 segmented control bar와 refresh status bar로 다듬고, S&P 500 daily snapshot이 5분 기준으로 stale이면 update-needed dot / 버튼이 보이도록 했다.
+  - S&P 500 snapshot refresh 기본 경로를 Yahoo quote batch fast path로 바꾸고, yfinance 5m OHLCV를 fallback으로 남겼다. Local smoke에서 503개 quote snapshot 저장은 6.514초가 걸렸다.
+  - Streamlit이 이전 job-wrapper import를 잡은 상태에서 `quote_batch_size` TypeError가 나던 UI click path를 수정했고, 재시작 후 브라우저에서 503개 snapshot 저장이 7.377초로 완료되는 것을 확인했다.
+  - Top1000 / Top2000 daily intraday refresh를 같은 `market_intraday_snapshot` 저장 구조로 확장했다. Local smoke에서 Top1000은 1000 rows / 9.322초, Top2000은 2000 rows / 16.0초로 저장됐고 Overview가 intraday snapshot을 우선 표시한다.
+- Overview Market Intelligence Task 4 / Market Event DB Structure:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-events-schema/`를 열고 `finance_meta.market_event_calendar` schema를 추가했다.
+  - `finance/data/market_intelligence.py`에 event row normalize, `event_key` 기반 UPSERT, date-range read helper를 추가했다.
+  - Local DB smoke에서 requested common event columns가 생성된 것을 확인했고, 다음 task는 FOMC collector다.
+- Overview Market Intelligence 2차 production baseline:
+  - `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`의 2차 task 2-01~2-03을 완료했다.
+  - Market Movers는 refresh state와 missing recommended action을 보여주고, Events는 official / provider estimate / stale estimate read model을 제공한다.
+  - 2차 acceptance checklist와 runbook을 정리했고, 다음 단계는 3차 earnings source validation이다.
+- Overview Market Intelligence 3차 earnings production baseline:
+  - 3차 task 3-01~3-03을 완료해 earnings row에 source validation / lifecycle metadata를 저장한다.
+  - yfinance earnings estimate는 선택적으로 Nasdaq earnings calendar와 cross-check하고, 변경된 이전 estimate는 superseded / stale 상태로 정리한다.
+  - Ingestion은 latest movers 외에 S&P 500 / Top1000 / Top2000 low-frequency batch 수집을 지원하며 다음 단계는 4차 visuals / calendar UX polish다.
+- Overview Market Intelligence 5차 ops hardening:
+  - `.aiworkspace/note/finance/tasks/active/overview-mi-ops-hardening/`에서 Overview `Data Health` 탭을 추가했다.
+  - Data Health는 DB freshness와 local `WEB_APP_RUN_HISTORY.jsonl`을 결합해 6개 수집 대상의 OK / Stale / Missing / Failed / Partial 상태와 next action을 보여준다.
+  - Overview refresh buttons가 실행 결과를 local web app run history에 남기도록 연결했고, service contract / browser smoke 검증을 완료했다.
+- Overview Market Intelligence 6차 macro calendar:
+  - `.aiworkspace/note/finance/tasks/active/overview-mi-macro-calendar/`에서 BLS / BEA official macro release calendar collector를 추가했다.
+  - Events는 `Macro` filter와 `Refresh Macro Calendar` 버튼을 제공하고, Data Health는 Macro Calendar coverage를 7번째 운영 대상으로 표시한다.
+  - Local smoke에서 BEA GDP 13개 row 저장은 성공했고, BLS는 HTTP 403으로 차단되어 partial failure로 노출되는 것을 확인했다.
+- Overview MI Sector / Industry trend:
+  - `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`에서 Sector / Industry Leadership을 최신 랭킹 + 기간별 추세 화면으로 개편했다.
+  - Coverage는 S&P 500 / Top1000 / Top2000을 지원하고, Period는 Daily / Weekly / Monthly로 선택한다.
+  - Daily 1개월, Weekly 3개월, Monthly 6개월 trend rows를 DB price history에서 계산하며 browser smoke와 service contract 56 tests를 통과했다.
+- Overview MI Sector / Industry detail polish:
+  - Sector / Industry trend horizon을 Daily 3개월, Weekly 6개월, Monthly 1년으로 확장했다.
+  - Trend Groups multiselect로 라인별 표시를 제어하고, 양수 그룹에는 티커 리더 bar / return-share donut 상세를 추가했다.
+  - Service contract 56 tests, module compile, browser smoke를 통과했다.
+- Overview MI Sector / Industry daily intraday:
+  - Sector / Industry `Daily`는 Market Movers와 같은 `market_intraday_snapshot`을 우선 읽도록 연결했다.
+  - Latest Ranking / Positive Group Detail은 `Previous Close -> latest quote` 기준으로 계산하고, Weekly / Monthly는 기존 EOD DB 기준을 유지한다.
+  - UI에 Return Window와 Price Mode를 표시해 intraday / EOD 기준 차이를 드러냈다.
+- Overview MI Events calendar UX:
+  - Events `Calendar` 탭에 월 선택 가능한 7열 월간 달력 그리드를 추가했다.
+  - 기존 event count chart와 날짜별 리스트는 그대로 유지해 월간 조망과 세부 스캔을 함께 제공한다.
+  - Service contract 56 tests, module compile, desktop/mobile browser smoke를 통과했다.
+- Overview Market Movers quote gap diagnostics:
+  - `missing quote row` 심볼만 대상으로 Yahoo single quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance fast_info evidence를 비교하는 1차 진단을 추가했다.
+  - Overview `Coverage Diagnostics`에 `Diagnose Missing Quotes` 버튼과 diagnosis / confidence / recommended action 테이블을 연결했다.
+  - 1차는 evidence-based hint이며 별도 delisting / halt 확정 판정은 하지 않는다.
+- Overview scheduled refresh automation:
+  - `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`에서 브라우저 없이 Overview ingestion job을 실행하는 1차 자동화 task를 열었다.
+  - `app/jobs/overview_automation.py`는 profile별 cadence, US market-hours guard, lock, dry-run, scheduled run history metadata를 처리하는 run-once CLI다.
+  - Data Health는 auto / manual run, next auto due, failure streak를 표시하고, quote gap 진단은 `market_data_issue`에 반복 issue로 누적된다.
+  - cron / launchd / 외부 automation 실제 등록은 다음 단계에서 이 CLI를 주기 호출하는 방식으로 붙일 수 있다.
+- Overview browser-session auto refresh:
+  - `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`에서 OS scheduler 대신 Overview를 열어둔 동안만 작동하는 1차 자동 refresh를 시작했다.
+  - `browser_safe` profile은 S&P 500 daily snapshot만 선택하고, Market Movers `데이터 갱신`의 자동 모드는 Streamlit fragment로 5분마다 해당 profile을 호출한다.
+  - 브라우저 smoke에서 토글 ON 시 장 시간 밖 `skipped` 상태가 표시되고 console error 0개를 확인했다.
+  - 자동 check 중에는 전체 화면 blocking 대신 Market Movers `데이터 갱신` 안에서 초 단위 countdown / cadence progress / completion 상태를 표시한다.
+  - UI redesign pass 1에서 Market Movers `데이터 갱신`을 반복 badge/card layout 대신 현재 상태, 수동/자동 모드, 주요 액션이 한 번에 읽히는 명령 영역으로 정리했다.
+  - UI redesign pass 2에서 `데이터 갱신` 외곽 카드 컨테이너를 제거하고, 현재 상태 pill / 메타 chip / 갱신 방식 / 수동 액션이 이어지는 status + action bar로 정리했다.
+  - UI redesign pass 3에서 Market Movers의 단순 wrapper container를 줄이고, snapshot status cards를 얇은 metadata strip으로 바꿔 ranking/table과의 시각적 거리를 줄였다.
+  - UI redesign pass 4에서 Market Movers 전용 HTML/CSS 렌더러를 `app/web/overview_ui_components.py`로 분리해 `overview_dashboard.py`의 화면 흐름과 시각 컴포넌트 책임을 나눴다.
+  - UI redesign pass 5에서 Overview 전용 색상 / 표면 / 차트 팔레트 / spacing / typography 토큰을 `overview_ui_components.py`로 모아 반복 하드코딩을 줄였다.
+  - UI redesign pass 6에서 새 UI 라이브러리 도입 전 단계로 Coverage / Period / Group / Events control 구성을 내부 model / helper로 정리했다.
+- Overview Events UX redesign:
+  - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 Events 탭을 Agenda / Calendar / Quality / Raw 구조로 개편했다.
+  - Source lane, event summary strip, agenda list 렌더러를 추가해 다음 일정 / source 상태 / review 필요 row가 먼저 읽히도록 했다.
+  - DB schema / collector 변경 없이 기존 `market_event_calendar` read model만 사용했다.
+- Overview Market Session Banner:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-session-banner/`에서 Overview 상단 미국장 세션 배너를 추가했다.
+  - NYSE 거래일이면 Open / Close ET와 KST 시간을 표시하고, 휴장이면 주말 / 주요 휴장일 사유와 다음 세션 시간을 표시한다.
+  - 외부 API 없이 rules-based NYSE calendar로 처리하며, one-off exchange closure는 범위 밖으로 명시했다.

@@ -1,0 +1,62 @@
+# Runs
+
+- 2026-05-29: `uv run python -m py_compile app/jobs/overview_automation.py tests/test_service_contracts.py` - PASS.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 6 tests.
+- 2026-05-29: `uv run python -m app.jobs.overview_automation --profile browser_safe --dry-run --json` - PASS; plan included only `sp500_intraday` and skipped outside US market hours.
+- 2026-05-29: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 7 tests.
+- 2026-05-29: `uv run python -m app.jobs.overview_automation --profile browser_safe --dry-run --json` - PASS; plan still includes only `sp500_intraday`.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts` - PASS, 68 tests.
+- 2026-05-29: `git diff --check` - PASS.
+- 2026-05-29: Browser smoke at `http://localhost:8501` Overview top panel - PASS; toggle ON displayed `skipped` / `outside US market hours`, console errors 0. Toggle was turned back off after smoke.
+- 2026-05-29: `uv run python -m py_compile app/jobs/overview_automation.py app/web/overview_dashboard.py app/services/overview_market_intelligence.py tests/test_service_contracts.py` - PASS.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` - PASS, 22 tests.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts` - PASS, 69 tests.
+- 2026-05-29: `uv run python -m app.jobs.overview_automation --profile browser_safe --dry-run --json` - PASS.
+- 2026-05-29: Browser smoke Data Health tab - PASS; `Latest Auto` card rendered, console errors 0.
+- 2026-05-29: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 10 tests.
+- 2026-05-29: `uv run python -m unittest tests.test_service_contracts` - PASS, 70 tests.
+- 2026-05-29: Restarted Streamlit on `http://localhost:8501` after module import changes, then browser smoke auto-refresh toggle - PASS; soft checking / completion status rendered, outside-hours skip displayed, console errors 0. Toggle was turned back off after smoke.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 10 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 71 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke auto-refresh toggle - PASS; Korean checking / skip reason / progress text rendered, console errors 0. Toggle was turned back off after smoke.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers redesign - PASS; `데이터 갱신` status / action surface rendered as HTML, manual / auto modes worked, countdown stayed dark-theme aligned, console errors 0. Returned mode to manual after smoke.
+- 2026-05-30: Restarted Streamlit on `http://localhost:8501`, browser smoke auto-refresh toggle - PASS; compact timing panel showed remaining time and next due time, console errors 0. Toggle was turned back off after smoke.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 14 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 75 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers - PASS; separate top auto panel absent, `데이터 갱신` shows manual/auto modes, auto mode renders second-by-second countdown/progress and no console errors. Returned mode to manual after smoke.
+- 2026-05-30: Re-ran `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` and `uv run python -m unittest tests.test_service_contracts` after removing obsolete top-panel helper - PASS, 75 tests.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers - PASS; `데이터 갱신` rendered as a non-bordered status / action bar, manual / auto buttons each resolved to one control, auto countdown rendered, and console errors were 0. Returned mode to manual after smoke.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Market Movers container reduction - PASS; scan controls and refresh actions render without extra wrapper borders, snapshot metadata strip is present, HTML did not leak, console errors 0.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Overview UI component split - PASS; Market Movers, `데이터 갱신`, visible manual / auto / daily refresh controls, metadata strip, and countdown component rendered with console errors 0. Returned mode to manual after smoke.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Overview visual tokens - PASS; Market Movers, `데이터 갱신`, refresh bar, metadata strip, CSS token values, no leaked HTML, console errors 0.
+- 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py tests/test_service_contracts.py` - PASS.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
+- 2026-05-30: `uv run python -m unittest tests.test_service_contracts` - PASS, 73 tests.
+- 2026-05-30: `git diff --check` - PASS.
+- 2026-05-30: Browser smoke at `http://localhost:8501` Overview structure-first pass - PASS; Market Movers / Sector-Industry / Events controls rendered after helper extraction, no leaked HTML, console errors 0.

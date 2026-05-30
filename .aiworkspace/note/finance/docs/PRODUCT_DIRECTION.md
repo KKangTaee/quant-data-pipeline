@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-30
 
 ## Product Summary
 
@@ -54,6 +54,6 @@ Last Verified: 2026-05-12
 
 현재 active development focus:
 
+- Overview Market Intelligence는 daily market movers, sector / industry leadership, events calendar, data health, browser-session auto refresh까지 production baseline을 완료했다.
 - Practical Validation V2의 P2 diagnostic normalization 마무리
-- 문서 체계 재구성
 - 이후 P3 수준의 QA, Final Review handoff, selected monitoring 연결 정리

@@ -906,6 +906,124 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `investability-evidence-packet-v1`은 이 phase의 첫 landed slice로 편입했고, 후속 task는 `validation-gate-hardening-v1`이다.
 - Follow-up:
   - structured waiver 허용 여부, profile별 critical diagnostic matrix, paper observation 필수 여부를 다음 gate hardening task에서 확정한다.
+### 2026-05-30 - Overview는 DB-first production baseline으로 병합 준비한다
+- User request:
+  - Overview Market Intelligence 개발 세션의 흐름을 정리하고 master 병합 전에 문서 / 개발 추적 상태를 업데이트해 달라고 요청함.
+- Interpreted goal:
+  - 추가 기능 개발이 아니라, Market Movers / Sector-Industry / Events / Data Health / 자동 갱신 / 시장 세션 배너가 어떤 기준으로 동작하는지 다음 작업자가 잃어버리지 않도록 정리해야 함.
+- Analysis result:
+  - Overview의 핵심 원칙은 `Ingestion or job wrapper -> DB -> service read model -> UI`다. UI render 중 직접 외부 provider를 fetch하지 않는다.
+  - Daily Market Movers와 Sector / Industry daily leadership은 저장된 `market_intraday_snapshot`을 공유하고, Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용한다. 최신 raw EOD row가 sparse하면 UI는 `Effective EOD Date`와 fallback reason을 표시한다.
+  - 브라우저 자동 갱신은 OS scheduler가 아니라 Overview 페이지가 열려 있을 때만 작동하는 1차 운영 모드다. 현재 범위는 `S&P 500 + Daily` snapshot이며, 5분 cadence / US market-hours / lock guard를 통과할 때만 실제 provider 수집을 실행한다.
+  - Events는 FOMC / macro / earnings row를 `market_event_calendar`에서 읽고, source / validation / quality action을 UI에서 분리해 보여준다. Earnings는 아직 yfinance provider estimate + Nasdaq cross-check 기반이며 official company IR parsing은 후속 후보다.
+- Follow-up:
+  - master 병합 후 우선순위 후보는 실제 사용 중 발견되는 Overview polish, official earnings IR source 확대, OS scheduler 연결 여부 결정, Practical Validation V2 P2/P3 재개다.
+
+### 2026-05-28 - Market Movers ops는 DB status check와 provider refresh를 분리한다
+- User request:
+  - 남은 3번 작업, Market Movers 운영 고도화를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 장중 daily movers에서 refresh 필요 여부와 stale / partial 상태를 빠르게 판단하되, 페이지 렌더나 status check가 자동 수집을 유발하면 안 됨.
+- Analysis result:
+  - Market Movers read model에 `returnable_ratio`, `returnable_pct`, `next_due_in_minutes`, `check_interval_minutes`, `stale_after_minutes` 같은 운영 필드를 추가했다.
+  - SP500뿐 아니라 TOP1000 / TOP2000 daily view도 `Status Check`로 stored DB snapshot 상태를 주기적으로 다시 읽는다.
+  - `Update Daily Snapshot`만 provider quote collection을 수행하고, status check는 DB reload만 수행한다.
+- Follow-up:
+  - 고도화 3개 축은 완료됐다. 다음 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion이다.
+
+### 2026-05-28 - Events UX는 Focus 중심으로 먼저 읽게 한다
+- User request:
+  - 남은 고도화 축 중 다음 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - Events 탭에서 전체 DB table을 먼저 읽기보다, 이번 주 일정, high impact 일정, source / validation 조치가 필요한 row를 빠르게 파악해야 함.
+- Analysis result:
+  - Events read model에 `Days Until`, `Importance`, `Focus`를 추가했다.
+  - FOMC / Macro는 `High`, Earnings는 `Medium`으로 표시하고, `Quality Action != No action`인 row는 `Focus=Needs Review`로 우선 노출한다.
+  - Overview Events는 `Focus`, `Calendar`, `Table` 탭으로 나뉘며, Calendar chart는 event type별 stacked count로 바뀌었다.
+- Follow-up:
+  - 남은 주요 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion, Market Movers ops hardening이다.
+
+### 2026-05-28 - Earnings 고도화 1차는 missing reason과 quality action을 먼저 보강한다
+- User request:
+  - 남은 고도화 축 중 1번, Events / Earnings 데이터 품질 고도화를 먼저 진행해 달라고 요청함.
+- Interpreted goal:
+  - 새 공식 IR parser를 바로 붙이기보다, 기존 yfinance / Nasdaq 기반 수집 결과의 품질과 누락 이유를 사용자가 이해할 수 있어야 함.
+- Analysis result:
+  - Earnings collector가 `symbol_diagnostics`를 남기도록 보강했다. 주요 reason은 `no_provider_earnings_date`, `outside_window`, `provider_error`다.
+  - Ingestion / Overview refresh 결과에서 `Earnings Diagnostics` expander로 issue count, reason count, symbol-level detail을 확인할 수 있다.
+  - Overview Events row에는 `Quality Action`을 추가해 estimate-only, not-confirmed, stale row의 다음 조치를 표시한다.
+- Follow-up:
+  - 다음 고도화 후보는 Events 캘린더 UX 정리 또는 company IR official parser prototype이다.
+
+### 2026-05-28 - BLS macro calendar는 공식 `.ics` import fallback으로 보강한다
+- User request:
+  - BLS 자동 수집이 막힌 이유와 다른 경로를 확인한 뒤, 공식 `.ics` import 방향으로 진행해 달라고 요청함.
+- Interpreted goal:
+  - 비공식 우회나 유료 API 없이 CPI / PPI / Employment Situation 일정을 공식 출처 기반으로 `market_event_calendar`에 넣을 수 있어야 함.
+- Analysis result:
+  - BLS backend 자동 요청은 HTTP 403으로 차단될 수 있으므로 direct collector만으로는 Macro Calendar coverage가 `1/4`에 머문다.
+  - 사용자가 브라우저로 내려받은 BLS 공식 `.ics` 파일을 Ingestion에서 업로드하면 같은 DB table에 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장하는 fallback을 추가했다.
+  - `raw_payload_json.import_method=official_ics_file`로 import 경로를 남기되, source/validation은 official schedule row로 유지한다.
+- Follow-up:
+  - 실제 BLS `.ics` 파일을 받은 뒤 end-to-end DB write를 한 번 확인하면 Macro Data Health coverage가 GDP 포함 `4/4`로 올라가는지 검증할 수 있다.
+
+### 2026-05-28 - Overview market intelligence 4차는 운영 UX 정식화로 닫는다
+- User request:
+  - 2차와 3차 이후 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 새 데이터 source를 추가하기보다 기존 Market Movers / Sector Leadership / Events를 실제로 매일 읽기 쉬운 화면으로 정식화해야 함.
+- Analysis result:
+  - Market Movers는 Rank와 Sector Pulse로 나눠 symbol-level과 sector-level 강도를 동시에 보게 했다.
+  - Sector / Industry는 equal-weight, cap-weighted, top-symbol return heatmap을 추가하고 table fallback을 유지했다.
+  - Events는 Window, Source Type, Validation filter와 Calendar / Table view로 단순 DB table에서 운영 calendar에 가까운 형태로 정리했다.
+- Follow-up:
+  - 후속 개발 후보는 macro calendar source, company IR official earnings parser, scheduled refresh automation이다.
+
+### 2026-05-28 - Overview prototype 정식화는 4차 흐름이 적절하다
+- User request:
+  - 1차 기능 구현 완료 이후 prototype을 정식화하려면 몇 차까지 진행해야 하는지 검토하고 phase / task를 다시 작성해 달라고 요청함.
+- Interpreted goal:
+  - 당장 구현보다 production-ready 상태로 가기 위한 단계, dependency, acceptance gate를 새 phase로 정리해야 함.
+- Analysis result:
+  - 최소 정식화는 3차까지 가능하지만, 매일 쓰는 product surface로 부르려면 4차까지 권장한다.
+  - 2차는 refresh state / diagnostics baseline, 3차는 earnings/events production, 4차는 visual UX / automation polish로 분리했다.
+- Follow-up:
+  - 새 phase는 `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`이며 첫 구현 task는 `Task 2-01 Refresh State And Diagnostics Baseline`이다.
+
+### 2026-05-28 - Overview market intelligence는 closeout/runbook 단계로 전환한다
+- User request:
+  - Task 6 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 기존 task list가 모두 완료됐으므로 새 기능 추가가 아니라 phase 운영 절차와 문서 상태를 정리해야 함.
+- Analysis result:
+  - Phase 문서에는 Events를 placeholder로 설명하는 stale wording이 남아 있었다.
+  - `OVERVIEW_MARKET_INTELLIGENCE.md` runbook을 추가해 Market Snapshot, FOMC, Earnings prototype refresh 순서와 실패 대응을 정리했다.
+- Follow-up:
+  - 다음 실제 기능 후보는 heatmap/treemap visual, earnings official-source validation, event estimate cleanup 중 하나로 별도 task를 열어야 한다.
+
+### 2026-05-28 - Earnings calendar prototype는 bounded yfinance source로 시작한다
+- User request:
+  - overview-market-intelligence의 FOMC 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 무료 API / scraping 원칙을 유지하면서 실적 발표 일정을 `market_event_calendar`에 저장하고 Overview Events에서 확인할 수 있어야 함.
+- Analysis result:
+  - `Ticker.get_earnings_dates()`는 rich하지만 심볼당 수 초가 걸려 Overview 버튼에 부적합하다.
+  - 첫 prototype은 yfinance `Ticker.calendar`의 upcoming `Earnings Date`를 사용하고, 수집 대상을 manual symbols 또는 latest S&P 500 movers 일부로 제한한다.
+  - rows는 `event_type=EARNINGS`, `source=yfinance_calendar`, `confidence=0.65`로 저장하며 provider calendar payload를 raw evidence로 남긴다.
+- Follow-up:
+  - production 단계에서는 stale estimate cleanup, official company IR cross-check, 더 넓은 universe cadence를 별도 task로 설계한다.
+
+### 2026-05-28 - FOMC calendar는 Fed 공식 HTML을 DB-first로 저장한다
+- User request:
+  - overview-market-intelligence 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - Task 4에서 만든 `market_event_calendar`를 실제 공식 FOMC collector와 Overview Events 표시로 연결해야 함.
+- Analysis result:
+  - Fed 공식 FOMC calendar page를 파싱해 `event_type=FOMC_MEETING`, `source=federal_reserve_fomc_calendar`로 저장한다.
+  - meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장하고, 원본 range / SEP 표시 / 공식 link는 `raw_payload_json`에 남긴다.
+  - Overview와 Ingestion 버튼은 직접 scraping하지 않고 `collect_fomc_calendar` job wrapper를 통해 DB를 갱신한다.
+- Follow-up:
+  - 다음 calendar slice는 earnings free-source prototype이며, FOMC와 같은 `market_event_calendar` contract를 재사용한다.
 
 ### 2026-05-27 - Diagnostics split의 public compatibility contract를 명시한다
 - User request:
@@ -6280,3 +6398,204 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation handoff는 검증 metric이 아니라 Next Action으로 배치해야 한다
 - Follow-up:
   - 구현 기록은 `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`에서 확인한다
+### 2026-05-28 - Overview를 market intelligence entry point로 바꿀 수 있는지 조사한다
+- User request:
+  - 사용자가 Overview에 일/주/月 top movers, 월별 sector / industry Top N, FOMC/earnings calendar 탭을 넣을 수 있는지 개발 전 조사와 청사진을 요청함
+- Interpreted goal:
+  - 현재 후보 우선순위 Overview를 유지하면서, DB-backed 시장 스캔과 이벤트 캘린더를 어떤 순서로 구현할지 판단해야 함
+- Analysis result:
+  - Coverage 1000/2000 top movers와 sector / industry leadership은 기존 `nyse_asset_profile`과 `nyse_price_history`로 바로 구현 가능하다
+  - 이벤트 캘린더는 FOMC는 공식 source로 가능하지만, earnings는 provider/API/persistence를 먼저 정해야 한다
+- Follow-up:
+  - 리서치 bundle은 `.aiworkspace/note/finance/researches/active/2026-05-overview-market-intelligence/`에 있고, 다음 구현은 사용자가 Overview 탭 구조를 승인하면 시작한다
+
+### 2026-05-28 - Overview Market Intelligence 1차 slice를 구현한다
+- User request:
+  - 사용자가 scope lock 포함 전체 흐름을 확인한 뒤 실제 작업 진행을 요청함
+- Interpreted goal:
+  - 무료 API / 크롤링 원칙을 지키되, 첫 구현은 이미 적재된 local DB만 사용해 Overview를 시장 스캔 entry point로 바꿔야 함
+- Analysis result:
+  - `nyse_asset_profile`과 `nyse_price_history`만으로 Coverage 1000/2000 movers와 sector / industry leadership은 구현 가능하다
+  - 화면에서 직접 원격 수집하지 않고, Events 탭은 ingestion 후속 slice를 받는 placeholder로 두는 것이 현재 구조와 가장 맞다
+- Follow-up:
+  - `app/services/overview_market_intelligence.py`와 Overview tabs를 추가했고, FOMC / earnings calendar ingestion은 다음 task 후보로 남겼다
+
+### 2026-05-28 - S&P 500 daily movers는 전일 종가 대비 intraday snapshot으로 시작한다
+- User request:
+  - 사용자가 Coverage 500 대신 S&P 500, daily 기준은 전일 종가 대비, intraday 확장은 먼저 S&P 500만 진행하자고 확정함
+- Interpreted goal:
+  - Top1000 / Top2000 EOD ranking은 유지하되, S&P 500 daily는 무료 provider 기반 준실시간 snapshot을 저장 후 Overview에서 빠르게 읽어야 함
+- Analysis result:
+  - `nyse_asset_profile.market_cap` 기준 Top1000 / Top2000은 현재 profile snapshot 기준임을 UI metadata와 docs에 드러내야 한다
+  - S&P 500 current constituents와 intraday return은 별도 table로 분리해 survivorship / provider delay 위험을 명시하는 것이 맞다
+- Follow-up:
+  - S&P 500 universe / intraday snapshot collector와 Overview controls를 구현했고, Top1000 / Top2000 intraday 확장은 실제 속도와 rate limit 확인 뒤 진행한다
+
+### 2026-05-28 - Market Movers update click TypeError 수정
+- User request:
+  - 사용자가 Overview `Update Daily Snapshot` 클릭 시 `run_collect_sp500_intraday_snapshot` 호출 지점에서 에러가 난다고 제보함
+- Interpreted goal:
+  - 브라우저에서 재현 가능한 UI click path를 안정화하고, 5분 상태 갱신 UX는 유지해야 함
+- Analysis result:
+  - 실행 중인 Streamlit 프로세스가 이전 job-wrapper 함수 시그니처를 메모리에 잡고 있어 새 `quote_batch_size` 인자를 못 받는 것이 직접 원인이었다
+  - 자동 새로고침 fragment 안에 수집 버튼과 `st.rerun()`이 같이 있던 구조도 불안정하므로 fragment는 DB 읽기 전용으로 분리하는 편이 맞다
+- Follow-up:
+  - Overview button action을 fragment 밖으로 옮기고, stale import 상황에서도 지원되는 인자만 넘기도록 호환 호출을 추가했다
+
+### 2026-05-28 - Top1000 / Top2000 daily intraday refresh 확장
+- User request:
+  - 사용자가 S&P 500 refresh가 정상 작동하면 Top1000 / Top2000도 같은 방향으로 확장해 달라고 요청함
+- Interpreted goal:
+  - daily movers의 전일 종가 대비 quote snapshot을 S&P 500뿐 아니라 market-cap coverage에도 적용해야 함
+- Analysis result:
+  - 기존 `market_intraday_snapshot`은 `universe_code`가 unique key에 포함되어 있어 schema 변경 없이 `TOP1000`, `TOP2000` row를 저장할 수 있다
+  - Top1000 / Top2000 universe는 current `nyse_asset_profile.market_cap` ranking 기준이며, quote-fast path는 충분히 빠르지만 yfinance OHLCV fallback은 넓은 coverage에서 오래 걸릴 수 있어 UI에서는 자동 fallback하지 않는 편이 맞다
+- Follow-up:
+  - generic market intraday collector / job wrapper를 추가하고 Overview daily view가 Top1000 / Top2000 intraday snapshot을 우선 읽도록 확장했다
+
+### 2026-05-28 - Task 4 Market Event DB 구조를 먼저 만든다
+- User request:
+  - 사용자가 재정리된 Overview Market Intelligence phase 기준으로 Task 4 작업 진행을 요청함
+- Interpreted goal:
+  - FOMC와 earnings collector를 붙이기 전에 공통 event calendar table과 persistence contract를 먼저 만들어야 함
+- Analysis result:
+  - event calendar는 price fact가 아니라 Overview / ingestion metadata이므로 `finance_meta`에 두는 것이 맞다
+  - 반복 수집 중복을 막으려면 요청된 공통 컬럼 외에 내부 business key인 `event_key`가 필요하다
+- Follow-up:
+  - `market_event_calendar` schema, normalized UPSERT, date-range read helper, service contract tests를 추가했다. 다음 구현 단위는 FOMC collector다
+
+### 2026-05-28 - Overview Market Intelligence 2차 production baseline을 진행한다
+- User request:
+  - 사용자가 1차 구현 후 2차 작업부터 진행하자고 요청함
+- Interpreted goal:
+  - 새 source를 늘리기 전에 현재 Overview Market Movers와 Events가 최신성, 부분 실패, source 신뢰도, stale estimate를 명확하게 보여줘야 함
+- Analysis result:
+  - Market Movers refresh state는 기존 intraday snapshot metadata로 계산 가능하고, Events official / estimate 구분도 schema 변경 없이 `event_type`과 `source`에서 read model로 파생할 수 있다
+- Follow-up:
+  - 2차 baseline 구현과 acceptance checklist를 완료했다. 3차에서는 earnings provider estimate를 official/company 또는 대체 free source와 비교하는 source validation이 필요하다
+
+### 2026-05-28 - Overview Market Intelligence 3차 earnings production baseline을 진행한다
+- User request:
+  - 사용자가 2차 완료 후 3차 작업도 진행해 달라고 요청함
+- Interpreted goal:
+  - earnings calendar를 단순 yfinance prototype에서 source validation, lifecycle cleanup, broader low-frequency collection이 가능한 운영 baseline으로 올려야 함
+- Analysis result:
+  - 범용 company IR official parser는 회사별 markup 편차 때문에 바로 넣기 어렵고, Nasdaq earnings calendar는 무료 alternate provider cross-check로 쓰는 것이 현실적이다
+  - 같은 symbol/source의 이전 active earnings estimate는 DB에 남기되 `superseded`로 숨기고, 오래된 provider estimate는 `stale`로 구분하는 것이 auditability와 UX를 모두 지킨다
+- Follow-up:
+  - 3차 baseline을 구현했다. 다음은 4차에서 sector/mover visuals와 calendar-like Events UX를 다듬는 작업이다
+
+### 2026-05-28 - Overview Market Intelligence 5차는 운영 상태판을 먼저 보강한다
+- User request:
+  - 사용자가 5차 작업 진행을 요청함
+- Interpreted goal:
+  - macro calendar나 official earnings source 같은 새 데이터 확장 전에, 이미 만든 Overview 수집 흐름이 매일 운영 가능한지 상태와 실패 원인을 한 화면에서 봐야 함
+- Analysis result:
+  - 현재 DB freshness metadata와 local `WEB_APP_RUN_HISTORY.jsonl`만으로 1차 Data Health read model을 만들 수 있다
+  - 새 외부 source나 schema를 추가하지 않고도 stale snapshot, missing collection, partial / failed run을 구분할 수 있다
+- Follow-up:
+  - Overview `Data Health` 탭과 refresh-button run history 기록을 추가했다. 다음 고도화 후보는 scheduled refresh automation, macro calendar, official earnings source 중에서 선택한다
+
+### 2026-05-28 - Overview Events에 공식 macro calendar를 추가한다
+- User request:
+  - 사용자가 자동 리프레시는 보류하고 다음 작업 진행을 요청함
+- Interpreted goal:
+  - FOMC와 earnings 외에 CPI, PPI, 고용지표, GDP 같은 미국 증시 주요 macro release 일정을 Overview Events에 추가해야 함
+- Analysis result:
+  - 기존 `market_event_calendar` table contract로 macro 일정도 저장 가능하다
+  - BEA release schedule은 live parse와 저장이 가능하지만, BLS schedule page는 현재 환경에서 HTTP 403을 반환하므로 partial failure로 드러내는 것이 맞다
+- Follow-up:
+  - `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, `MACRO_GDP` event type과 Overview `Macro` filter를 추가했다. BLS 접근성 보강은 별도 후속 후보로 남긴다
+
+### 2026-05-29 - Sector / Industry Leadership을 추세 중심으로 개편한다
+- User request:
+  - 사용자가 Sector / Industry Leadership에 S&P 500 coverage, Group dropdown, Daily / Weekly / Monthly trend graph, heatmap UX 개선을 요청함
+- Interpreted goal:
+  - 월간 단면 히트맵 대신 현재 강한 섹터/산업과 최근 흐름을 함께 읽을 수 있어야 함
+- Analysis result:
+  - 기존 DB의 universe/profile/price history만으로 Daily 1개월, Weekly 3개월, Monthly 6개월 non-overlap trend를 계산할 수 있음
+- Follow-up:
+  - 최신 Top N ranking과 해당 그룹들의 trend chart를 Overview UI에 추가했고, S&P 500 / Top1000 / Top2000 coverage를 지원한다
+
+### 2026-05-29 - Sector / Industry trend를 더 길고 조작 가능하게 만든다
+- User request:
+  - 사용자가 Trend 기간을 Daily 3개월 / Weekly 6개월 / Monthly 1년으로 늘리고, 산업별 라인 on/off와 양수 그룹의 대표 티커 상세를 요청함
+- Interpreted goal:
+  - 현재 강한 섹터/산업뿐 아니라 최근 동향과 내부 주도 종목을 한 화면에서 조절해 봐야 함
+- Analysis result:
+  - DB price history 기반 non-overlap window 수를 늘리면 추가 source 없이 구현 가능하다
+  - Streamlit chart click interaction보다 `Trend Groups` multiselect와 `Positive Group` selectbox가 더 안정적인 UX다
+- Follow-up:
+  - trend horizon 확장, line filter, ticker leader bar / return-share donut을 추가했다. Positive Return Share는 cap-weighted attribution이 아니라 양수 ticker return share로 정의했다
+
+### 2026-05-29 - Sector / Industry Daily가 Market Movers refresh를 반영해야 한다
+- User request:
+  - 사용자가 Market Movers daily를 최신화했는데 Sector / Industry의 산업 Top N 티커가 2026-05-27 기준으로 보이는 이유를 묻고 개선 진행을 요청함
+- Interpreted goal:
+  - Daily leadership과 티커 리더는 Market Movers refresh 결과인 intraday snapshot을 공유해야 하며, Weekly / Monthly EOD 기준과 UI에서 구분되어야 함
+- Analysis result:
+  - 기존 Sector / Industry는 `nyse_price_history` EOD만 읽어서 `2026-05-28` sparse row를 버리고 `2026-05-27`을 effective date로 선택했다
+  - `market_intraday_snapshot`에는 S&P 500 / Top1000 / Top2000 previous-close snapshot이 이미 있으므로 Daily에만 우선 적용하면 된다
+- Follow-up:
+  - Daily group leadership은 intraday snapshot을 우선 사용하고 fallback으로 EOD DB를 유지한다. UI에 Return Window / Price Mode를 표시했다
+
+### 2026-05-29 - Events에 달력형 UI를 추가한다
+- User request:
+  - 사용자가 Events가 리스트로만 보이므로 달력 형태 UI도 함께 제공해 달라고 요청함
+- Interpreted goal:
+  - 기존 리스트의 세부 스캔 기능은 유지하면서, FOMC / earnings / macro 일정을 월간 달력으로 한눈에 봐야 함
+- Analysis result:
+  - 새 collector나 DB 변경 없이 `market_event_calendar` read model의 날짜 / 타입 / 중요도 필드만으로 월간 grid를 만들 수 있음
+- Follow-up:
+  - Events `Calendar` 탭에 월 선택형 달력 grid를 추가하고 기존 stacked chart와 날짜별 리스트는 아래에 유지했다
+
+### 2026-05-29 - Market Movers missing quote row의 1차 원인 진단을 추가한다
+- User request:
+  - 사용자가 반복 refresh 후에도 남는 `missing quote row` 티커의 원인을 더 명확히 알 수 있는 기능을 요청함
+- Interpreted goal:
+  - 유료 API 없이 기존 Yahoo / yfinance / 내부 DB evidence를 조합해 사용자가 다음 조치를 판단할 수 있는 원인 후보와 confidence를 보여줘야 함
+- Analysis result:
+  - Yahoo quote batch 누락만으로 거래정지 / 상장폐지를 확정할 수 없으므로 `provider_quote_gap`, `batch_only_gap`, `history_gap_quote_available`, `missing_previous_close`, `possible_stale_universe` 같은 evidence-based diagnosis가 안전함
+- Follow-up:
+  - Overview `Coverage Diagnostics`에서 missing quote row만 대상으로 수동 진단을 실행하고, 결과를 job result table로 표시하도록 구현했다
+
+### 2026-05-29 - Overview 자동 수집 운영을 시작한다
+- User request:
+  - 사용자가 브라우저를 켜지 않아도 자동으로 데이터를 수집하는 운영 레이어 개발을 요청함
+- Interpreted goal:
+  - 기존 Overview refresh button이 호출하던 ingestion job들을 cron / launchd / 외부 runner가 대신 호출할 수 있어야 하며, 중복 실행과 provider 과부하를 피해야 함
+- Analysis result:
+  - 1차 자동화는 long-running daemon보다 run-once CLI가 안전하다. CLI가 cadence, US market-hours, lock, scheduled run history metadata를 처리하면 로컬 scheduler와 Codex automation 양쪽에 붙이기 쉽다
+- Follow-up:
+  - `app.jobs.overview_automation`을 추가했고, Data Health auto/manual/failure-streak 표시와 quote gap issue persistence까지 보강했다. 다음 단계는 실제 macOS launchd / cron 등록 또는 Codex automation 연결 여부를 선택하는 것이다
+
+### 2026-05-29 - 자동 수집을 브라우저가 열렸을 때만 작동하게 한다
+- User request:
+  - 사용자가 아직은 프로그램을 보고 있지 않을 때 수집할 필요가 없으므로, 브라우저가 열렸을 때만 스케줄러가 작동하는 방향을 제안하고 1차 작업 진행을 요청함
+- Interpreted goal:
+  - OS 상시 scheduler 대신 Overview 페이지가 열려 있는 세션에서만 S&P 500 daily snapshot을 주기적으로 확인해야 함
+- Analysis result:
+  - Streamlit `fragment(run_every=300)`이 브라우저 세션 기반 heartbeat에 적합하며, provider 호출은 직접 하지 않고 기존 `overview_automation --profile browser_safe` 경로를 재사용하는 것이 안전함
+- Follow-up:
+  - `browser_safe` profile과 Overview 상단 auto refresh toggle / status panel / heartbeat를 추가했다. 1차는 S&P 500 snapshot만 자동 check하며 Top1000 / Top2000 / Events는 후속 opt-in으로 남긴다
+
+### 2026-05-30 - Market Movers refresh UI에서 수동/자동 갱신을 통합한다
+- User request:
+  - 사용자가 자동 갱신 패널이 중복되어 보이고, 수동 refresh UI와 자동 refresh UI가 같은 데이터 갱신인데 분리되어 있어 헷갈린다고 지적함
+- Interpreted goal:
+  - 사용자가 먼저 수동/자동을 선택하고, 같은 Market Movers refresh surface에서 상태, 카운트다운, 수동 버튼을 함께 봐야 함
+- Analysis result:
+  - 별도 top-level auto panel을 제거하고 Market Movers `데이터 갱신`에 통합하면 중복 렌더링과 개념 분리가 동시에 줄어든다
+  - 초 단위 countdown / progress는 브라우저 JS로만 갱신하고, provider collection은 기존 5분 cadence guard를 유지해야 한다
+- Follow-up:
+  - Market Movers `데이터 갱신`에 `수동 갱신` / `자동 갱신` 모드를 추가하고, S&P 500 Daily 자동 모드에서 browser-side countdown과 기존 `browser_safe` heartbeat를 함께 사용하도록 정리했다
+
+### 2026-05-30 - 기존 UI 패턴 보존과 제품 본질 보존을 구분한다
+- User request:
+  - 사용자가 기존 Streamlit 패턴 반복으로 화면 품질이 낮아지고, "기존 프로젝트 패턴 보존"이 UI 고정을 뜻한 것이 아니라고 지적함
+- Interpreted goal:
+  - 데이터 안정성과 투자 연구 workflow는 유지하되, `container / badge / card` 반복을 제품 UI 원칙으로 착각하지 않아야 함
+- Analysis result:
+  - 보존해야 할 것은 백테스트와 시장 데이터로 포트폴리오 판단을 돕는 본질, 데이터 수집 guardrail, 근거 흐름이다. 기존 helper 시각 패턴은 필요할 때 바꿀 수 있다
+- Follow-up:
+  - Market Movers `데이터 갱신` 영역부터 반복 badge/card layout을 줄이고, 상태/모드/액션이 한 번에 읽히는 명령 영역으로 재설계하는 1차 pass를 시작했다

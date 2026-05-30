@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
 from typing import Any
 
 from app.workspace_paths import RUN_HISTORY_DIR
@@ -23,6 +24,15 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "calculate_factors": "manual_factor_calculation",
         "collect_financial_statements": "manual_financial_statement_ingestion",
         "collect_asset_profiles": "manual_asset_profile_collection",
+        "collect_sp500_universe": "overview_sp500_universe_collection",
+        "collect_sp500_intraday_snapshot": "overview_market_snapshot",
+        "collect_top1000_intraday_snapshot": "overview_market_snapshot",
+        "collect_top2000_intraday_snapshot": "overview_market_snapshot",
+        "collect_fomc_calendar": "overview_fomc_calendar_collection",
+        "collect_earnings_calendar": "overview_earnings_calendar_collection",
+        "collect_macro_calendar": "overview_macro_calendar_collection",
+        "import_bls_macro_calendar_ics": "overview_macro_calendar_collection",
+        "diagnose_market_quote_gaps": "overview_market_snapshot_diagnostics",
     }
     return mapping.get(job_name)
 
@@ -55,6 +65,12 @@ def _infer_execution_context(record: dict[str, Any]) -> str | None:
         "manual_financial_statement_ingestion": "Manual detailed financial statement ingestion for the selected symbols or universe source.",
         "statement_shadow_rebuild": "Manual rebuild of statement shadow tables using already stored raw statement ledgers.",
         "manual_asset_profile_collection": "Manual asset-profile refresh for the tracked stock and ETF universes.",
+        "overview_sp500_universe_collection": "Overview S&P 500 universe membership refresh for market intelligence.",
+        "overview_market_snapshot": "Overview market movers intraday previous-close snapshot refresh.",
+        "overview_fomc_calendar_collection": "Overview FOMC calendar refresh from the official Fed page.",
+        "overview_earnings_calendar_collection": "Overview bounded earnings calendar refresh for active event intelligence.",
+        "overview_macro_calendar_collection": "Overview macro calendar refresh from official BLS and BEA release schedules.",
+        "overview_market_snapshot_diagnostics": "Overview market movers quote gap diagnostic run for missing daily snapshot symbols.",
     }
     return mapping.get(pipeline_type)
 
@@ -75,11 +91,17 @@ def _normalize_history_record(record: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _json_safe(value: Any) -> str:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return str(value)
+
+
 def append_run_history(result: dict[str, Any]) -> None:
     record = _normalize_history_record(result)
     HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     with HISTORY_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        f.write(json.dumps(record, ensure_ascii=False, default=_json_safe) + "\n")
 
 
 def load_run_history(limit: int = 50) -> list[dict[str, Any]]:

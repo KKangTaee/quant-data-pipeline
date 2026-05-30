@@ -18,6 +18,16 @@ from finance.data.etf_provider import (
     discover_and_store_etf_provider_source_map,
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.market_intelligence import (
+    collect_and_store_bls_macro_calendar_ics,
+    collect_and_store_earnings_calendar,
+    collect_and_store_fomc_calendar,
+    collect_and_store_macro_calendar,
+    collect_and_store_market_intraday_snapshot,
+    collect_and_store_sp500_universe,
+    diagnose_market_quote_gaps,
+    persist_quote_gap_diagnostics,
+)
 from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
 from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
@@ -691,6 +701,511 @@ def run_daily_market_update(
     result.setdefault("details", {})
     result["details"]["pipeline_type"] = "daily_market_update"
     return result
+
+
+def run_collect_sp500_universe() -> JobResult:
+    job_name = "collect_sp500_universe"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        result = collect_and_store_sp500_universe()
+        rows_written = int(result.get("rows_written") or 0)
+        symbols = list(result.get("symbols") or [])
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="success" if rows_written else "failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(symbols),
+            symbols_processed=rows_written,
+            failed_symbols=[] if rows_written else symbols,
+            message="S&P 500 universe collection completed." if rows_written else "S&P 500 universe collection wrote no rows.",
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"S&P 500 universe collection failed: {exc}",
+        )
+
+
+MARKET_INTRADAY_LABELS = {
+    "SP500": "S&P 500",
+    "TOP1000": "Top 1000",
+    "TOP2000": "Top 2000",
+}
+
+
+def run_collect_market_intraday_snapshot(
+    *,
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
+    interval: str = "5m",
+    chunk_size: int = 100,
+    quote_batch_size: int = 200,
+    method: str = "quote_fast",
+    fallback_to_yfinance: bool = True,
+) -> JobResult:
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    universe_label = MARKET_INTRADAY_LABELS.get(normalized_universe, normalized_universe)
+    job_name = f"collect_{normalized_universe.lower()}_intraday_snapshot"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        result = collect_and_store_market_intraday_snapshot(
+            universe_code=normalized_universe,
+            universe_limit=universe_limit,
+            interval=interval,
+            chunk_size=chunk_size,
+            quote_batch_size=quote_batch_size,
+            method=method,
+            fallback_to_yfinance=fallback_to_yfinance,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        failed_symbols = list(result.get("failed_symbols") or [])
+        requested = int(result.get("symbols_requested") or 0)
+        processed = int(result.get("symbols_processed") or 0)
+        finished_at = _now_str()
+        if rows_written <= 0:
+            status = "failed"
+            message = f"{universe_label} intraday snapshot wrote no rows."
+        elif failed_symbols:
+            status = "partial_success"
+            message = f"{universe_label} intraday snapshot completed with missing symbols."
+        else:
+            status = "success"
+            message = f"{universe_label} intraday snapshot completed."
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=processed,
+            failed_symbols=failed_symbols,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"{universe_label} intraday snapshot failed: {exc}",
+            details={
+                "universe_code": normalized_universe,
+                "universe_limit": universe_limit,
+                "interval": interval,
+                "chunk_size": chunk_size,
+                "quote_batch_size": quote_batch_size,
+                "method": method,
+                "fallback_to_yfinance": fallback_to_yfinance,
+            },
+        )
+
+
+def run_collect_sp500_intraday_snapshot(
+    *,
+    interval: str = "5m",
+    chunk_size: int = 100,
+    quote_batch_size: int = 200,
+    method: str = "quote_fast",
+    fallback_to_yfinance: bool = True,
+) -> JobResult:
+    return run_collect_market_intraday_snapshot(
+        universe_code="SP500",
+        universe_limit=500,
+        interval=interval,
+        chunk_size=chunk_size,
+        quote_batch_size=quote_batch_size,
+        method=method,
+        fallback_to_yfinance=fallback_to_yfinance,
+    )
+
+
+def run_collect_fomc_calendar(
+    *,
+    years: Iterable[int] | None = None,
+    source_url: str | None = None,
+) -> JobResult:
+    job_name = "collect_fomc_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        result = collect_and_store_fomc_calendar(
+            years=normalized_years,
+            **({"source_url": source_url} if source_url else {}),
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        finished_at = _now_str()
+        status = "success" if rows_written > 0 else "failed"
+        message = (
+            f"FOMC calendar collected {events_found} events from the official Fed page."
+            if rows_written > 0
+            else "FOMC calendar collection wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"FOMC calendar collection failed: {exc}",
+            details={"years": list(years or []), "source_url": source_url},
+        )
+
+
+def run_collect_earnings_calendar(
+    *,
+    symbols: str | Iterable[str] | None = None,
+    symbol_source: str = "latest_movers",
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
+    interval: str = "5m",
+    top_movers_limit: int = 20,
+    lookahead_days: int = 120,
+    max_symbols: int = 100,
+    batch_offset: int = 0,
+    validate_with_nasdaq: bool = False,
+    request_sleep_sec: float = 0.0,
+) -> JobResult:
+    job_name = "collect_earnings_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed_symbols: list[str] | None = None
+    invalid_symbols: list[str] = []
+    if symbols is not None:
+        parsed_symbols, invalid_symbols = split_valid_invalid_symbols(symbols)
+        if not parsed_symbols:
+            finished_at = _now_str()
+            return _build_result(
+                job_name=job_name,
+                status="failed",
+                started_at=started_at,
+                finished_at=finished_at,
+                duration_sec=perf_counter() - t0,
+                rows_written=0,
+                symbols_requested=0,
+                symbols_processed=0,
+                failed_symbols=invalid_symbols,
+                message="Earnings calendar collection needs at least one valid symbol.",
+                details={"symbol_source": "manual", "invalid_symbols": invalid_symbols},
+            )
+    try:
+        result = collect_and_store_earnings_calendar(
+            symbols=parsed_symbols,
+            symbol_source=symbol_source,
+            universe_code=universe_code,
+            universe_limit=universe_limit,
+            interval=interval,
+            top_movers_limit=top_movers_limit,
+            lookahead_days=lookahead_days,
+            max_symbols=max_symbols,
+            batch_offset=batch_offset,
+            validate_with_nasdaq=validate_with_nasdaq,
+            request_sleep_sec=request_sleep_sec,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        symbols_requested = int(result.get("symbols_requested") or 0)
+        symbols_processed = int(result.get("symbols_processed") or 0)
+        missing_symbols = [str(item) for item in result.get("missing_symbols") or []]
+        failed_symbols = invalid_symbols + [str(item) for item in result.get("failed_symbols") or []]
+        surfaced_symbols = failed_symbols + [item for item in missing_symbols if item not in failed_symbols]
+        finished_at = _now_str()
+        if rows_written > 0 and not surfaced_symbols:
+            status = "success"
+        elif rows_written > 0:
+            status = "partial_success"
+        else:
+            status = "failed"
+        events_found = int(result.get("events_found") or 0)
+        issue_suffix = ""
+        if surfaced_symbols:
+            issue_suffix = f" Missing/failed symbols: {len(surfaced_symbols)}."
+        message = (
+            f"Earnings calendar collected {events_found} events for {symbols_processed} / {symbols_requested} symbols."
+            if rows_written > 0
+            else "Earnings calendar collection wrote no rows."
+        ) + issue_suffix
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=symbols_requested,
+            symbols_processed=symbols_processed,
+            failed_symbols=surfaced_symbols,
+            message=message,
+            details={**result, "invalid_symbols": invalid_symbols},
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed_symbols or []),
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message=f"Earnings calendar collection failed: {exc}",
+            details={
+                "symbol_source": symbol_source,
+                "universe_code": universe_code,
+                "batch_offset": batch_offset,
+                "top_movers_limit": top_movers_limit,
+                "lookahead_days": lookahead_days,
+                "validate_with_nasdaq": validate_with_nasdaq,
+                "request_sleep_sec": request_sleep_sec,
+                "invalid_symbols": invalid_symbols,
+            },
+        )
+
+
+def run_collect_macro_calendar(
+    *,
+    years: Iterable[int] | None = None,
+    include_bls: bool = True,
+    include_bea: bool = True,
+) -> JobResult:
+    job_name = "collect_macro_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        result = collect_and_store_macro_calendar(
+            years=normalized_years,
+            include_bls=include_bls,
+            include_bea=include_bea,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        failed_sources = [str(item) for item in result.get("failed_sources") or []]
+        finished_at = _now_str()
+        if rows_written > 0 and not failed_sources:
+            status = "success"
+        elif rows_written > 0:
+            status = "partial_success"
+        else:
+            status = "failed"
+        message = (
+            f"Macro calendar collected {events_found} official release events."
+            if rows_written > 0
+            else "Macro calendar collection wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            failed_symbols=failed_sources,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Macro calendar collection failed: {exc}",
+            details={
+                "years": list(years or []),
+                "include_bls": include_bls,
+                "include_bea": include_bea,
+            },
+        )
+
+
+def run_diagnose_market_quote_gaps(
+    *,
+    symbols: str | Iterable[str] | None = None,
+    universe_code: str = "SP500",
+    interval_code: str = "5m",
+    snapshot_time_utc: str | None = None,
+    max_symbols: int = 50,
+) -> JobResult:
+    job_name = "diagnose_market_quote_gaps"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="Quote gap diagnosis needs at least one valid missing symbol.",
+            details={"invalid_symbols": invalid_symbols, "universe_code": universe_code},
+        )
+    try:
+        result = diagnose_market_quote_gaps(
+            parsed,
+            universe_code=universe_code,
+            interval_code=interval_code,
+            snapshot_time_utc=snapshot_time_utc,
+            max_symbols=max_symbols,
+        )
+        diagnostics = list(result.get("diagnostics") or [])
+        counts = dict(result.get("diagnosis_counts") or {})
+        issue_persistence: dict[str, Any] = {"rows_written": 0, "issues": []}
+        if diagnostics:
+            issue_persistence = persist_quote_gap_diagnostics(
+                diagnostics,
+                universe_code=universe_code,
+                interval_code=interval_code,
+                snapshot_time_utc=snapshot_time_utc,
+            )
+        finished_at = _now_str()
+        status = "success" if diagnostics else "failed"
+        message = (
+            f"Quote gap diagnosis completed for {len(diagnostics)} / {len(parsed)} symbols."
+            if diagnostics
+            else "Quote gap diagnosis produced no rows."
+        )
+        if counts:
+            message += " " + ", ".join(f"{key}: {value}" for key, value in counts.items()) + "."
+        if issue_persistence.get("rows_written"):
+            message += f" Persisted {issue_persistence['rows_written']} issue row(s)."
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=len(diagnostics),
+            failed_symbols=invalid_symbols,
+            message=message,
+            details={
+                **result,
+                "invalid_symbols": invalid_symbols,
+                "issue_rows_written": issue_persistence.get("rows_written") or 0,
+                "issue_history": issue_persistence.get("issues") or [],
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=invalid_symbols + parsed,
+            message=f"Quote gap diagnosis failed: {exc}",
+            details={
+                "invalid_symbols": invalid_symbols,
+                "universe_code": universe_code,
+                "interval_code": interval_code,
+                "snapshot_time_utc": snapshot_time_utc,
+            },
+        )
+
+
+def run_import_bls_macro_calendar_ics(
+    *,
+    ics_text: str,
+    years: Iterable[int] | None = None,
+    source_name: str | None = None,
+) -> JobResult:
+    job_name = "import_bls_macro_calendar_ics"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        result = collect_and_store_bls_macro_calendar_ics(
+            ics_text,
+            years=normalized_years,
+            source_name=source_name,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        finished_at = _now_str()
+        status = "success" if rows_written > 0 else "failed"
+        message = (
+            f"BLS macro calendar imported {events_found} official release events from ICS."
+            if rows_written > 0
+            else "BLS macro calendar ICS import wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"BLS macro calendar ICS import failed: {exc}",
+            details={
+                "years": list(years or []),
+                "source_name": source_name,
+            },
+        )
 
 
 def run_weekly_fundamental_refresh(
