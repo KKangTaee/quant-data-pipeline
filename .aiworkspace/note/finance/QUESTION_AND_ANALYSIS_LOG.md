@@ -6633,3 +6633,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Stress / Robustness는 최소 실전 stress 근거를 필수로 두고 고급 parameter perturbation은 후속 / review 근거로 남기는 것이 적절하다
 - Follow-up:
   - module row에 `Gate Effect`와 `Gate Reason`을 추가하고 필수검증 설명 / next action을 정리했다. 내부 `Benchmark parity` check key는 호환성을 위해 유지한다
+
+### 2026-05-30 - Practical Validation 화면 보드와 검증 모듈을 분리한다
+- User request:
+  - 사용자가 GTAA 후보 검증 화면에서 보이는 `Final Review Gate`, audit board, provider board 등이 앞서 정의한 검증 module 목록과 섞여 보여 혼동된다고 지적하고 개선 진행을 승인함
+- Interpreted goal:
+  - 검증 module taxonomy는 유지하되, 사용자 화면의 board가 어떤 module evidence인지와 현재 후보에 적용되는지 명확히 보여줘야 함
+- Analysis result:
+  - module은 gate / 검증 의미 단위이고 board는 화면 근거 묶음이다. 두 개념을 분리하고 board registry를 두면 새 검증 추가 시 UI 설명과 적용 여부를 한 곳에서 관리할 수 있다
+- Follow-up:
+  - Practical Validation board registry, module evidence board mapping, Applied Validation Map, board badge, 단일 component 조건부 board의 Not applicable 표시를 추가했다

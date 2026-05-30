@@ -55,6 +55,7 @@ Last Verified: 2026-05-30
 | Backtest temporal validation service | `app/services/backtest_temporal_validation.py` |
 | Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
 | Practical Validation module gate service | `app/services/backtest_practical_validation_modules.py` |
+| Practical Validation board map service | `app/services/backtest_practical_validation_board_registry.py` |
 | Construction risk audit service | `app/services/backtest_construction_risk_audit.py` |
 | Risk contribution audit service | `app/services/backtest_risk_contribution_audit.py` |
 | Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
@@ -93,7 +94,8 @@ Last Verified: 2026-05-30
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
-| `app/services/backtest_practical_validation_modules.py` | Streamlit-free source traits / validation module planner. source kind, component mix, strategy keys, profile, input checks, diagnostics, and audit rows를 읽어 필수 / 조건부 / 후속 참고 module, gate effect, gate reason, Final Review 이동 gate를 만든다 |
+| `app/services/backtest_practical_validation_modules.py` | Streamlit-free source traits / validation module planner. source kind, component mix, strategy keys, profile, input checks, diagnostics, and audit rows를 읽어 필수 / 조건부 / 후속 참고 module, gate effect, gate reason, Final Review 이동 gate를 만들고 evidence board mapping을 붙인다 |
+| `app/services/backtest_practical_validation_board_registry.py` | Streamlit-free Practical Validation board registry. `Final Review Gate`, audit board, provider board, Robustness Lab 같은 화면 보드를 validation module과 연결하고 적용 / 비적용 board map을 만든다 |
 | `app/services/backtest_construction_risk_audit.py` | Streamlit-free construction risk audit read model. Existing component weight, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure evidence를 읽어 concentration / overlap / exposure risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Existing component return matrix, pairwise correlation, max risk contribution proxy, drop-one dependency, and storage boundary evidence를 읽어 risk contribution construction risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Existing proposal role, target weight, validation profile, role concentration, profile intent, weight reason, and storage boundary evidence를 읽어 role / weight discipline risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
@@ -129,7 +131,7 @@ Backtest Analysis
 역할:
 
 - Backtest Analysis는 후보 source를 만든다.
-- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 source traits 기반 module planner로 필수 / 조건부 / 후속 참고 검증과 Final Review 이동 gate를 만든다. Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거는 compact하게 계속 보여준다.
+- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 source traits 기반 module planner로 필수 / 조건부 / 후속 참고 검증과 Final Review 이동 gate를 만든다. 화면의 `Final Review Gate`, audit board, provider board, Robustness Lab은 board registry를 통해 어떤 module의 evidence인지 표시하며, 후보 특성상 적용되지 않는 조건부 board는 비적용으로 분리한다.
 - Final Review는 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row와 Construction Risk / Risk Contribution / Component Role / Weight non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, select / hold / reject / re-review 판단을 기록하며, 저장된 판단을 read-only dossier로 다시 보여준다.
 - Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck operations preflight / readiness / symbol freshness / provider evidence / monitoring timeline / review signal policy / recheck comparison / allocation drift evidence boundary를 확인한다.
 

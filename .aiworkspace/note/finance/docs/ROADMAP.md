@@ -7,6 +7,7 @@ Last Verified: 2026-05-30
 
 | Track | Status | Notes |
 |---|---|---|
+| Practical Validation Board Map V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-board-map-v1/`; 화면 board와 validation module을 분리하고 Applied Validation Map / board badge로 적용 / 비적용 근거를 표시 |
 | Backtest Analysis Stage 1 Closeout | Complete | `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`; Backtest 1단계는 단일 전략 / Portfolio Mix 후보를 만들고 1차 readiness 통과 시 Practical Validation source로 보내는 단계로 정리 완료 |
 | Practical Validation Required Module Polish V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-required-module-polish-v1/`; required module labels / reasons now distinguish source qualification, evidence coverage, comparator parity, minimum robustness, and gate effect / gate reason |
 | Practical Validation Module Gate V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-module-gate-v1/`; Practical Validation result now includes source traits, validation modules, and a Final Review gate. Required module `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN` blocks save-and-move while detailed diagnostics remain visible |

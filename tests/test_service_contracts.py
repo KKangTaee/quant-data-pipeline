@@ -282,6 +282,80 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(modules["risk_contribution"]["status"], "NOT_APPLICABLE")
         self.assertEqual(modules["risk_contribution"]["gate_effect"], "Not applicable")
 
+    def test_validation_board_map_marks_single_gtaa_conditional_boards(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": True},
+            {"Criteria": "Runtime period coverage", "Ready": True},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "PASS"},
+            {"domain": "robustness_sensitivity_overfit", "status": "PASS"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+            {"domain": "regime_macro_suitability", "status": "REVIEW"},
+            {"domain": "sentiment_risk_on_off_overlay", "status": "REVIEW"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [
+                    {
+                        "strategy_key": "gtaa",
+                        "target_weight": 100.0,
+                        "universe": ["SPY", "QQQ", "GLD", "IEF"],
+                        "replay_contract": {
+                            "settings_snapshot": {
+                                "tickers": ["SPY", "QQQ", "GLD", "IEF"],
+                                "interval": 2,
+                            }
+                        },
+                    }
+                ],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=pass_row,
+            risk_contribution_rows=[{"Criteria": "Pairwise correlation", "Status": "NEEDS_INPUT"}],
+            component_role_weight_rows=[{"Criteria": "Component role source coverage", "Status": "REVIEW"}],
+            backtest_realism_rows=pass_row,
+        )
+
+        modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertTrue(modules["provider_investability"]["applies"])
+        self.assertFalse(modules["leverage_inverse"]["applies"])
+        self.assertTrue(modules["macro_regime"]["applies"])
+        self.assertFalse(modules["risk_contribution"]["applies"])
+        self.assertFalse(modules["component_role_weight"]["applies"])
+
+        display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
+        self.assertEqual(display_rows["Risk Contribution"]["Module Type"], "Conditional")
+        self.assertEqual(display_rows["Risk Contribution"]["Applies"], "No")
+        self.assertIn("Risk Contribution Audit", display_rows["Risk Contribution"]["Evidence Boards"])
+
+        board_rows = {row["Board"]: row for row in plan["board_display_rows"]}
+        self.assertEqual(board_rows["Provider Coverage"]["Applies"], "Yes")
+        self.assertEqual(board_rows["Look-through Exposure Board"]["Applies"], "Yes")
+        self.assertEqual(board_rows["Risk Contribution Audit"]["Applies"], "No")
+        self.assertEqual(board_rows["Component Role / Weight Audit"]["Applies"], "No")
+        self.assertIn("single component", board_rows["Risk Contribution Audit"]["Applicability"])
+
     def test_validation_module_gate_allows_ready_with_review_modules(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
 
@@ -352,6 +426,7 @@ import app.services.backtest_realism_audit
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_diagnostics
+import app.services.backtest_practical_validation_board_registry
 import app.services.backtest_practical_validation_modules
 import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_provider_context

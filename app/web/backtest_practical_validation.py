@@ -309,6 +309,78 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _validation_board_row(validation_result: dict[str, Any], board_id: str) -> dict[str, Any]:
+    target = str(board_id or "").strip()
+    for row in list(validation_result.get("validation_board_display_rows") or []):
+        row_dict = dict(row or {})
+        if str(row_dict.get("Board ID") or "").strip() == target:
+            return row_dict
+    return {}
+
+
+def _board_applies(validation_result: dict[str, Any], board_id: str) -> bool:
+    row = _validation_board_row(validation_result, board_id)
+    if not row:
+        return True
+    return str(row.get("Applies") or "").lower() == "yes"
+
+
+def _board_feed_count(row: dict[str, Any]) -> int:
+    feeds = str(row.get("Feeds Modules") or "").strip()
+    if not feeds or feeds == "-":
+        return 0
+    return len([item for item in feeds.split(" / ") if item.strip()])
+
+
+def _board_gate_badge_value(row: dict[str, Any]) -> str:
+    gate_effects = str(row.get("Gate Effects") or "").strip()
+    if not gate_effects or gate_effects == "-":
+        return "Not applicable"
+    effects = [item.strip() for item in gate_effects.split(" / ") if item.strip()]
+    if len(dict.fromkeys(effects)) > 1:
+        return "Mixed"
+    return effects[0]
+
+
+def _render_board_context_badges(validation_result: dict[str, Any], board_id: str) -> None:
+    row = _validation_board_row(validation_result, board_id)
+    if not row:
+        return
+    applies = str(row.get("Applies") or "").lower() == "yes"
+    render_badge_strip(
+        [
+            {"label": "Board Type", "value": row.get("Board Type") or "-", "tone": "neutral"},
+            {
+                "label": "Applies",
+                "value": "Yes" if applies else "No",
+                "tone": "positive" if applies else "neutral",
+            },
+            {"label": "Feeds", "value": _board_feed_count(row), "tone": "neutral"},
+            {
+                "label": "Gate",
+                "value": _board_gate_badge_value(row),
+                "tone": _status_tone(row.get("Status")),
+            },
+        ]
+    )
+    if row.get("Why It Appears"):
+        st.caption(str(row.get("Why It Appears")))
+
+
+def _render_not_applicable_board(
+    validation_result: dict[str, Any],
+    board_id: str,
+    title: str,
+) -> bool:
+    row = _validation_board_row(validation_result, board_id)
+    if not row or _board_applies(validation_result, board_id):
+        return False
+    with st.expander(f"{title} - Not applicable", expanded=False):
+        _render_board_context_badges(validation_result, board_id)
+        st.caption(str(row.get("Applicability") or "현재 후보 특성상 이 보드는 적용하지 않습니다."))
+    return True
+
+
 def _pct_badge_value(value: Any) -> str:
     if value is None:
         return "-"
@@ -347,6 +419,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
         return
 
     st.markdown("##### Provider Data Gaps")
+    _render_board_context_badges(validation_result, "provider_data_gaps")
     st.caption(
         "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
         "부족 데이터는 이 화면에서 바로 수집할 수 있고, source mapping이 없는 ETF는 connector 보강이 필요합니다."
@@ -445,11 +518,14 @@ def _provider_look_through_board(validation_result: dict[str, Any]) -> dict[str,
 
 
 def _render_provider_look_through_board(validation_result: dict[str, Any]) -> None:
+    if _render_not_applicable_board(validation_result, "look_through_exposure", "Look-through Exposure Board"):
+        return
     board = _provider_look_through_board(validation_result)
     if not board:
         return
 
     st.markdown("##### Look-through Exposure Board")
+    _render_board_context_badges(validation_result, "look_through_exposure")
     st.caption(
         "ETF holdings / exposure snapshot을 portfolio weight 기준으로 접어 본 compact board입니다. "
         "full holdings row는 DB에만 있고, 여기에는 판단에 필요한 요약만 표시합니다."
@@ -506,9 +582,14 @@ def _robustness_lab_board(validation_result: dict[str, Any]) -> dict[str, Any]:
     return board
 
 
-def _render_robustness_lab_board(board: dict[str, Any]) -> None:
+def _render_robustness_lab_board(
+    board: dict[str, Any],
+    validation_result: dict[str, Any] | None = None,
+) -> None:
     metrics = dict(board.get("metrics") or {})
     st.markdown("##### Robustness Lab")
+    if validation_result is not None:
+        _render_board_context_badges(validation_result, "robustness_lab")
     st.caption(
         "Stress, rolling, sensitivity, overfit 근거를 Final Review에서 바로 읽을 수 있는 compact board로 요약합니다."
     )
@@ -569,7 +650,7 @@ def _render_robustness_lab_board(board: dict[str, Any]) -> None:
 def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any]) -> None:
     board = _robustness_lab_board(validation_result)
     if board:
-        _render_robustness_lab_board(board)
+        _render_robustness_lab_board(board, validation_result)
         return
 
     stress = dict(validation_result.get("stress_interpretation") or {})
@@ -578,6 +659,7 @@ def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any])
         return
 
     st.markdown("##### Stress / Sensitivity Interpretation")
+    _render_board_context_badges(validation_result, "robustness_lab")
     st.caption(
         "Stress와 sensitivity 숫자를 Final Review에서 바로 읽을 수 있도록 원인, trigger, 다음 확인 항목으로 요약합니다."
     )
@@ -610,6 +692,85 @@ def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any])
             st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
 
 
+def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
+    applied_rows = list(validation_result.get("applied_validation_board_display_rows") or [])
+    skipped_rows = list(validation_result.get("not_applicable_validation_board_display_rows") or [])
+    module_rows = list(validation_result.get("validation_module_display_rows") or [])
+    summary = dict(validation_result.get("validation_board_summary") or {})
+    if not applied_rows and not skipped_rows:
+        return
+
+    st.markdown("##### Applied Validation Map")
+    render_badge_strip(
+        [
+            {"label": "Applied Boards", "value": summary.get("applied", len(applied_rows)), "tone": "positive"},
+            {
+                "label": "Skipped Boards",
+                "value": summary.get("not_applicable", len(skipped_rows)),
+                "tone": "neutral",
+            },
+            {"label": "Required Links", "value": summary.get("required_boards", 0), "tone": "neutral"},
+            {
+                "label": "Conditional Links",
+                "value": summary.get("conditional_boards", 0),
+                "tone": "neutral",
+            },
+        ]
+    )
+    map_tab, skipped_tab, module_tab = st.tabs(["적용 보드", "비적용 보드", "모듈 연결"])
+    with map_tab:
+        if applied_rows:
+            st.dataframe(
+                pd.DataFrame(applied_rows)[
+                    [
+                        "Board",
+                        "Board Type",
+                        "Module Types",
+                        "Feeds Modules",
+                        "Gate Effects",
+                        "Why It Appears",
+                    ]
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+        else:
+            st.info("현재 후보에 적용되는 보드가 없습니다.")
+    with skipped_tab:
+        if skipped_rows:
+            st.dataframe(
+                pd.DataFrame(skipped_rows)[
+                    [
+                        "Board",
+                        "Board Type",
+                        "Applicability",
+                        "Primary Modules",
+                        "Why It Appears",
+                    ]
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+        else:
+            st.success("현재 후보에서 제외되는 조건부 보드가 없습니다.")
+    with module_tab:
+        if module_rows:
+            st.dataframe(
+                pd.DataFrame(module_rows)[
+                    [
+                        "Module",
+                        "Module Type",
+                        "Applies",
+                        "Status",
+                        "Gate Effect",
+                        "Evidence Boards",
+                    ]
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+
+
 def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     gate = dict(validation_result.get("final_review_gate") or {})
     summary = dict(validation_result.get("validation_module_summary") or {})
@@ -618,6 +779,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     module_rows = list(validation_result.get("validation_module_display_rows") or [])
 
     st.markdown("##### Final Review Gate")
+    _render_board_context_badges(validation_result, "final_review_gate")
     render_badge_strip(
         [
             {
@@ -672,6 +834,8 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
         ]
     )
 
+    _render_applied_validation_map(validation_result)
+
     blocking_modules = list(gate.get("blocking_modules") or [])
     if blocking_modules:
         st.error("Final Review 이동 전에 보강해야 할 필수 검증 모듈이 있습니다.")
@@ -699,13 +863,14 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
 
 def _render_validation_result(validation_result: dict[str, Any]) -> None:
     profile = dict(validation_result.get("validation_profile") or {})
+    gate = dict(validation_result.get("final_review_gate") or {})
     status_counts = dict(dict(validation_result.get("diagnostic_summary") or {}).get("status_counts") or {})
     render_readiness_route_panel(
-        route_label=str(validation_result.get("validation_route") or "-"),
+        route_label=str(gate.get("route") or validation_result.get("validation_route") or "-"),
         score=float(validation_result.get("validation_score") or 0.0),
-        blockers_count=len(validation_result.get("hard_blockers") or []),
-        verdict=str(validation_result.get("verdict") or "-"),
-        next_action=str(validation_result.get("next_action") or "-"),
+        blockers_count=len(gate.get("blocking_modules") or validation_result.get("hard_blockers") or []),
+        verdict=str(gate.get("verdict") or validation_result.get("verdict") or "-"),
+        next_action=str(gate.get("next_action") or validation_result.get("next_action") or "-"),
         route_title="Practical Validation",
         score_title="Validation Score",
     )
@@ -720,6 +885,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     )
     _render_validation_module_board(validation_result)
     st.markdown("##### Input Evidence")
+    _render_board_context_badges(validation_result, "input_evidence")
     st.dataframe(pd.DataFrame(validation_result.get("checks") or []), width="stretch", hide_index=True)
     _render_validation_efficacy_audit(validation_result)
     _render_data_coverage_audit(validation_result)
@@ -728,6 +894,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     _render_component_role_weight_audit(validation_result)
     _render_backtest_realism_audit(validation_result)
     st.markdown("##### Practical Diagnostics")
+    _render_board_context_badges(validation_result, "practical_diagnostics")
     diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
         st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
@@ -737,6 +904,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
     if provider_rows:
         st.markdown("##### Provider Coverage")
+        _render_board_context_badges(validation_result, "provider_coverage")
         st.caption(
             "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
         )
@@ -843,6 +1011,7 @@ def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
     st.markdown("##### Validation Efficacy Audit")
+    _render_board_context_badges(validation_result, "validation_efficacy_audit")
     render_badge_strip(
         [
             {
@@ -874,6 +1043,7 @@ def _render_backtest_realism_audit(validation_result: dict[str, Any]) -> None:
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
     st.markdown("##### Backtest Realism Audit")
+    _render_board_context_badges(validation_result, "backtest_realism_audit")
     render_badge_strip(
         [
             {
@@ -905,6 +1075,7 @@ def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
     st.markdown("##### Construction Risk Audit")
+    _render_board_context_badges(validation_result, "construction_risk_audit")
     render_badge_strip(
         [
             {
@@ -929,6 +1100,8 @@ def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:
 
 
 def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
+    if _render_not_applicable_board(validation_result, "risk_contribution_audit", "Risk Contribution Audit"):
+        return
     audit = dict(validation_result.get("risk_contribution_audit") or {})
     rows = list(validation_result.get("risk_contribution_display_rows") or audit.get("rows") or [])
     if not rows:
@@ -936,6 +1109,7 @@ def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
     st.markdown("##### Risk Contribution Audit")
+    _render_board_context_badges(validation_result, "risk_contribution_audit")
     render_badge_strip(
         [
             {
@@ -968,6 +1142,8 @@ def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
 
 
 def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> None:
+    if _render_not_applicable_board(validation_result, "component_role_weight_audit", "Component Role / Weight Audit"):
+        return
     audit = dict(validation_result.get("component_role_weight_audit") or {})
     rows = list(validation_result.get("component_role_weight_display_rows") or audit.get("rows") or [])
     if not rows:
@@ -975,6 +1151,7 @@ def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> No
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
     st.markdown("##### Component Role / Weight Audit")
+    _render_board_context_badges(validation_result, "component_role_weight_audit")
     render_badge_strip(
         [
             {
@@ -1015,6 +1192,7 @@ def _render_data_coverage_audit(validation_result: dict[str, Any]) -> None:
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
     st.markdown("##### Data Coverage Audit")
+    _render_board_context_badges(validation_result, "data_coverage_audit")
     render_badge_strip(
         [
             {

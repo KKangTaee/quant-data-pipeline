@@ -1688,6 +1688,15 @@ def build_practical_validation_result(
     result["validation_modules"] = list(module_plan.get("modules") or [])
     result["validation_module_display_rows"] = list(module_plan.get("module_display_rows") or [])
     result["validation_module_summary"] = dict(module_plan.get("summary") or {})
+    result["validation_board_map"] = dict(module_plan.get("board_map") or {})
+    result["validation_board_display_rows"] = list(module_plan.get("board_display_rows") or [])
+    result["applied_validation_board_display_rows"] = list(
+        module_plan.get("applied_board_display_rows") or []
+    )
+    result["not_applicable_validation_board_display_rows"] = list(
+        module_plan.get("not_applicable_board_display_rows") or []
+    )
+    result["validation_board_summary"] = dict(module_plan.get("board_summary") or {})
     result["final_review_gate"] = dict(module_plan.get("final_review_gate") or {})
     result["final_review_handoff"] = {
         **dict(result.get("final_review_handoff") or {}),

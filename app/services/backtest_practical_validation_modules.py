@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_practical_validation_board_registry import (
+    build_validation_board_map,
+    evidence_boards_for_module,
+)
+
 
 BLOCKING_STATUSES = {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
 REVIEW_STATUSES = {"REVIEW"}
@@ -44,6 +49,12 @@ LEVERAGED_OR_INVERSE_SYMBOLS = {
     "TBT",
     "UVXY",
     "SVXY",
+}
+
+MODULE_TYPE_LABELS = {
+    "REQUIRED": "Required",
+    "CONDITIONAL": "Conditional",
+    "REFERENCE": "Reference",
 }
 
 
@@ -205,16 +216,22 @@ def _module(
     next_action: str = "",
     evidence: str = "",
     profile_effect: str = "-",
+    applicability_reason: str = "",
 ) -> dict[str, Any]:
     normalized_status = _status(status) if applies else "NOT_APPLICABLE"
+    requirement_text = str(requirement or "").upper()
     return {
         "module_id": module_id,
         "label": label,
         "group": group,
         "status": normalized_status,
         "requirement": requirement,
+        "module_type": MODULE_TYPE_LABELS.get(requirement_text, requirement_text or "-"),
         "stage_owner": stage_owner,
         "applies": bool(applies),
+        "applicability_reason": applicability_reason or (
+            "현재 후보에 적용됩니다." if applies else "현재 후보 특성상 이 검증은 적용하지 않습니다."
+        ),
         "reason": reason,
         "next_action": next_action,
         "evidence": evidence,
@@ -255,7 +272,7 @@ def _module_gate_effect(module: dict[str, Any]) -> str:
 
 def _module_gate_reason(module: dict[str, Any]) -> str:
     if not module.get("applies"):
-        return "후보 특성상 이 검증은 적용하지 않습니다."
+        return str(module.get("applicability_reason") or "후보 특성상 이 검증은 적용하지 않습니다.")
     status = _status(module.get("status"))
     if _module_blocks_gate(module):
         return f"Final Review 이동 전 보강 필요: {module.get('next_action') or module.get('reason') or status}"
@@ -283,12 +300,20 @@ def _module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
             "Group": module.get("group"),
+            "Module Type": module.get("module_type"),
             "Module": module.get("label"),
             "Applies": "Yes" if module.get("applies") else "No",
+            "Applicability": module.get("applicability_reason"),
             "Requirement": module.get("requirement"),
             "Status": module.get("status"),
             "Gate Effect": module.get("gate_effect") or _module_gate_effect(module),
             "Gate Reason": module.get("gate_reason") or _module_gate_reason(module),
+            "Evidence Boards": " / ".join(
+                str(board.get("label") or "")
+                for board in list(module.get("evidence_boards") or [])
+                if board.get("label")
+            )
+            or "-",
             "Reason": module.get("reason"),
             "Next Action": module.get("next_action"),
             "Profile / Traits": module.get("profile_effect"),
@@ -477,6 +502,11 @@ def build_validation_module_plan(
             reason="ETF-like source에서 운용성, holdings, exposure, provider freshness를 확인합니다.",
             next_action="ETF source이면 provider gap 수집을 먼저 실행합니다.",
             profile_effect="ETF-like source" if traits.get("is_etf_like") else "not ETF-like",
+            applicability_reason=(
+                "ETF-like source이므로 provider 운용성 / holdings / exposure를 확인합니다."
+                if traits.get("is_etf_like")
+                else "ETF-like source가 아니므로 provider 전용 검증은 적용하지 않습니다."
+            ),
         ),
         _module(
             module_id="leverage_inverse",
@@ -485,12 +515,17 @@ def build_validation_module_plan(
             status=leverage_status,
             requirement="CONDITIONAL",
             stage_owner="practical_validation",
-            applies=bool(traits.get("is_etf_like") or traits.get("has_leveraged_or_inverse_symbols")),
+            applies=bool(traits.get("has_leveraged_or_inverse_symbols")),
             reason="레버리지 / 인버스 노출이 profile의 복잡도 허용 범위와 맞는지 확인합니다.",
             next_action="노출이 있으면 목적, 보유기간, 손실 감내 기준을 Final Review에 남깁니다.",
             profile_effect="leveraged/inverse symbols detected"
             if traits.get("has_leveraged_or_inverse_symbols")
-            else profile_label,
+            else "no leveraged/inverse symbols",
+            applicability_reason=(
+                "레버리지 / 인버스 ticker가 포함되어 suitability 검증을 적용합니다."
+                if traits.get("has_leveraged_or_inverse_symbols")
+                else "현재 universe에 레버리지 / 인버스 ticker가 없어 이 조건부 검증은 적용하지 않습니다."
+            ),
         ),
         _module(
             module_id="risk_contribution",
@@ -503,6 +538,11 @@ def build_validation_module_plan(
             reason="여러 component mix에서 correlation, risk contribution, drop-one dependency를 확인합니다.",
             next_action="single component 후보에는 적용하지 않고, weighted mix에서 component return matrix를 보강합니다.",
             profile_effect="weighted mix" if traits.get("is_weighted_mix") else "single component",
+            applicability_reason=(
+                "weighted mix 후보이므로 component별 위험 기여를 확인합니다."
+                if traits.get("is_weighted_mix")
+                else "single component 후보이므로 component 간 risk contribution 검증은 적용하지 않습니다."
+            ),
         ),
         _module(
             module_id="component_role_weight",
@@ -515,6 +555,11 @@ def build_validation_module_plan(
             reason="여러 component mix에서 role, target weight, weight reason coverage를 확인합니다.",
             next_action="single component 후보는 Final Review에서 core role로 해석합니다.",
             profile_effect="weighted mix" if traits.get("is_weighted_mix") else "single component",
+            applicability_reason=(
+                "weighted mix 후보이므로 component role / target weight 근거를 확인합니다."
+                if traits.get("is_weighted_mix")
+                else "single component 후보이므로 mix role / weight 검증은 적용하지 않습니다."
+            ),
         ),
         _module(
             module_id="macro_regime",
@@ -527,6 +572,11 @@ def build_validation_module_plan(
             reason="전술 / 헤지형 source에서 macro regime과 risk-on/off context를 확인합니다.",
             next_action="전술형이면 FRED macro snapshot과 historical regime split을 함께 확인합니다.",
             profile_effect="tactical source" if traits.get("is_tactical") else profile_label,
+            applicability_reason=(
+                "전술형 source 또는 전술 / 헤지 profile이므로 macro / regime fit을 확인합니다."
+                if traits.get("is_tactical") or profile_id == "hedged_tactical"
+                else "전술형 source가 아니므로 macro / regime 조건부 검증은 적용하지 않습니다."
+            ),
         ),
         _module(
             module_id="monitoring_baseline",
@@ -555,6 +605,12 @@ def build_validation_module_plan(
     for module in modules:
         module["gate_effect"] = _module_gate_effect(module)
         module["gate_reason"] = _module_gate_reason(module)
+        module["evidence_boards"] = evidence_boards_for_module(str(module.get("module_id") or ""))
+        module["evidence_board_labels"] = [
+            board.get("label")
+            for board in list(module.get("evidence_boards") or [])
+            if board.get("label")
+        ]
 
     blockers = [module for module in modules if _module_blocks_gate(module)]
     review_modules = [module for module in modules if _module_needs_review(module)]
@@ -578,10 +634,17 @@ def build_validation_module_plan(
         gate_verdict = "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다."
         next_action = "검증 결과를 저장하고 Final Review에서 최종 판단을 남깁니다."
 
+    board_map = build_validation_board_map(modules=modules, source_traits=traits)
+
     return {
         "source_traits": traits,
         "modules": modules,
         "module_display_rows": _module_display_rows(modules),
+        "board_map": board_map,
+        "board_display_rows": list(board_map.get("board_rows") or []),
+        "applied_board_display_rows": list(board_map.get("applied_board_rows") or []),
+        "not_applicable_board_display_rows": list(board_map.get("not_applicable_board_rows") or []),
+        "board_summary": dict(board_map.get("summary") or {}),
         "summary": {
             "applicable": len(applicable_modules),
             "required": len([module for module in required_modules if module.get("applies")]),

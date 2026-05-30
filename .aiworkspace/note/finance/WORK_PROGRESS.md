@@ -4432,3 +4432,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-required-module-polish-v1/`에서 필수검증 8개 표시를 보강했다.
   - `Benchmark Parity` 사용자-facing label을 `Benchmark / Comparator Parity`로 확장하고, module row에 `Gate Effect` / `Gate Reason`을 추가했다.
   - Source Integrity, Data Coverage, Latest Runtime Replay, Stress / Robustness, Backtest Realism 설명을 실제 gate 의미에 맞게 다듬었다.
+- Practical Validation Board Map V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-board-map-v1/`에서 화면 board와 validation module을 분리했다.
+  - `Applied Validation Map`은 적용 보드 / 비적용 보드 / 모듈 연결을 보여주고, 각 board title 아래에 `Board Type`, `Applies`, `Feeds`, `Gate` badge를 표시한다.
+  - 단일 component GTAA 후보에서는 weighted-mix 전용 Risk Contribution / Component Role / Weight board가 collapsed `Not applicable`로 내려간다.
