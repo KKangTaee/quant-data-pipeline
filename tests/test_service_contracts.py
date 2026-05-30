@@ -1275,14 +1275,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         first_row = snapshot["rows"].iloc[0]
         self.assertEqual(first_row["Group"], "Technology")
         self.assertEqual(first_row["Symbols"], 2)
+        self.assertEqual(first_row["Positive Symbols"], 2)
+        self.assertEqual(first_row["Positive Symbol Share %"], 100.0)
         self.assertEqual(first_row["Equal Weight Return %"], 20.0)
         self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
+        self.assertEqual(first_row["Cap vs Equal Gap pp"], 5.0)
+        self.assertEqual(first_row["Top 3 Positive Share %"], 100.0)
         self.assertEqual(first_row["Top Symbol"], "BBB")
         technology_leaders = snapshot["ticker_leader_rows"][
             snapshot["ticker_leader_rows"]["Group"] == "Technology"
         ].sort_values("Rank")
         self.assertEqual(technology_leaders["Symbol"].tolist(), ["BBB", "AAA"])
         self.assertEqual(technology_leaders.iloc[0]["Positive Return Share %"], 75.0)
+        self.assertIn("Previous Return %", technology_leaders.columns)
+        self.assertIn("Momentum Delta pp", technology_leaders.columns)
 
     def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
         from app.services.overview_market_intelligence import build_group_leadership_snapshot
@@ -1295,6 +1301,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             top_n=5,
             min_group_size=1,
             today=date(2026, 5, 28),
+            trend_groups=("Healthcare",),
             query_fn=self._query_fn,
         )
 
@@ -1308,9 +1315,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Top Symbol"], "AAA")
         self.assertEqual(snapshot["rows"].iloc[0]["Top Symbol Return %"], 12.0)
         self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["End Date"], "2026-05-18 15:30")
+        self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["Previous Return %"], 5.26)
+        self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["Momentum Delta pp"], 6.74)
         self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
         self.assertFalse(snapshot["rows"].empty)
         self.assertFalse(snapshot["trend_rows"].empty)
+        self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot

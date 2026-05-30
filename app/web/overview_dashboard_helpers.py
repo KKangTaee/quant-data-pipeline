@@ -401,6 +401,7 @@ def load_overview_group_leadership_snapshot(
     period: str = "monthly",
     top_n: int = 10,
     min_group_size: int = 5,
+    trend_groups: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     return build_group_leadership_snapshot(
         universe_limit=universe_limit,
@@ -409,6 +410,7 @@ def load_overview_group_leadership_snapshot(
         period=period,
         top_n=top_n,
         min_group_size=min_group_size,
+        trend_groups=trend_groups,
     )
 
 

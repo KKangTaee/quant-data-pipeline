@@ -53,11 +53,13 @@ http://localhost:8501
 
 3. `Workspace > Overview > Sector / Industry`
    - `Coverage`, `Group`, `Period`, `Top N`, `Min Symbols`를 선택한다.
-   - `Latest Ranking`에서 equal-weight / cap-weighted return, 구성 종목 수, 대표 symbol을 확인한다.
-   - `Trend`에서 Daily 3M, Weekly 6M, Monthly 1Y window의 group 흐름을 보고, `Trend Groups`로 표시할 line을 좁힌다.
+   - `Latest Ranking`에서 equal-weight / cap-weighted return, 구성 종목 수, 대표 symbol, breadth / concentration summary를 확인한다.
+   - `Trend`에서 Daily 3M, Weekly 6M, Monthly 1Y window의 group 흐름을 보고, `Trend Groups`로 표시할 group을 좁힌다.
+   - 같은 `Group` mode 안에서는 `Coverage`, `Period`, `Top N`, `Min Symbols`를 바꿔도 유효한 `Trend Groups` 선택을 유지한다. `Sector`와 `Industry` 선택 기억은 분리된다.
+   - Trend chart는 `Heatmap`, `Line`, `Latest Delta` 하위 탭으로 본다. Heatmap은 구간별 양/음 흐름, Line은 경로, Latest Delta는 latest window와 previous window의 변화폭을 빠르게 확인하는 용도다.
    - daily period는 저장된 `market_intraday_snapshot`이 있으면 `Previous Close -> latest quote` 기준을 사용한다.
    - weekly / monthly period는 EOD DB 기준이다. 최신 raw EOD row가 sparse하면 `Effective EOD Date`와 fallback reason이 status에 표시된다.
-   - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다.
+   - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다. Ticker leader bar는 양수일 때 sector color, 음수일 때 danger red를 사용하고, 직전 동일 기간 return은 얇은 marker로 표시한다.
 
 4. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
@@ -203,6 +205,9 @@ PY
 - Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
 - Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
 - Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.
+- Sector / Industry shows `Best Breadth`, `Cap vs Equal`, `Concentration`, and `Improving` insight cards above the latest ranking chart.
+- Sector / Industry Trend has `Heatmap`, `Line`, and `Latest Delta` chart tabs, and valid `Trend Groups` selections persist across controls inside the same group mode.
+- Sector / Industry Positive Group Detail ticker bars use sector colors for positive returns, danger red for negative returns, and high-contrast previous-period return markers.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.

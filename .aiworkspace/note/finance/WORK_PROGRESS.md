@@ -4122,3 +4122,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`에서 Volume Rank를 수익률 Top N의 재정렬이 아니라 별도 `volume_rows` read model로 분리했다.
   - Daily는 당일 snapshot / EOD 거래량과 거래대금을, weekly / monthly / yearly는 평균 일거래량 / 평균 일거래대금과 기간 합계를 함께 표시한다.
   - Top1000 / Top2000 비일별 조회는 결측 진단 최신일자 조회를 missing row로 제한하고 price / volume point read에 symbol-timeframe-date index를 사용하도록 줄였다.
+- Overview Sector / Industry polish:
+  - `.aiworkspace/note/finance/tasks/active/overview-sector-industry-polish/`에서 Trend Groups 유지, Heatmap / Line / Latest Delta trend view, insight cards, Positive Group Detail marker 개선을 완료했다.
+  - Service read model은 breadth, cap-vs-equal gap, concentration, ticker previous return, momentum delta를 제공한다.
+  - `tests.test_service_contracts` 80개, chart JSON smoke, `git diff --check`, Browser QA screenshot을 통과했다.

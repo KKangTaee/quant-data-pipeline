@@ -5638,3 +5638,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 현재 DB에는 daily volume이 존재한다. Daily는 latest snapshot / EOD day 기준, 비일별은 현재 return window의 average daily volume / average daily dollar volume과 total volume / total dollar volume이 가장 덜 모호하다
 - Follow-up:
   - `volume_rows` read model을 추가하고 Volume chart / table이 이 전용 랭킹을 사용하도록 구현했다. Top2000 yearly는 여전히 약 20초로 날짜 윈도우 계산 최적화가 후속 후보로 남았다
+
+### 2026-05-30 - Sector / Industry Trend와 Positive Detail을 더 읽기 쉽게 만든다
+- User request:
+  - 사용자가 Sector / Industry 안에서 Trend Groups가 컨트롤 변경 때마다 초기화되는 문제, line chart의 시각적 약함, Positive Group Detail의 색상 / 이전 수익률 marker 확장을 요청함
+- Interpreted goal:
+  - 탭 내부 컨트롤 변경은 사용자가 고른 group 의도를 보존하고, 섹터 상승/하락은 heatmap / delta / line을 함께 제공해 더 빠르게 읽히게 해야 함
+- Analysis result:
+  - Trend Groups state key를 coverage / period / top-N에서 분리하고 `sector` / `industry`별로 유지하면 내부 설정 변경과 탭 전환 의도를 구분할 수 있음
+  - 이전 기간 수익률은 모멘텀 참고 지표로 쓸 수 있지만 예측 신호가 아니라 latest window와 previous window의 비교 맥락으로 표시하는 것이 안전함
+- Follow-up:
+  - Sector / Industry에 insight cards, Heatmap / Line / Latest Delta tabs, Positive ticker sector-colored bars, previous-period marker를 추가했고 Browser QA screenshot까지 확인했다

@@ -87,8 +87,12 @@ GROUP_COLUMNS = [
     "Group",
     "Group Type",
     "Symbols",
+    "Positive Symbols",
+    "Positive Symbol Share %",
     "Equal Weight Return %",
     "Market Cap Weighted Return %",
+    "Cap vs Equal Gap pp",
+    "Top 3 Positive Share %",
     "Top Symbol",
     "Top Symbol Return %",
     "Start Date",
@@ -113,6 +117,8 @@ GROUP_TICKER_LEADER_COLUMNS = [
     "Symbol",
     "Name",
     "Return %",
+    "Previous Return %",
+    "Momentum Delta pp",
     "Positive Return Share %",
     "Sector",
     "Industry",
@@ -121,6 +127,8 @@ GROUP_TICKER_LEADER_COLUMNS = [
     "End Price",
     "Start Date",
     "End Date",
+    "Previous Start Date",
+    "Previous End Date",
 ]
 EVENT_COLUMNS = [
     "Date",
@@ -1051,13 +1059,29 @@ def _group_leadership_rows(
         else:
             weighted_return = equal_weight_return
         top_symbol = max(rows, key=lambda row: float(row["return_pct"]))
+        positive_symbols = sum(1 for row in rows if float(row.get("return_pct") or 0.0) > 0)
+        positive_symbol_share = (positive_symbols / len(rows)) * 100.0 if rows else 0.0
+        positive_returns = sorted(
+            [max(float(row.get("return_pct") or 0.0), 0.0) for row in rows],
+            reverse=True,
+        )
+        positive_return_total = sum(positive_returns)
+        top3_positive_share = (
+            (sum(positive_returns[:3]) / positive_return_total) * 100.0
+            if positive_return_total > 0
+            else None
+        )
         group_rows.append(
             {
                 "group": group_name,
                 "group_type": group_by.title(),
                 "symbols": len(rows),
+                "positive_symbols": positive_symbols,
+                "positive_symbol_share": positive_symbol_share,
                 "equal_weight_return": equal_weight_return,
                 "market_cap_weighted_return": weighted_return,
+                "cap_vs_equal_gap_pp": weighted_return - equal_weight_return,
+                "top3_positive_share": top3_positive_share,
                 "top_symbol": top_symbol["symbol"],
                 "top_symbol_return": top_symbol["return_pct"],
                 "start_date": start_date,
@@ -1086,8 +1110,14 @@ def _group_rows_frame(group_rows: list[dict[str, Any]]) -> pd.DataFrame:
             "Group": row["group"],
             "Group Type": row["group_type"],
             "Symbols": row["symbols"],
+            "Positive Symbols": row.get("positive_symbols"),
+            "Positive Symbol Share %": round(float(row.get("positive_symbol_share") or 0.0), 2),
             "Equal Weight Return %": round(float(row["equal_weight_return"]), 2),
             "Market Cap Weighted Return %": round(float(row["market_cap_weighted_return"]), 2),
+            "Cap vs Equal Gap pp": round(float(row.get("cap_vs_equal_gap_pp") or 0.0), 2),
+            "Top 3 Positive Share %": round(float(row["top3_positive_share"]), 2)
+            if row.get("top3_positive_share") is not None
+            else None,
             "Top Symbol": row["top_symbol"],
             "Top Symbol Return %": round(float(row["top_symbol_return"]), 2),
             "Start Date": row["start_date"],
@@ -1204,6 +1234,7 @@ def _group_ticker_leader_rows_frame(
         positive_return_total = sum(max(float(row.get("return_pct") or 0.0), 0.0) for row in rows)
         for rank, row in enumerate(rows, start=1):
             return_pct = float(row.get("return_pct") or 0.0)
+            previous_return = _safe_float(row.get("previous_return_pct"))
             leader_rows.append(
                 {
                     "Group": group_name,
@@ -1212,6 +1243,12 @@ def _group_ticker_leader_rows_frame(
                     "Symbol": str(row.get("symbol") or "").strip().upper(),
                     "Name": row.get("name") or "-",
                     "Return %": round(return_pct, 2),
+                    "Previous Return %": round(float(previous_return), 2)
+                    if previous_return is not None
+                    else None,
+                    "Momentum Delta pp": round(float(return_pct - previous_return), 2)
+                    if previous_return is not None
+                    else None,
                     "Positive Return Share %": round(
                         (return_pct / positive_return_total) * 100.0,
                         2,
@@ -1225,6 +1262,8 @@ def _group_ticker_leader_rows_frame(
                     "End Price": round(float(row.get("end_price") or 0.0), 4),
                     "Start Date": row.get("start_date"),
                     "End Date": row.get("end_date"),
+                    "Previous Start Date": row.get("previous_start_date") or "-",
+                    "Previous End Date": row.get("previous_end_date") or "-",
                 }
             )
 
@@ -2885,6 +2924,7 @@ def _build_intraday_group_leadership_snapshot(
     min_price_rows: int,
     today: date | None,
     interval: str,
+    trend_groups: Sequence[str] | None,
     query_fn: QueryFn,
 ) -> dict[str, Any] | None:
     payload = _build_intraday_return_payload(
@@ -2911,6 +2951,8 @@ def _build_intraday_group_leadership_snapshot(
     )
     ranked = _rank_group_rows(group_rows, top_n=top_n)
     top_groups = {str(row["group"]) for row in ranked}
+    requested_trend_groups = {str(group).strip() for group in (trend_groups or []) if str(group).strip()}
+    trend_group_set = top_groups | requested_trend_groups
     positive_groups = {
         str(row["group"])
         for row in ranked
@@ -2930,7 +2972,7 @@ def _build_intraday_group_leadership_snapshot(
         trend_rows = _group_trend_rows_frame(
             windows=list(trend_date_window.get("windows") or []),
             universe=universe,
-            groups=top_groups,
+            groups=trend_group_set,
             group_by=group_by,
             min_group_size=min_group_size,
             query_fn=query_fn,
@@ -2942,7 +2984,7 @@ def _build_intraday_group_leadership_snapshot(
 
     current_trend_rows = _group_trend_rows_from_group_rows(
         group_rows=group_rows,
-        groups=top_groups,
+        groups=trend_group_set,
         date_value=str(date_window["end_date"]),
     )
     if not current_trend_rows.empty:
@@ -2988,6 +3030,7 @@ def build_group_leadership_snapshot(
     today: date | None = None,
     prefer_intraday: bool = True,
     intraday_interval: str = "5m",
+    trend_groups: Sequence[str] | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
     normalized_group = str(group_by or "sector").strip().lower()
@@ -3023,6 +3066,7 @@ def build_group_leadership_snapshot(
                 min_price_rows=min_price_rows,
                 today=today,
                 interval=intraday_interval,
+                trend_groups=trend_groups,
                 query_fn=query,
             )
             if intraday_snapshot is not None:
@@ -3057,11 +3101,18 @@ def build_group_leadership_snapshot(
             )
             return snapshot
 
+        previous_context = _previous_return_context(
+            symbols=[str(row.get("symbol") or "").strip().upper() for row in universe if row.get("symbol")],
+            date_window=date_window,
+            period=normalized_period,
+            query_fn=query,
+        )
         return_rows, missing_rows = _build_return_rows(
             universe=universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
+            previous_context=previous_context,
         )
 
         group_rows = _group_leadership_rows(
@@ -3073,6 +3124,8 @@ def build_group_leadership_snapshot(
         )
         ranked = _rank_group_rows(group_rows, top_n=normalized_top_n)
         top_groups = {str(row["group"]) for row in ranked}
+        requested_trend_groups = {str(group).strip() for group in (trend_groups or []) if str(group).strip()}
+        trend_group_set = top_groups | requested_trend_groups
         positive_groups = {
             str(row["group"])
             for row in ranked
@@ -3081,7 +3134,7 @@ def build_group_leadership_snapshot(
         trend_rows = _group_trend_rows_frame(
             windows=list(date_window.get("windows") or []),
             universe=universe,
-            groups=top_groups,
+            groups=trend_group_set,
             group_by=normalized_group,
             min_group_size=min_group_size,
             query_fn=query,
