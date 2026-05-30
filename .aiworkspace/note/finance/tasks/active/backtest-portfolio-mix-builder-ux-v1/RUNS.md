@@ -16,3 +16,11 @@ Commands and outcomes will be appended during verification.
   - Loaded Backtest page, opened `Portfolio Mix Builder`, verified step strip renders as real UI rather than Markdown code.
   - Ran default `Equal Weight + GTAA` component execution.
   - Confirmed post-run UI exposes `요약 / 차트 / 진단 / 상세`, keeps raw component summary behind an expander, and no longer shows the old 9-tab overlay labels.
+- Follow-up Browser smoke on `http://127.0.0.1:8502/backtest`
+  - Ran `구성 포트폴리오 실행` and then `Mix 후보 결과 생성`.
+  - Confirmed top stepper classes after mix creation: step 1 `done`, step 2 `done`, step 3 `blocked` for current default blocker state, step 4 `pending`.
+  - Confirmed `Mix 후보 1차 판단` panel and creation notice are visible after the rerun.
+- Follow-up checks after stepper state fix:
+  - `.venv/bin/python -m py_compile app/web/backtest_compare.py`: passed.
+  - `git diff --check`: passed.
+  - `.venv/bin/python -m unittest tests.test_service_contracts`: passed, 133 tests.

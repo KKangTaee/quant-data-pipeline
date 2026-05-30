@@ -67,6 +67,10 @@ def _render_portfolio_mix_builder_css() -> None:
             border-color: #ff6b6b;
             background: rgba(255, 107, 107, 0.10);
         }
+        .pmx-step.ready {
+            border-color: #a7d7b9;
+            background: rgba(19, 115, 51, 0.10);
+        }
         .pmx-step.pending {
             background: var(--pmx-surface);
             color: var(--pmx-muted);
@@ -95,6 +99,10 @@ def _render_portfolio_mix_builder_css() -> None:
         .pmx-step.active .pmx-step-index {
             background: #ffe3e3;
             color: #c92a2a;
+        }
+        .pmx-step.ready .pmx-step-index {
+            background: #dff3e6;
+            color: #137333;
         }
         .pmx-step-title {
             display: block;
@@ -303,8 +311,6 @@ def _render_portfolio_mix_flow_strip(
         active_index = 0
     elif not mix_ready:
         active_index = 1
-    elif can_send_to_practical_validation:
-        active_index = 3
     else:
         active_index = 2
 
@@ -324,6 +330,8 @@ def _render_portfolio_mix_flow_strip(
                 css_class = "blocked"
         else:
             css_class = "pending"
+        if idx == 3 and mix_ready and can_send_to_practical_validation is True:
+            css_class = "ready"
         step_cards.append(
             f'<div class="pmx-step {css_class}">'
             f'<span class="pmx-step-index">{idx + 1}</span>'
@@ -2733,14 +2741,8 @@ def _render_weighted_portfolio_builder() -> None:
             "compare_source_context": compare_source_context,
         },
     )
-    st.success("Mix 포트폴리오를 생성했습니다.")
-    _render_portfolio_mix_section_head(
-        "3. Mix 후보 결과 확인",
-        "생성된 weighted portfolio 결과를 먼저 확인한 뒤, 아래 1차 판단에서 Practical Validation으로 보낼 수 있는지 봅니다.",
-    )
-    _render_weighted_portfolio_result(weighted_bundle)
-    _render_weighted_portfolio_practical_validation_panel(weighted_bundle)
-    _render_save_weighted_portfolio_panel(weighted_bundle)
+    st.session_state.backtest_weighted_portfolio_notice = "Mix 포트폴리오를 생성했습니다."
+    st.rerun()
 
 def _render_current_candidate_bundle_workspace() -> None:
     rows = _load_current_candidate_registry_latest()
