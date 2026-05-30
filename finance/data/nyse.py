@@ -1,6 +1,8 @@
+import json
 import time
 import pandas as pd
 from pathlib import Path
+from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 
 from selenium import webdriver
@@ -15,6 +17,82 @@ NYSE_URLS = {
     "stock": "https://www.nyse.com/listings_directory/stock",
     "etf": "https://www.nyse.com/listings_directory/etf",
 }
+NYSE_API_URL = "https://www.nyse.com/api/quotes/filter"
+NYSE_INSTRUMENT_TYPES = {
+    "stock": "EQUITY",
+    "etf": "EXCHANGE_TRADED_FUND",
+}
+
+
+def _fetch_api_rows(kind: str, max_results_per_page: int = 10000) -> list[dict]:
+    payload = json.dumps(
+        {
+            "instrumentType": NYSE_INSTRUMENT_TYPES[kind],
+            "pageNumber": 1,
+            "sortColumn": "NORMALIZED_TICKER",
+            "sortOrder": "ASC",
+            "maxResultsPerPage": max_results_per_page,
+            "filterToken": "",
+        }
+    ).encode("utf-8")
+    request = Request(
+        NYSE_API_URL,
+        data=payload,
+        headers={
+            "content-type": "application/json",
+            "origin": "https://www.nyse.com",
+            "referer": NYSE_URLS[kind],
+            "user-agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 Chrome/120 Safari/537.36"
+            ),
+        },
+        method="POST",
+    )
+    with urlopen(request, timeout=40) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    if not isinstance(data, list):
+        raise RuntimeError(f"NYSE listing API returned unexpected payload for {kind}.")
+    return data
+
+
+def _parse_api_rows(rows: list[dict]) -> tuple[pd.DataFrame, dict]:
+    parsed = []
+    for row in rows:
+        symbol = str(row.get("normalizedTicker") or row.get("symbolExchangeTicker") or "").strip()
+        name = str(row.get("instrumentName") or "").strip()
+        url = str(row.get("url") or "").strip()
+        if not symbol or not name:
+            continue
+        parsed.append({"symbol": symbol, "name": name, "url": url})
+
+    df = pd.DataFrame(parsed)
+    if df.empty:
+        return pd.DataFrame(columns=["symbol", "name", "url"]), {
+            "api_total": 0,
+            "api_rows": len(rows),
+            "usable_rows": 0,
+            "deduped_rows": 0,
+            "duplicate_symbol_rows": 0,
+        }
+
+    api_total = int(rows[0].get("total") or len(rows)) if rows else 0
+    df["_symbol_key"] = df["symbol"].str.lower()
+    df["_uppercase_rank"] = df["symbol"].map(lambda value: 0 if value == value.upper() else 1)
+    deduped = (
+        df.sort_values(["_symbol_key", "_uppercase_rank"])
+        .drop_duplicates("_symbol_key", keep="first")
+        .drop(columns=["_symbol_key", "_uppercase_rank"])
+        .sort_values("symbol")
+        .reset_index(drop=True)
+    )
+    return deduped, {
+        "api_total": api_total,
+        "api_rows": len(rows),
+        "usable_rows": len(df),
+        "deduped_rows": len(deduped),
+        "duplicate_symbol_rows": len(df) - len(deduped),
+    }
 
 
 def _create_driver() -> webdriver.Chrome:
@@ -118,32 +196,12 @@ def load_nyse_listings(
     if kind not in NYSE_URLS:
         raise ValueError(f"kind는 {list(NYSE_URLS.keys())} 중 하나여야 합니다.")
 
-    driver = _create_driver()
-    driver.get(NYSE_URLS[kind])
-    _accept_cookies(driver)
+    rows = _fetch_api_rows(kind)
+    df, stats = _parse_api_rows(rows)
+    if df.empty:
+        raise RuntimeError(f"NYSE listing API returned no usable {kind} rows.")
 
-    all_rows = []
-
-    while True:
-        WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, ".table-data.w-full.table-border-rows tbody tr")
-            )
-        )
-
-        all_rows.extend(_parse_table(driver.page_source))
-        print(f"[{kind.upper()}] 수집중... {len(all_rows):,} rows")
-
-        # 🔁 다음 페이지 이동
-        if not _click_next(driver):
-            break
-
-        time.sleep(sleep)
-
-
-    driver.quit()
-
-    df = pd.DataFrame(all_rows).drop_duplicates("symbol").reset_index(drop=True)
+    print(f"[{kind.upper()}] API 수집 완료: {stats}")
 
     if save_csv:
         out_dir = Path("csv")
