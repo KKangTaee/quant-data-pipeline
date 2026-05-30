@@ -15,6 +15,7 @@ Last Verified: 2026-05-30
 - 새 JSONL registry는 기본적으로 만들지 않는다.
 - 사용자 메모를 반복 저장하는 기능은 기본적으로 만들지 않는다.
 - Practical Validation과 Final Review JSONL에는 compact evidence만 둔다.
+- Workflow JSONL append 경계는 DB / pandas scalar를 JSON primitive로 정규화해야 한다. 예: `Decimal`은 int / float, `date` / `datetime`은 ISO string, non-finite float은 null.
 - full holdings, full macro series, full provider response, raw crawler output은 DB / ingestion 경계에 둔다.
 - UI는 provider / FRED / crawler를 직접 fetch하지 않는다. `Ingestion -> DB -> Loader -> UI` 흐름을 유지한다.
 - `NOT_RUN`은 pass가 아니며, 저장 record에서도 실행 불가 / 데이터 부재로 남긴다.

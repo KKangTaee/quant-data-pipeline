@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -119,6 +121,36 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         save_result.assert_called_once_with(validation_result)
         self.assertTrue(handoff.persisted)
         self.assertEqual(handoff.requested_panel, "Final Review")
+
+    def test_practical_validation_registry_serializes_db_scalar_payloads(self) -> None:
+        from app.runtime import portfolio_selection_v2
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            result_file = Path(tmp_dir) / "PRACTICAL_VALIDATION_RESULTS.jsonl"
+            with patch.object(portfolio_selection_v2, "PRACTICAL_VALIDATION_RESULT_FILE", result_file):
+                portfolio_selection_v2.append_practical_validation_result(
+                    {
+                        "selection_source_id": "source-json-safe",
+                        "input_evidence": {
+                            "data_coverage_context": {
+                                "price_window_rows": [
+                                    {
+                                        "symbol": "SPY",
+                                        "window_row_count": Decimal("2558"),
+                                        "first_date": date(2020, 1, 31),
+                                        "latest_seen": pd.Timestamp("2026-05-29"),
+                                    }
+                                ]
+                            }
+                        },
+                    }
+                )
+            loaded = json.loads(result_file.read_text(encoding="utf-8").strip())
+
+        row = loaded["input_evidence"]["data_coverage_context"]["price_window_rows"][0]
+        self.assertEqual(row["window_row_count"], 2558)
+        self.assertEqual(row["first_date"], "2020-01-31")
+        self.assertEqual(row["latest_seen"], "2026-05-29T00:00:00")
 
     def test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry(self) -> None:
         from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft

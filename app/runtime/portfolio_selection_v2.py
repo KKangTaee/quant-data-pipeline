@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +54,41 @@ def _read_jsonl_rows(path: Path) -> list[dict[str, Any]]:
 def _append_jsonl_row(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        handle.write(json.dumps(_json_ready(row), ensure_ascii=False) + "\n")
+
+
+def _json_ready(value: Any) -> Any:
+    """Normalize DB/UI scalar payloads before writing workflow JSONL rows."""
+
+    if isinstance(value, dict):
+        return {str(key): _json_ready(child) for key, child in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_ready(child) for child in value]
+    if isinstance(value, Decimal):
+        if not value.is_finite():
+            return None
+        if value == value.to_integral_value():
+            return int(value)
+        return float(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, float):
+        return value if isfinite(value) else None
+    if hasattr(value, "item"):
+        try:
+            return _json_ready(value.item())
+        except Exception:
+            pass
+    if value.__class__.__name__ == "DataFrame" and hasattr(value, "to_dict"):
+        try:
+            return _json_ready(value.to_dict(orient="records"))
+        except Exception:
+            return str(value)
+    try:
+        json.dumps(value, ensure_ascii=False)
+        return value
+    except TypeError:
+        return str(value)
 
 
 def _load_recent(path: Path, *, limit: int | None, timestamp_keys: tuple[str, ...]) -> list[dict[str, Any]]:

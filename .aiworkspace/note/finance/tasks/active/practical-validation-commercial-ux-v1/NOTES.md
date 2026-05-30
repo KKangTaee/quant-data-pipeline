@@ -10,3 +10,8 @@
 - 2차 visual overhaul은 검증 로직이나 저장 계약을 바꾸지 않고, `app/web/backtest_practical_validation_components.py`에 Practical Validation 전용 CSS / command center / section / card / step rail helper를 둔다.
 - 새 shell은 검증 module, evidence board, action board가 같은 검증 목록처럼 보이지 않도록 section boundary와 tone을 더 강하게 분리한다.
 - 선택 후보 확인의 backtest mini report는 기존 source의 `summary`, `result_curve`, `benchmark_curve`, `components` snapshot만 읽는다. 새 backtest 실행, registry rewrite, Final Review gate 계산 변경은 없다.
+
+## 2026-05-31
+
+- 저장 오류의 1차 원인은 `input_evidence.data_coverage_context.price_window_rows[].window_row_count`에 MySQL / pandas 경계에서 넘어온 `Decimal` 값이 포함되어 `json.dumps`가 실패한 것이다.
+- 해결은 Practical Validation 전용 계산을 바꾸지 않고 `app/runtime/portfolio_selection_v2.py`의 append-only JSONL write 경계에서 JSON-safe 정규화를 적용하는 방식으로 제한했다.

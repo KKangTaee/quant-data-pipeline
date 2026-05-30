@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-31 - Practical Validation Save & Move fails during JSONL persistence
+- User request:
+  - `저장하고 Final Review로 이동` 버튼 클릭 시 `json.dumps` TypeError가 발생한다고 stack trace와 함께 원인 파악 및 수정을 요청함.
+- Interpreted goal:
+  - Final Review 이동 전 Practical Validation result를 append-only registry에 안정적으로 저장하게 한다.
+- Analysis result:
+  - latest source로 재현한 결과 raw `json.dumps`가 `Decimal` 값에서 실패했다. 최초 확인 위치는 `input_evidence.data_coverage_context.price_window_rows[].window_row_count`다.
+  - DB / pandas scalar가 compact evidence에 포함될 수 있으므로 Clean V2 registry append 경계에서 JSON-safe primitive로 정규화하는 방식이 맞다.
+- Follow-up:
+  - validation scoring, module gate, Final Review routing은 변경하지 않는다.
+
 ### 2026-05-30 - Practical Validation source review should include the original backtest snapshot
 - User request:
   - Practical Validation의 `1. 선택 후보 확인`이 CAGR / MDD / 비중만 보여줘 부족하므로 기존 백테스트 결과의 summary, equity curve, result table을 간략히 보여 달라고 요청함.

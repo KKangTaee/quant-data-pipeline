@@ -31,6 +31,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-31
+- Fixed Practical Validation Save & Move JSONL persistence failure caused by DB `Decimal` scalar values in compact data coverage evidence.
+- Clean V2 selection registry append now normalizes DB / pandas scalar payloads before JSONL write; no gate policy or validation scoring change.
+
 ### 2026-05-30
 - Practical Validation `1. 선택 후보 확인` now shows the saved Backtest Analysis source snapshot as Summary / Equity Curve / Result Table / Components before profile and replay checks.
 - This is a read-only display change; it does not rerun backtests, rewrite registries, or change Final Review gate policy.

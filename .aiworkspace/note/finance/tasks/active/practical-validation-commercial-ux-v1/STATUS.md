@@ -11,3 +11,8 @@
 - 1차 pass가 여전히 기본 Streamlit card 느낌을 벗어나지 못한다는 사용자 피드백을 반영해 전용 `backtest_practical_validation_components.py` product shell로 2차 visual overhaul을 진행.
 - Practical Validation 상단, step section, Control Center, Gate, Evidence, Action, Save & Move 영역을 전용 dark workbench 컴포넌트로 교체하고 기존 `st.container(border=True)` 중심 구획을 제거.
 - `1. 선택 후보 확인`에 Backtest Analysis source snapshot의 Summary / Equity Curve / Result Table / Components 탭을 추가해 후보의 원래 백테스트 근거를 먼저 확인하게 함.
+
+## 2026-05-31
+
+- `저장하고 Final Review로 이동`에서 Practical Validation result 저장 시 DB coverage의 `Decimal` 값이 JSON 직렬화를 막는 문제를 재현하고 수정.
+- Clean V2 registry append 경계에서 Decimal / date / datetime / numpy scalar / DataFrame fallback을 JSON-safe primitive로 정규화하도록 보강.
