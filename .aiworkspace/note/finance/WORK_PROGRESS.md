@@ -24,6 +24,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Closed Backtest Analysis 1단계 기준 문서: `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
+- Current Stage 1 boundary is now explicit: Single Strategy / Portfolio Mix 후보 생성, 1차 readiness, and Practical Validation handoff only.
+- Candidate comparison as a separate read-only tool, saved mix inspector polish, weighted mix cost / turnover aggregation, and profile-specific thresholds remain follow-up candidates outside this closeout.
 - Completed `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-ux-v1/`.
 - Portfolio Mix Builder post-run UI now reads as `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation`, with component result cards, 4 tabs, and raw/detail evidence lowered into expanders.
 - No backtest calculation, DB schema, JSONL registry, saved setup policy, live approval, order, or auto rebalance behavior was added.

@@ -16,4 +16,5 @@
 
 ## Next
 
-- User review in the live browser.
+- Closed for Backtest Analysis Stage 1 closeout.
+- Durable closeout reference: `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.

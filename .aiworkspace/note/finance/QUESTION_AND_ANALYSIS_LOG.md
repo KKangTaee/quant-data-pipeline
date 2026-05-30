@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Backtest Analysis Stage 1 is closed as candidate-source creation
+- User request:
+  - 1단계 Backtest는 여기까지 진행하면 될 것 같으니, 이번 세션에서 작업한 내용과 최종 수정 상태를 문서로 업데이트하고 정리해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis를 최종 투자 판단이나 운영 판단이 아니라, 단일 전략 / Portfolio Mix 후보 source를 만들고 1차 readiness 통과 시 Practical Validation으로 보내는 단계로 닫는다.
+- Analysis result:
+  - Session closeout doc added at `docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
+  - Backtest Analysis now has explicit boundaries: Real-Money is first-pass readiness, Practical Validation handoff is gated, Portfolio Mix Builder creates one weighted mix candidate, and no memo / preset / live approval / order / auto rebalance behavior is added.
+  - Remaining items are parked as follow-up candidates: separate read-only candidate comparison, saved mix inspector polish, weighted mix cost / turnover aggregation, profile-specific thresholds, and Phase 14 prioritization.
+- Follow-up:
+  - Next product work should move to Practical Validation / Final Review review or Phase 14 prioritization, not keep expanding Backtest Analysis 1단계 without a new explicit scope.
+
 ### 2026-05-30 - Portfolio Mix Builder post-run UX is summary-first
 - User request:
   - Portfolio Mix Builder에서 mix 실행 후 상단 result UI가 혼잡하고, 기존 보수적 UI 패턴이 반복되어 완성도가 떨어진다고 지적함.
