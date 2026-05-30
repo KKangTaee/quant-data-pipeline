@@ -21,6 +21,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Market Movers 2차 개선은 coverage별 자동갱신과 momentum context로 좁힌다
+- User request:
+  - 새 세션에서 Workspace / Overview 2차 개선으로 Top1000 / Top2000 자동갱신, 거래량 랭킹, 섹터 컬러, 직전 기간 대비 momentum 표시 가능성을 검토하고 개발해 달라고 요청함.
+- Interpreted goal:
+  - Market Movers를 선택 coverage 기준으로 갱신하고, 수익률 ranking 외에 거래량과 직전 동일 기간 대비 강도 변화를 함께 읽는 화면으로 만든다.
+- Analysis result:
+  - 자동화 job spec에는 Top1000 / Top2000 intraday가 이미 있으므로 UI heartbeat에서 선택 coverage job_id만 넘기는 방식이 가장 안전하다. `browser_safe` 단독 profile은 S&P 500 용도로 유지한다.
+  - Momentum은 유효한 참고 지표지만 단기 noise와 crash risk가 있어 buy/sell 신호가 아니라 `Previous Return %` / `Momentum Delta pp` 보조 context로 표시한다.
+- Follow-up:
+  - Relative Volume은 평균 거래량 window가 필요한 후속 지표로 남기고, 이번 구현은 raw volume + dollar volume부터 제공한다.
+
 ### 2026-05-30 - Overview는 DB-first production baseline으로 병합 준비한다
 - User request:
   - Overview Market Intelligence 개발 세션의 흐름을 정리하고 master 병합 전에 문서 / 개발 추적 상태를 업데이트해 달라고 요청함.

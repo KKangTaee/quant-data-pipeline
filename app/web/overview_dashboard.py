@@ -48,6 +48,7 @@ from app.web.overview_ui_components import (
     OVERVIEW_COLOR_TEXT_INVERSE,
     OVERVIEW_COLOR_WARNING,
     OVERVIEW_DIVERGING_RANGE,
+    OVERVIEW_SECTOR_COLOR_MAP,
     OVERVIEW_SERIES_COLORS,
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
@@ -66,7 +67,11 @@ from app.web.overview_ui_components import (
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 BROWSER_AUTO_REFRESH_SECONDS = 300
-BROWSER_AUTO_REFRESH_PROFILE = "browser_safe"
+BROWSER_AUTO_REFRESH_JOB_CONFIG = {
+    "SP500": {"profile": "browser_safe", "job_id": "sp500_intraday"},
+    "TOP1000": {"profile": "intraday", "job_id": "top1000_intraday"},
+    "TOP2000": {"profile": "intraday", "job_id": "top2000_intraday"},
+}
 MARKET_MOVER_TABLE_CHROME_HEIGHT = 44
 MARKET_COVERAGE_LABELS = {
     "SP500": "S&P 500",
@@ -568,6 +573,26 @@ def _market_mover_chart_height(row_count: int) -> int:
     return 1360
 
 
+def _compact_number(value: Any, *, prefix: str = "") -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    amount = float(numeric)
+    sign = "-" if amount < 0 else ""
+    amount = abs(amount)
+    for suffix, divisor in (("T", 1_000_000_000_000), ("B", 1_000_000_000), ("M", 1_000_000), ("K", 1_000)):
+        if amount >= divisor:
+            return f"{sign}{prefix}{amount / divisor:.1f}{suffix}"
+    return f"{sign}{prefix}{amount:,.0f}"
+
+
+def _sector_bar_color(sector: Any, return_pct: Any | None = None) -> str:
+    numeric_return = pd.to_numeric(return_pct, errors="coerce") if return_pct is not None else None
+    if numeric_return is not None and pd.notna(numeric_return) and float(numeric_return) < 0:
+        return OVERVIEW_COLOR_DANGER
+    return OVERVIEW_SECTOR_COLOR_MAP.get(str(sector or "Unknown"), OVERVIEW_SECTOR_COLOR_MAP["Unknown"])
+
+
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
     if not chart_rows.empty and "Return %" in chart_rows:
@@ -581,6 +606,25 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows["Return Label"] = chart_rows["Return %"].map(
         lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
     )
+    if "Previous Return %" in chart_rows:
+        chart_rows["Previous Return %"] = pd.to_numeric(chart_rows["Previous Return %"], errors="coerce")
+    else:
+        chart_rows["Previous Return %"] = pd.NA
+    chart_rows["Previous Return Magnitude %"] = chart_rows["Previous Return %"].abs()
+    chart_rows["Previous Return Label"] = chart_rows["Previous Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    if "Momentum Delta pp" in chart_rows:
+        chart_rows["Momentum Delta pp"] = pd.to_numeric(chart_rows["Momentum Delta pp"], errors="coerce")
+    else:
+        chart_rows["Momentum Delta pp"] = pd.NA
+    chart_rows["Momentum Label"] = chart_rows["Momentum Delta pp"].map(
+        lambda value: f"{float(value):+.2f}pp" if pd.notna(value) else "-"
+    )
+    chart_rows["Bar Color"] = chart_rows.apply(
+        lambda row: _sector_bar_color(row.get("Sector"), row.get("Return %")),
+        axis=1,
+    )
     symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
     base = alt.Chart(chart_rows).encode(
         x=alt.X(
@@ -590,18 +634,27 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             scale=alt.Scale(domain=_positive_return_domain(chart_rows["Return Magnitude %"])),
         ),
         y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=80)),
-        tooltip=["Rank:O", "Symbol:N", "Name:N", "Return Label:N", "Sector:N", "Industry:N"],
+        tooltip=[
+            "Rank:O",
+            "Symbol:N",
+            "Name:N",
+            "Return Label:N",
+            "Previous Return Label:N",
+            "Momentum Label:N",
+            "Sector:N",
+            "Industry:N",
+        ],
     )
     bars = (
         base
         .mark_bar(cornerRadiusEnd=3)
-        .encode(
-            color=alt.condition(
-                "datum['Return %'] < 0",
-                alt.value(OVERVIEW_COLOR_DANGER),
-                alt.value(OVERVIEW_COLOR_POSITIVE),
-            )
-        )
+        .encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
+    )
+    previous_markers = (
+        base
+        .transform_filter("isValid(datum['Previous Return Magnitude %'])")
+        .mark_tick(thickness=2, size=16, color=OVERVIEW_COLOR_TEXT_MUTED)
+        .encode(x=alt.X("Previous Return Magnitude %:Q"))
     )
     labels = (
         base
@@ -609,6 +662,68 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
         .encode(
             text=alt.Text("Return Label:N"),
         )
+    )
+    return (bars + previous_markers + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
+
+
+def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
+    chart_rows = rows.copy()
+    if not chart_rows.empty and "Volume" in chart_rows:
+        chart_rows["Volume"] = pd.to_numeric(chart_rows["Volume"], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Volume"])
+    elif not chart_rows.empty:
+        chart_rows = pd.DataFrame()
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [
+                {
+                    "Symbol": "No Data",
+                    "Name": "-",
+                    "Volume": 0.0,
+                    "Dollar Volume": 0.0,
+                    "Return %": None,
+                    "Sector": "Unknown",
+                    "Industry": "-",
+                }
+            ]
+        )
+    chart_rows = chart_rows.sort_values(["Volume", "Symbol"], ascending=[False, True]).reset_index(drop=True)
+    chart_rows["Volume Rank"] = chart_rows.index + 1
+    chart_rows["Volume Label"] = chart_rows["Volume"].map(_compact_number)
+    if "Dollar Volume" in chart_rows:
+        chart_rows["Dollar Volume"] = pd.to_numeric(chart_rows["Dollar Volume"], errors="coerce")
+    else:
+        chart_rows["Dollar Volume"] = pd.NA
+    chart_rows["Dollar Volume Label"] = chart_rows["Dollar Volume"].map(lambda value: _compact_number(value, prefix="$"))
+    if "Return %" in chart_rows:
+        chart_rows["Return %"] = pd.to_numeric(chart_rows["Return %"], errors="coerce")
+    else:
+        chart_rows["Return %"] = pd.NA
+    chart_rows["Return Label"] = chart_rows["Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    chart_rows["Bar Color"] = chart_rows["Sector"].map(lambda value: _sector_bar_color(value))
+    symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
+    max_volume = max(1.0, float(chart_rows["Volume"].max()) if not chart_rows.empty else 1.0)
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X("Volume:Q", title="Volume", scale=alt.Scale(domain=[0, max_volume * 1.12])),
+        y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=80)),
+        tooltip=[
+            "Volume Rank:O",
+            "Symbol:N",
+            "Name:N",
+            "Volume Label:N",
+            "Dollar Volume Label:N",
+            "Return Label:N",
+            "Sector:N",
+            "Industry:N",
+        ],
+    )
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
+    labels = (
+        base
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
+        .encode(text=alt.Text("Volume Label:N"))
     )
     return (bars + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
 
@@ -644,6 +759,10 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows["Top Return Label"] = chart_rows["Top Return %"].map(
         lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
     )
+    chart_rows["Bar Color"] = chart_rows.apply(
+        lambda row: _sector_bar_color(row.get("Sector"), row.get("Average Return %")),
+        axis=1,
+    )
     sector_order = chart_rows["Sector"].drop_duplicates().tolist()
     base = alt.Chart(chart_rows).encode(
         x=alt.X(
@@ -658,13 +777,7 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
     bars = (
         base
         .mark_bar(cornerRadiusEnd=3)
-        .encode(
-            color=alt.condition(
-                "datum['Average Return %'] < 0",
-                alt.value(OVERVIEW_COLOR_DANGER),
-                alt.value(OVERVIEW_COLOR_POSITIVE),
-            )
-        )
+        .encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
     )
     labels = (
         base
@@ -1155,7 +1268,11 @@ def _auto_refresh_job_label(value: Any) -> str:
     text = str(value or "-")
     mapping = {
         "S&P 500 Daily Snapshot": "S&P 500 일중 스냅샷",
+        "Top1000 Daily Snapshot": "Top1000 일중 스냅샷",
+        "Top2000 Daily Snapshot": "Top2000 일중 스냅샷",
         "sp500_intraday": "S&P 500 일중 스냅샷",
+        "top1000_intraday": "Top1000 일중 스냅샷",
+        "top2000_intraday": "Top2000 일중 스냅샷",
     }
     return mapping.get(text, text)
 
@@ -1208,6 +1325,7 @@ def _browser_auto_refresh_timing(summary: dict[str, Any] | None, *, now: datetim
     reason = str(row.get("reason") or "").strip().lower()
     cadence_minutes = int(row.get("cadence_minutes") or MARKET_INTRADAY_REFRESH_MINUTES)
     cadence_seconds = max(1, cadence_minutes * 60)
+    job_label = _auto_refresh_job_label(row.get("label") or row.get("job_id") or "선택한 일중 스냅샷")
     now_ts = pd.Timestamp(now or datetime.now())
     last_finished = pd.to_datetime(row.get("last_finished_at"), errors="coerce")
     next_due = pd.to_datetime(row.get("next_due_at"), errors="coerce")
@@ -1232,15 +1350,15 @@ def _browser_auto_refresh_timing(summary: dict[str, Any] | None, *, now: datetim
 
     if reason == "outside us market hours":
         title = "미국 정규장 대기"
-        detail = "장이 열리면 5분 주기 조건에 맞춰 S&P 500 스냅샷을 확인합니다."
+        detail = f"장이 열리면 {cadence_minutes}분 주기 조건에 맞춰 {job_label}을 확인합니다."
         progress_pct = 0
     elif reason == "cadence not due":
         prefix = "방금 갱신됨. " if completed_current_check else ""
         title = f"{prefix}다음 갱신까지 {_format_auto_refresh_remaining(remaining_seconds)}"
-        detail = "5분 갱신 주기가 지나면 다음 확인에서 수집을 시도합니다."
+        detail = f"{cadence_minutes}분 갱신 주기가 지나면 다음 확인에서 수집을 시도합니다."
     elif reason == "due":
         title = "갱신 조건 충족"
-        detail = "이번 확인에서 S&P 500 스냅샷 수집을 시도합니다."
+        detail = f"이번 확인에서 {job_label} 수집을 시도합니다."
         progress_pct = 100
     elif reason == "forced":
         title = "강제 실행"
@@ -1283,16 +1401,18 @@ def _should_run_browser_auto_refresh_check(
 
 def _browser_auto_refresh_completion_label(summary: dict[str, Any]) -> str:
     status = str(summary.get("status") or "-")
+    row = _browser_auto_refresh_plan_row(summary)
+    job_label = _auto_refresh_job_label(row.get("label") or row.get("job_id") or "S&P 500 스냅샷")
     if status == "success":
-        return "S&P 500 스냅샷 갱신이 완료되었습니다."
+        return f"{job_label} 갱신이 완료되었습니다."
     if status == "skipped":
         return _summarize_auto_refresh_plan(summary)
     if status == "locked":
         return "다른 Overview 갱신 작업이 이미 실행 중입니다."
     if status == "partial_success":
-        return "S&P 500 스냅샷 갱신이 일부 이슈와 함께 완료되었습니다."
+        return f"{job_label} 갱신이 일부 이슈와 함께 완료되었습니다."
     if status == "failed":
-        return "S&P 500 스냅샷 갱신에 실패했습니다."
+        return f"{job_label} 갱신에 실패했습니다."
     return f"자동 갱신 상태: {_auto_refresh_status_label(status)}"
 
 
@@ -1316,18 +1436,56 @@ def _render_browser_auto_refresh_timing(
     render_auto_refresh_timing_static(timing)
 
 
-def _run_browser_auto_refresh_check() -> dict[str, Any]:
+def _browser_auto_refresh_state_keys(universe_code: str) -> tuple[str, str]:
+    normalized = str(universe_code or "SP500").strip().lower()
+    return (
+        f"overview_{normalized}_browser_auto_refresh_summary",
+        f"overview_{normalized}_browser_auto_refresh_checked_at",
+    )
+
+
+def _browser_auto_refresh_job_config(universe_code: str) -> dict[str, str]:
+    normalized = str(universe_code or "SP500").strip().upper()
+    return dict(BROWSER_AUTO_REFRESH_JOB_CONFIG.get(normalized, BROWSER_AUTO_REFRESH_JOB_CONFIG["SP500"]))
+
+
+def _get_browser_auto_refresh_state(universe_code: str) -> tuple[dict[str, Any] | None, str | None]:
+    summary_key, checked_key = _browser_auto_refresh_state_keys(universe_code)
+    summary = st.session_state.get(summary_key)
+    checked_at = st.session_state.get(checked_key)
+    if not isinstance(summary, dict):
+        summary = None
+    return summary, str(checked_at) if checked_at else None
+
+
+def _store_browser_auto_refresh_state(
+    universe_code: str,
+    summary: dict[str, Any],
+    checked_at: str,
+) -> None:
+    summary_key, checked_key = _browser_auto_refresh_state_keys(universe_code)
+    st.session_state[summary_key] = summary
+    st.session_state[checked_key] = checked_at
+    st.session_state["overview_browser_auto_refresh_summary"] = summary
+    st.session_state["overview_browser_auto_refresh_checked_at"] = checked_at
+
+
+def _run_browser_auto_refresh_check(*, universe_code: str = "SP500") -> dict[str, Any]:
     checked_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    config = _browser_auto_refresh_job_config(universe_code)
+    profile = config["profile"]
+    job_id = config["job_id"]
     try:
         summary = run_overview_automation(
-            profile=BROWSER_AUTO_REFRESH_PROFILE,
+            profile=profile,
+            job_ids=[job_id],
             execution_mode="browser_auto",
         )
     except RuntimeError as exc:
         summary = {
             "job_name": "overview_automation",
             "status": "locked",
-            "profile": BROWSER_AUTO_REFRESH_PROFILE,
+            "profile": profile,
             "execution_mode": "browser_auto",
             "started_at": checked_at,
             "finished_at": checked_at,
@@ -1341,7 +1499,7 @@ def _run_browser_auto_refresh_check() -> dict[str, Any]:
         summary = {
             "job_name": "overview_automation",
             "status": "failed",
-            "profile": BROWSER_AUTO_REFRESH_PROFILE,
+            "profile": profile,
             "execution_mode": "browser_auto",
             "started_at": checked_at,
             "finished_at": checked_at,
@@ -1351,8 +1509,8 @@ def _run_browser_auto_refresh_check() -> dict[str, Any]:
             "results": [],
             "message": str(exc),
         }
-    st.session_state["overview_browser_auto_refresh_summary"] = summary
-    st.session_state["overview_browser_auto_refresh_checked_at"] = checked_at
+    summary["selected_universe_code"] = str(universe_code or "SP500").strip().upper()
+    _store_browser_auto_refresh_state(universe_code, summary, checked_at)
     return summary
 
 
@@ -1647,7 +1805,7 @@ def _select_market_refresh_mode(container: Any, *, auto_supported: bool) -> str:
             key=key,
             format_func=_market_refresh_mode_label,
             disabled=not auto_supported,
-            help="자동 갱신은 현재 S&P 500 Daily 일중 스냅샷에서만 지원합니다.",
+            help="자동 갱신은 현재 선택한 Daily coverage의 일중 스냅샷만 확인합니다.",
         )
     else:
         selected = container.radio(
@@ -1657,21 +1815,18 @@ def _select_market_refresh_mode(container: Any, *, auto_supported: bool) -> str:
             format_func=_market_refresh_mode_label,
             horizontal=True,
             disabled=not auto_supported,
-            help="자동 갱신은 현재 S&P 500 Daily 일중 스냅샷에서만 지원합니다.",
+            help="자동 갱신은 현재 선택한 Daily coverage의 일중 스냅샷만 확인합니다.",
         )
     return str(selected or "manual")
 
 
 def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
-    summary = st.session_state.get("overview_browser_auto_refresh_summary")
-    checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
-    if not isinstance(summary, dict):
-        summary = None
+    summary, checked_at = _get_browser_auto_refresh_state(universe_code)
     if summary:
         _render_browser_auto_refresh_timing(
             summary,
             live_countdown=True,
-            auto_reload=universe_code == "SP500",
+            auto_reload=True,
             key_suffix=f"{universe_code}-{checked_at or 'new'}",
         )
         message = str(summary.get("message") or _browser_auto_refresh_completion_label(summary))
@@ -1687,10 +1842,11 @@ def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
                 "실행",
                 f"{jobs_due if jobs_due is not None else '-'} / {jobs_run if jobs_run is not None else '-'}",
             )
-            st.caption(f"Profile: {summary.get('profile') or BROWSER_AUTO_REFRESH_PROFILE}")
+            config = _browser_auto_refresh_job_config(universe_code)
+            st.caption(f"Profile: {summary.get('profile') or config['profile']} · Job: {config['job_id']}")
         return
 
-    render_market_auto_waiting_panel()
+    render_market_auto_waiting_panel(MARKET_COVERAGE_LABELS.get(universe_code, universe_code))
 
 
 def _render_market_movers_refresh_bar(
@@ -1707,7 +1863,7 @@ def _render_market_movers_refresh_bar(
     intraday_result_key = f"overview_{universe_code.lower()}_intraday_result"
     coverage = dict(snapshot.get("coverage") or {})
     state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
-    auto_supported = universe_code == "SP500" and period == "daily"
+    auto_supported = universe_code in BROWSER_AUTO_REFRESH_JOB_CONFIG and period == "daily"
 
     refresh_state = dict(coverage.get("refresh_state") or {})
     returnable = coverage.get("returnable_count") or 0
@@ -1789,9 +1945,11 @@ def _render_market_movers_snapshot_panel(
 
     left, right = st.columns([0.95, 1.25], gap="medium")
     with left:
-        chart_tab, sector_tab = st.tabs(["Rank", "Sector Pulse"])
-        with chart_tab:
+        return_tab, volume_tab, sector_tab = st.tabs(["Return Rank", "Volume Rank", "Sector Pulse"])
+        with return_tab:
             st.altair_chart(_build_return_bar_chart(rows), width="stretch")
+        with volume_tab:
+            st.altair_chart(_build_volume_bar_chart(rows), width="stretch")
         with sector_tab:
             st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
     with right:
@@ -1815,10 +1973,10 @@ def _render_market_movers_tab() -> None:
             "Daily는 저장된 quote snapshot을 previous close와 비교합니다. 갱신 방식은 아래 데이터 갱신 영역에서 선택합니다."
         )
 
-    if controls.coverage != "SP500" or controls.period != "daily":
+    if controls.coverage not in BROWSER_AUTO_REFRESH_JOB_CONFIG or controls.period != "daily":
         st.session_state["overview_market_movers_refresh_mode"] = "manual"
     auto_refresh_enabled = (
-        controls.coverage == "SP500"
+        controls.coverage in BROWSER_AUTO_REFRESH_JOB_CONFIG
         and controls.period == "daily"
         and st.session_state.get("overview_market_movers_refresh_mode") == "auto"
     )
@@ -1826,13 +1984,11 @@ def _render_market_movers_tab() -> None:
     if auto_refresh_enabled:
         @st.fragment(run_every=BROWSER_AUTO_REFRESH_SECONDS)
         def _market_movers_auto_refresh_panel() -> None:
-            summary = st.session_state.get("overview_browser_auto_refresh_summary")
-            checked_at = st.session_state.get("overview_browser_auto_refresh_checked_at")
-            if not isinstance(summary, dict):
-                summary = None
+            summary, checked_at = _get_browser_auto_refresh_state(controls.coverage)
             if _should_run_browser_auto_refresh_check(summary, checked_at=str(checked_at or "")):
-                with st.spinner("S&P 500 자동 갱신 조건을 확인하는 중입니다..."):
-                    _run_browser_auto_refresh_check()
+                coverage_label = MARKET_COVERAGE_LABELS.get(controls.coverage, controls.coverage)
+                with st.spinner(f"{coverage_label} 자동 갱신 조건을 확인하는 중입니다..."):
+                    _run_browser_auto_refresh_check(universe_code=controls.coverage)
             snapshot = _load_market_movers_snapshot(
                 universe_code=controls.coverage,
                 universe_limit=controls.universe_limit,

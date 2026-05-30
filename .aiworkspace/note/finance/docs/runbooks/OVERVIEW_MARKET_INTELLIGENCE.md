@@ -41,9 +41,11 @@ http://localhost:8501
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
    - daily period의 `데이터 갱신` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
    - `수동 갱신`에서는 `일중 스냅샷 갱신`을 눌러 새 snapshot을 저장하고, `화면 새로고침`으로 stored DB state를 다시 읽는다.
-   - `자동 갱신`은 현재 `S&P 500` + `Daily`에서만 활성화되며, Overview가 열려 있는 브라우저 세션에서 `browser_safe` profile을 5분 cadence 조건으로 확인한다.
+   - `자동 갱신`은 현재 선택한 daily coverage 하나만 확인한다. S&P 500은 `browser_safe` / `sp500_intraday`, Top1000은 `intraday` / `top1000_intraday`, Top2000은 `intraday` / `top2000_intraday` job filter를 사용한다.
+   - 자동 cadence는 S&P 500 5분, Top1000 15분, Top2000 30분 기준이며 Overview가 열려 있는 브라우저 세션에서만 heartbeat가 돈다.
    - `데이터 갱신` 상태 / 액션 바에서 현재 상태, 범위, 가격 모드, 커버리지 %, 다음 확인을 먼저 확인하고, 자동 실행 상세는 `자동 갱신 세부 정보`를 펼쳐 본다.
-   - `Rank` 탭에서 symbol-level return ranking을 확인한다.
+   - `Return Rank` 탭에서 symbol-level return ranking과 직전 동일 기간 return / momentum delta를 확인한다.
+   - `Volume Rank` 탭에서 raw volume ranking과 dollar volume을 함께 확인한다.
    - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
@@ -107,8 +109,8 @@ http://localhost:8501
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
 9. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
-   - `Market Movers > 데이터 갱신`의 `자동 갱신` 모드는 브라우저 세션이 살아 있을 때만 `browser_safe` profile을 5분마다 호출한다.
-   - 1차 browser-safe mode는 S&P 500 daily snapshot만 수집 대상으로 둔다.
+   - `Market Movers > 데이터 갱신`의 `자동 갱신` 모드는 브라우저 세션이 살아 있을 때만 현재 선택한 daily coverage의 due 여부를 확인한다.
+   - S&P 500은 `browser_safe` profile을 사용하고, Top1000 / Top2000은 `intraday` profile에 선택 job_id를 넘겨 한 coverage만 실행한다.
    - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.
    - 실제 실행 여부는 `overview_automation`의 cadence, US market-hours guard, lock file이 판단한다.
    - 자동 check 중에는 전체 화면을 blocking하지 않고, 같은 `데이터 갱신` 영역에서 다음 갱신까지 남은 시간과 5분 cadence 진행 bar를 표시한다.
@@ -146,7 +148,7 @@ uv run python -m app.jobs.overview_automation --profile safe
 uv run python -m app.jobs.overview_automation --profile events
 ```
 
-운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다. `browser_safe` profile은 OS scheduler가 아니라 Overview 브라우저 세션이 열려 있을 때 호출하는 용도이며, S&P 500 daily snapshot만 선택한다.
+운영 scheduler에 연결할 때는 5분마다 위 명령을 호출하도록 두고, 실제 실행 여부는 CLI가 run history cadence와 US market-hours guard로 판단한다. 중복 실행은 `.aiworkspace/note/finance/run_artifacts/locks/overview_automation.lock`으로 막는다. `browser_safe` profile은 OS scheduler가 아니라 Overview 브라우저 세션이 열려 있을 때 호출하는 용도이며, 단독 CLI profile로는 S&P 500 daily snapshot만 선택한다. Overview UI에서 Top1000 / Top2000 자동 갱신을 켜면 `intraday` profile에 선택 coverage job_id를 넘겨 단일 job만 실행한다.
 
 작은 수동 earnings smoke:
 
@@ -193,9 +195,10 @@ PY
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
 - Market Movers daily `데이터 갱신` status / action bar shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.
 - Market Movers snapshot metadata is shown as a compact strip rather than a separate card grid, so the ranking chart and table stay closer to the controls.
-- Market Movers `자동 갱신` is limited to S&P 500 Daily browser sessions; Top1000 / Top2000 remain manual unless a broader profile is explicitly added later.
+- Market Movers `자동 갱신` follows the selected daily coverage: S&P 500 uses 5-minute `browser_safe`, Top1000 uses 15-minute selected `intraday`, and Top2000 uses 30-minute selected `intraday`.
 - Market Movers refresh results expose `Snapshot Diagnostics` with snapshot time, rows written, failed count, method, and provider diagnostics when available.
-- Market Movers displays both `Rank` and `Sector Pulse` chart tabs.
+- Market Movers displays `Return Rank`, `Volume Rank`, and `Sector Pulse` chart tabs.
+- Market Movers return rows include `Volume`, `Dollar Volume`, `Previous Return %`, and `Momentum Delta pp`; positive return bars use sector colors and negative bars use the danger red.
 - Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
 - Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
 - Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.

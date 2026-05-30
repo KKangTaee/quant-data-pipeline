@@ -24,6 +24,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` for Workspace Overview Market Movers polish.
+- Market Movers second pass adds selected-coverage browser auto refresh, volume rank, sector-colored positive return bars, and previous-period momentum context while keeping provider collection inside existing job wrappers.
 - Completed the Overview browser-session auto refresh workstream under `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`.
 - Market Movers refresh UX is now a unified `데이터 갱신` status / action bar with manual vs browser-auto mode, second-by-second countdown UI, compact snapshot metadata, S&P 500 Daily-only browser-safe auto refresh, and Overview visual tokens / components split into `app/web/overview_ui_components.py`.
 - Completed Events UX redesign under `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`: source summary, refresh popover, mini source status cards, Agenda / Calendar / Quality / Raw views, and reduced-width-safe filters.

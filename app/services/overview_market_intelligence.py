@@ -30,6 +30,10 @@ MOVERS_COLUMNS = [
     "Symbol",
     "Name",
     "Return %",
+    "Previous Return %",
+    "Momentum Delta pp",
+    "Volume",
+    "Dollar Volume",
     "Start Price",
     "End Price",
     "Sector",
@@ -37,6 +41,8 @@ MOVERS_COLUMNS = [
     "Market Cap",
     "Start Date",
     "End Date",
+    "Previous Start Date",
+    "Previous End Date",
     "Price Source",
 ]
 MISSING_COLUMNS = [
@@ -479,7 +485,7 @@ def resolve_effective_market_dates(
     offset = VALID_PERIODS[normalized_period]
     latest_raw_date, eligible = _eligible_market_dates(
         min_price_rows=min_price_rows,
-        limit=offset + 1,
+        limit=(offset * 2) + 1,
         query_fn=query,
     )
     if len(eligible) <= offset:
@@ -683,6 +689,20 @@ def _load_prices_for_dates(
     dates: list[str],
     query_fn: QueryFn,
 ) -> dict[tuple[str, str], float]:
+    points = _load_price_points_for_dates(symbols=symbols, dates=dates, query_fn=query_fn)
+    return {
+        key: float(value["price"])
+        for key, value in points.items()
+        if value.get("price") is not None
+    }
+
+
+def _load_price_points_for_dates(
+    *,
+    symbols: list[str],
+    dates: list[str],
+    query_fn: QueryFn,
+) -> dict[tuple[str, str], dict[str, float | int | None]]:
     if not symbols or not dates:
         return {}
 
@@ -694,7 +714,8 @@ def _load_prices_for_dates(
         SELECT
             symbol,
             `date`,
-            COALESCE(adj_close, close) AS price
+            COALESCE(adj_close, close) AS price,
+            volume
         FROM nyse_price_history
         WHERE symbol IN ({symbol_placeholders})
           AND timeframe = %s
@@ -702,15 +723,75 @@ def _load_prices_for_dates(
         """,
         list(symbols) + ["1d"] + list(dates),
     )
-    prices: dict[tuple[str, str], float] = {}
+    points: dict[tuple[str, str], dict[str, float | int | None]] = {}
     for row in rows:
         symbol = str(row.get("symbol") or "").strip().upper()
         row_date = _iso_date(row.get("date"))
         price = _safe_float(row.get("price"))
         if not symbol or not row_date or price is None:
             continue
-        prices[(symbol, row_date)] = price
-    return prices
+        volume = _safe_float(row.get("volume"))
+        points[(symbol, row_date)] = {
+            "price": price,
+            "volume": int(volume) if volume is not None else None,
+        }
+    return points
+
+
+def _previous_period_window(date_window: dict[str, Any], *, period: str) -> dict[str, str] | None:
+    normalized_period = str(period or "daily").strip().lower()
+    offset = VALID_PERIODS.get(normalized_period)
+    if offset is None:
+        return None
+    eligible = list(date_window.get("eligible_dates") or [])
+    if len(eligible) <= offset * 2:
+        return None
+    previous_start = _iso_date(eligible[offset * 2].get("date"))
+    previous_end = _iso_date(eligible[offset].get("date"))
+    if not previous_start or not previous_end:
+        return None
+    return {
+        "previous_start_date": previous_start,
+        "previous_end_date": previous_end,
+    }
+
+
+def _return_pct(start_price: float | None, end_price: float | None) -> float | None:
+    if start_price is None or end_price is None or start_price <= 0:
+        return None
+    return (float(end_price) / float(start_price) - 1.0) * 100.0
+
+
+def _previous_return_context(
+    *,
+    symbols: list[str],
+    date_window: dict[str, Any],
+    period: str,
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    previous_window = _previous_period_window(date_window, period=period)
+    if not previous_window:
+        return {}
+    previous_start = previous_window["previous_start_date"]
+    previous_end = previous_window["previous_end_date"]
+    points = _load_price_points_for_dates(
+        symbols=symbols,
+        dates=[previous_start, previous_end],
+        query_fn=query_fn,
+    )
+    context: dict[str, dict[str, Any]] = {}
+    for symbol in symbols:
+        start_price = _safe_float((points.get((symbol, previous_start)) or {}).get("price"))
+        end_price = _safe_float((points.get((symbol, previous_end)) or {}).get("price"))
+        previous_return = _return_pct(start_price, end_price)
+        if previous_return is None:
+            continue
+        context[symbol] = {
+            "previous_return_pct": previous_return,
+            "previous_start_date": previous_start,
+            "previous_end_date": previous_end,
+        }
+    return context
 
 
 def _load_latest_price_dates(*, symbols: list[str], query_fn: QueryFn) -> dict[str, str]:
@@ -789,17 +870,21 @@ def _build_return_rows(
     start_date: str,
     end_date: str,
     query_fn: QueryFn,
+    previous_context: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     symbols = [str(row.get("symbol") or "").strip().upper() for row in universe if row.get("symbol")]
-    price_map = _load_prices_for_dates(symbols=symbols, dates=[start_date, end_date], query_fn=query_fn)
+    price_points = _load_price_points_for_dates(symbols=symbols, dates=[start_date, end_date], query_fn=query_fn)
     latest_dates = _load_latest_price_dates(symbols=symbols, query_fn=query_fn)
+    previous_context = previous_context or {}
     return_rows: list[dict[str, Any]] = []
     missing_rows: list[dict[str, Any]] = []
 
     for item in universe:
         symbol = str(item.get("symbol") or "").strip().upper()
-        start_price = price_map.get((symbol, start_date))
-        end_price = price_map.get((symbol, end_date))
+        start_point = price_points.get((symbol, start_date)) or {}
+        end_point = price_points.get((symbol, end_date)) or {}
+        start_price = _safe_float(start_point.get("price"))
+        end_price = _safe_float(end_point.get("price"))
         if start_price is None and end_price is None:
             reason = "missing start and end price"
         elif start_price is None:
@@ -823,7 +908,12 @@ def _build_return_rows(
                 )
             )
             continue
-        return_pct = (float(end_price) / float(start_price) - 1.0) * 100.0
+        return_pct = _return_pct(start_price, end_price)
+        if return_pct is None:
+            continue
+        volume = _safe_float(end_point.get("volume"))
+        previous = previous_context.get(symbol) or {}
+        previous_return = _safe_float(previous.get("previous_return_pct"))
         return_rows.append(
             {
                 "symbol": symbol,
@@ -834,8 +924,14 @@ def _build_return_rows(
                 "start_price": start_price,
                 "end_price": end_price,
                 "return_pct": return_pct,
+                "previous_return_pct": previous_return,
+                "momentum_delta_pp": (return_pct - previous_return) if previous_return is not None else None,
+                "volume": int(volume) if volume is not None else None,
+                "dollar_volume": (float(end_price) * float(volume)) if volume is not None else None,
                 "start_date": start_date,
                 "end_date": end_date,
+                "previous_start_date": previous.get("previous_start_date"),
+                "previous_end_date": previous.get("previous_end_date"),
                 "price_source": "EOD DB",
             }
         )
@@ -2120,6 +2216,16 @@ def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFr
             "Symbol": row["symbol"],
             "Name": row["name"] or "-",
             "Return %": round(float(row["return_pct"]), 2),
+            "Previous Return %": round(float(row["previous_return_pct"]), 2)
+            if row.get("previous_return_pct") is not None
+            else None,
+            "Momentum Delta pp": round(float(row["momentum_delta_pp"]), 2)
+            if row.get("momentum_delta_pp") is not None
+            else None,
+            "Volume": int(row["volume"]) if row.get("volume") is not None else None,
+            "Dollar Volume": round(float(row["dollar_volume"]), 2)
+            if row.get("dollar_volume") is not None
+            else None,
             "Start Price": round(float(row["start_price"]), 4),
             "End Price": round(float(row["end_price"]), 4),
             "Sector": row["sector"],
@@ -2127,6 +2233,8 @@ def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFr
             "Market Cap": int(row["market_cap"]) if row["market_cap"] else None,
             "Start Date": row["start_date"],
             "End Date": row["end_date"],
+            "Previous Start Date": row.get("previous_start_date") or "-",
+            "Previous End Date": row.get("previous_end_date") or "-",
             "Price Source": row.get("price_source") or "EOD DB",
         }
         for index, row in enumerate(ranked, start=1)
@@ -2199,6 +2307,8 @@ def _build_intraday_return_payload(
     universe_code: str,
     period: str,
     interval: str,
+    min_price_rows: int,
+    today: date | None,
     query_fn: QueryFn,
 ) -> dict[str, Any] | None:
     snapshot_time = _latest_intraday_snapshot_time(universe_code=universe_code, interval=interval, query_fn=query_fn)
@@ -2214,6 +2324,24 @@ def _build_intraday_return_payload(
         return None
 
     row_map = {str(row.get("symbol") or "").strip().upper(): row for row in rows}
+    symbols = [str(item.get("symbol") or "").strip().upper() for item in universe if item.get("symbol")]
+    effective_min_rows = min(int(min_price_rows), max(50, int(len(universe) * 0.75)))
+    previous_date_window = resolve_effective_market_dates(
+        period="daily",
+        min_price_rows=effective_min_rows,
+        today=today,
+        query_fn=query_fn,
+    )
+    previous_context = (
+        _previous_return_context(
+            symbols=symbols,
+            date_window=previous_date_window,
+            period="daily",
+            query_fn=query_fn,
+        )
+        if previous_date_window.get("status") == "OK"
+        else {}
+    )
     return_rows: list[dict[str, Any]] = []
     missing_rows: list[dict[str, Any]] = []
     for item in universe:
@@ -2235,6 +2363,7 @@ def _build_intraday_return_payload(
         previous_close = _safe_float(row.get("previous_close"))
         latest_price = _safe_float(row.get("latest_price"))
         return_pct = _safe_float(row.get("return_pct"))
+        volume = _safe_float(row.get("volume"))
         quote_time = _display_datetime(row.get("quote_time_utc")) or snapshot_time
         if row.get("provider_status") != "ok" or previous_close is None or latest_price is None or return_pct is None:
             missing_rows.append(
@@ -2249,6 +2378,8 @@ def _build_intraday_return_payload(
                 )
             )
             continue
+        previous = previous_context.get(symbol) or {}
+        previous_return = _safe_float(previous.get("previous_return_pct"))
         return_rows.append(
             {
                 "symbol": symbol,
@@ -2259,8 +2390,14 @@ def _build_intraday_return_payload(
                 "start_price": previous_close,
                 "end_price": latest_price,
                 "return_pct": return_pct,
+                "previous_return_pct": previous_return,
+                "momentum_delta_pp": (return_pct - previous_return) if previous_return is not None else None,
+                "volume": int(volume) if volume is not None else None,
+                "dollar_volume": (float(latest_price) * float(volume)) if volume is not None else None,
                 "start_date": "Previous Close",
                 "end_date": quote_time,
+                "previous_start_date": previous.get("previous_start_date"),
+                "previous_end_date": previous.get("previous_end_date"),
                 "price_source": "Yahoo Quote" if row.get("source") == "yahoo_quote" else f"Intraday {interval}",
             }
         )
@@ -2310,6 +2447,8 @@ def _build_intraday_movers_snapshot(
     period: str,
     top_n: int,
     sector: str | None,
+    min_price_rows: int,
+    today: date | None,
     interval: str,
     query_fn: QueryFn,
 ) -> dict[str, Any] | None:
@@ -2318,6 +2457,8 @@ def _build_intraday_movers_snapshot(
         universe_code=universe_code,
         period=period,
         interval=interval,
+        min_price_rows=min_price_rows,
+        today=today,
         query_fn=query_fn,
     )
     if payload is None:
@@ -2394,6 +2535,8 @@ def build_market_movers_snapshot(
                 period=normalized_period,
                 top_n=normalized_top_n,
                 sector=sector,
+                min_price_rows=min_price_rows,
+                today=today,
                 interval=intraday_interval,
                 query_fn=query,
             )
@@ -2429,11 +2572,18 @@ def build_market_movers_snapshot(
             )
             return snapshot
 
+        previous_context = _previous_return_context(
+            symbols=[str(row.get("symbol") or "").strip().upper() for row in universe if row.get("symbol")],
+            date_window=date_window,
+            period=normalized_period,
+            query_fn=query,
+        )
         return_rows, missing_rows = _build_return_rows(
             universe=universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
+            previous_context=previous_context,
         )
         coverage = _coverage(
             universe_count=len(universe),
@@ -2497,6 +2647,8 @@ def _build_intraday_group_leadership_snapshot(
         universe_code=universe_code,
         period=period,
         interval=interval,
+        min_price_rows=min_price_rows,
+        today=today,
         query_fn=query_fn,
     )
     if payload is None:

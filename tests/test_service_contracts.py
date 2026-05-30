@@ -512,6 +512,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "다른 Overview 갱신 작업이 이미 실행 중입니다.",
         )
 
+    def test_browser_auto_refresh_job_config_tracks_selected_coverage(self) -> None:
+        from app.web.overview_dashboard import _browser_auto_refresh_job_config
+
+        self.assertEqual(
+            _browser_auto_refresh_job_config("SP500"),
+            {"profile": "browser_safe", "job_id": "sp500_intraday"},
+        )
+        self.assertEqual(
+            _browser_auto_refresh_job_config("TOP1000"),
+            {"profile": "intraday", "job_id": "top1000_intraday"},
+        )
+        self.assertEqual(
+            _browser_auto_refresh_job_config("TOP2000"),
+            {"profile": "intraday", "job_id": "top2000_intraday"},
+        )
+
     def test_run_history_append_serializes_provider_date_payload(self) -> None:
         from app.jobs import run_history
 
@@ -1016,16 +1032,19 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ]
         if "COALESCE(adj_close, close) AS price" in sql:
             return [
-                {"symbol": "AAA", "date": "2026-05-15", "price": 100.0},
-                {"symbol": "AAA", "date": "2026-05-18", "price": 110.0},
-                {"symbol": "AAA", "date": "2026-04-17", "price": 100.0},
-                {"symbol": "BBB", "date": "2026-05-15", "price": 100.0},
-                {"symbol": "BBB", "date": "2026-05-18", "price": 130.0},
-                {"symbol": "BBB", "date": "2026-04-17", "price": 100.0},
-                {"symbol": "CCC", "date": "2026-05-15", "price": 100.0},
-                {"symbol": "CCC", "date": "2026-05-18", "price": 120.0},
-                {"symbol": "CCC", "date": "2026-04-17", "price": 100.0},
-                {"symbol": "DDD", "date": "2026-05-18", "price": 140.0},
+                {"symbol": "AAA", "date": "2026-05-14", "price": 95.0, "volume": 900},
+                {"symbol": "AAA", "date": "2026-05-15", "price": 100.0, "volume": 1000},
+                {"symbol": "AAA", "date": "2026-05-18", "price": 110.0, "volume": 1500},
+                {"symbol": "AAA", "date": "2026-04-17", "price": 100.0, "volume": 800},
+                {"symbol": "BBB", "date": "2026-05-14", "price": 90.0, "volume": 1800},
+                {"symbol": "BBB", "date": "2026-05-15", "price": 100.0, "volume": 2000},
+                {"symbol": "BBB", "date": "2026-05-18", "price": 130.0, "volume": 2500},
+                {"symbol": "BBB", "date": "2026-04-17", "price": 100.0, "volume": 1900},
+                {"symbol": "CCC", "date": "2026-05-14", "price": 100.0, "volume": 1200},
+                {"symbol": "CCC", "date": "2026-05-15", "price": 100.0, "volume": 1000},
+                {"symbol": "CCC", "date": "2026-05-18", "price": 120.0, "volume": 1700},
+                {"symbol": "CCC", "date": "2026-04-17", "price": 100.0, "volume": 1100},
+                {"symbol": "DDD", "date": "2026-05-18", "price": 140.0, "volume": 900},
             ]
         return []
 
@@ -1066,6 +1085,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Latest raw price date is sparse", snapshot["warnings"][0])
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "DDD")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing start price")
+        self.assertEqual(snapshot["rows"].iloc[0]["Volume"], 2500)
+        self.assertEqual(snapshot["rows"].iloc[0]["Dollar Volume"], 325000.0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Previous Return %"], 11.11)
+        self.assertEqual(snapshot["rows"].iloc[0]["Momentum Delta pp"], 18.89)
         self.assertEqual(
             snapshot["missing_rows"].iloc[0]["Recommended Action"],
             "Refresh daily OHLCV history or inspect previous-close coverage.",
@@ -1095,6 +1118,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["refresh_state"]["next_due_in_minutes"], 0)
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Volume"], 1000)
+        self.assertEqual(snapshot["rows"].iloc[0]["Dollar Volume"], 112000.0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Previous Return %"], 5.26)
+        self.assertEqual(snapshot["rows"].iloc[0]["Momentum Delta pp"], 6.74)
         self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
