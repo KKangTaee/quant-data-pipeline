@@ -7,6 +7,7 @@ Last Verified: 2026-05-30
 
 | Track | Status | Notes |
 |---|---|---|
+| Backtest Portfolio Mix Builder UX V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-ux-v1/`; component 실행 결과를 summary-first card / 4-tab 구조로 재정리하고 raw table / criteria / meta를 접힘 상세로 낮춰 Portfolio Mix 후보 생성 흐름을 더 명확하게 표시 |
 | Backtest Portfolio Mix Builder Flow V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-flow-v1/`; `Compare & Portfolio Builder` visible flow is now `Portfolio Mix Builder`, current mix handoff is gated by mix result / weight discipline / component data trust / component first-stage readiness, and individual strategy handoff is no longer the main action in the mix builder |
 | Backtest Practical Validation Handoff Gate V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-practical-validation-handoff-gate-v1/`; Backtest handoff button now enables only after first-stage candidate readiness has no Promotion / execution source / validation source blocker, and shows a state card with blocker reasons |
 | Backtest Real-Money Readiness Efficacy V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`; Execution Preview now scores only source checks, Candidate Readiness uses Promotion / execution source / validation source criteria, turnover / cost shows estimation status, and Backtest split-period wording no longer implies formal OOS validation |

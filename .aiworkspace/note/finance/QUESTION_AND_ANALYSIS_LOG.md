@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Portfolio Mix Builder post-run UX is summary-first
+- User request:
+  - Portfolio Mix Builder에서 mix 실행 후 상단 result UI가 혼잡하고, 기존 보수적 UI 패턴이 반복되어 완성도가 떨어진다고 지적함.
+- Interpreted goal:
+  - 계산 로직은 유지하되, Portfolio Mix Builder를 "여러 component를 하나의 mix 후보로 만드는 작업 공간"처럼 읽히게 정보 위계와 next action을 정리한다.
+- Analysis result:
+  - Component 실행 결과는 card overview와 `요약 / 차트 / 진단 / 상세` 4개 tab으로 재구성하고, 원본 summary table / meta / criteria는 접힘 상세로 낮춘다.
+  - 화면 flow strip은 `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation`을 보여주며, mix 후보 판단은 handoff 가능 여부와 blocker를 먼저 표시한다.
+  - 이 변경은 UI/UX 위계 정리이며, backtest 계산, DB schema, JSONL registry, saved setup policy, live approval, order, auto rebalance는 바꾸지 않는다.
+- Follow-up:
+  - User review should confirm whether the post-run result now feels like "비중을 정하기 위한 재료 확인" and whether the weight builder / mix 후보 판단까지 자연스럽게 이어지는지 확인한다.
+
 ### 2026-05-30 - Portfolio Mix Builder replaces mixed compare/build flow
 - User request:
   - Backtest Analysis의 `Compare & Portfolio Builder`가 비교와 조합을 섞고 있어, 여러 전략을 하나의 mix 후보로 만드는 화면으로 재정의하고 후보 비교는 별도 위치를 검토해 달라고 요청함.

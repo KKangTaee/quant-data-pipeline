@@ -24,6 +24,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-ux-v1/`.
+- Portfolio Mix Builder post-run UI now reads as `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation`, with component result cards, 4 tabs, and raw/detail evidence lowered into expanders.
+- No backtest calculation, DB schema, JSONL registry, saved setup policy, live approval, order, or auto rebalance behavior was added.
+- Verification passed: py_compile, `git diff --check`, full `unittest tests.test_service_contracts` 133 tests, and Browser smoke with default Equal Weight + GTAA run on `http://127.0.0.1:8502/backtest`.
 - Completed `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-flow-v1/`.
 - Backtest Analysis now shows `Portfolio Mix Builder`; legacy `Compare & Portfolio Builder` routes still normalize to the new mode.
 - The mix builder now treats component runs as inputs, then gates the weighted mix as one 1차 후보 before Practical Validation handoff; individual strategy handoff is no longer the main action in this flow.
