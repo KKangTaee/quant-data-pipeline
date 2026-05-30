@@ -25,7 +25,10 @@ from app.services.backtest_practical_validation_replay import (
     run_practical_validation_actual_replay,
 )
 from app.web.backtest_ui_components import (
+    render_action_card_grid,
     render_badge_strip,
+    render_product_section_header,
+    render_product_stepper,
     render_readiness_route_panel,
     render_stage_brief,
     render_status_card_grid,
@@ -202,6 +205,33 @@ def _render_validation_profile_form() -> dict[str, Any]:
             },
         ]
     )
+    thresholds = dict(profile.get("thresholds") or {})
+    render_action_card_grid(
+        [
+            {
+                "kicker": "Profile Focus",
+                "title": profile.get("profile_label") or profile_id,
+                "status": VALIDATION_PROFILE_OPTIONS[profile_id]["label"],
+                "detail": VALIDATION_PROFILE_OPTIONS[profile_id]["description"],
+                "tone": "neutral",
+            },
+            {
+                "kicker": "Risk Line",
+                "title": "Drawdown tolerance",
+                "status": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
+                "detail": "이 선을 넘는 약화 신호는 Final Review에서 보류 또는 재검토 근거로 확인합니다.",
+                "tone": "warning",
+            },
+            {
+                "kicker": "Required Evidence",
+                "title": "Replay / Coverage / Cost",
+                "status": "Always required",
+                "detail": "공격적 프로필이어도 최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 생략하지 않습니다.",
+                "tone": "positive",
+            },
+        ],
+        min_width=190,
+    )
     return {"profile_id": profile_id, "answers": answers}
 
 
@@ -336,6 +366,137 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _table_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get("Status") or row.get("status") or "-").upper()
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _audit_status_summary(rows: list[dict[str, Any]]) -> str:
+    counts = _table_status_counts(rows)
+    if not counts:
+        return "No rows"
+    order = ["BLOCKED", "NEEDS_INPUT", "NOT_RUN", "REVIEW", "PASS"]
+    parts = [f"{key} {counts[key]}" for key in order if counts.get(key)]
+    return " / ".join(parts) if parts else f"{len(rows)} rows"
+
+
+def _board_summary_cards(validation_result: dict[str, Any], board_ids: list[str]) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    for board_id in board_ids:
+        row = _validation_board_row(validation_result, board_id)
+        if not row:
+            continue
+        applies = str(row.get("Applies") or "").lower() == "yes"
+        status = row.get("Status") if applies else "NOT_APPLICABLE"
+        cards.append(
+            {
+                "kicker": row.get("Board Type") or "Evidence Board",
+                "title": row.get("Board") or board_id,
+                "status": status,
+                "detail": row.get("Why It Appears") or row.get("Applicability") or "",
+                "meta": f"Feeds: {row.get('Feeds Modules') or '-'}",
+                "tone": _status_tone(status) if applies else "neutral",
+            }
+        )
+    return cards
+
+
+def _replay_status_from_result(replay_result: dict[str, Any] | None) -> str:
+    if not isinstance(replay_result, dict) or not replay_result:
+        return "NOT_RUN"
+    return str(replay_result.get("status") or "NOT_RUN")
+
+
+def _render_validation_control_center(
+    *,
+    source: dict[str, Any],
+    validation_result: dict[str, Any],
+    replay_result: dict[str, Any] | None,
+) -> None:
+    gate = dict(validation_result.get("final_review_gate") or {})
+    profile = dict(validation_result.get("validation_profile") or {})
+    summary = dict(validation_result.get("validation_module_summary") or {})
+    traits = dict(validation_result.get("source_traits") or {})
+    status_counts = dict(summary.get("status_counts") or {})
+    replay_status = _replay_status_from_result(replay_result)
+    render_product_section_header(
+        eyebrow="Decision control",
+        title="Practical Validation Control Center",
+        detail=(
+            "후보, 검증 프로필, 최신 재검증, Final Review Gate를 한 번에 확인합니다. "
+            "아래 Fix Queue에 남은 항목이 없으면 저장 후 Final Review로 이동할 수 있습니다."
+        ),
+        tone=_status_tone(gate.get("route")),
+    )
+    render_product_stepper(
+        [
+            {
+                "marker": "1",
+                "title": "Source",
+                "detail": source.get("source_title") or source.get("selection_source_id") or "-",
+                "tone": "positive",
+            },
+            {
+                "marker": "2",
+                "title": "Profile",
+                "detail": profile.get("profile_label") or "-",
+                "tone": "neutral",
+            },
+            {
+                "marker": "3",
+                "title": "Latest Replay",
+                "detail": replay_status,
+                "tone": _status_tone(replay_status),
+            },
+            {
+                "marker": "4",
+                "title": "Final Review Gate",
+                "detail": gate.get("route") or "-",
+                "tone": _status_tone(gate.get("route")),
+            },
+        ]
+    )
+    render_action_card_grid(
+        [
+            {
+                "kicker": "Candidate Traits",
+                "title": " / ".join(
+                    label
+                    for label, enabled in [
+                        ("ETF-like", traits.get("is_etf_like")),
+                        ("Tactical", traits.get("is_tactical")),
+                        ("Weighted Mix", traits.get("is_weighted_mix")),
+                        ("Factor", traits.get("is_factor_equity")),
+                    ]
+                    if enabled
+                )
+                or "Basic",
+                "status": f"{traits.get('active_component_count', 0)} components",
+                "detail": f"{traits.get('symbol_count', 0)} symbols, weight total {traits.get('target_weight_total', 0)}%",
+                "tone": "neutral",
+            },
+            {
+                "kicker": "Module Health",
+                "title": "Required / Conditional checks",
+                "status": f"PASS {status_counts.get('PASS', 0)} / REVIEW {status_counts.get('REVIEW', 0)}",
+                "detail": f"NEEDS_INPUT {status_counts.get('NEEDS_INPUT', 0)}, NOT_RUN {status_counts.get('NOT_RUN', 0)}",
+                "tone": "warning" if status_counts.get("NEEDS_INPUT") or status_counts.get("NOT_RUN") else "positive",
+            },
+            {
+                "kicker": "Gate",
+                "title": gate.get("route") or "-",
+                "status": "Move enabled" if gate.get("can_save_and_move") else "Move blocked",
+                "detail": gate.get("verdict") or "",
+                "tone": "positive" if gate.get("can_save_and_move") else "danger",
+            },
+        ],
+        min_width=230,
+    )
+
+
 def _validation_board_row(validation_result: dict[str, Any], board_id: str) -> dict[str, Any]:
     target = str(board_id or "").strip()
     for row in list(validation_result.get("validation_board_display_rows") or []):
@@ -445,18 +606,63 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     if not gap_rows:
         return False
 
-    st.markdown("##### Provider Data Gaps")
-    _render_board_context_badges(validation_result, "provider_data_gaps")
-    st.caption(
-        "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
-        "부족 데이터는 이 화면에서 바로 수집할 수 있고, source mapping이 없는 ETF는 connector 보강이 필요합니다."
+    plan = build_provider_gap_collection_plan(validation_result)
+    actionable_rows = [row for row in gap_rows if str(row.get("Action") or "") != "조치 없음"]
+    collectable_count = sum(
+        len(plan[key])
+        for key in [
+            "operability_official",
+            "operability_bridge",
+            "holdings_exposure",
+            "source_map_discovery",
+        ]
+        if isinstance(plan.get(key), list)
+    ) + (1 if plan.get("macro") else 0)
+    render_product_section_header(
+        eyebrow="Action center",
+        title="Provider 보강 액션",
+        detail="ETF provider snapshot 부족분을 요약하고, 수집 가능한 항목과 connector 보강이 필요한 항목을 분리합니다.",
+        tone="warning" if actionable_rows else "positive",
     )
-    st.dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
+    render_action_card_grid(
+        [
+            {
+                "kicker": "Gap Status",
+                "title": "Provider data gaps",
+                "status": f"{len(actionable_rows)} actionable",
+                "detail": f"전체 {len(gap_rows)}개 row 중 보강 액션이 필요한 항목입니다.",
+                "tone": "warning" if actionable_rows else "positive",
+            },
+            {
+                "kicker": "Collectable Now",
+                "title": "수집 / 보강 가능",
+                "status": collectable_count,
+                "detail": "source map discovery, official operability, DB bridge, holdings / exposure, macro context 기준입니다.",
+                "tone": "positive" if collectable_count else "neutral",
+            },
+            {
+                "kicker": "Connector Work",
+                "title": "Mapping needed",
+                "status": len(plan["mapping_needed"]),
+                "detail": "검증된 issuer URL / parser mapping이 없으면 수동 connector 보강이 필요합니다.",
+                "tone": "warning" if plan["mapping_needed"] else "neutral",
+            },
+        ],
+        min_width=220,
+    )
+
+    st.markdown("##### Provider Data Gaps")
+    with st.expander("Provider Data Gaps 상세", expanded=bool(actionable_rows)):
+        _render_board_context_badges(validation_result, "provider_data_gaps")
+        st.caption(
+            "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
+            "부족 데이터는 이 화면에서 바로 수집할 수 있고, source mapping이 없는 ETF는 connector 보강이 필요합니다."
+        )
+        st.dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
     if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
         st.success("현재 ETF provider gap은 없습니다.")
         return True
 
-    plan = build_provider_gap_collection_plan(validation_result)
     if plan["operability_bridge"] or plan["operability_official"]:
         st.warning(
             "운용성 데이터 보강 필요: "
@@ -509,7 +715,21 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
                 "Meaning": "FRED market context series를 다시 수집합니다.",
             }
         )
-    st.dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
+    render_action_card_grid(
+        [
+            {
+                "kicker": row["Area"],
+                "title": row["Symbols"],
+                "status": "No immediate action" if row["Symbols"] == "-" else "Action available",
+                "detail": row["Meaning"],
+                "tone": "neutral" if row["Symbols"] == "-" else "warning",
+            }
+            for row in action_rows
+        ],
+        min_width=250,
+    )
+    with st.expander("보강 작업 상세 테이블", expanded=False):
+        st.dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
 
     result_key = provider_gap_state_key(validation_result)
     latest_results = st.session_state.get(result_key)
@@ -728,75 +948,79 @@ def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
     if not applied_rows and not skipped_rows:
         return
 
-    st.markdown("##### Applied Validation Map")
-    render_badge_strip(
-        [
-            {"label": "Applied Boards", "value": summary.get("applied", len(applied_rows)), "tone": "positive"},
-            {
-                "label": "Skipped Boards",
-                "value": summary.get("not_applicable", len(skipped_rows)),
-                "tone": "neutral",
-            },
-            {"label": "Required Links", "value": summary.get("required_boards", 0), "tone": "neutral"},
-            {
-                "label": "Conditional Links",
-                "value": summary.get("conditional_boards", 0),
-                "tone": "neutral",
-            },
-        ]
-    )
-    map_tab, skipped_tab, module_tab = st.tabs(["적용 보드", "비적용 보드", "모듈 연결"])
-    with map_tab:
-        if applied_rows:
-            st.dataframe(
-                pd.DataFrame(applied_rows)[
-                    [
-                        "Board",
-                        "Board Type",
-                        "Module Types",
-                        "Feeds Modules",
-                        "Gate Effects",
-                        "Why It Appears",
-                    ]
-                ],
-                width="stretch",
-                hide_index=True,
-            )
-        else:
-            st.info("현재 후보에 적용되는 보드가 없습니다.")
-    with skipped_tab:
-        if skipped_rows:
-            st.dataframe(
-                pd.DataFrame(skipped_rows)[
-                    [
-                        "Board",
-                        "Board Type",
-                        "Applicability",
-                        "Primary Modules",
-                        "Why It Appears",
-                    ]
-                ],
-                width="stretch",
-                hide_index=True,
-            )
-        else:
-            st.success("현재 후보에서 제외되는 조건부 보드가 없습니다.")
-    with module_tab:
-        if module_rows:
-            st.dataframe(
-                pd.DataFrame(module_rows)[
-                    [
-                        "Module",
-                        "Module Type",
-                        "Applies",
-                        "Status",
-                        "Gate Effect",
-                        "Evidence Boards",
-                    ]
-                ],
-                width="stretch",
-                hide_index=True,
-            )
+    with st.expander("검증-근거 연결 지도", expanded=False):
+        st.caption(
+            "이 표는 화면 보드가 어떤 검증 모듈의 근거인지 보여주는 보조 지도입니다. "
+            "Final Review 이동 판단은 위 Gate와 Fix Queue가 기준입니다."
+        )
+        render_badge_strip(
+            [
+                {"label": "Applied Boards", "value": summary.get("applied", len(applied_rows)), "tone": "positive"},
+                {
+                    "label": "Skipped Boards",
+                    "value": summary.get("not_applicable", len(skipped_rows)),
+                    "tone": "neutral",
+                },
+                {"label": "Required Links", "value": summary.get("required_boards", 0), "tone": "neutral"},
+                {
+                    "label": "Conditional Links",
+                    "value": summary.get("conditional_boards", 0),
+                    "tone": "neutral",
+                },
+            ]
+        )
+        map_tab, skipped_tab, module_tab = st.tabs(["적용 보드", "비적용 보드", "모듈 연결"])
+        with map_tab:
+            if applied_rows:
+                st.dataframe(
+                    pd.DataFrame(applied_rows)[
+                        [
+                            "Board",
+                            "Board Type",
+                            "Module Types",
+                            "Feeds Modules",
+                            "Gate Effects",
+                            "Why It Appears",
+                        ]
+                    ],
+                    width="stretch",
+                    hide_index=True,
+                )
+            else:
+                st.info("현재 후보에 적용되는 보드가 없습니다.")
+        with skipped_tab:
+            if skipped_rows:
+                st.dataframe(
+                    pd.DataFrame(skipped_rows)[
+                        [
+                            "Board",
+                            "Board Type",
+                            "Applicability",
+                            "Primary Modules",
+                            "Why It Appears",
+                        ]
+                    ],
+                    width="stretch",
+                    hide_index=True,
+                )
+            else:
+                st.success("현재 후보에서 제외되는 조건부 보드가 없습니다.")
+        with module_tab:
+            if module_rows:
+                st.dataframe(
+                    pd.DataFrame(module_rows)[
+                        [
+                            "Module",
+                            "Module Type",
+                            "Applies",
+                            "Status",
+                            "Gate Effect",
+                            "Evidence Boards",
+                        ]
+                    ],
+                    width="stretch",
+                    hide_index=True,
+                )
 
 
 def _gate_module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -823,6 +1047,43 @@ def _gate_module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, A
             }
         )
     return display_rows
+
+
+def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
+    if not blocking_modules:
+        render_action_card_grid(
+            [
+                {
+                    "kicker": "Fix Queue",
+                    "title": "필수 보강 항목 없음",
+                    "status": "Ready",
+                    "detail": "Final Review로 이동하기 전에 즉시 막는 필수 검증 blocker가 없습니다.",
+                    "tone": "positive",
+                }
+            ],
+            min_width=240,
+        )
+        return
+    cards: list[dict[str, Any]] = []
+    for module in blocking_modules:
+        display_row = _gate_module_display_rows([module])[0]
+        cards.append(
+            {
+                "kicker": display_row.get("Status") or "BLOCKING",
+                "title": display_row.get("Module") or "-",
+                "status": display_row.get("Fix Location") or "-",
+                "detail": display_row.get("Fix Action") or "-",
+                "meta": display_row.get("Gate Reason") or "",
+                "tone": _status_tone(display_row.get("Status")),
+            }
+        )
+    render_product_section_header(
+        eyebrow="Fix Queue",
+        title=f"Final Review 이동 전 해결할 항목 {len(blocking_modules)}개",
+        detail="각 카드의 Fix Location에서 보강한 뒤 Gate가 다시 계산됩니다.",
+        tone="danger",
+    )
+    render_action_card_grid(cards, min_width=260)
 
 
 def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
@@ -891,9 +1152,10 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     _render_applied_validation_map(validation_result)
 
     blocking_modules = list(gate.get("blocking_modules") or [])
+    _render_fix_queue(blocking_modules)
     if blocking_modules:
-        st.error("Final Review 이동 전에 보강해야 할 필수 검증 모듈이 있습니다.")
-        st.dataframe(pd.DataFrame(_gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
+        with st.expander("Fix Queue 상세 테이블", expanded=False):
+            st.dataframe(pd.DataFrame(_gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
     review_modules = list(gate.get("review_modules") or [])
     if review_modules:
         with st.expander("Final Review에서 확인할 REVIEW 모듈", expanded=False):
@@ -903,13 +1165,40 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
         required_rows = [row for row in module_rows if row.get("Group") == "Required for Final Review"]
         conditional_rows = [row for row in module_rows if row.get("Group") == "Conditional / Strategy-specific"]
         reference_rows = [row for row in module_rows if row.get("Group") == "Downstream Reference"]
-        required_tab, conditional_tab, reference_tab = st.tabs(["필수 검증", "조건부 검증", "후속 참고"])
-        with required_tab:
-            st.dataframe(pd.DataFrame(required_rows), width="stretch", hide_index=True)
-        with conditional_tab:
-            st.dataframe(pd.DataFrame(conditional_rows), width="stretch", hide_index=True)
-        with reference_tab:
-            st.dataframe(pd.DataFrame(reference_rows), width="stretch", hide_index=True)
+        render_action_card_grid(
+            [
+                {
+                    "kicker": "Required",
+                    "title": "필수 검증",
+                    "status": _audit_status_summary(required_rows),
+                    "detail": "Final Review 이동을 직접 막는 모듈입니다.",
+                    "tone": "danger" if blocking_modules else "positive",
+                },
+                {
+                    "kicker": "Conditional",
+                    "title": "조건부 / 전략별 검증",
+                    "status": _audit_status_summary(conditional_rows),
+                    "detail": "ETF-like, tactical, weighted mix 같은 후보 특성에 따라 적용됩니다.",
+                    "tone": "warning" if conditional_rows else "neutral",
+                },
+                {
+                    "kicker": "Reference",
+                    "title": "후속 참고",
+                    "status": _audit_status_summary(reference_rows),
+                    "detail": "Final Review 또는 Selected Dashboard에서 이어서 읽는 참고 근거입니다.",
+                    "tone": "neutral",
+                },
+            ],
+            min_width=220,
+        )
+        with st.expander("검증 모듈 상세", expanded=False):
+            required_tab, conditional_tab, reference_tab = st.tabs(["필수 검증", "조건부 검증", "후속 참고"])
+            with required_tab:
+                st.dataframe(pd.DataFrame(required_rows), width="stretch", hide_index=True)
+            with conditional_tab:
+                st.dataframe(pd.DataFrame(conditional_rows), width="stretch", hide_index=True)
+            with reference_tab:
+                st.dataframe(pd.DataFrame(reference_rows), width="stretch", hide_index=True)
 
     with st.expander("Source traits", expanded=False):
         st.json(traits)
@@ -940,36 +1229,7 @@ def _render_validation_gate_section(validation_result: dict[str, Any]) -> None:
     _render_validation_module_board(validation_result)
 
 
-def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
-    st.markdown("##### Input Evidence")
-    _render_board_context_badges(validation_result, "input_evidence")
-    st.dataframe(pd.DataFrame(validation_result.get("checks") or []), width="stretch", hide_index=True)
-    _render_validation_efficacy_audit(validation_result)
-    _render_data_coverage_audit(validation_result)
-    _render_construction_risk_audit(validation_result)
-    _render_risk_contribution_audit(validation_result)
-    _render_component_role_weight_audit(validation_result)
-    _render_backtest_realism_audit(validation_result)
-    st.markdown("##### Practical Diagnostics")
-    _render_board_context_badges(validation_result, "practical_diagnostics")
-    diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
-    if diagnostic_rows:
-        st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
-    else:
-        st.info("표시할 diagnostic row가 없습니다.")
-
-    provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
-    if provider_rows:
-        st.markdown("##### Provider Coverage")
-        _render_board_context_badges(validation_result, "provider_coverage")
-        st.caption(
-            "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
-        )
-        st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
-        _render_provider_look_through_board(validation_result)
-
-    _render_stress_sensitivity_interpretation(validation_result)
-
+def _render_validation_alerts(validation_result: dict[str, Any]) -> None:
     mismatch_warnings = list(validation_result.get("intent_mismatch_warnings") or [])
     if mismatch_warnings:
         st.warning("사용자 프로필과 후보 특성이 충돌할 수 있습니다.")
@@ -985,54 +1245,65 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
     if not_run_critical:
         st.info("아래 NOT_RUN 항목은 Final Review에서 선택/보류/재검토 판단 근거로 확인해야 합니다.")
         st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
+
+
+def _render_curve_evidence(validation_result: dict[str, Any]) -> None:
     curve_evidence = dict(validation_result.get("curve_evidence") or {})
-    if curve_evidence:
-        st.markdown("##### Curve / Recheck Evidence")
+    if not curve_evidence:
+        st.info("표시할 curve / recheck evidence가 없습니다.")
+        return
+    st.markdown("##### Curve / Recheck Evidence")
+    render_badge_strip(
+        [
+            {
+                "label": "Portfolio Curve",
+                "value": curve_evidence.get("portfolio_curve_source") or "-",
+                "tone": "positive" if curve_evidence.get("portfolio_curve_rows") else "warning",
+            },
+            {"label": "Rows", "value": curve_evidence.get("portfolio_curve_rows", 0), "tone": "neutral"},
+            {"label": "Benchmark", "value": curve_evidence.get("benchmark_ticker") or "-", "tone": "neutral"},
+            {"label": "Benchmark Rows", "value": curve_evidence.get("benchmark_curve_rows", 0), "tone": "neutral"},
+        ]
+    )
+    component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
+    if component_curve_rows:
+        st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
+    benchmark_parity = dict(curve_evidence.get("benchmark_parity") or {})
+    if benchmark_parity:
         render_badge_strip(
             [
-                {"label": "Portfolio Curve", "value": curve_evidence.get("portfolio_curve_source") or "-", "tone": "positive" if curve_evidence.get("portfolio_curve_rows") else "warning"},
-                {"label": "Rows", "value": curve_evidence.get("portfolio_curve_rows", 0), "tone": "neutral"},
-                {"label": "Benchmark", "value": curve_evidence.get("benchmark_ticker") or "-", "tone": "neutral"},
-                {"label": "Benchmark Rows", "value": curve_evidence.get("benchmark_curve_rows", 0), "tone": "neutral"},
+                {
+                    "label": "Benchmark / Comparator Parity",
+                    "value": benchmark_parity.get("status") or "-",
+                    "tone": _status_tone(benchmark_parity.get("status")),
+                },
+                {
+                    "label": "Coverage",
+                    "value": dict(benchmark_parity.get("metrics") or {}).get("coverage_ratio", "-"),
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Same Period",
+                    "value": dict(benchmark_parity.get("metrics") or {}).get("same_period", "-"),
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Same Frequency",
+                    "value": dict(benchmark_parity.get("metrics") or {}).get("same_frequency", "-"),
+                    "tone": "neutral",
+                },
             ]
         )
-        component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
-        if component_curve_rows:
-            st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
-        benchmark_parity = dict(curve_evidence.get("benchmark_parity") or {})
-        if benchmark_parity:
-            render_badge_strip(
-                [
-                    {
-                        "label": "Benchmark / Comparator Parity",
-                        "value": benchmark_parity.get("status") or "-",
-                        "tone": _status_tone(benchmark_parity.get("status")),
-                    },
-                    {
-                        "label": "Coverage",
-                        "value": dict(benchmark_parity.get("metrics") or {}).get("coverage_ratio", "-"),
-                        "tone": "neutral",
-                    },
-                    {
-                        "label": "Same Period",
-                        "value": dict(benchmark_parity.get("metrics") or {}).get("same_period", "-"),
-                        "tone": "neutral",
-                    },
-                    {
-                        "label": "Same Frequency",
-                        "value": dict(benchmark_parity.get("metrics") or {}).get("same_frequency", "-"),
-                        "tone": "neutral",
-                    },
-                ]
-            )
-            parity_rows = list(benchmark_parity.get("rows") or [])
-            if parity_rows:
-                st.dataframe(pd.DataFrame(parity_rows), width="stretch", hide_index=True)
-        curve_provenance = dict(curve_evidence.get("curve_provenance") or {})
-        if curve_provenance:
-            with st.expander("Curve provenance", expanded=False):
-                st.json(curve_provenance)
+        parity_rows = list(benchmark_parity.get("rows") or [])
+        if parity_rows:
+            st.dataframe(pd.DataFrame(parity_rows), width="stretch", hide_index=True)
+    curve_provenance = dict(curve_evidence.get("curve_provenance") or {})
+    if curve_provenance:
+        with st.expander("Curve provenance", expanded=False):
+            st.json(curve_provenance)
 
+
+def _render_diagnostic_detail_expanders(validation_result: dict[str, Any]) -> None:
     with st.expander("진단 세부 근거", expanded=False):
         for diagnostic in list(validation_result.get("diagnostic_results") or []):
             st.markdown(f"**{diagnostic.get('title')}**")
@@ -1057,6 +1328,121 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
     if profile_score_rows:
         with st.expander("Profile-aware score breakdown", expanded=False):
             st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
+
+
+def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> None:
+    st.markdown("##### Practical Diagnostics")
+    _render_board_context_badges(validation_result, "practical_diagnostics")
+    diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
+    if diagnostic_rows:
+        render_action_card_grid(
+            [
+                {
+                    "kicker": "Diagnostics",
+                    "title": "Practical diagnostics rows",
+                    "status": _audit_status_summary(diagnostic_rows),
+                    "detail": "프로필과 source traits에 따라 실전성 진단 row를 compact하게 요약합니다.",
+                    "tone": "warning" if any(str(row.get("Status") or "").upper() != "PASS" for row in diagnostic_rows) else "positive",
+                }
+            ],
+            min_width=240,
+        )
+        with st.expander("Practical Diagnostics 상세", expanded=False):
+            st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
+    else:
+        st.info("표시할 diagnostic row가 없습니다.")
+
+
+def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
+    render_product_section_header(
+        eyebrow="Evidence workspace",
+        title="검증 근거 보드",
+        detail="요약 카드로 먼저 판단하고, 상세 테이블과 raw evidence는 필요한 탭에서 펼쳐 확인합니다.",
+        tone="neutral",
+    )
+    render_action_card_grid(
+        _board_summary_cards(
+            validation_result,
+            [
+                "input_evidence",
+                "validation_efficacy_audit",
+                "data_coverage_audit",
+                "construction_risk_audit",
+                "backtest_realism_audit",
+                "robustness_lab",
+            ],
+        ),
+        min_width=230,
+    )
+    summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
+        ["핵심 근거", "데이터", "구성 / 리스크", "실전성", "강건성", "Raw Evidence"]
+    )
+    with summary_tab:
+        st.markdown("##### Input Evidence")
+        _render_board_context_badges(validation_result, "input_evidence")
+        checks = list(validation_result.get("checks") or [])
+        render_action_card_grid(
+            [
+                {
+                    "kicker": "Input",
+                    "title": "Source / Replay / Comparator",
+                    "status": _audit_status_summary(checks),
+                    "detail": "source 자격, 최신 재검증, 비교 기준 동등성의 기본 입력 근거입니다.",
+                    "tone": "warning" if any(not bool(row.get("Ready")) for row in checks) else "positive",
+                }
+            ],
+            min_width=240,
+        )
+        with st.expander("Input Evidence 상세", expanded=False):
+            st.dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
+        with st.expander("Curve / Recheck Evidence", expanded=False):
+            _render_curve_evidence(validation_result)
+        _render_validation_alerts(validation_result)
+    with data_tab:
+        with st.expander("Data Coverage Audit 상세", expanded=False):
+            _render_data_coverage_audit(validation_result)
+        provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
+        if provider_rows:
+            st.markdown("##### Provider Coverage")
+            _render_board_context_badges(validation_result, "provider_coverage")
+            st.caption(
+                "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
+            )
+            render_action_card_grid(
+                [
+                    {
+                        "kicker": "Provider Coverage",
+                        "title": "ETF / macro evidence",
+                        "status": _audit_status_summary(provider_rows),
+                        "detail": "provider freshness, operability, holdings / exposure coverage를 compact하게 확인합니다.",
+                        "tone": "warning"
+                        if any(str(row.get("Status") or "").upper() != "PASS" for row in provider_rows)
+                        else "positive",
+                    }
+                ],
+                min_width=240,
+            )
+            with st.expander("Provider Coverage 상세", expanded=False):
+                st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+            _render_provider_look_through_board(validation_result)
+    with construction_tab:
+        with st.expander("Construction Risk Audit 상세", expanded=False):
+            _render_construction_risk_audit(validation_result)
+        with st.expander("Risk Contribution Audit 상세", expanded=False):
+            _render_risk_contribution_audit(validation_result)
+        with st.expander("Component Role / Weight Audit 상세", expanded=False):
+            _render_component_role_weight_audit(validation_result)
+    with realism_tab:
+        with st.expander("Validation Efficacy Audit 상세", expanded=False):
+            _render_validation_efficacy_audit(validation_result)
+        with st.expander("Backtest Realism Audit 상세", expanded=False):
+            _render_backtest_realism_audit(validation_result)
+        _render_practical_diagnostics_summary(validation_result)
+    with robustness_tab:
+        with st.expander("Robustness Lab 상세", expanded=False):
+            _render_stress_sensitivity_interpretation(validation_result)
+    with raw_tab:
+        _render_diagnostic_detail_expanders(validation_result)
 
 
 def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
@@ -1344,6 +1730,11 @@ def render_practical_validation_workspace() -> None:
     validation_result = build_practical_validation_result(
         source,
         validation_profile=validation_profile,
+        replay_result=replay_result,
+    )
+    _render_validation_control_center(
+        source=source,
+        validation_result=validation_result,
         replay_result=replay_result,
     )
     st.markdown("#### 4. Final Review Gate / 검증 모듈")

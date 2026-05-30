@@ -24,6 +24,248 @@ def _display_value(value: Any) -> str:
     return value_text if value_text else "-"
 
 
+def _render_product_ux_css() -> None:
+    st.markdown(
+        """
+        <style>
+          .bt-pro-shell {
+            --bt-pro-surface: color-mix(in srgb, var(--background-color, #ffffff) 92%, var(--text-color, #111827) 8%);
+            --bt-pro-surface-soft: color-mix(in srgb, var(--background-color, #ffffff) 96%, var(--text-color, #111827) 4%);
+            --bt-pro-border: color-mix(in srgb, var(--text-color, #111827) 18%, transparent);
+            --bt-pro-muted: color-mix(in srgb, var(--text-color, #111827) 68%, transparent);
+            --bt-pro-subtle: color-mix(in srgb, var(--text-color, #111827) 54%, transparent);
+            --bt-pro-positive: #0f766e;
+            --bt-pro-warning: #b45309;
+            --bt-pro-danger: #b91c1c;
+            --bt-pro-neutral: #64748b;
+          }
+          .bt-pro-section {
+            margin: 0.35rem 0 0.95rem 0;
+            padding: 0.95rem 1rem;
+            border: 1px solid var(--bt-pro-border);
+            border-left: 4px solid var(--bt-pro-neutral);
+            border-radius: 8px;
+            background: var(--bt-pro-surface-soft);
+          }
+          .bt-pro-section-positive { border-left-color: var(--bt-pro-positive); }
+          .bt-pro-section-warning { border-left-color: var(--bt-pro-warning); }
+          .bt-pro-section-danger { border-left-color: var(--bt-pro-danger); }
+          .bt-pro-eyebrow {
+            font-size: 0.76rem;
+            font-weight: 780;
+            letter-spacing: 0;
+            color: var(--bt-pro-muted);
+            margin-bottom: 0.28rem;
+          }
+          .bt-pro-title {
+            font-size: 1.08rem;
+            line-height: 1.25;
+            font-weight: 820;
+            color: var(--text-color, #111827);
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-detail {
+            margin-top: 0.4rem;
+            max-width: 76rem;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            color: var(--bt-pro-muted);
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--bt-pro-card-min, 220px)), 1fr));
+            gap: 0.72rem;
+            margin: 0.45rem 0 1rem 0;
+          }
+          .bt-pro-card {
+            min-height: 126px;
+            padding: 0.88rem 0.95rem;
+            border: 1px solid var(--bt-pro-border);
+            border-left: 4px solid var(--bt-pro-neutral);
+            border-radius: 8px;
+            background: var(--bt-pro-surface);
+          }
+          .bt-pro-card-positive { border-left-color: var(--bt-pro-positive); }
+          .bt-pro-card-warning { border-left-color: var(--bt-pro-warning); }
+          .bt-pro-card-danger { border-left-color: var(--bt-pro-danger); }
+          .bt-pro-card-neutral { border-left-color: var(--bt-pro-neutral); }
+          .bt-pro-card-kicker {
+            font-size: 0.74rem;
+            line-height: 1.2;
+            font-weight: 760;
+            color: var(--bt-pro-subtle);
+            margin-bottom: 0.35rem;
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-card-title {
+            font-size: 0.98rem;
+            line-height: 1.25;
+            font-weight: 820;
+            color: var(--text-color, #111827);
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-card-status {
+            display: inline-flex;
+            width: fit-content;
+            margin-top: 0.55rem;
+            padding: 0.18rem 0.5rem;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--bt-pro-neutral) 16%, transparent);
+            color: var(--text-color, #111827);
+            font-size: 0.76rem;
+            font-weight: 760;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-card-positive .bt-pro-card-status { background: color-mix(in srgb, var(--bt-pro-positive) 18%, transparent); }
+          .bt-pro-card-warning .bt-pro-card-status { background: color-mix(in srgb, var(--bt-pro-warning) 20%, transparent); }
+          .bt-pro-card-danger .bt-pro-card-status { background: color-mix(in srgb, var(--bt-pro-danger) 18%, transparent); }
+          .bt-pro-card-detail {
+            margin-top: 0.58rem;
+            font-size: 0.84rem;
+            line-height: 1.42;
+            color: var(--bt-pro-muted);
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-card-meta {
+            margin-top: 0.5rem;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            color: var(--bt-pro-subtle);
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-stepper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+            gap: 0.55rem;
+            margin: 0.45rem 0 1rem 0;
+          }
+          .bt-pro-step {
+            display: grid;
+            grid-template-columns: 2rem 1fr;
+            gap: 0.6rem;
+            min-height: 88px;
+            align-items: start;
+            padding: 0.72rem 0.78rem;
+            border: 1px solid var(--bt-pro-border);
+            border-radius: 8px;
+            background: var(--bt-pro-surface-soft);
+          }
+          .bt-pro-step-marker {
+            width: 1.85rem;
+            height: 1.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--bt-pro-neutral);
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 820;
+          }
+          .bt-pro-step-positive .bt-pro-step-marker { background: var(--bt-pro-positive); }
+          .bt-pro-step-warning .bt-pro-step-marker { background: var(--bt-pro-warning); }
+          .bt-pro-step-danger .bt-pro-step-marker { background: var(--bt-pro-danger); }
+          .bt-pro-step-title {
+            font-size: 0.9rem;
+            line-height: 1.25;
+            font-weight: 800;
+            color: var(--text-color, #111827);
+            overflow-wrap: anywhere;
+          }
+          .bt-pro-step-detail {
+            margin-top: 0.28rem;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            color: var(--bt-pro-muted);
+            overflow-wrap: anywhere;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_product_section_header(
+    *,
+    title: str,
+    detail: str = "",
+    eyebrow: str = "",
+    tone: str = "neutral",
+) -> None:
+    _render_product_ux_css()
+    title_text = escape(title)
+    detail_text = escape(detail)
+    eyebrow_text = escape(eyebrow)
+    detail_html = f'<div class="bt-pro-detail">{detail_text}</div>' if detail else ""
+    eyebrow_html = f'<div class="bt-pro-eyebrow">{eyebrow_text}</div>' if eyebrow else ""
+    st.markdown(
+        '<div class="bt-pro-shell">'
+        f'<div class="bt-pro-section bt-pro-section-{escape(tone)}">'
+        f"{eyebrow_html}"
+        f'<div class="bt-pro-title">{title_text}</div>'
+        f"{detail_html}"
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_action_card_grid(cards: list[dict[str, Any]], *, min_width: int = 220) -> None:
+    _render_product_ux_css()
+    html_cards: list[str] = []
+    for card in cards:
+        tone = escape(str(card.get("tone") or "neutral"))
+        kicker = escape(str(card.get("kicker") or ""))
+        title = escape(str(card.get("title") or ""))
+        status = escape(_display_value(card.get("status")))
+        detail = escape(str(card.get("detail") or ""))
+        meta = escape(str(card.get("meta") or ""))
+        kicker_html = f'<div class="bt-pro-card-kicker">{kicker}</div>' if kicker else ""
+        status_html = f'<div class="bt-pro-card-status">{status}</div>' if status else ""
+        detail_html = f'<div class="bt-pro-card-detail">{detail}</div>' if detail else ""
+        meta_html = f'<div class="bt-pro-card-meta">{meta}</div>' if meta else ""
+        html_cards.append(
+            f'<div class="bt-pro-card bt-pro-card-{tone}">'
+            f"{kicker_html}"
+            f'<div class="bt-pro-card-title">{title}</div>'
+            f"{status_html}"
+            f"{detail_html}"
+            f"{meta_html}"
+            "</div>"
+        )
+    st.markdown(
+        '<div class="bt-pro-shell">'
+        f'<div class="bt-pro-card-grid" style="--bt-pro-card-min: {int(min_width)}px;">'
+        f'{"".join(html_cards)}'
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_product_stepper(steps: list[dict[str, Any]]) -> None:
+    _render_product_ux_css()
+    html_steps: list[str] = []
+    for index, step in enumerate(steps, start=1):
+        tone = escape(str(step.get("tone") or "neutral"))
+        marker = escape(str(step.get("marker") or index))
+        title = escape(str(step.get("title") or ""))
+        detail = escape(str(step.get("detail") or ""))
+        html_steps.append(
+            f'<div class="bt-pro-step bt-pro-step-{tone}">'
+            f'<div class="bt-pro-step-marker">{marker}</div>'
+            f'<div><div class="bt-pro-step-title">{title}</div>'
+            f'<div class="bt-pro-step-detail">{detail}</div></div>'
+            "</div>"
+        )
+    st.markdown(
+        '<div class="bt-pro-shell">'
+        f'<div class="bt-pro-stepper">{"".join(html_steps)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 # Render long Backtest status strings as wrapping cards instead of truncating Streamlit metrics.
 def render_status_card_grid(cards: list[dict[str, Any]]) -> None:
     html_cards: list[str] = []

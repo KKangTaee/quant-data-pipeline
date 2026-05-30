@@ -4438,3 +4438,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 단일 component GTAA 후보에서는 weighted-mix 전용 Risk Contribution / Component Role / Weight board가 collapsed `Not applicable`로 내려간다.
   - blocker / review module table에 `Fix Location`과 `Fix Action`을 추가해 `Latest Runtime Replay`가 `3. 최신 데이터 기준 전략 재검증`에서 해결된다는 점을 바로 표시한다.
   - Practical Validation 화면을 `4. Final Review Gate / 검증 모듈`, `5. 검증 근거 보드`, `6. 보강 액션`, `7. 저장 & Final Review 이동`으로 나눠 module / evidence / action 혼동을 줄였다.
+- Practical Validation Commercial UX V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-commercial-ux-v1/`에서 Practical Validation의 표시 계층을 summary-first로 개편했다.
+  - Control Center / Fix Queue / Evidence Workspace / Provider Action Center를 추가하고, raw module / evidence / provider table은 상세 영역으로 낮췄다.
+  - service contract 193 tests와 Browser QA를 통과했으며, 검증 module / Final Review gate 정책은 변경하지 않았다.

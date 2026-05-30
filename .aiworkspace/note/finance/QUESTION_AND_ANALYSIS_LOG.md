@@ -6663,3 +6663,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - evidence board와 action board는 검증 결과를 판단하거나 보강하는 화면이지 검증 module 자체가 아니므로 같은 섹션 안에 섞으면 module처럼 오해된다
 - Follow-up:
   - Practical Validation을 `4. Final Review Gate / 검증 모듈`, `5. 검증 근거 보드`, `6. 보강 액션`, `7. 저장 & Final Review 이동`으로 분리했다
+
+### 2026-05-30 - Practical Validation을 상용 UX 형태로 다듬는다
+- User request:
+  - 사용자가 Practical Validation 개선 결과를 리뷰하고, 프로토타입 느낌이 강하면 CSS / 라이브러리 등을 활용해 상용화 가능한 UX/UI로 개선해 달라고 요청함
+- Interpreted goal:
+  - 검증 로직과 Final Review gate는 유지하되, 사용자가 후보 상태, blocker, evidence, 보강 액션을 raw table보다 먼저 이해할 수 있게 해야 함
+- Analysis result:
+  - 치명적 gate 결함은 발견하지 못했고, 주요 gap은 raw table 우선 노출, blocker action의 낮은 시각 우선순위, board map의 내부 구현 표식 느낌이었다
+- Follow-up:
+  - Control Center / Fix Queue / summary-first Evidence Workspace / Provider Action Center를 추가하고 raw table은 상세 영역으로 낮췄다
