@@ -468,8 +468,10 @@ Compare 결과 상단에는 개별 전략용 `Compare 검증 보드`를 둔다.
 
 실행:
 
-- 통과 또는 조건부 통과 상태에서는 `Practical Validation으로 보내기` 버튼으로 단일 전략 Clean V2 source를 만들 수 있다.
-- 이 버튼은 registry 저장이나 live approval이 아니라 Practical Validation 입력 source를 저장하는 동작이다.
+- `Candidate Readiness`가 통과 또는 조건부 통과 상태일 때만 `실전성 검증으로 보내기` 버튼으로 단일 전략 Clean V2 source를 만들 수 있다.
+- 이 버튼은 1차 Backtest 후보 판단을 통과한 결과를 2차 `Practical Validation` 입력 source로 넘기는 handoff다.
+- `Promotion Decision = hold`, 실행 원천 blocker, 검증 원천 blocker가 남아 있으면 버튼은 비활성화되고, 화면에 막는 이유를 짧게 표시한다.
+- 이 버튼은 live approval, 투자 추천, 주문 지시, 자동 리밸런싱이 아니다.
 
 저장된 비중 조합 replay:
 

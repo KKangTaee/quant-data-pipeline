@@ -7,6 +7,7 @@ Last Verified: 2026-05-30
 
 | Track | Status | Notes |
 |---|---|---|
+| Backtest Practical Validation Handoff Gate V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-practical-validation-handoff-gate-v1/`; Backtest handoff button now enables only after first-stage candidate readiness has no Promotion / execution source / validation source blocker, and shows a state card with blocker reasons |
 | Backtest Real-Money Readiness Efficacy V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`; Execution Preview now scores only source checks, Candidate Readiness uses Promotion / execution source / validation source criteria, turnover / cost shows estimation status, and Backtest split-period wording no longer implies formal OOS validation |
 | Backtest Real-Money Stage Boundary V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-stage-boundary-v1/`; Backtest Real-Money now treats probation / monitoring / deployment as later-stage concerns and shows `Next Validation Focus` / `Execution Preview` without storage / calculation / persistence expansion |
 | Real-Money Promotion Route Absorption V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`; `Shortlist` is no longer shown as a peer validation item and is now displayed as `Promotion Suggested Route` without storage / calculation changes |

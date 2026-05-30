@@ -2948,6 +2948,57 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["Execution Source Checks"]["현재 값"], "block 0 / review 2")
         self.assertEqual(criteria["Validation Source Checks"]["현재 값"], "block 0 / review 2")
 
+    def test_practical_validation_handoff_gate_blocks_hold_candidates(self) -> None:
+        from app.web.backtest_result_display import _build_practical_validation_handoff_state
+
+        state = _build_practical_validation_handoff_state(
+            {
+                "meta": {
+                    "promotion_decision": "hold",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                }
+            }
+        )
+
+        self.assertFalse(state["can_submit"])
+        self.assertEqual(state["status_label"], "진입 보류")
+        self.assertIn("Promotion Decision이 hold이거나 비어 있음", state["display_reasons"])
+        criteria = {row["label"]: row for row in state["criteria"]}
+        self.assertEqual(criteria["Promotion"]["value"], "보류")
+
+    def test_practical_validation_handoff_gate_allows_ready_candidates(self) -> None:
+        from app.web.backtest_result_display import _build_practical_validation_handoff_state
+
+        state = _build_practical_validation_handoff_state(
+            {
+                "meta": {
+                    "promotion_decision": "real_money_candidate",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                }
+            }
+        )
+
+        self.assertTrue(state["can_submit"])
+        self.assertEqual(state["status_label"], "진입 가능")
+        self.assertEqual(state["display_reasons"], ["막는 항목 없음"])
+        criteria = {row["label"]: row for row in state["criteria"]}
+        self.assertEqual(criteria["실행 원천"]["value"], "통과")
+        self.assertEqual(criteria["검증 원천"]["value"], "통과")
+
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime
         from app.runtime import backtest as runtime_backtest

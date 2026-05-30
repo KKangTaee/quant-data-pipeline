@@ -214,7 +214,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             {
                 "checkpoint": "Practical Validation source로 저장됐는가",
                 "detail": "후보는 Review Note가 아니라 Clean V2 selection source로 넘어가야 다음 검증에서 같은 계약으로 읽힙니다.",
-                "screen": "Backtest Analysis > Next Action: 검증 후보로 보내기",
+                "screen": "Backtest Analysis > 2차 실전성 검증 Handoff",
             },
             {
                 "checkpoint": "실전 검증 blocker가 없는가",

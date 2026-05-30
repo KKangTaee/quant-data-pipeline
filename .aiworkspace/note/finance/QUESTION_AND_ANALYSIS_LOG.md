@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Practical Validation handoff requires first-stage readiness
+- User request:
+  - `검증 후보로 보내기`는 다음 단계로 넘기는 버튼이므로 1차 후보 판단을 통과했다는 의미로 읽히게 하고, 통과하지 못하면 비활성화와 근거 표시가 필요하다고 요청함.
+- Interpreted goal:
+  - Backtest Analysis의 handoff 버튼을 단순 저장 버튼이 아니라 `Candidate Readiness` gate를 통과한 결과만 2차 `Practical Validation`으로 넘기는 진입 버튼으로 정리한다.
+- Analysis result:
+  - Handoff enablement now follows `can_move_to_compare`: Promotion not hold, no execution source blocker, no validation source blocker.
+  - Disabled state shows concise blocker reasons and the handoff area displays a status card with Promotion / 실행 원천 / 검증 원천 상태.
+  - The handoff remains a Clean V2 source registration path only; it does not add live approval, order, account sync, auto rebalance, or a new storage model.
+- Follow-up:
+  - User review should confirm that the button now feels like "1차 후보 판단 통과 후 2차 실전성 검증 진입" rather than a generic save action.
+
 ### 2026-05-30 - Backtest Real-Money readiness now uses source checks only
 - User request:
   - Backtest 1차 Real-Money 지표가 실제로 유효한 검증인지 재검토하고, 필요하면 추가 / 수정 / 삭제하되 억지로 바꾸지는 말아 달라고 요청함.

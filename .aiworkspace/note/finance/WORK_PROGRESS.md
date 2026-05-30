@@ -24,6 +24,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-practical-validation-handoff-gate-v1/`.
+- Backtest `실전성 검증으로 보내기` now requires first-stage Candidate Readiness to have no Promotion / execution source / validation source blocker.
+- Disabled handoff now shows concise blocker reasons, and the handoff area is displayed as a status card; no live approval, order, auto rebalance, or new storage model was added.
 - Completed `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`.
 - Backtest Real-Money 1차 readiness now scores Promotion / execution source checks / validation source checks without reusing later-stage probation / monitoring fields.
 - Turnover / cost output now shows estimation status, and Backtest split-period wording no longer presents the 1차 check as formal OOS validation.

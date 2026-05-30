@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from typing import Any
 
 import altair as alt
@@ -369,24 +370,254 @@ def _render_latest_run_orientation(
             "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Real-Money에서 실행 조건을 확인합니다."
         )
 
+def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
+    meta = bundle.get("meta") or {}
+    evaluation = _build_next_step_readiness_evaluation(meta)
+    can_submit = bool(evaluation.get("can_move_to_compare"))
+    score = float(evaluation.get("score") or 0.0)
+    blocking_reasons = [str(reason) for reason in list(evaluation.get("blocking_reasons") or [])]
+    review_reasons = [str(reason) for reason in list(evaluation.get("review_reasons") or [])]
+
+    if can_submit and score >= 8.0:
+        status_label = "진입 가능"
+        tone = "positive"
+        summary = "1차 후보 판단을 통과했습니다."
+        action_text = "이 결과를 2차 실전성 검증 입력 후보로 등록할 수 있습니다."
+    elif can_submit:
+        status_label = "조건부 진입 가능"
+        tone = "warning"
+        summary = "1차 후보 판단은 통과했지만, 다음 단계에서 확인할 review 신호가 있습니다."
+        action_text = "Practical Validation으로 넘긴 뒤 표시된 review 신호를 우선 확인하세요."
+    else:
+        status_label = "진입 보류"
+        tone = "danger"
+        summary = "아직 1차 후보 판단을 통과하지 못했습니다."
+        action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
+
+    if blocking_reasons:
+        display_reasons = blocking_reasons[:3]
+        reason_title = "막는 이유"
+    elif review_reasons:
+        display_reasons = review_reasons[:3]
+        reason_title = "다음 단계 확인 항목"
+    else:
+        display_reasons = ["막는 항목 없음"]
+        reason_title = "상태"
+
+    criteria = [
+        {
+            "label": "Promotion",
+            "value": "통과" if bool(evaluation.get("promotion_ok")) else "보류",
+            "tone": "positive" if bool(evaluation.get("promotion_ok")) else "danger",
+        },
+        {
+            "label": "실행 원천",
+            "value": (
+                "통과"
+                if int(evaluation.get("execution_blocker_count") or 0) == 0
+                else f"block {int(evaluation.get('execution_blocker_count') or 0)}"
+            ),
+            "tone": "positive" if int(evaluation.get("execution_blocker_count") or 0) == 0 else "danger",
+        },
+        {
+            "label": "검증 원천",
+            "value": (
+                "통과"
+                if int(evaluation.get("validation_blocker_count") or 0) == 0
+                else f"block {int(evaluation.get('validation_blocker_count') or 0)}"
+            ),
+            "tone": "positive" if int(evaluation.get("validation_blocker_count") or 0) == 0 else "danger",
+        },
+    ]
+
+    return {
+        "can_submit": can_submit,
+        "status_label": status_label,
+        "tone": tone,
+        "summary": summary,
+        "action_text": action_text,
+        "score": score,
+        "reason_title": reason_title,
+        "display_reasons": display_reasons,
+        "criteria": criteria,
+        "evaluation": evaluation,
+    }
+
+
+def _render_practical_validation_handoff_card(state: dict[str, Any]) -> None:
+    tone = str(state.get("tone") or "neutral")
+    status = escape(str(state.get("status_label") or "-"))
+    summary = escape(str(state.get("summary") or "-"))
+    score = escape(f"{float(state.get('score') or 0.0):.1f} / 10")
+    reason_title = escape(str(state.get("reason_title") or "상태"))
+    reasons = list(state.get("display_reasons") or [])
+    criteria = list(state.get("criteria") or [])
+    reason_items = "".join(f"<li>{escape(str(reason))}</li>" for reason in reasons)
+    criteria_items = "".join(
+        '<div class="bt-handoff-chip bt-handoff-chip-{tone}">'
+        '<span class="bt-handoff-chip-label">{label}</span>'
+        '<span class="bt-handoff-chip-value">{value}</span>'
+        "</div>".format(
+            tone=escape(str(item.get("tone") or "neutral")),
+            label=escape(str(item.get("label") or "-")),
+            value=escape(str(item.get("value") or "-")),
+        )
+        for item in criteria
+    )
+    st.markdown(
+        """
+        <style>
+          .bt-handoff-card {
+            border: 1px solid rgba(49, 51, 63, 0.16);
+            border-left: 5px solid #64748b;
+            border-radius: 8px;
+            padding: 1rem 1.05rem;
+            margin: 0.35rem 0 0.85rem 0;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+          }
+          .bt-handoff-positive { border-left-color: #0f766e; background: #f8fffd; }
+          .bt-handoff-warning { border-left-color: #b45309; background: #fffaf0; }
+          .bt-handoff-danger { border-left-color: #b91c1c; background: #fffafa; }
+          .bt-handoff-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.65rem;
+            margin-bottom: 0.75rem;
+          }
+          .bt-handoff-title {
+            font-size: 1.02rem;
+            font-weight: 750;
+            line-height: 1.35;
+            color: #111827;
+          }
+          .bt-handoff-status {
+            padding: 0.26rem 0.58rem;
+            border-radius: 999px;
+            border: 1px solid rgba(49, 51, 63, 0.16);
+            font-size: 0.84rem;
+            font-weight: 750;
+            color: #111827;
+            background: #f8fafc;
+          }
+          .bt-handoff-main {
+            display: grid;
+            grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
+            gap: 0.8rem;
+            align-items: stretch;
+          }
+          .bt-handoff-summary {
+            font-size: 0.94rem;
+            line-height: 1.45;
+            color: #334155;
+          }
+          .bt-handoff-score {
+            margin-top: 0.55rem;
+            font-weight: 750;
+            color: #111827;
+          }
+          .bt-handoff-chips {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+          }
+          .bt-handoff-chip {
+            border: 1px solid rgba(49, 51, 63, 0.14);
+            border-radius: 8px;
+            padding: 0.62rem 0.68rem;
+            background: #ffffff;
+            min-width: 0;
+          }
+          .bt-handoff-chip-positive { border-color: rgba(15, 118, 110, 0.24); }
+          .bt-handoff-chip-danger { border-color: rgba(185, 28, 28, 0.24); }
+          .bt-handoff-chip-label {
+            display: block;
+            font-size: 0.78rem;
+            color: #64748b;
+            font-weight: 650;
+            margin-bottom: 0.2rem;
+          }
+          .bt-handoff-chip-value {
+            display: block;
+            font-size: 0.96rem;
+            font-weight: 750;
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
+          .bt-handoff-reasons {
+            border-radius: 8px;
+            background: rgba(248, 250, 252, 0.9);
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            padding: 0.72rem 0.82rem;
+          }
+          .bt-handoff-reason-title {
+            font-size: 0.84rem;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+          }
+          .bt-handoff-reasons ul {
+            margin: 0;
+            padding-left: 1.05rem;
+            color: #334155;
+            line-height: 1.45;
+            font-size: 0.92rem;
+          }
+          @media (max-width: 760px) {
+            .bt-handoff-main { grid-template-columns: 1fr; }
+            .bt-handoff-chips { grid-template-columns: 1fr; }
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="bt-handoff-card bt-handoff-{tone}">'
+        f'<div class="bt-handoff-head">'
+        f'<div class="bt-handoff-title">2차 실전성 검증 Handoff</div>'
+        f'<div class="bt-handoff-status">{status}</div>'
+        f"</div>"
+        f'<div class="bt-handoff-main">'
+        f'<div><div class="bt-handoff-summary">{summary}</div>'
+        f'<div class="bt-handoff-score">Candidate Readiness {score}</div>'
+        f'<div class="bt-handoff-chips">{criteria_items}</div></div>'
+        f'<div class="bt-handoff-reasons"><div class="bt-handoff-reason-title">{reason_title}</div>'
+        f"<ul>{reason_items}</ul></div>"
+        f"</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
 
 def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
+    state = _build_practical_validation_handoff_state(bundle)
+    _render_practical_validation_handoff_card(state)
+
     with st.container(border=True):
-        st.markdown("##### Next Action: Practical Validation 후보로 보내기")
+        st.markdown("##### 2차 실전성 검증 Handoff")
         st.caption(
-            "이 액션은 사용자 메모나 preset 저장이 아니라, 방금 실행한 결과를 Practical Validation이 읽을 "
-            "Clean V2 source로 등록하는 workflow handoff입니다."
+            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 Clean V2 source로 등록합니다."
         )
         handoff_cols = st.columns([0.3, 0.7], gap="small")
         with handoff_cols[0]:
-            if st.button("검증 후보로 보내기", key="latest_run_candidate_review_draft", use_container_width=True):
+            if st.button(
+                "실전성 검증으로 보내기",
+                key="latest_run_candidate_review_draft",
+                use_container_width=True,
+                disabled=not bool(state["can_submit"]),
+                type="primary" if bool(state["can_submit"]) else "secondary",
+            ):
                 _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
                 st.rerun()
         with handoff_cols[1]:
-            st.markdown(
-                "`Practical Validation`에서 provider / data coverage / realism / robustness를 확인하고, "
-                "`Final Review`에서 최종 선택 / 보류 / 거절 / 재검토를 판단합니다."
-            )
+            if bool(state["can_submit"]):
+                st.success(str(state["action_text"]))
+            else:
+                st.warning(str(state["action_text"]))
+            st.markdown("`Practical Validation`에서 provider / data coverage / realism / robustness를 확인합니다.")
             st.caption("최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
 
 
@@ -1180,6 +1411,11 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         "criteria_rows": criteria_rows,
         "blocking_reasons": blocking_reasons,
         "review_reasons": review_reasons,
+        "promotion_ok": promotion not in {"", "hold"},
+        "execution_blocker_count": len(execution_blockers),
+        "execution_review_count": len(execution_reviews),
+        "validation_blocker_count": len(validation_blockers),
+        "validation_review_count": len(validation_reviews),
     }
 
 def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
