@@ -10,3 +10,4 @@
 - durable flow / project map / roadmap 문서에 새 화면 구조를 반영.
 - 1차 pass가 여전히 기본 Streamlit card 느낌을 벗어나지 못한다는 사용자 피드백을 반영해 전용 `backtest_practical_validation_components.py` product shell로 2차 visual overhaul을 진행.
 - Practical Validation 상단, step section, Control Center, Gate, Evidence, Action, Save & Move 영역을 전용 dark workbench 컴포넌트로 교체하고 기존 `st.container(border=True)` 중심 구획을 제거.
+- `1. 선택 후보 확인`에 Backtest Analysis source snapshot의 Summary / Equity Curve / Result Table / Components 탭을 추가해 후보의 원래 백테스트 근거를 먼저 확인하게 함.

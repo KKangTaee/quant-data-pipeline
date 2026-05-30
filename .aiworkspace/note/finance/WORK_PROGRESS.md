@@ -32,6 +32,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Practical Validation `1. 선택 후보 확인` now shows the saved Backtest Analysis source snapshot as Summary / Equity Curve / Result Table / Components before profile and replay checks.
+- This is a read-only display change; it does not rerun backtests, rewrite registries, or change Final Review gate policy.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-commercial-ux-v1/` second visual pass.
 - Practical Validation now uses `app/web/backtest_practical_validation_components.py` as a dedicated workbench shell for the top command center, section headers, cards, step rail, gate alert, and Save & Move panel.
 - Validation service contracts, module gate policy, provider collection behavior, and registry storage boundaries were not changed.

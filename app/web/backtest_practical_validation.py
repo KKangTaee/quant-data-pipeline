@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -132,6 +133,200 @@ def _format_component_summary_df(component_df: pd.DataFrame) -> pd.DataFrame:
     return display_df
 
 
+def _format_number_value(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    try:
+        return f"{float(value):,.2f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _source_curve_dataframe(source: dict[str, Any], key: str, label: str) -> pd.DataFrame:
+    records = list(source.get(key) or [])
+    if not records:
+        return pd.DataFrame()
+    curve_df = pd.DataFrame(records)
+    if curve_df.empty or "Date" not in curve_df.columns or "Total Balance" not in curve_df.columns:
+        return pd.DataFrame()
+    curve_df = curve_df.copy()
+    curve_df["Date"] = pd.to_datetime(curve_df["Date"], errors="coerce")
+    curve_df["Total Balance"] = pd.to_numeric(curve_df["Total Balance"], errors="coerce")
+    if "Total Return" in curve_df.columns:
+        curve_df["Total Return"] = pd.to_numeric(curve_df["Total Return"], errors="coerce")
+    else:
+        curve_df["Total Return"] = None
+    curve_df = curve_df.dropna(subset=["Date", "Total Balance"]).sort_values("Date")
+    if curve_df.empty:
+        return pd.DataFrame()
+    curve_df["Series"] = label
+    return curve_df
+
+
+def _source_backtest_summary_rows(source: dict[str, Any]) -> list[dict[str, Any]]:
+    summary = dict(source.get("summary") or {})
+    period = dict(source.get("period") or {})
+    construction = dict(source.get("construction") or {})
+    data_trust = dict(source.get("data_trust") or {})
+    settings = dict(dict(source.get("source_snapshot") or {}).get("settings_snapshot") or {})
+    return [
+        {
+            "Area": "Performance",
+            "Metric": "CAGR",
+            "Value": _format_percent_value(summary.get("cagr")),
+        },
+        {
+            "Area": "Performance",
+            "Metric": "MDD",
+            "Value": _format_percent_value(summary.get("mdd")),
+        },
+        {
+            "Area": "Performance",
+            "Metric": "Sharpe",
+            "Value": _format_number_value(summary.get("sharpe")),
+        },
+        {
+            "Area": "Performance",
+            "Metric": "End Balance",
+            "Value": _format_number_value(summary.get("end_balance")),
+        },
+        {
+            "Area": "Period",
+            "Metric": "Actual Period",
+            "Value": (
+                f"{_format_date_value(period.get('actual_start') or period.get('start'))} -> "
+                f"{_format_date_value(period.get('actual_end') or period.get('end'))}"
+            ),
+        },
+        {
+            "Area": "Contract",
+            "Metric": "Benchmark",
+            "Value": settings.get("benchmark_ticker")
+            or next(
+                (
+                    str(component.get("benchmark"))
+                    for component in list(source.get("components") or [])
+                    if component.get("benchmark")
+                ),
+                "-",
+            ),
+        },
+        {
+            "Area": "Data",
+            "Metric": "Result Rows",
+            "Value": data_trust.get("result_rows") or len(source.get("result_curve") or []),
+        },
+        {
+            "Area": "Construction",
+            "Metric": "Weight Total",
+            "Value": f"{construction.get('target_weight_total', 0)}%",
+        },
+    ]
+
+
+def _format_source_result_table(curve_df: pd.DataFrame) -> pd.DataFrame:
+    if curve_df.empty:
+        return curve_df
+    display_df = curve_df.copy()
+    display_df["Date"] = display_df["Date"].map(_format_date_value)
+    if "Total Balance" in display_df.columns:
+        display_df["Total Balance"] = display_df["Total Balance"].map(_format_number_value)
+    if "Total Return" in display_df.columns:
+        display_df["Total Return"] = display_df["Total Return"].map(_format_percent_value)
+    ordered_columns = [
+        column
+        for column in ["Date", "Total Balance", "Total Return"]
+        if column in display_df.columns
+    ]
+    return display_df[ordered_columns]
+
+
+def _render_source_equity_curve(source: dict[str, Any]) -> None:
+    portfolio_df = _source_curve_dataframe(source, "result_curve", "Candidate")
+    benchmark_df = _source_curve_dataframe(source, "benchmark_curve", "Benchmark")
+    curve_frames = [frame for frame in [portfolio_df, benchmark_df] if not frame.empty]
+    if not curve_frames:
+        st.info("저장된 backtest equity curve snapshot이 없습니다.")
+        return
+    chart_df = pd.concat(curve_frames, ignore_index=True)
+    chart = (
+        alt.Chart(chart_df)
+        .mark_line(point=False, strokeWidth=2)
+        .encode(
+            x=alt.X("Date:T", title="Date"),
+            y=alt.Y("Total Balance:Q", title="Total Balance", scale=alt.Scale(zero=False)),
+            color=alt.Color("Series:N", title=None, legend=alt.Legend(orient="top")),
+            tooltip=[
+                alt.Tooltip("Date:T", title="Date", format="%Y-%m-%d"),
+                alt.Tooltip("Series:N", title="Series"),
+                alt.Tooltip("Total Balance:Q", title="Balance", format=",.2f"),
+                alt.Tooltip("Total Return:Q", title="Return", format=".2%"),
+            ],
+        )
+        .properties(height=320)
+    )
+    st.altair_chart(chart, use_container_width=True)
+    if benchmark_df.empty:
+        st.caption("Benchmark curve snapshot이 없어 후보 equity curve만 표시합니다.")
+
+
+def _render_source_backtest_snapshot(source: dict[str, Any]) -> None:
+    summary = dict(source.get("summary") or {})
+    data_trust = dict(source.get("data_trust") or {})
+    result_curve_df = _source_curve_dataframe(source, "result_curve", "Candidate")
+    component_df = source_components_dataframe(source)
+    summary_tab, curve_tab, table_tab, component_tab = st.tabs(
+        ["Summary", "Equity Curve", "Result Table", "Components"]
+    )
+    with summary_tab:
+        render_pv_card_grid(
+            [
+                {
+                    "kicker": "Backtest Result",
+                    "title": "성과 요약",
+                    "status": f"CAGR {_format_percent_value(summary.get('cagr'))}",
+                    "detail": (
+                        f"MDD {_format_percent_value(summary.get('mdd'))}, "
+                        f"Sharpe {_format_number_value(summary.get('sharpe'))}, "
+                        f"End {_format_number_value(summary.get('end_balance'))}"
+                    ),
+                    "tone": "positive",
+                },
+                {
+                    "kicker": "Equity Snapshot",
+                    "title": "저장된 curve",
+                    "status": f"{len(result_curve_df)} rows",
+                    "detail": "Backtest Analysis에서 Practical Validation으로 넘긴 compact result curve입니다.",
+                    "tone": "positive" if not result_curve_df.empty else "warning",
+                },
+                {
+                    "kicker": "Data Trust",
+                    "title": data_trust.get("status") or "snapshot",
+                    "status": f"Warnings {data_trust.get('warning_count', 0)}",
+                    "detail": (
+                        f"Actual end {_format_date_value(data_trust.get('actual_result_end'))}, "
+                        f"excluded {len(data_trust.get('excluded_tickers') or [])}"
+                    ),
+                    "tone": "warning" if data_trust.get("warning_count") else "neutral",
+                },
+            ],
+            min_width=220,
+        )
+        st.dataframe(pd.DataFrame(_source_backtest_summary_rows(source)), width="stretch", hide_index=True)
+    with curve_tab:
+        _render_source_equity_curve(source)
+    with table_tab:
+        if result_curve_df.empty:
+            st.info("표시할 saved result table snapshot이 없습니다.")
+        else:
+            st.dataframe(_format_source_result_table(result_curve_df), width="stretch", hide_index=True)
+    with component_tab:
+        if component_df.empty:
+            st.info("선택된 source에 component snapshot이 없습니다.")
+        else:
+            st.dataframe(_format_component_summary_df(component_df), width="stretch", hide_index=True)
+
+
 def _render_source_summary(source: dict[str, Any]) -> None:
     summary = dict(source.get("summary") or {})
     period = dict(source.get("period") or {})
@@ -152,11 +347,7 @@ def _render_source_summary(source: dict[str, Any]) -> None:
             {"label": "Weight Total", "value": f"{construction.get('target_weight_total', 0)}%", "tone": "neutral"},
         ]
     )
-    component_df = source_components_dataframe(source)
-    if component_df.empty:
-        st.info("선택된 source에 component snapshot이 없습니다.")
-    else:
-        st.dataframe(_format_component_summary_df(component_df), width="stretch", hide_index=True)
+    _render_source_backtest_snapshot(source)
 
 
 def _render_validation_profile_form() -> dict[str, Any]:

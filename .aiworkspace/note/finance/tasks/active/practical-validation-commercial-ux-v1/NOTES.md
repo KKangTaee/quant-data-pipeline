@@ -9,3 +9,4 @@
 - Provider Data Gaps는 action center 요약 카드가 먼저 나오고 상세 table / action plan은 접힘 영역으로 내려간다.
 - 2차 visual overhaul은 검증 로직이나 저장 계약을 바꾸지 않고, `app/web/backtest_practical_validation_components.py`에 Practical Validation 전용 CSS / command center / section / card / step rail helper를 둔다.
 - 새 shell은 검증 module, evidence board, action board가 같은 검증 목록처럼 보이지 않도록 section boundary와 tone을 더 강하게 분리한다.
+- 선택 후보 확인의 backtest mini report는 기존 source의 `summary`, `result_curve`, `benchmark_curve`, `components` snapshot만 읽는다. 새 backtest 실행, registry rewrite, Final Review gate 계산 변경은 없다.

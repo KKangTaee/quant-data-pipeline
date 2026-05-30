@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Practical Validation source review should include the original backtest snapshot
+- User request:
+  - Practical Validation의 `1. 선택 후보 확인`이 CAGR / MDD / 비중만 보여줘 부족하므로 기존 백테스트 결과의 summary, equity curve, result table을 간략히 보여 달라고 요청함.
+- Interpreted goal:
+  - 검증 profile이나 Final Review gate 전에, Backtest Analysis에서 왜 이 후보가 넘어왔는지 원래 결과 snapshot을 먼저 확인하게 한다.
+- Analysis result:
+  - `selection_source`에 이미 저장된 `summary`, `result_curve`, `benchmark_curve`, `components` snapshot을 read-only로 표시하면 충분하다.
+  - 새 실행이나 registry 재작성 없이 Summary / Equity Curve / Result Table / Components 탭을 추가하는 UI-only 변경으로 처리한다.
+- Follow-up:
+  - source snapshot이 없는 legacy row는 현재 component fallback과 안내 메시지로 처리한다.
+
 ### 2026-05-30 - Practical Validation needs a dedicated workbench shell
 - User request:
   - Practical Validation 화면이 여전히 기존 Streamlit 틀을 벗어나지 못하고 상용 프로그램보다 운영툴처럼 보인다고 지적하고, 진짜 시각 개편 진행을 승인함.
