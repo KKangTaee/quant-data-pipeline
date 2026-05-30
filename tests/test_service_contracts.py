@@ -336,9 +336,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(model["status"], "장중")
         self.assertIn("2026-05-29 ET", model["title"])
-        self.assertEqual(model["items"][0]["value"], "09:30 ET")
-        self.assertEqual(model["items"][0]["detail"], "05-29 22:30 KST")
-        self.assertEqual(model["items"][1]["value"], "16:00 ET")
+        self.assertEqual(model["items"][0]["value"], "05-29 22:30 KST")
+        self.assertEqual(model["items"][0]["detail"], "09:30 ET")
+        self.assertEqual(model["items"][1]["value"], "05-30 05:00 KST")
+        self.assertEqual(model["items"][1]["detail"], "16:00 ET")
 
     def test_market_session_banner_reports_weekend_closure(self) -> None:
         from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
@@ -347,7 +348,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(model["status"], "휴장")
         self.assertIn("주말", model["detail"])
-        self.assertEqual(model["items"][1]["value"], "09:30 ET")
+        self.assertEqual(model["items"][1]["value"], "06-01 22:30 KST")
+        self.assertEqual(model["items"][1]["detail"], "09:30 ET")
 
     def test_market_session_banner_reports_observed_holiday_closure(self) -> None:
         from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model

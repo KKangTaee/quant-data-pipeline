@@ -327,6 +327,14 @@ def _format_kst_time(value: datetime | None) -> str:
     return value.astimezone(KOREA_TZ).strftime("%m-%d %H:%M KST") if value else "-"
 
 
+def _format_session_time_item(label: str, value: datetime | None) -> dict[str, str]:
+    return {
+        "label": label,
+        "value": _format_kst_time(value),
+        "detail": _format_et_time(value),
+    }
+
+
 def _market_session_banner_model(now: datetime | None = None) -> dict[str, Any]:
     session = _current_market_session_info(now)
     if session.is_trading_day:
@@ -339,9 +347,9 @@ def _market_session_banner_model(now: datetime | None = None) -> dict[str, Any]:
             "title": f"미국장 세션 · {session.session_date.isoformat()} ET",
             "detail": detail,
             "items": [
-                {"label": "Open", "value": _format_et_time(session.open_at), "detail": _format_kst_time(session.open_at)},
-                {"label": "Close", "value": _format_et_time(session.close_at), "detail": _format_kst_time(session.close_at)},
-                {"label": "Calendar", "value": "NYSE", "detail": "regular session"},
+                _format_session_time_item("Open", session.open_at),
+                _format_session_time_item("Close", session.close_at),
+                {"label": "Timezone", "value": "KST", "detail": "ET shown below"},
             ],
         }
     return {
@@ -351,8 +359,8 @@ def _market_session_banner_model(now: datetime | None = None) -> dict[str, Any]:
         "detail": f"사유: {session.reason}",
         "items": [
             {"label": "Reason", "value": session.reason, "detail": "NYSE closed"},
-            {"label": "Next Open", "value": _format_et_time(session.next_open_at), "detail": _format_kst_time(session.next_open_at)},
-            {"label": "Next Close", "value": _format_et_time(session.next_close_at), "detail": _format_kst_time(session.next_close_at)},
+            _format_session_time_item("Next Open", session.next_open_at),
+            _format_session_time_item("Next Close", session.next_close_at),
         ],
     }
 
