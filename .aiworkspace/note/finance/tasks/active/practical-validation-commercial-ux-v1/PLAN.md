@@ -13,6 +13,7 @@ Practical Validation의 module gate와 evidence board 구조는 정리됐지만,
 ## Scope
 
 - Practical Validation 전용 visual helper / CSS 추가
+- Practical Validation 전용 product shell component를 분리해 기존 Streamlit container 중심 화면에서 벗어남
 - Final Review Gate blocker를 fix queue 중심으로 표시
 - Evidence board를 탭 / summary-first 구조로 재배치
 - Provider gap 보강 액션을 action center로 표시

@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-commercial-ux-v1/` second visual pass.
+- Practical Validation now uses `app/web/backtest_practical_validation_components.py` as a dedicated workbench shell for the top command center, section headers, cards, step rail, gate alert, and Save & Move panel.
+- Validation service contracts, module gate policy, provider collection behavior, and registry storage boundaries were not changed.
 - Closed Backtest Analysis 1단계 기준 문서: `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
 - Current Stage 1 boundary is now explicit: Single Strategy / Portfolio Mix 후보 생성, 1차 readiness, and Practical Validation handoff only.
 - Candidate comparison as a separate read-only tool, saved mix inspector polish, weighted mix cost / turnover aggregation, and profile-specific thresholds remain follow-up candidates outside this closeout.

@@ -67,6 +67,7 @@ Last Verified: 2026-05-30
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
+| Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py` |
 | Selected Portfolio Dashboard | `app/web/final_selected_portfolio_dashboard.py` |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
@@ -103,6 +104,7 @@ Last Verified: 2026-05-30
 | `app/services/backtest_data_coverage_audit.py` | Streamlit-free data coverage audit read model. DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 compact `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, Control Center, Fix Queue, summary-first evidence workspace, look-through board, Robustness Lab board, Provider Action Center, provider gap / replay service result session state handoff |
+| `app/web/backtest_practical_validation_components.py` | Practical Validation 전용 product shell / CSS helper. Command Center, section header, card grid, step rail, alert panel을 담당하며 검증 로직이나 저장 계약은 포함하지 않는다 |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |

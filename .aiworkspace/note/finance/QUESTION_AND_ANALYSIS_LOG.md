@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Practical Validation needs a dedicated workbench shell
+- User request:
+  - Practical Validation 화면이 여전히 기존 Streamlit 틀을 벗어나지 못하고 상용 프로그램보다 운영툴처럼 보인다고 지적하고, 진짜 시각 개편 진행을 승인함.
+- Interpreted goal:
+  - 검증 로직과 gate 정책은 유지하되, 화면 레이어를 전용 product shell로 분리해 module gate, evidence board, action board의 위계를 더 분명히 보여준다.
+- Analysis result:
+  - `app/web/backtest_practical_validation_components.py`를 추가해 Command Center, section header, card grid, step rail, alert panel을 Practical Validation 전용으로 분리했다.
+  - Practical Validation render는 `st.container(border=True)` 중심 구획을 제거하고 전용 workbench shell로 후보, profile, replay, gate, evidence, action, save flow를 배치한다.
+- Follow-up:
+  - 현재 변경은 UI shell only다. light theme 대비나 더 큰 design system화가 필요하면 별도 UX polish task로 연다.
+
 ### 2026-05-30 - Backtest Analysis Stage 1 is closed as candidate-source creation
 - User request:
   - 1단계 Backtest는 여기까지 진행하면 될 것 같으니, 이번 세션에서 작업한 내용과 최종 수정 상태를 문서로 업데이트하고 정리해 달라고 요청함.
