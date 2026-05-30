@@ -24,6 +24,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`.
+- Backtest Real-Money 1차 readiness now scores Promotion / execution source checks / validation source checks without reusing later-stage probation / monitoring fields.
+- Turnover / cost output now shows estimation status, and Backtest split-period wording no longer presents the 1차 check as formal OOS validation.
 - Completed `.aiworkspace/note/finance/tasks/active/backtest-real-money-stage-boundary-v1/`.
 - Backtest Real-Money now presents `Suggested Route`, `Next Validation Focus`, and `Execution Preview` as first-pass candidate readiness, while later paper observation / monitoring / final execution decisions stay outside Backtest Analysis.
 - Verification passed: targeted py_compile, `git diff --check`, targeted legacy label search, and Browser smoke on `http://127.0.0.1:8502/backtest`.

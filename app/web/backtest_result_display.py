@@ -709,12 +709,12 @@ def _render_last_run() -> None:
                 )
             if meta.get("out_of_sample_review_status"):
                 st.markdown(
-                    f"- `Out-Of-Sample Review`: `{meta['out_of_sample_review_status']}` "
+                    f"- `Split-Period Check`: `{meta['out_of_sample_review_status']}` "
                     f"(`{_review_status_value_to_label(meta.get('out_of_sample_review_status'))}`)"
                 )
             if meta.get("out_of_sample_out_sample_excess_return") is not None:
                 st.markdown(
-                    f"- `Out-Of-Sample Excess`: `{float(meta.get('out_of_sample_out_sample_excess_return') or 0.0):.2%}`"
+                    f"- `Back-Half Excess`: `{float(meta.get('out_of_sample_out_sample_excess_return') or 0.0):.2%}`"
                 )
             if meta.get("strategy_max_drawdown") is not None:
                 st.markdown(f"- `Strategy Max Drawdown`: `{float(meta['strategy_max_drawdown']):.2%}`")
@@ -1021,23 +1021,69 @@ def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
 
 def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]:
     promotion = str(meta.get("promotion_decision") or "").strip().lower()
-    deployment = str(meta.get("deployment_readiness_status") or "").strip().lower()
-    issue_rows = _build_stage_issue_resolution_rows(meta)
-    severe_statuses = {"caution", "unavailable", "error", "missing"}
-    severe_issue_rows = [
-        row
-        for row in issue_rows
-        if str(row.get("현재 상태") or "").strip().lower() in severe_statuses
-    ]
-    softer_issue_rows = [
-        row
-        for row in issue_rows
-        if str(row.get("현재 상태") or "").strip().lower() in {"watch", "warning"}
-    ]
+    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
+    turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+    net_cost_curve_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+    transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
 
-    fail_count = int(meta.get("deployment_check_fail_count") or 0)
-    watch_count = int(meta.get("deployment_check_watch_count") or 0)
-    unavailable_count = int(meta.get("deployment_check_unavailable_count") or 0)
+    def _source_bucket(
+        value: Any,
+        *,
+        unavailable_blocks: bool = True,
+        caution_blocks: bool = True,
+    ) -> str:
+        normalized = str(value or "").strip().lower()
+        if not normalized or normalized in {"normal", "ok", "pass", "passed", "fresh"}:
+            return "pass"
+        if normalized in {"error", "missing"}:
+            return "block"
+        if normalized == "caution":
+            return "block" if caution_blocks else "review"
+        if normalized == "unavailable":
+            return "block" if unavailable_blocks else "review"
+        if normalized in {"watch", "warning"}:
+            return "review"
+        return "review"
+
+    def _collect_source_reasons(
+        specs: list[tuple[str, Any, bool, bool]],
+    ) -> tuple[list[str], list[str]]:
+        blockers: list[str] = []
+        reviews: list[str] = []
+        for label, status, unavailable_blocks, caution_blocks in specs:
+            normalized = str(status or "").strip().lower()
+            bucket = _source_bucket(
+                normalized,
+                unavailable_blocks=unavailable_blocks,
+                caution_blocks=caution_blocks,
+            )
+            if bucket == "block":
+                blockers.append(f"{label}: {normalized or '-'}")
+            elif bucket == "review":
+                reviews.append(f"{label}: {normalized or '-'}")
+        return blockers, reviews
+
+    execution_specs: list[tuple[str, Any, bool, bool]] = [
+        ("Liquidity Policy", meta.get("liquidity_policy_status"), True, True),
+        ("ETF Operability", meta.get("etf_operability_status"), True, True),
+        ("Price Freshness", freshness_status, True, True),
+    ]
+    validation_specs: list[tuple[str, Any, bool, bool]] = [
+        ("Benchmark 비교", "missing" if not bool(meta.get("benchmark_available")) else "", True, True),
+        ("Validation", meta.get("validation_status"), True, True),
+        ("Benchmark Policy", meta.get("benchmark_policy_status"), True, True),
+        ("Validation Policy", meta.get("validation_policy_status"), True, True),
+        ("Portfolio Guardrail Policy", meta.get("guardrail_policy_status"), True, True),
+        # Backtest-level recent/split checks are useful warning signals, but they are not formal holdout validation.
+        ("Rolling Review", meta.get("rolling_review_status"), False, False),
+        ("Split-Period Check", meta.get("out_of_sample_review_status"), False, False),
+    ]
+    execution_blockers, execution_reviews = _collect_source_reasons(execution_specs)
+    validation_blockers, validation_reviews = _collect_source_reasons(validation_specs)
+    if transaction_cost_bps > 0.0 and turnover_status and turnover_status != "estimated_from_holdings":
+        execution_reviews.append(f"Turnover Estimate: {turnover_status}")
+    if net_cost_curve_status == "applied_without_turnover_estimate":
+        execution_reviews.append("Cost Curve: turnover estimate unavailable")
 
     if promotion == "real_money_candidate":
         promotion_score = 4.0
@@ -1052,37 +1098,31 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         promotion_score = 0.0
         promotion_judgment = "hold 해결 전에는 다음 단계 보류"
 
-    if deployment == "small_capital_ready":
-        deployment_score = 3.0
-        deployment_judgment = "실행 부담 preview가 양호함"
-    elif deployment in {"small_capital_ready_with_review", "paper_only"}:
-        deployment_score = 2.5
-        deployment_judgment = "다음 검토로 넘기기 충분"
-    elif deployment == "watchlist_only":
-        deployment_score = 2.0
-        deployment_judgment = "watchlist로 비교 가능"
-    elif deployment == "review_required":
-        deployment_score = 1.5
-        deployment_judgment = "비교는 가능하지만 실행 부담 재확인 필요"
+    if execution_blockers:
+        execution_score = 0.0
+        execution_judgment = "실행 원천 blocker가 남아 있음"
+    elif execution_reviews:
+        execution_score = 2.0
+        execution_judgment = "실행 부담은 검토 가능하지만 확인 항목 있음"
     else:
-        deployment_score = 0.0
-        deployment_judgment = "blocked 또는 상태 부족"
+        execution_score = 3.0
+        execution_judgment = "실행 부담 원천 지표가 양호함"
 
-    if severe_issue_rows:
-        blocker_score = 0.0
-        blocker_judgment = "핵심 blocker가 남아 있음"
-    elif fail_count > 0 or watch_count > 0 or unavailable_count > 0 or softer_issue_rows:
-        blocker_score = 2.0
-        blocker_judgment = "진행 가능하지만 개선 항목 있음"
+    if validation_blockers:
+        validation_score = 0.0
+        validation_judgment = "검증 원천 blocker가 남아 있음"
+    elif validation_reviews:
+        validation_score = 2.0
+        validation_judgment = "검증 근거는 있으나 후속 확인 필요"
     else:
-        blocker_score = 3.0
-        blocker_judgment = "핵심 blocker 없음"
+        validation_score = 3.0
+        validation_judgment = "검증 원천 지표가 양호함"
 
-    score = round(promotion_score + deployment_score + blocker_score, 1)
+    score = round(promotion_score + execution_score + validation_score, 1)
     can_move_to_compare = (
         promotion not in {"", "hold"}
-        and deployment not in {"", "blocked"}
-        and not severe_issue_rows
+        and not execution_blockers
+        and not validation_blockers
     )
 
     if can_move_to_compare and score >= 8.0:
@@ -1104,24 +1144,10 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
     blocking_reasons: list[str] = []
     if promotion in {"", "hold"}:
         blocking_reasons.append("Promotion Decision이 hold이거나 비어 있음")
-    if deployment in {"", "blocked"}:
-        blocking_reasons.append("Execution Preview가 blocked이거나 비어 있음")
-    blocking_reasons.extend(
-        f"{row.get('항목')}: {row.get('현재 상태')}"
-        for row in severe_issue_rows
-    )
+    blocking_reasons.extend(execution_blockers)
+    blocking_reasons.extend(validation_blockers)
 
-    review_reasons: list[str] = []
-    if fail_count > 0:
-        review_reasons.append(f"Execution preview fail {fail_count}개")
-    if watch_count > 0:
-        review_reasons.append(f"Execution preview watch {watch_count}개")
-    if unavailable_count > 0:
-        review_reasons.append(f"Execution preview unavailable {unavailable_count}개")
-    review_reasons.extend(
-        f"{row.get('항목')}: {row.get('현재 상태')}"
-        for row in softer_issue_rows
-    )
+    review_reasons: list[str] = execution_reviews + validation_reviews
 
     criteria_rows = [
         {
@@ -1131,16 +1157,16 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
             "판단": promotion_judgment,
         },
         {
-            "기준": "Execution Preview",
-            "현재 값": deployment or "-",
-            "점수": f"{deployment_score:g} / 3",
-            "판단": deployment_judgment,
+            "기준": "Execution Source Checks",
+            "현재 값": "정상" if not execution_blockers and not execution_reviews else f"block {len(execution_blockers)} / review {len(execution_reviews)}",
+            "점수": f"{execution_score:g} / 3",
+            "판단": execution_judgment,
         },
         {
-            "기준": "Core Blocker",
-            "현재 값": "없음" if not severe_issue_rows else f"{len(severe_issue_rows)}개",
-            "점수": f"{blocker_score:g} / 3",
-            "판단": blocker_judgment,
+            "기준": "Validation Source Checks",
+            "현재 값": "정상" if not validation_blockers and not validation_reviews else f"block {len(validation_blockers)} / review {len(validation_reviews)}",
+            "점수": f"{validation_score:g} / 3",
+            "판단": validation_judgment,
         },
     ]
 
@@ -1178,13 +1204,13 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
         )
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 후보 검토, `8.0점 미만`이어도 핵심 3조건을 만족하면 조건부 검토, "
-            "핵심 3조건을 만족하지 못하면 점수와 무관하게 blocker 해결이 먼저입니다."
+            "점수 기준: `8.0점 이상`은 깔끔한 후보 검토, `8.0점 미만`이어도 Promotion / 실행 원천 / 검증 원천에 "
+            "막는 항목이 없으면 조건부 검토, 막는 항목이 있으면 점수와 무관하게 blocker 해결이 먼저입니다."
         )
 
         message = (
             f"{evaluation['verdict']}: "
-            f"`Promotion Decision != hold`, `Execution Preview != blocked`, 핵심 blocker 없음 기준으로 계산했습니다."
+            f"`Promotion Decision != hold`, 실행 원천 blocker 없음, 검증 원천 blocker 없음 기준으로 계산했습니다."
         )
         if tone == "success":
             st.success(message)
@@ -1285,6 +1311,23 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "blocked": "Blocked",
         }
         return mapping.get(str(value or "").strip().lower(), "-")
+
+    def _turnover_estimation_label(value: Any) -> str:
+        mapping = {
+            "estimated_from_holdings": "Holdings 기반 추정",
+            "not_estimated_missing_holdings": "Holdings 근거 부족",
+            "not_estimated_no_observations": "관측치 부족",
+        }
+        return mapping.get(str(value or "").strip().lower(), str(value or "-"))
+
+    def _net_cost_curve_label(value: Any) -> str:
+        mapping = {
+            "applied_with_measurable_cost": "비용 반영됨",
+            "applied_zero_cost_bps": "비용 0bps",
+            "applied_without_turnover_estimate": "Turnover 근거 부족",
+            "applied_no_cost_impact": "비용 영향 없음",
+        }
+        return mapping.get(str(value or "").strip().lower(), str(value or "-"))
 
     def _focus_label(value: Any) -> str:
         mapping = {
@@ -1600,10 +1643,10 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                         st.dataframe(pd.DataFrame(display_checklist_rows), use_container_width=True, hide_index=True)
 
                 if deployment_status == "small_capital_ready":
-                    st.success("현재 preview 기준에서는 다음 검증에서 소액 검토 가능성을 확인해볼 수 있습니다.")
+                    st.success("현재 preview 기준에서는 실행 부담 원천 지표가 막히지 않아 다음 검증으로 넘겨볼 수 있습니다.")
                 elif deployment_status == "small_capital_ready_with_review":
                     st.info(
-                        "현재 preview 기준에서는 소액 검토 가능성은 있지만, watch / unavailable 항목을 다음 검증에서 먼저 확인해야 합니다."
+                        "현재 preview 기준에서는 다음 검증으로 넘길 여지는 있지만, watch / unavailable 항목을 먼저 확인해야 합니다."
                     )
                 elif deployment_status == "paper_only":
                     st.info("지금은 실제 배치 판단이 아니라 paper observation 요건을 다음 단계에서 확인하는 편이 맞습니다.")
@@ -1702,8 +1745,8 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
         if meta.get("rolling_review_status") or meta.get("out_of_sample_review_status"):
             with _section_header(
-                "최근 구간 / Out-of-Sample Review",
-                "최근 구간과 전후반 구간을 따로 봐서, 특정 시기 우연인지 아니면 비교적 꾸준한지 확인하는 섹션입니다.",
+                "최근 구간 / 간이 전후반 구간 점검",
+                "최근 구간과 전후반 구간을 따로 봐서, 특정 시기 우연인지 아니면 비교적 꾸준한지 확인하는 1차 점검입니다.",
             ):
                 review_cols = st.columns(5, gap="small")
                 review_cols[0].metric("Rolling Review", _review_status_value_to_label(meta.get("rolling_review_status")))
@@ -1712,13 +1755,13 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     review_cols[2].metric("Recent Excess", f"{float(meta.get('rolling_review_recent_excess_return')):.2%}")
                 if meta.get("rolling_review_recent_drawdown_gap") is not None:
                     review_cols[3].metric("Recent DD Gap", f"{float(meta.get('rolling_review_recent_drawdown_gap')):.2%}")
-                review_cols[4].metric("OOS Review", _review_status_value_to_label(meta.get("out_of_sample_review_status")))
+                review_cols[4].metric("Split-Period Check", _review_status_value_to_label(meta.get("out_of_sample_review_status")))
 
                 split_cols = st.columns(3, gap="small")
                 if meta.get("out_of_sample_in_sample_excess_return") is not None:
-                    split_cols[0].metric("In-Sample Excess", f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}")
+                    split_cols[0].metric("Front-Half Excess", f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}")
                 if meta.get("out_of_sample_out_sample_excess_return") is not None:
-                    split_cols[1].metric("Out-Sample Excess", f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}")
+                    split_cols[1].metric("Back-Half Excess", f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}")
                 if meta.get("out_of_sample_excess_change") is not None:
                     split_cols[2].metric("Excess Change", f"{float(meta.get('out_of_sample_excess_change')):.2%}")
 
@@ -1732,26 +1775,26 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     st.caption("Rolling review rationale: " + ", ".join(f"`{item}`" for item in rolling_review_rationale))
                 if meta.get("out_of_sample_in_sample_start") is not None and meta.get("out_of_sample_out_sample_end") is not None:
                     st.caption(
-                        "Split-period review: "
-                        f"in-sample `{meta.get('out_of_sample_in_sample_start')}` -> `{meta.get('out_of_sample_in_sample_end')}`, "
-                        f"out-sample `{meta.get('out_of_sample_out_sample_start')}` -> `{meta.get('out_of_sample_out_sample_end')}`"
+                        "Simple split-period check: "
+                        f"front half `{meta.get('out_of_sample_in_sample_start')}` -> `{meta.get('out_of_sample_in_sample_end')}`, "
+                        f"back half `{meta.get('out_of_sample_out_sample_start')}` -> `{meta.get('out_of_sample_out_sample_end')}`"
                     )
                 out_of_sample_review_rationale = list(meta.get("out_of_sample_review_rationale") or [])
                 if out_of_sample_review_rationale:
-                    st.caption("Out-of-sample rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale))
+                    st.caption("Split-period rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale))
 
                 if str(meta.get("rolling_review_status") or "").strip().lower() == "caution" or str(
                     meta.get("out_of_sample_review_status") or ""
                 ).strip().lower() == "caution":
                     st.warning(
-                        "최근 구간 또는 split-period review에서 caution이 잡혔습니다. "
+                        "최근 구간 또는 간이 전후반 구간 점검에서 caution이 잡혔습니다. "
                         "지금은 후속 검증에서 recent regime robustness를 먼저 확인하는 편이 맞습니다."
                     )
                 elif str(meta.get("rolling_review_status") or "").strip().lower() == "watch" or str(
                     meta.get("out_of_sample_review_status") or ""
                 ).strip().lower() == "watch":
                     st.info(
-                        "최근 구간 review는 완전히 깨지진 않았지만, current regime robustness를 조금 더 보수적으로 해석하는 편이 좋습니다."
+                        "최근 구간 / 전후반 구간 점검은 완전히 깨지진 않았지만, current regime robustness를 조금 더 보수적으로 해석하는 편이 좋습니다."
                     )
 
         if (
@@ -1886,13 +1929,40 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "실행 계약 요약",
             "가격, 이력, 유동성, turnover, 비용처럼 실제 운용 시 바로 영향을 주는 기본 조건을 보여줍니다.",
         ):
+            turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+            net_cost_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+            transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
+            turnover_estimated = turnover_status == "estimated_from_holdings"
+            avg_turnover = meta.get("avg_turnover")
+            estimated_cost_total = meta.get("estimated_cost_total")
+            avg_turnover_display = (
+                f"{float(avg_turnover):.2%}"
+                if turnover_estimated and avg_turnover is not None
+                else "N/A"
+            )
+            estimated_cost_display = (
+                f"{float(estimated_cost_total or 0.0):,.1f}"
+                if transaction_cost_bps <= 0.0 or net_cost_status != "applied_without_turnover_estimate"
+                else "N/A"
+            )
             top_cols = st.columns(6, gap="small")
             top_cols[0].metric("Minimum Price", f"{float(meta.get('min_price_filter') or 0.0):.2f}")
             top_cols[1].metric("Minimum History", f"{int(meta.get('min_history_months_filter') or 0)}M")
             top_cols[2].metric("Min Avg Dollar Volume 20D", f"{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M")
-            top_cols[3].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
-            top_cols[4].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
-            top_cols[5].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
+            top_cols[3].metric("Transaction Cost", f"{transaction_cost_bps:.1f} bps")
+            top_cols[4].metric("Avg Turnover", avg_turnover_display)
+            top_cols[5].metric("Estimated Cost Total", estimated_cost_display)
+            st.caption(
+                "Turnover estimate: "
+                f"`{_turnover_estimation_label(turnover_status)}` | "
+                "Cost curve: "
+                f"`{_net_cost_curve_label(net_cost_status)}`"
+            )
+            if transaction_cost_bps > 0.0 and not turnover_estimated:
+                st.warning(
+                    "Turnover를 holdings 기반으로 추정하지 못해 비용 영향이 낮게 보일 수 있습니다. "
+                    "이 경우 `Avg Turnover`와 `Estimated Cost Total`은 강한 실전성 근거로 보지 않는 편이 맞습니다."
+                )
             if meta.get("liquidity_excluded_total") is not None:
                 st.caption(
                     "Liquidity excluded candidates: "

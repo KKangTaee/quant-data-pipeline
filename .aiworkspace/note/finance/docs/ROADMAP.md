@@ -7,6 +7,7 @@ Last Verified: 2026-05-30
 
 | Track | Status | Notes |
 |---|---|---|
+| Backtest Real-Money Readiness Efficacy V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`; Execution Preview now scores only source checks, Candidate Readiness uses Promotion / execution source / validation source criteria, turnover / cost shows estimation status, and Backtest split-period wording no longer implies formal OOS validation |
 | Backtest Real-Money Stage Boundary V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-stage-boundary-v1/`; Backtest Real-Money now treats probation / monitoring / deployment as later-stage concerns and shows `Next Validation Focus` / `Execution Preview` without storage / calculation / persistence expansion |
 | Real-Money Promotion Route Absorption V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`; `Shortlist` is no longer shown as a peer validation item and is now displayed as `Promotion Suggested Route` without storage / calculation changes |
 | Backtest Analysis UX Checkpoint V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`; Runtime payload collapse, checkpoint-based Latest Backtest Run, Data Trust visual summary, Next Action handoff, and legacy 4/5-step wording cleanup |

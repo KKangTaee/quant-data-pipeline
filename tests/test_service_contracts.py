@@ -2884,6 +2884,70 @@ class FinanceWorkspacePathContractTests(unittest.TestCase):
 
 
 class BacktestRuntimeContractTests(unittest.TestCase):
+    def test_execution_preview_ignores_later_stage_probation_monitoring_fields(self) -> None:
+        from app.runtime.backtest import _build_deployment_readiness_contract
+
+        preview = _build_deployment_readiness_contract(
+            {
+                "benchmark_available": True,
+                "benchmark_contract": "spy",
+                "benchmark_label": "SPY Benchmark",
+                "universe_contract": "historical_dynamic_pit",
+                "price_freshness": {"status": "ok"},
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "rolling_review_status": "normal",
+                "out_of_sample_review_status": "normal",
+                # Legacy later-stage fields can remain in metadata, but Execution Preview must not score them.
+                "shortlist_status": "hold",
+                "probation_status": "not_ready",
+                "monitoring_status": "blocked",
+            }
+        )
+
+        check_names = {row["Check"] for row in preview["deployment_checklist_rows"]}
+        self.assertNotIn("Shortlist", check_names)
+        self.assertNotIn("Probation", check_names)
+        self.assertNotIn("Monitoring", check_names)
+        self.assertEqual(preview["deployment_readiness_status"], "small_capital_ready")
+        self.assertEqual(preview["deployment_check_fail_count"], 0)
+
+    def test_candidate_readiness_scores_source_checks_not_legacy_deployment_status(self) -> None:
+        from app.web.backtest_result_display import _build_next_step_readiness_evaluation
+
+        evaluation = _build_next_step_readiness_evaluation(
+            {
+                "promotion_decision": "real_money_candidate",
+                "deployment_readiness_status": "blocked",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "price_freshness": {"status": "ok"},
+                "rolling_review_status": "caution",
+                "out_of_sample_review_status": "caution",
+                "transaction_cost_bps": 10.0,
+                "turnover_estimation_status": "not_estimated_missing_holdings",
+                "net_cost_curve_status": "applied_without_turnover_estimate",
+            }
+        )
+
+        self.assertTrue(evaluation["can_move_to_compare"])
+        self.assertEqual(evaluation["blocking_reasons"], [])
+        self.assertEqual(evaluation["score"], 8.0)
+        self.assertIn("Rolling Review: caution", evaluation["review_reasons"])
+        self.assertIn("Split-Period Check: caution", evaluation["review_reasons"])
+        self.assertIn("Turnover Estimate: not_estimated_missing_holdings", evaluation["review_reasons"])
+        criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}
+        self.assertEqual(criteria["Execution Source Checks"]["현재 값"], "block 0 / review 2")
+        self.assertEqual(criteria["Validation Source Checks"]["현재 값"], "block 0 / review 2")
+
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime
         from app.runtime import backtest as runtime_backtest

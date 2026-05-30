@@ -1290,7 +1290,7 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Execution Next": _next_stage_step_label(meta.get("deployment_readiness_next_step")),
                 "Rolling Review": _review_status_value_to_label(meta.get("rolling_review_status")),
                 "Recent Excess": meta.get("rolling_review_recent_excess_return"),
-                "OOS Review": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
+                "Split-Period Check": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
                 "OOS Excess": meta.get("out_of_sample_out_sample_excess_return"),
                 "Route Next": _next_stage_step_label(meta.get("shortlist_next_step")),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),

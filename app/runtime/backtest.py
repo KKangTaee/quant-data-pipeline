@@ -1265,9 +1265,6 @@ def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]
     benchmark_contract = str(meta.get("benchmark_contract") or "").strip().lower()
     universe_contract = str(meta.get("universe_contract") or "").strip().lower()
     freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
-    shortlist_status = str(meta.get("shortlist_status") or "").strip().lower()
-    probation_status = str(meta.get("probation_status") or "").strip().lower()
-    monitoring_status = str(meta.get("monitoring_status") or "").strip().lower()
     rolling_review_status = str(meta.get("rolling_review_status") or "").strip().lower()
     out_of_sample_review_status = str(meta.get("out_of_sample_review_status") or "").strip().lower()
     benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
@@ -1318,35 +1315,11 @@ def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]
             freshness_check_status = "fail"
         add_row("Price Freshness", freshness_check_status, freshness_status)
 
-    if shortlist_status:
-        shortlist_check_status = "watch"
-        if shortlist_status == "small_capital_trial":
-            shortlist_check_status = "pass"
-        elif shortlist_status == "hold":
-            shortlist_check_status = "fail"
-        add_row("Shortlist", shortlist_check_status, shortlist_status)
-
-    if probation_status:
-        probation_check_status = "watch"
-        if probation_status == "small_capital_live_trial":
-            probation_check_status = "pass"
-        elif probation_status == "not_ready":
-            probation_check_status = "fail"
-        add_row("Probation", probation_check_status, probation_status)
-
-    if monitoring_status:
-        monitoring_check_status = "pass"
-        if monitoring_status == "heightened_review":
-            monitoring_check_status = "watch"
-        elif monitoring_status in {"breach_watch", "blocked"}:
-            monitoring_check_status = "fail"
-        add_row("Monitoring", monitoring_check_status, monitoring_status)
-
     if rolling_review_status:
         add_row("Rolling Review", _policy_status_to_check_status(rolling_review_status), rolling_review_status)
     if out_of_sample_review_status:
         add_row(
-            "Out-Of-Sample Review",
+            "Split-Period Review",
             _policy_status_to_check_status(out_of_sample_review_status),
             out_of_sample_review_status,
         )
@@ -1358,35 +1331,21 @@ def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]
 
     rationale: list[str] = []
     if fail_count > 0:
-        if probation_status == "not_ready" or shortlist_status == "hold":
-            status = "blocked"
-            next_step = "resolve_failed_checks_before_probation"
-            rationale.append("failed_checks_block_progress")
-        else:
-            status = "review_required"
-            next_step = "review_failed_checks_before_capital_increase"
-            rationale.append("failed_checks_need_manual_review")
-    elif probation_status == "small_capital_live_trial":
-        if watch_count > 0 or unavailable_count > 0:
-            status = "small_capital_ready_with_review"
-            next_step = "run_small_capital_trial_with_review_checklist"
-            rationale.append("small_capital_ready_but_review_needed")
-        else:
-            status = "small_capital_ready"
-            next_step = "run_small_capital_trial"
-            rationale.append("small_capital_ready")
-    elif probation_status == "paper_tracking":
-        status = "paper_only"
-        next_step = "continue_paper_probation_until_checklist_improves"
-        rationale.append("paper_probation_stage")
-    elif probation_status == "watchlist_review":
-        status = "watchlist_only"
-        next_step = "complete_robustness_review_before_paper_probation"
-        rationale.append("watchlist_stage")
-    else:
         status = "blocked"
-        next_step = "resolve_contract_gaps_before_deployment"
-        rationale.append("deployment_contract_incomplete")
+        next_step = "resolve_preview_gaps_before_validation_handoff"
+        rationale.append("source_checks_block_progress")
+    elif unavailable_count > 0:
+        status = "review_required"
+        next_step = "resolve_unavailable_preview_evidence"
+        rationale.append("preview_evidence_unavailable")
+    elif watch_count > 0:
+        status = "review_required"
+        next_step = "review_watch_items_before_validation_handoff"
+        rationale.append("source_checks_need_review")
+    else:
+        status = "small_capital_ready"
+        next_step = "send_to_practical_validation_for_execution_review"
+        rationale.append("source_checks_ready_for_next_review")
 
     return {
         "deployment_readiness_status": status,
@@ -2045,11 +2004,11 @@ def _apply_real_money_hardening(
                 )
             if out_of_sample_status == "caution":
                 warnings.append(
-                    "표본외 검토가 주의 상태입니다: 뒤쪽 검증 구간에서 벤치마크 대비 성과가 크게 낮거나, 앞쪽 구간보다 성과가 뚜렷하게 악화되었습니다."
+                    "간이 전후반 구간 점검이 주의 상태입니다: 뒤쪽 구간에서 벤치마크 대비 성과가 낮거나, 앞쪽 구간보다 성과가 뚜렷하게 악화되었습니다."
                 )
             elif out_of_sample_status == "watch":
                 warnings.append(
-                    "표본외 검토가 관찰 상태입니다: 뒤쪽 검증 구간이 앞쪽 구간보다 약하므로 비중 확대 전에 확인이 필요합니다."
+                    "간이 전후반 구간 점검이 관찰 상태입니다: 뒤쪽 구간이 앞쪽 구간보다 약하므로 후속 검증에서 다시 확인해야 합니다."
                 )
             if rolling_signals:
                 meta["rolling_review_signals"] = rolling_signals

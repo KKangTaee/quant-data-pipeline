@@ -23,6 +23,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Backtest Real-Money readiness now uses source checks only
+- User request:
+  - Backtest 1차 Real-Money 지표가 실제로 유효한 검증인지 재검토하고, 필요하면 추가 / 수정 / 삭제하되 억지로 바꾸지는 말아 달라고 요청함.
+- Interpreted goal:
+  - 기존 지표군은 유지하되, 후속 단계인 probation / monitoring 의미가 1차 점수에 섞이지 않도록 scoring / wording / cost display 경계를 정리한다.
+- Analysis result:
+  - `Execution Preview`는 benchmark, liquidity, validation, guardrail, ETF operability, price freshness, rolling, split-period 같은 source checks만 평가한다.
+  - `Candidate Readiness`는 `Promotion`, execution source blockers, validation source blockers 기준으로 계산하고, turnover / cost는 holdings 기반 추정 여부를 같이 표시한다.
+  - Backtest의 전후반 구간 점검은 `Split-Period Check`로 낮춰 표시하며, formal OOS / walk-forward / regime validation은 Practical Validation 이후 evidence가 담당한다.
+- Follow-up:
+  - User review should focus on whether Real-Money의 현재 판단이 "다음 검증으로 넘겨도 되는가"라는 1차 질문에만 답하는지 확인한다.
+
 ### 2026-05-30 - Backtest Real-Money is first-pass readiness only
 - User request:
   - Backtest 단계에서 `Probation / Monitoring / Deployment`까지 검증하는 것은 Practical Validation / Final Review / Selected Dashboard 역할과 겹치므로 과한 부분을 빼거나 분리하자는 방향을 승인함.

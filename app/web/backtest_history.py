@@ -452,7 +452,7 @@ def _render_persistent_backtest_history(*, open_backtest_page=None) -> None:
                     {"항목": "Guardrail Policy", "상태": gate_snapshot.get("guardrail_policy_status"), "다음 단계": None},
                     {"항목": "ETF Operability", "상태": gate_snapshot.get("etf_operability_status"), "다음 단계": None},
                     {"항목": "Rolling Review", "상태": gate_snapshot.get("rolling_review_status"), "다음 단계": None},
-                    {"항목": "Out-Of-Sample Review", "상태": gate_snapshot.get("out_of_sample_review_status"), "다음 단계": None},
+                    {"항목": "Split-Period Check", "상태": gate_snapshot.get("out_of_sample_review_status"), "다음 단계": None},
                     {"항목": "Price Freshness", "상태": gate_snapshot.get("price_freshness_status"), "다음 단계": None},
                 ]
                 gate_df = pd.DataFrame(gate_rows).dropna(how="all")
