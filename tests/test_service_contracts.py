@@ -528,6 +528,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
             {"profile": "intraday", "job_id": "top2000_intraday"},
         )
 
+    def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
+        from app.web.overview_dashboard import (
+            GROUP_TREND_HEATMAP_ROW_HEIGHT,
+            _build_group_leadership_trend_heatmap,
+        )
+
+        rows = pd.DataFrame(
+            [
+                {
+                    "Date": "2026-05-27",
+                    "Group": f"Sector {index}",
+                    "Market Cap Weighted Return %": float(index),
+                    "Symbols": 10,
+                    "Top Symbol": "AAA",
+                }
+                for index in range(11)
+            ]
+        )
+
+        chart_spec = _build_group_leadership_trend_heatmap(rows).to_dict()
+
+        self.assertGreaterEqual(chart_spec["height"], GROUP_TREND_HEATMAP_ROW_HEIGHT * 11)
+
     def test_run_history_append_serializes_provider_date_payload(self) -> None:
         from app.jobs import run_history
 

@@ -99,6 +99,8 @@ GROUP_BY_LABELS = {
     "sector": "Sector",
     "industry": "Industry",
 }
+GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
+GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 CHART_VALUE_LABEL_STYLE = {
     "color": OVERVIEW_COLOR_TEXT_INVERSE,
     "stroke": OVERVIEW_COLOR_TEXT,
@@ -1032,12 +1034,23 @@ def _build_group_leadership_trend_heatmap(rows: pd.DataFrame) -> alt.Chart:
         else []
     )
     group_order = chart_rows["Group"].drop_duplicates().tolist() if "Group" in chart_rows else ["No Data"]
+    chart_height = max(GROUP_TREND_HEATMAP_MIN_HEIGHT, GROUP_TREND_HEATMAP_ROW_HEIGHT * len(group_order))
     base = (
         alt.Chart(chart_rows)
         .mark_rect(cornerRadius=2)
         .encode(
-            x=alt.X("Date Label:N", sort=date_order, title=None, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y("Group:N", sort=group_order, title=None, axis=alt.Axis(labelLimit=180)),
+            x=alt.X(
+                "Date Label:N",
+                sort=date_order,
+                title=None,
+                axis=alt.Axis(labelAngle=0, labelFontSize=10),
+            ),
+            y=alt.Y(
+                "Group:N",
+                sort=group_order,
+                title=None,
+                axis=alt.Axis(labelLimit=240, labelFontSize=12),
+            ),
             color=alt.Color(
                 f"{metric}:Q",
                 scale=_symmetric_return_scale(chart_rows[metric]),
@@ -1048,7 +1061,7 @@ def _build_group_leadership_trend_heatmap(rows: pd.DataFrame) -> alt.Chart:
     )
     text = (
         alt.Chart(chart_rows)
-        .mark_text(fontSize=10)
+        .mark_text(fontSize=11)
         .encode(
             x=alt.X("Date Label:N", sort=date_order, title=None),
             y=alt.Y("Group:N", sort=group_order, title=None),
@@ -1060,7 +1073,7 @@ def _build_group_leadership_trend_heatmap(rows: pd.DataFrame) -> alt.Chart:
             ),
         )
     )
-    return (base + text).properties(height=max(280, min(680, 32 * len(group_order))))
+    return (base + text).properties(height=chart_height)
 
 
 def _latest_group_trend_delta_rows(rows: pd.DataFrame) -> pd.DataFrame:

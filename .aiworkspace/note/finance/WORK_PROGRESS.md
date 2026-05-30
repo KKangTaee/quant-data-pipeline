@@ -4127,3 +4127,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - Service read model은 breadth, cap-vs-equal gap, concentration, ticker previous return, momentum delta를 제공한다.
   - `tests.test_service_contracts` 80개, chart JSON smoke, `git diff --check`, Browser QA screenshot을 통과했다.
   - 후속 QA에서 Daily heatmap이 과밀하다는 문제를 확인해 Trend horizon을 Daily 1M / Weekly 3M / Monthly 12M으로 조정했다.
+  - 후속 QA에서 전체 섹터 선택 시 Heatmap 높이가 압축되는 문제를 확인해 선택 그룹 수만큼 아래로 늘어나는 chart height 계약을 추가했다.

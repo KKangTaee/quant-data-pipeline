@@ -5659,3 +5659,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 Daily 3M / Weekly 6M / Monthly 1Y는 line chart에는 괜찮지만 heatmap에는 daily cell 수가 많아 과밀해진다
 - Follow-up:
   - Trend window contract를 Daily 21 거래일 / Weekly 13주 / Monthly 12개월로 조정하고 서비스 계약 테스트와 Browser QA screenshot으로 확인했다
+
+### 2026-05-30 - Heatmap 전체 섹터 선택 시 높이를 늘린다
+- User request:
+  - 사용자가 Trend Groups에 전체 섹터를 넣으면 Heatmap이 아래로 길어지지 않고 고정 영역 안에 압축되어 라벨이 작아진다고 지적함
+- Interpreted goal:
+  - 선택 group 수가 늘면 Heatmap chart height도 같이 늘어나야 하며, 섹터 라벨과 셀 값을 스크롤로 읽을 수 있어야 함
+- Analysis result:
+  - 기존 height 계산은 `min(680, 32 * group_count)`처럼 상한과 낮은 row height가 있어 선택 group이 많아질수록 행당 공간이 줄어들 수 있었다
+- Follow-up:
+  - Heatmap row height를 group당 54px로 고정하고 상한 cap을 제거했으며, 축 / 셀 label font size를 명시하고 contract test와 Browser QA screenshot으로 확인했다
