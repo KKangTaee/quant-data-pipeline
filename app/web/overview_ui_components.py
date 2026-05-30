@@ -41,6 +41,20 @@ OVERVIEW_SERIES_COLORS = [
     OVERVIEW_COLOR_LIME,
     OVERVIEW_COLOR_NEUTRAL,
 ]
+OVERVIEW_SECTOR_COLOR_MAP = {
+    "Basic Materials": "#8b5cf6",
+    "Communication Services": "#0891b2",
+    "Consumer Cyclical": "#d97706",
+    "Consumer Defensive": "#65a30d",
+    "Energy": "#0f766e",
+    "Financial Services": "#2563eb",
+    "Healthcare": "#be123c",
+    "Industrials": "#7c3aed",
+    "Real Estate": "#64748b",
+    "Technology": "#0284c7",
+    "Utilities": "#16a34a",
+    "Unknown": OVERVIEW_COLOR_NEUTRAL,
+}
 
 _CSS_TOKENS = {
     "color-positive": OVERVIEW_COLOR_POSITIVE,
@@ -947,13 +961,13 @@ def render_market_auto_message(message: Any) -> None:
     )
 
 
-def render_market_auto_waiting_panel() -> None:
+def render_market_auto_waiting_panel(coverage_label: Any = "선택한 coverage") -> None:
     st.markdown(
         overview_ui_css()
-        + """
+        + f"""
 <div class="ov-mm-auto-static">
           <div class="ov-mm-auto-static-title">자동 갱신 대기</div>
-          <div class="ov-mm-auto-static-detail">자동 갱신을 켜면 현재 브라우저 세션에서 S&P 500 일중 스냅샷 갱신 조건을 확인합니다.</div>
+          <div class="ov-mm-auto-static-detail">자동 갱신을 켜면 현재 브라우저 세션에서 {escape(str(coverage_label))} 일중 스냅샷 갱신 조건을 확인합니다.</div>
         </div>""",
         unsafe_allow_html=True,
     )
