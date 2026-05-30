@@ -4424,3 +4424,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-session-banner/`에서 Overview 상단 미국장 세션 배너를 추가했다.
   - NYSE 거래일이면 Open / Close ET와 KST 시간을 표시하고, 휴장이면 주말 / 주요 휴장일 사유와 다음 세션 시간을 표시한다.
   - 외부 API 없이 rules-based NYSE calendar로 처리하며, one-off exchange closure는 범위 밖으로 명시했다.
+- Practical Validation Module Gate V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-module-gate-v1/`에서 Practical Validation 개편을 구현했다.
+  - source traits 기반 validation module planner와 Final Review gate를 추가해 필수 module `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`이면 save-and-move를 막는다.
+  - UI는 Final Review Gate / 필수 / 조건부 / 후속 참고 module board를 먼저 보여주고, 기존 상세 diagnostics는 그대로 유지한다.

@@ -12,7 +12,7 @@ from app.runtime import PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION
 VALIDATION_PROFILE_OPTIONS = {
     "conservative_defensive": {
         "label": "방어형",
-        "description": "손실 방어와 안정성 우선",
+        "description": "손실 방어, stress, 유동성 근거를 엄격하게 확인",
         "rolling_window_months": 24,
         "equity_exposure_review": 70.0,
         "max_weight_review": 60.0,
@@ -21,7 +21,7 @@ VALIDATION_PROFILE_OPTIONS = {
     },
     "balanced_core": {
         "label": "균형형",
-        "description": "수익과 위험 균형",
+        "description": "수익과 위험 균형을 기본 기준으로 확인",
         "rolling_window_months": 36,
         "equity_exposure_review": 85.0,
         "max_weight_review": 75.0,
@@ -29,8 +29,8 @@ VALIDATION_PROFILE_OPTIONS = {
         "cost_interpretation": "보통",
     },
     "growth_aggressive": {
-        "label": "성장형",
-        "description": "성장과 upside 우선",
+        "label": "성장 / 공격형",
+        "description": "손실 허용선은 넓히되 대안 대비 우위와 과최적화 근거를 확인",
         "rolling_window_months": 60,
         "equity_exposure_review": 95.0,
         "max_weight_review": 90.0,
@@ -39,7 +39,7 @@ VALIDATION_PROFILE_OPTIONS = {
     },
     "hedged_tactical": {
         "label": "전술 / 헤지형",
-        "description": "hedge 또는 tactical exposure 확인",
+        "description": "macro, regime, turnover, hedge 목적 적합성을 엄격하게 확인",
         "rolling_window_months": 24,
         "equity_exposure_review": 85.0,
         "max_weight_review": 70.0,
@@ -48,7 +48,7 @@ VALIDATION_PROFILE_OPTIONS = {
     },
     "custom": {
         "label": "사용자 지정",
-        "description": "질문 답변 기반 사용자 기준",
+        "description": "질문 답변 기반 advanced 기준",
         "rolling_window_months": 36,
         "equity_exposure_review": 85.0,
         "max_weight_review": 75.0,

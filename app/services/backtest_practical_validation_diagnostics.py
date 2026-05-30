@@ -27,6 +27,7 @@ from app.services.backtest_practical_validation_curve_context import (
     compact_curve_snapshot_from_bundle,
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
+from app.services.backtest_practical_validation_modules import build_validation_module_plan
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
@@ -1671,6 +1672,29 @@ def build_practical_validation_result(
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    module_plan = build_validation_module_plan(
+        source=source_row,
+        validation_profile=profile_row,
+        checks=input_checks,
+        diagnostics=diagnostics,
+        validation_efficacy_rows=result["validation_efficacy_display_rows"],
+        data_coverage_rows=result["data_coverage_display_rows"],
+        construction_risk_rows=result["construction_risk_display_rows"],
+        risk_contribution_rows=result["risk_contribution_display_rows"],
+        component_role_weight_rows=result["component_role_weight_display_rows"],
+        backtest_realism_rows=result["backtest_realism_display_rows"],
+    )
+    result["source_traits"] = dict(module_plan.get("source_traits") or {})
+    result["validation_modules"] = list(module_plan.get("modules") or [])
+    result["validation_module_display_rows"] = list(module_plan.get("module_display_rows") or [])
+    result["validation_module_summary"] = dict(module_plan.get("summary") or {})
+    result["final_review_gate"] = dict(module_plan.get("final_review_gate") or {})
+    result["final_review_handoff"] = {
+        **dict(result.get("final_review_handoff") or {}),
+        "route": dict(module_plan.get("final_review_gate") or {}).get("route") or route,
+        "allowed": bool(dict(module_plan.get("final_review_gate") or {}).get("can_save_and_move")),
+        "module_gate": dict(module_plan.get("final_review_gate") or {}),
+    }
     return result
 
 

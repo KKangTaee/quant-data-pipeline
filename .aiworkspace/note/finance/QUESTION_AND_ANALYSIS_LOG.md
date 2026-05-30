@@ -6611,3 +6611,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 보존해야 할 것은 백테스트와 시장 데이터로 포트폴리오 판단을 돕는 본질, 데이터 수집 guardrail, 근거 흐름이다. 기존 helper 시각 패턴은 필요할 때 바꿀 수 있다
 - Follow-up:
   - Market Movers `데이터 갱신` 영역부터 반복 badge/card layout을 줄이고, 상태/모드/액션이 한 번에 읽히는 명령 영역으로 재설계하는 1차 pass를 시작했다
+
+### 2026-05-30 - Practical Validation은 후보별 module gate로 Final Review 이동을 판단한다
+- User request:
+  - 사용자가 Practical Validation의 선택 후보 표시, 검증 프로필 의미, 최신 데이터 재검증, 실전 진단 보드, 다음 단계 저장 / 이동 구조를 개편해 달라고 승인함
+- Interpreted goal:
+  - Backtest Analysis에서 넘어온 후보를 일괄 동일 검증으로 보는 대신 source traits와 validation profile에 따라 필요한 검증 module을 나누고, 필수 근거가 없으면 Final Review 이동을 막아야 함
+- Analysis result:
+  - 공격적 profile은 evidence를 생략하는 설정이 아니라 손실 허용선과 판단 threshold를 넓히는 설정이다. 최신 runtime replay, data coverage, validation efficacy, realism 같은 core evidence는 profile과 무관하게 필요하다
+- Follow-up:
+  - Practical Validation result에 source traits, validation modules, final review gate를 추가했다. 필수 module `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`은 save-and-move를 차단하고, 조건부 / 후속 참고 module은 source 성격에 맞게 적용 여부를 분리한다

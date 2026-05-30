@@ -198,6 +198,137 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         )
         self.assertEqual(source["construction"]["rebalance_cadence"], 1)
 
+    def test_validation_source_traits_classify_single_etf_tactical_candidate(self) -> None:
+        from app.services.backtest_practical_validation_modules import infer_validation_source_traits
+
+        traits = infer_validation_source_traits(
+            {
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [
+                    {
+                        "strategy_key": "gtaa",
+                        "target_weight": 100.0,
+                        "universe": ["SPY", "QQQ", "GLD", "IEF"],
+                        "replay_contract": {
+                            "settings_snapshot": {
+                                "tickers": ["SPY", "QQQ", "GLD", "IEF"],
+                                "interval": 2,
+                            }
+                        },
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(traits["is_single_component"])
+        self.assertFalse(traits["is_weighted_mix"])
+        self.assertTrue(traits["is_etf_like"])
+        self.assertTrue(traits["is_tactical"])
+        self.assertTrue(traits["is_high_turnover"])
+        self.assertEqual(traits["symbol_count"], 4)
+
+    def test_validation_module_gate_blocks_missing_required_runtime_replay(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": False, "Current": "NOT_RUN"},
+            {"Criteria": "Runtime period coverage", "Ready": False, "Current": "NOT_RUN"},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "PASS"},
+            {"domain": "robustness_sensitivity_overfit", "status": "PASS"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+            {"domain": "regime_macro_suitability", "status": "REVIEW"},
+            {"domain": "sentiment_risk_on_off_overlay", "status": "REVIEW"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [{"strategy_key": "gtaa", "target_weight": 100.0, "universe": ["SPY", "TLT"]}],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=pass_row,
+            risk_contribution_rows=[{"Criteria": "Pairwise correlation", "Status": "NEEDS_INPUT"}],
+            component_role_weight_rows=[{"Criteria": "Component role source coverage", "Status": "REVIEW"}],
+            backtest_realism_rows=pass_row,
+        )
+
+        gate = plan["final_review_gate"]
+        self.assertFalse(gate["can_save_and_move"])
+        self.assertEqual(gate["route"], "BLOCKED_FOR_FINAL_REVIEW")
+        self.assertEqual([row["module_id"] for row in gate["blocking_modules"]], ["latest_replay"])
+        modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertFalse(modules["risk_contribution"]["applies"])
+        self.assertEqual(modules["risk_contribution"]["status"], "NOT_APPLICABLE")
+
+    def test_validation_module_gate_allows_ready_with_review_modules(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": True},
+            {"Criteria": "Runtime period coverage", "Ready": True},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "PASS"},
+            {"domain": "robustness_sensitivity_overfit", "status": "PASS"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [{"strategy_key": "equal_weight", "target_weight": 100.0, "universe": ["SPY", "TLT"]}],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=[{"Criteria": "Component weight concentration", "Status": "REVIEW"}],
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=[{"Criteria": "Cost / slippage sensitivity evidence", "Status": "REVIEW"}],
+        )
+
+        gate = plan["final_review_gate"]
+        self.assertTrue(gate["can_save_and_move"])
+        self.assertEqual(gate["route"], "READY_WITH_REVIEW")
+        self.assertEqual(gate["blocking_modules"], [])
+        self.assertTrue(
+            {row["module_id"] for row in gate["review_modules"]}
+            >= {"construction_risk", "backtest_realism"}
+        )
+
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
@@ -212,6 +343,7 @@ import app.services.backtest_realism_audit
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_diagnostics
+import app.services.backtest_practical_validation_modules
 import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay

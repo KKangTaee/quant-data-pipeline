@@ -67,6 +67,41 @@ def _source_label(row: dict[str, Any]) -> str:
     )
 
 
+def _format_date_value(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return str(value)
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _format_percent_value(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if abs(numeric) <= 2.0:
+        return f"{numeric:.2%}"
+    return f"{numeric:.2f}%"
+
+
+def _format_component_summary_df(component_df: pd.DataFrame) -> pd.DataFrame:
+    if component_df.empty:
+        return component_df
+    display_df = component_df.copy()
+    if "Weight" in display_df.columns:
+        display_df["Weight"] = display_df["Weight"].map(
+            lambda value: f"{float(value):.2f}%" if value not in (None, "") else "-"
+        )
+    for column in ["CAGR", "MDD"]:
+        if column in display_df.columns:
+            display_df[column] = display_df[column].map(_format_percent_value)
+    return display_df
+
+
 def _render_source_summary(source: dict[str, Any]) -> None:
     summary = dict(source.get("summary") or {})
     period = dict(source.get("period") or {})
@@ -74,9 +109,16 @@ def _render_source_summary(source: dict[str, Any]) -> None:
     render_badge_strip(
         [
             {"label": "Source", "value": source.get("source_kind") or "-", "tone": "neutral"},
-            {"label": "Period", "value": f"{period.get('actual_start') or period.get('start') or '-'} -> {period.get('actual_end') or period.get('end') or '-'}", "tone": "neutral"},
-            {"label": "CAGR", "value": summary.get("cagr") if summary.get("cagr") is not None else "-", "tone": "neutral"},
-            {"label": "MDD", "value": summary.get("mdd") if summary.get("mdd") is not None else "-", "tone": "neutral"},
+            {
+                "label": "Period",
+                "value": (
+                    f"{_format_date_value(period.get('actual_start') or period.get('start'))} -> "
+                    f"{_format_date_value(period.get('actual_end') or period.get('end'))}"
+                ),
+                "tone": "neutral",
+            },
+            {"label": "CAGR", "value": _format_percent_value(summary.get("cagr")), "tone": "neutral"},
+            {"label": "MDD", "value": _format_percent_value(summary.get("mdd")), "tone": "neutral"},
             {"label": "Weight Total", "value": f"{construction.get('target_weight_total', 0)}%", "tone": "neutral"},
         ]
     )
@@ -84,10 +126,14 @@ def _render_source_summary(source: dict[str, Any]) -> None:
     if component_df.empty:
         st.info("선택된 source에 component snapshot이 없습니다.")
     else:
-        st.dataframe(component_df, width="stretch", hide_index=True)
+        st.dataframe(_format_component_summary_df(component_df), width="stretch", hide_index=True)
 
 
 def _render_validation_profile_form() -> dict[str, Any]:
+    st.caption(
+        "검증 프로필은 증거를 생략하는 설정이 아니라, 어떤 위험을 더 엄격하게 볼지 정하는 기준입니다. "
+        "공격적 프로필은 손실 허용선이 넓지만 최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 계속 필요합니다."
+    )
     profile_options = list(VALIDATION_PROFILE_OPTIONS.keys())
     profile_id = st.selectbox(
         "검증 프로필",
@@ -122,7 +168,11 @@ def _render_validation_profile_form() -> dict[str, Any]:
             {"label": "Profile", "value": profile.get("profile_label") or "-", "tone": "neutral"},
             {"label": "Rolling", "value": f"{dict(profile.get('thresholds') or {}).get('rolling_window_months')}M", "tone": "neutral"},
             {"label": "Cost", "value": f"{dict(profile.get('thresholds') or {}).get('one_way_cost_bps')} bps", "tone": "neutral"},
-            {"label": "MDD Line", "value": dict(profile.get("thresholds") or {}).get("mdd_review_line"), "tone": "neutral"},
+            {
+                "label": "MDD Line",
+                "value": _format_percent_value((dict(profile.get("thresholds") or {}).get("mdd_review_line") or 0.0) / 100.0),
+                "tone": "neutral",
+            },
         ]
     )
     return {"profile_id": profile_id, "answers": answers}
@@ -147,8 +197,16 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
     render_badge_strip(
         [
             {"label": "Mode", "value": recheck_plan.get("mode_label") or "-", "tone": "neutral"},
-            {"label": "Stored End", "value": dict(recheck_plan.get("stored_period") or {}).get("end") or "-", "tone": "neutral"},
-            {"label": "Recheck End", "value": dict(recheck_plan.get("requested_period") or {}).get("end") or "-", "tone": "neutral"},
+            {
+                "label": "Stored End",
+                "value": _format_date_value(dict(recheck_plan.get("stored_period") or {}).get("end")),
+                "tone": "neutral",
+            },
+            {
+                "label": "Recheck End",
+                "value": _format_date_value(dict(recheck_plan.get("requested_period") or {}).get("end")),
+                "tone": "neutral",
+            },
             {
                 "label": "Extension",
                 "value": f"{recheck_plan.get('extension_days', 0)} days",
@@ -193,8 +251,8 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
                 },
                 {"label": "Recheck ID", "value": replay_result.get("replay_id") or "-", "tone": "neutral"},
                 {"label": "Elapsed", "value": f"{replay_result.get('elapsed_ms', 0)} ms", "tone": "neutral"},
-                {"label": "CAGR", "value": summary.get("cagr") if summary else "-", "tone": "neutral"},
-                {"label": "MDD", "value": summary.get("mdd") if summary else "-", "tone": "neutral"},
+                {"label": "CAGR", "value": _format_percent_value(summary.get("cagr")) if summary else "-", "tone": "neutral"},
+                {"label": "MDD", "value": _format_percent_value(summary.get("mdd")) if summary else "-", "tone": "neutral"},
             ]
         )
         render_badge_strip(
@@ -204,9 +262,9 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
                     "value": period_coverage.get("status") or "NOT_RUN",
                     "tone": _status_tone(period_coverage.get("status")),
                 },
-                {"label": "Actual End", "value": actual_period.get("end") or "-", "tone": "neutral"},
+                {"label": "Actual End", "value": _format_date_value(actual_period.get("end")), "tone": "neutral"},
                 {"label": "End Gap", "value": f"{period_coverage.get('end_gap_days', '-')} days", "tone": "neutral"},
-                {"label": "Latest DB", "value": replay_result.get("latest_market_date") or "-", "tone": "neutral"},
+                {"label": "Latest DB", "value": _format_date_value(replay_result.get("latest_market_date")), "tone": "neutral"},
             ]
         )
         if period_coverage.get("summary"):
@@ -222,10 +280,10 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
                             "Weight": row.get("target_weight"),
                             "Status": row.get("status"),
                             "Rows": row.get("result_rows"),
-                            "Requested Start": row.get("requested_start"),
-                            "Requested End": row.get("requested_end"),
-                            "Start": row.get("actual_start"),
-                            "End": row.get("actual_end"),
+                            "Requested Start": _format_date_value(row.get("requested_start")),
+                            "Requested End": _format_date_value(row.get("requested_end")),
+                            "Start": _format_date_value(row.get("actual_start")),
+                            "End": _format_date_value(row.get("actual_end")),
                             "Error": row.get("error"),
                         }
                         for row in component_rows
@@ -242,11 +300,11 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
 
 def _status_tone(status: Any) -> str:
     status_text = str(status or "").upper()
-    if status_text in {"PASS", "READY"}:
+    if status_text in {"PASS", "READY", "READY_FOR_FINAL_REVIEW"}:
         return "positive"
-    if status_text == "BLOCKED":
+    if "BLOCKED" in status_text:
         return "danger"
-    if status_text in {"REVIEW", "NEEDS_INPUT"}:
+    if status_text in {"REVIEW", "NEEDS_INPUT", "READY_WITH_REVIEW"}:
         return "warning"
     return "neutral"
 
@@ -552,6 +610,89 @@ def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any])
             st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
 
 
+def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
+    gate = dict(validation_result.get("final_review_gate") or {})
+    summary = dict(validation_result.get("validation_module_summary") or {})
+    status_counts = dict(summary.get("status_counts") or {})
+    traits = dict(validation_result.get("source_traits") or {})
+    module_rows = list(validation_result.get("validation_module_display_rows") or [])
+
+    st.markdown("##### Final Review Gate")
+    render_badge_strip(
+        [
+            {
+                "label": "Gate",
+                "value": gate.get("route") or "-",
+                "tone": _status_tone(gate.get("route")),
+            },
+            {
+                "label": "Move",
+                "value": "Enabled" if gate.get("can_save_and_move") else "Blocked",
+                "tone": "positive" if gate.get("can_save_and_move") else "danger",
+            },
+            {"label": "Required", "value": summary.get("required", 0), "tone": "neutral"},
+            {
+                "label": "Blocking",
+                "value": len(gate.get("blocking_modules") or []),
+                "tone": "danger" if gate.get("blocking_modules") else "positive",
+            },
+            {
+                "label": "Review",
+                "value": len(gate.get("review_modules") or []),
+                "tone": "warning" if gate.get("review_modules") else "neutral",
+            },
+        ]
+    )
+    st.caption(str(gate.get("verdict") or ""))
+    render_badge_strip(
+        [
+            {
+                "label": "Traits",
+                "value": " / ".join(
+                    label
+                    for label, enabled in [
+                        ("ETF-like", traits.get("is_etf_like")),
+                        ("Tactical", traits.get("is_tactical")),
+                        ("Weighted Mix", traits.get("is_weighted_mix")),
+                        ("Factor", traits.get("is_factor_equity")),
+                    ]
+                    if enabled
+                )
+                or "Basic",
+                "tone": "neutral",
+            },
+            {"label": "Components", "value": traits.get("active_component_count", 0), "tone": "neutral"},
+            {"label": "Symbols", "value": traits.get("symbol_count", 0), "tone": "neutral"},
+            {"label": "PASS", "value": status_counts.get("PASS", 0), "tone": "positive"},
+            {"label": "NEEDS_INPUT", "value": status_counts.get("NEEDS_INPUT", 0), "tone": "warning"},
+        ]
+    )
+
+    blocking_modules = list(gate.get("blocking_modules") or [])
+    if blocking_modules:
+        st.error("Final Review 이동 전에 보강해야 할 필수 검증 모듈이 있습니다.")
+        st.dataframe(pd.DataFrame(blocking_modules), width="stretch", hide_index=True)
+    review_modules = list(gate.get("review_modules") or [])
+    if review_modules:
+        with st.expander("Final Review에서 확인할 REVIEW 모듈", expanded=False):
+            st.dataframe(pd.DataFrame(review_modules), width="stretch", hide_index=True)
+
+    if module_rows:
+        required_rows = [row for row in module_rows if row.get("Group") == "Required for Final Review"]
+        conditional_rows = [row for row in module_rows if row.get("Group") == "Conditional / Strategy-specific"]
+        reference_rows = [row for row in module_rows if row.get("Group") == "Downstream Reference"]
+        required_tab, conditional_tab, reference_tab = st.tabs(["필수 검증", "조건부 검증", "후속 참고"])
+        with required_tab:
+            st.dataframe(pd.DataFrame(required_rows), width="stretch", hide_index=True)
+        with conditional_tab:
+            st.dataframe(pd.DataFrame(conditional_rows), width="stretch", hide_index=True)
+        with reference_tab:
+            st.dataframe(pd.DataFrame(reference_rows), width="stretch", hide_index=True)
+
+    with st.expander("Source traits", expanded=False):
+        st.json(traits)
+
+
 def _render_validation_result(validation_result: dict[str, Any]) -> None:
     profile = dict(validation_result.get("validation_profile") or {})
     status_counts = dict(dict(validation_result.get("diagnostic_summary") or {}).get("status_counts") or {})
@@ -573,6 +714,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             {"label": "NOT_RUN", "value": status_counts.get("NOT_RUN", 0), "tone": "neutral"},
         ]
     )
+    _render_validation_module_board(validation_result)
     st.markdown("##### Input Evidence")
     st.dataframe(pd.DataFrame(validation_result.get("checks") or []), width="stretch", hide_index=True)
     _render_validation_efficacy_audit(validation_result)
@@ -965,22 +1107,48 @@ def render_practical_validation_workspace() -> None:
 
     st.markdown("#### 5. 다음 단계")
     with st.container(border=True):
+        gate = dict(validation_result.get("final_review_gate") or {})
+        can_save_and_move = bool(gate.get("can_save_and_move"))
         st.info(
             "이 단계는 구조화된 검증 자료를 저장합니다. "
+            "Final Review 이동은 필수 검증 모듈의 BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
             "선정 / 보류 / 거절 / 재검토 판단과 최종 메모는 Final Review에서 기록합니다."
         )
+        render_badge_strip(
+            [
+                {
+                    "label": "Gate",
+                    "value": gate.get("route") or validation_result.get("validation_route") or "-",
+                    "tone": _status_tone(gate.get("route") or validation_result.get("validation_route")),
+                },
+                {
+                    "label": "Save & Move",
+                    "value": "Enabled" if can_save_and_move else "Blocked",
+                    "tone": "positive" if can_save_and_move else "danger",
+                },
+                {
+                    "label": "Blocking Modules",
+                    "value": len(gate.get("blocking_modules") or []),
+                    "tone": "danger" if gate.get("blocking_modules") else "positive",
+                },
+            ]
+        )
+        if gate.get("next_action"):
+            st.caption(str(gate.get("next_action")))
+        blocking_modules = list(gate.get("blocking_modules") or [])
+        if blocking_modules:
+            st.dataframe(pd.DataFrame(blocking_modules), width="stretch", hide_index=True)
         action_cols = st.columns(2, gap="small")
         with action_cols[0]:
-            if st.button("검증 결과 저장", key="practical_validation_save_result", width="stretch"):
+            if st.button("검증 결과만 저장", key="practical_validation_save_result", width="stretch"):
                 save_practical_validation_result(validation_result)
                 st.success(f"검증 결과 `{validation_result['validation_id']}`를 저장했습니다.")
         with action_cols[1]:
-            is_blocked = validation_result.get("validation_route") == "BLOCKED"
             if st.button(
-                "Final Review로 이동",
+                "저장하고 Final Review로 이동",
                 key="practical_validation_send_final_review",
                 width="stretch",
-                disabled=is_blocked,
+                disabled=not can_save_and_move,
             ):
                 handoff = prepare_final_review_handoff_from_validation(
                     source=source,
@@ -991,8 +1159,8 @@ def render_practical_validation_workspace() -> None:
                 st.session_state.final_review_practical_validation_notice = handoff.notice
                 st.session_state.backtest_requested_panel = handoff.requested_panel
                 st.rerun()
-            if is_blocked:
-                st.caption("BLOCKED 상태는 Backtest Analysis에서 source를 보강한 뒤 Final Review로 보낼 수 있습니다.")
+            if not can_save_and_move:
+                st.caption("필수 검증 모듈을 보강한 뒤 저장하고 Final Review로 이동할 수 있습니다.")
 
     with st.expander("Clean V2 Source JSON", expanded=False):
         st.json(source)
