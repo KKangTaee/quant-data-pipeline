@@ -26,6 +26,34 @@ from app.web.backtest_history_helpers import (
 )
 from app.web.backtest_strategy_catalog import strategy_key_to_selection
 
+
+def _history_next_stage_step_label(value: Any) -> str:
+    raw = str(value or "-")
+    mapping = {
+        "resolve_contract_gaps_before_shortlist": "resolve_contract_gaps_before_validation_handoff",
+        "manual_review_then_paper_probation_gate": "manual_review_then_practical_validation_gate",
+        "start_paper_probation_and_monitor_monthly": "send_to_practical_validation_for_paper_observation_check",
+        "start_small_capital_trial_with_monthly_review": "send_to_practical_validation_for_small_capital_review",
+        "resolve_failed_checks_before_probation": "resolve_preview_gaps_before_validation_handoff",
+        "review_failed_checks_before_capital_increase": "review_preview_gaps_before_next_stage",
+        "run_small_capital_trial_with_review_checklist": "validate_small_capital_review_conditions",
+        "run_small_capital_trial": "validate_small_capital_review_conditions",
+        "continue_paper_probation_until_checklist_improves": "continue_validation_review_until_preview_improves",
+        "complete_robustness_review_before_paper_probation": "complete_robustness_review_before_next_stage",
+        "resolve_contract_gaps_before_deployment": "resolve_contract_gaps_before_validation_handoff",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    return (
+        raw.replace("shortlist", "promotion_route")
+        .replace("paper_probation", "paper_observation")
+        .replace("small_capital_trial", "small_capital_review")
+        .replace("deployment", "validation_handoff")
+        .replace("probation", "validation_review")
+        .replace("capital_increase", "next_stage")
+    )
+
+
 SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
     "quality_snapshot",
     "quality_snapshot_strict_annual",
@@ -397,13 +425,25 @@ def _render_persistent_backtest_history(*, open_backtest_page=None) -> None:
                 )
                 gate_rows = [
                     {"항목": "Promotion", "상태": gate_snapshot.get("promotion_decision"), "다음 단계": gate_snapshot.get("promotion_next_step")},
-                    {"항목": "Shortlist", "상태": gate_snapshot.get("shortlist_status"), "다음 단계": gate_snapshot.get("shortlist_next_step")},
-                    {"항목": "Probation", "상태": gate_snapshot.get("probation_status"), "다음 단계": gate_snapshot.get("probation_next_step")},
-                    {"항목": "Monitoring", "상태": gate_snapshot.get("monitoring_status"), "다음 단계": gate_snapshot.get("monitoring_next_step")},
                     {
-                        "항목": "Deployment",
+                        "항목": "Suggested Route",
+                        "상태": gate_snapshot.get("shortlist_status"),
+                        "다음 단계": _history_next_stage_step_label(gate_snapshot.get("shortlist_next_step")),
+                    },
+                    {
+                        "항목": "Next Validation Focus",
+                        "상태": ", ".join(str(item) for item in list(gate_snapshot.get("monitoring_focus") or [])) or "-",
+                        "다음 단계": "Practical Validation에서 확인",
+                    },
+                    {
+                        "항목": "Review Signals",
+                        "상태": len(list(gate_snapshot.get("monitoring_breach_signals") or [])),
+                        "다음 단계": "Final Review 전 재확인",
+                    },
+                    {
+                        "항목": "Execution Preview",
                         "상태": gate_snapshot.get("deployment_readiness_status"),
-                        "다음 단계": gate_snapshot.get("deployment_readiness_next_step"),
+                        "다음 단계": _history_next_stage_step_label(gate_snapshot.get("deployment_readiness_next_step")),
                     },
                     {"항목": "Validation", "상태": gate_snapshot.get("validation_status"), "다음 단계": None},
                     {"항목": "Benchmark Policy", "상태": gate_snapshot.get("benchmark_policy_status"), "다음 단계": None},

@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-30 - Backtest Real-Money is first-pass readiness only
+- User request:
+  - Backtest 단계에서 `Probation / Monitoring / Deployment`까지 검증하는 것은 Practical Validation / Final Review / Selected Dashboard 역할과 겹치므로 과한 부분을 빼거나 분리하자는 방향을 승인함.
+- Interpreted goal:
+  - Backtest Analysis의 Real-Money 탭은 후보를 다음 검증으로 넘겨도 되는지 보는 1차 readiness 화면으로 고정하고, 후속 관찰 / 운영 / 최종 선택처럼 보이는 문구를 낮춘다.
+- Analysis result:
+  - User-facing Backtest / Compare / History surfaces now show `Suggested Route`, `Next Validation Focus`, and `Execution Preview`.
+  - Internal legacy metadata remains compatible, but Backtest Analysis does not start paper observation, monitoring, deployment, broker approval, order, account sync, or auto rebalance.
+- Follow-up:
+  - User review should verify that Backtest Analysis reads as candidate screening, while Practical Validation / Final Review own the actual investability evidence and final decision.
+
 ### 2026-05-30 - Real-Money shortlist meaning is absorbed into Promotion
 - User request:
   - Real-Money의 후보 shortlist가 사실상 Promotion의 추천 경로 역할이라면 독립 기능처럼 보이지 않게 낮추자는 방향을 승인함.

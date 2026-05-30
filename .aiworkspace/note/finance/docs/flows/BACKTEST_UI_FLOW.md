@@ -383,7 +383,7 @@ Stage:
 
 - `Result Integrity`: Data Trust, 기간, 가격 최신성, excluded ticker
 - `Performance Shape`: Summary, Equity Curve, extremes
-- `Candidate Readiness`: Real-Money signal, Promotion, Deployment, blocker
+- `Candidate Readiness`: Real-Money signal, Promotion, Execution Preview, blocker
 - `Practical Evidence`: provider / data coverage / realism / robustness / construction evidence
 - `Final Decision Gate`: selected-route blocker와 최종 판단
 - `Monitoring Check`: 선정 이후 recheck readiness, freshness, provider evidence, review signal
@@ -394,15 +394,16 @@ Stage:
 
 목적:
 
-- `Promotion`, `Deployment`, blocker 정보를 10점 척도로 요약한다.
+- `Promotion`, `Execution Preview`, blocker 정보를 10점 척도로 요약한다.
 - 사용자가 이 결과를 Compare 또는 Practical Validation 후보로 넘겨도 되는지 먼저 판단하게 한다.
 - 이 평가는 live trading approval이나 주문 지시가 아니라 후보 검토 보조 신호다.
 - `Shortlist`는 독립 검증 단계로 보지 않고, `Promotion` 안의 `Suggested Route`로 표시한다.
+- Backtest Analysis에서는 `Probation`, `Monitoring`, `Deployment`를 시작한 것처럼 표시하지 않고, `Next Validation Focus`와 `Execution Preview`로 낮춰 보여준다.
 
 기준:
 
 - `Promotion Decision != hold`
-- `Deployment Readiness / Deployment Status != blocked`
+- `Execution Preview / Execution Status != blocked`
 - 핵심 blocker 없음
 
 점수 해석:
@@ -416,8 +417,10 @@ Stage:
 - `Candidate Readiness`: 10점 만점의 후보 검토 점수
 - `판정`: `후보 검토 진행 가능`, `후보 검토 가능, 개선 항목 동시 확인`, `후보 보류: blocker 먼저 해결`
 - `다음 행동`: Compare / Practical Validation으로 넘길지, blocker를 먼저 해결할지 설명
-- `Promotion Suggested Route`: `Hold`, `Watchlist`, `Paper Probation`, `Small Capital Trial` 같은 추천 경로
-- `점수 계산 기준 보기`: Promotion / Deployment / Core Blocker별 점수 근거
+- `Promotion Suggested Route`: `Hold / Review`, `Watchlist Review`, `Paper Observation Candidate`, `Small-Capital Review Candidate` 같은 추천 경로
+- `Next Validation Focus`: 다음 단계에서 확인할 benchmark, drawdown, liquidity, price freshness, regime / OOS 항목
+- `Execution Preview`: 비용, 유동성, ETF 운용 가능성 같은 실행 부담 미리보기이며 배치 승인 아님
+- `점수 계산 기준 보기`: Promotion / Execution Preview / Core Blocker별 점수 근거
 
 ## Compare 흐름
 
@@ -452,7 +455,7 @@ Compare 결과 상단에는 개별 전략용 `Compare 검증 보드`를 둔다.
 
 - `Compare Run`: 2개 이상 전략이 정상 비교됐는지
 - `Data Trust`: 선택 후보의 결과 기간, 가격 최신성, excluded / malformed ticker가 해석 가능한지
-- `Real-Money Gate`: `Promotion != hold`, `Deployment != blocked`, 핵심 blocker 없음인지
+- `Real-Money Gate`: `Promotion != hold`, `Execution Preview != blocked`, 핵심 blocker 없음인지
 - `Relative Evidence`: CAGR, End Balance, Maximum Drawdown, Sharpe 중 설명 가능한 상대 근거가 있는지
 
 점수 해석:

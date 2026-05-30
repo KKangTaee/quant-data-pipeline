@@ -70,6 +70,7 @@ def _safe_summary_metric(bundle: dict[str, Any], column: str) -> float | None:
         return None
     return float(value)
 
+
 def _compare_strategy_contract_label(bundle: dict[str, Any]) -> str:
     meta = dict(bundle.get("meta") or {})
     parts = []
@@ -91,6 +92,46 @@ def _compare_strategy_contract_label(bundle: dict[str, Any]) -> str:
         parts.append(f"risk_off={meta.get('risk_off_mode')}")
     return " / ".join(parts) if parts else "-"
 
+
+def _execution_preview_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "small_capital_ready": "Ready For Next Review",
+        "small_capital_ready_with_review": "Review Required",
+        "paper_only": "Paper Observation Check",
+        "watchlist_only": "Watchlist Review",
+        "review_required": "Review Required",
+        "blocked": "Blocked",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _next_stage_step_label(value: Any) -> str:
+    raw = str(value or "-")
+    mapping = {
+        "resolve_contract_gaps_before_shortlist": "resolve_contract_gaps_before_validation_handoff",
+        "manual_review_then_paper_probation_gate": "manual_review_then_practical_validation_gate",
+        "start_paper_probation_and_monitor_monthly": "send_to_practical_validation_for_paper_observation_check",
+        "start_small_capital_trial_with_monthly_review": "send_to_practical_validation_for_small_capital_review",
+        "resolve_failed_checks_before_probation": "resolve_preview_gaps_before_validation_handoff",
+        "review_failed_checks_before_capital_increase": "review_preview_gaps_before_next_stage",
+        "run_small_capital_trial_with_review_checklist": "validate_small_capital_review_conditions",
+        "run_small_capital_trial": "validate_small_capital_review_conditions",
+        "continue_paper_probation_until_checklist_improves": "continue_validation_review_until_preview_improves",
+        "complete_robustness_review_before_paper_probation": "complete_robustness_review_before_next_stage",
+        "resolve_contract_gaps_before_deployment": "resolve_contract_gaps_before_validation_handoff",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    return (
+        raw.replace("shortlist", "promotion_route")
+        .replace("paper_probation", "paper_observation")
+        .replace("small_capital_trial", "small_capital_review")
+        .replace("deployment", "validation_handoff")
+        .replace("probation", "validation_review")
+        .replace("capital_increase", "next_stage")
+    )
+
+
 def _build_compare_strategy_overview_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     data_trust_rows = {
         str(row.get("Strategy") or ""): row
@@ -111,10 +152,11 @@ def _build_compare_strategy_overview_rows(bundles: list[dict[str, Any]]) -> list
                 "Sharpe": _safe_summary_metric(bundle, "Sharpe Ratio"),
                 "Data Trust": data_trust.get("Interpretation") or "-",
                 "Promotion": meta.get("promotion_decision") or "-",
-                "Deployment": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
+                "Execution Preview": _execution_preview_status_value_to_label(meta.get("deployment_readiness_status")),
             }
         )
     return rows
+
 
 def _rank_candidate_metric(
     metric_rows: list[dict[str, Any]],
@@ -395,7 +437,7 @@ def _build_compare_real_money_gate_assessment(bundle: dict[str, Any]) -> dict[st
     if not promotion_ok:
         reasons.append("Promotion Decision이 hold이거나 비어 있음")
     if not deployment_ok:
-        reasons.append("Deployment Readiness가 blocked이거나 비어 있음")
+        reasons.append("Execution Preview가 blocked이거나 비어 있음")
     reasons.extend(f"{row.get('항목')}: {row.get('현재 상태')}" for row in severe_issue_rows)
 
     ready = promotion_ok and deployment_ok and blocker_ok
@@ -1241,16 +1283,16 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Net CAGR Spread": meta.get("net_cagr_spread"),
                 "Validation": meta.get("validation_status"),
                 "Promotion": meta.get("promotion_decision"),
-                "Shortlist": _shortlist_status_value_to_label(meta.get("shortlist_status")),
-                "Probation": _probation_status_value_to_label(meta.get("probation_status")),
-                "Monitoring": _monitoring_status_value_to_label(meta.get("monitoring_status")),
-                "Deployment": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
-                "Deploy Next": meta.get("deployment_readiness_next_step"),
+                "Suggested Route": _shortlist_status_value_to_label(meta.get("shortlist_status")),
+                "Validation Focus": len(list(meta.get("monitoring_focus") or [])),
+                "Review Signals": len(list(meta.get("monitoring_breach_signals") or [])),
+                "Execution Preview": _execution_preview_status_value_to_label(meta.get("deployment_readiness_status")),
+                "Execution Next": _next_stage_step_label(meta.get("deployment_readiness_next_step")),
                 "Rolling Review": _review_status_value_to_label(meta.get("rolling_review_status")),
                 "Recent Excess": meta.get("rolling_review_recent_excess_return"),
                 "OOS Review": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
                 "OOS Excess": meta.get("out_of_sample_out_sample_excess_return"),
-                "Shortlist Next": meta.get("shortlist_next_step"),
+                "Route Next": _next_stage_step_label(meta.get("shortlist_next_step")),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
                 "DD Guardrail Triggers": meta.get("drawdown_guardrail_trigger_count"),
                 "Strategy Max DD": meta.get("strategy_max_drawdown"),

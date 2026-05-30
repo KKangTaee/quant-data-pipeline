@@ -24,6 +24,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-real-money-stage-boundary-v1/`.
+- Backtest Real-Money now presents `Suggested Route`, `Next Validation Focus`, and `Execution Preview` as first-pass candidate readiness, while later paper observation / monitoring / final execution decisions stay outside Backtest Analysis.
+- Verification passed: targeted py_compile, `git diff --check`, targeted legacy label search, and Browser smoke on `http://127.0.0.1:8502/backtest`.
 - Completed `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`.
 - Real-Money now treats the old `Shortlist` value as `Promotion Suggested Route`, not as a separate validation stage.
 - No runtime calculation, DB schema, JSONL registry, user memo / preset storage, live approval, order, or auto rebalance behavior was added.

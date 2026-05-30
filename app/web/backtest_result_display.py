@@ -217,6 +217,35 @@ def _render_data_trust_summary(meta: dict[str, Any]) -> None:
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)
 
+
+def _next_validation_step_label(value: Any) -> str:
+    raw = str(value or "-")
+    mapping = {
+        "resolve_contract_gaps_before_shortlist": "resolve_contract_gaps_before_validation_handoff",
+        "manual_review_then_paper_probation_gate": "manual_review_then_practical_validation_gate",
+        "start_paper_probation_and_monitor_monthly": "send_to_practical_validation_for_paper_observation_check",
+        "start_small_capital_trial_with_monthly_review": "send_to_practical_validation_for_small_capital_review",
+        "resolve_failed_checks_before_probation": "resolve_preview_gaps_before_validation_handoff",
+        "review_failed_checks_before_capital_increase": "review_preview_gaps_before_next_stage",
+        "run_small_capital_trial_with_review_checklist": "validate_small_capital_review_conditions",
+        "run_small_capital_trial": "validate_small_capital_review_conditions",
+        "continue_paper_probation_until_checklist_improves": "continue_validation_review_until_preview_improves",
+        "complete_robustness_review_before_paper_probation": "complete_robustness_review_before_next_stage",
+        "resolve_contract_gaps_before_deployment": "resolve_contract_gaps_before_validation_handoff",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    return (
+        raw.replace("shortlist", "promotion_route")
+        .replace("paper_probation", "paper_observation")
+        .replace("small_capital_trial", "small_capital_review")
+        .replace("deployment", "validation_handoff")
+        .replace("probation", "validation_review")
+        .replace("capital_increase", "next_stage")
+        .replace("monitor_monthly", "review_in_next_stage")
+    )
+
+
 def _build_strategy_data_trust_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return build_strategy_data_trust_rows(bundles)
 
@@ -638,50 +667,31 @@ def _render_last_run() -> None:
                     f"(`{_shortlist_status_value_to_label(meta.get('shortlist_status'))}`)"
                 )
             if meta.get("shortlist_next_step"):
-                route_next_step = str(meta.get("shortlist_next_step") or "").replace("shortlist", "promotion_route")
+                route_next_step = _next_validation_step_label(meta.get("shortlist_next_step"))
                 st.markdown(f"- `Promotion Route Next Step`: `{route_next_step}`")
             if meta.get("shortlist_family"):
                 st.markdown(f"- `Promotion Route Family`: `{meta['shortlist_family']}`")
-            if meta.get("probation_status"):
-                st.markdown(
-                    f"- `Probation Status`: `{meta['probation_status']}` "
-                    f"(`{_probation_status_value_to_label(meta.get('probation_status'))}`)"
-                )
-            if meta.get("probation_stage"):
-                st.markdown(f"- `Probation Stage`: `{meta['probation_stage']}`")
-            if meta.get("probation_review_frequency"):
-                st.markdown(f"- `Probation Review Frequency`: `{meta['probation_review_frequency']}`")
-            if meta.get("probation_next_step"):
-                st.markdown(f"- `Probation Next Step`: `{meta['probation_next_step']}`")
-            if meta.get("monitoring_status"):
-                st.markdown(
-                    f"- `Monitoring Status`: `{meta['monitoring_status']}` "
-                    f"(`{_monitoring_status_value_to_label(meta.get('monitoring_status'))}`)"
-                )
-            if meta.get("monitoring_review_frequency"):
-                st.markdown(f"- `Monitoring Review Frequency`: `{meta['monitoring_review_frequency']}`")
-            if meta.get("monitoring_next_step"):
-                st.markdown(f"- `Monitoring Next Step`: `{meta['monitoring_next_step']}`")
             if meta.get("monitoring_focus"):
                 st.markdown(
-                    "- `Monitoring Focus`: "
+                    "- `Next Validation Focus`: "
                     + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_focus") or []))
                 )
             if meta.get("monitoring_breach_signals"):
                 st.markdown(
-                    "- `Monitoring Breach Signals`: "
+                    "- `Validation Review Signals`: "
                     + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_breach_signals") or []))
                 )
             if meta.get("deployment_readiness_status"):
                 st.markdown(
-                    f"- `Deployment Readiness`: `{meta['deployment_readiness_status']}` "
+                    f"- `Execution Preview`: `{meta['deployment_readiness_status']}` "
                     f"(`{_deployment_readiness_status_value_to_label(meta.get('deployment_readiness_status'))}`)"
                 )
             if meta.get("deployment_readiness_next_step"):
-                st.markdown(f"- `Deployment Next Step`: `{meta['deployment_readiness_next_step']}`")
+                preview_next_step = _next_validation_step_label(meta.get("deployment_readiness_next_step"))
+                st.markdown(f"- `Execution Preview Next Step`: `{preview_next_step}`")
             if meta.get("deployment_check_pass_count") is not None:
                 st.markdown(
-                    f"- `Deployment Checklist Counts`: pass `{int(meta.get('deployment_check_pass_count') or 0)}`, "
+                    f"- `Execution Preview Counts`: pass `{int(meta.get('deployment_check_pass_count') or 0)}`, "
                     f"watch `{int(meta.get('deployment_check_watch_count') or 0)}`, "
                     f"fail `{int(meta.get('deployment_check_fail_count') or 0)}`, "
                     f"unavailable `{int(meta.get('deployment_check_unavailable_count') or 0)}`"
@@ -1044,7 +1054,7 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
 
     if deployment == "small_capital_ready":
         deployment_score = 3.0
-        deployment_judgment = "deployment checklist가 강함"
+        deployment_judgment = "실행 부담 preview가 양호함"
     elif deployment in {"small_capital_ready_with_review", "paper_only"}:
         deployment_score = 2.5
         deployment_judgment = "다음 검토로 넘기기 충분"
@@ -1053,7 +1063,7 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         deployment_judgment = "watchlist로 비교 가능"
     elif deployment == "review_required":
         deployment_score = 1.5
-        deployment_judgment = "비교는 가능하지만 checklist 재확인 필요"
+        deployment_judgment = "비교는 가능하지만 실행 부담 재확인 필요"
     else:
         deployment_score = 0.0
         deployment_judgment = "blocked 또는 상태 부족"
@@ -1084,18 +1094,18 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         verdict = "후보 검토 가능, 개선 항목 동시 확인"
         tone = "warning"
         route_label = "조건부 후보 검토"
-        next_action = "Compare 또는 Practical Validation으로 넘기기 전에 watch / checklist 항목을 함께 확인합니다."
+        next_action = "Compare 또는 Practical Validation으로 넘기기 전에 watch / preview 항목을 함께 확인합니다."
     else:
         verdict = "후보 보류: blocker 먼저 해결"
         tone = "error"
         route_label = "Hold / Review"
-        next_action = "Hold 해결 가이드, Deployment checklist, 실행 부담 / 검토 근거의 caution 항목을 먼저 정리합니다."
+        next_action = "Hold 해결 가이드, 실행 부담 preview, 검토 근거의 caution 항목을 먼저 정리합니다."
 
     blocking_reasons: list[str] = []
     if promotion in {"", "hold"}:
         blocking_reasons.append("Promotion Decision이 hold이거나 비어 있음")
     if deployment in {"", "blocked"}:
-        blocking_reasons.append("Deployment Readiness가 blocked이거나 비어 있음")
+        blocking_reasons.append("Execution Preview가 blocked이거나 비어 있음")
     blocking_reasons.extend(
         f"{row.get('항목')}: {row.get('현재 상태')}"
         for row in severe_issue_rows
@@ -1103,11 +1113,11 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
 
     review_reasons: list[str] = []
     if fail_count > 0:
-        review_reasons.append(f"Deployment checklist fail {fail_count}개")
+        review_reasons.append(f"Execution preview fail {fail_count}개")
     if watch_count > 0:
-        review_reasons.append(f"Deployment checklist watch {watch_count}개")
+        review_reasons.append(f"Execution preview watch {watch_count}개")
     if unavailable_count > 0:
-        review_reasons.append(f"Deployment checklist unavailable {unavailable_count}개")
+        review_reasons.append(f"Execution preview unavailable {unavailable_count}개")
     review_reasons.extend(
         f"{row.get('항목')}: {row.get('현재 상태')}"
         for row in softer_issue_rows
@@ -1121,7 +1131,7 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
             "판단": promotion_judgment,
         },
         {
-            "기준": "Deployment Readiness",
+            "기준": "Execution Preview",
             "현재 값": deployment or "-",
             "점수": f"{deployment_score:g} / 3",
             "판단": deployment_judgment,
@@ -1174,7 +1184,7 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
 
         message = (
             f"{evaluation['verdict']}: "
-            f"`Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음 기준으로 계산했습니다."
+            f"`Promotion Decision != hold`, `Execution Preview != blocked`, 핵심 blocker 없음 기준으로 계산했습니다."
         )
         if tone == "success":
             st.success(message)
@@ -1232,7 +1242,13 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         render_status_card_grid(cards)
 
     def _suggested_route_label() -> str:
-        return _shortlist_status_value_to_label(meta.get("shortlist_status"))
+        mapping = {
+            "watchlist": "Watchlist Review",
+            "paper_probation": "Paper Observation Candidate",
+            "small_capital_trial": "Small-Capital Review Candidate",
+            "hold": "Hold / Review",
+        }
+        return mapping.get(str(meta.get("shortlist_status") or "").strip().lower(), "-")
 
     def _promotion_detail() -> str:
         route = _suggested_route_label()
@@ -1242,28 +1258,80 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         return next_step
 
     def _display_route_step(value: Any) -> str:
-        return str(value or "-").replace("shortlist", "promotion_route")
+        return _next_validation_step_label(value)
 
     def _display_rationale_items(values: list[Any]) -> list[str]:
         return [
-            str(value).replace("shortlist_", "promotion_route_")
+            str(value)
+            .replace("shortlist_", "promotion_route_")
+            .replace("paper_probation", "paper_observation")
+            .replace("small_capital_trial", "small_capital_review")
             for value in values
         ]
+
+    def _validation_focus_items() -> list[str]:
+        return [str(item) for item in list(meta.get("monitoring_focus") or []) if str(item)]
+
+    def _validation_review_signals() -> list[str]:
+        return [str(item) for item in list(meta.get("monitoring_breach_signals") or []) if str(item)]
+
+    def _execution_preview_label(value: Any) -> str:
+        mapping = {
+            "small_capital_ready": "Ready For Next Review",
+            "small_capital_ready_with_review": "Review Required",
+            "paper_only": "Paper Observation Check",
+            "watchlist_only": "Watchlist Review",
+            "review_required": "Review Required",
+            "blocked": "Blocked",
+        }
+        return mapping.get(str(value or "").strip().lower(), "-")
+
+    def _focus_label(value: Any) -> str:
+        mapping = {
+            "benchmark_relative_validation": "Benchmark-relative validation",
+            "rolling_underperformance": "Rolling underperformance",
+            "drawdown_control": "Drawdown control",
+            "recent_regime_review": "Recent regime review",
+            "split_period_consistency": "Split-period consistency",
+            "liquidity_cleanliness": "Liquidity / cost realism",
+            "etf_operability": "ETF operability",
+            "price_freshness": "Price freshness",
+        }
+        return mapping.get(str(value or "").strip(), str(value or "-"))
+
+    def _focus_rows() -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for item in _validation_focus_items():
+            rows.append(
+                {
+                    "Type": "Focus",
+                    "Item": _focus_label(item),
+                    "Meaning": "Practical Validation / Final Review에서 확인할 항목",
+                }
+            )
+        for signal in _validation_review_signals():
+            rows.append(
+                {
+                    "Type": "Review Signal",
+                    "Item": str(signal).replace("_", " "),
+                    "Meaning": "Backtest 단계에서 확정하지 않고 다음 검증에서 재확인할 신호",
+                }
+            )
+        return rows
 
     def _render_suggested_route_guidance(shortlist_status: str) -> None:
         if shortlist_status == "small_capital_trial":
             st.success(
-                "Promotion 결과가 강하고 계약 조건도 충분해 소액 trial까지 검토 가능한 추천 경로입니다. "
-                "다만 실제 선택은 Practical Validation과 Final Review를 통과해야 합니다."
+                "Promotion 결과가 강해 다음 단계에서 소액 검토 가능성까지 확인해볼 수 있는 추천 경로입니다. "
+                "실제 선택이나 운용 판단은 Practical Validation과 Final Review에서 다시 확인해야 합니다."
             )
         elif shortlist_status == "paper_probation":
             st.info(
-                "Promotion 결과는 후보 검토가 가능하지만, 실제 투입 전 paper probation으로 먼저 관찰하는 추천 경로입니다."
+                "Promotion 결과는 후보 검토가 가능하지만, 다음 단계에서 paper observation 조건을 먼저 확인하는 추천 경로입니다."
             )
         elif shortlist_status == "watchlist":
             st.info(
-                "Promotion 결과는 후보로 볼 여지가 있지만, 추가 robustness / monitoring review를 거친 뒤 "
-                "paper probation으로 올리는 추천 경로입니다."
+                "Promotion 결과는 후보로 볼 여지가 있지만, 추가 robustness와 validation focus를 먼저 확인하는 추천 경로입니다."
             )
         elif shortlist_status == "hold":
             st.warning(
@@ -1272,13 +1340,15 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             )
 
     st.info(
-        "이 탭은 실전형 해석을 한 번에 보기 위한 화면입니다. "
+        "이 탭은 Backtest 단계의 1차 후보성 해석을 한 번에 보기 위한 화면입니다. "
         "먼저 `현재 판단`에서 지금 상태를 보고, "
         "그다음 `검토 근거`에서 왜 그런 판단이 나왔는지 확인하고, "
-        "`실행 부담`에서 비용/유동성/ETF 운용 가능성을 본 뒤, "
+        "`실행 부담`에서 비용/유동성/ETF 운용 가능성 preview를 본 뒤, "
         "마지막 `상세 데이터`에서 원자료를 확인하면 됩니다."
     )
 
+    focus_count = len(_validation_focus_items())
+    review_signal_count = len(_validation_review_signals())
     _render_real_money_cards(
         [
             {
@@ -1288,15 +1358,27 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 "tone": _status_tone(meta.get("promotion_decision")),
             },
             {
-                "title": "Probation",
-                "value": _probation_status_value_to_label(meta.get("probation_status")),
-                "detail": meta.get("probation_review_frequency") or "",
-                "tone": _status_tone(meta.get("probation_status")),
+                "title": "Suggested Route",
+                "value": _suggested_route_label(),
+                "detail": "다음 검증 후보 경로",
+                "tone": _status_tone(meta.get("shortlist_status")),
             },
             {
-                "title": "Deployment",
-                "value": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
-                "detail": meta.get("deployment_readiness_next_step") or "",
+                "title": "Validation Focus",
+                "value": str(focus_count),
+                "detail": "다음 단계에서 확인할 항목",
+                "tone": "warning" if focus_count else "neutral",
+            },
+            {
+                "title": "Review Signals",
+                "value": str(review_signal_count),
+                "detail": "확정이 아닌 재확인 신호",
+                "tone": "danger" if review_signal_count else "neutral",
+            },
+            {
+                "title": "Execution Preview",
+                "value": _execution_preview_label(meta.get("deployment_readiness_status")),
+                "detail": "배치 승인이 아닌 실행 부담 preview",
                 "tone": _status_tone(meta.get("deployment_readiness_status")),
             },
             {
@@ -1320,8 +1402,8 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
     with overview_tab:
         st.caption(
-            "이 섹션은 이 전략을 지금 어떤 단계로 해석해야 하는지 보여줍니다. "
-            "즉 `당장 보류할지`, `paper probation으로 둘지`, `소액 trial까지 볼지`를 먼저 판단하는 곳입니다."
+            "이 섹션은 이 전략을 Backtest 1차 후보로 볼 수 있는지 보여줍니다. "
+            "실제 paper observation, 소액 검토, 운영 모니터링 조건은 이후 단계에서 다시 정의합니다."
         )
         _render_next_step_readiness_box(meta)
 
@@ -1333,7 +1415,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 decision = str(meta.get("promotion_decision") or "-")
                 next_step = str(meta.get("promotion_next_step") or "-")
                 shortlist_status = str(meta.get("shortlist_status") or "")
-                shortlist_label = _shortlist_status_value_to_label(shortlist_status)
+                shortlist_label = _suggested_route_label()
                 shortlist_next_step = _display_route_step(meta.get("shortlist_next_step"))
                 _render_real_money_cards(
                     [
@@ -1346,7 +1428,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                         {
                             "title": "Suggested Route",
                             "value": shortlist_label,
-                            "detail": "Promotion 결과에서 파생된 추천 경로",
+                            "detail": "다음 검증 후보 경로",
                             "tone": _status_tone(shortlist_status),
                         },
                         {
@@ -1358,7 +1440,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                         {
                             "title": "Route Next Step",
                             "value": shortlist_next_step,
-                            "detail": "추천 경로의 다음 행동",
+                            "detail": "다음 검증 경로",
                             "tone": _status_tone(shortlist_status),
                         },
                     ]
@@ -1376,7 +1458,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 if decision == "real_money_candidate":
                     st.success(
                         "현재 계약 기준에서는 실전형 후보로 읽을 수 있는 상태입니다. "
-                        "다음 단계는 paper tracking 또는 소액 probation이 자연스럽습니다."
+                        "다음 단계에서는 Practical Validation으로 보내 검증 근거를 확인하는 것이 자연스럽습니다."
                     )
                 elif decision == "production_candidate":
                     st.info(
@@ -1411,96 +1493,65 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             "필요하면 `실행 부담`에서 유동성 / 비용 / ETF 운용 가능성까지 같이 점검하면 가장 빠릅니다."
                         )
 
-        if meta.get("probation_status") or meta.get("monitoring_status"):
+        focus_rows = _focus_rows()
+        if focus_rows:
             with _section_header(
-                "Probation / Monitoring",
-                "실제 운용 전 관찰 단계입니다. paper tracking 중인지, routine review로 충분한지, breach 신호가 있는지를 봅니다.",
+                "Next Validation Focus",
+                "Backtest에서 검증을 끝냈다는 뜻이 아니라, Practical Validation / Final Review에서 우선 확인할 항목입니다.",
             ):
-                probation_status = str(meta.get("probation_status") or "-")
-                probation_stage = str(meta.get("probation_stage") or "-")
-                probation_review_frequency = str(meta.get("probation_review_frequency") or "-")
-                monitoring_status = str(meta.get("monitoring_status") or "-")
-                monitoring_review_frequency = str(meta.get("monitoring_review_frequency") or "-")
                 _render_real_money_cards(
                     [
                         {
-                            "title": "Probation",
-                            "value": _probation_status_value_to_label(probation_status),
-                            "detail": "운영 전 관찰 상태",
-                            "tone": _status_tone(probation_status),
+                            "title": "Focus Items",
+                            "value": str(focus_count),
+                            "detail": "검증에서 볼 항목",
+                            "tone": "warning" if focus_count else "neutral",
                         },
                         {
-                            "title": "Stage",
-                            "value": probation_stage,
-                            "detail": "현재 probation 단계",
-                            "tone": _status_tone(probation_status),
+                            "title": "Review Signals",
+                            "value": str(review_signal_count),
+                            "detail": "재확인 신호",
+                            "tone": "danger" if review_signal_count else "neutral",
                         },
                         {
-                            "title": "Probation Review",
-                            "value": probation_review_frequency,
-                            "detail": "점검 주기",
-                            "tone": "neutral",
-                        },
-                        {
-                            "title": "Monitoring",
-                            "value": _monitoring_status_value_to_label(monitoring_status),
-                            "detail": meta.get("monitoring_next_step") or "운영 감시 상태",
-                            "tone": _status_tone(monitoring_status),
-                        },
-                        {
-                            "title": "Monitoring Review",
-                            "value": monitoring_review_frequency,
-                            "detail": "감시 점검 주기",
-                            "tone": "neutral",
+                            "title": "Next Surface",
+                            "value": "Practical Validation",
+                            "detail": "정식 검증 위치",
+                            "tone": "positive",
                         },
                     ]
                 )
-                if meta.get("probation_next_step"):
-                    st.caption(f"다음 probation 액션: `{meta.get('probation_next_step')}`")
-                probation_rationale = list(meta.get("probation_rationale") or [])
-                if probation_rationale:
-                    st.caption(
-                        "Probation 판단 근거: "
-                        + ", ".join(f"`{item}`" for item in _display_rationale_items(probation_rationale))
-                    )
-                monitoring_focus = list(meta.get("monitoring_focus") or [])
-                if monitoring_focus:
-                    st.caption("지켜볼 항목: " + ", ".join(f"`{item}`" for item in monitoring_focus))
-                monitoring_breach_signals = list(meta.get("monitoring_breach_signals") or [])
-                if monitoring_breach_signals:
-                    st.caption("경고 신호: " + ", ".join(f"`{item}`" for item in monitoring_breach_signals))
-
-                if monitoring_status == "breach_watch":
+                st.dataframe(pd.DataFrame(focus_rows), use_container_width=True, hide_index=True)
+                if review_signal_count:
                     st.warning(
-                        "현재 probation 단계에서 breach signal이 관찰됐습니다. "
-                        "비중 확대보다는 월별 review와 rule re-check를 먼저 하는 편이 맞습니다."
+                        "Backtest 단계의 review signal은 실전 관찰 결과가 아닙니다. "
+                        "다음 단계에서 같은 신호가 Practical Evidence로 확인되는지 먼저 보셔야 합니다."
                     )
-                elif monitoring_status == "heightened_review":
+                else:
                     st.info(
-                        "지금은 monitoring watch signal이 있어서, routine review보다 조금 더 보수적으로 월별 확인을 이어가는 편이 좋습니다."
+                        "현재 Backtest 기준으로는 다음 검증에서 확인할 focus만 정리되었습니다. "
+                        "실제 관찰 기간과 trigger는 Final Review 이후에 정의합니다."
                     )
-                elif monitoring_status == "routine_review":
-                    st.success("현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다.")
 
         if meta.get("deployment_readiness_status"):
             with _section_header(
-                "Deployment Readiness",
-                "실제 배치 직전 체크리스트입니다. pass / watch / fail / unavailable 개수를 보고 지금 배치를 열어도 되는지 판단합니다.",
+                "Execution Preview",
+                "Backtest 단계의 실행 부담 미리보기입니다. 실제 배치 가능성은 Practical Validation과 Final Review에서 다시 판단합니다.",
             ):
                 deployment_status = str(meta.get("deployment_readiness_status") or "-")
-                deployment_next_step = str(meta.get("deployment_readiness_next_step") or "-")
+                deployment_next_step = _display_route_step(meta.get("deployment_readiness_next_step"))
                 _render_real_money_cards(
                     [
                         {
                             "title": "Status",
-                            "value": _deployment_readiness_status_value_to_label(deployment_status),
-                            "detail": "현재 배치 준비 상태",
+                            "value": _execution_preview_label(deployment_status),
+                            "detail": "현재 실행 부담 preview",
                             "tone": _status_tone(deployment_status),
                         },
                         {
-                            "title": "Next Step",
+                            "title": "Next Validation Step",
                             "value": deployment_next_step,
-                            "detail": "다음 처리",
+                            "detail": "다음 검증에서 확인할 처리",
                             "tone": _status_tone(deployment_status),
                         },
                         {
@@ -1518,7 +1569,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                         {
                             "title": "Fail",
                             "value": str(int(meta.get("deployment_check_fail_count") or 0)),
-                            "detail": "막는 체크",
+                            "detail": "검증 전 확인 필요",
                             "tone": "danger" if int(meta.get("deployment_check_fail_count") or 0) else "neutral",
                         },
                         {
@@ -1532,7 +1583,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
                 deployment_rationale = list(meta.get("deployment_readiness_rationale") or [])
                 if deployment_rationale:
-                    st.caption("Deployment 판단 근거: " + ", ".join(f"`{item}`" for item in deployment_rationale))
+                    st.caption("Execution preview 근거: " + ", ".join(f"`{item}`" for item in deployment_rationale))
 
                 checklist_rows = list(meta.get("deployment_checklist_rows") or [])
                 if checklist_rows:
@@ -1545,21 +1596,21 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             display_checklist_rows.append(display_row)
                         else:
                             display_checklist_rows.append({"Check": "Unknown", "Status": "-", "Detail": str(row)})
-                    with st.expander("Checklist 상세 보기", expanded=deployment_status in {"review_required", "blocked"}):
+                    with st.expander("Preview 상세 보기", expanded=deployment_status in {"review_required", "blocked"}):
                         st.dataframe(pd.DataFrame(display_checklist_rows), use_container_width=True, hide_index=True)
 
                 if deployment_status == "small_capital_ready":
-                    st.success("현재 checklist 기준에서는 small-capital trial까지 비교적 자연스럽게 볼 수 있는 상태입니다.")
+                    st.success("현재 preview 기준에서는 다음 검증에서 소액 검토 가능성을 확인해볼 수 있습니다.")
                 elif deployment_status == "small_capital_ready_with_review":
                     st.info(
-                        "현재 checklist 기준에서는 소액 trial은 가능하지만, watch / unavailable 항목을 같이 보면서 더 보수적으로 운용하는 편이 맞습니다."
+                        "현재 preview 기준에서는 소액 검토 가능성은 있지만, watch / unavailable 항목을 다음 검증에서 먼저 확인해야 합니다."
                     )
                 elif deployment_status == "paper_only":
-                    st.info("지금은 deployment-ready보다는 paper probation 단계로 두는 편이 맞습니다.")
+                    st.info("지금은 실제 배치 판단이 아니라 paper observation 요건을 다음 단계에서 확인하는 편이 맞습니다.")
                 elif deployment_status == "review_required":
-                    st.warning("failed checklist 항목이 있어, 수동 review 없이 바로 비중을 늘리는 것은 보수적이지 않습니다.")
+                    st.warning("failed preview 항목이 있어, Practical Validation / Final Review에서 재확인해야 합니다.")
                 elif deployment_status == "blocked":
-                    st.warning("현재 checklist 기준에서는 deployment를 열기보다 blocker를 먼저 해결하는 편이 맞습니다.")
+                    st.warning("현재 preview 기준에서는 다음 검증으로 넘기기 전에 blocker를 먼저 정리하는 편이 맞습니다.")
 
     with review_tab:
         st.caption(
@@ -1694,7 +1745,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 ).strip().lower() == "caution":
                     st.warning(
                         "최근 구간 또는 split-period review에서 caution이 잡혔습니다. "
-                        "지금은 비중 확대보다 recent regime robustness review를 먼저 하는 편이 맞습니다."
+                        "지금은 후속 검증에서 recent regime robustness를 먼저 확인하는 편이 맞습니다."
                     )
                 elif str(meta.get("rolling_review_status") or "").strip().lower() == "watch" or str(
                     meta.get("out_of_sample_review_status") or ""
