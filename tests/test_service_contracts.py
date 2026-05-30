@@ -999,6 +999,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "2026-04-17",
             ]
             return [{"date": item, "usable_rows": 1200} for item in dates]
+        if "SUM(CASE WHEN volume IS NOT NULL THEN volume ELSE 0 END) AS total_volume" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "total_volume": 5_000,
+                    "avg_daily_volume": 1_000,
+                    "total_dollar_volume": 650_000.0,
+                    "avg_daily_dollar_volume": 130_000.0,
+                    "volume_days": 5,
+                },
+                {
+                    "symbol": "BBB",
+                    "total_volume": 7_500,
+                    "avg_daily_volume": 1_500,
+                    "total_dollar_volume": 900_000.0,
+                    "avg_daily_dollar_volume": 180_000.0,
+                    "volume_days": 5,
+                },
+                {
+                    "symbol": "CCC",
+                    "total_volume": 12_500,
+                    "avg_daily_volume": 2_500,
+                    "total_dollar_volume": 2_500_000.0,
+                    "avg_daily_dollar_volume": 500_000.0,
+                    "volume_days": 5,
+                },
+            ]
         if "FROM nyse_asset_profile" in sql:
             return [
                 {
@@ -1032,14 +1059,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ]
         if "COALESCE(adj_close, close) AS price" in sql:
             return [
+                {"symbol": "AAA", "date": "2026-05-11", "price": 100.0, "volume": 700},
                 {"symbol": "AAA", "date": "2026-05-14", "price": 95.0, "volume": 900},
                 {"symbol": "AAA", "date": "2026-05-15", "price": 100.0, "volume": 1000},
                 {"symbol": "AAA", "date": "2026-05-18", "price": 110.0, "volume": 1500},
                 {"symbol": "AAA", "date": "2026-04-17", "price": 100.0, "volume": 800},
+                {"symbol": "BBB", "date": "2026-05-11", "price": 100.0, "volume": 1800},
                 {"symbol": "BBB", "date": "2026-05-14", "price": 90.0, "volume": 1800},
                 {"symbol": "BBB", "date": "2026-05-15", "price": 100.0, "volume": 2000},
                 {"symbol": "BBB", "date": "2026-05-18", "price": 130.0, "volume": 2500},
                 {"symbol": "BBB", "date": "2026-04-17", "price": 100.0, "volume": 1900},
+                {"symbol": "CCC", "date": "2026-05-11", "price": 100.0, "volume": 1200},
                 {"symbol": "CCC", "date": "2026-05-14", "price": 100.0, "volume": 1200},
                 {"symbol": "CCC", "date": "2026-05-15", "price": 100.0, "volume": 1000},
                 {"symbol": "CCC", "date": "2026-05-18", "price": 120.0, "volume": 1700},
@@ -1089,6 +1119,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Dollar Volume"], 325000.0)
         self.assertEqual(snapshot["rows"].iloc[0]["Previous Return %"], 11.11)
         self.assertEqual(snapshot["rows"].iloc[0]["Momentum Delta pp"], 18.89)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Basis"], "Daily dollar volume")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume"], 2500)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Dollar Volume"], 325000.0)
         self.assertEqual(
             snapshot["missing_rows"].iloc[0]["Recommended Action"],
             "Refresh daily OHLCV history or inspect previous-close coverage.",
@@ -1123,6 +1157,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Previous Return %"], 5.26)
         self.assertEqual(snapshot["rows"].iloc[0]["Momentum Delta pp"], 6.74)
         self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Basis"], "Daily dollar volume")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Metric"], 112000.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
         self.assertEqual(
@@ -1152,6 +1189,29 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_weekly_volume_rows_use_average_and_total_volume(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="weekly",
+            top_n=5,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 30.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Symbol"], "CCC")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Basis"], "Avg daily dollar volume")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Metric"], 500000.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Avg Daily Volume"], 2500)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Volume"], 12500)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Avg Daily Dollar Volume"], 500000.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Dollar Volume"], 2500000.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Days"], 5)
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot

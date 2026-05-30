@@ -45,6 +45,27 @@ MOVERS_COLUMNS = [
     "Previous End Date",
     "Price Source",
 ]
+VOLUME_COLUMNS = [
+    "Rank",
+    "Symbol",
+    "Name",
+    "Volume Metric",
+    "Volume Basis",
+    "Volume",
+    "Dollar Volume",
+    "Avg Daily Volume",
+    "Total Volume",
+    "Avg Daily Dollar Volume",
+    "Total Dollar Volume",
+    "Volume Days",
+    "Return %",
+    "Sector",
+    "Industry",
+    "Market Cap",
+    "Start Date",
+    "End Date",
+    "Price Source",
+]
 MISSING_COLUMNS = [
     "Symbol",
     "Name",
@@ -321,6 +342,7 @@ def _empty_movers_snapshot(
         "sector": sector or "All",
         "top_n": top_n,
         "rows": pd.DataFrame(columns=MOVERS_COLUMNS),
+        "volume_rows": pd.DataFrame(columns=VOLUME_COLUMNS),
         "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
@@ -443,21 +465,38 @@ def _eligible_market_dates(
     query_fn: QueryFn,
 ) -> tuple[str | None, list[dict[str, Any]]]:
     latest_raw_date = _query_latest_raw_date(query_fn)
-    rows = query_fn(
-        "finance_price",
-        """
+    bounded_since: str | None = None
+    latest_raw_ts = pd.Timestamp(latest_raw_date) if latest_raw_date else pd.NaT
+    if not pd.isna(latest_raw_ts):
+        lookback_days = max(370, int(limit) * 4)
+        bounded_since = (latest_raw_ts.normalize() - pd.Timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+
+    def query_dates(*, since: str | None) -> list[dict[str, Any]]:
+        conditions = ["timeframe = %s"]
+        params: list[Any] = ["1d"]
+        if since:
+            conditions.append("`date` >= %s")
+            params.append(since)
+        params.extend([int(min_price_rows), int(limit)])
+        return query_fn(
+            "finance_price",
+            f"""
         SELECT
             `date`,
             SUM(CASE WHEN COALESCE(adj_close, close) IS NOT NULL THEN 1 ELSE 0 END) AS usable_rows
-        FROM nyse_price_history
-        WHERE timeframe = %s
+        FROM nyse_price_history FORCE INDEX (ix_date)
+        WHERE {" AND ".join(conditions)}
         GROUP BY `date`
         HAVING usable_rows >= %s
         ORDER BY `date` DESC
         LIMIT %s
         """,
-        ["1d", int(min_price_rows), int(limit)],
-    )
+            params,
+        )
+
+    rows = query_dates(since=bounded_since)
+    if bounded_since and len(rows) < int(limit):
+        rows = query_dates(since=None)
     eligible = [
         {
             "date": _iso_date(row.get("date")),
@@ -716,7 +755,7 @@ def _load_price_points_for_dates(
             `date`,
             COALESCE(adj_close, close) AS price,
             volume
-        FROM nyse_price_history
+        FROM nyse_price_history FORCE INDEX (uk_symbol_timeframe_date)
         WHERE symbol IN ({symbol_placeholders})
           AND timeframe = %s
           AND `date` IN ({date_placeholders})
@@ -874,9 +913,9 @@ def _build_return_rows(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     symbols = [str(row.get("symbol") or "").strip().upper() for row in universe if row.get("symbol")]
     price_points = _load_price_points_for_dates(symbols=symbols, dates=[start_date, end_date], query_fn=query_fn)
-    latest_dates = _load_latest_price_dates(symbols=symbols, query_fn=query_fn)
     previous_context = previous_context or {}
     return_rows: list[dict[str, Any]] = []
+    missing_candidates: list[dict[str, Any]] = []
     missing_rows: list[dict[str, Any]] = []
 
     for item in universe:
@@ -896,16 +935,14 @@ def _build_return_rows(
         else:
             reason = ""
         if reason:
-            missing_rows.append(
-                _missing_row(
-                    item=item,
-                    reason=reason,
-                    start_date=start_date,
-                    end_date=end_date,
-                    start_price=start_price,
-                    end_price=end_price,
-                    latest_price_date=latest_dates.get(symbol),
-                )
+            missing_candidates.append(
+                {
+                    "item": item,
+                    "symbol": symbol,
+                    "reason": reason,
+                    "start_price": start_price,
+                    "end_price": end_price,
+                }
             )
             continue
         return_pct = _return_pct(start_price, end_price)
@@ -935,6 +972,23 @@ def _build_return_rows(
                 "price_source": "EOD DB",
             }
         )
+    if missing_candidates:
+        latest_dates = _load_latest_price_dates(
+            symbols=[str(row["symbol"]) for row in missing_candidates],
+            query_fn=query_fn,
+        )
+        for row in missing_candidates:
+            missing_rows.append(
+                _missing_row(
+                    item=row["item"],
+                    reason=str(row["reason"]),
+                    start_date=start_date,
+                    end_date=end_date,
+                    start_price=_safe_float(row.get("start_price")),
+                    end_price=_safe_float(row.get("end_price")),
+                    latest_price_date=latest_dates.get(str(row["symbol"])),
+                )
+            )
     return return_rows, missing_rows
 
 
@@ -2242,6 +2296,182 @@ def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFr
     return _rows_frame(out, columns=MOVERS_COLUMNS)
 
 
+def _current_period_volume_dates(date_window: dict[str, Any], *, period: str) -> list[str]:
+    normalized_period = str(period or "daily").strip().lower()
+    offset = VALID_PERIODS.get(normalized_period, 1)
+    dates = [
+        row_date
+        for row in list(date_window.get("eligible_dates") or [])[: max(1, offset)]
+        if (row_date := _iso_date(row.get("date")))
+    ]
+    if dates:
+        return dates
+    end_date = _iso_date(date_window.get("end_date"))
+    return [end_date] if end_date else []
+
+
+def _load_period_volume_stats(
+    *,
+    symbols: list[str],
+    dates: list[str],
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    if not symbols or not dates:
+        return {}
+    symbol_placeholders = ",".join(["%s"] * len(symbols))
+    date_placeholders = ",".join(["%s"] * len(dates))
+    rows = query_fn(
+        "finance_price",
+        f"""
+        SELECT
+            symbol,
+            SUM(CASE WHEN volume IS NOT NULL THEN volume ELSE 0 END) AS total_volume,
+            AVG(volume) AS avg_daily_volume,
+            SUM(
+                CASE
+                    WHEN volume IS NOT NULL AND COALESCE(adj_close, close) IS NOT NULL
+                    THEN COALESCE(adj_close, close) * volume
+                    ELSE 0
+                END
+            ) AS total_dollar_volume,
+            AVG(
+                CASE
+                    WHEN volume IS NOT NULL AND COALESCE(adj_close, close) IS NOT NULL
+                    THEN COALESCE(adj_close, close) * volume
+                    ELSE NULL
+                END
+            ) AS avg_daily_dollar_volume,
+            COUNT(volume) AS volume_days
+        FROM nyse_price_history FORCE INDEX (uk_symbol_timeframe_date)
+        WHERE symbol IN ({symbol_placeholders})
+          AND timeframe = %s
+          AND `date` IN ({date_placeholders})
+        GROUP BY symbol
+        """,
+        list(symbols) + ["1d"] + list(dates),
+    )
+    stats: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        stats[symbol] = {
+            "total_volume": _safe_float(row.get("total_volume")),
+            "avg_daily_volume": _safe_float(row.get("avg_daily_volume")),
+            "total_dollar_volume": _safe_float(row.get("total_dollar_volume")),
+            "avg_daily_dollar_volume": _safe_float(row.get("avg_daily_dollar_volume")),
+            "volume_days": int(row.get("volume_days") or 0),
+        }
+    return stats
+
+
+def _volume_metric(*values: Any) -> float | None:
+    for value in values:
+        numeric = _safe_float(value)
+        if numeric is not None and numeric > 0:
+            return numeric
+    return None
+
+
+def _ranked_volume_frame(
+    return_rows: list[dict[str, Any]],
+    *,
+    top_n: int,
+    period: str,
+    volume_stats: dict[str, dict[str, Any]] | None = None,
+) -> pd.DataFrame:
+    normalized_period = str(period or "daily").strip().lower()
+    volume_stats = volume_stats or {}
+    ranked_rows: list[dict[str, Any]] = []
+    for row in return_rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        volume = _safe_float(row.get("volume"))
+        dollar_volume = _safe_float(row.get("dollar_volume"))
+        if normalized_period == "daily":
+            avg_daily_volume = volume
+            total_volume = volume
+            avg_daily_dollar_volume = dollar_volume
+            total_dollar_volume = dollar_volume
+            volume_days = 1 if volume is not None else 0
+            volume_basis = "Daily dollar volume"
+            metric = _volume_metric(dollar_volume, volume)
+        else:
+            stats = volume_stats.get(symbol) or {}
+            avg_daily_volume = _safe_float(stats.get("avg_daily_volume"))
+            total_volume = _safe_float(stats.get("total_volume"))
+            avg_daily_dollar_volume = _safe_float(stats.get("avg_daily_dollar_volume"))
+            total_dollar_volume = _safe_float(stats.get("total_dollar_volume"))
+            volume_days = int(stats.get("volume_days") or 0)
+            volume_basis = "Avg daily dollar volume"
+            metric = _volume_metric(
+                avg_daily_dollar_volume,
+                total_dollar_volume,
+                avg_daily_volume,
+                total_volume,
+            )
+        if metric is None:
+            continue
+        ranked_rows.append(
+            {
+                "symbol": symbol,
+                "name": row.get("name") or "-",
+                "volume_metric": metric,
+                "volume_basis": volume_basis,
+                "volume": avg_daily_volume if normalized_period != "daily" else volume,
+                "dollar_volume": avg_daily_dollar_volume if normalized_period != "daily" else dollar_volume,
+                "avg_daily_volume": avg_daily_volume,
+                "total_volume": total_volume,
+                "avg_daily_dollar_volume": avg_daily_dollar_volume,
+                "total_dollar_volume": total_dollar_volume,
+                "volume_days": volume_days,
+                "return_pct": row.get("return_pct"),
+                "sector": row.get("sector") or "Unknown",
+                "industry": row.get("industry") or "Unknown",
+                "market_cap": row.get("market_cap"),
+                "start_date": row.get("start_date"),
+                "end_date": row.get("end_date"),
+                "price_source": row.get("price_source") or "EOD DB",
+            }
+        )
+
+    ranked = sorted(ranked_rows, key=lambda item: (-float(item["volume_metric"]), item["symbol"]))[:top_n]
+    out = [
+        {
+            "Rank": index,
+            "Symbol": row["symbol"],
+            "Name": row["name"] or "-",
+            "Volume Metric": round(float(row["volume_metric"]), 2),
+            "Volume Basis": row["volume_basis"],
+            "Volume": int(round(float(row["volume"]))) if row.get("volume") is not None else None,
+            "Dollar Volume": round(float(row["dollar_volume"]), 2)
+            if row.get("dollar_volume") is not None
+            else None,
+            "Avg Daily Volume": int(round(float(row["avg_daily_volume"])))
+            if row.get("avg_daily_volume") is not None
+            else None,
+            "Total Volume": int(round(float(row["total_volume"]))) if row.get("total_volume") is not None else None,
+            "Avg Daily Dollar Volume": round(float(row["avg_daily_dollar_volume"]), 2)
+            if row.get("avg_daily_dollar_volume") is not None
+            else None,
+            "Total Dollar Volume": round(float(row["total_dollar_volume"]), 2)
+            if row.get("total_dollar_volume") is not None
+            else None,
+            "Volume Days": int(row.get("volume_days") or 0),
+            "Return %": round(float(row["return_pct"]), 2) if row.get("return_pct") is not None else None,
+            "Sector": row["sector"],
+            "Industry": row["industry"],
+            "Market Cap": int(row["market_cap"]) if row.get("market_cap") else None,
+            "Start Date": row["start_date"],
+            "End Date": row["end_date"],
+            "Price Source": row["price_source"],
+        }
+        for index, row in enumerate(ranked, start=1)
+    ]
+    return _rows_frame(out, columns=VOLUME_COLUMNS)
+
+
 def _latest_intraday_snapshot_time(
     *,
     universe_code: str,
@@ -2477,6 +2707,7 @@ def _build_intraday_movers_snapshot(
         "sector": sector or "All",
         "top_n": top_n,
         "rows": _ranked_movers_frame(return_rows, top_n=top_n),
+        "volume_rows": _ranked_volume_frame(return_rows, top_n=top_n, period=period),
         "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
         "date_window": date_window,
         "coverage": coverage,
@@ -2585,6 +2816,14 @@ def build_market_movers_snapshot(
             query_fn=query,
             previous_context=previous_context,
         )
+        volume_stats: dict[str, dict[str, Any]] = {}
+        if normalized_period != "daily":
+            volume_dates = _current_period_volume_dates(date_window, period=normalized_period)
+            volume_stats = _load_period_volume_stats(
+                symbols=[str(row.get("symbol") or "").strip().upper() for row in return_rows],
+                dates=volume_dates,
+                query_fn=query,
+            )
         coverage = _coverage(
             universe_count=len(universe),
             returnable_count=len(return_rows),
@@ -2611,6 +2850,12 @@ def build_market_movers_snapshot(
             "sector": sector or "All",
             "top_n": normalized_top_n,
             "rows": _ranked_movers_frame(return_rows, top_n=normalized_top_n),
+            "volume_rows": _ranked_volume_frame(
+                return_rows,
+                top_n=normalized_top_n,
+                period=normalized_period,
+                volume_stats=volume_stats,
+            ),
             "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,

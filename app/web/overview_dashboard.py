@@ -668,9 +668,17 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
 
 def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
-    if not chart_rows.empty and "Volume" in chart_rows:
-        chart_rows["Volume"] = pd.to_numeric(chart_rows["Volume"], errors="coerce")
-        chart_rows = chart_rows.dropna(subset=["Volume"])
+    metric_column = next(
+        (
+            candidate
+            for candidate in ("Volume Metric", "Dollar Volume", "Avg Daily Dollar Volume", "Volume")
+            if candidate in chart_rows
+        ),
+        "Volume",
+    )
+    if not chart_rows.empty and metric_column in chart_rows:
+        chart_rows[metric_column] = pd.to_numeric(chart_rows[metric_column], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=[metric_column])
     elif not chart_rows.empty:
         chart_rows = pd.DataFrame()
     if chart_rows.empty:
@@ -679,22 +687,61 @@ def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
                 {
                     "Symbol": "No Data",
                     "Name": "-",
+                    "Volume Metric": 0.0,
+                    "Volume Basis": "Volume",
                     "Volume": 0.0,
                     "Dollar Volume": 0.0,
+                    "Avg Daily Volume": 0.0,
+                    "Total Volume": 0.0,
+                    "Avg Daily Dollar Volume": 0.0,
+                    "Total Dollar Volume": 0.0,
+                    "Volume Days": 0,
                     "Return %": None,
                     "Sector": "Unknown",
                     "Industry": "-",
                 }
             ]
         )
-    chart_rows = chart_rows.sort_values(["Volume", "Symbol"], ascending=[False, True]).reset_index(drop=True)
-    chart_rows["Volume Rank"] = chart_rows.index + 1
+        metric_column = "Volume Metric"
+    if "Rank" in chart_rows:
+        chart_rows = chart_rows.sort_values("Rank").reset_index(drop=True)
+        chart_rows["Volume Rank"] = chart_rows["Rank"]
+    else:
+        chart_rows = chart_rows.sort_values([metric_column, "Symbol"], ascending=[False, True]).reset_index(drop=True)
+        chart_rows["Volume Rank"] = chart_rows.index + 1
+    if metric_column != "Volume Metric":
+        chart_rows["Volume Metric"] = chart_rows[metric_column]
+    if "Volume Basis" not in chart_rows:
+        chart_rows["Volume Basis"] = "Dollar volume" if "Dollar" in metric_column else "Volume"
+    chart_rows["Volume Metric"] = pd.to_numeric(chart_rows["Volume Metric"], errors="coerce").fillna(0.0)
+    chart_rows["Volume Metric Label"] = chart_rows.apply(
+        lambda row: _compact_number(
+            row.get("Volume Metric"),
+            prefix="$" if "dollar" in str(row.get("Volume Basis") or metric_column).lower() else "",
+        ),
+        axis=1,
+    )
+    if "Volume" not in chart_rows:
+        chart_rows["Volume"] = pd.NA
+    chart_rows["Volume"] = pd.to_numeric(chart_rows["Volume"], errors="coerce")
     chart_rows["Volume Label"] = chart_rows["Volume"].map(_compact_number)
     if "Dollar Volume" in chart_rows:
         chart_rows["Dollar Volume"] = pd.to_numeric(chart_rows["Dollar Volume"], errors="coerce")
     else:
         chart_rows["Dollar Volume"] = pd.NA
     chart_rows["Dollar Volume Label"] = chart_rows["Dollar Volume"].map(lambda value: _compact_number(value, prefix="$"))
+    for source_column, label_column, prefix in [
+        ("Avg Daily Volume", "Avg Daily Volume Label", ""),
+        ("Total Volume", "Total Volume Label", ""),
+        ("Avg Daily Dollar Volume", "Avg Daily Dollar Volume Label", "$"),
+        ("Total Dollar Volume", "Total Dollar Volume Label", "$"),
+    ]:
+        if source_column not in chart_rows:
+            chart_rows[source_column] = pd.NA
+        chart_rows[source_column] = pd.to_numeric(chart_rows[source_column], errors="coerce")
+        chart_rows[label_column] = chart_rows[source_column].map(lambda value, p=prefix: _compact_number(value, prefix=p))
+    if "Volume Days" not in chart_rows:
+        chart_rows["Volume Days"] = pd.NA
     if "Return %" in chart_rows:
         chart_rows["Return %"] = pd.to_numeric(chart_rows["Return %"], errors="coerce")
     else:
@@ -704,16 +751,25 @@ def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     )
     chart_rows["Bar Color"] = chart_rows["Sector"].map(lambda value: _sector_bar_color(value))
     symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
-    max_volume = max(1.0, float(chart_rows["Volume"].max()) if not chart_rows.empty else 1.0)
+    max_volume = max(1.0, float(chart_rows["Volume Metric"].max()) if not chart_rows.empty else 1.0)
+    basis_values = [str(value) for value in chart_rows["Volume Basis"].dropna().unique().tolist() if str(value)]
+    axis_title = basis_values[0] if len(basis_values) == 1 else "Volume Metric"
     base = alt.Chart(chart_rows).encode(
-        x=alt.X("Volume:Q", title="Volume", scale=alt.Scale(domain=[0, max_volume * 1.12])),
+        x=alt.X("Volume Metric:Q", title=axis_title, scale=alt.Scale(domain=[0, max_volume * 1.12])),
         y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=80)),
         tooltip=[
             "Volume Rank:O",
             "Symbol:N",
             "Name:N",
+            "Volume Basis:N",
+            "Volume Metric Label:N",
             "Volume Label:N",
             "Dollar Volume Label:N",
+            "Avg Daily Volume Label:N",
+            "Total Volume Label:N",
+            "Avg Daily Dollar Volume Label:N",
+            "Total Dollar Volume Label:N",
+            "Volume Days:O",
             "Return Label:N",
             "Sector:N",
             "Industry:N",
@@ -723,7 +779,7 @@ def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     labels = (
         base
         .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
-        .encode(text=alt.Text("Volume Label:N"))
+        .encode(text=alt.Text("Volume Metric Label:N"))
     )
     return (bars + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
 
@@ -1942,6 +1998,9 @@ def _render_market_movers_snapshot_panel(
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("DB-backed market mover rows are not available for the selected controls.")
         return
+    volume_rows = snapshot.get("volume_rows")
+    if not isinstance(volume_rows, pd.DataFrame) or volume_rows.empty:
+        volume_rows = rows
 
     left, right = st.columns([0.95, 1.25], gap="medium")
     with left:
@@ -1949,16 +2008,25 @@ def _render_market_movers_snapshot_panel(
         with return_tab:
             st.altair_chart(_build_return_bar_chart(rows), width="stretch")
         with volume_tab:
-            st.altair_chart(_build_volume_bar_chart(rows), width="stretch")
+            st.altair_chart(_build_volume_bar_chart(volume_rows), width="stretch")
         with sector_tab:
             st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
     with right:
-        st.dataframe(
-            rows,
-            width="stretch",
-            height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
-            hide_index=True,
-        )
+        return_table_tab, volume_table_tab = st.tabs(["Return Table", "Volume Table"])
+        with return_table_tab:
+            st.dataframe(
+                rows,
+                width="stretch",
+                height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                hide_index=True,
+            )
+        with volume_table_tab:
+            st.dataframe(
+                volume_rows,
+                width="stretch",
+                height=_market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                hide_index=True,
+            )
 
 
 def _render_market_movers_tab() -> None:

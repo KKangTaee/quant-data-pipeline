@@ -5628,3 +5628,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 보존해야 할 것은 백테스트와 시장 데이터로 포트폴리오 판단을 돕는 본질, 데이터 수집 guardrail, 근거 흐름이다. 기존 helper 시각 패턴은 필요할 때 바꿀 수 있다
 - Follow-up:
   - Market Movers `데이터 갱신` 영역부터 반복 badge/card layout을 줄이고, 상태/모드/액션이 한 번에 읽히는 명령 영역으로 재설계하는 1차 pass를 시작했다
+
+### 2026-05-30 - Volume Rank의 기간별 거래량 정의를 명확히 한다
+- User request:
+  - 사용자가 Volume Rank가 비어 보이는 이유와 daily / weekly / monthly / yearly 거래량 표기 기준을 물었고, daily는 당일 거래량 / 거래대금, 나머지는 평균 또는 합계 기준으로 진행해 달라고 요청함
+- Interpreted goal:
+  - Volume Rank는 수익률 Top N 안의 재정렬이 아니라 선택 coverage의 returnable universe에서 별도 거래량 랭킹으로 계산해야 하며, 기간별 의미가 화면에서 드러나야 함
+- Analysis result:
+  - 현재 DB에는 daily volume이 존재한다. Daily는 latest snapshot / EOD day 기준, 비일별은 현재 return window의 average daily volume / average daily dollar volume과 total volume / total dollar volume이 가장 덜 모호하다
+- Follow-up:
+  - `volume_rows` read model을 추가하고 Volume chart / table이 이 전용 랭킹을 사용하도록 구현했다. Top2000 yearly는 여전히 약 20초로 날짜 윈도우 계산 최적화가 후속 후보로 남았다

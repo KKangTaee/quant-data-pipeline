@@ -45,7 +45,7 @@ http://localhost:8501
    - 자동 cadence는 S&P 500 5분, Top1000 15분, Top2000 30분 기준이며 Overview가 열려 있는 브라우저 세션에서만 heartbeat가 돈다.
    - `데이터 갱신` 상태 / 액션 바에서 현재 상태, 범위, 가격 모드, 커버리지 %, 다음 확인을 먼저 확인하고, 자동 실행 상세는 `자동 갱신 세부 정보`를 펼쳐 본다.
    - `Return Rank` 탭에서 symbol-level return ranking과 직전 동일 기간 return / momentum delta를 확인한다.
-   - `Volume Rank` 탭에서 raw volume ranking과 dollar volume을 함께 확인한다.
+   - `Volume Rank` 탭에서 daily는 당일 거래량 / 거래대금을, weekly / monthly / yearly는 평균 일거래량 / 평균 일거래대금과 기간 합계를 함께 확인한다.
    - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
@@ -198,6 +198,7 @@ PY
 - Market Movers `자동 갱신` follows the selected daily coverage: S&P 500 uses 5-minute `browser_safe`, Top1000 uses 15-minute selected `intraday`, and Top2000 uses 30-minute selected `intraday`.
 - Market Movers refresh results expose `Snapshot Diagnostics` with snapshot time, rows written, failed count, method, and provider diagnostics when available.
 - Market Movers displays `Return Rank`, `Volume Rank`, and `Sector Pulse` chart tabs.
+- Market Movers builds a separate `volume_rows` ranking. Daily ranks the latest stored snapshot / EOD day by dollar volume with raw volume beside it; weekly / monthly / yearly rank average daily dollar volume and expose average / total volume metrics in the Volume table.
 - Market Movers return rows include `Volume`, `Dollar Volume`, `Previous Return %`, and `Momentum Delta pp`; positive return bars use sector colors and negative bars use the danger red.
 - Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
 - Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
