@@ -617,7 +617,7 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows["Previous Marker Color"] = chart_rows["Previous Return %"].map(
         lambda value: OVERVIEW_COLOR_DANGER
         if pd.notna(value) and float(value) < 0
-        else OVERVIEW_COLOR_POSITIVE
+        else OVERVIEW_COLOR_TEXT
         if pd.notna(value) and float(value) > 0
         else OVERVIEW_COLOR_TEXT_MUTED
     )
@@ -657,10 +657,16 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
         .mark_bar(cornerRadiusEnd=3)
         .encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
     )
+    previous_marker_halo = (
+        base
+        .transform_filter("isValid(datum['Previous Return Magnitude %'])")
+        .mark_tick(thickness=5, size=20, color=OVERVIEW_COLOR_SURFACE)
+        .encode(x=alt.X("Previous Return Magnitude %:Q"))
+    )
     previous_markers = (
         base
         .transform_filter("isValid(datum['Previous Return Magnitude %'])")
-        .mark_tick(thickness=2, size=16)
+        .mark_tick(thickness=2, size=18)
         .encode(
             x=alt.X("Previous Return Magnitude %:Q"),
             color=alt.Color("Previous Marker Color:N", scale=None, legend=None),
@@ -673,7 +679,9 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             text=alt.Text("Return Label:N"),
         )
     )
-    return (bars + previous_markers + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
+    return (bars + previous_marker_halo + previous_markers + labels).properties(
+        height=_market_mover_chart_height(len(chart_rows))
+    )
 
 
 def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:

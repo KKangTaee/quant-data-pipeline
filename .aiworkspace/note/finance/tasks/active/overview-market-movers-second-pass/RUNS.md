@@ -16,3 +16,4 @@
 - 2026-05-30: `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py` passed after Healthcare color / previous marker update.
 - 2026-05-30: Focused Overview service / automation tests passed, 33 tests.
 - 2026-05-30: Browser QA on `http://localhost:8501` confirmed Healthcare filtered bars are teal and previous-return negative markers are red; screenshot saved to `/tmp/overview-healthcare-chart-color-marker-qa.png`.
+- 2026-05-30: Added previous-return marker halo / high-contrast positive marker pass; QA screenshot saved to `/tmp/overview-previous-marker-halo-qa.png`.
