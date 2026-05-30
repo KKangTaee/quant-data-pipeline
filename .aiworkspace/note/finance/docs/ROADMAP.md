@@ -7,6 +7,7 @@ Last Verified: 2026-05-30
 
 | Track | Status | Notes |
 |---|---|---|
+| Real-Money Promotion Route Absorption V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`; `Shortlist` is no longer shown as a peer validation item and is now displayed as `Promotion Suggested Route` without storage / calculation changes |
 | Backtest Analysis UX Checkpoint V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`; Runtime payload collapse, checkpoint-based Latest Backtest Run, Data Trust visual summary, Next Action handoff, and legacy 4/5-step wording cleanup |
 | Phase 14 Second-Cycle Prioritization | Active | `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`; next task is `phase14-candidate-prioritization-v1` |
 | Phase 14 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase14-board-open/`; second-cycle prioritization board opened without code / storage / trading automation changes |

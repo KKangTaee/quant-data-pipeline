@@ -397,6 +397,7 @@ Stage:
 - `Promotion`, `Deployment`, blocker 정보를 10점 척도로 요약한다.
 - 사용자가 이 결과를 Compare 또는 Practical Validation 후보로 넘겨도 되는지 먼저 판단하게 한다.
 - 이 평가는 live trading approval이나 주문 지시가 아니라 후보 검토 보조 신호다.
+- `Shortlist`는 독립 검증 단계로 보지 않고, `Promotion` 안의 `Suggested Route`로 표시한다.
 
 기준:
 
@@ -415,6 +416,7 @@ Stage:
 - `Candidate Readiness`: 10점 만점의 후보 검토 점수
 - `판정`: `후보 검토 진행 가능`, `후보 검토 가능, 개선 항목 동시 확인`, `후보 보류: blocker 먼저 해결`
 - `다음 행동`: Compare / Practical Validation으로 넘길지, blocker를 먼저 해결할지 설명
+- `Promotion Suggested Route`: `Hold`, `Watchlist`, `Paper Probation`, `Small Capital Trial` 같은 추천 경로
 - `점수 계산 기준 보기`: Promotion / Deployment / Core Blocker별 점수 근거
 
 ## Compare 흐름
@@ -490,7 +492,7 @@ Phase 28 이후 `Single Strategy`와 `Compare & Portfolio Builder`의 strategy b
 
 - strict annual은 가장 성숙한 Real-Money / Guardrail surface로 설명한다.
 - strict quarterly prototype은 Data Trust와 Portfolio Handling은 지원하지만, Real-Money promotion / Guardrail 판단은 아직 annual strict 중심으로 설명한다.
-- Equal Weight는 static ETF basket baseline이지만, Single / Compare 실행에서는 ETF Real-Money first pass를 붙여 promotion / shortlist / deployment gate를 읽는다.
+- Equal Weight는 static ETF basket baseline이지만, Single / Compare 실행에서는 ETF Real-Money first pass를 붙여 promotion / suggested route / deployment gate를 읽는다.
 - Global Relative Strength는 재무제표 selection history 대상이 아니라 price-only ETF relative strength strategy로 설명한다.
 
 ## Data Trust Summary 흐름
@@ -645,7 +647,7 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - `운영 기록 저장 및 다음 단계 판단`은 System Suggested Status를 기본값으로 보여주고, 사용자가 필요할 때만 `운영 상태 확인`과 접힌 운영 메모 / 다음 확인일을 수정하게 한다. 이 판정 박스는 입력 영역보다 위에 렌더링해, 저장 가능 여부를 먼저 읽고 아래에서 최소한의 운영 기록을 확인하는 흐름으로 보이게 한다.
 - 공통 route/readiness panel은 긴 enum route를 underscore 기준으로 줄바꿈하고, 좁은 화면에서는 verdict 영역을 아래로 내려 가로 넘침 없이 읽히게 한다.
 - Save / Open 버튼은 판단 기준과 JSON보다 먼저 보이게 하고, 상세 기준 / Pre-Live JSON / 선택 후보 raw detail은 하나의 `상세 보기` expander 안에 둔다.
-- Pre-Live 운영 상태 영역은 Candidate Review 관점에서 필요한 promotion / shortlist / deployment / suggested status만 badge strip으로 보여주고, 추천 근거, 저장 후보 식별값, 판단 기준 표는 접힘 영역에 둔다.
+- Pre-Live 운영 상태 영역은 Candidate Review 관점에서 필요한 promotion / suggested route / deployment / suggested status만 badge strip으로 보여주고, 추천 근거, 저장 후보 식별값, 판단 기준 표는 접힘 영역에 둔다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - `Save Pre-Live Record`는 live trading 승인이 아니라 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 paper / watchlist / hold 같은 운영 상태를 남기는 append-only 기록이다.
 - `Open Portfolio Proposal`은 같은 후보의 현재 선택 상태가 저장된 Pre-Live record와 맞고 route가 `PORTFOLIO_PROPOSAL_READY`일 때 활성화된다.

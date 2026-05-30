@@ -24,6 +24,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-30
+- Completed `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`.
+- Real-Money now treats the old `Shortlist` value as `Promotion Suggested Route`, not as a separate validation stage.
+- No runtime calculation, DB schema, JSONL registry, user memo / preset storage, live approval, order, or auto rebalance behavior was added.
 - Opened `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`.
 - Phase 14 is a second-cycle prioritization phase: rank Phase 13 carry-forward candidates and select the first implementation slice before code changes.
 - Completed `.aiworkspace/note/finance/tasks/active/phase14-board-open/`; next task is `phase14-candidate-prioritization-v1`.

@@ -634,13 +634,14 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Promotion Next Step`: `{meta['promotion_next_step']}`")
             if meta.get("shortlist_status"):
                 st.markdown(
-                    f"- `Shortlist Status`: `{meta['shortlist_status']}` "
+                    f"- `Promotion Suggested Route`: `{meta['shortlist_status']}` "
                     f"(`{_shortlist_status_value_to_label(meta.get('shortlist_status'))}`)"
                 )
             if meta.get("shortlist_next_step"):
-                st.markdown(f"- `Shortlist Next Step`: `{meta['shortlist_next_step']}`")
+                route_next_step = str(meta.get("shortlist_next_step") or "").replace("shortlist", "promotion_route")
+                st.markdown(f"- `Promotion Route Next Step`: `{route_next_step}`")
             if meta.get("shortlist_family"):
-                st.markdown(f"- `Shortlist Family`: `{meta['shortlist_family']}`")
+                st.markdown(f"- `Promotion Route Family`: `{meta['shortlist_family']}`")
             if meta.get("probation_status"):
                 st.markdown(
                     f"- `Probation Status`: `{meta['probation_status']}` "
@@ -1230,6 +1231,46 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
     def _render_real_money_cards(cards: list[dict[str, Any]]) -> None:
         render_status_card_grid(cards)
 
+    def _suggested_route_label() -> str:
+        return _shortlist_status_value_to_label(meta.get("shortlist_status"))
+
+    def _promotion_detail() -> str:
+        route = _suggested_route_label()
+        next_step = str(meta.get("promotion_next_step") or "")
+        if route and route != "-":
+            return f"Suggested route: {route}"
+        return next_step
+
+    def _display_route_step(value: Any) -> str:
+        return str(value or "-").replace("shortlist", "promotion_route")
+
+    def _display_rationale_items(values: list[Any]) -> list[str]:
+        return [
+            str(value).replace("shortlist_", "promotion_route_")
+            for value in values
+        ]
+
+    def _render_suggested_route_guidance(shortlist_status: str) -> None:
+        if shortlist_status == "small_capital_trial":
+            st.success(
+                "Promotion 결과가 강하고 계약 조건도 충분해 소액 trial까지 검토 가능한 추천 경로입니다. "
+                "다만 실제 선택은 Practical Validation과 Final Review를 통과해야 합니다."
+            )
+        elif shortlist_status == "paper_probation":
+            st.info(
+                "Promotion 결과는 후보 검토가 가능하지만, 실제 투입 전 paper probation으로 먼저 관찰하는 추천 경로입니다."
+            )
+        elif shortlist_status == "watchlist":
+            st.info(
+                "Promotion 결과는 후보로 볼 여지가 있지만, 추가 robustness / monitoring review를 거친 뒤 "
+                "paper probation으로 올리는 추천 경로입니다."
+            )
+        elif shortlist_status == "hold":
+            st.warning(
+                "Promotion 결과상 다음 검증으로 밀어붙이기보다 Hold / Review에 두는 추천 경로입니다. "
+                "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
+            )
+
     st.info(
         "이 탭은 실전형 해석을 한 번에 보기 위한 화면입니다. "
         "먼저 `현재 판단`에서 지금 상태를 보고, "
@@ -1243,14 +1284,8 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             {
                 "title": "Promotion",
                 "value": str(meta.get("promotion_decision") or "-").upper(),
-                "detail": meta.get("promotion_next_step") or "",
+                "detail": _promotion_detail(),
                 "tone": _status_tone(meta.get("promotion_decision")),
-            },
-            {
-                "title": "Shortlist",
-                "value": _shortlist_status_value_to_label(meta.get("shortlist_status")),
-                "detail": meta.get("shortlist_next_step") or "",
-                "tone": _status_tone(meta.get("shortlist_status")),
             },
             {
                 "title": "Probation",
@@ -1291,9 +1326,15 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         _render_next_step_readiness_box(meta)
 
         if meta.get("promotion_decision"):
-            with _section_header("전략 승격 판단", "이 전략이 현재 계약 기준에서 어느 정도까지 올라왔는지 보여줍니다."):
+            with _section_header(
+                "전략 승격 판단",
+                "Promotion은 이 결과를 다음 후보 검토 흐름으로 넘길 수 있는지 판단하고, 추천 경로를 함께 보여줍니다.",
+            ):
                 decision = str(meta.get("promotion_decision") or "-")
                 next_step = str(meta.get("promotion_next_step") or "-")
+                shortlist_status = str(meta.get("shortlist_status") or "")
+                shortlist_label = _shortlist_status_value_to_label(shortlist_status)
+                shortlist_next_step = _display_route_step(meta.get("shortlist_next_step"))
                 _render_real_money_cards(
                     [
                         {
@@ -1303,16 +1344,35 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             "tone": _status_tone(decision),
                         },
                         {
-                            "title": "Next Step",
+                            "title": "Suggested Route",
+                            "value": shortlist_label,
+                            "detail": "Promotion 결과에서 파생된 추천 경로",
+                            "tone": _status_tone(shortlist_status),
+                        },
+                        {
+                            "title": "Promotion Next Step",
                             "value": next_step,
-                            "detail": "이 판정에서 이어지는 처리",
+                            "detail": "승격 판정에서 이어지는 처리",
                             "tone": _status_tone(decision),
+                        },
+                        {
+                            "title": "Route Next Step",
+                            "value": shortlist_next_step,
+                            "detail": "추천 경로의 다음 행동",
+                            "tone": _status_tone(shortlist_status),
                         },
                     ]
                 )
                 rationale = list(meta.get("promotion_rationale") or [])
                 if rationale:
-                    st.caption("왜 이렇게 판단했는지: " + ", ".join(f"`{item}`" for item in rationale))
+                    st.caption("Promotion 판단 근거: " + ", ".join(f"`{item}`" for item in rationale))
+                shortlist_rationale = list(meta.get("shortlist_rationale") or [])
+                if shortlist_rationale:
+                    st.caption(
+                        "추천 경로 근거: "
+                        + ", ".join(f"`{item}`" for item in _display_rationale_items(shortlist_rationale))
+                    )
+                _render_suggested_route_guidance(shortlist_status)
                 if decision == "real_money_candidate":
                     st.success(
                         "현재 계약 기준에서는 실전형 후보로 읽을 수 있는 상태입니다. "
@@ -1350,57 +1410,6 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             "먼저 `검토 근거`에서 막히는 항목을 확인하고, "
                             "필요하면 `실행 부담`에서 유동성 / 비용 / ETF 운용 가능성까지 같이 점검하면 가장 빠릅니다."
                         )
-
-        if meta.get("shortlist_status"):
-            with _section_header("후보 전략 숏리스트", "실전 후보 목록 안에서 현재 어느 단계인지 보여줍니다."):
-                shortlist_status = str(meta.get("shortlist_status") or "-")
-                shortlist_next_step = str(meta.get("shortlist_next_step") or "-")
-                shortlist_family = str(meta.get("shortlist_family") or meta.get("strategy_family") or "-")
-                _render_real_money_cards(
-                    [
-                        {
-                            "title": "Family",
-                            "value": shortlist_family,
-                            "detail": "후보가 속한 전략군",
-                            "tone": "neutral",
-                        },
-                        {
-                            "title": "Status",
-                            "value": _shortlist_status_value_to_label(shortlist_status),
-                            "detail": "숏리스트 단계",
-                            "tone": _status_tone(shortlist_status),
-                        },
-                        {
-                            "title": "Next Step",
-                            "value": shortlist_next_step,
-                            "detail": "다음 검토 행동",
-                            "tone": _status_tone(shortlist_status),
-                        },
-                    ]
-                )
-                shortlist_rationale = list(meta.get("shortlist_rationale") or [])
-                if shortlist_rationale:
-                    st.caption("숏리스트 판단 근거: " + ", ".join(f"`{item}`" for item in shortlist_rationale))
-                if shortlist_status == "small_capital_trial":
-                    st.success(
-                        "현재 계약 기준에서는 소액 실전 trial까지 검토할 수 있는 shortlist 상태입니다. "
-                        "다만 월별 review 기록은 계속 남기는 편이 맞습니다."
-                    )
-                elif shortlist_status == "paper_probation":
-                    st.info(
-                        "현재 run은 paper probation으로 먼저 관찰하는 편이 가장 자연스럽습니다. "
-                        "다음 review를 통과하면 소액 trial을 검토할 수 있습니다."
-                    )
-                elif shortlist_status == "watchlist":
-                    st.info(
-                        "지금은 shortlist watchlist로 두고, 추가 robustness / monitoring review를 거친 뒤 "
-                        "paper probation으로 올리는 편이 맞습니다."
-                    )
-                elif shortlist_status == "hold":
-                    st.warning(
-                        "현재 run은 shortlist 단계로 올리기보다 hold로 두는 편이 맞습니다. "
-                        "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
-                    )
 
         if meta.get("probation_status") or meta.get("monitoring_status"):
             with _section_header(
@@ -1450,7 +1459,10 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     st.caption(f"다음 probation 액션: `{meta.get('probation_next_step')}`")
                 probation_rationale = list(meta.get("probation_rationale") or [])
                 if probation_rationale:
-                    st.caption("Probation 판단 근거: " + ", ".join(f"`{item}`" for item in probation_rationale))
+                    st.caption(
+                        "Probation 판단 근거: "
+                        + ", ".join(f"`{item}`" for item in _display_rationale_items(probation_rationale))
+                    )
                 monitoring_focus = list(meta.get("monitoring_focus") or [])
                 if monitoring_focus:
                     st.caption("지켜볼 항목: " + ", ".join(f"`{item}`" for item in monitoring_focus))
@@ -1524,8 +1536,17 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
                 checklist_rows = list(meta.get("deployment_checklist_rows") or [])
                 if checklist_rows:
+                    display_checklist_rows: list[dict[str, Any]] = []
+                    for row in checklist_rows:
+                        if isinstance(row, dict):
+                            display_row = dict(row)
+                            if str(display_row.get("Check") or "").strip().lower() == "shortlist":
+                                display_row["Check"] = "Promotion Route"
+                            display_checklist_rows.append(display_row)
+                        else:
+                            display_checklist_rows.append({"Check": "Unknown", "Status": "-", "Detail": str(row)})
                     with st.expander("Checklist 상세 보기", expanded=deployment_status in {"review_required", "blocked"}):
-                        st.dataframe(pd.DataFrame(checklist_rows), use_container_width=True, hide_index=True)
+                        st.dataframe(pd.DataFrame(display_checklist_rows), use_container_width=True, hide_index=True)
 
                 if deployment_status == "small_capital_ready":
                     st.success("현재 checklist 기준에서는 small-capital trial까지 비교적 자연스럽게 볼 수 있는 상태입니다.")
