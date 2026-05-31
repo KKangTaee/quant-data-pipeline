@@ -10,3 +10,4 @@
 - Gate policy, selected-route logic, Practical Validation evidence reuse, JSONL persistence, and Selected Dashboard handoff read models were not changed.
 - Durable docs were aligned in Project Map, Script Structure Map, Backtest UI Flow, and Portfolio Selection Flow.
 - Verification passed: py_compile, full service contract suite, `git diff --check`, and Browser QA screenshot.
+- Review follow-up fixed candidate-specific widget state leakage in Final Review: `Source` and `Decision ID` now use source-scoped Streamlit keys, and the post-save Decision ID reset targets the saved source slug.

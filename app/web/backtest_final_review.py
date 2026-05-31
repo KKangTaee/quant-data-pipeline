@@ -1316,9 +1316,13 @@ def render_final_review_workspace() -> None:
             for row in final_decision_rows
             if str(row.get("decision_id") or "").strip()
         }
-        if st.session_state.pop("final_review_reset_decision_id_after_save", False):
-            st.session_state.pop("final_review_decision_id", None)
         source_slug = _paper_ledger_slug(source.get("source_id"))
+        source_display_key = f"final_review_source_display_v1_{source_slug}"
+        decision_id_key = f"final_review_decision_id_v1_{source_slug}"
+        if st.session_state.pop("final_review_reset_decision_id_after_save", False):
+            reset_source_slug = str(st.session_state.pop("final_review_reset_decision_id_source_slug", "") or source_slug)
+            st.session_state.pop(f"final_review_decision_id_v1_{reset_source_slug}", None)
+            st.session_state.pop("final_review_decision_id", None)
         default_decision_id = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
         gate_policy_snapshot = dict(investability_packet.get("gate_policy_snapshot") or {})
         suggested_route = str(
@@ -1343,7 +1347,7 @@ def render_final_review_workspace() -> None:
                 help="이 값이 Final Review의 최종 판단으로 저장됩니다.",
             )
         with input_cols[1]:
-            st.text_input("Source", value=str(source.get("source_id") or "-"), disabled=True, key="final_review_source_display")
+            st.text_input("Source", value=str(source.get("source_id") or "-"), disabled=True, key=source_display_key)
         st.caption(FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(str(decision_route), "-"))
         decision_record_guide = build_final_review_decision_record_guide(
             decision_route=str(decision_route),
@@ -1403,7 +1407,7 @@ def render_final_review_workspace() -> None:
             placeholder=str(route_templates.get("reason") or ""),
         )
         with st.expander("고급: 저장 ID / 운영 전 조건 / 다음 행동 확인", expanded=False):
-            decision_id = st.text_input("Decision ID", value=default_decision_id, key="final_review_decision_id")
+            decision_id = st.text_input("Decision ID", value=default_decision_id, key=decision_id_key)
             operator_constraints = st.text_area(
                 "운영 전 조건",
                 key=operator_constraints_key,
@@ -1462,6 +1466,7 @@ def render_final_review_workspace() -> None:
                     "이 기록은 live approval이나 주문 지시가 아닙니다."
                 )
                 st.session_state["final_review_reset_decision_id_after_save"] = True
+                st.session_state["final_review_reset_decision_id_source_slug"] = source_slug
                 st.rerun()
         with action_cols[1]:
             st.button(
