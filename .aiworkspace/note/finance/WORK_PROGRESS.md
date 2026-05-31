@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Decision Cockpit V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
+  - Final Review Evidence Appendix V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,8 +32,11 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-evidence-appendix-v1/`.
+- Final Review now reads as Candidate Board -> Decision Cockpit -> Final Decision Record -> Evidence Appendix, so detailed Practical Validation / Robustness / Paper Observation / Investability Packet evidence is a read-only appendix rather than the main action.
+- No validation scoring, selected-route policy, DB schema, provider fetch, JSONL registry schema, live approval, order, account sync, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-decision-cockpit-v1/`.
-- Final Review now shows Gate-passed Practical Validation candidates in a Candidate Board and surfaces selected-route state, suggested decision, Must Fix / Must Review rows, and monitoring seed in a Decision Cockpit before detailed evidence tables.
+- Final Review now shows Gate-passed Practical Validation candidates in a Candidate Board and surfaces selected-route state, suggested decision, Must Fix / Must Review rows, and monitoring seed in a Decision Cockpit before the final decision record.
 - No DB schema, provider fetch, new registry, monitoring log auto-write, waiver persistence, live approval, order, account sync, or auto rebalance behavior was added.
 - Fixed Practical Validation Save & Move JSONL persistence failure caused by DB `Decimal` scalar values in compact data coverage evidence.
 - Clean V2 selection registry append now normalizes DB / pandas scalar payloads before JSONL write; no gate policy or validation scoring change.

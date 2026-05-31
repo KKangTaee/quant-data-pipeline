@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Decision Cockpit V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
+  - Final Review Evidence Appendix V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Final Review should not feel like duplicate validation
+- User request:
+  - Decision Cockpit의 선정 / 차단 / 보류가 이전 단계 검증을 재검증하는 중복 흐름이 아닌지 우려함.
+- Interpreted goal:
+  - Final Review를 새 검증 실행 화면이 아니라, Practical Validation 결과를 최종 판단으로 번역하고 기록하는 화면으로 더 명확히 만든다.
+- Analysis result:
+  - 판정 로직은 기존 Practical Validation / investability packet / selected-route gate evidence를 읽는 해석 layer이며 새 검증을 실행하지 않는다.
+  - 중복처럼 보인 원인은 상세 validation evidence table이 최종 판단 전에 길게 노출된 화면 위계였다.
+  - 구현 결과 최종 판단 기록을 Decision Cockpit 바로 아래로 올리고, 상세 evidence는 read-only `Evidence Appendix`로 낮췄다.
+- Follow-up:
+  - Structured waiver, candidate prioritization, dossier/report polish는 별도 task로 다룬다.
 
 ### 2026-05-31 - Final Review should act as a decision cockpit
 - User request:

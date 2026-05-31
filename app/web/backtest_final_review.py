@@ -703,6 +703,60 @@ def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
             st.dataframe(pd.DataFrame(cockpit.get("watch_rows") or []), width="stretch", hide_index=True)
 
 
+def _render_evidence_appendix(
+    *,
+    validation: dict[str, Any],
+    paper_observation: dict[str, Any],
+    investability_packet: dict[str, Any],
+) -> None:
+    render_stage_brief(
+        purpose="이전 단계에서 이미 저장된 validation evidence를 필요할 때만 확인하는 부록입니다.",
+        result="Read-only evidence appendix",
+    )
+    st.caption(
+        "Evidence Appendix는 Practical Validation을 다시 실행하지 않습니다. "
+        "현재 선택 후보의 저장된 validation result와 Final Review read model을 그대로 읽습니다."
+    )
+    appendix_tabs = st.tabs(
+        [
+            "Guide",
+            "Practical Validation",
+            "Robustness / Stress",
+            "Paper Observation",
+            "Investability Packet",
+        ]
+    )
+    with appendix_tabs[0]:
+        st.info(
+            "최종 판단에 필요한 요약은 위 Decision Cockpit과 Final Decision Record에 있습니다. "
+            "이 부록은 왜 그런 판단이 나왔는지 원본 근거를 추적할 때 확인합니다."
+        )
+        render_badge_strip(
+            [
+                {"label": "Validation Re-run", "value": "Disabled", "tone": "neutral"},
+                {"label": "Provider Fetch", "value": "Disabled", "tone": "neutral"},
+                {"label": "Registry Write", "value": "Disabled", "tone": "neutral"},
+                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+    with appendix_tabs[1]:
+        _render_validation_summary(validation)
+    with appendix_tabs[2]:
+        _render_robustness_summary(validation)
+    with appendix_tabs[3]:
+        render_stage_brief(
+            purpose="별도 Paper Ledger를 또 저장하지 않고, 최종 검토 기록 안에 관찰 기준을 함께 남깁니다.",
+            result="Inline paper observation criteria",
+        )
+        _render_paper_observation_summary(paper_observation)
+    with appendix_tabs[4]:
+        render_stage_brief(
+            purpose="새 저장 기능을 늘리지 않고, 기존 검증 결과를 최종 판단용 compact packet으로 읽습니다.",
+            result="Decision support packet",
+        )
+        _render_investability_packet(investability_packet)
+
+
 def _render_decision_dossier_export(row: dict[str, Any], *, key_prefix: str) -> None:
     dossier = build_decision_dossier(row)
     decision = dict(dossier.get("decision") or {})
@@ -800,8 +854,8 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
 def render_final_review_workspace() -> None:
     st.markdown("### Final Review")
     st.caption(
-        "최종 실전 후보로 선정할지 판단하는 공간입니다. Proposal 작성과 분리해서 Validation, Robustness, "
-        "Paper Observation 기준, 최종 판단을 한 화면에서 확인합니다. 검토 대상은 Practical Validation Gate를 통과한 후보만 표시합니다."
+        "최종 실전 후보로 선정할지 판단하는 공간입니다. Candidate Board와 Decision Cockpit으로 판단 상태를 먼저 보고, "
+        "최종 판단을 기록한 뒤 필요한 경우에만 이전 validation evidence 부록을 확인합니다. 검토 대상은 Practical Validation Gate를 통과한 후보만 표시합니다."
     )
 
     current_rows = load_current_candidate_registry_latest()
@@ -853,9 +907,9 @@ def render_final_review_workspace() -> None:
         render_artifact_pipeline(
             [
                 {"title": "검토 대상", "detail": "Practical Validation Gate 통과 후보", "status": "선택", "tone": "neutral"},
-                {"title": "검증 근거", "detail": "Validation / Robustness / Stress", "status": "자동 계산", "tone": "neutral"},
-                {"title": "관찰 기준", "detail": "별도 ledger 저장 없이 최종 기록에 포함", "status": "Inline", "tone": "positive"},
+                {"title": "판정 요약", "detail": "Decision Cockpit", "status": "자동 계산", "tone": "neutral"},
                 {"title": "최종 판단", "detail": "선정 / 보류 / 거절 / 재검토", "status": "명시 기록", "tone": "warning"},
+                {"title": "근거 부록", "detail": "이전 검증 결과 read-only 확인", "status": "Appendix", "tone": "neutral"},
             ]
         )
 
@@ -913,32 +967,12 @@ def render_final_review_workspace() -> None:
         )
         _render_decision_cockpit(cockpit)
 
-    st.markdown("#### 3. 검증 근거 확인")
-    with st.container(border=True):
-        _render_validation_summary(validation)
-
-    st.markdown("#### 4. Robustness / Stress 질문 확인")
-    with st.container(border=True):
-        _render_robustness_summary(validation)
-
-    st.markdown("#### 5. Paper Observation 기준 확인")
+    st.markdown("#### 3. 최종 판단 기록")
     with st.container(border=True):
         render_stage_brief(
-            purpose="별도 Paper Ledger를 또 저장하지 않고, 최종 검토 기록 안에 관찰 기준을 함께 남깁니다.",
-            result="Inline paper observation criteria",
+            purpose="Decision Cockpit을 보고 오늘의 최종 select / hold / reject / re-review 판단을 한 번만 명시적으로 기록합니다.",
+            result="Final decision record",
         )
-        _render_paper_observation_summary(paper_observation)
-
-    st.markdown("#### 6. Investability Evidence Packet")
-    with st.container(border=True):
-        render_stage_brief(
-            purpose="새 저장 기능을 늘리지 않고, 기존 검증 결과를 최종 판단용 compact packet으로 읽습니다.",
-            result="Decision support packet",
-        )
-        _render_investability_packet(investability_packet)
-
-    st.markdown("#### 7. 최종 판단 기록")
-    with st.container(border=True):
         render_readiness_route_panel(
             route_label=str(evidence.get("route") or "-"),
             score=float(evidence.get("score") or 0.0),
@@ -948,10 +982,12 @@ def render_final_review_workspace() -> None:
             route_title="Final Review Route",
             score_title="Evidence Score",
         )
+        st.caption("상세 validation table은 아래 Evidence Appendix에서 확인합니다. 이 구간은 최종 판단 기록이 주 action입니다.")
         if evidence.get("blockers"):
             for blocker in list(evidence.get("blockers") or []):
                 st.warning(str(blocker))
-        st.dataframe(pd.DataFrame(evidence.get("checks") or []), width="stretch", hide_index=True)
+        with st.expander("Final route check detail", expanded=False):
+            st.dataframe(pd.DataFrame(evidence.get("checks") or []), width="stretch", hide_index=True)
 
         existing_decision_ids = {
             str(row.get("decision_id") or "").strip()
@@ -1055,6 +1091,14 @@ def render_final_review_workspace() -> None:
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
-    st.markdown("#### 8. 기록된 최종 검토 결과 확인")
+    st.markdown("#### 4. Evidence Appendix / 이전 검증 결과 부록")
+    with st.container(border=True):
+        _render_evidence_appendix(
+            validation=validation,
+            paper_observation=paper_observation,
+            investability_packet=investability_packet,
+        )
+
+    st.markdown("#### 5. 기록된 최종 검토 결과 확인")
     with st.container(border=True):
         _render_saved_final_review_decisions(final_decision_rows)

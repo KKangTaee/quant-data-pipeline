@@ -566,7 +566,7 @@ Final Review record 안에 paper observation 기준을 함께 남긴다.
 - Phase 32의 `Phase 33 Handoff`가 `READY_FOR_PAPER_LEDGER_PREP`이면,
   paper observation 또는 legacy paper ledger row를 만들 준비가 된 후보로 볼 수 있다.
 - Phase 33에서는 `.aiworkspace/note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`에 append-only row를 저장하는 ledger 계약을 만들었다.
-- 현재 main UI에서는 `Backtest > Final Review`의 `Paper Observation 기준 확인`에서 benchmark, cadence, trigger를 확인하고 final review record 안에 남긴다.
+- 현재 main UI에서는 `Backtest > Final Review`의 최종 판단 기록과 `Evidence Appendix`에서 benchmark, cadence, trigger를 확인하고 final review record 안에 남긴다.
 - 저장 row에는 source id, target weights, tracking start date, benchmark, review cadence, review trigger, Phase32 handoff snapshot, baseline snapshot, Phase34 handoff가 남는다.
 - 이 ledger는 live approval이나 주문 지시가 아니며, 실제 투자 전 관찰 기록이다.
 
