@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete with selection-only official save; the next work should be user review feedback, mobile polish if needed, or Phase 14 prioritization.
+  - Final Review Commercial UX V1 is implementation complete with selection-only official save. Fresh non-GTAA search found no current-gate selected V2 row; legacy V1 has a non-GTAA Quality selected row that can be used only as an explicit migration seed.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Opened `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`.
+- Non-GTAA dry-runs found several Practical Validation / Final Review evidence-ready candidates, but no fresh candidate passed the current selected-route gate for V2 `SELECT_FOR_PRACTICAL_PORTFOLIO` save.
+- Existing legacy V1 Final Review registry contains one non-GTAA Quality selected row; a read-only handoff dry-run maps it to one dashboard row, but the current V2 dashboard source remains empty until an explicit migration seed is approved.
 - Adjusted Final Review official save policy after user feedback: new durable Final Decision V2 rows are created only for `SELECT_FOR_PRACTICAL_PORTFOLIO` when selected-route gate passes.
 - Hold / reject / re-review now remain status guidance and compatibility read paths, not new official save actions; Selected Dashboard continues to read selected rows only.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-commercial-ux-v1/`.

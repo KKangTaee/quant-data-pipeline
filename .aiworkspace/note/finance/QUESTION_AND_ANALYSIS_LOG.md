@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete with selection-only official save; remaining near-term work should be chosen after user review feedback or through Phase 14 prioritization.
+  - Final Review Commercial UX V1 is implementation complete with selection-only official save. Fresh non-GTAA search found no current-gate selected V2 row; legacy V1 has a non-GTAA Quality selected row that can be used only as an explicit migration seed.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Non-GTAA search did not produce a fresh selected-route pass
+- User request:
+  - GTAA가 아닌 전략으로도 최종 포트폴리오 후보를 찾아 달라고 요청했고, 다음 개편에는 3단계까지 통과한 최종 포트폴리오가 필요하다고 설명함.
+- Interpreted goal:
+  - 현재 selection-only save 정책을 유지하면서 비-GTAA 후보가 Practical Validation과 Final Review selected-route gate를 통과해 V2 selected row와 Selected Dashboard 노출까지 가능한지 확인한다.
+- Analysis result:
+  - Equal Weight, Risk Parity Trend, Dual Momentum, Global Relative Strength, 성장 / 섹터 / 금, SPY / SOXX / IEF / TLT lifecycle mix를 dry-run했지만 fresh current-gate 통과 후보는 없었다.
+  - 가장 가까운 후보들은 Practical Validation `READY_FOR_FINAL_REVIEW`와 Final Review evidence `READY_FOR_FINAL_DECISION`까지 갔으나 Backtest Realism, Component Role / Weight, Risk Contribution, Provider / Data / Validation review-required group에서 selected-route가 막혔다.
+  - legacy V1 registry에는 비-GTAA Quality selected row가 있으며, read-only Dashboard handoff dry-run은 `HANDOFF_READY` / dashboard row 1개를 반환한다.
+- Follow-up:
+  - 사용자가 seed가 필요하다고 승인하면 legacy Quality row를 V2 migration seed로 append할 수 있다. 이는 fresh current-gate 재통과가 아니라 명시적 legacy migration으로 라벨링해야 한다.
 
 ### 2026-05-31 - Final Review official save should be selection-only
 - User request:
