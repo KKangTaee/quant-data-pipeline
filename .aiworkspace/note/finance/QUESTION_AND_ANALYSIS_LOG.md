@@ -6879,3 +6879,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 Practical Validation row, saved portfolio 2개, legacy Final Review option 13개를 dry-run 평가했지만 `select_allowed=True` 후보가 없었다. 가장 가까운 후보는 `EW Growth/Commodity 30 + GTAA Clean-6 70`이나 Backtest Realism과 Component Role / Weight hard blocker가 남았다
 - Follow-up:
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 append하지 않았고 Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인했다. 후보 보강은 evidence mapping / realism / provider / risk contribution 쪽에서 진행해야 한다
+
+### 2026-05-31 - Practical Validation에서 후보 전략과 월별 선택 종목을 보여준다
+- User request:
+  - 사용자가 Practical Validation의 `검증할 후보 source` 선택 후 Step 1에서 어떤 전략 / mix 구성인지와 각 달 선택 종목이 보이지 않는다고 지적하고, 먼저 분석 방향을 확인한 뒤 개발 진행을 승인함
+- Interpreted goal:
+  - Backtest Analysis가 넘긴 단일 / mix 후보의 구성, component strategy, target weight, 월별 selection / holdings evidence를 Practical Validation Step 1에서 바로 읽을 수 있어야 함
+- Analysis result:
+  - 기존 source snapshot은 compact curve 중심이라 `Date`, `Total Balance`, `Total Return`만 보존했고, result frame의 `Next Ticker`, `Next Weight` 등 selection evidence가 Practical Validation handoff에서 사라졌다. 기존 registry row는 재작성하지 않고 fallback이 필요하다
+- Follow-up:
+  - source builder에 compact selection history helper를 추가하고 candidate / weighted mix / saved mix handoff와 runtime replay에 연결했다. Practical Validation Step 1은 strategy / construction brief, component strategy table, performance table, monthly selection / holdings table을 표시한다

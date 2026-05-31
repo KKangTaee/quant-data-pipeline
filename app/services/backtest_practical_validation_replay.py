@@ -8,6 +8,7 @@ from uuid import uuid4
 import pandas as pd
 
 from app.services.backtest_practical_validation_curve import curve_records_from_df, optional_float
+from app.services.backtest_practical_validation_source import compact_selection_history_from_result_df
 from app.runtime.backtest import (
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
@@ -693,6 +694,11 @@ def run_practical_validation_actual_replay(
                         }
                     },
                     "result_curve": curve_records_from_df(result_df),
+                    "selection_history": compact_selection_history_from_result_df(
+                        result_df,
+                        component_title=title,
+                        component_weight=optional_float(component.get("target_weight")) or 0.0,
+                    ),
                     "_result_df": result_df,
                 }
             )

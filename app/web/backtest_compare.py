@@ -15,6 +15,7 @@ from app.services.backtest_practical_validation_curve_context import (
 from app.services.backtest_practical_validation_source import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
+    compact_selection_history_from_bundle,
 )
 from app.workspace_paths import REGISTRIES_DIR
 from app.web.backtest_history import (
@@ -1473,6 +1474,7 @@ def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[st
                 "mdd": summary.get("mdd"),
                 "period": _bundle_result_period(bundle),
                 "result_curve": compact_curve_snapshot_from_bundle(bundle),
+                "selection_history": compact_selection_history_from_bundle(bundle, component_weight=weight),
                 "contract": contract,
                 "benchmark": meta.get("benchmark_ticker") or contract.get("benchmark_ticker") or "-",
                 "universe": ",".join(str(ticker) for ticker in list(contract.get("tickers") or [])) or str(contract.get("preset_name") or "-"),
@@ -1497,6 +1499,7 @@ def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[st
         "weighted_summary": _bundle_summary_snapshot(weighted_bundle),
         "weighted_period": _bundle_result_period(weighted_bundle),
         "weighted_curve_snapshot": compact_curve_snapshot_from_bundle(weighted_bundle),
+        "selection_history_snapshot": compact_selection_history_from_bundle(weighted_bundle),
         "components": components,
     }
 
@@ -1560,6 +1563,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
                 "mdd": summary.get("mdd"),
                 "period": _bundle_result_period(bundle),
                 "result_curve": compact_curve_snapshot_from_bundle(bundle),
+                "selection_history": compact_selection_history_from_bundle(bundle, component_weight=weight),
                 "contract": contract,
                 "benchmark": meta_row.get("benchmark_ticker") or contract.get("benchmark_ticker") or "-",
                 "universe": ",".join(str(ticker) for ticker in list(contract.get("tickers") or [])) or str(contract.get("preset_name") or "-"),
@@ -1587,6 +1591,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
         "weighted_summary": _bundle_summary_snapshot(weighted_bundle),
         "weighted_period": _bundle_result_period(weighted_bundle),
         "weighted_curve_snapshot": compact_curve_snapshot_from_bundle(weighted_bundle),
+        "selection_history_snapshot": compact_selection_history_from_bundle(weighted_bundle),
         "data_trust_status": "weighted_mix_snapshot",
         "components": components,
     }

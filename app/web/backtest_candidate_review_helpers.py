@@ -13,7 +13,10 @@ from app.services.backtest_practical_validation_curve_context import (
     compact_benchmark_curve_snapshot_from_bundle,
     compact_curve_snapshot_from_bundle,
 )
-from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
+from app.services.backtest_practical_validation_source import (
+    build_selection_source_from_candidate_draft,
+    compact_selection_history_from_bundle,
+)
 from app.web.backtest_strategy_catalog import strategy_key_to_display_name as catalog_strategy_key_to_display_name
 from app.runtime import CURRENT_CANDIDATE_REGISTRY_FILE
 from app.runtime.backtest import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
@@ -924,6 +927,7 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
         },
         "result_curve_snapshot": compact_curve_snapshot_from_bundle(bundle),
         "benchmark_curve_snapshot": compact_benchmark_curve_snapshot_from_bundle(bundle),
+        "selection_history_snapshot": compact_selection_history_from_bundle(bundle),
         "real_money_signal": {
             "promotion": promotion,
             "shortlist": shortlist,

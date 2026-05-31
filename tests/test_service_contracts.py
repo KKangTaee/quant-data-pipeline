@@ -258,6 +258,95 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         )
         self.assertEqual(source["construction"]["rebalance_cadence"], 1)
 
+    def test_compact_selection_history_extracts_monthly_holdings(self) -> None:
+        from app.services.backtest_practical_validation_source import compact_selection_history_from_result_df
+
+        result_df = pd.DataFrame(
+            [
+                {
+                    "Date": "2020-01-31",
+                    "Rebalancing": True,
+                    "Next Ticker": ["SPY", "TLT"],
+                    "Next Balance": [600.0, 400.0],
+                    "Raw Selected Ticker": ["SPY", "TLT", "GLD"],
+                    "Overlay Rejected Ticker": ["GLD"],
+                    "Cash": 0.0,
+                    "Total Balance": 1000.0,
+                    "Total Return": 0.0,
+                },
+                {
+                    "Date": "2020-02-29",
+                    "Rebalancing": False,
+                    "Next Ticker": ["SPY", "TLT"],
+                    "Next Balance": [610.0, 410.0],
+                    "Cash": 0.0,
+                    "Total Balance": 1020.0,
+                    "Total Return": 0.02,
+                },
+            ]
+        )
+
+        rows = compact_selection_history_from_result_df(result_df, component_title="GTAA", component_weight=100.0)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["date"], "2020-01-31")
+        self.assertEqual(rows[0]["component"], "GTAA")
+        self.assertEqual(rows[0]["selected_tickers"], ["SPY", "TLT"])
+        self.assertEqual(rows[0]["target_weights"], [0.6, 0.4])
+        self.assertEqual(rows[0]["raw_selected_tickers"], ["SPY", "TLT", "GLD"])
+        self.assertEqual(rows[0]["overlay_rejected_tickers"], ["GLD"])
+        self.assertIn("Selected SPY 60.0%, TLT 40.0%", rows[0]["interpretation"])
+
+    def test_selection_source_preserves_selection_history_snapshot(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
+
+        selection_history = [
+            {
+                "date": "2020-01-31",
+                "component": "Quality Snapshot",
+                "selected_tickers": ["AAPL", "MSFT"],
+                "target_weights": [0.5, 0.5],
+            }
+        ]
+
+        source = build_selection_source_from_candidate_draft(
+            {
+                "source_kind": "latest_backtest_run",
+                "strategy_key": "quality_snapshot_strict_annual",
+                "strategy_name": "Quality Snapshot (Strict Annual)",
+                "result_snapshot": {"start_date": "2020-01-31", "end_date": "2020-12-31"},
+                "settings_snapshot": {"tickers": ["AAPL", "MSFT"], "rebalance_interval": 1},
+                "selection_history_snapshot": selection_history,
+            }
+        )
+
+        self.assertEqual(source["selection_history"], selection_history)
+        self.assertEqual(source["components"][0]["selection_history"], selection_history)
+
+    def test_saved_mix_source_preserves_component_selection_history(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_saved_mix_prefill
+
+        source = build_selection_source_from_saved_mix_prefill(
+            {
+                "source_kind": "weighted_portfolio_mix",
+                "weighted_portfolio_id": "mix-1",
+                "weighted_portfolio_name": "Two Sleeve Mix",
+                "weighted_summary": {"cagr": 0.1, "mdd": -0.2},
+                "weighted_period": {"start": "2020-01-31", "end": "2020-12-31"},
+                "components": [
+                    {
+                        "registry_id": "component-1",
+                        "strategy_name": "Quality Snapshot (Strict Annual)",
+                        "target_weight": 60.0,
+                        "selection_history": [{"date": "2020-01-31", "selected_tickers": ["AAPL"]}],
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(source["construction"]["target_weight_total"], 60.0)
+        self.assertEqual(source["components"][0]["selection_history"][0]["selected_tickers"], ["AAPL"])
+
     def test_validation_source_traits_classify_single_etf_tactical_candidate(self) -> None:
         from app.services.backtest_practical_validation_modules import infer_validation_source_traits
 

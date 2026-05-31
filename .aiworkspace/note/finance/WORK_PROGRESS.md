@@ -4496,3 +4496,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Practical Validation 통과 또는 Final Review evidence-ready 후보는 있었지만, Final Review selected-route investability gate `select_allowed=True`를 만족한 후보는 없었다.
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에는 아무 row도 append하지 않았고, Selected Portfolio Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인됐다.
   - 다음 보강 1순위는 `EW Growth/Commodity 30 + GTAA Clean-6 70`의 backtest realism, component role / weight rationale propagation, provider/look-through, risk contribution, stress/validation efficacy evidence다.
+- Practical Validation Source Context V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-source-context-v1/`에서 Step 1 source snapshot에 strategy / construction brief와 component strategy table을 추가했다.
+  - 신규 candidate / weighted mix / saved mix handoff는 compact monthly selection / holdings history를 함께 넘기고, legacy source는 Step 3 runtime replay selection history를 fallback으로 읽는다.
+  - Result Table은 기존 performance row를 유지하면서 selection / holdings row를 별도 표로 표시한다. Full holdings 원장이나 provider raw data는 workflow JSONL에 새로 복사하지 않는다.

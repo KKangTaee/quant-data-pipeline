@@ -30,7 +30,7 @@ Backtest > Backtest Analysis
 | Stage | Owns | Does Not Own |
 |---|---|---|
 | Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness, Practical Validation handoff gate | 최종 판단, 별도 후보 간 read-only 비교, 후속 monitoring / deployment 판단 |
-| Practical Validation | 실전 투입 전 검증, source traits 기반 module gate, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모 |
+| Practical Validation | 실전 투입 전 검증, source strategy / construction 확인, source traits 기반 module gate, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
 | Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 선정 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 최종 선정 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
 | Selected Portfolio Dashboard | Final Review selected row handoff 확인, 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary | broker order, live approval, auto rebalance |
 
@@ -71,7 +71,8 @@ Selected Dashboard handoff review도 같은 Final Decision V2 row를 읽으며, 
 - `검증 후보로 보내기` / `실전성 검증으로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
 - Practical Validation은 후보가 실전 검토에 충분한 근거를 갖는지 보여준다.
 - Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리한다.
-- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 summary, equity curve, result table snapshot을 먼저 보여줘 후보의 원래 백테스트 근거를 빠르게 확인하게 한다.
+- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 먼저 보여줘 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
+- 기존 source처럼 selection history snapshot이 없는 기록은 `3. 최신 데이터 기준 전략 재검증`을 실행하면 가능한 범위에서 runtime replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
 - Practical Validation은 전용 workbench shell의 Control Center에서 후보 / profile / latest replay / gate를 먼저 요약한다.
 - Practical Validation의 각 step은 bordered surface로 분리해 step 경계를 명확히 보여준다.
 - Practical Validation의 `4. Final Review Gate / 검증 모듈`은 통과 / 차단 여부와 적용 module을 먼저 보여주고, blocker는 Fix Queue 카드로 해결 위치와 액션을 같이 보여준다. 화면 board는 검증 module과 1:1 개념이 아니므로 `5. 검증 근거 보드`와 `6. 보강 액션`으로 분리한다.
