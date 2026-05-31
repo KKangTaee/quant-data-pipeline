@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-31 - Saved Final Review decisions should read as a ledger
+- User request:
+  - Final Review 개편 4번 작업을 진행해 달라고 승인함.
+- Interpreted goal:
+  - 저장된 최종 판단을 단순 table / JSON inspector가 아니라, 과거 판단을 다시 읽고 비교하는 Saved Decision Review UX로 만든다.
+- Analysis result:
+  - 구현 결과 saved final decision row는 summary counts, route filter, latest decision, review ledger, Summary / Dossier / Evidence Packet / Raw JSON detail tabs로 표시된다.
+  - Decision Dossier export는 유지하되 자동 report write가 아니라 read-only download / preview로 남긴다.
+- Follow-up:
+  - 새 validation, 새 registry, approval, order, account sync, auto rebalance는 추가하지 않았다. 다음 slice는 Selected Dashboard handoff polish다.
+
 ### 2026-05-31 - Final decision record should guide the last user action
 - User request:
   - Candidate Board V1 다음 단계를 진행해 달라고 승인함.

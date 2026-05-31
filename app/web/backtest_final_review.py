@@ -12,6 +12,7 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_candidate_board,
     build_final_review_decision_cockpit,
     build_final_review_decision_record_guide,
+    build_saved_final_review_decision_review,
 )
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
@@ -846,49 +847,121 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
         st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
         return
 
-    st.dataframe(_build_final_review_decision_rows_for_display(final_decision_rows), width="stretch", hide_index=True)
-    labels = [
-        f"{row.get('updated_at') or row.get('created_at')} | {row.get('decision_route')} | {row.get('decision_id')}"
-        for row in final_decision_rows
-    ]
-    selected_label = st.selectbox("기록 확인", options=labels, key="final_review_saved_decision_selected")
-    selected_row = final_decision_rows[labels.index(selected_label)]
-    evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
-    status_display = _build_final_review_status_display(selected_row)
-    render_readiness_route_panel(
-        route_label=str(status_display.get("route") or "-"),
-        score=float(evidence.get("score") or 0.0),
-        blockers_count=len(evidence.get("blockers") or []),
-        verdict=str(status_display.get("verdict") or "-"),
-        next_action=str(status_display.get("next_action") or "-"),
-        route_title="Final Review Status",
-        score_title="Evidence Score",
+    review = build_saved_final_review_decision_review(final_decision_rows)
+    summary = dict(review.get("summary") or {})
+    render_stage_brief(
+        purpose="저장된 최종 판단을 다시 읽고, 어떤 판단이 Selected Dashboard로 이어지는지 확인합니다.",
+        result="Saved decision ledger",
     )
-    decision_label = FINAL_REVIEW_DECISION_LABELS.get(str(selected_row.get("decision_route") or ""), "재검토 필요")
-    render_badge_strip(
+    render_status_card_grid(
         [
-            {"label": "Decision", "value": selected_row.get("decision_route") or "-", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
-            {"label": "판단 라벨", "value": decision_label, "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
-            {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
-            {"label": "Observation", "value": selected_row.get("source_observation_id") or selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-            {"label": "Order", "value": "Disabled", "tone": "neutral"},
+            {"title": "Saved Decisions", "value": summary.get("total_records", 0), "tone": "positive"},
+            {"title": "Selected", "value": summary.get("selected", 0), "detail": "Dashboard eligible", "tone": "positive" if summary.get("selected") else "neutral"},
+            {"title": "Hold", "value": summary.get("hold", 0), "tone": "warning" if summary.get("hold") else "neutral"},
+            {"title": "Reject", "value": summary.get("reject", 0), "tone": "warning" if summary.get("reject") else "neutral"},
+            {"title": "Re-review", "value": summary.get("re_review", 0), "tone": "warning" if summary.get("re_review") else "neutral"},
+            {"title": "Live Approval", "value": "Disabled", "detail": "review only", "tone": "neutral"},
         ]
     )
-    component_df = _build_final_selection_decision_component_rows(selected_row)
-    if component_df.empty:
-        st.info("이 기록에는 selected component가 없습니다.")
-    else:
-        st.dataframe(component_df, width="stretch", hide_index=True)
-    _render_decision_dossier_export(
-        selected_row,
-        key_prefix=f"final_review_dossier_{selected_row.get('decision_id') or 'saved'}",
+    st.info(
+        "최근 판단: "
+        f"{summary.get('latest_updated_at') or '-'} / "
+        f"{summary.get('latest_decision') or '-'} / "
+        f"id={summary.get('latest_decision_id') or '-'}"
     )
-    packet = dict(selected_row.get("investability_evidence_packet") or {})
-    if packet:
-        with st.expander("Investability Evidence Packet", expanded=False):
+    filter_options = list(review.get("filter_options") or ["All"])
+    selected_filter = st.selectbox(
+        "판단 상태 필터",
+        options=filter_options,
+        key="final_review_saved_decision_route_filter",
+    )
+    review_rows = list(review.get("rows") or [])
+    if selected_filter != "All":
+        review_rows = [row for row in review_rows if row.get("Route Family") == selected_filter]
+    st.caption(f"표시 중인 기록: {len(review_rows)} / {summary.get('total_records', 0)}")
+    if not review_rows:
+        st.warning("선택한 필터에 해당하는 최종 검토 기록이 없습니다.")
+        return
+
+    table_rows = [
+        {key: value for key, value in row.items() if not str(key).startswith("_")}
+        for row in review_rows
+    ]
+    st.dataframe(pd.DataFrame(table_rows), width="stretch", hide_index=True)
+    labels = [
+        f"{row.get('Updated At')} | {row.get('Decision')} | {row.get('Decision ID')}"
+        for row in review_rows
+    ]
+    selected_label = st.selectbox(
+        "기록 확인",
+        options=labels,
+        key=f"final_review_saved_decision_selected_{selected_filter}",
+    )
+    selected_review_row = review_rows[labels.index(selected_label)]
+    selected_row = dict(final_decision_rows[int(selected_review_row.get("_row_index", 0))] or {})
+    evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
+    status_display = _build_final_review_status_display(selected_row)
+    decision_label = FINAL_REVIEW_DECISION_LABELS.get(str(selected_row.get("decision_route") or ""), "재검토 필요")
+    detail_tabs = st.tabs(["Summary", "Dossier", "Evidence Packet", "Raw JSON"])
+    with detail_tabs[0]:
+        render_readiness_route_panel(
+            route_label=str(status_display.get("route") or "-"),
+            score=float(evidence.get("score") or 0.0),
+            blockers_count=len(evidence.get("blockers") or []),
+            verdict=str(status_display.get("verdict") or "-"),
+            next_action=str(status_display.get("next_action") or "-"),
+            route_title="Final Review Status",
+            score_title="Evidence Score",
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Decision",
+                    "value": selected_row.get("decision_route") or "-",
+                    "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning",
+                },
+                {
+                    "label": "판단 라벨",
+                    "value": decision_label,
+                    "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning",
+                },
+                {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
+                {"label": "Observation", "value": selected_row.get("source_observation_id") or selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
+                {"label": "Dashboard", "value": "Eligible" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "Not selected", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "neutral"},
+                {"label": "Order", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        operator = dict(selected_row.get("operator_decision") or {})
+        st.markdown("###### Operator Decision")
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {"Field": "Reason", "Value": operator.get("reason") or "-"},
+                    {"Field": "Constraints", "Value": operator.get("constraints") or "-"},
+                    {"Field": "Next Action", "Value": operator.get("next_action") or "-"},
+                ]
+            ),
+            width="stretch",
+            hide_index=True,
+        )
+        component_df = _build_final_selection_decision_component_rows(selected_row)
+        if component_df.empty:
+            st.info("이 기록에는 selected component가 없습니다.")
+        else:
+            st.markdown("###### Components")
+            st.dataframe(component_df, width="stretch", hide_index=True)
+    with detail_tabs[1]:
+        _render_decision_dossier_export(
+            selected_row,
+            key_prefix=f"final_review_dossier_{selected_row.get('decision_id') or 'saved'}",
+        )
+    with detail_tabs[2]:
+        packet = dict(selected_row.get("investability_evidence_packet") or {})
+        if packet:
             _render_investability_packet(packet)
-    with st.expander("최종 검토 결과 JSON", expanded=False):
+        else:
+            st.info("이 기록에는 investability evidence packet snapshot이 없습니다.")
+    with detail_tabs[3]:
         st.json(selected_row)
 
 

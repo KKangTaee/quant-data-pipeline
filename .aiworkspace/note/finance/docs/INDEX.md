@@ -23,7 +23,7 @@ Last Verified: 2026-05-31
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
-- Current implementation focus: Final Review Decision Record V1 is implementation complete after Candidate Board V1. Remaining user-facing Final Review slices should be chosen from saved decision review UX, Selected Dashboard handoff polish, dossier/report polish, or future structured waiver UI / persistence.
+- Current implementation focus: Final Review Saved Decision Review V1 is implementation complete after Decision Record V1. The remaining near-term Final Review slice is Selected Dashboard handoff polish.
 
 ## By Purpose
 

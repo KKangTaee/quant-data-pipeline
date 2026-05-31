@@ -6325,6 +6325,75 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["Final Status"], "FINAL_REVIEW_DECISION_COMPLETE")
         self.assertEqual(row["Live Approval"], "Disabled")
 
+    def test_saved_final_review_decision_review_summarizes_and_sorts_records(self) -> None:
+        from app.services.backtest_evidence_read_model import build_saved_final_review_decision_review
+
+        rows = [
+            {
+                "decision_id": "decision-hold",
+                "updated_at": "2026-05-20T10:00:00",
+                "decision_route": "HOLD_FOR_MORE_PAPER_TRACKING",
+                "source_type": "practical_validation_result",
+                "source_id": "validation-hold",
+                "selected_components": [],
+                "decision_evidence_snapshot": {"route": "READY_FOR_FINAL_DECISION", "score": 7.2},
+                "operator_decision": {"reason": "more observation", "next_action": "paper tracking"},
+                "investability_evidence_packet": {
+                    "route": "INVESTABILITY_PACKET_REVIEW",
+                    "gate_policy_snapshot": {
+                        "outcome": "hold_or_re_review",
+                        "select_allowed": False,
+                        "review_required": ["Backtest realism review"],
+                    },
+                },
+            },
+            {
+                "decision_id": "decision-selected",
+                "updated_at": "2026-05-22T10:00:00",
+                "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                "source_type": "practical_validation_result",
+                "source_id": "validation-selected",
+                "selected_components": [{"ticker": "SPY"}, {"ticker": "TLT"}],
+                "decision_evidence_snapshot": {"route": "READY_FOR_FINAL_DECISION", "score": 8.8},
+                "operator_decision": {"reason": "ready", "next_action": "dashboard recheck"},
+                "investability_evidence_packet": {
+                    "route": "INVESTABILITY_PACKET_READY",
+                    "gate_policy_snapshot": {
+                        "outcome": "select_ready",
+                        "select_allowed": True,
+                        "blockers": [],
+                        "review_required": [],
+                    },
+                },
+            },
+            {
+                "decision_id": "decision-reject",
+                "updated_at": "2026-05-21T10:00:00",
+                "decision_route": "REJECT_FOR_PRACTICAL_USE",
+                "source_type": "practical_validation_result",
+                "source_id": "validation-reject",
+                "decision_evidence_snapshot": {"route": "REVIEW_REQUIRED", "score": 4.1, "blockers": ["missing data"]},
+                "operator_decision": {"reason": "reject"},
+            },
+        ]
+
+        review = build_saved_final_review_decision_review(rows)
+
+        self.assertEqual(review["schema_version"], "final_review_saved_decision_review_v1")
+        self.assertEqual(review["summary"]["total_records"], 3)
+        self.assertEqual(review["summary"]["selected"], 1)
+        self.assertEqual(review["summary"]["hold"], 1)
+        self.assertEqual(review["summary"]["reject"], 1)
+        self.assertEqual(review["summary"]["dashboard_eligible"], 1)
+        self.assertEqual(review["summary"]["latest_decision_id"], "decision-selected")
+        self.assertFalse(review["summary"]["live_approval"])
+        self.assertIn("All", review["filter_options"])
+        self.assertEqual(review["rows"][0]["Decision ID"], "decision-selected")
+        self.assertEqual(review["rows"][0]["Route Family"], "Selected")
+        self.assertEqual(review["rows"][0]["Dashboard Eligible"], "Yes")
+        self.assertEqual(review["rows"][1]["Decision ID"], "decision-reject")
+        self.assertEqual(review["rows"][2]["Evidence Issues"], 1)
+
     def test_final_review_decision_cockpit_summarizes_selected_route_state(self) -> None:
         from app.services.backtest_evidence_read_model import (
             build_final_review_candidate_board_rows,

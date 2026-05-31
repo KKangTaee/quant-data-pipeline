@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-saved-decision-review-v1/`.
+- Final Review saved final decisions now render as a read-only review ledger with summary counts, route filter, focused detail tabs, operator decision view, Decision Dossier reuse, packet tab, and raw JSON tab.
+- No validation rerun, new registry, report auto-write, live approval, order, account sync, or auto rebalance behavior was added; next natural slice is Selected Dashboard handoff polish.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-decision-record-v1/`.
 - Final Review final decision input now shows a Decision Record Checklist, selected-route guide badges, route-specific record templates, and explicit live approval / order disabled boundary.
 - Blocked selected-route candidates now default to the gate-suggested non-select route for recording, while `SELECT_FOR_PRACTICAL_PORTFOLIO` remains blocked unless the existing investability gate allows it.

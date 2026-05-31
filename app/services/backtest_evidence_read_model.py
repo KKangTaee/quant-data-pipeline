@@ -15,6 +15,7 @@ DECISION_DOSSIER_SCHEMA_VERSION = "decision_dossier_v1"
 DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
 CANDIDATE_BOARD_SCHEMA_VERSION = "final_review_candidate_board_v1"
 DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
+SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
@@ -66,6 +67,14 @@ FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
         "next_action": "구성 / 비중 / validation / provider / robustness evidence를 보강한 뒤 Final Review에서 재검토한다.",
     },
 }
+FINAL_REVIEW_SAVED_DECISION_FILTER_OPTIONS = (
+    "All",
+    "Selected",
+    "Hold",
+    "Reject",
+    "Re-review",
+    "Unknown",
+)
 GATE_POLICY_SCHEMA_VERSION = "investability_gate_policy_v1"
 GATE_POLICY_GROUP_LABELS = {
     "data_trust": "Data Trust / Source Contract",
@@ -1407,6 +1416,105 @@ def build_final_review_decision_display_rows(rows: list[dict[str, Any]]) -> list
     return display_rows
 
 
+def _saved_decision_route_family(route: Any) -> str:
+    route_text = str(route or "").strip()
+    if route_text == SELECT_FOR_PRACTICAL_PORTFOLIO:
+        return "Selected"
+    if route_text == "HOLD_FOR_MORE_PAPER_TRACKING":
+        return "Hold"
+    if route_text == "REJECT_FOR_PRACTICAL_USE":
+        return "Reject"
+    if route_text == "RE_REVIEW_REQUIRED":
+        return "Re-review"
+    return "Unknown"
+
+
+def _decision_gate_policy(row: dict[str, Any]) -> dict[str, Any]:
+    gate_policy = dict(row.get("gate_policy_snapshot") or {})
+    if gate_policy:
+        return gate_policy
+    packet = dict(row.get("investability_evidence_packet") or {})
+    return dict(packet.get("gate_policy_snapshot") or {})
+
+
+def build_saved_final_review_decision_review(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize saved Final Review decisions for review without adding persistence."""
+
+    indexed_rows = [
+        (index, dict(row or {}))
+        for index, row in enumerate(list(rows or []))
+    ]
+    indexed_rows.sort(
+        key=lambda item: _safe_text(item[1].get("updated_at") or item[1].get("created_at"), ""),
+        reverse=True,
+    )
+    review_rows: list[dict[str, Any]] = []
+    family_counts = {key: 0 for key in FINAL_REVIEW_SAVED_DECISION_FILTER_OPTIONS if key != "All"}
+    dashboard_eligible = 0
+    for display_index, (raw_index, row) in enumerate(indexed_rows, start=1):
+        route = str(row.get("decision_route") or "").strip()
+        family = _saved_decision_route_family(route)
+        family_counts[family] = int(family_counts.get(family, 0) or 0) + 1
+        if route == SELECT_FOR_PRACTICAL_PORTFOLIO:
+            dashboard_eligible += 1
+        evidence = dict(row.get("decision_evidence_snapshot") or {})
+        packet = dict(row.get("investability_evidence_packet") or {})
+        gate_policy = _decision_gate_policy(row)
+        operator = dict(row.get("operator_decision") or {})
+        status_display = build_final_review_status_display(row)
+        issue_count = (
+            len(evidence.get("blockers") or [])
+            + len(packet.get("critical_gaps") or [])
+            + len(gate_policy.get("blockers") or [])
+            + len(gate_policy.get("review_required") or [])
+        )
+        review_rows.append(
+            {
+                "Rank": display_index,
+                "Updated At": row.get("updated_at") or row.get("created_at") or "-",
+                "Decision ID": row.get("decision_id") or "-",
+                "Decision": FINAL_REVIEW_DECISION_LABELS.get(route, "재검토 필요"),
+                "Route Family": family,
+                "Decision Route": route or "-",
+                "Final Status": status_display.get("route") or "-",
+                "Source": f"{row.get('source_type') or '-'} / {row.get('source_id') or '-'}",
+                "Components": len(row.get("selected_components") or []),
+                "Evidence Route": evidence.get("route") or "-",
+                "Evidence Score": evidence.get("score") if evidence.get("score") is not None else "-",
+                "Packet Route": packet.get("route") or "-",
+                "Gate Outcome": gate_policy.get("outcome") or "-",
+                "Select Allowed": "Yes" if bool(gate_policy.get("select_allowed")) else "No",
+                "Evidence Issues": issue_count,
+                "Dashboard Eligible": "Yes" if route == SELECT_FOR_PRACTICAL_PORTFOLIO else "No",
+                "Operator Reason": _safe_text(operator.get("reason"), "-"),
+                "Next Action": _safe_text(operator.get("next_action") or status_display.get("next_action"), "-"),
+                "Live Approval": "Disabled",
+                "_row_index": raw_index,
+            }
+        )
+    latest = dict(review_rows[0]) if review_rows else {}
+    return {
+        "schema_version": SAVED_DECISION_REVIEW_SCHEMA_VERSION,
+        "summary": {
+            "total_records": len(review_rows),
+            "selected": int(family_counts.get("Selected", 0) or 0),
+            "hold": int(family_counts.get("Hold", 0) or 0),
+            "reject": int(family_counts.get("Reject", 0) or 0),
+            "re_review": int(family_counts.get("Re-review", 0) or 0),
+            "unknown": int(family_counts.get("Unknown", 0) or 0),
+            "dashboard_eligible": dashboard_eligible,
+            "latest_decision_id": latest.get("Decision ID") or "-",
+            "latest_decision": latest.get("Decision") or "-",
+            "latest_updated_at": latest.get("Updated At") or "-",
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+        "filter_options": list(FINAL_REVIEW_SAVED_DECISION_FILTER_OPTIONS),
+        "rows": review_rows,
+    }
+
+
 def _append_check_rows(
     display_rows: list[dict[str, Any]],
     *,
@@ -1818,6 +1926,7 @@ __all__ = [
     "DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION",
     "CANDIDATE_BOARD_SCHEMA_VERSION",
     "DECISION_RECORD_GUIDE_SCHEMA_VERSION",
+    "SAVED_DECISION_REVIEW_SCHEMA_VERSION",
     "FINAL_REVIEW_DECISION_LABELS",
     "FINAL_REVIEW_STATUS_DISPLAY",
     "SELECT_FOR_PRACTICAL_PORTFOLIO",
@@ -1826,6 +1935,7 @@ __all__ = [
     "build_final_review_candidate_board_rows",
     "build_final_review_decision_cockpit",
     "build_final_review_decision_record_guide",
+    "build_saved_final_review_decision_review",
     "build_investability_gate_policy",
     "build_investability_evidence_packet",
     "build_final_decision_evidence_rows",
