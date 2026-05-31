@@ -17,11 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - no active strategy-search candidate summary in `main-dev`; next work is `phase14-candidate-prioritization-v1`
+  - Final Review Decision Cockpit V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Final Review should act as a decision cockpit
+- User request:
+  - Final Review 탭이 프로토타입이라 목적과 활용도가 불명확하므로, 외부 조사와 현재 흐름 분석을 바탕으로 개편 방향을 정하고 진행해 달라고 요청함.
+- Interpreted goal:
+  - Final Review를 검증 결과 모음이 아니라 Practical Validation Gate 통과 후보를 최종 선정 / 보류 / 거절 / 재검토로 판단하는 Decision Desk로 재구성한다.
+- Analysis result:
+  - Backtest는 후보 생성, Practical Validation은 검증 실행과 Gate, Final Review는 증거 기반 최종 판단, Selected Dashboard는 선정 이후 재확인으로 경계를 유지한다.
+  - 첫 구현 slice는 새 저장소 / DB 변경 없이 Candidate Board와 Decision Cockpit을 추가하는 것이 가장 안전하다.
+  - 구현 결과 Candidate Board는 Gate 통과 후보의 상태를 비교하고, Decision Cockpit은 selected-route state, suggested decision, Must Fix / Must Review, monitoring seed를 상세 evidence보다 먼저 보여준다.
+- Follow-up:
+  - 다음 Final Review slice가 필요하면 structured waiver UI, candidate prioritization rules, or dossier/report polish를 별도 task로 연다.
 
 ### 2026-05-31 - Practical Validation Save & Move fails during JSONL persistence
 - User request:

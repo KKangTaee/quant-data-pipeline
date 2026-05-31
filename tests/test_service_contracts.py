@@ -6321,8 +6321,125 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["Components"], 2)
         self.assertEqual(row["Evidence Route"], "READY")
         self.assertEqual(row["Evidence Score"], 92)
+        self.assertEqual(row["판단 라벨"], "실전 검토 통과 후보")
         self.assertEqual(row["Final Status"], "FINAL_REVIEW_DECISION_COMPLETE")
         self.assertEqual(row["Live Approval"], "Disabled")
+
+    def test_final_review_decision_cockpit_summarizes_selected_route_state(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_candidate_board_rows,
+            build_final_review_decision_cockpit,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Ready candidate",
+        }
+        paper = {
+            "route": "PAPER_OBSERVATION_READY",
+            "blockers": [],
+            "review_cadence": "monthly_or_rebalance_review",
+            "tracking_benchmark": "SPY",
+            "review_triggers": ["CAGR deterioration review"],
+            "active_components": [{"title": "Ready component", "target_weight": 100.0}],
+            "baseline_snapshot": {"target_weight_total": 100.0},
+        }
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        cockpit = build_final_review_decision_cockpit(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+        board_rows = build_final_review_candidate_board_rows(
+            [
+                {
+                    "source": source,
+                    "validation": validation,
+                    "paper_observation": paper,
+                    "decision_evidence": evidence,
+                    "investability_packet": packet,
+                }
+            ]
+        )
+
+        self.assertEqual(cockpit["schema_version"], "final_review_decision_cockpit_v1")
+        self.assertEqual(cockpit["state"], "SELECT_READY")
+        self.assertTrue(cockpit["select_allowed"])
+        self.assertEqual(cockpit["suggested_decision_route"], "SELECT_FOR_PRACTICAL_PORTFOLIO")
+        self.assertEqual(cockpit["monitoring_handoff"]["tracking_benchmark"], "SPY")
+        self.assertEqual(board_rows[0]["Decision State"], "선정 가능")
+        self.assertEqual(board_rows[0]["Select Allowed"], "Yes")
+        self.assertEqual(board_rows[0]["Candidate"], "Ready candidate")
+
+    def test_final_review_decision_cockpit_surfaces_blocked_candidate_board_row(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_candidate_board_rows,
+            build_final_review_decision_cockpit,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-blocked"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-blocked",
+            "source_title": "Blocked candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        cockpit = build_final_review_decision_cockpit(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+        board_rows = build_final_review_candidate_board_rows(
+            [
+                {
+                    "source": source,
+                    "validation": validation,
+                    "paper_observation": paper,
+                    "decision_evidence": evidence,
+                    "investability_packet": packet,
+                }
+            ]
+        )
+
+        self.assertEqual(cockpit["state"], "SELECT_BLOCKED")
+        self.assertFalse(cockpit["select_allowed"])
+        self.assertGreaterEqual(len(cockpit["must_fix_rows"]), 1)
+        self.assertEqual(board_rows[0]["Decision State"], "선정 차단")
+        self.assertEqual(board_rows[0]["Select Allowed"], "No")
+        self.assertGreaterEqual(board_rows[0]["Blockers"], 1)
+        self.assertEqual(board_rows[0]["NOT_RUN"], 1)
 
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_decision_evidence_rows

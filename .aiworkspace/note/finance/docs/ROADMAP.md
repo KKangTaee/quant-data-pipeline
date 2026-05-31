@@ -7,6 +7,7 @@ Last Verified: 2026-05-31
 
 | Track | Status | Notes |
 |---|---|---|
+| Final Review Decision Cockpit V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-decision-cockpit-v1/`; Final Review now shows a Candidate Board for Gate-passed Practical Validation results and a Decision Cockpit that surfaces selected-route state, blockers, review-required rows, suggested decision, and monitoring seed before detailed evidence tables |
 | Practical Validation Commercial UX V1 | Complete / user-accepted closeout | `.aiworkspace/note/finance/tasks/active/practical-validation-commercial-ux-v1/`; Practical Validation을 전용 workbench shell / Control Center / Fix Queue / summary-first Evidence Workspace / Provider Action Center 구조로 다듬고 raw evidence는 상세 펼침으로 낮춤. 선택 후보 backtest snapshot, 7-step boundary, replay state reset, 저장-only audit trail, Final Review Gate 통과 후보만 source picker 노출까지 반영 |
 | Practical Validation Board Map V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-board-map-v1/`; 화면 board와 validation module을 분리하고 Applied Validation Map / board badge로 적용 / 비적용 근거를 표시 |
 | Backtest Analysis Stage 1 Closeout | Complete | `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`; Backtest 1단계는 단일 전략 / Portfolio Mix 후보를 만들고 1차 readiness 통과 시 Practical Validation source로 보내는 단계로 정리 완료 |

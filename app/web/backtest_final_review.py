@@ -7,7 +7,11 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
-from app.services.backtest_evidence_read_model import build_decision_dossier
+from app.services.backtest_evidence_read_model import (
+    build_decision_dossier,
+    build_final_review_candidate_board_rows,
+    build_final_review_decision_cockpit,
+)
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
@@ -569,6 +573,136 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(packet.get("assumptions_and_limits") or []), width="stretch", hide_index=True)
 
 
+def _cockpit_tone(state: Any) -> str:
+    state_text = str(state or "").upper()
+    if state_text == "SELECT_READY":
+        return "positive"
+    if state_text == "SELECT_BLOCKED":
+        return "danger"
+    return "warning"
+
+
+def _build_candidate_contexts(
+    source_options: list[dict[str, Any]],
+    *,
+    current_rows: list[dict[str, Any]],
+    pre_live_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    contexts: list[dict[str, Any]] = []
+    for option in source_options:
+        source = dict(option or {})
+        validation = _build_final_review_validation(source, current_rows=current_rows, pre_live_rows=pre_live_rows)
+        paper_observation = _build_final_review_paper_observation_snapshot(validation)
+        evidence = _build_final_review_decision_evidence_pack(validation, paper_observation)
+        investability_packet = _build_investability_evidence_packet(source, validation, paper_observation, evidence)
+        cockpit = build_final_review_decision_cockpit(
+            source=source,
+            validation=validation,
+            paper_observation=paper_observation,
+            decision_evidence=evidence,
+            investability_packet=investability_packet,
+        )
+        contexts.append(
+            {
+                "label": str(option.get("label") or option.get("source_id") or "-"),
+                "source": source,
+                "validation": validation,
+                "paper_observation": paper_observation,
+                "decision_evidence": evidence,
+                "investability_packet": investability_packet,
+                "cockpit": cockpit,
+            }
+        )
+    return contexts
+
+
+def _render_candidate_board(candidate_contexts: list[dict[str, Any]]) -> None:
+    rows = build_final_review_candidate_board_rows(candidate_contexts)
+    if not rows:
+        st.info("표시할 Final Review 후보가 없습니다.")
+        return
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    st.caption(
+        "Candidate Board는 기존 Practical Validation result와 investability packet을 읽는 비교표입니다. "
+        "새 registry row를 만들거나 provider 데이터를 수집하지 않습니다."
+    )
+
+
+def _render_policy_row_list(rows: list[dict[str, Any]], *, empty_message: str, status: str) -> None:
+    if not rows:
+        st.success(empty_message)
+        return
+    for row in rows[:4]:
+        label = str(row.get("Criteria") or row.get("Group") or "-")
+        evidence = str(row.get("Required Action") or row.get("Current") or row.get("Evidence") or "-")
+        if len(evidence) > 180:
+            evidence = evidence[:177].rstrip() + "..."
+        if status == "error":
+            st.error(f"{label}: {evidence}")
+        elif status == "warning":
+            st.warning(f"{label}: {evidence}")
+        else:
+            st.info(f"{label}: {evidence}")
+    if len(rows) > 4:
+        st.caption(f"외 {len(rows) - 4}개 항목은 Gate Policy 상세에서 확인합니다.")
+
+
+def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
+    metrics = dict(cockpit.get("metrics") or {})
+    handoff = dict(cockpit.get("monitoring_handoff") or {})
+    source_chain = dict(cockpit.get("source_chain") or {})
+    render_readiness_route_panel(
+        route_label=str(cockpit.get("state_label") or "-"),
+        score=float(cockpit.get("packet_score") or 0.0),
+        blockers_count=int(metrics.get("policy_blockers", 0) or 0) + int(metrics.get("policy_review_required", 0) or 0),
+        verdict=str(cockpit.get("verdict") or "-"),
+        next_action=str(cockpit.get("next_action") or "-"),
+        route_title="Decision Cockpit",
+        score_title="Packet Score",
+    )
+    render_badge_strip(
+        [
+            {"label": "State", "value": cockpit.get("state_label") or "-", "tone": _cockpit_tone(cockpit.get("state"))},
+            {"label": "Suggested", "value": cockpit.get("suggested_decision_label") or "-", "tone": _cockpit_tone(cockpit.get("state"))},
+            {"label": "Gate", "value": cockpit.get("gate_outcome") or "-", "tone": "positive" if cockpit.get("select_allowed") else "warning"},
+            {"label": "Blockers", "value": metrics.get("policy_blockers", 0), "tone": "danger" if metrics.get("policy_blockers") else "neutral"},
+            {"label": "Review", "value": metrics.get("policy_review_required", 0), "tone": "warning" if metrics.get("policy_review_required") else "neutral"},
+            {"label": "NOT_RUN", "value": metrics.get("not_run", 0), "tone": "warning" if metrics.get("not_run") else "neutral"},
+            {"label": "Validation", "value": source_chain.get("validation_id") or "-", "tone": "neutral"},
+            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    cockpit_cols = st.columns(3, gap="small")
+    with cockpit_cols[0]:
+        st.markdown("###### Must Fix")
+        _render_policy_row_list(
+            list(cockpit.get("must_fix_rows") or []),
+            empty_message="선정 차단 blocker 없음",
+            status="error",
+        )
+    with cockpit_cols[1]:
+        st.markdown("###### Must Review")
+        _render_policy_row_list(
+            list(cockpit.get("must_review_rows") or []),
+            empty_message="선정 전 review-required 없음",
+            status="warning",
+        )
+    with cockpit_cols[2]:
+        st.markdown("###### Monitoring Seed")
+        st.write(
+            {
+                "cadence": handoff.get("review_cadence") or "-",
+                "benchmark": handoff.get("tracking_benchmark") or "-",
+                "triggers": len(handoff.get("review_triggers") or []),
+                "components": handoff.get("active_components", 0),
+                "weight_total": handoff.get("target_weight_total"),
+            }
+        )
+    if cockpit.get("watch_rows"):
+        with st.expander("Watch-only policy rows", expanded=False):
+            st.dataframe(pd.DataFrame(cockpit.get("watch_rows") or []), width="stretch", hide_index=True)
+
+
 def _render_decision_dossier_export(row: dict[str, Any], *, key_prefix: str) -> None:
     dossier = build_decision_dossier(row)
     decision = dict(dossier.get("decision") or {})
@@ -639,7 +773,7 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
     render_badge_strip(
         [
             {"label": "Decision", "value": selected_row.get("decision_route") or "-", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
-            {"label": "투자 가능성", "value": decision_label, "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
+            {"label": "판단 라벨", "value": decision_label, "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
             {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
             {"label": "Observation", "value": selected_row.get("source_observation_id") or selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
             {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
@@ -735,18 +869,29 @@ def render_final_review_workspace() -> None:
     if not source_options:
         st.info("Final Review Gate를 통과한 Practical Validation 후보가 없습니다.")
         st.caption("검증 결과만 저장한 blocked / needs input / not run 후보는 기록으로 남지만, Final Review 검토 대상에는 표시되지 않습니다.")
+        st.markdown("#### 기록된 최종 검토 결과 확인")
+        with st.container(border=True):
+            _render_saved_final_review_decisions(final_decision_rows)
         return
 
+    candidate_contexts = _build_candidate_contexts(
+        source_options,
+        current_rows=current_rows,
+        pre_live_rows=pre_live_rows,
+    )
+
     st.divider()
-    st.markdown("#### 1. 최종 검토 대상 선택")
+    st.markdown("#### 1. Candidate Board / 최종 검토 대상 선택")
     with st.container(border=True):
         render_stage_brief(
-            purpose="Practical Validation에서 필수 검증 Gate를 통과한 후보만 최종 검토 대상으로 고릅니다.",
-            result="Final review source",
+            purpose="Final Review Gate를 통과한 후보를 먼저 비교하고, 오늘 판단할 source를 고릅니다.",
+            result="Candidate board + selected source",
         )
-        labels = [str(option["label"]) for option in source_options]
+        _render_candidate_board(candidate_contexts)
+        labels = [str(context["label"]) for context in candidate_contexts]
         selected_label = st.selectbox("검토 대상", options=labels, key="final_review_source_selected")
-        source = source_options[labels.index(selected_label)]
+        selected_context = candidate_contexts[labels.index(selected_label)]
+        source = dict(selected_context["source"])
         render_badge_strip(
             [
                 {"label": "Source Type", "value": source.get("source_type") or "-", "tone": "neutral"},
@@ -754,20 +899,29 @@ def render_final_review_workspace() -> None:
             ]
         )
 
-    validation = _build_final_review_validation(source, current_rows=current_rows, pre_live_rows=pre_live_rows)
-    paper_observation = _build_final_review_paper_observation_snapshot(validation)
-    evidence = _build_final_review_decision_evidence_pack(validation, paper_observation)
-    investability_packet = _build_investability_evidence_packet(source, validation, paper_observation, evidence)
+    validation = dict(selected_context["validation"])
+    paper_observation = dict(selected_context["paper_observation"])
+    evidence = dict(selected_context["decision_evidence"])
+    investability_packet = dict(selected_context["investability_packet"])
+    cockpit = dict(selected_context["cockpit"])
 
-    st.markdown("#### 2. 검증 근거 확인")
+    st.markdown("#### 2. Decision Cockpit")
+    with st.container(border=True):
+        render_stage_brief(
+            purpose="상세 표를 보기 전에, 선정 차단 / 보류 필요 / 선정 가능 여부와 monitoring seed를 먼저 확인합니다.",
+            result="Decision state",
+        )
+        _render_decision_cockpit(cockpit)
+
+    st.markdown("#### 3. 검증 근거 확인")
     with st.container(border=True):
         _render_validation_summary(validation)
 
-    st.markdown("#### 3. Robustness / Stress 질문 확인")
+    st.markdown("#### 4. Robustness / Stress 질문 확인")
     with st.container(border=True):
         _render_robustness_summary(validation)
 
-    st.markdown("#### 4. Paper Observation 기준 확인")
+    st.markdown("#### 5. Paper Observation 기준 확인")
     with st.container(border=True):
         render_stage_brief(
             purpose="별도 Paper Ledger를 또 저장하지 않고, 최종 검토 기록 안에 관찰 기준을 함께 남깁니다.",
@@ -775,7 +929,7 @@ def render_final_review_workspace() -> None:
         )
         _render_paper_observation_summary(paper_observation)
 
-    st.markdown("#### 5. Investability Evidence Packet")
+    st.markdown("#### 6. Investability Evidence Packet")
     with st.container(border=True):
         render_stage_brief(
             purpose="새 저장 기능을 늘리지 않고, 기존 검증 결과를 최종 판단용 compact packet으로 읽습니다.",
@@ -783,7 +937,7 @@ def render_final_review_workspace() -> None:
         )
         _render_investability_packet(investability_packet)
 
-    st.markdown("#### 6. 최종 판단 및 테스트 검증")
+    st.markdown("#### 7. 최종 판단 기록")
     with st.container(border=True):
         render_readiness_route_panel(
             route_label=str(evidence.get("route") or "-"),
@@ -901,6 +1055,6 @@ def render_final_review_workspace() -> None:
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
-    st.markdown("#### 7. 기록된 최종 검토 결과 확인")
+    st.markdown("#### 8. 기록된 최종 검토 결과 확인")
     with st.container(border=True):
         _render_saved_final_review_decisions(final_decision_rows)

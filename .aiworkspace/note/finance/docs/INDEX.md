@@ -23,7 +23,7 @@ Last Verified: 2026-05-31
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
-- Current implementation focus: Portfolio Validation closeout is complete. Next planned implementation focus remains `phase14-candidate-prioritization-v1`; rank Phase 13 carry-forward candidates before opening the next implementation slice.
+- Current implementation focus: Final Review Decision Cockpit V1 is implementation complete after user approval. Next planned phase work remains `phase14-candidate-prioritization-v1` unless the user asks for another Final Review slice.
 
 ## By Purpose
 

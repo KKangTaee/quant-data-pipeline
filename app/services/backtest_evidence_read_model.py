@@ -969,6 +969,168 @@ def build_selected_route_gate(
     }
 
 
+def _decision_route_label(route: Any) -> str:
+    return FINAL_REVIEW_DECISION_LABELS.get(_safe_text(route, ""), "재검토 필요")
+
+
+def _policy_rows_by_severity(gate_policy: dict[str, Any], severity: str) -> list[dict[str, Any]]:
+    target = str(severity or "").upper()
+    return [
+        dict(row or {})
+        for row in list(dict(gate_policy or {}).get("policy_rows") or [])
+        if str(dict(row or {}).get("Severity") or "").upper() == target
+    ]
+
+
+def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any]) -> tuple[str, str, str]:
+    outcome = str(dict(gate_policy or {}).get("outcome") or "").strip()
+    route = str(dict(packet or {}).get("route") or "").strip()
+    if outcome == "select_ready" or route == "INVESTABILITY_PACKET_READY":
+        return (
+            "SELECT_READY",
+            "선정 가능",
+            "현재 gate policy상 실전 검토 통과 후보로 기록할 수 있습니다.",
+        )
+    if outcome == "blocked" or route == "INVESTABILITY_PACKET_BLOCKED":
+        return (
+            "SELECT_BLOCKED",
+            "선정 차단",
+            "critical blocker가 남아 있어 선정 대신 재검토 / 거절 / 보류 기록이 필요합니다.",
+        )
+    return (
+        "HOLD_OR_RE_REVIEW",
+        "보류 / 재검토 권장",
+        "hard blocker는 아니지만 선정 전 확인해야 할 review-required 근거가 남아 있습니다.",
+    )
+
+
+def build_final_review_decision_cockpit(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    paper_observation: dict[str, Any],
+    decision_evidence: dict[str, Any],
+    investability_packet: dict[str, Any],
+) -> dict[str, Any]:
+    """Build the summary that Final Review should show before detailed evidence tables."""
+
+    source = dict(source or {})
+    validation = dict(validation or {})
+    paper_observation = dict(paper_observation or {})
+    decision_evidence = dict(decision_evidence or {})
+    packet = dict(investability_packet or {})
+    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    source_chain = dict(packet.get("source_chain") or {})
+    summary = dict(packet.get("summary") or {})
+    state, state_label, verdict = _decision_cockpit_state(gate_policy, packet)
+    suggested_route = (
+        gate_policy.get("suggested_decision_route")
+        or decision_evidence.get("suggested_decision_route")
+        or SELECT_FOR_PRACTICAL_PORTFOLIO
+    )
+    must_fix = _policy_rows_by_severity(gate_policy, "BLOCK")
+    must_review = _policy_rows_by_severity(gate_policy, "REVIEW_REQUIRED")
+    watch_rows = _policy_rows_by_severity(gate_policy, "WATCH")
+    ready_rows = _policy_rows_by_severity(gate_policy, "PASS")
+    baseline = dict(paper_observation.get("baseline_snapshot") or {})
+    return {
+        "schema_version": "final_review_decision_cockpit_v1",
+        "state": state,
+        "state_label": state_label,
+        "verdict": verdict,
+        "next_action": gate_policy.get("next_action") or packet.get("next_action") or decision_evidence.get("next_action") or "-",
+        "suggested_decision_route": suggested_route,
+        "suggested_decision_label": _decision_route_label(suggested_route),
+        "select_allowed": bool(gate_policy.get("select_allowed")),
+        "packet_route": packet.get("route"),
+        "packet_score": packet.get("score"),
+        "gate_outcome": gate_policy.get("outcome"),
+        "source_chain": source_chain,
+        "source_title": source.get("source_title") or validation.get("source_title") or source_chain.get("source_id") or "-",
+        "source_type": source.get("source_type") or validation.get("source_type") or source_chain.get("source_type") or "-",
+        "blockers": list(gate_policy.get("blockers") or []),
+        "review_required": list(gate_policy.get("review_required") or []),
+        "critical_gaps": list(packet.get("critical_gaps") or []),
+        "must_fix_rows": must_fix,
+        "must_review_rows": must_review,
+        "watch_rows": watch_rows,
+        "ready_rows": ready_rows,
+        "monitoring_handoff": {
+            "route": paper_observation.get("route"),
+            "review_cadence": paper_observation.get("review_cadence"),
+            "tracking_benchmark": paper_observation.get("tracking_benchmark"),
+            "review_triggers": list(paper_observation.get("review_triggers") or []),
+            "active_components": len(paper_observation.get("active_components") or []),
+            "target_weight_total": baseline.get("target_weight_total"),
+        },
+        "metrics": {
+            "not_run": summary.get("not_run", 0),
+            "review": summary.get("review", 0),
+            "blocked": summary.get("blocked", 0),
+            "policy_blockers": len(gate_policy.get("blockers") or []),
+            "policy_review_required": len(gate_policy.get("review_required") or []),
+            "critical_gaps": len(packet.get("critical_gaps") or []),
+            "provider_status": summary.get("provider_status") or "-",
+            "validation_efficacy_route": summary.get("validation_efficacy_route") or "-",
+            "data_coverage_route": summary.get("data_coverage_route") or "-",
+            "backtest_realism_route": summary.get("backtest_realism_route") or "-",
+        },
+    }
+
+
+def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Flatten Final Review eligible candidates into a comparison board."""
+
+    rows: list[dict[str, Any]] = []
+    for index, candidate in enumerate(list(candidates or []), start=1):
+        source = dict(candidate.get("source") or {})
+        validation = dict(candidate.get("validation") or {})
+        paper_observation = dict(candidate.get("paper_observation") or {})
+        decision_evidence = dict(candidate.get("decision_evidence") or {})
+        packet = dict(candidate.get("investability_packet") or {})
+        if not packet:
+            packet = build_investability_evidence_packet(
+                source=source,
+                validation=validation,
+                paper_observation=paper_observation,
+                decision_evidence=decision_evidence,
+            )
+        cockpit = build_final_review_decision_cockpit(
+            source=source,
+            validation=validation,
+            paper_observation=paper_observation,
+            decision_evidence=decision_evidence,
+            investability_packet=packet,
+        )
+        source_chain = dict(packet.get("source_chain") or {})
+        summary = dict(packet.get("summary") or {})
+        rows.append(
+            {
+                "Rank": index,
+                "Candidate": cockpit.get("source_title") or candidate.get("label") or "-",
+                "Decision State": cockpit.get("state_label"),
+                "Suggested Decision": cockpit.get("suggested_decision_label"),
+                "Gate Outcome": cockpit.get("gate_outcome") or "-",
+                "Select Allowed": "Yes" if cockpit.get("select_allowed") else "No",
+                "Blockers": cockpit["metrics"].get("policy_blockers", 0),
+                "Review Required": cockpit["metrics"].get("policy_review_required", 0),
+                "Critical Gaps": cockpit["metrics"].get("critical_gaps", 0),
+                "NOT_RUN": summary.get("not_run", 0),
+                "Provider": summary.get("provider_status") or "-",
+                "Validation Efficacy": summary.get("validation_efficacy_route") or "-",
+                "Data Coverage": summary.get("data_coverage_route") or "-",
+                "Backtest Realism": summary.get("backtest_realism_route") or "-",
+                "Packet Score": packet.get("score"),
+                "Validation ID": source_chain.get("validation_id") or validation.get("validation_id") or "-",
+                "Source ID": source_chain.get("selection_source_id")
+                or source_chain.get("source_id")
+                or source.get("source_id")
+                or "-",
+            }
+        )
+    return rows
+
+
 def build_final_review_status_display(row: dict[str, Any]) -> dict[str, str]:
     """Translate a saved final decision row into the current Final Review status copy."""
 
@@ -999,7 +1161,7 @@ def build_final_review_decision_display_rows(rows: list[dict[str, Any]]) -> list
                 "Updated At": row.get("updated_at") or row.get("created_at"),
                 "Decision ID": row.get("decision_id"),
                 "Decision Route": row.get("decision_route"),
-                "투자 가능성": FINAL_REVIEW_DECISION_LABELS.get(str(row.get("decision_route") or ""), "재검토 필요"),
+                "판단 라벨": FINAL_REVIEW_DECISION_LABELS.get(str(row.get("decision_route") or ""), "재검토 필요"),
                 "Source": f"{row.get('source_type')} / {row.get('source_id')}",
                 "Observation": row.get("source_observation_id") or row.get("source_paper_ledger_id") or "-",
                 "Components": len(row.get("selected_components") or []),
@@ -1426,6 +1588,8 @@ __all__ = [
     "FINAL_REVIEW_STATUS_DISPLAY",
     "SELECT_FOR_PRACTICAL_PORTFOLIO",
     "build_decision_dossier",
+    "build_final_review_candidate_board_rows",
+    "build_final_review_decision_cockpit",
     "build_investability_gate_policy",
     "build_investability_evidence_packet",
     "build_final_decision_evidence_rows",
