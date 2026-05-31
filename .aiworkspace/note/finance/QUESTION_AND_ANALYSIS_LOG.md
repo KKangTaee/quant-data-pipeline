@@ -6716,3 +6716,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `final_review_gate.can_save_and_move=True`가 Final Review source picker eligibility 기준이다. 이전 session replay state가 자동 표시되면 `NOT_RUN`과 실제 재검증 실행의 의미가 흐려진다
 - Follow-up:
   - Final Review source option을 Gate 통과 Practical Validation result로 제한하고, Practical Validation 신규 진입 / source 변경 / recheck mode 변경 시 replay display state를 초기화하도록 조정했다. Step 1~7 경계 surface도 복원했다
+
+### 2026-05-31 - Portfolio Validation closeout 문서 최신화
+- User request:
+  - 사용자가 Portfolio Validation은 여기까지 마무리하고, 이번 세션에서 수정한 내용을 바탕으로 문서를 업데이트해 달라고 요청함
+- Interpreted goal:
+  - 새 기능 구현 없이 Practical Validation / Final Review 흐름, 저장 경계, closeout 상태를 장기 문서와 task 기록에 반영해야 함
+- Analysis result:
+  - 오래 남길 결정은 `저장-only는 audit trail`, `Final Review 후보는 Gate 통과 Practical Validation result만`, `Step 3 replay는 현재 세션 실행 결과만 표시`, `Portfolio Validation 구현 pass는 closeout complete` 네 가지다
+- Follow-up:
+  - `INDEX`, `ROADMAP`, `PROJECT_MAP`, flow docs, `STORAGE_GOVERNANCE`, `GLOSSARY`, task closeout docs를 최신화했다

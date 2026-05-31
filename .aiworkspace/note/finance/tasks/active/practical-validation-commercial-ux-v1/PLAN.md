@@ -1,7 +1,8 @@
 # Practical Validation Commercial UX V1
 
-Status: Active
+Status: Complete
 Started: 2026-05-30
+Completed: 2026-05-31
 
 ## 이걸 하는 이유?
 
@@ -18,6 +19,10 @@ Practical Validation의 module gate와 evidence board 구조는 정리됐지만,
 - Evidence board를 탭 / summary-first 구조로 재배치
 - Provider gap 보강 액션을 action center로 표시
 - 기존 dataframe / raw JSON은 상세 접힘 영역으로 낮춤
+- 선택 후보 확인에 Backtest Analysis summary / equity curve / result table snapshot 표시
+- 최신 runtime replay 결과는 현재 세션에서 실행한 뒤에만 표시
+- 저장-only는 audit trail로 유지하고 Final Review 후보 노출은 Gate 통과 result로 제한
+- Step 1~7 본문 경계 surface와 7-step rail 표시
 - focused compile, service contract, boundary, browser QA 실행
 
 ## Out Of Scope

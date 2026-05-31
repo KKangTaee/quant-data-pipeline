@@ -4453,3 +4453,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - service contract 193 tests와 Browser QA를 통과했으며, 검증 module / Final Review gate 정책은 변경하지 않았다.
   - 저장-only는 audit trail로 유지하되 Gate 미통과 validation row는 Final Review 후보 목록에서 숨기도록 정리했다.
   - Practical Validation 신규 진입 / source 변경 시 이전 replay 표시 state를 비우고, Step 1~7 본문 경계 surface를 복원했다.
+  - 사용자 확인에 따라 Portfolio Validation closeout으로 정리하고 durable docs / roadmap / project map / glossary / storage governance를 최신 상태로 맞췄다.

@@ -19,3 +19,5 @@
 - `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동`의 의미를 분리. 저장-only row는 audit trail로 남지만 Final Review Gate를 통과하지 않으면 Final Review source picker에 표시하지 않도록 필터링.
 - Practical Validation 탭 신규 진입 / source 변경 시 이전 runtime replay 표시 state를 비워, 현재 세션에서 사용자가 `전략 재검증 실행`을 누른 결과만 Step 3에 표시하도록 조정.
 - 상용 visual overhaul에서 흐려진 step 경계를 보완하기 위해 Step 1~7 본문을 bordered surface로 다시 묶고, 상단 7-step rail을 추가.
+- 사용자가 Portfolio Validation은 여기까지 마무리한다고 확인. 장기 문서 `INDEX`, `ROADMAP`, `PROJECT_MAP`, `flows`, `STORAGE_GOVERNANCE`, `GLOSSARY`에 최신 흐름과 저장 경계를 동기화.
+- 남은 상태는 별도 구현 task가 아니라 future pass 후보로만 둔다.

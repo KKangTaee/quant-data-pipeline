@@ -1,7 +1,7 @@
 # Finance Glossary
 
 Status: Active
-Last Verified: 2026-05-30
+Last Verified: 2026-05-31
 
 ## 목적
 이 문서는 퀀트, 백테스트, 실전형 전략 문서에서 반복해서 나오는 용어를
@@ -2854,15 +2854,18 @@ Practical Validation 결과 위에 보조 layer로 얹어 보는 진단이다.
 ## Practical Validation
 
 ### 기본 설명
-Backtest Analysis에서 만든 후보 source를 실전 검토 관점의 12개 진단으로 확인하는 단계다.
+Backtest Analysis에서 만든 후보 source를 실전 검토 관점의 12개 진단과 source traits 기반 module gate로 확인하는 단계다.
 
 ### 왜 사용되는지
 좋아 보이는 백테스트 성과가 데이터 신뢰도, ETF 운용성, holdings, macro context, stress / sensitivity 조건에서도 설명 가능한지 확인해야 하기 때문이다.
+Final Review로 넘어갈 수 있는지는 저장 여부가 아니라 필수 module gate 통과 여부로 판단한다.
 
 ### 예시 / 필요 상황
 - provider data gap이 남아 있는지 확인할 때
 - ETF 비용, 유동성, holdings exposure, macro context, stress window를 함께 볼 때
 - `PASS`, `REVIEW`, `BLOCKED`, `NOT_RUN`의 의미를 Final Review 전에 정리할 때
+- `검증 결과 저장(기록용)`으로 audit trail을 남기되, Gate 미통과 row가 Final Review 후보로 표시되지 않아야 할 때
+- 최신 runtime replay를 현재 세션에서 다시 실행했는지 확인해야 할 때
 
 ---
 
