@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-30
 
 ## Purpose
 
@@ -17,6 +17,13 @@ Last Verified: 2026-05-28
 2. [Roadmap](./ROADMAP.md)
 3. [Project Map](./PROJECT_MAP.md)
 4. [Glossary](./GLOSSARY.md)
+
+## Current Phase State
+
+- Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
+- Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
+- Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
+- Current implementation focus: `phase14-candidate-prioritization-v1`; rank Phase 13 carry-forward candidates before opening the next implementation slice.
 
 ## By Purpose
 
@@ -38,6 +45,7 @@ Last Verified: 2026-05-28
 | 위치 | 역할 |
 |---|---|
 | `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리하는 phase 단위 계획과 통합 기록 |
+| `.aiworkspace/note/finance/phases/done/` | 완료된 phase의 closeout summary |
 | `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과 |
 | `.aiworkspace/note/finance/researches/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `.aiworkspace/note/finance/agent/` | Codex 반복 실수, 교훈, 운영 팁 |

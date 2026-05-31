@@ -16,13 +16,16 @@ BACKTEST_STAGE_OPTIONS = [
 BACKTEST_LEGACY_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
+    "Portfolio Mix Builder",
     "Candidate Review",
     "Portfolio Proposal",
     "Final Review",
 ]
 
 BACKTEST_ANALYSIS_MODE_SINGLE = "Single Strategy"
-BACKTEST_ANALYSIS_MODE_COMPARE = "Compare & Portfolio Builder"
+BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE = "Compare & Portfolio Builder"
+BACKTEST_ANALYSIS_MODE_PORTFOLIO_MIX = "Portfolio Mix Builder"
+BACKTEST_ANALYSIS_MODE_COMPARE = BACKTEST_ANALYSIS_MODE_PORTFOLIO_MIX
 BACKTEST_ANALYSIS_MODE_OPTIONS = [
     BACKTEST_ANALYSIS_MODE_SINGLE,
     BACKTEST_ANALYSIS_MODE_COMPARE,
@@ -49,7 +52,7 @@ def _route_target_to_stage_and_mode(target: str | None) -> dict[str, Any]:
             "analysis_mode": BACKTEST_ANALYSIS_MODE_SINGLE,
             "practical_mode": None,
         }
-    if normalized == "Compare & Portfolio Builder":
+    if normalized in {BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE, BACKTEST_ANALYSIS_MODE_PORTFOLIO_MIX}:
         return {
             "stage": BACKTEST_STAGE_ANALYSIS,
             "analysis_mode": BACKTEST_ANALYSIS_MODE_COMPARE,

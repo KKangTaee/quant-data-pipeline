@@ -188,8 +188,202 @@ def build_selected_portfolio_drift_alert_table(alert_preview: dict[str, Any]) ->
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_allocation_drift_boundary_table(boundary: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(boundary.get("rows") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+                "Source": row.get("Source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def build_selected_portfolio_evidence_table(row: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(build_final_decision_evidence_rows(row))
+
+
+def build_selected_portfolio_monitoring_timeline_table(timeline: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(timeline.get("rows") or []):
+        display_rows.append(
+            {
+                "Order": row.get("order"),
+                "Event": row.get("event"),
+                "When": row.get("timestamp"),
+                "Status": row.get("status_label") or row.get("status"),
+                "Signal": row.get("signal"),
+                "Evidence": row.get("evidence"),
+                "Next Action": row.get("next_action"),
+                "Source": row.get("source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_continuity_table(continuity: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(continuity.get("checks") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_source_contract_table(contract: dict[str, Any]) -> pd.DataFrame:
+    boundary = dict(contract.get("execution_boundary") or {})
+    rows = [
+        {"Field": "Schema", "Value": contract.get("schema_version")},
+        {"Field": "Surface", "Value": contract.get("surface")},
+        {"Field": "Decision ID", "Value": contract.get("decision_id")},
+        {"Field": "Decision Route", "Value": contract.get("decision_route")},
+        {"Field": "Durable Source", "Value": contract.get("durable_source")},
+        {"Field": "Source Identity", "Value": contract.get("source_identity")},
+        {"Field": "Selection Source ID", "Value": contract.get("selection_source_id")},
+        {"Field": "Validation ID", "Value": contract.get("validation_id")},
+        {
+            "Field": "Session Evidence",
+            "Value": ", ".join(list(contract.get("session_evidence_sources") or [])) or "-",
+        },
+        {"Field": "Registry Write", "Value": boundary.get("registry_write")},
+        {"Field": "Monitoring Log Auto Write", "Value": boundary.get("monitoring_log_auto_write")},
+        {"Field": "Report Auto Write", "Value": boundary.get("report_auto_write")},
+        {"Field": "Order Instruction", "Value": boundary.get("order_instruction")},
+        {"Field": "Auto Rebalance", "Value": boundary.get("auto_rebalance")},
+    ]
+    return pd.DataFrame(rows)
+
+
+def build_selected_portfolio_recheck_comparison_table(comparison: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(comparison.get("rows") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Threshold": row.get("Threshold"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_review_signal_policy_table(policy: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(policy.get("rows") or []):
+        display_rows.append(
+            {
+                "Trigger": row.get("Trigger"),
+                "Status": row.get("Status Label") or row.get("Status"),
+                "Current Signal": row.get("Current Signal"),
+                "Policy Owner": row.get("Policy Owner"),
+                "Why It Matters": row.get("Why It Matters"),
+                "Suggested Action": row.get("Suggested Action"),
+                "Source": row.get("Source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_recheck_readiness_table(readiness: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(readiness.get("rows") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_recheck_preflight_table(preflight: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(preflight.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("Area"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_symbol_freshness_table(freshness: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(freshness.get("rows") or []):
+        display_rows.append(
+            {
+                "Symbol": row.get("Symbol"),
+                "Role": row.get("Role"),
+                "Components": row.get("Components"),
+                "Status": row.get("Status"),
+                "Latest Date": row.get("Latest Date"),
+                "Market Date": row.get("Market Date"),
+                "Days Lag": row.get("Days Lag"),
+                "Row Count": row.get("Row Count"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_provider_evidence_table(evidence: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(evidence.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("Area"),
+                "Status": row.get("Status"),
+                "Coverage": row.get("Coverage"),
+                "Coverage Weight": row.get("Coverage Weight"),
+                "Freshness": row.get("Freshness"),
+                "As Of Range": row.get("As Of Range"),
+                "Source Mix": row.get("Source Mix"),
+                "Policy Reason": row.get("Policy Reason"),
+                "Summary": row.get("Summary"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_provider_symbol_weight_table(evidence: dict[str, Any]) -> pd.DataFrame:
+    symbol_weights = dict(evidence.get("symbol_weights") or {})
+    return pd.DataFrame(
+        [
+            {
+                "Symbol": symbol,
+                "Provider Weight": weight,
+            }
+            for symbol, weight in sorted(symbol_weights.items())
+        ]
+    )
 
 
 def filter_selected_portfolio_rows(

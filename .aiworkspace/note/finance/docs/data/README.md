@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-30
 
 ## Purpose
 
@@ -14,6 +14,7 @@ Last Verified: 2026-05-28
 | 상황 | 먼저 볼 문서 |
 |---|---|
 | 데이터가 어디서 와서 어디로 저장되는지 확인 | [DATA_FLOW_MAP.md](./DATA_FLOW_MAP.md) |
+| DB / JSONL / saved setup / run artifact 저장 경계 확인 | [STORAGE_GOVERNANCE.md](./STORAGE_GOVERNANCE.md) |
 | DB와 table 목록을 빠르게 확인 | [DB_SCHEMA_MAP.md](./DB_SCHEMA_MAP.md) |
 | table별 source / derived / shadow / provider snapshot 의미 확인 | [TABLE_SEMANTICS.md](./TABLE_SEMANTICS.md) |
 | PIT, look-ahead, survivorship, stale data 위험 확인 | [DATA_QUALITY_AND_PIT_NOTES.md](./DATA_QUALITY_AND_PIT_NOTES.md) |
@@ -32,6 +33,7 @@ Last Verified: 2026-05-28
 |---|---|
 | `nyse_stock` | NYSE stock listing master |
 | `nyse_etf` | NYSE ETF listing master |
+| `nyse_symbol_lifecycle` | symbol lifecycle / historical universe / delisting evidence table. SEC Form 25 collector가 official delisting evidence를 저장할 수 있다 |
 | `nyse_asset_profile` | stock / ETF profile and bridge metadata |
 | `nyse_price_history` | OHLCV price ledger |
 | `market_universe_member` | Overview market intelligence current universe membership |
@@ -49,13 +51,14 @@ Last Verified: 2026-05-28
 
 | File / Folder | Meaning | Policy |
 |---|---|---|
-| `.aiworkspace/note/finance/registries/` | workflow decision / source registry | 보존 대상. 명시 요청 없이 재작성하지 않음 |
-| `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup | 보존 대상 |
-| `.aiworkspace/note/finance/run_history/` | local run history | 장기 문서 아님. 보통 커밋하지 않음 |
+| `.aiworkspace/note/finance/registries/` | workflow decision / source registry | 보존 대상. 명시 요청 없이 재작성하지 않음. 새 파일 추가 전 [Storage Governance](./STORAGE_GOVERNANCE.md) checklist 확인 |
+| `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup | 사용자가 명시적으로 저장한 setup. validation / final decision evidence가 아님 |
+| `.aiworkspace/note/finance/run_history/` | local run history | 장기 문서 아님. 투자 판단 source-of-truth가 아니며 보통 커밋하지 않음 |
 | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact | 장기 문서 아님. 보통 커밋하지 않음 |
 
 앱 코드는 이 위치들을 `app/workspace_paths.py`의 canonical path 상수로 읽는다.
 새 registry / saved / run-history helper를 만들 때는 `.note/finance` 경로를 직접 만들지 않는다.
+runtime-defined V2 JSONL 파일은 첫 workflow write 전에는 로컬에 없을 수 있으며, 파일 부재 자체는 저장 경계 drift가 아니다.
 
 ## Data Integrity Rules
 
@@ -63,7 +66,9 @@ Last Verified: 2026-05-28
 - provider field는 안정적이거나 완전하다고 가정하지 않는다.
 - official row가 partial이면 DB bridge와 병합하되 source origin을 숨기지 않는다.
 - Practical Validation JSONL에는 compact evidence와 reason만 저장하고, full provider raw data는 DB에 둔다.
+- 새 JSONL registry는 기본적으로 만들지 않고, stage handoff나 명시적 reusable setup이 아닌 저장은 피한다.
 - static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
+- Selected Portfolio Dashboard read model은 monitoring log 자동 저장, live approval, broker order, auto rebalance를 수행하지 않는다.
 
 ## Code Flow 문서와의 차이
 

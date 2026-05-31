@@ -23,9 +23,9 @@ app/web/streamlit_app.py
   -> Backtest UI latest result / history
 ```
 
-Compare / weighted portfolio 흐름은 일부 service layer로 이동했다.
-수동 Compare 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했고,
-strategy별 runner catalog와 compare default / universe resolution은 `app/services/backtest_compare_catalog.py`로 이동했다.
+Portfolio Mix / weighted portfolio 흐름은 일부 service layer로 이동했다.
+수동 multi-strategy component 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했고,
+strategy별 runner catalog와 mix builder default / universe resolution은 `app/services/backtest_compare_catalog.py`로 이동했다.
 weighted portfolio bundle construction은 `app/services/backtest_weighted_portfolio.py`로 이동했다.
 saved portfolio replay execution / data assembly는 `app/services/backtest_saved_portfolio_replay.py`로 이동했다.
 UI는 session state, history append call, notice, render side effect를 유지한다.
@@ -38,7 +38,7 @@ app/web/streamlit_app.py
   -> app/services/backtest_compare_catalog.py
   -> app/runtime/backtest.py
   -> finance/loaders/* / finance strategy runtime
-  -> compare result
+  -> component result
   -> app/services/backtest_weighted_portfolio.py
   -> finance/performance.py / app/runtime/backtest.py
   -> weighted portfolio result
@@ -51,14 +51,15 @@ app/web/streamlit_app.py
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console navigation entry |
-| `app/web/pages/backtest.py` | form, panel, result surface, history, compare, saved portfolio UI |
+| `app/web/pages/backtest.py` | form, panel, result surface, history, Portfolio Mix Builder, saved portfolio UI |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, Streamlit spinner, session state / history append |
 | `app/services/backtest_execution.py` | Single Strategy runtime dispatch, elapsed timing, input/data/system error normalization |
-| `app/services/backtest_compare_execution.py` | Manual Compare execution loop, elapsed timing, input/data/system error normalization |
-| `app/services/backtest_compare_catalog.py` | Compare strategy runner catalog, default parameter, preset/manual universe resolution, runtime dispatch |
+| `app/services/backtest_compare_execution.py` | Manual multi-strategy component execution loop, elapsed timing, input/data/system error normalization |
+| `app/services/backtest_compare_catalog.py` | Portfolio Mix Builder strategy runner catalog, default parameter, preset/manual universe resolution, runtime dispatch |
 | `app/services/backtest_result_read_model.py` | Strategy data trust rows, weighted component contribution amount/share views |
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
+| `app/services/backtest_realism_audit.py` | Practical Validation / Final Review가 읽는 read-only backtest realism audit. 기존 runtime metadata와 compact validation evidence에서 비용, turnover, liquidity, net policy, rebalance, tax/account, execution boundary gap을 해석한다 |
 | `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
 | `app/runtime/backtest_result_bundle.py` | runtime 결과를 UI-facing result bundle / summary / chart / metadata contract로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
@@ -145,11 +146,25 @@ runtime은 단순 성과표만 반환하지 않는다.
 
 - gross / net / cost result
 - turnover / cost assumption
+- `cost_model_source_contract_v1`: cost bps가 단순 assumption인지, `_apply_transaction_cost_postprocess`를 통해 `Total Balance` / `Total Return` 결과 곡선에 적용됐는지 나타내는 compact proof
+- `turnover_evidence_contract_v1`: turnover가 holdings delta에서 실제 추정됐는지, rebalance cadence만 있는지, 또는 holdings column 부족으로 추정하지 못했는지 나타내는 compact proof
+- `net_cost_curve_contract_v1`: gross / net / estimated cost curve가 실제로 연결됐는지, measurable cost impact / zero-cost / missing turnover estimate / missing proof를 분리하는 compact proof
+- `cost_slippage_sensitivity_contract_v1`: 기존 validation payload의 cost / slippage sensitivity evidence가 explicit인지, generic robustness-only인지, missing인지 분리하는 read-only proof
+- `liquidity_capacity_contract_v1`: provider operability context의 coverage, freshness, source strength, compact capacity metrics를 읽어 fresh official actual evidence와 weak / stale / legacy evidence를 분리하는 compact proof
 - benchmark overlay와 benchmark-relative diagnostics
 - investability filter 결과
 - liquidity / coverage policy status
 - underperformance / drawdown guardrail trigger state
 - promotion / shortlist / deployment 또는 pre-live review status
+
+Backtest Realism Audit은 이 metadata를 새로 계산하거나 저장하지 않는다.
+기존 result bundle / Practical Validation evidence에 붙어 있는 비용, turnover, liquidity, net spread, rebalance cadence 같은 값을 읽어 실전성 공백을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 표시한다.
+`transaction_cost_bps`만 있고 `cost_application_status=applied_to_result_curve` 또는 그에 준하는 cost application proof가 없으면 assumption-only `REVIEW`로 해석한다.
+turnover는 holdings-derived estimate가 있을 때만 strong evidence로 보고, cadence-only 또는 legacy turnover metadata는 `REVIEW`로 해석한다.
+net cost curve proof는 measurable gross-net delta와 positive estimated-cost rows가 있을 때 strong evidence로 보며, cost application flag만 있는 legacy source는 과대평가하지 않는다.
+cost / slippage sensitivity proof는 explicit cost bps / slippage / spread sensitivity evidence가 있을 때만 strong evidence로 보며, 일반 robustness sensitivity만 있으면 `REVIEW`로 남긴다.
+liquidity / capacity proof는 fresh official actual provider evidence와 compact capacity metrics가 있을 때만 strong evidence로 보며, bridge / proxy, stale / unknown, partial coverage, legacy pass-only source는 `REVIEW` 또는 `NEEDS_INPUT`으로 남긴다.
+metadata가 없으면 pass로 추정하지 않고 보강 필요로 남긴다.
 
 주의:
 

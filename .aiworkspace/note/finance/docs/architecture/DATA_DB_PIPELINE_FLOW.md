@@ -24,6 +24,7 @@ external source
 | yfinance | price, profile, 일부 fundamentals |
 | NYSE listing source | stock / ETF universe |
 | EDGAR | detailed financial statements |
+| SEC EDGAR submissions / Form 25 | symbol lifecycle delisting evidence |
 | local DB | backtest runtime read path |
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
 | ETF provider source map | `nyse_etf` / `nyse_asset_profile`와 issuer 공식 URL 검증을 이용해 ETF별 수집 endpoint / parser mapping을 저장 |
@@ -42,7 +43,11 @@ external source
 |---|---|
 | `finance/data/db/schema.py` | DB table definition과 schema migration 성격의 column 보강 |
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
-| `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재 |
+| `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재하고 current listing lifecycle bridge row를 UPSERT |
+| `finance/data/sec_delisting.py` | SEC `company_tickers.json`와 submissions API에서 Form 25 / 25-NSE filing metadata를 읽어 `nyse_symbol_lifecycle` delisting_feed row로 UPSERT |
+| `finance/data/sec_company_tickers.py` | SEC `company_tickers_exchange.json` current CIK / ticker / exchange association을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
+| `finance/data/symbol_directory.py` | Nasdaq public Symbol Directory `nasdaqlisted.txt` / `otherlisted.txt` current snapshot을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
+| `finance/data/computed_lifecycle.py` | 기존 current snapshot lifecycle rows를 읽어 repeated observation window를 `computed_from_snapshots` partial row로 요약 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
@@ -51,16 +56,16 @@ external source
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
-| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
+| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / market intelligence snapshot 실행 화면. FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate, ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
 
 ## Loader 계층
 
 | 파일 | 역할 |
 |---|---|
-| `finance/loaders/universe.py` | universe와 asset profile status 조회 |
-| `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price 조회 |
+| `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary 조회 |
+| `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
@@ -88,6 +93,33 @@ external source
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
   `macro_series_observation`은 FRED market-context observation을 long-form으로 저장하고,
   `finance/loaders/macro.py`가 validation 기준일 근처 snapshot과 staleness를 읽는다.
+  `regime-split-validation-v1`부터 Practical Validation은 같은 loader의 historical observation read path를 사용해
+  VIX / yield curve / credit spread 월별 regime bucket evidence를 read-only로 계산한다.
+  `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,
+  stale ETF provider snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
+  `liquidity-capacity-evidence-v1`부터 provider operability context는 min net assets, min average daily dollar volume, max bid-ask spread, max expense, max premium/discount, review symbols 같은 compact capacity metrics도 제공한다.
+  Bridge / proxy liquidity evidence는 coverage가 높아도 official actual provider evidence처럼 PASS 처리하지 않고 REVIEW로 남긴다.
+  `look-through-exposure-board-v1`부터 같은 provider context가 holdings / exposure snapshot을 compact board로 접어 asset bucket, top holding, overlap, ETF별 coverage를 보여준다.
+  이 board도 full holdings row를 JSONL에 저장하지 않고 DB-backed loader 결과에서 만든 summary / top rows만 저장한다.
+  `data-coverage-hardening-v1`부터 `finance/loaders/price.py`는 requested validation window의 symbol별 first / latest / row count summary를 제공한다.
+  Practical Validation은 이 summary와 asset profile status, provider freshness, runtime replay / period coverage를 `Data Coverage Audit`으로 묶어 보여주며, full OHLCV row나 full listing row를 workflow JSONL에 저장하지 않는다.
+  `historical-universe-survivorship-v1`부터 `nyse_symbol_lifecycle`은 current listing snapshot, historical listing, delisting feed, computed snapshot evidence를 저장할 수 있는 lifecycle table이다.
+  `finance/loaders/universe.py`는 requested period 기준 compact lifecycle summary를 제공하고, Data Coverage Audit은 requested period를 덮는 historical / delisting evidence가 있을 때만 survivorship control을 PASS로 본다.
+  current listing snapshot이나 asset profile row만 있으면 REVIEW로 남긴다.
+  `sec-form25-delisting-backfill-v1`부터 `finance/data/sec_delisting.py`는 SEC EDGAR submissions API와 Form 25 / 25-NSE metadata를 official/free delisting source로 사용해
+  `source_type=delisting_feed`, `coverage_status=actual`, `listing_status=delisted` lifecycle row를 저장한다.
+  Form 25 row는 delisting evidence이며, Form 25 부재를 active proof로 해석하지 않는다.
+  `symbol-lifecycle-event-fields-v1`부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.
+  NYSE current listing row는 `event_type=listing_observed`, SEC Form 25 row는 `event_type=delisting`으로 저장해 future ticker change / merger source와 같은 row contract를 쓴다.
+  `symbol-directory-snapshot-ingestion-v1`부터 `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 읽어
+  `source=nasdaq_symdir_nasdaqlisted` / `nasdaq_symdir_otherlisted`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장한다.
+  이 row는 current snapshot evidence이며 historical membership PASS 근거가 아니다.
+  `sec-cik-exchange-crosscheck-v1`부터 `finance/data/sec_company_tickers.py`는 SEC `company_tickers_exchange.json` current association을 읽어
+  `source=sec_company_tickers_exchange`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장하고 CIK를 `related_cik`에 둔다.
+  이 row는 identity cross-check evidence이며 historical membership / delisting / ticker action proof가 아니다.
+  `computed-snapshot-lifecycle-v1`부터 `finance/data/computed_lifecycle.py`는 기존 current snapshot rows의 repeated observation window를
+  `source=computed_snapshot_lifecycle`, `source_type=computed_from_snapshots`, `coverage_status=partial`, `event_type=historical_membership` row로 요약한다.
+  이 row도 absence를 delisting proof로 해석하지 않으며, Data Coverage Audit은 `coverage_status=actual` row만 survivorship PASS 후보로 본다.
 
 ## 데이터 무결성 체크포인트
 

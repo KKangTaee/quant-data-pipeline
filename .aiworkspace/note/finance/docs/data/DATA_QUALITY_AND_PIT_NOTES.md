@@ -40,6 +40,20 @@
 - `status`, `is_spac`, country, sector, industry는 provider 품질에 의존한다.
 - historical listing / delisting / symbol-change truth가 아니다.
 - survivorship bias를 완전히 제거하지 못한다.
+- `nyse_symbol_lifecycle`은 historical universe / delisting evidence를 담기 위한 table이다.
+  current listing snapshot row는 partial `listing_observed` evidence이고, requested period를 덮는 actual `historical_listing`, `delisting_feed`, 또는 actual `computed_from_snapshots` source가 있어야 survivorship control PASS 근거가 된다.
+- SEC Form 25 / 25-NSE row는 official delisting / withdrawal evidence로 저장할 수 있지만, first listing date나 complete historical universe membership을 증명하지 않는다.
+  Form 25 부재를 active listing proof로 해석하면 안 된다.
+- Phase 8부터 lifecycle row는 `event_type`과 `event_date`를 명시한다.
+  SEC Form 25는 `delisting` event이고 current listing snapshot은 `listing_observed` event이므로 두 evidence를 같은 PASS 근거처럼 해석하면 안 된다.
+- Nasdaq public Symbol Directory current files는 `listing_observed` partial evidence로 저장할 수 있다.
+  이 row는 current snapshot coverage를 넓히지만, missing symbol을 delisted로 만들거나 requested historical period membership을 증명하지 않는다.
+- SEC `company_tickers_exchange.json` row는 current CIK / ticker / exchange identity cross-check로 저장할 수 있다.
+  이 row도 current association일 뿐이므로 historical membership, delisting, ticker action proof가 아니다.
+- computed snapshot lifecycle row는 existing current snapshot rows의 repeated observation window를 요약한다.
+  Phase 8-5에서는 `coverage_status=partial`로 저장하며, missing snapshot을 delisting proof로 해석하지 않는다.
+- Data Coverage Audit은 lifecycle evidence를 current snapshot, SEC identity cross-check, computed partial, actual coverage, delisting actual로 분리해 표시한다.
+  이 분리는 operator 해석을 돕기 위한 read-only scoring이며, partial evidence를 PASS로 승격하지 않는다.
 - `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
 - P2-2B official row는 iShares / SSGA / Invesco page의 current snapshot을 normalize한 것이다.
   다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,
@@ -49,9 +63,17 @@
   AOR은 현재 1차 ETF holdings만 저장하고, 2차 Aggregate Underlying look-through는 후속이다.
   GLD는 row-level source가 bar list PDF 성격이라 synthetic holdings row를 만들지 않는다.
   holdings와 exposure 모두 과거 특정 검증일의 point-in-time truth로 쓰려면 해당 날짜의 provider snapshot이 DB에 있어야 한다.
+- `data-provenance-coverage-v1` 이후 Practical Validation provider context는 ETF provider snapshot의 source mix, as-of range, collected range, coverage status weight, freshness를 compact하게 보여준다.
+  기본 provider freshness threshold는 45일이며, coverage가 충분해도 threshold를 넘은 stale snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
+- `validation-efficacy-hardening-v1` 이후 Practical Validation과 Final Review는 Validation Efficacy Audit에서 PIT / look-ahead / survivorship / provider freshness / temporal / OOS / regime gap을 별도 row로 노출한다.
+  이 audit은 기존 compact evidence를 읽는 read model이며, historical universe / delisting evidence가 명시되지 않으면 survivorship / universe row를 `REVIEW`로 남긴다.
+- `validation-efficacy-gate-policy-refinement-v2` 이후 temporal / OOS / regime non-PASS row는 Final Review selected-route gate evidence에도 병합된다. `REVIEW`는 hold / re-review 요구이고, `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker다.
+- `look-through-exposure-board-v1` 이후 holdings / exposure snapshot은 compact board로만 workflow에 전달된다.
+  이 board는 1차 ETF holdings / exposure 기준이며, ETF-of-ETF 2차 look-through는 아직 보장하지 않는다.
 - `macro_series_observation`은 FRED observation date 기준 market-context series다.
   FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다.
   vintage / revision point-in-time까지 보장하는 ALFRED 계층은 아직 구현하지 않았다.
+  Macro freshness threshold는 기존 Practical Validation 기준인 10일을 유지한다.
 
 ## Fundamentals / factors
 

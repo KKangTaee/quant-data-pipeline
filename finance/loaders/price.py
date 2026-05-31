@@ -197,6 +197,78 @@ def load_price_freshness_summary(
     return df
 
 
+def load_price_window_summary(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+) -> pd.DataFrame:
+    """
+    Load per-symbol DB price coverage around a requested validation window.
+
+    The function returns compact coverage metrics only; it does not load full
+    OHLCV rows. This keeps Practical Validation evidence small while still
+    proving whether DB rows exist for the requested source window.
+    """
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    normalized_timeframe = normalize_timeframe(timeframe)
+    start_ts, end_ts = normalize_date_range(start=start, end=end)
+
+    if not resolved_symbols:
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "first_available_date",
+                "latest_available_date",
+                "total_row_count",
+                "first_window_date",
+                "latest_window_date",
+                "window_row_count",
+            ]
+        )
+
+    start_text = start_ts.strftime("%Y-%m-%d") if start_ts is not None else "1000-01-01"
+    end_text = end_ts.strftime("%Y-%m-%d") if end_ts is not None else "9999-12-31"
+    placeholders = ",".join(["%s"] * len(resolved_symbols))
+    params: list[object] = [start_text, end_text, start_text, end_text, start_text, end_text]
+    params.extend(resolved_symbols)
+    params.append(normalized_timeframe)
+
+    sql = f"""
+        SELECT
+            symbol,
+            MIN(`date`) AS first_available_date,
+            MAX(`date`) AS latest_available_date,
+            COUNT(*) AS total_row_count,
+            MIN(CASE WHEN `date` BETWEEN %s AND %s THEN `date` ELSE NULL END) AS first_window_date,
+            MAX(CASE WHEN `date` BETWEEN %s AND %s THEN `date` ELSE NULL END) AS latest_window_date,
+            SUM(CASE WHEN `date` BETWEEN %s AND %s THEN 1 ELSE 0 END) AS window_row_count
+        FROM nyse_price_history
+        WHERE symbol IN ({placeholders})
+          AND timeframe = %s
+        GROUP BY symbol
+        ORDER BY symbol ASC
+    """
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_price")
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    for column in ["first_available_date", "latest_available_date", "first_window_date", "latest_window_date"]:
+        if column in df.columns:
+            df[column] = pd.to_datetime(df[column], errors="coerce")
+    return df
+
+
 def load_latest_market_date(
     *,
     end: str | None = None,

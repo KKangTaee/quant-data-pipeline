@@ -35,6 +35,45 @@ NYSE 웹페이지
 - `nyse_asset_profile`은 stock / ETF 필터링과 current-operability 판단의 핵심 메타 table이다.
 - 완전한 point-in-time universe history는 아직 아니다.
 
+## Symbol lifecycle / delisting evidence 흐름
+
+```text
+NYSE listing CSV
+  -> finance.data.nyse_db.load_nyse_csv_to_mysql()
+  -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / listing_observed / partial)
+
+Nasdaq public Symbol Directory
+  -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
+  -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / listing_observed / partial)
+
+SEC company_tickers_exchange.json
+  -> finance.data.sec_company_tickers.collect_and_store_sec_company_ticker_crosscheck()
+  -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / listing_observed / partial / CIK cross-check)
+
+SEC company_tickers.json
+SEC submissions API Form 25 / 25-NSE metadata
+  -> finance.data.sec_delisting.collect_and_store_sec_form25_delistings()
+  -> finance_meta.nyse_symbol_lifecycle (delisting_feed / delisting / actual)
+
+Existing current snapshot lifecycle rows
+  -> finance.data.computed_lifecycle.collect_and_store_computed_snapshot_lifecycle()
+  -> finance_meta.nyse_symbol_lifecycle (computed_from_snapshots / historical_membership / partial)
+  -> finance.loaders.universe.load_symbol_lifecycle_coverage_summary()
+  -> Data Coverage Audit / Validation Efficacy Audit
+```
+
+의미:
+
+- current listing snapshot은 현재 NYSE listing 관찰치이며 historical survivorship PASS 근거가 아니다.
+- Nasdaq Symbol Directory snapshot도 current listing 관찰치이며 historical survivorship PASS 근거가 아니다.
+- SEC CIK / ticker / exchange association도 current identity cross-check이며 historical survivorship PASS 근거가 아니다.
+- SEC Form 25 row는 official delisting / withdrawal evidence다.
+- computed snapshot lifecycle row는 repeated observation window 요약이며, `coverage_status=partial`이면 historical survivorship PASS 근거가 아니다.
+- Form 25가 없다는 사실은 active listing proof가 아니다.
+- complete historical universe membership은 여전히 별도 historical listing source가 필요하다.
+- Phase 8부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.
+  이 필드는 future ticker change / merger / historical membership source를 같은 table에 넣기 위한 DB row contract다.
+
 ## Price 흐름
 
 ```text
@@ -160,6 +199,7 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 - QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Operability`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 9번 / 10번 진단은 이 snapshot을 우선 읽는다. 공식 provider row가 부족하고 bridge / proxy만 있으면 `PASS`가 아니라 `REVIEW` 출처로 남긴다.
+- `data-provenance-coverage-v1`부터 provider context는 operability snapshot의 source mix, coverage status weight, as-of range, collected range, freshness를 compact provenance로 함께 저장한다. coverage가 충분해도 snapshot이 오래됐으면 diagnostic status는 `REVIEW`로 낮춘다.
 
 ## ETF holdings / exposure provider snapshot 흐름
 
@@ -189,6 +229,8 @@ Invesco official holdings / weighted sector API
 - `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
 - P2-5A부터 이 수집과 exposure 재집계는 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 2번 / 3번 진단은 이 holdings / exposure snapshot을 우선 읽고, JSONL에는 full row가 아니라 compact provider coverage와 top evidence만 저장한다.
+- `data-provenance-coverage-v1`부터 holdings / exposure context도 source mix, coverage status weight, freshness, stale symbols를 compact provenance로 제공한다. Full holdings / exposure row는 계속 DB에만 둔다.
+- `look-through-exposure-board-v1`부터 provider context는 holdings / exposure snapshot을 compact board로 요약한다. Board에는 asset bucket rows, top holding rows, ETF별 holdings / exposure coverage, exposure detail top rows만 남기며 full holdings row는 저장하지 않는다.
 
 ## Macro / sentiment market-context 흐름
 
@@ -210,6 +252,8 @@ FRED API or FRED official CSV download
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
+- `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
+- `regime-split-validation-v1`부터 Practical Validation은 stored FRED history를 read-only로 읽어 `neutral` / `caution` / `risk_off` bucket별 portfolio / benchmark 성과를 compact evidence로 계산한다.
 
 ## Broad fundamentals / factors 흐름
 

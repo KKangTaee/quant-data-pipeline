@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from html import escape
+
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
@@ -19,6 +21,7 @@ from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
 )
 from app.web.backtest_result_display import *  # noqa: F401,F403
+from app.web.backtest_result_display import _build_next_step_readiness_evaluation
 
 
 def _compare_preset_catalog() -> ComparePresetCatalog:
@@ -30,6 +33,319 @@ def _compare_preset_catalog() -> ComparePresetCatalog:
         value_strict_presets=VALUE_STRICT_PRESETS,
         strict_annual_compare_default_preset=STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
         strict_quarterly_prototype_default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+    )
+
+
+def _render_portfolio_mix_builder_css() -> None:
+    st.markdown(
+        """
+        <style>
+        .pmx-stepper, .pmx-section-head, .pmx-card-grid, .pmx-handoff-card {
+            --pmx-surface: var(--secondary-background-color);
+            --pmx-border: rgba(128, 128, 128, 0.28);
+            --pmx-text: var(--text-color);
+            --pmx-muted: #8a94a6;
+        }
+        .pmx-stepper {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 0.9rem 0 1.1rem;
+        }
+        .pmx-step {
+            min-height: 5.25rem;
+            border: 1px solid var(--pmx-border);
+            border-radius: 8px;
+            padding: 0.8rem 0.9rem;
+            background: var(--pmx-surface);
+        }
+        .pmx-step.done {
+            border-color: #a7d7b9;
+            background: rgba(19, 115, 51, 0.10);
+        }
+        .pmx-step.active {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.10);
+        }
+        .pmx-step.ready {
+            border-color: #a7d7b9;
+            background: rgba(19, 115, 51, 0.10);
+        }
+        .pmx-step.pending {
+            background: var(--pmx-surface);
+            color: var(--pmx-muted);
+        }
+        .pmx-step.blocked {
+            border-color: #f2b8b5;
+            background: rgba(180, 35, 24, 0.10);
+        }
+        .pmx-step-index {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.35rem;
+            height: 1.35rem;
+            margin-right: 0.35rem;
+            border-radius: 999px;
+            background: rgba(128, 128, 128, 0.18);
+            color: var(--pmx-text);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .pmx-step.done .pmx-step-index {
+            background: #dff3e6;
+            color: #137333;
+        }
+        .pmx-step.active .pmx-step-index {
+            background: #ffe3e3;
+            color: #c92a2a;
+        }
+        .pmx-step.ready .pmx-step-index {
+            background: #dff3e6;
+            color: #137333;
+        }
+        .pmx-step-title {
+            display: block;
+            margin-top: 0.15rem;
+            font-weight: 750;
+            color: var(--pmx-text);
+        }
+        .pmx-step-caption {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.84rem;
+            line-height: 1.35;
+            color: var(--pmx-muted);
+        }
+        .pmx-section-head {
+            margin: 0.4rem 0 0.75rem;
+            padding: 0.95rem 1rem;
+            border: 1px solid var(--pmx-border);
+            border-left: 4px solid #ff6b6b;
+            border-radius: 8px;
+            background: var(--pmx-surface);
+        }
+        .pmx-section-head strong {
+            display: block;
+            color: var(--pmx-text);
+            font-size: 1rem;
+        }
+        .pmx-section-head span {
+            display: block;
+            margin-top: 0.3rem;
+            color: var(--pmx-muted);
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+        .pmx-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.75rem;
+            margin: 0.7rem 0 1rem;
+        }
+        .pmx-component-card {
+            border: 1px solid var(--pmx-border);
+            border-radius: 8px;
+            padding: 0.85rem 0.9rem;
+            background: var(--pmx-surface);
+        }
+        .pmx-component-title {
+            font-weight: 750;
+            color: var(--pmx-text);
+            margin-bottom: 0.25rem;
+        }
+        .pmx-component-contract {
+            min-height: 1.8rem;
+            color: var(--pmx-muted);
+            font-size: 0.82rem;
+            line-height: 1.3;
+            margin-bottom: 0.65rem;
+        }
+        .pmx-metric-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.45rem;
+            margin-bottom: 0.65rem;
+        }
+        .pmx-metric {
+            padding: 0.45rem;
+            border-radius: 7px;
+            background: rgba(128, 128, 128, 0.12);
+        }
+        .pmx-metric small {
+            display: block;
+            color: var(--pmx-muted);
+            font-size: 0.72rem;
+            line-height: 1.1;
+        }
+        .pmx-metric strong {
+            display: block;
+            margin-top: 0.2rem;
+            color: var(--pmx-text);
+            font-size: 0.86rem;
+        }
+        .pmx-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+        .pmx-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            border-radius: 999px;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.78rem;
+            font-weight: 650;
+            background: #f2f4f7;
+            color: #344054;
+        }
+        .pmx-chip.pass {
+            background: #e7f6ec;
+            color: #137333;
+        }
+        .pmx-chip.review {
+            background: #fff4d6;
+            color: #8a5b00;
+        }
+        .pmx-chip.fail {
+            background: #ffe4e4;
+            color: #b42318;
+        }
+        .pmx-chip.neutral {
+            background: #f2f4f7;
+            color: #344054;
+        }
+        .pmx-handoff-card {
+            border: 1px solid var(--pmx-border);
+            border-radius: 8px;
+            padding: 1rem;
+            background: var(--pmx-surface);
+            margin: 0.5rem 0 0.9rem;
+        }
+        .pmx-handoff-card.pass {
+            border-color: #a7d7b9;
+            background: rgba(19, 115, 51, 0.10);
+        }
+        .pmx-handoff-card.review {
+            border-color: #efd28d;
+            background: rgba(255, 196, 0, 0.10);
+        }
+        .pmx-handoff-card.fail {
+            border-color: #f2b8b5;
+            background: rgba(180, 35, 24, 0.10);
+        }
+        .pmx-handoff-title {
+            display: block;
+            color: var(--pmx-text);
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+        }
+        .pmx-handoff-body {
+            display: block;
+            color: var(--pmx-muted);
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+        @media (max-width: 900px) {
+            .pmx-stepper {
+                grid-template-columns: 1fr 1fr;
+            }
+            .pmx-metric-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 560px) {
+            .pmx-stepper,
+            .pmx-card-grid,
+            .pmx-metric-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _html_text(value: Any) -> str:
+    return escape(str(value if value is not None else "-"))
+
+
+def _metric_text(value: Any, kind: str) -> str:
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    if pd.isna(numeric_value):
+        return "-"
+    if kind == "currency":
+        return _format_currency(numeric_value)
+    if kind == "percent":
+        return _format_percent(numeric_value)
+    if kind == "ratio":
+        return _format_ratio(numeric_value)
+    return f"{numeric_value:,.2f}"
+
+
+def _status_chip_tone(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized or normalized == "-":
+        return "neutral"
+    if any(token in normalized for token in ["pass", "ready", "가능", "없음", "clean", "created"]):
+        return "pass"
+    if any(token in normalized for token in ["review", "conditional", "warning", "cadence", "확인", "필요"]):
+        return "review"
+    if any(token in normalized for token in ["fail", "hold", "block", "error", "disabled", "차단"]):
+        return "fail"
+    return "neutral"
+
+
+def _render_portfolio_mix_flow_strip(
+    *,
+    component_ready: bool,
+    mix_ready: bool,
+    can_send_to_practical_validation: bool | None = None,
+) -> None:
+    if not component_ready:
+        active_index = 0
+    elif not mix_ready:
+        active_index = 1
+    else:
+        active_index = 2
+
+    steps = [
+        ("Component 실행", "같은 기간 조건으로 mix 재료를 만듭니다."),
+        ("Weight 구성", "구성 전략 비중과 date alignment를 정합니다."),
+        ("Mix 후보 판단", "mix 전체가 2차 검증 후보인지 확인합니다."),
+        ("Practical Validation", "통과한 mix를 Clean V2 source로 보냅니다."),
+    ]
+    step_cards = []
+    for idx, (title, caption) in enumerate(steps):
+        if idx < active_index:
+            css_class = "done"
+        elif idx == active_index:
+            css_class = "active"
+            if idx == 2 and can_send_to_practical_validation is False:
+                css_class = "blocked"
+        else:
+            css_class = "pending"
+        if idx == 3 and mix_ready and can_send_to_practical_validation is True:
+            css_class = "ready"
+        step_cards.append(
+            f'<div class="pmx-step {css_class}">'
+            f'<span class="pmx-step-index">{idx + 1}</span>'
+            f'<span class="pmx-step-title">{_html_text(title)}</span>'
+            f'<span class="pmx-step-caption">{_html_text(caption)}</span>'
+            "</div>"
+        )
+    st.markdown(f'<div class="pmx-stepper">{"".join(step_cards)}</div>', unsafe_allow_html=True)
+
+
+def _render_portfolio_mix_section_head(title: str, body: str) -> None:
+    st.markdown(
+        f'<div class="pmx-section-head"><strong>{_html_text(title)}</strong><span>{_html_text(body)}</span></div>',
+        unsafe_allow_html=True,
     )
 
 
@@ -70,6 +386,7 @@ def _safe_summary_metric(bundle: dict[str, Any], column: str) -> float | None:
         return None
     return float(value)
 
+
 def _compare_strategy_contract_label(bundle: dict[str, Any]) -> str:
     meta = dict(bundle.get("meta") or {})
     parts = []
@@ -91,6 +408,46 @@ def _compare_strategy_contract_label(bundle: dict[str, Any]) -> str:
         parts.append(f"risk_off={meta.get('risk_off_mode')}")
     return " / ".join(parts) if parts else "-"
 
+
+def _execution_preview_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "small_capital_ready": "Ready For Next Review",
+        "small_capital_ready_with_review": "Review Required",
+        "paper_only": "Paper Observation Check",
+        "watchlist_only": "Watchlist Review",
+        "review_required": "Review Required",
+        "blocked": "Blocked",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _next_stage_step_label(value: Any) -> str:
+    raw = str(value or "-")
+    mapping = {
+        "resolve_contract_gaps_before_shortlist": "resolve_contract_gaps_before_validation_handoff",
+        "manual_review_then_paper_probation_gate": "manual_review_then_practical_validation_gate",
+        "start_paper_probation_and_monitor_monthly": "send_to_practical_validation_for_paper_observation_check",
+        "start_small_capital_trial_with_monthly_review": "send_to_practical_validation_for_small_capital_review",
+        "resolve_failed_checks_before_probation": "resolve_preview_gaps_before_validation_handoff",
+        "review_failed_checks_before_capital_increase": "review_preview_gaps_before_next_stage",
+        "run_small_capital_trial_with_review_checklist": "validate_small_capital_review_conditions",
+        "run_small_capital_trial": "validate_small_capital_review_conditions",
+        "continue_paper_probation_until_checklist_improves": "continue_validation_review_until_preview_improves",
+        "complete_robustness_review_before_paper_probation": "complete_robustness_review_before_next_stage",
+        "resolve_contract_gaps_before_deployment": "resolve_contract_gaps_before_validation_handoff",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    return (
+        raw.replace("shortlist", "promotion_route")
+        .replace("paper_probation", "paper_observation")
+        .replace("small_capital_trial", "small_capital_review")
+        .replace("deployment", "validation_handoff")
+        .replace("probation", "validation_review")
+        .replace("capital_increase", "next_stage")
+    )
+
+
 def _build_compare_strategy_overview_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     data_trust_rows = {
         str(row.get("Strategy") or ""): row
@@ -111,10 +468,11 @@ def _build_compare_strategy_overview_rows(bundles: list[dict[str, Any]]) -> list
                 "Sharpe": _safe_summary_metric(bundle, "Sharpe Ratio"),
                 "Data Trust": data_trust.get("Interpretation") or "-",
                 "Promotion": meta.get("promotion_decision") or "-",
-                "Deployment": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
+                "Execution Preview": _execution_preview_status_value_to_label(meta.get("deployment_readiness_status")),
             }
         )
     return rows
+
 
 def _rank_candidate_metric(
     metric_rows: list[dict[str, Any]],
@@ -395,7 +753,7 @@ def _build_compare_real_money_gate_assessment(bundle: dict[str, Any]) -> dict[st
     if not promotion_ok:
         reasons.append("Promotion Decision이 hold이거나 비어 있음")
     if not deployment_ok:
-        reasons.append("Deployment Readiness가 blocked이거나 비어 있음")
+        reasons.append("Execution Preview가 blocked이거나 비어 있음")
     reasons.extend(f"{row.get('항목')}: {row.get('현재 상태')}" for row in severe_issue_rows)
 
     ready = promotion_ok and deployment_ok and blocker_ok
@@ -430,7 +788,7 @@ def _build_candidate_draft_readiness_evaluation(
     compare_judgment = (
         "2개 이상 전략이 정상 비교됨"
         if compare_score == 2.0
-        else "Compare 실행 결과가 부족하거나 1개 전략만 있음"
+        else "Component 실행 결과가 부족하거나 1개 전략만 있음"
     )
 
     if selected_bundle is None:
@@ -499,7 +857,7 @@ def _build_candidate_draft_readiness_evaluation(
         next_action = "Practical Validation으로 넘기되 비교 약점과 확인 항목을 검증 gap으로 같이 봅니다."
     else:
         stage_status = "FAIL"
-        verdict = "FAIL: 5단계 Compare 보강 필요"
+        verdict = "FAIL: 개별 후보 보강 필요"
         tone = "error"
         next_action = "아래 Summary / Data Trust / Real-Money / Strategy Highlights를 다시 확인합니다."
 
@@ -521,7 +879,7 @@ def _build_candidate_draft_readiness_evaluation(
 
     criteria_rows = [
         {
-            "기준": "Compare Run",
+            "기준": "Component Run",
             "상태": "PASS" if compare_score == 2.0 else ("REVIEW" if compare_score == 1.0 else "FAIL"),
             "현재 값": f"{len(bundles)}개 전략",
             "점수": f"{compare_score:g} / 2",
@@ -788,6 +1146,9 @@ def _build_saved_mix_validation_evaluation(
         "stage_status": stage_status,
         "verdict": verdict,
         "tone": tone,
+        "can_send_to_practical_validation": not (
+            not replay_ready or data_status == "FAIL" or real_money_status == "FAIL"
+        ),
         "criteria_rows": criteria_rows,
         "workflow_references": workflow_references,
         "data_rows": data_rows,
@@ -795,6 +1156,226 @@ def _build_saved_mix_validation_evaluation(
         "requested_end": requested_end,
         "shortened_days": shortened_days,
         "cadence_alignments": cadence_alignments,
+    }
+
+# Evaluate the just-built weighted mix as one first-stage candidate. Component
+# comparisons remain evidence for choosing weights; only the mix candidate is
+# handed off from Portfolio Mix Builder.
+def _build_weighted_mix_candidate_readiness_evaluation(
+    weighted_bundle: dict[str, Any] | None,
+    bundles: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    component_bundles = list(bundles or [])
+    replay_ready = (
+        isinstance(weighted_bundle, dict)
+        and isinstance(weighted_bundle.get("summary_df"), pd.DataFrame)
+        and not weighted_bundle["summary_df"].empty
+        and isinstance(weighted_bundle.get("result_df"), pd.DataFrame)
+        and not weighted_bundle["result_df"].empty
+    )
+    component_names = list((weighted_bundle or {}).get("component_strategy_names") or [])
+    input_weights = [
+        float(weight)
+        for weight in list((weighted_bundle or {}).get("component_input_weights") or [])
+        if weight is not None
+    ]
+    if not input_weights:
+        input_weights = [
+            round(float(weight) * 100.0, 4)
+            for weight in list((weighted_bundle or {}).get("component_weights") or [])
+            if weight is not None
+        ]
+    target_weight_total = round(sum(input_weights), 4)
+    positive_weight_count = sum(1 for weight in input_weights if float(weight) > 0.0)
+    date_policy = str((weighted_bundle or {}).get("date_policy") or dict((weighted_bundle or {}).get("meta") or {}).get("date_policy") or "-")
+
+    replay_score = 2.0 if replay_ready else 0.0
+    replay_status = "PASS" if replay_ready else "FAIL"
+    replay_judgment = "weighted mix result가 생성됨" if replay_ready else "weighted mix result를 먼저 생성해야 함"
+
+    if abs(target_weight_total - 100.0) <= 0.01 and positive_weight_count >= 2:
+        weight_status = "PASS"
+        weight_score = 2.0
+        weight_judgment = "2개 이상 구성 전략의 target weight 합계가 100%"
+    elif abs(target_weight_total - 100.0) <= 0.01:
+        weight_status = "FAIL"
+        weight_score = 0.0
+        weight_judgment = "positive weight가 1개뿐이면 mix 후보가 아니라 단일 후보에 가까움"
+    elif positive_weight_count >= 2:
+        weight_status = "FAIL"
+        weight_score = 0.0
+        weight_judgment = "positive weight는 2개 이상이지만 target weight 합계가 100%가 아님"
+    else:
+        weight_status = "FAIL"
+        weight_score = 0.0
+        weight_judgment = "2개 이상 구성 전략과 100% target weight가 필요함"
+
+    data_rows = list((weighted_bundle or {}).get("component_data_trust_rows") or [])
+    component_data_assessments = [_build_compare_data_trust_assessment(bundle) for bundle in component_bundles]
+    cadence_alignments = [
+        dict(assessment.get("cadence_alignment") or {})
+        for assessment in component_data_assessments
+        if assessment.get("cadence_alignment")
+    ]
+    has_component_error = any(
+        str(row.get("Price Freshness") or "").strip().lower() == "error"
+        for row in data_rows
+    ) or any(str(assessment.get("gate_status") or "").strip().lower() == "blocked" for assessment in component_data_assessments)
+    has_component_review = any(
+        str(row.get("Interpretation") or "").strip() not in {"", "-", "눈에 띄는 데이터 이슈 없음"}
+        or _safe_int_value(row.get("Warnings")) > 0
+        or _safe_int_value(row.get("Excluded Tickers")) > 0
+        or _safe_int_value(row.get("Malformed Tickers")) > 0
+        for row in data_rows
+    ) or any(str(assessment.get("gate_status") or "").strip().lower() == "warning" for assessment in component_data_assessments)
+    if not replay_ready:
+        data_status = "FAIL"
+        data_score = 0.0
+        data_judgment = "mix result가 없어 component data trust를 확정할 수 없음"
+    elif has_component_error:
+        data_status = "FAIL"
+        data_score = 0.0
+        data_judgment = "구성 전략 데이터에 hard blocker가 있음"
+    elif cadence_alignments:
+        data_status = "CADENCE ALIGNED"
+        data_score = 1.5
+        data_judgment = "구성 전략 종료일 차이 중 정상 cadence로 보이는 항목이 있음"
+    elif has_component_review:
+        data_status = "REVIEW"
+        data_score = 1.0
+        data_judgment = "구성 전략 데이터 warning / 제외 ticker / 기간 확인 필요"
+    else:
+        data_status = "PASS"
+        data_score = 2.0
+        data_judgment = "구성 전략 data trust가 mix 생성을 막지 않음"
+
+    component_readiness_rows: list[dict[str, Any]] = []
+    component_blockers: list[str] = []
+    component_reviews: list[str] = []
+    component_scores: list[float] = []
+    for bundle in component_bundles:
+        strategy_name = str(bundle.get("strategy_name") or dict(bundle.get("meta") or {}).get("strategy_name") or "-")
+        meta = dict(bundle.get("meta") or {})
+        readiness = _build_next_step_readiness_evaluation(meta)
+        component_scores.append(float(readiness.get("score") or 0.0))
+        if not bool(readiness.get("can_move_to_compare")):
+            component_blockers.extend(f"{strategy_name}: {reason}" for reason in readiness.get("blocking_reasons") or [])
+        component_reviews.extend(f"{strategy_name}: {reason}" for reason in readiness.get("review_reasons") or [])
+        component_readiness_rows.append(
+            {
+                "Component": strategy_name,
+                "Promotion": meta.get("promotion_decision") or "-",
+                "Readiness": readiness.get("verdict") or "-",
+                "Score": readiness.get("score"),
+                "Blockers": len(readiness.get("blocking_reasons") or []),
+                "Review": len(readiness.get("review_reasons") or []),
+            }
+        )
+    if not component_bundles:
+        component_status = "FAIL"
+        component_score = 0.0
+        component_judgment = "구성 전략 실행 결과가 없음"
+    elif component_blockers:
+        component_status = "FAIL"
+        component_score = 0.0
+        component_judgment = "구성 전략 중 1차 후보 blocker가 있음"
+    elif component_reviews:
+        component_status = "REVIEW"
+        component_score = min(4.0, round((sum(component_scores) / max(len(component_scores), 1)) / 10.0 * 4.0, 1))
+        component_judgment = "구성 전략은 이동 가능하지만 review 항목이 있음"
+    else:
+        component_status = "PASS"
+        component_score = 4.0
+        component_judgment = "구성 전략 1차 후보 판단이 mix handoff를 막지 않음"
+
+    score = round(replay_score + weight_score + data_score + component_score, 1)
+    hard_blocked = (
+        replay_status == "FAIL"
+        or weight_status == "FAIL"
+        or data_status == "FAIL"
+        or component_status == "FAIL"
+    )
+    can_send = not hard_blocked
+    if can_send and score >= 8.0 and data_status == "PASS" and weight_status == "PASS" and component_status == "PASS":
+        stage_status = "PASS"
+        verdict = "PASS: mix 후보를 Practical Validation으로 보낼 수 있습니다."
+        tone = "success"
+        next_action = "mix 전체를 2차 실전성 검증 source로 등록합니다."
+    elif can_send:
+        stage_status = "CONDITIONAL"
+        verdict = "CONDITIONAL: review 항목을 남기고 Practical Validation으로 보낼 수 있습니다."
+        tone = "warning"
+        next_action = "Practical Validation에서 component warning과 weight / data trust 확인을 이어갑니다."
+    else:
+        stage_status = "HOLD"
+        verdict = "HOLD: mix 후보를 보내기 전에 blocker를 해결해야 합니다."
+        tone = "error"
+        next_action = "weight 합계, component promotion, data trust blocker를 먼저 정리합니다."
+
+    blocking_reasons: list[str] = []
+    if replay_status == "FAIL":
+        blocking_reasons.append(replay_judgment)
+    if weight_status == "FAIL":
+        blocking_reasons.append(weight_judgment)
+    if data_status == "FAIL":
+        blocking_reasons.append(data_judgment)
+    blocking_reasons.extend(component_blockers)
+
+    review_reasons: list[str] = []
+    if weight_status == "REVIEW":
+        review_reasons.append(weight_judgment)
+    if data_status in {"REVIEW", "CADENCE ALIGNED"}:
+        review_reasons.append(data_judgment)
+    review_reasons.extend(component_reviews)
+
+    criteria_rows = [
+        {
+            "기준": "Mix Result",
+            "상태": replay_status,
+            "현재 값": "created" if replay_ready else "missing",
+            "점수": f"{replay_score:g} / 2",
+            "판단": replay_judgment,
+        },
+        {
+            "기준": "Weight Discipline",
+            "상태": weight_status,
+            "현재 값": f"{target_weight_total:.1f}% / positive {positive_weight_count}",
+            "점수": f"{weight_score:g} / 2",
+            "판단": weight_judgment,
+        },
+        {
+            "기준": "Component Data Trust",
+            "상태": data_status,
+            "현재 값": f"{len(data_rows)}개 component row",
+            "점수": f"{data_score:g} / 2",
+            "판단": data_judgment,
+        },
+        {
+            "기준": "Component 1차 후보 판단",
+            "상태": component_status,
+            "현재 값": f"{len(component_bundles)}개 component",
+            "점수": f"{component_score:g} / 4",
+            "판단": component_judgment,
+        },
+    ]
+
+    return {
+        "score": score,
+        "stage_status": stage_status,
+        "verdict": verdict,
+        "tone": tone,
+        "next_action": next_action,
+        "can_send_to_practical_validation": can_send,
+        "component_count": len(component_names),
+        "target_weight_total": target_weight_total,
+        "positive_weight_count": positive_weight_count,
+        "date_policy": date_policy,
+        "criteria_rows": criteria_rows,
+        "component_readiness_rows": component_readiness_rows,
+        "data_rows": data_rows,
+        "cadence_alignments": cadence_alignments,
+        "blocking_reasons": blocking_reasons,
+        "review_reasons": review_reasons,
     }
 
 # Extract the replay period from a result bundle so a saved mix proposal can
@@ -969,7 +1550,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
                 "candidate_role": "weighted_mix_component",
                 "proposal_role": _saved_mix_component_role(str(strategy_name), weight, max_weight),
                 "target_weight": weight,
-                "weight_reason": "현재 비중 포트폴리오 구성에서 지정한 목표 비중",
+                "weight_reason": "현재 Mix Weight 구성에서 지정한 목표 비중",
                 "data_trust_status": str(data_assessment.get("gate_status") or "warning"),
                 "pre_live_status": "weighted_mix_current",
                 "promotion": meta_row.get("promotion_decision"),
@@ -996,7 +1577,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
         "source_kind": "weighted_portfolio_mix",
         "weighted_portfolio_id": weighted_id,
         "weighted_portfolio_name": weighted_name,
-        "description": "현재 Compare 화면에서 생성한 비중 포트폴리오 mix",
+        "description": "현재 Portfolio Mix Builder 화면에서 생성한 비중 포트폴리오 mix",
         "compare_context": compare_context,
         "portfolio_context": portfolio_context,
         "source_context": {
@@ -1023,7 +1604,7 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
         st.markdown("### Portfolio Mix 검증 보드")
         st.caption(
             "이 보드는 저장 mix 자체를 다시 열었을 때 보는 검증입니다. "
-            "개별 전략을 보내는 Compare 보드와 분리해서, mix replay 가능 여부와 Practical Validation 연결 가능성을 봅니다."
+            "component 개별 handoff와 분리해서, mix replay 가능 여부와 Practical Validation 연결 가능성을 봅니다."
         )
         metric_cols = st.columns([0.2, 0.18, 0.18, 0.44], gap="small")
         metric_cols[0].metric("Mix 상태", str(evaluation["stage_status"]))
@@ -1058,6 +1639,7 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
             if st.button(
                 "Practical Validation으로 보내기",
                 key=f"use_saved_mix_in_portfolio_proposal_{record.get('portfolio_id')}",
+                disabled=not bool(evaluation.get("can_send_to_practical_validation")),
                 use_container_width=True,
             ):
                 prefill = _build_saved_mix_proposal_prefill_payload(record)
@@ -1099,17 +1681,17 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
     default_index = strategy_names.index(default_strategy) if default_strategy in strategy_names else 0
 
     with st.container(border=True):
-        st.markdown("##### 개별 후보 5단계 Compare 검증 보드")
+        st.markdown("##### 개별 후보 검증 보드")
         st.caption(
-            "이 보드는 개별 전략 후보의 5단계 stop/go 판단입니다. "
-            "mix 자체 검증은 `저장된 비중 조합` 화면의 Portfolio Mix 검증 보드에서 확인합니다."
+            "이 보드는 개별 전략 후보를 Practical Validation으로 넘겨도 되는지 보는 stop/go 판단입니다. "
+            "mix 자체 검증은 Portfolio Mix Builder의 mix 후보 판단에서 확인합니다."
         )
         candidate_strategy = st.selectbox(
-            "5단계에서 검증할 개별 후보",
+            "검증할 개별 후보",
             options=strategy_names,
             index=default_index,
             key="compare_candidate_draft_readiness_strategy",
-            help="Compare에 올린 개별 전략 중 Practical Validation으로 보낼 후보를 고릅니다. 비중 mix는 아래 mix handoff를 사용합니다.",
+            help="component 실행에 올린 개별 전략 중 Practical Validation으로 보낼 후보를 고릅니다. 비중 mix는 아래 mix handoff를 사용합니다.",
         )
         evaluation = _build_candidate_draft_readiness_evaluation(
             bundles,
@@ -1122,7 +1704,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         stage_status = str(evaluation.get("stage_status") or "-")
 
         metric_cols = st.columns([0.18, 0.18, 0.2, 0.44], gap="small")
-        metric_cols[0].metric("5단계 판정", stage_status)
+        metric_cols[0].metric("후보 판정", stage_status)
         metric_cols[1].metric("Readiness", f"{score:.1f} / 10")
         metric_cols[2].metric("Data Trust", data_gate_status)
         with metric_cols[3]:
@@ -1137,7 +1719,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             "Data Trust는 점수를 강제로 깎는 cap이 아니라 별도 gate로 표시합니다."
         )
 
-        message = f"{evaluation['verdict']}: Compare 결과, Data Trust, Real-Money gate, 상대 비교 근거를 합산했습니다."
+        message = f"{evaluation['verdict']}: component 실행 결과, Data Trust, Real-Money gate, 상대 비교 근거를 합산했습니다."
         if tone == "success":
             st.success(message)
         elif tone == "warning":
@@ -1152,7 +1734,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             blocked_text = ", ".join(str(item) for item in data_gate.get("reasons") or []) or str(data_gate.get("judgment"))
             st.error(f"Data Trust Blocked: {blocked_text}")
 
-        st.markdown("**5단계 검증 기준**")
+        st.markdown("**후보 검증 기준**")
         st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
 
         if evaluation["blocking_reasons"]:
@@ -1194,7 +1776,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             with st.expander("상대 비교 순위 보기", expanded=False):
                 st.dataframe(pd.DataFrame(rank_rows), use_container_width=True, hide_index=True)
 
-        with st.expander("이번 Compare 구성 보기", expanded=False):
+        with st.expander("이번 component 구성 보기", expanded=False):
             st.dataframe(pd.DataFrame(evaluation["overview_rows"]), use_container_width=True, hide_index=True)
 
 def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
@@ -1241,16 +1823,16 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Net CAGR Spread": meta.get("net_cagr_spread"),
                 "Validation": meta.get("validation_status"),
                 "Promotion": meta.get("promotion_decision"),
-                "Shortlist": _shortlist_status_value_to_label(meta.get("shortlist_status")),
-                "Probation": _probation_status_value_to_label(meta.get("probation_status")),
-                "Monitoring": _monitoring_status_value_to_label(meta.get("monitoring_status")),
-                "Deployment": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
-                "Deploy Next": meta.get("deployment_readiness_next_step"),
+                "Suggested Route": _shortlist_status_value_to_label(meta.get("shortlist_status")),
+                "Validation Focus": len(list(meta.get("monitoring_focus") or [])),
+                "Review Signals": len(list(meta.get("monitoring_breach_signals") or [])),
+                "Execution Preview": _execution_preview_status_value_to_label(meta.get("deployment_readiness_status")),
+                "Execution Next": _next_stage_step_label(meta.get("deployment_readiness_next_step")),
                 "Rolling Review": _review_status_value_to_label(meta.get("rolling_review_status")),
                 "Recent Excess": meta.get("rolling_review_recent_excess_return"),
-                "OOS Review": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
+                "Split-Period Check": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
                 "OOS Excess": meta.get("out_of_sample_out_sample_excess_return"),
-                "Shortlist Next": meta.get("shortlist_next_step"),
+                "Route Next": _next_stage_step_label(meta.get("shortlist_next_step")),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
                 "DD Guardrail Triggers": meta.get("drawdown_guardrail_trigger_count"),
                 "Strategy Max DD": meta.get("strategy_max_drawdown"),
@@ -1370,6 +1952,59 @@ def _render_stacked_component_chart(
     )
     st.altair_chart(chart, use_container_width=True)
 
+
+def _render_component_result_overview(bundles: list[dict[str, Any]]) -> None:
+    overview_rows = _build_compare_strategy_overview_rows(bundles)
+    if not overview_rows:
+        return
+
+    cards = []
+    for row in overview_rows:
+        trust = row.get("Data Trust") or "-"
+        promotion = row.get("Promotion") or "-"
+        execution_preview = row.get("Execution Preview") or "-"
+        cards.append(
+            '<div class="pmx-component-card">'
+            f'<div class="pmx-component-title">{_html_text(row.get("Strategy"))}</div>'
+            f'<div class="pmx-component-contract">{_html_text(row.get("Contract"))}</div>'
+            '<div class="pmx-metric-row">'
+            f'<div class="pmx-metric"><small>End</small><strong>{_html_text(_metric_text(row.get("End Balance"), "currency"))}</strong></div>'
+            f'<div class="pmx-metric"><small>CAGR</small><strong>{_html_text(_metric_text(row.get("CAGR"), "percent"))}</strong></div>'
+            f'<div class="pmx-metric"><small>MDD</small><strong>{_html_text(_metric_text(row.get("MDD"), "percent"))}</strong></div>'
+            f'<div class="pmx-metric"><small>Sharpe</small><strong>{_html_text(_metric_text(row.get("Sharpe"), "ratio"))}</strong></div>'
+            '</div>'
+            '<div class="pmx-chip-row">'
+            f'<span class="pmx-chip {_status_chip_tone(trust)}">Data {_html_text(trust)}</span>'
+            f'<span class="pmx-chip {_status_chip_tone(promotion)}">Promotion {_html_text(promotion)}</span>'
+            f'<span class="pmx-chip {_status_chip_tone(execution_preview)}">Source {_html_text(execution_preview)}</span>'
+            '</div>'
+            '</div>'
+        )
+    st.markdown(f'<div class="pmx-card-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
+def _component_chart_mode() -> str:
+    options = ["Equity", "Drawdown", "Return"]
+    if hasattr(st, "segmented_control"):
+        selected = st.segmented_control(
+            "Chart view",
+            options=options,
+            selection_mode="single",
+            default="Equity",
+            key="portfolio_mix_component_chart_mode",
+            width="stretch",
+        )
+        return str(selected or "Equity")
+    return str(
+        st.radio(
+            "Chart view",
+            options=options,
+            horizontal=True,
+            key="portfolio_mix_component_chart_mode",
+        )
+    )
+
+
 def _render_compare_results() -> None:
     error = st.session_state.backtest_compare_error
     error_kind = st.session_state.backtest_compare_error_kind
@@ -1395,47 +2030,63 @@ def _render_compare_results() -> None:
     drawdown_view = _build_drawdown_compare_view(bundles)
     return_view = _build_total_return_compare_view(bundles)
 
-    st.markdown("### 개별 전략 비교 상세")
-    st.caption(
-        "5단계 Compare의 상세 근거입니다. Summary, Data Trust, Real-Money / Guardrail, "
-        "Strategy Highlights, Focused Strategy를 탭별로 확인합니다."
+    _render_portfolio_mix_section_head(
+        "구성 포트폴리오 실행 결과",
+        "이 결과는 mix 후보를 만들기 위한 재료입니다. 개별 전략을 바로 넘기지 않고, 아래 weight 구성 후 mix 전체를 하나의 후보로 판단합니다.",
     )
+    _render_component_result_overview(bundles)
     if any((bundle.get("meta") or {}).get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE for bundle in bundles):
         st.info(
             "This compare run includes `Historical Dynamic PIT Universe` strategies. "
             "In Phase 10 first pass, annual strict strategies rebuild approximate rebalance-date membership, so "
             "`Dynamic Candidate Pool`, `Membership Avg`, and `Membership Range` help explain why static and dynamic results diverge."
         )
-    _render_candidate_draft_readiness_box(bundles)
-
-    summary_tab, data_trust_tab, real_money_guardrail_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
-        [
-            "Summary Compare",
-            "Data Trust",
-            "Real-Money / Guardrail",
-            "Equity Overlay",
-            "Drawdown Overlay",
-            "Return Overlay",
-            "Strategy Highlights",
-            "Focused Strategy",
-            "Execution Meta",
-        ]
-    )
+    summary_tab, chart_tab, diagnostics_tab, detail_tab = st.tabs(["요약", "차트", "진단", "상세"])
 
     with summary_tab:
-        st.dataframe(summary_df, use_container_width=True)
+        st.caption("먼저 component별 성과와 high / low / best / worst period를 빠르게 확인합니다.")
+        st.dataframe(highlight_df, use_container_width=True, hide_index=True)
+        with st.expander("원본 component summary table", expanded=False):
+            st.dataframe(summary_df, use_container_width=True)
 
-    with data_trust_tab:
+    with chart_tab:
+        chart_mode = _component_chart_mode()
+        if chart_mode == "Equity":
+            _render_compare_altair_chart(
+                balance_view,
+                title="Equity Curve Overlay",
+                y_title="Total Balance",
+                show_end_markers=True,
+            )
+            st.caption("Sparse strategies such as GTAA can have fewer rebalance dates than monthly strategies. Points are shown so those paths remain visible, and end markers label the latest position of each strategy.")
+        elif chart_mode == "Drawdown":
+            _render_compare_altair_chart(
+                drawdown_view,
+                title="Drawdown Overlay",
+                y_title="Drawdown",
+                show_end_markers=True,
+            )
+            st.caption("Overlay drawdown curves make downside behavior easier to compare than end-balance alone. End markers make the latest drawdown state easier to read.")
+        else:
+            _render_compare_altair_chart(
+                return_view,
+                title="Total Return Overlay",
+                y_title="Total Return",
+                show_end_markers=True,
+            )
+            st.caption("This view helps compare period-by-period aggressiveness and recovery, not just end balance. End markers show the current total-return position of each strategy.")
+
+    with diagnostics_tab:
+        st.caption("mix 후보를 만들기 전에 component의 데이터 신뢰도와 실행 원천 조건을 확인합니다.")
         _render_strategy_data_trust_snapshot(
             bundles,
-            title="Compare Data Trust Snapshot",
+            title="Component Data Trust Snapshot",
             caption=(
-                "Compare 결과를 해석하기 전에 각 전략의 요청 종료일, 실제 결과 종료일, "
+                "component 결과를 해석하기 전에 각 전략의 요청 종료일, 실제 결과 종료일, "
                 "가격 최신성, 제외 ticker, 결측 row를 함께 확인합니다."
             ),
         )
-
-    with real_money_guardrail_tab:
+        st.divider()
         _render_real_money_guardrail_parity_snapshot(
             [
                 {
@@ -1445,175 +2096,149 @@ def _render_compare_results() -> None:
                 }
                 for bundle in bundles
             ],
-            title="Compare Real-Money / Guardrail Scope",
+            title="Component Real-Money / Guardrail Scope",
             caption=(
-                "이 표는 selected strategies를 같은 compare 결과 안에서 해석할 때, "
+                "이 표는 selected strategies를 같은 mix component 결과 안에서 해석할 때, "
                 "어떤 전략은 full strict Real-Money 검증 대상이고 어떤 전략은 prototype 또는 ETF first-pass인지 구분합니다."
             ),
         )
 
-    with balance_tab:
-        _render_compare_altair_chart(
-            balance_view,
-            title="Equity Curve Overlay",
-            y_title="Total Balance",
-            show_end_markers=True,
-        )
-        st.caption("Sparse strategies such as GTAA can have fewer rebalance dates than monthly strategies. Points are shown so those paths remain visible, and end markers label the latest position of each strategy.")
+    with detail_tab:
+        detail_summary_tab, focus_tab, meta_tab = st.tabs(["Strategy Highlights", "Focused Strategy", "Execution Meta"])
+        with detail_summary_tab:
+            st.caption(
+                "요약 tab보다 더 긴 compare 전용 highlight입니다. "
+                "한 전략을 더 자세히 보려면 `Focused Strategy`로 이동합니다."
+            )
+            st.dataframe(highlight_df, use_container_width=True, hide_index=True)
 
-    with drawdown_tab:
-        _render_compare_altair_chart(
-            drawdown_view,
-            title="Drawdown Overlay",
-            y_title="Drawdown",
-            show_end_markers=True,
-        )
-        st.caption("Overlay drawdown curves make downside behavior easier to compare than end-balance alone. End markers make the latest drawdown state easier to read.")
+        with focus_tab:
+            strategy_names = [bundle["strategy_name"] for bundle in bundles]
+            focus_default = summary_df.iloc[0]["Name"] if "Name" in summary_df.columns and not summary_df.empty else strategy_names[0]
+            focused_strategy = st.selectbox(
+                "Focused Strategy",
+                options=strategy_names,
+                index=strategy_names.index(focus_default) if focus_default in strategy_names else 0,
+                key="compare_focus_strategy",
+                help="Overlay chart는 전체 비교용이고, 여기서는 선택한 전략 하나를 자세히 읽습니다.",
+            )
+            focused_bundle = next(bundle for bundle in bundles if bundle["strategy_name"] == focused_strategy)
+            focused_result_df = focused_bundle["result_df"]
+            focused_chart_df = focused_bundle["chart_df"]
 
-    with return_tab:
-        _render_compare_altair_chart(
-            return_view,
-            title="Total Return Overlay",
-            y_title="Total Return",
-            show_end_markers=True,
-        )
-        st.caption("This view helps compare period-by-period aggressiveness and recovery, not just end balance. End markers show the current total-return position of each strategy.")
-
-    with highlights_tab:
-        st.caption(
-            "이 표는 compare 전용 요약 surface입니다. "
-            "single run의 `Real-Money` 탭과 같은 것이 아니라, 여러 전략의 high / low / end state와 best / worst period를 한 번에 훑기 위한 표입니다. "
-            "한 전략을 더 자세히 보려면 `Focused Strategy` 안의 `Real-Money Contract`로 내려가면 됩니다."
-        )
-        st.dataframe(highlight_df, use_container_width=True, hide_index=True)
-
-    with focus_tab:
-        strategy_names = [bundle["strategy_name"] for bundle in bundles]
-        focus_default = summary_df.iloc[0]["Name"] if "Name" in summary_df.columns and not summary_df.empty else strategy_names[0]
-        focused_strategy = st.selectbox(
-            "Focused Strategy",
-            options=strategy_names,
-            index=strategy_names.index(focus_default) if focus_default in strategy_names else 0,
-            key="compare_focus_strategy",
-            help="Overlay chart는 전체 비교용이고, 여기서는 선택한 전략 하나를 자세히 읽습니다.",
-        )
-        focused_bundle = next(bundle for bundle in bundles if bundle["strategy_name"] == focused_strategy)
-        focused_result_df = focused_bundle["result_df"]
-        focused_chart_df = focused_bundle["chart_df"]
-
-        st.caption("선택한 전략 하나에 대해 high / low / best / worst period를 더 자세히 확인할 수 있습니다.")
-        _render_summary_metrics(focused_bundle["summary_df"])
-        _render_balance_chart_with_markers(
-            focused_chart_df,
-            result_df=focused_result_df,
-            title=f"{focused_strategy} Equity Curve",
-        )
-
-        high_df, low_df = _build_balance_extremes_tables(focused_chart_df, top_n=3)
-        best_df, worst_df = _build_period_extremes_tables(focused_result_df, top_n=3)
-
-        upper_left, upper_right = st.columns(2, gap="large")
-        with upper_left:
-            st.markdown("##### Top 3 Balance Highs")
-            st.dataframe(high_df, use_container_width=True, hide_index=True)
-        with upper_right:
-            st.markdown("##### Top 3 Balance Lows")
-            st.dataframe(low_df, use_container_width=True, hide_index=True)
-
-        lower_left, lower_right = st.columns(2, gap="large")
-        with lower_left:
-            st.markdown("##### Top 3 Best Periods")
-            st.dataframe(best_df, use_container_width=True, hide_index=True)
-        with lower_right:
-            st.markdown("##### Top 3 Worst Periods")
-            st.dataframe(worst_df, use_container_width=True, hide_index=True)
-
-        if focused_bundle["meta"].get("strategy_key") in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS:
-            st.divider()
-            st.markdown("##### Selection History & Interpretation")
-            _render_snapshot_selection_history(
-                focused_result_df,
-                strategy_name=focused_bundle["strategy_name"],
-                factor_names=(focused_bundle["meta"].get("quality_factors") or []) + [
-                    name for name in (focused_bundle["meta"].get("value_factors") or [])
-                    if name not in (focused_bundle["meta"].get("quality_factors") or [])
-                ],
-                snapshot_mode=focused_bundle["meta"].get("snapshot_mode"),
-                snapshot_source=focused_bundle["meta"].get("snapshot_source"),
+            st.caption("선택한 전략 하나에 대해 high / low / best / worst period를 더 자세히 확인할 수 있습니다.")
+            _render_summary_metrics(focused_bundle["summary_df"])
+            _render_balance_chart_with_markers(
+                focused_chart_df,
+                result_df=focused_result_df,
+                title=f"{focused_strategy} Equity Curve",
             )
 
-        if focused_bundle["meta"].get("real_money_hardening"):
-            st.divider()
-            st.markdown("##### Real-Money Contract")
-            _render_real_money_details(focused_bundle)
+            high_df, low_df = _build_balance_extremes_tables(focused_chart_df, top_n=3)
+            best_df, worst_df = _build_period_extremes_tables(focused_result_df, top_n=3)
 
-    with meta_tab:
-        meta_rows = []
-        for bundle in bundles:
-            meta = bundle["meta"]
-            meta_rows.append(
-                {
-                    "strategy": bundle["strategy_name"],
-                    "tickers": ", ".join(meta["tickers"]),
-                    "start": meta["start"],
-                    "end": meta["end"],
-                    "timeframe": meta["timeframe"],
-                    "option": meta["option"],
-                    "rebalance_interval": meta.get("rebalance_interval"),
-                    "top": meta.get("top"),
-                    "min_price_filter": meta.get("min_price_filter"),
-                    "min_history_months_filter": meta.get("min_history_months_filter"),
-                    "min_avg_dollar_volume_20d_m_filter": meta.get("min_avg_dollar_volume_20d_m_filter"),
-                    "transaction_cost_bps": meta.get("transaction_cost_bps"),
-                    "promotion_min_etf_aum_b": meta.get("promotion_min_etf_aum_b"),
-                    "promotion_max_bid_ask_spread_pct": meta.get("promotion_max_bid_ask_spread_pct"),
-                    "benchmark_ticker": meta.get("benchmark_ticker"),
-                    "etf_operability_status": meta.get("etf_operability_status"),
-                    "promotion_min_benchmark_coverage": meta.get("promotion_min_benchmark_coverage"),
-                    "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
-                    "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
-                    "promotion_max_underperformance_share": meta.get("promotion_max_underperformance_share"),
-                    "promotion_min_worst_rolling_excess_return": meta.get("promotion_min_worst_rolling_excess_return"),
-                    "promotion_max_strategy_drawdown": meta.get("promotion_max_strategy_drawdown"),
-                    "promotion_max_drawdown_gap_vs_benchmark": meta.get("promotion_max_drawdown_gap_vs_benchmark"),
-                    "strategy_family": meta.get("strategy_family"),
-                    "shortlist_status": meta.get("shortlist_status"),
-                    "shortlist_next_step": meta.get("shortlist_next_step"),
-                    "probation_status": meta.get("probation_status"),
-                    "probation_stage": meta.get("probation_stage"),
-                    "probation_review_frequency": meta.get("probation_review_frequency"),
-                    "probation_next_step": meta.get("probation_next_step"),
-                    "monitoring_status": meta.get("monitoring_status"),
-                    "monitoring_review_frequency": meta.get("monitoring_review_frequency"),
-                    "monitoring_next_step": meta.get("monitoring_next_step"),
-                    "deployment_readiness_status": meta.get("deployment_readiness_status"),
-                    "deployment_readiness_next_step": meta.get("deployment_readiness_next_step"),
-                    "deployment_check_pass_count": meta.get("deployment_check_pass_count"),
-                    "deployment_check_watch_count": meta.get("deployment_check_watch_count"),
-                    "deployment_check_fail_count": meta.get("deployment_check_fail_count"),
-                    "rolling_review_status": meta.get("rolling_review_status"),
-                    "rolling_review_window_label": meta.get("rolling_review_window_label"),
-                    "rolling_review_recent_excess_return": meta.get("rolling_review_recent_excess_return"),
-                    "out_of_sample_review_status": meta.get("out_of_sample_review_status"),
-                    "out_of_sample_out_sample_excess_return": meta.get("out_of_sample_out_sample_excess_return"),
-                    "underperformance_guardrail_enabled": meta.get("underperformance_guardrail_enabled"),
-                    "underperformance_guardrail_window_months": meta.get("underperformance_guardrail_window_months"),
-                    "underperformance_guardrail_threshold": meta.get("underperformance_guardrail_threshold"),
-                    "drawdown_guardrail_enabled": meta.get("drawdown_guardrail_enabled"),
-                    "drawdown_guardrail_window_months": meta.get("drawdown_guardrail_window_months"),
-                    "drawdown_guardrail_strategy_threshold": meta.get("drawdown_guardrail_strategy_threshold"),
-                    "drawdown_guardrail_gap_threshold": meta.get("drawdown_guardrail_gap_threshold"),
-                    "avg_turnover": meta.get("avg_turnover"),
-                    "trend_filter": (
-                        f"MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}"
-                        if meta.get("trend_filter_enabled")
-                        else "off"
-                    ),
-                    "vol_window": meta.get("vol_window"),
-                    "preset_name": meta["preset_name"],
-                }
-            )
-        st.dataframe(pd.DataFrame(meta_rows), use_container_width=True)
+            upper_left, upper_right = st.columns(2, gap="large")
+            with upper_left:
+                st.markdown("##### Top 3 Balance Highs")
+                st.dataframe(high_df, use_container_width=True, hide_index=True)
+            with upper_right:
+                st.markdown("##### Top 3 Balance Lows")
+                st.dataframe(low_df, use_container_width=True, hide_index=True)
+
+            lower_left, lower_right = st.columns(2, gap="large")
+            with lower_left:
+                st.markdown("##### Top 3 Best Periods")
+                st.dataframe(best_df, use_container_width=True, hide_index=True)
+            with lower_right:
+                st.markdown("##### Top 3 Worst Periods")
+                st.dataframe(worst_df, use_container_width=True, hide_index=True)
+
+            if focused_bundle["meta"].get("strategy_key") in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS:
+                st.divider()
+                st.markdown("##### Selection History & Interpretation")
+                _render_snapshot_selection_history(
+                    focused_result_df,
+                    strategy_name=focused_bundle["strategy_name"],
+                    factor_names=(focused_bundle["meta"].get("quality_factors") or []) + [
+                        name for name in (focused_bundle["meta"].get("value_factors") or [])
+                        if name not in (focused_bundle["meta"].get("quality_factors") or [])
+                    ],
+                    snapshot_mode=focused_bundle["meta"].get("snapshot_mode"),
+                    snapshot_source=focused_bundle["meta"].get("snapshot_source"),
+                )
+
+            if focused_bundle["meta"].get("real_money_hardening"):
+                st.divider()
+                st.markdown("##### Real-Money Contract")
+                _render_real_money_details(focused_bundle)
+
+        with meta_tab:
+            meta_rows = []
+            for bundle in bundles:
+                meta = bundle["meta"]
+                meta_rows.append(
+                    {
+                        "strategy": bundle["strategy_name"],
+                        "tickers": ", ".join(meta["tickers"]),
+                        "start": meta["start"],
+                        "end": meta["end"],
+                        "timeframe": meta["timeframe"],
+                        "option": meta["option"],
+                        "rebalance_interval": meta.get("rebalance_interval"),
+                        "top": meta.get("top"),
+                        "min_price_filter": meta.get("min_price_filter"),
+                        "min_history_months_filter": meta.get("min_history_months_filter"),
+                        "min_avg_dollar_volume_20d_m_filter": meta.get("min_avg_dollar_volume_20d_m_filter"),
+                        "transaction_cost_bps": meta.get("transaction_cost_bps"),
+                        "promotion_min_etf_aum_b": meta.get("promotion_min_etf_aum_b"),
+                        "promotion_max_bid_ask_spread_pct": meta.get("promotion_max_bid_ask_spread_pct"),
+                        "benchmark_ticker": meta.get("benchmark_ticker"),
+                        "etf_operability_status": meta.get("etf_operability_status"),
+                        "promotion_min_benchmark_coverage": meta.get("promotion_min_benchmark_coverage"),
+                        "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
+                        "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
+                        "promotion_max_underperformance_share": meta.get("promotion_max_underperformance_share"),
+                        "promotion_min_worst_rolling_excess_return": meta.get("promotion_min_worst_rolling_excess_return"),
+                        "promotion_max_strategy_drawdown": meta.get("promotion_max_strategy_drawdown"),
+                        "promotion_max_drawdown_gap_vs_benchmark": meta.get("promotion_max_drawdown_gap_vs_benchmark"),
+                        "strategy_family": meta.get("strategy_family"),
+                        "shortlist_status": meta.get("shortlist_status"),
+                        "shortlist_next_step": meta.get("shortlist_next_step"),
+                        "probation_status": meta.get("probation_status"),
+                        "probation_stage": meta.get("probation_stage"),
+                        "probation_review_frequency": meta.get("probation_review_frequency"),
+                        "probation_next_step": meta.get("probation_next_step"),
+                        "monitoring_status": meta.get("monitoring_status"),
+                        "monitoring_review_frequency": meta.get("monitoring_review_frequency"),
+                        "monitoring_next_step": meta.get("monitoring_next_step"),
+                        "deployment_readiness_status": meta.get("deployment_readiness_status"),
+                        "deployment_readiness_next_step": meta.get("deployment_readiness_next_step"),
+                        "deployment_check_pass_count": meta.get("deployment_check_pass_count"),
+                        "deployment_check_watch_count": meta.get("deployment_check_watch_count"),
+                        "deployment_check_fail_count": meta.get("deployment_check_fail_count"),
+                        "rolling_review_status": meta.get("rolling_review_status"),
+                        "rolling_review_window_label": meta.get("rolling_review_window_label"),
+                        "rolling_review_recent_excess_return": meta.get("rolling_review_recent_excess_return"),
+                        "out_of_sample_review_status": meta.get("out_of_sample_review_status"),
+                        "out_of_sample_out_sample_excess_return": meta.get("out_of_sample_out_sample_excess_return"),
+                        "underperformance_guardrail_enabled": meta.get("underperformance_guardrail_enabled"),
+                        "underperformance_guardrail_window_months": meta.get("underperformance_guardrail_window_months"),
+                        "underperformance_guardrail_threshold": meta.get("underperformance_guardrail_threshold"),
+                        "drawdown_guardrail_enabled": meta.get("drawdown_guardrail_enabled"),
+                        "drawdown_guardrail_window_months": meta.get("drawdown_guardrail_window_months"),
+                        "drawdown_guardrail_strategy_threshold": meta.get("drawdown_guardrail_strategy_threshold"),
+                        "drawdown_guardrail_gap_threshold": meta.get("drawdown_guardrail_gap_threshold"),
+                        "avg_turnover": meta.get("avg_turnover"),
+                        "trend_filter": (
+                            f"MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}"
+                            if meta.get("trend_filter_enabled")
+                            else "off"
+                        ),
+                        "vol_window": meta.get("vol_window"),
+                        "preset_name": meta["preset_name"],
+                    }
+                )
+            st.dataframe(pd.DataFrame(meta_rows), use_container_width=True)
 
 def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
@@ -1799,10 +2424,10 @@ def _build_saved_portfolio_replay_parity_rows(record: dict[str, Any]) -> pd.Data
     rows: list[dict[str, str]] = []
     rows.append(
         {
-            "확인 영역": "Compare 공용 입력",
+            "확인 영역": "Component 공용 입력",
             "저장 상태": "저장됨" if _saved_portfolio_present_count(compare_context, ["start", "end", "timeframe", "option"]) == 4 else "일부 누락",
             "저장된 값": _saved_portfolio_field_summary(compare_context, ["start", "end", "timeframe", "option"]),
-            "왜 중요한가": "Replay는 이 기간과 timeframe / option으로 strategy compare를 다시 실행합니다.",
+            "왜 중요한가": "Replay는 이 기간과 timeframe / option으로 component 실행을 다시 수행합니다.",
         }
     )
     rows.append(
@@ -1914,7 +2539,7 @@ def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> No
     selected_strategies = list(compare_context.get("selected_strategies") or [])
     weights_percent = list(portfolio_context.get("weights_percent") or [])
 
-    st.markdown("#### 저장된 비중 조합 Replay / 편집 Parity Snapshot")
+    st.markdown("#### 저장된 Mix Replay / 편집 Parity Snapshot")
     st.caption(
         "이 표는 저장된 portfolio mix를 `전략 비교에서 수정하기` 또는 `Mix 재실행 및 검증`으로 다시 열 때 "
         "전략 목록, 공용 기간, strategy-specific override, weight/date alignment가 충분히 남아 있는지 확인하는 표입니다."
@@ -1931,7 +2556,7 @@ def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> No
         with st.expander("Strategy Override Summary", expanded=False):
             st.caption(
                 "전략별 저장 override를 사람이 읽기 쉬운 형태로 줄여서 보여줍니다. "
-                "정확한 전체 payload는 `Compare Context` 또는 `Raw Record` 탭에서 확인합니다."
+                "정확한 전체 payload는 `Mix Context` 또는 `Raw Record` 탭에서 확인합니다."
             )
             st.dataframe(override_df, use_container_width=True, hide_index=True)
     _render_real_money_guardrail_parity_snapshot(
@@ -1965,7 +2590,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     st.session_state.backtest_compare_source_context = replay_result.replay_source_context
     st.session_state.backtest_saved_portfolio_replay_id = str(record.get("portfolio_id") or "")
     st.session_state.backtest_compare_result_notice = None
-    st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
+    st.session_state.backtest_requested_panel = "Portfolio Mix Builder"
 
     append_backtest_run_history(
         bundle=replay_result.compare_history_bundle,
@@ -2009,9 +2634,9 @@ def _render_weighted_portfolio_builder() -> None:
     default_weight = round(100 / len(strategy_names), 2)
     _apply_weighted_portfolio_prefill(strategy_names)
 
-    st.markdown("### 2. 비중 포트폴리오 구성")
-    st.caption(
-        "방금 비교한 전략들을 하나의 mix로 섞습니다. 여기서 만든 결과는 바로 아래에서 확인한 뒤 저장할 수 있습니다."
+    _render_portfolio_mix_section_head(
+        "2. Mix Weight 구성",
+        "방금 실행한 구성 포트폴리오들을 하나의 mix 후보로 섞습니다. 여기서 만든 결과가 1차 후보 판단의 대상입니다.",
     )
     _render_compare_source_context_card(compare_source_context, bundles)
     weighted_notice = st.session_state.get("backtest_weighted_portfolio_notice")
@@ -2052,6 +2677,7 @@ def _render_weighted_portfolio_builder() -> None:
                 weights.append(weight)
 
         total_weight = sum(weights)
+        st.progress(min(max(total_weight / 100.0, 0.0), 1.0))
         if abs(total_weight - 100.0) <= 0.01:
             st.success("총 비중이 100%입니다. 이 상태로 결과를 만들 수 있습니다.")
         else:
@@ -2067,12 +2693,15 @@ def _render_weighted_portfolio_builder() -> None:
             key="weighted_portfolio_date_policy",
         )
 
-        submitted = st.form_submit_button("Build Weighted Portfolio", use_container_width=True)
+        submitted = st.form_submit_button("Mix 후보 결과 생성", use_container_width=True)
 
     if not submitted:
         weighted_bundle = st.session_state.backtest_weighted_bundle
         if weighted_bundle:
-            st.markdown("### 3. 비중 포트폴리오 결과 확인")
+            _render_portfolio_mix_section_head(
+                "3. Mix 후보 결과 확인",
+                "생성된 weighted portfolio 결과를 먼저 확인한 뒤, 아래 1차 판단에서 Practical Validation으로 보낼 수 있는지 봅니다.",
+            )
             _render_weighted_portfolio_result(weighted_bundle)
             _render_weighted_portfolio_practical_validation_panel(weighted_bundle)
             _render_save_weighted_portfolio_panel(weighted_bundle)
@@ -2112,11 +2741,8 @@ def _render_weighted_portfolio_builder() -> None:
             "compare_source_context": compare_source_context,
         },
     )
-    st.success("Weighted portfolio created.")
-    st.markdown("### 3. 비중 포트폴리오 결과 확인")
-    _render_weighted_portfolio_result(weighted_bundle)
-    _render_weighted_portfolio_practical_validation_panel(weighted_bundle)
-    _render_save_weighted_portfolio_panel(weighted_bundle)
+    st.session_state.backtest_weighted_portfolio_notice = "Mix 포트폴리오를 생성했습니다."
+    st.rerun()
 
 def _render_current_candidate_bundle_workspace() -> None:
     rows = _load_current_candidate_registry_latest()
@@ -2174,13 +2800,13 @@ def _render_current_candidate_bundle_workspace() -> None:
         )
         st.dataframe(display_df, use_container_width=True, hide_index=True)
         selected_labels = st.multiselect(
-            "Choose Specific Candidates To Load Into Compare",
+            "Choose Specific Candidates To Load Into Portfolio Mix Builder",
             options=list(label_to_row.keys()),
             max_selections=4,
-            help="최소 2개 후보를 고르면 compare form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
+            help="최소 2개 후보를 고르면 Portfolio Mix Builder form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
             key="current_candidate_bundle_selection",
         )
-        if st.button("Load Selected Candidates Into Compare", key="load_selected_candidate_bundle", use_container_width=True):
+        if st.button("Load Selected Candidates Into Portfolio Mix Builder", key="load_selected_candidate_bundle", use_container_width=True):
             try:
                 selected_rows = [label_to_row[label] for label in selected_labels]
                 _queue_current_candidate_compare_prefill(selected_rows)
@@ -2241,17 +2867,17 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     source_kind = str(source_context.get("source_kind") or "").strip()
     candidate_titles = [str(value).strip() for value in list(source_context.get("candidate_titles") or []) if str(value).strip()]
 
-    st.markdown("##### Compare Form Updated")
+    st.markdown("##### Portfolio Mix Form Updated")
     if source_kind == "saved_portfolio":
         st.caption(
-            "저장된 비중 조합을 편집하기 위해 개별 전략 비교 form을 다시 채웠습니다. "
+            "저장된 Mix를 편집하기 위해 새 Mix 만들기 form을 다시 채웠습니다. "
             "기존 결과는 숨기고 저장된 전략 / 기간 / 세부 설정을 먼저 수정할 수 있게 했습니다. "
-            "수정 후 다시 실행하면 아래 비중 포트폴리오 구성에 기존 weight가 반영됩니다."
+            "수정 후 다시 실행하면 아래 Mix Weight 구성에 기존 weight가 반영됩니다."
         )
     else:
         st.caption(
-            "방금 불러온 후보 묶음 기준으로 compare form이 다시 채워졌습니다. "
-            "아직 compare를 실행한 것은 아니고, 아래 입력값이 바뀐 상태입니다."
+            "방금 불러온 후보 묶음 기준으로 Portfolio Mix Builder form이 다시 채워졌습니다. "
+            "아직 component 실행을 한 것은 아니고, 아래 입력값이 바뀐 상태입니다."
         )
     top_cols = st.columns(3, gap="small")
     with top_cols[0]:
@@ -2263,7 +2889,7 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     if candidate_titles:
         st.caption(f"이번에 불러온 후보: `{', '.join(candidate_titles)}`")
     st.caption(
-        f"현재 compare form에는 `{', '.join(selected_strategies)}` 전략이 선택되어 있고, "
+        f"현재 Portfolio Mix Builder form에는 `{', '.join(selected_strategies)}` 전략이 선택되어 있고, "
         f"`Timeframe = {timeframe}`, `Option = {option}`으로 채워져 있습니다."
     )
     summary_df = _build_compare_prefill_summary_rows(payload)
@@ -2290,16 +2916,16 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     st.markdown("**어디서 확인하면 되나**")
     st.markdown(
         "- 바로 아래 `Strategies`에서 어떤 전략이 선택됐는지 확인\n"
-        "- `Compare Period & Shared Inputs`에서 기간, timeframe, option이 어떻게 채워졌는지 확인\n"
+        "- `Component Period & Shared Inputs`에서 기간, timeframe, option이 어떻게 채워졌는지 확인\n"
         "- `Strategy-Specific Advanced Inputs`에서 strategy별 override를 확인"
     )
     if source_kind == "saved_portfolio":
         st.info(
-            "구성 전략을 바꾸거나 weight를 다시 만들 때만 `Run Strategy Comparison`을 실행하세요. "
-            "저장된 mix 자체 검증은 `저장된 비중 조합`에서 `Mix 재실행 및 검증`을 사용합니다."
+            "구성 전략을 바꾸거나 weight를 다시 만들 때만 `구성 포트폴리오 실행`을 실행하세요. "
+            "저장된 mix 자체 검증은 `저장된 Mix`에서 `Mix 재실행 및 검증`을 사용합니다."
         )
     else:
-        st.info("값이 맞으면 `Run Strategy Comparison`을 눌러 실제 compare를 실행하면 됩니다.")
+        st.info("값이 맞으면 `구성 포트폴리오 실행`을 눌러 mix 재료가 될 component 결과를 만듭니다.")
 
 def _format_portfolio_name_weight(weight: float) -> str:
     if abs(float(weight) - round(float(weight))) < 0.0001:
@@ -2354,32 +2980,52 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
     if not compare_bundles or not weighted_bundle:
         return
 
-    component_names = list(weighted_bundle.get("component_strategy_names") or [])
-    input_weights = [float(weight) for weight in list(weighted_bundle.get("component_input_weights") or [])]
-    if not input_weights:
-        input_weights = [round(float(weight) * 100.0, 4) for weight in list(weighted_bundle.get("component_weights") or [])]
-    target_weight_total = round(sum(input_weights), 4)
-    date_policy = str(weighted_bundle.get("date_policy") or dict(weighted_bundle.get("meta") or {}).get("date_policy") or "-")
+    evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, compare_bundles)
+    target_weight_total = float(evaluation.get("target_weight_total") or 0.0)
+    date_policy = str(evaluation.get("date_policy") or "-")
+    can_send = bool(evaluation.get("can_send_to_practical_validation"))
 
     with st.container(border=True):
-        st.markdown("#### Practical Validation")
-        st.caption(
-            "현재 화면에서 만든 weighted portfolio mix 전체를 Clean V2 source로 저장합니다. "
-            "저장된 비중 조합을 먼저 만들지 않아도 Practical Validation에서 바로 검증할 수 있습니다."
+        st.markdown("#### Mix 후보 1차 판단")
+        tone_class = {
+            "success": "pass",
+            "warning": "review",
+        }.get(str(evaluation.get("tone") or ""), "fail")
+        message = str(evaluation.get("verdict") or "-")
+        st.markdown(
+            f'<div class="pmx-handoff-card {tone_class}">'
+            f'<span class="pmx-handoff-title">{_html_text(message)}</span>'
+            '<span class="pmx-handoff-body">'
+            '현재 화면에서 만든 weighted portfolio mix 전체를 하나의 1차 후보로 봅니다. '
+            '구성 전략의 promotion / 실행 원천 / 검증 원천, data trust, weight discipline이 막지 않을 때만 '
+            '2차 실전성 검증으로 보냅니다.'
+            '</span>'
+            '</div>',
+            unsafe_allow_html=True,
         )
         metric_cols = st.columns(4, gap="small")
-        metric_cols[0].metric("Components", len(component_names))
+        metric_cols[0].metric("판정", str(evaluation.get("stage_status") or "-"))
         metric_cols[1].metric("Target Weight", f"{target_weight_total:.1f}%")
         metric_cols[2].metric("Date Policy", date_policy)
-        metric_cols[3].metric("Live Approval", "Disabled")
-        if abs(target_weight_total - 100.0) > 0.01:
-            st.warning(
-                f"현재 입력 비중 합계는 {target_weight_total:.1f}%입니다. "
-                "Practical Validation에서는 100%가 아니면 blocker로 표시됩니다."
-            )
+        metric_cols[3].metric("Score", f"{float(evaluation.get('score') or 0.0):.1f} / 10")
+        st.caption(f"{str(evaluation.get('next_action') or '')} 최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
+        if evaluation.get("blocking_reasons"):
+            st.error("보내기 비활성화 사유: " + "; ".join(str(reason) for reason in evaluation["blocking_reasons"]))
+        elif evaluation.get("review_reasons"):
+            st.caption("Practical Validation에서 같이 볼 항목: " + "; ".join(str(reason) for reason in evaluation["review_reasons"]))
+        with st.expander("판단 기준 상세", expanded=False):
+            st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+        if evaluation.get("component_readiness_rows"):
+            with st.expander("Component 1차 후보 판단 보기", expanded=False):
+                st.dataframe(pd.DataFrame(evaluation["component_readiness_rows"]), use_container_width=True, hide_index=True)
         action_cols = st.columns([0.36, 0.64], gap="small")
         with action_cols[0]:
-            if st.button("현재 Mix를 Practical Validation으로 보내기", key="weighted_mix_send_practical_validation", use_container_width=True):
+            if st.button(
+                "실전성 검증으로 보내기",
+                key="weighted_mix_send_practical_validation",
+                disabled=not can_send,
+                use_container_width=True,
+            ):
                 try:
                     prefill = _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle)
                     source = build_selection_source_from_weighted_mix_prefill(prefill)
@@ -2389,7 +3035,7 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
                     st.error(f"Practical Validation handoff failed: {exc}")
         with action_cols[1]:
             st.caption(
-                "이 버튼은 개별 전략 후보가 아니라 mix 전체를 보냅니다. "
+                "이 버튼은 개별 전략 후보가 아니라 mix 전체를 하나의 Clean V2 source로 보냅니다. "
                 "최종 선정 / 보류 / 거절 / 재검토 판단은 Final Review에서만 기록합니다."
             )
 
@@ -2413,7 +3059,7 @@ def _render_save_weighted_portfolio_panel(weighted_bundle: dict[str, Any]) -> No
                 "Portfolio Mix Name",
                 value=suggested_name or "",
                 placeholder="예: GTAA Clean-6 70 + Equal Weight Growth 30",
-                help="저장된 비중 조합 화면의 목록에 표시될 이름입니다.",
+                help="저장된 Mix 화면의 목록에 표시될 이름입니다.",
                 key="saved_portfolio_name_input",
             )
             portfolio_description = st.text_area(
@@ -2441,22 +3087,22 @@ def _render_save_weighted_portfolio_panel(weighted_bundle: dict[str, Any]) -> No
                     },
                 )
                 st.session_state.backtest_saved_portfolio_notice = (
-                    f"저장된 portfolio mix `{record.get('name')}`를 만들었습니다. `저장된 비중 조합` 화면에서 확인할 수 있습니다."
+                    f"저장된 portfolio mix `{record.get('name')}`를 만들었습니다. `저장된 Mix` 화면에서 확인할 수 있습니다."
                 )
                 st.rerun()
             except Exception as exc:
                 st.error(f"Portfolio mix save failed: {exc}")
 
 def _render_saved_portfolio_workspace() -> None:
-    st.markdown("### 저장된 비중 조합")
+    st.markdown("### 저장된 Mix")
     st.caption(
         "저장한 weighted portfolio mix를 다시 실행하고 mix-level 검증으로 읽습니다. "
-        "개별 후보 5단계 검증이 아니라 Practical Validation으로 이어지는 비중 조합 작업 공간입니다."
+        "개별 후보 검증이 아니라 Practical Validation으로 이어지는 비중 조합 작업 공간입니다."
     )
 
     saved_portfolios = load_saved_portfolios(limit=100)
     if not saved_portfolios:
-        st.info("저장된 portfolio mix가 아직 없습니다. `개별 전략 비교`에서 비중 포트폴리오 결과를 만든 뒤 저장할 수 있습니다.")
+        st.info("저장된 portfolio mix가 아직 없습니다. `새 Mix 만들기`에서 mix 후보 결과를 만든 뒤 저장할 수 있습니다.")
         st.caption(f"저장 위치: `{SAVED_PORTFOLIO_FILE}`")
         return
 
@@ -2468,7 +3114,7 @@ def _render_saved_portfolio_workspace() -> None:
         for item in saved_portfolios
     ]
     selected_label = st.selectbox(
-        "저장된 비중 조합 선택",
+        "저장된 Mix 선택",
         options=record_labels,
         index=0,
         key="saved_portfolio_selected_record",
@@ -2481,7 +3127,7 @@ def _render_saved_portfolio_workspace() -> None:
 
     _render_saved_portfolio_replay_parity_snapshot(selected_record)
 
-    detail_tabs = st.tabs(["Summary", "Source & Actions", "Compare Context", "Raw Record"])
+    detail_tabs = st.tabs(["Summary", "Source & Actions", "Mix Context", "Raw Record"])
     with detail_tabs[0]:
         st.json(
             {
@@ -2516,7 +3162,7 @@ def _render_saved_portfolio_workspace() -> None:
     with detail_tabs[2]:
         left, right = st.columns(2, gap="large")
         with left:
-            st.markdown("##### Compare Context")
+            st.markdown("##### Mix Context")
             st.json(compare_context)
         with right:
             st.markdown("##### Portfolio Context")
@@ -2551,7 +3197,7 @@ def _render_saved_portfolio_workspace() -> None:
                 st.error("Saved mix delete failed.")
     with action_cols[3]:
         st.caption(
-            "`Mix 재실행 및 검증`은 저장된 비중 조합 자체를 평가합니다. "
+            "`Mix 재실행 및 검증`은 저장된 Mix 자체를 평가합니다. "
             "`전략 비교에서 수정하기`는 검증이 아니라 form 편집 / 재구성 진입입니다."
         )
 
@@ -2580,7 +3226,7 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
     if st.session_state.backtest_weighted_error:
         st.error(st.session_state.backtest_weighted_error)
 
-    st.markdown("#### Weighted Portfolio Result")
+    st.markdown("#### Mix 후보 결과")
     _render_summary_metrics(bundle["summary_df"])
 
     result_df = bundle["result_df"]
@@ -2593,90 +3239,84 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
     component_data_trust_rows = list(bundle.get("component_data_trust_rows") or [])
     meta = bundle.get("meta") or {}
 
-    summary_tab, data_trust_tab, curve_tab, contribution_tab, balance_tab, periods_tab, table_tab, meta_tab = st.tabs(
-        [
-            "Summary",
-            "Component Data Trust",
-            "Equity Curve",
-            "Contribution",
-            "Balance Extremes",
-            "Period Extremes",
-            "Result Table",
-            "Meta",
-        ]
-    )
+    summary_tab, chart_tab, extremes_tab, detail_tab = st.tabs(["요약", "차트 / 기여도", "극단값", "상세"])
 
     with summary_tab:
+        st.caption("mix 후보의 핵심 성과와 구성 전략 데이터 상태를 먼저 확인합니다.")
         st.dataframe(bundle["summary_df"], use_container_width=True)
-    with data_trust_tab:
-        st.caption(
-            "Weighted Portfolio 자체는 여러 전략 결과를 섞은 composite입니다. "
-            "따라서 먼저 각 구성 전략이 어떤 실제 결과 기간과 데이터 상태에서 계산됐는지 확인합니다."
-        )
-        if component_data_trust_rows:
-            st.dataframe(pd.DataFrame(component_data_trust_rows), use_container_width=True, hide_index=True)
-        else:
-            st.info("이 weighted portfolio에는 component data trust snapshot이 저장되어 있지 않습니다. 최신 compare 결과에서 다시 생성하면 표시됩니다.")
-    with curve_tab:
-        _render_balance_chart_with_markers(
-            chart_df,
-            result_df=result_df,
-            title="Weighted Portfolio Equity Curve",
-        )
-        st.caption("Weighted portfolio results reuse the same marker language as single-strategy runs.")
-    with contribution_tab:
-        st.caption("This view shows how each compared strategy contributes to the weighted portfolio over time under the current date-alignment rule.")
-        if contribution_amount_df is None or contribution_share_df is None:
-            st.info("Contribution views are not available for this weighted portfolio result.")
-        else:
-            weights_df = pd.DataFrame(
-                {
-                    "Strategy": component_strategy_names,
-                    "Configured Weight (%)": component_input_weights or [round(float(weight) * 100.0, 2) for weight in component_weights],
-                    "Normalized Weight": component_weights,
-                }
+        with st.expander("Component Data Trust", expanded=False):
+            st.caption(
+                "Weighted Portfolio 자체는 여러 전략 결과를 섞은 composite입니다. "
+                "각 구성 전략이 어떤 실제 결과 기간과 데이터 상태에서 계산됐는지 확인합니다."
             )
-            end_share_row = contribution_share_df.iloc[-1].rename("Ending Share").reset_index()
-            end_share_row.columns = ["Strategy", "Ending Share"]
-            contribution_summary_df = weights_df.merge(end_share_row, on="Strategy", how="left")
+            if component_data_trust_rows:
+                st.dataframe(pd.DataFrame(component_data_trust_rows), use_container_width=True, hide_index=True)
+            else:
+                st.info("이 weighted portfolio에는 component data trust snapshot이 저장되어 있지 않습니다. 최신 compare 결과에서 다시 생성하면 표시됩니다.")
 
-            st.markdown("##### Weight Snapshot")
-            st.dataframe(contribution_summary_df, use_container_width=True, hide_index=True)
+    with chart_tab:
+        curve_tab, contribution_tab = st.tabs(["Equity Curve", "Contribution"])
+        with curve_tab:
+            _render_balance_chart_with_markers(
+                chart_df,
+                result_df=result_df,
+                title="Weighted Portfolio Equity Curve",
+            )
+            st.caption("Weighted portfolio results reuse the same marker language as single-strategy runs.")
+        with contribution_tab:
+            st.caption("This view shows how each compared strategy contributes to the weighted portfolio over time under the current date-alignment rule.")
+            if contribution_amount_df is None or contribution_share_df is None:
+                st.info("Contribution views are not available for this weighted portfolio result.")
+            else:
+                weights_df = pd.DataFrame(
+                    {
+                        "Strategy": component_strategy_names,
+                        "Configured Weight (%)": component_input_weights or [round(float(weight) * 100.0, 2) for weight in component_weights],
+                        "Normalized Weight": component_weights,
+                    }
+                )
+                end_share_row = contribution_share_df.iloc[-1].rename("Ending Share").reset_index()
+                end_share_row.columns = ["Strategy", "Ending Share"]
+                contribution_summary_df = weights_df.merge(end_share_row, on="Strategy", how="left")
 
-            amount_chart_tab, share_chart_tab = st.tabs(["Contribution Amount", "Contribution Share"])
-            with amount_chart_tab:
-                title_col, help_col = st.columns([0.92, 0.08], gap="small")
-                with title_col:
-                    st.markdown("##### Contribution Amount")
-                with help_col:
-                    _render_inline_help_popover(
-                        "Contribution Amount",
-                        "Each layer shows how much of the weighted portfolio balance comes from that strategy at each month. It is an amount-based view, not a percentage view.",
+                st.markdown("##### Weight Snapshot")
+                st.dataframe(contribution_summary_df, use_container_width=True, hide_index=True)
+
+                amount_chart_tab, share_chart_tab = st.tabs(["Contribution Amount", "Contribution Share"])
+                with amount_chart_tab:
+                    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+                    with title_col:
+                        st.markdown("##### Contribution Amount")
+                    with help_col:
+                        _render_inline_help_popover(
+                            "Contribution Amount",
+                            "Each layer shows how much of the weighted portfolio balance comes from that strategy at each month. It is an amount-based view, not a percentage view.",
+                        )
+                    _render_stacked_component_chart(
+                        contribution_amount_df,
+                        title="Weighted Portfolio Contribution Amount",
+                        y_title="Contribution Amount",
+                        percent=False,
                     )
-                _render_stacked_component_chart(
-                    contribution_amount_df,
-                    title="Weighted Portfolio Contribution Amount",
-                    y_title="Contribution Amount",
-                    percent=False,
-                )
-                st.caption("Each layer shows the strategy's weighted contribution to total balance at each month.")
-            with share_chart_tab:
-                title_col, help_col = st.columns([0.92, 0.08], gap="small")
-                with title_col:
-                    st.markdown("##### Contribution Share")
-                with help_col:
-                    _render_inline_help_popover(
-                        "Contribution Share",
-                        "This normalizes contribution into percentage share of the total weighted portfolio balance. It helps compare relative influence between strategies over time.",
+                    st.caption("Each layer shows the strategy's weighted contribution to total balance at each month.")
+                with share_chart_tab:
+                    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+                    with title_col:
+                        st.markdown("##### Contribution Share")
+                    with help_col:
+                        _render_inline_help_popover(
+                            "Contribution Share",
+                            "This normalizes contribution into percentage share of the total weighted portfolio balance. It helps compare relative influence between strategies over time.",
+                        )
+                    _render_stacked_component_chart(
+                        contribution_share_df,
+                        title="Weighted Portfolio Contribution Share",
+                        y_title="Contribution Share",
+                        percent=True,
                     )
-                _render_stacked_component_chart(
-                    contribution_share_df,
-                    title="Weighted Portfolio Contribution Share",
-                    y_title="Contribution Share",
-                    percent=True,
-                )
-                st.caption("This normalizes the same contribution view into percentage share of total portfolio balance.")
-    with balance_tab:
+                    st.caption("This normalizes the same contribution view into percentage share of total portfolio balance.")
+
+    with extremes_tab:
         high_df, low_df = _build_balance_extremes_tables(chart_df, top_n=3)
         high_col, low_col = st.columns(2, gap="large")
         with high_col:
@@ -2685,7 +3325,7 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
         with low_col:
             st.markdown("##### Top 3 Balance Lows")
             st.dataframe(low_df, use_container_width=True, hide_index=True)
-    with periods_tab:
+        st.divider()
         best_df, worst_df = _build_period_extremes_tables(result_df, top_n=3)
         best_col, worst_col = st.columns(2, gap="large")
         with best_col:
@@ -2694,17 +3334,19 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
         with worst_col:
             st.markdown("##### Top 3 Worst Periods")
             st.dataframe(worst_df, use_container_width=True, hide_index=True)
-    with table_tab:
-        st.dataframe(result_df, use_container_width=True)
-    with meta_tab:
-        st.markdown("##### Portfolio Context")
-        st.markdown(f"- `Portfolio Name`: `{meta.get('portfolio_name') or '-'}`")
-        st.markdown(f"- `Portfolio ID`: `{meta.get('portfolio_id') or '-'}`")
-        st.markdown(f"- `Source`: `{meta.get('portfolio_source_kind') or 'weighted_builder'}`")
-        st.markdown(f"- `Date Policy`: `{meta.get('date_policy') or bundle.get('date_policy') or '-'}`")
-        st.markdown(f"- `Selected Strategies`: `{', '.join(meta.get('selected_strategies') or component_strategy_names)}`")
-        st.markdown(f"- `Input Weights (%)`: `{meta.get('input_weights_percent') or component_input_weights or []}`")
-        st.json(meta)
+
+    with detail_tab:
+        with st.expander("Result Table", expanded=False):
+            st.dataframe(result_df, use_container_width=True)
+        with st.expander("Portfolio Context / Meta", expanded=False):
+            st.markdown("##### Portfolio Context")
+            st.markdown(f"- `Portfolio Name`: `{meta.get('portfolio_name') or '-'}`")
+            st.markdown(f"- `Portfolio ID`: `{meta.get('portfolio_id') or '-'}`")
+            st.markdown(f"- `Source`: `{meta.get('portfolio_source_kind') or 'weighted_builder'}`")
+            st.markdown(f"- `Date Policy`: `{meta.get('date_policy') or bundle.get('date_policy') or '-'}`")
+            st.markdown(f"- `Selected Strategies`: `{', '.join(meta.get('selected_strategies') or component_strategy_names)}`")
+            st.markdown(f"- `Input Weights (%)`: `{meta.get('input_weights_percent') or component_input_weights or []}`")
+            st.json(meta)
 
 def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = dict(bundle.get("meta") or {})
@@ -2968,7 +3610,7 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
 
 def _build_saved_portfolio_compare_context(bundles: list[dict[str, Any]]) -> dict[str, Any]:
     if not bundles:
-        raise ValueError("Compare bundles are required.")
+        raise ValueError("Component bundles are required.")
 
     first_meta = bundles[0].get("meta") or {}
     selected_strategies = [str(bundle.get("strategy_name")) for bundle in bundles]
@@ -3009,11 +3651,13 @@ def _build_saved_portfolio_context(
         "date_policy": weighted_bundle.get("date_policy") or "intersection",
     }
 
-COMPARE_MODE_STRATEGY = "개별 전략 비교"
-COMPARE_MODE_SAVED_MIX = "저장된 비중 조합"
+COMPARE_MODE_STRATEGY = "새 Mix 만들기"
+COMPARE_MODE_SAVED_MIX = "저장된 Mix"
 LEGACY_COMPARE_MODE_LABELS = {
     "전략 비교": COMPARE_MODE_STRATEGY,
+    "개별 전략 비교": COMPARE_MODE_STRATEGY,
     "저장 Mix 다시 열기": COMPARE_MODE_SAVED_MIX,
+    "저장된 비중 조합": COMPARE_MODE_SAVED_MIX,
 }
 
 
@@ -3039,8 +3683,8 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     st.session_state.backtest_weighted_error = None
     st.session_state.backtest_compare_workspace_mode_request = COMPARE_MODE_STRATEGY
     st.session_state.backtest_compare_prefill_notice = (
-        f"저장된 비중 조합 `{saved_portfolio.get('name')}`의 compare 전략/기간/세부 설정과 "
-        "weight/date alignment를 개별 전략 비교 form에 다시 채웠습니다. "
+        f"저장된 Mix `{saved_portfolio.get('name')}`의 전략/기간/세부 설정과 "
+        "weight/date alignment를 새 Mix 만들기 form에 다시 채웠습니다. "
         "이전 결과는 숨기고, 저장된 설정을 수정할 수 있는 form-first 상태로 전환했습니다."
     )
     st.session_state.backtest_compare_source_context = {
@@ -3057,7 +3701,7 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
         "weights_percent": list(portfolio_context.get("weights_percent") or []),
         "date_policy": portfolio_context.get("date_policy") or "intersection",
     }
-    st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
+    st.session_state.backtest_requested_panel = "Portfolio Mix Builder"
 
 def _current_candidate_registry_default_compare_override(row: dict[str, Any]) -> dict[str, Any] | None:
     registry_id = str(row.get("registry_id") or "").strip()
@@ -3298,9 +3942,9 @@ def _queue_current_candidate_compare_prefill(rows: list[dict[str, Any]]) -> None
         compare_ready_items.append(item)
 
     if len(compare_ready_items) < 2:
-        raise ValueError("Compare로 보내려면 최소 2개의 후보를 선택해야 합니다.")
+        raise ValueError("Portfolio Mix Builder로 보내려면 최소 2개의 후보를 선택해야 합니다.")
     if len(compare_ready_items) > 4:
-        raise ValueError("Compare bundle은 최대 4개 후보까지만 지원합니다.")
+        raise ValueError("Portfolio Mix Builder bundle은 최대 4개 후보까지만 지원합니다.")
 
     starts = {str(item["start"]) for item in compare_ready_items}
     ends = {str(item["end"]) for item in compare_ready_items}
@@ -3321,7 +3965,7 @@ def _queue_current_candidate_compare_prefill(rows: list[dict[str, Any]]) -> None
     st.session_state.backtest_compare_prefill_payload = payload
     st.session_state.backtest_compare_prefill_pending = True
     st.session_state.backtest_compare_prefill_notice = (
-        f"current candidate bundle `{titles}`를 `Compare & Portfolio Builder`로 불러왔습니다."
+        f"current candidate bundle `{titles}`를 `Portfolio Mix Builder`로 불러왔습니다."
     )
     st.session_state.backtest_compare_source_context = {
         "source_kind": "current_candidate_bundle",
@@ -3330,7 +3974,7 @@ def _queue_current_candidate_compare_prefill(rows: list[dict[str, Any]]) -> None
         "candidate_titles": [str(row.get("title") or "") for row in rows],
         "selected_strategies": payload["selected_strategies"],
     }
-    st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
+    st.session_state.backtest_requested_panel = "Portfolio Mix Builder"
 
 def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]) -> None:
     if strategy_name == "Equal Weight":
@@ -3752,17 +4396,17 @@ def _compare_source_kind_label(source_kind: str | None) -> str:
     mapping = {
         "current_candidate_bundle": "Current Candidate Bundle",
         "saved_portfolio": "Saved Portfolio Re-entry",
-        "manual_compare_selection": "Manual Compare Selection",
+        "manual_compare_selection": "Manual Mix Component Selection",
     }
-    return mapping.get(str(source_kind or "").strip(), str(source_kind or "Manual Compare Selection"))
+    return mapping.get(str(source_kind or "").strip(), str(source_kind or "Manual Mix Component Selection"))
 
 def _compare_source_kind_plain_text(source_kind: str | None) -> str:
     mapping = {
         "current_candidate_bundle": "Current candidate 후보 묶음에서 불러옴",
         "saved_portfolio": "저장된 포트폴리오에서 다시 불러옴",
-        "manual_compare_selection": "직접 선택한 compare 설정",
+        "manual_compare_selection": "직접 선택한 mix component 설정",
     }
-    return mapping.get(str(source_kind or "").strip(), "직접 선택한 compare 설정")
+    return mapping.get(str(source_kind or "").strip(), "직접 선택한 mix component 설정")
 
 def _build_weighted_builder_compare_rows(bundles: list[dict[str, Any]]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
@@ -3829,7 +4473,7 @@ def _render_compare_source_context_card(source_context: dict[str, Any] | None, b
         "권장 흐름: 1) 위 전략 표를 보고 무엇을 섞는지 확인하고, "
         "2) 바로 아래에서 strategy별 weight를 넣고, "
         "3) `Date Alignment`를 고른 뒤, "
-        "4) `Build Weighted Portfolio`를 눌러 결과를 만듭니다."
+        "4) `Mix 포트폴리오 생성`을 눌러 하나의 후보 결과를 만듭니다."
     )
 
 def _resolve_saved_portfolio_dynamic_inputs(
@@ -3912,14 +4556,30 @@ def _render_saved_mix_replay_result_card() -> None:
             _render_summary_metrics(weighted_bundle["summary_df"])
             st.caption("상세 equity curve, contribution, result table은 아래 `3. 비중 포트폴리오 결과 확인`에서 확인합니다.")
         else:
-            st.info("저장된 비중 조합의 weighted portfolio 결과가 아직 없습니다. `Mix 재실행 및 검증`을 실행하면 생성됩니다.")
+            st.info("저장된 Mix의 weighted portfolio 결과가 아직 없습니다. `Mix 재실행 및 검증`을 실행하면 생성됩니다.")
 
-# Render the create-new-mix side of Compare & Portfolio Builder.
+# Render the create-new-mix side of Portfolio Mix Builder.
 def _render_strategy_compare_workspace() -> None:
-    st.markdown("### 1. 개별 전략 비교")
+    st.markdown("### 1. 구성 포트폴리오 실행")
     st.caption(
-        "공통 기간으로 전략 후보를 비교하고, 개별 후보를 Practical Validation으로 보낼지 판단합니다. "
-        "비중 조합 자체는 아래 비중 포트폴리오 구성 또는 저장된 비중 조합 화면에서 mix 단위로 검증합니다."
+        "여기서는 여러 전략을 같은 기간 조건으로 실행해 mix의 재료를 만듭니다. "
+        "개별 전략을 직접 보내는 화면이 아니라, 아래에서 weight를 정한 mix 전체를 하나의 후보로 판단합니다."
+    )
+    current_component_ready = bool(st.session_state.backtest_compare_bundles) and not _is_saved_mix_replay_context()
+    current_weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+    current_mix_ready = bool(current_component_ready and current_weighted_bundle)
+    current_can_send: bool | None = None
+    if current_mix_ready:
+        current_can_send = bool(
+            _build_weighted_mix_candidate_readiness_evaluation(
+                current_weighted_bundle,
+                list(st.session_state.get("backtest_compare_bundles") or []),
+            ).get("can_send_to_practical_validation")
+        )
+    _render_portfolio_mix_flow_strip(
+        component_ready=current_component_ready,
+        mix_ready=current_mix_ready,
+        can_send_to_practical_validation=current_can_send,
     )
     _apply_compare_prefill()
     compare_prefill_notice = st.session_state.get("backtest_compare_prefill_notice")
@@ -3937,18 +4597,11 @@ def _render_strategy_compare_workspace() -> None:
     if st.session_state.backtest_compare_bundles or st.session_state.backtest_compare_error:
         if _is_saved_mix_replay_context():
             st.info(
-                "최근 `Mix 재실행 및 검증` 결과는 `저장된 비중 조합` 화면에서 바로 확인합니다. "
-                "새로운 개별 전략 5단계 비교를 하려면 아래 입력을 조정한 뒤 `Run Strategy Comparison`을 실행하세요."
+                "최근 `Mix 재실행 및 검증` 결과는 `저장된 Mix` 화면에서 바로 확인합니다. "
+                "새 mix 재료를 만들려면 아래 입력을 조정한 뒤 `구성 포트폴리오 실행`을 실행하세요."
             )
         else:
-            with st.container(border=True):
-                st.markdown("### 개별 전략 5단계 Compare 결과")
-                st.caption(
-                    "최근 실행한 개별 전략 Compare 결과입니다. 여기서 Summary, Data Trust, Real-Money gate, "
-                    "상대 비교 근거를 보고 단일 후보를 Practical Validation으로 넘길 수 있는지 확인합니다. "
-                    "저장된 mix는 이 보드가 아니라 Portfolio Mix 검증 보드에서 판단합니다."
-                )
-                _render_compare_results()
+            _render_compare_results()
         st.divider()
     current_compare_selection = list(st.session_state.get("compare_selected_strategies") or [])
     normalized_compare_selection: list[str] = []
@@ -3992,9 +4645,9 @@ def _render_strategy_compare_workspace() -> None:
     compare_grs_universe_mode = "preset"
     compare_grs_preset_name: str | None = "Global Relative Strength Core ETF Universe"
     compare_grs_tickers = list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS)
-    st.markdown("#### Compare Period & Shared Inputs")
+    st.markdown("#### Component Period & Shared Inputs")
     st.caption(
-        "모든 compare 전략이 함께 사용하는 기간과 실행 옵션입니다. "
+        "모든 mix component 전략이 함께 사용하는 기간과 실행 옵션입니다. "
         "`Timeframe`과 `Option`은 특정 전략 전용 설정이 아니므로 날짜 입력과 같은 공용 영역에서 관리합니다."
     )
     with st.container():
@@ -4472,7 +5125,7 @@ def _render_strategy_compare_workspace() -> None:
             if quality_compare_strategy_name == "Quality Snapshot (Strict Annual)" and quality_compare_settings_container is not None:
                 with quality_compare_settings_container:
                     st.markdown("##### Quality Snapshot (Strict Annual)")
-                    st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    st.caption("Portfolio Mix Builder keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
                     qss_compare_preset = st.selectbox(
                         "Strict Annual Quality Preset",
                         options=list(QUALITY_STRICT_PRESETS.keys()),
@@ -4757,7 +5410,7 @@ def _render_strategy_compare_workspace() -> None:
             if value_compare_strategy_name == "Value Snapshot (Strict Annual)" and value_compare_settings_container is not None:
                 with value_compare_settings_container:
                     st.markdown("##### Value Snapshot (Strict Annual)")
-                    st.caption("Compare mode keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
+                    st.caption("Portfolio Mix Builder keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
                     vss_compare_preset = st.selectbox(
                         "Strict Annual Value Preset",
                         options=list(VALUE_STRICT_PRESETS.keys()),
@@ -5042,7 +5695,7 @@ def _render_strategy_compare_workspace() -> None:
             if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)" and quality_value_compare_settings_container is not None:
                 with quality_value_compare_settings_container:
                     st.markdown("##### Quality + Value Snapshot (Strict Annual)")
-                    st.caption("Compare mode keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    st.caption("Portfolio Mix Builder keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
                     qvss_compare_preset = st.selectbox(
                         "Strict Annual Multi-Factor Preset",
                         options=list(QUALITY_STRICT_PRESETS.keys()),
@@ -5337,7 +5990,7 @@ def _render_strategy_compare_workspace() -> None:
                         )
 
         compare_submitted = st.button(
-            "Run Strategy Comparison",
+            "구성 포트폴리오 실행",
             key="compare_run_strategy_comparison",
             use_container_width=True,
         )
@@ -5358,7 +6011,7 @@ def _render_strategy_compare_workspace() -> None:
         st.session_state.backtest_saved_portfolio_replay_id = None
         st.session_state.backtest_compare_source_context = {
             "source_kind": "manual_compare",
-            "source_label": "Manual Strategy Comparison",
+            "source_label": "Manual Portfolio Mix Components",
             "selected_strategies": selected_strategy_execution_names,
         }
         if not selected_strategies:
@@ -5439,7 +6092,7 @@ def _render_strategy_compare_workspace() -> None:
                 st.session_state.backtest_weighted_error = None
                 st.session_state.backtest_compare_workspace_mode_request = COMPARE_MODE_STRATEGY
                 st.session_state.backtest_compare_result_notice = (
-                    "개별 전략 Compare 결과를 만들었습니다. 아래 Compare 검증 보드에서 단일 후보 handoff 가능 여부를 확인하세요."
+                    "구성 포트폴리오 실행 결과를 만들었습니다. 아래에서 weight를 정해 하나의 mix 후보로 판단하세요."
                 )
                 append_backtest_run_history(
                     bundle={
@@ -5470,14 +6123,15 @@ def _render_strategy_compare_workspace() -> None:
                         ],
                     },
                 )
-                st.success("Strategy comparison completed.")
+                st.success("구성 포트폴리오 실행을 완료했습니다.")
         st.rerun()
     if st.session_state.backtest_compare_bundles:
         st.divider()
     _render_weighted_portfolio_builder()
 
-# Render and operate the Compare & Portfolio Builder workspace.
+# Render and operate the Portfolio Mix Builder workspace.
 def render_compare_portfolio_workspace() -> None:
+    _render_portfolio_mix_builder_css()
     saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
     if saved_notice:
         st.success(saved_notice)
@@ -5494,7 +6148,7 @@ def render_compare_portfolio_workspace() -> None:
     st.session_state.backtest_compare_workspace_mode = current_mode
     if hasattr(st, "segmented_control"):
         st.segmented_control(
-            "Compare Workspace",
+            "Portfolio Mix Workspace",
             options=mode_options,
             selection_mode="single",
             required=True,
@@ -5504,7 +6158,7 @@ def render_compare_portfolio_workspace() -> None:
         )
     else:
         st.radio(
-            "Compare Workspace",
+            "Portfolio Mix Workspace",
             options=mode_options,
             horizontal=True,
             key="backtest_compare_workspace_mode",

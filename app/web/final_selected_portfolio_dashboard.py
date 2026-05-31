@@ -7,14 +7,26 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_portfolio_allocation_drift_boundary_table,
+    build_selected_portfolio_continuity_table,
     build_selected_portfolio_current_weight_input_table,
     build_selected_portfolio_drift_alert_table,
     build_selected_portfolio_drift_table,
     build_selected_portfolio_component_table,
     build_selected_portfolio_dashboard_table,
     build_selected_portfolio_evidence_table,
+    build_selected_portfolio_monitoring_timeline_table,
+    build_selected_portfolio_provider_evidence_table,
+    build_selected_portfolio_provider_symbol_weight_table,
+    build_selected_portfolio_recheck_comparison_table,
+    build_selected_portfolio_recheck_preflight_table,
+    build_selected_portfolio_recheck_readiness_table,
+    build_selected_portfolio_review_signal_policy_table,
+    build_selected_portfolio_source_contract_table,
+    build_selected_portfolio_symbol_freshness_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
     selected_portfolio_active_components,
@@ -27,11 +39,18 @@ from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
+    build_selected_portfolio_allocation_drift_boundary,
+    build_selected_portfolio_continuity_check,
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
+    build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_performance_recheck,
+    build_selected_portfolio_provider_evidence,
+    build_selected_portfolio_recheck_comparison,
+    build_selected_portfolio_recheck_operations_preflight,
     build_selected_portfolio_recheck_defaults,
+    build_selected_portfolio_review_signal_policy,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
 )
@@ -57,12 +76,73 @@ def _alert_tone(alert_route: str) -> str:
     return "neutral"
 
 
-def _review_trigger_tone(status: str) -> str:
-    if status == "Clear":
+def _allocation_boundary_tone(route: str) -> str:
+    if route in {"ALLOCATION_DRIFT_BOUNDARY_READY", "ALLOCATION_DRIFT_BOUNDARY_OPTIONAL"}:
         return "positive"
-    if status == "Watch":
+    if route in {"ALLOCATION_DRIFT_BOUNDARY_WATCH", "ALLOCATION_DRIFT_BOUNDARY_NEEDS_INPUT"}:
         return "warning"
-    if status == "Breached":
+    if route in {"ALLOCATION_DRIFT_BOUNDARY_BREACHED", "ALLOCATION_DRIFT_BOUNDARY_BLOCKED"}:
+        return "danger"
+    return "neutral"
+
+
+def _review_trigger_tone(status: str) -> str:
+    normalized = str(status or "")
+    if normalized in {"Clear", "CLEAR"}:
+        return "positive"
+    if normalized in {"Watch", "WATCH", "Needs Input", "NEEDS_INPUT"}:
+        return "warning"
+    if normalized in {"Breached", "BREACHED"}:
+        return "danger"
+    return "neutral"
+
+
+def _continuity_tone(route: str) -> str:
+    if route == "CONTINUITY_READY":
+        return "positive"
+    if route in {"CONTINUITY_NEEDS_INPUT", "CONTINUITY_REVIEW"}:
+        return "warning"
+    if route == "CONTINUITY_BLOCKED":
+        return "danger"
+    return "neutral"
+
+
+def _recheck_readiness_tone(route: str) -> str:
+    if route == "RECHECK_READINESS_READY":
+        return "positive"
+    if route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
+        return "warning"
+    if route == "RECHECK_READINESS_BLOCKED":
+        return "danger"
+    return "neutral"
+
+
+def _recheck_preflight_tone(route: str) -> str:
+    if route == "RECHECK_PREFLIGHT_READY":
+        return "positive"
+    if route in {"RECHECK_PREFLIGHT_REVIEW", "RECHECK_PREFLIGHT_NEEDS_DATA"}:
+        return "warning"
+    if route == "RECHECK_PREFLIGHT_BLOCKED":
+        return "danger"
+    return "neutral"
+
+
+def _symbol_freshness_tone(route: str) -> str:
+    if route == "SYMBOL_FRESHNESS_READY":
+        return "positive"
+    if route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
+        return "warning"
+    if route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_BLOCKED"}:
+        return "danger"
+    return "neutral"
+
+
+def _provider_evidence_tone(route: str) -> str:
+    if route == "SELECTED_PROVIDER_READY":
+        return "positive"
+    if route in {"SELECTED_PROVIDER_REVIEW", "SELECTED_PROVIDER_NEEDS_DATA"}:
+        return "warning"
+    if route == "SELECTED_PROVIDER_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -304,8 +384,9 @@ def _render_selected_portfolio_picker(rows: list[dict[str, Any]]) -> dict[str, A
 
 def _render_selected_row_detail(row: dict[str, Any]) -> None:
     _render_snapshot(row)
-    _render_performance_recheck(row)
-    _render_operator_context(row)
+    operations_evidence = _render_performance_recheck(row)
+    _render_operator_context(row, operations_evidence=operations_evidence)
+    _render_decision_dossier(row)
 
     with st.expander("Audit / Developer Details", expanded=False):
         st.caption("데이터 출처, 화면 경계, 원본 저장 row 구조를 확인할 때만 펼쳐 봅니다.")
@@ -359,222 +440,17 @@ def _latest_drift_check(row: dict[str, Any]) -> dict[str, Any]:
     return dict(st.session_state.get(f"selected_portfolio_drift_check_result_{_decision_key(row)}") or {})
 
 
-def _trigger_row(
-    *,
-    trigger: str,
-    current_signal: str,
-    status: str,
-    why_it_matters: str,
-    suggested_action: str,
-) -> dict[str, str]:
-    return {
-        "Trigger": trigger,
-        "Current Signal": current_signal,
-        "Status": status,
-        "Why It Matters": why_it_matters,
-        "Suggested Action": suggested_action,
-    }
+def _latest_drift_alert_preview(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(st.session_state.get(f"selected_portfolio_drift_alert_result_{_decision_key(row)}") or {})
 
 
-def _status_from_delta(
-    value: Any,
-    *,
-    breach_below: float | None = None,
-    watch_below: float | None = None,
-    clear_label: str = "Clear",
-) -> str:
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return "Needs Input"
-    if pd.isna(numeric):
-        return "Needs Input"
-    if breach_below is not None and numeric < breach_below:
-        return "Breached"
-    if watch_below is not None and numeric < watch_below:
-        return "Watch"
-    return clear_label
-
-
-# Build the operator-facing trigger board by translating latest recheck/drift state into actionable rows.
-def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str]], str, str]:
-    recheck_result = _latest_recheck_result(row)
-    drift_check = _latest_drift_check(row)
-    blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
-    evidence_route = str(row.get("evidence_route") or "-")
-    rows: list[dict[str, str]] = []
-
-    evidence_status = "Clear" if not blockers and evidence_route == "READY_FOR_FINAL_DECISION" else "Watch"
-    rows.append(
-        _trigger_row(
-            trigger="Final Review evidence",
-            current_signal=evidence_route,
-            status=evidence_status,
-            why_it_matters="선정 당시 검증 근거가 아직 운영 대상 조건을 만족하는지 확인합니다.",
-            suggested_action=(
-                "남은 blocker가 없으므로 성과와 보유 상태를 계속 점검합니다."
-                if evidence_status == "Clear"
-                else "Why Selected tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
-            ),
-        )
+def _latest_monitoring_timeline(row: dict[str, Any]) -> dict[str, Any]:
+    return build_selected_portfolio_monitoring_timeline(
+        row,
+        recheck_result=_latest_recheck_result(row),
+        drift_check=_latest_drift_check(row),
+        alert_preview=_latest_drift_alert_preview(row),
     )
-
-    if not recheck_result:
-        rows.extend(
-            [
-                _trigger_row(
-                    trigger="CAGR deterioration",
-                    current_signal="Performance Recheck not run",
-                    status="Needs Input",
-                    why_it_matters="선정 당시 수익률 근거가 최신 기간에서도 유지되는지 봅니다.",
-                    suggested_action="Performance Recheck에서 기간과 가상 투자금을 확인한 뒤 Run Performance Recheck를 실행합니다.",
-                ),
-                _trigger_row(
-                    trigger="MDD expansion",
-                    current_signal="Performance Recheck not run",
-                    status="Needs Input",
-                    why_it_matters="최신 기간에서 최대 낙폭이 커졌는지 확인합니다.",
-                    suggested_action="Performance Recheck 실행 후 drawdown 변화를 확인합니다.",
-                ),
-                _trigger_row(
-                    trigger="Benchmark underperformance",
-                    current_signal="Performance Recheck not run",
-                    status="Needs Input",
-                    why_it_matters="선정 포트폴리오가 benchmark 대비 우위를 유지하는지 봅니다.",
-                    suggested_action="Performance Recheck 실행 후 benchmark spread를 확인합니다.",
-                ),
-            ]
-        )
-    elif recheck_result.get("status") == "error":
-        error_text = str(recheck_result.get("error") or "recheck failed")
-        rows.extend(
-            [
-                _trigger_row(
-                    trigger="CAGR deterioration",
-                    current_signal=error_text,
-                    status="Needs Input",
-                    why_it_matters="성과 유지 여부를 판단하려면 recheck 결과가 필요합니다.",
-                    suggested_action="입력 기간과 selected component contract를 확인한 뒤 다시 실행합니다.",
-                ),
-                _trigger_row(
-                    trigger="MDD expansion",
-                    current_signal=error_text,
-                    status="Needs Input",
-                    why_it_matters="리스크 확대 여부를 판단하려면 recheck 결과가 필요합니다.",
-                    suggested_action="Performance Recheck 오류를 먼저 해결합니다.",
-                ),
-                _trigger_row(
-                    trigger="Benchmark underperformance",
-                    current_signal=error_text,
-                    status="Needs Input",
-                    why_it_matters="benchmark 대비 성과를 판단하려면 recheck 결과가 필요합니다.",
-                    suggested_action="Performance Recheck 오류를 먼저 해결합니다.",
-                ),
-            ]
-        )
-    else:
-        change = dict(recheck_result.get("change_summary") or {})
-        portfolio_summary = dict(recheck_result.get("portfolio_summary") or {})
-        baseline_summary = dict(recheck_result.get("baseline_summary") or {})
-        cagr_delta = change.get("cagr_delta_vs_baseline")
-        mdd_delta = change.get("mdd_delta_vs_baseline")
-        spread = change.get("net_cagr_spread")
-        cagr_status = _status_from_delta(cagr_delta, breach_below=-0.03, watch_below=0.0)
-        mdd_status = _status_from_delta(mdd_delta, breach_below=-0.05, watch_below=0.0)
-        spread_status = _status_from_delta(spread, breach_below=0.0, watch_below=0.02)
-        rows.extend(
-            [
-                _trigger_row(
-                    trigger="CAGR deterioration",
-                    current_signal=(
-                        f"Recheck {_format_pct(portfolio_summary.get('cagr'))} vs "
-                        f"baseline {_format_pct(baseline_summary.get('cagr'))} "
-                        f"(delta {_format_pct(cagr_delta)})"
-                    ),
-                    status=cagr_status,
-                    why_it_matters="선정 근거였던 장기 수익률이 최신 기간에서 약해졌는지 봅니다.",
-                    suggested_action=(
-                        "CAGR 약화 폭이 큽니다. What Changed와 Contribution tab에서 원인을 확인합니다."
-                        if cagr_status == "Breached"
-                        else "다음 점검에서도 하락이 이어지는지 관찰합니다."
-                        if cagr_status == "Watch"
-                        else "현재 수익률 근거는 유지됩니다."
-                    ),
-                ),
-                _trigger_row(
-                    trigger="MDD expansion",
-                    current_signal=(
-                        f"Recheck {_format_pct(portfolio_summary.get('mdd'))} vs "
-                        f"baseline {_format_pct(baseline_summary.get('mdd'))} "
-                        f"(delta {_format_pct(mdd_delta)})"
-                    ),
-                    status=mdd_status,
-                    why_it_matters="최신 기간에서 손실 위험이 선정 당시보다 커졌는지 봅니다.",
-                    suggested_action=(
-                        "MDD 확대가 큽니다. 약한 기간과 component contribution을 먼저 확인합니다."
-                        if mdd_status == "Breached"
-                        else "drawdown이 더 커지는지 다음 점검에서 확인합니다."
-                        if mdd_status == "Watch"
-                        else "현재 drawdown 근거는 유지됩니다."
-                    ),
-                ),
-                _trigger_row(
-                    trigger="Benchmark underperformance",
-                    current_signal=f"Benchmark spread {_format_pct(spread)}",
-                    status=spread_status,
-                    why_it_matters="포트폴리오가 비교 기준 대비 우위를 유지하는지 봅니다.",
-                    suggested_action=(
-                        "benchmark를 밑돌았습니다. 선정 thesis를 재검토합니다."
-                        if spread_status == "Breached"
-                        else "spread가 얇습니다. 다음 recheck에서 우위가 유지되는지 봅니다."
-                        if spread_status == "Watch"
-                        else "benchmark 대비 우위가 유지됩니다."
-                    ),
-                ),
-            ]
-        )
-
-    drift_route = str(drift_check.get("route") or "")
-    drift_signal = str(drift_check.get("route_label") or "Actual Allocation not checked")
-    if not drift_check:
-        drift_status = "Optional"
-        drift_action = "실제 또는 가상 보유금액까지 관리할 때만 Actual Allocation tab에서 입력합니다."
-    elif drift_route == "DRIFT_ALIGNED":
-        drift_status = "Clear"
-        drift_action = "현재 입력 기준으로 target allocation 근처입니다."
-    elif drift_route == "DRIFT_WATCH":
-        drift_status = "Watch"
-        drift_action = "watch component의 drift가 확대되는지 다음 점검에서 확인합니다."
-    elif drift_route == "REBALANCE_NEEDED":
-        drift_status = "Breached"
-        drift_action = "주문 지시가 아니라, drift가 큰 component를 운영 검토 목록에 올립니다."
-    else:
-        drift_status = "Needs Input"
-        drift_action = "입력 합계와 누락 component를 확인한 뒤 다시 계산합니다."
-    rows.append(
-        _trigger_row(
-            trigger="Actual allocation drift",
-            current_signal=drift_signal,
-            status=drift_status,
-            why_it_matters="전략 성과가 아니라 실제 또는 가정 보유금액 배분이 target allocation에서 벗어났는지 봅니다.",
-            suggested_action=drift_action,
-        )
-    )
-
-    statuses = [row_item["Status"] for row_item in rows]
-    if "Breached" in statuses:
-        return rows, "Breached", "재검토가 필요한 trigger가 있습니다. Breached row의 Suggested Action부터 확인합니다."
-    if "Needs Input" in statuses:
-        required_inputs = [
-            row_item for row_item in rows
-            if row_item["Status"] == "Needs Input" and row_item["Trigger"] != "Actual allocation drift"
-        ]
-        if required_inputs:
-            return rows, "Needs Input", "먼저 Performance Recheck를 실행해야 최신 기간 기준 Review Signals를 완성할 수 있습니다."
-        return rows, "Needs Input", "Actual Allocation 입력값을 확인해야 보유금액 배분 signal을 완성할 수 있습니다."
-    if "Watch" in statuses:
-        return rows, "Watch", "큰 차단은 없지만 watch trigger가 있습니다. 다음 점검에서 같은 항목이 악화되는지 확인합니다."
-    return rows, "Clear", "현재 Review Signals 기준으로 선정 thesis와 운영 점검 상태가 유지됩니다."
 
 
 def _render_snapshot(row: dict[str, Any]) -> None:
@@ -635,7 +511,7 @@ def _render_snapshot(row: dict[str, Any]) -> None:
             st.dataframe(component_df, width="stretch", hide_index=True)
 
 
-def _render_operator_context(row: dict[str, Any]) -> None:
+def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[str, Any] | None = None) -> None:
     st.markdown("#### Portfolio Monitoring")
     st.caption(
         "Performance Recheck 이후 이 포트폴리오가 계속 추적할 만한지 확인하는 영역입니다. "
@@ -643,28 +519,35 @@ def _render_operator_context(row: dict[str, Any]) -> None:
     )
     triggers = [str(trigger) for trigger in list(row.get("review_triggers") or []) if str(trigger)]
     blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
+    operations = dict(operations_evidence or {})
     _render_info_card_grid(
         [
             {
-                "title": "1. Review Signals",
+                "title": "1. Timeline",
+                "value": "Read Only",
+                "detail": "선정, 재검증, drift, trigger preview를 시간순으로 확인",
+                "tone": "neutral",
+            },
+            {
+                "title": "2. Review Signals",
                 "value": "Latest Check",
                 "detail": "성과 약화, drawdown 확대, benchmark 우위, allocation drift를 한 번에 확인",
                 "tone": "neutral",
             },
             {
-                "title": "2. Why Selected",
+                "title": "3. Why Selected",
                 "value": row.get("evidence_route"),
                 "detail": "Final Review에서 이 포트폴리오를 통과시킨 근거",
                 "tone": "positive" if not blockers else "warning",
             },
             {
-                "title": "3. Actual Allocation",
+                "title": "4. Actual Allocation",
                 "value": "Optional",
                 "detail": "실제 또는 가상 보유금액을 target allocation과 비교할 때만 사용",
                 "tone": "neutral",
             },
             {
-                "title": "4. Audit",
+                "title": "5. Audit",
                 "value": "Read Only",
                 "detail": "승인, 주문, 자동 리밸런싱은 생성하지 않음",
                 "tone": "neutral",
@@ -673,30 +556,215 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         min_width=190,
     )
     evidence_df = build_selected_portfolio_evidence_table(row)
-    trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
-        ["Review Signals", "Why Selected", "Actual Allocation", "Audit"]
+    continuity_timeline = _latest_monitoring_timeline(row)
+    continuity = build_selected_portfolio_continuity_check(row, monitoring_timeline=continuity_timeline)
+    continuity_metrics = dict(continuity.get("metrics") or {})
+    continuity_route = str(continuity.get("route") or "")
+    continuity_source_contract = dict(continuity.get("source_contract") or {})
+    with st.container(border=True):
+        st.markdown("##### Final Review -> Selected Dashboard Continuity")
+        render_badge_strip(
+            [
+                {
+                    "label": "Continuity",
+                    "value": continuity.get("route_label"),
+                    "tone": _continuity_tone(continuity_route),
+                },
+                {
+                    "label": "Needs Input",
+                    "value": continuity_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if continuity_metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Review",
+                    "value": continuity_metrics.get("review_count", 0),
+                    "tone": "warning" if continuity_metrics.get("review_count") else "neutral",
+                },
+                {
+                    "label": "Blocked",
+                    "value": continuity_metrics.get("blocked_count", 0),
+                    "tone": "danger" if continuity_metrics.get("blocked_count") else "neutral",
+                },
+                {
+                    "label": "Source Contract",
+                    "value": "Consistent" if continuity_metrics.get("source_contract_consistent") else "Mismatch",
+                    "tone": "positive" if continuity_metrics.get("source_contract_consistent") else "danger",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if continuity_route == "CONTINUITY_BLOCKED":
+            st.warning(str(continuity.get("next_action") or "-"))
+        elif continuity_route in {"CONTINUITY_NEEDS_INPUT", "CONTINUITY_REVIEW"}:
+            st.info(str(continuity.get("next_action") or "-"))
+        else:
+            st.success(str(continuity.get("next_action") or "-"))
+        with st.expander("Continuity check rows", expanded=continuity_route != "CONTINUITY_READY"):
+            st.dataframe(build_selected_portfolio_continuity_table(continuity), width="stretch", hide_index=True)
+        with st.expander("Selected decision source contract", expanded=not continuity_metrics.get("source_contract_consistent")):
+            st.caption(
+                "Continuity, Timeline, Review Signals, and Decision Dossier should read the same Final Decision V2 row. "
+                "Session evidence is read-only context, not durable monitoring history."
+            )
+            st.dataframe(
+                build_selected_portfolio_source_contract_table(continuity_source_contract),
+                width="stretch",
+                hide_index=True,
+            )
+
+    timeline_tab, trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
+        ["Timeline", "Review Signals", "Why Selected", "Actual Allocation", "Audit"]
     )
+    with timeline_tab:
+        st.caption(
+            "Final Review 선정 이후 현재 화면에서 확인한 신호를 시간순으로 읽습니다. "
+            "이 timeline은 monitoring log를 자동 저장하지 않습니다."
+        )
+        timeline = continuity_timeline
+        metrics = dict(timeline.get("metrics") or {})
+        boundary = dict(timeline.get("execution_boundary") or {})
+        render_badge_strip(
+            [
+                {
+                    "label": "Timeline",
+                    "value": timeline.get("timeline_label"),
+                    "tone": _review_trigger_tone(str(timeline.get("timeline_status") or "")),
+                },
+                {"label": "Rows", "value": metrics.get("row_count", 0), "tone": "neutral"},
+                {
+                    "label": "Needs Input",
+                    "value": metrics.get("needs_input_count", 0),
+                    "tone": "warning" if metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Breached",
+                    "value": metrics.get("breached_count", 0),
+                    "tone": "danger" if metrics.get("breached_count") else "neutral",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        status = str(timeline.get("timeline_status") or "")
+        conclusion = str(timeline.get("conclusion") or "-")
+        if status == "BREACHED":
+            st.warning(conclusion)
+        elif status in {"WATCH", "NEEDS_INPUT"}:
+            st.info(conclusion)
+        else:
+            st.success(conclusion)
+        timeline_df = build_selected_portfolio_monitoring_timeline_table(timeline)
+        if timeline_df.empty:
+            st.info("표시할 timeline row가 없습니다.")
+        else:
+            st.dataframe(timeline_df, width="stretch", hide_index=True)
+        st.caption(
+            f"Write policy: {boundary.get('write_policy') or '-'} / "
+            f"monitoring auto write: {boundary.get('monitoring_log_auto_write')}"
+        )
     with trigger_tab:
         st.caption(
             "Performance Recheck와 Actual Allocation의 최신 입력을 운영 signal 상태로 번역합니다. "
-            "먼저 Summary를 보고, Watch / Breached row의 Suggested Action을 확인합니다."
+            "성과 threshold는 Recheck Comparison을 기준으로 읽고, Watch / Breached row의 Suggested Action을 확인합니다."
         )
-        trigger_rows, board_status, board_conclusion = _build_review_trigger_board(row)
+        review_signal_policy = build_selected_portfolio_review_signal_policy(
+            row,
+            recheck_result=_latest_recheck_result(row),
+            recheck_preflight=dict(operations.get("preflight") or {}),
+            provider_evidence=dict(operations.get("provider_evidence") or {}),
+            drift_check=_latest_drift_check(row),
+        )
+        signal_metrics = dict(review_signal_policy.get("metrics") or {})
+        signal_boundary = dict(review_signal_policy.get("execution_boundary") or {})
+        board_status = str(review_signal_policy.get("overall_status") or "")
+        board_conclusion = str(review_signal_policy.get("conclusion") or "-")
         render_badge_strip(
             [
-                {"label": "Board Status", "value": board_status, "tone": _review_trigger_tone(board_status)},
+                {
+                    "label": "Board Status",
+                    "value": review_signal_policy.get("route_label") or board_status,
+                    "tone": _review_trigger_tone(board_status),
+                },
                 {"label": "Review Cadence", "value": row.get("review_cadence"), "tone": "neutral"},
                 {"label": "Stored Triggers", "value": len(triggers), "tone": "neutral"},
+                {
+                    "label": "Needs Input",
+                    "value": signal_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if signal_metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Breached",
+                    "value": signal_metrics.get("breached_count", 0),
+                    "tone": "danger" if signal_metrics.get("breached_count") else "neutral",
+                },
                 {"label": "Writes", "value": "Disabled", "tone": "neutral"},
             ]
         )
-        if board_status == "Breached":
+        if board_status == "BREACHED":
             st.warning(board_conclusion)
-        elif board_status in {"Watch", "Needs Input"}:
+        elif board_status in {"WATCH", "NEEDS_INPUT"}:
             st.info(board_conclusion)
         else:
             st.success(board_conclusion)
-        st.dataframe(pd.DataFrame(trigger_rows), width="stretch", hide_index=True)
+        signal_df = build_selected_portfolio_review_signal_policy_table(review_signal_policy)
+        if signal_df.empty:
+            st.info("표시할 Review Signal row가 없습니다.")
+        else:
+            st.dataframe(signal_df, width="stretch", hide_index=True)
+        st.caption(
+            f"Write policy: {signal_boundary.get('write_policy') or '-'} / "
+            f"monitoring auto write: {signal_boundary.get('monitoring_log_auto_write')}"
+        )
+        recheck_comparison = dict(review_signal_policy.get("recheck_comparison") or {})
+        comparison_metrics = dict(recheck_comparison.get("metrics") or {})
+        comparison_boundary = dict(recheck_comparison.get("execution_boundary") or {})
+        st.markdown("##### Recheck Evidence Comparison")
+        st.caption(
+            "최신 Performance Recheck 결과가 Final Review에서 선정할 때의 baseline 근거를 계속 지지하는지 읽습니다. "
+            "이 비교는 monitoring log를 저장하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Comparison",
+                    "value": recheck_comparison.get("route_label"),
+                    "tone": _review_trigger_tone(str(recheck_comparison.get("overall_status") or "")),
+                },
+                {
+                    "label": "Breached",
+                    "value": comparison_metrics.get("breached_count", 0),
+                    "tone": "danger" if comparison_metrics.get("breached_count") else "neutral",
+                },
+                {
+                    "label": "Watch",
+                    "value": comparison_metrics.get("watch_count", 0),
+                    "tone": "warning" if comparison_metrics.get("watch_count") else "neutral",
+                },
+                {
+                    "label": "Needs Input",
+                    "value": comparison_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if comparison_metrics.get("needs_input_count") else "neutral",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        comparison_status = str(recheck_comparison.get("overall_status") or "")
+        comparison_conclusion = str(recheck_comparison.get("conclusion") or "-")
+        if comparison_status == "BREACHED":
+            st.warning(comparison_conclusion)
+        elif comparison_status in {"WATCH", "NEEDS_INPUT"}:
+            st.info(comparison_conclusion)
+        else:
+            st.success(comparison_conclusion)
+        with st.expander("Recheck comparison rows", expanded=comparison_status != "CLEAR"):
+            comparison_df = build_selected_portfolio_recheck_comparison_table(recheck_comparison)
+            if comparison_df.empty:
+                st.info("표시할 recheck comparison row가 없습니다.")
+            else:
+                st.dataframe(comparison_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {comparison_boundary.get('write_policy') or '-'} / "
+                f"monitoring auto write: {comparison_boundary.get('monitoring_log_auto_write')}"
+            )
         with st.expander("Original Operator Notes", expanded=False):
             st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
             st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")
@@ -722,6 +790,65 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         _render_execution_boundary()
 
 
+def _render_decision_dossier(row: dict[str, Any]) -> None:
+    st.markdown("#### Decision Dossier")
+    st.caption(
+        "Final Review 판단 근거와 현재 Selected Dashboard timeline을 markdown dossier로 읽습니다. "
+        "자동 report 저장, monitoring log 저장, 주문 지시는 만들지 않습니다."
+    )
+    dossier = build_decision_dossier(row, monitoring_timeline=_latest_monitoring_timeline(row))
+    decision = dict(dossier.get("decision") or {})
+    metrics = dict(dossier.get("metrics") or {})
+    source_contract = dict(dossier.get("source_contract") or {})
+    boundary = dict(dossier.get("execution_boundary") or {})
+    render_badge_strip(
+        [
+            {"label": "Decision", "value": decision.get("decision_label"), "tone": "neutral"},
+            {"label": "Evidence", "value": metrics.get("evidence_check_count", 0), "tone": "neutral"},
+            {
+                "label": "Needs Review",
+                "value": metrics.get("not_ready_evidence_check_count", 0),
+                "tone": "warning" if metrics.get("not_ready_evidence_check_count") else "neutral",
+            },
+            {
+                "label": "Timeline",
+                "value": "Included" if metrics.get("monitoring_timeline_present") else "Not Included",
+                "tone": "neutral",
+            },
+            {
+                "label": "Source Contract",
+                "value": "Consistent" if metrics.get("source_contract_consistent") else "Check",
+                "tone": "positive" if metrics.get("source_contract_consistent") else "warning",
+            },
+            {"label": "Auto Write", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    action_cols = st.columns([0.34, 0.66], gap="small")
+    with action_cols[0]:
+        st.download_button(
+            "Markdown 다운로드",
+            data=str(dossier.get("markdown") or ""),
+            file_name=str(dossier.get("filename") or "decision_dossier.md"),
+            mime="text/markdown",
+            key=f"selected_dossier_download_{row.get('decision_id') or 'selected'}",
+            width="stretch",
+        )
+    with action_cols[1]:
+        st.caption(
+            f"Write policy: {boundary.get('write_policy') or '-'} / "
+            f"report auto write: {boundary.get('report_auto_write')} / "
+            f"monitoring auto write: {boundary.get('monitoring_log_auto_write')}"
+        )
+    with st.expander("Dossier source contract", expanded=not metrics.get("source_contract_consistent")):
+        st.dataframe(
+            build_selected_portfolio_source_contract_table(source_contract),
+            width="stretch",
+            hide_index=True,
+        )
+    with st.expander("Dossier preview", expanded=False):
+        st.markdown(str(dossier.get("markdown") or "-"))
+
+
 def _render_execution_boundary() -> None:
     with st.container(border=True):
         st.markdown("#### Execution Boundary")
@@ -735,7 +862,7 @@ def _render_execution_boundary() -> None:
         action_cols[2].button("Auto Rebalance", disabled=True, width="stretch")
 
 
-def _render_performance_recheck(row: dict[str, Any]) -> None:
+def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     st.markdown("#### Performance Recheck")
     st.caption(
         "선정 당시의 component contract를 다시 실행해, 사용자가 지정한 기간에서 포트폴리오 성과가 유지되는지 확인합니다. "
@@ -745,11 +872,268 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
     if defaults.get("latest_market_date_error"):
         st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
 
+    latest_market_result = {
+        "status": defaults.get("latest_market_date_status"),
+        "latest_market_date": defaults.get("latest_market_date"),
+        "error": defaults.get("latest_market_date_error"),
+    }
+    preflight = build_selected_portfolio_recheck_operations_preflight(
+        row,
+        latest_market_result=latest_market_result,
+    )
+    preflight_metrics = dict(preflight.get("metrics") or {})
+    preflight_boundary = dict(preflight.get("execution_boundary") or {})
+    preflight_route = str(preflight.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Recheck Operations Preflight")
+        st.caption(
+            "Performance Recheck 실행 전 replay contract readiness와 DB 가격 최신성을 하나의 운영 사전 점검으로 봅니다. "
+            "이 확인은 read-only이며 자동 저장, 승인, 주문, 리밸런싱을 만들지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Preflight",
+                    "value": preflight.get("route_label"),
+                    "tone": _recheck_preflight_tone(preflight_route),
+                },
+                {
+                    "label": "DB Latest",
+                    "value": preflight_metrics.get("latest_market_date") or "-",
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Replay Contracts",
+                    "value": f"{preflight_metrics.get('replay_contract_count', 0)}/{preflight_metrics.get('active_component_count', 0)}",
+                    "tone": "positive"
+                    if preflight_metrics.get("replay_contract_count") == preflight_metrics.get("active_component_count")
+                    and preflight_metrics.get("active_component_count")
+                    else "warning",
+                },
+                {"label": "Symbols", "value": preflight_metrics.get("symbol_count", 0), "tone": "neutral"},
+                {
+                    "label": "Missing/Stale",
+                    "value": f"{preflight_metrics.get('missing_symbol_count', 0)}/{preflight_metrics.get('stale_symbol_count', 0)}",
+                    "tone": "warning"
+                    if preflight_metrics.get("missing_symbol_count") or preflight_metrics.get("stale_symbol_count")
+                    else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if preflight_route == "RECHECK_PREFLIGHT_BLOCKED":
+            st.warning(str(preflight.get("conclusion") or "-"))
+        elif preflight_route in {"RECHECK_PREFLIGHT_REVIEW", "RECHECK_PREFLIGHT_NEEDS_DATA"}:
+            st.info(str(preflight.get("conclusion") or "-"))
+        else:
+            st.success(str(preflight.get("conclusion") or "-"))
+        with st.expander("Preflight rows", expanded=preflight_route != "RECHECK_PREFLIGHT_READY"):
+            preflight_df = build_selected_portfolio_recheck_preflight_table(preflight)
+            if preflight_df.empty:
+                st.info("표시할 preflight row가 없습니다.")
+            else:
+                st.dataframe(preflight_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {preflight_boundary.get('write_policy') or '-'} / "
+                f"DB write: {preflight_boundary.get('db_write')} / "
+                f"registry write: {preflight_boundary.get('registry_write')} / "
+                f"monitoring log auto write: {preflight_boundary.get('monitoring_log_auto_write')}"
+            )
+
+    decision_id = str(row.get("decision_id") or "selected_portfolio")
+    readiness = dict(preflight.get("readiness") or {})
+    readiness_metrics = dict(readiness.get("metrics") or {})
+    readiness_boundary = dict(readiness.get("execution_boundary") or {})
+    readiness_route = str(readiness.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Recheck Readiness")
+        st.caption(
+            "Performance Recheck 실행 전에 DB 최신 시장일과 selected component replay contract가 준비됐는지 확인합니다. "
+            "이 확인은 데이터를 수집하거나 monitoring log를 저장하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Readiness",
+                    "value": readiness.get("route_label"),
+                    "tone": _recheck_readiness_tone(readiness_route),
+                },
+                {
+                    "label": "DB Latest",
+                    "value": readiness_metrics.get("latest_market_date") or "-",
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Replay Contracts",
+                    "value": f"{readiness_metrics.get('replay_contract_count', 0)}/{readiness_metrics.get('active_component_count', 0)}",
+                    "tone": "positive"
+                    if readiness_metrics.get("replay_contract_count") == readiness_metrics.get("active_component_count")
+                    and readiness_metrics.get("active_component_count")
+                    else "warning",
+                },
+                {
+                    "label": "Blocked",
+                    "value": readiness_metrics.get("blocked_count", 0),
+                    "tone": "danger" if readiness_metrics.get("blocked_count") else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if readiness_route == "RECHECK_READINESS_BLOCKED":
+            st.warning(str(readiness.get("conclusion") or "-"))
+        elif readiness_route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
+            st.info(str(readiness.get("conclusion") or "-"))
+        else:
+            st.success(str(readiness.get("conclusion") or "-"))
+        with st.expander("Readiness check rows", expanded=readiness_route != "RECHECK_READINESS_READY"):
+            readiness_df = build_selected_portfolio_recheck_readiness_table(readiness)
+            if readiness_df.empty:
+                st.info("표시할 readiness row가 없습니다.")
+            else:
+                st.dataframe(readiness_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {readiness_boundary.get('write_policy') or '-'} / "
+                f"DB write: {readiness_boundary.get('db_write')} / "
+                f"registry write: {readiness_boundary.get('registry_write')}"
+            )
+
+    symbol_freshness = dict(preflight.get("symbol_freshness") or {})
+    freshness_metrics = dict(symbol_freshness.get("metrics") or {})
+    freshness_boundary = dict(symbol_freshness.get("execution_boundary") or {})
+    freshness_route = str(symbol_freshness.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Symbol Freshness")
+        st.caption(
+            "Performance Recheck에 쓰일 portfolio ticker와 benchmark ticker의 DB 가격 최신성을 확인합니다. "
+            "이 확인은 OHLCV를 수집하지 않고 기존 DB metadata만 읽습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Freshness",
+                    "value": symbol_freshness.get("route_label"),
+                    "tone": _symbol_freshness_tone(freshness_route),
+                },
+                {"label": "Symbols", "value": freshness_metrics.get("symbol_count", 0), "tone": "neutral"},
+                {
+                    "label": "Missing",
+                    "value": freshness_metrics.get("missing_count", 0),
+                    "tone": "danger" if freshness_metrics.get("missing_count") else "neutral",
+                },
+                {
+                    "label": "Stale",
+                    "value": freshness_metrics.get("stale_count", 0),
+                    "tone": "warning" if freshness_metrics.get("stale_count") else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if freshness_route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_BLOCKED"}:
+            st.warning(str(symbol_freshness.get("conclusion") or "-"))
+        elif freshness_route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
+            st.info(str(symbol_freshness.get("conclusion") or "-"))
+        else:
+            st.success(str(symbol_freshness.get("conclusion") or "-"))
+        with st.expander("Symbol freshness rows", expanded=freshness_route != "SYMBOL_FRESHNESS_READY"):
+            freshness_df = build_selected_portfolio_symbol_freshness_table(symbol_freshness)
+            if freshness_df.empty:
+                st.info("표시할 symbol freshness row가 없습니다.")
+            else:
+                st.dataframe(freshness_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {freshness_boundary.get('write_policy') or '-'} / "
+                f"DB write: {freshness_boundary.get('db_write')} / "
+                f"registry write: {freshness_boundary.get('registry_write')}"
+            )
+
+    provider_evidence = build_selected_portfolio_provider_evidence(
+        row,
+        as_of_date=defaults.get("latest_market_date") or date.today().isoformat(),
+    )
+    provider_metrics = dict(provider_evidence.get("metrics") or {})
+    provider_boundary = dict(provider_evidence.get("execution_boundary") or {})
+    provider_route = str(provider_evidence.get("route") or "")
+    look_through = dict(provider_evidence.get("look_through_board") or {})
+    with st.container(border=True):
+        st.markdown("##### Provider Evidence")
+        st.caption(
+            "선정 포트폴리오의 ETF provider / holdings / exposure snapshot을 기존 DB에서 읽어 coverage와 stale 상태를 확인합니다. "
+            "이 확인은 provider 데이터를 수집하거나 JSONL / monitoring log를 저장하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Provider",
+                    "value": provider_evidence.get("route_label"),
+                    "tone": _provider_evidence_tone(provider_route),
+                },
+                {"label": "Symbols", "value": provider_metrics.get("provider_symbol_count", 0), "tone": "neutral"},
+                {
+                    "label": "Holdings",
+                    "value": f"{provider_metrics.get('holdings_coverage_weight', 0) or 0}%",
+                    "tone": "warning"
+                    if provider_metrics.get("holdings_coverage_weight") is not None
+                    and float(provider_metrics.get("holdings_coverage_weight") or 0.0) < 80.0
+                    else "neutral",
+                },
+                {
+                    "label": "Exposure",
+                    "value": f"{provider_metrics.get('exposure_coverage_weight', 0) or 0}%",
+                    "tone": "warning"
+                    if provider_metrics.get("exposure_coverage_weight") is not None
+                    and float(provider_metrics.get("exposure_coverage_weight") or 0.0) < 80.0
+                    else "neutral",
+                },
+                {
+                    "label": "Needs Data",
+                    "value": provider_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if provider_metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Stale",
+                    "value": provider_metrics.get("stale_count", 0),
+                    "tone": "warning" if provider_metrics.get("stale_count") else "neutral",
+                },
+                {
+                    "label": "Partial",
+                    "value": provider_metrics.get("partial_coverage_count", 0),
+                    "tone": "warning" if provider_metrics.get("partial_coverage_count") else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if provider_route == "SELECTED_PROVIDER_BLOCKED":
+            st.warning(str(provider_evidence.get("conclusion") or "-"))
+        elif provider_route in {"SELECTED_PROVIDER_REVIEW", "SELECTED_PROVIDER_NEEDS_DATA"}:
+            st.info(str(provider_evidence.get("conclusion") or "-"))
+        else:
+            st.success(str(provider_evidence.get("conclusion") or "-"))
+        with st.expander("Provider evidence rows", expanded=provider_route != "SELECTED_PROVIDER_READY"):
+            provider_df = build_selected_portfolio_provider_evidence_table(provider_evidence)
+            if provider_df.empty:
+                st.info("표시할 provider evidence row가 없습니다.")
+            else:
+                st.dataframe(provider_df, width="stretch", hide_index=True)
+            symbol_weight_df = build_selected_portfolio_provider_symbol_weight_table(provider_evidence)
+            if not symbol_weight_df.empty:
+                st.markdown("###### Selected provider symbol weights")
+                st.dataframe(symbol_weight_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {provider_boundary.get('write_policy') or '-'} / "
+                f"DB read: {provider_boundary.get('db_read')} / "
+                f"DB write: {provider_boundary.get('db_write')} / "
+                f"provider collection: {provider_boundary.get('provider_collection')}"
+            )
+        summary_rows = list(look_through.get("summary_rows") or [])
+        if summary_rows:
+            with st.expander("Look-through summary", expanded=False):
+                st.caption(str(look_through.get("summary") or "-"))
+                st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+
     fallback_start = date(2016, 1, 1)
     fallback_end = date.today()
     default_start = _coerce_date(defaults.get("default_start"), fallback_start)
     default_end = _coerce_date(defaults.get("default_end"), fallback_end)
-    decision_id = str(row.get("decision_id") or "selected_portfolio")
     with st.container(border=True):
         st.markdown("##### Recheck Setup")
         setup_cols = st.columns([0.24, 0.24, 0.24, 0.28], gap="small")
@@ -955,6 +1339,11 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
                 if "Total Balance" in worst_df.columns:
                     worst_df["Total Balance"] = worst_df["Total Balance"].map(lambda value: _format_money(value))
                 st.dataframe(worst_df, width="stretch", hide_index=True)
+
+    return {
+        "preflight": preflight,
+        "provider_evidence": provider_evidence,
+    }
 
 
 def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
@@ -1239,12 +1628,22 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         for blocker in list(drift_check.get("blockers") or []):
             st.warning(str(blocker))
     alert_preview = build_selected_portfolio_drift_alert_preview(row, drift_check=drift_check)
+    allocation_boundary = build_selected_portfolio_allocation_drift_boundary(
+        row,
+        weight_inputs=value_input_contract,
+        drift_check=drift_check,
+        alert_preview=alert_preview,
+        input_mode=input_mode,
+    )
     apply_cols = st.columns([0.62, 0.38], gap="small")
     with apply_cols[0]:
-        st.caption("이 결과를 Review Signals에 반영하려면 오른쪽 버튼을 누릅니다. 입력값과 주문은 저장하지 않습니다.")
+        st.caption(
+            "이 결과는 현재 session의 Review Signals에만 반영됩니다. "
+            "입력값, alert record, monitoring log, 주문은 저장하지 않습니다."
+        )
     with apply_cols[1]:
         if st.button(
-            "Update Review Signals",
+            "Reflect Session Signal",
             key=f"selected_portfolio_update_allocation_signal_{row.get('decision_id')}",
             width="stretch",
         ):
@@ -1280,6 +1679,37 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
             st.info("표시할 allocation review row가 없습니다.")
         else:
             st.dataframe(alert_df, width="stretch", hide_index=True)
+    boundary_metrics = dict(allocation_boundary.get("metrics") or {})
+    boundary_expanded = allocation_boundary.get("route") in {
+        "ALLOCATION_DRIFT_BOUNDARY_BREACHED",
+        "ALLOCATION_DRIFT_BOUNDARY_BLOCKED",
+    }
+    with st.expander("Allocation evidence boundary", expanded=boundary_expanded):
+        st.caption(
+            "Actual Allocation 결과가 수동/session 증거인지 확인합니다. "
+            "이 boundary는 DB 저장, registry 저장, 계좌 연결, 주문, 자동 리밸런싱을 허용하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Boundary",
+                    "value": allocation_boundary.get("route_label"),
+                    "tone": _allocation_boundary_tone(str(allocation_boundary.get("route") or "")),
+                },
+                {"label": "Raw Input Save", "value": "Disabled", "tone": "neutral"},
+                {"label": "Alert Save", "value": "Disabled", "tone": "neutral"},
+                {
+                    "label": "Boundary Violations",
+                    "value": boundary_metrics.get("boundary_violation_count", 0),
+                    "tone": "danger" if boundary_metrics.get("boundary_violation_count") else "neutral",
+                },
+                {"label": "Order / Rebalance", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        st.caption(str(allocation_boundary.get("conclusion") or "-"))
+        boundary_df = build_selected_portfolio_allocation_drift_boundary_table(allocation_boundary)
+        if not boundary_df.empty:
+            st.dataframe(boundary_df, width="stretch", hide_index=True)
     st.info(str(drift_check.get("next_action") or "-"))
     st.info(str(alert_preview.get("next_action") or "-"))
 

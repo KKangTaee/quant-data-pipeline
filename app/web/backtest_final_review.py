@@ -7,10 +7,12 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
     FINAL_REVIEW_ROUTE_OPTIONS,
+    _build_investability_evidence_packet,
     _build_final_review_decision_evidence_pack,
     _build_final_review_decision_row,
     _build_final_review_decision_rows_for_display,
@@ -44,13 +46,289 @@ from app.runtime import (
 
 def _status_tone(status: Any) -> str:
     status_text = str(status or "").upper()
-    if status_text == "PASS":
+    if status_text in {"PASS", "READY"}:
         return "positive"
     if status_text == "BLOCKED":
         return "danger"
-    if status_text == "REVIEW":
+    if status_text in {"REVIEW", "NEEDS_INPUT"}:
         return "warning"
     return "neutral"
+
+
+def _provider_look_through_board(validation: dict[str, Any]) -> dict[str, Any]:
+    board = dict(validation.get("provider_look_through_board") or {})
+    if board:
+        return board
+    provider_context = dict(validation.get("provider_coverage") or {})
+    return dict(provider_context.get("look_through_board") or {})
+
+
+def _render_provider_look_through_summary(validation: dict[str, Any]) -> None:
+    board = _provider_look_through_board(validation)
+    if not board:
+        return
+
+    st.markdown("###### Look-through Exposure Board")
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {"label": "Holdings", "value": f"{board.get('holdings_coverage_weight', 0)}%", "tone": _status_tone(board.get("holdings_status"))},
+            {"label": "Exposure", "value": f"{board.get('exposure_coverage_weight', 0)}%", "tone": _status_tone(board.get("exposure_status"))},
+            {"label": "Top Holding", "value": f"{board.get('top_holding_weight', 0)}%", "tone": "warning" if (board.get("top_holding_weight") or 0) > 25 else "neutral"},
+            {"label": "Dominant", "value": f"{board.get('dominant_asset_bucket') or '-'} {board.get('dominant_asset_weight', 0)}%", "tone": "neutral"},
+            {"label": "Unknown", "value": f"{board.get('unknown_exposure_weight', 0)}%", "tone": "warning" if (board.get("unknown_exposure_weight") or 0) else "neutral"},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_rows = list(board.get("summary_rows") or [])
+    if summary_rows:
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+    with st.expander("Look-through detail", expanded=False):
+        detail_tabs = st.tabs(["Asset Buckets", "Top Holdings", "Fund Coverage"])
+        with detail_tabs[0]:
+            rows = list(board.get("asset_bucket_rows") or [])
+            if rows:
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 asset bucket row가 없습니다.")
+        with detail_tabs[1]:
+            rows = list(board.get("top_holding_rows") or [])
+            if rows:
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 top holdings row가 없습니다.")
+        with detail_tabs[2]:
+            rows = list(board.get("fund_coverage_rows") or [])
+            if rows:
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 ETF별 coverage row가 없습니다.")
+
+
+def _robustness_lab_board(validation: dict[str, Any]) -> dict[str, Any]:
+    robustness = dict(validation.get("robustness_validation") or {})
+    return dict(robustness.get("robustness_lab_board") or validation.get("robustness_lab_board") or {})
+
+
+def _render_robustness_lab_summary(board: dict[str, Any]) -> None:
+    metrics = dict(board.get("metrics") or {})
+    st.markdown("###### Robustness Lab")
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {
+                "label": "Stress",
+                "value": f"{metrics.get('computed_stress_windows', 0)}/{metrics.get('covered_stress_windows', 0)}",
+                "tone": _status_tone(metrics.get("stress_status")),
+            },
+            {
+                "label": "Sensitivity",
+                "value": metrics.get("computed_sensitivity_checks", 0),
+                "tone": _status_tone(metrics.get("sensitivity_status")),
+            },
+            {
+                "label": "Follow-up",
+                "value": metrics.get("runtime_followup_count", 0),
+                "tone": "warning" if metrics.get("runtime_followup_count") else "neutral",
+            },
+            {"label": "Rolling", "value": metrics.get("rolling_window_count") or "-", "tone": _status_tone(metrics.get("rolling_status"))},
+            {"label": "Trials", "value": metrics.get("local_trial_count", 0), "tone": _status_tone(metrics.get("overfit_status"))},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_rows = list(board.get("summary_rows") or [])
+    if summary_rows:
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+    with st.expander("Robustness Lab detail", expanded=False):
+        stress_tab, sensitivity_tab, follow_up_tab = st.tabs(["Stress", "Sensitivity", "Follow-up"])
+        with stress_tab:
+            stress_rows = list(board.get("stress_rows") or [])
+            if stress_rows:
+                st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 stress detail row가 없습니다.")
+        with sensitivity_tab:
+            sensitivity_rows = list(board.get("sensitivity_rows") or [])
+            if sensitivity_rows:
+                st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 sensitivity detail row가 없습니다.")
+        with follow_up_tab:
+            follow_up_rows = list(board.get("follow_up_rows") or [])
+            if follow_up_rows:
+                st.dataframe(pd.DataFrame(follow_up_rows), width="stretch", hide_index=True)
+            else:
+                st.success("즉시 follow-up으로 남은 robustness row가 없습니다.")
+    limitations = list(board.get("limitations") or [])
+    if limitations:
+        st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
+
+
+def _render_validation_efficacy_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("validation_efficacy_audit") or {})
+    rows = list(validation.get("validation_efficacy_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Validation Efficacy")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Validation efficacy rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
+def _render_backtest_realism_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("backtest_realism_audit") or {})
+    rows = list(validation.get("backtest_realism_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Backtest Realism")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Backtest realism rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
+def _render_data_coverage_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("data_coverage_audit") or {})
+    rows = list(validation.get("data_coverage_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Data Coverage")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "Symbols", "value": metrics.get("symbol_count", 0), "tone": "neutral"},
+        ]
+    )
+    with st.expander("Data coverage rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
+def _render_construction_risk_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("construction_risk_audit") or {})
+    rows = list(validation.get("construction_risk_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Construction Risk")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Construction risk rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
+def _render_risk_contribution_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("risk_contribution_audit") or {})
+    rows = list(validation.get("risk_contribution_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Risk Contribution")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Risk contribution rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        component_rows = list(audit.get("component_rows") or [])
+        if component_rows:
+            st.markdown("Component proxy rows")
+            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
+def _render_component_role_weight_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("component_role_weight_audit") or {})
+    rows = list(validation.get("component_role_weight_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Component Role / Weight")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Component role / weight rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        component_rows = list(audit.get("component_rows") or [])
+        if component_rows:
+            st.markdown("Component role source rows")
+            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
 
 
 def _render_validation_summary(validation: dict[str, Any]) -> None:
@@ -78,6 +356,12 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         st.info("최종 검토에 연결된 component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    _render_validation_efficacy_summary(validation)
+    _render_data_coverage_summary(validation)
+    _render_construction_risk_summary(validation)
+    _render_risk_contribution_summary(validation)
+    _render_component_role_weight_summary(validation)
+    _render_backtest_realism_summary(validation)
     diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
         st.markdown("###### Practical Diagnostics")
@@ -97,6 +381,7 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         if provider_rows:
             st.markdown("###### Provider Coverage")
             st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+            _render_provider_look_through_summary(validation)
         not_run_critical = list(validation.get("not_run_critical_domains") or [])
         if not_run_critical:
             st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")
@@ -158,6 +443,11 @@ def _render_robustness_summary(validation: dict[str, Any]) -> None:
         route_title="Robustness Preview",
         score_title="Robustness Score",
     )
+    board = _robustness_lab_board(validation)
+    if board:
+        _render_robustness_lab_summary(board)
+        return
+
     stress_interpretation = dict(robustness.get("stress_interpretation") or validation.get("stress_interpretation") or {})
     sensitivity_interpretation = dict(
         robustness.get("sensitivity_interpretation") or validation.get("sensitivity_interpretation") or {}
@@ -225,6 +515,101 @@ def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None
             st.info(str(trigger))
 
 
+def _render_investability_packet(packet: dict[str, Any]) -> None:
+    summary = dict(packet.get("summary") or {})
+    source_chain = dict(packet.get("source_chain") or {})
+    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    policy_blocker_count = len(gate_policy.get("blockers") or []) + len(gate_policy.get("review_required") or [])
+    route = str(packet.get("route") or "-")
+    render_readiness_route_panel(
+        route_label=route,
+        score=float(packet.get("score") or 0.0),
+        blockers_count=policy_blocker_count or len(packet.get("critical_gaps") or []),
+        verdict=str(packet.get("verdict") or "-"),
+        next_action=str(packet.get("next_action") or "-"),
+        route_title="Investability Packet",
+        score_title="Packet Score",
+    )
+    render_badge_strip(
+        [
+            {"label": "Source", "value": source_chain.get("selection_source_id") or source_chain.get("source_id") or "-", "tone": "neutral"},
+            {"label": "Validation", "value": source_chain.get("validation_id") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": summary.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": summary.get("review", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": summary.get("blocked", 0), "tone": "danger"},
+            {"label": "NOT_RUN", "value": summary.get("not_run", 0), "tone": "neutral"},
+            {"label": "Gate", "value": gate_policy.get("outcome") or "-", "tone": "positive" if gate_policy.get("select_allowed") else "warning"},
+            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    st.caption("이 packet은 새 저장소가 아니라 Final Review에서 기존 validation evidence를 읽는 compact 판단 근거입니다.")
+    st.dataframe(pd.DataFrame(packet.get("checks") or []), width="stretch", hide_index=True)
+    policy_rows = list(gate_policy.get("policy_rows") or [])
+    if policy_rows:
+        st.markdown("###### Validation Gate Policy")
+        st.caption("profile-aware gate matrix입니다. `Selected Route = Blocked`이면 선정 대신 보류 / 재검토로 기록합니다.")
+        st.dataframe(pd.DataFrame(policy_rows), width="stretch", hide_index=True)
+        if gate_policy.get("blockers"):
+            for blocker in list(gate_policy.get("blockers") or []):
+                st.error(str(blocker))
+        if gate_policy.get("review_required"):
+            for item in list(gate_policy.get("review_required") or []):
+                st.warning(str(item))
+    critical_gaps = list(packet.get("critical_gaps") or [])
+    if critical_gaps:
+        st.markdown("###### Critical Gaps")
+        st.dataframe(pd.DataFrame(critical_gaps), width="stretch", hide_index=True)
+    else:
+        if gate_policy.get("blockers") or gate_policy.get("review_required"):
+            st.info("packet critical gap은 없지만 gate policy상 선정 전 보강 항목이 있습니다.")
+        else:
+            st.success("critical gap 없음")
+    with st.expander("Assumptions & Limits", expanded=False):
+        st.dataframe(pd.DataFrame(packet.get("assumptions_and_limits") or []), width="stretch", hide_index=True)
+
+
+def _render_decision_dossier_export(row: dict[str, Any], *, key_prefix: str) -> None:
+    dossier = build_decision_dossier(row)
+    decision = dict(dossier.get("decision") or {})
+    metrics = dict(dossier.get("metrics") or {})
+    boundary = dict(dossier.get("execution_boundary") or {})
+    st.markdown("###### Decision Dossier")
+    st.caption(
+        "저장된 Final Review row를 사람이 읽는 markdown dossier로 묶습니다. "
+        "이 export는 report 파일을 자동 저장하지 않습니다."
+    )
+    render_badge_strip(
+        [
+            {"label": "Schema", "value": dossier.get("schema_version"), "tone": "neutral"},
+            {"label": "Decision", "value": decision.get("decision_label"), "tone": "neutral"},
+            {"label": "Evidence", "value": metrics.get("evidence_check_count", 0), "tone": "neutral"},
+            {
+                "label": "Needs Review",
+                "value": metrics.get("not_ready_evidence_check_count", 0),
+                "tone": "warning" if metrics.get("not_ready_evidence_check_count") else "neutral",
+            },
+            {"label": "Auto Write", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    action_cols = st.columns([0.36, 0.64], gap="small")
+    with action_cols[0]:
+        st.download_button(
+            "Markdown 다운로드",
+            data=str(dossier.get("markdown") or ""),
+            file_name=str(dossier.get("filename") or "decision_dossier.md"),
+            mime="text/markdown",
+            key=f"{key_prefix}_download",
+            width="stretch",
+        )
+    with action_cols[1]:
+        st.caption(
+            f"Write policy: {boundary.get('write_policy') or '-'} / "
+            f"report auto write: {boundary.get('report_auto_write')}"
+        )
+    with st.expander("Dossier preview", expanded=False):
+        st.markdown(str(dossier.get("markdown") or "-"))
+
+
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 기록된 최종 검토 결과가 없습니다.")
@@ -265,6 +650,14 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
         st.info("이 기록에는 selected component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    _render_decision_dossier_export(
+        selected_row,
+        key_prefix=f"final_review_dossier_{selected_row.get('decision_id') or 'saved'}",
+    )
+    packet = dict(selected_row.get("investability_evidence_packet") or {})
+    if packet:
+        with st.expander("Investability Evidence Packet", expanded=False):
+            _render_investability_packet(packet)
     with st.expander("최종 검토 결과 JSON", expanded=False):
         st.json(selected_row)
 
@@ -341,6 +734,7 @@ def render_final_review_workspace() -> None:
     validation = _build_final_review_validation(source, current_rows=current_rows, pre_live_rows=pre_live_rows)
     paper_observation = _build_final_review_paper_observation_snapshot(validation)
     evidence = _build_final_review_decision_evidence_pack(validation, paper_observation)
+    investability_packet = _build_investability_evidence_packet(source, validation, paper_observation, evidence)
 
     st.markdown("#### 2. 검증 근거 확인")
     with st.container(border=True):
@@ -358,7 +752,15 @@ def render_final_review_workspace() -> None:
         )
         _render_paper_observation_summary(paper_observation)
 
-    st.markdown("#### 5. 최종 판단 및 테스트 검증")
+    st.markdown("#### 5. Investability Evidence Packet")
+    with st.container(border=True):
+        render_stage_brief(
+            purpose="새 저장 기능을 늘리지 않고, 기존 검증 결과를 최종 판단용 compact packet으로 읽습니다.",
+            result="Decision support packet",
+        )
+        _render_investability_packet(investability_packet)
+
+    st.markdown("#### 6. 최종 판단 및 테스트 검증")
     with st.container(border=True):
         render_readiness_route_panel(
             route_label=str(evidence.get("route") or "-"),
@@ -422,6 +824,7 @@ def render_final_review_workspace() -> None:
             )
         save_evaluation = _build_final_review_save_evaluation(
             evidence=evidence,
+            investability_packet=investability_packet,
             decision_id=decision_id,
             decision_route=str(decision_route),
             operator_reason=operator_reason,
@@ -441,6 +844,7 @@ def render_final_review_workspace() -> None:
             validation=validation,
             paper_observation=paper_observation,
             evidence=evidence,
+            investability_packet=investability_packet,
             decision_id=decision_id,
             decision_route=str(decision_route),
             operator_reason=operator_reason,
@@ -474,6 +878,6 @@ def render_final_review_workspace() -> None:
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
-    st.markdown("#### 6. 기록된 최종 검토 결과 확인")
+    st.markdown("#### 7. 기록된 최종 검토 결과 확인")
     with st.container(border=True):
         _render_saved_final_review_decisions(final_decision_rows)

@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-28
+Last Verified: 2026-05-29
 
 ## Project Summary
 
@@ -52,7 +52,14 @@ Last Verified: 2026-05-28
 | Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
 | Practical Validation curve context service helper | `app/services/backtest_practical_validation_curve_context.py` |
 | Practical Validation stress/sensitivity service helper | `app/services/backtest_practical_validation_stress_sensitivity.py` |
+| Backtest temporal validation service | `app/services/backtest_temporal_validation.py` |
 | Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
+| Construction risk audit service | `app/services/backtest_construction_risk_audit.py` |
+| Risk contribution audit service | `app/services/backtest_risk_contribution_audit.py` |
+| Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
+| Practical Validation efficacy audit service | `app/services/backtest_validation_efficacy.py` |
+| Data coverage audit service | `app/services/backtest_data_coverage_audit.py` |
+| Backtest realism audit service | `app/services/backtest_realism_audit.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Overview market intelligence service | `app/services/overview_market_intelligence.py` |
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
@@ -63,6 +70,10 @@ Last Verified: 2026-05-28
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
 | DB schema | `finance/data/db/schema.py` |
+| SEC Form 25 delisting collector | `finance/data/sec_delisting.py` |
+| SEC CIK / ticker exchange crosscheck collector | `finance/data/sec_company_tickers.py` |
+| Nasdaq Symbol Directory snapshot collector | `finance/data/symbol_directory.py` |
+| Computed snapshot lifecycle collector | `finance/data/computed_lifecycle.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
@@ -75,12 +86,19 @@ Last Verified: 2026-05-28
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation result build wrapper, source/result registry append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration |
 | `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder / source component table helper |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free compact curve snapshot, result curve normalize, DB price proxy curve, component curve combination, window perturbation / monthly returns helper |
-| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit helper |
+| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit, Robustness Lab board helper |
+| `app/services/backtest_temporal_validation.py` | Streamlit-free benchmark-aligned temporal validation helper. Walk-forward rolling excess return, OOS holdout excess / deterioration, macro regime split excess / drawdown gap, curve / macro source strength, and compact storage boundary evidence를 만든다 |
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics orchestration, component context assembly, 12개 diagnostic result 생성, public compatibility export |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
-| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to diagnostic evidence context adapter |
-| `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, provider gaps display, provider gap / replay service result session state handoff |
+| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
+| `app/services/backtest_construction_risk_audit.py` | Streamlit-free construction risk audit read model. Existing component weight, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure evidence를 읽어 concentration / overlap / exposure risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Existing component return matrix, pairwise correlation, max risk contribution proxy, drop-one dependency, and storage boundary evidence를 읽어 risk contribution construction risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Existing proposal role, target weight, validation profile, role concentration, profile intent, weight reason, and storage boundary evidence를 읽어 role / weight discipline risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_validation_efficacy.py` | Streamlit-free validation efficacy audit read model. Existing compact evidence를 읽어 runtime replay, period coverage, benchmark parity, walk-forward temporal validation, OOS holdout validation, regime split validation, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_data_coverage_audit.py` | Streamlit-free data coverage audit read model. DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 compact `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, look-through board, Robustness Lab board, provider gaps display, provider gap / replay service result session state handoff |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |
@@ -90,12 +108,12 @@ Last Verified: 2026-05-28
 
 | File | Responsibility |
 |---|---|
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, saved decision table rows, shared evidence check rows |
-| `app/web/backtest_final_review.py` | Final Review screen render, final decision input, saved final decision review |
-| `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, save row construction |
-| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render and selected portfolio monitoring controls |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / drift / alert display helpers |
-| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model and performance recheck |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, investability evidence packet / profile-aware gate policy snapshot / selected-route gate, saved decision table rows, shared evidence check rows, decision dossier markdown read model and selected decision source consistency contract. Validation Efficacy row-level walk-forward / OOS / regime gaps and Construction Risk / Risk Contribution / Component Role / Weight non-PASS rows feed selected-route gate evidence |
+| `app/web/backtest_final_review.py` | Final Review screen render, investability packet display, look-through / Robustness Lab summary, final decision input, saved final decision review, decision dossier download |
+| `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, investability packet wiring, save row construction |
+| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, continuity check, Recheck Operations Preflight, Recheck Readiness, Symbol Freshness, Provider Evidence freshness / coverage policy, Timeline / Review Signal Policy / recheck comparison / allocation monitoring controls / allocation evidence boundary / source contract tables |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / recheck comparison / drift / alert / allocation boundary / source contract display helpers |
+| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, Final Review -> Selected Dashboard continuity check, selected decision source consistency contract, performance recheck operations preflight, readiness, symbol freshness, selected provider evidence staleness / coverage policy, review signal policy, performance recheck, recheck comparison, drift check, alert preview, allocation drift evidence boundary, monitoring timeline |
 
 ## Backtest Workflow Boundary
 
@@ -109,16 +127,16 @@ Backtest Analysis
 역할:
 
 - Backtest Analysis는 후보 source를 만든다.
-- Practical Validation은 source를 실전 투입 전 조건으로 검증한다.
-- Final Review는 select / hold / reject / re-review 판단을 기록한다.
-- Selected Portfolio Dashboard는 선정 이후 성과와 monitoring signal을 확인한다.
+- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거를 compact하게 보여준다.
+- Final Review는 Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row와 Construction Risk / Risk Contribution / Component Role / Weight non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, select / hold / reject / re-review 판단을 기록하며, 저장된 판단을 read-only dossier로 다시 보여준다.
+- Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck operations preflight / readiness / symbol freshness / provider evidence / monitoring timeline / review signal policy / recheck comparison / allocation drift evidence boundary를 확인한다.
 
 ## Data Boundary
 
 | Data | Location | Commit Policy |
 |---|---|---|
-| Current / candidate / final decision registries | `.aiworkspace/note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지 |
-| Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상 |
+| Current / candidate / final decision registries | `.aiworkspace/note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지. 저장 경계는 `docs/data/STORAGE_GOVERNANCE.md` 기준 |
+| Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup |
 | Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |

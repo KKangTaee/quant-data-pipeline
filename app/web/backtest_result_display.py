@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from typing import Any
 
 import altair as alt
@@ -12,7 +13,12 @@ from app.services.backtest_result_read_model import (
     data_trust_status_label,
 )
 from app.web.backtest_common import *  # noqa: F401,F403
-from app.web.backtest_ui_components import render_status_card_grid
+from app.web.backtest_ui_components import (
+    render_badge_strip,
+    render_checkpoint_strip,
+    render_readiness_route_panel,
+    render_status_card_grid,
+)
 
 
 def _render_compare_altair_chart(
@@ -76,30 +82,109 @@ def _render_compare_altair_chart(
     st.altair_chart(chart + end_points + end_labels, use_container_width=True)
 
 
+def _data_trust_result_integrity(meta: dict[str, Any]) -> dict[str, str]:
+    price_freshness = meta.get("price_freshness") or {}
+    status = str(price_freshness.get("status") or "").strip().lower()
+    excluded_tickers = list(meta.get("excluded_tickers") or [])
+    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+    warnings = list(meta.get("warnings") or [])
+
+    if status == "error":
+        return {
+            "label": "BLOCKED",
+            "tone": "danger",
+            "detail": "가격 최신성 오류가 있어 결과 해석 전에 데이터 보강이 필요합니다.",
+        }
+    if status == "warning" or excluded_tickers or malformed_price_rows or warnings:
+        return {
+            "label": "REVIEW",
+            "tone": "warning",
+            "detail": "결과는 읽을 수 있지만 기간, 제외 ticker, warning을 함께 확인해야 합니다.",
+        }
+    if status == "ok":
+        return {
+            "label": "OK",
+            "tone": "positive",
+            "detail": "요청 기간과 가격 최신성 기준에서 큰 차단 신호가 없습니다.",
+        }
+    return {
+        "label": "UNKNOWN",
+        "tone": "neutral",
+        "detail": "가격 최신성 metadata가 제한적입니다. 결과 기간과 row 수를 먼저 확인합니다.",
+    }
+
+
+def _price_freshness_display(status: str | None) -> tuple[str, str]:
+    normalized = str(status or "").strip().lower()
+    if normalized == "ok":
+        return "OK", "positive"
+    if normalized == "warning":
+        return "WARNING", "warning"
+    if normalized == "error":
+        return "ERROR", "danger"
+    return "NOT ATTACHED", "neutral"
+
+
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
     price_freshness = meta.get("price_freshness") or {}
     freshness_details = price_freshness.get("details") or {}
     excluded_tickers = list(meta.get("excluded_tickers") or [])
     malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+    integrity = _data_trust_result_integrity(meta)
+    freshness_label, freshness_tone = _price_freshness_display(price_freshness.get("status"))
 
     st.markdown("#### Data Trust Summary")
     st.caption(
-        "이번 결과가 어떤 데이터 범위에서 계산됐는지 먼저 확인하는 요약입니다. "
-        "성과 해석 전에 요청 기간과 실제 결과 기간, 가격 최신성, 제외 ticker를 같이 봅니다."
+        "Checkpoint A · Result Integrity. 성과를 보기 전에 이 백테스트 결과가 어떤 데이터 범위에서 계산됐는지 확인합니다."
     )
 
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("Requested End", meta.get("end") or "-")
-    metric_cols[1].metric("Actual Result End", meta.get("actual_result_end") or "-")
-    metric_cols[2].metric("Result Rows", meta.get("result_rows", "-"))
-    metric_cols[3].metric("Excluded Tickers", len(excluded_tickers))
+    render_status_card_grid(
+        [
+            {
+                "title": "Result Integrity",
+                "value": integrity["label"],
+                "detail": integrity["detail"],
+                "tone": integrity["tone"],
+            },
+            {
+                "title": "Price Freshness",
+                "value": freshness_label,
+                "detail": price_freshness.get("message") or "가격 최신성 metadata 기준",
+                "tone": freshness_tone,
+            },
+            {
+                "title": "Result Window",
+                "value": meta.get("actual_result_end") or "-",
+                "detail": f"Requested end: {meta.get('end') or '-'}",
+                "tone": "neutral",
+            },
+            {
+                "title": "Excluded Tickers",
+                "value": len(excluded_tickers),
+                "detail": "전략 계산에서 제외된 ticker 수",
+                "tone": "warning" if excluded_tickers else "positive",
+            },
+        ]
+    )
+
+    render_badge_strip(
+        [
+            {"label": "Requested End", "value": meta.get("end") or "-", "tone": "neutral"},
+            {"label": "Actual Result End", "value": meta.get("actual_result_end") or "-", "tone": "neutral"},
+            {"label": "Result Rows", "value": meta.get("result_rows", "-"), "tone": "neutral"},
+            {"label": "Malformed Rows", "value": len(malformed_price_rows), "tone": "warning" if malformed_price_rows else "positive"},
+        ]
+    )
 
     if freshness_details:
-        fresh_cols = st.columns(4)
-        fresh_cols[0].metric("Effective Trading End", freshness_details.get("effective_end_date") or "-")
-        fresh_cols[1].metric("Common Latest Price", freshness_details.get("common_latest_date") or "-")
-        fresh_cols[2].metric("Newest Latest Price", freshness_details.get("newest_latest_date") or "-")
-        fresh_cols[3].metric("Latest-Date Spread", f"{freshness_details.get('spread_days', 0)}d")
+        render_badge_strip(
+            [
+                {"label": "Effective Trading End", "value": freshness_details.get("effective_end_date") or "-", "tone": "neutral"},
+                {"label": "Common Latest Price", "value": freshness_details.get("common_latest_date") or "-", "tone": "neutral"},
+                {"label": "Newest Latest Price", "value": freshness_details.get("newest_latest_date") or "-", "tone": "neutral"},
+                {"label": "Latest-Date Spread", "value": f"{freshness_details.get('spread_days', 0)}d", "tone": freshness_tone},
+            ]
+        )
         status = str(price_freshness.get("status") or "").strip().lower()
         message = price_freshness.get("message")
         if status == "ok":
@@ -132,6 +217,35 @@ def _render_data_trust_summary(meta: dict[str, Any]) -> None:
 
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)
+
+
+def _next_validation_step_label(value: Any) -> str:
+    raw = str(value or "-")
+    mapping = {
+        "resolve_contract_gaps_before_shortlist": "resolve_contract_gaps_before_validation_handoff",
+        "manual_review_then_paper_probation_gate": "manual_review_then_practical_validation_gate",
+        "start_paper_probation_and_monitor_monthly": "send_to_practical_validation_for_paper_observation_check",
+        "start_small_capital_trial_with_monthly_review": "send_to_practical_validation_for_small_capital_review",
+        "resolve_failed_checks_before_probation": "resolve_preview_gaps_before_validation_handoff",
+        "review_failed_checks_before_capital_increase": "review_preview_gaps_before_next_stage",
+        "run_small_capital_trial_with_review_checklist": "validate_small_capital_review_conditions",
+        "run_small_capital_trial": "validate_small_capital_review_conditions",
+        "continue_paper_probation_until_checklist_improves": "continue_validation_review_until_preview_improves",
+        "complete_robustness_review_before_paper_probation": "complete_robustness_review_before_next_stage",
+        "resolve_contract_gaps_before_deployment": "resolve_contract_gaps_before_validation_handoff",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    return (
+        raw.replace("shortlist", "promotion_route")
+        .replace("paper_probation", "paper_observation")
+        .replace("small_capital_trial", "small_capital_review")
+        .replace("deployment", "validation_handoff")
+        .replace("probation", "validation_review")
+        .replace("capital_increase", "next_stage")
+        .replace("monitor_monthly", "review_in_next_stage")
+    )
+
 
 def _build_strategy_data_trust_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return build_strategy_data_trust_rows(bundles)
@@ -195,6 +309,318 @@ def _render_strategy_data_trust_snapshot(
         _render_strategy_data_trust_details(bundles)
     return rows
 
+
+def _availability_tone(is_available: bool) -> str:
+    return "positive" if is_available else "warning"
+
+
+def _render_latest_run_orientation(
+    *,
+    has_selection_history: bool,
+    has_dynamic_details: bool,
+    has_real_money_details: bool,
+) -> None:
+    st.caption(
+        "Backtest Analysis는 후보를 만드는 화면입니다. 아래 체크포인트는 결과 해석 순서이며, "
+        "최종 검증과 선택은 Practical Validation과 Final Review에서 이어집니다."
+    )
+    render_checkpoint_strip(
+        [
+            {
+                "label": "A",
+                "title": "Result Integrity",
+                "detail": "Data Trust로 기간, 가격 최신성, 제외 ticker를 먼저 확인합니다.",
+                "status": "Data Trust",
+                "tone": "positive",
+            },
+            {
+                "label": "B",
+                "title": "Performance Shape",
+                "detail": "Summary와 Equity Curve에서 수익률, 낙폭, 회복 구간을 봅니다.",
+                "status": "Summary / Curve",
+                "tone": "neutral",
+            },
+            {
+                "label": "C",
+                "title": "Candidate Readiness",
+                "detail": "Real-Money 신호와 blocker로 후보 검토 가능성을 봅니다.",
+                "status": "Real-Money" if has_real_money_details else "Not available",
+                "tone": _availability_tone(has_real_money_details),
+            },
+            {
+                "label": "D",
+                "title": "Next Action",
+                "detail": "필요하면 Portfolio Mix Builder에서 조합하거나 Practical Validation 후보로 보냅니다.",
+                "status": "Action after metrics",
+                "tone": "neutral",
+            },
+        ]
+    )
+    render_badge_strip(
+        [
+            {"label": "Selection History", "value": "Available" if has_selection_history else "Strategy-specific", "tone": _availability_tone(has_selection_history)},
+            {"label": "Dynamic Universe", "value": "Available" if has_dynamic_details else "Not included", "tone": "positive" if has_dynamic_details else "neutral"},
+            {"label": "Real-Money", "value": "Available" if has_real_money_details else "Not included", "tone": _availability_tone(has_real_money_details)},
+            {"label": "Meta", "value": "Available", "tone": "positive"},
+        ]
+    )
+    if not has_selection_history:
+        st.caption(
+            "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
+            "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Real-Money에서 실행 조건을 확인합니다."
+        )
+
+def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
+    meta = bundle.get("meta") or {}
+    evaluation = _build_next_step_readiness_evaluation(meta)
+    can_submit = bool(evaluation.get("can_move_to_compare"))
+    score = float(evaluation.get("score") or 0.0)
+    blocking_reasons = [str(reason) for reason in list(evaluation.get("blocking_reasons") or [])]
+    review_reasons = [str(reason) for reason in list(evaluation.get("review_reasons") or [])]
+
+    if can_submit and score >= 8.0:
+        status_label = "진입 가능"
+        tone = "positive"
+        summary = "1차 후보 판단을 통과했습니다."
+        action_text = "이 결과를 2차 실전성 검증 입력 후보로 등록할 수 있습니다."
+    elif can_submit:
+        status_label = "조건부 진입 가능"
+        tone = "warning"
+        summary = "1차 후보 판단은 통과했지만, 다음 단계에서 확인할 review 신호가 있습니다."
+        action_text = "Practical Validation으로 넘긴 뒤 표시된 review 신호를 우선 확인하세요."
+    else:
+        status_label = "진입 보류"
+        tone = "danger"
+        summary = "아직 1차 후보 판단을 통과하지 못했습니다."
+        action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
+
+    if blocking_reasons:
+        display_reasons = blocking_reasons[:3]
+        reason_title = "막는 이유"
+    elif review_reasons:
+        display_reasons = review_reasons[:3]
+        reason_title = "다음 단계 확인 항목"
+    else:
+        display_reasons = ["막는 항목 없음"]
+        reason_title = "상태"
+
+    criteria = [
+        {
+            "label": "Promotion",
+            "value": "통과" if bool(evaluation.get("promotion_ok")) else "보류",
+            "tone": "positive" if bool(evaluation.get("promotion_ok")) else "danger",
+        },
+        {
+            "label": "실행 원천",
+            "value": (
+                "통과"
+                if int(evaluation.get("execution_blocker_count") or 0) == 0
+                else f"block {int(evaluation.get('execution_blocker_count') or 0)}"
+            ),
+            "tone": "positive" if int(evaluation.get("execution_blocker_count") or 0) == 0 else "danger",
+        },
+        {
+            "label": "검증 원천",
+            "value": (
+                "통과"
+                if int(evaluation.get("validation_blocker_count") or 0) == 0
+                else f"block {int(evaluation.get('validation_blocker_count') or 0)}"
+            ),
+            "tone": "positive" if int(evaluation.get("validation_blocker_count") or 0) == 0 else "danger",
+        },
+    ]
+
+    return {
+        "can_submit": can_submit,
+        "status_label": status_label,
+        "tone": tone,
+        "summary": summary,
+        "action_text": action_text,
+        "score": score,
+        "reason_title": reason_title,
+        "display_reasons": display_reasons,
+        "criteria": criteria,
+        "evaluation": evaluation,
+    }
+
+
+def _render_practical_validation_handoff_card(state: dict[str, Any]) -> None:
+    tone = str(state.get("tone") or "neutral")
+    status = escape(str(state.get("status_label") or "-"))
+    summary = escape(str(state.get("summary") or "-"))
+    score = escape(f"{float(state.get('score') or 0.0):.1f} / 10")
+    reason_title = escape(str(state.get("reason_title") or "상태"))
+    reasons = list(state.get("display_reasons") or [])
+    criteria = list(state.get("criteria") or [])
+    reason_items = "".join(f"<li>{escape(str(reason))}</li>" for reason in reasons)
+    criteria_items = "".join(
+        '<div class="bt-handoff-chip bt-handoff-chip-{tone}">'
+        '<span class="bt-handoff-chip-label">{label}</span>'
+        '<span class="bt-handoff-chip-value">{value}</span>'
+        "</div>".format(
+            tone=escape(str(item.get("tone") or "neutral")),
+            label=escape(str(item.get("label") or "-")),
+            value=escape(str(item.get("value") or "-")),
+        )
+        for item in criteria
+    )
+    st.markdown(
+        """
+        <style>
+          .bt-handoff-card {
+            border: 1px solid rgba(49, 51, 63, 0.16);
+            border-left: 5px solid #64748b;
+            border-radius: 8px;
+            padding: 1rem 1.05rem;
+            margin: 0.35rem 0 0.85rem 0;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+          }
+          .bt-handoff-positive { border-left-color: #0f766e; background: #f8fffd; }
+          .bt-handoff-warning { border-left-color: #b45309; background: #fffaf0; }
+          .bt-handoff-danger { border-left-color: #b91c1c; background: #fffafa; }
+          .bt-handoff-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.65rem;
+            margin-bottom: 0.75rem;
+          }
+          .bt-handoff-title {
+            font-size: 1.02rem;
+            font-weight: 750;
+            line-height: 1.35;
+            color: #111827;
+          }
+          .bt-handoff-status {
+            padding: 0.26rem 0.58rem;
+            border-radius: 999px;
+            border: 1px solid rgba(49, 51, 63, 0.16);
+            font-size: 0.84rem;
+            font-weight: 750;
+            color: #111827;
+            background: #f8fafc;
+          }
+          .bt-handoff-main {
+            display: grid;
+            grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
+            gap: 0.8rem;
+            align-items: stretch;
+          }
+          .bt-handoff-summary {
+            font-size: 0.94rem;
+            line-height: 1.45;
+            color: #334155;
+          }
+          .bt-handoff-score {
+            margin-top: 0.55rem;
+            font-weight: 750;
+            color: #111827;
+          }
+          .bt-handoff-chips {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+          }
+          .bt-handoff-chip {
+            border: 1px solid rgba(49, 51, 63, 0.14);
+            border-radius: 8px;
+            padding: 0.62rem 0.68rem;
+            background: #ffffff;
+            min-width: 0;
+          }
+          .bt-handoff-chip-positive { border-color: rgba(15, 118, 110, 0.24); }
+          .bt-handoff-chip-danger { border-color: rgba(185, 28, 28, 0.24); }
+          .bt-handoff-chip-label {
+            display: block;
+            font-size: 0.78rem;
+            color: #64748b;
+            font-weight: 650;
+            margin-bottom: 0.2rem;
+          }
+          .bt-handoff-chip-value {
+            display: block;
+            font-size: 0.96rem;
+            font-weight: 750;
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
+          .bt-handoff-reasons {
+            border-radius: 8px;
+            background: rgba(248, 250, 252, 0.9);
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            padding: 0.72rem 0.82rem;
+          }
+          .bt-handoff-reason-title {
+            font-size: 0.84rem;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+          }
+          .bt-handoff-reasons ul {
+            margin: 0;
+            padding-left: 1.05rem;
+            color: #334155;
+            line-height: 1.45;
+            font-size: 0.92rem;
+          }
+          @media (max-width: 760px) {
+            .bt-handoff-main { grid-template-columns: 1fr; }
+            .bt-handoff-chips { grid-template-columns: 1fr; }
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="bt-handoff-card bt-handoff-{tone}">'
+        f'<div class="bt-handoff-head">'
+        f'<div class="bt-handoff-title">2차 실전성 검증 Handoff</div>'
+        f'<div class="bt-handoff-status">{status}</div>'
+        f"</div>"
+        f'<div class="bt-handoff-main">'
+        f'<div><div class="bt-handoff-summary">{summary}</div>'
+        f'<div class="bt-handoff-score">Candidate Readiness {score}</div>'
+        f'<div class="bt-handoff-chips">{criteria_items}</div></div>'
+        f'<div class="bt-handoff-reasons"><div class="bt-handoff-reason-title">{reason_title}</div>'
+        f"<ul>{reason_items}</ul></div>"
+        f"</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
+    state = _build_practical_validation_handoff_state(bundle)
+    _render_practical_validation_handoff_card(state)
+
+    with st.container(border=True):
+        st.markdown("##### 2차 실전성 검증 Handoff")
+        st.caption(
+            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 Clean V2 source로 등록합니다."
+        )
+        handoff_cols = st.columns([0.3, 0.7], gap="small")
+        with handoff_cols[0]:
+            if st.button(
+                "실전성 검증으로 보내기",
+                key="latest_run_candidate_review_draft",
+                use_container_width=True,
+                disabled=not bool(state["can_submit"]),
+                type="primary" if bool(state["can_submit"]) else "secondary",
+            ):
+                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+                st.rerun()
+        with handoff_cols[1]:
+            if bool(state["can_submit"]):
+                st.success(str(state["action_text"]))
+            else:
+                st.warning(str(state["action_text"]))
+            st.markdown("`Practical Validation`에서 provider / data coverage / realism / robustness를 확인합니다.")
+            st.caption("최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -231,48 +657,13 @@ def _render_last_run() -> None:
     )
     has_real_money_details = bool(meta.get("real_money_hardening"))
 
-    st.info(
-        "가장 최근 실행한 백테스트 결과입니다. "
-        "먼저 `Summary`에서 핵심 숫자를 보고, `Equity Curve`에서 흐름을 확인한 뒤, "
-        "`Real-Money`와 `Meta`에서 실전형 해석과 실행 조건을 읽으면 가장 자연스럽습니다."
+    _render_latest_run_orientation(
+        has_selection_history=has_selection_history,
+        has_dynamic_details=has_dynamic_details,
+        has_real_money_details=has_real_money_details,
     )
 
-    guide_left, guide_right = st.columns([1.4, 1.0], gap="small")
-    with guide_left:
-        st.markdown("##### 결과 읽는 순서")
-        st.markdown(
-            "- `Summary`: 수익률과 위험의 핵심 숫자 확인\n"
-            "- `Equity Curve`: 전략 흐름과 회복 구간 확인\n"
-            "- `Selection History`: 각 리밸런싱에서 실제로 어떤 종목이 선택되고 어떻게 처리됐는지 확인\n"
-            "- `Real-Money`: 실전 후보 해석, 검토 근거, 실행 부담 확인\n"
-            "- `Meta`: 이번 실행의 계약과 세부 설정 재확인"
-        )
-    with guide_right:
-        st.markdown("##### 이번 실행에 포함된 보기")
-        availability_lines = [
-            f"- `Selection History`: {'있음' if has_selection_history else '없음'}",
-            f"- `Dynamic Universe`: {'있음' if has_dynamic_details else '없음'}",
-            f"- `Real-Money`: {'있음' if has_real_money_details else '없음'}",
-        ]
-        st.markdown("\n".join(availability_lines))
-
     _render_data_trust_summary(meta)
-
-    with st.expander("Practical Validation Handoff", expanded=False):
-        st.caption(
-            "이번 실행 결과를 Clean V2 source로 저장하고 Practical Validation에서 실전 검증 자료로 읽어봅니다. "
-            "이 동작은 최종 선택, 투자 추천, live 승인, 주문 지시가 아닙니다."
-        )
-        handoff_cols = st.columns([0.28, 0.72], gap="small")
-        with handoff_cols[0]:
-            if st.button("Practical Validation으로 보내기", key="latest_run_candidate_review_draft", use_container_width=True):
-                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
-                st.rerun()
-        with handoff_cols[1]:
-            st.caption(
-                "`Practical Validation`에서 Data Trust, Real-Money signal, 구성 / 비중 조건을 확인한 뒤 "
-                "`Final Review`에서 최종 선택 / 보류 / 거절 / 재검토를 판단합니다."
-            )
 
     if warnings:
         warning_lines = "\n".join(f"- {warning}" for warning in warnings)
@@ -283,6 +674,7 @@ def _render_last_run() -> None:
 
     st.markdown(f"#### {bundle['strategy_name']}")
     _render_summary_metrics(summary_df)
+    _render_practical_validation_next_action(bundle)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
@@ -502,53 +894,35 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Promotion Next Step`: `{meta['promotion_next_step']}`")
             if meta.get("shortlist_status"):
                 st.markdown(
-                    f"- `Shortlist Status`: `{meta['shortlist_status']}` "
+                    f"- `Promotion Suggested Route`: `{meta['shortlist_status']}` "
                     f"(`{_shortlist_status_value_to_label(meta.get('shortlist_status'))}`)"
                 )
             if meta.get("shortlist_next_step"):
-                st.markdown(f"- `Shortlist Next Step`: `{meta['shortlist_next_step']}`")
+                route_next_step = _next_validation_step_label(meta.get("shortlist_next_step"))
+                st.markdown(f"- `Promotion Route Next Step`: `{route_next_step}`")
             if meta.get("shortlist_family"):
-                st.markdown(f"- `Shortlist Family`: `{meta['shortlist_family']}`")
-            if meta.get("probation_status"):
-                st.markdown(
-                    f"- `Probation Status`: `{meta['probation_status']}` "
-                    f"(`{_probation_status_value_to_label(meta.get('probation_status'))}`)"
-                )
-            if meta.get("probation_stage"):
-                st.markdown(f"- `Probation Stage`: `{meta['probation_stage']}`")
-            if meta.get("probation_review_frequency"):
-                st.markdown(f"- `Probation Review Frequency`: `{meta['probation_review_frequency']}`")
-            if meta.get("probation_next_step"):
-                st.markdown(f"- `Probation Next Step`: `{meta['probation_next_step']}`")
-            if meta.get("monitoring_status"):
-                st.markdown(
-                    f"- `Monitoring Status`: `{meta['monitoring_status']}` "
-                    f"(`{_monitoring_status_value_to_label(meta.get('monitoring_status'))}`)"
-                )
-            if meta.get("monitoring_review_frequency"):
-                st.markdown(f"- `Monitoring Review Frequency`: `{meta['monitoring_review_frequency']}`")
-            if meta.get("monitoring_next_step"):
-                st.markdown(f"- `Monitoring Next Step`: `{meta['monitoring_next_step']}`")
+                st.markdown(f"- `Promotion Route Family`: `{meta['shortlist_family']}`")
             if meta.get("monitoring_focus"):
                 st.markdown(
-                    "- `Monitoring Focus`: "
+                    "- `Next Validation Focus`: "
                     + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_focus") or []))
                 )
             if meta.get("monitoring_breach_signals"):
                 st.markdown(
-                    "- `Monitoring Breach Signals`: "
+                    "- `Validation Review Signals`: "
                     + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_breach_signals") or []))
                 )
             if meta.get("deployment_readiness_status"):
                 st.markdown(
-                    f"- `Deployment Readiness`: `{meta['deployment_readiness_status']}` "
+                    f"- `Execution Preview`: `{meta['deployment_readiness_status']}` "
                     f"(`{_deployment_readiness_status_value_to_label(meta.get('deployment_readiness_status'))}`)"
                 )
             if meta.get("deployment_readiness_next_step"):
-                st.markdown(f"- `Deployment Next Step`: `{meta['deployment_readiness_next_step']}`")
+                preview_next_step = _next_validation_step_label(meta.get("deployment_readiness_next_step"))
+                st.markdown(f"- `Execution Preview Next Step`: `{preview_next_step}`")
             if meta.get("deployment_check_pass_count") is not None:
                 st.markdown(
-                    f"- `Deployment Checklist Counts`: pass `{int(meta.get('deployment_check_pass_count') or 0)}`, "
+                    f"- `Execution Preview Counts`: pass `{int(meta.get('deployment_check_pass_count') or 0)}`, "
                     f"watch `{int(meta.get('deployment_check_watch_count') or 0)}`, "
                     f"fail `{int(meta.get('deployment_check_fail_count') or 0)}`, "
                     f"unavailable `{int(meta.get('deployment_check_unavailable_count') or 0)}`"
@@ -566,12 +940,12 @@ def _render_last_run() -> None:
                 )
             if meta.get("out_of_sample_review_status"):
                 st.markdown(
-                    f"- `Out-Of-Sample Review`: `{meta['out_of_sample_review_status']}` "
+                    f"- `Split-Period Check`: `{meta['out_of_sample_review_status']}` "
                     f"(`{_review_status_value_to_label(meta.get('out_of_sample_review_status'))}`)"
                 )
             if meta.get("out_of_sample_out_sample_excess_return") is not None:
                 st.markdown(
-                    f"- `Out-Of-Sample Excess`: `{float(meta.get('out_of_sample_out_sample_excess_return') or 0.0):.2%}`"
+                    f"- `Back-Half Excess`: `{float(meta.get('out_of_sample_out_sample_excess_return') or 0.0):.2%}`"
                 )
             if meta.get("strategy_max_drawdown") is not None:
                 st.markdown(f"- `Strategy Max Drawdown`: `{float(meta['strategy_max_drawdown']):.2%}`")
@@ -878,23 +1252,69 @@ def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
 
 def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]:
     promotion = str(meta.get("promotion_decision") or "").strip().lower()
-    deployment = str(meta.get("deployment_readiness_status") or "").strip().lower()
-    issue_rows = _build_stage_issue_resolution_rows(meta)
-    severe_statuses = {"caution", "unavailable", "error", "missing"}
-    severe_issue_rows = [
-        row
-        for row in issue_rows
-        if str(row.get("현재 상태") or "").strip().lower() in severe_statuses
-    ]
-    softer_issue_rows = [
-        row
-        for row in issue_rows
-        if str(row.get("현재 상태") or "").strip().lower() in {"watch", "warning"}
-    ]
+    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
+    turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+    net_cost_curve_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+    transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
 
-    fail_count = int(meta.get("deployment_check_fail_count") or 0)
-    watch_count = int(meta.get("deployment_check_watch_count") or 0)
-    unavailable_count = int(meta.get("deployment_check_unavailable_count") or 0)
+    def _source_bucket(
+        value: Any,
+        *,
+        unavailable_blocks: bool = True,
+        caution_blocks: bool = True,
+    ) -> str:
+        normalized = str(value or "").strip().lower()
+        if not normalized or normalized in {"normal", "ok", "pass", "passed", "fresh"}:
+            return "pass"
+        if normalized in {"error", "missing"}:
+            return "block"
+        if normalized == "caution":
+            return "block" if caution_blocks else "review"
+        if normalized == "unavailable":
+            return "block" if unavailable_blocks else "review"
+        if normalized in {"watch", "warning"}:
+            return "review"
+        return "review"
+
+    def _collect_source_reasons(
+        specs: list[tuple[str, Any, bool, bool]],
+    ) -> tuple[list[str], list[str]]:
+        blockers: list[str] = []
+        reviews: list[str] = []
+        for label, status, unavailable_blocks, caution_blocks in specs:
+            normalized = str(status or "").strip().lower()
+            bucket = _source_bucket(
+                normalized,
+                unavailable_blocks=unavailable_blocks,
+                caution_blocks=caution_blocks,
+            )
+            if bucket == "block":
+                blockers.append(f"{label}: {normalized or '-'}")
+            elif bucket == "review":
+                reviews.append(f"{label}: {normalized or '-'}")
+        return blockers, reviews
+
+    execution_specs: list[tuple[str, Any, bool, bool]] = [
+        ("Liquidity Policy", meta.get("liquidity_policy_status"), True, True),
+        ("ETF Operability", meta.get("etf_operability_status"), True, True),
+        ("Price Freshness", freshness_status, True, True),
+    ]
+    validation_specs: list[tuple[str, Any, bool, bool]] = [
+        ("Benchmark 비교", "missing" if not bool(meta.get("benchmark_available")) else "", True, True),
+        ("Validation", meta.get("validation_status"), True, True),
+        ("Benchmark Policy", meta.get("benchmark_policy_status"), True, True),
+        ("Validation Policy", meta.get("validation_policy_status"), True, True),
+        ("Portfolio Guardrail Policy", meta.get("guardrail_policy_status"), True, True),
+        # Backtest-level recent/split checks are useful warning signals, but they are not formal holdout validation.
+        ("Rolling Review", meta.get("rolling_review_status"), False, False),
+        ("Split-Period Check", meta.get("out_of_sample_review_status"), False, False),
+    ]
+    execution_blockers, execution_reviews = _collect_source_reasons(execution_specs)
+    validation_blockers, validation_reviews = _collect_source_reasons(validation_specs)
+    if transaction_cost_bps > 0.0 and turnover_status and turnover_status != "estimated_from_holdings":
+        execution_reviews.append(f"Turnover Estimate: {turnover_status}")
+    if net_cost_curve_status == "applied_without_turnover_estimate":
+        execution_reviews.append("Cost Curve: turnover estimate unavailable")
 
     if promotion == "real_money_candidate":
         promotion_score = 4.0
@@ -909,73 +1329,56 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         promotion_score = 0.0
         promotion_judgment = "hold 해결 전에는 다음 단계 보류"
 
-    if deployment == "small_capital_ready":
-        deployment_score = 3.0
-        deployment_judgment = "deployment checklist가 강함"
-    elif deployment in {"small_capital_ready_with_review", "paper_only"}:
-        deployment_score = 2.5
-        deployment_judgment = "다음 검토로 넘기기 충분"
-    elif deployment == "watchlist_only":
-        deployment_score = 2.0
-        deployment_judgment = "watchlist로 비교 가능"
-    elif deployment == "review_required":
-        deployment_score = 1.5
-        deployment_judgment = "비교는 가능하지만 checklist 재확인 필요"
+    if execution_blockers:
+        execution_score = 0.0
+        execution_judgment = "실행 원천 blocker가 남아 있음"
+    elif execution_reviews:
+        execution_score = 2.0
+        execution_judgment = "실행 부담은 검토 가능하지만 확인 항목 있음"
     else:
-        deployment_score = 0.0
-        deployment_judgment = "blocked 또는 상태 부족"
+        execution_score = 3.0
+        execution_judgment = "실행 부담 원천 지표가 양호함"
 
-    if severe_issue_rows:
-        blocker_score = 0.0
-        blocker_judgment = "핵심 blocker가 남아 있음"
-    elif fail_count > 0 or watch_count > 0 or unavailable_count > 0 or softer_issue_rows:
-        blocker_score = 2.0
-        blocker_judgment = "진행 가능하지만 개선 항목 있음"
+    if validation_blockers:
+        validation_score = 0.0
+        validation_judgment = "검증 원천 blocker가 남아 있음"
+    elif validation_reviews:
+        validation_score = 2.0
+        validation_judgment = "검증 근거는 있으나 후속 확인 필요"
     else:
-        blocker_score = 3.0
-        blocker_judgment = "핵심 blocker 없음"
+        validation_score = 3.0
+        validation_judgment = "검증 원천 지표가 양호함"
 
-    score = round(promotion_score + deployment_score + blocker_score, 1)
+    score = round(promotion_score + execution_score + validation_score, 1)
     can_move_to_compare = (
         promotion not in {"", "hold"}
-        and deployment not in {"", "blocked"}
-        and not severe_issue_rows
+        and not execution_blockers
+        and not validation_blockers
     )
 
     if can_move_to_compare and score >= 8.0:
-        verdict = "5단계 Compare 진행 가능"
+        verdict = "후보 검토 진행 가능"
         tone = "success"
-        next_action = "Compare에서 다른 후보와 성과, data trust, Real-Money 상태를 비교합니다."
+        route_label = "Portfolio Mix Builder 또는 Practical Validation"
+        next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 실전 검증 근거를 확인합니다."
     elif can_move_to_compare:
-        verdict = "5단계 Compare 진행 가능, 개선 항목 동시 확인"
+        verdict = "후보 검토 가능, 개선 항목 동시 확인"
         tone = "warning"
-        next_action = "Compare로 넘기되 watch / checklist 항목을 같이 열어보고 후보 등록은 보수적으로 판단합니다."
+        route_label = "조건부 후보 검토"
+        next_action = "Portfolio Mix Builder 또는 Practical Validation으로 넘기기 전에 watch / preview 항목을 함께 확인합니다."
     else:
-        verdict = "4단계에서 먼저 blocker 해결"
+        verdict = "후보 보류: blocker 먼저 해결"
         tone = "error"
-        next_action = "Hold 해결 가이드, Deployment checklist, 실행 부담 / 검토 근거의 caution 항목을 먼저 정리합니다."
+        route_label = "Hold / Review"
+        next_action = "Hold 해결 가이드, 실행 부담 preview, 검토 근거의 caution 항목을 먼저 정리합니다."
 
     blocking_reasons: list[str] = []
     if promotion in {"", "hold"}:
         blocking_reasons.append("Promotion Decision이 hold이거나 비어 있음")
-    if deployment in {"", "blocked"}:
-        blocking_reasons.append("Deployment Readiness가 blocked이거나 비어 있음")
-    blocking_reasons.extend(
-        f"{row.get('항목')}: {row.get('현재 상태')}"
-        for row in severe_issue_rows
-    )
+    blocking_reasons.extend(execution_blockers)
+    blocking_reasons.extend(validation_blockers)
 
-    review_reasons: list[str] = []
-    if fail_count > 0:
-        review_reasons.append(f"Deployment checklist fail {fail_count}개")
-    if watch_count > 0:
-        review_reasons.append(f"Deployment checklist watch {watch_count}개")
-    if unavailable_count > 0:
-        review_reasons.append(f"Deployment checklist unavailable {unavailable_count}개")
-    review_reasons.extend(
-        f"{row.get('항목')}: {row.get('현재 상태')}"
-        for row in softer_issue_rows
-    )
+    review_reasons: list[str] = execution_reviews + validation_reviews
 
     criteria_rows = [
         {
@@ -985,16 +1388,16 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
             "판단": promotion_judgment,
         },
         {
-            "기준": "Deployment Readiness",
-            "현재 값": deployment or "-",
-            "점수": f"{deployment_score:g} / 3",
-            "판단": deployment_judgment,
+            "기준": "Execution Source Checks",
+            "현재 값": "정상" if not execution_blockers and not execution_reviews else f"block {len(execution_blockers)} / review {len(execution_reviews)}",
+            "점수": f"{execution_score:g} / 3",
+            "판단": execution_judgment,
         },
         {
-            "기준": "Core Blocker",
-            "현재 값": "없음" if not severe_issue_rows else f"{len(severe_issue_rows)}개",
-            "점수": f"{blocker_score:g} / 3",
-            "판단": blocker_judgment,
+            "기준": "Validation Source Checks",
+            "현재 값": "정상" if not validation_blockers and not validation_reviews else f"block {len(validation_blockers)} / review {len(validation_reviews)}",
+            "점수": f"{validation_score:g} / 3",
+            "판단": validation_judgment,
         },
     ]
 
@@ -1002,11 +1405,17 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         "score": score,
         "verdict": verdict,
         "tone": tone,
+        "route_label": route_label,
         "next_action": next_action,
         "can_move_to_compare": can_move_to_compare,
         "criteria_rows": criteria_rows,
         "blocking_reasons": blocking_reasons,
         "review_reasons": review_reasons,
+        "promotion_ok": promotion not in {"", "hold"},
+        "execution_blocker_count": len(execution_blockers),
+        "execution_review_count": len(execution_reviews),
+        "validation_blocker_count": len(validation_blockers),
+        "validation_review_count": len(validation_reviews),
     }
 
 def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
@@ -1015,27 +1424,29 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
     tone = str(evaluation["tone"])
 
     with st.container(border=True):
-        st.markdown("##### 5단계 Compare 진입 평가")
+        st.markdown("##### Candidate Readiness Checkpoint")
         st.caption(
-            "이 박스는 투자 승인 기준이 아니라, `Hold 해결`을 마치고 "
-            "`Compare`에서 다른 후보와 비교해 볼 수 있는지 빠르게 판단하는 표지입니다."
+            "이 체크포인트는 투자 승인 기준이 아니라, 이 결과를 후보 비교나 Practical Validation으로 "
+            "넘겨도 되는지 빠르게 보는 진단입니다."
         )
-        metric_cols = st.columns([0.24, 0.76], gap="small")
-        metric_cols[0].metric("Readiness Score", f"{score:.1f} / 10")
-        with metric_cols[1]:
-            st.caption("판정")
-            st.markdown(f"**{evaluation['verdict']}**")
-            st.caption("다음 행동")
-            st.markdown(str(evaluation["next_action"]))
+        render_readiness_route_panel(
+            route_label=str(evaluation["route_label"]),
+            score=score,
+            blockers_count=len(evaluation["blocking_reasons"]),
+            verdict=str(evaluation["verdict"]),
+            next_action=str(evaluation["next_action"]),
+            route_title="Next Route",
+            score_title="Candidate Readiness",
+        )
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 진행, `8.0점 미만`이어도 핵심 3조건을 만족하면 조건부 진행, "
-            "핵심 3조건을 만족하지 못하면 점수와 무관하게 4단계에서 먼저 멈춥니다."
+            "점수 기준: `8.0점 이상`은 깔끔한 후보 검토, `8.0점 미만`이어도 Promotion / 실행 원천 / 검증 원천에 "
+            "막는 항목이 없으면 조건부 검토, 막는 항목이 있으면 점수와 무관하게 blocker 해결이 먼저입니다."
         )
 
         message = (
             f"{evaluation['verdict']}: "
-            f"`Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음 기준으로 계산했습니다."
+            f"`Promotion Decision != hold`, 실행 원천 blocker 없음, 검증 원천 blocker 없음 기준으로 계산했습니다."
         )
         if tone == "success":
             st.success(message)
@@ -1049,13 +1460,13 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
         elif evaluation["review_reasons"]:
             st.caption("같이 볼 개선 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
         else:
-            st.caption("핵심 blocker가 보이지 않습니다. Compare로 넘겨 상대 후보와 비교해도 되는 상태입니다.")
+            st.caption("핵심 blocker가 보이지 않습니다. 비교 또는 Practical Validation 후보로 검토해도 되는 상태입니다.")
 
         with st.expander("점수 계산 기준 보기", expanded=False):
             st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
             st.caption(
                 "`real_money_candidate`는 가장 강한 Compare 진입 신호이고, "
-                "`production_candidate`는 Compare에는 올릴 수 있지만 후보 등록 전 추가 검토가 필요한 상태입니다."
+                "`production_candidate`는 후보 검토는 가능하지만 최종 판단 전 추가 검토가 필요한 상태입니다."
             )
 
 def _render_real_money_details(bundle: dict[str, Any]) -> None:
@@ -1092,38 +1503,161 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
     def _render_real_money_cards(cards: list[dict[str, Any]]) -> None:
         render_status_card_grid(cards)
 
+    def _suggested_route_label() -> str:
+        mapping = {
+            "watchlist": "Watchlist Review",
+            "paper_probation": "Paper Observation Candidate",
+            "small_capital_trial": "Small-Capital Review Candidate",
+            "hold": "Hold / Review",
+        }
+        return mapping.get(str(meta.get("shortlist_status") or "").strip().lower(), "-")
+
+    def _promotion_detail() -> str:
+        route = _suggested_route_label()
+        next_step = str(meta.get("promotion_next_step") or "")
+        if route and route != "-":
+            return f"Suggested route: {route}"
+        return next_step
+
+    def _display_route_step(value: Any) -> str:
+        return _next_validation_step_label(value)
+
+    def _display_rationale_items(values: list[Any]) -> list[str]:
+        return [
+            str(value)
+            .replace("shortlist_", "promotion_route_")
+            .replace("paper_probation", "paper_observation")
+            .replace("small_capital_trial", "small_capital_review")
+            for value in values
+        ]
+
+    def _validation_focus_items() -> list[str]:
+        return [str(item) for item in list(meta.get("monitoring_focus") or []) if str(item)]
+
+    def _validation_review_signals() -> list[str]:
+        return [str(item) for item in list(meta.get("monitoring_breach_signals") or []) if str(item)]
+
+    def _execution_preview_label(value: Any) -> str:
+        mapping = {
+            "small_capital_ready": "Ready For Next Review",
+            "small_capital_ready_with_review": "Review Required",
+            "paper_only": "Paper Observation Check",
+            "watchlist_only": "Watchlist Review",
+            "review_required": "Review Required",
+            "blocked": "Blocked",
+        }
+        return mapping.get(str(value or "").strip().lower(), "-")
+
+    def _turnover_estimation_label(value: Any) -> str:
+        mapping = {
+            "estimated_from_holdings": "Holdings 기반 추정",
+            "not_estimated_missing_holdings": "Holdings 근거 부족",
+            "not_estimated_no_observations": "관측치 부족",
+        }
+        return mapping.get(str(value or "").strip().lower(), str(value or "-"))
+
+    def _net_cost_curve_label(value: Any) -> str:
+        mapping = {
+            "applied_with_measurable_cost": "비용 반영됨",
+            "applied_zero_cost_bps": "비용 0bps",
+            "applied_without_turnover_estimate": "Turnover 근거 부족",
+            "applied_no_cost_impact": "비용 영향 없음",
+        }
+        return mapping.get(str(value or "").strip().lower(), str(value or "-"))
+
+    def _focus_label(value: Any) -> str:
+        mapping = {
+            "benchmark_relative_validation": "Benchmark-relative validation",
+            "rolling_underperformance": "Rolling underperformance",
+            "drawdown_control": "Drawdown control",
+            "recent_regime_review": "Recent regime review",
+            "split_period_consistency": "Split-period consistency",
+            "liquidity_cleanliness": "Liquidity / cost realism",
+            "etf_operability": "ETF operability",
+            "price_freshness": "Price freshness",
+        }
+        return mapping.get(str(value or "").strip(), str(value or "-"))
+
+    def _focus_rows() -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for item in _validation_focus_items():
+            rows.append(
+                {
+                    "Type": "Focus",
+                    "Item": _focus_label(item),
+                    "Meaning": "Practical Validation / Final Review에서 확인할 항목",
+                }
+            )
+        for signal in _validation_review_signals():
+            rows.append(
+                {
+                    "Type": "Review Signal",
+                    "Item": str(signal).replace("_", " "),
+                    "Meaning": "Backtest 단계에서 확정하지 않고 다음 검증에서 재확인할 신호",
+                }
+            )
+        return rows
+
+    def _render_suggested_route_guidance(shortlist_status: str) -> None:
+        if shortlist_status == "small_capital_trial":
+            st.success(
+                "Promotion 결과가 강해 다음 단계에서 소액 검토 가능성까지 확인해볼 수 있는 추천 경로입니다. "
+                "실제 선택이나 운용 판단은 Practical Validation과 Final Review에서 다시 확인해야 합니다."
+            )
+        elif shortlist_status == "paper_probation":
+            st.info(
+                "Promotion 결과는 후보 검토가 가능하지만, 다음 단계에서 paper observation 조건을 먼저 확인하는 추천 경로입니다."
+            )
+        elif shortlist_status == "watchlist":
+            st.info(
+                "Promotion 결과는 후보로 볼 여지가 있지만, 추가 robustness와 validation focus를 먼저 확인하는 추천 경로입니다."
+            )
+        elif shortlist_status == "hold":
+            st.warning(
+                "Promotion 결과상 다음 검증으로 밀어붙이기보다 Hold / Review에 두는 추천 경로입니다. "
+                "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
+            )
+
     st.info(
-        "이 탭은 실전형 해석을 한 번에 보기 위한 화면입니다. "
+        "이 탭은 Backtest 단계의 1차 후보성 해석을 한 번에 보기 위한 화면입니다. "
         "먼저 `현재 판단`에서 지금 상태를 보고, "
         "그다음 `검토 근거`에서 왜 그런 판단이 나왔는지 확인하고, "
-        "`실행 부담`에서 비용/유동성/ETF 운용 가능성을 본 뒤, "
+        "`실행 부담`에서 비용/유동성/ETF 운용 가능성 preview를 본 뒤, "
         "마지막 `상세 데이터`에서 원자료를 확인하면 됩니다."
     )
 
+    focus_count = len(_validation_focus_items())
+    review_signal_count = len(_validation_review_signals())
     _render_real_money_cards(
         [
             {
                 "title": "Promotion",
                 "value": str(meta.get("promotion_decision") or "-").upper(),
-                "detail": meta.get("promotion_next_step") or "",
+                "detail": _promotion_detail(),
                 "tone": _status_tone(meta.get("promotion_decision")),
             },
             {
-                "title": "Shortlist",
-                "value": _shortlist_status_value_to_label(meta.get("shortlist_status")),
-                "detail": meta.get("shortlist_next_step") or "",
+                "title": "Suggested Route",
+                "value": _suggested_route_label(),
+                "detail": "다음 검증 후보 경로",
                 "tone": _status_tone(meta.get("shortlist_status")),
             },
             {
-                "title": "Probation",
-                "value": _probation_status_value_to_label(meta.get("probation_status")),
-                "detail": meta.get("probation_review_frequency") or "",
-                "tone": _status_tone(meta.get("probation_status")),
+                "title": "Validation Focus",
+                "value": str(focus_count),
+                "detail": "다음 단계에서 확인할 항목",
+                "tone": "warning" if focus_count else "neutral",
             },
             {
-                "title": "Deployment",
-                "value": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
-                "detail": meta.get("deployment_readiness_next_step") or "",
+                "title": "Review Signals",
+                "value": str(review_signal_count),
+                "detail": "확정이 아닌 재확인 신호",
+                "tone": "danger" if review_signal_count else "neutral",
+            },
+            {
+                "title": "Execution Preview",
+                "value": _execution_preview_label(meta.get("deployment_readiness_status")),
+                "detail": "배치 승인이 아닌 실행 부담 preview",
                 "tone": _status_tone(meta.get("deployment_readiness_status")),
             },
             {
@@ -1147,15 +1681,21 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
     with overview_tab:
         st.caption(
-            "이 섹션은 이 전략을 지금 어떤 단계로 해석해야 하는지 보여줍니다. "
-            "즉 `당장 보류할지`, `paper probation으로 둘지`, `소액 trial까지 볼지`를 먼저 판단하는 곳입니다."
+            "이 섹션은 이 전략을 Backtest 1차 후보로 볼 수 있는지 보여줍니다. "
+            "실제 paper observation, 소액 검토, 운영 모니터링 조건은 이후 단계에서 다시 정의합니다."
         )
         _render_next_step_readiness_box(meta)
 
         if meta.get("promotion_decision"):
-            with _section_header("전략 승격 판단", "이 전략이 현재 계약 기준에서 어느 정도까지 올라왔는지 보여줍니다."):
+            with _section_header(
+                "전략 승격 판단",
+                "Promotion은 이 결과를 다음 후보 검토 흐름으로 넘길 수 있는지 판단하고, 추천 경로를 함께 보여줍니다.",
+            ):
                 decision = str(meta.get("promotion_decision") or "-")
                 next_step = str(meta.get("promotion_next_step") or "-")
+                shortlist_status = str(meta.get("shortlist_status") or "")
+                shortlist_label = _suggested_route_label()
+                shortlist_next_step = _display_route_step(meta.get("shortlist_next_step"))
                 _render_real_money_cards(
                     [
                         {
@@ -1165,20 +1705,39 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             "tone": _status_tone(decision),
                         },
                         {
-                            "title": "Next Step",
+                            "title": "Suggested Route",
+                            "value": shortlist_label,
+                            "detail": "다음 검증 후보 경로",
+                            "tone": _status_tone(shortlist_status),
+                        },
+                        {
+                            "title": "Promotion Next Step",
                             "value": next_step,
-                            "detail": "이 판정에서 이어지는 처리",
+                            "detail": "승격 판정에서 이어지는 처리",
                             "tone": _status_tone(decision),
+                        },
+                        {
+                            "title": "Route Next Step",
+                            "value": shortlist_next_step,
+                            "detail": "다음 검증 경로",
+                            "tone": _status_tone(shortlist_status),
                         },
                     ]
                 )
                 rationale = list(meta.get("promotion_rationale") or [])
                 if rationale:
-                    st.caption("왜 이렇게 판단했는지: " + ", ".join(f"`{item}`" for item in rationale))
+                    st.caption("Promotion 판단 근거: " + ", ".join(f"`{item}`" for item in rationale))
+                shortlist_rationale = list(meta.get("shortlist_rationale") or [])
+                if shortlist_rationale:
+                    st.caption(
+                        "추천 경로 근거: "
+                        + ", ".join(f"`{item}`" for item in _display_rationale_items(shortlist_rationale))
+                    )
+                _render_suggested_route_guidance(shortlist_status)
                 if decision == "real_money_candidate":
                     st.success(
                         "현재 계약 기준에서는 실전형 후보로 읽을 수 있는 상태입니다. "
-                        "다음 단계는 paper tracking 또는 소액 probation이 자연스럽습니다."
+                        "다음 단계에서는 Practical Validation으로 보내 검증 근거를 확인하는 것이 자연스럽습니다."
                     )
                 elif decision == "production_candidate":
                     st.info(
@@ -1213,144 +1772,65 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             "필요하면 `실행 부담`에서 유동성 / 비용 / ETF 운용 가능성까지 같이 점검하면 가장 빠릅니다."
                         )
 
-        if meta.get("shortlist_status"):
-            with _section_header("후보 전략 숏리스트", "실전 후보 목록 안에서 현재 어느 단계인지 보여줍니다."):
-                shortlist_status = str(meta.get("shortlist_status") or "-")
-                shortlist_next_step = str(meta.get("shortlist_next_step") or "-")
-                shortlist_family = str(meta.get("shortlist_family") or meta.get("strategy_family") or "-")
-                _render_real_money_cards(
-                    [
-                        {
-                            "title": "Family",
-                            "value": shortlist_family,
-                            "detail": "후보가 속한 전략군",
-                            "tone": "neutral",
-                        },
-                        {
-                            "title": "Status",
-                            "value": _shortlist_status_value_to_label(shortlist_status),
-                            "detail": "숏리스트 단계",
-                            "tone": _status_tone(shortlist_status),
-                        },
-                        {
-                            "title": "Next Step",
-                            "value": shortlist_next_step,
-                            "detail": "다음 검토 행동",
-                            "tone": _status_tone(shortlist_status),
-                        },
-                    ]
-                )
-                shortlist_rationale = list(meta.get("shortlist_rationale") or [])
-                if shortlist_rationale:
-                    st.caption("숏리스트 판단 근거: " + ", ".join(f"`{item}`" for item in shortlist_rationale))
-                if shortlist_status == "small_capital_trial":
-                    st.success(
-                        "현재 계약 기준에서는 소액 실전 trial까지 검토할 수 있는 shortlist 상태입니다. "
-                        "다만 월별 review 기록은 계속 남기는 편이 맞습니다."
-                    )
-                elif shortlist_status == "paper_probation":
-                    st.info(
-                        "현재 run은 paper probation으로 먼저 관찰하는 편이 가장 자연스럽습니다. "
-                        "다음 review를 통과하면 소액 trial을 검토할 수 있습니다."
-                    )
-                elif shortlist_status == "watchlist":
-                    st.info(
-                        "지금은 shortlist watchlist로 두고, 추가 robustness / monitoring review를 거친 뒤 "
-                        "paper probation으로 올리는 편이 맞습니다."
-                    )
-                elif shortlist_status == "hold":
-                    st.warning(
-                        "현재 run은 shortlist 단계로 올리기보다 hold로 두는 편이 맞습니다. "
-                        "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
-                    )
-
-        if meta.get("probation_status") or meta.get("monitoring_status"):
+        focus_rows = _focus_rows()
+        if focus_rows:
             with _section_header(
-                "Probation / Monitoring",
-                "실제 운용 전 관찰 단계입니다. paper tracking 중인지, routine review로 충분한지, breach 신호가 있는지를 봅니다.",
+                "Next Validation Focus",
+                "Backtest에서 검증을 끝냈다는 뜻이 아니라, Practical Validation / Final Review에서 우선 확인할 항목입니다.",
             ):
-                probation_status = str(meta.get("probation_status") or "-")
-                probation_stage = str(meta.get("probation_stage") or "-")
-                probation_review_frequency = str(meta.get("probation_review_frequency") or "-")
-                monitoring_status = str(meta.get("monitoring_status") or "-")
-                monitoring_review_frequency = str(meta.get("monitoring_review_frequency") or "-")
                 _render_real_money_cards(
                     [
                         {
-                            "title": "Probation",
-                            "value": _probation_status_value_to_label(probation_status),
-                            "detail": "운영 전 관찰 상태",
-                            "tone": _status_tone(probation_status),
+                            "title": "Focus Items",
+                            "value": str(focus_count),
+                            "detail": "검증에서 볼 항목",
+                            "tone": "warning" if focus_count else "neutral",
                         },
                         {
-                            "title": "Stage",
-                            "value": probation_stage,
-                            "detail": "현재 probation 단계",
-                            "tone": _status_tone(probation_status),
+                            "title": "Review Signals",
+                            "value": str(review_signal_count),
+                            "detail": "재확인 신호",
+                            "tone": "danger" if review_signal_count else "neutral",
                         },
                         {
-                            "title": "Probation Review",
-                            "value": probation_review_frequency,
-                            "detail": "점검 주기",
-                            "tone": "neutral",
-                        },
-                        {
-                            "title": "Monitoring",
-                            "value": _monitoring_status_value_to_label(monitoring_status),
-                            "detail": meta.get("monitoring_next_step") or "운영 감시 상태",
-                            "tone": _status_tone(monitoring_status),
-                        },
-                        {
-                            "title": "Monitoring Review",
-                            "value": monitoring_review_frequency,
-                            "detail": "감시 점검 주기",
-                            "tone": "neutral",
+                            "title": "Next Surface",
+                            "value": "Practical Validation",
+                            "detail": "정식 검증 위치",
+                            "tone": "positive",
                         },
                     ]
                 )
-                if meta.get("probation_next_step"):
-                    st.caption(f"다음 probation 액션: `{meta.get('probation_next_step')}`")
-                probation_rationale = list(meta.get("probation_rationale") or [])
-                if probation_rationale:
-                    st.caption("Probation 판단 근거: " + ", ".join(f"`{item}`" for item in probation_rationale))
-                monitoring_focus = list(meta.get("monitoring_focus") or [])
-                if monitoring_focus:
-                    st.caption("지켜볼 항목: " + ", ".join(f"`{item}`" for item in monitoring_focus))
-                monitoring_breach_signals = list(meta.get("monitoring_breach_signals") or [])
-                if monitoring_breach_signals:
-                    st.caption("경고 신호: " + ", ".join(f"`{item}`" for item in monitoring_breach_signals))
-
-                if monitoring_status == "breach_watch":
+                st.dataframe(pd.DataFrame(focus_rows), use_container_width=True, hide_index=True)
+                if review_signal_count:
                     st.warning(
-                        "현재 probation 단계에서 breach signal이 관찰됐습니다. "
-                        "비중 확대보다는 월별 review와 rule re-check를 먼저 하는 편이 맞습니다."
+                        "Backtest 단계의 review signal은 실전 관찰 결과가 아닙니다. "
+                        "다음 단계에서 같은 신호가 Practical Evidence로 확인되는지 먼저 보셔야 합니다."
                     )
-                elif monitoring_status == "heightened_review":
+                else:
                     st.info(
-                        "지금은 monitoring watch signal이 있어서, routine review보다 조금 더 보수적으로 월별 확인을 이어가는 편이 좋습니다."
+                        "현재 Backtest 기준으로는 다음 검증에서 확인할 focus만 정리되었습니다. "
+                        "실제 관찰 기간과 trigger는 Final Review 이후에 정의합니다."
                     )
-                elif monitoring_status == "routine_review":
-                    st.success("현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다.")
 
         if meta.get("deployment_readiness_status"):
             with _section_header(
-                "Deployment Readiness",
-                "실제 배치 직전 체크리스트입니다. pass / watch / fail / unavailable 개수를 보고 지금 배치를 열어도 되는지 판단합니다.",
+                "Execution Preview",
+                "Backtest 단계의 실행 부담 미리보기입니다. 실제 배치 가능성은 Practical Validation과 Final Review에서 다시 판단합니다.",
             ):
                 deployment_status = str(meta.get("deployment_readiness_status") or "-")
-                deployment_next_step = str(meta.get("deployment_readiness_next_step") or "-")
+                deployment_next_step = _display_route_step(meta.get("deployment_readiness_next_step"))
                 _render_real_money_cards(
                     [
                         {
                             "title": "Status",
-                            "value": _deployment_readiness_status_value_to_label(deployment_status),
-                            "detail": "현재 배치 준비 상태",
+                            "value": _execution_preview_label(deployment_status),
+                            "detail": "현재 실행 부담 preview",
                             "tone": _status_tone(deployment_status),
                         },
                         {
-                            "title": "Next Step",
+                            "title": "Next Validation Step",
                             "value": deployment_next_step,
-                            "detail": "다음 처리",
+                            "detail": "다음 검증에서 확인할 처리",
                             "tone": _status_tone(deployment_status),
                         },
                         {
@@ -1368,7 +1848,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                         {
                             "title": "Fail",
                             "value": str(int(meta.get("deployment_check_fail_count") or 0)),
-                            "detail": "막는 체크",
+                            "detail": "검증 전 확인 필요",
                             "tone": "danger" if int(meta.get("deployment_check_fail_count") or 0) else "neutral",
                         },
                         {
@@ -1382,25 +1862,34 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
                 deployment_rationale = list(meta.get("deployment_readiness_rationale") or [])
                 if deployment_rationale:
-                    st.caption("Deployment 판단 근거: " + ", ".join(f"`{item}`" for item in deployment_rationale))
+                    st.caption("Execution preview 근거: " + ", ".join(f"`{item}`" for item in deployment_rationale))
 
                 checklist_rows = list(meta.get("deployment_checklist_rows") or [])
                 if checklist_rows:
-                    with st.expander("Checklist 상세 보기", expanded=deployment_status in {"review_required", "blocked"}):
-                        st.dataframe(pd.DataFrame(checklist_rows), use_container_width=True, hide_index=True)
+                    display_checklist_rows: list[dict[str, Any]] = []
+                    for row in checklist_rows:
+                        if isinstance(row, dict):
+                            display_row = dict(row)
+                            if str(display_row.get("Check") or "").strip().lower() == "shortlist":
+                                display_row["Check"] = "Promotion Route"
+                            display_checklist_rows.append(display_row)
+                        else:
+                            display_checklist_rows.append({"Check": "Unknown", "Status": "-", "Detail": str(row)})
+                    with st.expander("Preview 상세 보기", expanded=deployment_status in {"review_required", "blocked"}):
+                        st.dataframe(pd.DataFrame(display_checklist_rows), use_container_width=True, hide_index=True)
 
                 if deployment_status == "small_capital_ready":
-                    st.success("현재 checklist 기준에서는 small-capital trial까지 비교적 자연스럽게 볼 수 있는 상태입니다.")
+                    st.success("현재 preview 기준에서는 실행 부담 원천 지표가 막히지 않아 다음 검증으로 넘겨볼 수 있습니다.")
                 elif deployment_status == "small_capital_ready_with_review":
                     st.info(
-                        "현재 checklist 기준에서는 소액 trial은 가능하지만, watch / unavailable 항목을 같이 보면서 더 보수적으로 운용하는 편이 맞습니다."
+                        "현재 preview 기준에서는 다음 검증으로 넘길 여지는 있지만, watch / unavailable 항목을 먼저 확인해야 합니다."
                     )
                 elif deployment_status == "paper_only":
-                    st.info("지금은 deployment-ready보다는 paper probation 단계로 두는 편이 맞습니다.")
+                    st.info("지금은 실제 배치 판단이 아니라 paper observation 요건을 다음 단계에서 확인하는 편이 맞습니다.")
                 elif deployment_status == "review_required":
-                    st.warning("failed checklist 항목이 있어, 수동 review 없이 바로 비중을 늘리는 것은 보수적이지 않습니다.")
+                    st.warning("failed preview 항목이 있어, Practical Validation / Final Review에서 재확인해야 합니다.")
                 elif deployment_status == "blocked":
-                    st.warning("현재 checklist 기준에서는 deployment를 열기보다 blocker를 먼저 해결하는 편이 맞습니다.")
+                    st.warning("현재 preview 기준에서는 다음 검증으로 넘기기 전에 blocker를 먼저 정리하는 편이 맞습니다.")
 
     with review_tab:
         st.caption(
@@ -1492,8 +1981,8 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
         if meta.get("rolling_review_status") or meta.get("out_of_sample_review_status"):
             with _section_header(
-                "최근 구간 / Out-of-Sample Review",
-                "최근 구간과 전후반 구간을 따로 봐서, 특정 시기 우연인지 아니면 비교적 꾸준한지 확인하는 섹션입니다.",
+                "최근 구간 / 간이 전후반 구간 점검",
+                "최근 구간과 전후반 구간을 따로 봐서, 특정 시기 우연인지 아니면 비교적 꾸준한지 확인하는 1차 점검입니다.",
             ):
                 review_cols = st.columns(5, gap="small")
                 review_cols[0].metric("Rolling Review", _review_status_value_to_label(meta.get("rolling_review_status")))
@@ -1502,13 +1991,13 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     review_cols[2].metric("Recent Excess", f"{float(meta.get('rolling_review_recent_excess_return')):.2%}")
                 if meta.get("rolling_review_recent_drawdown_gap") is not None:
                     review_cols[3].metric("Recent DD Gap", f"{float(meta.get('rolling_review_recent_drawdown_gap')):.2%}")
-                review_cols[4].metric("OOS Review", _review_status_value_to_label(meta.get("out_of_sample_review_status")))
+                review_cols[4].metric("Split-Period Check", _review_status_value_to_label(meta.get("out_of_sample_review_status")))
 
                 split_cols = st.columns(3, gap="small")
                 if meta.get("out_of_sample_in_sample_excess_return") is not None:
-                    split_cols[0].metric("In-Sample Excess", f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}")
+                    split_cols[0].metric("Front-Half Excess", f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}")
                 if meta.get("out_of_sample_out_sample_excess_return") is not None:
-                    split_cols[1].metric("Out-Sample Excess", f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}")
+                    split_cols[1].metric("Back-Half Excess", f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}")
                 if meta.get("out_of_sample_excess_change") is not None:
                     split_cols[2].metric("Excess Change", f"{float(meta.get('out_of_sample_excess_change')):.2%}")
 
@@ -1522,26 +2011,26 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     st.caption("Rolling review rationale: " + ", ".join(f"`{item}`" for item in rolling_review_rationale))
                 if meta.get("out_of_sample_in_sample_start") is not None and meta.get("out_of_sample_out_sample_end") is not None:
                     st.caption(
-                        "Split-period review: "
-                        f"in-sample `{meta.get('out_of_sample_in_sample_start')}` -> `{meta.get('out_of_sample_in_sample_end')}`, "
-                        f"out-sample `{meta.get('out_of_sample_out_sample_start')}` -> `{meta.get('out_of_sample_out_sample_end')}`"
+                        "Simple split-period check: "
+                        f"front half `{meta.get('out_of_sample_in_sample_start')}` -> `{meta.get('out_of_sample_in_sample_end')}`, "
+                        f"back half `{meta.get('out_of_sample_out_sample_start')}` -> `{meta.get('out_of_sample_out_sample_end')}`"
                     )
                 out_of_sample_review_rationale = list(meta.get("out_of_sample_review_rationale") or [])
                 if out_of_sample_review_rationale:
-                    st.caption("Out-of-sample rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale))
+                    st.caption("Split-period rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale))
 
                 if str(meta.get("rolling_review_status") or "").strip().lower() == "caution" or str(
                     meta.get("out_of_sample_review_status") or ""
                 ).strip().lower() == "caution":
                     st.warning(
-                        "최근 구간 또는 split-period review에서 caution이 잡혔습니다. "
-                        "지금은 비중 확대보다 recent regime robustness review를 먼저 하는 편이 맞습니다."
+                        "최근 구간 또는 간이 전후반 구간 점검에서 caution이 잡혔습니다. "
+                        "지금은 후속 검증에서 recent regime robustness를 먼저 확인하는 편이 맞습니다."
                     )
                 elif str(meta.get("rolling_review_status") or "").strip().lower() == "watch" or str(
                     meta.get("out_of_sample_review_status") or ""
                 ).strip().lower() == "watch":
                     st.info(
-                        "최근 구간 review는 완전히 깨지진 않았지만, current regime robustness를 조금 더 보수적으로 해석하는 편이 좋습니다."
+                        "최근 구간 / 전후반 구간 점검은 완전히 깨지진 않았지만, current regime robustness를 조금 더 보수적으로 해석하는 편이 좋습니다."
                     )
 
         if (
@@ -1676,13 +2165,40 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "실행 계약 요약",
             "가격, 이력, 유동성, turnover, 비용처럼 실제 운용 시 바로 영향을 주는 기본 조건을 보여줍니다.",
         ):
+            turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+            net_cost_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+            transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
+            turnover_estimated = turnover_status == "estimated_from_holdings"
+            avg_turnover = meta.get("avg_turnover")
+            estimated_cost_total = meta.get("estimated_cost_total")
+            avg_turnover_display = (
+                f"{float(avg_turnover):.2%}"
+                if turnover_estimated and avg_turnover is not None
+                else "N/A"
+            )
+            estimated_cost_display = (
+                f"{float(estimated_cost_total or 0.0):,.1f}"
+                if transaction_cost_bps <= 0.0 or net_cost_status != "applied_without_turnover_estimate"
+                else "N/A"
+            )
             top_cols = st.columns(6, gap="small")
             top_cols[0].metric("Minimum Price", f"{float(meta.get('min_price_filter') or 0.0):.2f}")
             top_cols[1].metric("Minimum History", f"{int(meta.get('min_history_months_filter') or 0)}M")
             top_cols[2].metric("Min Avg Dollar Volume 20D", f"{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M")
-            top_cols[3].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
-            top_cols[4].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
-            top_cols[5].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
+            top_cols[3].metric("Transaction Cost", f"{transaction_cost_bps:.1f} bps")
+            top_cols[4].metric("Avg Turnover", avg_turnover_display)
+            top_cols[5].metric("Estimated Cost Total", estimated_cost_display)
+            st.caption(
+                "Turnover estimate: "
+                f"`{_turnover_estimation_label(turnover_status)}` | "
+                "Cost curve: "
+                f"`{_net_cost_curve_label(net_cost_status)}`"
+            )
+            if transaction_cost_bps > 0.0 and not turnover_estimated:
+                st.warning(
+                    "Turnover를 holdings 기반으로 추정하지 못해 비용 영향이 낮게 보일 수 있습니다. "
+                    "이 경우 `Avg Turnover`와 `Estimated Cost Total`은 강한 실전성 근거로 보지 않는 편이 맞습니다."
+                )
             if meta.get("liquidity_excluded_total") is not None:
                 st.caption(
                     "Liquidity excluded candidates: "

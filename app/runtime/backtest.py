@@ -274,7 +274,17 @@ def _build_weight_map(
     return weights
 
 
+_TURNOVER_INPUT_COLUMNS = {"End Ticker", "End Balance", "Next Ticker", "Next Balance"}
+
+
+def _missing_turnover_input_columns(result_df: pd.DataFrame) -> list[str]:
+    return sorted(column for column in _TURNOVER_INPUT_COLUMNS if column not in result_df.columns)
+
+
 def _estimate_turnover_series(result_df: pd.DataFrame) -> pd.Series:
+    if _missing_turnover_input_columns(result_df):
+        return pd.Series([np.nan] * len(result_df), index=result_df.index, dtype=float)
+
     turnovers: list[float] = []
     for _, row in result_df.iterrows():
         if "Rebalancing" in result_df.columns and bool(row.get("Rebalancing")) is False:
@@ -316,11 +326,45 @@ def _estimate_turnover_series(result_df: pd.DataFrame) -> pd.Series:
     return pd.Series(turnovers, index=result_df.index, dtype=float)
 
 
+def _turnover_diagnostics_from_result(working: pd.DataFrame) -> dict[str, Any]:
+    missing_columns = _missing_turnover_input_columns(working)
+    turnover = pd.to_numeric(working.get("Turnover"), errors="coerce")
+    observed = turnover.dropna()
+    if "Rebalancing" in working.columns:
+        rebalance_mask = working["Rebalancing"].fillna(False).astype(bool)
+    else:
+        rebalance_mask = pd.Series(True, index=working.index)
+    rebalance_turnover = turnover[rebalance_mask].dropna()
+
+    if missing_columns:
+        estimation_status = "not_estimated_missing_holdings"
+        turnover_source = "missing_result_holding_columns"
+    elif observed.empty:
+        estimation_status = "not_estimated_no_observations"
+        turnover_source = "end_next_holdings_weight_delta"
+    else:
+        estimation_status = "estimated_from_holdings"
+        turnover_source = "end_next_holdings_weight_delta"
+
+    return {
+        "turnover_model_contract_version": "turnover_evidence_contract_v1",
+        "turnover_estimation_status": estimation_status,
+        "turnover_source": turnover_source,
+        "turnover_input_missing_columns": missing_columns,
+        "turnover_observation_count": int(observed.count()),
+        "turnover_rebalance_rows": int(rebalance_mask.sum()) if not working.empty else 0,
+        "turnover_nonzero_count": int((observed > 0).sum()),
+        "avg_turnover": float(observed.mean()) if not observed.empty else None,
+        "max_turnover": float(observed.max()) if not observed.empty else None,
+        "avg_rebalance_turnover": float(rebalance_turnover.mean()) if not rebalance_turnover.empty else None,
+    }
+
+
 def _apply_transaction_cost_postprocess(
     result_df: pd.DataFrame,
     *,
     transaction_cost_bps: float,
-) -> tuple[pd.DataFrame, dict[str, float]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     working = result_df.copy()
     working["Gross Total Balance"] = pd.to_numeric(working["Total Balance"], errors="coerce")
     working["Gross Total Return"] = pd.to_numeric(working["Total Return"], errors="coerce")
@@ -366,11 +410,33 @@ def _apply_transaction_cost_postprocess(
     working["Total Balance"] = working["Net Total Balance"]
     working["Total Return"] = working["Net Total Return"]
 
-    diagnostics = {
-        "avg_turnover": float(working["Turnover"].mean()) if not working.empty else 0.0,
-        "max_turnover": float(working["Turnover"].max()) if not working.empty else 0.0,
-        "estimated_cost_total": float(working["Estimated Cost"].sum()) if not working.empty else 0.0,
-    }
+    diagnostics = _turnover_diagnostics_from_result(working)
+    estimated_cost_series = pd.to_numeric(working["Estimated Cost"], errors="coerce").fillna(0.0)
+    gross_end_balance = float(working["Gross Total Balance"].iloc[-1]) if not working.empty else 0.0
+    net_end_balance = float(working["Total Balance"].iloc[-1]) if not working.empty else 0.0
+    estimated_cost_total = float(estimated_cost_series.sum()) if not working.empty else 0.0
+    estimated_cost_positive_rows = int((estimated_cost_series > 0).sum())
+    gross_net_end_balance_delta = float(gross_end_balance - net_end_balance)
+    if float(transaction_cost_bps or 0.0) <= 0:
+        net_curve_status = "applied_zero_cost_bps"
+    elif diagnostics.get("turnover_estimation_status") != "estimated_from_holdings":
+        net_curve_status = "applied_without_turnover_estimate"
+    elif estimated_cost_total > 0 and gross_net_end_balance_delta > 0 and estimated_cost_positive_rows > 0:
+        net_curve_status = "applied_with_measurable_cost"
+    else:
+        net_curve_status = "applied_no_cost_impact"
+    diagnostics.update(
+        {
+            "net_cost_curve_contract_version": "net_cost_curve_contract_v1",
+            "net_cost_curve_status": net_curve_status,
+            "net_cost_curve_application_target": "result_df.Total Balance/Total Return",
+            "total_balance_is_net_of_cost": True,
+            "net_cost_curve_rows": int(len(working)),
+            "estimated_cost_total": estimated_cost_total,
+            "estimated_cost_positive_rows": estimated_cost_positive_rows,
+            "gross_net_end_balance_delta": gross_net_end_balance_delta,
+        }
+    )
     return working, diagnostics
 
 
@@ -1199,9 +1265,6 @@ def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]
     benchmark_contract = str(meta.get("benchmark_contract") or "").strip().lower()
     universe_contract = str(meta.get("universe_contract") or "").strip().lower()
     freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
-    shortlist_status = str(meta.get("shortlist_status") or "").strip().lower()
-    probation_status = str(meta.get("probation_status") or "").strip().lower()
-    monitoring_status = str(meta.get("monitoring_status") or "").strip().lower()
     rolling_review_status = str(meta.get("rolling_review_status") or "").strip().lower()
     out_of_sample_review_status = str(meta.get("out_of_sample_review_status") or "").strip().lower()
     benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
@@ -1252,35 +1315,11 @@ def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]
             freshness_check_status = "fail"
         add_row("Price Freshness", freshness_check_status, freshness_status)
 
-    if shortlist_status:
-        shortlist_check_status = "watch"
-        if shortlist_status == "small_capital_trial":
-            shortlist_check_status = "pass"
-        elif shortlist_status == "hold":
-            shortlist_check_status = "fail"
-        add_row("Shortlist", shortlist_check_status, shortlist_status)
-
-    if probation_status:
-        probation_check_status = "watch"
-        if probation_status == "small_capital_live_trial":
-            probation_check_status = "pass"
-        elif probation_status == "not_ready":
-            probation_check_status = "fail"
-        add_row("Probation", probation_check_status, probation_status)
-
-    if monitoring_status:
-        monitoring_check_status = "pass"
-        if monitoring_status == "heightened_review":
-            monitoring_check_status = "watch"
-        elif monitoring_status in {"breach_watch", "blocked"}:
-            monitoring_check_status = "fail"
-        add_row("Monitoring", monitoring_check_status, monitoring_status)
-
     if rolling_review_status:
         add_row("Rolling Review", _policy_status_to_check_status(rolling_review_status), rolling_review_status)
     if out_of_sample_review_status:
         add_row(
-            "Out-Of-Sample Review",
+            "Split-Period Review",
             _policy_status_to_check_status(out_of_sample_review_status),
             out_of_sample_review_status,
         )
@@ -1292,35 +1331,21 @@ def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]
 
     rationale: list[str] = []
     if fail_count > 0:
-        if probation_status == "not_ready" or shortlist_status == "hold":
-            status = "blocked"
-            next_step = "resolve_failed_checks_before_probation"
-            rationale.append("failed_checks_block_progress")
-        else:
-            status = "review_required"
-            next_step = "review_failed_checks_before_capital_increase"
-            rationale.append("failed_checks_need_manual_review")
-    elif probation_status == "small_capital_live_trial":
-        if watch_count > 0 or unavailable_count > 0:
-            status = "small_capital_ready_with_review"
-            next_step = "run_small_capital_trial_with_review_checklist"
-            rationale.append("small_capital_ready_but_review_needed")
-        else:
-            status = "small_capital_ready"
-            next_step = "run_small_capital_trial"
-            rationale.append("small_capital_ready")
-    elif probation_status == "paper_tracking":
-        status = "paper_only"
-        next_step = "continue_paper_probation_until_checklist_improves"
-        rationale.append("paper_probation_stage")
-    elif probation_status == "watchlist_review":
-        status = "watchlist_only"
-        next_step = "complete_robustness_review_before_paper_probation"
-        rationale.append("watchlist_stage")
-    else:
         status = "blocked"
-        next_step = "resolve_contract_gaps_before_deployment"
-        rationale.append("deployment_contract_incomplete")
+        next_step = "resolve_preview_gaps_before_validation_handoff"
+        rationale.append("source_checks_block_progress")
+    elif unavailable_count > 0:
+        status = "review_required"
+        next_step = "resolve_unavailable_preview_evidence"
+        rationale.append("preview_evidence_unavailable")
+    elif watch_count > 0:
+        status = "review_required"
+        next_step = "review_watch_items_before_validation_handoff"
+        rationale.append("source_checks_need_review")
+    else:
+        status = "small_capital_ready"
+        next_step = "send_to_practical_validation_for_execution_review"
+        rationale.append("source_checks_ready_for_next_review")
 
     return {
         "deployment_readiness_status": status,
@@ -1776,6 +1801,17 @@ def _apply_real_money_hardening(
         {
             "warnings": warnings,
             "real_money_hardening": True,
+            "cost_model_contract_version": "cost_model_source_contract_v1",
+            "cost_model_source": "app.runtime.backtest._apply_transaction_cost_postprocess",
+            "cost_model_formula": "estimated_cost=pre_cost_balance*(transaction_cost_bps/10000)*estimated_turnover",
+            "cost_application_status": "applied_to_result_curve",
+            "cost_application_target": "result_df.Total Balance/Total Return",
+            "cost_turnover_source": turnover_stats["turnover_source"],
+            "net_cost_curve_contract_version": turnover_stats["net_cost_curve_contract_version"],
+            "net_cost_curve_status": turnover_stats["net_cost_curve_status"],
+            "net_cost_curve_application_target": turnover_stats["net_cost_curve_application_target"],
+            "total_balance_is_net_of_cost": turnover_stats["total_balance_is_net_of_cost"],
+            "net_cost_curve_rows": turnover_stats["net_cost_curve_rows"],
             "min_price_filter": float(min_price_filter or 0.0),
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
@@ -1822,9 +1858,20 @@ def _apply_real_money_hardening(
             ),
             "avg_turnover": turnover_stats["avg_turnover"],
             "max_turnover": turnover_stats["max_turnover"],
+            "avg_rebalance_turnover": turnover_stats["avg_rebalance_turnover"],
+            "turnover_model_contract_version": turnover_stats["turnover_model_contract_version"],
+            "turnover_estimation_status": turnover_stats["turnover_estimation_status"],
+            "turnover_source": turnover_stats["turnover_source"],
+            "turnover_input_missing_columns": turnover_stats["turnover_input_missing_columns"],
+            "turnover_observation_count": turnover_stats["turnover_observation_count"],
+            "turnover_rebalance_rows": turnover_stats["turnover_rebalance_rows"],
+            "turnover_nonzero_count": turnover_stats["turnover_nonzero_count"],
             "estimated_cost_total": turnover_stats["estimated_cost_total"],
+            "estimated_cost_positive_rows": turnover_stats["estimated_cost_positive_rows"],
             "gross_start_balance": float(hardened_df["Gross Total Balance"].iloc[0]),
             "gross_end_balance": float(hardened_df["Gross Total Balance"].iloc[-1]),
+            "net_end_balance": float(hardened_df["Total Balance"].iloc[-1]),
+            "gross_net_end_balance_delta": turnover_stats["gross_net_end_balance_delta"],
         }
     )
     strategy_summary_df = bundle.get("summary_df")
@@ -1957,11 +2004,11 @@ def _apply_real_money_hardening(
                 )
             if out_of_sample_status == "caution":
                 warnings.append(
-                    "표본외 검토가 주의 상태입니다: 뒤쪽 검증 구간에서 벤치마크 대비 성과가 크게 낮거나, 앞쪽 구간보다 성과가 뚜렷하게 악화되었습니다."
+                    "간이 전후반 구간 점검이 주의 상태입니다: 뒤쪽 구간에서 벤치마크 대비 성과가 낮거나, 앞쪽 구간보다 성과가 뚜렷하게 악화되었습니다."
                 )
             elif out_of_sample_status == "watch":
                 warnings.append(
-                    "표본외 검토가 관찰 상태입니다: 뒤쪽 검증 구간이 앞쪽 구간보다 약하므로 비중 확대 전에 확인이 필요합니다."
+                    "간이 전후반 구간 점검이 관찰 상태입니다: 뒤쪽 구간이 앞쪽 구간보다 약하므로 후속 검증에서 다시 확인해야 합니다."
                 )
             if rolling_signals:
                 meta["rolling_review_signals"] = rolling_signals

@@ -10,6 +10,7 @@ from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
 from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
 from finance.data.asset_profile import collect_and_store_asset_profiles
+from finance.data.computed_lifecycle import collect_and_store_computed_snapshot_lifecycle
 from finance.data.etf_provider import (
     aggregate_and_store_etf_exposures,
     collect_and_store_etf_holdings,
@@ -27,6 +28,9 @@ from finance.data.market_intelligence import (
     diagnose_market_quote_gaps,
     persist_quote_gap_diagnostics,
 )
+from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
+from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
+from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
 
 
 JobResult = dict[str, Any]
@@ -1813,6 +1817,331 @@ def run_discover_etf_provider_source_map(
             failed_symbols=[],
             message=f"ETF provider source map discovery failed: {exc}",
             details={"limit": limit, "verify": bool(verify)},
+        )
+
+
+def run_collect_sec_form25_delistings(
+    symbols: str | Iterable[str] | None,
+    *,
+    user_agent: str | None = None,
+    include_archive_files: bool = True,
+    max_archive_files: int = 5,
+) -> JobResult:
+    """Collect SEC Form 25 delisting evidence into the lifecycle evidence table."""
+    job_name = "collect_sec_form25_delistings"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided for SEC Form 25 delisting collection.",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "include_archive_files": bool(include_archive_files),
+                "max_archive_files": int(max_archive_files),
+            },
+        )
+
+    try:
+        summary = collect_and_store_sec_form25_delistings(
+            parsed,
+            user_agent=user_agent,
+            include_archive_files=bool(include_archive_files),
+            max_archive_files=int(max_archive_files),
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        unmapped_symbols = list(summary.get("unmapped_symbols") or [])
+        symbols_without_form25 = list(summary.get("symbols_without_form25") or [])
+        error_symbols = _failed_item_ids(summary.get("errors") or [], id_keys=("symbol",))
+        all_failed = invalid_symbols + error_symbols + unmapped_symbols + symbols_without_form25
+        if rows_written <= 0:
+            status = "failed"
+            message = "SEC Form 25 delisting collection wrote no lifecycle rows."
+        elif error_symbols or unmapped_symbols or symbols_without_form25 or invalid_symbols:
+            status = "partial_success"
+            message = "SEC Form 25 delisting collection completed with coverage gaps."
+        else:
+            status = "success"
+            message = "SEC Form 25 delisting collection completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(parsed),
+            symbols_processed=max(len(parsed) - len(set(all_failed)), 0) if rows_written > 0 else 0,
+            failed_symbols=all_failed[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"SEC Form 25 delisting collection failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "include_archive_files": bool(include_archive_files),
+                "max_archive_files": int(max_archive_files),
+            },
+        )
+
+
+def run_collect_symbol_directory_snapshots(
+    sources: str | Iterable[str] | None = None,
+    *,
+    user_agent: str | None = None,
+    include_test_issues: bool = False,
+    snapshot_date: str | None = None,
+) -> JobResult:
+    """Collect Nasdaq public Symbol Directory current snapshots into lifecycle evidence."""
+    job_name = "collect_symbol_directory_snapshots"
+    started_at = _now_str()
+    t0 = perf_counter()
+
+    try:
+        summary = collect_and_store_symbol_directory_snapshots(
+            sources=sources,
+            user_agent=user_agent,
+            include_test_issues=bool(include_test_issues),
+            snapshot_date=snapshot_date,
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        errors = list(summary.get("errors") or [])
+        failed_sources = _failed_item_ids(errors, id_keys=("source",))
+        if rows_written <= 0:
+            status = "failed"
+            message = "Nasdaq Symbol Directory snapshot collection wrote no lifecycle rows."
+        elif errors:
+            status = "partial_success"
+            message = "Nasdaq Symbol Directory snapshot collection completed with source gaps."
+        else:
+            status = "success"
+            message = "Nasdaq Symbol Directory snapshot collection completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("rows_found") or 0),
+            symbols_processed=rows_written,
+            failed_symbols=failed_sources[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"Nasdaq Symbol Directory snapshot collection failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "sources": sources,
+                "include_test_issues": bool(include_test_issues),
+            },
+        )
+
+
+def run_collect_sec_company_ticker_crosscheck(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    user_agent: str | None = None,
+    snapshot_date: str | None = None,
+) -> JobResult:
+    """Collect SEC current CIK / ticker / exchange associations into lifecycle evidence."""
+    job_name = "collect_sec_company_ticker_crosscheck"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if symbols is not None and not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided for SEC CIK / ticker / exchange crosscheck.",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "symbols": parsed,
+            },
+        )
+
+    try:
+        summary = collect_and_store_sec_company_ticker_crosscheck(
+            symbols=parsed,
+            user_agent=user_agent,
+            snapshot_date=snapshot_date,
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        missing_symbols = list(summary.get("requested_missing_symbols") or [])
+        failed_symbols = invalid_symbols + missing_symbols
+        if rows_written <= 0:
+            status = "failed"
+            message = "SEC CIK / ticker / exchange crosscheck wrote no lifecycle rows."
+        elif failed_symbols:
+            status = "partial_success"
+            message = "SEC CIK / ticker / exchange crosscheck completed with coverage gaps."
+        else:
+            status = "success"
+            message = "SEC CIK / ticker / exchange crosscheck completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("requested") or len(parsed)),
+            symbols_processed=rows_written,
+            failed_symbols=failed_symbols[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"SEC CIK / ticker / exchange crosscheck failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "symbols": parsed,
+            },
+        )
+
+
+def run_collect_computed_snapshot_lifecycle(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    min_observation_dates: int = 2,
+) -> JobResult:
+    """Compute conservative lifecycle evidence from existing current snapshot rows."""
+    job_name = "collect_computed_snapshot_lifecycle"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if symbols is not None and not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided for computed snapshot lifecycle evidence.",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "symbols": parsed,
+                "min_observation_dates": int(min_observation_dates),
+            },
+        )
+
+    try:
+        summary = collect_and_store_computed_snapshot_lifecycle(
+            symbols=parsed,
+            min_observation_dates=int(min_observation_dates),
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        missing_symbols = list(summary.get("requested_missing_symbols") or [])
+        failed_symbols = invalid_symbols + missing_symbols
+        if rows_written <= 0:
+            status = "failed"
+            message = "Computed snapshot lifecycle wrote no lifecycle rows."
+        elif failed_symbols:
+            status = "partial_success"
+            message = "Computed snapshot lifecycle completed with coverage gaps."
+        else:
+            status = "success"
+            message = "Computed snapshot lifecycle completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("requested") or len(parsed)),
+            symbols_processed=rows_written,
+            failed_symbols=failed_symbols[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"Computed snapshot lifecycle failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "symbols": parsed,
+                "min_observation_dates": int(min_observation_dates),
+            },
         )
 
 

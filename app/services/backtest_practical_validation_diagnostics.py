@@ -11,6 +11,11 @@ from app.services.backtest_practical_validation_curve import (
     build_curve_provenance,
     normalize_result_curve as normalize_validation_curve,
 )
+from app.services.backtest_data_coverage_audit import (
+    build_data_coverage_audit,
+    build_db_data_coverage_context,
+)
+from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_practical_validation_curve_context import (
     _combine_component_curves,
     _format_date,
@@ -22,6 +27,10 @@ from app.services.backtest_practical_validation_curve_context import (
     compact_curve_snapshot_from_bundle,
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
+from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
+from app.services.backtest_realism_audit import build_backtest_realism_audit
+from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
+from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
@@ -48,8 +57,15 @@ from app.services.backtest_practical_validation_stress_sensitivity import (
     _sensitivity_rows,
     _stress_interpretation_result,
     _stress_window_rows,
+    build_robustness_lab_board,
 )
-from finance.loaders import load_price_history
+from app.services.backtest_temporal_validation import (
+    REGIME_MACRO_SERIES,
+    build_oos_holdout_validation,
+    build_regime_split_validation,
+    build_walkforward_validation,
+)
+from finance.loaders import load_macro_series_observations, load_price_history
 
 
 PRIMARY_TICKER_BUCKETS = {
@@ -224,6 +240,23 @@ def _component_provider_symbol_weights(active_components: list[dict[str, Any]]) 
             tickers.extend(_component_tickers(component))
         benchmark = str(component.get("benchmark") or "").strip().upper()
         tickers = [ticker for ticker in dict.fromkeys(tickers) if ticker and ticker != "-" and ticker != benchmark]
+        if not tickers:
+            continue
+        ticker_weight = component_weight / len(tickers)
+        for ticker in tickers:
+            weights[ticker] = weights.get(ticker, 0.0) + ticker_weight
+    return {ticker: round(weight, 4) for ticker, weight in sorted(weights.items()) if weight > 0.0}
+
+
+def _component_data_coverage_symbol_weights(active_components: list[dict[str, Any]]) -> dict[str, float]:
+    """Approximate price / listing coverage weights from component universes and benchmarks."""
+    weights: dict[str, float] = {}
+    for component in active_components:
+        component_weight = _component_weight(component)
+        tickers = _component_universe_tickers(component)
+        if not tickers:
+            tickers = _component_tickers(component)
+        tickers = [ticker for ticker in dict.fromkeys(tickers) if ticker and ticker != "-"]
         if not tickers:
             continue
         ticker_weight = component_weight / len(tickers)
@@ -537,6 +570,18 @@ def _operability_rows(active_components: list[dict[str, Any]], source_period: di
     return rows
 
 
+def _load_macro_regime_history(start: Any, end: Any) -> tuple[pd.DataFrame, str | None]:
+    try:
+        frame = load_macro_series_observations(
+            REGIME_MACRO_SERIES,
+            start=_format_date(start),
+            end=_format_date(end),
+        )
+    except Exception as exc:
+        return pd.DataFrame(), str(exc)
+    return frame if isinstance(frame, pd.DataFrame) else pd.DataFrame(), None
+
+
 def build_practical_validation_result(
     source: dict[str, Any],
     validation_profile: dict[str, Any] | None = None,
@@ -614,6 +659,33 @@ def build_practical_validation_result(
     provider_context = build_provider_context(provider_symbol_weights, as_of_date=provider_as_of)
     provider_coverage = dict(provider_context.get("coverage") or {})
     provider_display_rows = list(provider_context.get("display_rows") or [])
+    provider_look_through_board = dict(provider_context.get("look_through_board") or {})
+    data_coverage_context = build_db_data_coverage_context(
+        _component_data_coverage_symbol_weights(active_components),
+        start=_format_date(source_period.get("actual_start") or source_period.get("start")),
+        end=_format_date(source_period.get("actual_end") or source_period.get("end")),
+        timeframe="1d",
+    )
+
+    def _compact_provider_area(area_key: str) -> dict[str, Any]:
+        area = dict(provider_coverage.get(area_key) or {})
+        provenance = dict(area.get("provenance") or {})
+        out = {
+            "status": area.get("status"),
+            "diagnostic_status": area.get("diagnostic_status"),
+            "freshness_status": provenance.get("freshness_status"),
+            "source_mix": provenance.get("source_mix"),
+        }
+        if area_key == "macro":
+            out["series_count"] = area.get("series_count")
+            out["stale_count"] = area.get("stale_count")
+            out["observation_range"] = provenance.get("observation_range")
+        else:
+            out["coverage_weight"] = area.get("coverage_weight")
+            out["as_of_range"] = provenance.get("as_of_range")
+            out["stale_weight"] = provenance.get("stale_weight")
+        return out
+
     provider_statuses = {
         str(dict(item or {}).get("diagnostic_status") or "NOT_RUN")
         for item in provider_coverage.values()
@@ -724,6 +796,53 @@ def build_practical_validation_result(
         window_months=int(thresholds.get("rolling_window_months") or 36),
         mdd_review_line=float(thresholds.get("mdd_review_line") or -25.0),
     )
+    walkforward_validation = build_walkforward_validation(
+        portfolio_curve,
+        benchmark_curve,
+        portfolio_curve_source=curve_context.get("portfolio_curve_source"),
+        benchmark_curve_source=dict(curve_context.get("benchmark_meta") or {}).get("source")
+        or dict(curve_context.get("benchmark_meta") or {}).get("status"),
+        benchmark_parity=benchmark_parity,
+        window_months=int(thresholds.get("rolling_window_months") or 36),
+    )
+    oos_holdout_validation = build_oos_holdout_validation(
+        portfolio_curve,
+        benchmark_curve,
+        portfolio_curve_source=curve_context.get("portfolio_curve_source"),
+        benchmark_curve_source=dict(curve_context.get("benchmark_meta") or {}).get("source")
+        or dict(curve_context.get("benchmark_meta") or {}).get("status"),
+        benchmark_parity=benchmark_parity,
+    )
+    macro_history_start = (
+        portfolio_curve["Date"].min()
+        if not portfolio_curve.empty
+        else source_period.get("actual_start") or source_period.get("start")
+    )
+    macro_history_end = (
+        portfolio_curve["Date"].max()
+        if not portfolio_curve.empty
+        else source_period.get("actual_end") or source_period.get("end")
+    )
+    macro_history, macro_history_error = _load_macro_regime_history(macro_history_start, macro_history_end)
+    regime_split_macro_source = (
+        "macro_loader_error"
+        if macro_history_error
+        else "finance.loaders.macro.load_macro_series_observations"
+    )
+    regime_split_validation = build_regime_split_validation(
+        portfolio_curve,
+        benchmark_curve,
+        macro_history,
+        portfolio_curve_source=curve_context.get("portfolio_curve_source"),
+        benchmark_curve_source=dict(curve_context.get("benchmark_meta") or {}).get("source")
+        or dict(curve_context.get("benchmark_meta") or {}).get("status"),
+        macro_source=regime_split_macro_source,
+        benchmark_parity=benchmark_parity,
+    )
+    if macro_history_error:
+        regime_split_validation["limitations"] = list(regime_split_validation.get("limitations") or []) + [
+            f"Macro history loader failed: {macro_history_error}"
+        ]
 
     input_status = "BLOCKED" if hard_blockers else "REVIEW" if review_gaps else "PASS"
     diagnostics: list[dict[str, Any]] = [
@@ -914,6 +1033,16 @@ def build_practical_validation_result(
         regime_rows = list(regime_evidence.get("rows") or [])
         regime_limitations = ["현재는 benchmark recent return/drawdown/vol proxy이며, FRED macro connector data가 없으면 proxy로만 표시합니다."]
         regime_next_action = "Workspace > Ingestion에서 Macro Context Snapshot을 수집합니다."
+    if regime_split_validation.get("status") in {"PASS", "REVIEW"}:
+        regime_summary = f"{regime_summary} Historical split: {regime_split_validation.get('summary')}"
+        regime_metrics = {
+            **regime_metrics,
+            "historical_regime_split": dict(regime_split_validation.get("metrics") or {}),
+        }
+        regime_rows = regime_rows + list(regime_split_validation.get("rows") or [])
+        regime_limitations = regime_limitations + [
+            "Historical regime split은 월별 compact evidence이며 full macro series / raw curve는 workflow JSONL에 저장하지 않습니다."
+        ]
     diagnostics.append(
         _domain_result(
             domain="regime_macro_suitability",
@@ -1179,6 +1308,14 @@ def build_practical_validation_result(
         overfit_audit=overfit_audit,
         rolling_evidence=rolling_evidence,
     )
+    robustness_lab_board = build_robustness_lab_board(
+        stress_interpretation=stress_interpretation,
+        sensitivity_interpretation=sensitivity_interpretation,
+        stress_rows=stress_rows,
+        sensitivity_rows=sensitivity_rows,
+        overfit_audit=overfit_audit,
+        rolling_evidence=rolling_evidence,
+    )
     robustness_status = (
         "REVIEW"
         if str(sensitivity_interpretation.get("status") or "NOT_RUN") == "REVIEW"
@@ -1311,7 +1448,7 @@ def build_practical_validation_result(
         for idx, component in enumerate(active_components)
     ]
 
-    return {
+    result = {
         "schema_version": PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
         "validation_id": f"validation_{_slug(source_id)}_{uuid4().hex[:8]}",
         "selection_source_id": source_id,
@@ -1340,9 +1477,14 @@ def build_practical_validation_result(
             "curve_provenance": curve_provenance,
             "benchmark_parity": benchmark_parity,
             "provider_coverage": provider_context,
+            "data_coverage_context": data_coverage_context,
+            "temporal_validation": walkforward_validation,
+            "oos_holdout_validation": oos_holdout_validation,
+            "regime_split_validation": regime_split_validation,
         },
         "provider_coverage": provider_context,
         "provider_coverage_display_rows": provider_display_rows,
+        "data_coverage_context": data_coverage_context,
         "diagnostic_results": diagnostics,
         "diagnostic_display_rows": _diagnostic_display_rows(diagnostics),
         "diagnostic_summary": {
@@ -1374,6 +1516,9 @@ def build_practical_validation_result(
             "benchmark_parity_status": benchmark_parity.get("status"),
             "benchmark_parity": benchmark_parity.get("metrics") or {},
             "rolling_validation": rolling_evidence.get("metrics") or {},
+            "walkforward_validation": dict(walkforward_validation.get("metrics") or {}),
+            "oos_holdout_validation": dict(oos_holdout_validation.get("metrics") or {}),
+            "regime_split_validation": dict(regime_split_validation.get("metrics") or {}),
             "runtime_recheck_status": replay_row.get("status") or "NOT_RUN",
             "runtime_recheck_mode": replay_row.get("recheck_mode"),
             "runtime_recheck_extension_days": replay_row.get("extension_days"),
@@ -1382,27 +1527,37 @@ def build_practical_validation_result(
             "provider_coverage": {
                 "as_of_date": provider_context.get("as_of_date"),
                 "symbols": list(provider_context.get("symbols") or []),
-                "operability": {
-                    "status": dict(provider_coverage.get("operability") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("operability") or {}).get("diagnostic_status"),
-                    "coverage_weight": dict(provider_coverage.get("operability") or {}).get("coverage_weight"),
-                },
-                "holdings": {
-                    "status": dict(provider_coverage.get("holdings") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("holdings") or {}).get("diagnostic_status"),
-                    "coverage_weight": dict(provider_coverage.get("holdings") or {}).get("coverage_weight"),
-                },
-                "exposure": {
-                    "status": dict(provider_coverage.get("exposure") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("exposure") or {}).get("diagnostic_status"),
-                    "coverage_weight": dict(provider_coverage.get("exposure") or {}).get("coverage_weight"),
-                },
-                "macro": {
-                    "status": dict(provider_coverage.get("macro") or {}).get("status"),
-                    "diagnostic_status": dict(provider_coverage.get("macro") or {}).get("diagnostic_status"),
-                    "series_count": dict(provider_coverage.get("macro") or {}).get("series_count"),
-                    "stale_count": dict(provider_coverage.get("macro") or {}).get("stale_count"),
-                },
+                "operability": _compact_provider_area("operability"),
+                "holdings": _compact_provider_area("holdings"),
+                "exposure": _compact_provider_area("exposure"),
+                "macro": _compact_provider_area("macro"),
+            },
+            "provider_look_through": {
+                "status": provider_look_through_board.get("status"),
+                "holdings_coverage_weight": provider_look_through_board.get("holdings_coverage_weight"),
+                "exposure_coverage_weight": provider_look_through_board.get("exposure_coverage_weight"),
+                "top_holding_weight": provider_look_through_board.get("top_holding_weight"),
+                "top_overlap_weight": provider_look_through_board.get("top_overlap_weight"),
+                "unknown_exposure_weight": provider_look_through_board.get("unknown_exposure_weight"),
+                "dominant_asset_bucket": provider_look_through_board.get("dominant_asset_bucket"),
+                "dominant_asset_weight": provider_look_through_board.get("dominant_asset_weight"),
+            },
+            "data_coverage": {
+                "symbols": list(data_coverage_context.get("symbols") or []),
+                "requested_start": data_coverage_context.get("requested_start"),
+                "requested_end": data_coverage_context.get("requested_end"),
+                "price_window_error": data_coverage_context.get("price_window_error"),
+                "asset_profile_error": data_coverage_context.get("asset_profile_error"),
+            },
+            "robustness_lab": {
+                "status": robustness_lab_board.get("status"),
+                "covered_stress_windows": robustness_lab_board.get("metrics", {}).get("covered_stress_windows"),
+                "computed_stress_windows": robustness_lab_board.get("metrics", {}).get("computed_stress_windows"),
+                "computed_sensitivity_checks": robustness_lab_board.get("metrics", {}).get("computed_sensitivity_checks"),
+                "sensitivity_review_count": robustness_lab_board.get("metrics", {}).get("sensitivity_review_count"),
+                "runtime_followup_count": robustness_lab_board.get("metrics", {}).get("runtime_followup_count"),
+                "rolling_window_count": robustness_lab_board.get("metrics", {}).get("rolling_window_count"),
+                "local_trial_count": robustness_lab_board.get("metrics", {}).get("local_trial_count"),
             },
         },
         "component_rows": component_rows,
@@ -1418,6 +1573,7 @@ def build_practical_validation_result(
             "stress_summary_rows": stress_rows + sensitivity_rows,
             "stress_interpretation": stress_interpretation,
             "sensitivity_interpretation": sensitivity_interpretation,
+            "robustness_lab_board": robustness_lab_board,
             "overfit_audit": overfit_audit,
             "sensitivity_rows": sensitivity_rows,
             "rolling_validation": rolling_evidence,
@@ -1465,6 +1621,10 @@ def build_practical_validation_result(
         "alternative_baseline_rows": alternative_rows,
         "sensitivity_rows": sensitivity_rows,
         "rolling_validation": rolling_evidence,
+        "temporal_validation": walkforward_validation,
+        "walkforward_validation": walkforward_validation,
+        "oos_holdout_validation": oos_holdout_validation,
+        "regime_split_validation": regime_split_validation,
         "curve_evidence": {
             "portfolio_curve_source": curve_context.get("portfolio_curve_source"),
             "portfolio_curve_rows": len(portfolio_curve),
@@ -1476,6 +1636,9 @@ def build_practical_validation_result(
             "benchmark_parity": benchmark_parity,
             "replay_attempt": replay_row,
             "period_coverage": period_coverage,
+            "temporal_validation": walkforward_validation,
+            "oos_holdout_validation": oos_holdout_validation,
+            "regime_split_validation": regime_split_validation,
         },
         "final_review_handoff": {
             "route": route,
@@ -1490,6 +1653,25 @@ def build_practical_validation_result(
         "selection_source_snapshot": source_row,
         "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     }
+    data_coverage_audit = build_data_coverage_audit(result)
+    result["data_coverage_audit"] = data_coverage_audit
+    result["data_coverage_display_rows"] = list(data_coverage_audit.get("rows") or [])
+    construction_risk_audit = build_construction_risk_audit(result)
+    result["construction_risk_audit"] = construction_risk_audit
+    result["construction_risk_display_rows"] = list(construction_risk_audit.get("rows") or [])
+    risk_contribution_audit = build_risk_contribution_audit(result)
+    result["risk_contribution_audit"] = risk_contribution_audit
+    result["risk_contribution_display_rows"] = list(risk_contribution_audit.get("rows") or [])
+    component_role_weight_audit = build_component_role_weight_audit(result)
+    result["component_role_weight_audit"] = component_role_weight_audit
+    result["component_role_weight_display_rows"] = list(component_role_weight_audit.get("rows") or [])
+    backtest_realism_audit = build_backtest_realism_audit(result)
+    result["backtest_realism_audit"] = backtest_realism_audit
+    result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])
+    validation_efficacy_audit = build_validation_efficacy_audit(result)
+    result["validation_efficacy_audit"] = validation_efficacy_audit
+    result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    return result
 
 
 __all__ = [

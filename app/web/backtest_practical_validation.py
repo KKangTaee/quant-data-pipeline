@@ -242,11 +242,11 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
 
 def _status_tone(status: Any) -> str:
     status_text = str(status or "").upper()
-    if status_text == "PASS":
+    if status_text in {"PASS", "READY"}:
         return "positive"
     if status_text == "BLOCKED":
         return "danger"
-    if status_text == "REVIEW":
+    if status_text in {"REVIEW", "NEEDS_INPUT"}:
         return "warning"
     return "neutral"
 
@@ -378,7 +378,142 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
         st.rerun()
 
 
+def _provider_look_through_board(validation_result: dict[str, Any]) -> dict[str, Any]:
+    board = dict(validation_result.get("provider_look_through_board") or {})
+    if board:
+        return board
+    provider_context = dict(validation_result.get("provider_coverage") or {})
+    return dict(provider_context.get("look_through_board") or {})
+
+
+def _render_provider_look_through_board(validation_result: dict[str, Any]) -> None:
+    board = _provider_look_through_board(validation_result)
+    if not board:
+        return
+
+    st.markdown("##### Look-through Exposure Board")
+    st.caption(
+        "ETF holdings / exposure snapshot을 portfolio weight 기준으로 접어 본 compact board입니다. "
+        "full holdings row는 DB에만 있고, 여기에는 판단에 필요한 요약만 표시합니다."
+    )
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {"label": "Holdings", "value": f"{board.get('holdings_coverage_weight', 0)}%", "tone": _status_tone(board.get("holdings_status"))},
+            {"label": "Exposure", "value": f"{board.get('exposure_coverage_weight', 0)}%", "tone": _status_tone(board.get("exposure_status"))},
+            {"label": "Top Holding", "value": f"{board.get('top_holding_weight', 0)}%", "tone": "warning" if (board.get("top_holding_weight") or 0) > 25 else "neutral"},
+            {"label": "Dominant", "value": f"{board.get('dominant_asset_bucket') or '-'} {board.get('dominant_asset_weight', 0)}%", "tone": "neutral"},
+            {"label": "Unknown", "value": f"{board.get('unknown_exposure_weight', 0)}%", "tone": "warning" if (board.get("unknown_exposure_weight") or 0) else "neutral"},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_rows = list(board.get("summary_rows") or [])
+    if summary_rows:
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+
+    tabs = st.tabs(["Asset Buckets", "Top Holdings", "Fund Coverage", "Exposure Detail"])
+    with tabs[0]:
+        asset_rows = list(board.get("asset_bucket_rows") or [])
+        if asset_rows:
+            st.dataframe(pd.DataFrame(asset_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 asset bucket exposure가 없습니다.")
+    with tabs[1]:
+        holding_rows = list(board.get("top_holding_rows") or [])
+        if holding_rows:
+            st.dataframe(pd.DataFrame(holding_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 top holdings row가 없습니다.")
+    with tabs[2]:
+        fund_rows = list(board.get("fund_coverage_rows") or [])
+        if fund_rows:
+            st.dataframe(pd.DataFrame(fund_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 ETF별 coverage row가 없습니다.")
+    with tabs[3]:
+        exposure_rows = list(board.get("exposure_detail_rows") or [])
+        if exposure_rows:
+            st.dataframe(pd.DataFrame(exposure_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 exposure detail row가 없습니다.")
+
+    limitations = list(board.get("limitations") or [])
+    if limitations:
+        st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
+
+
+def _robustness_lab_board(validation_result: dict[str, Any]) -> dict[str, Any]:
+    robustness = dict(validation_result.get("robustness_validation") or {})
+    board = dict(robustness.get("robustness_lab_board") or validation_result.get("robustness_lab_board") or {})
+    return board
+
+
+def _render_robustness_lab_board(board: dict[str, Any]) -> None:
+    metrics = dict(board.get("metrics") or {})
+    st.markdown("##### Robustness Lab")
+    st.caption(
+        "Stress, rolling, sensitivity, overfit 근거를 Final Review에서 바로 읽을 수 있는 compact board로 요약합니다."
+    )
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {
+                "label": "Stress",
+                "value": f"{metrics.get('computed_stress_windows', 0)}/{metrics.get('covered_stress_windows', 0)}",
+                "tone": _status_tone(metrics.get("stress_status")),
+            },
+            {
+                "label": "Sensitivity",
+                "value": metrics.get("computed_sensitivity_checks", 0),
+                "tone": _status_tone(metrics.get("sensitivity_status")),
+            },
+            {
+                "label": "Follow-up",
+                "value": metrics.get("runtime_followup_count", 0),
+                "tone": "warning" if metrics.get("runtime_followup_count") else "neutral",
+            },
+            {"label": "Rolling", "value": metrics.get("rolling_window_count") or "-", "tone": _status_tone(metrics.get("rolling_status"))},
+            {"label": "Trials", "value": metrics.get("local_trial_count", 0), "tone": _status_tone(metrics.get("overfit_status"))},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_tab, stress_tab, sensitivity_tab, follow_up_tab = st.tabs(["Summary", "Stress", "Sensitivity", "Follow-up"])
+    with summary_tab:
+        summary_rows = list(board.get("summary_rows") or [])
+        if summary_rows:
+            st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 robustness summary row가 없습니다.")
+    with stress_tab:
+        stress_rows = list(board.get("stress_rows") or [])
+        if stress_rows:
+            st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 stress detail row가 없습니다.")
+    with sensitivity_tab:
+        sensitivity_rows = list(board.get("sensitivity_rows") or [])
+        if sensitivity_rows:
+            st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 sensitivity detail row가 없습니다.")
+    with follow_up_tab:
+        follow_up_rows = list(board.get("follow_up_rows") or [])
+        if follow_up_rows:
+            st.dataframe(pd.DataFrame(follow_up_rows), width="stretch", hide_index=True)
+        else:
+            st.success("즉시 follow-up으로 남은 robustness row가 없습니다.")
+
+    limitations = list(board.get("limitations") or [])
+    if limitations:
+        st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
+
+
 def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any]) -> None:
+    board = _robustness_lab_board(validation_result)
+    if board:
+        _render_robustness_lab_board(board)
+        return
+
     stress = dict(validation_result.get("stress_interpretation") or {})
     sensitivity = dict(validation_result.get("sensitivity_interpretation") or {})
     if not stress and not sensitivity:
@@ -440,6 +575,12 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     )
     st.markdown("##### Input Evidence")
     st.dataframe(pd.DataFrame(validation_result.get("checks") or []), width="stretch", hide_index=True)
+    _render_validation_efficacy_audit(validation_result)
+    _render_data_coverage_audit(validation_result)
+    _render_construction_risk_audit(validation_result)
+    _render_risk_contribution_audit(validation_result)
+    _render_component_role_weight_audit(validation_result)
+    _render_backtest_realism_audit(validation_result)
     st.markdown("##### Practical Diagnostics")
     diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
@@ -454,6 +595,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
         )
         st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+        _render_provider_look_through_board(validation_result)
         _render_provider_gap_section(validation_result)
 
     _render_stress_sensitivity_interpretation(validation_result)
@@ -547,6 +689,209 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
 
 
+def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("validation_efficacy_audit") or {})
+    rows = list(validation_result.get("validation_efficacy_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Validation Efficacy Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+            {
+                "label": "Writes",
+                "value": "Disabled" if not boundary.get("db_write") and not boundary.get("registry_write") else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
+def _render_backtest_realism_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("backtest_realism_audit") or {})
+    rows = list(validation_result.get("backtest_realism_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Backtest Realism Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+            {
+                "label": "Writes",
+                "value": "Disabled" if not boundary.get("db_write") and not boundary.get("registry_write") else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
+def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("construction_risk_audit") or {})
+    rows = list(validation_result.get("construction_risk_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Construction Risk Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {
+                "label": "Writes",
+                "value": "Disabled" if not boundary.get("db_write") and not boundary.get("registry_write") else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
+def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("risk_contribution_audit") or {})
+    rows = list(validation_result.get("risk_contribution_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Risk Contribution Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {
+                "label": "Writes",
+                "value": "Disabled"
+                if not boundary.get("db_write")
+                and not boundary.get("registry_write")
+                and not boundary.get("raw_matrix_persistence")
+                else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    component_rows = list(audit.get("component_rows") or [])
+    if component_rows:
+        with st.expander("Risk contribution component rows", expanded=False):
+            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
+def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("component_role_weight_audit") or {})
+    rows = list(validation_result.get("component_role_weight_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Component Role / Weight Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {
+                "label": "Writes",
+                "value": "Disabled"
+                if not boundary.get("db_write")
+                and not boundary.get("registry_write")
+                and not boundary.get("memo_persistence")
+                and not boundary.get("role_preset_persistence")
+                else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    component_rows = list(audit.get("component_rows") or [])
+    if component_rows:
+        with st.expander("Component role / weight rows", expanded=False):
+            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
+def _render_data_coverage_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("data_coverage_audit") or {})
+    rows = list(validation_result.get("data_coverage_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Data Coverage Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "Symbols", "value": metrics.get("symbol_count", 0), "tone": "neutral"},
+            {
+                "label": "Writes",
+                "value": "Disabled" if not boundary.get("db_write") and not boundary.get("registry_write") else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
+
+
 def render_practical_validation_workspace() -> None:
     st.markdown("### Practical Validation")
     st.caption(
@@ -572,7 +917,7 @@ def render_practical_validation_workspace() -> None:
 
     with st.container(border=True):
         render_stage_brief(
-            purpose="선택된 단일 전략, Compare 후보, 저장 Mix를 같은 Clean V2 source로 읽습니다.",
+            purpose="선택된 단일 전략 후보와 Portfolio Mix 후보를 같은 Clean V2 source로 읽습니다.",
             result="Practical Validation result",
         )
         st.caption(f"Sources: `{PORTFOLIO_SELECTION_SOURCE_FILE}`")
@@ -590,7 +935,7 @@ def render_practical_validation_workspace() -> None:
 
     if not selectable_sources:
         st.info("아직 Practical Validation으로 보낸 Clean V2 source가 없습니다.")
-        st.caption("Backtest Analysis에서 Single / Compare / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
+        st.caption("Backtest Analysis에서 Single / Portfolio Mix / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
         return
 
     labels = [_source_label(row) for row in selectable_sources]

@@ -12,14 +12,900 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Active Pointers
 
-- latest phase board:
-  - [PHASE34_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md)
+- current phase board:
+  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
+- latest completed phase:
+  - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase14-candidate-prioritization-v1`
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-30 - Backtest Analysis Stage 1 is closed as candidate-source creation
+- User request:
+  - 1단계 Backtest는 여기까지 진행하면 될 것 같으니, 이번 세션에서 작업한 내용과 최종 수정 상태를 문서로 업데이트하고 정리해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis를 최종 투자 판단이나 운영 판단이 아니라, 단일 전략 / Portfolio Mix 후보 source를 만들고 1차 readiness 통과 시 Practical Validation으로 보내는 단계로 닫는다.
+- Analysis result:
+  - Session closeout doc added at `docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
+  - Backtest Analysis now has explicit boundaries: Real-Money is first-pass readiness, Practical Validation handoff is gated, Portfolio Mix Builder creates one weighted mix candidate, and no memo / preset / live approval / order / auto rebalance behavior is added.
+  - Remaining items are parked as follow-up candidates: separate read-only candidate comparison, saved mix inspector polish, weighted mix cost / turnover aggregation, profile-specific thresholds, and Phase 14 prioritization.
+- Follow-up:
+  - Next product work should move to Practical Validation / Final Review review or Phase 14 prioritization, not keep expanding Backtest Analysis 1단계 without a new explicit scope.
+
+### 2026-05-30 - Portfolio Mix Builder post-run UX is summary-first
+- User request:
+  - Portfolio Mix Builder에서 mix 실행 후 상단 result UI가 혼잡하고, 기존 보수적 UI 패턴이 반복되어 완성도가 떨어진다고 지적함.
+- Interpreted goal:
+  - 계산 로직은 유지하되, Portfolio Mix Builder를 "여러 component를 하나의 mix 후보로 만드는 작업 공간"처럼 읽히게 정보 위계와 next action을 정리한다.
+- Analysis result:
+  - Component 실행 결과는 card overview와 `요약 / 차트 / 진단 / 상세` 4개 tab으로 재구성하고, 원본 summary table / meta / criteria는 접힘 상세로 낮춘다.
+  - 화면 flow strip은 `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation`을 보여주며, mix 후보 판단은 handoff 가능 여부와 blocker를 먼저 표시한다.
+  - 이 변경은 UI/UX 위계 정리이며, backtest 계산, DB schema, JSONL registry, saved setup policy, live approval, order, auto rebalance는 바꾸지 않는다.
+- Follow-up:
+  - User review should confirm whether the post-run result now feels like "비중을 정하기 위한 재료 확인" and whether the weight builder / mix 후보 판단까지 자연스럽게 이어지는지 확인한다.
+
+### 2026-05-30 - Portfolio Mix Builder replaces mixed compare/build flow
+- User request:
+  - Backtest Analysis의 `Compare & Portfolio Builder`가 비교와 조합을 섞고 있어, 여러 전략을 하나의 mix 후보로 만드는 화면으로 재정의하고 후보 비교는 별도 위치를 검토해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis는 단일 후보 또는 Portfolio Mix 후보를 만들어 2차 Practical Validation으로 보내는 1차 후보 생성 단계로 고정한다.
+- Analysis result:
+  - Visible mode is now `Portfolio Mix Builder`; legacy `Compare & Portfolio Builder` route remains compatible.
+  - Component runs remain as evidence for weight selection, but the handoff button evaluates and sends the weighted mix as one Clean V2 source.
+  - Mix handoff requires mix result, 100% / multi-component weight discipline, component data trust, and component first-stage readiness with no hard blocker.
+  - Candidate-to-candidate read-only comparison is intentionally left as a future separate tool rather than kept inside the mix builder.
+- Follow-up:
+  - User review should run a GTAA + Equal Weight mix and confirm that the screen reads as "여러 전략을 하나의 후보로 만들기" rather than "개별 전략 비교 후 하나 고르기".
+
+### 2026-05-30 - Practical Validation handoff requires first-stage readiness
+- User request:
+  - `검증 후보로 보내기`는 다음 단계로 넘기는 버튼이므로 1차 후보 판단을 통과했다는 의미로 읽히게 하고, 통과하지 못하면 비활성화와 근거 표시가 필요하다고 요청함.
+- Interpreted goal:
+  - Backtest Analysis의 handoff 버튼을 단순 저장 버튼이 아니라 `Candidate Readiness` gate를 통과한 결과만 2차 `Practical Validation`으로 넘기는 진입 버튼으로 정리한다.
+- Analysis result:
+  - Handoff enablement now follows `can_move_to_compare`: Promotion not hold, no execution source blocker, no validation source blocker.
+  - Disabled state shows concise blocker reasons and the handoff area displays a status card with Promotion / 실행 원천 / 검증 원천 상태.
+  - The handoff remains a Clean V2 source registration path only; it does not add live approval, order, account sync, auto rebalance, or a new storage model.
+- Follow-up:
+  - User review should confirm that the button now feels like "1차 후보 판단 통과 후 2차 실전성 검증 진입" rather than a generic save action.
+
+### 2026-05-30 - Backtest Real-Money readiness now uses source checks only
+- User request:
+  - Backtest 1차 Real-Money 지표가 실제로 유효한 검증인지 재검토하고, 필요하면 추가 / 수정 / 삭제하되 억지로 바꾸지는 말아 달라고 요청함.
+- Interpreted goal:
+  - 기존 지표군은 유지하되, 후속 단계인 probation / monitoring 의미가 1차 점수에 섞이지 않도록 scoring / wording / cost display 경계를 정리한다.
+- Analysis result:
+  - `Execution Preview`는 benchmark, liquidity, validation, guardrail, ETF operability, price freshness, rolling, split-period 같은 source checks만 평가한다.
+  - `Candidate Readiness`는 `Promotion`, execution source blockers, validation source blockers 기준으로 계산하고, turnover / cost는 holdings 기반 추정 여부를 같이 표시한다.
+  - Backtest의 전후반 구간 점검은 `Split-Period Check`로 낮춰 표시하며, formal OOS / walk-forward / regime validation은 Practical Validation 이후 evidence가 담당한다.
+- Follow-up:
+  - User review should focus on whether Real-Money의 현재 판단이 "다음 검증으로 넘겨도 되는가"라는 1차 질문에만 답하는지 확인한다.
+
+### 2026-05-30 - Backtest Real-Money is first-pass readiness only
+- User request:
+  - Backtest 단계에서 `Probation / Monitoring / Deployment`까지 검증하는 것은 Practical Validation / Final Review / Selected Dashboard 역할과 겹치므로 과한 부분을 빼거나 분리하자는 방향을 승인함.
+- Interpreted goal:
+  - Backtest Analysis의 Real-Money 탭은 후보를 다음 검증으로 넘겨도 되는지 보는 1차 readiness 화면으로 고정하고, 후속 관찰 / 운영 / 최종 선택처럼 보이는 문구를 낮춘다.
+- Analysis result:
+  - User-facing Backtest / Compare / History surfaces now show `Suggested Route`, `Next Validation Focus`, and `Execution Preview`.
+  - Internal legacy metadata remains compatible, but Backtest Analysis does not start paper observation, monitoring, deployment, broker approval, order, account sync, or auto rebalance.
+- Follow-up:
+  - User review should verify that Backtest Analysis reads as candidate screening, while Practical Validation / Final Review own the actual investability evidence and final decision.
+
+### 2026-05-30 - Real-Money shortlist meaning is absorbed into Promotion
+- User request:
+  - Real-Money의 후보 shortlist가 사실상 Promotion의 추천 경로 역할이라면 독립 기능처럼 보이지 않게 낮추자는 방향을 승인함.
+- Interpreted goal:
+  - Backtest Analysis의 Real-Money 탭에서 핵심 질문을 "Promotion 결과상 다음 단계로 넘길 수 있는가?"로 고정하고, shortlist 값을 `Promotion Suggested Route`로 표시한다.
+- Analysis result:
+  - `shortlist_status` / `shortlist_next_step` metadata is still useful for compatibility, but user-facing UX should not present it as a separate validation stage.
+  - The change is UI / wording only; runtime calculation, JSONL registry, user memo / preset storage, broker approval, order, and auto rebalance remain unchanged.
+- Follow-up:
+  - User review should focus on whether Promotion, Probation, Deployment, and Validation now read as one coherent Real-Money decision flow.
+
+### 2026-05-30 - Phase 14 opens second-cycle prioritization
+- User request:
+  - Phase 13 완료 후 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13 carry-forward 후보를 바로 무작정 구현하지 않고, 2차 cycle의 첫 구현 slice를 정하기 위한 Phase 14를 연다.
+- Analysis result:
+  - High-priority 후보가 여러 개이므로 `selected replay contract hardening`, `weighted mix cost / turnover aggregation`, `profile-specific threshold policy`, historical membership/source review, broker-grade execution realism design을 impact / dependency / effort / source uncertainty / storage risk / QA 기준으로 먼저 비교해야 한다.
+  - Phase 14는 구현 phase가 아니라 prioritization / handoff phase이며, code / DB schema / new JSONL / broker automation 변경을 포함하지 않는다.
+- Follow-up:
+  - 다음 task는 `phase14-candidate-prioritization-v1`로 후보 matrix를 만들고 첫 구현 후보와 owner skill을 확정한다.
+
+### 2026-05-30 - Phase 13 closes the first hardening cycle
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-6으로 13-1~13-5 산출물을 묶고 final QA를 수행한 뒤 1차 hardening cycle을 안전한 범위에서 closeout한다.
+- Analysis result:
+  - 1차 cycle은 lifecycle / survivorship, cost / liquidity realism, temporal validation, construction risk, selected monitoring evidence를 하나의 investability evidence workflow로 강화했다.
+  - 이 완료 선언은 broker-grade trading readiness, live approval, order, account sync, auto rebalance, production alerting, full optimizer 구현을 뜻하지 않는다.
+  - Storage boundary remains compact: DB-backed full evidence, workflow JSONL compact evidence, saved reusable setup, generated artifacts, and reports keep separate roles.
+- Follow-up:
+  - 다음 작업은 자동으로 열지 않는다. 사용자가 `phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md`에서 2차 cycle 방향을 선택하면 새 phase로 시작한다.
+
+### 2026-05-30 - Phase 13 residual risks separated for final closeout
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-5로 Phase 8~12와 Phase 13 13-1~13-4에서 남은 한계를 current limitation, second-cycle candidate, explicit out-of-scope로 분리한다.
+- Analysis result:
+  - 1차 cycle은 investability evidence workflow 개선으로 closeout할 수 있지만 broker-grade trading / account reconciliation / optimizer / production monitoring system으로 표현하면 안 된다.
+  - Key carry-forward candidates are historical membership coverage expansion, broker-grade execution realism design, weighted mix cost / turnover aggregation, profile-specific thresholds, formal validation statistics, construction taxonomy / covariance, provider operations hardening, and selected replay contract hardening.
+  - Live approval, broker orders, account sync, tax-lot handling, auto rebalance, paid source adoption, user memo / preset expansion, and automatic monitoring log append remain explicit first-cycle out-of-scope items.
+- Follow-up:
+  - 다음 task는 `phase13-integrated-qa-final-closeout`로 final QA와 1차 hardening cycle closeout summary를 작성한다.
+
+### 2026-05-30 - Phase 13 docs and runbooks align with current boundaries
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-4로 13-1 inventory, 13-2 gate QA, 13-3 storage audit 결과를 durable docs와 runbook에 맞춘다.
+- Analysis result:
+  - Current user flow docs now identify `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` as the selected dashboard source, while legacy V1 remains history / compatibility.
+  - Storage docs clarify runtime-defined JSONL paths, DB-backed full evidence, workflow compact evidence, saved setup, generated artifacts, and selected monitoring read-only boundaries.
+  - Added a reusable Phase Closeout QA runbook for future phase/task verification and artifact hygiene.
+- Follow-up:
+  - 다음 task는 `phase13-residual-risk-carry-forward-v1`로 남은 limitations, second-cycle candidates, and out-of-scope broker-grade items를 분리한다.
+
+### 2026-05-30 - Phase 13 storage boundary audit finds no drift
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-3으로 DB-backed data, workflow JSONL compact evidence, saved setup, run artifact, and selected monitoring read-only boundaries를 감사한다.
+- Analysis result:
+  - Lifecycle / survivorship collectors write DB-backed `finance_meta.nyse_symbol_lifecycle` evidence with `registry_write: False`.
+  - Practical Validation / Final Review persistence remains compact workflow handoff / validation / decision evidence, while saved portfolio rows remain reusable setup rather than approval or monitoring evidence.
+  - Selected Dashboard read models expose no DB write, registry write, monitoring log auto-write, live approval, order instruction, or auto rebalance behavior. No task-created registry / saved / run history / run artifact / Playwright output drift was found.
+- Follow-up:
+  - 다음 task는 `phase13-docs-runbook-alignment-v1`로 13-1 inventory, 13-2 QA matrix, and 13-3 storage audit를 durable docs / runbooks / roadmap에 맞춘다.
+
+### 2026-05-30 - Phase 13 gate validation QA finds no immediate code defect
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-2로 Practical Validation / Final Review / Selected Dashboard gate와 severity consistency를 확인한다.
+- Analysis result:
+  - `build_investability_gate_policy()` and `build_selected_route_gate()` consistently block selected route for critical `NOT_RUN`, `NEEDS_INPUT`, `BLOCKED`, and critical `REVIEW` evidence.
+  - Selected Dashboard post-selection routes surface continuity, recheck, provider, review signal, and allocation drift gaps as read-only operations evidence without live approval, order, monitoring log auto-write, or auto rebalance.
+  - Full `tests.test_service_contracts` passed, 126 tests. No immediate code defect was identified.
+- Follow-up:
+  - 다음 task는 `phase13-storage-data-boundary-audit-v1`로 DB-backed data, workflow JSONL compact evidence, saved setup, monitoring log, report, and generated artifact boundary를 확인한다.
+
+### 2026-05-29 - Phase 13 inventory sets the QA source map
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 13의 13-1로 Phase 8~12 1차 hardening cycle이 어떤 약점을 줄였고 무엇을 남겼는지 하나의 inventory로 정리한다.
+- Analysis result:
+  - Phase 8~12는 lifecycle / survivorship, cost / liquidity realism, temporal validation, construction risk, selected monitoring evidence를 순차적으로 보강했다.
+  - 현재 제품은 단순 backtest exploration보다 investability evidence workflow에 가까워졌지만, broker-grade execution, account reconciliation, optimizer, production alerting, auto rebalance는 아직 구현된 기능이 아니다.
+  - No new JSONL registry, user memo / preset storage, monitoring log auto-write, account sync, approval, order, or auto rebalance behavior was added.
+- Follow-up:
+  - 다음 task는 `phase13-gate-validation-qa-matrix-v1`로 Practical Validation / Final Review / Selected Dashboard gate와 severity consistency를 확인한다.
+
+### 2026-05-29 - Actual allocation drift remains session-only evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 12의 12-5로 optional Actual Allocation / drift check가 저장, 주문, 자동 리밸런싱 기능처럼 보이지 않도록 경계를 명확히 한다.
+- Analysis result:
+  - Existing Dashboard behavior was already session-only, but runtime boundary fields were not explicit enough.
+  - Added `selected_allocation_drift_evidence_boundary_v1` with DB / registry / monitoring log / raw input / alert persistence and account / broker / order / auto rebalance all disabled.
+  - Breached drift now means manual review signal only; Dashboard action is labeled `Reflect Session Signal`.
+- Follow-up:
+  - 다음 task는 `decision-dossier-continuity-operations-v1`로 Decision Dossier, Continuity, Timeline, Review Signals source consistency를 정리한다.
+
+### 2026-05-29 - Selected monitoring source map chooses recheck readiness / freshness first
+- User request:
+  - Phase 12 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 12의 첫 task로 current Selected Portfolio Dashboard / Final Review / runtime monitoring evidence source map과 gap을 확인한다.
+- Analysis result:
+  - Selected Dashboard는 Final Review V2 decision row를 canonical source로 읽고, readiness / freshness / provider / timeline / comparison / drift / dossier evidence를 read-only로 제공한다.
+  - 주요 gap은 Performance Recheck / symbol freshness가 Current Candidate Registry replay contract에 의존한다는 점, readiness와 symbol freshness가 policy상 분리되어 있다는 점, Review Signals와 Recheck Comparison이 CAGR / MDD / benchmark spread threshold를 중복 계산한다는 점이다.
+  - 새 JSONL registry, automatic monitoring log append, user memo, preset, account integration, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `recheck-readiness-freshness-contract-v1`로 Final Review V2 selected row, replay contract, DB latest market date, symbol freshness를 하나의 operations preflight contract로 정리한다.
+
+### 2026-05-29 - Phase 12 opens for selected monitoring / recheck operations
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 11 closeout 이후 다음 hardening target인 selected monitoring / recheck operations를 공식 phase로 연다.
+- Analysis result:
+  - Phase 12 board를 `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`에 생성했다.
+  - 이번 phase는 Final Review 선정 이후에도 recheck readiness, symbol freshness, provider evidence, timeline, review signals, recheck comparison, optional allocation drift, continuity evidence가 재검토 필요 상태를 숨기지 않도록 정리하는 방향이다.
+  - 새 JSONL registry, automatic monitoring log append, user memo, preset, account integration, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `selected-monitoring-source-map-v1`로 current Selected Portfolio Dashboard / Final Review / runtime source map과 gap을 확인한다.
+
+### 2026-05-29 - Phase 11 construction risk controls close out
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 마지막 task로 construction risk controls 전체를 통합 검증하고 완료 상태로 정리한다.
+- Analysis result:
+  - Phase 11 integrated QA passed: service / web compile, full service contracts 112 tests, UI / engine boundary checker, finance refinement hygiene, and diff check.
+  - Phase 11 closeout summary was added under `phases/done/`.
+  - This phase strengthened portfolio construction risk evidence and selected-route gate policy without adding new JSONL registry, memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - Next hardening target is Phase 12 selected monitoring / recheck operations. Start with `phase12-board-open`.
+
+### 2026-05-29 - Construction risk gate policy feeds selected-route evidence
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-5로 세 construction risk audit route와 row-level non-PASS evidence를 Final Review selected-route gate policy에 연결한다.
+- Analysis result:
+  - `construction_risk`, `risk_contribution`, `component_role_weight` are now first-class critical gate groups.
+  - `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+  - Failing row criteria are merged into gate policy evidence without adding JSONL registry, user memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `phase11-integrated-qa-closeout`로 Phase 11 전체 compile / service contract / boundary / hygiene / docs closeout을 수행한다.
+
+### 2026-05-29 - Component role / weight audit V1 covers role discipline
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-4로 component role / target weight / validation profile evidence를 read-only construction risk contract로 묶는다.
+- Analysis result:
+  - `component_role_weight_audit_v1` now reads explicit proposal role source coverage, target weights, profile-aware max weight, role concentration, profile intent fit, weight reason, and storage boundary.
+  - Missing or partial role metadata does not become `PASS`; inferred or single-component role evidence remains `REVIEW` or `NEEDS_INPUT`.
+  - Practical Validation and Final Review display the audit, and final decision snapshots / evidence rows preserve it without adding role preset, user memo, saved setup, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `construction-risk-gate-policy-v1`로 세 construction risk audit route와 row-level non-PASS evidence를 selected-route gate policy에 연결한다.
+
+### 2026-05-29 - Risk contribution audit V1 covers correlation / risk contribution
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-3으로 component return correlation / risk contribution evidence를 read-only construction risk contract로 묶는다.
+- Analysis result:
+  - `risk_contribution_audit_v1` now reads component return matrix coverage, average / max correlation, max risk contribution proxy, Robustness Lab drop-one dependency, and storage boundary.
+  - Missing component matrix or missing drop-one evidence does not become `PASS`; DB price proxy / mixed source evidence remains `REVIEW`.
+  - Practical Validation and Final Review display the audit, and final decision snapshots / evidence rows preserve it without adding JSONL registry, user memo, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `component-role-weight-discipline-v1`로 role source와 profile-aware weight discipline을 분리한다.
+
+### 2026-05-29 - Construction risk audit V1 covers concentration / overlap / exposure
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 11-2로 provider look-through evidence를 read-only Construction Risk Audit contract로 묶는다.
+- Analysis result:
+  - `construction_risk_audit_v1` now reads component max weight, provider holdings / exposure coverage, top holding, top overlap, dominant asset, and unknown exposure.
+  - Missing or partial provider holdings / exposure does not become `PASS`; it remains `NEEDS_INPUT` or `REVIEW`.
+  - Practical Validation and Final Review display the audit, and final decision snapshots preserve it without adding JSONL registry, user memo, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - 다음 task는 `correlation-risk-contribution-contract-v1`로 component return correlation / risk contribution evidence를 construction risk 관점으로 분리한다.
+
+### 2026-05-29 - Phase 11 source map chooses concentration / overlap first
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 11의 첫 task로 current construction risk evidence source map과 gap을 확인한다.
+- Analysis result:
+  - Practical Validation already emits concentration / overlap / exposure and correlation / risk contribution diagnostics.
+  - Provider look-through board already emits holdings coverage, exposure coverage, top holding, top overlap, dominant asset, and unknown exposure as compact evidence.
+  - Robustness Lab already has drop-one and weight tilt dependency evidence, but Final Review has no explicit construction risk gate group yet.
+  - 새 JSONL registry, user memo, preset, raw holdings artifact, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `concentration-overlap-exposure-contract-v1`로 기존 provider look-through evidence를 read-only Construction Risk Audit contract로 묶는다.
+
+### 2026-05-29 - Phase 11 opens for portfolio construction risk controls
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10 closeout 이후 다음 hardening target인 portfolio construction risk controls를 공식 phase로 연다.
+- Analysis result:
+  - Phase 11 board를 `.aiworkspace/note/finance/phases/active/phase11-portfolio-construction-risk-controls/`에 생성했다.
+  - 이번 phase는 concentration, overlap, correlation, risk contribution, component role / weight discipline이 selected-route 판단에서 숨지 않도록 만드는 방향이다.
+  - 새 JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `construction-risk-source-map-v1`로 current Practical Validation / Look-through / Robustness Lab / Final Review gate source map과 gap을 확인한다.
+
+### 2026-05-29 - Phase 10 validation efficacy hardening closes
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 walk-forward / OOS / regime validation work를 통합 검증하고 closeout한다.
+- Analysis result:
+  - Phase 10 integrated QA passed: targeted service / loader compile, full service contracts 98 tests, UI / engine boundary checker, finance refinement hygiene, and diff check.
+  - Phase 10 closeout summary was added under `phases/done/`.
+  - This phase strengthened Validation Efficacy and selected-route gate evidence without adding new JSONL registry, memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - Next hardening target is Phase 11 portfolio construction risk controls. Start with `phase11-board-open`.
+
+### 2026-05-29 - Validation efficacy temporal gaps become selected-route gate evidence
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-5로 walk-forward / OOS / regime gap이 Final Review selected-route gate에서 blocker 또는 review-required 근거로 드러나게 한다.
+- Analysis result:
+  - `build_investability_gate_policy()`가 Validation Efficacy Audit non-PASS row를 `validation_efficacy` gate policy group에 병합한다.
+  - `REVIEW` temporal row는 hold / re-review 요구이며, `NEEDS_INPUT` / `BLOCKED` temporal row는 selected-route blocker다.
+  - 이 변경은 기존 investability packet / selected-route gate를 재사용하는 read-only evidence 정렬이며 새 JSONL registry, user memo, preset, approval, order, auto rebalance를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `phase10-integrated-qa-closeout`으로 Phase 10 전체 compile / service contracts / boundary / hygiene 검증과 closeout을 수행한다.
+
+### 2026-05-29 - Regime split validation becomes compact audit evidence
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-4로 DB-backed macro history를 사용한 historical regime split evidence를 Practical Validation과 Final Review 판단 경로에 연결한다.
+- Analysis result:
+  - `app/services/backtest_temporal_validation.py`에 `build_regime_split_validation()`을 추가해 VIX / yield curve / credit spread 기반 monthly regime bucket별 portfolio / benchmark excess와 drawdown gap을 compact evidence로 계산한다.
+  - Practical Validation result가 `regime_split_validation` evidence를 가지며, Validation Efficacy Audit이 `Regime split validation` row를 읽는다.
+  - missing / short / proxy-only macro evidence는 `PASS`가 아니라 `NEEDS_INPUT` 또는 `REVIEW`로 남긴다.
+- Follow-up:
+  - 다음 task는 `validation-efficacy-gate-policy-refinement-v2`로 temporal / OOS / regime gap이 selected-route gate policy에 미치는 영향을 정리한다.
+
+### 2026-05-29 - OOS holdout validation becomes compact audit evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-3으로 in-sample / out-sample holdout evidence를 Practical Validation과 Final Review 판단 경로에 연결한다.
+- Analysis result:
+  - `app/services/backtest_temporal_validation.py`에 `build_oos_holdout_validation()`을 추가해 benchmark-aligned OOS excess, split deterioration, out-sample drawdown gap을 compact evidence로 계산한다.
+  - Practical Validation result가 `oos_holdout_validation` evidence를 가지며, Validation Efficacy Audit이 `OOS holdout validation` row를 읽는다.
+  - missing / short / proxy-only evidence는 `PASS`가 아니라 `NEEDS_INPUT` 또는 `REVIEW`로 남긴다.
+- Follow-up:
+  - 다음 task는 `regime-split-validation-v1`로 DB / macro loader source를 기준으로 historical regime split evidence를 추가한다.
+
+### 2026-05-29 - Walk-forward temporal validation becomes compact audit evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 10-2로 benchmark-aligned walk-forward / rolling split evidence를 Practical Validation과 Final Review 판단 경로에 연결한다.
+- Analysis result:
+  - `app/services/backtest_temporal_validation.py`를 추가해 rolling portfolio return, benchmark return, excess return, strategy MDD, benchmark MDD, drawdown gap을 compact evidence로 계산한다.
+  - Practical Validation result가 `temporal_validation` evidence를 가지며, Validation Efficacy Audit이 `Walk-forward temporal validation` row를 읽는다.
+  - missing / short / proxy-only evidence는 `PASS`가 아니라 `NEEDS_INPUT` 또는 `REVIEW`로 남긴다.
+- Follow-up:
+  - 다음 task는 `oos-holdout-validation-contract-v1`로 in-sample / out-sample holdout evidence를 분리한다.
+
+### 2026-05-29 - Phase 10 source map chooses walk-forward contract first
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 10의 첫 task로 current Practical Validation / Robustness Lab / runtime replay / Final Review gate source map과 gap을 확인한다.
+- Analysis result:
+  - Practical Validation에는 runtime replay, embedded source curve, component curve, DB price proxy를 읽는 curve source hierarchy가 이미 있다.
+  - Runtime backtest에는 benchmark-aligned rolling / OOS metadata가 있지만, Validation Efficacy Audit과 Final Review gate에 explicit temporal validation row로 연결되지는 않았다.
+  - Robustness Lab rolling evidence는 존재하지만 benchmark-relative rolling excess row가 부족하다.
+- Follow-up:
+  - 다음 task는 `walkforward-split-contract-v1`로 compact benchmark-aligned walk-forward / rolling validation contract를 먼저 구현한다.
+
+### 2026-05-29 - Phase 10 opens for walk-forward / OOS / regime validation
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 9 closeout 이후 다음 hardening target인 walk-forward / out-of-sample / regime split validation을 공식 phase로 연다.
+- Analysis result:
+  - Phase 10 board를 `.aiworkspace/note/finance/phases/active/phase10-walkforward-oos-regime-validation/`에 생성했다.
+  - 이번 phase는 전체기간 백테스트 성과를 과대 신뢰하지 않도록 OOS / walk-forward / regime evidence를 Practical Validation과 Final Review gate에 연결하는 방향이다.
+  - 새 JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `walkforward-oos-source-map-v1`로 current Practical Validation / Robustness Lab / replay / result metadata source map과 gap을 확인한다.
+
+### 2026-05-29 - Phase 9 cost / slippage / liquidity realism closes
+- User request:
+  - Phase 9 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 9의 cost / turnover / net curve / liquidity / sensitivity / gate policy 변경을 통합 검증하고 closeout한다.
+- Analysis result:
+  - Phase 9 integrated QA passed: touched service compile, UI / engine boundary checker, full service contracts 90 tests, refinement hygiene, and diff check.
+  - Phase 9 closeout summary was added under `phases/done/`.
+  - This phase strengthened Backtest Realism and selected-route evidence gates without adding new JSONL registry, memo, preset, approval, order, or auto rebalance behavior.
+- Follow-up:
+  - Next hardening target is Phase 10 walk-forward / out-of-sample / regime split validation.
+
+### 2026-05-29 - Backtest realism gate policy surfaces row-level gaps
+- User request:
+  - Phase 9 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 9에서 추가한 Backtest Realism row-level gap이 Final Review selected-route gate에서 의도한 severity와 evidence로 보이게 한다.
+- Analysis result:
+  - `build_investability_gate_policy()`가 failing Backtest Realism Audit row criteria를 `backtest_realism` policy evidence에 병합한다.
+  - cost / slippage sensitivity와 liquidity row-level REVIEW는 review-required, NEEDS_INPUT은 blocker severity로 고정했다.
+  - 이 작업은 read-only gate evidence refinement이며 새 JSONL, memo, preset, waiver persistence, approval, order, auto rebalance를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `phase9-integrated-qa-closeout`으로 Phase 9 전체 통합 검증과 Phase 10 handoff를 정리한다.
+
+### 2026-05-29 - Cost / slippage sensitivity requires explicit evidence
+- User request:
+  - Phase 9 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism Audit이 단일 transaction cost bps나 일반 robustness sensitivity만으로 cost / slippage robustness를 PASS 처리하지 않게 한다.
+- Analysis result:
+  - `cost_slippage_sensitivity_contract_v1`과 `Cost / slippage sensitivity evidence` row를 추가했다.
+  - explicit cost / slippage sensitivity evidence만 PASS 후보이고, generic robustness-only sensitivity는 REVIEW, cost / net curve baseline missing은 NEEDS_INPUT으로 남긴다.
+  - 이 작업은 기존 validation payload를 읽는 read-only audit이며 새 JSONL, memo, preset, raw artifact, DB schema, provider fetch를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `backtest-realism-gate-policy-refinement-v1`로 selected-route gate severity를 Phase 9 보강 후 기준에 맞게 고정한다.
+
+### 2026-05-29 - Liquidity capacity evidence requires fresh official provider proof
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism Audit이 liquidity / capacity evidence를 legacy `PASS` 문자열이 아니라 provider coverage, freshness, source strength, capacity metric으로 판단하게 한다.
+- Analysis result:
+  - Provider operability context에 compact capacity metrics를 추가했다.
+  - Backtest Realism Audit에 `liquidity_capacity_contract_v1`을 추가해 fresh official actual evidence는 PASS 후보로 보고, stale / partial / bridge-proxy / legacy pass-only evidence는 REVIEW 또는 NEEDS_INPUT으로 남긴다.
+  - 이 작업은 기존 Ingestion -> DB -> Loader -> UI 흐름만 읽으며 새 JSONL, memo, preset, DB schema, UI direct fetch를 추가하지 않는다.
+- Follow-up:
+  - 다음 task는 `cost-slippage-sensitivity-audit-v1`로 cost / slippage sensitivity evidence 공백을 read-only audit으로 분리한다.
+
+### 2026-05-29 - Net cost curve proof separates applied cost from measurable impact
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - cost application proof와 turnover evidence가 실제 net result curve에 연결됐는지 더 직접적으로 확인한다.
+- Analysis result:
+  - `cost_application_status=applied_to_result_curve`만으로는 measurable cost impact를 증명하기 부족했다.
+  - Runtime metadata, candidate/history snapshot, Practical Validation source, Backtest Realism Audit에 compact `net_cost_curve_contract_v1`을 연결했다.
+  - measurable gross-net delta와 positive estimated-cost rows는 PASS 후보, zero-cost / turnover 미추정 / legacy flag only / missing proof는 REVIEW 또는 NEEDS_INPUT으로 해석한다.
+- Follow-up:
+  - 다음 task는 `liquidity-capacity-evidence-v1`로 DB provider / price 기반 liquidity와 capacity evidence를 강화한다.
+
+### 2026-05-29 - Turnover evidence separates holdings-derived estimates from cadence-only
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 거래비용 realism이 turnover 근거에 의존하므로, actual estimate와 cadence-only evidence를 분리한다.
+- Analysis result:
+  - Runtime turnover estimate는 holdings delta 기반이지만, holdings column이 없을 때도 audit이 강한 근거처럼 읽을 수 있는 공백이 있었다.
+  - `turnover_evidence_contract_v1`을 runtime metadata, source snapshot, Backtest Realism Audit에 연결했다.
+  - holdings-derived estimate는 PASS 후보, legacy estimate / cadence-only는 REVIEW, missing은 NEEDS_INPUT으로 해석한다.
+- Follow-up:
+  - 다음 task는 `net-cost-curve-application-v1`로 gross / net cost result curve proof를 더 명확히 연결한다.
+
+### 2026-05-29 - Cost model source contract distinguishes assumption from applied cost
+- User request:
+  - Phase 9 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism Audit이 transaction cost bps를 단순 가정과 실제 result curve 적용 증거로 구분하게 한다.
+- Analysis result:
+  - `_apply_transaction_cost_postprocess`는 이미 net `Total Balance` / `Total Return`을 만들고 있었지만, Practical Validation source snapshot이 그 적용 증거를 명시적으로 보존하지 못했다.
+  - Runtime metadata, source snapshot, Backtest Realism Audit에 compact `cost_model_source_contract_v1` 경계를 추가했다.
+  - 비용 bps만 있고 application proof가 없으면 `Transaction cost model` row는 `REVIEW`다.
+- Follow-up:
+  - 다음 task는 `turnover-rebalance-evidence-v1`로 turnover estimate와 cadence-only evidence를 더 분리한다.
+
+### 2026-05-29 - Phase 9 opens for cost / liquidity realism
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 8 closeout 이후 1차 hardening cycle의 다음 단계인 cost / slippage / turnover / liquidity realism을 공식 phase로 연다.
+- Analysis result:
+  - Phase 9 board를 `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`에 생성했다.
+  - 현재 Backtest Realism Audit은 cost / turnover / liquidity row를 갖고 있으나, cost assumption과 net-curve-applied proof를 더 분리해야 한다.
+  - Phase 9는 새 JSONL / memo / preset 저장이 아니라 existing metadata, DB provider / price snapshot, compact audit evidence를 우선 사용한다.
+- Follow-up:
+  - 다음 task는 `cost-model-source-contract-review-v1`로 current runtime / validation / audit cost source contract를 먼저 정리한다.
+
+### 2026-05-29 - Phase 8 lifecycle evidence hardening closes
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Phase 8 전체 lifecycle evidence path를 통합 검증하고 closeout / Phase 9 handoff를 정리한다.
+- Analysis result:
+  - Phase 8 closeout summary를 `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`에 추가했다.
+  - lifecycle schema / collectors / loader / ingestion wrapper / Data Coverage Audit compile check와 full service contracts가 통과했다.
+  - Phase 8은 complete이며, complete free historical membership feed는 residual risk로 남긴다.
+- Follow-up:
+  - 다음 hardening target은 Phase 9 cost / slippage / turnover / liquidity realism이다.
+
+### 2026-05-28 - Lifecycle audit scoring separates evidence strength
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Data Coverage Audit에서 lifecycle evidence가 어떤 종류의 근거인지 source semantics 기준으로 분리해 보여준다.
+- Analysis result:
+  - `app/services/backtest_data_coverage_audit.py`가 current snapshot, SEC identity cross-check, computed partial, actual coverage, actual non-covering, delisting actual symbol metrics를 분리한다.
+  - Universe / listing evidence와 Survivorship / delisting control row는 partial evidence class를 evidence string에 표시한다.
+  - `coverage_status=actual` requested-period coverage가 없으면 partial evidence는 계속 REVIEW다.
+- Follow-up:
+  - 다음 task는 `phase8-integrated-qa-closeout`으로 Phase 8 전체 lifecycle evidence path를 통합 검증하고 Phase 9 handoff를 정리한다.
+
+### 2026-05-28 - Computed snapshot lifecycle remains partial evidence
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - existing current snapshot lifecycle rows를 반복 관찰 근거로 요약하되, absence / disappearance를 delisting proof로 과대 해석하지 않는다.
+- Analysis result:
+  - `finance/data/computed_lifecycle.py` collector와 `run_collect_computed_snapshot_lifecycle()` job wrapper를 추가했다.
+  - computed row는 `source_type=computed_from_snapshots`, `coverage_status=partial`, `event_type=historical_membership`로 저장된다.
+  - Data Coverage Audit은 lifecycle row가 requested period를 덮더라도 `coverage_status=actual`이 아니면 survivorship PASS로 보지 않는다.
+- Follow-up:
+  - 다음 task는 `lifecycle-audit-scoring-v1`로 partial snapshot / identity cross-check / computed partial / actual evidence를 audit scoring에서 더 분명히 분리한다.
+
+### 2026-05-28 - SEC CIK exchange crosscheck becomes DB lifecycle identity evidence
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - SEC current CIK / ticker / exchange association을 lifecycle identity 보조 evidence로 DB에 연결한다.
+- Analysis result:
+  - `finance/data/sec_company_tickers.py` collector와 `run_collect_sec_company_ticker_crosscheck()` job wrapper를 추가했다.
+  - SEC `company_tickers_exchange.json` row는 `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed`로 저장되고 CIK는 `related_cik`에 저장된다.
+  - 이 row는 identity cross-check evidence이며 historical membership PASS, delisting proof, ticker action proof로 해석하지 않는다.
+- Follow-up:
+  - 다음 task는 `computed-snapshot-lifecycle-v1`로 repeated current snapshot 기반 computed lifecycle evidence 조건을 보수적으로 설계한다.
+
+### 2026-05-28 - Symbol Directory snapshots become DB lifecycle evidence
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Source review에서 정한 public Nasdaq Symbol Directory current files를 DB-backed lifecycle evidence로 적재한다.
+- Analysis result:
+  - `finance/data/symbol_directory.py` collector와 `run_collect_symbol_directory_snapshots()` job wrapper를 추가했다.
+  - `nasdaqlisted.txt` / `otherlisted.txt` row는 `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed`로 저장된다.
+  - 이 row는 current snapshot evidence이며 historical membership PASS, delisting proof, ticker action proof로 해석하지 않는다.
+- Follow-up:
+  - 다음 task는 `sec-cik-exchange-crosscheck-v1`로 SEC current CIK / ticker / exchange association을 lifecycle identity 보조 evidence로 연결한다.
+
+### 2026-05-28 - Phase 8 source review chooses public current snapshot path first
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - historical membership / ticker action source 후보를 확인하고, 무료 / 공식 source 우선 원칙에 맞는 다음 구현 대상을 정한다.
+- Analysis result:
+  - Nasdaq Daily List는 new listings, delistings, symbol/name changes 같은 corporate action source로 가장 강하지만 subscription / approval product이므로 parking lot으로 분리했다.
+  - Nasdaq public Symbol Directory `nasdaqlisted.txt` / `otherlisted.txt`는 current snapshot source로 바로 접근 가능하고, `listing_observed` partial lifecycle evidence를 DB에 적재하는 다음 구현 대상으로 적합하다.
+  - SEC company ticker / exchange file과 Submissions API는 CIK / exchange / former-name 보조 source로 유용하지만 complete historical membership proof는 아니다.
+- Follow-up:
+  - 다음 task는 `symbol-directory-snapshot-ingestion-v1`로 public current symbol directory rows를 `nyse_symbol_lifecycle`에 DB-backed partial evidence로 적재한다.
+
+### 2026-05-28 - Phase 8 starts with lifecycle event semantics
+- User request:
+  - 1차 hardening cycle을 목표로 Phase 8 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 0~7 완료 이후 남은 데이터 evidence 약점을 Phase 8로 공식화하고, lifecycle / survivorship 근거 강화의 첫 구현 slice를 진행한다.
+- Analysis result:
+  - Phase 8 board를 열고 `symbol-lifecycle-event-fields-v1`을 구현했다.
+  - `nyse_symbol_lifecycle`은 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있고, current listing row는 `listing_observed`, SEC Form 25 row는 `delisting` event로 저장된다.
+  - 이 변경은 lifecycle source semantics를 명확히 하는 DB-backed evidence 작업이며, 새 JSONL / memo / preset / approval / order / rebalance 동작을 추가하지 않았다.
+- Follow-up:
+  - 다음 Phase 8 task는 `historical-membership-source-review-v1`로 free / official historical membership 또는 ticker action source 후보를 확인한다.
+
+### 2026-05-28 - SEC Form 25 collector should be reachable from Ingestion
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 이미 구현된 SEC Form 25 delisting collector를 실제 운영 화면에서 수동 실행할 수 있게 한다.
+- Analysis result:
+  - `Workspace > Ingestion > Practical Validation Provider Snapshots`에 `Delisting Evidence` tab을 추가했다.
+  - 이 tab은 symbol list와 SEC user-agent override를 받아 기존 `collect_sec_form25_delistings` job wrapper를 실행한다.
+  - Form 25 부재는 active proof가 아니며 complete historical membership은 별도 source가 필요하다는 경고를 화면에 남겼다.
+- Follow-up:
+  - 다음 개선 후보는 더 완전한 historical listing membership source 또는 cost / turnover 실측 근거 수집이다.
+
+### 2026-05-28 - SEC Form 25 can seed actual delisting evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Historical lifecycle table을 만들었으므로, 이제 무료 공식 source로 실제 delisting evidence를 채운다.
+- Analysis result:
+  - SEC `company_tickers.json`와 submissions API를 사용해 Form 25 / 25-NSE filing metadata를 수집하는 collector를 추가했다.
+  - 수집 row는 `nyse_symbol_lifecycle`에 `source_type=delisting_feed`, `coverage_status=actual`, `listing_status=delisted`로 UPSERT된다.
+  - Form 25는 delisting evidence이며, Form 25 부재는 active proof가 아니고 first listing date도 제공하지 않는다.
+- Follow-up:
+  - 다음 개선 후보는 Ingestion UI 연결, 더 완전한 historical listing membership source, 또는 cost / turnover 실측 근거 수집이다.
+
+### 2026-05-28 - Survivorship control needs DB-backed lifecycle evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Data Coverage gate가 약한 evidence를 막게 됐으므로, 이제 survivorship / historical universe 근거 자체를 DB-backed로 받을 수 있게 만든다.
+- Analysis result:
+  - `nyse_symbol_lifecycle` schema, NYSE listing lifecycle UPSERT path, `load_symbol_lifecycle_coverage_summary`, Data Coverage Audit 연결을 추가했다.
+  - requested period를 덮는 `historical_listing`, `delisting_feed`, `computed_from_snapshots` lifecycle evidence가 있을 때만 survivorship control PASS가 된다.
+  - current listing snapshot과 asset profile만 있는 경우는 여전히 REVIEW다.
+- Follow-up:
+  - 다음 작업은 실제 historical delisting source backfill 또는 cost / turnover 실측 근거 보강이 적절하다.
+
+### 2026-05-28 - Integrated investability gate needs combination QA
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 개별 audit gate 연결 이후, 세 audit과 기존 provider / robustness / paper observation / final evidence gate가 함께 작동할 때 selected-route가 잘못 열리거나 보류 판단까지 막히지 않는지 확인한다.
+- Analysis result:
+  - Integrated gate QA contract를 추가했다.
+  - all-ready 조합은 selected-route를 허용하고, multi-review 조합은 `INVESTABILITY_PACKET_NEEDS_REVIEW`로 selected-route만 차단하며, multi-blocker 조합은 `INVESTABILITY_PACKET_BLOCKED`로 selected-route를 차단한다.
+  - 이 작업은 새 저장소, memo, preset, approval, order, auto rebalance를 추가하지 않았다.
+- Follow-up:
+  - 다음 큰 개선은 historical universe / delisting source, survivorship control, 또는 cost / turnover 실측 근거처럼 실제 데이터 소스 자체를 보강하는 작업이다.
+
+### 2026-05-28 - Data coverage audit should affect selected-route gate
+- User request:
+  - 추천 순서대로 작업 진행을 요청함.
+- Interpreted goal:
+  - Data Coverage Audit을 단순 표시가 아니라 최종 선정 조건에 반영한다.
+- Analysis result:
+  - `data_coverage` gate group을 추가했다.
+  - `DATA_COVERAGE_NEEDS_INPUT` / `DATA_COVERAGE_BLOCKED`는 selected-route blocker로 처리하고, `DATA_COVERAGE_REVIEW`는 review-required로 처리한다.
+  - 보류 / 거절 / 재검토 판단은 계속 기록 가능하며, 새 저장 기능이나 실거래 동작은 추가하지 않았다.
+- Follow-up:
+  - 다음 작업은 Integrated Investability Gate QA로 validation efficacy, data coverage, backtest realism, 기존 provider / robustness / paper observation gate가 함께 작동하는지 점검하는 것이다.
+
+### 2026-05-28 - Data coverage needs explicit DB-backed audit evidence
+- User request:
+  - 추천 순서대로 작업 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism gate 연결 이후 PIT / survivorship / universe evidence를 DB-backed 근거로 더 명확히 확인한다.
+- Analysis result:
+  - `data_coverage_audit_v1`을 추가했다.
+  - Audit은 DB price window coverage, provider freshness, PIT replay / period coverage, universe listing, survivorship / delisting control, storage boundary를 분리한다.
+  - Current listing / asset profile row는 historical universe evidence가 아니므로 survivorship PASS로 보지 않는다.
+  - 새 JSONL registry, memo, preset, approval, order, auto rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 선택지는 Data Coverage Audit을 selected-route gate policy에 연결하거나, historical universe / survivorship source 자체를 더 강하게 수집하는 것이다.
+
+### 2026-05-28 - Backtest realism audit should affect selected-route gate
+- User request:
+  - 추천 순서대로 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 둘 다 해야 하는 작업 중 먼저 작은 안전장치인 Backtest Realism Gate 연결을 완료한다.
+- Analysis result:
+  - `backtest_realism` gate group을 추가했다.
+  - `BACKTEST_REALISM_NEEDS_INPUT` / `BACKTEST_REALISM_BLOCKED`는 selected-route blocker로 처리하고, `BACKTEST_REALISM_REVIEW`는 review-required로 처리한다.
+  - 보류 / 거절 / 재검토 판단은 계속 기록 가능하며, 새 저장 기능이나 실거래 동작은 추가하지 않았다.
+- Follow-up:
+  - 다음 작업은 Data Coverage Hardening으로 PIT / survivorship / universe evidence를 DB-backed로 보강하는 것이다.
+
+### 2026-05-28 - Backtest realism gap should be visible before selection
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 검증 효력 gate 다음으로, 백테스트 성과가 실제 투자 환경의 비용 / turnover / liquidity / execution 가정을 충분히 반영했는지 확인할 수 있어야 함.
+- Analysis result:
+  - `backtest_realism_audit_v1`은 기존 result metadata와 compact validation evidence만 읽어 transaction cost, turnover, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 분리한다.
+  - Practical Validation, Final Review, investability packet, saved final decision evidence row가 같은 audit을 읽는다.
+  - 새 DB write, JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않았다.
+- Follow-up:
+  - Backtest Realism gate 연결은 완료됐다. 다음은 Data Coverage Hardening으로 PIT / survivorship evidence를 DB-backed로 보강한다.
+
+### 2026-05-28 - Validation efficacy audit should affect selected-route gate
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 직전 audit board를 단순 표시에서 끝내지 않고 실전 후보 선정 조건에 반영한다.
+- Analysis result:
+  - `validation_efficacy` gate group을 추가했다.
+  - `VALIDATION_EFFICACY_NEEDS_INPUT` / `VALIDATION_EFFICACY_BLOCKED`는 selected-route blocker로 처리하고, `VALIDATION_EFFICACY_REVIEW`는 review-required로 처리한다.
+  - 보류 / 거절 / 재검토 판단은 계속 기록 가능하며, 새 저장 기능이나 실거래 동작은 추가하지 않았다.
+- Follow-up:
+  - 다음 개선은 Backtest Realism Hardening 또는 Data Coverage Hardening 중 하나가 적절하다.
+
+### 2026-05-28 - Validation efficacy must be visible before final selection
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Practical Validation / Final Review의 검증 효력을 높이되, 새 memo / preset / monitoring storage를 늘리지 않는다.
+- Analysis result:
+  - `validation_efficacy_audit_v1`은 기존 compact validation evidence만 읽어 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution/storage boundary를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 분리한다.
+  - missing runtime replay, stale / missing provider evidence, 명시되지 않은 survivorship evidence는 pass로 추론하지 않는다.
+  - 새 DB write, JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 결정은 Validation Efficacy audit을 selected-route gate policy에 연결할지, 또는 Backtest Realism / Data Coverage hardening으로 넘어갈지다.
+
+### 2026-05-28 - Practical Validation V2 P3 selected monitoring can close out
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 새 기능 추가보다 P3 전체가 read-only selected monitoring 흐름으로 연결됐는지 확인하고 다음 큰 개선으로 넘어갈 준비를 한다.
+- Analysis result:
+  - P3 closeout QA에서 continuity, recheck comparison, recheck readiness, symbol freshness, selected provider evidence가 하나의 Selected Dashboard 흐름으로 연결된 것을 확인했다.
+  - service contract 46개, UI / engine boundary helper, selected dashboard append-path scan이 통과했다.
+  - provider 수집, JSONL 자동 저장, monitoring log 자동 저장, memo/preset 저장, approval/order/rebalance는 추가되지 않았다.
+- Follow-up:
+  - 다음 개선은 P3 연장이 아니라 Validation Efficacy Hardening, Backtest Realism Hardening, Data Coverage Hardening 중 하나를 새 task / phase로 여는 것이 맞다.
+
+### 2026-05-28 - Selected Dashboard should show provider evidence after selection
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 선정 이후 성과 재검증 전후로 ETF provider / holdings / exposure 근거도 현재 selected portfolio 기준으로 확인한다.
+- Analysis result:
+  - `selected_provider_evidence_v1`은 selected component ticker weight를 만들고 기존 DB provider context를 read-only로 읽는다.
+  - Provider `NOT_RUN`, partial coverage, stale evidence, replay contract fallback은 pass로 숨기지 않고 `NEEDS_DATA` 또는 `REVIEW`로 표시한다.
+  - provider 수집, JSONL 저장, monitoring log 저장, memo/preset 저장, approval/order/rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 후보는 Practical Validation V2 P3 closeout QA 또는 remaining selected monitoring gap 점검이다.
+
+### 2026-05-28 - Selected Dashboard should show symbol-level price freshness before recheck
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Recheck Readiness 다음으로 ticker별 DB 가격 최신성을 확인해 최신 recheck의 검증 효력을 높인다.
+- Analysis result:
+  - `selected_recheck_symbol_freshness_v1`은 selected component replay payload의 portfolio ticker와 benchmark ticker를 모아 DB latest date / row count / lag를 read-only로 표시한다.
+  - Missing symbol은 `SYMBOL_FRESHNESS_MISSING`, stale symbol은 `SYMBOL_FRESHNESS_STALE`로 보이며 pass로 숨기지 않는다.
+  - OHLCV 수집, DB write, monitoring log 저장, memo/preset 저장, approval/order/rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 후보는 provider-level selected monitoring evidence 또는 Practical Validation V2 P3 closeout QA다.
+
+### 2026-05-28 - Selected Dashboard should show recheck readiness before execution
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - P3 selected monitoring의 검증 효력을 높이되, 새 저장 기능을 늘리지 않아야 함.
+- Analysis result:
+  - `selected_recheck_readiness_v1`은 DB latest market date, selected component replay contract, default period, execution/storage boundary를 read-only로 확인한다.
+  - Candidate replay contract 누락은 `BLOCKED`, DB latest market date 미확인은 `NEEDS_DATA`로 표시한다.
+  - 데이터 수집, monitoring log 저장, memo/preset 저장, approval/order/rebalance는 추가하지 않았다.
+- Follow-up:
+  - 더 깊은 다음 후보는 symbol-level DB freshness 또는 provider-level selected monitoring evidence다.
+
+### 2026-05-28 - Selected Dashboard recheck result must be compared to the original baseline
+- User request:
+  - Continue the next phase after clarifying that memo-like / preset-like / automatic monitoring storage should be avoided.
+- Interpreted goal:
+  - Improve post-selection verification without adding another JSONL or user memo storage feature.
+- Analysis result:
+  - Implemented `selected_recheck_comparison_v1` as a read-only model that compares latest Performance Recheck result with Final Review baseline.
+  - Missing or failed Performance Recheck is `NEEDS_INPUT`, not pass; breached CAGR / MDD / benchmark spread routes to re-review.
+- Follow-up:
+  - Next useful work should focus on DB-backed verification evidence gaps, not user-facing recordkeeping.
+
+### 2026-05-28 - Selected Dashboard needs a continuity check before monitoring
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Practical Validation V2 P3의 첫 slice로 Final Review selected row가 Selected Dashboard monitoring에 필요한 근거를 갖췄는지 확인해야 함.
+- Analysis result:
+  - `practical-validation-v2-p3-continuity-check` task를 열고 구현했다.
+  - Selected Dashboard는 selected route, investability packet, component target, review trigger, monitoring timeline, Performance Recheck input, execution / storage boundary를 read-only continuity check로 표시한다.
+  - Performance Recheck 미실행은 `NEEDS_INPUT`으로 보이며 pass처럼 숨기지 않는다.
+  - monitoring log 자동 저장, live approval, broker order, auto rebalance는 계속 비활성이다.
+- Follow-up:
+  - Recheck evidence 비교는 다음 P3 slice에서 read-only로 구현한다.
+
+### 2026-05-28 - Practical Validation V2 P2 is closed out
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Investability foundation 이후 남은 carry-forward 중 Practical Validation V2 P2 closeout 가능 여부를 실제 검증 결과로 확정해야 함.
+- Analysis result:
+  - `practical-validation-v2` task의 P2-7 QA를 완료 처리했다.
+  - Service contract, py_compile, UI-engine boundary check가 통과했다.
+  - P2 기준은 모든 provider 완전 지원이 아니라 actual / bridge / proxy / `NOT_RUN` origin을 명확히 표시하고 Final Review가 그 gap을 판단 근거로 읽는 것이다.
+  - full holdings / full macro / raw provider payload는 JSONL에 저장하지 않는 경계를 유지한다.
+- Follow-up:
+  - 다음 후보는 P3 범위를 열어 Final Review handoff QA와 Selected Portfolio Dashboard monitoring 연결을 정리하는 것이다.
+
+### 2026-05-28 - Structured waiver is not a pass
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - critical gap을 예외 처리할 수 있는지 여부를 구현 전에 정책으로 정해야 함.
+- Analysis result:
+  - `structured-waiver-policy-v1` task를 열고 documentation-only 정책을 확정했다.
+  - 현재 구현은 `waiver_supported=False`를 유지한다.
+  - `BLOCK` severity는 waiver 불가이고, future waiver는 일부 `REVIEW_REQUIRED` gap에만 expiry / review trigger / scope를 가진 구조화 snapshot으로 검토할 수 있다.
+  - 새 waiver JSONL registry나 free-form memo 저장은 허용하지 않는다.
+- Follow-up:
+  - Practical Validation V2 P2 closeout은 이후 완료됐다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.
+
+### 2026-05-28 - Investability foundation implementation track is complete
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 계획된 구현 task가 끝난 phase를 계속 확장하지 말고 완료 상태와 다음 의사결정을 분리해야 함.
+- Analysis result:
+  - `investability-decision-foundation-closeout` task를 열고 closeout을 문서화했다.
+  - Phase status는 implementation complete로 정리했고, concise done summary를 `phases/done/investability-decision-foundation.md`에 추가했다.
+  - Main storage chain은 `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`로 유지된다.
+- Follow-up:
+  - `structured-waiver-policy-v1`과 Practical Validation V2 P2 closeout은 이후 완료됐다.
+
+### 2026-05-28 - Final decision evidence는 read-only dossier로 묶는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 최종 판단 근거를 여러 화면에서 흩어 읽지 않고, 사람이 읽는 handoff 문서로 확인할 수 있어야 함.
+- Analysis result:
+  - `decision-dossier-report-v1` task를 열고 구현했다.
+  - `build_decision_dossier`는 saved Final Review row와 optional Selected Dashboard monitoring timeline을 `decision_dossier_v1` read model과 markdown string으로 묶는다.
+  - Final Review saved record와 Selected Dashboard는 dossier markdown을 표시 / 다운로드할 수 있다.
+  - Dossier는 자동 report file write, monitoring log append, live approval, broker order, auto rebalance를 하지 않는다.
+- Follow-up:
+  - phase의 계획된 구현 task는 완료됐다. 다음은 phase closeout 또는 structured waiver policy 허용 여부 결정이다.
+
+### 2026-05-28 - Selected monitoring은 read-only timeline으로 읽는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - selected 이후 상태 변화를 새 자동 저장 없이 시간순으로 확인할 수 있어야 함.
+- Analysis result:
+  - `selected-monitoring-timeline-v1` task를 열고 구현했다.
+  - Selected Dashboard Timeline은 Final Review selection, evidence gate snapshot, Performance Recheck, Actual Allocation drift, Review trigger preview를 compact row로 묶는다.
+  - Missing Performance Recheck는 `NEEDS_INPUT`이며, Actual Allocation과 alert preview는 입력이 있을 때만 반영되는 optional session-state evidence다.
+  - Timeline은 `read_only_timeline`이고 `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`를 자동 append하지 않는다.
+- Follow-up:
+  - 다음 후보는 final decision evidence를 사람이 읽는 dossier / export contract로 묶는 `decision-dossier-report-v1`이다.
+
+### 2026-05-28 - Robustness evidence는 compact lab board로 읽는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - stress / rolling / sensitivity / overfit 근거를 새 저장소 없이 Final Review에서 더 직접적으로 읽을 수 있어야 함.
+- Analysis result:
+  - `robustness-lab-v1` task를 열고 구현했다.
+  - Practical Validation result의 `robustness_validation.robustness_lab_board`에 compact summary / detail / follow-up row를 추가했다.
+  - Practical Validation, Final Review, final decision evidence read model이 같은 board를 읽는다.
+  - Raw run history와 strategy-specific perturbation artifact는 workflow JSONL에 저장하지 않는다.
+- Follow-up:
+  - 다음 후보는 `selected-monitoring-timeline-v1`로 selected 이후 review signal을 자동 저장 없이 더 잘 읽게 만드는 것이다.
+
+### 2026-05-28 - Look-through evidence는 compact board로 읽는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - holdings / exposure raw row를 저장하지 않고도 Final Review에서 실제 underlying 노출을 확인할 수 있어야 함.
+- Analysis result:
+  - `look-through-exposure-board-v1` task를 열고 구현했다.
+  - Provider context에 compact `look_through_board`를 추가해 asset bucket, top holding, top overlap, ETF별 coverage를 표시한다.
+  - Practical Validation과 Final Review는 같은 board를 읽고, board는 `provider_coverage` 안에만 보존해 top-level 중복 저장을 피한다.
+- Follow-up:
+  - 다음 후보는 `robustness-lab-v1`로 stress / sensitivity / overfit 근거를 더 실행 가능한 surface로 만드는 것이다.
+
+### 2026-05-28 - Provider evidence는 출처와 freshness를 함께 봐야 한다
+- User request:
+  - Investability Decision Foundation의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 새 저장소를 만들지 않고 DB-backed provider / macro evidence가 실제 판단에 충분한지 source / freshness / coverage로 더 엄격히 읽어야 함.
+- Analysis result:
+  - `data-provenance-coverage-v1` task를 열고 provider context schema v2를 구현했다.
+  - ETF operability / holdings / exposure context는 source mix, coverage status weight, as-of range, collected range, stale symbols, stale weight를 compact provenance로 제공한다.
+  - Macro context는 source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
+  - stale ETF provider snapshot은 pass가 아니라 `REVIEW`로 낮춘다.
+- Follow-up:
+  - 다음 구현은 `look-through-exposure-board-v1`로 holdings / exposure coverage를 사용자가 더 직접적으로 확인하게 만든다.
+
+### 2026-05-28 - 새 저장은 stage handoff 또는 명시적 재사용일 때만 추가한다
+- User request:
+  - Investability Decision Foundation의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 의미 없는 JSONL 저장과 사용자 memo 저장이 다시 늘어나지 않도록, 기존 저장 지점을 먼저 분류해야 함.
+- Analysis result:
+  - `storage-governance-audit-v1` task를 열고 JSONL / artifact write surface를 감사했다.
+  - main source chain은 `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`로 유지한다.
+  - legacy candidate / proposal / paper registry는 보존하지만 main flow 의존성을 늘리지 않는다.
+  - raw provider / holdings / macro data는 DB에 두고 workflow JSONL에는 compact evidence만 남긴다.
+- Follow-up:
+  - 다음 구현은 `data-provenance-coverage-v1`로 provider / macro / holdings evidence의 source / freshness / coverage를 강화한다.
+
+### 2026-05-28 - Final Review selected route는 profile-aware gate policy를 통과해야 한다
+- User request:
+  - Phase 0 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - V1 evidence packet을 더 명시적인 gate policy matrix로 강화하고, selected route가 어떤 이유로 차단되는지 Final Review에서 설명해야 함.
+- Analysis result:
+  - `validation-gate-hardening-v1` task를 열고 구현했다.
+  - `app/services/backtest_evidence_read_model.py`에 profile-aware `gate_policy_snapshot`을 추가했다.
+  - Final Review는 `Validation Gate Policy` 표를 표시하고, final decision row에는 compact policy snapshot만 저장한다.
+  - 새 JSONL registry, waiver UI, DB schema, crawler는 추가하지 않았다.
+- Follow-up:
+  - 다음 후보는 기존 JSONL 저장 흐름을 점검하는 `storage-governance-audit-v1` 또는 provider / macro / holdings provenance를 강화하는 `data-provenance-coverage-v1`이다.
+
+### 2026-05-28 - Investability workflow hardening starts with Phase 0 policy
+- User request:
+  - Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 투자 검토에 더 가깝게 만들기 위한 큰 개발 흐름 진행을 승인함.
+- Interpreted goal:
+  - 바로 기능을 늘리기보다, 의미 없는 JSONL 저장을 막고, critical `NOT_RUN` / proxy evidence / provider coverage / 데이터 수집 경계를 먼저 고정해야 함.
+- Analysis result:
+  - 새 active phase `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`를 열었다.
+  - Phase 0 기본 정책은 새 JSONL registry와 사용자 memo 저장을 피하고, raw provider / holdings / macro data는 DB에 두며, UI는 remote source를 직접 fetch하지 않는 것이다.
+  - `investability-evidence-packet-v1`은 이 phase의 첫 landed slice로 편입했고, 후속 task는 `validation-gate-hardening-v1`이다.
+- Follow-up:
+  - structured waiver 허용 여부, profile별 critical diagnostic matrix, paper observation 필수 여부를 다음 gate hardening task에서 확정한다.
 
 ### 2026-05-30 - Market Movers 2차 개선은 coverage별 자동갱신과 momentum context로 좁힌다
 - User request:
@@ -5427,6 +6313,103 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 서비스 계약 테스트에 canonical path contract를 추가했고, Browser smoke에서 Overview가 실제 JSONL 카운트와 Top 3 후보를 표시하는 것을 확인했다
 
+### 2026-05-28 - 실전 투자 판단 workflow의 약점과 개선 방향을 먼저 정리한다
+- User request:
+  - 사용자가 현재 Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름이 실전 투자에는 부족하다고 보고, 상용 프로젝트와 비교해 약점 / 근거 / 개선 방향을 먼저 정리해 달라고 요청함
+- Interpreted goal:
+  - 바로 개발하지 않고 product direction research bundle을 열어 현재 약점, 외부 benchmark pattern, 기능 후보, 추천 가이드라인을 정리해야 함
+- Analysis result:
+  - 현재 흐름은 유지하되 `Investability Evidence Packet`, stricter validation gate, assumptions / limitations disclosure, source-of-truth breadcrumb를 먼저 만드는 것이 가장 높은 우선순위다
+  - broker 연결, live approval, auto rebalance는 현재 경계 밖으로 유지한다
+- Follow-up:
+  - 산출물은 `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/RECOMMENDATION.md`와 관련 bundle 문서에서 이어서 보면 된다
+
+### 2026-05-28 - Final Review에서 investability evidence packet을 먼저 구현한다
+- User request:
+  - 사용자가 앞서 정리한 큰 개발 흐름을 실제 작업으로 진행해 달라고 요청함
+- Interpreted goal:
+  - 새 JSONL 저장소나 사용자 메모 저장 기능을 늘리지 않고, Final Review의 판단 근거와 selected-route gate를 먼저 강화해야 함
+- Analysis result:
+  - 기존 validation / robustness / paper observation evidence를 Streamlit-free packet read model로 묶고, critical gap이 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장을 차단하는 V1이 가장 작은 안전한 구현 단위다
+- Follow-up:
+  - 구현 기록과 검증 결과는 `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`에서 확인한다
+
+### 2026-05-29 - Selected Dashboard recheck 전 preflight를 하나로 묶는다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Performance Recheck 실행 전 readiness와 symbol freshness가 따로 보이는 문제를 하나의 read-only operations preflight로 정리해야 함
+- Analysis result:
+  - Final Review embedded replay contract를 우선 사용하고 Current Candidate Registry를 fallback으로 쓰는 source priority가 필요하다
+  - stale / missing price, missing replay contract, DB latest date error는 ready가 아니며 각각 review / needs data / blocked로 드러나야 한다
+- Follow-up:
+  - `selected_recheck_operations_preflight_v1`을 구현했고, 다음은 selected provider evidence staleness / coverage contract다
+
+### 2026-05-29 - Selected provider evidence의 stale / partial 상태를 PASS에서 분리한다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Selected Dashboard의 provider evidence가 오래되었거나 부분 coverage일 때도 충분한 근거처럼 보이는 문제를 차단해야 함
+- Analysis result:
+  - freshness date, source type, coverage mode, coverage weight, required evidence area를 하나의 staleness contract로 묶는 것이 가장 작은 read-only 강화 단위다
+  - missing required provider area와 partial / stale evidence는 투자 가능 근거가 아니라 review 또는 needs input으로 표시되어야 한다
+- Follow-up:
+  - `selected_provider_evidence_staleness_contract_v1`을 구현했고, 다음은 recheck comparison review signal policy다
+
+### 2026-05-29 - Review Signals의 성과 threshold owner를 Recheck Comparison으로 고정한다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Review Signals와 Recheck Comparison이 CAGR / MDD / benchmark spread threshold를 중복 계산하지 않게 해야 함
+- Analysis result:
+  - Review Signals는 signal board이고, 성과 약화 판단의 policy owner는 Recheck Comparison으로 두는 것이 맞다
+  - preflight / provider / comparison route를 하나의 read-only signal board로 묶으면 missing, stale, partial, failed recheck가 Clear로 숨지 않는다
+- Follow-up:
+  - `selected_review_signal_policy_v1`을 구현했고, 다음은 allocation drift evidence boundary다
+
+### 2026-05-29 - Dossier / Continuity / Timeline source를 같은 Final Decision V2 row로 고정한다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Decision Dossier, Continuity, Timeline, Review Signals가 서로 다른 source처럼 보이거나 session evidence를 durable monitoring history처럼 보이게 하는 gap을 줄여야 함
+- Analysis result:
+  - 새 저장소가 아니라 read model metadata로 `selected_decision_source_consistency_v1`을 붙이는 것이 가장 작은 안전한 구현 단위다
+  - timeline source contract가 현재 selected decision row와 다르면 Continuity는 blocked issue로 표시해야 한다
+- Follow-up:
+  - 12-6 구현은 완료했고, 다음은 Phase 12 integrated QA / closeout이다
+
+### 2026-05-29 - Phase 12는 통합 QA 후 완료 상태로 닫는다
+- User request:
+  - 사용자가 Phase 12 다음 단계 진행을 요청함
+- Interpreted goal:
+  - 12-1부터 12-6까지의 selected monitoring / recheck operations hardening이 전체 검증과 문서 closeout을 통과해야 함
+- Analysis result:
+  - compile, full service contracts, UI / engine boundary, finance hygiene, diff, storage boundary checks를 통과하면 Phase 12는 완료로 볼 수 있다
+  - 다음 작업은 새 구현이 아니라 Phase 8-12 1차 hardening cycle 전체를 정리하는 Phase 13 closeout으로 넘기는 것이 맞다
+- Follow-up:
+  - Phase 12 closeout summary를 `phases/done/`에 남기고 roadmap / index를 Phase 13 next target으로 갱신했다
+
+### 2026-05-29 - Phase 13은 1차 hardening cycle closeout board로 연다
+- User request:
+  - 사용자가 Phase 13 작업 진행을 요청함
+- Interpreted goal:
+  - Phase 8~12 약점 개선 결과를 하나의 1차 사이클로 검증 / 정리하는 마지막 phase를 시작해야 함
+- Analysis result:
+  - 바로 새 기능을 추가하기보다 improvement inventory, gate QA, storage audit, docs / runbook sync, residual risk triage, final closeout 순서로 진행하는 것이 맞다
+  - broker/account/order/auto rebalance와 memo-like storage는 Phase 13 범위 밖으로 유지한다
+- Follow-up:
+  - Phase 13 board를 열었고 다음 작업은 `phase13-cycle-inventory-v1`이다
+
+### 2026-05-30 - Backtest Analysis는 Stage와 검증 체크포인트를 분리해서 읽는다
+- User request:
+  - 사용자가 Backtest Analysis 결과 화면에서 Runtime Payload, Data Trust, Practical Validation handoff, Real-Money의 legacy 단계 표현이 혼란스럽다고 지적하고 1~6단계 개선을 요청함
+- Interpreted goal:
+  - 새 저장 기능을 늘리지 않고, Backtest Analysis를 후보 생성 화면답게 정리하며 검증 기준은 `검증 체크포인트` 언어로 분리해야 함
+- Analysis result:
+  - `Stage`는 Backtest Analysis / Practical Validation / Final Review / Selected Dashboard로 유지하고, Result Integrity / Candidate Readiness 같은 검증 기준은 별도 checkpoint로 표시하는 것이 맞다
+  - Practical Validation handoff는 검증 metric이 아니라 Next Action으로 배치해야 한다
+- Follow-up:
+  - 구현 기록은 `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`에서 확인한다
 ### 2026-05-28 - Overview를 market intelligence entry point로 바꿀 수 있는지 조사한다
 - User request:
   - 사용자가 Overview에 일/주/月 top movers, 월별 sector / industry Top N, FOMC/earnings calendar 탭을 넣을 수 있는지 개발 전 조사와 청사진을 요청함

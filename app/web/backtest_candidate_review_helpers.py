@@ -211,14 +211,14 @@ def _candidate_review_next_step(row: dict[str, Any]) -> str:
     deployment = str(result.get("deployment") or "").strip().lower()
 
     if record_type == "current_candidate" and promotion == "real_money_candidate":
-        return "Compare에서 다른 family 후보와 같이 본 뒤, 유지 후보라면 Candidate Review 안에서 Pre-Live 운영 상태를 기록합니다."
+        return "Portfolio Mix Builder에서 다른 family 후보와 같이 본 뒤, 유지 후보라면 Candidate Review 안에서 Pre-Live 운영 상태를 기록합니다."
     if record_type == "near_miss":
-        return "낙폭을 줄이는 대안이 필요한 상황에서 Compare로 주 후보와 비교합니다. 기본 후보로 자동 승격하지 않습니다."
+        return "낙폭을 줄이는 대안이 필요한 상황에서 Portfolio Mix Builder로 주 후보와 같이 검토합니다. 기본 후보로 자동 승격하지 않습니다."
     if record_type == "scenario":
         return "설정 차이를 확인하는 비교 대상으로 사용합니다. 필요할 때만 Pre-Live 후보로 넘깁니다."
     if shortlist == "watchlist" or deployment == "review_required":
         return "Watchlist 후보로 두고 다음 비교나 데이터 업데이트 후 재검토합니다."
-    return "후보 역할과 Real-Money 신호를 확인한 뒤 compare 또는 Pre-Live 운영 기록 중 하나로 넘깁니다."
+    return "후보 역할과 Real-Money 신호를 확인한 뒤 Portfolio Mix Builder 또는 Pre-Live 운영 기록 중 하나로 넘깁니다."
 
 
 def _build_candidate_review_board_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -294,8 +294,8 @@ def _build_candidate_board_operating_evaluation(row: dict[str, Any]) -> dict[str
         next_action = "Candidate Review 안에서 paper tracking / watchlist / hold 같은 운영 상태를 저장합니다."
     elif can_move_to_compare:
         route_label = "COMPARE_REVIEW_READY"
-        verdict = "Candidate Packaging 확인 완료: Compare에서 다시 비교할 후보"
-        next_action = "Compare 후보 선택 목록에서 비교할 다른 후보를 추가한 뒤 실행합니다."
+        verdict = "Candidate Packaging 확인 완료: Portfolio Mix Builder에서 다시 검토할 후보"
+        next_action = "Portfolio Mix Builder 후보 선택 목록에서 함께 섞거나 검토할 다른 후보를 추가한 뒤 실행합니다."
     else:
         route_label = "BOARD_HOLD"
         verdict = "Candidate Packaging 보류: Board에서 역할과 근거를 먼저 보강"
@@ -325,7 +325,7 @@ def _build_candidate_board_operating_evaluation(row: dict[str, Any]) -> dict[str
             "ready": contract_ready,
             "points": 2.0,
             "current": _current_candidate_registry_contract_summary(row),
-            "judgment": "Compare 또는 Pre-Live에서 재진입 가능" if contract_ready else "설정 snapshot 부족",
+            "judgment": "Portfolio Mix Builder 또는 Pre-Live에서 재진입 가능" if contract_ready else "설정 snapshot 부족",
         },
         {
             "criteria": "Review Context",
@@ -813,6 +813,86 @@ def _candidate_review_summary_from_bundle(bundle: dict[str, Any]) -> dict[str, A
     return {}
 
 
+_COST_MODEL_SNAPSHOT_KEYS = (
+    "cost_model_contract_version",
+    "cost_model_source",
+    "cost_model_formula",
+    "cost_application_status",
+    "cost_application_target",
+    "cost_turnover_source",
+    "real_money_hardening",
+    "transaction_cost_bps",
+    "avg_turnover",
+    "max_turnover",
+    "estimated_cost_total",
+    "gross_start_balance",
+    "gross_end_balance",
+    "net_end_balance",
+    "net_cagr_spread",
+    "promotion_min_net_cagr_spread",
+    "liquidity_clean_coverage",
+    "promotion_min_liquidity_clean_coverage",
+)
+
+
+_TURNOVER_EVIDENCE_SNAPSHOT_KEYS = (
+    "turnover_model_contract_version",
+    "turnover_estimation_status",
+    "turnover_source",
+    "turnover_input_missing_columns",
+    "turnover_observation_count",
+    "turnover_rebalance_rows",
+    "turnover_nonzero_count",
+    "avg_turnover",
+    "max_turnover",
+    "avg_rebalance_turnover",
+    "rebalance_interval",
+    "rebalance_freq",
+    "factor_freq",
+)
+
+
+_NET_COST_CURVE_SNAPSHOT_KEYS = (
+    "net_cost_curve_contract_version",
+    "net_cost_curve_status",
+    "net_cost_curve_application_target",
+    "total_balance_is_net_of_cost",
+    "net_cost_curve_rows",
+    "estimated_cost_total",
+    "estimated_cost_positive_rows",
+    "gross_start_balance",
+    "gross_end_balance",
+    "net_end_balance",
+    "gross_net_end_balance_delta",
+    "transaction_cost_bps",
+    "turnover_estimation_status",
+)
+
+
+def _cost_model_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: data.get(key)
+        for key in _COST_MODEL_SNAPSHOT_KEYS
+        if data.get(key) is not None
+    }
+
+
+def _turnover_evidence_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: data.get(key)
+        for key in _TURNOVER_EVIDENCE_SNAPSHOT_KEYS
+        if data.get(key) is not None
+    }
+
+
+def _net_cost_curve_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: data.get(key)
+        for key in _NET_COST_CURVE_SNAPSHOT_KEYS
+        if data.get(key) is not None
+    }
+
+
 def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = dict(bundle.get("meta") or {})
     summary = _candidate_review_summary_from_bundle(bundle)
@@ -861,16 +941,23 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
             "malformed_price_row_count": len(list(meta.get("malformed_price_rows") or [])),
             "warning_count": len(list(meta.get("warnings") or [])),
         },
+        "cost_model_snapshot": _cost_model_snapshot_from_mapping(meta),
+        "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(meta),
+        "net_cost_curve_snapshot": _net_cost_curve_snapshot_from_mapping(meta),
         "settings_snapshot": {
             "tickers": meta.get("tickers") or [],
             "universe_mode": meta.get("universe_mode"),
             "preset_name": meta.get("preset_name"),
             "universe_contract": meta.get("universe_contract"),
             "factor_freq": meta.get("factor_freq"),
+            "rebalance_interval": meta.get("rebalance_interval"),
             "rebalance_freq": meta.get("rebalance_freq"),
             "top": meta.get("top"),
+            "transaction_cost_bps": meta.get("transaction_cost_bps"),
             "benchmark_contract": meta.get("benchmark_contract"),
             "benchmark_ticker": meta.get("benchmark_ticker"),
+            "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
+            "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
         },
         "notes": (
             "This is a Candidate Review draft. It is not appended to "
@@ -928,16 +1015,23 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
             "malformed_price_row_count": len(list(record.get("malformed_price_rows") or [])),
             "warning_count": len(list(record.get("warnings") or [])),
         },
+        "cost_model_snapshot": _cost_model_snapshot_from_mapping(record),
+        "turnover_evidence_snapshot": _turnover_evidence_snapshot_from_mapping(record),
+        "net_cost_curve_snapshot": _net_cost_curve_snapshot_from_mapping(record),
         "settings_snapshot": {
             "tickers": record.get("tickers") or [],
             "universe_mode": record.get("universe_mode"),
             "preset_name": record.get("preset_name"),
             "universe_contract": record.get("universe_contract"),
             "factor_freq": record.get("factor_freq"),
+            "rebalance_interval": record.get("rebalance_interval"),
             "rebalance_freq": record.get("rebalance_freq"),
             "top": record.get("top"),
+            "transaction_cost_bps": record.get("transaction_cost_bps"),
             "benchmark_contract": record.get("benchmark_contract"),
             "benchmark_ticker": record.get("benchmark_ticker"),
+            "promotion_min_net_cagr_spread": record.get("promotion_min_net_cagr_spread"),
+            "promotion_min_liquidity_clean_coverage": record.get("promotion_min_liquidity_clean_coverage"),
             "context_keys": sorted(context.keys()),
         },
         "notes": (
@@ -1096,7 +1190,7 @@ def _build_candidate_intake_readiness_evaluation(
         next_step = "Save Candidate Review Note를 누른 뒤 같은 Candidate Packaging 안에서 registry 후보 범위를 정합니다."
     else:
         verdict = "Candidate Packaging 저장 전 Draft 보강 필요"
-        next_step = "막힌 항목을 보강하거나, Latest / History / Compare에서 후보 초안을 다시 보내 확인합니다."
+        next_step = "막힌 항목을 보강하거나, Latest / History / Portfolio Mix Builder에서 후보 초안을 다시 보내 확인합니다."
 
     return {
         "ready": ready,
@@ -1214,6 +1308,9 @@ def _build_candidate_review_note_from_draft(
         "result_snapshot": dict(draft.get("result_snapshot") or {}),
         "real_money_signal": dict(draft.get("real_money_signal") or {}),
         "data_trust_snapshot": dict(draft.get("data_trust_snapshot") or {}),
+        "cost_model_snapshot": dict(draft.get("cost_model_snapshot") or {}),
+        "turnover_evidence_snapshot": dict(draft.get("turnover_evidence_snapshot") or {}),
+        "net_cost_curve_snapshot": dict(draft.get("net_cost_curve_snapshot") or {}),
         "settings_snapshot": dict(draft.get("settings_snapshot") or {}),
         "compare_readiness_evaluation": dict(draft.get("compare_readiness_evaluation") or {}),
         "notes": (

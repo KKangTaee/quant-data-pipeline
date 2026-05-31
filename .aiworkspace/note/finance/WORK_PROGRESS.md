@@ -12,18 +12,288 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Active Pointers
 
+- current phase board:
+  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
+- latest completed phase:
+  - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current roadmap:
-  - [.aiworkspace/note/finance/docs/ROADMAP.md](/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/.aiworkspace/note/finance/docs/ROADMAP.md)
+  - [Finance Roadmap](./docs/ROADMAP.md)
 - overview operations runbook:
-  - [.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md](/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md)
+  - [Overview Market Intelligence Runbook](./docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md)
 - current code map:
-  - [.aiworkspace/note/finance/docs/PROJECT_MAP.md](/Users/taeho/Project/quant-data-pipeline-worktrees/sub-dev/.aiworkspace/note/finance/docs/PROJECT_MAP.md)
-- historical archive:
+  - [Finance Project Map](./docs/PROJECT_MAP.md)
+- current candidate summary:
+  - no active strategy-search candidate summary in `main-dev`; next work is `phase14-candidate-prioritization-v1`
+- historical full archive:
+  - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
+- historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
 
 ### 2026-05-30
+- Closed Backtest Analysis 1단계 기준 문서: `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
+- Current Stage 1 boundary is now explicit: Single Strategy / Portfolio Mix 후보 생성, 1차 readiness, and Practical Validation handoff only.
+- Candidate comparison as a separate read-only tool, saved mix inspector polish, weighted mix cost / turnover aggregation, and profile-specific thresholds remain follow-up candidates outside this closeout.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-ux-v1/`.
+- Portfolio Mix Builder post-run UI now reads as `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation`, with component result cards, 4 tabs, and raw/detail evidence lowered into expanders.
+- No backtest calculation, DB schema, JSONL registry, saved setup policy, live approval, order, or auto rebalance behavior was added.
+- Verification passed: py_compile, `git diff --check`, full `unittest tests.test_service_contracts` 133 tests, and Browser smoke with default Equal Weight + GTAA run on `http://127.0.0.1:8502/backtest`.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-flow-v1/`.
+- Backtest Analysis now shows `Portfolio Mix Builder`; legacy `Compare & Portfolio Builder` routes still normalize to the new mode.
+- The mix builder now treats component runs as inputs, then gates the weighted mix as one 1차 후보 before Practical Validation handoff; individual strategy handoff is no longer the main action in this flow.
+- Verification passed: py_compile, full `tests.test_service_contracts` 133 tests, `git diff --check`, and Browser smoke on `http://127.0.0.1:8502/backtest`.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-practical-validation-handoff-gate-v1/`.
+- Backtest `실전성 검증으로 보내기` now requires first-stage Candidate Readiness to have no Promotion / execution source / validation source blocker.
+- Disabled handoff now shows concise blocker reasons, and the handoff area is displayed as a status card; no live approval, order, auto rebalance, or new storage model was added.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`.
+- Backtest Real-Money 1차 readiness now scores Promotion / execution source checks / validation source checks without reusing later-stage probation / monitoring fields.
+- Turnover / cost output now shows estimation status, and Backtest split-period wording no longer presents the 1차 check as formal OOS validation.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-real-money-stage-boundary-v1/`.
+- Backtest Real-Money now presents `Suggested Route`, `Next Validation Focus`, and `Execution Preview` as first-pass candidate readiness, while later paper observation / monitoring / final execution decisions stay outside Backtest Analysis.
+- Verification passed: targeted py_compile, `git diff --check`, targeted legacy label search, and Browser smoke on `http://127.0.0.1:8502/backtest`.
+- Completed `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`.
+- Real-Money now treats the old `Shortlist` value as `Promotion Suggested Route`, not as a separate validation stage.
+- No runtime calculation, DB schema, JSONL registry, user memo / preset storage, live approval, order, or auto rebalance behavior was added.
+- Opened `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`.
+- Phase 14 is a second-cycle prioritization phase: rank Phase 13 carry-forward candidates and select the first implementation slice before code changes.
+- Completed `.aiworkspace/note/finance/tasks/active/phase14-board-open/`; next task is `phase14-candidate-prioritization-v1`.
+- No code, DB schema, JSONL registry, user memo / preset storage, monitoring log auto-write, broker order, live approval, account sync, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-integrated-qa-final-closeout/`.
+- Phase 13 closeout summary added at `.aiworkspace/note/finance/phases/done/phase13-hardening-cycle-closeout.md`.
+- First hardening cycle is complete as an investability evidence workflow; it is not broker-grade trading, live approval, account sync, order, or auto rebalance readiness.
+- Next work should open only after the user chooses a second-cycle direction from `phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md`.
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-residual-risk-carry-forward-v1/`.
+- Remaining Phase 8~12 / Phase 13 risks are now split into current limitations, second-cycle candidates, explicit first-cycle out-of-scope items, and safe / unsafe final closeout wording.
+- Next task is `phase13-integrated-qa-final-closeout`.
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-docs-runbook-alignment-v1/`.
+- Durable data / flow / glossary docs now point to Final Decision V2 and the Phase 13 storage boundary; added `.aiworkspace/note/finance/docs/runbooks/PHASE_CLOSEOUT_QA.md`.
+- This handed off to `phase13-residual-risk-carry-forward-v1`, now complete.
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-storage-data-boundary-audit-v1/`.
+- DB-backed data / workflow JSONL compact evidence / saved setup / run artifact / Selected Dashboard read-only storage boundaries were audited with no immediate code defect found.
+- No registry / saved / run history / run artifact / Playwright output change was created by this task; this handed off to `phase13-docs-runbook-alignment-v1`, now complete.
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-gate-validation-qa-matrix-v1/`.
+- Practical Validation / Final Review / Selected Dashboard gate severity QA found no immediate code defect; full `tests.test_service_contracts` passed, 126 tests.
+- This handed off to `phase13-storage-data-boundary-audit-v1`, now complete.
+
+### 2026-05-29
+- Completed `.aiworkspace/note/finance/tasks/active/phase13-cycle-inventory-v1/`.
+- Phase 8~12 1차 hardening cycle을 weakness / mitigation / evidence surface / service contract / verification / residual risk inventory로 정리했다.
+- No code, DB schema, new JSONL registry, user memo / preset storage, monitoring log auto-write, account integration, order, approval, or auto rebalance behavior was added.
+- Next task is `phase13-gate-validation-qa-matrix-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/allocation-drift-evidence-boundary-v1/`.
+- Added `selected_allocation_drift_evidence_boundary_v1` and Dashboard boundary display for optional Actual Allocation.
+- Actual Allocation remains manual / session-only evidence with no raw input persistence, alert persistence, monitoring log auto-write, account / broker integration, order, or auto rebalance.
+- Next task is `decision-dossier-continuity-operations-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/selected-monitoring-source-map-v1/`.
+- Source map confirmed Selected Dashboard already has read-only readiness / freshness / provider / timeline / comparison / drift / dossier evidence.
+- Main gaps: Current Candidate Registry replay dependency, readiness / freshness policy split, Review Signals / Recheck Comparison threshold duplication, and session-only monitoring evidence clarity.
+- Next task is `recheck-readiness-freshness-contract-v1`.
+- Opened `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`.
+- Phase 12 focuses on selected monitoring / recheck operations after Final Review selection.
+- Next task is `selected-monitoring-source-map-v1`; start by mapping current Selected Portfolio Dashboard readiness / freshness / provider / timeline / signal / comparison / drift / continuity sources.
+- No new JSONL registry, automatic monitoring log append, user memo, preset, account integration, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/phase11-integrated-qa-closeout/`.
+- Phase 11 closeout summary added at `.aiworkspace/note/finance/phases/done/phase11-portfolio-construction-risk-controls.md`.
+- Integrated verification passed: Phase 11 service / web compile, full `tests.test_service_contracts` 112 tests, UI / engine boundary checker, finance refinement hygiene, and `git diff --check`.
+- Next hardening target is Phase 12 selected monitoring / recheck operations.
+- Completed `.aiworkspace/note/finance/tasks/active/construction-risk-gate-policy-v1/`.
+- Final Review selected-route gate policy now treats Construction Risk / Risk Contribution / Component Role / Weight audit routes and non-PASS row criteria as blocker or review-required evidence.
+- Verification passed: targeted py_compile, `FinalReviewEvidenceReadModelContractTests` 24 tests, and full `tests.test_service_contracts` 112 tests.
+- Next task is `phase11-integrated-qa-closeout`.
+- Completed `.aiworkspace/note/finance/tasks/active/component-role-weight-discipline-v1/`.
+- Added read-only `component_role_weight_audit_v1` for explicit role source coverage, profile-aware max weight, role concentration, profile intent fit, weight rationale coverage, and storage boundary.
+- Practical Validation and Final Review now display the Component Role / Weight Audit and preserve it in final decision snapshots / evidence rows; selected-route gate enforcement remains 11-5 scope.
+- Verification passed: targeted py_compile, `ComponentRoleWeightAuditContractTests` 4 tests, and full `tests.test_service_contracts` 109 tests.
+- Next task is `construction-risk-gate-policy-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/correlation-risk-contribution-contract-v1/`.
+- Added read-only `risk_contribution_audit_v1` for component return matrix coverage, pairwise correlation, max risk contribution proxy, drop-one dependency, source strength, and storage boundary.
+- Practical Validation and Final Review now display the Risk Contribution Audit and preserve it in final decision snapshots / evidence rows; selected-route gate enforcement remains 11-5 scope.
+- Verification passed: targeted py_compile, `RiskContributionAuditContractTests` 4 tests, and full `tests.test_service_contracts` 105 tests.
+- Next task is `component-role-weight-discipline-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/concentration-overlap-exposure-contract-v1/`.
+- Added read-only `construction_risk_audit_v1` for component weight concentration, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure.
+- Practical Validation and Final Review now display the Construction Risk Audit and preserve it in final decision snapshots; selected-route gate enforcement remains 11-5 scope.
+- Verification passed: targeted py_compile, `ConstructionRiskAuditContractTests` 3 tests, and full `tests.test_service_contracts` 101 tests.
+- Next task is `correlation-risk-contribution-contract-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/construction-risk-source-map-v1/`.
+- Source map confirmed existing Practical Validation diagnostics, provider look-through board, Robustness Lab sensitivity, and Final Review gate can seed Phase 11 without new storage.
+- Main gap is ownership / selected-route visibility: construction risk is currently split across provider coverage and stress robustness evidence.
+- Next task is `concentration-overlap-exposure-contract-v1`; start by wrapping existing component weight, top holding, top overlap, dominant asset, unknown exposure, and provider coverage evidence into a read-only contract.
+- Opened `.aiworkspace/note/finance/phases/active/phase11-portfolio-construction-risk-controls/`.
+- Phase 11 focuses on portfolio construction risk controls: concentration, overlap, correlation, risk contribution, component role, and profile-aware weight discipline.
+- Next task is `construction-risk-source-map-v1`; start by mapping current Practical Validation / Look-through / Robustness Lab / Final Review gate construction risk sources before implementation.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/phase10-integrated-qa-closeout/`.
+- Phase 10 closeout summary added at `.aiworkspace/note/finance/phases/done/phase10-walkforward-oos-regime-validation.md`.
+- Integrated verification passed: Phase 10 service / loader compile, full `tests.test_service_contracts` 98 tests, UI / engine boundary checker, finance refinement hygiene, and `git diff --check`.
+- Next hardening target is Phase 11 portfolio construction risk controls.
+- Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-refinement-v2/`.
+- Final Review selected-route gate policy now surfaces Validation Efficacy row-level walk-forward / OOS / regime gaps as blocker or review-required evidence.
+- This is read-only gate evidence refinement; no new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Next task is `phase10-integrated-qa-closeout`.
+- Completed `.aiworkspace/note/finance/tasks/active/regime-split-validation-v1/`.
+- Added DB-backed FRED macro history regime split evidence and connected `regime_split_validation` to Practical Validation / Validation Efficacy Audit.
+- Missing / short / proxy-only regime evidence is not treated as PASS; no new DB schema, JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Next task is `validation-efficacy-gate-policy-refinement-v2`.
+- Completed `.aiworkspace/note/finance/tasks/active/oos-holdout-validation-contract-v1/`.
+- Added benchmark-aligned in-sample / out-sample holdout evidence and connected `oos_holdout_validation` to Practical Validation / Validation Efficacy Audit.
+- Missing / short / proxy-only OOS evidence is not treated as PASS; no new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Next task is `regime-split-validation-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/walkforward-split-contract-v1/`.
+- Added `app/services/backtest_temporal_validation.py` and connected compact walk-forward evidence to Practical Validation / Validation Efficacy Audit.
+- Missing / short / proxy-only walk-forward evidence is not treated as PASS; no new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Next task is `oos-holdout-validation-contract-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/walkforward-oos-source-map-v1/`.
+- Source map found reusable Practical Validation curve / benchmark / replay plumbing and existing runtime rolling / OOS metadata.
+- Main gap: temporal evidence is not yet an explicit Validation Efficacy / Final Review gate row; next task is `walkforward-split-contract-v1`.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Opened `.aiworkspace/note/finance/phases/active/phase10-walkforward-oos-regime-validation/`.
+- Phase 10 focuses on walk-forward / out-of-sample / regime split validation so good full-period backtests are not over-trusted.
+- Next task is `walkforward-oos-source-map-v1`; start by mapping current Practical Validation / Robustness Lab / replay / result metadata sources before implementation.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/phase9-integrated-qa-closeout/`.
+- Phase 9 closeout summary added at `.aiworkspace/note/finance/phases/done/phase9-cost-slippage-liquidity-realism.md`.
+- Integrated verification passed: Phase 9 touched service compile, UI / engine boundary checker, full `tests.test_service_contracts` 90 tests, finance refinement hygiene, and `git diff --check`.
+- Next hardening target is Phase 10: walk-forward / out-of-sample / regime split validation.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-refinement-v1/`.
+- Final Review gate policy now surfaces failing Backtest Realism row criteria, including cost / slippage sensitivity and liquidity gaps, in selected-route evidence.
+- Row-level `NEEDS_INPUT` maps to blocker severity and `REVIEW` maps to review-required; no waiver, memo, preset, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/cost-slippage-sensitivity-audit-v1/`.
+- Backtest Realism Audit now reads `cost_slippage_sensitivity_contract_v1` and shows a separate cost / slippage sensitivity row.
+- Explicit cost / slippage sensitivity can PASS; generic robustness-only sensitivity stays REVIEW, and missing cost / net curve baseline stays NEEDS_INPUT.
+- No new JSONL registry, memo, preset, raw run artifact, DB schema, provider fetch, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/liquidity-capacity-evidence-v1/`.
+- Provider operability context now emits compact capacity metrics, and Backtest Realism Audit reads `liquidity_capacity_contract_v1`.
+- Fresh official actual provider evidence is the strong liquidity PASS path; stale / partial / bridge-proxy / legacy pass-only evidence stays REVIEW or NEEDS_INPUT.
+- No new JSONL registry, memo, preset, DB schema, UI direct provider fetch, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/net-cost-curve-application-v1/`.
+- Runtime now emits compact `net_cost_curve_contract_v1` metadata, and Practical Validation / Backtest Realism Audit preserve gross-net cost proof without new workflow persistence.
+- Backtest Realism Audit now separates measurable net cost impact from zero-cost, missing-turnover, legacy-flag-only, and missing-proof cases.
+- Next Phase 9 task is `liquidity-capacity-evidence-v1`; keep it DB/provider/loader-backed and avoid UI direct fetch.
+- Completed `.aiworkspace/note/finance/tasks/active/turnover-rebalance-evidence-v1/`.
+- Runtime now emits compact `turnover_evidence_contract_v1` metadata and does not fabricate turnover when holdings columns are missing.
+- Backtest Realism Audit separates holdings-derived turnover, legacy estimate, cadence-only, and missing turnover evidence.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/cost-model-source-contract-review-v1/`.
+- Runtime now emits compact `cost_model_source_contract_v1` metadata showing when transaction cost is applied to the net result curve.
+- Practical Validation source snapshots preserve cost model evidence, and Backtest Realism Audit treats cost bps without application proof as REVIEW.
+- No new JSONL registry, user memo, preset, approval, order, or auto rebalance behavior was added.
+- Opened `.aiworkspace/note/finance/phases/active/phase9-cost-slippage-liquidity-realism/`.
+- Phase 9 focuses on cost / slippage / turnover / liquidity / capacity realism in Backtest Realism and selected-route decisions.
+- Next task is `cost-model-source-contract-review-v1`; start by mapping current cost metadata source and proof gaps before runtime changes.
+- Completed `.aiworkspace/note/finance/tasks/active/phase8-integrated-qa-closeout/`.
+- Phase 8 is closeout complete; summary added at `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`.
+- Integrated verification passed: lifecycle path compile check, full `tests.test_service_contracts` 79 tests, and `git diff --check`.
+- Next hardening target is Phase 9: cost / slippage / turnover / liquidity realism.
+
+### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/lifecycle-audit-scoring-v1/`.
+- Data Coverage Audit now separates lifecycle evidence metrics for actual coverage, actual non-covering rows, current snapshots, SEC identity cross-check, computed partial rows, and actual delisting rows.
+- This is read-only audit scoring; it adds no DB table, ingestion collector, workflow JSONL, memo, preset, approval, order, or rebalance behavior.
+- Completed `.aiworkspace/note/finance/tasks/active/computed-snapshot-lifecycle-v1/`.
+- Added `finance/data/computed_lifecycle.py` and `run_collect_computed_snapshot_lifecycle()` to summarize repeated current snapshot lifecycle rows as DB `computed_from_snapshots` partial evidence.
+- Data Coverage Audit now requires `coverage_status=actual` before lifecycle evidence can make survivorship PASS; no workflow JSONL, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/sec-cik-exchange-crosscheck-v1/`.
+- Added `finance/data/sec_company_tickers.py` and `run_collect_sec_company_ticker_crosscheck()` to store SEC current CIK / ticker / exchange association as DB lifecycle `listing_observed` partial identity evidence.
+- The collector adds no workflow JSONL, memo, preset, approval, order, or rebalance behavior, and does not loosen survivorship PASS criteria.
+- Completed `.aiworkspace/note/finance/tasks/active/symbol-directory-snapshot-ingestion-v1/`.
+- Added `finance/data/symbol_directory.py` and `run_collect_symbol_directory_snapshots()` to store Nasdaq public Symbol Directory current rows as DB lifecycle `listing_observed` partial evidence.
+- The collector adds no workflow JSONL, memo, preset, approval, order, or rebalance behavior, and does not loosen survivorship PASS criteria.
+- Completed `.aiworkspace/note/finance/tasks/active/historical-membership-source-review-v1/`.
+- Source review found Nasdaq Daily List is the strongest corporate-action source but subscription / approval based, so Phase 8 free-source-first implementation should not start there.
+- Next Phase 8 implementation is `symbol-directory-snapshot-ingestion-v1`, using public Nasdaq Symbol Directory current files as DB lifecycle `listing_observed` partial evidence.
+- Opened `.aiworkspace/note/finance/phases/active/phase8-investability-data-evidence-expansion/` as the official Phase 8 board for the 1차 hardening cycle.
+- Completed `.aiworkspace/note/finance/tasks/active/symbol-lifecycle-event-fields-v1/`.
+- `nyse_symbol_lifecycle` now has event semantics for lifecycle rows: NYSE current listing snapshot rows are `listing_observed` partial evidence, and SEC Form 25 rows are `delisting` actual evidence.
+- The change updates DB schema / writers / loader / contracts and adds no new workflow JSONL, memo, preset, approval, order, or rebalance behavior.
+- Completed `.aiworkspace/note/finance/tasks/active/sec-form25-ingestion-ui-v1/`.
+- `Workspace > Ingestion > Practical Validation Provider Snapshots` now has a `Delisting Evidence` tab that runs the SEC Form 25 lifecycle evidence collector.
+- The UI writes only through the existing DB collector path and adds no new workflow JSONL, memo, preset, report file, approval, order, or rebalance behavior.
+- Completed `.aiworkspace/note/finance/tasks/active/sec-form25-delisting-backfill-v1/`.
+- Added SEC EDGAR Form 25 / 25-NSE delisting collector and ingestion job wrapper that write compact actual delisting evidence to `finance_meta.nyse_symbol_lifecycle`.
+- Form 25 evidence is treated as delisting evidence, not complete historical membership or active-listing proof. No workflow JSONL, memo, preset, report file, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/historical-universe-survivorship-v1/`.
+- Added `nyse_symbol_lifecycle` schema, NYSE listing lifecycle UPSERT path, lifecycle coverage loader, and Data Coverage / Validation Efficacy survivorship integration.
+- Current listing snapshots remain partial evidence; only requested-period historical / delisting lifecycle evidence can make survivorship control PASS. No workflow JSONL, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/integrated-investability-gate-qa-v1/`.
+- Final Review evidence read model now has integrated contract coverage for all-ready, multi-review, and multi-blocker investability gate combinations.
+- This QA added no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior.
+- Completed `.aiworkspace/note/finance/tasks/active/data-coverage-gate-policy-link-v1/`.
+- Data Coverage Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+- This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/data-coverage-hardening-v1/`.
+- Practical Validation and Final Review now show a read-only Data Coverage Audit for DB price window coverage, provider freshness, PIT replay / period coverage, universe listing, survivorship / delisting control, and storage boundary.
+- The audit reads existing DB loader summaries and compact validation evidence; it does not create a new JSONL registry, memo, preset, approval, order, or rebalance behavior.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-link-v1/`.
+- Backtest Realism Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+- This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-realism-hardening-v1/`.
+- Practical Validation and Final Review now show a read-only Backtest Realism Audit for transaction cost, turnover, liquidity / operability, net performance policy, rebalance timing, tax / account scope, and execution boundary gaps.
+- The audit reads existing result metadata / compact validation evidence and feeds the investability packet / saved evidence rows; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-link-v1/`.
+- Validation Efficacy Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+- This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-hardening-v1/`.
+- Practical Validation and Final Review now show a read-only Validation Efficacy Audit for runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, and execution/storage boundary gaps.
+- The audit uses existing compact evidence only; no DB write, new JSONL registry, user memo, preset, approval, order, or rebalance behavior was added.
+- Follow-up gate policy link is complete; next implementation track is Data Coverage Hardening.
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-closeout-qa/`.
+- Practical Validation V2 P3 selected monitoring integration is now closeout complete: continuity, recheck comparison, recheck readiness, symbol freshness, and selected provider evidence passed service / boundary QA.
+- Next work should open a new task / phase for validation efficacy, backtest realism, or data coverage hardening rather than extending P3.
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-selected-provider-evidence/`.
+- Selected Dashboard Performance Recheck now shows read-only provider evidence for selected component ticker weights, existing DB provider / holdings / exposure context, and compact look-through summary.
+- `NOT_RUN`, partial, stale, or missing provider evidence is visible before relying on selected monitoring; no provider collection, JSONL write, monitoring log, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-symbol-freshness/`.
+- Selected Dashboard Performance Recheck now shows read-only symbol freshness for replay portfolio tickers and benchmark tickers.
+- Missing / stale price DB symbols are visible before running recheck; no OHLCV collection, monitoring log, memo, preset, approval, order, or rebalance behavior was added.
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-readiness/`.
+- Selected Dashboard Performance Recheck now shows read-only readiness for DB latest market date, replay contract coverage, default period, and execution/storage boundary.
+- This does not collect data, save monitoring logs, create memo/preset records, approve orders, or rebalance.
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-comparison/`.
+- Selected Dashboard Review Signals now includes a read-only Recheck Evidence Comparison for CAGR, MDD, benchmark spread, component coverage, and period coverage.
+- Missing / failed Performance Recheck remains `NEEDS_INPUT`; no DB/JSONL monitoring log, memo, preset, report, approval, order, or auto rebalance write was added.
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-continuity-check/`.
+- Selected Portfolio Dashboard now shows a read-only Final Review -> Selected Dashboard continuity check.
+- The continuity check verifies selected route, investability packet, component target, review trigger, timeline connection, Performance Recheck input, and execution/storage boundary without auto-writing monitoring logs.
+- Completed Practical Validation V2 P2 closeout in `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`.
+- Verified provider context / look-through / robustness / Final Review service contracts with `tests/test_service_contracts.py`.
+- P2 is now closed; next decision is whether to open P3 for Final Review handoff QA and Selected Portfolio Dashboard monitoring connection.
+- Completed `.aiworkspace/note/finance/tasks/active/structured-waiver-policy-v1/`.
+- Added `.aiworkspace/note/finance/docs/flows/STRUCTURED_WAIVER_POLICY.md`.
+- Policy: current implementation remains `waiver_supported=False`; future waiver cannot apply to `BLOCK` and can only consider structured, expiring `REVIEW_REQUIRED` gaps.
+- Closed out `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as implementation complete.
+- Added `.aiworkspace/note/finance/phases/done/investability-decision-foundation.md` as the concise closeout summary.
+- Carry-forward decisions are now structured waiver policy, provider snapshot PIT/as-of requirement, and Practical Validation V2 P3 scope.
+- Completed `.aiworkspace/note/finance/tasks/active/decision-dossier-report-v1/`.
+- Final Review saved records and Selected Portfolio Dashboard can now render/download a read-only markdown Decision Dossier.
+- Dossier generation reads existing final decision evidence and optional session timeline; it does not auto-write report files, monitoring logs, orders, or approval rows.
+- Next recommended step is Investability Decision Foundation phase closeout or structured waiver policy decision.
+- Completed `.aiworkspace/note/finance/tasks/active/selected-monitoring-timeline-v1/`.
+- Selected Portfolio Dashboard now has a read-only Timeline tab for Final Review selection, evidence gate, Performance Recheck, Actual Allocation drift, and review trigger preview.
+- Timeline generation does not append monitoring logs, create user memo storage, approve orders, or trigger auto rebalance.
+- Next implementation candidate is `decision-dossier-report-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/robustness-lab-v1/`.
+- Practical Validation now builds a compact `robustness_lab_board` from existing stress / rolling / sensitivity / overfit evidence.
+- Practical Validation, Final Review, and final decision evidence rows read the same board without adding a new JSONL registry or storing raw perturbation artifacts.
+- Next implementation candidate is `selected-monitoring-timeline-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/look-through-exposure-board-v1/`.
+- Provider context now includes a compact `look_through_board` for holdings / exposure asset buckets, top holdings, overlap, and ETF-level coverage.
+- Practical Validation and Final Review display the board without adding a new JSONL registry or duplicating full holdings rows.
+- Next implementation candidate is `robustness-lab-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/data-provenance-coverage-v1/`.
+- Provider context schema v2 now carries compact source mix, freshness, as-of range, stale symbols / series, and coverage weights.
+- Stale ETF provider snapshot evidence now downgrades otherwise-PASS provider diagnostics to REVIEW; no DB schema or JSONL registry was added.
+- Next implementation candidate is `look-through-exposure-board-v1`.
+- Completed `.aiworkspace/note/finance/tasks/active/storage-governance-audit-v1/`.
+- Added `.aiworkspace/note/finance/docs/data/STORAGE_GOVERNANCE.md` as the durable DB / JSONL / saved setup / run artifact boundary.
+- Main investability chain remains `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`; no registry rewrite or new JSONL was added.
+- Followed by `data-provenance-coverage-v1`.
+- Opened `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as the Phase 0 baseline for investability workflow hardening.
+- Completed `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`.
+- Added profile-aware gate policy snapshot to `app/services/backtest_evidence_read_model.py` and Final Review display.
+- Final decision rows now keep compact `gate_policy_snapshot`; no new JSONL registry was added.
+- Next investability foundation choice is storage governance audit versus data provenance / coverage.
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` for Workspace Overview Market Movers polish.
 - Market Movers second pass adds selected-coverage browser auto refresh, volume rank, sector-colored positive return bars, and previous-period momentum context while keeping provider collection inside existing job wrappers.
 - Completed the Overview browser-session auto refresh workstream under `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`.
@@ -4038,6 +4308,42 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/canonical-finance-note-paths/`를 열고 legacy `.note/finance` 직접 참조를 정리했다.
   - `app/workspace_paths.py`를 추가해 `registries`, `saved`, `run_history`, `run_artifacts`, docs path를 canonical `.aiworkspace/note/finance` 기준으로 통일했다.
   - Overview browser smoke에서 Current Candidates / Paper Tracking / Proposal Drafts / Recent Runs가 canonical JSONL 데이터를 읽는 것을 확인했다.
+- Product Research - Investable Workflow Gap Analysis:
+  - `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/` 리서치 번들을 생성했다.
+  - 현재 Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 audit하고 QuantConnect, Bloomberg PORT, Morningstar X-Ray, IBKR PortfolioAnalyst, Portfolio Lab, CFA / FINRA / NBER 근거와 비교했다.
+  - 1차 추천은 `Investability Evidence Packet`, `Validation Gate Hardening`, `Assumption Disclosure`, `Source Breadcrumb`를 먼저 확정하고 개발하는 방향이다.
+- Investability Evidence Packet V1:
+  - `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`를 열고 Final Review evidence packet / selected-route gate를 구현했다.
+  - 새 JSONL registry는 만들지 않고, 기존 Final Review decision row에 compact packet snapshot만 연결했다.
+  - service contract 26 tests, UI-engine boundary check, Browser smoke를 통과했다.
+- Phase 12 Recheck Readiness / Freshness Contract V1:
+  - `.aiworkspace/note/finance/tasks/active/recheck-readiness-freshness-contract-v1/`에서 Selected Dashboard recheck operations preflight를 구현했다.
+  - Final Review embedded replay contract를 우선 사용하고 Current Candidate Registry를 fallback으로 쓰는 resolver를 추가했다.
+  - 다음 작업은 `selected-provider-evidence-staleness-contract-v1`이며 `.aiworkspace/note/finance/phases/active/phase12-selected-monitoring-recheck-operations/`에서 이어서 본다.
+- Phase 12 Selected Provider Evidence Staleness Contract V1:
+  - `.aiworkspace/note/finance/tasks/active/selected-provider-evidence-staleness-contract-v1/`에서 provider evidence freshness / coverage policy를 구현했다.
+  - stale actual evidence, partial / missing look-through coverage, missing required provider areas가 PASS처럼 보이지 않도록 Dashboard와 service contract를 강화했다.
+  - 다음 작업은 `recheck-comparison-review-signal-policy-v1`이며 Phase 12 문서에서 12-4로 이어진다.
+- Phase 12 Recheck Comparison Review Signal Policy V1:
+  - `.aiworkspace/note/finance/tasks/active/recheck-comparison-review-signal-policy-v1/`에서 `selected_review_signal_policy_v1`을 구현했다.
+  - Review Signals의 CAGR / MDD / benchmark spread rows는 Recheck Comparison에서 파생되고, preflight / provider route도 같은 signal board에 반영된다.
+  - 다음 작업은 `allocation-drift-evidence-boundary-v1`이며 Phase 12 문서에서 12-5로 이어진다.
+- Phase 12 Decision Dossier Continuity Operations V1:
+  - `.aiworkspace/note/finance/tasks/active/decision-dossier-continuity-operations-v1/`에서 `selected_decision_source_consistency_v1`을 구현했다.
+  - Decision Dossier, Continuity, Timeline, Review Signals가 같은 Final Decision V2 source contract를 표시하고, session evidence는 read-only context로 남긴다.
+  - 다음 작업은 `phase12-integrated-qa-closeout`이며 Phase 12 문서에서 12-7로 이어진다.
+- Phase 12 Integrated QA Closeout:
+  - `.aiworkspace/note/finance/tasks/active/phase12-integrated-qa-closeout/`에서 Phase 12 전체 compile / service contract / boundary / hygiene / diff / storage boundary 검증을 완료했다.
+  - closeout summary는 `.aiworkspace/note/finance/phases/done/phase12-selected-monitoring-recheck-operations.md`에 남겼다.
+  - 다음 대상은 Phase 13 first-cycle hardening closeout이다.
+- Phase 13 Board Open:
+  - `.aiworkspace/note/finance/phases/active/phase13-hardening-cycle-closeout/`를 열고 1차 hardening cycle closeout 범위를 정의했다.
+  - 13-1부터 13-6까지 inventory / gate QA / storage audit / docs-runbook sync / residual risk / final closeout task split을 만들었다.
+  - 다음 작업은 `phase13-cycle-inventory-v1`이다.
+- Backtest Analysis UX Checkpoint V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`에서 Backtest Analysis 결과 화면의 Stage / 검증 체크포인트 언어를 분리했다.
+  - Runtime payload를 접힌 Developer Payload로 낮추고, Latest Backtest Run / Data Trust / Next Action / Real-Money Candidate Readiness UI를 정리했다.
+  - 새 DB / JSONL / 사용자 메모 저장 없이 기존 Clean V2 handoff만 더 명확하게 표시했다.
 - Overview Market Intelligence research:
   - `.aiworkspace/note/finance/researches/active/2026-05-overview-market-intelligence/`를 열고 Overview 개편 feasibility를 조사했다.
   - Coverage 1000/2000 top movers와 sector / industry leadership은 기존 DB price/profile로 가능하다는 결론을 남겼다.

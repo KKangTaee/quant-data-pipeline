@@ -261,6 +261,9 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
     result = dict(draft.get("result_snapshot") or {})
     settings = dict(draft.get("settings_snapshot") or {})
     data_trust = dict(draft.get("data_trust_snapshot") or {})
+    cost_model = dict(draft.get("cost_model_snapshot") or {})
+    turnover_evidence = dict(draft.get("turnover_evidence_snapshot") or {})
+    net_cost_curve = dict(draft.get("net_cost_curve_snapshot") or {})
     real_money = dict(draft.get("real_money_signal") or {})
     return {
         "schema_version": PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
@@ -288,6 +291,9 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
             "warning_count": data_trust.get("warning_count"),
             "excluded_tickers": list(data_trust.get("excluded_tickers") or []),
         },
+        "cost_model_snapshot": cost_model,
+        "turnover_evidence_snapshot": turnover_evidence,
+        "net_cost_curve_snapshot": net_cost_curve,
         "real_money_signal": real_money,
         "components": [
             {
@@ -311,6 +317,9 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
                 "result_curve": list(draft.get("result_curve_snapshot") or []),
                 "replay_contract": {
                     "settings_snapshot": settings,
+                    "cost_model_snapshot": cost_model,
+                    "turnover_evidence_snapshot": turnover_evidence,
+                    "net_cost_curve_snapshot": net_cost_curve,
                     "source_kind": source_kind,
                 },
             }
@@ -318,7 +327,9 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
         "construction": {
             "source": "single_strategy" if source_kind != "compare_focused_strategy" else "compare_focused_strategy",
             "target_weight_total": 100.0,
-            "rebalance_cadence": settings.get("rebalance_freq") or settings.get("factor_freq"),
+            "rebalance_cadence": settings.get("rebalance_freq")
+            or settings.get("factor_freq")
+            or settings.get("rebalance_interval"),
         },
         "source_snapshot": draft,
         "notes": "Clean V2 selection source. It is not a live approval or an investment recommendation.",

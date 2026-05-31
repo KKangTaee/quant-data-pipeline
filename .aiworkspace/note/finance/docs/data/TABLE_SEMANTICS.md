@@ -17,6 +17,38 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - source는 NYSE listing 수집 경로
 - 완전한 historical listing membership table은 아니다
 
+## `nyse_symbol_lifecycle`
+
+역할:
+
+- symbol lifecycle, historical universe membership, delisting evidence를 저장한다.
+- Data Coverage Audit의 `Universe / listing evidence`와 `Survivorship / delisting control` row가 이 table의 compact loader summary를 읽는다.
+
+성격:
+
+- lifecycle evidence table이다.
+- `source_type=current_listing_snapshot` row는 NYSE 현재 listing을 반복 관찰하기 위한 partial `event_type=listing_observed` evidence다.
+- `source=nasdaq_symdir_nasdaqlisted` 또는 `nasdaq_symdir_otherlisted` row도 Nasdaq Symbol Directory current snapshot에서 온 partial `listing_observed` evidence다.
+- `source=sec_company_tickers_exchange` row는 SEC current CIK / ticker / exchange association에서 온 partial `listing_observed` identity evidence다.
+- `source=computed_snapshot_lifecycle` row는 existing current snapshot rows에서 계산한 repeated observation window이며 partial `historical_membership` evidence다.
+- `source_type=delisting_feed` row는 SEC Form 25 같은 delisting source에서 온 actual `event_type=delisting` evidence를 담을 수 있다.
+- `source_type=historical_listing`, `delisting_feed`, `computed_from_snapshots` row가 requested backtest period를 덮고 `coverage_status=actual`일 때만 survivorship control PASS 근거가 된다.
+- Phase 8부터 `event_type`, `event_date`, `related_symbol`, `related_cik`를 사용할 수 있다.
+  이 필드는 ticker change / merger / delisting / membership event를 source-neutral하게 읽기 위한 nullable event semantics다.
+- `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재 시 current snapshot row를 idempotent하게 UPSERT할 수 있다.
+- `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 idempotent하게 UPSERT할 수 있다.
+- `finance/data/sec_company_tickers.py`는 SEC current CIK / ticker / exchange association을 idempotent하게 UPSERT할 수 있다.
+- `finance/data/sec_delisting.py`는 SEC EDGAR Form 25 / 25-NSE filing metadata를 idempotent하게 UPSERT할 수 있다.
+
+주의:
+
+- current listing snapshot만으로 과거 backtest 기간의 universe membership을 증명할 수 없다.
+- Form 25는 delisting / withdrawal evidence이며, Form 25 부재는 active listing proof가 아니다.
+- Form 25만으로 first listing date와 complete historical membership을 알 수 없으므로, full survivorship control에는 별도 historical listing source가 필요할 수 있다.
+- repeated current snapshot은 관찰 구간 요약일 뿐이고, missing snapshot을 delisting이나 inactive proof로 해석하지 않는다.
+- table이 생겼다고 survivorship bias가 자동 제거되는 것은 아니다. 과거 delisting / historical membership source를 실제로 적재해야 PASS 근거가 된다.
+- workflow JSONL에는 full lifecycle row를 저장하지 않고 compact audit evidence만 남긴다.
+
 ## `nyse_asset_profile`
 
 역할:
@@ -174,6 +206,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Invesco QQQ는 현재 expense ratio / inception만 있어 `partial`로 저장된다.
 - current snapshot이므로 historical point-in-time ETF 운용성 truth로 바로 해석하면 안 된다.
 - Practical Validation result JSONL에는 full row를 저장하지 않고 compact evidence / coverage status만 저장하는 방향이다.
+- `data-provenance-coverage-v1` 이후 Practical Validation provider context는 `source`, `source_type`, `coverage_status`, `as_of_date`, `collected_at`을 compact provenance로 요약한다.
+- `look-through-exposure-board-v1` 이후 Practical Validation provider context는 `etf_holdings_snapshot` / `etf_exposure_snapshot`을 compact look-through board로 접어 asset bucket, top holdings, overlap, ETF별 coverage를 보여준다.
+- provider snapshot freshness가 오래됐으면 충분한 coverage라도 `REVIEW`로 남긴다.
 
 ## `etf_holdings_snapshot`
 
@@ -213,6 +248,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - exposure는 원천 holdings coverage와 provider aggregate coverage에 의존한다.
 - sector가 없는 holdings source는 asset class / currency exposure만 만들 수 있다.
 - Practical Validation result JSONL에는 full exposure table이 아니라 compact summary만 저장하는 방향이다.
+- Practical Validation result JSONL에는 source mix / coverage status weight / stale symbol 같은 compact provenance만 저장하고 full holdings / exposure row는 저장하지 않는다.
+- Look-through board도 compact summary / top rows만 저장하며 full holdings / exposure source-of-truth는 이 table들과 DB loader다.
 
 ## `macro_series_observation`
 
@@ -233,6 +270,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - macro / sentiment는 trade signal이 아니라 validation 기준일의 시장 환경 설명 자료다.
 - FRED value는 observation date 기준 데이터이며, 실제 발표 / 수정 vintage point-in-time truth와는 구분해야 한다.
 - Practical Validation result JSONL에는 full series를 저장하지 않고 compact snapshot / staleness만 저장하는 방향이다.
+- Practical Validation result JSONL에는 source mode / observation range / stale series 같은 compact macro provenance만 저장한다.
 
 ## `nyse_price_history`
 

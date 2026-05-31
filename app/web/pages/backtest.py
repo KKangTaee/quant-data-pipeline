@@ -30,6 +30,7 @@ from app.web.backtest_practical_validation import render_practical_validation_wo
 from app.web.backtest_single_runner import _handle_backtest_run  # noqa: F401
 from app.web.backtest_single_strategy import render_single_strategy_workspace
 from app.web.backtest_workflow_routes import (
+    BACKTEST_ANALYSIS_MODE_COMPARE,
     BACKTEST_STAGE_ANALYSIS,
     BACKTEST_STAGE_FINAL_REVIEW,
     BACKTEST_STAGE_PRACTICAL_VALIDATION,
@@ -71,8 +72,9 @@ def render_backtest_tab() -> None:
     with st.expander("Backtest 사용 안내", expanded=False):
         st.markdown(
             """
-            - `Backtest Analysis`: Single Strategy, Compare, 저장된 비중 조합 replay로 후보 source를 만듭니다.
-            - `Practical Validation`: 선택한 단일 후보, Compare 후보, Saved Mix를 실전 검증 자료로 구조화합니다.
+            - `Backtest Analysis`: Single Strategy 또는 Portfolio Mix Builder로 1차 후보 source를 만듭니다.
+            - `Portfolio Mix Builder`: 여러 전략을 실행하고 비중을 정해 하나의 mix 후보로 만든 뒤, 통과한 mix만 Practical Validation으로 보냅니다.
+            - `Practical Validation`: 선택한 단일 후보 또는 mix 후보를 실전 검증 자료로 구조화합니다.
             - `Final Review`: 검증 자료를 기준으로 최종 선정 / 보류 / 거절 / 재검토를 한 번만 기록합니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
             - `Operations > Selected Portfolio Dashboard`: Final Review에서 선정된 V2 decision을 읽어 선정 이후 성과와 review signal을 확인합니다.
@@ -95,7 +97,7 @@ def render_backtest_tab() -> None:
         render_final_review_workspace()
     elif active_panel == "Single Strategy":
         render_single_strategy_workspace()
-    elif active_panel == "Compare & Portfolio Builder":
+    elif active_panel in {"Compare & Portfolio Builder", BACKTEST_ANALYSIS_MODE_COMPARE}:
         render_compare_portfolio_workspace()
     elif active_panel == "Candidate Review":
         render_candidate_review_workspace()

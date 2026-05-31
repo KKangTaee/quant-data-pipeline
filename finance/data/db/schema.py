@@ -190,6 +190,45 @@ NYSE_SCHEMAS = {
             UNIQUE KEY uk_nyse_etf_symbol (symbol)
         );
     """,
+
+    "symbol_lifecycle": """
+        CREATE TABLE IF NOT EXISTS nyse_symbol_lifecycle (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          kind ENUM('stock','etf') NOT NULL,
+
+          listing_status ENUM('active','inactive','delisted','not_found','unknown','error') NOT NULL DEFAULT 'unknown',
+          source VARCHAR(64) NOT NULL,
+          source_type ENUM('current_listing_snapshot','historical_listing','delisting_feed','asset_profile_bridge','computed_from_snapshots') NOT NULL DEFAULT 'current_listing_snapshot',
+          coverage_status ENUM('actual','partial','bridge','proxy','missing','error') NOT NULL DEFAULT 'partial',
+
+          first_seen_date DATE NULL,
+          last_seen_date DATE NULL,
+          inactive_detected_at DATE NULL,
+          event_type ENUM('listing_observed','historical_membership','delisting','ticker_change','merger','name_change','unknown','error') NOT NULL DEFAULT 'unknown',
+          event_date DATE NULL,
+          related_symbol VARCHAR(20) NULL,
+          related_cik BIGINT NULL,
+
+          name VARCHAR(255) NULL,
+          source_ref VARCHAR(1024) NULL,
+          evidence_json JSON NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_kind_source (symbol, kind, source),
+          KEY ix_symbol_kind (symbol, kind),
+          KEY ix_source_type (source_type),
+          KEY ix_listing_status (listing_status),
+          KEY ix_event_type (event_type),
+          KEY ix_event_date (event_date),
+          KEY ix_lifecycle_dates (first_seen_date, last_seen_date)
+        );
+    """,
     
      "asset_profile": """
         CREATE TABLE IF NOT EXISTS nyse_asset_profile (

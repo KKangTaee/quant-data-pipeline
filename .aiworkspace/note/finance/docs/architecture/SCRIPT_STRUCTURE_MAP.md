@@ -33,25 +33,25 @@
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
-| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Compare & Portfolio Builder를 submode로 렌더링하는 wrapper |
+| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
-| `app/web/backtest_compare.py` | `Backtest > Compare & Portfolio Builder` 화면 render, compare / weighted portfolio / saved replay service 호출, saved portfolio load, candidate handoff, preset catalog assembly |
+| `app/web/backtest_compare.py` | `Backtest > Portfolio Mix Builder` 화면 render, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff, preset catalog assembly |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display, summary / chart / data trust / real-money detail / selection history / compare result render wrapper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
 | `app/web/backtest_history_helpers.py` | Backtest history row 변환, replay payload 복원, History replay parity / Real-Money scope table helper |
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
-| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board / Provider Data Gaps 표시, provider gap / replay service 실행 버튼, service 결과를 session state에 반영하는 화면 render |
+| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board / Provider Data Gaps / Look-through Board / Robustness Lab 표시, provider gap / replay service 실행 버튼, service 결과를 session state에 반영하는 화면 render |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
 | `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, 저장 proposal monitoring / feedback 화면 render |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, saved proposal monitoring / Pre-Live feedback / paper feedback table helper |
-| `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Practical Diagnostics 요약, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, 최종 판단 완료 review 화면 render |
-| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, Practical Diagnostics snapshot 포함, inline paper observation snapshot, final review evidence / save readiness / decision row 생성 helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit 표시 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, value / holding input row, drift row, alert preview row, filter option helper. Evidence row는 service read model을 사용 |
+| `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Practical Diagnostics 요약, Look-through / Robustness Lab / Paper Observation / Investability Evidence Packet 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, 최종 판단 완료 review / Decision Dossier 화면 render |
+| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, Practical Diagnostics snapshot 포함, inline paper observation snapshot, investability packet 연결, final review evidence / save readiness / decision row 생성 helper |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / recheck readiness / symbol freshness / provider evidence / continuity check / source contract / Portfolio Monitoring Timeline / Review Signal Policy / recheck comparison / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit 표시 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, continuity row, source contract row, timeline row, recheck readiness row, symbol freshness row, provider evidence row, review signal policy row, recheck comparison row, value / holding input row, drift row, alert preview row, allocation boundary row, filter option helper. Evidence row는 service read model을 사용 |
 | `app/web/pages/backtest.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. 본문은 별도 module이 관리 |
 
 ## App / Services
@@ -67,12 +67,16 @@
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. result 생성 wrapper, selection source / validation result append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration을 담당 |
 | `app/services/backtest_practical_validation_source.py` | Streamlit-free Practical Validation validation profile / selection source builder / source component table helper. Candidate draft, saved mix, weighted mix를 Clean V2 selection source contract로 변환 |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free Practical Validation curve context helper. compact curve snapshot, result curve normalize, DB price proxy curve, component curve combination, window perturbation / monthly returns 계산을 담당 |
-| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free Practical Validation stress / sensitivity helper. rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit를 담당 |
+| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free Practical Validation stress / sensitivity helper. rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit, Robustness Lab board를 담당 |
+| `app/services/backtest_temporal_validation.py` | Streamlit-free temporal validation helper. benchmark-aligned walk-forward rolling excess return, OOS holdout excess / deterioration, macro regime split excess / drawdown gap, source strength, compact storage boundary evidence를 담당 |
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics service. component context assembly, 12개 Practical Diagnostics result 생성, legacy compatibility export를 담당 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime으로 최신 DB 데이터 기준 재검증하거나 저장 기간 그대로 재현해 component / portfolio curve evidence를 만든다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize / compact records / curve provenance / benchmark parity helper |
-| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / saved decision table row / Selected Dashboard evidence check row를 담당 |
+| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage, provenance, freshness, diagnostic evidence, look-through board로 변환 |
+| `app/services/backtest_construction_risk_audit.py` | Streamlit-free construction risk audit read model. Practical Validation metrics와 provider look-through board를 읽어 component concentration, provider coverage, top holding, holdings overlap, asset bucket exposure를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
+| `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Practical Validation의 component return matrix, correlation, max risk contribution proxy, drop-one dependency, storage boundary evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
+| `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Practical Validation의 proposal role, target weight, validation profile, role concentration, profile intent, weight reason evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / investability evidence packet / profile-aware gate policy snapshot / selected-route gate / saved decision table row / Selected Dashboard evidence check row / Decision Dossier markdown read model과 selected decision source consistency contract를 담당. Validation Efficacy Audit의 walk-forward / OOS / regime non-PASS row를 gate policy evidence에 병합한다 |
 | `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, Sector / Industry ranking/trend/ticker leaders, market event calendar payload, collection ops snapshot을 담당 |
 
 ## App / Runtime
@@ -88,14 +92,14 @@
 | `app/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
 | `app/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
 | `app/runtime/portfolio_selection_v2.py` | Clean V2 portfolio selection source / Practical Validation result / Final Decision V2 / selected monitoring log / saved mix JSONL helper와 legacy archive copy helper |
-| `app/runtime/final_selected_portfolios.py` | Final Selection Decision V2 registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
+| `app/runtime/final_selected_portfolios.py` | Final Selection Decision V2 registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / Final Review -> Selected Dashboard continuity check / 기간 확장 replay readiness / symbol freshness / selected provider evidence / review signal policy / replay recheck / recheck comparison / current weight 또는 value / holding input 기반 drift check / drift alert preview / allocation drift evidence boundary / monitoring timeline으로 변환 |
 | `app/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## App / Jobs
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion` 또는 Overview 수동 refresh에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion` 또는 Overview 수동 refresh에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar job을 표준 `JobResult`로 감싼다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리 |
 
 ## Finance Core
@@ -120,7 +124,7 @@
 | `finance/loaders/factors.py` | Factor snapshot read path |
 | `finance/loaders/fundamentals.py` | Fundamentals read path |
 | `finance/loaders/financial_statements.py` | Statement snapshot read path |
-| `finance/loaders/universe.py` | Universe / investability 관련 read path |
+| `finance/loaders/universe.py` | Universe / investability 관련 read path. asset profile status와 symbol lifecycle coverage summary를 제공 |
 | `finance/loaders/runtime_adapter.py` | loader output을 runtime / strategy 입력으로 맞추는 adapter |
 | `finance/loaders/_common.py` | loader 공통 DB / dataframe helper |
 
@@ -133,7 +137,8 @@
 | `finance/data/data.py` | 가격 데이터 수집 entry / orchestration |
 | `finance/data/data_format.py` | 수집 데이터 정규화 helper |
 | `finance/data/nyse.py` | NYSE universe source 수집 |
-| `finance/data/nyse_db.py` | NYSE universe DB persistence |
+| `finance/data/nyse_db.py` | NYSE universe DB persistence. current listing master와 `nyse_symbol_lifecycle` bridge row UPSERT를 담당 |
+| `finance/data/sec_delisting.py` | SEC EDGAR Form 25 / 25-NSE filing metadata를 읽어 `nyse_symbol_lifecycle` delisting_feed evidence row로 UPSERT |
 | `finance/data/asset_profile.py` | Asset profile 수집. ETF operability snapshot의 bridge source로 일부 field를 제공 |
 | `finance/data/market_intelligence.py` | S&P 500 current constituent parsing / 저장, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot 수집 / 저장, quote gap diagnostics / issue persistence, Fed 공식 FOMC calendar parsing / 저장, BLS / BEA macro calendar 수집 및 BLS `.ics` import, yfinance earnings estimate 수집, Nasdaq earnings cross-check, earnings lifecycle cleanup, Overview market event calendar persistence helper |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
