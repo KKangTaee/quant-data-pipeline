@@ -29,12 +29,18 @@ from app.web.backtest_final_review_helpers import (
     _build_final_review_validation,
     _is_final_review_eligible_validation_result,
 )
+from app.web.backtest_final_review_components import (
+    render_fr_action_panel,
+    render_fr_command_center,
+    render_fr_flow,
+    render_fr_lane_grid,
+    render_fr_section_header,
+)
 from app.web.backtest_portfolio_proposal_helpers import (
     _build_final_selection_decision_component_rows,
     _paper_ledger_slug,
 )
 from app.web.backtest_ui_components import (
-    render_artifact_pipeline,
     render_badge_strip,
     render_readiness_route_panel,
     render_stage_brief,
@@ -76,6 +82,48 @@ def _handoff_tone(route: Any) -> str:
     if route_text == "HANDOFF_BLOCKED":
         return "danger"
     return "neutral"
+
+
+def _short_text(value: Any, limit: int = 140) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "-"
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _candidate_board_tone(summary: dict[str, Any]) -> str:
+    if int(summary.get("select_ready", 0) or 0) > 0:
+        return "positive"
+    if int(summary.get("blocked", 0) or 0) > 0:
+        return "danger"
+    if int(summary.get("hold_or_re_review", 0) or 0) > 0:
+        return "warning"
+    return "neutral"
+
+
+def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
+    if not int(summary.get("total_candidates", 0) or 0):
+        return "검토 후보 없음", "Final Review Gate를 통과한 후보가 없습니다.", "warning"
+    if int(summary.get("select_ready", 0) or 0) > 0:
+        return "선정 후보 있음", "선정 가능한 후보를 확인하고 최종 판단을 기록합니다.", "positive"
+    if int(summary.get("blocked", 0) or 0) > 0:
+        return "차단 원인 확인", "먼저 볼 후보의 blocker를 확인하고 보류 / 재검토 / 거절을 기록합니다.", "danger"
+    return "재검토 필요", "review-required 근거를 확인하고 최종 판단을 남깁니다.", "warning"
+
+
+def _policy_rows_preview(rows: list[dict[str, Any]], *, empty_message: str) -> str:
+    if not rows:
+        return empty_message
+    previews: list[str] = []
+    for row in rows[:2]:
+        label = str(row.get("Criteria") or row.get("Group") or row.get("Module") or "-")
+        action = str(row.get("Required Action") or row.get("Fix Action") or row.get("Current") or row.get("Evidence") or "-")
+        previews.append(f"{label}: {_short_text(action, 86)}")
+    if len(rows) > 2:
+        previews.append(f"외 {len(rows) - 2}개")
+    return " / ".join(previews)
 
 
 def _provider_look_through_board(validation: dict[str, Any]) -> dict[str, Any]:
@@ -641,44 +689,43 @@ def _render_candidate_board(candidate_contexts: list[dict[str, Any]]) -> None:
         st.info("표시할 Final Review 후보가 없습니다.")
         return
     summary = dict(board.get("summary") or {})
-    render_status_card_grid(
+    route_value, route_detail, route_tone = _candidate_board_route(summary)
+    render_fr_lane_grid(
         [
             {
-                "title": "Review Queue",
-                "value": summary.get("total_candidates", 0),
-                "detail": "Final Review Gate 통과 후보",
-                "tone": "positive" if summary.get("total_candidates") else "neutral",
+                "kicker": "Next Review",
+                "title": _short_text(summary.get("first_review_candidate") or "검토 후보 없음", 96),
+                "status": route_value,
+                "detail": _short_text(summary.get("first_review_reason") or route_detail, 150),
+                "meta": _short_text(summary.get("first_review_action") or "-", 100),
+                "tone": route_tone,
             },
             {
                 "title": "Select Ready",
-                "value": summary.get("select_ready", 0),
+                "status": summary.get("select_ready", 0),
                 "detail": "선정 기록 가능 후보",
                 "tone": "positive" if summary.get("select_ready") else "neutral",
             },
             {
                 "title": "Hold / Re-review",
-                "value": summary.get("hold_or_re_review", 0),
+                "status": summary.get("hold_or_re_review", 0),
                 "detail": "보류 / 재검토 판단 필요",
                 "tone": "warning" if summary.get("hold_or_re_review") else "neutral",
             },
             {
                 "title": "Blocked",
-                "value": summary.get("blocked", 0),
+                "status": summary.get("blocked", 0),
                 "detail": "선정 전 차단 원인 있음",
                 "tone": "danger" if summary.get("blocked") else "neutral",
             },
-        ]
+        ],
+        min_width=210,
     )
-    st.info(
-        f"먼저 볼 후보: {summary.get('first_review_candidate') or '-'} / "
-        f"{summary.get('first_review_action') or '-'}"
-    )
-    st.caption(str(summary.get("first_review_reason") or "-"))
     queue_rows = list(board.get("review_queue_rows") or [])
     if queue_rows:
         st.markdown("###### Review Queue")
         st.dataframe(pd.DataFrame(queue_rows), width="stretch", hide_index=True)
-    with st.expander("Candidate Board detail", expanded=True):
+    with st.expander("Candidate Board detail", expanded=False):
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption(
         "Candidate Board는 기존 Practical Validation result와 investability packet을 읽는 비교표입니다. "
@@ -686,79 +733,107 @@ def _render_candidate_board(candidate_contexts: list[dict[str, Any]]) -> None:
     )
 
 
-def _render_policy_row_list(rows: list[dict[str, Any]], *, empty_message: str, status: str) -> None:
-    if not rows:
-        st.success(empty_message)
-        return
-    for row in rows[:4]:
-        label = str(row.get("Criteria") or row.get("Group") or "-")
-        evidence = str(row.get("Required Action") or row.get("Current") or row.get("Evidence") or "-")
-        if len(evidence) > 180:
-            evidence = evidence[:177].rstrip() + "..."
-        if status == "error":
-            st.error(f"{label}: {evidence}")
-        elif status == "warning":
-            st.warning(f"{label}: {evidence}")
-        else:
-            st.info(f"{label}: {evidence}")
-    if len(rows) > 4:
-        st.caption(f"외 {len(rows) - 4}개 항목은 Gate Policy 상세에서 확인합니다.")
-
-
 def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
     metrics = dict(cockpit.get("metrics") or {})
     handoff = dict(cockpit.get("monitoring_handoff") or {})
     source_chain = dict(cockpit.get("source_chain") or {})
-    render_readiness_route_panel(
-        route_label=str(cockpit.get("state_label") or "-"),
-        score=float(cockpit.get("packet_score") or 0.0),
-        blockers_count=int(metrics.get("policy_blockers", 0) or 0) + int(metrics.get("policy_review_required", 0) or 0),
-        verdict=str(cockpit.get("verdict") or "-"),
-        next_action=str(cockpit.get("next_action") or "-"),
-        route_title="Decision Cockpit",
-        score_title="Packet Score",
+    must_fix_rows = list(cockpit.get("must_fix_rows") or [])
+    must_review_rows = list(cockpit.get("must_review_rows") or [])
+    watch_rows = list(cockpit.get("watch_rows") or [])
+    cockpit_tone = _cockpit_tone(cockpit.get("state"))
+    render_fr_action_panel(
+        title="Decision Cockpit",
+        detail=str(cockpit.get("verdict") or "-"),
+        route_label="Suggested Decision",
+        route_value=str(cockpit.get("suggested_decision_label") or "-"),
+        route_detail=str(cockpit.get("next_action") or "-"),
+        route_tone=cockpit_tone,
+        meta_items=[
+            {"label": "State", "value": cockpit.get("state_label") or "-"},
+            {"label": "Gate", "value": cockpit.get("gate_outcome") or "-"},
+            {"label": "Packet Score", "value": f"{float(cockpit.get('packet_score') or 0.0):.1f}"},
+            {"label": "Validation", "value": source_chain.get("validation_id") or "-"},
+            {"label": "Live Approval", "value": "Disabled"},
+        ],
     )
-    render_badge_strip(
+    render_fr_lane_grid(
         [
-            {"label": "State", "value": cockpit.get("state_label") or "-", "tone": _cockpit_tone(cockpit.get("state"))},
-            {"label": "Suggested", "value": cockpit.get("suggested_decision_label") or "-", "tone": _cockpit_tone(cockpit.get("state"))},
-            {"label": "Gate", "value": cockpit.get("gate_outcome") or "-", "tone": "positive" if cockpit.get("select_allowed") else "warning"},
-            {"label": "Blockers", "value": metrics.get("policy_blockers", 0), "tone": "danger" if metrics.get("policy_blockers") else "neutral"},
-            {"label": "Review", "value": metrics.get("policy_review_required", 0), "tone": "warning" if metrics.get("policy_review_required") else "neutral"},
-            {"label": "NOT_RUN", "value": metrics.get("not_run", 0), "tone": "warning" if metrics.get("not_run") else "neutral"},
-            {"label": "Validation", "value": source_chain.get("validation_id") or "-", "tone": "neutral"},
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-    cockpit_cols = st.columns(3, gap="small")
-    with cockpit_cols[0]:
-        st.markdown("###### Must Fix")
-        _render_policy_row_list(
-            list(cockpit.get("must_fix_rows") or []),
-            empty_message="선정 차단 blocker 없음",
-            status="error",
-        )
-    with cockpit_cols[1]:
-        st.markdown("###### Must Review")
-        _render_policy_row_list(
-            list(cockpit.get("must_review_rows") or []),
-            empty_message="선정 전 review-required 없음",
-            status="warning",
-        )
-    with cockpit_cols[2]:
-        st.markdown("###### Monitoring Seed")
-        st.write(
             {
-                "cadence": handoff.get("review_cadence") or "-",
-                "benchmark": handoff.get("tracking_benchmark") or "-",
-                "triggers": len(handoff.get("review_triggers") or []),
-                "components": handoff.get("active_components", 0),
-                "weight_total": handoff.get("target_weight_total"),
-            }
+                "kicker": "Gate Policy",
+                "title": "Must Fix",
+                "status": len(must_fix_rows),
+                "detail": _policy_rows_preview(must_fix_rows, empty_message="선정 차단 blocker 없음"),
+                "tone": "danger" if must_fix_rows else "positive",
+            },
+            {
+                "kicker": "Gate Policy",
+                "title": "Must Review",
+                "status": len(must_review_rows),
+                "detail": _policy_rows_preview(must_review_rows, empty_message="선정 전 review-required 없음"),
+                "tone": "warning" if must_review_rows else "positive",
+            },
+            {
+                "kicker": "Monitoring Seed",
+                "title": str(handoff.get("review_cadence") or "관찰 기준 미지정"),
+                "status": f"{handoff.get('active_components', 0)} components",
+                "detail": (
+                    f"Benchmark {handoff.get('tracking_benchmark') or '-'} / "
+                    f"Triggers {len(handoff.get('review_triggers') or [])} / "
+                    f"Weight {handoff.get('target_weight_total') or '-'}"
+                ),
+                "tone": "info",
+            },
+            {
+                "kicker": "Watch Only",
+                "title": "Policy Watch",
+                "status": len(watch_rows),
+                "detail": _policy_rows_preview(watch_rows, empty_message="관찰 전용 policy row 없음"),
+                "tone": "warning" if watch_rows else "neutral",
+            },
+        ],
+        min_width=220,
+    )
+    with st.expander("Decision Cockpit detail", expanded=False):
+        render_badge_strip(
+            [
+                {"label": "State", "value": cockpit.get("state_label") or "-", "tone": cockpit_tone},
+                {"label": "Suggested", "value": cockpit.get("suggested_decision_label") or "-", "tone": cockpit_tone},
+                {"label": "Gate", "value": cockpit.get("gate_outcome") or "-", "tone": "positive" if cockpit.get("select_allowed") else "warning"},
+                {"label": "Blockers", "value": metrics.get("policy_blockers", 0), "tone": "danger" if metrics.get("policy_blockers") else "neutral"},
+                {"label": "Review", "value": metrics.get("policy_review_required", 0), "tone": "warning" if metrics.get("policy_review_required") else "neutral"},
+                {"label": "NOT_RUN", "value": metrics.get("not_run", 0), "tone": "warning" if metrics.get("not_run") else "neutral"},
+            ]
         )
-    if cockpit.get("watch_rows"):
-        with st.expander("Watch-only policy rows", expanded=False):
-            st.dataframe(pd.DataFrame(cockpit.get("watch_rows") or []), width="stretch", hide_index=True)
+        detail_tabs = st.tabs(["Must Fix", "Must Review", "Monitoring Seed", "Watch-only"])
+        with detail_tabs[0]:
+            if must_fix_rows:
+                st.dataframe(pd.DataFrame(must_fix_rows), width="stretch", hide_index=True)
+            else:
+                st.success("선정 차단 blocker 없음")
+        with detail_tabs[1]:
+            if must_review_rows:
+                st.dataframe(pd.DataFrame(must_review_rows), width="stretch", hide_index=True)
+            else:
+                st.success("선정 전 review-required 없음")
+        with detail_tabs[2]:
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {"Field": "Cadence", "Value": str(handoff.get("review_cadence") or "-")},
+                        {"Field": "Benchmark", "Value": str(handoff.get("tracking_benchmark") or "-")},
+                        {"Field": "Triggers", "Value": str(len(handoff.get("review_triggers") or []))},
+                        {"Field": "Components", "Value": str(handoff.get("active_components", 0))},
+                        {"Field": "Weight Total", "Value": str(handoff.get("target_weight_total") or "-")},
+                    ]
+                ),
+                width="stretch",
+                hide_index=True,
+            )
+        with detail_tabs[3]:
+            if watch_rows:
+                st.dataframe(pd.DataFrame(watch_rows), width="stretch", hide_index=True)
+            else:
+                st.info("관찰 전용 policy row가 없습니다.")
 
 
 def _render_evidence_appendix(
@@ -1065,42 +1140,6 @@ def render_final_review_workspace() -> None:
     if final_notice:
         st.success(str(final_notice))
 
-    render_status_card_grid(
-        [
-            {
-                "title": "Saved PV Records",
-                "value": len(practical_validation_rows),
-                "detail": "기록용 저장 포함",
-                "tone": "positive" if practical_validation_rows else "neutral",
-            },
-            {
-                "title": "Final Review Eligible",
-                "value": f"{len(eligible_practical_validation_rows)} / {len(practical_validation_rows)}",
-                "detail": "통과 / 전체 Practical Validation",
-                "tone": "positive" if eligible_practical_validation_rows else "neutral",
-            },
-            {"title": "Final Review Records", "value": len(final_decision_rows), "tone": "positive" if final_decision_rows else "neutral"},
-            {"title": "Paper Ledger Save", "value": "Not Required", "detail": "관찰 기준은 최종 검토 기록 안에 포함합니다.", "tone": "neutral"},
-            {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
-        ]
-    )
-    hidden_validation_count = len(practical_validation_rows) - len(eligible_practical_validation_rows)
-    if hidden_validation_count > 0:
-        st.caption(
-            f"Practical Validation 저장 기록 {hidden_validation_count}개는 Final Review Gate를 통과하지 않아 검토 대상 목록에서 숨겼습니다."
-        )
-
-    with st.container(border=True):
-        st.markdown("#### 최종 검토 흐름")
-        render_artifact_pipeline(
-            [
-                {"title": "검토 대상", "detail": "Practical Validation Gate 통과 후보", "status": "선택", "tone": "neutral"},
-                {"title": "판정 요약", "detail": "Decision Cockpit", "status": "자동 계산", "tone": "neutral"},
-                {"title": "최종 판단", "detail": "선정 / 보류 / 거절 / 재검토", "status": "명시 기록", "tone": "warning"},
-                {"title": "근거 부록", "detail": "이전 검증 결과 read-only 확인", "status": "Appendix", "tone": "neutral"},
-            ]
-        )
-
     source_options = _build_final_review_source_options(
         current_rows,
         proposal_rows,
@@ -1108,27 +1147,112 @@ def render_final_review_workspace() -> None:
         session_practical_source=session_practical_source if isinstance(session_practical_source, dict) else None,
         include_legacy_sources=False,
     )
+    candidate_contexts = (
+        _build_candidate_contexts(
+            source_options,
+            current_rows=current_rows,
+            pre_live_rows=pre_live_rows,
+        )
+        if source_options
+        else []
+    )
+    candidate_board = build_final_review_candidate_board(candidate_contexts) if candidate_contexts else {}
+    candidate_summary = dict(candidate_board.get("summary") or {})
+    route_value, route_detail, route_tone = _candidate_board_route(candidate_summary)
+    dashboard_handoff = build_selected_dashboard_handoff_review(final_decision_rows)
+    dashboard_summary = dict(dashboard_handoff.get("summary") or {})
+    hidden_validation_count = len(practical_validation_rows) - len(eligible_practical_validation_rows)
+    render_fr_command_center(
+        eyebrow="Final Review Decision Desk",
+        title="최종 후보 선별",
+        detail=(
+            "Practical Validation Gate를 통과한 후보만 비교하고, Decision Cockpit에서 차단 / 보류 / 선정 가능 상태를 확인한 뒤 "
+            "최종 판단을 명시적으로 기록합니다."
+        ),
+        route_label="오늘의 판단 상태",
+        route_value=route_value,
+        route_detail=route_detail,
+        route_tone=route_tone,
+        kpis=[
+            {
+                "label": "Saved PV",
+                "value": len(practical_validation_rows),
+                "detail": "기록용 저장 포함",
+            },
+            {
+                "label": "Eligible",
+                "value": f"{len(eligible_practical_validation_rows)} / {len(practical_validation_rows)}",
+                "detail": "Final Review Gate 통과",
+            },
+            {"label": "Hidden", "value": hidden_validation_count, "detail": "Gate 미통과 기록"},
+            {
+                "label": "Review Queue",
+                "value": candidate_summary.get("total_candidates", 0),
+                "detail": "오늘 비교할 후보",
+            },
+            {"label": "Final Records", "value": len(final_decision_rows), "detail": "저장된 최종 판단"},
+            {
+                "label": "Dashboard Selected",
+                "value": dashboard_summary.get("selected_decision_count", 0),
+                "detail": "Selected Dashboard 후보",
+            },
+        ],
+    )
+    render_fr_flow(
+        [
+            {
+                "title": "후보 선택",
+                "detail": "Gate 통과 후보를 Candidate Board에서 비교합니다.",
+                "tone": "info",
+            },
+            {
+                "title": "상태 판단",
+                "detail": "Decision Cockpit에서 선정 차단 / 보류 / 선정 가능 상태를 확인합니다.",
+                "tone": "neutral",
+            },
+            {
+                "title": "최종 기록",
+                "detail": "선정, 보류, 거절, 재검토 중 하나를 명시적으로 저장합니다.",
+                "tone": "warning",
+            },
+            {
+                "title": "근거 확인",
+                "detail": "필요할 때만 이전 validation evidence를 read-only 부록으로 확인합니다.",
+                "tone": "neutral",
+            },
+            {
+                "title": "대시보드 연결",
+                "detail": "선정 기록만 Selected Portfolio Dashboard 후보로 전달됩니다.",
+                "tone": "positive",
+            },
+        ]
+    )
+    if hidden_validation_count > 0:
+        st.caption(
+            f"Practical Validation 저장 기록 {hidden_validation_count}개는 Final Review Gate를 통과하지 않아 검토 대상 목록에서 숨겼습니다."
+        )
+
     if not source_options:
         st.info("Final Review Gate를 통과한 Practical Validation 후보가 없습니다.")
         st.caption("검증 결과만 저장한 blocked / needs input / not run 후보는 기록으로 남지만, Final Review 검토 대상에는 표시되지 않습니다.")
-        st.markdown("#### 기록된 최종 검토 결과 확인")
+        render_fr_section_header(
+            eyebrow="Saved Decisions",
+            title="Decision History / Dashboard Handoff",
+            detail="새로 판단할 후보가 없을 때도 기존 최종 판단과 Dashboard handoff 상태는 확인할 수 있습니다.",
+            tone=_handoff_tone(dashboard_handoff.get("route")),
+        )
         with st.container(border=True):
             _render_saved_final_review_decisions(final_decision_rows)
         return
 
-    candidate_contexts = _build_candidate_contexts(
-        source_options,
-        current_rows=current_rows,
-        pre_live_rows=pre_live_rows,
-    )
-
     st.divider()
-    st.markdown("#### 1. Candidate Board / 최종 검토 대상 선택")
+    render_fr_section_header(
+        eyebrow="Step 1",
+        title="Candidate Board",
+        detail="Final Review Gate를 통과한 후보를 먼저 비교하고, 오늘 판단할 source를 고릅니다.",
+        tone=_candidate_board_tone(candidate_summary),
+    )
     with st.container(border=True):
-        render_stage_brief(
-            purpose="Final Review Gate를 통과한 후보를 먼저 비교하고, 오늘 판단할 source를 고릅니다.",
-            result="Candidate board + selected source",
-        )
         _render_candidate_board(candidate_contexts)
         labels = [str(context["label"]) for context in candidate_contexts]
         selected_label = st.selectbox("검토 대상", options=labels, key="final_review_source_selected")
@@ -1147,28 +1271,38 @@ def render_final_review_workspace() -> None:
     investability_packet = dict(selected_context["investability_packet"])
     cockpit = dict(selected_context["cockpit"])
 
-    st.markdown("#### 2. Decision Cockpit")
+    render_fr_section_header(
+        eyebrow="Step 2",
+        title="Decision Cockpit",
+        detail="상세 표를 보기 전에 선정 차단, 보류 필요, 선정 가능 여부와 monitoring seed를 먼저 확인합니다.",
+        tone=_cockpit_tone(cockpit.get("state")),
+    )
     with st.container(border=True):
-        render_stage_brief(
-            purpose="상세 표를 보기 전에, 선정 차단 / 보류 필요 / 선정 가능 여부와 monitoring seed를 먼저 확인합니다.",
-            result="Decision state",
-        )
         _render_decision_cockpit(cockpit)
 
-    st.markdown("#### 3. 최종 판단 기록")
+    render_fr_section_header(
+        eyebrow="Step 3",
+        title="Final Decision Action",
+        detail="Decision Cockpit을 보고 오늘의 최종 select / hold / reject / re-review 판단을 한 번만 명시적으로 기록합니다.",
+        tone="warning",
+    )
     with st.container(border=True):
-        render_stage_brief(
-            purpose="Decision Cockpit을 보고 오늘의 최종 select / hold / reject / re-review 판단을 한 번만 명시적으로 기록합니다.",
-            result="Final decision record",
-        )
-        render_readiness_route_panel(
-            route_label=str(evidence.get("route") or "-"),
-            score=float(evidence.get("score") or 0.0),
-            blockers_count=len(evidence.get("blockers") or []),
-            verdict=str(evidence.get("verdict") or "-"),
-            next_action=str(evidence.get("next_action") or "-"),
-            route_title="Final Review Route",
-            score_title="Evidence Score",
+        render_fr_action_panel(
+            title="Final Decision Action",
+            detail=(
+                "이 구간이 실제 최종 판단입니다. 운영 상태와 proposal 메모는 준비 기록이고, "
+                "실전 후보 선정 / 보류 / 거절 / 재검토는 여기에서 명시적으로 저장합니다."
+            ),
+            route_label="Evidence Route",
+            route_value=str(evidence.get("route") or "-"),
+            route_detail=str(evidence.get("next_action") or "-"),
+            route_tone="danger" if evidence.get("blockers") else "positive",
+            meta_items=[
+                {"label": "Evidence Score", "value": f"{float(evidence.get('score') or 0.0):.1f}"},
+                {"label": "Blockers", "value": len(evidence.get("blockers") or [])},
+                {"label": "Source", "value": source.get("source_id") or "-"},
+                {"label": "Live Approval", "value": "Disabled"},
+            ],
         )
         st.caption("상세 validation table은 아래 Evidence Appendix에서 확인합니다. 이 구간은 최종 판단 기록이 주 action입니다.")
         if evidence.get("blockers"):
@@ -1198,11 +1332,6 @@ def render_final_review_workspace() -> None:
         operator_reason_key = f"final_review_operator_reason_v1_{source_slug}"
         operator_constraints_key = f"final_review_operator_constraints_v1_{source_slug}"
         operator_next_action_key = f"final_review_operator_next_action_v1_{source_slug}"
-
-        st.info(
-            "여기가 실제 최종 판단 구간입니다. 앞 단계의 운영 상태 / proposal 메모는 준비 기록이고, "
-            "실전 후보 선정 / 보류 / 거절 / 재검토는 여기에서 한 번만 명시적으로 기록합니다."
-        )
 
         input_cols = st.columns([0.56, 0.44], gap="small")
         with input_cols[0]:
@@ -1293,14 +1422,19 @@ def render_final_review_workspace() -> None:
             operator_reason=operator_reason,
             existing_decision_ids=existing_decision_ids,
         )
-        render_readiness_route_panel(
-            route_label=str(save_evaluation.get("route") or "-"),
-            score=float(save_evaluation.get("score") or 0.0),
-            blockers_count=len(save_evaluation.get("blockers") or []),
-            verdict=str(save_evaluation.get("verdict") or "-"),
-            next_action=str(save_evaluation.get("next_action") or "-"),
-            route_title="Record Route",
-            score_title="Record Score",
+        render_fr_action_panel(
+            title="Record Readiness",
+            detail=str(save_evaluation.get("verdict") or "-"),
+            route_label="Record Route",
+            route_value=str(save_evaluation.get("route") or "-"),
+            route_detail=str(save_evaluation.get("next_action") or "-"),
+            route_tone="positive" if save_evaluation.get("can_save") else "danger",
+            meta_items=[
+                {"label": "Record Score", "value": f"{float(save_evaluation.get('score') or 0.0):.1f}"},
+                {"label": "Blockers", "value": len(save_evaluation.get("blockers") or [])},
+                {"label": "Decision ID", "value": decision_id},
+                {"label": "Storage", "value": "Final Selection v2"},
+            ],
         )
         final_row = _build_final_review_decision_row(
             source=source,
@@ -1341,7 +1475,12 @@ def render_final_review_workspace() -> None:
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
-    st.markdown("#### 4. Evidence Appendix / 이전 검증 결과 부록")
+    render_fr_section_header(
+        eyebrow="Step 4",
+        title="Evidence Appendix",
+        detail="최종 판단에 필요한 요약은 위에서 끝내고, 원본 검증 근거는 필요한 경우에만 read-only로 확인합니다.",
+        tone="neutral",
+    )
     with st.container(border=True):
         _render_evidence_appendix(
             validation=validation,
@@ -1349,6 +1488,11 @@ def render_final_review_workspace() -> None:
             investability_packet=investability_packet,
         )
 
-    st.markdown("#### 5. 기록된 최종 검토 결과 확인")
+    render_fr_section_header(
+        eyebrow="Step 5",
+        title="Decision History / Dashboard Handoff",
+        detail="저장된 최종 판단과 Selected Portfolio Dashboard로 이어질 후보 상태를 확인합니다.",
+        tone=_handoff_tone(dashboard_handoff.get("route")),
+    )
     with st.container(border=True):
         _render_saved_final_review_decisions(final_decision_rows)

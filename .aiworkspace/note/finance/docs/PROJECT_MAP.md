@@ -69,6 +69,7 @@ Last Verified: 2026-05-31
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py` |
+| Final Review UI components | `app/web/backtest_final_review_components.py` |
 | Selected Portfolio Dashboard | `app/web/final_selected_portfolio_dashboard.py` |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
@@ -115,7 +116,8 @@ Last Verified: 2026-05-31
 | File | Responsibility |
 |---|---|
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, Final Review candidate board priority / decision cockpit / decision record guide / saved decision review read models, investability evidence packet / profile-aware gate policy snapshot / selected-route gate, saved decision table rows, shared evidence check rows, decision dossier markdown read model and selected decision source consistency contract. Validation Efficacy row-level walk-forward / OOS / regime gaps and Construction Risk / Risk Contribution / Component Role / Weight non-PASS rows feed selected-route gate evidence |
-| `app/web/backtest_final_review.py` | Final Review screen render, Practical Validation Gate-passed Candidate Board with review priority / queue / primary reason, selected-source Decision Cockpit, hidden blocked validation count, final decision input with decision record checklist / route guide, Evidence Appendix for investability packet / look-through / Robustness Lab / previous validation evidence, saved final decision review ledger with route filter and detail tabs, Selected Dashboard handoff summary, decision dossier download |
+| `app/web/backtest_final_review.py` | Final Review screen render, Decision Desk command center / flow ordering, Practical Validation Gate-passed Candidate Board with review priority / queue / primary reason, selected-source Decision Cockpit, hidden blocked validation count, final decision input with decision record checklist / route guide, Evidence Appendix for investability packet / look-through / Robustness Lab / previous validation evidence, saved final decision review ledger with route filter and detail tabs, Selected Dashboard handoff summary, decision dossier download |
+| `app/web/backtest_final_review_components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source eligibility filter, validation reuse, paper observation snapshot, investability packet wiring, save row construction |
 | `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, Final Review handoff summary, continuity check, Recheck Operations Preflight, Recheck Readiness, Symbol Freshness, Provider Evidence freshness / coverage policy, Timeline / Review Signal Policy / recheck comparison / allocation monitoring controls / allocation evidence boundary / source contract tables |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / Selected Dashboard handoff table / component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / recheck comparison / drift / alert / allocation boundary / source contract display helpers |

@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Selected Dashboard Handoff V1 is implementation complete; the next Final Review slice should be chosen from remaining post-handoff polish or Phase 14 prioritization.
+  - Final Review Commercial UX V1 is implementation complete; the next work should be user review feedback, mobile polish if needed, or Phase 14 prioritization.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-commercial-ux-v1/`.
+- Final Review now opens as a user-facing Decision Desk: command center, flow rail, Candidate Board lane cards, visual Decision Cockpit, Final Decision Action, Evidence Appendix, and Decision History / Dashboard Handoff.
+- No validation scoring, gate policy, DB schema, JSONL persistence, provider fetch, live approval, order, account sync, or auto rebalance behavior was changed.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-selected-dashboard-handoff-v1/`.
 - Final Review Saved Decision Review and `Operations > Selected Portfolio Dashboard` now share a read-only handoff review for selected rows, dashboard row build, monitorable / blocked counts, checklist, and destination.
 - No new registry, monitoring log auto-write, report auto-write, live approval, order, account sync, or auto rebalance behavior was added.

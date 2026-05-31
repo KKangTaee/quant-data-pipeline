@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Selected Dashboard Handoff V1 is implementation complete; remaining near-term work should be chosen after reviewing the current Final Review / Selected Dashboard polish state.
+  - Final Review Commercial UX V1 is implementation complete; remaining near-term work should be chosen after user review feedback or through Phase 14 prioritization.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Final Review should feel like a user-facing decision desk
+- User request:
+  - Final Review가 개발자용 UX/UI처럼 보이므로 전체 흐름과 로직을 파악해 사용자가 쉽게 이해할 수 있게 시각적으로 개편해 달라고 승인함.
+- Interpreted goal:
+  - 검증 / gate / 저장 로직은 유지하면서, 최종 후보 선별 화면의 정보 위계를 사용자-facing Decision Desk로 바꾼다.
+- Analysis result:
+  - 구현 결과 Final Review는 command center, flow rail, Candidate Board lane cards, visual Decision Cockpit, Final Decision Action, Evidence Appendix, Decision History / Dashboard Handoff 순서로 읽힌다.
+  - 새 `app/web/backtest_final_review_components.py`는 CSS / HTML shell만 담당하며, 기존 read model, selected-route gate, JSONL persistence를 바꾸지 않는다.
+- Follow-up:
+  - 모바일 전용 polish와 깊은 Evidence Appendix redesign은 별도 scope로 남긴다.
 
 ### 2026-05-31 - Selected Dashboard handoff should be a read-only connection layer
 - User request:
