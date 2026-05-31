@@ -6517,6 +6517,72 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[2]["Candidate"], "Blocked")
         self.assertEqual(board["review_queue_rows"][0]["Action"], "최종 판단 기록")
 
+    def test_final_review_decision_record_guide_blocks_selected_route_when_gate_blocks(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_final_review_decision_record_guide,
+        )
+
+        packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "suggested_decision_route": "RE_REVIEW_REQUIRED",
+                "blockers": ["Risk Contribution: missing drop-one dependency"],
+                "review_required": [],
+                "policy_rows": [
+                    {
+                        "Criteria": "Risk Contribution",
+                        "Severity": "BLOCK",
+                        "Required Action": "drop-one dependency evidence를 보강합니다.",
+                    }
+                ],
+            },
+        }
+
+        guide = build_final_review_decision_record_guide(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=packet,
+        )
+
+        self.assertEqual(guide["schema_version"], "final_review_decision_record_guide_v1")
+        self.assertEqual(guide["route_state"], "SELECT_ROUTE_BLOCKED")
+        self.assertFalse(guide["recordable_route"])
+        self.assertFalse(guide["selected_route_gate"]["Ready"])
+        self.assertEqual(guide["suggested_decision_route"], "RE_REVIEW_REQUIRED")
+        self.assertIn("Investability evidence packet", guide["blockers"])
+        self.assertFalse(guide["record_boundary"]["live_approval"])
+
+    def test_final_review_decision_record_guide_allows_non_select_route_with_evidence_gap(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_decision_record_guide
+
+        packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "suggested_decision_route": "RE_REVIEW_REQUIRED",
+                "blockers": ["Data Coverage: survivorship evidence missing"],
+                "review_required": [],
+            },
+        }
+
+        guide = build_final_review_decision_record_guide(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=packet,
+        )
+
+        self.assertEqual(guide["route_state"], "NON_SELECT_RECORDABLE")
+        self.assertTrue(guide["recordable_route"])
+        self.assertTrue(guide["selected_route_gate"]["Ready"])
+        self.assertIn("paper tracking", guide["route_templates"]["reason"])
+        self.assertFalse(guide["record_boundary"]["waiver_persistence"])
+
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_decision_evidence_rows
 

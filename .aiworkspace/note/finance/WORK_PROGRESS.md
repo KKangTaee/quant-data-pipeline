@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-decision-record-v1/`.
+- Final Review final decision input now shows a Decision Record Checklist, selected-route guide badges, route-specific record templates, and explicit live approval / order disabled boundary.
+- Blocked selected-route candidates now default to the gate-suggested non-select route for recording, while `SELECT_FOR_PRACTICAL_PORTFOLIO` remains blocked unless the existing investability gate allows it.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-candidate-board-v1/`.
 - Final Review Candidate Board now ranks Gate-passed candidates by review usefulness and shows select-ready / hold / blocked counts, first-review candidate, review queue, primary reason, and next action.
 - This is read-only display priority only; no validation scoring, source eligibility, provider fetch, JSONL schema, live approval, order, account sync, or auto rebalance behavior was added.

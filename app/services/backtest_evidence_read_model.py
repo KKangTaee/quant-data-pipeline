@@ -14,6 +14,7 @@ SELECT_FOR_PRACTICAL_PORTFOLIO = "SELECT_FOR_PRACTICAL_PORTFOLIO"
 DECISION_DOSSIER_SCHEMA_VERSION = "decision_dossier_v1"
 DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
 CANDIDATE_BOARD_SCHEMA_VERSION = "final_review_candidate_board_v1"
+DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
@@ -41,6 +42,28 @@ FINAL_REVIEW_STATUS_DISPLAY = {
         "route": "FINAL_REVIEW_REVIEW_REQUIRED",
         "verdict": "최종 판단 재검토 필요: 구성 / 비중 / 검증 근거를 다시 확인",
         "next_action": "구성, 비중, validation, robustness, paper observation 근거를 보강한 뒤 Final Review에서 다시 판단합니다.",
+    },
+}
+FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
+    SELECT_FOR_PRACTICAL_PORTFOLIO: {
+        "reason": "Decision Cockpit과 investability gate가 선정 가능 상태이며, 남은 blocker 없이 실전 검토 통과 후보로 기록한다.",
+        "constraints": "실제 투자 전 투입 금액, 리밸런싱 규칙, 중단 / 재검토 기준, 세금 / 계좌 조건은 별도로 확인한다.",
+        "next_action": "Selected Portfolio Dashboard에서 read-only monitoring / recheck 기준을 확인한다.",
+    },
+    "HOLD_FOR_MORE_PAPER_TRACKING": {
+        "reason": "critical blocker는 아니지만 review-required evidence나 관찰 공백이 남아 있어 선정 전 추가 paper tracking이 필요하다.",
+        "constraints": "관찰 기간, benchmark, review trigger, 보강할 evidence row를 명시하고 선정 판단은 보류한다.",
+        "next_action": "추가 관찰 또는 evidence 보강 후 Final Review에서 다시 판단한다.",
+    },
+    "REJECT_FOR_PRACTICAL_USE": {
+        "reason": "현재 검증 근거와 gate evidence로는 실전 후보로 사용하기 어렵다고 판단한다.",
+        "constraints": "동일 source를 다시 검토하려면 blocker 해소나 후보 재구성이 먼저 필요하다.",
+        "next_action": "필요하면 Backtest Analysis, Practical Validation, Portfolio Mix 단계로 돌아가 새 후보를 만든다.",
+    },
+    "RE_REVIEW_REQUIRED": {
+        "reason": "구성, 비중, 검증 근거, 데이터 상태 중 최종 판단 전에 다시 검토해야 할 항목이 남아 있다.",
+        "constraints": "재검토 대상 evidence row와 보강 책임 범위를 남기고 선정 route로 저장하지 않는다.",
+        "next_action": "구성 / 비중 / validation / provider / robustness evidence를 보강한 뒤 Final Review에서 재검토한다.",
     },
 }
 GATE_POLICY_SCHEMA_VERSION = "investability_gate_policy_v1"
@@ -970,6 +993,106 @@ def build_selected_route_gate(
     }
 
 
+def build_final_review_decision_record_guide(
+    *,
+    decision_route: str,
+    decision_evidence: dict[str, Any] | None,
+    investability_packet: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Explain how the selected final route should be recorded without revalidating evidence."""
+
+    route = str(decision_route or "").strip()
+    evidence = dict(decision_evidence or {})
+    packet = dict(investability_packet or {})
+    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    suggested_route = (
+        gate_policy.get("suggested_decision_route")
+        or evidence.get("suggested_decision_route")
+        or SELECT_FOR_PRACTICAL_PORTFOLIO
+    )
+    selected_gate = build_selected_route_gate(
+        decision_route=route,
+        investability_packet=packet,
+    )
+    selected = route == SELECT_FOR_PRACTICAL_PORTFOLIO
+    valid_route = route in FINAL_REVIEW_DECISION_LABELS
+    route_templates = dict(
+        FINAL_REVIEW_DECISION_RECORD_TEMPLATES.get(
+            route,
+            FINAL_REVIEW_DECISION_RECORD_TEMPLATES["RE_REVIEW_REQUIRED"],
+        )
+    )
+    if selected and not bool(selected_gate.get("Ready")):
+        route_state = "SELECT_ROUTE_BLOCKED"
+        route_state_label = "선정 저장 차단"
+        notice_level = "warning"
+        notice = "선정 route는 기존 investability gate가 허용할 때만 저장됩니다. 보류 / 재검토 / 거절 기록은 남길 수 있습니다."
+    elif selected:
+        route_state = "SELECT_ROUTE_READY"
+        route_state_label = "선정 기록 가능"
+        notice_level = "success"
+        notice = "현재 selected-route gate가 선정 기록을 허용합니다. 판단 사유를 남기면 최종 검토 기록으로 저장할 수 있습니다."
+    else:
+        route_state = "NON_SELECT_RECORDABLE"
+        route_state_label = "비선정 기록 가능"
+        notice_level = "info"
+        notice = "보류 / 거절 / 재검토 판단은 evidence gap이 있어도 기록할 수 있습니다. 단, 실제 선정으로 저장되지는 않습니다."
+    checklist_rows = [
+        {
+            "Criteria": "Suggested decision",
+            "Ready": True,
+            "Current": "matches suggestion" if route == suggested_route else "manual override",
+            "Meaning": f"권장 route는 {_decision_route_label(suggested_route)}입니다.",
+        },
+        {
+            "Criteria": "Selected route",
+            "Ready": valid_route,
+            "Current": _decision_route_label(route) if valid_route else route or "-",
+            "Meaning": "최종 판단으로 저장될 route입니다.",
+        },
+        selected_gate,
+        {
+            "Criteria": "Operator reason",
+            "Ready": True,
+            "Current": "required at save",
+            "Meaning": "저장 가능 여부는 실제 판단 사유 입력 후 최종 save gate에서 다시 확인합니다.",
+        },
+        {
+            "Criteria": "Live approval / order",
+            "Ready": True,
+            "Current": "disabled",
+            "Meaning": "Final Review는 승인, 주문, 계좌 연동, 자동 리밸런싱을 만들지 않습니다.",
+        },
+    ]
+    blockers = [str(row.get("Criteria")) for row in checklist_rows if not bool(row.get("Ready"))]
+    return {
+        "schema_version": DECISION_RECORD_GUIDE_SCHEMA_VERSION,
+        "decision_route": route,
+        "decision_label": _decision_route_label(route),
+        "suggested_decision_route": suggested_route,
+        "suggested_decision_label": _decision_route_label(suggested_route),
+        "route_state": route_state,
+        "route_state_label": route_state_label,
+        "notice_level": notice_level,
+        "notice": notice,
+        "selected_route_gate": selected_gate,
+        "recordable_route": valid_route and bool(selected_gate.get("Ready")),
+        "checklist_rows": checklist_rows,
+        "blockers": blockers,
+        "route_templates": route_templates,
+        "record_boundary": {
+            "write_policy": "append_final_selection_decision_v2_only",
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "waiver_persistence": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "account_sync": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
 def _decision_route_label(route: Any) -> str:
     return FINAL_REVIEW_DECISION_LABELS.get(_safe_text(route, ""), "재검토 필요")
 
@@ -1694,6 +1817,7 @@ __all__ = [
     "DECISION_DOSSIER_SCHEMA_VERSION",
     "DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION",
     "CANDIDATE_BOARD_SCHEMA_VERSION",
+    "DECISION_RECORD_GUIDE_SCHEMA_VERSION",
     "FINAL_REVIEW_DECISION_LABELS",
     "FINAL_REVIEW_STATUS_DISPLAY",
     "SELECT_FOR_PRACTICAL_PORTFOLIO",
@@ -1701,6 +1825,7 @@ __all__ = [
     "build_final_review_candidate_board",
     "build_final_review_candidate_board_rows",
     "build_final_review_decision_cockpit",
+    "build_final_review_decision_record_guide",
     "build_investability_gate_policy",
     "build_investability_evidence_packet",
     "build_final_decision_evidence_rows",

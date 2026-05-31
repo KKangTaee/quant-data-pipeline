@@ -11,6 +11,7 @@ from app.services.backtest_evidence_read_model import (
     build_decision_dossier,
     build_final_review_candidate_board,
     build_final_review_decision_cockpit,
+    build_final_review_decision_record_guide,
 )
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
@@ -1038,8 +1039,18 @@ def render_final_review_workspace() -> None:
             st.session_state.pop("final_review_decision_id", None)
         source_slug = _paper_ledger_slug(source.get("source_id"))
         default_decision_id = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
-        suggested_route = str(evidence.get("suggested_decision_route") or FINAL_REVIEW_ROUTE_OPTIONS[0])
+        gate_policy_snapshot = dict(investability_packet.get("gate_policy_snapshot") or {})
+        suggested_route = str(
+            gate_policy_snapshot.get("suggested_decision_route")
+            or evidence.get("suggested_decision_route")
+            or cockpit.get("suggested_decision_route")
+            or FINAL_REVIEW_ROUTE_OPTIONS[0]
+        )
         suggested_index = FINAL_REVIEW_ROUTE_OPTIONS.index(suggested_route) if suggested_route in FINAL_REVIEW_ROUTE_OPTIONS else 0
+        decision_route_key = f"final_review_decision_route_v1_{source_slug}"
+        operator_reason_key = f"final_review_operator_reason_v1_{source_slug}"
+        operator_constraints_key = f"final_review_operator_constraints_v1_{source_slug}"
+        operator_next_action_key = f"final_review_operator_next_action_v1_{source_slug}"
 
         st.info(
             "여기가 실제 최종 판단 구간입니다. 앞 단계의 운영 상태 / proposal 메모는 준비 기록이고, "
@@ -1052,28 +1063,80 @@ def render_final_review_workspace() -> None:
                 "최종 판단",
                 options=FINAL_REVIEW_ROUTE_OPTIONS,
                 index=suggested_index,
-                key="final_review_decision_route",
+                key=decision_route_key,
                 help="이 값이 Final Review의 최종 판단으로 저장됩니다.",
             )
         with input_cols[1]:
             st.text_input("Source", value=str(source.get("source_id") or "-"), disabled=True, key="final_review_source_display")
         st.caption(FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(str(decision_route), "-"))
+        decision_record_guide = build_final_review_decision_record_guide(
+            decision_route=str(decision_route),
+            decision_evidence=evidence,
+            investability_packet=investability_packet,
+        )
+        selected_gate = dict(decision_record_guide.get("selected_route_gate") or {})
+        render_badge_strip(
+            [
+                {
+                    "label": "Suggested",
+                    "value": decision_record_guide.get("suggested_decision_label") or "-",
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Selected",
+                    "value": decision_record_guide.get("decision_label") or "-",
+                    "tone": "positive" if decision_record_guide.get("recordable_route") else "warning",
+                },
+                {
+                    "label": "Selected Gate",
+                    "value": "Ready" if selected_gate.get("Ready") else "Blocked",
+                    "tone": "positive" if selected_gate.get("Ready") else "danger",
+                },
+                {
+                    "label": "Record Type",
+                    "value": decision_record_guide.get("route_state_label") or "-",
+                    "tone": "positive" if decision_record_guide.get("recordable_route") else "warning",
+                },
+                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        notice = str(decision_record_guide.get("notice") or "")
+        if decision_record_guide.get("notice_level") == "warning":
+            st.warning(notice)
+        elif decision_record_guide.get("notice_level") == "success":
+            st.success(notice)
+        else:
+            st.info(notice)
+        with st.expander("Decision Record Checklist", expanded=True):
+            st.dataframe(pd.DataFrame(decision_record_guide.get("checklist_rows") or []), width="stretch", hide_index=True)
+            st.caption("이 checklist는 기존 evidence를 다시 검증하지 않고, 최종 기록 전에 route 의미와 저장 경계를 보여주는 안내입니다.")
+        route_templates = dict(decision_record_guide.get("route_templates") or {})
+        if not str(st.session_state.get(operator_reason_key) or "").strip():
+            st.session_state[operator_reason_key] = str(route_templates.get("reason") or "")
+        if not str(st.session_state.get(operator_constraints_key) or "").strip():
+            st.session_state[operator_constraints_key] = str(route_templates.get("constraints") or "")
+        if not str(st.session_state.get(operator_next_action_key) or "").strip():
+            st.session_state[operator_next_action_key] = str(route_templates.get("next_action") or "")
+        with st.expander("Route별 권장 기록 문안", expanded=False):
+            st.markdown(f"**판단 사유**: {route_templates.get('reason') or '-'}")
+            st.markdown(f"**운영 전 조건**: {route_templates.get('constraints') or '-'}")
+            st.markdown(f"**다음 행동**: {route_templates.get('next_action') or '-'}")
         operator_reason = st.text_area(
             "판단 사유",
-            value="검증 근거와 관찰 기준을 함께 보고 최종 실전 후보 여부를 판단한다.",
-            key="final_review_operator_reason",
+            key=operator_reason_key,
+            placeholder=str(route_templates.get("reason") or ""),
         )
         with st.expander("고급: 저장 ID / 운영 전 조건 / 다음 행동 확인", expanded=False):
             decision_id = st.text_input("Decision ID", value=default_decision_id, key="final_review_decision_id")
             operator_constraints = st.text_area(
                 "운영 전 조건",
-                value="실제 투자 전 투입 금액, 리밸런싱, 중단 / 재검토 기준은 사용자가 별도로 확인한다.",
-                key="final_review_operator_constraints",
+                key=operator_constraints_key,
+                placeholder=str(route_templates.get("constraints") or ""),
             )
             operator_next_action = st.text_area(
                 "다음 행동",
-                value="선정이면 최종 판단 완료로 보고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
-                key="final_review_operator_next_action",
+                key=operator_next_action_key,
+                placeholder=str(route_templates.get("next_action") or ""),
             )
         save_evaluation = _build_final_review_save_evaluation(
             evidence=evidence,
