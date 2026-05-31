@@ -6857,3 +6857,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 height 계산은 `min(680, 32 * group_count)`처럼 상한과 낮은 row height가 있어 선택 group이 많아질수록 행당 공간이 줄어들 수 있었다
 - Follow-up:
   - Heatmap row height를 group당 54px로 고정하고 상한 cap을 제거했으며, 축 / 셀 label font size를 명시하고 contract test와 Browser QA screenshot으로 확인했다
+
+### 2026-05-31 - Final Review 선정 저장 가능한 포트폴리오 후보를 찾는다
+- User request:
+  - 기존 DB, saved portfolio, registry를 활용해 Backtest Analysis -> Practical Validation -> Final Review를 실행하고, selected-route gate 통과 후보만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장해 Dashboard 노출을 확인해 달라고 요청함
+- Interpreted goal:
+  - Final Review selection-only save 정책을 지키면서 실제 운영 후보를 찾되, live approval / 주문 / 자동 리밸런싱 / broker 연동은 수행하지 않아야 함
+- Analysis result:
+  - 기존 Practical Validation row, saved portfolio 2개, legacy Final Review option 13개를 dry-run 평가했지만 `select_allowed=True` 후보가 없었다. 가장 가까운 후보는 `EW Growth/Commodity 30 + GTAA Clean-6 70`이나 Backtest Realism과 Component Role / Weight hard blocker가 남았다
+- Follow-up:
+  - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 append하지 않았고 Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인했다. 후보 보강은 evidence mapping / realism / provider / risk contribution 쪽에서 진행해야 한다

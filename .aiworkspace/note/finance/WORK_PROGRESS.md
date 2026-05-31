@@ -4487,3 +4487,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `tests.test_service_contracts` 80개, chart JSON smoke, `git diff --check`, Browser QA screenshot을 통과했다.
   - 후속 QA에서 Daily heatmap이 과밀하다는 문제를 확인해 Trend horizon을 Daily 1M / Weekly 3M / Monthly 12M으로 조정했다.
   - 후속 QA에서 전체 섹터 선택 시 Heatmap 높이가 압축되는 문제를 확인해 선택 그룹 수만큼 아래로 늘어나는 chart height 계약을 추가했다.
+- Selected Portfolio Candidate Search:
+  - `.aiworkspace/note/finance/tasks/active/selected-portfolio-candidate-search-20260531/`에서 기존 V2 selection source, Practical Validation 결과, saved portfolios, legacy Final Review 후보를 재검토했다.
+  - Practical Validation 통과 또는 Final Review evidence-ready 후보는 있었지만, Final Review selected-route investability gate `select_allowed=True`를 만족한 후보는 없었다.
+  - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에는 아무 row도 append하지 않았고, Selected Portfolio Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인됐다.
+  - 다음 보강 1순위는 `EW Growth/Commodity 30 + GTAA Clean-6 70`의 backtest realism, component role / weight rationale propagation, provider/look-through, risk contribution, stress/validation efficacy evidence다.
