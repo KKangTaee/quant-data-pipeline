@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Evidence Appendix V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
+  - Final Review Candidate Board V1 is implementation complete; next work should be chosen from the remaining user-facing Final Review roadmap slices.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Candidate Board should guide what to review first
+- User request:
+  - 앞서 나눈 Final Review 5단계 개발 방향 중 2번 Candidate Board V1을 진행해 달라고 승인함.
+- Interpreted goal:
+  - Candidate Board를 단순 Gate 통과 후보 표가 아니라, 최종 선별 관점에서 어떤 후보를 먼저 봐야 하는지 알려주는 비교 / 우선순위 보드로 만든다.
+- Analysis result:
+  - 기존 Practical Validation result, investability packet, Decision Cockpit read model만 사용해 read-only review priority를 계산한다.
+  - 구현 결과 Candidate Board는 select-ready / hold / blocked counts, first-review candidate, review queue, primary reason, next action을 표시하고, 후보를 select-ready -> hold / re-review -> blocked 순서로 정렬한다.
+- Follow-up:
+  - 이 priority는 새 투자 점수나 새 검증 기준이 아니다. 다음 slice에서는 structured waiver, dossier/report polish, saved decision review UX, or Selected Dashboard handoff polish 중 하나를 고른다.
 
 ### 2026-05-31 - Final Review should not feel like duplicate validation
 - User request:

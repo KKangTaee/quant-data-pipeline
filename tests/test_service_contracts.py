@@ -6441,6 +6441,82 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertGreaterEqual(board_rows[0]["Blockers"], 1)
         self.assertEqual(board_rows[0]["NOT_RUN"], 1)
 
+    def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_candidate_board
+
+        def candidate(label: str, outcome: str, score: float, *, blockers: int = 0, reviews: int = 0) -> dict:
+            policy_rows = []
+            policy_blockers = [
+                "Risk Contribution: drop-one dependency missing",
+            ][:blockers]
+            policy_reviews = [
+                "Backtest Realism: tax/account scope review",
+            ][:reviews]
+            if blockers:
+                policy_rows.append(
+                    {
+                        "Criteria": "Risk Contribution",
+                        "Severity": "BLOCK",
+                        "Required Action": "drop-one dependency evidence를 보강합니다.",
+                    }
+                )
+            if reviews:
+                policy_rows.append(
+                    {
+                        "Criteria": "Backtest Realism",
+                        "Severity": "REVIEW_REQUIRED",
+                        "Required Action": "세금 / 계좌 scope를 최종 판단 전에 확인합니다.",
+                    }
+                )
+            suggested = (
+                "SELECT_FOR_PRACTICAL_PORTFOLIO"
+                if outcome == "select_ready"
+                else "RE_REVIEW_REQUIRED"
+                if outcome == "blocked"
+                else "HOLD_FOR_MORE_PAPER_TRACKING"
+            )
+            return {
+                "source": {"source_title": label, "source_type": "practical_validation_result"},
+                "validation": {"validation_id": f"validation-{label.lower()}"},
+                "paper_observation": {"route": "PAPER_OBSERVATION_READY", "blockers": []},
+                "decision_evidence": {"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+                "investability_packet": {
+                    "route": "INVESTABILITY_PACKET_READY" if outcome == "select_ready" else "INVESTABILITY_PACKET_REVIEW",
+                    "score": score,
+                    "summary": {"not_run": 0, "review": reviews, "blocked": blockers},
+                    "source_chain": {"validation_id": f"validation-{label.lower()}", "selection_source_id": f"source-{label.lower()}"},
+                    "gate_policy_snapshot": {
+                        "outcome": outcome,
+                        "select_allowed": outcome == "select_ready",
+                        "suggested_decision_route": suggested,
+                        "blockers": policy_blockers,
+                        "review_required": policy_reviews,
+                        "policy_rows": policy_rows,
+                    },
+                },
+            }
+
+        board = build_final_review_candidate_board(
+            [
+                candidate("Blocked", "blocked", 6.1, blockers=1),
+                candidate("Hold", "hold_or_re_review", 7.2, reviews=1),
+                candidate("Ready", "select_ready", 8.8),
+            ]
+        )
+
+        rows = board["rows"]
+        self.assertEqual(board["schema_version"], "final_review_candidate_board_v1")
+        self.assertEqual(board["summary"]["total_candidates"], 3)
+        self.assertEqual(board["summary"]["select_ready"], 1)
+        self.assertEqual(board["summary"]["hold_or_re_review"], 1)
+        self.assertEqual(board["summary"]["blocked"], 1)
+        self.assertEqual(rows[0]["Candidate"], "Ready")
+        self.assertEqual(rows[0]["Review Priority"], "P1")
+        self.assertEqual(rows[0]["Board Action"], "최종 판단 기록")
+        self.assertEqual(rows[1]["Candidate"], "Hold")
+        self.assertEqual(rows[2]["Candidate"], "Blocked")
+        self.assertEqual(board["review_queue_rows"][0]["Action"], "최종 판단 기록")
+
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_decision_evidence_rows
 

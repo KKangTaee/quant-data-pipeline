@@ -13,6 +13,7 @@ from app.services.backtest_validation_efficacy import build_validation_efficacy_
 SELECT_FOR_PRACTICAL_PORTFOLIO = "SELECT_FOR_PRACTICAL_PORTFOLIO"
 DECISION_DOSSIER_SCHEMA_VERSION = "decision_dossier_v1"
 DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
+CANDIDATE_BOARD_SCHEMA_VERSION = "final_review_candidate_board_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
@@ -1004,6 +1005,51 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
     )
 
 
+def _candidate_board_state_priority(state: Any) -> int:
+    state_text = str(state or "").upper()
+    if state_text == "SELECT_READY":
+        return 1
+    if state_text == "HOLD_OR_RE_REVIEW":
+        return 2
+    return 3
+
+
+def _candidate_board_policy_reason(rows: list[dict[str, Any]], fallback: str) -> str:
+    if not rows:
+        return fallback
+    row = dict(rows[0] or {})
+    label = _safe_text(row.get("Criteria") or row.get("Group"), "Evidence")
+    evidence = _safe_text(row.get("Required Action") or row.get("Evidence") or row.get("Current"), fallback)
+    return f"{label}: {evidence}"
+
+
+def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
+    state = str(dict(cockpit or {}).get("state") or "").upper()
+    if state == "SELECT_READY":
+        return (
+            "최종 판단 기록",
+            "선정 가능 후보입니다. Decision Cockpit을 확인한 뒤 최종 판단 기록으로 진행합니다.",
+            "선정 가능",
+        )
+    if state == "SELECT_BLOCKED":
+        return (
+            "차단 원인 해소",
+            _candidate_board_policy_reason(
+                list(dict(cockpit or {}).get("must_fix_rows") or []),
+                "critical blocker를 먼저 해소하거나 재검토 / 거절로 기록합니다.",
+            ),
+            "선정 차단",
+        )
+    return (
+        "보류 / 재검토 판단",
+        _candidate_board_policy_reason(
+            list(dict(cockpit or {}).get("must_review_rows") or []),
+            "review-required 근거를 확인하고 보류 / 재검토 여부를 결정합니다.",
+        ),
+        "보류 필요",
+    )
+
+
 def build_final_review_decision_cockpit(
     *,
     source: dict[str, Any],
@@ -1104,17 +1150,30 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
         )
         source_chain = dict(packet.get("source_chain") or {})
         summary = dict(packet.get("summary") or {})
+        action_label, primary_reason, priority_label = _candidate_board_action(cockpit)
+        metrics = dict(cockpit.get("metrics") or {})
+        packet_score = packet.get("score")
+        try:
+            sortable_score = float(packet_score or 0.0)
+        except (TypeError, ValueError):
+            sortable_score = 0.0
+        state_priority = _candidate_board_state_priority(cockpit.get("state"))
         rows.append(
             {
                 "Rank": index,
+                "Review Priority": f"P{index}",
+                "Priority Label": priority_label,
                 "Candidate": cockpit.get("source_title") or candidate.get("label") or "-",
                 "Decision State": cockpit.get("state_label"),
                 "Suggested Decision": cockpit.get("suggested_decision_label"),
+                "Board Action": action_label,
+                "Primary Reason": primary_reason,
+                "Next Review Focus": cockpit.get("next_action") or "-",
                 "Gate Outcome": cockpit.get("gate_outcome") or "-",
                 "Select Allowed": "Yes" if cockpit.get("select_allowed") else "No",
-                "Blockers": cockpit["metrics"].get("policy_blockers", 0),
-                "Review Required": cockpit["metrics"].get("policy_review_required", 0),
-                "Critical Gaps": cockpit["metrics"].get("critical_gaps", 0),
+                "Blockers": metrics.get("policy_blockers", 0),
+                "Review Required": metrics.get("policy_review_required", 0),
+                "Critical Gaps": metrics.get("critical_gaps", 0),
                 "NOT_RUN": summary.get("not_run", 0),
                 "Provider": summary.get("provider_status") or "-",
                 "Validation Efficacy": summary.get("validation_efficacy_route") or "-",
@@ -1126,9 +1185,59 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
                 or source_chain.get("source_id")
                 or source.get("source_id")
                 or "-",
+                "_sort_key": (
+                    state_priority,
+                    int(metrics.get("policy_blockers", 0) or 0),
+                    int(metrics.get("policy_review_required", 0) or 0),
+                    int(metrics.get("critical_gaps", 0) or 0),
+                    int(summary.get("not_run", 0) or 0),
+                    -sortable_score,
+                    index,
+                ),
             }
         )
+    rows.sort(key=lambda row: tuple(row.get("_sort_key") or (99, 99, 99, 99, 99, 0, 9999)))
+    for rank, row in enumerate(rows, start=1):
+        row["Rank"] = rank
+        row["Review Priority"] = f"P{rank}"
+        row.pop("_sort_key", None)
     return rows
+
+
+def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build the Final Review candidate comparison board and review queue."""
+
+    rows = build_final_review_candidate_board_rows(candidates)
+    total = len(rows)
+    select_ready = sum(1 for row in rows if row.get("Decision State") == "선정 가능")
+    blocked = sum(1 for row in rows if row.get("Decision State") == "선정 차단")
+    hold_or_re_review = max(0, total - select_ready - blocked)
+    first_row = dict(rows[0] or {}) if rows else {}
+    queue_rows = [
+        {
+            "Priority": row.get("Review Priority"),
+            "Candidate": row.get("Candidate"),
+            "Action": row.get("Board Action"),
+            "Reason": row.get("Primary Reason"),
+            "Suggested Decision": row.get("Suggested Decision"),
+            "Packet Score": row.get("Packet Score"),
+        }
+        for row in rows[:5]
+    ]
+    return {
+        "schema_version": CANDIDATE_BOARD_SCHEMA_VERSION,
+        "summary": {
+            "total_candidates": total,
+            "select_ready": select_ready,
+            "hold_or_re_review": hold_or_re_review,
+            "blocked": blocked,
+            "first_review_candidate": first_row.get("Candidate") or "-",
+            "first_review_action": first_row.get("Board Action") or "-",
+            "first_review_reason": first_row.get("Primary Reason") or "-",
+        },
+        "review_queue_rows": queue_rows,
+        "rows": rows,
+    }
 
 
 def build_final_review_status_display(row: dict[str, Any]) -> dict[str, str]:
@@ -1584,10 +1693,12 @@ def build_decision_dossier(
 __all__ = [
     "DECISION_DOSSIER_SCHEMA_VERSION",
     "DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION",
+    "CANDIDATE_BOARD_SCHEMA_VERSION",
     "FINAL_REVIEW_DECISION_LABELS",
     "FINAL_REVIEW_STATUS_DISPLAY",
     "SELECT_FOR_PRACTICAL_PORTFOLIO",
     "build_decision_dossier",
+    "build_final_review_candidate_board",
     "build_final_review_candidate_board_rows",
     "build_final_review_decision_cockpit",
     "build_investability_gate_policy",

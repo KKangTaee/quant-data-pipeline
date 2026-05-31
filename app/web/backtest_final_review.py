@@ -9,7 +9,7 @@ import streamlit as st
 
 from app.services.backtest_evidence_read_model import (
     build_decision_dossier,
-    build_final_review_candidate_board_rows,
+    build_final_review_candidate_board,
     build_final_review_decision_cockpit,
 )
 from app.web.backtest_final_review_helpers import (
@@ -617,14 +617,54 @@ def _build_candidate_contexts(
 
 
 def _render_candidate_board(candidate_contexts: list[dict[str, Any]]) -> None:
-    rows = build_final_review_candidate_board_rows(candidate_contexts)
+    board = build_final_review_candidate_board(candidate_contexts)
+    rows = list(board.get("rows") or [])
     if not rows:
         st.info("표시할 Final Review 후보가 없습니다.")
         return
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    summary = dict(board.get("summary") or {})
+    render_status_card_grid(
+        [
+            {
+                "title": "Review Queue",
+                "value": summary.get("total_candidates", 0),
+                "detail": "Final Review Gate 통과 후보",
+                "tone": "positive" if summary.get("total_candidates") else "neutral",
+            },
+            {
+                "title": "Select Ready",
+                "value": summary.get("select_ready", 0),
+                "detail": "선정 기록 가능 후보",
+                "tone": "positive" if summary.get("select_ready") else "neutral",
+            },
+            {
+                "title": "Hold / Re-review",
+                "value": summary.get("hold_or_re_review", 0),
+                "detail": "보류 / 재검토 판단 필요",
+                "tone": "warning" if summary.get("hold_or_re_review") else "neutral",
+            },
+            {
+                "title": "Blocked",
+                "value": summary.get("blocked", 0),
+                "detail": "선정 전 차단 원인 있음",
+                "tone": "danger" if summary.get("blocked") else "neutral",
+            },
+        ]
+    )
+    st.info(
+        f"먼저 볼 후보: {summary.get('first_review_candidate') or '-'} / "
+        f"{summary.get('first_review_action') or '-'}"
+    )
+    st.caption(str(summary.get("first_review_reason") or "-"))
+    queue_rows = list(board.get("review_queue_rows") or [])
+    if queue_rows:
+        st.markdown("###### Review Queue")
+        st.dataframe(pd.DataFrame(queue_rows), width="stretch", hide_index=True)
+    with st.expander("Candidate Board detail", expanded=True):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption(
         "Candidate Board는 기존 Practical Validation result와 investability packet을 읽는 비교표입니다. "
-        "새 registry row를 만들거나 provider 데이터를 수집하지 않습니다."
+        "Review Priority는 화면 정렬용 우선순위이며, 새 registry row를 만들거나 provider 데이터를 수집하지 않습니다."
     )
 
 

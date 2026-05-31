@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Evidence Appendix V1 is implementation complete; next planned phase work remains `phase14-candidate-prioritization-v1` unless another Final Review slice is requested.
+  - Final Review Candidate Board V1 is implementation complete; next work should be chosen from the remaining user-facing Final Review roadmap slices.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-candidate-board-v1/`.
+- Final Review Candidate Board now ranks Gate-passed candidates by review usefulness and shows select-ready / hold / blocked counts, first-review candidate, review queue, primary reason, and next action.
+- This is read-only display priority only; no validation scoring, source eligibility, provider fetch, JSONL schema, live approval, order, account sync, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-evidence-appendix-v1/`.
 - Final Review now reads as Candidate Board -> Decision Cockpit -> Final Decision Record -> Evidence Appendix, so detailed Practical Validation / Robustness / Paper Observation / Investability Packet evidence is a read-only appendix rather than the main action.
 - No validation scoring, selected-route policy, DB schema, provider fetch, JSONL registry schema, live approval, order, account sync, or auto rebalance behavior was added.

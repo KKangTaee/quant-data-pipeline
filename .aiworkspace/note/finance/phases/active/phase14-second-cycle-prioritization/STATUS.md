@@ -6,7 +6,7 @@ Created: 2026-05-30
 ## Current State
 
 Phase 14 board is open.
-User-approved Final Review Decision Cockpit V1 and Evidence Appendix V1 were implemented as focused Backtest workflow slices before continuing Phase 14 prioritization.
+User-approved Final Review Decision Cockpit V1, Evidence Appendix V1, and Candidate Board V1 were implemented as focused Backtest workflow slices before continuing any broader prioritization work.
 
 Completed:
 
@@ -14,6 +14,7 @@ Completed:
 - Phase 14 scope, task split, initial hypothesis, storage / trading automation boundary 정리
 - ad-hoc user-approved task: `final-review-decision-cockpit-v1`
 - ad-hoc user-approved task: `final-review-evidence-appendix-v1`
+- ad-hoc user-approved task: `final-review-candidate-board-v1`
 
 Next:
 
