@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete; the next work should be user review feedback, mobile polish if needed, or Phase 14 prioritization.
+  - Final Review Commercial UX V1 is implementation complete with selection-only official save; the next work should be user review feedback, mobile polish if needed, or Phase 14 prioritization.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Adjusted Final Review official save policy after user feedback: new durable Final Decision V2 rows are created only for `SELECT_FOR_PRACTICAL_PORTFOLIO` when selected-route gate passes.
+- Hold / reject / re-review now remain status guidance and compatibility read paths, not new official save actions; Selected Dashboard continues to read selected rows only.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-commercial-ux-v1/`.
 - Final Review now opens as a user-facing Decision Desk: command center, flow rail, Candidate Board lane cards, visual Decision Cockpit, Final Decision Action, Evidence Appendix, and Decision History / Dashboard Handoff.
 - No validation scoring, gate policy, DB schema, JSONL persistence, provider fetch, live approval, order, account sync, or auto rebalance behavior was changed.

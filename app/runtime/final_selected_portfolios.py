@@ -549,12 +549,12 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
 
     if not final_rows:
         route = "HANDOFF_NO_FINAL_DECISION"
-        next_action = "Final Review에서 최종 판단을 먼저 기록합니다."
-        verdict = "Selected Dashboard로 넘길 최종 판단 row가 아직 없습니다."
+        next_action = "Final Review에서 최종 후보 선정 저장을 먼저 진행합니다."
+        verdict = "Selected Dashboard로 넘길 최종 선정 row가 아직 없습니다."
     elif not selected_rows:
         route = "HANDOFF_NO_SELECTED_DECISION"
-        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 판단을 저장해야 합니다."
-        verdict = "저장된 최종 판단은 있지만 선정된 dashboard 대상 row가 없습니다."
+        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 선정 row를 저장해야 합니다."
+        verdict = "저장된 Final Review row는 있지만 선정된 dashboard 대상 row가 없습니다."
     elif monitorable_count == 0:
         route = "HANDOFF_BLOCKED"
         next_action = "선정 row의 component, target weight, Final Review blocker를 보강합니다."

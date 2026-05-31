@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete; remaining near-term work should be chosen after user review feedback or through Phase 14 prioritization.
+  - Final Review Commercial UX V1 is implementation complete with selection-only official save; remaining near-term work should be chosen after user review feedback or through Phase 14 prioritization.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Final Review official save should be selection-only
+- User request:
+  - Final Review에서 비선정 저장 판단이 필요한지 질문했고, 정식 저장은 최종 통과 후보에만 활성화되도록 요청함.
+- Interpreted goal:
+  - Final Review의 주 action을 최종 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
+- Analysis result:
+  - 구현 기준은 `SELECT_FOR_PRACTICAL_PORTFOLIO` + selected-route gate pass + operator reason + unique decision id다.
+  - 기존 hold / reject / re-review row는 Saved Decision Review / read model 호환을 위해 읽을 수 있지만, 새 UI의 정식 저장 action은 만들지 않는다.
+- Follow-up:
+  - Selected Dashboard는 계속 selected row만 읽는다. 보류 후보 queue를 별도 운영 대상으로 관리하고 싶다면 나중에 별도 lightweight queue 기능으로 분리한다.
 
 ### 2026-05-31 - Final Review should feel like a user-facing decision desk
 - User request:

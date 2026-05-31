@@ -6581,10 +6581,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(board["summary"]["blocked"], 1)
         self.assertEqual(rows[0]["Candidate"], "Ready")
         self.assertEqual(rows[0]["Review Priority"], "P1")
-        self.assertEqual(rows[0]["Board Action"], "최종 판단 기록")
+        self.assertEqual(rows[0]["Board Action"], "최종 후보 선정")
         self.assertEqual(rows[1]["Candidate"], "Hold")
         self.assertEqual(rows[2]["Candidate"], "Blocked")
-        self.assertEqual(board["review_queue_rows"][0]["Action"], "최종 판단 기록")
+        self.assertEqual(board["review_queue_rows"][0]["Action"], "최종 후보 선정")
 
     def test_final_review_decision_record_guide_blocks_selected_route_when_gate_blocks(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -6625,7 +6625,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("Investability evidence packet", guide["blockers"])
         self.assertFalse(guide["record_boundary"]["live_approval"])
 
-    def test_final_review_decision_record_guide_allows_non_select_route_with_evidence_gap(self) -> None:
+    def test_final_review_decision_record_guide_treats_non_select_route_as_status_only(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_decision_record_guide
 
         packet = {
@@ -6646,10 +6646,12 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(guide["route_state"], "NON_SELECT_RECORDABLE")
-        self.assertTrue(guide["recordable_route"])
+        self.assertEqual(guide["route_state"], "NON_SELECT_NOT_STORED")
+        self.assertFalse(guide["recordable_route"])
         self.assertTrue(guide["selected_route_gate"]["Ready"])
+        self.assertIn("Official selection route", guide["blockers"])
         self.assertIn("paper tracking", guide["route_templates"]["reason"])
+        self.assertFalse(guide["record_boundary"]["non_select_persistence"])
         self.assertFalse(guide["record_boundary"]["waiver_persistence"])
 
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
@@ -8040,7 +8042,8 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         self.assertFalse(selected["can_save"])
         self.assertIn("Investability evidence packet", selected["blockers"])
-        self.assertTrue(hold["can_save"])
+        self.assertFalse(hold["can_save"])
+        self.assertIn("Official selection route", hold["blockers"])
 
     def test_final_review_decision_row_stores_compact_gate_policy_snapshot(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_decision_row

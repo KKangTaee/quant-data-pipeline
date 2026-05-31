@@ -307,7 +307,7 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _render_empty_state(summary: dict[str, Any]) -> None:
     if not summary.get("final_decision_count"):
-        st.info("아직 Final Review에서 기록된 최종 판단 row가 없습니다.")
+        st.info("아직 Final Review에서 저장된 최종 선정 row가 없습니다.")
         st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
         return
     st.warning(

@@ -40,7 +40,7 @@ from app.web.backtest_workflow_routes import (
 # Render the Backtest workflow as primary navigation.
 def _render_backtest_panel_selector() -> str:
     st.markdown("#### 후보 선정 흐름")
-    st.caption("Backtest Analysis에서 후보를 만들고, Practical Validation에서 검증한 뒤, Final Review에서 최종 판단합니다.")
+    st.caption("Backtest Analysis에서 후보를 만들고, Practical Validation에서 검증한 뒤, Final Review에서 최종 선정 여부를 판단합니다.")
 
     if hasattr(st, "segmented_control"):
         st.segmented_control(
@@ -75,7 +75,7 @@ def render_backtest_tab() -> None:
             - `Backtest Analysis`: Single Strategy 또는 Portfolio Mix Builder로 1차 후보 source를 만듭니다.
             - `Portfolio Mix Builder`: 여러 전략을 실행하고 비중을 정해 하나의 mix 후보로 만든 뒤, 통과한 mix만 Practical Validation으로 보냅니다.
             - `Practical Validation`: 선택한 단일 후보 또는 mix 후보를 실전 검증 자료로 구조화합니다.
-            - `Final Review`: 검증 자료를 기준으로 최종 선정 / 보류 / 거절 / 재검토를 한 번만 기록합니다.
+            - `Final Review`: 검증 자료를 기준으로 selected-route gate까지 통과한 후보만 최종 선정으로 저장합니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
             - `Operations > Selected Portfolio Dashboard`: Final Review에서 선정된 V2 decision을 읽어 선정 이후 성과와 review signal을 확인합니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.

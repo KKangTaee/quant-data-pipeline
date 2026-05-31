@@ -63,7 +63,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review Candidate Board priority / Decision Cockpit / Decision Record guide / Saved Decision Review ledger / investability evidence packet / selected-route gate / saved decision status / table row, Selected Dashboard evidence check row, Decision Dossier markdown read model과 selected decision source contract를 공통으로 만든다 |
-| `app/web/backtest_final_review.py` | Final Review 화면 render. Decision Desk command center / flow rail, Practical Validation Gate 통과 후보 Candidate Board priority / review queue, 선택 후보 Decision Cockpit, 최종 판단 기록 checklist / route guide, Evidence Appendix의 Validation / Robustness / Paper Observation / Investability Evidence Packet read-only 확인, saved final decision review ledger, Selected Dashboard handoff summary, Decision Dossier download |
+| `app/web/backtest_final_review.py` | Final Review 화면 render. Decision Desk command center / flow rail, Practical Validation Gate 통과 후보 Candidate Board priority / review queue, 선택 후보 Decision Cockpit, 최종 후보 선정 저장 checklist / route guide, 보류 / 거절 / 재검토 상태 안내, Evidence Appendix의 Validation / Robustness / Paper Observation / Investability Evidence Packet read-only 확인, saved final selection review ledger, Selected Dashboard handoff summary, Decision Dossier download |
 | `app/web/backtest_final_review_components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, investability packet 연결, final evidence / save readiness / decision row helper |
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 Final Review handoff summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / recheck operations preflight / recheck readiness / symbol freshness / provider evidence / Final Review -> dashboard continuity check / source contract / Portfolio Monitoring Timeline / Review Signals / recheck comparison / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit을 보여준다 |
@@ -93,7 +93,7 @@ Backtest 주 흐름:
 
 - `Backtest Analysis`: Single Strategy 또는 Portfolio Mix Builder로 1차 후보 source를 만들고 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 Clean V2 source로 저장한다. Portfolio Mix Builder는 여러 component portfolio를 실행하고 weight를 정해 하나의 mix 후보로 만든다. 화면은 `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation` 순서로 읽히며, component 실행 결과는 compact card와 `요약 / 차트 / 진단 / 상세` 탭으로 먼저 보여주고 원본 summary / criteria / meta는 접힘 상세로 낮춘다.
 - `Practical Validation`: 선택된 단일 전략 후보 / Portfolio Mix 후보 source를 실전 투입 전 조건으로 검증한다. 사용자는 방어형 / 균형형 / 성장 / 공격형 / 전술·헤지형 / 사용자 지정 profile과 5개 답변을 고른다. 화면은 전용 workbench shell에서 후보 / profile / latest replay / gate를 먼저 요약하고, `1. 선택 후보 확인`에서 Backtest Analysis가 넘긴 summary, equity curve, result table, component snapshot을 간략히 확인한다. 각 step은 bordered surface로 다시 분리해 현재 위치를 명확히 보여준다. `3. 최신 데이터 기준 전략 재검증` 결과는 현재 브라우저 세션에서 사용자가 `전략 재검증 실행`을 누른 뒤에만 표시하며, Practical Validation 탭에 새로 진입하거나 source를 바꾸면 이전 replay 표시 state를 지운다. `4. Final Review Gate / 검증 모듈`의 Fix Queue는 이동 차단 항목을 카드형으로 보여준다. `5. 검증 근거 보드`는 summary-first Evidence Workspace로, Input Evidence, audit board, Practical Diagnostics, Provider Coverage, Look-through Exposure Board, Robustness Lab, Curve evidence를 탭과 접힘 상세로 나눠 보여준다. `6. 보강 액션`은 Provider Action Center로 Provider Data Gaps, 수집 가능 항목, connector 보강 필요 항목, 수집 / 보강 버튼을 분리해서 보여주며, `7. 저장 & Final Review 이동`에서 저장과 이동을 수행한다. `검증 결과 저장(기록용)`은 audit trail만 남기며 Gate 미통과 row를 Final Review 후보로 노출하지 않는다. 각 화면 보드는 board registry를 통해 Required / Conditional / Reference module과 연결되며, 단일 component 후보의 mix 전용 board처럼 적용되지 않는 보드는 비적용으로 분리한다. 결과는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장하며 사용자 최종 메모는 받지 않는다.
-- `Final Review`: Practical Validation Gate를 통과한 result만 검토 대상 목록에 표시한다. 통과 기준은 `final_review_gate.can_save_and_move=True`이며, 저장만 된 blocked / needs input / not run validation row는 기록으로 남더라도 source picker에서 숨긴다. Final Review는 전용 Decision Desk shell에서 command center와 flow rail로 현재 판단 상태를 먼저 보여준다. 그다음 Candidate Board로 Gate 통과 후보의 decision state / suggested decision / blocker / review-required / 주요 audit route를 비교하고, select-ready / hold / blocked counts, first-review candidate, review queue, primary reason, next action을 lane card로 보여준다. 선택 후보는 Decision Cockpit에서 Must Fix / Must Review / monitoring seed를 먼저 확인한다. 이후 최종 선정 / 보류 / 거절 / 재검토 판단을 주 action으로 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장하며, Decision Record Checklist는 suggested decision, selected-route gate, operator reason requirement, live approval / order disabled boundary를 저장 전 안내한다. 저장된 판단은 Saved Decision Review ledger에서 selected / hold / reject / re-review count, latest decision, route filter, detail tabs, Selected Dashboard handoff, Decision Dossier export로 다시 읽는다. Selected Dashboard handoff는 기존 selected row를 다시 검증하지 않고 selected rows / dashboard rows / monitorable / blocked counts와 checklist만 read-only로 보여준다. 선택된 Practical Validation result와 diagnostics 요약, Construction Risk, Risk Contribution, Component Role / Weight, Validation Efficacy, Data Coverage, Backtest Realism, Robustness / Paper Observation / Investability Evidence Packet 상세는 `Evidence Appendix`에서 read-only로 확인한다. profile-aware `Validation Gate Policy`로 selected-route 가능 여부를 판정하고, critical gap, Construction Risk / Risk Contribution / Component Role / Weight `NEEDS_INPUT` / `BLOCKED`, Validation Efficacy `NEEDS_INPUT` / `BLOCKED`, walk-forward / OOS / regime row-level `NEEDS_INPUT` / `BLOCKED`, Data Coverage `NEEDS_INPUT` / `BLOCKED`, Backtest Realism `NEEDS_INPUT` / `BLOCKED`, selected-route policy blocker가 남아 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장은 차단하지만, 보류 / 거절 / 재검토 판단은 기록할 수 있다. Construction risk 계열과 Validation Efficacy row-level `REVIEW`는 선정 전 hold / re-review 요구로 표시한다. Structured waiver는 현재 UI / persistence가 없고, future policy도 `BLOCK` waiver를 허용하지 않는다. 저장된 최종 판단은 read-only Decision Dossier markdown으로 다운로드할 수 있지만 report 파일을 자동 생성하지 않는다.
+- `Final Review`: Practical Validation Gate를 통과한 result만 검토 대상 목록에 표시한다. 통과 기준은 `final_review_gate.can_save_and_move=True`이며, 저장만 된 blocked / needs input / not run validation row는 기록으로 남더라도 source picker에서 숨긴다. Final Review는 전용 Decision Desk shell에서 command center와 flow rail로 현재 판단 상태를 먼저 보여준다. 그다음 Candidate Board로 Gate 통과 후보의 decision state / suggested decision / blocker / review-required / 주요 audit route를 비교하고, select-ready / hold / blocked counts, first-review candidate, review queue, primary reason, next action을 lane card로 보여준다. 선택 후보는 Decision Cockpit에서 Must Fix / Must Review / monitoring seed를 먼저 확인한다. 이후 selected-route gate까지 통과한 후보만 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 정식 저장하며, Decision Record Checklist는 suggested decision, selected-route gate, operator reason requirement, live approval / order disabled boundary를 저장 전 안내한다. 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내와 보강 방향으로 표시한다. 저장된 선정 기록은 Saved Decision Review ledger에서 selected count, latest selection, detail tabs, Selected Dashboard handoff, Decision Dossier export로 다시 읽는다. 기존 hold / reject / re-review row는 과거 호환용으로 읽을 수 있지만 새 UI의 정식 저장 action은 아니다. Selected Dashboard handoff는 기존 selected row를 다시 검증하지 않고 selected rows / dashboard rows / monitorable / blocked counts와 checklist만 read-only로 보여준다. 선택된 Practical Validation result와 diagnostics 요약, Construction Risk, Risk Contribution, Component Role / Weight, Validation Efficacy, Data Coverage, Backtest Realism, Robustness / Paper Observation / Investability Evidence Packet 상세는 `Evidence Appendix`에서 read-only로 확인한다. profile-aware `Validation Gate Policy`로 selected-route 가능 여부를 판정하고, critical gap, Construction Risk / Risk Contribution / Component Role / Weight `NEEDS_INPUT` / `BLOCKED`, Validation Efficacy `NEEDS_INPUT` / `BLOCKED`, walk-forward / OOS / regime row-level `NEEDS_INPUT` / `BLOCKED`, Data Coverage `NEEDS_INPUT` / `BLOCKED`, Backtest Realism `NEEDS_INPUT` / `BLOCKED`, selected-route policy blocker가 남아 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장은 차단된다. Construction risk 계열과 Validation Efficacy row-level `REVIEW`는 선정 전 hold / re-review 상태로 표시한다. Structured waiver는 현재 UI / persistence가 없고, future policy도 `BLOCK` waiver를 허용하지 않는다. 저장된 최종 선정 기록은 read-only Decision Dossier markdown으로 다운로드할 수 있지만 report 파일을 자동 생성하지 않는다.
 
 Backtest Analysis 1단계 closeout 기준은 [BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md](./BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md)에 둔다. 이 문서는 이번 세션에서 정리한 Real-Money 1차 readiness, Practical Validation handoff gate, Portfolio Mix Builder 재정의, Mix 후보 판단 UI, 저장 경계를 요약한다.
 
@@ -163,7 +163,7 @@ Ingestion / Data Trust
   -> Final Review
      -> Decision Desk command center
      -> Candidate Board / Decision Cockpit
-     -> Decision Record Checklist와 최종 선정 / 보류 / 거절 / 재검토 결과 기록
+     -> Decision Record Checklist와 최종 선정 저장 가능 여부 확인
      -> Evidence Appendix에서 이전 검증 결과 확인
      -> Saved Decision Review ledger에서 저장된 판단 재확인
      -> 최종 판단 완료
@@ -389,7 +389,7 @@ Stage:
 
 - `Backtest Analysis`: 후보 생성
 - `Practical Validation`: 실전 투입 전 검증
-- `Final Review`: 최종 선택 / 보류 / 거절 / 재검토
+- `Final Review`: 최종 후보 선정 저장 / 미통과 상태 안내
 - `Operations > Selected Portfolio Dashboard`: 선정 이후 모니터링 / 재확인
 
 검증 체크포인트:
@@ -494,7 +494,7 @@ component별 상세 결과는 weight를 정하기 위한 근거로 남기고, Pr
 - `Mix 재실행 및 검증`은 저장된 weighted portfolio mix 자체와 그 구성 전략 compare를 함께 복원한다.
 - UI에서는 `저장된 Mix` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
 - `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, Clean V2 검증 기록 여부를 분리해서 보여준다.
-- 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 최종 판단 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Practical Validation / Final Review 쪽 기록이 아직 없다는 뜻이다.
+- 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 최종 선정 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Practical Validation / Final Review 쪽 기록이 아직 없다는 뜻이다.
 - 이 경우 사용자는 `Practical Validation으로 보내기`로 mix 전체를 Clean V2 source로 저장한다. Saved mix는 이미 비중이 정해진 포트폴리오 조합이므로, 단일 전략 후보 handoff와 분리한다.
 - 개별 전략 후보 간 비교 / 벤치마킹 도구는 추후 별도 Candidate Comparison 성격의 read-only 도구로 분리할 수 있다.
 
@@ -839,12 +839,12 @@ Practical Validation Gate 통과 후보
      -> review priority / first-review candidate / primary reason 확인
   -> 2. Decision Cockpit
      -> selected-route state / Must Fix / Must Review / monitoring seed 확인
-  -> 3. 최종 판단 기록
-     -> 최종 검토 결과 기록
+  -> 3. 최종 후보 선정 저장
+     -> selected-route gate 통과 시 최종 후보로 선정
      -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl append
   -> 4. Evidence Appendix / 이전 검증 결과 부록
      -> Validation / Robustness / Paper Observation / Investability Packet read-only 확인
-  -> 5. 기록된 최종 검토 결과 확인
+  -> 5. 저장된 최종 선정 기록 확인
      -> Phase35 handoff inspect
 ```
 
@@ -857,8 +857,8 @@ Practical Validation Gate 통과 후보
 - Phase 32의 `Robustness / Stress Validation Preview`와 `Stress / Sensitivity Summary`도 Final Review 안에서 읽지만, 재검증 단계가 아니라 Appendix evidence다.
 - `Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았다는 뜻이다.
 - Paper Observation은 별도 ledger 저장 버튼으로 노출하지 않고, benchmark / review cadence / trigger / baseline을 최종 검토 기록 안에 포함한다.
-- Candidate Review와 Portfolio Proposal의 판단 field는 준비 기록이고, Final Review의 `최종 판단`만 실전 후보 선정 / 보류 / 거절 / 재검토를 명시하는 주 decision surface다.
-- `최종 검토 결과 기록`은 `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
+- Candidate Review와 Portfolio Proposal의 판단 field는 준비 기록이고, Final Review의 `최종 후보 선정 저장`만 실전 검토 통과 후보를 명시하는 주 decision surface다.
+- `최종 후보로 선정`은 `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 append-only로 저장한다. `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED`는 과거 row 호환 / 상태 안내 route로만 읽고 새 정식 저장 action으로 만들지 않는다.
 - Final Review 기록은 `최종 판단 완료` 기록이지 live approval, broker order, 자동매매 지시가 아니다.
 
 ## Final Review 완료 흐름
@@ -867,21 +867,21 @@ Practical Validation Gate 통과 후보
 Backtest > Final Review
   -> 검토 대상 선택
   -> Decision Cockpit 확인
-  -> 최종 판단 선택
-     -> SELECT_FOR_PRACTICAL_PORTFOLIO / HOLD_FOR_MORE_PAPER_TRACKING
-     -> REJECT_FOR_PRACTICAL_USE / RE_REVIEW_REQUIRED
-  -> 최종 검토 결과 기록
+  -> 최종 후보 선정 가능 여부 확인
+     -> SELECT_FOR_PRACTICAL_PORTFOLIO gate 통과 시에만 저장 버튼 활성화
+     -> HOLD / REJECT / RE_REVIEW는 상태 안내와 보강 방향으로만 표시
+  -> 최종 후보로 선정
   -> Evidence Appendix에서 이전 검증 결과 확인
-  -> 기록된 최종 검토 결과 확인
-     -> 투자 가능 후보 / 내용 부족 / 투자하면 안 됨 / 재검토 필요 확인
+  -> 저장된 최종 선정 기록 확인
+     -> 투자 가능 후보와 Dashboard handoff 확인
      -> Live Approval = Disabled / Order = Disabled 확인
 ```
 
 구분:
 
 - Final Review는 현재 active workflow의 마지막 panel이다.
-- final decision registry가 최종 판단 원본이다.
-- `decision_route`는 사용자-facing으로 `투자 가능 후보`, `내용 부족 / 관찰 필요`, `투자하면 안 됨`, `재검토 필요`로 읽는다.
+- final decision registry가 최종 선정 기록 원본이다.
+- 새 UI가 저장하는 `decision_route`는 `SELECT_FOR_PRACTICAL_PORTFOLIO`이며, 기존 `내용 부족 / 관찰 필요`, `투자하면 안 됨`, `재검토 필요` row는 legacy 호환으로만 읽는다.
 - `phase35_handoff` 필드는 과거 row 호환을 위해 남아 있을 수 있지만, UI에서는 `Final Review Status` 또는 `Final Status`로 읽는다.
 - 별도 Post-Selection registry나 Post-Selection panel은 만들지 않는다.
 - Final Review도 live approval, broker order, 자동매매 지시가 아니다.

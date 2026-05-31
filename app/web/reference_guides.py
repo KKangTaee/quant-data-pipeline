@@ -23,7 +23,7 @@ def _route_cards() -> dict[str, dict[str, Any]]:
         "단일 후보": {
             "headline": "전략 하나를 끝까지 검토",
             "summary": "후보 1개를 Clean V2 selection source로 저장하고 Practical Validation을 거쳐 Final Review가 직접 읽는 경로입니다.",
-            "goal": "후보 1개를 Practical Validation 결과로 만든 뒤 Final Review에서 최종 판단합니다.",
+            "goal": "후보 1개를 Practical Validation 결과로 만든 뒤 Final Review에서 최종 선정 여부를 판단합니다.",
             "sequence": "Backtest Analysis -> Practical Validation -> Final Review",
             "caution": "Review Note / Pre-Live / Proposal 저장은 더 이상 필수 경로가 아닙니다.",
             "records": "Portfolio Selection Source, Practical Validation Result, Final Decision V2",
@@ -116,14 +116,14 @@ def _decision_gate_rows() -> list[dict[str, str]]:
         {
             "gate": "Practical Validation을 통과할 수 있는가",
             "go": "BLOCKED가 없고 profile-aware Practical Diagnostics의 REVIEW / NOT_RUN 의미를 설명할 수 있음",
-            "review": "NOT_RUN 또는 REVIEW domain이 남아 있지만 Final Review에서 보류 / 재검토 / 선정 판단 근거로 다룰 수 있음",
+            "review": "NOT_RUN 또는 REVIEW domain이 남아 있지만 Final Review에서 보강 필요 상태와 선정 가능 여부의 근거로 다룰 수 있음",
             "stop": "component 없음, 비중 합계 오류, Data Trust blocked, deployment blocked, 프로필과 충돌하는 큰 leveraged / inverse exposure",
             "screen": "Practical Validation",
         },
         {
-            "gate": "Final Review에서 최종 판단을 저장할 수 있는가",
+            "gate": "Final Review에서 최종 선정 저장을 할 수 있는가",
             "go": "Validation, robustness, paper observation 기준이 Ready이고 판단 사유가 있음",
-            "review": "선정은 어렵지만 HOLD / RE_REVIEW / REJECT 사유를 남길 수 있음",
+            "review": "선정은 어렵고 보강 필요 상태로 확인됨",
             "stop": "선정하려는데 final evidence blocker가 남아 있거나 판단 사유가 비어 있음",
             "screen": "Final Review",
         },
@@ -159,8 +159,8 @@ def _stage_timeline_rows() -> list[dict[str, str]]:
             "step": "3",
             "phase": "최종 판단",
             "screen": "Final Review",
-            "title": "최종 판단과 사유 기록",
-            "check": "Validation, robustness, paper observation 기준을 보고 선정 / 보류 / 거절 / 재검토를 기록합니다.",
+            "title": "최종 선정 저장",
+            "check": "Validation, robustness, paper observation 기준을 보고 selected-route gate까지 통과한 후보만 최종 선정으로 저장합니다.",
             "output": "Final Selection Decision V2",
         },
         {
@@ -223,7 +223,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             },
             {
                 "checkpoint": "최종 판단을 한 번만 남기는가",
-                "detail": "선정 / 보류 / 거절 / 재검토와 최종 메모는 Final Review V2 decision에만 남깁니다.",
+                "detail": "최종 선정 저장과 최종 메모는 Final Review V2 decision에만 남깁니다. 보류 / 거절 / 재검토는 상태 안내입니다.",
                 "screen": "Final Review",
             },
         ],
@@ -315,7 +315,7 @@ def _concept_rows() -> list[dict[str, str]]:
         },
         {
             "개념": "Final Review",
-            "제품 안에서의 의미": "선정 / 보류 / 거절 / 재검토와 최종 사유를 기록하는 마지막 판단 화면",
+            "제품 안에서의 의미": "selected-route gate까지 통과한 후보를 최종 선정으로 저장하는 마지막 판단 화면",
             "사용자가 볼 곳": "Backtest > Final Review",
         },
         {
@@ -350,7 +350,7 @@ def _storage_rows() -> list[dict[str, str]]:
         },
         {
             "기록": "Final Selection Decision V2",
-            "담는 내용": "선정 / 보류 / 거절 / 재검토 최종 판단. Dashboard는 이 기록을 읽기만 합니다.",
+            "담는 내용": "최종 선정 판단. Dashboard는 이 기록을 읽기만 합니다.",
             "생성 화면": "Final Review",
         },
         {
@@ -435,7 +435,7 @@ def _registry_detail_rows() -> list[dict[str, str]]:
         {
             "흐름 단계": "3단계 Final Review",
             "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
-            "담는 데이터": "선정 / 보류 / 거절 / 재검토 최종 판단, operator reason, inline paper observation",
+            "담는 데이터": "최종 선정 판단, operator reason, inline paper observation",
             "화면 위치": "Backtest > Final Review / Operations > Selected Portfolio Dashboard",
             "읽는 법": "Selected Portfolio Dashboard의 source-of-truth입니다.",
         },
@@ -959,7 +959,7 @@ def _render_reference_drawer() -> None:
                 """
                 - `1`: Backtest Analysis에서 단일 / Portfolio Mix / 저장 mix 후보 source를 만든다.
                 - `2`: Practical Validation에서 검증 프로필, Input Evidence, 12개 Practical Diagnostics를 확인한다.
-                - `3`: Final Review에서 최종 판단과 이유를 V2 decision으로 남긴다.
+                - `3`: Final Review에서 최종 후보 선정과 이유를 V2 decision으로 남긴다.
                 - `4`: Selected Portfolio Dashboard에서 선정 row를 read-only로 관찰한다.
                 """
             )

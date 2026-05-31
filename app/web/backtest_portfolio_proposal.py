@@ -1117,11 +1117,11 @@ def render_portfolio_proposal_workspace() -> None:
                     "Open Final Review",
                     key="open_final_review_from_proposal",
                     width="stretch",
-                    help="저장된 proposal 또는 단일 후보를 검증 근거와 함께 최종 판단합니다.",
+                    help="저장된 proposal 또는 단일 후보를 검증 근거와 함께 최종 선정 여부로 판단합니다.",
                 ):
                     _request_backtest_panel("Final Review")
                     st.rerun()
-            st.caption("이 경로에서는 proposal draft 저장까지만 처리합니다. 검증 / 관찰 / 최종 판단은 `Final Review`에서 진행합니다.")
+            st.caption("이 경로에서는 proposal draft 저장까지만 처리합니다. 검증 / 관찰 / 최종 선정 판단은 `Final Review`에서 진행합니다.")
 
             with st.expander("상세 보기", expanded=False):
                 criteria_tab, json_tab = st.tabs(["판단 기준", "Portfolio Proposal JSON"])

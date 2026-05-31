@@ -32,6 +32,6 @@ Final Review는 Candidate Board, Decision Cockpit, Decision Record, Saved Decisi
 
 - Final Review 진입 시 현재 후보 상태와 다음 행동을 command center에서 바로 읽을 수 있다.
 - Candidate Board와 Decision Cockpit이 table보다 먼저 decision-oriented card/lane으로 보인다.
-- 최종 판단 기록 영역이 명확한 primary action panel로 보인다.
+- 최종 후보 선정 저장 영역이 명확한 primary action panel로 보인다.
 - 기존 save / dossier / appendix / handoff 기능이 유지된다.
 - py_compile, service contracts, diff check, Browser QA를 통과하고 commit된다.

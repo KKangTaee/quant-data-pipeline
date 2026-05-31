@@ -12,3 +12,4 @@
 - Mobile QA was not part of this pass. The CSS uses responsive grid collapse, but mobile-specific polish should be handled in a follow-up if needed.
 - Existing Backtest code still contains broad `use_container_width` deprecation warnings. This task did not add new occurrences.
 - Candidate-switching state leakage for `Source` / `Decision ID` was fixed by source-scoped widget keys. Browser QA only had one eligible candidate available locally, so the multi-candidate switch itself remains covered by code inspection rather than an interactive fixture.
+- Official save is now selection-only. Existing historical non-select decision rows remain readable for compatibility, but the current UI no longer creates new hold / reject / re-review rows.

@@ -1427,10 +1427,10 @@ def build_practical_validation_result(
         route = "READY_FOR_FINAL_REVIEW"
         if review_gaps or not_run_domains:
             verdict = "Final Review로 이동 가능: REVIEW / NOT_RUN 항목을 최종 판단 근거로 함께 확인해야 합니다."
-            next_action = "Final Review에서 보류, 재검토, 선택 중 현실적인 판단을 남깁니다."
+            next_action = "Final Review에서 보강 필요 상태를 확인하고, selected-route gate가 통과될 때만 최종 선정으로 저장합니다."
         else:
             verdict = "Final Review로 이동 가능: 실전 후보 검증 자료가 구성되었습니다."
-            next_action = "Final Review에서 최종 선택 / 보류 / 거절 / 재검토 판단을 남깁니다."
+            next_action = "Final Review에서 selected-route gate를 확인한 뒤 최종 후보 선정 저장을 진행합니다."
 
     component_rows = [
         {

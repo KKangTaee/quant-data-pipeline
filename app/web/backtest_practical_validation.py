@@ -2058,7 +2058,7 @@ def render_practical_validation_workspace() -> None:
             detail=(
                 "검증 결과 저장은 감사용 기록을 남기는 기능입니다. Final Review 이동과 후보 노출은 필수 검증 모듈의 "
                 "BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
-                "선정 / 보류 / 거절 / 재검토 판단과 최종 메모는 Final Review에서 기록합니다."
+                "Final Review의 정식 저장은 selected-route gate까지 통과한 최종 후보 선정만 허용합니다."
             ),
             tone="positive" if can_save_and_move else "danger",
         )

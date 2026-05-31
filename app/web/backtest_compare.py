@@ -3036,7 +3036,7 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
         with action_cols[1]:
             st.caption(
                 "이 버튼은 개별 전략 후보가 아니라 mix 전체를 하나의 Clean V2 source로 보냅니다. "
-                "최종 선정 / 보류 / 거절 / 재검토 판단은 Final Review에서만 기록합니다."
+                "최종 선정 저장은 Final Review에서 selected-route gate를 통과했을 때만 가능합니다."
             )
 
 # Save the just-built weighted result as a reusable setup, separate from formal registries.

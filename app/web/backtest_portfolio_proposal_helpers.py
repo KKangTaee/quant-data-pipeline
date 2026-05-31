@@ -69,7 +69,7 @@ FINAL_SELECTION_DECISION_ROUTE_OPTIONS = [
     "RE_REVIEW_REQUIRED",
 ]
 FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS = {
-    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 판단이 완료됩니다.",
+    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 선정 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "paper tracking 기간이나 trigger 확인이 더 필요해 보류합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, stress, paper tracking 조건을 재검토해야 합니다.",
@@ -725,7 +725,7 @@ def _build_paper_portfolio_ledger_phase34_handoff(row: dict[str, Any]) -> dict[s
     else:
         route = "READY_FOR_FINAL_SELECTION_REVIEW"
         verdict = "Phase 34 입력 가능: paper tracking 조건과 기준이 기록됨"
-        next_action = "Phase 34에서 백테스트, stress, paper ledger, operator note를 함께 읽어 선정 / 보류 / 거절을 판단합니다."
+        next_action = "Final Review에서 백테스트, stress, paper observation, operator note를 함께 읽고 최종 선정 가능 여부를 판단합니다."
     score = 10.0 - blocker_count * 2.0
     if not has_triggers:
         score -= 1.0
@@ -982,7 +982,7 @@ def _build_final_selection_decision_save_evaluation(
             "criteria": "Operator Reason",
             "ready": reason_ready,
             "current_value": "attached" if reason_ready else "-",
-            "judgment": "사용자 판단 사유 있음" if reason_ready else "선정 / 보류 / 거절 / 재검토 사유 필요",
+            "judgment": "사용자 판단 사유 있음" if reason_ready else "최종 선정 사유 필요",
             "score": 1.2,
         },
         {

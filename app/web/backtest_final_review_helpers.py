@@ -33,7 +33,7 @@ from app.runtime import FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
-    SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 판단이 완료됩니다.",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 선정 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",
@@ -296,7 +296,7 @@ def _build_final_review_decision_evidence_pack(
             "Criteria": "Paper observation criteria",
             "Ready": not paper_blocked,
             "Current": paper_route or "-",
-            "Meaning": "별도 ledger 저장 없이 최종 판단 기록에 남길 관찰 기준이 충분한지 봅니다.",
+            "Meaning": "별도 ledger 저장 없이 최종 선정 저장에 남길 관찰 기준이 충분한지 봅니다.",
             "Score": 2.0,
         },
         {
@@ -312,7 +312,7 @@ def _build_final_review_decision_evidence_pack(
     if blockers:
         route = "FINAL_DECISION_BLOCKED"
         verdict = "최종 판단 전 보강 필요: validation / robustness / paper observation blocker가 남아 있음"
-        next_action = "blocker를 해결하거나 보류 / 거절 / 재검토 판단으로 기록합니다."
+        next_action = "blocker를 해결한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
         suggested_decision_route = "RE_REVIEW_REQUIRED"
     elif validation_route not in validation_ready_routes or robustness_route != "READY_FOR_STRESS_SWEEP":
         route = "FINAL_DECISION_NEEDS_REVIEW"
@@ -322,7 +322,7 @@ def _build_final_review_decision_evidence_pack(
     else:
         route = "READY_FOR_FINAL_DECISION"
         verdict = "최종 검토 가능: 검증 근거와 관찰 기준이 하나의 판단 기록으로 묶임"
-        next_action = "최종 판단과 사유를 기록하면 Final Review에서 실전 후보 판단이 완료됩니다."
+        next_action = "최종 후보 선정과 사유를 저장하면 Final Review에서 실전 후보 판단이 완료됩니다."
         suggested_decision_route = "SELECT_FOR_PRACTICAL_PORTFOLIO"
     return {
         "route": route,
@@ -382,10 +382,10 @@ def _build_final_review_save_evaluation(
             "Meaning": "중복되지 않는 최종 검토 기록 id가 필요합니다.",
         },
         {
-            "Criteria": "Decision route",
-            "Ready": decision_route_clean in FINAL_REVIEW_ROUTE_OPTIONS,
+            "Criteria": "Official selection route",
+            "Ready": decision_route_clean == SELECT_FOR_PRACTICAL_PORTFOLIO,
             "Current": decision_route_clean or "-",
-            "Meaning": "선정 / 보류 / 거절 / 재검토 중 하나를 고릅니다.",
+            "Meaning": "Final Review의 정식 저장은 최종 선정 route만 허용합니다. 보류 / 거절 / 재검토는 저장하지 않는 상태 안내입니다.",
         },
         {
             "Criteria": "Operator reason",
@@ -395,8 +395,7 @@ def _build_final_review_save_evaluation(
         },
         {
             "Criteria": "Select readiness",
-            "Ready": decision_route_clean != SELECT_FOR_PRACTICAL_PORTFOLIO
-            or evidence.get("route") == "READY_FOR_FINAL_DECISION",
+            "Ready": evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
             "Meaning": "실전 후보 선정은 blocker가 없을 때만 저장합니다.",
         },
@@ -404,13 +403,13 @@ def _build_final_review_save_evaluation(
     ]
     blockers = [str(row["Criteria"]) for row in checks if not row["Ready"]]
     if not blockers:
-        route = "FINAL_REVIEW_RECORD_READY"
-        verdict = "최종 검토 결과 기록 가능"
-        next_action = "`최종 검토 결과 기록`을 눌러 판단과 근거를 남깁니다."
+        route = "FINAL_SELECTION_SAVE_READY"
+        verdict = "최종 후보 선정 저장 가능"
+        next_action = "`최종 후보로 선정`을 눌러 선정 근거를 남깁니다."
     else:
-        route = "FINAL_REVIEW_RECORD_BLOCKED"
-        verdict = "최종 검토 결과 기록 전 확인 필요"
-        next_action = "decision id, 판단 route, 판단 사유, 선정 readiness를 확인합니다."
+        route = "FINAL_SELECTION_SAVE_BLOCKED"
+        verdict = "최종 후보 선정 저장 전 확인 필요"
+        next_action = "decision id, 선정 사유, selected-route gate, investability packet을 확인합니다."
     return {
         "route": route,
         "score": round((len(checks) - len(blockers)) / len(checks) * 10.0, 1),

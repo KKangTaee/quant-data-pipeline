@@ -666,11 +666,11 @@ def build_validation_module_plan(
     elif review_modules:
         gate_route = "READY_WITH_REVIEW"
         gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목을 최종 판단 근거로 확인해야 합니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 보류 / 재검토 / 선택 판단을 남깁니다."
+        next_action = "검증 결과를 저장하고 Final Review에서 보강 필요 상태와 최종 선정 가능 여부를 확인합니다."
     else:
         gate_route = "READY_FOR_FINAL_REVIEW"
         gate_verdict = "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 최종 판단을 남깁니다."
+        next_action = "검증 결과를 저장하고 Final Review에서 최종 후보 선정 저장을 진행합니다."
 
     board_map = build_validation_board_map(modules=modules, source_traits=traits)
 

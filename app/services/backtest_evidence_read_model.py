@@ -599,15 +599,15 @@ def build_investability_gate_policy(
     if blockers:
         outcome = "blocked"
         suggested_decision_route = "RE_REVIEW_REQUIRED"
-        next_action = "critical blocker를 해소하거나 실전 검토 후보 선정 대신 재검토 / 거절로 기록합니다."
+        next_action = "critical blocker를 해소한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
     elif review_required:
         outcome = "hold_or_re_review"
         suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
-        next_action = "선정 대신 보류 / 재검토로 기록하고 부족한 evidence를 보강합니다."
+        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
     else:
         outcome = "select_ready"
         suggested_decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
-        next_action = "Final Review에서 선정 / 보류 / 거절 / 재검토 판단을 기록합니다."
+        next_action = "Final Review에서 최종 후보 선정 저장을 진행합니다."
     return {
         "schema_version": GATE_POLICY_SCHEMA_VERSION,
         "profile_id": profile_id,
@@ -926,15 +926,15 @@ def build_investability_evidence_packet(
     if policy_blockers:
         route = "INVESTABILITY_PACKET_BLOCKED"
         verdict = "실전 후보 선정 차단: validation gate policy blocker가 남아 있습니다."
-        next_action = "선택 대신 보류 / 재검토로 기록하거나 validation evidence를 보강합니다."
+        next_action = "validation evidence를 보강한 뒤 Final Review에서 선정 가능 여부를 다시 확인합니다."
     elif policy_review_required:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "실전 후보 선정 전 추가 검토가 필요합니다."
-        next_action = "selected route 대신 보류 / 재검토로 기록하고 부족한 evidence를 보강합니다."
+        next_action = "부족한 evidence를 보강한 뒤 selected-route gate를 다시 확인합니다."
     elif decision_evidence.get("route") == "READY_FOR_FINAL_DECISION":
         route = "INVESTABILITY_PACKET_READY"
         verdict = "실전 검토 통과 후보로 기록 가능한 evidence packet입니다."
-        next_action = "Final Review에서 선정 / 보류 / 거절 / 재검토 판단을 기록합니다."
+        next_action = "Final Review에서 최종 후보 선정 저장을 진행합니다."
     else:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "hard blocker는 없지만 Final Review evidence가 아직 완전하지 않습니다."
@@ -997,7 +997,7 @@ def build_selected_route_gate(
         "Meaning": (
             "실전 검토 통과 후보 선정은 validation gate policy가 허용할 때만 저장합니다."
             if selected
-            else "보류 / 거절 / 재검토 판단은 evidence gap이 있어도 기록할 수 있습니다."
+            else "보류 / 거절 / 재검토는 정식 저장하지 않는 상태 안내입니다."
         ),
     }
 
@@ -1035,17 +1035,17 @@ def build_final_review_decision_record_guide(
         route_state = "SELECT_ROUTE_BLOCKED"
         route_state_label = "선정 저장 차단"
         notice_level = "warning"
-        notice = "선정 route는 기존 investability gate가 허용할 때만 저장됩니다. 보류 / 재검토 / 거절 기록은 남길 수 있습니다."
+        notice = "최종 후보 선정 저장은 기존 investability gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
     elif selected:
         route_state = "SELECT_ROUTE_READY"
         route_state_label = "선정 기록 가능"
         notice_level = "success"
         notice = "현재 selected-route gate가 선정 기록을 허용합니다. 판단 사유를 남기면 최종 검토 기록으로 저장할 수 있습니다."
     else:
-        route_state = "NON_SELECT_RECORDABLE"
-        route_state_label = "비선정 기록 가능"
+        route_state = "NON_SELECT_NOT_STORED"
+        route_state_label = "상태 안내만 표시"
         notice_level = "info"
-        notice = "보류 / 거절 / 재검토 판단은 evidence gap이 있어도 기록할 수 있습니다. 단, 실제 선정으로 저장되지는 않습니다."
+        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 최종 후보 선정이 가능할 때만 활성화됩니다."
     checklist_rows = [
         {
             "Criteria": "Suggested decision",
@@ -1058,6 +1058,12 @@ def build_final_review_decision_record_guide(
             "Ready": valid_route,
             "Current": _decision_route_label(route) if valid_route else route or "-",
             "Meaning": "최종 판단으로 저장될 route입니다.",
+        },
+        {
+            "Criteria": "Official selection route",
+            "Ready": selected,
+            "Current": "selection save" if selected else "status only",
+            "Meaning": "Final Review의 정식 저장은 최종 선정 route만 허용합니다.",
         },
         selected_gate,
         {
@@ -1085,7 +1091,7 @@ def build_final_review_decision_record_guide(
         "notice_level": notice_level,
         "notice": notice,
         "selected_route_gate": selected_gate,
-        "recordable_route": valid_route and bool(selected_gate.get("Ready")),
+        "recordable_route": valid_route and selected and bool(selected_gate.get("Ready")),
         "checklist_rows": checklist_rows,
         "blockers": blockers,
         "route_templates": route_templates,
@@ -1094,6 +1100,7 @@ def build_final_review_decision_record_guide(
             "validation_rerun": False,
             "provider_fetch": False,
             "waiver_persistence": False,
+            "non_select_persistence": False,
             "live_approval": False,
             "order_instruction": False,
             "account_sync": False,
@@ -1122,13 +1129,13 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
         return (
             "SELECT_READY",
             "선정 가능",
-            "현재 gate policy상 실전 검토 통과 후보로 기록할 수 있습니다.",
+            "현재 gate policy상 실전 검토 통과 후보로 저장할 수 있습니다.",
         )
     if outcome == "blocked" or route == "INVESTABILITY_PACKET_BLOCKED":
         return (
             "SELECT_BLOCKED",
             "선정 차단",
-            "critical blocker가 남아 있어 선정 대신 재검토 / 거절 / 보류 기록이 필요합니다.",
+            "critical blocker가 남아 있어 최종 후보 선정 저장이 차단됩니다.",
         )
     return (
         "HOLD_OR_RE_REVIEW",
@@ -1159,8 +1166,8 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
     state = str(dict(cockpit or {}).get("state") or "").upper()
     if state == "SELECT_READY":
         return (
-            "최종 판단 기록",
-            "선정 가능 후보입니다. Decision Cockpit을 확인한 뒤 최종 판단 기록으로 진행합니다.",
+            "최종 후보 선정",
+            "선정 가능 후보입니다. Decision Cockpit을 확인한 뒤 최종 후보 선정 저장으로 진행합니다.",
             "선정 가능",
         )
     if state == "SELECT_BLOCKED":
@@ -1168,15 +1175,15 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
             "차단 원인 해소",
             _candidate_board_policy_reason(
                 list(dict(cockpit or {}).get("must_fix_rows") or []),
-                "critical blocker를 먼저 해소하거나 재검토 / 거절로 기록합니다.",
+                "critical blocker를 먼저 해소한 뒤 다시 확인합니다.",
             ),
             "선정 차단",
         )
     return (
-        "보류 / 재검토 판단",
+        "보강 후 재확인",
         _candidate_board_policy_reason(
             list(dict(cockpit or {}).get("must_review_rows") or []),
-            "review-required 근거를 확인하고 보류 / 재검토 여부를 결정합니다.",
+            "review-required 근거를 확인하고 evidence를 보강합니다.",
         ),
         "보류 필요",
     )
