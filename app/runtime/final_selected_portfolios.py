@@ -60,6 +60,7 @@ SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION = "selected_provider_evidence_v1"
 SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION = "selected_provider_evidence_staleness_contract_v1"
 SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION = "selected_review_signal_policy_v1"
 SELECTED_DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
+SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION = "selected_dashboard_handoff_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -119,6 +120,12 @@ SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS = {
     "ALLOCATION_DRIFT_BOUNDARY_NEEDS_INPUT": "비중 근거 입력 필요",
     "ALLOCATION_DRIFT_BOUNDARY_BREACHED": "비중 근거 재검토",
     "ALLOCATION_DRIFT_BOUNDARY_BLOCKED": "비중 근거 경계 위반",
+}
+SELECTED_DASHBOARD_HANDOFF_ROUTE_LABELS = {
+    "HANDOFF_NO_FINAL_DECISION": "최종 판단 없음",
+    "HANDOFF_NO_SELECTED_DECISION": "선정 row 없음",
+    "HANDOFF_BLOCKED": "Dashboard 연결 차단",
+    "HANDOFF_READY": "Dashboard 연결 가능",
 }
 _SELECTED_PROVIDER_REQUIRED_AREAS = {"ETF Operability", "ETF Holdings", "ETF Exposure"}
 _SELECTED_PROVIDER_STATUS_RANK = {
@@ -451,6 +458,199 @@ def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[st
         "live_approval": bool(row.get("live_approval")),
         "order_instruction": bool(row.get("order_instruction")),
         "raw_decision": dict(row),
+    }
+
+
+def _final_decision_source_row(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(row.get("raw_decision") or row or {})
+
+
+def _handoff_check_row(
+    *,
+    check: str,
+    status: str,
+    ready: bool,
+    current: Any,
+    evidence: str,
+    next_action: str,
+) -> dict[str, Any]:
+    return {
+        "Check": check,
+        "Status": status,
+        "Ready": ready,
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+    }
+
+
+def _selected_dashboard_handoff_action(row: dict[str, Any]) -> str:
+    status = str(row.get("operation_status") or "")
+    if status == "blocked":
+        return "Final Review source row의 selected component / target weight / blocker를 보강합니다."
+    if status in {"watch", "rebalance_needed", "re_review_needed"}:
+        return "Selected Dashboard에서 recheck, provider evidence, timeline을 먼저 확인합니다."
+    return "Operations > Selected Portfolio Dashboard에서 사후 점검을 이어갑니다."
+
+
+def _selected_dashboard_handoff_rows(dashboard_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, row in enumerate(dashboard_rows):
+        review_triggers = [
+            str(trigger).strip()
+            for trigger in list(row.get("review_triggers") or [])
+            if str(trigger).strip()
+        ]
+        rows.append(
+            {
+                "Updated At": row.get("updated_at"),
+                "Decision ID": row.get("decision_id"),
+                "Portfolio": row.get("source_title"),
+                "Dashboard Status": row.get("operation_status_label"),
+                "Status Reason": row.get("status_reason"),
+                "Components": row.get("component_count"),
+                "Target Weight": f"{(_optional_float(row.get('target_weight_total')) or 0.0):.1f}%",
+                "Benchmark": row.get("benchmark_label"),
+                "Evidence Route": row.get("evidence_route"),
+                "Review Cadence": row.get("review_cadence"),
+                "Review Triggers": ", ".join(review_triggers) if review_triggers else "-",
+                "Handoff Destination": "Operations > Selected Portfolio Dashboard",
+                "Handoff Action": _selected_dashboard_handoff_action(row),
+                "Live Approval": "Disabled",
+                "Order": "Disabled",
+                "_row_index": index,
+                "_operation_status": row.get("operation_status"),
+            }
+        )
+    return rows
+
+
+def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize which Final Review decisions can flow into Selected Dashboard."""
+    final_rows = [_final_decision_source_row(dict(row or {})) for row in list(final_decision_rows or [])]
+    selected_rows = [row for row in final_rows if _is_selected_practical_portfolio(row)]
+    dashboard_rows = [build_final_selected_portfolio_dashboard_row(row) for row in selected_rows]
+    dashboard_rows = sorted(
+        dashboard_rows,
+        key=lambda row: str(row.get("updated_at") or row.get("decision_id") or ""),
+        reverse=True,
+    )
+    status_counts = {status: 0 for status in FINAL_SELECTED_PORTFOLIO_STATUS_ORDER}
+    for row in dashboard_rows:
+        status = str(row.get("operation_status") or "blocked")
+        if status not in status_counts:
+            status_counts[status] = 0
+        status_counts[status] += 1
+
+    blocked_count = int(status_counts.get("blocked", 0))
+    dashboard_row_count = len(dashboard_rows)
+    monitorable_count = max(dashboard_row_count - blocked_count, 0)
+    latest_selected = dashboard_rows[0] if dashboard_rows else {}
+
+    if not final_rows:
+        route = "HANDOFF_NO_FINAL_DECISION"
+        next_action = "Final Review에서 최종 판단을 먼저 기록합니다."
+        verdict = "Selected Dashboard로 넘길 최종 판단 row가 아직 없습니다."
+    elif not selected_rows:
+        route = "HANDOFF_NO_SELECTED_DECISION"
+        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 판단을 저장해야 합니다."
+        verdict = "저장된 최종 판단은 있지만 선정된 dashboard 대상 row가 없습니다."
+    elif monitorable_count == 0:
+        route = "HANDOFF_BLOCKED"
+        next_action = "선정 row의 component, target weight, Final Review blocker를 보강합니다."
+        verdict = "선정 row가 모두 dashboard 운영 대상으로 보기 전에 막혀 있습니다."
+    else:
+        route = "HANDOFF_READY"
+        next_action = "Operations > Selected Portfolio Dashboard에서 recheck / readiness / provider / timeline을 이어서 확인합니다."
+        verdict = "선정 row가 Selected Dashboard read-only 점검 대상으로 연결됩니다."
+
+    checklist = [
+        _handoff_check_row(
+            check="Final Review decision record",
+            status="PASS" if final_rows else "NEEDS_INPUT",
+            ready=bool(final_rows),
+            current=len(final_rows),
+            evidence="Final Decision V2 rows are available" if final_rows else "No saved final decision rows",
+            next_action="Use saved decisions as the handoff source." if final_rows else "Record a final review decision first.",
+        ),
+        _handoff_check_row(
+            check="Selected route record",
+            status="PASS" if selected_rows else "NEEDS_INPUT",
+            ready=bool(selected_rows),
+            current=len(selected_rows),
+            evidence="SELECT_FOR_PRACTICAL_PORTFOLIO rows are available" if selected_rows else "No selected decision route",
+            next_action=(
+                "Build dashboard rows from selected decisions."
+                if selected_rows
+                else "Save a SELECT_FOR_PRACTICAL_PORTFOLIO decision when the candidate is actually selected."
+            ),
+        ),
+        _handoff_check_row(
+            check="Dashboard row build",
+            status="PASS" if dashboard_rows else "NEEDS_INPUT",
+            ready=bool(dashboard_rows),
+            current=dashboard_row_count,
+            evidence="Selected rows were converted to dashboard read models" if dashboard_rows else "No dashboard rows can be built yet",
+            next_action="Show rows in Selected Dashboard." if dashboard_rows else "Resolve selected route availability first.",
+        ),
+        _handoff_check_row(
+            check="Monitorable row",
+            status="PASS" if monitorable_count else "BLOCKED" if selected_rows else "NEEDS_INPUT",
+            ready=bool(monitorable_count),
+            current=f"{monitorable_count} monitorable / {blocked_count} blocked",
+            evidence="At least one selected row is not blocked" if monitorable_count else "No selected dashboard row is monitorable yet",
+            next_action=(
+                "Continue in Operations > Selected Portfolio Dashboard."
+                if monitorable_count
+                else "Fix selected component, target weight, or blocker evidence before treating the row as monitorable."
+            ),
+        ),
+        _handoff_check_row(
+            check="Execution boundary",
+            status="PASS",
+            ready=True,
+            current="approval=False / order=False / auto_rebalance=False",
+            evidence="Handoff review is read-only and does not persist monitoring state",
+            next_action="Keep approval, order, and rebalance decisions outside this dashboard handoff.",
+        ),
+    ]
+
+    return {
+        "schema_version": SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_DASHBOARD_HANDOFF_ROUTE_LABELS.get(route, route),
+        "verdict": verdict,
+        "next_action": next_action,
+        "destination": "Operations > Selected Portfolio Dashboard",
+        "summary": {
+            "registry_path": str(FINAL_SELECTION_DECISION_V2_FILE),
+            "final_decision_count": len(final_rows),
+            "selected_decision_count": len(selected_rows),
+            "dashboard_row_count": dashboard_row_count,
+            "monitorable_count": monitorable_count,
+            "blocked_count": blocked_count,
+            "status_counts": status_counts,
+            "latest_selected_decision_id": latest_selected.get("decision_id") or "-",
+            "latest_selected_title": latest_selected.get("source_title") or "-",
+            "latest_selected_updated_at": latest_selected.get("updated_at") or "-",
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "monitoring_log_auto_write": False,
+        },
+        "rows": _selected_dashboard_handoff_rows(dashboard_rows),
+        "checklist": checklist,
+        "execution_boundary": {
+            "write_policy": "read_only_selected_dashboard_handoff",
+            "db_write": False,
+            "registry_write": False,
+            "report_auto_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "The handoff review reads Final Decision V2 rows and does not create dashboard state or trading actions.",
+        },
     }
 
 

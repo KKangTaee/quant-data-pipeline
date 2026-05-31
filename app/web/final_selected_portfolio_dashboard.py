@@ -10,6 +10,8 @@ import streamlit as st
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_dashboard_handoff_checklist_table,
+    build_selected_dashboard_handoff_table,
     build_selected_portfolio_allocation_drift_boundary_table,
     build_selected_portfolio_continuity_table,
     build_selected_portfolio_current_weight_input_table,
@@ -39,6 +41,7 @@ from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
+    build_selected_dashboard_handoff_review,
     build_selected_portfolio_allocation_drift_boundary,
     build_selected_portfolio_continuity_check,
     build_selected_portfolio_current_weight_inputs,
@@ -62,6 +65,16 @@ def _status_tone(status: str) -> str:
     if status in {"watch", "rebalance_needed", "re_review_needed"}:
         return "warning"
     if status == "blocked":
+        return "danger"
+    return "neutral"
+
+
+def _handoff_tone(route: str) -> str:
+    if route == "HANDOFF_READY":
+        return "positive"
+    if route in {"HANDOFF_NO_FINAL_DECISION", "HANDOFF_NO_SELECTED_DECISION"}:
+        return "warning"
+    if route == "HANDOFF_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -302,6 +315,63 @@ def _render_empty_state(summary: dict[str, Any]) -> None:
         "`Backtest > Final Review`에서 최종 판단이 선정으로 저장된 row만 이 대시보드에 운영 대상으로 표시됩니다."
     )
     st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
+
+
+def _render_final_review_handoff(all_final_decisions: list[dict[str, Any]]) -> None:
+    handoff = build_selected_dashboard_handoff_review(all_final_decisions)
+    summary = dict(handoff.get("summary") or {})
+    route = str(handoff.get("route") or "")
+    with st.container(border=True):
+        st.markdown("#### Final Review Handoff")
+        render_badge_strip(
+            [
+                {"label": "Handoff", "value": handoff.get("route_label") or route, "tone": _handoff_tone(route)},
+                {
+                    "label": "Final Decisions",
+                    "value": summary.get("final_decision_count", 0),
+                    "tone": "positive" if summary.get("final_decision_count") else "neutral",
+                },
+                {
+                    "label": "Selected Rows",
+                    "value": summary.get("selected_decision_count", 0),
+                    "tone": "positive" if summary.get("selected_decision_count") else "warning",
+                },
+                {
+                    "label": "Monitorable",
+                    "value": summary.get("monitorable_count", 0),
+                    "tone": "positive" if summary.get("monitorable_count") else "warning",
+                },
+                {
+                    "label": "Blocked",
+                    "value": summary.get("blocked_count", 0),
+                    "tone": "danger" if summary.get("blocked_count") else "neutral",
+                },
+                {"label": "Approval / Order", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        message = f"{handoff.get('verdict') or '-'} 다음 단계: {handoff.get('next_action') or '-'}"
+        if route == "HANDOFF_READY":
+            st.success(message)
+        elif route == "HANDOFF_BLOCKED":
+            st.error(message)
+        else:
+            st.warning(message)
+        handoff_df = build_selected_dashboard_handoff_table(handoff)
+        if not handoff_df.empty:
+            st.dataframe(handoff_df, width="stretch", hide_index=True)
+        else:
+            st.caption("Dashboard로 표시할 selected Final Review row가 아직 없습니다.")
+        with st.expander("Handoff checklist / storage boundary", expanded=False):
+            checklist_df = build_selected_dashboard_handoff_checklist_table(handoff)
+            if not checklist_df.empty:
+                st.dataframe(checklist_df, width="stretch", hide_index=True)
+            boundary = dict(handoff.get("execution_boundary") or {})
+            st.caption(
+                f"Source: {summary.get('registry_path') or FINAL_SELECTION_DECISION_V2_FILE} / "
+                f"write policy: {boundary.get('write_policy') or '-'} / "
+                f"monitoring auto-write: {boundary.get('monitoring_log_auto_write')} / "
+                f"auto rebalance: {boundary.get('auto_rebalance')}"
+            )
 
 
 def _render_selected_portfolio_picker(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -1726,6 +1796,7 @@ def render_final_selected_portfolio_dashboard_page() -> None:
     rows = list(dashboard.get("dashboard_rows") or [])
 
     render_status_card_grid(_summary_cards(summary))
+    _render_final_review_handoff(list(dashboard.get("all_final_decisions") or []))
 
     if not rows:
         _render_empty_state(summary)

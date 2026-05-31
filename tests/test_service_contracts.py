@@ -8200,6 +8200,78 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             },
         }
 
+    def test_selected_dashboard_handoff_review_links_selected_final_review_rows(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION,
+            build_selected_dashboard_handoff_review,
+        )
+
+        handoff = build_selected_dashboard_handoff_review([self._selected_row()])
+
+        self.assertEqual(handoff["schema_version"], SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION)
+        self.assertEqual(handoff["route"], "HANDOFF_READY")
+        self.assertEqual(handoff["destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["summary"]["final_decision_count"], 1)
+        self.assertEqual(handoff["summary"]["selected_decision_count"], 1)
+        self.assertEqual(handoff["summary"]["dashboard_row_count"], 1)
+        self.assertEqual(handoff["summary"]["monitorable_count"], 1)
+        self.assertEqual(handoff["rows"][0]["Decision ID"], "decision-selected")
+        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["rows"][0]["Live Approval"], "Disabled")
+        checks = {row["Check"]: row for row in handoff["checklist"]}
+        self.assertEqual(checks["Selected route record"]["Status"], "PASS")
+        self.assertEqual(checks["Monitorable row"]["Status"], "PASS")
+        self.assertFalse(handoff["execution_boundary"]["registry_write"])
+        self.assertFalse(handoff["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(handoff["execution_boundary"]["live_approval"])
+        self.assertFalse(handoff["execution_boundary"]["order_instruction"])
+        self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
+
+    def test_selected_dashboard_handoff_review_blocks_without_selected_route(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_dashboard_handoff_review
+
+        row = dict(self._selected_row()["raw_decision"])
+        row["decision_route"] = "HOLD_FOR_MORE_PAPER_TRACKING"
+        row["selected_practical_portfolio"] = False
+
+        handoff = build_selected_dashboard_handoff_review([row])
+
+        self.assertEqual(handoff["route"], "HANDOFF_NO_SELECTED_DECISION")
+        self.assertEqual(handoff["summary"]["final_decision_count"], 1)
+        self.assertEqual(handoff["summary"]["selected_decision_count"], 0)
+        self.assertEqual(handoff["summary"]["dashboard_row_count"], 0)
+        self.assertEqual(handoff["rows"], [])
+        checks = {item["Check"]: item for item in handoff["checklist"]}
+        self.assertEqual(checks["Final Review decision record"]["Status"], "PASS")
+        self.assertEqual(checks["Selected route record"]["Status"], "NEEDS_INPUT")
+        self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
+
+    def test_selected_dashboard_handoff_review_surfaces_blocked_dashboard_contract(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_dashboard_handoff_review
+
+        row = dict(self._selected_row()["raw_decision"])
+        row["selected_components"] = [
+            {
+                "title": "Incomplete Component",
+                "registry_id": "candidate-incomplete",
+                "target_weight": 80.0,
+                "benchmark": "SPY",
+            }
+        ]
+
+        handoff = build_selected_dashboard_handoff_review([row])
+
+        self.assertEqual(handoff["route"], "HANDOFF_BLOCKED")
+        self.assertEqual(handoff["summary"]["selected_decision_count"], 1)
+        self.assertEqual(handoff["summary"]["monitorable_count"], 0)
+        self.assertEqual(handoff["summary"]["blocked_count"], 1)
+        self.assertEqual(handoff["rows"][0]["Dashboard Status"], "운영 대상 차단")
+        self.assertIn("target weight", handoff["rows"][0]["Handoff Action"])
+        checks = {item["Check"]: item for item in handoff["checklist"]}
+        self.assertEqual(checks["Dashboard row build"]["Status"], "PASS")
+        self.assertEqual(checks["Monitorable row"]["Status"], "BLOCKED")
+        self.assertFalse(handoff["execution_boundary"]["order_instruction"])
+
     def _ready_recheck_result(self) -> dict:
         return {
             "status": "ok",

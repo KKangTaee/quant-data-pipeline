@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Candidate Board V1 is implementation complete; next work should be chosen from the remaining user-facing Final Review roadmap slices.
+  - Final Review Selected Dashboard Handoff V1 is implementation complete; the next Final Review slice should be chosen from remaining post-handoff polish or Phase 14 prioritization.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-selected-dashboard-handoff-v1/`.
+- Final Review Saved Decision Review and `Operations > Selected Portfolio Dashboard` now share a read-only handoff review for selected rows, dashboard row build, monitorable / blocked counts, checklist, and destination.
+- No new registry, monitoring log auto-write, report auto-write, live approval, order, account sync, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-saved-decision-review-v1/`.
 - Final Review saved final decisions now render as a read-only review ledger with summary counts, route filter, focused detail tabs, operator decision view, Decision Dossier reuse, packet tab, and raw JSON tab.
 - No validation rerun, new registry, report auto-write, live approval, order, account sync, or auto rebalance behavior was added; next natural slice is Selected Dashboard handoff polish.

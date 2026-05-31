@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Candidate Board V1 is implementation complete; next work should be chosen from the remaining user-facing Final Review roadmap slices.
+  - Final Review Selected Dashboard Handoff V1 is implementation complete; remaining near-term work should be chosen after reviewing the current Final Review / Selected Dashboard polish state.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-31 - Selected Dashboard handoff should be a read-only connection layer
+- User request:
+  - Final Review 개편 5번 작업을 진행해 달라고 승인함.
+- Interpreted goal:
+  - Final Review에서 저장된 선정 판단이 Selected Portfolio Dashboard로 어떻게 이어지는지 명확히 보여주되, 이전 단계 검증을 다시 실행하거나 새 운영 저장을 만들지 않아야 함.
+- Analysis result:
+  - 구현 결과 Final Decision V2 row를 읽는 `selected_dashboard_handoff_v1` read model이 selected rows, dashboard rows, monitorable / blocked counts, handoff table, checklist, no approval / order / auto-rebalance boundary를 반환한다.
+  - Final Review Saved Decision Review와 `Operations > Selected Portfolio Dashboard`가 같은 handoff model을 표시한다.
+- Follow-up:
+  - 이 handoff는 selected-route gate 또는 continuity check를 대체하지 않는다. 선정 이후 실제 점검은 Selected Dashboard의 recheck / readiness / provider / timeline / allocation evidence에서 이어진다.
 
 ### 2026-05-31 - Saved Final Review decisions should read as a ledger
 - User request:

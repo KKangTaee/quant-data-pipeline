@@ -40,9 +40,14 @@ from app.web.backtest_ui_components import (
     render_stage_brief,
     render_status_card_grid,
 )
+from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_dashboard_handoff_checklist_table,
+    build_selected_dashboard_handoff_table,
+)
 from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     append_final_selection_decision_v2,
+    build_selected_dashboard_handoff_review,
     load_current_candidate_registry_latest,
     load_final_selection_decisions_v2,
     load_portfolio_proposals,
@@ -59,6 +64,17 @@ def _status_tone(status: Any) -> str:
         return "danger"
     if status_text in {"REVIEW", "NEEDS_INPUT"}:
         return "warning"
+    return "neutral"
+
+
+def _handoff_tone(route: Any) -> str:
+    route_text = str(route or "")
+    if route_text == "HANDOFF_READY":
+        return "positive"
+    if route_text in {"HANDOFF_NO_FINAL_DECISION", "HANDOFF_NO_SELECTED_DECISION"}:
+        return "warning"
+    if route_text == "HANDOFF_BLOCKED":
+        return "danger"
     return "neutral"
 
 
@@ -841,10 +857,67 @@ def _render_decision_dossier_export(row: dict[str, Any], *, key_prefix: str) -> 
         st.markdown(str(dossier.get("markdown") or "-"))
 
 
+def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]) -> None:
+    handoff = build_selected_dashboard_handoff_review(final_decision_rows)
+    summary = dict(handoff.get("summary") or {})
+    route = str(handoff.get("route") or "")
+    st.markdown("##### Selected Dashboard Handoff")
+    render_badge_strip(
+        [
+            {"label": "Handoff", "value": handoff.get("route_label") or route, "tone": _handoff_tone(route)},
+            {
+                "label": "Selected Rows",
+                "value": summary.get("selected_decision_count", 0),
+                "tone": "positive" if summary.get("selected_decision_count") else "warning",
+            },
+            {
+                "label": "Dashboard Rows",
+                "value": summary.get("dashboard_row_count", 0),
+                "tone": "positive" if summary.get("dashboard_row_count") else "neutral",
+            },
+            {
+                "label": "Monitorable",
+                "value": summary.get("monitorable_count", 0),
+                "tone": "positive" if summary.get("monitorable_count") else "warning",
+            },
+            {
+                "label": "Blocked",
+                "value": summary.get("blocked_count", 0),
+                "tone": "danger" if summary.get("blocked_count") else "neutral",
+            },
+            {"label": "Approval / Order", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    message = f"{handoff.get('verdict') or '-'} 다음 단계: {handoff.get('next_action') or '-'}"
+    if route == "HANDOFF_READY":
+        st.success(message)
+    elif route == "HANDOFF_BLOCKED":
+        st.error(message)
+    else:
+        st.warning(message)
+    handoff_df = build_selected_dashboard_handoff_table(handoff)
+    if not handoff_df.empty:
+        st.dataframe(handoff_df, width="stretch", hide_index=True)
+    else:
+        st.caption("Selected Dashboard로 넘길 선정 row가 아직 없습니다.")
+    with st.expander("Handoff checklist / storage boundary", expanded=False):
+        checklist_df = build_selected_dashboard_handoff_checklist_table(handoff)
+        if not checklist_df.empty:
+            st.dataframe(checklist_df, width="stretch", hide_index=True)
+        boundary = dict(handoff.get("execution_boundary") or {})
+        st.caption(
+            f"Destination: {handoff.get('destination') or '-'} / "
+            f"write policy: {boundary.get('write_policy') or '-'} / "
+            f"monitoring auto-write: {boundary.get('monitoring_log_auto_write')} / "
+            f"auto rebalance: {boundary.get('auto_rebalance')}"
+        )
+
+
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 기록된 최종 검토 결과가 없습니다.")
         st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
+        _render_selected_dashboard_handoff(final_decision_rows)
         return
 
     review = build_saved_final_review_decision_review(final_decision_rows)
@@ -863,6 +936,7 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
             {"title": "Live Approval", "value": "Disabled", "detail": "review only", "tone": "neutral"},
         ]
     )
+    _render_selected_dashboard_handoff(final_decision_rows)
     st.info(
         "최근 판단: "
         f"{summary.get('latest_updated_at') or '-'} / "

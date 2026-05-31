@@ -61,6 +61,47 @@ def build_selected_portfolio_dashboard_table(rows: list[dict[str, Any]]) -> pd.D
     return pd.DataFrame(display_rows)
 
 
+def build_selected_dashboard_handoff_table(handoff: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(handoff.get("rows") or []):
+        display_rows.append(
+            {
+                "Updated At": row.get("Updated At"),
+                "Decision ID": row.get("Decision ID"),
+                "Portfolio": row.get("Portfolio"),
+                "Dashboard Status": row.get("Dashboard Status"),
+                "Status Reason": row.get("Status Reason"),
+                "Components": row.get("Components"),
+                "Target Weight": row.get("Target Weight"),
+                "Benchmark": row.get("Benchmark"),
+                "Evidence Route": row.get("Evidence Route"),
+                "Review Cadence": row.get("Review Cadence"),
+                "Review Triggers": row.get("Review Triggers"),
+                "Handoff Destination": row.get("Handoff Destination"),
+                "Handoff Action": row.get("Handoff Action"),
+                "Live Approval": row.get("Live Approval"),
+                "Order": row.get("Order"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_dashboard_handoff_checklist_table(handoff: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(handoff.get("checklist") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def build_selected_portfolio_component_table(row: dict[str, Any]) -> pd.DataFrame:
     raw_decision = dict(row.get("raw_decision") or {})
     display_rows: list[dict[str, Any]] = []
