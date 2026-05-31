@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-01 - Ingestion should explain jobs without changing collection control
+- User request:
+  - `Workspace > Ingestion` 탭의 기능, 수집 데이터 결함 가능성, UX/UI 문제를 리뷰한 뒤 개발 진행을 승인함.
+- Interpreted goal:
+  - 사용자가 원하는 심볼 / 기간 / provider / 옵션을 직접 정하는 Run Job 형태는 유지하면서, 각 job이 무엇을 수집하고 어디에 저장되며 어떤 검증에 쓰이는지 한국어로 명확히 보여준다.
+- Analysis result:
+  - 구현 결과 Ingestion은 routine operations / validation data와 manual recovery / diagnostics로 분리되고, job guide / result guidance / data-quality caveat를 표시한다.
+  - 기존 lifecycle collector인 Nasdaq Symbol Directory, SEC CIK cross-check, computed snapshot lifecycle을 UI에 노출했지만 current snapshot과 partial evidence는 survivorship PASS 근거가 아니라고 명시했다.
+- Follow-up:
+  - 실제 DB freshness와 provider sparse-response coverage는 이번 UX slice만으로 검증되지 않는다. 필요하면 다음 slice에서 requested-window 대비 저장 coverage guard를 data layer로 보강한다.
+
 ### 2026-05-31 - Non-GTAA search did not produce a fresh selected-route pass
 - User request:
   - GTAA가 아닌 전략으로도 최종 포트폴리오 후보를 찾아 달라고 요청했고, 다음 개편에는 3단계까지 통과한 최종 포트폴리오가 필요하다고 설명함.

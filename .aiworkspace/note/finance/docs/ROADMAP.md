@@ -1,12 +1,13 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-01
 
 ## Current Work
 
 | Track | Status | Notes |
 |---|---|---|
+| Ingestion Console UX / Data Quality V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`; `Workspace > Ingestion` now uses Korean purpose-first job guides, clearer routine / manual tab separation, result next-action guidance, and exposes lifecycle evidence collectors for Nasdaq current listing, SEC CIK cross-check, and computed snapshot summaries without changing user-controlled symbol / period / source collection inputs |
 | Final Review Commercial UX V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-commercial-ux-v1/`; Final Review now opens as a user-facing Decision Desk with command center, flow rail, Candidate Board lane cards, visual Decision Cockpit, Final Decision Action panel, Evidence Appendix, and Decision History / Dashboard Handoff. The follow-up selection-only save policy now limits new official Final Decision V2 writes to `SELECT_FOR_PRACTICAL_PORTFOLIO` after selected-route gate pass; hold / reject / re-review are status guidance and legacy read paths |
 | Final Review Candidate Search Closeout | Complete / handoff ready | `.aiworkspace/note/finance/tasks/active/selected-portfolio-candidate-search-20260531/`, `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`; fresh GTAA and non-GTAA searches produced Practical Validation / Final Review evidence-ready candidates but no current-gate V2 selected row. The legacy non-GTAA Quality selected row can seed the dashboard only through an explicit legacy migration, not as a fresh selected-route pass |
 | Final Review Selected Dashboard Handoff V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-selected-dashboard-handoff-v1/`; Final Review saved decision review and `Operations > Selected Portfolio Dashboard` now share a read-only handoff review that shows selected rows, dashboard row build, monitorable / blocked counts, checklist, and no approval / order / auto-rebalance boundary |

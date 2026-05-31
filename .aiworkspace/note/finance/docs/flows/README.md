@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-01
 
 ## Main User Flow
 
@@ -29,8 +29,13 @@ Workspace > Ingestion
   -> ETF provider source map discovery
   -> ETF operability / holdings / exposure snapshot
   -> FRED macro market-context snapshot
+  -> symbol lifecycle evidence
+     (SEC Form 25 actual delisting evidence,
+      Nasdaq current listing snapshot,
+      SEC CIK / ticker cross-check,
+      computed repeated-observation summary)
   -> MySQL
-  -> finance/loaders/provider.py / macro.py
+  -> finance/loaders/provider.py / macro.py / universe.py
   -> Practical Validation diagnostics
 ```
 
@@ -42,6 +47,7 @@ Workspace > Ingestion
 - Final Review decision도 broker order나 auto rebalance가 아니다.
 - Selected Dashboard는 read-only monitoring surface이며 monitoring log 자동 저장, live approval, broker order, auto rebalance를 하지 않는다.
 - 부족 provider data는 Practical Validation Provider Gaps에서 확인하고, 수집 가능한 항목은 ingestion job을 통해 보강한다.
+- Ingestion의 current listing snapshot, SEC identity cross-check, computed snapshot lifecycle row는 survivorship PASS 근거가 아니다. Form 25 delisting row도 delisting evidence이며, Form 25 부재를 active listing proof로 해석하지 않는다.
 
 ## Detailed Flow Docs
 

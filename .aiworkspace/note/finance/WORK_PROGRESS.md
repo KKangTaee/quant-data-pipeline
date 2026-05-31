@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-01
+- Completed `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`.
+- `Workspace > Ingestion` now has Korean purpose-first job guides, routine / manual separation, result next-action guidance, and visible data-quality caveats while preserving user-controlled symbols, periods, source modes, and provider options.
+- Exposed lifecycle evidence jobs for Nasdaq current listing snapshots, SEC CIK / ticker cross-check, and computed repeated-observation summaries under `상장 / 상폐 근거`.
+- No DB schema, provider connector, loader contract, Practical Validation gate, JSONL registry, saved setup, live approval, order, or auto rebalance behavior was added.
+
 ### 2026-05-31
 - Session closeout docs aligned for master merge handoff: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs now describe Final Review selection-only official save and the current candidate search outcome.
 - Opened `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`.
