@@ -3413,6 +3413,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
             {"profile": "intraday", "job_id": "top2000_intraday"},
         )
 
+    def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
+        from app.web.overview_dashboard import (
+            GROUP_TREND_HEATMAP_ROW_HEIGHT,
+            _build_group_leadership_trend_heatmap,
+        )
+
+        rows = pd.DataFrame(
+            [
+                {
+                    "Date": "2026-05-27",
+                    "Group": f"Sector {index}",
+                    "Market Cap Weighted Return %": float(index),
+                    "Symbols": 10,
+                    "Top Symbol": "AAA",
+                }
+                for index in range(11)
+            ]
+        )
+
+        chart_spec = _build_group_leadership_trend_heatmap(rows).to_dict()
+
+        self.assertGreaterEqual(chart_spec["height"], GROUP_TREND_HEATMAP_ROW_HEIGHT * 11)
+
     def test_run_history_append_serializes_provider_date_payload(self) -> None:
         from app.jobs import run_history
 
@@ -4149,6 +4172,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "2026-04-17",
             ]
             return [{"date": item, "usable_rows": 1200} for item in dates]
+        if "SUM(CASE WHEN volume IS NOT NULL THEN volume ELSE 0 END) AS total_volume" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "total_volume": 5_000,
+                    "avg_daily_volume": 1_000,
+                    "total_dollar_volume": 650_000.0,
+                    "avg_daily_dollar_volume": 130_000.0,
+                    "volume_days": 5,
+                },
+                {
+                    "symbol": "BBB",
+                    "total_volume": 7_500,
+                    "avg_daily_volume": 1_500,
+                    "total_dollar_volume": 900_000.0,
+                    "avg_daily_dollar_volume": 180_000.0,
+                    "volume_days": 5,
+                },
+                {
+                    "symbol": "CCC",
+                    "total_volume": 12_500,
+                    "avg_daily_volume": 2_500,
+                    "total_dollar_volume": 2_500_000.0,
+                    "avg_daily_dollar_volume": 500_000.0,
+                    "volume_days": 5,
+                },
+            ]
         if "FROM nyse_asset_profile" in sql:
             return [
                 {
@@ -4182,14 +4232,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ]
         if "COALESCE(adj_close, close) AS price" in sql:
             return [
+                {"symbol": "AAA", "date": "2026-05-11", "price": 100.0, "volume": 700},
                 {"symbol": "AAA", "date": "2026-05-14", "price": 95.0, "volume": 900},
                 {"symbol": "AAA", "date": "2026-05-15", "price": 100.0, "volume": 1000},
                 {"symbol": "AAA", "date": "2026-05-18", "price": 110.0, "volume": 1500},
                 {"symbol": "AAA", "date": "2026-04-17", "price": 100.0, "volume": 800},
+                {"symbol": "BBB", "date": "2026-05-11", "price": 100.0, "volume": 1800},
                 {"symbol": "BBB", "date": "2026-05-14", "price": 90.0, "volume": 1800},
                 {"symbol": "BBB", "date": "2026-05-15", "price": 100.0, "volume": 2000},
                 {"symbol": "BBB", "date": "2026-05-18", "price": 130.0, "volume": 2500},
                 {"symbol": "BBB", "date": "2026-04-17", "price": 100.0, "volume": 1900},
+                {"symbol": "CCC", "date": "2026-05-11", "price": 100.0, "volume": 1200},
                 {"symbol": "CCC", "date": "2026-05-14", "price": 100.0, "volume": 1200},
                 {"symbol": "CCC", "date": "2026-05-15", "price": 100.0, "volume": 1000},
                 {"symbol": "CCC", "date": "2026-05-18", "price": 120.0, "volume": 1700},
@@ -4213,6 +4266,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(window["effective_end_date"], "2026-05-18")
         self.assertEqual(window["start_date"], "2026-05-15")
         self.assertEqual(window["stale_days"], 10)
+
+    def test_group_trend_window_contract_uses_compact_horizons(self) -> None:
+        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+
+        market_dates = [
+            item.strftime("%Y-%m-%d")
+            for item in reversed(pd.bdate_range(end="2026-05-29", periods=320).tolist())
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "MAX(`date`) AS latest_raw_date" in sql:
+                return [{"latest_raw_date": market_dates[0]}]
+            if "GROUP BY `date`" in sql:
+                return [{"date": item, "usable_rows": 1200} for item in market_dates]
+            return []
+
+        daily = resolve_group_trend_market_dates(period="daily", query_fn=query_fn)
+        weekly = resolve_group_trend_market_dates(period="weekly", query_fn=query_fn)
+        monthly = resolve_group_trend_market_dates(period="monthly", query_fn=query_fn)
+
+        self.assertEqual(daily["trend_window_label"], "Last 1M")
+        self.assertEqual(len(daily["windows"]), 21)
+        self.assertEqual(weekly["trend_window_label"], "Last 3M")
+        self.assertEqual(len(weekly["windows"]), 13)
+        self.assertEqual(monthly["trend_window_label"], "Last 12M")
+        self.assertEqual(len(monthly["windows"]), 12)
 
     def test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
@@ -4239,6 +4319,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Dollar Volume"], 325000.0)
         self.assertEqual(snapshot["rows"].iloc[0]["Previous Return %"], 11.11)
         self.assertEqual(snapshot["rows"].iloc[0]["Momentum Delta pp"], 18.89)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Basis"], "Daily dollar volume")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume"], 2500)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Dollar Volume"], 325000.0)
         self.assertEqual(
             snapshot["missing_rows"].iloc[0]["Recommended Action"],
             "Refresh daily OHLCV history or inspect previous-close coverage.",
@@ -4273,6 +4357,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Previous Return %"], 5.26)
         self.assertEqual(snapshot["rows"].iloc[0]["Momentum Delta pp"], 6.74)
         self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Basis"], "Daily dollar volume")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Metric"], 112000.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
         self.assertEqual(
@@ -4302,6 +4389,29 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_weekly_volume_rows_use_average_and_total_volume(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="weekly",
+            top_n=5,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 30.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Symbol"], "CCC")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Basis"], "Avg daily dollar volume")
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Metric"], 500000.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Avg Daily Volume"], 2500)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Volume"], 12500)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Avg Daily Dollar Volume"], 500000.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Dollar Volume"], 2500000.0)
+        self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Days"], 5)
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
@@ -4358,21 +4468,27 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["date_window"]["period"], "monthly")
         self.assertEqual(snapshot["period"], "monthly")
-        self.assertEqual(snapshot["trend_window_label"], "Last 1Y")
+        self.assertEqual(snapshot["trend_window_label"], "Last 12M")
         self.assertFalse(snapshot["trend_rows"].empty)
         self.assertFalse(snapshot["ticker_leader_rows"].empty)
         self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
         first_row = snapshot["rows"].iloc[0]
         self.assertEqual(first_row["Group"], "Technology")
         self.assertEqual(first_row["Symbols"], 2)
+        self.assertEqual(first_row["Positive Symbols"], 2)
+        self.assertEqual(first_row["Positive Symbol Share %"], 100.0)
         self.assertEqual(first_row["Equal Weight Return %"], 20.0)
         self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
+        self.assertEqual(first_row["Cap vs Equal Gap pp"], 5.0)
+        self.assertEqual(first_row["Top 3 Positive Share %"], 100.0)
         self.assertEqual(first_row["Top Symbol"], "BBB")
         technology_leaders = snapshot["ticker_leader_rows"][
             snapshot["ticker_leader_rows"]["Group"] == "Technology"
         ].sort_values("Rank")
         self.assertEqual(technology_leaders["Symbol"].tolist(), ["BBB", "AAA"])
         self.assertEqual(technology_leaders.iloc[0]["Positive Return Share %"], 75.0)
+        self.assertIn("Previous Return %", technology_leaders.columns)
+        self.assertIn("Momentum Delta pp", technology_leaders.columns)
 
     def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
         from app.services.overview_market_intelligence import build_group_leadership_snapshot
@@ -4385,22 +4501,26 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             top_n=5,
             min_group_size=1,
             today=date(2026, 5, 28),
+            trend_groups=("Healthcare",),
             query_fn=self._query_fn,
         )
 
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["universe_code"], "SP500")
         self.assertEqual(snapshot["period"], "daily")
-        self.assertEqual(snapshot["trend_window_label"], "Last 3M")
+        self.assertEqual(snapshot["trend_window_label"], "Last 1M")
         self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
         self.assertEqual(snapshot["coverage"]["snapshot_time_utc"], "2026-05-18 15:35")
         self.assertEqual(snapshot["date_window"]["start_date"], "Previous Close")
         self.assertEqual(snapshot["rows"].iloc[0]["Top Symbol"], "AAA")
         self.assertEqual(snapshot["rows"].iloc[0]["Top Symbol Return %"], 12.0)
         self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["End Date"], "2026-05-18 15:30")
+        self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["Previous Return %"], 5.26)
+        self.assertEqual(snapshot["ticker_leader_rows"].iloc[0]["Momentum Delta pp"], 6.74)
         self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
         self.assertFalse(snapshot["rows"].empty)
         self.assertFalse(snapshot["trend_rows"].empty)
+        self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot

@@ -117,6 +117,7 @@ def load_nyse_csv_to_mysql(
     password="1234",
     port=3306,
     *,
+    canonical_replace: bool = True,
     update_lifecycle: bool = True,
     snapshot_date: str | None = None,
 ):
@@ -152,6 +153,20 @@ def load_nyse_csv_to_mysql(
         """
 
         rows = df.values.tolist()
+        if canonical_replace:
+            latest_symbols = {str(row[0]).strip() for row in rows if row and str(row[0]).strip()}
+            existing_rows = db.query(f"SELECT symbol FROM nyse_{kind}")
+            stale_symbols = sorted(
+                str(row["symbol"]).strip()
+                for row in existing_rows
+                if row.get("symbol") and str(row["symbol"]).strip() not in latest_symbols
+            )
+            for i in range(0, len(stale_symbols), 500):
+                batch = stale_symbols[i:i + 500]
+                placeholders = ", ".join(["%s"] * len(batch))
+                db.execute(f"DELETE FROM nyse_{kind} WHERE symbol IN ({placeholders})", batch)
+            if stale_symbols:
+                print(f"🧹 nyse_{kind} stale rows 제거 ({len(stale_symbols):,} rows)")
 
         db.executemany(
             sql,

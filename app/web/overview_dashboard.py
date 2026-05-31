@@ -99,6 +99,14 @@ GROUP_BY_LABELS = {
     "sector": "Sector",
     "industry": "Industry",
 }
+GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
+GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
+CHART_VALUE_LABEL_STYLE = {
+    "color": OVERVIEW_COLOR_TEXT_INVERSE,
+    "stroke": OVERVIEW_COLOR_TEXT,
+    "strokeWidth": 1.15,
+    "strokeOpacity": 0.75,
+}
 EVENT_TYPE_LABELS = {
     "ALL": "All",
     "FOMC_MEETING": "FOMC",
@@ -614,6 +622,13 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows["Previous Return Label"] = chart_rows["Previous Return %"].map(
         lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
     )
+    chart_rows["Previous Marker Color"] = chart_rows["Previous Return %"].map(
+        lambda value: OVERVIEW_COLOR_DANGER
+        if pd.notna(value) and float(value) < 0
+        else OVERVIEW_COLOR_TEXT
+        if pd.notna(value) and float(value) > 0
+        else OVERVIEW_COLOR_TEXT_MUTED
+    )
     if "Momentum Delta pp" in chart_rows:
         chart_rows["Momentum Delta pp"] = pd.to_numeric(chart_rows["Momentum Delta pp"], errors="coerce")
     else:
@@ -650,11 +665,20 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
         .mark_bar(cornerRadiusEnd=3)
         .encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
     )
+    previous_marker_halo = (
+        base
+        .transform_filter("isValid(datum['Previous Return Magnitude %'])")
+        .mark_tick(thickness=5, size=20, color=OVERVIEW_COLOR_SURFACE)
+        .encode(x=alt.X("Previous Return Magnitude %:Q"))
+    )
     previous_markers = (
         base
         .transform_filter("isValid(datum['Previous Return Magnitude %'])")
-        .mark_tick(thickness=2, size=16, color=OVERVIEW_COLOR_TEXT_MUTED)
-        .encode(x=alt.X("Previous Return Magnitude %:Q"))
+        .mark_tick(thickness=2, size=18)
+        .encode(
+            x=alt.X("Previous Return Magnitude %:Q"),
+            color=alt.Color("Previous Marker Color:N", scale=None, legend=None),
+        )
     )
     labels = (
         base
@@ -663,14 +687,24 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             text=alt.Text("Return Label:N"),
         )
     )
-    return (bars + previous_markers + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
+    return (bars + previous_marker_halo + previous_markers + labels).properties(
+        height=_market_mover_chart_height(len(chart_rows))
+    )
 
 
 def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
-    if not chart_rows.empty and "Volume" in chart_rows:
-        chart_rows["Volume"] = pd.to_numeric(chart_rows["Volume"], errors="coerce")
-        chart_rows = chart_rows.dropna(subset=["Volume"])
+    metric_column = next(
+        (
+            candidate
+            for candidate in ("Volume Metric", "Dollar Volume", "Avg Daily Dollar Volume", "Volume")
+            if candidate in chart_rows
+        ),
+        "Volume",
+    )
+    if not chart_rows.empty and metric_column in chart_rows:
+        chart_rows[metric_column] = pd.to_numeric(chart_rows[metric_column], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=[metric_column])
     elif not chart_rows.empty:
         chart_rows = pd.DataFrame()
     if chart_rows.empty:
@@ -679,22 +713,61 @@ def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
                 {
                     "Symbol": "No Data",
                     "Name": "-",
+                    "Volume Metric": 0.0,
+                    "Volume Basis": "Volume",
                     "Volume": 0.0,
                     "Dollar Volume": 0.0,
+                    "Avg Daily Volume": 0.0,
+                    "Total Volume": 0.0,
+                    "Avg Daily Dollar Volume": 0.0,
+                    "Total Dollar Volume": 0.0,
+                    "Volume Days": 0,
                     "Return %": None,
                     "Sector": "Unknown",
                     "Industry": "-",
                 }
             ]
         )
-    chart_rows = chart_rows.sort_values(["Volume", "Symbol"], ascending=[False, True]).reset_index(drop=True)
-    chart_rows["Volume Rank"] = chart_rows.index + 1
+        metric_column = "Volume Metric"
+    if "Rank" in chart_rows:
+        chart_rows = chart_rows.sort_values("Rank").reset_index(drop=True)
+        chart_rows["Volume Rank"] = chart_rows["Rank"]
+    else:
+        chart_rows = chart_rows.sort_values([metric_column, "Symbol"], ascending=[False, True]).reset_index(drop=True)
+        chart_rows["Volume Rank"] = chart_rows.index + 1
+    if metric_column != "Volume Metric":
+        chart_rows["Volume Metric"] = chart_rows[metric_column]
+    if "Volume Basis" not in chart_rows:
+        chart_rows["Volume Basis"] = "Dollar volume" if "Dollar" in metric_column else "Volume"
+    chart_rows["Volume Metric"] = pd.to_numeric(chart_rows["Volume Metric"], errors="coerce").fillna(0.0)
+    chart_rows["Volume Metric Label"] = chart_rows.apply(
+        lambda row: _compact_number(
+            row.get("Volume Metric"),
+            prefix="$" if "dollar" in str(row.get("Volume Basis") or metric_column).lower() else "",
+        ),
+        axis=1,
+    )
+    if "Volume" not in chart_rows:
+        chart_rows["Volume"] = pd.NA
+    chart_rows["Volume"] = pd.to_numeric(chart_rows["Volume"], errors="coerce")
     chart_rows["Volume Label"] = chart_rows["Volume"].map(_compact_number)
     if "Dollar Volume" in chart_rows:
         chart_rows["Dollar Volume"] = pd.to_numeric(chart_rows["Dollar Volume"], errors="coerce")
     else:
         chart_rows["Dollar Volume"] = pd.NA
     chart_rows["Dollar Volume Label"] = chart_rows["Dollar Volume"].map(lambda value: _compact_number(value, prefix="$"))
+    for source_column, label_column, prefix in [
+        ("Avg Daily Volume", "Avg Daily Volume Label", ""),
+        ("Total Volume", "Total Volume Label", ""),
+        ("Avg Daily Dollar Volume", "Avg Daily Dollar Volume Label", "$"),
+        ("Total Dollar Volume", "Total Dollar Volume Label", "$"),
+    ]:
+        if source_column not in chart_rows:
+            chart_rows[source_column] = pd.NA
+        chart_rows[source_column] = pd.to_numeric(chart_rows[source_column], errors="coerce")
+        chart_rows[label_column] = chart_rows[source_column].map(lambda value, p=prefix: _compact_number(value, prefix=p))
+    if "Volume Days" not in chart_rows:
+        chart_rows["Volume Days"] = pd.NA
     if "Return %" in chart_rows:
         chart_rows["Return %"] = pd.to_numeric(chart_rows["Return %"], errors="coerce")
     else:
@@ -704,16 +777,25 @@ def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     )
     chart_rows["Bar Color"] = chart_rows["Sector"].map(lambda value: _sector_bar_color(value))
     symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
-    max_volume = max(1.0, float(chart_rows["Volume"].max()) if not chart_rows.empty else 1.0)
+    max_volume = max(1.0, float(chart_rows["Volume Metric"].max()) if not chart_rows.empty else 1.0)
+    basis_values = [str(value) for value in chart_rows["Volume Basis"].dropna().unique().tolist() if str(value)]
+    axis_title = basis_values[0] if len(basis_values) == 1 else "Volume Metric"
     base = alt.Chart(chart_rows).encode(
-        x=alt.X("Volume:Q", title="Volume", scale=alt.Scale(domain=[0, max_volume * 1.12])),
+        x=alt.X("Volume Metric:Q", title=axis_title, scale=alt.Scale(domain=[0, max_volume * 1.12])),
         y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=80)),
         tooltip=[
             "Volume Rank:O",
             "Symbol:N",
             "Name:N",
+            "Volume Basis:N",
+            "Volume Metric Label:N",
             "Volume Label:N",
             "Dollar Volume Label:N",
+            "Avg Daily Volume Label:N",
+            "Total Volume Label:N",
+            "Avg Daily Dollar Volume Label:N",
+            "Total Dollar Volume Label:N",
+            "Volume Days:O",
             "Return Label:N",
             "Sector:N",
             "Industry:N",
@@ -723,7 +805,7 @@ def _build_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     labels = (
         base
         .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
-        .encode(text=alt.Text("Volume Label:N"))
+        .encode(text=alt.Text("Volume Metric Label:N"))
     )
     return (bars + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
 
@@ -933,6 +1015,227 @@ def _build_group_leadership_trend_chart(rows: pd.DataFrame) -> alt.Chart:
     return line.properties(height=420)
 
 
+def _build_group_leadership_trend_heatmap(rows: pd.DataFrame) -> alt.Chart:
+    metric = "Market Cap Weighted Return %"
+    chart_rows = rows.copy()
+    if not chart_rows.empty and metric in chart_rows and "Date" in chart_rows:
+        chart_rows["Date"] = pd.to_datetime(chart_rows["Date"], errors="coerce")
+        chart_rows[metric] = pd.to_numeric(chart_rows[metric], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Date", metric])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [{"Date": pd.Timestamp.today().normalize(), "Group": "No Data", metric: 0.0, "Symbols": 0}]
+        )
+    chart_rows["Date Label"] = chart_rows["Date"].dt.strftime("%m-%d")
+    chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
+    date_order = (
+        chart_rows.sort_values("Date")["Date Label"].drop_duplicates().tolist()
+        if "Date Label" in chart_rows
+        else []
+    )
+    group_order = chart_rows["Group"].drop_duplicates().tolist() if "Group" in chart_rows else ["No Data"]
+    chart_height = max(GROUP_TREND_HEATMAP_MIN_HEIGHT, GROUP_TREND_HEATMAP_ROW_HEIGHT * len(group_order))
+    base = (
+        alt.Chart(chart_rows)
+        .mark_rect(cornerRadius=2)
+        .encode(
+            x=alt.X(
+                "Date Label:N",
+                sort=date_order,
+                title=None,
+                axis=alt.Axis(labelAngle=0, labelFontSize=10),
+            ),
+            y=alt.Y(
+                "Group:N",
+                sort=group_order,
+                title=None,
+                axis=alt.Axis(labelLimit=240, labelFontSize=12),
+            ),
+            color=alt.Color(
+                f"{metric}:Q",
+                scale=_symmetric_return_scale(chart_rows[metric]),
+                legend=alt.Legend(title="Return %", orient="bottom"),
+            ),
+            tooltip=["Date:T", "Group:N", "Return Label:N", "Symbols:Q", "Top Symbol:N"],
+        )
+    )
+    text = (
+        alt.Chart(chart_rows)
+        .mark_text(fontSize=11)
+        .encode(
+            x=alt.X("Date Label:N", sort=date_order, title=None),
+            y=alt.Y("Group:N", sort=group_order, title=None),
+            text=alt.Text("Return Label:N"),
+            color=alt.condition(
+                f"datum['{metric}'] >= 8 || datum['{metric}'] <= -8",
+                alt.value(OVERVIEW_COLOR_TEXT_INVERSE),
+                alt.value(OVERVIEW_COLOR_TEXT),
+            ),
+        )
+    )
+    return (base + text).properties(height=chart_height)
+
+
+def _latest_group_trend_delta_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    metric = "Market Cap Weighted Return %"
+    if rows.empty or "Group" not in rows or "Date" not in rows or metric not in rows:
+        return pd.DataFrame(
+            columns=["Group", "Latest Date", "Previous Date", "Latest Return %", "Previous Return %", "Delta pp"]
+        )
+    source = rows.copy()
+    source["Date"] = pd.to_datetime(source["Date"], errors="coerce")
+    source[metric] = pd.to_numeric(source[metric], errors="coerce")
+    source = source.dropna(subset=["Date", metric])
+    out: list[dict[str, Any]] = []
+    for group_name, group_rows in source.sort_values("Date").groupby("Group"):
+        ordered = group_rows.sort_values("Date")
+        latest = ordered.iloc[-1]
+        previous = ordered.iloc[-2] if len(ordered) >= 2 else None
+        latest_return = float(latest[metric])
+        previous_return = float(previous[metric]) if previous is not None else None
+        out.append(
+            {
+                "Group": str(group_name),
+                "Latest Date": latest["Date"],
+                "Previous Date": previous["Date"] if previous is not None else pd.NaT,
+                "Latest Return %": latest_return,
+                "Previous Return %": previous_return,
+                "Delta pp": (latest_return - previous_return) if previous_return is not None else None,
+                "Symbols": latest.get("Symbols"),
+                "Top Symbol": latest.get("Top Symbol"),
+            }
+        )
+    return pd.DataFrame(out)
+
+
+def _build_group_leadership_delta_chart(rows: pd.DataFrame) -> alt.Chart:
+    chart_rows = _latest_group_trend_delta_rows(rows)
+    if not chart_rows.empty:
+        chart_rows["Delta pp"] = pd.to_numeric(chart_rows["Delta pp"], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Delta pp"])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame([{"Group": "No Data", "Delta pp": 0.0, "Latest Return %": 0.0}])
+    chart_rows["Delta Label"] = chart_rows["Delta pp"].map(lambda value: f"{float(value):+.2f}pp")
+    chart_rows["Latest Return Label"] = chart_rows["Latest Return %"].map(lambda value: f"{float(value):+.2f}%")
+    chart_rows["Previous Return Label"] = chart_rows["Previous Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    chart_rows = chart_rows.sort_values(["Delta pp", "Group"], ascending=[False, True])
+    group_order = chart_rows["Group"].drop_duplicates().tolist()
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X(
+            "Delta pp:Q",
+            title="Latest vs Previous pp",
+            scale=alt.Scale(domain=_signed_return_axis_domain(chart_rows["Delta pp"])),
+        ),
+        y=alt.Y("Group:N", sort=group_order, title=None, axis=alt.Axis(labelLimit=180)),
+        tooltip=[
+            "Group:N",
+            "Delta Label:N",
+            "Latest Return Label:N",
+            "Previous Return Label:N",
+            "Symbols:Q",
+            "Top Symbol:N",
+        ],
+    )
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(
+        color=alt.condition(
+            "datum['Delta pp'] < 0",
+            alt.value(OVERVIEW_COLOR_DANGER),
+            alt.value(OVERVIEW_COLOR_PRIMARY),
+        )
+    )
+    zero = alt.Chart(pd.DataFrame([{"x": 0}])).mark_rule(color=OVERVIEW_COLOR_TEXT_MUTED).encode(x="x:Q")
+    labels = (
+        base
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, **CHART_VALUE_LABEL_STYLE)
+        .encode(text=alt.Text("Delta Label:N"))
+    )
+    return (bars + zero + labels).properties(height=max(280, min(620, 34 * len(chart_rows))))
+
+
+def _format_signed(value: Any, *, suffix: str = "%") -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):+.2f}{suffix}"
+
+
+def _format_percent(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):.1f}%"
+
+
+def _group_leadership_insight_cards(rows: pd.DataFrame, trend_rows: pd.DataFrame | None) -> list[dict[str, Any]]:
+    if rows.empty:
+        return []
+    source = rows.copy()
+    for column in [
+        "Positive Symbol Share %",
+        "Cap vs Equal Gap pp",
+        "Top 3 Positive Share %",
+        "Market Cap Weighted Return %",
+    ]:
+        if column in source:
+            source[column] = pd.to_numeric(source[column], errors="coerce")
+
+    cards: list[dict[str, Any]] = []
+    if "Positive Symbol Share %" in source and not source["Positive Symbol Share %"].dropna().empty:
+        row = source.sort_values(["Positive Symbol Share %", "Market Cap Weighted Return %"], ascending=False).iloc[0]
+        cards.append(
+            {
+                "title": "Best Breadth",
+                "value": f"{row.get('Group')} {_format_percent(row.get('Positive Symbol Share %'))}",
+                "detail": f"{int(row.get('Positive Symbols') or 0)} / {int(row.get('Symbols') or 0)} positive",
+                "tone": "positive" if float(row.get("Positive Symbol Share %") or 0.0) >= 60 else "neutral",
+            }
+        )
+
+    if "Cap vs Equal Gap pp" in source and not source["Cap vs Equal Gap pp"].dropna().empty:
+        skew_rows = source.assign(_abs_gap=source["Cap vs Equal Gap pp"].abs()).sort_values("_abs_gap", ascending=False)
+        row = skew_rows.iloc[0]
+        gap = float(row.get("Cap vs Equal Gap pp") or 0.0)
+        cards.append(
+            {
+                "title": "Cap vs Equal",
+                "value": f"{row.get('Group')} {_format_signed(gap, suffix='pp')}",
+                "detail": "positive means large-cap leadership",
+                "tone": "warning" if abs(gap) >= 2 else "neutral",
+            }
+        )
+
+    if "Top 3 Positive Share %" in source and not source["Top 3 Positive Share %"].dropna().empty:
+        row = source.sort_values("Top 3 Positive Share %", ascending=False).iloc[0]
+        concentration = float(row.get("Top 3 Positive Share %") or 0.0)
+        cards.append(
+            {
+                "title": "Concentration",
+                "value": f"{row.get('Group')} {_format_percent(concentration)}",
+                "detail": "top 3 positive-return share",
+                "tone": "warning" if concentration >= 70 else "neutral",
+            }
+        )
+
+    if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
+        delta_rows = _latest_group_trend_delta_rows(trend_rows)
+        if not delta_rows.empty and "Delta pp" in delta_rows:
+            delta_rows["Delta pp"] = pd.to_numeric(delta_rows["Delta pp"], errors="coerce")
+            delta_rows = delta_rows.dropna(subset=["Delta pp"])
+            if not delta_rows.empty:
+                row = delta_rows.sort_values("Delta pp", ascending=False).iloc[0]
+                cards.append(
+                    {
+                        "title": "Improving",
+                        "value": f"{row.get('Group')} {_format_signed(row.get('Delta pp'), suffix='pp')}",
+                        "detail": "latest window vs previous",
+                        "tone": "positive" if float(row.get("Delta pp") or 0.0) > 0 else "danger",
+                    }
+                )
+    return cards
+
+
 def _build_group_ticker_leader_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     metric = "Return %"
     chart_rows = rows.copy()
@@ -957,6 +1260,32 @@ def _build_group_ticker_leader_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = chart_rows.sort_values("Rank") if "Rank" in chart_rows else chart_rows
     chart_rows["Return Magnitude %"] = chart_rows[metric].abs()
     chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
+    if "Previous Return %" in chart_rows:
+        chart_rows["Previous Return %"] = pd.to_numeric(chart_rows["Previous Return %"], errors="coerce")
+    else:
+        chart_rows["Previous Return %"] = pd.NA
+    chart_rows["Previous Return Magnitude %"] = chart_rows["Previous Return %"].abs()
+    chart_rows["Previous Return Label"] = chart_rows["Previous Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    if "Momentum Delta pp" in chart_rows:
+        chart_rows["Momentum Delta pp"] = pd.to_numeric(chart_rows["Momentum Delta pp"], errors="coerce")
+    else:
+        chart_rows["Momentum Delta pp"] = pd.NA
+    chart_rows["Momentum Label"] = chart_rows["Momentum Delta pp"].map(
+        lambda value: f"{float(value):+.2f}pp" if pd.notna(value) else "-"
+    )
+    chart_rows["Previous Marker Color"] = chart_rows["Previous Return %"].map(
+        lambda value: OVERVIEW_COLOR_DANGER
+        if pd.notna(value) and float(value) < 0
+        else OVERVIEW_COLOR_TEXT
+        if pd.notna(value) and float(value) > 0
+        else OVERVIEW_COLOR_TEXT_MUTED
+    )
+    chart_rows["Bar Color"] = chart_rows.apply(
+        lambda row: _sector_bar_color(row.get("Sector"), row.get(metric)),
+        axis=1,
+    )
     chart_rows["Share Label"] = chart_rows["Positive Return Share %"].map(
         lambda value: f"{float(value):.2f}%" if pd.notna(value) else "-"
     )
@@ -972,17 +1301,36 @@ def _build_group_ticker_leader_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             "Symbol:N",
             "Name:N",
             "Return Label:N",
+            "Previous Return Label:N",
+            "Momentum Label:N",
             "Share Label:N",
             "Sector:N",
             "Industry:N",
         ],
     )
-    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.value(OVERVIEW_COLOR_POSITIVE))
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
+    previous_marker_halo = (
+        base
+        .transform_filter("isValid(datum['Previous Return Magnitude %'])")
+        .mark_tick(thickness=5, size=20, color=OVERVIEW_COLOR_SURFACE)
+        .encode(x=alt.X("Previous Return Magnitude %:Q"))
+    )
+    previous_markers = (
+        base
+        .transform_filter("isValid(datum['Previous Return Magnitude %'])")
+        .mark_tick(thickness=2, size=18)
+        .encode(
+            x=alt.X("Previous Return Magnitude %:Q"),
+            color=alt.Color("Previous Marker Color:N", scale=None, legend=None),
+        )
+    )
     labels = (
-        base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT)
+        base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, **CHART_VALUE_LABEL_STYLE)
         .encode(text=alt.Text("Return Label:N"))
     )
-    return (bars + labels).properties(height=max(260, min(560, 34 * len(chart_rows))))
+    return (bars + previous_marker_halo + previous_markers + labels).properties(
+        height=max(260, min(560, 34 * len(chart_rows)))
+    )
 
 
 def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) -> alt.Chart:
@@ -1728,6 +2076,35 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
     )
 
 
+def _group_trend_selection_key(group_by: str) -> str:
+    normalized = str(group_by or "sector").strip().lower()
+    return f"overview_group_leadership_trend_groups_{normalized}"
+
+
+def _remembered_group_trend_groups(group_by: str) -> tuple[str, ...]:
+    values = st.session_state.get(_group_trend_selection_key(group_by), [])
+    if isinstance(values, str):
+        values = [values]
+    return tuple(str(value) for value in values if str(value).strip())
+
+
+def _select_group_trend_groups(*, group_by: str, group_options: list[str]) -> list[str]:
+    key = _group_trend_selection_key(group_by)
+    clean_options = [str(option) for option in group_options if str(option).strip()]
+    option_set = set(clean_options)
+    current = st.session_state.get(key, [])
+    if isinstance(current, str):
+        current = [current]
+    retained = [str(value) for value in current if str(value) in option_set]
+    if not retained:
+        retained = clean_options[: min(5, len(clean_options))]
+    if key in st.session_state:
+        if list(current) != retained:
+            st.session_state[key] = retained
+        return list(st.multiselect("Trend Groups", options=clean_options, key=key))
+    return list(st.multiselect("Trend Groups", options=clean_options, default=retained, key=key))
+
+
 def _render_event_refresh_toolbar() -> str:
     render_overview_toolbar_label("일정 타입")
     controls = st.columns([0.95, 2.9, 0.9], gap="small", vertical_alignment="bottom")
@@ -1942,6 +2319,9 @@ def _render_market_movers_snapshot_panel(
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("DB-backed market mover rows are not available for the selected controls.")
         return
+    volume_rows = snapshot.get("volume_rows")
+    if not isinstance(volume_rows, pd.DataFrame) or volume_rows.empty:
+        volume_rows = rows
 
     left, right = st.columns([0.95, 1.25], gap="medium")
     with left:
@@ -1949,16 +2329,25 @@ def _render_market_movers_snapshot_panel(
         with return_tab:
             st.altair_chart(_build_return_bar_chart(rows), width="stretch")
         with volume_tab:
-            st.altair_chart(_build_volume_bar_chart(rows), width="stretch")
+            st.altair_chart(_build_volume_bar_chart(volume_rows), width="stretch")
         with sector_tab:
             st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
     with right:
-        st.dataframe(
-            rows,
-            width="stretch",
-            height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
-            hide_index=True,
-        )
+        return_table_tab, volume_table_tab = st.tabs(["Return Table", "Volume Table"])
+        with return_table_tab:
+            st.dataframe(
+                rows,
+                width="stretch",
+                height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                hide_index=True,
+            )
+        with volume_table_tab:
+            st.dataframe(
+                volume_rows,
+                width="stretch",
+                height=_market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                hide_index=True,
+            )
 
 
 def _render_market_movers_tab() -> None:
@@ -2047,6 +2436,7 @@ def _render_sector_industry_tab() -> None:
             period=controls.period,
             top_n=controls.top_n,
             min_group_size=controls.min_group_size,
+            trend_groups=_remembered_group_trend_groups(controls.group_by),
         )
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
@@ -2066,26 +2456,42 @@ def _render_sector_industry_tab() -> None:
     chart_tab, table_tab = st.tabs(["Trend", "Table"])
     with chart_tab:
         st.markdown("#### Latest Ranking")
+        insight_cards = _group_leadership_insight_cards(
+            rows,
+            trend_rows if isinstance(trend_rows, pd.DataFrame) else None,
+        )
+        if insight_cards:
+            render_status_card_grid(insight_cards)
         st.altair_chart(_build_group_leadership_rank_chart(rows), width="stretch")
         if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
             st.markdown("#### Trend")
-            group_options = rows["Group"].dropna().astype(str).drop_duplicates().tolist()
-            default_groups = group_options[: min(5, len(group_options))]
-            selected_groups = st.multiselect(
-                "Trend Groups",
-                options=group_options,
-                default=default_groups,
-                key=(
-                    "overview_group_leadership_trend_groups_"
-                    f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
-                ),
+            group_options = (
+                pd.concat(
+                    [
+                        rows["Group"].dropna().astype(str),
+                        trend_rows["Group"].dropna().astype(str),
+                    ],
+                    ignore_index=True,
+                )
+                .drop_duplicates()
+                .tolist()
+            )
+            selected_groups = _select_group_trend_groups(
+                group_by=controls.group_by,
+                group_options=group_options,
             )
             visible_trend_rows = (
                 trend_rows[trend_rows["Group"].astype(str).isin(selected_groups)]
                 if selected_groups
                 else trend_rows.iloc[0:0]
             )
-            st.altair_chart(_build_group_leadership_trend_chart(visible_trend_rows), width="stretch")
+            heatmap_tab, line_tab, delta_tab = st.tabs(["Heatmap", "Line", "Latest Delta"])
+            with heatmap_tab:
+                st.altair_chart(_build_group_leadership_trend_heatmap(visible_trend_rows), width="stretch")
+            with line_tab:
+                st.altair_chart(_build_group_leadership_trend_chart(visible_trend_rows), width="stretch")
+            with delta_tab:
+                st.altair_chart(_build_group_leadership_delta_chart(visible_trend_rows), width="stretch")
         if isinstance(ticker_leader_rows, pd.DataFrame) and not ticker_leader_rows.empty:
             st.markdown("#### Positive Group Detail")
             positive_group_set = set(ticker_leader_rows["Group"].dropna().astype(str).tolist())

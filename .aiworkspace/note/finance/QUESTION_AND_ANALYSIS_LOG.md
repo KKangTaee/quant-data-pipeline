@@ -6726,3 +6726,44 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 오래 남길 결정은 `저장-only는 audit trail`, `Final Review 후보는 Gate 통과 Practical Validation result만`, `Step 3 replay는 현재 세션 실행 결과만 표시`, `Portfolio Validation 구현 pass는 closeout complete` 네 가지다
 - Follow-up:
   - `INDEX`, `ROADMAP`, `PROJECT_MAP`, flow docs, `STORAGE_GOVERNANCE`, `GLOSSARY`, task closeout docs를 최신화했다
+
+### 2026-05-30 - Volume Rank의 기간별 거래량 정의를 명확히 한다
+- User request:
+  - 사용자가 Volume Rank가 비어 보이는 이유와 daily / weekly / monthly / yearly 거래량 표기 기준을 물었고, daily는 당일 거래량 / 거래대금, 나머지는 평균 또는 합계 기준으로 진행해 달라고 요청함
+- Interpreted goal:
+  - Volume Rank는 수익률 Top N 안의 재정렬이 아니라 선택 coverage의 returnable universe에서 별도 거래량 랭킹으로 계산해야 하며, 기간별 의미가 화면에서 드러나야 함
+- Analysis result:
+  - 현재 DB에는 daily volume이 존재한다. Daily는 latest snapshot / EOD day 기준, 비일별은 현재 return window의 average daily volume / average daily dollar volume과 total volume / total dollar volume이 가장 덜 모호하다
+- Follow-up:
+  - `volume_rows` read model을 추가하고 Volume chart / table이 이 전용 랭킹을 사용하도록 구현했다. Top2000 yearly는 여전히 약 20초로 날짜 윈도우 계산 최적화가 후속 후보로 남았다
+
+### 2026-05-30 - Sector / Industry Trend와 Positive Detail을 더 읽기 쉽게 만든다
+- User request:
+  - 사용자가 Sector / Industry 안에서 Trend Groups가 컨트롤 변경 때마다 초기화되는 문제, line chart의 시각적 약함, Positive Group Detail의 색상 / 이전 수익률 marker 확장을 요청함
+- Interpreted goal:
+  - 탭 내부 컨트롤 변경은 사용자가 고른 group 의도를 보존하고, 섹터 상승/하락은 heatmap / delta / line을 함께 제공해 더 빠르게 읽히게 해야 함
+- Analysis result:
+  - Trend Groups state key를 coverage / period / top-N에서 분리하고 `sector` / `industry`별로 유지하면 내부 설정 변경과 탭 전환 의도를 구분할 수 있음
+  - 이전 기간 수익률은 모멘텀 참고 지표로 쓸 수 있지만 예측 신호가 아니라 latest window와 previous window의 비교 맥락으로 표시하는 것이 안전함
+- Follow-up:
+  - Sector / Industry에 insight cards, Heatmap / Line / Latest Delta tabs, Positive ticker sector-colored bars, previous-period marker를 추가했고 Browser QA screenshot까지 확인했다
+
+### 2026-05-30 - Daily Heatmap 과밀도를 줄인다
+- User request:
+  - 사용자가 Daily heatmap이 너무 촘촘해서 알아보기 어렵다고 지적하고 Daily 1개월, Weekly 3개월, Monthly 12개월 범위를 요청함
+- Interpreted goal:
+  - Trend horizon은 분석 의미보다 화면 판독성이 우선이며, 특히 Daily heatmap은 약 1개월 거래일만 보여야 함
+- Analysis result:
+  - 기존 Daily 3M / Weekly 6M / Monthly 1Y는 line chart에는 괜찮지만 heatmap에는 daily cell 수가 많아 과밀해진다
+- Follow-up:
+  - Trend window contract를 Daily 21 거래일 / Weekly 13주 / Monthly 12개월로 조정하고 서비스 계약 테스트와 Browser QA screenshot으로 확인했다
+
+### 2026-05-30 - Heatmap 전체 섹터 선택 시 높이를 늘린다
+- User request:
+  - 사용자가 Trend Groups에 전체 섹터를 넣으면 Heatmap이 아래로 길어지지 않고 고정 영역 안에 압축되어 라벨이 작아진다고 지적함
+- Interpreted goal:
+  - 선택 group 수가 늘면 Heatmap chart height도 같이 늘어나야 하며, 섹터 라벨과 셀 값을 스크롤로 읽을 수 있어야 함
+- Analysis result:
+  - 기존 height 계산은 `min(680, 32 * group_count)`처럼 상한과 낮은 row height가 있어 선택 group이 많아질수록 행당 공간이 줄어들 수 있었다
+- Follow-up:
+  - Heatmap row height를 group당 54px로 고정하고 상한 cap을 제거했으며, 축 / 셀 label font size를 명시하고 contract test와 Browser QA screenshot으로 확인했다

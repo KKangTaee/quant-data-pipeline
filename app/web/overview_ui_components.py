@@ -48,7 +48,7 @@ OVERVIEW_SECTOR_COLOR_MAP = {
     "Consumer Defensive": "#65a30d",
     "Energy": "#0f766e",
     "Financial Services": "#2563eb",
-    "Healthcare": "#be123c",
+    "Healthcare": "#14b8a6",
     "Industrials": "#7c3aed",
     "Real Estate": "#64748b",
     "Technology": "#0284c7",

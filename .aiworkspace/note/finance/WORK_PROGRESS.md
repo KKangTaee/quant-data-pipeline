@@ -4454,3 +4454,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - 저장-only는 audit trail로 유지하되 Gate 미통과 validation row는 Final Review 후보 목록에서 숨기도록 정리했다.
   - Practical Validation 신규 진입 / source 변경 시 이전 replay 표시 state를 비우고, Step 1~7 본문 경계 surface를 복원했다.
   - 사용자 확인에 따라 Portfolio Validation closeout으로 정리하고 durable docs / roadmap / project map / glossary / storage governance를 최신 상태로 맞췄다.
+- Overview Market Movers second pass:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`에서 Volume Rank를 수익률 Top N의 재정렬이 아니라 별도 `volume_rows` read model로 분리했다.
+  - Daily는 당일 snapshot / EOD 거래량과 거래대금을, weekly / monthly / yearly는 평균 일거래량 / 평균 일거래대금과 기간 합계를 함께 표시한다.
+  - Top1000 / Top2000 비일별 조회는 결측 진단 최신일자 조회를 missing row로 제한하고 price / volume point read에 symbol-timeframe-date index를 사용하도록 줄였다.
+- Overview Sector / Industry polish:
+  - `.aiworkspace/note/finance/tasks/active/overview-sector-industry-polish/`에서 Trend Groups 유지, Heatmap / Line / Latest Delta trend view, insight cards, Positive Group Detail marker 개선을 완료했다.
+  - Service read model은 breadth, cap-vs-equal gap, concentration, ticker previous return, momentum delta를 제공한다.
+  - `tests.test_service_contracts` 80개, chart JSON smoke, `git diff --check`, Browser QA screenshot을 통과했다.
+  - 후속 QA에서 Daily heatmap이 과밀하다는 문제를 확인해 Trend horizon을 Daily 1M / Weekly 3M / Monthly 12M으로 조정했다.
+  - 후속 QA에서 전체 섹터 선택 시 Heatmap 높이가 압축되는 문제를 확인해 선택 그룹 수만큼 아래로 늘어나는 chart height 계약을 추가했다.
