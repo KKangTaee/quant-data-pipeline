@@ -86,9 +86,9 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Final Review의 마지막 action인 `최종 검토 결과 기록`이 어떤 route로 저장되는지, 왜 선정 저장이 막히는지, 비선정 route는 무엇을 의미하는지 더 명확하게 만든다.
 - Analysis result:
   - 구현 결과 Final Review는 Decision Record Checklist, selected-route gate badge, route별 판단 사유 / 운영 전 조건 / 다음 행동 문안을 보여준다.
-  - blocked selected-route 후보는 gate-suggested non-select route로 기본 표시되며, 선정 저장은 기존 investability gate가 허용할 때만 가능하다.
+  - 초기 구현에서는 blocked selected-route 후보에 gate-suggested non-select route를 보여줬지만, 이후 selection-only save 정책으로 새 비선정 row 생성은 제거하고 상태 / legacy compatibility 안내로 낮췄다.
 - Follow-up:
-  - 새 validation, waiver persistence, approval, order, account sync, auto rebalance는 추가하지 않았다. 다음 slice는 saved decision review UX, Selected Dashboard handoff polish, dossier/report polish, or structured waiver UI / persistence 중에서 고른다.
+  - 새 validation, waiver persistence, approval, order, account sync, auto rebalance는 추가하지 않았다. 정식 저장은 `SELECT_FOR_PRACTICAL_PORTFOLIO` selected-route pass에만 열리며, 다음 slice는 saved decision review UX, Selected Dashboard handoff polish, dossier/report polish, or structured waiver UI / persistence 중에서 고른다.
 
 ### 2026-05-31 - Candidate Board should guide what to review first
 - User request:

@@ -1,7 +1,8 @@
 # Final Review Commercial UX V1
 
-Status: Active
+Status: Implementation complete / docs closeout ready
 Started: 2026-05-31
+Completed: 2026-05-31
 
 ## 이걸 하는 이유?
 
@@ -35,3 +36,8 @@ Final Review는 Candidate Board, Decision Cockpit, Decision Record, Saved Decisi
 - 최종 후보 선정 저장 영역이 명확한 primary action panel로 보인다.
 - 기존 save / dossier / appendix / handoff 기능이 유지된다.
 - py_compile, service contracts, diff check, Browser QA를 통과하고 commit된다.
+
+## Closeout
+
+- UX 개편과 selection-only official save 후속 조정까지 구현 / 검증 / 문서 정렬을 완료했다.
+- master 병합 전 기준은 정식 저장이 `SELECT_FOR_PRACTICAL_PORTFOLIO` selected-route pass에만 열리고, 보류 / 거절 / 재검토는 상태 안내와 legacy read compatibility로 남는 것이다.

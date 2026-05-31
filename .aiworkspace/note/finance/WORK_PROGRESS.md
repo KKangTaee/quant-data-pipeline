@@ -32,6 +32,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-31
+- Session closeout docs aligned for master merge handoff: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs now describe Final Review selection-only official save and the current candidate search outcome.
 - Opened `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`.
 - Non-GTAA dry-runs found several Practical Validation / Final Review evidence-ready candidates, but no fresh candidate passed the current selected-route gate for V2 `SELECT_FOR_PRACTICAL_PORTFOLIO` save.
 - Existing legacy V1 Final Review registry contains one non-GTAA Quality selected row; a read-only handoff dry-run maps it to one dashboard row, but the current V2 dashboard source remains empty until an explicit migration seed is approved.
@@ -39,7 +40,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hold / reject / re-review now remain status guidance and compatibility read paths, not new official save actions; Selected Dashboard continues to read selected rows only.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-commercial-ux-v1/`.
 - Final Review now opens as a user-facing Decision Desk: command center, flow rail, Candidate Board lane cards, visual Decision Cockpit, Final Decision Action, Evidence Appendix, and Decision History / Dashboard Handoff.
-- No validation scoring, gate policy, DB schema, JSONL persistence, provider fetch, live approval, order, account sync, or auto rebalance behavior was changed.
+- No validation scoring, selected-route gate criteria, DB schema, provider fetch, live approval, order, account sync, or auto rebalance behavior was changed; the later selection-only follow-up narrowed which Final Decision V2 routes can be newly written.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-selected-dashboard-handoff-v1/`.
 - Final Review Saved Decision Review and `Operations > Selected Portfolio Dashboard` now share a read-only handoff review for selected rows, dashboard row build, monitorable / blocked counts, checklist, and destination.
 - No new registry, monitoring log auto-write, report auto-write, live approval, order, account sync, or auto rebalance behavior was added.
@@ -48,7 +49,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - No validation rerun, new registry, report auto-write, live approval, order, account sync, or auto rebalance behavior was added; next natural slice is Selected Dashboard handoff polish.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-decision-record-v1/`.
 - Final Review final decision input now shows a Decision Record Checklist, selected-route guide badges, route-specific record templates, and explicit live approval / order disabled boundary.
-- Blocked selected-route candidates now default to the gate-suggested non-select route for recording, while `SELECT_FOR_PRACTICAL_PORTFOLIO` remains blocked unless the existing investability gate allows it.
+- Initial Decision Record V1 displayed gate-suggested non-select routes for blocked candidates; the later selection-only save follow-up kept those routes as status / compatibility guidance instead of new official save actions.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-candidate-board-v1/`.
 - Final Review Candidate Board now ranks Gate-passed candidates by review usefulness and shows select-ready / hold / blocked counts, first-review candidate, review queue, primary reason, and next action.
 - This is read-only display priority only; no validation scoring, source eligibility, provider fetch, JSONL schema, live approval, order, account sync, or auto rebalance behavior was added.

@@ -13,3 +13,4 @@
 - Review follow-up fixed candidate-specific widget state leakage in Final Review: `Source` and `Decision ID` now use source-scoped Streamlit keys, and the post-save Decision ID reset targets the saved source slug.
 - User follow-up simplified the official save model: Final Review now creates a durable row only for `SELECT_FOR_PRACTICAL_PORTFOLIO` when the selected-route gate passes. Hold / reject / re-review are status guidance, not new official save actions.
 - Selection-only save verification passed: py_compile, full service contract suite, `git diff --check`, and Browser QA.
+- Closeout docs were aligned for master merge handoff: durable docs now describe the selection-only save policy and the latest candidate search result that found no fresh current-gate selected V2 row.
