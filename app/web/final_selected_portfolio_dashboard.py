@@ -70,6 +70,7 @@ from app.runtime import (
     load_latest_selected_portfolio_prices,
     remove_selected_dashboard_portfolio_strategy,
     save_selected_dashboard_portfolio,
+    update_selected_dashboard_portfolio_strategy_slot,
 )
 
 
@@ -212,11 +213,57 @@ def _format_money(value: Any, *, default: str = "-") -> str:
     return f"{numeric:,.0f}"
 
 
+def _format_signed_money(value: Any, *, default: str = "-") -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return default
+    if pd.isna(numeric):
+        return default
+    sign = "+" if numeric >= 0 else "-"
+    return f"{sign}{abs(numeric):,.0f}"
+
+
 def _coerce_date(value: Any, fallback: date) -> date:
     parsed = pd.to_datetime(value, errors="coerce")
     if pd.isna(parsed):
         return fallback
     return parsed.date()
+
+
+def _slot_for_row(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(row.get("dashboard_slot") or {})
+
+
+def _slot_effective_start(row: dict[str, Any]) -> str:
+    slot = _slot_for_row(row)
+    defaults = build_selected_portfolio_recheck_defaults(row)
+    return str(slot.get("start") or defaults.get("default_start") or defaults.get("baseline_start") or "").strip()
+
+
+def _slot_effective_end(row: dict[str, Any]) -> str:
+    slot = _slot_for_row(row)
+    defaults = build_selected_portfolio_recheck_defaults(row)
+    if bool(slot.get("use_latest_end", True)):
+        return str(defaults.get("default_end") or defaults.get("latest_market_date") or "").strip()
+    return str(slot.get("end") or "").strip()
+
+
+def _slot_effective_capital(row: dict[str, Any]) -> float:
+    slot = _slot_for_row(row)
+    try:
+        capital = float(slot.get("initial_capital") or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    return capital if not pd.isna(capital) else 0.0
+
+
+def _dashboard_status_tone(status: str) -> str:
+    if status == "Ready":
+        return "positive"
+    if status == "Needs Review":
+        return "warning"
+    return "neutral"
 
 
 def _render_info_card_grid(cards: list[dict[str, Any]], *, min_width: int = 210) -> None:
@@ -496,6 +543,8 @@ def _selected_strategy_rows_for_portfolio(
     portfolio: dict[str, Any],
     dashboard_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    if portfolio.get("strategy_rows"):
+        return [dict(row or {}) for row in list(portfolio.get("strategy_rows") or [])]
     row_by_decision_id = {
         str(row.get("decision_id") or ""): row
         for row in dashboard_rows
@@ -510,44 +559,99 @@ def _selected_strategy_rows_for_portfolio(
 
 def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, Any] | None:
     st.markdown("#### 1. 나의 포트폴리오")
-    st.caption(
-        "Final Review 통과 후보를 담아 관찰할 사용자 모니터링 포트폴리오를 만듭니다. "
-        "이 저장은 Dashboard 전용 saved state이며 Final Review 판단 row를 바꾸지 않습니다."
-    )
-    with st.container(border=True):
-        with st.form("selected_dashboard_create_portfolio_form", clear_on_submit=True):
-            cols = st.columns([0.35, 0.47, 0.18], gap="small")
-            with cols[0]:
-                name = st.text_input("Portfolio name", placeholder="예: 은퇴 계좌 모니터링")
-            with cols[1]:
-                description = st.text_input("Description", placeholder="선택 사항")
-            with cols[2]:
-                submitted = st.form_submit_button("Create", type="primary", width="stretch")
-            if submitted:
-                try:
-                    record = save_selected_dashboard_portfolio(name=name, description=description)
-                except ValueError as exc:
-                    st.warning(str(exc))
-                else:
-                    st.session_state["selected_dashboard_active_portfolio_id"] = record.get("portfolio_id")
-                    st.success("포트폴리오를 만들었습니다.")
+    current_id = st.session_state.get("selected_dashboard_active_portfolio_id")
+    selected_portfolio = _portfolio_by_id(portfolios, current_id) if current_id else None
+    show_create = bool(st.session_state.get("selected_dashboard_show_create_portfolio")) or not portfolios
+
+    shelf_count = min(len(portfolios) + 1, 4) or 1
+    shelf_cols = st.columns(shelf_count, gap="small")
+    with shelf_cols[0]:
+        with st.container(border=True):
+            st.markdown("##### + 새 포트폴리오")
+            st.caption("이름과 메모만 저장")
+            if st.button(
+                "+ 새 포트폴리오",
+                key="selected_dashboard_open_create_portfolio",
+                type="primary" if not portfolios else "secondary",
+                width="stretch",
+            ):
+                st.session_state["selected_dashboard_show_create_portfolio"] = True
+                st.rerun()
+
+    for index, portfolio in enumerate(portfolios[: shelf_count - 1], start=1):
+        with shelf_cols[index]:
+            portfolio_id = str(portfolio.get("portfolio_id") or "")
+            is_active = selected_portfolio is not None and str(selected_portfolio.get("portfolio_id") or "") == portfolio_id
+            with st.container(border=True):
+                st.markdown(f"##### {portfolio.get('name') or '-'}")
+                st.caption(str(portfolio.get("description") or ""))
+                render_badge_strip(
+                    [
+                        {
+                            "label": "Status",
+                            "value": portfolio.get("dashboard_status") or "Empty",
+                            "tone": _dashboard_status_tone(str(portfolio.get("dashboard_status") or "")),
+                        },
+                        {"label": "Strategies", "value": portfolio.get("strategy_count", 0), "tone": "neutral"},
+                        {
+                            "label": "Capital",
+                            "value": _format_money(portfolio.get("virtual_capital_total")),
+                            "tone": "positive" if float(portfolio.get("virtual_capital_total") or 0.0) else "neutral",
+                        },
+                    ]
+                )
+                if st.button(
+                    "선택됨" if is_active else "선택",
+                    key=f"selected_dashboard_pick_card_{portfolio_id}",
+                    disabled=is_active,
+                    width="stretch",
+                ):
+                    st.session_state["selected_dashboard_active_portfolio_id"] = portfolio_id
                     st.rerun()
 
+    if len(portfolios) > shelf_count - 1:
+        labels = [selected_dashboard_portfolio_label(portfolio) for portfolio in portfolios]
+        default_index = 0
+        if selected_portfolio in portfolios:
+            default_index = portfolios.index(selected_portfolio)
+        selected_label = st.selectbox(
+            "More portfolios",
+            options=labels,
+            index=default_index,
+            key="selected_dashboard_portfolio_picker",
+        )
+        selected_portfolio = portfolios[labels.index(selected_label)]
+        st.session_state["selected_dashboard_active_portfolio_id"] = selected_portfolio.get("portfolio_id")
+
+    if show_create:
+        with st.container(border=True):
+            with st.form("selected_dashboard_create_portfolio_form", clear_on_submit=True):
+                cols = st.columns([0.35, 0.47, 0.18], gap="small")
+                with cols[0]:
+                    name = st.text_input("포트폴리오 이름", placeholder="예: Core ETF 모니터링")
+                with cols[1]:
+                    description = st.text_input("간단한 설명 / 메모", placeholder="선택 사항")
+                with cols[2]:
+                    submitted = st.form_submit_button("포트폴리오 저장", type="primary", width="stretch")
+                if submitted:
+                    try:
+                        record = save_selected_dashboard_portfolio(name=name, description=description)
+                    except ValueError as exc:
+                        st.warning(str(exc))
+                    else:
+                        st.session_state["selected_dashboard_active_portfolio_id"] = record.get("portfolio_id")
+                        st.session_state["selected_dashboard_show_create_portfolio"] = False
+                        st.success("포트폴리오를 만들었습니다.")
+                        st.rerun()
+
     if not portfolios:
-        st.info("아직 만든 포트폴리오가 없습니다. 먼저 이름을 입력해 새 포트폴리오를 만드세요.")
+        st.info("아직 만든 포트폴리오가 없습니다. `+ 새 포트폴리오`에서 먼저 포트폴리오를 저장하세요.")
         return None
 
-    labels = [selected_dashboard_portfolio_label(portfolio) for portfolio in portfolios]
-    current_id = st.session_state.get("selected_dashboard_active_portfolio_id")
-    current_portfolio = _portfolio_by_id(portfolios, current_id) or portfolios[0]
-    default_index = portfolios.index(current_portfolio)
-    selected_label = st.selectbox(
-        "Portfolio",
-        options=labels,
-        index=default_index,
-        key="selected_dashboard_portfolio_picker",
-    )
-    selected_portfolio = portfolios[labels.index(selected_label)]
+    selected_portfolio = _portfolio_by_id(
+        portfolios,
+        str(st.session_state.get("selected_dashboard_active_portfolio_id") or ""),
+    ) or selected_portfolio or portfolios[0]
     st.session_state["selected_dashboard_active_portfolio_id"] = selected_portfolio.get("portfolio_id")
 
     with st.expander("My portfolio list", expanded=False):
@@ -583,33 +687,39 @@ def _render_strategy_selection_manager(
     portfolio: dict[str, Any],
     dashboard_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    st.markdown("#### 2. 포트폴리오 전략 선택")
-    st.caption(
-        "Final Review에서 최종 선별된 후보를 현재 포트폴리오에 하나씩 추가합니다. "
-        "여기서 전략은 backtest 함수가 아니라 Final Review selected decision입니다."
+    st.markdown("#### 2. 포트폴리오 상세 / 전략 구성")
+    render_badge_strip(
+        [
+            {"label": "Portfolio", "value": portfolio.get("name") or "-", "tone": "neutral"},
+            {
+                "label": "Status",
+                "value": portfolio.get("dashboard_status") or "Empty",
+                "tone": _dashboard_status_tone(str(portfolio.get("dashboard_status") or "")),
+            },
+            {"label": "Strategies", "value": portfolio.get("strategy_count", 0), "tone": "neutral"},
+            {
+                "label": "Total Balance",
+                "value": _format_money(portfolio.get("virtual_capital_total")),
+                "tone": "positive" if float(portfolio.get("virtual_capital_total") or 0.0) else "neutral",
+            },
+            {"label": "Final Review Source", "value": "Read Only", "tone": "neutral"},
+        ]
     )
+    if portfolio.get("description"):
+        st.caption(str(portfolio.get("description") or ""))
     selected_ids = [str(item) for item in list(portfolio.get("selected_decision_ids") or [])]
     selected_rows = _selected_strategy_rows_for_portfolio(portfolio, dashboard_rows)
     with st.container(border=True):
-        if dashboard_rows:
-            pool_df = build_selected_dashboard_strategy_pool_table(
-                dashboard_rows,
-                selected_decision_ids=selected_ids,
-            )
-            with st.expander("Final Review selected strategy pool", expanded=not selected_rows):
-                st.dataframe(pool_df, width="stretch", hide_index=True)
-        else:
-            st.warning("Final Review에서 통과한 selected 후보가 아직 없습니다.")
-
+        st.markdown("##### + 전략 추가")
         available_rows = [
             row for row in dashboard_rows if str(row.get("decision_id") or "") not in set(selected_ids)
         ]
-        add_cols = st.columns([0.72, 0.28], gap="small")
+        add_cols = st.columns([0.58, 0.18, 0.24], gap="small")
         with add_cols[0]:
             if available_rows:
                 add_labels = [final_selected_portfolio_label(row) for row in available_rows]
                 add_label = st.selectbox(
-                    "Add selected strategy",
+                    "전략 선택",
                     options=add_labels,
                     key=f"selected_dashboard_add_strategy_{portfolio.get('portfolio_id')}",
                 )
@@ -617,22 +727,35 @@ def _render_strategy_selection_manager(
             else:
                 add_row = None
                 st.selectbox(
-                    "Add selected strategy",
-                    options=["추가 가능한 selected 후보 없음"],
+                    "전략 선택",
+                    options=["Final Review selected 후보 없음"],
                     disabled=True,
                     key=f"selected_dashboard_add_strategy_empty_{portfolio.get('portfolio_id')}",
                 )
         with add_cols[1]:
+            add_capital = st.number_input(
+                "Balance",
+                min_value=1_000.0,
+                value=10_000.0,
+                step=1_000.0,
+                key=f"selected_dashboard_add_strategy_capital_{portfolio.get('portfolio_id')}",
+                disabled=add_row is None,
+            )
+        with add_cols[2]:
             if st.button(
-                "Add Strategy",
+                "+ 전략 추가",
                 disabled=add_row is None,
                 key=f"selected_dashboard_add_strategy_button_{portfolio.get('portfolio_id')}",
                 type="primary",
                 width="stretch",
             ):
+                defaults = build_selected_portfolio_recheck_defaults(add_row or {})
                 result = add_selected_dashboard_portfolio_strategy(
                     str(portfolio.get("portfolio_id") or ""),
                     str(add_row.get("decision_id") or ""),
+                    start=str(defaults.get("default_start") or defaults.get("baseline_start") or ""),
+                    use_latest_end=True,
+                    initial_capital=float(add_capital),
                 )
                 if result.get("status") == "added":
                     st.success("전략을 추가했습니다.")
@@ -641,36 +764,275 @@ def _render_strategy_selection_manager(
                     st.info("이미 추가된 전략입니다.")
                 else:
                     st.warning(str(result.get("message") or "전략을 추가하지 못했습니다."))
+        if not dashboard_rows:
+            st.info("Final Review에서 모니터링 후보 선정이 필요합니다.")
+        elif not available_rows:
+            st.caption("현재 포트폴리오에 추가 가능한 selected 후보가 없습니다.")
+        with st.expander("Final Review selected 후보 풀", expanded=False):
+            pool_df = build_selected_dashboard_strategy_pool_table(
+                dashboard_rows,
+                selected_decision_ids=selected_ids,
+            )
+            if pool_df.empty:
+                st.info("Final Review selected 후보가 없습니다.")
+            else:
+                st.dataframe(pool_df, width="stretch", hide_index=True)
 
     if selected_rows:
-        st.markdown("##### Added strategies")
+        st.markdown("##### 전략 리스트")
         st.dataframe(build_selected_dashboard_portfolio_strategy_table(selected_rows), width="stretch", hide_index=True)
-        remove_cols = st.columns([0.72, 0.28], gap="small")
-        with remove_cols[0]:
-            remove_labels = [final_selected_portfolio_label(row) for row in selected_rows]
-            remove_label = st.selectbox(
-                "Remove selected strategy",
-                options=remove_labels,
-                key=f"selected_dashboard_remove_strategy_{portfolio.get('portfolio_id')}",
-            )
-            remove_row = selected_rows[remove_labels.index(remove_label)]
-        with remove_cols[1]:
-            if st.button(
-                "Remove",
-                key=f"selected_dashboard_remove_strategy_button_{portfolio.get('portfolio_id')}",
-                width="stretch",
-            ):
-                result = remove_selected_dashboard_portfolio_strategy(
-                    str(portfolio.get("portfolio_id") or ""),
-                    str(remove_row.get("decision_id") or ""),
-                )
-                if result.get("status") == "removed":
-                    st.success("전략을 제거했습니다.")
-                    st.rerun()
-                st.warning(str(result.get("message") or "전략을 제거하지 못했습니다."))
+        for index, row in enumerate(selected_rows):
+            decision_id = str(row.get("decision_id") or f"decision_{index}")
+            slot = _slot_for_row(row)
+            defaults = build_selected_portfolio_recheck_defaults(row)
+            default_start = _coerce_date(slot.get("start") or defaults.get("default_start"), date(2024, 1, 1))
+            default_end = _coerce_date(slot.get("end") or defaults.get("default_end"), date.today())
+            use_latest_end_default = bool(slot.get("use_latest_end", True))
+            with st.container(border=True):
+                st.markdown(f"##### {row.get('source_title') or decision_id}")
+                if row.get("slot_blockers"):
+                    st.warning(" / ".join(str(item) for item in list(row.get("slot_blockers") or [])))
+                with st.form(f"selected_dashboard_strategy_slot_form_{portfolio.get('portfolio_id')}_{decision_id}"):
+                    form_cols = st.columns([0.20, 0.20, 0.18, 0.27, 0.15], gap="small")
+                    with form_cols[0]:
+                        start_value = st.date_input("시작 날짜", value=default_start)
+                    with form_cols[1]:
+                        use_latest_end_value = st.checkbox("latest 사용", value=use_latest_end_default)
+                        end_value = st.date_input("종료 날짜", value=default_end, disabled=use_latest_end_value)
+                    with form_cols[2]:
+                        capital_value = st.number_input(
+                            "투자금 / balance",
+                            min_value=1_000.0,
+                            value=float(slot.get("initial_capital") or 10_000.0),
+                            step=1_000.0,
+                        )
+                    with form_cols[3]:
+                        memo_value = st.text_input("optional memo", value=str(slot.get("memo") or ""))
+                    with form_cols[4]:
+                        apply_clicked = st.form_submit_button("전략 적용", type="primary", width="stretch")
+                        delete_clicked = st.form_submit_button("전략 삭제", width="stretch")
+                    if apply_clicked:
+                        result = update_selected_dashboard_portfolio_strategy_slot(
+                            str(portfolio.get("portfolio_id") or ""),
+                            decision_id,
+                            start=str(start_value),
+                            end="" if use_latest_end_value else str(end_value),
+                            use_latest_end=bool(use_latest_end_value),
+                            initial_capital=float(capital_value),
+                            memo=memo_value,
+                        )
+                        if result.get("status") == "updated":
+                            st.success("전략 설정을 저장했습니다.")
+                            st.rerun()
+                        st.warning(str(result.get("message") or "전략 설정을 저장하지 못했습니다."))
+                    if delete_clicked:
+                        result = remove_selected_dashboard_portfolio_strategy(
+                            str(portfolio.get("portfolio_id") or ""),
+                            decision_id,
+                        )
+                        if result.get("status") == "removed":
+                            st.success("전략을 제거했습니다.")
+                            st.rerun()
+                        st.warning(str(result.get("message") or "전략을 제거하지 못했습니다."))
     else:
         st.info("현재 포트폴리오에 담긴 전략이 없습니다. Final Review selected 후보를 하나씩 추가하세요.")
     return selected_rows
+
+
+def _portfolio_curve_from_results(results: list[dict[str, Any]]) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for index, result in enumerate(results):
+        result_df = result.get("portfolio_result_df")
+        if not isinstance(result_df, pd.DataFrame) or result_df.empty:
+            continue
+        frame = result_df[["Date", "Total Balance"]].copy()
+        frame["Date"] = pd.to_datetime(frame["Date"], errors="coerce")
+        frame = frame.dropna(subset=["Date"])
+        if frame.empty:
+            continue
+        frame = frame.rename(columns={"Total Balance": f"strategy_{index + 1}"})
+        frames.append(frame)
+    if not frames:
+        return pd.DataFrame()
+    combined = frames[0]
+    for frame in frames[1:]:
+        combined = combined.merge(frame, on="Date", how="outer")
+    combined = combined.sort_values("Date").ffill().dropna(how="all", subset=[column for column in combined.columns if column != "Date"])
+    value_columns = [column for column in combined.columns if column != "Date"]
+    combined["Portfolio Value"] = combined[value_columns].sum(axis=1)
+    first_value = float(combined["Portfolio Value"].iloc[0] or 0.0)
+    combined["Total Return"] = (combined["Portfolio Value"] / first_value - 1.0) if first_value > 0 else 0.0
+    return combined[["Date", "Portfolio Value", "Total Return"]]
+
+
+def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    results = [
+        _latest_recheck_result(row)
+        for row in strategy_rows
+        if _latest_recheck_result(row).get("status") in {"ok", "partial"}
+    ]
+    invested = sum(float(result.get("initial_capital") or 0.0) for result in results)
+    current_value = sum(float(dict(result.get("portfolio_summary") or {}).get("end_balance") or 0.0) for result in results)
+    profit = current_value - invested
+    total_return = profit / invested if invested > 0 else None
+    curve = _portfolio_curve_from_results(results)
+    cagr = None
+    mdd = None
+    as_of = "-"
+    if not curve.empty:
+        start_value = float(curve["Portfolio Value"].iloc[0] or 0.0)
+        end_value = float(curve["Portfolio Value"].iloc[-1] or 0.0)
+        start_date = pd.to_datetime(curve["Date"].iloc[0], errors="coerce")
+        end_date = pd.to_datetime(curve["Date"].iloc[-1], errors="coerce")
+        as_of = end_date.strftime("%Y-%m-%d") if not pd.isna(end_date) else "-"
+        if start_value > 0 and end_value > 0 and not pd.isna(start_date) and not pd.isna(end_date):
+            years = max((end_date - start_date).days / 365.25, 1 / 365.25)
+            cagr = (end_value / start_value) ** (1 / years) - 1
+        running_peak = curve["Portfolio Value"].cummax()
+        drawdown = curve["Portfolio Value"] / running_peak - 1.0
+        mdd = float(drawdown.min()) if not drawdown.empty else None
+    benchmark_spreads = [
+        dict(result.get("change_summary") or {}).get("net_cagr_spread")
+        for result in results
+        if dict(result.get("change_summary") or {}).get("net_cagr_spread") is not None
+    ]
+    benchmark_spread = sum(float(value) for value in benchmark_spreads) / len(benchmark_spreads) if benchmark_spreads else None
+    return {
+        "results": results,
+        "curve": curve,
+        "invested": invested,
+        "current_value": current_value,
+        "profit": profit,
+        "total_return": total_return,
+        "cagr": cagr,
+        "mdd": mdd,
+        "benchmark_spread": benchmark_spread,
+        "as_of": as_of,
+    }
+
+
+def _strategy_result_status(row: dict[str, Any], result: dict[str, Any]) -> str:
+    if not row.get("slot_input_complete"):
+        return "Review Needed"
+    if not result:
+        return "Not Run"
+    if result.get("status") == "error":
+        return "Error"
+    if result.get("status") == "partial":
+        return "Review Needed"
+    route = str(result.get("verdict_route") or "")
+    if route == "SELECTION_THESIS_HOLDS":
+        return "Good"
+    if route in {"PERFORMANCE_WEAKENED", "RISK_DRAWDOWN_EXPANDED"}:
+        return "Watch"
+    return "Review Needed"
+
+
+def _build_strategy_performance_table(strategy_rows: list[dict[str, Any]]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for row in strategy_rows:
+        result = _latest_recheck_result(row)
+        summary = dict(result.get("portfolio_summary") or {})
+        change = dict(result.get("change_summary") or {})
+        invested = result.get("initial_capital") or row.get("slot_initial_capital")
+        current_value = summary.get("end_balance")
+        profit = None
+        if invested is not None and current_value is not None:
+            profit = float(current_value) - float(invested)
+        rows.append(
+            {
+                "Strategy": row.get("source_title"),
+                "Invested": _format_money(invested),
+                "Current Value": _format_money(current_value),
+                "P/L": _format_signed_money(profit),
+                "Return": _format_pct(summary.get("total_return")),
+                "CAGR": _format_pct(summary.get("cagr")),
+                "MDD": _format_pct(summary.get("mdd")),
+                "Benchmark Spread": _format_pct(change.get("net_cagr_spread")),
+                "Status": _strategy_result_status(row, result),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _next_month_end(value: Any, interval: int = 1) -> str:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return "-"
+    base_month_end = parsed.to_period("M").to_timestamp("M")
+    return (base_month_end + pd.offsets.MonthEnd(max(int(interval or 1), 1))).strftime("%Y-%m-%d")
+
+
+def _build_rebalance_table(strategy_rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in strategy_rows:
+        raw_decision = dict(row.get("raw_decision") or {})
+        for component in list(raw_decision.get("selected_components") or []):
+            component_row = dict(component or {})
+            history = [dict(item or {}) for item in list(component_row.get("selection_history") or [])]
+            latest = history[-1] if history else {}
+            replay_contract = dict(component_row.get("replay_contract") or {})
+            settings = dict(replay_contract.get("settings_snapshot") or {})
+            interval = int(settings.get("rebalance_interval") or settings.get("interval") or 1)
+            tickers = [str(item) for item in list(latest.get("selected_tickers") or []) if str(item)]
+            weights = list(latest.get("target_weights") or [])
+            allocation_parts = []
+            for index, ticker in enumerate(tickers):
+                weight = weights[index] if index < len(weights) else None
+                if weight is None:
+                    allocation_parts.append(ticker)
+                else:
+                    allocation_parts.append(f"{ticker} {float(weight):.1%}")
+            cash_share = latest.get("cash_share")
+            if cash_share is not None and float(cash_share or 0.0) > 0:
+                allocation_parts.append(f"Cash / defensive {float(cash_share):.1%}")
+            display_rows.append(
+                {
+                    "Strategy": row.get("source_title"),
+                    "Component": component_row.get("title") or component_row.get("strategy_name") or "-",
+                    "Last Rebalance": latest.get("date") or component_row.get("period_end") or "-",
+                    "Next Rebalance": _next_month_end(latest.get("date") or component_row.get("period_end"), interval=interval),
+                    "Current Target Assets": ", ".join(allocation_parts) or "-",
+                    "Next Target Asset": "Recomputed at next rebalance",
+                    "Cash / Defensive Sleeve": (
+                        f"{float(cash_share):.1%}" if cash_share is not None else ("BIL / cash ticker" if "BIL" in tickers else "-")
+                    ),
+                }
+            )
+    return pd.DataFrame(display_rows)
+
+
+def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -> None:
+    summary = _portfolio_summary_from_results(strategy_rows)
+    completed = len(summary["results"])
+    _render_info_card_grid(
+        [
+            {"title": "총 투입금", "value": _format_money(summary.get("invested")), "detail": f"{completed}/{len(strategy_rows)} strategies run", "tone": "neutral"},
+            {"title": "현재 평가금액", "value": _format_money(summary.get("current_value")), "detail": f"기준일 {summary.get('as_of')}", "tone": "positive" if completed else "neutral"},
+            {"title": "총 손익", "value": _format_signed_money(summary.get("profit")), "detail": "scenario session 기준", "tone": "positive" if float(summary.get("profit") or 0.0) >= 0 and completed else "warning"},
+            {"title": "총 수익률", "value": _format_pct(summary.get("total_return")), "detail": "현재 가치 / 투입금", "tone": "positive" if float(summary.get("total_return") or 0.0) >= 0 and completed else "warning"},
+            {"title": "CAGR", "value": _format_pct(summary.get("cagr")), "detail": "combined value curve", "tone": "neutral"},
+            {"title": "MDD", "value": _format_pct(summary.get("mdd")), "detail": "combined value curve", "tone": "warning"},
+            {"title": "Benchmark 대비", "value": _format_pct(summary.get("benchmark_spread")), "detail": "전략별 spread 평균", "tone": "positive" if float(summary.get("benchmark_spread") or 0.0) >= 0 and completed else "warning"},
+        ],
+        min_width=150,
+    )
+    if completed == 0:
+        st.info("전략 설정을 적용한 뒤 각 전략 탭에서 `모니터 시나리오 실행`을 누르면 포트폴리오 요약이 채워집니다.")
+    curve = summary.get("curve")
+    if isinstance(curve, pd.DataFrame) and not curve.empty:
+        chart_view = curve[["Date", "Portfolio Value"]].copy()
+        chart_view["Date"] = pd.to_datetime(chart_view["Date"], errors="coerce")
+        chart_view = chart_view.dropna(subset=["Date"]).set_index("Date")
+        st.line_chart(chart_view)
+    st.markdown("##### 전략별 성과")
+    st.dataframe(_build_strategy_performance_table(strategy_rows), width="stretch", hide_index=True)
+    with st.expander("리밸런싱 정보", expanded=completed > 0):
+        rebalance_df = _build_rebalance_table(strategy_rows)
+        if rebalance_df.empty:
+            st.info("표시할 리밸런싱 정보가 없습니다.")
+        else:
+            st.dataframe(rebalance_df, width="stretch", hide_index=True)
 
 
 def _render_portfolio_strategy_comparison(strategy_rows: list[dict[str, Any]]) -> None:
@@ -741,7 +1103,8 @@ def _render_dashboard_portfolio_workspace(
         return
 
     st.markdown("#### 3. 모니터 시나리오")
-    st.caption("각 전략별 가상 기간과 초기자산을 입력해 모니터링 이후 성과와 리스크 상태를 확인합니다.")
+    st.caption("Step 2에서 적용한 전략 row 기준으로 현재 가치, 손익, 리스크 상태를 확인합니다.")
+    _render_portfolio_monitoring_overview(selected_rows)
     tabs = st.tabs([
         f"{index + 1}. {str(row.get('source_title') or row.get('decision_id') or 'Selected')[:42]}"
         for index, row in enumerate(selected_rows)
@@ -1288,7 +1651,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
     with allocation_tab:
         _render_selected_row_drift_check(row)
     with audit_tab:
-        _render_execution_boundary()
+        _render_execution_boundary(key_prefix=f"selected_dashboard_execution_{_decision_key(row)}")
 
 
 def _render_decision_dossier(row: dict[str, Any]) -> None:
@@ -1350,7 +1713,7 @@ def _render_decision_dossier(row: dict[str, Any]) -> None:
         st.markdown(str(dossier.get("markdown") or "-"))
 
 
-def _render_execution_boundary() -> None:
+def _render_execution_boundary(*, key_prefix: str = "selected_dashboard_execution_boundary") -> None:
     with st.container(border=True):
         st.markdown("#### Execution Boundary")
         st.caption(
@@ -1358,39 +1721,32 @@ def _render_execution_boundary() -> None:
             "기간 확장 재검증과 drift 점검은 read-only이며 실제 투자 승인, broker 주문, 자동 리밸런싱은 만들지 않습니다."
         )
         action_cols = st.columns(3, gap="small")
-        action_cols[0].button("Live Approval", disabled=True, width="stretch")
-        action_cols[1].button("Broker Order", disabled=True, width="stretch")
-        action_cols[2].button("Auto Rebalance", disabled=True, width="stretch")
-
-
-def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
-    st.markdown("##### Monitoring Scenario")
-    st.caption(
-        "선정 당시의 component contract를 사용자가 지정한 가상 시작일 / 종료일 / 초기자산으로 다시 실행합니다. "
-        "종료일이 비어 있으면 DB에 있는 최신 시장일을 기준으로 봅니다."
-    )
-    defaults = build_selected_portfolio_recheck_defaults(row)
-    if defaults.get("latest_market_date_error"):
-        st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
-
-    latest_market_result = {
-        "status": defaults.get("latest_market_date_status"),
-        "latest_market_date": defaults.get("latest_market_date"),
-        "error": defaults.get("latest_market_date_error"),
-    }
-    preflight = build_selected_portfolio_recheck_operations_preflight(
-        row,
-        latest_market_result=latest_market_result,
-    )
-    preflight_metrics = dict(preflight.get("metrics") or {})
-    preflight_boundary = dict(preflight.get("execution_boundary") or {})
-    preflight_route = str(preflight.get("route") or "")
-    with st.container(border=True):
-        st.markdown("##### Recheck Operations Preflight")
-        st.caption(
-            "Performance Recheck 실행 전 replay contract readiness와 DB 가격 최신성을 하나의 운영 사전 점검으로 봅니다. "
-            "이 확인은 read-only이며 자동 저장, 승인, 주문, 리밸런싱을 만들지 않습니다."
+        action_cols[0].button(
+            "Live Approval",
+            disabled=True,
+            key=f"{key_prefix}_live_approval",
+            width="stretch",
         )
+        action_cols[1].button(
+            "Broker Order",
+            disabled=True,
+            key=f"{key_prefix}_broker_order",
+            width="stretch",
+        )
+        action_cols[2].button(
+            "Auto Rebalance",
+            disabled=True,
+            key=f"{key_prefix}_auto_rebalance",
+            width="stretch",
+        )
+
+
+def _render_recheck_evidence_detail(preflight: dict[str, Any], provider_evidence: dict[str, Any]) -> None:
+    with st.expander("하단 상세 점검 / 감사 근거", expanded=False):
+        preflight_metrics = dict(preflight.get("metrics") or {})
+        preflight_boundary = dict(preflight.get("execution_boundary") or {})
+        preflight_route = str(preflight.get("route") or "")
+        st.markdown("##### Recheck Readiness / Source")
         render_badge_strip(
             [
                 {
@@ -1398,11 +1754,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     "value": preflight.get("route_label"),
                     "tone": _recheck_preflight_tone(preflight_route),
                 },
-                {
-                    "label": "DB Latest",
-                    "value": preflight_metrics.get("latest_market_date") or "-",
-                    "tone": "neutral",
-                },
+                {"label": "DB Latest", "value": preflight_metrics.get("latest_market_date") or "-", "tone": "neutral"},
                 {
                     "label": "Replay Contracts",
                     "value": f"{preflight_metrics.get('replay_contract_count', 0)}/{preflight_metrics.get('active_component_count', 0)}",
@@ -1411,7 +1763,6 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     and preflight_metrics.get("active_component_count")
                     else "warning",
                 },
-                {"label": "Symbols", "value": preflight_metrics.get("symbol_count", 0), "tone": "neutral"},
                 {
                     "label": "Missing/Stale",
                     "value": f"{preflight_metrics.get('missing_symbol_count', 0)}/{preflight_metrics.get('stale_symbol_count', 0)}",
@@ -1422,36 +1773,21 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                 {"label": "Writes", "value": "Disabled", "tone": "neutral"},
             ]
         )
-        if preflight_route == "RECHECK_PREFLIGHT_BLOCKED":
-            st.warning(str(preflight.get("conclusion") or "-"))
-        elif preflight_route in {"RECHECK_PREFLIGHT_REVIEW", "RECHECK_PREFLIGHT_NEEDS_DATA"}:
-            st.info(str(preflight.get("conclusion") or "-"))
+        st.caption(str(preflight.get("conclusion") or "-"))
+        st.markdown("###### Preflight rows")
+        preflight_df = build_selected_portfolio_recheck_preflight_table(preflight)
+        if preflight_df.empty:
+            st.info("표시할 preflight row가 없습니다.")
         else:
-            st.success(str(preflight.get("conclusion") or "-"))
-        with st.expander("Preflight rows", expanded=preflight_route != "RECHECK_PREFLIGHT_READY"):
-            preflight_df = build_selected_portfolio_recheck_preflight_table(preflight)
-            if preflight_df.empty:
-                st.info("표시할 preflight row가 없습니다.")
-            else:
-                st.dataframe(preflight_df, width="stretch", hide_index=True)
-            st.caption(
-                f"Write policy: {preflight_boundary.get('write_policy') or '-'} / "
-                f"DB write: {preflight_boundary.get('db_write')} / "
-                f"registry write: {preflight_boundary.get('registry_write')} / "
-                f"monitoring log auto write: {preflight_boundary.get('monitoring_log_auto_write')}"
-            )
-
-    decision_id = str(row.get("decision_id") or "selected_portfolio")
-    readiness = dict(preflight.get("readiness") or {})
-    readiness_metrics = dict(readiness.get("metrics") or {})
-    readiness_boundary = dict(readiness.get("execution_boundary") or {})
-    readiness_route = str(readiness.get("route") or "")
-    with st.container(border=True):
-        st.markdown("##### Recheck Readiness")
+            st.dataframe(preflight_df, width="stretch", hide_index=True)
         st.caption(
-            "Performance Recheck 실행 전에 DB 최신 시장일과 selected component replay contract가 준비됐는지 확인합니다. "
-            "이 확인은 데이터를 수집하거나 monitoring log를 저장하지 않습니다."
+            f"Write policy: {preflight_boundary.get('write_policy') or '-'} / "
+            f"monitoring log auto write: {preflight_boundary.get('monitoring_log_auto_write')}"
         )
+
+        readiness = dict(preflight.get("readiness") or {})
+        readiness_metrics = dict(readiness.get("metrics") or {})
+        readiness_route = str(readiness.get("route") or "")
         render_badge_strip(
             [
                 {
@@ -1459,19 +1795,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     "value": readiness.get("route_label"),
                     "tone": _recheck_readiness_tone(readiness_route),
                 },
-                {
-                    "label": "DB Latest",
-                    "value": readiness_metrics.get("latest_market_date") or "-",
-                    "tone": "neutral",
-                },
-                {
-                    "label": "Replay Contracts",
-                    "value": f"{readiness_metrics.get('replay_contract_count', 0)}/{readiness_metrics.get('active_component_count', 0)}",
-                    "tone": "positive"
-                    if readiness_metrics.get("replay_contract_count") == readiness_metrics.get("active_component_count")
-                    and readiness_metrics.get("active_component_count")
-                    else "warning",
-                },
+                {"label": "DB Latest", "value": readiness_metrics.get("latest_market_date") or "-", "tone": "neutral"},
                 {
                     "label": "Blocked",
                     "value": readiness_metrics.get("blocked_count", 0),
@@ -1480,34 +1804,17 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                 {"label": "Writes", "value": "Disabled", "tone": "neutral"},
             ]
         )
-        if readiness_route == "RECHECK_READINESS_BLOCKED":
-            st.warning(str(readiness.get("conclusion") or "-"))
-        elif readiness_route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
-            st.info(str(readiness.get("conclusion") or "-"))
+        st.markdown("###### Readiness rows")
+        readiness_df = build_selected_portfolio_recheck_readiness_table(readiness)
+        if readiness_df.empty:
+            st.info("표시할 readiness row가 없습니다.")
         else:
-            st.success(str(readiness.get("conclusion") or "-"))
-        with st.expander("Readiness check rows", expanded=readiness_route != "RECHECK_READINESS_READY"):
-            readiness_df = build_selected_portfolio_recheck_readiness_table(readiness)
-            if readiness_df.empty:
-                st.info("표시할 readiness row가 없습니다.")
-            else:
-                st.dataframe(readiness_df, width="stretch", hide_index=True)
-            st.caption(
-                f"Write policy: {readiness_boundary.get('write_policy') or '-'} / "
-                f"DB write: {readiness_boundary.get('db_write')} / "
-                f"registry write: {readiness_boundary.get('registry_write')}"
-            )
+            st.dataframe(readiness_df, width="stretch", hide_index=True)
 
-    symbol_freshness = dict(preflight.get("symbol_freshness") or {})
-    freshness_metrics = dict(symbol_freshness.get("metrics") or {})
-    freshness_boundary = dict(symbol_freshness.get("execution_boundary") or {})
-    freshness_route = str(symbol_freshness.get("route") or "")
-    with st.container(border=True):
+        symbol_freshness = dict(preflight.get("symbol_freshness") or {})
+        freshness_metrics = dict(symbol_freshness.get("metrics") or {})
+        freshness_route = str(symbol_freshness.get("route") or "")
         st.markdown("##### Symbol Freshness")
-        st.caption(
-            "Performance Recheck에 쓰일 portfolio ticker와 benchmark ticker의 DB 가격 최신성을 확인합니다. "
-            "이 확인은 OHLCV를 수집하지 않고 기존 DB metadata만 읽습니다."
-        )
         render_badge_strip(
             [
                 {
@@ -1526,41 +1833,20 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     "value": freshness_metrics.get("stale_count", 0),
                     "tone": "warning" if freshness_metrics.get("stale_count") else "neutral",
                 },
-                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
             ]
         )
-        if freshness_route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_BLOCKED"}:
-            st.warning(str(symbol_freshness.get("conclusion") or "-"))
-        elif freshness_route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
-            st.info(str(symbol_freshness.get("conclusion") or "-"))
+        st.markdown("###### Symbol freshness rows")
+        freshness_df = build_selected_portfolio_symbol_freshness_table(symbol_freshness)
+        if freshness_df.empty:
+            st.info("표시할 symbol freshness row가 없습니다.")
         else:
-            st.success(str(symbol_freshness.get("conclusion") or "-"))
-        with st.expander("Symbol freshness rows", expanded=freshness_route != "SYMBOL_FRESHNESS_READY"):
-            freshness_df = build_selected_portfolio_symbol_freshness_table(symbol_freshness)
-            if freshness_df.empty:
-                st.info("표시할 symbol freshness row가 없습니다.")
-            else:
-                st.dataframe(freshness_df, width="stretch", hide_index=True)
-            st.caption(
-                f"Write policy: {freshness_boundary.get('write_policy') or '-'} / "
-                f"DB write: {freshness_boundary.get('db_write')} / "
-                f"registry write: {freshness_boundary.get('registry_write')}"
-            )
+            st.dataframe(freshness_df, width="stretch", hide_index=True)
 
-    provider_evidence = build_selected_portfolio_provider_evidence(
-        row,
-        as_of_date=defaults.get("latest_market_date") or date.today().isoformat(),
-    )
-    provider_metrics = dict(provider_evidence.get("metrics") or {})
-    provider_boundary = dict(provider_evidence.get("execution_boundary") or {})
-    provider_route = str(provider_evidence.get("route") or "")
-    look_through = dict(provider_evidence.get("look_through_board") or {})
-    with st.container(border=True):
+        provider_metrics = dict(provider_evidence.get("metrics") or {})
+        provider_boundary = dict(provider_evidence.get("execution_boundary") or {})
+        provider_route = str(provider_evidence.get("route") or "")
+        look_through = dict(provider_evidence.get("look_through_board") or {})
         st.markdown("##### Provider Evidence")
-        st.caption(
-            "선정 포트폴리오의 ETF provider / holdings / exposure snapshot을 기존 DB에서 읽어 coverage와 stale 상태를 확인합니다. "
-            "이 확인은 provider 데이터를 수집하거나 JSONL / monitoring log를 저장하지 않습니다."
-        )
         render_badge_strip(
             [
                 {
@@ -1585,101 +1871,93 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     and float(provider_metrics.get("exposure_coverage_weight") or 0.0) < 80.0
                     else "neutral",
                 },
-                {
-                    "label": "Needs Data",
-                    "value": provider_metrics.get("needs_input_count", 0),
-                    "tone": "warning" if provider_metrics.get("needs_input_count") else "neutral",
-                },
-                {
-                    "label": "Stale",
-                    "value": provider_metrics.get("stale_count", 0),
-                    "tone": "warning" if provider_metrics.get("stale_count") else "neutral",
-                },
-                {
-                    "label": "Partial",
-                    "value": provider_metrics.get("partial_coverage_count", 0),
-                    "tone": "warning" if provider_metrics.get("partial_coverage_count") else "neutral",
-                },
                 {"label": "Writes", "value": "Disabled", "tone": "neutral"},
             ]
         )
-        if provider_route == "SELECTED_PROVIDER_BLOCKED":
-            st.warning(str(provider_evidence.get("conclusion") or "-"))
-        elif provider_route in {"SELECTED_PROVIDER_REVIEW", "SELECTED_PROVIDER_NEEDS_DATA"}:
-            st.info(str(provider_evidence.get("conclusion") or "-"))
+        st.caption(str(provider_evidence.get("conclusion") or "-"))
+        st.markdown("###### Provider evidence rows")
+        provider_df = build_selected_portfolio_provider_evidence_table(provider_evidence)
+        if provider_df.empty:
+            st.info("표시할 provider evidence row가 없습니다.")
         else:
-            st.success(str(provider_evidence.get("conclusion") or "-"))
-        with st.expander("Provider evidence rows", expanded=provider_route != "SELECTED_PROVIDER_READY"):
-            provider_df = build_selected_portfolio_provider_evidence_table(provider_evidence)
-            if provider_df.empty:
-                st.info("표시할 provider evidence row가 없습니다.")
-            else:
-                st.dataframe(provider_df, width="stretch", hide_index=True)
-            symbol_weight_df = build_selected_portfolio_provider_symbol_weight_table(provider_evidence)
-            if not symbol_weight_df.empty:
-                st.markdown("###### Selected provider symbol weights")
-                st.dataframe(symbol_weight_df, width="stretch", hide_index=True)
-            st.caption(
-                f"Write policy: {provider_boundary.get('write_policy') or '-'} / "
-                f"DB read: {provider_boundary.get('db_read')} / "
-                f"DB write: {provider_boundary.get('db_write')} / "
-                f"provider collection: {provider_boundary.get('provider_collection')}"
-            )
+            st.dataframe(provider_df, width="stretch", hide_index=True)
+        symbol_weight_df = build_selected_portfolio_provider_symbol_weight_table(provider_evidence)
+        if not symbol_weight_df.empty:
+            st.markdown("###### Selected provider symbol weights")
+            st.dataframe(symbol_weight_df, width="stretch", hide_index=True)
+        st.caption(
+            f"Write policy: {provider_boundary.get('write_policy') or '-'} / "
+            f"DB write: {provider_boundary.get('db_write')} / "
+            f"provider collection: {provider_boundary.get('provider_collection')}"
+        )
         summary_rows = list(look_through.get("summary_rows") or [])
         if summary_rows:
-            with st.expander("Look-through summary", expanded=False):
-                st.caption(str(look_through.get("summary") or "-"))
-                st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+            st.markdown("###### Look-through summary")
+            st.caption(str(look_through.get("summary") or "-"))
+            st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
 
-    fallback_start = date(2016, 1, 1)
-    fallback_end = date.today()
-    default_start = _coerce_date(defaults.get("default_start"), fallback_start)
-    default_end = _coerce_date(defaults.get("default_end"), fallback_end)
+
+def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
+    st.markdown("##### Monitoring Scenario")
+    defaults = build_selected_portfolio_recheck_defaults(row)
+    if defaults.get("latest_market_date_error"):
+        st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
+
+    latest_market_result = {
+        "status": defaults.get("latest_market_date_status"),
+        "latest_market_date": defaults.get("latest_market_date"),
+        "error": defaults.get("latest_market_date_error"),
+    }
+    preflight = build_selected_portfolio_recheck_operations_preflight(
+        row,
+        latest_market_result=latest_market_result,
+    )
+    provider_evidence = build_selected_portfolio_provider_evidence(
+        row,
+        as_of_date=defaults.get("latest_market_date") or date.today().isoformat(),
+    )
+    decision_id = str(row.get("decision_id") or "selected_portfolio")
+    slot = _slot_for_row(row)
+    start = _slot_effective_start(row)
+    end = _slot_effective_end(row)
+    capital = _slot_effective_capital(row)
+    slot_blockers = [str(item) for item in list(row.get("slot_blockers") or []) if str(item)]
+    if not start:
+        slot_blockers.append("시작 날짜가 필요합니다.")
+    if not end:
+        slot_blockers.append("종료 날짜 또는 latest market date가 필요합니다.")
+    if capital <= 0:
+        slot_blockers.append("투자금 / balance는 0보다 커야 합니다.")
+
     with st.container(border=True):
         st.markdown("##### Scenario Setup")
-        setup_cols = st.columns([0.24, 0.24, 0.24, 0.28], gap="small")
-        with setup_cols[0]:
-            recheck_start = st.date_input(
-                "Virtual start",
-                value=default_start,
-                key=f"selected_portfolio_recheck_start_{decision_id}",
-            )
-        with setup_cols[1]:
-            use_latest_end = st.checkbox(
-                "Use latest end",
-                value=True,
-                key=f"selected_portfolio_recheck_use_latest_end_{decision_id}",
-                help="체크하면 DB 최신 시장일을 종료일로 사용합니다.",
-            )
-            recheck_end = st.date_input(
-                "Virtual end",
-                value=default_end,
-                disabled=use_latest_end,
-                key=f"selected_portfolio_recheck_end_{decision_id}",
-            )
-        with setup_cols[2]:
-            initial_capital = st.number_input(
-                "Virtual capital",
-                min_value=1_000.0,
-                value=10_000.0,
-                step=1_000.0,
-                key=f"selected_portfolio_recheck_capital_{decision_id}",
-            )
-        with setup_cols[3]:
-            render_badge_strip(
-                [
-                    {"label": "Original End", "value": defaults.get("baseline_end") or "-", "tone": "neutral"},
-                    {"label": "DB Latest", "value": defaults.get("latest_market_date") or "-", "tone": "neutral"},
-                ]
-            )
-        action_cols = st.columns([0.72, 0.28], gap="small")
-        with action_cols[0]:
+        render_badge_strip(
+            [
+                {"label": "Start", "value": start or "-", "tone": "positive" if start else "warning"},
+                {
+                    "label": "End",
+                    "value": "Latest market date" if bool(slot.get("use_latest_end", True)) else end or "-",
+                    "tone": "positive" if end else "warning",
+                },
+                {"label": "Balance", "value": _format_money(capital), "tone": "positive" if capital > 0 else "warning"},
+                {"label": "DB Latest", "value": defaults.get("latest_market_date") or "-", "tone": "neutral"},
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if slot.get("memo"):
+            st.caption(f"Memo: {slot.get('memo')}")
+        for blocker in slot_blockers:
+            st.warning(blocker)
+        run_cols = st.columns([0.68, 0.32], gap="small")
+        with run_cols[0]:
             st.caption(
-                f"Original period: {defaults.get('baseline_start') or '-'} -> {defaults.get('baseline_end') or '-'}"
+                f"Original period: {defaults.get('baseline_start') or '-'} -> {defaults.get('baseline_end') or '-'} / "
+                f"Scenario end: {end or '-'}"
             )
-        with action_cols[1]:
+        with run_cols[1]:
             run_clicked = st.button(
-                "Run Scenario",
+                "모니터 시나리오 실행",
+                disabled=bool(slot_blockers),
                 key=f"selected_portfolio_run_recheck_{decision_id}",
                 type="primary",
                 width="stretch",
@@ -1690,9 +1968,9 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
         with st.spinner("선정 포트폴리오 contract를 재실행하는 중입니다..."):
             st.session_state[result_key] = build_selected_portfolio_performance_recheck(
                 row,
-                start=str(recheck_start),
-                end=str(default_end if use_latest_end else recheck_end),
-                initial_capital=float(initial_capital),
+                start=start,
+                end=end,
+                initial_capital=float(capital),
             )
 
     operations_payload = {
@@ -1701,12 +1979,14 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     }
     result = dict(st.session_state.get(result_key) or {})
     if not result:
-        st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Scenario`를 누르면 해당 기간 기준 성과를 바로 계산합니다.")
+        st.info("`모니터 시나리오 실행`을 누르면 이 전략의 현재 가치, 손익, 수익률, 리스크 지표가 계산됩니다.")
+        _render_recheck_evidence_detail(preflight, provider_evidence)
         return operations_payload
     if result.get("status") == "error":
         st.error(str(result.get("error") or "Performance recheck failed."))
         for blocker in list(result.get("blockers") or []):
             st.warning(str(blocker))
+        _render_recheck_evidence_detail(preflight, provider_evidence)
         return operations_payload
 
     for blocker in list(result.get("blockers") or []):
@@ -1728,6 +2008,12 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     "value": result.get("verdict_route"),
                     "detail": result.get("verdict"),
                     "tone": "positive" if result.get("verdict_route") == "SELECTION_THESIS_HOLDS" else "warning",
+                },
+                {
+                    "title": "Invested",
+                    "value": _format_money(result.get("initial_capital")),
+                    "detail": f"Start {period.get('start') or '-'}",
+                    "tone": "neutral",
                 },
                 {
                     "title": "Portfolio Value",
@@ -1852,6 +2138,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     worst_df["Total Balance"] = worst_df["Total Balance"].map(lambda value: _format_money(value))
                 st.dataframe(worst_df, width="stretch", hide_index=True)
 
+    _render_recheck_evidence_detail(preflight, provider_evidence)
     return operations_payload
 
 
@@ -2235,12 +2522,13 @@ def render_final_selected_portfolio_dashboard_page() -> None:
     rows = list(dashboard.get("dashboard_rows") or [])
     monitoring_portfolios = list(dashboard.get("monitoring_portfolios") or [])
 
-    render_status_card_grid(_summary_cards(summary))
-    _render_final_review_handoff(list(dashboard.get("all_final_decisions") or []))
-
-    if not rows:
-        _render_empty_state(summary)
     _render_dashboard_portfolio_workspace(
         dashboard_rows=rows,
         monitoring_portfolios=monitoring_portfolios,
     )
+    with st.container(border=True):
+        st.markdown("#### Final Review Handoff / 상세 근거")
+        render_status_card_grid(_summary_cards(summary))
+        _render_final_review_handoff(list(dashboard.get("all_final_decisions") or []))
+        if not rows:
+            _render_empty_state(summary)

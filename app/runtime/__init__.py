@@ -133,6 +133,7 @@ from .final_selected_portfolios import (
     load_latest_selected_portfolio_prices,
     remove_selected_dashboard_portfolio_strategy,
     save_selected_dashboard_portfolio,
+    update_selected_dashboard_portfolio_strategy_slot,
 )
 
 __all__ = [
@@ -258,4 +259,5 @@ __all__ = [
     "run_value_snapshot_strict_quarterly_prototype_backtest_from_db",
     "save_saved_portfolio",
     "save_selected_dashboard_portfolio",
+    "update_selected_dashboard_portfolio_strategy_slot",
 ]

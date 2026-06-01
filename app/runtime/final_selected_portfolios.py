@@ -263,13 +263,103 @@ def _normalize_selected_decision_ids(values: list[Any] | tuple[Any, ...] | None)
     return normalized
 
 
+def _normalize_selected_dashboard_strategy_slot(value: Any) -> dict[str, Any] | None:
+    if isinstance(value, str):
+        raw = {"decision_id": value}
+    else:
+        raw = dict(value or {})
+    decision_id = str(raw.get("decision_id") or raw.get("selected_decision_id") or "").strip()
+    if not decision_id:
+        return None
+    capital = _optional_float(raw.get("initial_capital"))
+    if capital is None:
+        capital = _optional_float(raw.get("balance"))
+    use_latest_end = raw.get("use_latest_end")
+    if use_latest_end is None:
+        use_latest_end = not str(raw.get("end") or "").strip()
+    return {
+        "slot_id": str(raw.get("slot_id") or f"slot_{decision_id}").strip(),
+        "decision_id": decision_id,
+        "start": str(raw.get("start") or raw.get("start_date") or "").strip(),
+        "end": str(raw.get("end") or raw.get("end_date") or "").strip(),
+        "use_latest_end": bool(use_latest_end),
+        "initial_capital": float(capital) if capital is not None else None,
+        "memo": str(raw.get("memo") or "").strip(),
+    }
+
+
+def _normalize_selected_dashboard_strategy_slots(
+    values: list[Any] | tuple[Any, ...] | None,
+    *,
+    selected_decision_ids: list[Any] | tuple[Any, ...] | None = None,
+) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for value in list(values or []):
+        slot = _normalize_selected_dashboard_strategy_slot(value)
+        if slot is None:
+            continue
+        decision_id = str(slot.get("decision_id") or "")
+        if decision_id in seen:
+            continue
+        seen.add(decision_id)
+        normalized.append(slot)
+    for decision_id in _normalize_selected_decision_ids(list(selected_decision_ids or [])):
+        if decision_id in seen:
+            continue
+        seen.add(decision_id)
+        normalized.append(
+            {
+                "slot_id": f"slot_{decision_id}",
+                "decision_id": decision_id,
+                "start": "",
+                "end": "",
+                "use_latest_end": True,
+                "initial_capital": None,
+                "memo": "",
+            }
+        )
+    return normalized
+
+
+def _strategy_slots_from_portfolio_row(row: dict[str, Any]) -> list[dict[str, Any]]:
+    return _normalize_selected_dashboard_strategy_slots(
+        list(row.get("strategy_slots") or []),
+        selected_decision_ids=list(row.get("selected_decision_ids") or []),
+    )
+
+
+def _selected_dashboard_slot_blockers(slot: dict[str, Any], *, row_found: bool) -> list[str]:
+    blockers: list[str] = []
+    if not str(slot.get("decision_id") or "").strip():
+        blockers.append("Final Review selected decision을 선택해야 합니다.")
+    if not row_found:
+        blockers.append("Final Review selected 후보 원본을 찾을 수 없습니다.")
+    if not str(slot.get("start") or "").strip():
+        blockers.append("시작 날짜가 필요합니다.")
+    if not bool(slot.get("use_latest_end")) and not str(slot.get("end") or "").strip():
+        blockers.append("latest를 쓰지 않으면 종료 날짜가 필요합니다.")
+    capital = _optional_float(slot.get("initial_capital"))
+    if capital is None or capital <= 0.0:
+        blockers.append("투자금 / balance는 0보다 커야 합니다.")
+    return blockers
+
+
 def load_selected_dashboard_portfolios(
     *,
     include_deleted: bool = False,
     path: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Load user-created Selected Dashboard monitoring portfolios from saved state."""
-    rows = _read_selected_dashboard_portfolio_rows(path)
+    rows = []
+    for row in _read_selected_dashboard_portfolio_rows(path):
+        normalized_row = dict(row)
+        slots = _strategy_slots_from_portfolio_row(normalized_row)
+        normalized_row["strategy_slots"] = slots
+        normalized_row["selected_decision_ids"] = _normalize_selected_decision_ids(
+            [slot.get("decision_id") for slot in slots]
+        )
+        rows.append(normalized_row)
     if not include_deleted:
         rows = [row for row in rows if not row.get("deleted_at")]
     return sorted(
@@ -284,6 +374,7 @@ def save_selected_dashboard_portfolio(
     name: str,
     description: str | None = None,
     selected_decision_ids: list[Any] | tuple[Any, ...] | None = None,
+    strategy_slots: list[Any] | tuple[Any, ...] | None = None,
     portfolio_id: str | None = None,
     now: str | None = None,
     path: Path | None = None,
@@ -302,6 +393,17 @@ def save_selected_dashboard_portfolio(
                 existing_index = index
                 existing = dict(row)
                 break
+    normalized_slots = _normalize_selected_dashboard_strategy_slots(
+        strategy_slots if strategy_slots is not None else list(existing.get("strategy_slots") or []),
+        selected_decision_ids=(
+            selected_decision_ids
+            if selected_decision_ids is not None
+            else list(existing.get("selected_decision_ids") or [])
+        ),
+    )
+    normalized_decision_ids = _normalize_selected_decision_ids(
+        [slot.get("decision_id") for slot in normalized_slots]
+    )
     record = {
         "schema_version": SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION,
         "portfolio_id": str(portfolio_id or existing.get("portfolio_id") or f"selected_dashboard_portfolio_{uuid4().hex[:12]}"),
@@ -310,11 +412,8 @@ def save_selected_dashboard_portfolio(
         "deleted_at": None,
         "name": clean_name,
         "description": str(description if description is not None else existing.get("description") or "").strip(),
-        "selected_decision_ids": _normalize_selected_decision_ids(
-            selected_decision_ids
-            if selected_decision_ids is not None
-            else list(existing.get("selected_decision_ids") or [])
-        ),
+        "selected_decision_ids": normalized_decision_ids,
+        "strategy_slots": normalized_slots,
         "storage_boundary": {
             "source": str(_selected_dashboard_portfolio_path(path or SELECTED_DASHBOARD_PORTFOLIOS_FILE)),
             "final_decision_registry_write": False,
@@ -361,6 +460,11 @@ def _mutate_selected_dashboard_portfolio_strategy(
     decision_id: str,
     *,
     action: str,
+    start: str | None = None,
+    end: str | None = None,
+    use_latest_end: bool | None = None,
+    initial_capital: float | None = None,
+    memo: str | None = None,
     now: str | None = None,
     path: Path | None = None,
 ) -> dict[str, Any]:
@@ -373,20 +477,34 @@ def _mutate_selected_dashboard_portfolio_strategy(
     for index, row in enumerate(rows):
         if str(row.get("portfolio_id") or "") != clean_portfolio_id or row.get("deleted_at"):
             continue
-        decision_ids = _normalize_selected_decision_ids(list(row.get("selected_decision_ids") or []))
+        slots = _strategy_slots_from_portfolio_row(dict(row))
+        decision_ids = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
         if action == "add":
             if clean_decision_id in decision_ids:
                 return {"status": "duplicate", "message": "Selected strategy already exists in this portfolio.", "portfolio": dict(row)}
-            decision_ids.append(clean_decision_id)
+            slot = _normalize_selected_dashboard_strategy_slot(
+                {
+                    "decision_id": clean_decision_id,
+                    "start": start or "",
+                    "end": end or "",
+                    "use_latest_end": True if use_latest_end is None else bool(use_latest_end),
+                    "initial_capital": initial_capital,
+                    "memo": memo or "",
+                }
+            )
+            if slot is not None:
+                slots.append(slot)
             status = "added"
             message = "Selected strategy added."
         else:
             if clean_decision_id not in decision_ids:
                 return {"status": "not_found", "message": "Selected strategy is not in this portfolio.", "portfolio": dict(row)}
-            decision_ids = [item for item in decision_ids if item != clean_decision_id]
+            slots = [slot for slot in slots if str(slot.get("decision_id") or "") != clean_decision_id]
             status = "removed"
             message = "Selected strategy removed."
+        decision_ids = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
         row["selected_decision_ids"] = decision_ids
+        row["strategy_slots"] = slots
         row["updated_at"] = timestamp
         rows[index] = row
         _write_selected_dashboard_portfolio_rows(rows, path)
@@ -398,6 +516,11 @@ def add_selected_dashboard_portfolio_strategy(
     portfolio_id: str,
     decision_id: str,
     *,
+    start: str | None = None,
+    end: str | None = None,
+    use_latest_end: bool | None = None,
+    initial_capital: float | None = None,
+    memo: str | None = None,
     now: str | None = None,
     path: Path | None = None,
 ) -> dict[str, Any]:
@@ -405,6 +528,11 @@ def add_selected_dashboard_portfolio_strategy(
         portfolio_id,
         decision_id,
         action="add",
+        start=start,
+        end=end,
+        use_latest_end=use_latest_end,
+        initial_capital=initial_capital,
+        memo=memo,
         now=now,
         path=path,
     )
@@ -426,6 +554,58 @@ def remove_selected_dashboard_portfolio_strategy(
     )
 
 
+def update_selected_dashboard_portfolio_strategy_slot(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    use_latest_end: bool | None = None,
+    initial_capital: float | None = None,
+    memo: str | None = None,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Update one saved strategy slot without mutating Final Review decision rows."""
+    clean_portfolio_id = str(portfolio_id or "").strip()
+    clean_decision_id = str(decision_id or "").strip()
+    if not clean_portfolio_id or not clean_decision_id:
+        return {"status": "error", "message": "portfolio_id and decision_id are required.", "portfolio": {}}
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    for index, row in enumerate(rows):
+        if str(row.get("portfolio_id") or "") != clean_portfolio_id or row.get("deleted_at"):
+            continue
+        slots = _strategy_slots_from_portfolio_row(dict(row))
+        updated = False
+        for slot in slots:
+            if str(slot.get("decision_id") or "") != clean_decision_id:
+                continue
+            if start is not None:
+                slot["start"] = str(start or "").strip()
+            if end is not None:
+                slot["end"] = str(end or "").strip()
+            if use_latest_end is not None:
+                slot["use_latest_end"] = bool(use_latest_end)
+                if bool(use_latest_end):
+                    slot["end"] = ""
+            if initial_capital is not None:
+                slot["initial_capital"] = float(initial_capital)
+            if memo is not None:
+                slot["memo"] = str(memo or "").strip()
+            updated = True
+            break
+        if not updated:
+            return {"status": "not_found", "message": "Selected strategy is not in this portfolio.", "portfolio": dict(row)}
+        row["strategy_slots"] = slots
+        row["selected_decision_ids"] = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
+        row["updated_at"] = timestamp
+        rows[index] = row
+        _write_selected_dashboard_portfolio_rows(rows, path)
+        return {"status": "updated", "message": "Selected strategy slot updated.", "portfolio": dict(row)}
+    return {"status": "not_found", "message": "Portfolio not found.", "portfolio": {}}
+
+
 def build_selected_dashboard_portfolio_state(
     *,
     portfolios: list[dict[str, Any]] | None = None,
@@ -444,17 +624,73 @@ def build_selected_dashboard_portfolio_state(
     duplicate_references = 0
     for portfolio in active_portfolios:
         raw_ids = [str(item or "").strip() for item in list(portfolio.get("selected_decision_ids") or []) if str(item or "").strip()]
-        unique_ids = _normalize_selected_decision_ids(raw_ids)
-        duplicate_references += max(len(raw_ids) - len(unique_ids), 0)
-        strategy_rows = [row_by_decision_id[decision_id] for decision_id in unique_ids if decision_id in row_by_decision_id]
+        raw_slots = list(portfolio.get("strategy_slots") or [])
+        raw_slot_ids = [
+            str(slot.get("decision_id") or "")
+            for slot in [
+                _normalize_selected_dashboard_strategy_slot(raw_slot)
+                for raw_slot in raw_slots
+            ]
+            if slot and str(slot.get("decision_id") or "")
+        ]
+        slots = _strategy_slots_from_portfolio_row(portfolio)
+        unique_ids = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
+        duplicate_references += max(len(raw_ids) - len(_normalize_selected_decision_ids(raw_ids)), 0)
+        duplicate_references += max(len(raw_slot_ids) - len(_normalize_selected_decision_ids(raw_slot_ids)), 0)
+        strategy_rows = []
+        incomplete_slot_count = 0
+        complete_slot_count = 0
+        virtual_capital_total = 0.0
+        for slot in slots:
+            decision_id = str(slot.get("decision_id") or "")
+            selected_row = row_by_decision_id.get(decision_id)
+            effective_slot = dict(slot)
+            if selected_row is not None:
+                if not str(effective_slot.get("start") or "").strip():
+                    effective_slot["start"] = selected_row.get("baseline_start") or ""
+                if _optional_float(effective_slot.get("initial_capital")) is None:
+                    effective_slot["initial_capital"] = 10000.0
+            blockers = _selected_dashboard_slot_blockers(effective_slot, row_found=selected_row is not None)
+            if blockers:
+                incomplete_slot_count += 1
+            else:
+                complete_slot_count += 1
+                virtual_capital_total += float(_optional_float(effective_slot.get("initial_capital")) or 0.0)
+            if selected_row is None:
+                continue
+            strategy_rows.append(
+                {
+                    **selected_row,
+                    "dashboard_slot": effective_slot,
+                    "slot_id": effective_slot.get("slot_id"),
+                    "slot_start": effective_slot.get("start"),
+                    "slot_end": effective_slot.get("end"),
+                    "slot_use_latest_end": bool(effective_slot.get("use_latest_end")),
+                    "slot_initial_capital": effective_slot.get("initial_capital"),
+                    "slot_memo": effective_slot.get("memo"),
+                    "slot_input_complete": not blockers,
+                    "slot_blockers": blockers,
+                }
+            )
         missing_ids = [decision_id for decision_id in unique_ids if decision_id not in row_by_decision_id]
         missing_references += len(missing_ids)
+        if not unique_ids:
+            dashboard_status = "Empty"
+        elif missing_ids or incomplete_slot_count:
+            dashboard_status = "Needs Review"
+        else:
+            dashboard_status = "Ready"
         portfolio_rows.append(
             {
                 **portfolio,
                 "selected_decision_ids": unique_ids,
+                "strategy_slots": slots,
                 "strategy_count": len(strategy_rows),
                 "missing_strategy_count": len(missing_ids),
+                "complete_strategy_slot_count": complete_slot_count,
+                "incomplete_strategy_slot_count": incomplete_slot_count,
+                "virtual_capital_total": round(virtual_capital_total, 4),
+                "dashboard_status": dashboard_status,
                 "strategy_rows": strategy_rows,
                 "missing_decision_ids": missing_ids,
             }
@@ -480,6 +716,9 @@ def build_selected_dashboard_portfolio_state(
             "available_unassigned_strategy_count": len(available_rows),
             "missing_reference_count": missing_references,
             "duplicate_reference_count": duplicate_references,
+            "complete_strategy_slot_count": sum(int(row.get("complete_strategy_slot_count") or 0) for row in portfolio_rows),
+            "incomplete_strategy_slot_count": sum(int(row.get("incomplete_strategy_slot_count") or 0) for row in portfolio_rows),
+            "virtual_capital_total": round(sum(float(row.get("virtual_capital_total") or 0.0) for row in portfolio_rows), 4),
         },
         "execution_boundary": {
             "portfolio_saved_state": True,

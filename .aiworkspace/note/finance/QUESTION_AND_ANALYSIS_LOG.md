@@ -17,11 +17,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Monitoring Portfolio V1 is implementation complete. Selected Dashboard now treats user-created monitoring portfolios as the primary workspace, with Final Review selected candidates added one by one and Live / Deployment Readiness kept as optional preflight only.
+  - Selected Dashboard Portfolio Flow Redesign V1 is implementation complete. Selected Dashboard now treats user-created monitoring portfolios and strategy slots as the primary workspace, with monitoring scenario / rebalance summary first and evidence detail below.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-01 - Selected Dashboard should be portfolio-first and scenario-first
+- User request:
+  - 사용자가 `Operations > Selected Portfolio Dashboard`를 사용자가 만든 나의 포트폴리오, 전략 구성, 모니터링 시나리오 중심으로 다시 설계해 달라고 요청함.
+- Interpreted goal:
+  - Final Review handoff / readiness / provider evidence를 첫 화면 주인공에서 내리고, 포트폴리오 생성 / 선택, selected 전략 slot 설정, portfolio-level scenario / 리밸런싱 정보가 먼저 읽히게 만든다.
+- Analysis result:
+  - 기존 화면은 handoff / evidence 확인이 먼저 보이고 portfolio manager와 strategy recheck가 뒤따라 UX가 운영 대시보드처럼 느껴지지 않았다. 저장 모델은 `strategy_slots`를 추가하되 legacy `selected_decision_ids`를 계속 읽어야 한다.
+- Follow-up:
+  - 구현 결과 `전략 적용`과 `모니터 시나리오 실행`을 분리하고 evidence detail을 하단으로 낮췄다. Scenario 결과는 session-only이며 live approval / order / broker-account sync / auto rebalance는 계속 disabled다.
 
 ### 2026-06-01 - Phase 14 active state was stale and is removed
 - User request:

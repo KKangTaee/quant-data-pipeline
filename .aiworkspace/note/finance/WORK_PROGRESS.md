@@ -23,13 +23,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Monitoring Portfolio V1 is implementation complete. Selected Dashboard now uses user-created monitoring portfolios, a Final Review selected strategy pool, per-strategy virtual monitoring scenarios, and optional preflight only; no approval / order / account sync / auto rebalance behavior was added.
+  - Selected Dashboard Portfolio Flow Redesign V1 is implementation complete. Selected Dashboard now opens with a portfolio card shelf, saves per-portfolio strategy slots, separates `전략 적용` from `모니터 시나리오 실행`, and shows portfolio-level monitoring scenario / rebalance summary before lower evidence detail; no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-01 - Selected Dashboard Portfolio Flow Redesign V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`.
+- `Operations > Selected Portfolio Dashboard` now reads as `1. 나의 포트폴리오` -> `2. 포트폴리오 상세 / 전략 구성` -> `3. 모니터 시나리오`, with Final Review handoff / readiness / provider / audit evidence moved below the scenario workflow.
+- Dashboard saved state now supports backward-compatible strategy slots with selected decision / start / latest-end mode / balance / memo while preserving legacy `selected_decision_ids`.
+- Verification passed: py_compile, full `tests.test_service_contracts` 222 tests, `git diff --check`, and Browser QA screenshot `selected-dashboard-portfolio-flow-redesign-v1-qa.png`.
+- No Final Review decision rows, DB schema, provider fetch, broker/account sync, live approval, order, monitoring auto-write, or auto rebalance path was added.
 
 ### 2026-06-01 - Removed stale Phase 14 active pointers
 - Removed the stale active Phase 14 pointer from durable index / roadmap / root handoff logs.

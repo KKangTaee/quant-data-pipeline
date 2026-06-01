@@ -23,7 +23,7 @@ Last Verified: 2026-06-01
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current implementation focus: Selected Dashboard Monitoring Portfolio V1 is implementation complete. Selected Dashboard now starts with user-created monitoring portfolios, reads Final Review selected candidates as a strategy pool, runs per-strategy virtual monitoring scenarios, keeps Live / Deployment Readiness as optional preflight, and stores only dashboard setup in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`. No live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added.
+- Current implementation focus: Selected Dashboard Portfolio Flow Redesign V1 is implementation complete. Selected Dashboard now starts with a portfolio card shelf, stores per-portfolio strategy slots with selected decision / start / latest-end mode / balance / memo, separates strategy setup from scenario execution, shows portfolio-level monitoring scenario summary and rebalance targets first, and lowers recheck readiness / provider / deployment evidence into detail sections. Saved setup remains `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; Final Review rows remain read-only; no live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added.
 
 ## By Purpose
 

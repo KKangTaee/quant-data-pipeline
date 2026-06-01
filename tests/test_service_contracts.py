@@ -8689,6 +8689,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             load_selected_dashboard_portfolios,
             remove_selected_dashboard_portfolio_strategy,
             save_selected_dashboard_portfolio,
+            update_selected_dashboard_portfolio_strategy_slot,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -8703,12 +8704,17 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertEqual(record["schema_version"], 1)
             self.assertEqual(record["name"], "Core Monitor")
             self.assertEqual(record["selected_decision_ids"], [])
+            self.assertEqual(record["strategy_slots"], [])
             self.assertFalse(record["storage_boundary"]["final_decision_registry_write"])
             self.assertFalse(record["storage_boundary"]["monitoring_log_auto_write"])
 
             add_result = add_selected_dashboard_portfolio_strategy(
                 record["portfolio_id"],
                 "decision-selected",
+                start="2024-01-01",
+                use_latest_end=True,
+                initial_capital=10000.0,
+                memo="core sleeve",
                 now="2026-06-01T10:01:00",
                 path=path,
             )
@@ -8723,6 +8729,26 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertEqual(duplicate_result["status"], "duplicate")
             portfolios = load_selected_dashboard_portfolios(path=path)
             self.assertEqual(portfolios[0]["selected_decision_ids"], ["decision-selected"])
+            self.assertEqual(portfolios[0]["strategy_slots"][0]["start"], "2024-01-01")
+            self.assertEqual(portfolios[0]["strategy_slots"][0]["initial_capital"], 10000.0)
+
+            update_result = update_selected_dashboard_portfolio_strategy_slot(
+                record["portfolio_id"],
+                "decision-selected",
+                start="2024-02-01",
+                end="2026-05-29",
+                use_latest_end=False,
+                initial_capital=12000.0,
+                memo="updated sleeve",
+                now="2026-06-01T10:02:30",
+                path=path,
+            )
+            self.assertEqual(update_result["status"], "updated")
+            updated_slot = load_selected_dashboard_portfolios(path=path)[0]["strategy_slots"][0]
+            self.assertEqual(updated_slot["start"], "2024-02-01")
+            self.assertEqual(updated_slot["end"], "2026-05-29")
+            self.assertFalse(updated_slot["use_latest_end"])
+            self.assertEqual(updated_slot["initial_capital"], 12000.0)
 
             remove_result = remove_selected_dashboard_portfolio_strategy(
                 record["portfolio_id"],
@@ -8772,8 +8798,46 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(portfolio["strategy_count"], 1)
         self.assertEqual(portfolio["missing_strategy_count"], 1)
         self.assertEqual(portfolio["strategy_rows"][0]["decision_id"], "decision-selected")
+        self.assertEqual(portfolio["complete_strategy_slot_count"], 1)
+        self.assertEqual(portfolio["incomplete_strategy_slot_count"], 1)
+        self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
         self.assertFalse(state["execution_boundary"]["final_decision_registry_write"])
         self.assertFalse(state["execution_boundary"]["monitoring_log_auto_write"])
+
+    def test_selected_dashboard_portfolio_state_marks_complete_strategy_slots_ready(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            build_final_selected_portfolio_dashboard_row,
+            build_selected_dashboard_portfolio_state,
+        )
+
+        dashboard_row = build_final_selected_portfolio_dashboard_row(self._selected_row()["raw_decision"])
+        state = build_selected_dashboard_portfolio_state(
+            portfolios=[
+                {
+                    "portfolio_id": "p1",
+                    "name": "Core Monitor",
+                    "strategy_slots": [
+                        {
+                            "decision_id": "decision-selected",
+                            "start": "2024-01-01",
+                            "end": "",
+                            "use_latest_end": True,
+                            "initial_capital": 30000.0,
+                            "memo": "monitoring row",
+                        }
+                    ],
+                    "updated_at": "2026-06-01T10:00:00",
+                }
+            ],
+            dashboard_rows=[dashboard_row],
+        )
+
+        portfolio = state["portfolios"][0]
+        self.assertEqual(portfolio["dashboard_status"], "Ready")
+        self.assertEqual(portfolio["complete_strategy_slot_count"], 1)
+        self.assertEqual(portfolio["incomplete_strategy_slot_count"], 0)
+        self.assertEqual(portfolio["virtual_capital_total"], 30000.0)
+        self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
 
     def _ready_provider_evidence(self) -> dict:
         return {

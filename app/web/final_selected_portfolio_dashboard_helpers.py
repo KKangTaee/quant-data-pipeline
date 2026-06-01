@@ -66,7 +66,8 @@ def selected_dashboard_portfolio_label(row: dict[str, Any]) -> str:
     if len(name) > 72:
         name = f"{name[:69]}..."
     count = int(row.get("strategy_count") or len(list(row.get("selected_decision_ids") or [])) or 0)
-    return f"{name} | {count} strategies | {_display_value(row.get('updated_at'))}"
+    status = _display_value(row.get("dashboard_status"))
+    return f"{status} | {name} | {count} strategies | {_display_value(row.get('updated_at'))}"
 
 
 def build_selected_dashboard_portfolio_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -75,7 +76,11 @@ def build_selected_dashboard_portfolio_table(rows: list[dict[str, Any]]) -> pd.D
         display_rows.append(
             {
                 "Name": row.get("name"),
+                "Status": row.get("dashboard_status") or "Empty",
                 "Strategies": row.get("strategy_count", len(list(row.get("selected_decision_ids") or []))),
+                "Complete Slots": row.get("complete_strategy_slot_count", 0),
+                "Needs Review": row.get("incomplete_strategy_slot_count", 0) + row.get("missing_strategy_count", 0),
+                "Virtual Capital": row.get("virtual_capital_total", 0.0),
                 "Missing": row.get("missing_strategy_count", 0),
                 "Updated At": row.get("updated_at"),
                 "Created At": row.get("created_at"),
@@ -88,10 +93,19 @@ def build_selected_dashboard_portfolio_table(rows: list[dict[str, Any]]) -> pd.D
 def build_selected_dashboard_portfolio_strategy_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in rows:
+        slot = dict(row.get("dashboard_slot") or {})
+        blockers = [str(item) for item in list(row.get("slot_blockers") or []) if str(item)]
+        use_latest_end = bool(slot.get("use_latest_end"))
         display_rows.append(
             {
                 "Decision ID": row.get("decision_id"),
                 "Strategy": row.get("source_title"),
+                "Input Status": "Ready" if row.get("slot_input_complete") else "Needs Review",
+                "Missing Reason": "; ".join(blockers) if blockers else "-",
+                "Start": slot.get("start") or "-",
+                "End": "Latest market date" if use_latest_end else slot.get("end") or "-",
+                "Balance": slot.get("initial_capital"),
+                "Memo": slot.get("memo") or "-",
                 "Status": row.get("operation_status_label"),
                 "Components": row.get("component_count"),
                 "Target": f"{_optional_float(row.get('target_weight_total')) or 0.0:.1f}%",
