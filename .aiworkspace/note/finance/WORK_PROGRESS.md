@@ -4527,3 +4527,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-selected-route-preflight-v1/`에서 Practical Validation gate와 Final Review selected-route gate의 의미를 맞췄다.
   - Final Review selection policy를 Practical Validation에서 preflight로 먼저 실행하고, selected-route 저장을 막을 evidence gap은 `Selected-route Preflight` 필수 module의 `NEEDS_INPUT`으로 승격해 Final Review 이동을 차단한다.
   - 기존 saved Practical Validation row는 재작성하지 않고 Final Review source picker에서 동적으로 preflight를 확인해, 과거 `READY_WITH_REVIEW` row라도 selected-route 미통과이면 후보 목록에서 숨긴다.
+- Final Review pass candidate dashboard exposure:
+  - `.aiworkspace/note/finance/tasks/active/final-review-pass-candidate-search-20260601/`에서 통과 후보를 fresh 재검증한 뒤 Final Decision V2에 4개 GRS 후보를 append했다.
+  - `Final Review 통과 후보 2026-06-01` dashboard saved portfolio를 만들어 4개 selected decision id를 배정했고, Selected Dashboard Browser QA에서 `My Portfolios=1`, `Selected Pool=4`, `Assigned=4`를 확인했다.
+  - `GTAA Default Top3`는 fresh run에서 Practical Validation / investability packet이 block되어 저장하지 않았다. live approval / order / auto rebalance는 모두 disabled 상태다.

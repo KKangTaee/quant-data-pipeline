@@ -6964,3 +6964,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 Practical Validation module gate는 `REVIEW`를 이동 가능으로 처리했지만, Final Review selection policy는 gross-only / net-cost / 핵심 coverage 같은 selection-critical `REVIEW_REQUIRED`를 저장 차단으로 해석했다
 - Follow-up:
   - Final Review selection policy를 Practical Validation `Selected-route Preflight`로 재사용하고, preflight 미통과 row는 Final Review source picker에서 숨기도록 구현했다. Existing registry row는 rewrite하지 않고 동적 preflight로 판정한다
+
+### 2026-06-01 - Final Review 통과 후보를 Dashboard에 노출한다
+- User request:
+  - 사용자가 최종 통과한 후보들을 저장해서 Selected Portfolio Dashboard에 노출되도록 해 달라고 요청함
+- Interpreted goal:
+  - Final Review selected-route gate를 완화하지 않고, fresh 재검증에서 통과한 후보만 Final Decision V2와 Dashboard saved state에 남겨야 함
+- Analysis result:
+  - `GRS Liquid Macro Top2`, `GRS Macro Top1 MA200`, `GRS QQQ Gold Bonds Top2 MA150`, `GRS Macro Top3 MA200`는 replay PASS / Practical Validation READY / selected-route ready / investability packet ready였다. `GTAA Default Top3`는 fresh run에서 Practical Validation `BLOCKED`로 바뀌어 저장 대상에서 제외했다
+- Follow-up:
+  - Final Decision V2에 4개 row를 append하고 `Final Review 통과 후보 2026-06-01` dashboard portfolio에 4개 decision id를 배정했다. Dashboard는 read-only이며 live approval, order, broker/account linkage, auto rebalance는 모두 disabled다

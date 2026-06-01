@@ -14,3 +14,18 @@
     - `GRS QQQ Gold Bonds Top2 MA150`: QQQ / GLD / TLT / IEF / BIL, top `2`, MA `150`, CAGR `0.1294415188`, MDD `-0.0880554614`, Sharpe `1.3108865652`.
     - `GRS Macro Top3 MA200`: SPY / QQQ / GLD / IEF / TLT / BIL, top `3`, MA `200`, CAGR `0.1187777925`, MDD `-0.1263209120`, Sharpe `1.2898865794`.
   - Full gate check for those three: all replay PASS, period coverage PASS, Practical Validation `READY_FOR_FINAL_REVIEW`, selected-route preflight ready, Final Review selected gate Ready.
+- Durable dashboard exposure:
+  - Appended to `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`:
+    - `GRS Liquid Macro Top2`
+    - `GRS Macro Top1 MA200`
+    - `GRS QQQ Gold Bonds Top2 MA150`
+    - `GRS Macro Top3 MA200`
+  - Fresh GTAA Default Top3 re-run was blocked and not appended: replay PASS / period coverage PASS, but Practical Validation `BLOCKED`, selected-route preflight `SELECTED_ROUTE_PREFLIGHT_NEEDS_INPUT`, packet `INVESTABILITY_PACKET_BLOCKED`.
+  - Created `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` row `selected_dashboard_portfolio_final_review_passes_20260601` with the 4 appended decision ids.
+  - Service dashboard check: `HANDOFF_READY`, `final_decision_count=4`, `selected_decision_count=4`, `dashboard_row_count=4`, `monitorable_count=4`, `blocked_count=0`, live approval/order/auto rebalance all false.
+  - Browser QA on `http://127.0.0.1:8503/selected-portfolio-dashboard`: showed `My Portfolios=1`, `Selected Pool=4`, `Assigned=4`; tabs visible for all 4 GRS candidates.
+  - Verification:
+    - `.venv/bin/python -m py_compile app/runtime/portfolio_selection_v2.py app/runtime/final_selected_portfolios.py app/web/final_selected_portfolio_dashboard.py app/web/backtest_final_review_helpers.py`: PASS.
+    - `git diff --check`: PASS.
+    - `.venv/bin/python -m unittest tests.test_service_contracts.SelectedPortfolioMonitoringTimelineContractTests -v`: 34 tests PASS.
+    - First attempted unittest class name `FinalSelectedPortfolioDashboardServiceContractTests` did not exist; reran the actual selected dashboard contract class above.
