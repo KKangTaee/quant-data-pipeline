@@ -39,6 +39,14 @@ Last Verified: 2026-06-01
 | `.aiworkspace/note/finance/reports/backtests/` | Human-readable strategy / validation / decision reports | Reports may cite evidence, but do not replace registries. |
 | MySQL finance DBs | Provider, holdings, exposure, macro, price, factor data | Source-of-truth for full structured data. |
 
+As of the 2026-06-01 JSONL cleanup, the active selected-dashboard state is intentionally minimal:
+
+- `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`
+- `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`
+- `SAVED_PORTFOLIOS.jsonl`
+
+`PORTFOLIO_SELECTION_SOURCES.jsonl` and `PRACTICAL_VALIDATION_RESULTS.jsonl` may be absent until the next Backtest Analysis / Practical Validation save. File absence is not storage drift when no active selected-route source/result row is being preserved.
+
 ## Phase 13 Alignment Notes
 
 Phase 13 13-3 rechecked the storage boundary after the Phase 8~12 hardening cycle.
@@ -53,7 +61,13 @@ The current rule is:
 
 ## Legacy Registry Boundary
 
-The following registries are preserved for compatibility but should not gain new main-flow responsibilities:
+The following registries were archived out of the active registry directory during the 2026-06-01 JSONL cleanup. They are compatibility / prototype history, not current main-flow source-of-truth, and should not gain new main-flow responsibilities:
+
+Archive root:
+
+```text
+.aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/
+```
 
 | File | Boundary |
 |---|---|

@@ -1,0 +1,134 @@
+{
+  "archive_id": "jsonl-registry-audit-20260601-20260601T152645KST",
+  "archive_root": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST",
+  "created_at": "2026-06-01T15:26:45KST",
+  "entries": [
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/CANDIDATE_REVIEW_NOTES.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 5,
+      "sha256": "0be44d73a9d3536fbd9c7e0518cf74fd7e83219616a357d2dd6e6a845cd0ce10",
+      "source_path": ".aiworkspace/note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 10,
+      "sha256": "e398a4d9b8ad290325c76791922d06aab16552718ffad6b81151df16d8655779",
+      "source_path": ".aiworkspace/note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 2,
+      "sha256": "db08b149ad1f23f4cc2033d9df7043f7225f895bab28b13cb303428bad62313a",
+      "source_path": ".aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl"
+    },
+    {
+      "action": "keep-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "current runtime input or saved setup",
+      "row_count": 4,
+      "sha256": "1555b7ad47263ffb5cb0e9df95e0710f4ac354330d549f67068eed5937e26d8e",
+      "source_path": ".aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 1,
+      "sha256": "3d19c6d483384f0ea5efc3368f6b3874ca679f4019420c5ec890524aa4bdabc2",
+      "source_path": ".aiworkspace/note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 4,
+      "sha256": "a3921764272c91b5b1c7fd18cdb34eb9018f3ddf45cc7520898fa32b0ad9438b",
+      "source_path": ".aiworkspace/note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/PORTFOLIO_SELECTION_SOURCES.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 1,
+      "sha256": "fd17dcefff371837a44f408e6152e72f0b9cc4da523922e7efc97ed300c8f406",
+      "source_path": ".aiworkspace/note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/PRACTICAL_VALIDATION_RESULTS.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 2,
+      "sha256": "0fe8426a50db36d1108512a3a5a89d024e563b7bb50ad81acafc1da6d40e0141",
+      "source_path": ".aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl"
+    },
+    {
+      "action": "archive-remove-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
+      "row_count": 5,
+      "sha256": "454bdea913f0ef10630017d1b3ac7dcc8402b78eaf82d8d30410d18a7dc802b3",
+      "source_path": ".aiworkspace/note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl"
+    },
+    {
+      "action": "delete-generated-after-archive",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/run_history/BACKTEST_RUN_HISTORY.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "local/generated run history",
+      "row_count": 62,
+      "sha256": "2ae735189ac6d604fd8cec1d81e0a2a662500be5110abce370bb8dca580aa280",
+      "source_path": ".aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl"
+    },
+    {
+      "action": "delete-generated-after-archive",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/run_history/WEB_APP_RUN_HISTORY.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "local/generated run history",
+      "row_count": 10,
+      "sha256": "2be725c449d729d291335e7391a67955555eb681a6dc1a9d367292267394a35a",
+      "source_path": ".aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl"
+    },
+    {
+      "action": "keep-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/saved/SAVED_PORTFOLIOS.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "current runtime input or saved setup",
+      "row_count": 2,
+      "sha256": "7e37c1550ff1bac66b76d7c69f630b4e47df7c6588d95fbf56d0cbdfd7159877",
+      "source_path": ".aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl"
+    },
+    {
+      "action": "keep-active",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl",
+      "invalid_jsonl_rows": 0,
+      "reason": "current runtime input or saved setup",
+      "row_count": 1,
+      "sha256": "23f769888ae6454cc9d2fa67ffd6769008a42108296b60679c07e43d774a7b3e",
+      "source_path": ".aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl"
+    }
+  ],
+  "policy": {
+    "auto_rebalance": false,
+    "broker_account_connection": false,
+    "db_write": false,
+    "live_approval": false,
+    "order_instruction": false,
+    "synthetic_v2_migration": false
+  },
+  "schema_version": 1,
+  "scope": ".aiworkspace/note/finance/**/*.jsonl"
+}

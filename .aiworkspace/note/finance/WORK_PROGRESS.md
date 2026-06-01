@@ -4531,3 +4531,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/final-review-pass-candidate-search-20260601/`에서 통과 후보를 fresh 재검증한 뒤 Final Decision V2에 4개 GRS 후보를 append했다.
   - `Final Review 통과 후보 2026-06-01` dashboard saved portfolio를 만들어 4개 selected decision id를 배정했고, Selected Dashboard Browser QA에서 `My Portfolios=1`, `Selected Pool=4`, `Assigned=4`를 확인했다.
   - `GTAA Default Top3`는 fresh run에서 Practical Validation / investability packet이 block되어 저장하지 않았다. live approval / order / auto rebalance는 모두 disabled 상태다.
+- JSONL registry audit dry run:
+  - `.aiworkspace/note/finance/tasks/active/jsonl-registry-audit-20260601/`에서 `.aiworkspace/note/finance/**/*.jsonl` read-only inventory와 cleanup plan을 작성했다.
+  - JSONL 13개 / 109 row parse, GRS Final Decision V2 4개 selected row, Dashboard row 4개, assigned reference 4개를 확인했다.
+  - 승인 전 archive/delete/rewrite는 하지 않았다. 권장안은 GRS 4개를 Final Decision V2 self-contained selected record로 유지하고 synthetic source/result row는 만들지 않는 것이다.
+- JSONL registry cleanup:
+  - 사용자 승인 후 전체 JSONL 13개를 `.aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/`에 SHA-256 manifest와 함께 백업했다.
+  - active JSONL은 Final Decision V2, Selected Dashboard portfolios, Saved Portfolios 3개만 남겼고 legacy/prototype/generated JSONL 10개는 active에서 제거했다.
+  - 검증 결과 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0, 6개 focused service contract, `git diff --check`가 통과했다.

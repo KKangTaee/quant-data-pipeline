@@ -6974,3 +6974,23 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `GRS Liquid Macro Top2`, `GRS Macro Top1 MA200`, `GRS QQQ Gold Bonds Top2 MA150`, `GRS Macro Top3 MA200`는 replay PASS / Practical Validation READY / selected-route ready / investability packet ready였다. `GTAA Default Top3`는 fresh run에서 Practical Validation `BLOCKED`로 바뀌어 저장 대상에서 제외했다
 - Follow-up:
   - Final Decision V2에 4개 row를 append하고 `Final Review 통과 후보 2026-06-01` dashboard portfolio에 4개 decision id를 배정했다. Dashboard는 read-only이며 live approval, order, broker/account linkage, auto rebalance는 모두 disabled다
+
+### 2026-06-01 - Finance JSONL registry cleanup 전 read-only audit을 한다
+- User request:
+  - 사용자가 DB는 건드리지 않고 `.aiworkspace/note/finance/**/*.jsonl` 전체를 최신 프로그램 상태 기준으로 audit하고, 승인 전에는 삭제 / 재작성 없이 inventory와 정리안만 제시해 달라고 요청함
+- Interpreted goal:
+  - V1 / V2 / legacy compatibility / saved setup / local run history를 구분하고, GRS 4개 selected decision과 Selected Dashboard assignment를 유지하는 cleanup plan을 만들어야 함
+- Analysis result:
+  - 13개 JSONL, 109 row 모두 parse 성공. GRS 4개 Final Decision V2는 source/result registry counterpart는 없지만, 현재 Selected Dashboard read model은 Final Decision V2 self-contained record로 정상 작동하며 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0이다
+- Follow-up:
+  - `.aiworkspace/note/finance/tasks/active/jsonl-registry-audit-20260601/DRY_RUN_REPORT.md`에 dry-run report를 작성했다. 승인 전 archive/delete/rewrite는 하지 않았고, source/result synthetic migration도 gate 재실행 없이는 하지 않는 방향을 권장했다
+
+### 2026-06-01 - 초창기 prototype JSONL을 active에서 정리한다
+- User request:
+  - 사용자가 V1 / prototype 저장 데이터가 무엇인지 혼란스럽고, 실제 삭제가 필요한지 V2 승격이 필요한지 정리한 뒤 권장안대로 진행해 달라고 승인함
+- Interpreted goal:
+  - 초창기 candidate / proposal / pre-live / V1 final / generated run history를 active workflow에서 제거하되, 원본은 archive에 남기고 GRS 4개 Selected Dashboard 상태는 유지해야 함
+- Analysis result:
+  - legacy/prototype rows는 현재 selected-route gate를 통과한 V2 chain이 아니므로 V2 승격 대상이 아니며, GRS 4개는 이미 Final Decision V2 self-contained selected record로 Dashboard에서 정상 작동한다
+- Follow-up:
+  - 13개 JSONL을 archive에 백업하고 10개 active JSONL을 제거했다. active에는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`, `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIOS.jsonl`만 남겼으며 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0을 재검증했다
