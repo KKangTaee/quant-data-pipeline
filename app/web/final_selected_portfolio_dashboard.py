@@ -235,15 +235,33 @@ def _slot_for_row(row: dict[str, Any]) -> dict[str, Any]:
     return dict(row.get("dashboard_slot") or {})
 
 
+def _recheck_defaults_cache_key(row: dict[str, Any]) -> str:
+    return "|".join(
+        [
+            str(row.get("decision_id") or ""),
+            str(row.get("baseline_start") or ""),
+            str(row.get("baseline_end") or ""),
+        ]
+    )
+
+
+def _recheck_defaults(row: dict[str, Any]) -> dict[str, Any]:
+    cache_key = _recheck_defaults_cache_key(row)
+    cache = st.session_state.setdefault("selected_portfolio_recheck_defaults_cache", {})
+    if cache_key not in cache:
+        cache[cache_key] = build_selected_portfolio_recheck_defaults(row)
+    return dict(cache.get(cache_key) or {})
+
+
 def _slot_effective_start(row: dict[str, Any]) -> str:
     slot = _slot_for_row(row)
-    defaults = build_selected_portfolio_recheck_defaults(row)
+    defaults = _recheck_defaults(row)
     return str(slot.get("start") or defaults.get("default_start") or defaults.get("baseline_start") or "").strip()
 
 
 def _slot_effective_end(row: dict[str, Any]) -> str:
     slot = _slot_for_row(row)
-    defaults = build_selected_portfolio_recheck_defaults(row)
+    defaults = _recheck_defaults(row)
     if bool(slot.get("use_latest_end", True)):
         return str(defaults.get("default_end") or defaults.get("latest_market_date") or "").strip()
     return str(slot.get("end") or "").strip()
@@ -951,7 +969,7 @@ def _strategy_card_html(row: dict[str, Any], index: int) -> str:
     input_status = "Ready" if not blockers else "Needs Input"
     status_tone = "positive" if not blockers else "warning"
     result = _latest_recheck_result(row)
-    result_status = _strategy_result_status(row, result)
+    result_status = "Stale" if _has_stale_recheck_result(row) else _strategy_result_status(row, result)
     return (
         '<div class="fspd-strategy-card">'
         '<div class="fspd-strategy-card-header">'
@@ -969,6 +987,22 @@ def _strategy_card_html(row: dict[str, Any], index: int) -> str:
         "</div>"
         "</div>"
     )
+
+
+def _portfolio_detail_state_key(portfolio: dict[str, Any]) -> str:
+    return f"selected_dashboard_active_strategy_detail_{portfolio.get('portfolio_id')}"
+
+
+def _clear_portfolio_detail_selection(portfolio: dict[str, Any]) -> None:
+    st.session_state.pop(_portfolio_detail_state_key(portfolio), None)
+
+
+def _with_portfolio_context(row: dict[str, Any], portfolio: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **row,
+        "dashboard_portfolio_id": str(portfolio.get("portfolio_id") or ""),
+        "dashboard_portfolio_name": str(portfolio.get("name") or ""),
+    }
 
 
 def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -1086,7 +1120,10 @@ def _render_strategy_selection_manager(
     st.markdown("#### 2. 포트폴리오 상세 / 전략 구성")
     _render_portfolio_command_band(portfolio)
     selected_ids = [str(item) for item in list(portfolio.get("selected_decision_ids") or [])]
-    selected_rows = _selected_strategy_rows_for_portfolio(portfolio, dashboard_rows)
+    selected_rows = [
+        _with_portfolio_context(row, portfolio)
+        for row in _selected_strategy_rows_for_portfolio(portfolio, dashboard_rows)
+    ]
     st.markdown(
         '<div class="fspd-add-panel">'
         '<div class="fspd-section-label">+ 전략 추가</div>'
@@ -1132,7 +1169,7 @@ def _render_strategy_selection_manager(
             type="primary",
             width="stretch",
         ):
-            defaults = build_selected_portfolio_recheck_defaults(add_row or {})
+            defaults = _recheck_defaults(add_row or {})
             result = add_selected_dashboard_portfolio_strategy(
                 str(portfolio.get("portfolio_id") or ""),
                 str(add_row.get("decision_id") or ""),
@@ -1141,6 +1178,7 @@ def _render_strategy_selection_manager(
                 initial_capital=float(add_capital),
             )
             if result.get("status") == "added":
+                _clear_portfolio_detail_selection(portfolio)
                 st.success("전략을 추가했습니다.")
                 st.rerun()
             elif result.get("status") == "duplicate":
@@ -1163,13 +1201,13 @@ def _render_strategy_selection_manager(
 
     if selected_rows:
         st.markdown("##### 전략 보드")
-        st.caption("각 전략은 이 포트폴리오의 독립 slot입니다. 설정을 적용한 뒤 3번에서 포트폴리오 전체 시나리오를 실행합니다.")
+        st.caption("각 전략은 이 포트폴리오의 독립 slot입니다. 설정을 적용하면 기존 scenario 결과는 다시 실행해야 최신 상태가 됩니다.")
         with st.expander("전략 설정 테이블", expanded=False):
             st.dataframe(build_selected_dashboard_portfolio_strategy_table(selected_rows), width="stretch", hide_index=True)
         for index, row in enumerate(selected_rows):
             decision_id = str(row.get("decision_id") or f"decision_{index}")
             slot = _slot_for_row(row)
-            defaults = build_selected_portfolio_recheck_defaults(row)
+            defaults = _recheck_defaults(row)
             default_start = _coerce_date(slot.get("start") or defaults.get("default_start"), date(2024, 1, 1))
             default_end = _coerce_date(slot.get("end") or defaults.get("default_end"), date.today())
             use_latest_end_default = bool(slot.get("use_latest_end", True))
@@ -1208,6 +1246,8 @@ def _render_strategy_selection_manager(
                             memo=memo_value,
                         )
                         if result.get("status") == "updated":
+                            _clear_recheck_result(row)
+                            _clear_portfolio_detail_selection(portfolio)
                             st.success("전략 설정을 저장했습니다.")
                             st.rerun()
                         st.warning(str(result.get("message") or "전략 설정을 저장하지 못했습니다."))
@@ -1217,6 +1257,8 @@ def _render_strategy_selection_manager(
                             decision_id,
                         )
                         if result.get("status") == "removed":
+                            _clear_recheck_result(row)
+                            _clear_portfolio_detail_selection(portfolio)
                             st.success("전략을 제거했습니다.")
                             st.rerun()
                         st.warning(str(result.get("message") or "전략을 제거하지 못했습니다."))
@@ -1376,6 +1418,9 @@ def _run_strategy_recheck(row: dict[str, Any]) -> dict[str, Any]:
         end=_slot_effective_end(row),
         initial_capital=float(_slot_effective_capital(row)),
     )
+    result = dict(result or {})
+    result["dashboard_input_signature"] = _scenario_input_signature(row)
+    result["dashboard_result_key"] = _decision_key(row)
     st.session_state[f"selected_portfolio_recheck_result_{_decision_key(row)}"] = result
     return result
 
@@ -1475,25 +1520,45 @@ def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -
     summary = _portfolio_summary_from_results(strategy_rows)
     completed = len(summary["results"])
     runnable_rows = [row for row in strategy_rows if not _slot_blockers_for_row(row)]
+    pending_rows = [row for row in runnable_rows if not _latest_recheck_result(row)]
     action_cols = st.columns([0.66, 0.34], gap="small")
     with action_cols[0]:
         st.caption(
             "선택된 포트폴리오 전체 strategy slot을 balance 기준으로 합산합니다. "
-            "개별 전략 탭은 상세 재검증과 evidence 확인용입니다."
+            "이미 현재 설정으로 실행된 전략은 재사용하고, 미실행 / stale 전략만 업데이트합니다."
         )
     with action_cols[1]:
+        force_refresh = st.checkbox(
+            "전체 재실행",
+            value=False,
+            key="selected_dashboard_force_portfolio_scenarios",
+            help="켜면 이미 최신 결과가 있는 전략까지 다시 실행합니다.",
+        )
+        rows_to_run = runnable_rows if force_refresh else pending_rows
         if st.button(
-            "포트폴리오 시나리오 실행",
+            "포트폴리오 시나리오 업데이트",
             key="selected_dashboard_run_portfolio_scenarios",
             type="primary",
-            disabled=not runnable_rows,
+            disabled=not rows_to_run,
             width="stretch",
         ):
+            progress = st.progress(0.0)
+            status = st.empty()
             with st.spinner("포트폴리오 전략 시나리오를 순서대로 실행하는 중입니다..."):
-                for row in runnable_rows:
+                for index, row in enumerate(rows_to_run, start=1):
+                    status.caption(
+                        f"{index}/{len(rows_to_run)} 실행 중 - {row.get('source_title') or row.get('decision_id') or '-'}"
+                    )
                     _run_strategy_recheck(row)
-            st.success(f"{len(runnable_rows)}개 전략 시나리오를 실행했습니다.")
+                    progress.progress(index / len(rows_to_run))
+            status.empty()
+            progress.empty()
+            st.success(f"{len(rows_to_run)}개 전략 시나리오를 업데이트했습니다.")
             st.rerun()
+        if runnable_rows and not rows_to_run:
+            st.caption("현재 설정 기준으로 모든 실행 결과가 최신입니다. 다시 계산하려면 `전체 재실행`을 켜세요.")
+        elif pending_rows:
+            st.caption(f"업데이트 필요: {len(pending_rows)}개 / 최신 결과 재사용: {len(runnable_rows) - len(pending_rows)}개")
     _render_scenario_cockpit(summary, strategy_count=len(strategy_rows))
     if len(runnable_rows) < len(strategy_rows):
         st.warning(f"{len(strategy_rows) - len(runnable_rows)}개 전략은 시작일 / 종료일 / balance 설정 보강이 필요합니다.")
@@ -1548,6 +1613,51 @@ def _render_portfolio_strategy_comparison(strategy_rows: list[dict[str, Any]]) -
     )
 
 
+def _render_selected_strategy_detail(portfolio: dict[str, Any], strategy_rows: list[dict[str, Any]]) -> None:
+    st.markdown("#### 4. 전략별 상세 / 근거")
+    st.caption(
+        "Streamlit 탭은 숨겨진 탭도 모두 계산하므로, 여기서는 선택한 전략 1개만 상세 근거를 엽니다. "
+        "전략 추가 / 설정 변경만으로는 이 상세 재검증이 자동 실행되지 않습니다."
+    )
+    if not strategy_rows:
+        st.info("상세 확인할 전략이 없습니다.")
+        return
+
+    labels = [
+        f"{index + 1}. {_clip_text(row.get('source_title') or row.get('decision_id'), limit=70)}"
+        for index, row in enumerate(strategy_rows)
+    ]
+    picker_cols = st.columns([0.68, 0.32], gap="small")
+    with picker_cols[0]:
+        selected_label = st.selectbox(
+            "상세 확인할 전략",
+            options=labels,
+            key=f"selected_dashboard_strategy_detail_picker_{portfolio.get('portfolio_id')}",
+        )
+    selected_row = strategy_rows[labels.index(selected_label)]
+    with picker_cols[1]:
+        if st.button(
+            "선택 전략 상세 열기",
+            key=f"selected_dashboard_open_strategy_detail_{portfolio.get('portfolio_id')}",
+            width="stretch",
+        ):
+            st.session_state[_portfolio_detail_state_key(portfolio)] = _decision_key(selected_row)
+
+    active_key = str(st.session_state.get(_portfolio_detail_state_key(portfolio)) or "")
+    active_row = next((row for row in strategy_rows if _decision_key(row) == active_key), None)
+    if active_row is None:
+        st.info("상단 요약만 보고 있다면 여기서 멈춰도 됩니다. 개별 evidence가 필요할 때만 전략을 선택하고 상세를 여세요.")
+        return
+
+    if _has_stale_recheck_result(active_row):
+        st.warning("이 전략의 이전 scenario 결과는 현재 시작일 / 종료일 / balance 설정과 달라서 stale로 처리했습니다. 다시 실행하면 최신 결과로 갱신됩니다.")
+
+    _render_snapshot(active_row)
+    operations_evidence = _render_performance_recheck(active_row)
+    _render_operator_context(active_row, operations_evidence=operations_evidence)
+    _render_decision_dossier(active_row)
+
+
 def _render_dashboard_portfolio_workspace(
     *,
     dashboard_rows: list[dict[str, Any]],
@@ -1584,18 +1694,9 @@ def _render_dashboard_portfolio_workspace(
         return
 
     st.markdown("#### 3. 포트폴리오 모니터 시나리오")
-    st.caption("이 섹션은 선택된 포트폴리오 전체 성과를 합산해서 보여줍니다. 아래 전략 탭은 개별 전략 재검증과 evidence 확인용입니다.")
+    st.caption("이 섹션은 선택된 포트폴리오 전체 성과를 합산해서 보여줍니다. 아래 전략별 상세는 사용자가 열어본 1개 전략만 계산합니다.")
     _render_portfolio_monitoring_overview(selected_rows)
-    tabs = st.tabs([
-        f"{index + 1}. {str(row.get('source_title') or row.get('decision_id') or 'Selected')[:42]}"
-        for index, row in enumerate(selected_rows)
-    ])
-    for tab, row in zip(tabs, selected_rows):
-        with tab:
-            _render_snapshot(row)
-            operations_evidence = _render_performance_recheck(row)
-            _render_operator_context(row, operations_evidence=operations_evidence)
-            _render_decision_dossier(row)
+    _render_selected_strategy_detail(portfolio, selected_rows)
     _render_portfolio_strategy_comparison(selected_rows)
 
 
@@ -1646,11 +1747,54 @@ def _render_source_boundary(row: dict[str, Any] | None = None) -> None:
 
 
 def _decision_key(row: dict[str, Any]) -> str:
-    return str(row.get("decision_id") or "selected_portfolio")
+    parts = [
+        str(row.get("dashboard_portfolio_id") or "portfolio"),
+        str(row.get("slot_id") or "slot"),
+        str(row.get("decision_id") or "selected_portfolio"),
+    ]
+    return "::".join(parts)
+
+
+def _scenario_input_signature(row: dict[str, Any]) -> dict[str, Any]:
+    slot = _slot_for_row(row)
+    return {
+        "decision_id": str(row.get("decision_id") or ""),
+        "dashboard_portfolio_id": str(row.get("dashboard_portfolio_id") or ""),
+        "slot_id": str(row.get("slot_id") or ""),
+        "start": _slot_effective_start(row),
+        "end": _slot_effective_end(row),
+        "use_latest_end": bool(slot.get("use_latest_end", True)),
+        "initial_capital": round(float(_slot_effective_capital(row) or 0.0), 4),
+    }
+
+
+def _stored_recheck_result(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(st.session_state.get(f"selected_portfolio_recheck_result_{_decision_key(row)}") or {})
+
+
+def _result_matches_current_slot(row: dict[str, Any], result: dict[str, Any]) -> bool:
+    if not result:
+        return False
+    signature = result.get("dashboard_input_signature")
+    if not signature:
+        return False
+    return dict(signature) == _scenario_input_signature(row)
+
+
+def _has_stale_recheck_result(row: dict[str, Any]) -> bool:
+    result = _stored_recheck_result(row)
+    return bool(result) and not _result_matches_current_slot(row, result)
+
+
+def _clear_recheck_result(row: dict[str, Any]) -> None:
+    st.session_state.pop(f"selected_portfolio_recheck_result_{_decision_key(row)}", None)
 
 
 def _latest_recheck_result(row: dict[str, Any]) -> dict[str, Any]:
-    return dict(st.session_state.get(f"selected_portfolio_recheck_result_{_decision_key(row)}") or {})
+    result = _stored_recheck_result(row)
+    if not _result_matches_current_slot(row, result):
+        return {}
+    return result
 
 
 def _latest_drift_check(row: dict[str, Any]) -> dict[str, Any]:
@@ -2380,7 +2524,7 @@ def _render_recheck_evidence_detail(preflight: dict[str, Any], provider_evidence
 
 def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     st.markdown("##### Monitoring Scenario")
-    defaults = build_selected_portfolio_recheck_defaults(row)
+    defaults = _recheck_defaults(row)
     if defaults.get("latest_market_date_error"):
         st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
 
@@ -2398,6 +2542,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
         as_of_date=defaults.get("latest_market_date") or date.today().isoformat(),
     )
     decision_id = str(row.get("decision_id") or "selected_portfolio")
+    result_decision_key = _decision_key(row)
     slot = _slot_for_row(row)
     start = _slot_effective_start(row)
     end = _slot_effective_end(row)
@@ -2433,22 +2578,23 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
             run_clicked = st.button(
                 "모니터 시나리오 실행",
                 disabled=bool(slot_blockers),
-                key=f"selected_portfolio_run_recheck_{decision_id}",
+                key=f"selected_portfolio_run_recheck_{result_decision_key}",
                 type="primary",
                 width="stretch",
             )
 
-    result_key = f"selected_portfolio_recheck_result_{decision_id}"
     if run_clicked:
         with st.spinner("선정 포트폴리오 contract를 재실행하는 중입니다..."):
-            st.session_state[result_key] = _run_strategy_recheck(row)
+            _run_strategy_recheck(row)
 
     operations_payload = {
         "preflight": preflight,
         "provider_evidence": provider_evidence,
     }
-    result = dict(st.session_state.get(result_key) or {})
+    result = _latest_recheck_result(row)
     if not result:
+        if _has_stale_recheck_result(row):
+            st.warning("이전 scenario 결과가 있지만 현재 setup과 입력값이 달라서 표시하지 않았습니다. 다시 실행하면 최신 결과가 채워집니다.")
         st.info("`모니터 시나리오 실행`을 누르면 이 전략의 현재 가치, 손익, 수익률, 리스크 지표가 계산됩니다.")
         _render_recheck_evidence_detail(preflight, provider_evidence)
         return operations_payload

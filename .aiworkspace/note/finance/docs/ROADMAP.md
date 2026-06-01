@@ -1,12 +1,13 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-01
+Last Verified: 2026-06-02
 
 ## Current Work
 
 | Track | Status | Notes |
 |---|---|---|
+| Selected Dashboard Manual Scenario Run V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`; `Operations > Selected Portfolio Dashboard` no longer performs lower individual scenario detail work after strategy add / slot edit. Scenario session results are keyed by portfolio / slot / selected decision and current start / end / balance signature, stale results are hidden from aggregation, `포트폴리오 시나리오 업데이트` runs pending / stale strategies by default, and individual strategy evidence is opened for one selected strategy instead of eager-rendered tabs. No live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
 | Selected Dashboard Product Polish V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-product-polish-v1/`; `Operations > Selected Portfolio Dashboard` sections 1~3 now use fixed-height portfolio shelf cards, collapsed portfolio management for delete, selected portfolio command band, compact strategy board cards with collapsed edit/delete controls, and a portfolio-wide monitoring scenario cockpit with `포트폴리오 시나리오 실행`. Section 4 evidence / Monitoring Signals was intentionally left unchanged; no live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
 | Selected Dashboard Portfolio Flow Redesign V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`; `Operations > Selected Portfolio Dashboard` now opens with a portfolio card shelf and `+ 새 포트폴리오`, stores per-portfolio strategy slots with selected decision / start / latest-end mode / balance / memo, separates `전략 적용` from `모니터 시나리오 실행`, shows portfolio-level value / P&L / return / CAGR / MDD / benchmark summary and rebalance target table before lower evidence details. Final Review rows remain read-only; saved state stays in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; no live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
 | Selected Dashboard Monitoring Portfolio V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-portfolio-v1/`; `Operations > Selected Portfolio Dashboard` now starts with user-created monitoring portfolios, lets the user add Final Review selected candidates one by one without same-portfolio duplicates, runs per-strategy virtual monitoring scenarios, shows Monitoring Signals / open issues / optional preflight, and compares alternatives inside the same portfolio. Saved state is `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; no live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added |

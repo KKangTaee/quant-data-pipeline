@@ -23,13 +23,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Product Polish V1 is implementation complete. Selected Dashboard sections 1~3 now use fixed-height portfolio cards, collapsed portfolio management, selected portfolio command band, compact strategy board, and a portfolio-wide monitoring scenario cockpit; no approval / order / account sync / auto rebalance behavior was added.
+  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Strategy add / slot edit no longer triggers lower individual scenario detail work, portfolio scenario update runs pending / stale strategies by default, and individual evidence detail is lazy-open for one selected strategy; no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-02 - Selected Dashboard Manual Scenario Run V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`.
+- Strategy add / slot edit now changes saved setup only; current scenario results are keyed by portfolio / slot / selected decision and start / end / balance signature so stale results are not counted as fresh.
+- `포트폴리오 시나리오 업데이트` runs pending / stale strategies by default and `전체 재실행` forces a full refresh; individual strategy evidence is opened for one selected strategy instead of eager-rendered tabs.
+- Verification passed: py_compile, focused Selected Portfolio contracts, `git diff --check`, Browser text QA, and screenshot `selected-dashboard-manual-scenario-run-v1-qa.png`.
+- Full scenario replay can still be slow because selected strategy contracts are replayed sequentially; no async worker, DB schema, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
 
 ### 2026-06-01 - Selected Dashboard Product Polish V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-product-polish-v1/`.

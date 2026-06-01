@@ -17,11 +17,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Product Polish V1 is implementation complete. Selected Dashboard now treats sections 1~3 as a product workspace: fixed portfolio shelf, command band, compact strategy board, and portfolio-wide scenario cockpit.
+  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Scenario execution is explicit: strategy add / slot edit is saved setup only, portfolio scenario update runs pending / stale rows by default, and one selected strategy detail is lazy-rendered.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-02 - Selected Dashboard scenario execution must remain explicit
+- User request:
+  - 사용자가 전략 추가 직후 `3. 포트폴리오 모니터 시나리오` 또는 하단 개별 성과가 자동 실행되는 것처럼 보이고 오래 걸린다고 지적하며, 버튼을 눌렀을 때만 업데이트되도록 수정과 성능 검토를 요청함.
+- Interpreted goal:
+  - Strategy add / slot edit는 saved setup만 바꾸고, scenario result는 명시적인 portfolio-wide 또는 strategy별 실행 action이 있을 때만 새로 계산한다.
+- Analysis result:
+  - Portfolio-wide recheck 자체는 버튼 뒤에 있었지만, Streamlit `tabs`가 숨겨진 strategy detail 탭까지 eager render해 recheck defaults / preflight / provider evidence 조회가 전략 수만큼 자동 실행됐다. 또한 session result key가 decision-only라 다른 portfolio / slot 설정과 결과가 섞일 수 있었다.
+- Follow-up:
+  - 구현 결과 scenario result를 portfolio / slot / selected decision / start / end / balance signature로 판정하고, stale 결과는 합산하지 않는다. Portfolio update는 pending / stale 전략만 기본 실행하고 `전체 재실행`으로 full refresh한다. 개별 evidence detail은 사용자가 선택한 1개 strategy만 연다. Full replay는 여전히 selected component contract를 순차 실행하므로 장기적으로 cache / background job / per-strategy incremental queue가 개선 후보로 남는다.
 
 ### 2026-06-01 - Selected Dashboard UX polish should go beyond legacy cards/tabs
 - User request:
