@@ -4211,6 +4211,161 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(bundle["meta"]["score_lookback_months"], [3, 6, 12])
         self.assertFalse(bundle["summary_df"].empty)
 
+    def test_dynamic_etf_execution_dispatch_adds_promotion_policy_defaults(self) -> None:
+        from app.runtime.backtest import (
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+            STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+            STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        )
+        from app.services.backtest_execution import execute_single_backtest
+
+        payload = {
+            "strategy_key": "global_relative_strength",
+            "tickers": ["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"],
+            "cash_ticker": "BIL",
+            "start": "2016-01-29",
+            "end": "2026-05-29",
+            "timeframe": "1d",
+            "option": "month_end",
+            "top": 2,
+            "interval": 1,
+            "universe_mode": "manual_tickers",
+            "preset_name": "GRS Liquid Macro Top2",
+        }
+
+        with patch(
+            "app.services.backtest_execution.run_global_relative_strength_backtest_from_db",
+            return_value={"strategy_name": "Global Relative Strength", "meta": {}},
+        ) as runner:
+            result = execute_single_backtest(payload, strategy_name="Global Relative Strength")
+
+        self.assertTrue(result.ok, result.error_message)
+        kwargs = runner.call_args.kwargs
+        self.assertEqual(kwargs["promotion_min_benchmark_coverage"], STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE)
+        self.assertEqual(kwargs["promotion_min_net_cagr_spread"], STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD)
+        self.assertEqual(
+            kwargs["promotion_min_liquidity_clean_coverage"],
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        )
+        self.assertEqual(
+            kwargs["promotion_max_underperformance_share"],
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        )
+        self.assertEqual(
+            kwargs["promotion_min_worst_rolling_excess_return"],
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        )
+        self.assertEqual(kwargs["promotion_max_strategy_drawdown"], STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN)
+        self.assertEqual(
+            kwargs["promotion_max_drawdown_gap_vs_benchmark"],
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        )
+
+    def test_global_relative_strength_source_contract_includes_promotion_policy_defaults(self) -> None:
+        from app.runtime import backtest as runtime_backtest
+        from app.runtime.backtest import (
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+            STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+            STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        )
+
+        result_df = pd.DataFrame(
+            [
+                {"Date": "2020-01-31", "Total Balance": 100.0, "Total Return": 0.0},
+                {"Date": "2020-02-29", "Total Balance": 103.0, "Total Return": 0.03},
+                {"Date": "2020-03-31", "Total Balance": 107.0, "Total Return": 0.07},
+            ]
+        )
+        result_df.attrs["effective_tickers"] = ["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"]
+        result_df.attrs["requested_tickers"] = ["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"]
+        captured_hardening_kwargs: dict[str, object] = {}
+
+        def _capture_hardening(bundle: dict[str, object], **kwargs: object) -> dict[str, object]:
+            captured_hardening_kwargs.update(kwargs)
+            return bundle
+
+        with (
+            patch.object(
+                runtime_backtest,
+                "inspect_strict_annual_price_freshness",
+                return_value={"status": "ok", "message": "", "details": {}},
+            ),
+            patch.object(runtime_backtest, "_preflight_price_strategy_data"),
+            patch.object(runtime_backtest, "get_global_relative_strength_from_db", return_value=result_df),
+            patch.object(runtime_backtest, "_apply_real_money_hardening", side_effect=_capture_hardening),
+        ):
+            bundle = runtime_backtest.run_global_relative_strength_backtest_from_db(
+                tickers=["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"],
+                cash_ticker="BIL",
+                start="2020-01-31",
+                end="2020-03-31",
+                timeframe="1d",
+                option="month_end",
+                top=2,
+                interval=1,
+                benchmark_ticker="AOR",
+                universe_mode="manual_tickers",
+                preset_name="GRS Liquid Macro Top2",
+            )
+
+        meta = bundle["meta"]
+        self.assertEqual(meta["promotion_min_benchmark_coverage"], STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE)
+        self.assertEqual(meta["promotion_min_net_cagr_spread"], STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD)
+        self.assertEqual(
+            meta["promotion_min_liquidity_clean_coverage"],
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        )
+        self.assertEqual(
+            meta["promotion_max_underperformance_share"],
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        )
+        self.assertEqual(
+            meta["promotion_min_worst_rolling_excess_return"],
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        )
+        self.assertEqual(meta["promotion_max_strategy_drawdown"], STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN)
+        self.assertEqual(
+            meta["promotion_max_drawdown_gap_vs_benchmark"],
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        )
+        self.assertEqual(
+            captured_hardening_kwargs["promotion_min_net_cagr_spread"],
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        )
+
+    def test_dynamic_etf_compare_override_preserves_promotion_policy_defaults(self) -> None:
+        from app.runtime.backtest import STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD
+        from app.web.backtest_compare import _bundle_to_saved_strategy_override
+
+        override = _bundle_to_saved_strategy_override(
+            {
+                "strategy_name": "Global Relative Strength",
+                "meta": {
+                    "tickers": ["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"],
+                    "cash_ticker": "BIL",
+                    "top": 2,
+                    "rebalance_interval": 1,
+                    "benchmark_ticker": "AOR",
+                },
+            }
+        )
+
+        self.assertEqual(
+            override["promotion_min_net_cagr_spread"],
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        )
+        self.assertIn("promotion_min_benchmark_coverage", override)
+        self.assertIn("promotion_min_liquidity_clean_coverage", override)
+        self.assertIn("promotion_max_drawdown_gap_vs_benchmark", override)
+
     def test_result_bundle_rejects_missing_required_columns(self) -> None:
         from app.runtime.backtest_result_bundle import build_backtest_result_bundle
 
@@ -8179,6 +8334,41 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(
             any("Backtest Realism" in item for item in preflight["review_required"])
         )
+
+    def test_selected_route_preflight_blocks_equal_weight_missing_net_cost_proof(self) -> None:
+        from app.services.backtest_selected_route_preflight import (
+            build_practical_validation_selected_route_preflight,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["source_title"] = "Equal Weight proof-deficient regression"
+        validation["backtest_realism_audit"] = {
+            "route": "BACKTEST_REALISM_REVIEW",
+            "route_label": "Review Required",
+            "rows": [
+                {
+                    "Criteria": "Net cost curve proof",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "not_proven / equal weight net curve missing",
+                    "Meaning": "net cost curve proof is required before selected-route storage",
+                },
+                {
+                    "Criteria": "Turnover evidence",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "not_estimated_missing_holdings",
+                    "Meaning": "turnover proof is still missing",
+                },
+            ],
+        }
+
+        preflight = build_practical_validation_selected_route_preflight(validation)
+
+        self.assertFalse(preflight["select_allowed"])
+        self.assertEqual(preflight["policy_outcome"], "hold_or_re_review")
+        self.assertEqual(preflight["route"], "SELECTED_ROUTE_PREFLIGHT_NEEDS_INPUT")
+        self.assertTrue(any("Backtest Realism" in item for item in preflight["review_required"]))
 
     def test_gate_policy_blocks_selected_route_on_provider_review_for_balanced_profile(self) -> None:
         from app.services.backtest_evidence_read_model import (

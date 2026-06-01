@@ -3353,6 +3353,28 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
             st.markdown(f"- `Input Weights (%)`: `{meta.get('input_weights_percent') or component_input_weights or []}`")
             st.json(meta)
 
+def _dynamic_etf_promotion_policy_from_meta(meta: dict[str, Any]) -> dict[str, float]:
+    policy: dict[str, float] = {}
+    for key, default in _dynamic_etf_promotion_policy_defaults().items():
+        raw_value = meta.get(key)
+        policy[key] = float(default if raw_value is None else raw_value)
+    return policy
+
+
+def _set_dynamic_etf_promotion_prefill_state(key_prefix: str, override: dict[str, Any]) -> None:
+    for key, default in _dynamic_etf_promotion_policy_defaults().items():
+        raw_value = override.get(key)
+        st.session_state[f"{key_prefix}_{key}"] = float(default if raw_value is None else raw_value)
+
+
+def _dynamic_etf_promotion_policy_from_state(key_prefix: str) -> dict[str, float]:
+    policy: dict[str, float] = {}
+    for key, default in _dynamic_etf_promotion_policy_defaults().items():
+        raw_value = st.session_state.get(f"{key_prefix}_{key}", default)
+        policy[key] = float(default if raw_value is None else raw_value)
+    return policy
+
+
 def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = dict(bundle.get("meta") or {})
     strategy_name = bundle.get("strategy_name")
@@ -3400,6 +3422,7 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "promotion_max_bid_ask_spread_pct": float(
                 meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
             ),
+            **_dynamic_etf_promotion_policy_from_meta(meta),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             "underperformance_guardrail_enabled": bool(
                 meta.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
@@ -3455,6 +3478,7 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "promotion_max_bid_ask_spread_pct": float(
                 meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
             ),
+            **_dynamic_etf_promotion_policy_from_meta(meta),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "Risk Parity Trend":
@@ -3467,6 +3491,7 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "promotion_max_bid_ask_spread_pct": float(
                 meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
             ),
+            **_dynamic_etf_promotion_policy_from_meta(meta),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             "underperformance_guardrail_enabled": bool(
                 meta.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
@@ -3500,6 +3525,7 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "promotion_max_bid_ask_spread_pct": float(
                 meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
             ),
+            **_dynamic_etf_promotion_policy_from_meta(meta),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             "underperformance_guardrail_enabled": bool(
                 meta.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
@@ -4089,6 +4115,7 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state["compare_gtaa_drawdown_guardrail_gap_threshold"] = float(
             (override.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
+        _set_dynamic_etf_promotion_prefill_state("compare_gtaa", override)
         return
     if strategy_name == "Global Relative Strength":
         preset_name = override.get("preset_name")
@@ -4144,6 +4171,7 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state["compare_grs_benchmark_ticker"] = str(
             override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
         ).strip().upper()
+        _set_dynamic_etf_promotion_prefill_state("compare_grs", override)
         return
     if strategy_name == "Risk Parity Trend":
         st.session_state["compare_rp_interval"] = int(override.get("rebalance_interval") or 1)
@@ -4178,6 +4206,7 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state["compare_rp_drawdown_guardrail_gap_threshold"] = float(
             (override.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
+        _set_dynamic_etf_promotion_prefill_state("compare_rp", override)
         return
     if strategy_name == "Dual Momentum":
         st.session_state["compare_dm_top"] = int(override.get("top") or 1)
@@ -4212,6 +4241,7 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state["compare_dm_drawdown_guardrail_gap_threshold"] = float(
             (override.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
+        _set_dynamic_etf_promotion_prefill_state("compare_dm", override)
         return
     if strategy_name == "Quality Snapshot":
         st.session_state["compare_qs_top_n"] = int(override.get("top_n") or 2)
@@ -4864,6 +4894,9 @@ def _render_strategy_compare_workspace() -> None:
                     compare_strategy_overrides["GTAA"]["benchmark_ticker"] = benchmark_ticker
                     compare_strategy_overrides["GTAA"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
                     compare_strategy_overrides["GTAA"]["promotion_max_bid_ask_spread_pct"] = float(promotion_max_bid_ask_spread_pct)
+                    compare_strategy_overrides["GTAA"].update(
+                        _dynamic_etf_promotion_policy_from_state("compare_gtaa")
+                    )
                     with st.expander("ETF Guardrails", expanded=False):
                         (
                             underperformance_guardrail_enabled,
@@ -4975,6 +5008,9 @@ def _render_strategy_compare_workspace() -> None:
                     compare_strategy_overrides["Global Relative Strength"]["promotion_max_bid_ask_spread_pct"] = float(
                         promotion_max_bid_ask_spread_pct
                     )
+                    compare_strategy_overrides["Global Relative Strength"].update(
+                        _dynamic_etf_promotion_policy_from_state("compare_grs")
+                    )
 
             if "Risk Parity Trend" in selected_strategies:
                 with st.container(border=True):
@@ -5018,6 +5054,9 @@ def _render_strategy_compare_workspace() -> None:
                     compare_strategy_overrides["Risk Parity Trend"]["benchmark_ticker"] = benchmark_ticker
                     compare_strategy_overrides["Risk Parity Trend"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
                     compare_strategy_overrides["Risk Parity Trend"]["promotion_max_bid_ask_spread_pct"] = float(promotion_max_bid_ask_spread_pct)
+                    compare_strategy_overrides["Risk Parity Trend"].update(
+                        _dynamic_etf_promotion_policy_from_state("compare_rp")
+                    )
                     with st.expander("ETF Guardrails", expanded=False):
                         (
                             underperformance_guardrail_enabled,
@@ -5081,6 +5120,9 @@ def _render_strategy_compare_workspace() -> None:
                     compare_strategy_overrides["Dual Momentum"]["benchmark_ticker"] = benchmark_ticker
                     compare_strategy_overrides["Dual Momentum"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
                     compare_strategy_overrides["Dual Momentum"]["promotion_max_bid_ask_spread_pct"] = float(promotion_max_bid_ask_spread_pct)
+                    compare_strategy_overrides["Dual Momentum"].update(
+                        _dynamic_etf_promotion_policy_from_state("compare_dm")
+                    )
                     with st.expander("ETF Guardrails", expanded=False):
                         (
                             underperformance_guardrail_enabled,

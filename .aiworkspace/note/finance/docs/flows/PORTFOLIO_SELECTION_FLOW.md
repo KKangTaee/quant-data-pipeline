@@ -65,6 +65,7 @@ PORTFOLIO_SELECTION_SOURCES
 Selected Dashboard의 Timeline / Continuity / Review Signals / Decision Dossier는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2` row를 같은 durable source로 표시하고, session-state recheck / drift / alert evidence는 저장된 monitoring history가 아니라 read-only context로 표시한다.
 Selected Dashboard handoff review도 같은 Final Decision V2 row를 읽으며, selected route / dashboard row build / monitorable 여부를 표시한다. 사용자가 만든 dashboard portfolio setup은 별도 saved state인 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에만 저장되며 Final Decision V2 row를 수정하지 않는다.
 Final Decision V2 row는 backward compatibility용 `gate_policy_snapshot`을 selection policy로 유지하고, `selection_gate_policy_snapshot`, `deployment_readiness_policy_snapshot`, `open_review_items`를 함께 저장해 선정 판단과 live 투입 감사 후보 항목을 분리한다.
+ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서 strict promotion default와 일관된 `promotion_min_benchmark_coverage`, `promotion_min_net_cagr_spread`, `promotion_min_liquidity_clean_coverage`, rolling underperformance, drawdown policy threshold를 함께 싣는다. Practical Validation이나 Final Review가 missing policy를 후처리로 채우지 않으며, net cost / turnover proof가 부족한 후보는 selected-route gate에서 계속 막힌다.
 
 ## User-Facing Rules
 

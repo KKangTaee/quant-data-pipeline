@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-01 - ETF dynamic strategy sources should carry promotion policy thresholds
+- User request:
+  - GRS Liquid Macro Top2처럼 실제 성과와 net cost / turnover proof가 충분한 ETF 동적 전략 후보가 `promotion_min_net_cagr_spread` 등 source contract 누락 때문에 Practical Validation selected-route preflight와 Final Review selected gate에서 막히는 문제를 해결해 달라고 요청함.
+- Interpreted goal:
+  - Final Review gate를 완화하지 않고, Backtest Analysis fresh source contract에서 GTAA / Global Relative Strength / Risk Parity / Dual Momentum이 strict-compatible promotion policy metadata를 자연스럽게 갖게 만든다.
+- Analysis result:
+  - `_apply_real_money_hardening`은 이미 policy sink 역할을 하고 있었고, 누락 지점은 ETF dynamic runtime / execution dispatch / replay / compare override의 upstream propagation이었다. 해당 경로에 `promotion_min_benchmark_coverage`, `promotion_min_net_cagr_spread`, `promotion_min_liquidity_clean_coverage`, rolling / drawdown policy defaults를 보강했다.
+  - Fresh GRS Liquid Macro Top2 검증에서 `promotion_min_net_cagr_spread=-0.02`, `net_cagr_spread=0.0718244521`, Practical Validation replay PASS, selected-route preflight `select_ready`, Final Review selected gate Ready를 확인했다.
+- Follow-up:
+  - 기존 registry / saved row migration은 하지 않았다. 오래된 row는 rerun/replay 전까지 policy field가 비어 있을 수 있으며, net-cost / turnover proof가 부족한 Equal Weight-style 후보는 계속 selected-route gate에서 막힌다.
+
 ### 2026-06-01 - Selected Dashboard should become a monitoring portfolio workspace
 - User request:
   - Final Review를 통과한 후보를 실제 투자 후보로 보고, Selected Dashboard에서 사용자가 나의 포트폴리오를 만들고 Final Review selected 후보를 하나씩 담아 가상 시작일 / 종료일 / 초기자산 기준으로 선정 이후 성과와 리밸런싱 필요성을 모니터링하고 싶다고 요청함.

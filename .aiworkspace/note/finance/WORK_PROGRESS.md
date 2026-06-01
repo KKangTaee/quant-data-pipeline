@@ -32,6 +32,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-06-01
+- Completed `.aiworkspace/note/finance/tasks/active/etf-dynamic-promotion-policy-contract-v1/`.
+- ETF dynamic strategies now carry strict-compatible promotion policy thresholds from Backtest Analysis source contract through execution dispatch, compare overrides, Practical Validation replay, and candidate source snapshots.
+- Fresh `GRS Liquid Macro Top2` verification passed: source has `promotion_min_net_cagr_spread=-0.02`, Practical Validation replay PASS, selected-route preflight `select_ready`, and Final Review selected gate Ready.
+- Final Review gate policy was not relaxed; proof-deficient Equal Weight-style missing net-cost / turnover evidence remains blocked by selected-route preflight.
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-portfolio-v1/`.
 - `Operations > Selected Portfolio Dashboard` now starts with `1. 나의 포트폴리오`, stores dashboard setup in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, and lets users add Final Review selected candidates one by one without same-portfolio duplicates.
 - Monitoring Scenario now uses virtual start / end / capital, with latest DB market date as the default end, and Monitoring Signals / Open Issues / optional Preflight / same-portfolio transition comparison are organized after scenario execution.
