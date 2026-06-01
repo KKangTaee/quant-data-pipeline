@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Selection Readiness Gate V1 is implementation complete. Fresh pre-change candidate searches found no current-gate selected V2 row; the new gate separates Selected Dashboard candidate selection from future live-readiness audit and carries default `REVIEW` findings as open review items.
+  - Selected Dashboard Live Readiness Follow-up V1 is implementation complete. Selected Dashboard now surfaces Final Review open issues / follow-up triggers and a read-only Deployment Readiness preflight. Fresh registry recheck found no selected-route pass, so no Final Decision V2 row was appended.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-06-01
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-live-readiness-followup-v1/`.
+- `Operations > Selected Portfolio Dashboard` now shows Open Issues / Follow-up and Deployment Readiness tabs sourced from selected Final Decision V2 snapshots and existing read-only dashboard evidence.
+- Deployment Readiness remains preflight-only: no live approval, order, broker/account connection, monitoring auto-write, or auto rebalance behavior was added.
+- Candidate recheck found 2 Practical Validation rows, 1 Final Review eligible GTAA row, and 0 selected-route pass; non-GTAA candidates exist only in legacy current/proposal registries, so no fresh selected row was appended.
 - Completed `.aiworkspace/note/finance/tasks/active/final-review-selection-readiness-gate-v1/`.
 - Final Review now uses `selection_gate_policy_snapshot` for `SELECT_FOR_PRACTICAL_PORTFOLIO` save readiness and preserves the older stricter audit as `deployment_readiness_policy_snapshot`.
 - Default `REVIEW` findings become `open_review_items`; hard blockers / critical missing evidence still block selected-route save.

@@ -15,12 +15,14 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_allocation_drift_boundary_table,
     build_selected_portfolio_continuity_table,
     build_selected_portfolio_current_weight_input_table,
+    build_selected_portfolio_deployment_readiness_table,
     build_selected_portfolio_drift_alert_table,
     build_selected_portfolio_drift_table,
     build_selected_portfolio_component_table,
     build_selected_portfolio_dashboard_table,
     build_selected_portfolio_evidence_table,
     build_selected_portfolio_monitoring_timeline_table,
+    build_selected_portfolio_open_issue_followup_table,
     build_selected_portfolio_provider_evidence_table,
     build_selected_portfolio_provider_symbol_weight_table,
     build_selected_portfolio_recheck_comparison_table,
@@ -47,7 +49,9 @@ from app.runtime import (
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
+    build_selected_portfolio_deployment_readiness_preflight,
     build_selected_portfolio_monitoring_timeline,
+    build_selected_portfolio_open_issue_followup,
     build_selected_portfolio_performance_recheck,
     build_selected_portfolio_provider_evidence,
     build_selected_portfolio_recheck_comparison,
@@ -106,6 +110,24 @@ def _review_trigger_tone(status: str) -> str:
     if normalized in {"Watch", "WATCH", "Needs Input", "NEEDS_INPUT"}:
         return "warning"
     if normalized in {"Breached", "BREACHED"}:
+        return "danger"
+    return "neutral"
+
+
+def _open_issue_tone(route: str) -> str:
+    if route == "OPEN_ISSUES_CLEAR":
+        return "positive"
+    if route in {"OPEN_ISSUES_PRESENT", "OPEN_ISSUES_NEEDS_INPUT"}:
+        return "warning"
+    return "neutral"
+
+
+def _deployment_readiness_tone(route: str) -> str:
+    if route == "DEPLOYMENT_READINESS_READY":
+        return "positive"
+    if route in {"DEPLOYMENT_READINESS_REVIEW", "DEPLOYMENT_READINESS_NEEDS_INPUT"}:
+        return "warning"
+    if route == "DEPLOYMENT_READINESS_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -682,8 +704,38 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
                 hide_index=True,
             )
 
-    timeline_tab, trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
-        ["Timeline", "Review Signals", "Why Selected", "Actual Allocation", "Audit"]
+    open_issue_followup = build_selected_portfolio_open_issue_followup(row)
+    review_signal_policy = build_selected_portfolio_review_signal_policy(
+        row,
+        recheck_result=_latest_recheck_result(row),
+        recheck_preflight=dict(operations.get("preflight") or {}),
+        provider_evidence=dict(operations.get("provider_evidence") or {}),
+        drift_check=_latest_drift_check(row),
+    )
+    allocation_boundary = build_selected_portfolio_allocation_drift_boundary(
+        row,
+        drift_check=_latest_drift_check(row),
+        alert_preview=_latest_drift_alert_preview(row),
+    )
+    deployment_preflight = build_selected_portfolio_deployment_readiness_preflight(
+        row,
+        recheck_preflight=dict(operations.get("preflight") or {}),
+        provider_evidence=dict(operations.get("provider_evidence") or {}),
+        continuity_check=continuity,
+        review_signal_policy=review_signal_policy,
+        allocation_boundary=allocation_boundary,
+    )
+
+    timeline_tab, trigger_tab, issue_tab, deployment_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
+        [
+            "Timeline",
+            "Review Signals",
+            "Open Issues",
+            "Deployment Readiness",
+            "Why Selected",
+            "Actual Allocation",
+            "Audit",
+        ]
     )
     with timeline_tab:
         st.caption(
@@ -735,13 +787,6 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
         st.caption(
             "Performance Recheck와 Actual Allocation의 최신 입력을 운영 signal 상태로 번역합니다. "
             "성과 threshold는 Recheck Comparison을 기준으로 읽고, Watch / Breached row의 Suggested Action을 확인합니다."
-        )
-        review_signal_policy = build_selected_portfolio_review_signal_policy(
-            row,
-            recheck_result=_latest_recheck_result(row),
-            recheck_preflight=dict(operations.get("preflight") or {}),
-            provider_evidence=dict(operations.get("provider_evidence") or {}),
-            drift_check=_latest_drift_check(row),
         )
         signal_metrics = dict(review_signal_policy.get("metrics") or {})
         signal_boundary = dict(review_signal_policy.get("execution_boundary") or {})
@@ -848,6 +893,105 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
                 st.caption("등록된 review trigger가 없습니다.")
             if blockers:
                 st.warning("남아 있는 blocker: " + ", ".join(blockers))
+    with issue_tab:
+        st.caption(
+            "Final Review에서 selection은 허용했지만 Dashboard / Live Readiness에서 이어서 봐야 할 open issue와 follow-up trigger입니다. "
+            "이 표는 monitoring log를 자동 저장하지 않습니다."
+        )
+        issue_metrics = dict(open_issue_followup.get("metrics") or {})
+        issue_boundary = dict(open_issue_followup.get("execution_boundary") or {})
+        issue_route = str(open_issue_followup.get("route") or "")
+        render_badge_strip(
+            [
+                {
+                    "label": "Open Issues",
+                    "value": open_issue_followup.get("route_label") or issue_route,
+                    "tone": _open_issue_tone(issue_route),
+                },
+                {
+                    "label": "Open Review",
+                    "value": issue_metrics.get("open_review_item_count", 0),
+                    "tone": "warning" if issue_metrics.get("open_review_item_count") else "neutral",
+                },
+                {
+                    "label": "Triggers",
+                    "value": issue_metrics.get("review_trigger_count", 0),
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Needs Input",
+                    "value": issue_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if issue_metrics.get("needs_input_count") else "neutral",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if issue_route == "OPEN_ISSUES_NEEDS_INPUT":
+            st.warning(str(open_issue_followup.get("conclusion") or "-"))
+        elif issue_route == "OPEN_ISSUES_PRESENT":
+            st.info(str(open_issue_followup.get("conclusion") or "-"))
+        else:
+            st.success(str(open_issue_followup.get("conclusion") or "-"))
+        issue_df = build_selected_portfolio_open_issue_followup_table(open_issue_followup)
+        if issue_df.empty:
+            st.info("표시할 open issue / follow-up row가 없습니다.")
+        else:
+            st.dataframe(issue_df, width="stretch", hide_index=True)
+        st.caption(
+            f"Write policy: {issue_boundary.get('write_policy') or '-'} / "
+            f"monitoring auto write: {issue_boundary.get('monitoring_log_auto_write')} / "
+            f"live approval: {issue_boundary.get('live_approval')}"
+        )
+    with deployment_tab:
+        st.caption(
+            "실제 자금 투입 판단 전에 남은 blocker / review / data gap을 read-only로 묶어 봅니다. "
+            "이 preflight는 승인, 주문, 계좌 연결, 자동 리밸런싱을 만들지 않습니다."
+        )
+        deployment_metrics = dict(deployment_preflight.get("metrics") or {})
+        deployment_boundary = dict(deployment_preflight.get("execution_boundary") or {})
+        deployment_route = str(deployment_preflight.get("route") or "")
+        render_badge_strip(
+            [
+                {
+                    "label": "Deployment",
+                    "value": deployment_preflight.get("route_label") or deployment_route,
+                    "tone": _deployment_readiness_tone(deployment_route),
+                },
+                {
+                    "label": "Blocked",
+                    "value": deployment_metrics.get("blocked_count", 0),
+                    "tone": "danger" if deployment_metrics.get("blocked_count") else "neutral",
+                },
+                {
+                    "label": "Needs Input",
+                    "value": deployment_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if deployment_metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Review",
+                    "value": deployment_metrics.get("review_count", 0),
+                    "tone": "warning" if deployment_metrics.get("review_count") else "neutral",
+                },
+                {"label": "Approval / Order", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if deployment_route == "DEPLOYMENT_READINESS_BLOCKED":
+            st.warning(str(deployment_preflight.get("conclusion") or "-"))
+        elif deployment_route in {"DEPLOYMENT_READINESS_REVIEW", "DEPLOYMENT_READINESS_NEEDS_INPUT"}:
+            st.info(str(deployment_preflight.get("conclusion") or "-"))
+        else:
+            st.success(str(deployment_preflight.get("conclusion") or "-"))
+        deployment_df = build_selected_portfolio_deployment_readiness_table(deployment_preflight)
+        if deployment_df.empty:
+            st.info("표시할 deployment readiness row가 없습니다.")
+        else:
+            st.dataframe(deployment_df, width="stretch", hide_index=True)
+        st.caption(
+            f"Write policy: {deployment_boundary.get('write_policy') or '-'} / "
+            f"account connection: {deployment_boundary.get('account_connection')} / "
+            f"order instruction: {deployment_boundary.get('order_instruction')} / "
+            f"auto rebalance: {deployment_boundary.get('auto_rebalance')}"
+        )
     with evidence_tab:
         st.caption("Final Review에서 이 포트폴리오가 실전 후보로 선정될 수 있었던 검증 근거입니다.")
         if evidence_df.empty:
@@ -1257,15 +1401,19 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                 initial_capital=float(initial_capital),
             )
 
+    operations_payload = {
+        "preflight": preflight,
+        "provider_evidence": provider_evidence,
+    }
     result = dict(st.session_state.get(result_key) or {})
     if not result:
         st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Performance Recheck`를 누르면 최신 기간 기준 성과를 바로 계산합니다.")
-        return
+        return operations_payload
     if result.get("status") == "error":
         st.error(str(result.get("error") or "Performance recheck failed."))
         for blocker in list(result.get("blockers") or []):
             st.warning(str(blocker))
-        return
+        return operations_payload
 
     for blocker in list(result.get("blockers") or []):
         st.warning(str(blocker))
@@ -1410,10 +1558,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
                     worst_df["Total Balance"] = worst_df["Total Balance"].map(lambda value: _format_money(value))
                 st.dataframe(worst_df, width="stretch", hide_index=True)
 
-    return {
-        "preflight": preflight,
-        "provider_evidence": provider_evidence,
-    }
+    return operations_payload
 
 
 def _render_selected_row_drift_check(row: dict[str, Any]) -> None:

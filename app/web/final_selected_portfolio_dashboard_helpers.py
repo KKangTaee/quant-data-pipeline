@@ -61,6 +61,40 @@ def build_selected_portfolio_dashboard_table(rows: list[dict[str, Any]]) -> pd.D
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_open_issue_followup_table(followup: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(followup.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("Area"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+                "Source": row.get("Source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_deployment_readiness_table(preflight: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(preflight.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("Area"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+                "Source": row.get("Source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def build_selected_dashboard_handoff_table(handoff: dict[str, Any]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in list(handoff.get("rows") or []):

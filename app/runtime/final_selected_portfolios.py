@@ -61,6 +61,8 @@ SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION = "selected_provider_evidenc
 SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION = "selected_review_signal_policy_v1"
 SELECTED_DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
 SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION = "selected_dashboard_handoff_v1"
+SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION = "selected_open_issue_followup_v1"
+SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_SCHEMA_VERSION = "selected_deployment_readiness_preflight_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -127,6 +129,17 @@ SELECTED_DASHBOARD_HANDOFF_ROUTE_LABELS = {
     "HANDOFF_BLOCKED": "Dashboard 연결 차단",
     "HANDOFF_READY": "Dashboard 연결 가능",
 }
+SELECTED_OPEN_ISSUE_FOLLOWUP_ROUTE_LABELS = {
+    "OPEN_ISSUES_CLEAR": "Follow-up clear",
+    "OPEN_ISSUES_PRESENT": "Follow-up 확인 필요",
+    "OPEN_ISSUES_NEEDS_INPUT": "Follow-up 입력 필요",
+}
+SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_ROUTE_LABELS = {
+    "DEPLOYMENT_READINESS_READY": "Deployment preflight clear",
+    "DEPLOYMENT_READINESS_REVIEW": "Deployment review 필요",
+    "DEPLOYMENT_READINESS_NEEDS_INPUT": "Deployment 입력 필요",
+    "DEPLOYMENT_READINESS_BLOCKED": "Deployment 차단",
+}
 _SELECTED_PROVIDER_REQUIRED_AREAS = {"ETF Operability", "ETF Holdings", "ETF Exposure"}
 _SELECTED_PROVIDER_STATUS_RANK = {
     "PASS": 0,
@@ -140,6 +153,12 @@ _TIMELINE_STATUS_RANK = {
     "WATCH": 2,
     "NEEDS_INPUT": 3,
     "BREACHED": 4,
+}
+_DEPLOYMENT_STATUS_RANK = {
+    "PASS": 0,
+    "REVIEW": 1,
+    "NEEDS_INPUT": 2,
+    "BLOCKED": 3,
 }
 _ALLOCATION_DRIFT_DISABLED_FIELDS = (
     "db_write",
@@ -3287,6 +3306,409 @@ def build_selected_portfolio_recheck_operations_preflight(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Operations preflight combines existing readiness and DB price freshness read models; it does not ingest data or save monitoring records.",
+        },
+    }
+
+
+def _selected_raw_decision(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(row.get("raw_decision") or row or {})
+
+
+def _selected_policy_snapshot(row: dict[str, Any], key: str) -> dict[str, Any]:
+    raw_decision = _selected_raw_decision(row)
+    packet = dict(raw_decision.get("investability_evidence_packet") or row.get("investability_evidence_packet") or {})
+    if key == "deployment":
+        return dict(
+            raw_decision.get("deployment_readiness_policy_snapshot")
+            or packet.get("deployment_readiness_policy_snapshot")
+            or {}
+        )
+    if key == "selection":
+        return dict(
+            raw_decision.get("selection_gate_policy_snapshot")
+            or raw_decision.get("gate_policy_snapshot")
+            or packet.get("selection_gate_policy_snapshot")
+            or packet.get("gate_policy_snapshot")
+            or {}
+        )
+    return {}
+
+
+def _selected_open_review_items(row: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_decision = _selected_raw_decision(row)
+    packet = dict(raw_decision.get("investability_evidence_packet") or row.get("investability_evidence_packet") or {})
+    items = raw_decision.get("open_review_items")
+    if items is None:
+        items = packet.get("open_review_items")
+    return [dict(item or {}) for item in list(items or []) if isinstance(item, dict)]
+
+
+def _selected_followup_status(value: Any) -> str:
+    normalized = str(value or "").strip().upper()
+    if normalized in {"BLOCK", "BLOCKED", "BREACHED", "ERROR"}:
+        return "BLOCKED"
+    if normalized in {"NEEDS_INPUT", "NOT_RUN", "MISSING", "NEEDS_DATA"}:
+        return "NEEDS_INPUT"
+    if normalized in {"PASS", "READY", "CLEAR", "OK"}:
+        return "PASS"
+    return "REVIEW"
+
+
+def _selected_open_issue_row(
+    *,
+    area: str,
+    status: str,
+    current: Any,
+    evidence: Any,
+    next_action: Any,
+    source: str,
+) -> dict[str, Any]:
+    normalized_status = _selected_followup_status(status)
+    return {
+        "Area": _clean_text(area),
+        "Status": normalized_status,
+        "Ready": normalized_status == "PASS",
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+        "Source": _clean_text(source),
+    }
+
+
+def build_selected_portfolio_open_issue_followup(row: dict[str, Any]) -> dict[str, Any]:
+    """Expose Final Review open review items on the Selected Dashboard without creating new state."""
+
+    raw_decision = _selected_raw_decision(row)
+    open_items = _selected_open_review_items(row)
+    rows: list[dict[str, Any]] = []
+    for item in open_items:
+        deployment_effect = item.get("Deployment Gate Effect") or item.get("deployment_gate_effect")
+        status = deployment_effect or item.get("Severity") or item.get("Status") or "REVIEW"
+        rows.append(
+            _selected_open_issue_row(
+                area=item.get("Criteria") or item.get("Group") or "Open review item",
+                status=status,
+                current=item.get("Current") or status,
+                evidence=item.get("Evidence") or "Final Review selection allowed this item as follow-up evidence.",
+                next_action=item.get("Required Action") or item.get("Next Action") or "Dashboard / Deployment readiness에서 이어서 확인합니다.",
+                source=item.get("Group") or "open_review_items",
+            )
+        )
+
+    review_triggers = [
+        str(trigger).strip()
+        for trigger in list(row.get("review_triggers") or dict(raw_decision.get("paper_tracking_snapshot") or {}).get("review_triggers") or [])
+        if str(trigger).strip()
+    ]
+    for trigger in review_triggers:
+        rows.append(
+            _selected_open_issue_row(
+                area="Review Trigger",
+                status="REVIEW",
+                current=trigger,
+                evidence="Final Review에 저장된 monitoring trigger입니다.",
+                next_action="Performance Recheck / Review Signals에서 trigger breach 여부를 확인합니다.",
+                source="paper_tracking_snapshot.review_triggers",
+            )
+        )
+
+    status_counts = {status: 0 for status in _DEPLOYMENT_STATUS_RANK}
+    for issue_row in rows:
+        status = str(issue_row.get("Status") or "REVIEW")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    needs_input_count = int(status_counts.get("NEEDS_INPUT", 0))
+    blocked_count = int(status_counts.get("BLOCKED", 0))
+    open_issue_count = len(open_items)
+    if blocked_count or needs_input_count:
+        route = "OPEN_ISSUES_NEEDS_INPUT"
+        conclusion = "선정 후보의 follow-up 중 입력 또는 차단 성격의 항목이 있습니다."
+        next_action = "해당 issue의 Required Action을 먼저 확인하고 필요한 evidence를 보강합니다."
+    elif rows:
+        route = "OPEN_ISSUES_PRESENT"
+        conclusion = "선정은 가능했지만 Dashboard / Deployment Readiness에서 이어서 볼 follow-up이 있습니다."
+        next_action = "Review Signals, Provider Evidence, Performance Recheck와 함께 open issue를 확인합니다."
+    else:
+        route = "OPEN_ISSUES_CLEAR"
+        conclusion = "Final Review에서 이어서 볼 open review item이 없습니다."
+        next_action = "정기 recheck와 monitoring trigger만 확인합니다."
+
+    return {
+        "schema_version": SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_OPEN_ISSUE_FOLLOWUP_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "next_action": next_action,
+        "rows": rows,
+        "metrics": {
+            "open_review_item_count": open_issue_count,
+            "review_trigger_count": len(review_triggers),
+            "row_count": len(rows),
+            "review_count": int(status_counts.get("REVIEW", 0)),
+            "needs_input_count": needs_input_count,
+            "blocked_count": blocked_count,
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_selected_open_issue_followup",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Open issue follow-up reads Final Decision V2 snapshots only; it does not save monitoring state.",
+        },
+    }
+
+
+def _deployment_status_from_policy_severity(value: Any) -> str:
+    normalized = str(value or "").strip().upper()
+    if normalized == "BLOCK":
+        return "BLOCKED"
+    if normalized in {"REVIEW_REQUIRED", "WATCH", "REVIEW"}:
+        return "REVIEW"
+    if normalized in {"NEEDS_INPUT", "NOT_RUN", "MISSING"}:
+        return "NEEDS_INPUT"
+    return "PASS"
+
+
+def _deployment_status_from_route(route: Any) -> str:
+    normalized = str(route or "").strip().upper()
+    if not normalized:
+        return "NEEDS_INPUT"
+    if any(token in normalized for token in ("BLOCKED", "BREACHED", "ERROR")):
+        return "BLOCKED"
+    if any(token in normalized for token in ("NEEDS_DATA", "NEEDS_INPUT", "MISSING", "NOT_RUN")):
+        return "NEEDS_INPUT"
+    if any(token in normalized for token in ("READY", "CLEAR", "OPTIONAL", "PASS")):
+        return "PASS"
+    if any(token in normalized for token in ("REVIEW", "WATCH", "STALE", "PRESENT")):
+        return "REVIEW"
+    return "PASS"
+
+
+def _deployment_preflight_row(
+    *,
+    area: str,
+    status: str,
+    current: Any,
+    evidence: Any,
+    next_action: Any,
+    source: str,
+) -> dict[str, Any]:
+    normalized_status = _selected_followup_status(status)
+    return {
+        "Area": _clean_text(area),
+        "Status": normalized_status,
+        "Ready": normalized_status == "PASS",
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+        "Source": _clean_text(source),
+    }
+
+
+def build_selected_portfolio_deployment_readiness_preflight(
+    row: dict[str, Any],
+    *,
+    recheck_preflight: dict[str, Any] | None = None,
+    provider_evidence: dict[str, Any] | None = None,
+    continuity_check: dict[str, Any] | None = None,
+    review_signal_policy: dict[str, Any] | None = None,
+    allocation_boundary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Combine selected-row evidence into a read-only live/deployment readiness preflight."""
+
+    deployment_policy = _selected_policy_snapshot(row, "deployment")
+    open_issue_followup = build_selected_portfolio_open_issue_followup(row)
+    rows: list[dict[str, Any]] = []
+
+    if deployment_policy:
+        rows.append(
+            _deployment_preflight_row(
+                area="Deployment Gate Policy",
+                status=_deployment_status_from_route(deployment_policy.get("outcome")),
+                current=deployment_policy.get("outcome") or "-",
+                evidence="Final Review가 저장한 strict deployment-readiness policy snapshot입니다.",
+                next_action=deployment_policy.get("next_action") or "Policy rows의 non-PASS 항목을 확인합니다.",
+                source=deployment_policy.get("schema_version") or "deployment_readiness_policy_snapshot",
+            )
+        )
+        for policy_row in list(deployment_policy.get("policy_rows") or []):
+            policy_item = dict(policy_row or {})
+            severity = policy_item.get("Severity") or "PASS"
+            status = _deployment_status_from_policy_severity(severity)
+            if status == "PASS":
+                continue
+            rows.append(
+                _deployment_preflight_row(
+                    area=f"Policy: {policy_item.get('Criteria') or policy_item.get('Group') or 'Policy row'}",
+                    status=status,
+                    current=policy_item.get("Current") or severity,
+                    evidence=policy_item.get("Evidence") or "-",
+                    next_action=policy_item.get("Required Action") or "Deployment 전 policy evidence를 보강합니다.",
+                    source=policy_item.get("Group") or "deployment_policy_row",
+                )
+            )
+    else:
+        rows.append(
+            _deployment_preflight_row(
+                area="Deployment Gate Policy",
+                status="NEEDS_INPUT",
+                current="missing",
+                evidence="Final Decision row에 deployment_readiness_policy_snapshot이 없습니다.",
+                next_action="Final Review selection-readiness gate가 분리된 이후 생성된 selected row로 다시 확인합니다.",
+                source="deployment_readiness_policy_snapshot",
+            )
+        )
+
+    open_metrics = dict(open_issue_followup.get("metrics") or {})
+    rows.append(
+        _deployment_preflight_row(
+            area="Open Issues / Follow-up",
+            status=_deployment_status_from_route(open_issue_followup.get("route")),
+            current=f"open={open_metrics.get('open_review_item_count', 0)} / triggers={open_metrics.get('review_trigger_count', 0)}",
+            evidence=open_issue_followup.get("conclusion") or "-",
+            next_action=open_issue_followup.get("next_action") or "-",
+            source=open_issue_followup.get("schema_version") or SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION,
+        )
+    )
+
+    optional_inputs = [
+        (
+            "Recheck Operations Preflight",
+            recheck_preflight,
+            "route",
+            "route_label",
+            "conclusion",
+            "Performance Recheck readiness와 symbol freshness를 확인합니다.",
+        ),
+        (
+            "Provider Evidence",
+            provider_evidence,
+            "route",
+            "route_label",
+            "conclusion",
+            "Provider / holdings / exposure evidence를 보강합니다.",
+        ),
+        (
+            "Continuity Check",
+            continuity_check,
+            "route",
+            "route_label",
+            "next_action",
+            "Final Review -> Dashboard continuity를 확인합니다.",
+        ),
+        (
+            "Review Signals",
+            review_signal_policy,
+            "route",
+            "route_label",
+            "conclusion",
+            "Review Signal의 Watch / Breach row를 확인합니다.",
+        ),
+        (
+            "Allocation Boundary",
+            allocation_boundary,
+            "route",
+            "route_label",
+            "conclusion",
+            "Optional allocation evidence boundary를 확인합니다.",
+        ),
+    ]
+    for area, payload, route_key, label_key, evidence_key, next_action in optional_inputs:
+        payload_dict = dict(payload or {})
+        if not payload_dict:
+            rows.append(
+                _deployment_preflight_row(
+                    area=area,
+                    status="NEEDS_INPUT" if area in {"Recheck Operations Preflight", "Provider Evidence"} else "REVIEW",
+                    current="not evaluated",
+                    evidence="Selected Dashboard에서 아직 해당 read-only evidence를 만들지 않았습니다.",
+                    next_action=next_action,
+                    source="selected_dashboard_session",
+                )
+            )
+            continue
+        route = payload_dict.get(route_key)
+        rows.append(
+            _deployment_preflight_row(
+                area=area,
+                status=_deployment_status_from_route(route),
+                current=payload_dict.get(label_key) or route or "-",
+                evidence=payload_dict.get(evidence_key) or "-",
+                next_action=next_action,
+                source=payload_dict.get("schema_version") or area,
+            )
+        )
+
+    rows.append(
+        _deployment_preflight_row(
+            area="Execution Boundary",
+            status="PASS",
+            current="read_only / no approval / no order / no auto rebalance",
+            evidence="이 화면은 실제 자금 투입 승인이나 주문 지시를 생성하지 않습니다.",
+            next_action="필요하면 별도 human approval / account / order workflow에서 판단합니다.",
+            source="selected_dashboard_boundary",
+        )
+    )
+
+    status_counts = {status: 0 for status in _DEPLOYMENT_STATUS_RANK}
+    for preflight_row in rows:
+        status = str(preflight_row.get("Status") or "NEEDS_INPUT")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    blocked_count = int(status_counts.get("BLOCKED", 0))
+    needs_input_count = int(status_counts.get("NEEDS_INPUT", 0))
+    review_count = int(status_counts.get("REVIEW", 0))
+    if blocked_count:
+        route = "DEPLOYMENT_READINESS_BLOCKED"
+        conclusion = "실제 투입 판단 전에 해소해야 할 blocker가 남아 있습니다."
+        next_action = "BLOCKED row를 먼저 해결한 뒤 deployment readiness를 다시 확인합니다."
+    elif needs_input_count:
+        route = "DEPLOYMENT_READINESS_NEEDS_INPUT"
+        conclusion = "실제 투입 판단에 필요한 입력 또는 evidence가 부족합니다."
+        next_action = "NEEDS_INPUT row의 source evidence를 보강합니다."
+    elif review_count:
+        route = "DEPLOYMENT_READINESS_REVIEW"
+        conclusion = "hard blocker는 없지만 실제 투입 판단 전 review 항목이 남아 있습니다."
+        next_action = "REVIEW row를 확인하고 human approval 전에 조건을 명확히 합니다."
+    else:
+        route = "DEPLOYMENT_READINESS_READY"
+        conclusion = "read-only preflight 기준으로 남은 blocker가 없습니다. 이는 live approval이 아닙니다."
+        next_action = "별도 human approval / broker workflow가 없다면 주문을 만들지 않습니다."
+
+    return {
+        "schema_version": SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "next_action": next_action,
+        "rows": rows,
+        "open_issue_followup": open_issue_followup,
+        "deployment_policy_snapshot": deployment_policy,
+        "metrics": {
+            "row_count": len(rows),
+            "blocked_count": blocked_count,
+            "needs_input_count": needs_input_count,
+            "review_count": review_count,
+            "pass_count": int(status_counts.get("PASS", 0)),
+            "open_review_item_count": open_metrics.get("open_review_item_count", 0),
+            "review_trigger_count": open_metrics.get("review_trigger_count", 0),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_deployment_readiness_preflight",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "input_persistence": False,
+            "alert_persistence": False,
+            "account_connection": False,
+            "broker_sync": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Deployment readiness preflight is read-only and does not create approval, account, order, or rebalance records.",
         },
     }
 

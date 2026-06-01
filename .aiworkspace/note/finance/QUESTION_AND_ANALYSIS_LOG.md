@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Selection Readiness Gate V1 is implementation complete. Fresh pre-change non-GTAA search found no current-gate selected V2 row; the new gate separates Selected Dashboard candidate selection from future live-readiness audit and carries default `REVIEW` findings as open review items.
+  - Selected Dashboard Live Readiness Follow-up V1 is implementation complete. Selected Dashboard now surfaces Final Review open issues / follow-up triggers and a read-only Deployment Readiness preflight. Fresh registry recheck found no selected-route pass, so no Final Decision V2 row was appended.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-01 - Selected Dashboard should carry open issues into deployment preflight
+- User request:
+  - Final Review selected gate 분리 이후 5~7차 작업으로 Selected Dashboard open issue / follow-up 확인, Live / Deployment Readiness read-only preflight, 후보 재탐색 후 fresh selected row 생성 여부 확인을 진행해 달라고 승인함.
+- Interpreted goal:
+  - Final Review가 `REVIEW` 항목을 저장 차단하지 않는 대신, Selected Dashboard에서 해당 항목을 사라지지 않게 보여주고 future deployment 판단으로 이어지는 read-only preflight를 만든다.
+- Analysis result:
+  - Open Issues / Follow-up는 Final Decision V2의 `open_review_items`와 review trigger를 읽고, Deployment Readiness preflight는 `deployment_readiness_policy_snapshot`과 recheck / provider / continuity / review signal / allocation evidence를 묶는다.
+  - 2026-06-01 registry recheck 기준 Practical Validation row는 2개, Final Review eligible은 GTAA 1개뿐이며, 해당 후보도 selection outcome `hold_or_re_review`라 selected-route pass가 아니다. non-GTAA는 legacy current/proposal registry에만 있어 Clean V2 Practical Validation-passed source가 아니다.
+- Follow-up:
+  - no selected V2 row 상태에서는 Selected Dashboard가 empty state로 남는다. 다음 후보 탐색은 Backtest Analysis에서 non-GTAA Clean V2 source를 만들고 Practical Validation 필수 gate를 fresh로 통과시키는 쪽으로 진행해야 한다.
 
 ### 2026-06-01 - Final Review selection should not equal live deployment readiness
 - User request:

@@ -8363,6 +8363,40 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             },
         }
 
+    def _selected_row_with_open_issue(self) -> dict:
+        row = self._selected_row()
+        raw = dict(row["raw_decision"])
+        raw["open_review_items"] = [
+            {
+                "Group": "provider_coverage",
+                "Criteria": "Provider / Look-through",
+                "Severity": "OPEN_REVIEW",
+                "Current": "partial provider coverage",
+                "Evidence": "Holdings coverage is partial.",
+                "Required Action": "Provider holdings / exposure evidence를 보강합니다.",
+                "Selection Gate Effect": "Open review item",
+                "Deployment Gate Effect": "REVIEW_REQUIRED",
+            }
+        ]
+        raw["deployment_readiness_policy_snapshot"] = {
+            "schema_version": "deployment_readiness_gate_policy_v1",
+            "outcome": "hold_or_re_review",
+            "select_allowed": False,
+            "policy_rows": [
+                {
+                    "Criteria": "Provider / Look-through",
+                    "Group": "provider_coverage",
+                    "Ready": False,
+                    "Severity": "REVIEW_REQUIRED",
+                    "Current": "partial provider coverage",
+                    "Evidence": "Holdings coverage is partial.",
+                    "Required Action": "Provider holdings / exposure evidence를 보강합니다.",
+                }
+            ],
+        }
+        row["raw_decision"] = raw
+        return row
+
     def _ready_provider_evidence(self) -> dict:
         return {
             "schema_version": "selected_provider_evidence_v1",
@@ -9083,6 +9117,64 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         rows = {row["Area"]: row for row in preflight["rows"]}
         self.assertEqual(rows["Recheck Readiness"]["Status"], "BLOCKED")
         self.assertEqual(rows["Symbol Freshness"]["Status"], "BLOCKED")
+
+    def test_open_issue_followup_surfaces_final_review_open_items(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_open_issue_followup
+
+        followup = build_selected_portfolio_open_issue_followup(self._selected_row_with_open_issue())
+
+        self.assertEqual(followup["schema_version"], "selected_open_issue_followup_v1")
+        self.assertEqual(followup["route"], "OPEN_ISSUES_PRESENT")
+        self.assertEqual(followup["metrics"]["open_review_item_count"], 1)
+        self.assertEqual(followup["metrics"]["review_trigger_count"], 1)
+        rows = {row["Area"]: row for row in followup["rows"]}
+        self.assertEqual(rows["Provider / Look-through"]["Status"], "REVIEW")
+        self.assertIn("Provider holdings", rows["Provider / Look-through"]["Next Action"])
+        self.assertFalse(followup["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(followup["execution_boundary"]["live_approval"])
+
+    def test_deployment_readiness_preflight_is_read_only_and_keeps_review_open(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_deployment_readiness_preflight
+
+        preflight = build_selected_portfolio_deployment_readiness_preflight(
+            self._selected_row_with_open_issue(),
+            recheck_preflight=self._ready_recheck_preflight(),
+            provider_evidence={
+                "schema_version": "selected_provider_evidence_v1",
+                "route": "SELECTED_PROVIDER_READY",
+                "route_label": "Provider 근거 준비 완료",
+                "conclusion": "provider ready",
+            },
+            continuity_check={
+                "schema_version": "selected_continuity_check_v1",
+                "route": "CONTINUITY_READY",
+                "route_label": "사후 점검 준비 완료",
+                "next_action": "continue monitoring",
+            },
+            review_signal_policy={
+                "schema_version": "selected_review_signal_policy_v1",
+                "route": "REVIEW_SIGNAL_CLEAR",
+                "route_label": "운영 신호 정상",
+                "conclusion": "signals clear",
+            },
+            allocation_boundary={
+                "schema_version": "selected_allocation_drift_evidence_boundary_v1",
+                "route": "ALLOCATION_DRIFT_BOUNDARY_OPTIONAL",
+                "route_label": "비중 근거 선택 점검",
+                "conclusion": "allocation optional",
+            },
+        )
+
+        self.assertEqual(preflight["schema_version"], "selected_deployment_readiness_preflight_v1")
+        self.assertEqual(preflight["route"], "DEPLOYMENT_READINESS_REVIEW")
+        self.assertEqual(preflight["metrics"]["review_count"], 3)
+        rows = {row["Area"]: row for row in preflight["rows"]}
+        self.assertEqual(rows["Deployment Gate Policy"]["Status"], "REVIEW")
+        self.assertEqual(rows["Policy: Provider / Look-through"]["Status"], "REVIEW")
+        self.assertEqual(rows["Open Issues / Follow-up"]["Status"], "REVIEW")
+        self.assertFalse(preflight["execution_boundary"]["live_approval"])
+        self.assertFalse(preflight["execution_boundary"]["order_instruction"])
+        self.assertFalse(preflight["execution_boundary"]["auto_rebalance"])
 
     def test_selected_provider_evidence_ready_from_injected_provider_context(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
