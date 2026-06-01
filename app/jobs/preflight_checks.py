@@ -25,10 +25,10 @@ def _error(message: str, **details) -> CheckResult:
 def check_symbol_input(symbols: str | Iterable[str] | None) -> CheckResult:
     parsed, invalid = split_valid_invalid_symbols(symbols)
     if not parsed:
-        return _error("No valid symbols provided.", count=0, invalid_symbols=invalid)
+        return _error("유효한 symbol이 없습니다.", count=0, invalid_symbols=invalid)
     if invalid:
-        return _warn("Some symbols are invalid and may be ignored.", count=len(parsed), symbols=parsed, invalid_symbols=invalid)
-    return _ok("Symbols are ready.", count=len(parsed), symbols=parsed)
+        return _warn("일부 symbol은 형식이 맞지 않아 무시될 수 있습니다.", count=len(parsed), symbols=parsed, invalid_symbols=invalid)
+    return _ok("Symbol 입력이 준비되었습니다.", count=len(parsed), symbols=parsed)
 
 
 def check_factor_prerequisites(
@@ -42,7 +42,7 @@ def check_factor_prerequisites(
 ) -> CheckResult:
     parsed, invalid = split_valid_invalid_symbols(symbols)
     if not parsed:
-        return _error("No valid symbols provided for factor validation.", symbols=[], invalid_symbols=invalid)
+        return _error("factor validation에 사용할 유효한 symbol이 없습니다.", symbols=[], invalid_symbols=invalid)
 
     price_db = MySQLClient(host, user, password, port)
     fund_db = MySQLClient(host, user, password, port)
@@ -80,19 +80,19 @@ def check_factor_prerequisites(
         if not missing_price and not missing_fund:
             if invalid:
                 return _warn(
-                    "Factor prerequisites look ready for valid symbols, but some symbols are invalid.",
+                    "유효한 symbol의 factor prerequisite은 준비된 것으로 보이지만, 일부 symbol 형식이 맞지 않습니다.",
                     symbols=parsed,
                     invalid_symbols=invalid,
                     freq=freq,
                 )
             return _ok(
-                "Factor prerequisites look ready.",
+                "Factor prerequisite이 준비된 것으로 보입니다.",
                 symbols=parsed,
                 freq=freq,
             )
 
         return _warn(
-            "Some factor prerequisites are missing.",
+            "일부 factor prerequisite이 부족합니다.",
             symbols=parsed,
             invalid_symbols=invalid,
             freq=freq,
@@ -101,7 +101,7 @@ def check_factor_prerequisites(
         )
     except Exception as exc:
         return _error(
-            f"Preflight check failed: {exc}",
+            f"Preflight check를 실행하지 못했습니다: {exc}",
             symbols=parsed,
             freq=freq,
         )
@@ -120,7 +120,7 @@ def check_asset_profile_prerequisites(
 ) -> CheckResult:
     kinds = tuple(kinds)
     if not kinds:
-        return _error("No asset profile kinds selected.", kinds=[])
+        return _error("선택된 asset profile kind가 없습니다.", kinds=[])
 
     db = MySQLClient(host, user, password, port)
     try:
@@ -133,13 +133,13 @@ def check_asset_profile_prerequisites(
         empty_kinds = [kind for kind, cnt in counts.items() if cnt == 0]
         if empty_kinds:
             return _warn(
-                "Some NYSE universe tables are empty.",
+                "일부 NYSE universe table이 비어 있습니다.",
                 counts=counts,
                 empty_kinds=empty_kinds,
             )
 
-        return _ok("Asset profile prerequisites look ready.", counts=counts)
+        return _ok("Asset profile prerequisite이 준비된 것으로 보입니다.", counts=counts)
     except Exception as exc:
-        return _error(f"Preflight check failed: {exc}", kinds=list(kinds))
+        return _error(f"Preflight check를 실행하지 못했습니다: {exc}", kinds=list(kinds))
     finally:
         db.close()

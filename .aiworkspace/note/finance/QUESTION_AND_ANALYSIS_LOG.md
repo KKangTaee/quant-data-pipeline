@@ -6892,3 +6892,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 Practical Validation row, saved portfolio 2개, legacy Final Review option 13개를 dry-run 평가했지만 `select_allowed=True` 후보가 없었다. 가장 가까운 후보는 `EW Growth/Commodity 30 + GTAA Clean-6 70`이나 Backtest Realism과 Component Role / Weight hard blocker가 남았다
 - Follow-up:
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 append하지 않았고 Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인했다. 후보 보강은 evidence mapping / realism / provider / risk contribution 쪽에서 진행해야 한다
+
+### 2026-06-01 - Ingestion 탭 리뷰 후속 UX와 결과 해석을 개선한다
+- User request:
+  - 사용자가 Ingestion 리뷰 결과를 바탕으로 개선을 진행하되, 버튼 / 단어 / 기술 용어를 억지로 모두 한글화하지 말고 설명 내용을 이해하기 쉽게 정리해 달라고 요청함
+- Interpreted goal:
+  - 기존 심볼 / 기간 / source 선택 형식은 유지하고, 사용자가 실행 전 수집 범위와 실행 후 데이터 의미를 더 정확히 읽게 해야 함
+- Analysis result:
+  - 가장 큰 gap은 화면 구조 전체 교체보다 실행 전 계약, bounded coverage 확인, result domain별 해석 부재였다. 특히 price row, provider snapshot, lifecycle partial evidence를 같은 방식으로 표시하면 coverage를 과신할 수 있음
+- Follow-up:
+  - Ingestion workflow overview, 실행 전 contract card, bounded DB coverage quick check, domain-aware result label / interpretation callout, visible lifecycle partial-evidence warning을 추가했다

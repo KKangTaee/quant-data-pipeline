@@ -133,7 +133,7 @@ def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str
     if not relevant or symbol_count <= 0:
         return {
             "available": False,
-            "message": "No estimate available yet.",
+            "message": "아직 예상 소요 시간을 계산할 실행 기록이 없습니다.",
         }
 
     per_symbol = [
@@ -144,7 +144,7 @@ def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str
     if not per_symbol:
         return {
             "available": False,
-            "message": "No estimate available yet.",
+            "message": "아직 예상 소요 시간을 계산할 실행 기록이 없습니다.",
         }
 
     avg = sum(per_symbol) / len(per_symbol)
@@ -156,5 +156,5 @@ def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str
         "available": True,
         "seconds_low": low,
         "seconds_high": high,
-        "message": f"Estimated runtime: {low // 60}m {low % 60}s - {high // 60}m {high % 60}s",
+        "message": f"예상 소요 시간: {low // 60}m {low % 60}s - {high // 60}m {high % 60}s",
     }

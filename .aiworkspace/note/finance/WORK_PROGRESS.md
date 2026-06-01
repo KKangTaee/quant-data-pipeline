@@ -4503,3 +4503,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Practical Validation 통과 또는 Final Review evidence-ready 후보는 있었지만, Final Review selected-route investability gate `select_allowed=True`를 만족한 후보는 없었다.
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에는 아무 row도 append하지 않았고, Selected Portfolio Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인됐다.
   - 다음 보강 1순위는 `EW Growth/Commodity 30 + GTAA Clean-6 70`의 backtest realism, component role / weight rationale propagation, provider/look-through, risk contribution, stress/validation efficacy evidence다.
+- Ingestion Console UX / Data Quality follow-up:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`에서 리뷰 후속 개선을 완료했다.
+  - Ingestion 상단에 workflow overview를 추가하고, 주요 가격 수집 card에 실행 전 source / 대상 수 / 기간 / interval 계약과 bounded DB coverage quick check를 붙였다.
+  - 결과 summary는 job domain별 metric label / interpretation callout을 사용해 가격 row, lifecycle evidence row, provider snapshot의 의미를 분리한다.
+  - py_compile, `git diff --check`, service contract 207 tests, Browser DOM QA를 통과했다. Browser screenshot capture는 timeout으로 생성하지 못했다.

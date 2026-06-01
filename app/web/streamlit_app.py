@@ -65,6 +65,7 @@ from app.web.pages.backtest import render_backtest_tab
 from app.web.reference_guides import render_reference_guides_page
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
+from finance.loaders.price import load_price_window_summary
 from app.workspace_paths import GLOSSARY_DOC_PATH, PROJECT_ROOT as CANONICAL_PROJECT_ROOT
 
 
@@ -274,6 +275,32 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "next_action": "raw present / shadow missing이면 이 job, raw missing이면 Extended Statement Refresh를 실행하세요.",
     },
 }
+
+PRICE_COLLECTION_JOBS = {"daily_market_update", "collect_ohlcv"}
+COMPOSITE_PRICE_JOBS = {"pipeline_core_market_data"}
+LIFECYCLE_EVIDENCE_JOBS = {
+    "collect_sec_form25_delistings",
+    "collect_symbol_directory_snapshots",
+    "collect_sec_company_ticker_crosscheck",
+    "collect_computed_snapshot_lifecycle",
+}
+PARTIAL_LIFECYCLE_EVIDENCE_JOBS = {
+    "collect_symbol_directory_snapshots",
+    "collect_sec_company_ticker_crosscheck",
+    "collect_computed_snapshot_lifecycle",
+}
+ETF_PROVIDER_JOBS = {
+    "discover_etf_provider_source_map",
+    "collect_etf_operability_provider",
+    "collect_etf_holdings_exposure",
+}
+EVENT_CALENDAR_JOBS = {
+    "collect_fomc_calendar",
+    "collect_macro_calendar",
+    "import_bls_macro_calendar_ics",
+    "collect_earnings_calendar",
+}
+MACRO_CONTEXT_JOBS = {"collect_macro_market_context"}
 
 
 def _read_git_short_sha() -> str | None:
@@ -677,6 +704,102 @@ def _install_ingestion_responsive_styles() -> None:
             margin: -0.25rem 0 0.45rem;
             overflow-wrap: anywhere;
           }
+          .ingestion-workflow-grid {
+            display: grid;
+            gap: 0.75rem;
+            grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+            margin: 0.85rem 0 1.1rem;
+          }
+          .ingestion-workflow-card {
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            border-radius: 0.5rem;
+            min-width: 0;
+            padding: 0.78rem 0.86rem;
+          }
+          .ingestion-workflow-step {
+            color: #6f7480;
+            font-size: 0.75rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-transform: uppercase;
+          }
+          .ingestion-workflow-title {
+            font-size: 0.98rem;
+            font-weight: 760;
+            line-height: 1.25;
+            margin-top: 0.18rem;
+          }
+          .ingestion-workflow-body {
+            color: #6f7480;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            margin-top: 0.28rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-contract-panel,
+          .ingestion-callout {
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            border-radius: 0.5rem;
+            margin: 0.7rem 0 0.9rem;
+            padding: 0.8rem 0.9rem;
+          }
+          .ingestion-callout.warning {
+            background: #fff7e6;
+            border-color: rgba(184, 121, 0, 0.24);
+          }
+          .ingestion-callout.danger {
+            background: #fff0f0;
+            border-color: rgba(210, 56, 56, 0.24);
+          }
+          .ingestion-callout.info {
+            background: rgba(41, 111, 214, 0.08);
+            border-color: rgba(41, 111, 214, 0.18);
+          }
+          .ingestion-callout.success {
+            background: #eaf8ef;
+            border-color: rgba(34, 139, 73, 0.22);
+          }
+          .ingestion-callout-title,
+          .ingestion-contract-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1.25;
+          }
+          .ingestion-callout-body {
+            font-size: 0.9rem;
+            line-height: 1.45;
+            margin-top: 0.32rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-contract-grid {
+            display: grid;
+            gap: 0.52rem;
+            grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+            margin-top: 0.62rem;
+          }
+          .ingestion-contract-item {
+            min-width: 0;
+          }
+          .ingestion-contract-label {
+            color: #6f7480;
+            font-size: 0.74rem;
+            font-weight: 800;
+            line-height: 1.2;
+          }
+          .ingestion-contract-value {
+            font-size: 0.94rem;
+            font-weight: 650;
+            line-height: 1.32;
+            margin-top: 0.18rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-contract-note {
+            color: #6f7480;
+            font-size: 0.83rem;
+            line-height: 1.4;
+            margin-top: 0.62rem;
+            overflow-wrap: anywhere;
+          }
           @media (max-width: 760px) {
             div[data-testid="column"] {
               flex: 1 1 100% !important;
@@ -688,6 +811,10 @@ def _install_ingestion_responsive_styles() -> None:
               grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .ingestion-meta-grid {
+              grid-template-columns: minmax(0, 1fr);
+            }
+            .ingestion-workflow-grid,
+            .ingestion-contract-grid {
               grid-template-columns: minmax(0, 1fr);
             }
           }
@@ -773,6 +900,195 @@ def _render_ingestion_meta_grid(items: list[tuple[str, str]]) -> None:
         )
 
 
+def _render_ingestion_workflow_overview() -> None:
+    cards = [
+        (
+            "Step 1",
+            "수집 범위 선택",
+            "심볼 source, 기간, provider 옵션은 기존처럼 사용자가 직접 정합니다.",
+        ),
+        (
+            "Step 2",
+            "Preflight 확인",
+            "입력값, 대상 수, 기존 DB coverage, 대량 실행 위험을 먼저 확인합니다.",
+        ),
+        (
+            "Step 3",
+            "DB 저장",
+            "외부 API / 공식 파일 / provider page 결과를 MySQL table에 저장합니다.",
+        ),
+        (
+            "Step 4",
+            "결과 해석",
+            "row 수, symbol 누락, partial evidence 의미를 job 유형별로 구분해서 확인합니다.",
+        ),
+    ]
+    html = []
+    for step, title, body in cards:
+        html.append(
+            '<div class="ingestion-workflow-card">'
+            f'<div class="ingestion-workflow-step">{escape(step)}</div>'
+            f'<div class="ingestion-workflow-title">{escape(title)}</div>'
+            f'<div class="ingestion-workflow-body">{escape(body)}</div>'
+            "</div>"
+        )
+    st.markdown(
+        '<div class="ingestion-workflow-grid">' + "".join(html) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_data_quality_callout(title: str, body: str, *, tone: str = "info") -> None:
+    st.markdown(
+        f'<div class="ingestion-callout {escape(tone)}">'
+        f'<div class="ingestion-callout-title">{escape(title)}</div>'
+        f'<div class="ingestion-callout-body">{escape(body)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_collection_contract(
+    title: str,
+    items: list[tuple[str, Any]],
+    *,
+    note: str | None = None,
+) -> None:
+    rendered_items = []
+    for label, value in items:
+        rendered_items.append(
+            '<div class="ingestion-contract-item">'
+            f'<div class="ingestion-contract-label">{escape(label)}</div>'
+            f'<div class="ingestion-contract-value">{escape(str(value if value not in (None, "") else "-"))}</div>'
+            "</div>"
+        )
+    note_html = (
+        f'<div class="ingestion-contract-note">{escape(note)}</div>'
+        if note
+        else ""
+    )
+    st.markdown(
+        '<div class="ingestion-contract-panel">'
+        f'<div class="ingestion-contract-title">{escape(title)}</div>'
+        '<div class="ingestion-contract-grid">'
+        + "".join(rendered_items)
+        + "</div>"
+        + note_html
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _job_domain(job_name: str | None) -> str:
+    normalized = str(job_name or "")
+    if normalized in PRICE_COLLECTION_JOBS:
+        return "price"
+    if normalized in COMPOSITE_PRICE_JOBS:
+        return "pipeline"
+    if normalized in LIFECYCLE_EVIDENCE_JOBS:
+        return "lifecycle"
+    if normalized in ETF_PROVIDER_JOBS:
+        return "provider"
+    if normalized in MACRO_CONTEXT_JOBS:
+        return "macro"
+    if normalized in EVENT_CALENDAR_JOBS:
+        return "event"
+    if "statement" in normalized:
+        return "statement"
+    if "fundamental" in normalized or "factor" in normalized:
+        return "fundamental"
+    if "profile" in normalized or "metadata" in normalized:
+        return "metadata"
+    return "generic"
+
+
+def _result_metric_labels(job_name: str | None) -> tuple[str, str, str, str, str]:
+    domain = _job_domain(job_name)
+    if domain == "lifecycle":
+        return ("상태", "증거 Row", "관찰 / 요청", "누락 Source/Symbol", "소요 시간(초)")
+    if domain in {"provider", "macro", "event"}:
+        return ("상태", "저장 Row", "수집 대상", "누락 / 실패", "소요 시간(초)")
+    if domain == "price":
+        return ("상태", "가격 Row", "요청 Symbol", "누락 / 실패", "소요 시간(초)")
+    if domain == "pipeline":
+        return ("상태", "총 저장 Row", "요청 Symbol", "누락 / 실패", "소요 시간(초)")
+    return ("상태", "저장 Row", "요청 대상", "누락 / 실패", "소요 시간(초)")
+
+
+def _format_contract_window(*, period: str | None, start: str | None, end: str | None) -> str:
+    if start or end:
+        return f"start={start or '-'}, end={end or '-'}"
+    return f"period={period or '-'}"
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _load_price_window_summary_cached(
+    symbols: tuple[str, ...],
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+) -> pd.DataFrame:
+    return load_price_window_summary(
+        symbols=list(symbols),
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+
+
+def _render_price_window_preflight(
+    *,
+    symbols: list[str],
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    max_symbols: int = 300,
+) -> None:
+    if not symbols:
+        return
+    if not start and not end:
+        st.caption(
+            "DB coverage quick check는 명시적인 start/end가 있을 때 실행합니다. "
+            "period 기반 수집은 실행 후 결과의 최신 거래일과 Price Stale Diagnosis로 확인하세요."
+        )
+        return
+    if len(symbols) > max_symbols:
+        st.caption(
+            f"DB coverage quick check는 {max_symbols}개 이하의 bounded run에서만 자동 실행합니다. "
+            f"현재 대상은 {len(symbols):,}개이므로 실행 후 결과와 진단 payload를 확인하세요."
+        )
+        return
+
+    try:
+        coverage = _load_price_window_summary_cached(tuple(symbols), start, end, timeframe)
+    except Exception as exc:
+        st.warning(f"DB coverage quick check를 실행하지 못했습니다: {exc}")
+        return
+
+    if coverage.empty:
+        _render_data_quality_callout(
+            "DB coverage quick check",
+            "선택한 대상의 기존 가격 row를 찾지 못했습니다. 이 실행은 신규 보강 또는 provider 확인 성격으로 봐야 합니다.",
+            tone="warning",
+        )
+        return
+
+    coverage = coverage.copy()
+    coverage["window_row_count"] = pd.to_numeric(coverage.get("window_row_count"), errors="coerce").fillna(0)
+    symbols_with_window = set(coverage.loc[coverage["window_row_count"] > 0, "symbol"].astype(str))
+    missing_window = [sym for sym in symbols if sym not in symbols_with_window]
+    message = (
+        f"기존 DB window row 확인: {len(symbols_with_window):,}/{len(symbols):,} symbols. "
+        "이 값은 실행 전 상태이며, provider 수집 결과와 별도로 봐야 합니다."
+    )
+    if missing_window:
+        message += f" window row가 없는 sample: {', '.join(missing_window[:8])}."
+        tone = "warning"
+    else:
+        tone = "info"
+    _render_data_quality_callout("DB coverage quick check", message, tone=tone)
+
+
 def _job_guide(job_name: str | None) -> dict[str, Any]:
     return JOB_GUIDE.get(str(job_name or ""), {})
 
@@ -835,6 +1151,95 @@ def _render_result_guidance(result: JobResult) -> None:
             st.markdown(f"- {item}")
 
 
+def _render_result_interpretation(result: JobResult) -> None:
+    job_name = str(result.get("job_name") or "")
+    domain = _job_domain(job_name)
+    status = str(result.get("status") or "")
+    details = result.get("details") or {}
+    failed_count = len(result.get("failed_symbols") or [])
+
+    if domain == "price":
+        missing = len(details.get("missing_symbols") or [])
+        provider_no_data = len(details.get("provider_no_data_symbols") or [])
+        rate_limited = len(details.get("rate_limited_symbols") or [])
+        if status != "success" or missing or provider_no_data or rate_limited:
+            _render_data_quality_callout(
+                "가격 수집 결과 해석",
+                "저장 row가 있더라도 요청 symbol 전체가 같은 기간을 채웠다는 뜻은 아닙니다. "
+                f"missing={missing:,}, provider no-data={provider_no_data:,}, rate-limit={rate_limited:,} 상태를 확인하고 "
+                "필요하면 rerun payload 또는 Price Stale Diagnosis로 원인을 분리하세요.",
+                tone="warning",
+            )
+        else:
+            _render_data_quality_callout(
+                "가격 수집 결과 해석",
+                "provider가 row를 반환한 대상은 저장되었습니다. 실제 backtest 기간 coverage는 Data Coverage Audit이나 "
+                "bounded DB coverage check로 다시 확인하는 것이 안전합니다.",
+                tone="info",
+            )
+        return
+
+    if domain == "pipeline":
+        steps = details.get("steps") or []
+        partial_steps = [step.get("job_name") for step in steps if step.get("status") != "success"]
+        if partial_steps:
+            _render_data_quality_callout(
+                "Pipeline 결과 해석",
+                "Composite job은 OHLCV, fundamentals, factors 중 하나만 partial이어도 downstream coverage gap이 남습니다. "
+                f"확인 필요 step: {', '.join(str(item) for item in partial_steps[:5])}.",
+                tone="warning",
+            )
+        else:
+            _render_data_quality_callout(
+                "Pipeline 결과 해석",
+                "세부 step이 모두 성공이면 기본 데이터 연결은 완료된 상태입니다. 그래도 기간 coverage와 factor prerequisite은 "
+                "실제 backtest 범위 기준으로 다시 확인하세요.",
+                tone="info",
+            )
+        return
+
+    if domain == "lifecycle":
+        if job_name in PARTIAL_LIFECYCLE_EVIDENCE_JOBS:
+            _render_data_quality_callout(
+                "Lifecycle evidence 해석",
+                "이 결과는 current snapshot 또는 repeated observation 기반 partial evidence입니다. "
+                "historical membership PASS나 active listing proof로 해석하면 안 됩니다.",
+                tone="warning",
+            )
+        else:
+            _render_data_quality_callout(
+                "Lifecycle evidence 해석",
+                "SEC Form 25 row는 delisting evidence로 유효하지만, Form 25가 없다는 사실은 active listing proof가 아닙니다.",
+                tone="info",
+            )
+        return
+
+    if domain == "provider":
+        tone = "warning" if status != "success" or failed_count else "info"
+        _render_data_quality_callout(
+            "Provider snapshot 해석",
+            "이 row는 현재 provider snapshot입니다. Practical Validation은 이 DB snapshot을 읽지만, 과거 특정 시점의 "
+            "PIT holdings / operability truth로 보지는 않습니다. partial이면 unsupported parser와 missing ETF를 먼저 확인하세요.",
+            tone=tone,
+        )
+        return
+
+    if domain == "macro":
+        _render_data_quality_callout(
+            "Macro context 해석",
+            "FRED observation date 기준 series입니다. ALFRED vintage PIT가 아니므로 과거 시점 의사결정 재현에는 한계가 있습니다.",
+            tone="info" if status == "success" else "warning",
+        )
+        return
+
+    if domain == "event":
+        _render_data_quality_callout(
+            "Event calendar 해석",
+            "시장 이벤트 row는 수집 시점의 calendar snapshot 또는 free-provider estimate입니다. 실적 발표 일정은 공식 확정 IR 일정으로 보지 않습니다.",
+            tone="info" if status == "success" else "warning",
+        )
+
+
 def _render_result_data_quality_notes(job_name: str | None) -> None:
     guide = _job_guide(job_name)
     caveats = [str(item) for item in guide.get("caveats") or [] if str(item).strip()]
@@ -862,7 +1267,7 @@ def _promote_pending_job() -> None:
 
 def _schedule_job(job: dict[str, Any]) -> None:
     if _has_running_job():
-        st.warning("Another ingestion job is already running. Wait for it to finish before starting a new one.")
+        st.warning("다른 Ingestion job이 실행 중입니다. 완료 후 새 작업을 시작하세요.")
         return
     st.session_state.pending_job = job
     st.rerun()
@@ -1035,7 +1440,7 @@ def _render_ingestion_runtime_build_indicator() -> None:
 
 def _render_inline_running_hint(action: str, label: str) -> None:
     if _is_running_action(action):
-        st.info(f"`{label}` is running. Progress is still synchronous, so the page will update again when the job finishes.")
+        st.info(f"`{label}` 실행 중입니다. 현재 실행은 동기 처리라 job이 끝난 뒤 화면이 다시 갱신됩니다.")
 
 
 def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
@@ -1059,11 +1464,11 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     progress_bar = st.progress(0)
 
     if action in {"collect_ohlcv", "daily_market_update"}:
-        progress_text.info(f"`{label}` is running with live OHLCV progress.")
+        progress_text.info(f"`{label}` 실행 중입니다. OHLCV batch 진행률을 표시합니다.")
     elif action in {"extended_statement_refresh", "collect_financial_statements"}:
-        progress_text.info(f"`{label}` is running with live statement-ingestion progress.")
+        progress_text.info(f"`{label}` 실행 중입니다. statement ingestion 진행률을 표시합니다.")
     else:
-        progress_text.info(f"`{label}` is running with pipeline-stage progress.")
+        progress_text.info(f"`{label}` 실행 중입니다. pipeline stage 진행률을 표시합니다.")
 
     def _callback(event: dict[str, Any]) -> None:
         event_type = event.get("event")
@@ -1074,20 +1479,20 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             percent = int((processed_symbols / total_symbols) * 100)
             progress_bar.progress(percent)
             progress_meta.caption(
-                "Processed "
+                "처리 "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
-                f"rows written `{event.get('rows_written', 0)}` | "
+                f"저장 rows `{event.get('rows_written', 0)}` | "
                 f"rate-limited `{event.get('rate_limited_symbols', 0)}`"
             )
             return
 
         if action in {"collect_ohlcv", "daily_market_update"} and event_type == "rate_limit_cooldown":
             progress_text.warning(
-                f"`{label}` detected provider rate limiting. Applying cooldown before the next batch window."
+                f"`{label}`에서 provider rate-limit이 감지되었습니다. 다음 batch 전에 cooldown을 적용합니다."
             )
             progress_meta.caption(
-                f"Processed `{event.get('processed_symbols', 0)}/{event.get('total_symbols', symbol_count)}` symbols | "
+                f"처리 `{event.get('processed_symbols', 0)}/{event.get('total_symbols', symbol_count)}` symbols | "
                 f"cooldown `{event.get('cooldown_sec', 0)}` sec | "
                 f"next chunk `{event.get('current_chunk_size', 0)}` | "
                 f"workers `{event.get('current_max_workers', 0)}`"
@@ -1103,13 +1508,13 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             if event_type == "stage_start":
                 percent = int(((stage_index - 1) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Current stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages})")
                 return
 
             if event_type == "stage_complete":
                 percent = int((stage_index / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Completed stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages})")
                 return
 
             if event_type == "batch_progress":
@@ -1120,10 +1525,10 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                 progress_bar.progress(percent)
                 if action == "pipeline_core_market_data":
                     progress_meta.caption(
-                        "Current stage: `OHLCV` | "
-                        f"processed `{processed_symbols}/{total_symbols}` symbols | "
+                        "현재 stage: `OHLCV` | "
+                        f"처리 `{processed_symbols}/{total_symbols}` symbols | "
                         f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
-                        f"rows written `{event.get('rows_written', 0)}`"
+                        f"저장 rows `{event.get('rows_written', 0)}`"
                     )
                 return
 
@@ -1133,7 +1538,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             percent = int((processed_symbols / total_symbols) * 100)
             progress_bar.progress(percent)
             progress_meta.caption(
-                "Processed "
+                "처리 "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
                 f"values `{event.get('inserted_values', 0)}` | "
@@ -1150,11 +1555,11 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             if event_type == "stage_start":
                 percent = int(((stage_index - 1) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Current stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages})")
             else:
                 percent = int((stage_index / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Completed stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages})")
 
     return _callback
 
@@ -1238,15 +1643,17 @@ def _render_result_summary(result: JobResult) -> None:
 
     failed_count = len(result.get("failed_symbols") or [])
     status = str(result.get("status") or "")
+    status_label, rows_label, requested_label, failed_label, duration_label = _result_metric_labels(job_name)
     _render_ingestion_stat_grid(
         [
-            ("상태", _status_label(status), status),
-            ("저장 Row", _format_count(result.get("rows_written")), None),
-            ("요청 대상", _format_count(result.get("symbols_requested")), None),
-            ("누락 / 실패", _format_count(failed_count), None),
-            ("소요 시간(초)", _format_duration(result.get("duration_sec")), None),
+            (status_label, _status_label(status), status),
+            (rows_label, _format_count(result.get("rows_written")), None),
+            (requested_label, _format_count(result.get("symbols_requested")), None),
+            (failed_label, _format_count(failed_count), None),
+            (duration_label, _format_duration(result.get("duration_sec")), None),
         ]
     )
+    _render_result_interpretation(result)
 
     run_metadata = result.get("run_metadata") or {}
     if run_metadata:
@@ -1299,7 +1706,7 @@ def _render_result_summary(result: JobResult) -> None:
             diag_col4.metric("Cooldown Events", len(details.get("cooldown_events") or []))
             timing_breakdown = details.get("timing_breakdown") or {}
             if timing_breakdown:
-                st.caption("Timing Breakdown")
+                st.caption("시간 breakdown")
                 time_col1, time_col2, time_col3, time_col4 = st.columns(4)
                 time_col1.metric("Fetch (sec)", timing_breakdown.get("fetch_sec", 0.0))
                 time_col2.metric("Delete (sec)", timing_breakdown.get("delete_sec", 0.0))
@@ -1311,14 +1718,14 @@ def _render_result_summary(result: JobResult) -> None:
                 time_col7.metric("Batch Count", timing_breakdown.get("batch_count", 0))
                 time_col8.metric("Avg Fetch / Batch", timing_breakdown.get("avg_fetch_sec_per_batch", 0.0))
             if details.get("rerun_rate_limited_payload"):
-                st.caption("Retry payload for rate-limited symbols")
+                st.caption("rate-limit 대상 재실행 payload")
                 st.code(details["rerun_rate_limited_payload"], language="text")
             if details.get("rerun_missing_payload"):
-                st.caption("Retry payload for missing-provider symbols")
+                st.caption("missing-provider 대상 재실행 payload")
                 st.code(details["rerun_missing_payload"], language="text")
             provider_message_batches = details.get("provider_message_batches") or []
             if provider_message_batches:
-                st.caption("Provider message excerpts")
+                st.caption("Provider message 일부")
                 st.json(provider_message_batches[:5])
 
     steps = details.get("steps")
@@ -1534,7 +1941,7 @@ def _render_persistent_run_history() -> None:
     st.subheader("누적 실행 기록")
     history = load_run_history(limit=30)
     if not history:
-        st.info("No persisted run history found yet.")
+        st.info("아직 저장된 실행 기록이 없습니다.")
         return
 
     st.caption(f"경로: {HISTORY_FILE}")
@@ -1580,7 +1987,7 @@ def _render_check_result(result: dict[str, Any]) -> None:
 
     details = result.get("details") or {}
     if details:
-        with st.expander("Preflight Details", expanded=False):
+        with st.expander("Preflight 상세", expanded=False):
             st.json(details)
 
 
@@ -2181,10 +2588,10 @@ def _render_symbol_source_inputs(
 
     source_result = resolve_symbol_source(source_mode, manual_symbols)
     if source_result["status"] == "ok":
-        st.info(f'{_format_symbol_source_label(source_mode)} ready. Count: {source_result["count"]}')
+        st.info(f'{_format_symbol_source_label(source_mode)} 준비 완료. 대상: {source_result["count"]:,}개')
         preview = ", ".join(source_result["symbols"][:10])
         if preview:
-            st.caption(f"Preview: {preview}")
+            st.caption(f"미리보기: {preview}")
     else:
         st.error(source_result["message"])
 
@@ -2205,11 +2612,11 @@ def _render_large_run_guard(
         return False
 
     if count >= warn_threshold:
-        st.warning(f"Large run detected: {count} symbols.")
+        st.warning(f"대량 실행입니다: {count:,} symbols.")
         if estimate.get("available"):
             st.caption(estimate["message"])
         else:
-            st.caption("Estimated runtime unavailable. Large runs may take several minutes or longer.")
+            st.caption("아직 예상 소요 시간을 계산할 실행 기록이 없습니다. 대량 실행은 수 분 이상 걸릴 수 있습니다.")
 
     return True
 
@@ -2270,7 +2677,7 @@ def _resolve_daily_market_execution_profile(
     if source_mode in raw_source_modes:
         return (
             "raw_heavy",
-            "Execution profile: `raw_heavy` | smaller batches, single-worker mode, longer cooldown, raw-universe operator sweep.",
+            "Execution profile: `raw_heavy` | raw universe 대량 sweep용입니다. batch를 작게 나누고 cooldown을 길게 둡니다.",
         )
     managed_source_modes = {
         "Profile Filtered Stocks",
@@ -2283,16 +2690,16 @@ def _resolve_daily_market_execution_profile(
     ):
         return (
             "managed_refresh_short",
-            "Execution profile: `managed_refresh_short` | short-window daily refresh, larger batches, two-worker first pass, rate-limit fallback still enabled.",
+            "Execution profile: `managed_refresh_short` | 짧은 daily refresh용입니다. batch를 키우되 rate-limit fallback은 유지합니다.",
         )
     if source_mode == "Profile Filtered Stocks + ETFs":
         return (
             "managed_fast",
-            "Execution profile: `managed_fast` | larger managed-universe batches, shorter idle sleep, lighter cooldown.",
+            "Execution profile: `managed_fast` | 관리된 universe를 빠르게 갱신합니다. raw sweep보다 cooldown이 가볍습니다.",
         )
     return (
         "managed_safe",
-        "Execution profile: `managed_safe` | moderate batching for narrower or manual universes with built-in cooldown.",
+        "Execution profile: `managed_safe` | 좁은 범위나 수동 입력에 맞춘 기본 안전 모드입니다.",
     )
 
 
@@ -2307,6 +2714,7 @@ def _render_ingestion_console() -> None:
         "이 화면은 외부 API / 공식 파일 / provider page에서 데이터를 수집해 MySQL에 저장하는 운영 콘솔입니다. "
         "각 작업은 기존처럼 사용자가 심볼, 기간, 소스, 옵션을 직접 정하되, 무엇을 수집하고 어디에 쓰이는지 먼저 보여줍니다."
     )
+    _render_ingestion_workflow_overview()
 
     current_progress_callback = None
     col_left, col_right = st.columns([3, 2])
@@ -2328,13 +2736,13 @@ def _render_ingestion_console() -> None:
 
             with st.expander("일별 가격 업데이트", expanded=True):
                 _render_job_brief("daily_market_update")
-                st.caption("Recommended cadence: every trading day after market close or before the next backtest/data sync.")
+                st.caption("권장 주기: 매 거래일 장 마감 후 또는 다음 backtest/data sync 전에 실행합니다.")
                 st.caption(
-                    "Recommended symbol source: use `Profile Filtered Stocks + ETFs` for routine refreshes. "
-                    "Use raw `NYSE Stocks + ETFs` only for broad operator sweeps."
+                    "권장 source: 평소 운영은 `Profile Filtered Stocks + ETFs`를 사용합니다. "
+                    "raw `NYSE Stocks + ETFs`는 넓은 universe를 다시 훑어야 할 때만 사용하세요."
                 )
-                st.caption("Current defaults: `Profile Filtered Stocks + ETFs`, `1d`, `1d`.")
-                st.caption("Writes to: `finance_price.nyse_price_history`")
+                st.caption("기본값: `Profile Filtered Stocks + ETFs`, `1d`, `1d`.")
+                st.caption("저장 테이블: `finance_price.nyse_price_history`")
                 daily_symbol_result = _render_symbol_source_inputs(
                     "daily_market",
                     "Daily Market Symbols",
@@ -2358,10 +2766,10 @@ def _render_ingestion_console() -> None:
                     daily_filtered_symbols, daily_excluded_symbols = filter_non_plain_symbols(daily_symbols_input)
                     if daily_excluded_symbols:
                         st.info(
-                            "Filtered non-plain symbols for provider stability: "
-                            f"`{len(daily_excluded_symbols)}` excluded, `{len(daily_filtered_symbols)}` remain."
+                            "provider 안정성을 위해 특수 share-class / non-plain symbol을 제외했습니다: "
+                            f"`{len(daily_excluded_symbols)}`개 제외, `{len(daily_filtered_symbols)}`개 실행 대상."
                         )
-                        st.caption(f"Excluded sample: {', '.join(daily_excluded_symbols[:10])}")
+                        st.caption(f"제외 sample: {', '.join(daily_excluded_symbols[:10])}")
                 daily_symbols_input = daily_filtered_symbols
                 daily_col1, daily_col2 = st.columns(2)
                 daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=0, key="daily_period_input")
@@ -2382,6 +2790,33 @@ def _render_ingestion_console() -> None:
                     interval=daily_interval_input,
                 )
                 st.caption(daily_profile_caption)
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", _format_symbol_source_label(daily_source_mode)),
+                        ("대상 수", f"{len(daily_symbols_input):,} symbols"),
+                        (
+                            "기간",
+                            _format_contract_window(
+                                period=daily_resolved_period,
+                                start=daily_resolved_start,
+                                end=daily_resolved_end,
+                            ),
+                        ),
+                        ("Interval", daily_interval_input),
+                        ("Execution profile", daily_execution_profile),
+                    ],
+                    note=(
+                        "이 설정으로 가격 row를 저장합니다. 저장 row 수가 있어도 요청 기간 전체 coverage를 뜻하지는 않으므로 "
+                        "결과 해석과 DB coverage quick check를 함께 보세요."
+                    ),
+                )
+                _render_price_window_preflight(
+                    symbols=daily_symbols_input,
+                    start=daily_resolved_start,
+                    end=daily_resolved_end,
+                    timeframe=daily_interval_input,
+                )
                 daily_symbol_check = check_symbol_input(daily_symbols_input)
                 _render_check_result(daily_symbol_check)
                 daily_run_allowed = _render_large_run_guard(
@@ -2437,11 +2872,11 @@ def _render_ingestion_console() -> None:
 
             with st.expander("주간 펀더멘털 / 팩터 업데이트", expanded=False):
                 _render_job_brief("weekly_fundamental_refresh")
-                st.caption("Recommended cadence: once per week, or after a meaningful batch of earnings / filing updates.")
-                st.caption("Recommended symbol source: match the same stock universe used by Daily Market Update so factor coverage stays aligned.")
-                st.caption("Current defaults: `NYSE Stocks`, `quarterly`.")
-                st.caption("Large NYSE stock runs can take noticeably longer than OHLCV refreshes because this job executes both fundamentals ingestion and factor recomputation.")
-                st.caption("Writes to: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
+                st.caption("권장 주기: 주 1회 또는 earnings / filing update가 많이 쌓인 뒤 실행합니다.")
+                st.caption("권장 source: Daily Market Update와 같은 stock universe를 맞추면 factor coverage가 덜 어긋납니다.")
+                st.caption("기본값: `NYSE Stocks`, `quarterly`.")
+                st.caption("NYSE stock 대량 실행은 fundamentals 수집과 factor 재계산을 함께 수행하므로 OHLCV보다 오래 걸릴 수 있습니다.")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
                 weekly_symbol_result = _render_symbol_source_inputs(
                     "weekly_fundamental",
                     "Weekly Refresh Symbols",
@@ -2494,19 +2929,19 @@ def _render_ingestion_console() -> None:
 
             with st.expander("상세 재무제표 확장 수집", expanded=False):
                 _render_job_brief("extended_statement_refresh")
-                st.caption("Recommended cadence: monthly, or before deep factor research and long-horizon backtest preparation.")
-                st.caption("Recommended symbol source: `Profile Filtered Stocks` or a narrower research universe, because this job is heavier than summary fundamentals refresh.")
+                st.caption("권장 주기: 월 1회 또는 긴 기간 factor research / backtest 준비 전에 실행합니다.")
+                st.caption("권장 source: 이 작업은 무겁기 때문에 `Profile Filtered Stocks`나 더 좁은 research universe부터 사용하세요.")
                 st.caption(
-                    "If you are looking for the older lower-level `Financial Statement Ingestion` card from the checklist, "
-                    "it still exists under the `수동 복구 / 진단` tab. For routine Phase 7/8 recovery work, start from this card."
+                    "기존 checklist의 낮은 수준 `Financial Statement Ingestion` card는 `수동 복구 / 진단` 탭에 남아 있습니다. "
+                    "일상적인 PIT coverage 복구는 이 확장 수집 card에서 시작하세요."
                 )
                 st.caption(
-                    "Managed annual coverage presets are also available in the symbol preset dropdown: "
+                    "symbol preset dropdown에는 관리용 coverage preset도 있습니다: "
                     "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
                 )
-                st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `0 periods (all available)`.")
+                st.caption("기본값: `Profile Filtered Stocks`, `annual`, `0 periods (all available)`.")
                 st.caption(
-                    "Writes to: "
+                    "저장 테이블: "
                     "`finance_fundamental.nyse_financial_statement_filings`, "
                     "`finance_fundamental.nyse_financial_statement_labels`, "
                     "`finance_fundamental.nyse_financial_statement_values`, "
@@ -2530,8 +2965,8 @@ def _render_ingestion_console() -> None:
                     key="ext_periods_input",
                     help="`0` means collect all available statement periods from the source. Use this for PIT recovery and quarterly history hardening.",
                 )
-                st.caption("`freq` is automatically matched to the selected `Period Type` for this operational pipeline.")
-                st.caption("Tip: `0 = all available periods`. Use a positive number only when you intentionally want a shorter rolling refresh.")
+                st.caption("`freq`는 선택한 `Period Type`에 자동으로 맞춰 실행됩니다.")
+                st.caption("Tip: `0 = all available periods`. 짧은 rolling refresh를 의도할 때만 양수를 입력하세요.")
                 ext_symbol_check = check_symbol_input(ext_symbols_input)
                 _render_check_result(ext_symbol_check)
                 ext_run_allowed = _render_large_run_guard(
@@ -2578,9 +3013,9 @@ def _render_ingestion_console() -> None:
 
             with st.expander("종목 메타데이터 업데이트", expanded=False):
                 _render_job_brief("metadata_refresh")
-                st.caption("Recommended cadence: weekly or whenever the tracked universe definition / profile filters change.")
-                st.caption("Recommended source scope: keep both `stock` and `etf` selected unless you are intentionally refreshing only one side of the universe.")
-                st.caption("Writes to: `finance_meta.nyse_asset_profile`")
+                st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")
+                st.caption("권장 scope: 한쪽만 갱신할 의도가 아니라면 `stock`과 `etf`를 함께 선택하세요.")
+                st.caption("저장 테이블: `finance_meta.nyse_asset_profile`")
                 metadata_kind_options = st.multiselect(
                     "Metadata Refresh Kinds",
                     options=["stock", "etf"],
@@ -3237,9 +3672,11 @@ def _render_ingestion_console() -> None:
                     _render_inline_last_completed_result("collect_macro_market_context")
 
                 with lifecycle_tab:
-                    st.caption(
+                    _render_data_quality_callout(
+                        "상장 / 상폐 근거 해석 기준",
                         "상장 / 상폐 근거는 Data Coverage Audit의 survivorship 해석을 보강합니다. "
-                        "current snapshot 계열은 historical membership PASS 근거가 아니며, 실제 historical source나 delisting source와 구분해서 봅니다."
+                        "current snapshot 계열은 historical membership PASS 근거가 아니며, 실제 historical source나 delisting source와 구분해서 봅니다.",
+                        tone="warning",
                     )
                     form25_tab, symdir_tab, sec_cik_tab, computed_tab = st.tabs(
                         ["SEC Form 25", "Nasdaq 현재 상장", "SEC CIK 교차확인", "반복 관찰 요약"]
@@ -3528,10 +3965,10 @@ def _render_ingestion_console() -> None:
             with st.expander("핵심 시장 데이터 일괄 수집", expanded=True):
                 _render_job_brief("pipeline_core_market_data")
                 st.caption(
-                    "Execution order: OHLCV -> Fundamentals -> Factors. "
-                    "This is a manual composite job for one-off full reruns on the current symbol set."
+                    "실행 순서: OHLCV -> Fundamentals -> Factors. "
+                    "현재 symbol set을 한 번에 다시 채워야 할 때 쓰는 수동 composite job입니다."
                 )
-                st.caption("Writes to: `finance_price.nyse_price_history`, `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
+                st.caption("저장 테이블: `finance_price.nyse_price_history`, `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
                 pipeline_symbol_result = _render_symbol_source_inputs("pipeline", "Pipeline Symbols")
                 pipeline_symbols_input = pipeline_symbol_result["symbols"]
                 pipe_col1, pipe_col2 = st.columns(2)
@@ -3548,8 +3985,35 @@ def _render_ingestion_console() -> None:
                 )
                 if pipeline_period_input == "7d" and not pipeline_start_input and not pipeline_end_input:
                     st.caption(
-                        f"`7d` is handled as a rolling date window: start=`{pipeline_resolved_start}`, end=`{pipeline_resolved_end}`."
+                        f"`7d`는 rolling date window로 변환됩니다: start=`{pipeline_resolved_start}`, end=`{pipeline_resolved_end}`."
                     )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", _format_symbol_source_label(pipeline_symbol_result.get("source_mode") or "Manual")),
+                        ("대상 수", f"{len(pipeline_symbols_input):,} symbols"),
+                        (
+                            "가격 기간",
+                            _format_contract_window(
+                                period=pipeline_resolved_period,
+                                start=pipeline_resolved_start,
+                                end=pipeline_resolved_end,
+                            ),
+                        ),
+                        ("Interval", pipeline_interval_input),
+                        ("Fundamental freq", pipeline_freq_input),
+                    ],
+                    note=(
+                        "Composite job은 가격, fundamentals, factors 중 한 단계만 partial이어도 downstream coverage gap이 남습니다. "
+                        "실행 결과의 Pipeline Steps를 먼저 확인하세요."
+                    ),
+                )
+                _render_price_window_preflight(
+                    symbols=pipeline_symbols_input,
+                    start=pipeline_resolved_start,
+                    end=pipeline_resolved_end,
+                    timeframe=pipeline_interval_input,
+                )
                 pipeline_symbol_check = check_symbol_input(pipeline_symbols_input)
                 _render_check_result(pipeline_symbol_check)
                 pipeline_run_allowed = _render_large_run_guard(
@@ -3601,10 +4065,10 @@ def _render_ingestion_console() -> None:
             with st.expander("가격 이력 수동 수집", expanded=False):
                 _render_job_brief("collect_ohlcv")
                 st.caption(
-                    "Uses the `Symbols` input. Recommended before running Factors. "
-                    "Current date-range handling is more reliable with `period` than with `end`."
+                    "`Symbols` 입력을 사용합니다. Factors 계산 전에 가격 row를 좁은 범위로 보강할 때 적합합니다. "
+                    "date-range가 애매하면 `period` 기반 실행이 더 단순합니다."
                 )
-                st.caption("Writes to: `finance_price.nyse_price_history`")
+                st.caption("저장 테이블: `finance_price.nyse_price_history`")
                 ohlcv_symbol_result = _render_symbol_source_inputs("ohlcv", "OHLCV Symbols")
                 ohlcv_symbols_input = ohlcv_symbol_result["symbols"]
                 ohlcv_col1, ohlcv_col2 = st.columns(2)
@@ -3620,8 +4084,31 @@ def _render_ingestion_console() -> None:
                 )
                 if ohlcv_period_input == "7d" and not ohlcv_start_input and not ohlcv_end_input:
                     st.caption(
-                        f"`7d` is handled as a rolling date window: start=`{ohlcv_resolved_start}`, end=`{ohlcv_resolved_end}`."
+                        f"`7d`는 rolling date window로 변환됩니다: start=`{ohlcv_resolved_start}`, end=`{ohlcv_resolved_end}`."
                     )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", _format_symbol_source_label(ohlcv_symbol_result.get("source_mode") or "Manual")),
+                        ("대상 수", f"{len(ohlcv_symbols_input):,} symbols"),
+                        (
+                            "기간",
+                            _format_contract_window(
+                                period=ohlcv_resolved_period,
+                                start=ohlcv_resolved_start,
+                                end=ohlcv_resolved_end,
+                            ),
+                        ),
+                        ("Interval", ohlcv_interval_input),
+                    ],
+                    note="수동 OHLCV 수집은 요청 범위 보강용입니다. 실행 후 missing / no-data / rate-limit payload를 확인하세요.",
+                )
+                _render_price_window_preflight(
+                    symbols=ohlcv_symbols_input,
+                    start=ohlcv_resolved_start,
+                    end=ohlcv_resolved_end,
+                    timeframe=ohlcv_interval_input,
+                )
                 ohlcv_symbol_check = check_symbol_input(ohlcv_symbols_input)
                 _render_check_result(ohlcv_symbol_check)
                 ohlcv_run_allowed = _render_large_run_guard(
@@ -3671,9 +4158,9 @@ def _render_ingestion_console() -> None:
             with st.expander("펀더멘털 수동 수집", expanded=False):
                 _render_job_brief("collect_fundamentals")
                 st.caption(
-                    "Uses the `Symbols` input. Required before `Factor Calculation` for those symbols."
+                    "`Symbols` 입력을 사용합니다. 해당 symbol의 `Factor Calculation` 전에 필요한 normalized fundamentals를 채웁니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_fundamentals`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`")
                 fundamentals_symbol_result = _render_symbol_source_inputs("fundamentals", "Fundamentals Symbols")
                 fundamentals_symbols_input = fundamentals_symbol_result["symbols"]
                 fundamentals_freq_input = st.selectbox(
@@ -3723,9 +4210,9 @@ def _render_ingestion_console() -> None:
             with st.expander("팩터 수동 계산", expanded=False):
                 _render_job_brief("calculate_factors")
                 st.caption(
-                    "Uses the `Symbols` input. Requires matching OHLCV and fundamentals data to already exist in MySQL."
+                    "`Symbols` 입력을 사용합니다. 같은 symbol의 OHLCV와 fundamentals가 MySQL에 먼저 있어야 계산됩니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_factors`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_factors`")
                 factor_symbol_result = _render_symbol_source_inputs("factor", "Factor Symbols")
                 factor_symbols_input = factor_symbol_result["symbols"]
                 factor_col1, factor_col2, factor_col3 = st.columns(3)
@@ -3779,10 +4266,10 @@ def _render_ingestion_console() -> None:
             with st.expander("자산 프로필 수동 수집", expanded=False):
                 _render_job_brief("collect_asset_profiles")
                 st.caption(
-                    "Does not use the `Symbols` input. Uses the selected `Asset Profile Kinds` and reads from "
-                    "`nyse_stock` / `nyse_etf` in MySQL."
+                    "`Symbols` 입력은 사용하지 않습니다. 선택한 `Asset Profile Kinds`와 MySQL의 "
+                    "`nyse_stock` / `nyse_etf` universe table을 기준으로 실행합니다."
                 )
-                st.caption("Writes to: `finance_meta.nyse_asset_profile`")
+                st.caption("저장 테이블: `finance_meta.nyse_asset_profile`")
                 profile_kind_options = st.multiselect(
                     "Asset Profile Kinds",
                     options=["stock", "etf"],
@@ -3817,18 +4304,17 @@ def _render_ingestion_console() -> None:
             with st.expander("상세 재무제표 수동 수집", expanded=False):
                 _render_job_brief("collect_financial_statements")
                 st.caption(
-                    "Uses the `Symbols` input. This job is usually slower than the normalized fundamentals job and may "
-                    "produce partial success if some issuers fail."
+                    "`Symbols` 입력을 사용합니다. normalized fundamentals보다 느리고, issuer별 실패가 있으면 partial success가 될 수 있습니다."
                 )
                 st.caption(
-                    "This is the lower-level manual ingestion card. For routine statement history recovery and quarterly coverage work, "
-                    "prefer `Extended Statement Refresh` above."
+                    "이 card는 낮은 수준의 수동 수집입니다. 일상적인 statement history 복구와 quarterly coverage 보강은 "
+                    "위의 `Extended Statement Refresh`를 우선 사용하세요."
                 )
                 st.caption(
-                    "For strict annual operator runs, the symbol preset dropdown also exposes "
-                    "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
+                    "strict annual 운영 run에는 symbol preset dropdown의 "
+                    "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, `US Statement Coverage 1000`도 사용할 수 있습니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
                 fs_symbol_result = _render_symbol_source_inputs("fs", "Financial Statement Symbols")
                 fs_symbols_input = fs_symbol_result["symbols"]
                 fs_col1, fs_col2 = st.columns(2)
@@ -3846,9 +4332,9 @@ def _render_ingestion_console() -> None:
                     value=0,
                     step=1,
                     key="fs_periods_input",
-                    help="`0` means collect all available statement periods from EDGAR for each symbol.",
+                    help="`0`이면 각 symbol에 대해 EDGAR에서 가능한 모든 statement period를 수집합니다.",
                 )
-                st.caption("Tip: `0 = all available periods`. This is recommended when rebuilding quarterly strict coverage.")
+                st.caption("Tip: `0 = all available periods`. quarterly strict coverage를 다시 채울 때 권장합니다.")
                 st.caption(
                     "`Statement Mode`는 operator용 단일 입력입니다. "
                     "내부적으로는 `freq`와 `period`를 같은 값으로 맞춰 실행합니다."
@@ -3901,10 +4387,10 @@ def _render_ingestion_console() -> None:
             with st.expander("재무제표 shadow 재구성", expanded=False):
                 _render_job_brief("rebuild_statement_shadow")
                 st.caption(
-                    "Use this when `Statement Shadow Coverage Preview` says `raw_statement_present_but_shadow_missing`. "
-                    "This is the faster recovery path when raw statement rows already exist."
+                    "`Statement Shadow Coverage Preview`가 `raw_statement_present_but_shadow_missing`라고 표시할 때 사용합니다. "
+                    "raw statement row가 이미 있으면 이 경로가 더 빠릅니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_fundamentals_statement`, `finance_fundamental.nyse_factors_statement`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals_statement`, `finance_fundamental.nyse_factors_statement`")
                 shadow_symbol_result = _render_symbol_source_inputs(
                     "shadow_rebuild",
                     "Shadow Rebuild Symbols",
@@ -3916,7 +4402,7 @@ def _render_ingestion_console() -> None:
                     ["annual", "quarterly"],
                     index=1,
                     key="shadow_rebuild_freq_input",
-                    help="Rebuild the shadow tables for the selected statement frequency using already stored raw statement rows.",
+                    help="이미 저장된 raw statement row를 사용해 선택한 statement frequency의 shadow table을 재구성합니다.",
                 )
                 shadow_symbol_check = check_symbol_input(shadow_symbols_input)
                 _render_check_result(shadow_symbol_check)

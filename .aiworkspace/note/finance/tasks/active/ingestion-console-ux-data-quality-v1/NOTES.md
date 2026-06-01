@@ -24,3 +24,8 @@
 - Responsive follow-up replaced truncating Streamlit metrics in Ingestion result summaries with custom wrapping stat cards, added wrapping metadata rows for DB targets / downstream use, and added compact Korean `format_func` labels for symbol-source / preset selectors.
 - Persistent run-history selection now uses compact display labels and a full `현재 선택` caption, so the selected run remains identifiable when the browser is narrow.
 - Do not style `div[data-baseweb="select"]` or `div[role="listbox"]` internals globally. It can interfere with Streamlit/BaseWeb option positioning and click targets; keep selectbox reliability native and show long values in adjacent captions/cards instead.
+- Follow-up implementation kept button names, common finance terms, option values, and internal IDs where useful, but translated explanatory content that tells the user what the job does and how to interpret results.
+- Added a top workflow overview and per-run execution contracts so users see source / count / period / destination before clicking run.
+- Added bounded price-window DB coverage quick check using `finance.loaders.price.load_price_window_summary`; it is intentionally skipped for large runs to avoid making the UI rerun expensive.
+- Result cards now classify job domains and change labels / interpretation: price rows are not lifecycle evidence rows, provider snapshots are not PIT truth, and current lifecycle snapshots are not survivorship PASS evidence.
+- User-facing preflight and source-resolution messages moved to Korean explanatory text in `app/jobs/preflight_checks.py`, `app/jobs/symbol_sources.py`, and `app/jobs/run_history.py`.

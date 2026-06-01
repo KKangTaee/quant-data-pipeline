@@ -53,7 +53,7 @@ def resolve_symbol_source(source_mode: str, manual_symbols: list[str]) -> Source
         if source_mode == "Manual":
             return {
                 "status": "ok" if manual_symbols else "error",
-                "message": "Manual symbols ready." if manual_symbols else "No manual symbols provided.",
+                "message": "직접 입력 symbol이 준비되었습니다." if manual_symbols else "직접 입력 symbol이 없습니다.",
                 "symbols": manual_symbols,
                 "count": len(manual_symbols),
                 "source_mode": source_mode,
@@ -77,7 +77,7 @@ def resolve_symbol_source(source_mode: str, manual_symbols: list[str]) -> Source
         else:
             return {
                 "status": "error",
-                "message": f"Unsupported symbol source: {source_mode}",
+                "message": f"지원하지 않는 symbol source입니다: {source_mode}",
                 "symbols": [],
                 "count": 0,
                 "source_mode": source_mode,
@@ -85,7 +85,7 @@ def resolve_symbol_source(source_mode: str, manual_symbols: list[str]) -> Source
 
         return {
             "status": "ok" if symbols else "error",
-            "message": f"{source_mode} ready." if symbols else f"{source_mode} returned no symbols.",
+            "message": f"{source_mode} source가 준비되었습니다." if symbols else f"{source_mode} source에서 symbol을 찾지 못했습니다.",
             "symbols": symbols,
             "count": len(symbols),
             "source_mode": source_mode,
@@ -93,7 +93,7 @@ def resolve_symbol_source(source_mode: str, manual_symbols: list[str]) -> Source
     except Exception as exc:
         return {
             "status": "error",
-            "message": f"Failed to resolve symbol source: {exc}",
+            "message": f"symbol source를 확인하지 못했습니다: {exc}",
             "symbols": [],
             "count": 0,
             "source_mode": source_mode,
