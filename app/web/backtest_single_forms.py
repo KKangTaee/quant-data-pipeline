@@ -773,7 +773,7 @@ def _render_equal_weight_form() -> None:
                 ),
                 key="eq_rebalance_interval",
             )
-        with st.expander("Real-Money Contract", expanded=False):
+        with st.expander("Promotion Policy Signal", expanded=False):
             (
                 min_price_filter,
                 transaction_cost_bps,
@@ -860,7 +860,7 @@ def _render_gtaa_form() -> None:
             _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 추가 overlay / 실전 계약 / guardrail은 아래 그룹으로 분리했습니다.")
             with st.expander("Risk-Off Overlay", expanded=False):
                 risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="gtaa")
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     min_price_filter,
                     transaction_cost_bps,
@@ -1016,7 +1016,7 @@ def _render_global_relative_strength_form() -> None:
                 help="가격이 이 이동평균 아래에 있으면 cash ticker로 대피합니다.",
                 key="grs_trend_filter_window",
             )
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     min_price_filter,
                     transaction_cost_bps,
@@ -1140,7 +1140,7 @@ def _render_risk_parity_form() -> None:
                 )
             )
             _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     min_price_filter,
                     transaction_cost_bps,
@@ -1273,7 +1273,7 @@ def _render_dual_momentum_form() -> None:
                 )
             )
             _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     min_price_filter,
                     transaction_cost_bps,
@@ -1614,7 +1614,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     key_prefix="qss",
                     label_prefix="Strict Annual Quality",
                 )
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -1890,7 +1890,7 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 )
                 st.caption(
                     "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
-                    "Real-Money Contract와 Promotion 판단은 아직 annual strict 중심으로 유지합니다."
+                    "Promotion Policy Signal 판단은 아직 annual strict 중심으로 유지합니다."
                 )
 
         submitted = st.form_submit_button("Run Strict Quarterly Quality Prototype", use_container_width=True)
@@ -2105,7 +2105,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 )
                 st.caption(
                     "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
-                    "Real-Money Contract와 Promotion 판단은 아직 annual strict 중심으로 유지합니다."
+                    "Promotion Policy Signal 판단은 아직 annual strict 중심으로 유지합니다."
                 )
 
         submitted = st.form_submit_button("Run Strict Quarterly Value Prototype", use_container_width=True)
@@ -2307,7 +2307,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     key_prefix="vss",
                     label_prefix="Strict Annual Value",
                 )
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -2590,7 +2590,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 )
                 st.caption(
                     "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
-                    "Real-Money Contract와 Promotion 판단은 아직 annual strict 중심으로 유지합니다."
+                    "Promotion Policy Signal 판단은 아직 annual strict 중심으로 유지합니다."
                 )
 
         submitted = st.form_submit_button("Run Strict Quarterly Quality + Value Prototype", use_container_width=True)
@@ -2803,7 +2803,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     key_prefix="qvss",
                     label_prefix="Strict Annual Multi-Factor",
                 )
-            with st.expander("Real-Money Contract", expanded=False):
+            with st.expander("Promotion Policy Signal", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,

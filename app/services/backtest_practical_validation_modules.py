@@ -281,7 +281,7 @@ def _module_gate_reason(module: dict[str, Any]) -> str:
     if _module_blocks_gate(module):
         return f"Final Review 이동 전 보강 필요: {module.get('next_action') or module.get('reason') or status}"
     if _module_needs_review(module):
-        return f"이동 가능하지만 Final Review 판단 근거로 확인: {module.get('next_action') or module.get('reason') or status}"
+        return f"이동 가능하지만 PASS가 아니므로 Final Review 판단 근거로 확인: {module.get('next_action') or module.get('reason') or status}"
     requirement = str(module.get("requirement") or "").upper()
     if requirement == "REFERENCE":
         return "Practical Validation 이동 차단 기준은 아니며 후속 화면의 참고 근거입니다."
@@ -716,12 +716,12 @@ def build_validation_module_plan(
             next_action = "필수 모듈의 BLOCKED / NEEDS_INPUT / NOT_RUN 항목을 먼저 해결합니다."
     elif review_modules:
         gate_route = "READY_WITH_REVIEW"
-        gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목을 최종 판단 근거로 확인해야 합니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 보강 필요 상태와 최종 선정 가능 여부를 확인합니다."
+        gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목은 PASS가 아니며 최종 판단 근거로 확인해야 합니다."
+        next_action = "검증 결과를 저장하고 Final Review에서 보강 필요 상태와 모니터링 후보 선정 가능 여부를 확인합니다."
     else:
         gate_route = "READY_FOR_FINAL_REVIEW"
         gate_verdict = "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 최종 후보 선정 저장을 진행합니다."
+        next_action = "검증 결과를 저장하고 Final Review에서 모니터링 후보 선정 가능 여부를 확인합니다."
 
     board_map = build_validation_board_map(modules=modules, source_traits=traits)
 

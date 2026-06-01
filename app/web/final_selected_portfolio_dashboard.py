@@ -305,9 +305,9 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
             "tone": "positive" if summary.get("selected_decision_count") else "neutral",
         },
         {
-            "title": "Normal",
+            "title": "Monitoring Clear",
             "value": status_counts.get("normal", 0),
-            "detail": "선정 row / allocation / blocker 기준 통과",
+            "detail": "모니터링 후보 row / allocation / blocker 기준 모니터링 가능",
             "tone": "positive" if status_counts.get("normal") else "neutral",
         },
         {
@@ -339,12 +339,12 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _render_empty_state(summary: dict[str, Any]) -> None:
     if not summary.get("final_decision_count"):
-        st.info("아직 Final Review에서 저장된 최종 선정 row가 없습니다.")
+        st.info("아직 Final Review에서 저장된 모니터링 후보 row가 없습니다.")
         st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
         return
     st.warning(
-        "Final Review 기록은 있지만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 포트폴리오가 없습니다. "
-        "`Backtest > Final Review`에서 최종 판단이 선정으로 저장된 row만 이 대시보드에 운영 대상으로 표시됩니다."
+        "Final Review 기록은 있지만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 모니터링 후보 포트폴리오가 없습니다. "
+        "`Backtest > Final Review`에서 모니터링 후보로 저장된 row만 이 대시보드에 운영 대상으로 표시됩니다."
     )
     st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
 
@@ -741,7 +741,7 @@ def _render_dashboard_portfolio_workspace(
         return
 
     st.markdown("#### 3. 모니터 시나리오")
-    st.caption("각 전략별 가상 기간과 초기자산을 입력해 선정 이후 성과와 리스크 상태를 확인합니다.")
+    st.caption("각 전략별 가상 기간과 초기자산을 입력해 모니터링 이후 성과와 리스크 상태를 확인합니다.")
     tabs = st.tabs([
         f"{index + 1}. {str(row.get('source_title') or row.get('decision_id') or 'Selected')[:42]}"
         for index, row in enumerate(selected_rows)
@@ -772,7 +772,7 @@ def _render_source_boundary(row: dict[str, Any] | None = None) -> None:
         {
             "title": "Source",
             "value": "Final Review Decisions",
-            "detail": "최종 선정 판단 row를 읽습니다.",
+            "detail": "모니터링 후보 판단 row를 읽습니다.",
             "tone": "neutral",
         },
         {
@@ -1026,7 +1026,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
     )
     with timeline_tab:
         st.caption(
-            "Final Review 선정 이후 현재 화면에서 확인한 신호를 시간순으로 읽습니다. "
+            "Final Review 모니터링 후보 선정 후 현재 화면에서 확인한 신호를 시간순으로 읽습니다. "
             "이 timeline은 monitoring log를 자동 저장하지 않습니다."
         )
         timeline = continuity_timeline
@@ -1280,7 +1280,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
             f"auto rebalance: {deployment_boundary.get('auto_rebalance')}"
         )
     with evidence_tab:
-        st.caption("Final Review에서 이 포트폴리오가 실전 후보로 선정될 수 있었던 검증 근거입니다.")
+        st.caption("Final Review에서 이 포트폴리오가 모니터링 후보로 선정될 수 있었던 검증 근거입니다.")
         if evidence_df.empty:
             st.info("표시할 evidence check row가 없습니다.")
         else:
@@ -1354,7 +1354,7 @@ def _render_execution_boundary() -> None:
     with st.container(border=True):
         st.markdown("#### Execution Boundary")
         st.caption(
-            "이 대시보드는 최종 선정 포트폴리오를 운영 대상으로 읽는 화면입니다. "
+            "이 대시보드는 Final Review 모니터링 후보 포트폴리오를 운영 대상으로 읽는 화면입니다. "
             "기간 확장 재검증과 drift 점검은 read-only이며 실제 투자 승인, broker 주문, 자동 리밸런싱은 만들지 않습니다."
         )
         action_cols = st.columns(3, gap="small")
@@ -2226,8 +2226,8 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
 def render_final_selected_portfolio_dashboard_page() -> None:
     st.title("Selected Portfolio Dashboard")
     st.caption(
-        "Final Review에서 최종 선별된 후보를 나의 모니터링 포트폴리오에 담고, "
-        "가상 시나리오와 review signal로 선정 이후 상태를 확인합니다."
+        "Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
+        "가상 시나리오와 review signal로 모니터링 이후 상태를 확인합니다."
     )
 
     dashboard = load_final_selected_portfolio_dashboard()

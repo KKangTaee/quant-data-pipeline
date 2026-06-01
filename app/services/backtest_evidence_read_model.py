@@ -18,7 +18,7 @@ DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
-    SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
     "HOLD_FOR_MORE_PAPER_TRACKING": "내용 부족 / 관찰 필요",
     "REJECT_FOR_PRACTICAL_USE": "투자하면 안 됨",
     "RE_REVIEW_REQUIRED": "재검토 필요",
@@ -26,8 +26,8 @@ FINAL_REVIEW_DECISION_LABELS = {
 FINAL_REVIEW_STATUS_DISPLAY = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
         "route": "FINAL_REVIEW_DECISION_COMPLETE",
-        "verdict": "최종 판단 완료: 실전 검토 통과 후보로 선정됨",
-        "next_action": "이 기록은 투자 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
+        "verdict": "최종 판단 완료: Selected Dashboard 모니터링 후보로 선정됨",
+        "next_action": "이 기록은 모니터링 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
     },
     "HOLD_FOR_MORE_PAPER_TRACKING": {
         "route": "FINAL_REVIEW_HOLD_FOR_MORE_OBSERVATION",
@@ -36,7 +36,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
     },
     "REJECT_FOR_PRACTICAL_USE": {
         "route": "FINAL_REVIEW_REJECTED",
-        "verdict": "최종 판단 완료: 실전 후보에서 제외됨",
+        "verdict": "최종 판단 완료: 모니터링 후보에서 제외됨",
         "next_action": "필요하면 후보 탐색, Compare, Portfolio Proposal 단계로 되돌아갑니다.",
     },
     "RE_REVIEW_REQUIRED": {
@@ -47,7 +47,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
 }
 FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
-        "reason": "Decision Cockpit과 investability gate가 선정 가능 상태이며, 남은 blocker 없이 실전 검토 통과 후보로 기록한다.",
+        "reason": "Decision Cockpit과 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Selected Dashboard 추적 후보로 기록한다.",
         "constraints": "실제 투자 전 투입 금액, 리밸런싱 규칙, 중단 / 재검토 기준, 세금 / 계좌 조건은 별도로 확인한다.",
         "next_action": "Selected Portfolio Dashboard에서 read-only monitoring / recheck 기준을 확인한다.",
     },
@@ -57,7 +57,7 @@ FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
         "next_action": "추가 관찰 또는 evidence 보강 후 Final Review에서 다시 판단한다.",
     },
     "REJECT_FOR_PRACTICAL_USE": {
-        "reason": "현재 검증 근거와 gate evidence로는 실전 후보로 사용하기 어렵다고 판단한다.",
+        "reason": "현재 검증 근거와 gate evidence로는 모니터링 후보로 사용하기 어렵다고 판단한다.",
         "constraints": "동일 source를 다시 검토하려면 blocker 해소나 후보 재구성이 먼저 필요하다.",
         "next_action": "필요하면 Backtest Analysis, Practical Validation, Portfolio Mix 단계로 돌아가 새 후보를 만든다.",
     },
@@ -764,6 +764,12 @@ def build_investability_gate_policy(
         if severity != "PASS":
             current_values = [item for item in current_values if item != "PASS"] or ["-"]
             evidence_values = [item for item in evidence_values if item != "No policy finding"] or ["-"]
+        if ready and severity == "WATCH":
+            selected_route_label = "Allowed with watch"
+        elif ready:
+            selected_route_label = "Allowed"
+        else:
+            selected_route_label = "Blocked"
         policy_rows.append(
             {
                 "Criteria": _finding_label(group),
@@ -782,7 +788,7 @@ def build_investability_gate_policy(
                 "Current": "; ".join(current_values),
                 "Evidence": "; ".join(evidence_values),
                 "Required Action": state.get("required_action") or GATE_POLICY_GROUP_ACTIONS.get(group, "-"),
-                "Selected Route": "Allowed" if ready else "Blocked",
+                "Selected Route": selected_route_label,
             }
         )
     blockers = [
@@ -798,15 +804,15 @@ def build_investability_gate_policy(
     if blockers:
         outcome = "blocked"
         suggested_decision_route = "RE_REVIEW_REQUIRED"
-        next_action = "critical blocker를 해소한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "critical blocker를 해소한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
     elif review_required:
         outcome = "hold_or_re_review"
         suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
-        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
     else:
         outcome = "select_ready"
         suggested_decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
-        next_action = "Final Review에서 최종 후보 선정 저장을 진행합니다."
+        next_action = "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
     return {
         "schema_version": (
             SELECTION_GATE_POLICY_SCHEMA_VERSION
@@ -1089,7 +1095,7 @@ def build_investability_evidence_packet(
             "Section": "Paper Observation",
             "Ready": not bool(paper_observation.get("blockers")),
             "Current": paper_observation.get("route") or "-",
-            "Meaning": "선정 이후 관찰 benchmark와 trigger seed가 있는지 봅니다.",
+            "Meaning": "모니터링에서 관찰할 benchmark와 trigger seed가 있는지 봅니다.",
         },
         {
             "Section": "Critical Gaps",
@@ -1213,16 +1219,16 @@ def build_investability_evidence_packet(
     policy_review_required = list(selection_gate_policy.get("review_required") or [])
     if policy_blockers:
         route = "INVESTABILITY_PACKET_BLOCKED"
-        verdict = "실전 후보 선정 차단: selection gate blocker가 남아 있습니다."
-        next_action = "validation evidence를 보강한 뒤 Final Review에서 선정 가능 여부를 다시 확인합니다."
+        verdict = "모니터링 후보 선정 차단: selection gate blocker가 남아 있습니다."
+        next_action = "validation evidence를 보강한 뒤 Final Review에서 모니터링 후보 가능 여부를 다시 확인합니다."
     elif policy_review_required:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
-        verdict = "실전 후보 선정 전 반드시 해소해야 할 review가 남아 있습니다."
+        verdict = "모니터링 후보 선정 전 반드시 해소해야 할 review가 남아 있습니다."
         next_action = "부족한 evidence를 보강한 뒤 selected-route gate를 다시 확인합니다."
     elif decision_evidence.get("route") == "READY_FOR_FINAL_DECISION":
         route = "INVESTABILITY_PACKET_READY"
-        verdict = "Selected Dashboard에서 추적할 최종 후보로 기록 가능한 evidence packet입니다."
-        next_action = "Final Review에서 최종 후보 선정 저장을 진행하고 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
+        verdict = "Selected Dashboard에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
+        next_action = "Final Review에서 모니터링 후보 선정 저장을 진행하고 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
     else:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "hard blocker는 없지만 Final Review evidence가 아직 완전하지 않습니다."
@@ -1289,7 +1295,7 @@ def build_selected_route_gate(
         "Ready": ready,
         "Current": current,
         "Meaning": (
-            "실전 후보 선정 저장은 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
+            "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
             if selected
             else "보류 / 거절 / 재검토는 정식 저장하지 않는 상태 안내입니다."
         ),
@@ -1329,7 +1335,7 @@ def build_final_review_decision_record_guide(
         route_state = "SELECT_ROUTE_BLOCKED"
         route_state_label = "선정 저장 차단"
         notice_level = "warning"
-        notice = "최종 후보 선정 저장은 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
+        notice = "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
     elif selected:
         route_state = "SELECT_ROUTE_READY"
         route_state_label = "선정 기록 가능"
@@ -1339,7 +1345,7 @@ def build_final_review_decision_record_guide(
         route_state = "NON_SELECT_NOT_STORED"
         route_state_label = "상태 안내만 표시"
         notice_level = "info"
-        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 최종 후보 선정이 가능할 때만 활성화됩니다."
+        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 모니터링 후보 선정이 가능할 때만 활성화됩니다."
     checklist_rows = [
         {
             "Criteria": "Suggested decision",
@@ -1357,7 +1363,7 @@ def build_final_review_decision_record_guide(
             "Criteria": "Official selection route",
             "Ready": selected,
             "Current": "selection save" if selected else "status only",
-            "Meaning": "Final Review의 정식 저장은 최종 선정 route만 허용합니다.",
+            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다.",
         },
         selected_gate,
         {
@@ -1422,14 +1428,14 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
     if outcome == "select_ready" or route == "INVESTABILITY_PACKET_READY":
         return (
             "SELECT_READY",
-            "선정 가능",
-            "현재 gate policy상 실전 검토 통과 후보로 저장할 수 있습니다.",
+            "모니터링 후보 가능",
+            "현재 gate policy상 Selected Dashboard 모니터링 후보로 저장할 수 있습니다.",
         )
     if outcome == "blocked" or route == "INVESTABILITY_PACKET_BLOCKED":
         return (
             "SELECT_BLOCKED",
             "선정 차단",
-            "critical blocker가 남아 있어 최종 후보 선정 저장이 차단됩니다.",
+            "critical blocker가 남아 있어 모니터링 후보 선정 저장이 차단됩니다.",
         )
     return (
         "HOLD_OR_RE_REVIEW",
@@ -1460,9 +1466,9 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
     state = str(dict(cockpit or {}).get("state") or "").upper()
     if state == "SELECT_READY":
         return (
-            "최종 후보 선정",
-            "선정 가능 후보입니다. Decision Cockpit을 확인한 뒤 최종 후보 선정 저장으로 진행합니다.",
-            "선정 가능",
+            "모니터링 후보 선정",
+            "모니터링 후보로 저장 가능한 상태입니다. Decision Cockpit을 확인한 뒤 Selected Dashboard 추적 후보로 저장합니다.",
+            "모니터링 후보 가능",
         )
     if state == "SELECT_BLOCKED":
         return (
@@ -1646,7 +1652,7 @@ def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict
 
     rows = build_final_review_candidate_board_rows(candidates)
     total = len(rows)
-    select_ready = sum(1 for row in rows if row.get("Decision State") == "선정 가능")
+    select_ready = sum(1 for row in rows if row.get("Decision State") == "모니터링 후보 가능")
     blocked = sum(1 for row in rows if row.get("Decision State") == "선정 차단")
     hold_or_re_review = max(0, total - select_ready - blocked)
     first_row = dict(rows[0] or {}) if rows else {}

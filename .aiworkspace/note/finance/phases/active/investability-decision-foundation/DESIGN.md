@@ -49,7 +49,7 @@ Backtest source
 
 ## Validation Gate Policy
 
-`SELECT_FOR_PRACTICAL_PORTFOLIO`는 live approval이 아니라 `실전 검토 통과 후보`다.
+`SELECT_FOR_PRACTICAL_PORTFOLIO`는 live approval이 아니라 `모니터링 후보 선정`이다.
 그래도 아래 gap이 있으면 selected route를 막는 것이 기본 정책이다.
 
 | Condition | Default Handling |
@@ -117,7 +117,7 @@ Waiver policy:
 
 | Avoid | Prefer |
 | --- | --- |
-| 투자 가능 후보 | 실전 검토 통과 후보 |
+| 투자 가능 후보 | 모니터링 후보 선정 |
 | live readiness | Final Review 입력 준비 또는 실전 검토 readiness |
 | 승인 / 주문 / 실행 | 선정 / 관찰 / 재검토 / monitoring |
 | 자동 리밸런싱 | drift preview / review trigger |

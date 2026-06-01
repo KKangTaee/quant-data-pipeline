@@ -10,7 +10,7 @@ Created: 2026-05-28
 | Gate too strict before provider coverage matures | Useful candidates may be blocked too often | Introduce structured waiver only after explicit policy, expiry, and review trigger exist |
 | Gate too loose | Current validation weakness returns under a new UI label | Default selected route remains blocked on critical gaps |
 | Evidence packet too verbose | User ignores the most important blockers | Keep packet compact and rank critical gaps first |
-| "실전 검토 통과 후보" still sounds too strong | User may confuse it with investment approval | Repeat no-live boundary in Final Review and Selected Dashboard |
+| "모니터링 후보 선정" may still sound stronger than monitoring | User may confuse it with investment approval | Repeat no-live boundary in Final Review and Selected Dashboard |
 | Monitoring timeline becomes another log sprawl | JSONL storage problem repeats | Make monitoring snapshot explicit and compact; no automatic save without approved automation policy |
 
 ## Data Risks

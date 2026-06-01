@@ -36,9 +36,9 @@ from app.runtime import FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
-    SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 선정 판단이 완료됩니다.",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "Selected Dashboard 모니터링 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 선정 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
-    "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
+    "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 모니터링 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",
 }
 
@@ -247,7 +247,7 @@ def _build_final_review_paper_observation_snapshot(validation: dict[str, Any]) -
             "Criteria": "Target weight total",
             "Ready": bool(active_components) and abs(target_weight_total - 100.0) <= 0.01,
             "Current": f"{target_weight_total:.1f}%",
-            "Meaning": "실전 후보 검토 기준 비중이 100%인지 봅니다.",
+            "Meaning": "모니터링 후보 검토 기준 비중이 100%인지 봅니다.",
         },
         {
             "Criteria": "Observation benchmark",
@@ -311,7 +311,7 @@ def _build_final_review_decision_evidence_pack(
             "Criteria": "Paper observation criteria",
             "Ready": not paper_blocked,
             "Current": paper_route or "-",
-            "Meaning": "별도 ledger 저장 없이 최종 선정 저장에 남길 관찰 기준이 충분한지 봅니다.",
+            "Meaning": "별도 ledger 저장 없이 모니터링 후보 선정 저장에 남길 관찰 기준이 충분한지 봅니다.",
             "Score": 2.0,
         },
         {
@@ -327,17 +327,17 @@ def _build_final_review_decision_evidence_pack(
     if blockers:
         route = "FINAL_DECISION_BLOCKED"
         verdict = "최종 판단 전 보강 필요: validation / robustness / paper observation blocker가 남아 있음"
-        next_action = "blocker를 해결한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "blocker를 해결한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
         suggested_decision_route = "RE_REVIEW_REQUIRED"
     elif validation_route not in validation_ready_routes or robustness_route != "READY_FOR_STRESS_SWEEP":
         route = "FINAL_DECISION_NEEDS_REVIEW"
-        verdict = "최종 선정 전 추가 검토 필요: hard blocker는 없지만 검증 보강 항목이 남아 있음"
+        verdict = "모니터링 후보 선정 전 추가 검토 필요: hard blocker는 없지만 검증 보강 항목이 남아 있음"
         next_action = "더 관찰하거나 보강 후 선정 판단을 다시 봅니다."
         suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
     else:
         route = "READY_FOR_FINAL_DECISION"
         verdict = "최종 검토 가능: 검증 근거와 관찰 기준이 하나의 판단 기록으로 묶임"
-        next_action = "최종 후보 선정과 사유를 저장하면 Final Review에서 실전 후보 판단이 완료됩니다."
+        next_action = "모니터링 후보 선정과 사유를 저장하면 Final Review에서 Dashboard 추적 후보 판단이 완료됩니다."
         suggested_decision_route = "SELECT_FOR_PRACTICAL_PORTFOLIO"
     return {
         "route": route,
@@ -400,7 +400,7 @@ def _build_final_review_save_evaluation(
             "Criteria": "Official selection route",
             "Ready": decision_route_clean == SELECT_FOR_PRACTICAL_PORTFOLIO,
             "Current": decision_route_clean or "-",
-            "Meaning": "Final Review의 정식 저장은 최종 선정 route만 허용합니다. 보류 / 거절 / 재검토는 저장하지 않는 상태 안내입니다.",
+            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다. 보류 / 거절 / 재검토는 저장하지 않는 상태 안내입니다.",
         },
         {
             "Criteria": "Operator reason",
@@ -412,18 +412,18 @@ def _build_final_review_save_evaluation(
             "Criteria": "Select readiness",
             "Ready": evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
-            "Meaning": "실전 후보 선정은 blocker가 없을 때만 저장합니다.",
+            "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다.",
         },
         packet_gate,
     ]
     blockers = [str(row["Criteria"]) for row in checks if not row["Ready"]]
     if not blockers:
         route = "FINAL_SELECTION_SAVE_READY"
-        verdict = "최종 후보 선정 저장 가능"
-        next_action = "`최종 후보로 선정`을 눌러 선정 근거를 남깁니다."
+        verdict = "모니터링 후보 선정 저장 가능"
+        next_action = "`모니터링 후보로 선정`을 눌러 선정 근거를 남깁니다."
     else:
         route = "FINAL_SELECTION_SAVE_BLOCKED"
-        verdict = "최종 후보 선정 저장 전 확인 필요"
+        verdict = "모니터링 후보 선정 저장 전 확인 필요"
         next_action = "decision id, 선정 사유, selection gate, investability packet을 확인합니다."
     return {
         "route": route,

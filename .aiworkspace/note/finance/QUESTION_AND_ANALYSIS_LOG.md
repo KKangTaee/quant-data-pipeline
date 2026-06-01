@@ -105,7 +105,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation, Final Review, Selected Dashboard, future Live / Deployment Readiness의 질문을 분리하되, Final Review가 Portfolio Validation과 같은 목적이 되지 않도록 저장 기준과 증거 handoff를 명확히 한다.
 - Analysis result:
   - Final Review의 현재 selected-route gate는 live/deployment audit처럼 작동해 기본 `REVIEW`까지 대부분 저장 차단으로 처리했다. 이 때문에 Practical Validation이 허용한 후보가 Final Review에서 거의 저장되지 않는 구조적 병목이 생겼다.
-  - 개선 기준은 Final Review를 Selected Dashboard에서 관찰할 최종 후보 선정 단계로 좁히고, 실제 자금 투입 판단은 future Live / Deployment Readiness로 분리하는 것이다. Final Review는 hard blocker / critical missing evidence를 막고, 기본 `REVIEW`는 `open_review_items`로 이어서 추적한다.
+  - 개선 기준은 Final Review를 Selected Dashboard에서 관찰할 모니터링 후보 선정 단계로 좁히고, 실제 자금 투입 판단은 future Live / Deployment Readiness로 분리하는 것이다. Final Review는 hard blocker / critical missing evidence를 막고, 기본 `REVIEW`는 `open_review_items`로 이어서 추적한다.
 - Follow-up:
   - Live / Deployment Readiness 화면은 아직 구현하지 않았다. 향후 구현 시 `deployment_readiness_policy_snapshot`을 입력으로 쓰되, broker order / account sync / auto rebalance / live approval은 별도 승인 경계로 다룬다.
 
@@ -125,7 +125,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request:
   - Final Review에서 비선정 저장 판단이 필요한지 질문했고, 정식 저장은 최종 통과 후보에만 활성화되도록 요청함.
 - Interpreted goal:
-  - Final Review의 주 action을 최종 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
+  - Final Review의 주 action을 모니터링 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
 - Analysis result:
   - 구현 기준은 `SELECT_FOR_PRACTICAL_PORTFOLIO` + selected-route gate pass + operator reason + unique decision id다.
   - 기존 hold / reject / re-review row는 Saved Decision Review / read model 호환을 위해 읽을 수 있지만, 새 UI의 정식 저장 action은 만들지 않는다.

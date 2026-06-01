@@ -54,7 +54,7 @@ DIAGNOSTIC_EXPLANATIONS = {
     "leveraged_inverse_etf_suitability": "레버리지, 인버스, 일간 목표 상품이 포함되어 운용 목적과 충돌하지 않는지 확인합니다.",
     "operability_cost_liquidity": "ETF 비용, 규모, 거래대금, 스프레드, premium/discount가 실전 운용에 충분한지 확인합니다.",
     "robustness_sensitivity_overfit": "기간, 구성요소, 비중 변화에 결과가 과도하게 흔들리거나 과최적화된 흔적이 있는지 확인합니다.",
-    "monitoring_baseline_seed": "선정 이후 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
+    "monitoring_baseline_seed": "모니터링에서 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
 }
 
 GATE_FIX_GUIDANCE = {
@@ -2138,7 +2138,7 @@ def render_practical_validation_workspace() -> None:
     render_pv_styles()
     st.markdown("### Practical Validation")
     st.caption(
-        "Backtest Analysis에서 선택한 후보를 실전 투입 전 관점으로 검증합니다. "
+        "Backtest Analysis에서 선택한 후보를 Final Review로 넘기기 전 검증 근거로 구조화합니다. "
         "최종 사용자 메모와 최종 판단은 Final Review에서만 남깁니다."
     )
 
@@ -2154,7 +2154,7 @@ def render_practical_validation_workspace() -> None:
 
     render_pv_command_center(
         eyebrow="Practical Validation Workbench",
-        title="실전 검증을 위한 후보 통제 화면",
+        title="검증 근거를 위한 후보 통제 화면",
         detail=(
             "선택 source, 검증 프로필, 최신 runtime replay, module gate, evidence board, provider action을 "
             "하나의 의사결정 흐름으로 확인합니다."
@@ -2289,7 +2289,7 @@ def render_practical_validation_workspace() -> None:
             detail=(
                 "검증 결과 저장은 감사용 기록을 남기는 기능입니다. Final Review 이동과 후보 노출은 필수 검증 모듈의 "
                 "BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
-                "Final Review의 정식 저장은 selected-route gate까지 통과한 최종 후보 선정만 허용합니다."
+                "Final Review의 정식 저장은 selected-route gate까지 통과한 Selected Dashboard 모니터링 후보 선정만 허용합니다."
             ),
             tone="positive" if can_save_and_move else "danger",
         )

@@ -628,7 +628,7 @@ def build_practical_validation_result(
     if str(data_trust.get("status") or "").lower() in {"error", "blocked"}:
         hard_blockers.append(f"Data Trust blocked: {data_trust.get('status')}")
     if real_money.get("deployment") in {"blocked", "deployment_blocked"}:
-        hard_blockers.append("Real-Money deployment blocked")
+        hard_blockers.append("Promotion policy deployment blocker")
 
     if data_trust.get("warning_count"):
         review_gaps.append(f"Data Trust warning {data_trust.get('warning_count')}개")
@@ -707,7 +707,7 @@ def build_practical_validation_result(
             "Criteria": "Active components",
             "Ready": bool(active_components),
             "Current": str(len(active_components)),
-            "Meaning": "실전 검증할 component가 있는지 봅니다.",
+            "Meaning": "검증 근거를 만들 component가 있는지 봅니다.",
         },
         {
             "Criteria": "Target weight total",
@@ -1430,10 +1430,10 @@ def build_practical_validation_result(
         route = "READY_FOR_FINAL_REVIEW"
         if review_gaps or not_run_domains:
             verdict = "Final Review로 이동 가능: REVIEW / NOT_RUN 항목을 최종 판단 근거로 함께 확인해야 합니다."
-            next_action = "Final Review에서 보강 필요 상태를 확인하고, selected-route gate가 통과될 때만 최종 선정으로 저장합니다."
+            next_action = "Final Review에서 보강 필요 상태를 확인하고, selected-route gate가 통과될 때만 모니터링 후보로 저장합니다."
         else:
-            verdict = "Final Review로 이동 가능: 실전 후보 검증 자료가 구성되었습니다."
-            next_action = "Final Review에서 selected-route gate를 확인한 뒤 최종 후보 선정 저장을 진행합니다."
+            verdict = "Final Review로 이동 가능: 후보 검증 근거 자료가 구성되었습니다."
+            next_action = "Final Review에서 selected-route gate를 확인한 뒤 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
 
     component_rows = [
         {

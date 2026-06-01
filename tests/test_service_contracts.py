@@ -6671,7 +6671,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["Components"], 2)
         self.assertEqual(row["Evidence Route"], "READY")
         self.assertEqual(row["Evidence Score"], 92)
-        self.assertEqual(row["판단 라벨"], "실전 검토 통과 후보")
+        self.assertEqual(row["판단 라벨"], "모니터링 후보 선정")
         self.assertEqual(row["Final Status"], "FINAL_REVIEW_DECISION_COMPLETE")
         self.assertEqual(row["Live Approval"], "Disabled")
 
@@ -6798,7 +6798,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(cockpit["select_allowed"])
         self.assertEqual(cockpit["suggested_decision_route"], "SELECT_FOR_PRACTICAL_PORTFOLIO")
         self.assertEqual(cockpit["monitoring_handoff"]["tracking_benchmark"], "SPY")
-        self.assertEqual(board_rows[0]["Decision State"], "선정 가능")
+        self.assertEqual(board_rows[0]["Decision State"], "모니터링 후보 가능")
         self.assertEqual(board_rows[0]["Select Allowed"], "Yes")
         self.assertEqual(board_rows[0]["Open Review"], 0)
         self.assertEqual(board_rows[0]["Candidate"], "Ready candidate")
@@ -6932,10 +6932,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(board["summary"]["blocked"], 1)
         self.assertEqual(rows[0]["Candidate"], "Ready")
         self.assertEqual(rows[0]["Review Priority"], "P1")
-        self.assertEqual(rows[0]["Board Action"], "최종 후보 선정")
+        self.assertEqual(rows[0]["Board Action"], "모니터링 후보 선정")
         self.assertEqual(rows[1]["Candidate"], "Hold")
         self.assertEqual(rows[2]["Candidate"], "Blocked")
-        self.assertEqual(board["review_queue_rows"][0]["Action"], "최종 후보 선정")
+        self.assertEqual(board["review_queue_rows"][0]["Action"], "모니터링 후보 선정")
 
     def test_final_review_decision_record_guide_blocks_selected_route_when_gate_blocks(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -7333,6 +7333,13 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(severities["validation_efficacy"], "WATCH")
         self.assertEqual(severities["data_coverage"], "WATCH")
         self.assertEqual(severities["backtest_realism"], "WATCH")
+        self.assertTrue(
+            all(
+                row["Selected Route"] == "Allowed with watch"
+                for row in packet["gate_policy_snapshot"]["policy_rows"]
+                if row["Severity"] == "WATCH"
+            )
+        )
 
     def test_integrated_investability_gate_multiple_blockers_block_selected_route(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -8553,7 +8560,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             "decision_id": "decision-selected",
             "updated_at": "2026-05-28T10:00:00",
             "operation_status": "normal",
-            "operation_status_label": "정상 관찰",
+            "operation_status_label": "모니터링 기준 통과",
             "status_reason": "selected row is operational",
             "evidence_route": "READY_FOR_FINAL_DECISION",
             "validation_route": "READY_FOR_FINAL_REVIEW",

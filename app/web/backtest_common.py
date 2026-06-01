@@ -1553,7 +1553,7 @@ def _render_strict_portfolio_handling_contracts_intro() -> None:
 def _render_strict_quarterly_productionization_note(*, family_label: str) -> None:
     st.info(
         f"Phase 23 기준으로 `{family_label}`는 실행 / compare / history 재현성을 제품 기능 수준으로 끌어올리는 중입니다. "
-        "아직 투자 후보 승격이나 real-money promotion 단계는 아니며, 이번 화면에서는 quarterly cadence와 portfolio handling contract가 "
+        "아직 모니터링 후보 승격이나 promotion policy signal 단계는 아니며, 이번 화면에서는 quarterly cadence와 portfolio handling contract가 "
         "같은 payload로 저장되고 재실행되는지를 먼저 확인합니다."
     )
 
@@ -1813,10 +1813,10 @@ def _render_etf_real_money_inputs(
     default_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
     default_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
 ) -> tuple[float, float, str, float, float]:
-    st.markdown("##### Real-Money Contract")
-    st.caption("설명은 `Reference > Guides > Real-Money Contract 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
+    st.markdown("##### Promotion Policy Signal")
+    st.caption("설명은 `Reference > Guides > Promotion Policy Signal 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
     st.caption(
-        "실전형 first pass에서는 너무 낮은 가격 ETF를 걸러내는 `Minimum Price`, "
+        "후보 handoff first pass에서는 너무 낮은 가격 ETF를 걸러내는 `Minimum Price`, "
         "리밸런싱 turnover에 적용할 `Transaction Cost`, 비교 기준이 되는 `Benchmark Ticker`, "
         "ETF current-operability를 읽는 `Min ETF AUM`, `Max Bid-Ask Spread`를 같이 사용합니다."
     )
@@ -1830,7 +1830,7 @@ def _render_etf_real_money_inputs(
                 value=float(default_min_price),
                 step=1.0,
                 key=f"{key_prefix}_min_price_filter",
-                help="이 값보다 싼 ETF는 해당 날짜 투자 후보에서 제외합니다.",
+                help="이 값보다 싼 ETF는 해당 날짜 후보 universe에서 제외합니다.",
             )
         )
     with center:
@@ -1863,7 +1863,7 @@ def _render_etf_real_money_inputs(
                 value=float(default_min_etf_aum_b),
                 step=0.5,
                 key=f"{key_prefix}_promotion_min_etf_aum_b",
-                help="현재 asset profile 기준 ETF 총자산이 이 값보다 작은 종목은 실전 운용 후보로 보수적으로 평가합니다.",
+                help="현재 asset profile 기준 ETF 총자산이 이 값보다 작은 종목은 운용성 policy signal에서 보수적으로 평가합니다.",
             )
         )
     with far_right:
@@ -1875,7 +1875,7 @@ def _render_etf_real_money_inputs(
                 value=float(default_max_bid_ask_spread_pct) * 100.0,
                 step=0.05,
                 key=f"{key_prefix}_promotion_max_bid_ask_spread_pct",
-                help="현재 bid/ask 기준 스프레드가 이 값보다 넓은 ETF는 실전 운용 후보로 보수적으로 평가합니다.",
+                help="현재 bid/ask 기준 스프레드가 이 값보다 넓은 ETF는 운용성 policy signal에서 보수적으로 평가합니다.",
             )
         )
 
@@ -1947,10 +1947,10 @@ def _render_strict_annual_real_money_inputs(
     default_promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
     default_promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
 ) -> tuple[str, float, int, float, float, str, float, float, float, float, float, float, float]:
-    st.markdown("##### Real-Money Contract")
-    st.caption("설명은 `Reference > Guides > Real-Money Contract 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
+    st.markdown("##### Promotion Policy Signal")
+    st.caption("설명은 `Reference > Guides > Promotion Policy Signal 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
     st.caption(
-        "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
+        "Annual strict handoff policy에서는 `Minimum Price`, `Minimum History (Months)`, "
         "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark Ticker`, "
         "`Benchmark Policy`, `Validation Policy`, `Portfolio Guardrail Policy`를 같이 사용합니다."
     )
@@ -1964,7 +1964,7 @@ def _render_strict_annual_real_money_inputs(
                 value=float(default_min_price),
                 step=1.0,
                 key=f"{key_prefix}_min_price_filter",
-                help="이 값보다 싼 종목은 해당 날짜 투자 후보에서 제외합니다.",
+                help="이 값보다 싼 종목은 해당 날짜 후보 universe에서 제외합니다.",
             )
         )
     with col2:
@@ -2093,7 +2093,7 @@ def _render_strict_annual_real_money_inputs(
 
     st.caption(
         "`Minimum History (Months)`는 각 리밸런싱 시점 전에 최소 몇 개월의 가격 이력이 쌓여 있어야 "
-        "그 종목을 투자 후보로 인정할지를 뜻합니다."
+        "그 종목을 후보 universe에 남길지를 뜻합니다."
     )
     if float(min_avg_dollar_volume_20d_m_filter or 0.0) > 0.0:
         st.caption(
@@ -2892,7 +2892,7 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
                 "확인 포인트": "선택 종목, trend rejection, risk-off, weighting 해석을 볼 수 있습니다.",
             },
             {
-                "확인 영역": "Real-Money / Guardrail",
+                "확인 영역": "Policy Signal / Guardrail",
                 "현재 상태": "가장 성숙한 기준 surface",
                 "확인 포인트": "Benchmark, liquidity, validation, underperformance/drawdown guardrail을 함께 봅니다.",
             },
@@ -2923,7 +2923,7 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
             {
                 "확인 영역": "Portfolio Handling",
                 "현재 상태": "Weighting / Rejected Slot / Risk-Off contract 지원",
-                "확인 포인트": "단, Real-Money promotion / Guardrail 판단은 아직 annual strict 중심입니다.",
+                "확인 포인트": "단, promotion policy / Guardrail 판단은 아직 annual strict 중심입니다.",
             },
             {
                 "확인 영역": "저장 / 재실행",
@@ -2950,7 +2950,7 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
                 "확인 포인트": "행별 factor 선택표가 아니라 ETF ranking / result table 중심으로 봅니다.",
             },
             {
-                "확인 영역": "Real-Money / Guardrail",
+                "확인 영역": "Policy Signal / Guardrail",
                 "현재 상태": "ETF operability + cost/benchmark first pass 지원",
                 "확인 포인트": "AUM/spread/cost/benchmark는 보지만, ETF underperformance/drawdown guardrail은 아직 붙이지 않습니다.",
             },
@@ -2974,8 +2974,8 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
                 "확인 포인트": "Phase 28에서 GRS 수준의 freshness surface가 필요한지 봅니다.",
             },
             {
-                "확인 영역": "Real-Money / Guardrail",
-                "현재 상태": "ETF Real-Money + ETF Guardrail surface 지원",
+                "확인 영역": "Policy Signal / Guardrail",
+                "현재 상태": "ETF promotion policy + ETF Guardrail surface 지원",
                 "확인 포인트": "risk-off overlay와 crash / ETF guardrail을 함께 확인합니다.",
             },
             {
@@ -2998,8 +2998,8 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
                 "확인 포인트": "Phase 28에서 GRS 수준으로 맞출 필요가 있는지 확인합니다.",
             },
             {
-                "확인 영역": "Real-Money / Guardrail",
-                "현재 상태": "ETF Real-Money + ETF Guardrail surface 지원",
+                "확인 영역": "Policy Signal / Guardrail",
+                "현재 상태": "ETF promotion policy + ETF Guardrail surface 지원",
                 "확인 포인트": "ETF operability와 guardrail 정책을 함께 봅니다.",
             },
             {
@@ -3022,9 +3022,9 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
                 "확인 포인트": "별도 price freshness preflight는 아직 없습니다.",
             },
             {
-                "확인 영역": "Real-Money / Guardrail",
+                "확인 영역": "Policy Signal / Guardrail",
                 "현재 상태": "promotion / guardrail 판단 대상 아님",
-                "확인 포인트": "실전 후보 판정이 아니라 기준선 역할입니다.",
+                "확인 포인트": "모니터링 후보 판정이 아니라 기준선 역할입니다.",
             },
             {
                 "확인 영역": "저장 / 재실행",
@@ -3048,7 +3048,7 @@ def _render_strategy_capability_snapshot(strategy_name: str | None) -> None:
 
     with st.expander("Strategy Capability Snapshot", expanded=False):
         st.caption(
-            "Phase 28 기준으로 이 전략이 어떤 cadence, data trust, Real-Money/Guardrail, "
+            "Phase 28 기준으로 이 전략이 어떤 cadence, data trust, promotion policy / Guardrail, "
             "history/replay 지원 범위를 갖는지 빠르게 확인하는 표입니다."
         )
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

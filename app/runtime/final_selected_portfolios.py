@@ -26,7 +26,7 @@ SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION = 1
 SELECTED_DASHBOARD_PORTFOLIO_STATE_SCHEMA_VERSION = "selected_dashboard_monitoring_portfolio_state_v1"
 
 FINAL_SELECTED_PORTFOLIO_STATUS_LABELS = {
-    "normal": "정상 관찰",
+    "normal": "모니터링 기준 통과",
     "watch": "관찰 필요",
     "rebalance_needed": "리밸런싱 확인 필요",
     "re_review_needed": "재검토 필요",
@@ -132,7 +132,7 @@ SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS = {
 }
 SELECTED_DASHBOARD_HANDOFF_ROUTE_LABELS = {
     "HANDOFF_NO_FINAL_DECISION": "최종 판단 없음",
-    "HANDOFF_NO_SELECTED_DECISION": "선정 row 없음",
+    "HANDOFF_NO_SELECTED_DECISION": "모니터링 후보 row 없음",
     "HANDOFF_BLOCKED": "Dashboard 연결 차단",
     "HANDOFF_READY": "Dashboard 연결 가능",
 }
@@ -696,7 +696,7 @@ def _derive_operation_status(
     blockers: list[str],
 ) -> tuple[str, str]:
     if not _is_selected_practical_portfolio(row):
-        return "blocked", "Final Review에서 실전 후보로 선정된 row가 아닙니다."
+        return "blocked", "Final Review에서 Selected Dashboard 모니터링 후보로 선정된 row가 아닙니다."
     if not active_components:
         return "blocked", "선정된 component가 없어 운영 대상으로 볼 수 없습니다."
     if abs(target_weight_total - 100.0) > 0.01:
@@ -723,7 +723,7 @@ def _derive_operation_status(
         watch_routes.append(f"paper={paper_route}")
     if watch_routes:
         return "watch", " / ".join(watch_routes)
-    return "normal", "최종 선정 기록, component, 목표 비중, evidence blocker 기준이 운영 대시보드 첫 범위를 통과했습니다."
+    return "normal", "선정 기록, component, 목표 비중, evidence blocker 기준이 모니터링 대시보드 첫 범위를 통과했습니다."
 
 
 def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -869,20 +869,20 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
 
     if not final_rows:
         route = "HANDOFF_NO_FINAL_DECISION"
-        next_action = "Final Review에서 최종 후보 선정 저장을 먼저 진행합니다."
-        verdict = "Selected Dashboard로 넘길 최종 선정 row가 아직 없습니다."
+        next_action = "Final Review에서 모니터링 후보 선정 저장을 먼저 진행합니다."
+        verdict = "Selected Dashboard로 넘길 모니터링 후보 row가 아직 없습니다."
     elif not selected_rows:
         route = "HANDOFF_NO_SELECTED_DECISION"
-        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 선정 row를 저장해야 합니다."
-        verdict = "저장된 Final Review row는 있지만 선정된 dashboard 대상 row가 없습니다."
+        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 모니터링 후보 row를 저장해야 합니다."
+        verdict = "저장된 Final Review row는 있지만 모니터링 dashboard 대상 row가 없습니다."
     elif monitorable_count == 0:
         route = "HANDOFF_BLOCKED"
-        next_action = "선정 row의 component, target weight, Final Review blocker를 보강합니다."
-        verdict = "선정 row가 모두 dashboard 운영 대상으로 보기 전에 막혀 있습니다."
+        next_action = "모니터링 후보 row의 component, target weight, Final Review blocker를 보강합니다."
+        verdict = "모니터링 후보 row가 모두 dashboard 운영 대상으로 보기 전에 막혀 있습니다."
     else:
         route = "HANDOFF_READY"
         next_action = "Operations > Selected Portfolio Dashboard에서 recheck / readiness / provider / timeline을 이어서 확인합니다."
-        verdict = "선정 row가 Selected Dashboard read-only 점검 대상으로 연결됩니다."
+        verdict = "모니터링 후보 row가 Selected Dashboard read-only 점검 대상으로 연결됩니다."
 
     checklist = [
         _handoff_check_row(
@@ -1700,7 +1700,7 @@ def build_selected_portfolio_monitoring_timeline(
             signal=operation_label,
             evidence=_clean_text(selected.get("status_reason")),
             next_action=(
-                "선정 row를 운영 대상으로 계속 읽습니다."
+                "모니터링 후보 row를 운영 대상으로 계속 읽습니다."
                 if operation_status == "normal"
                 else "Why Selected에서 남은 blocker와 watch 이유를 먼저 확인합니다."
             ),

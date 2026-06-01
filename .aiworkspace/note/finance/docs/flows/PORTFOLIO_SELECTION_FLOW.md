@@ -5,7 +5,7 @@ Last Verified: 2026-06-01
 
 ## Purpose
 
-이 문서는 Backtest에서 후보를 만들고, Practical Validation에서 검증하고, Final Review에서 최종 선정 여부를 판단한 뒤 Selected Portfolio Dashboard에서 사후 확인하는 현재 사용자 흐름을 설명한다.
+이 문서는 Backtest에서 후보를 만들고, Practical Validation에서 검증 근거를 만들고, Final Review에서 Selected Dashboard 모니터링 후보 여부를 판단한 뒤 Selected Portfolio Dashboard에서 사후 확인하는 현재 사용자 흐름을 설명한다.
 
 예전의 긴 workflow redesign 문서는 구현 전 분석과 migration 계획이 섞여 있었다. 이 문서는 현재 제품에서 사용자가 실제로 따라야 하는 흐름만 남긴다.
 
@@ -22,7 +22,7 @@ Backtest > Backtest Analysis
 |---|---|---|---|
 | 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
 | 2 | Practical Validation | 선택된 source를 source traits 기반 module gate, selected-route preflight, practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
-| 3 | Final Review | Decision Desk command center로 오늘의 판단 상태를 먼저 보고, Candidate Board의 review priority / first-review candidate와 Decision Cockpit으로 selection-readiness 상태를 확인한다. `selection_gate_policy_snapshot`이 통과한 후보만 최종 선정으로 저장하며, 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내로 표시한다. `REVIEW` 항목은 기본적으로 `open_review_items`로 이어서 추적하고, 더 엄격한 live 투입 감사 성격의 판정은 `deployment_readiness_policy_snapshot`으로 보존한다. 저장된 선정 기록은 Saved Decision Review ledger와 Selected Dashboard handoff로 다시 읽고 상세 Practical Validation evidence는 Appendix에서 read-only로 확인한다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` |
+| 3 | Final Review | Decision Desk command center로 오늘의 판단 상태를 먼저 보고, Candidate Board의 review priority / first-review candidate와 Decision Cockpit으로 selection-readiness 상태를 확인한다. `selection_gate_policy_snapshot`이 통과한 후보만 Selected Dashboard 모니터링 후보로 저장하며, 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내로 표시한다. `REVIEW` 항목은 기본적으로 `open_review_items`로 이어서 추적하고, 더 엄격한 live 투입 감사 성격의 판정은 `deployment_readiness_policy_snapshot`으로 보존한다. 저장된 선정 기록은 Saved Decision Review ledger와 Selected Dashboard handoff로 다시 읽고 상세 Practical Validation evidence는 Appendix에서 read-only로 확인한다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` |
 | 4 | Selected Portfolio Dashboard | 사용자가 만든 나의 모니터링 포트폴리오에 Final Review selected 후보를 하나씩 담고, 각 selected 전략을 가상 시작일 / 종료일 / 초기자산 기준 monitoring scenario로 다시 계산한다. 이후 현재 가치, 누적 수익률, CAGR, MDD, benchmark 비교, drift / 리밸런싱 검토, review signal, open issue, 전환 비교를 확인한다 | `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` for dashboard portfolio setup; 사용자가 명시적으로 저장할 때만 monitoring log |
 
 ## Stage Ownership
@@ -31,24 +31,24 @@ Backtest > Backtest Analysis
 |---|---|---|
 | Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness, Practical Validation handoff gate | 최종 판단, 별도 후보 간 read-only 비교, 후속 monitoring / deployment 판단 |
 | Practical Validation | Final Review로 넘길 검증 근거 생성, source strategy / construction 확인, source traits 기반 module gate, selected-route preflight, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
-| Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 선정 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 최종 선정 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, selection-readiness gate, open review item handoff, deployment readiness policy snapshot 보존, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 실제 자금 투입 승인, broker order, account sync, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
-| Selected Portfolio Dashboard | 사용자 dashboard portfolio 생성 / 선택 / soft delete, Final Review selected 후보 pool에서 전략 추가 / 제거, 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교 | broker order, live approval, account / broker sync, auto rebalance |
+| Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 모니터링 후보 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 모니터링 후보 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, selection-readiness gate, open review item handoff, deployment readiness policy snapshot 보존, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 실제 자금 투입 승인, broker order, account sync, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
+| Selected Portfolio Dashboard | 사용자 dashboard portfolio 생성 / 선택 / soft delete, Final Review selected 후보 pool에서 전략 추가 / 제거, 모니터링 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교 | broker order, live approval, account / broker sync, auto rebalance |
 
 Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다. Final Review는 향후 그 단계가 사용할 수 있도록 엄격한 `deployment_readiness_policy_snapshot`을 남기지만, 그 snapshot이 곧 live approval이나 주문 가능 상태를 뜻하지 않는다.
 
 ## Verification Checkpoints
 
 검증 기준은 제품 `Stage` 번호로 부르지 않는다.
-화면 흐름과 검증 기준이 섞이면 Backtest Analysis 안의 Real-Money / Portfolio Mix 보조 신호가 별도 단계처럼 보이기 때문이다.
+화면 흐름과 검증 기준이 섞이면 Backtest Analysis 안의 promotion policy signal / Portfolio Mix 보조 신호가 별도 단계처럼 보이기 때문이다.
 
 | Checkpoint | Primary Surface | Meaning |
 |---|---|---|
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
-| Candidate Readiness | Backtest Analysis > Real-Money / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
+| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
 | Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, selected-route preflight, provider, data coverage, realism, robustness, construction risk 검증 |
 | Final Decision Gate | Final Review | selection hard blocker와 open review item을 분리해 최종 관찰 후보로 저장 가능한지 판단 |
-| Monitoring Check | Selected Portfolio Dashboard | 선정 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
+| Monitoring Check | Selected Portfolio Dashboard | 모니터링 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
 
 ## Source Contract
 
@@ -70,10 +70,10 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 ## User-Facing Rules
 
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
-- Backtest Analysis의 Real-Money는 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다.
+- Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
-- `검증 후보로 보내기` / `실전성 검증으로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
-- Practical Validation은 후보가 실전 검토에 충분한 근거를 갖는지 보여준다.
+- `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
+- Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.
 - Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리한다.
 - Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 먼저 보여줘 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
 - 기존 source처럼 selection history snapshot이 없는 기록은 `3. 최신 데이터 기준 전략 재검증`을 실행하면 가능한 범위에서 runtime replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
@@ -87,13 +87,13 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - `NOT_RUN`은 pass가 아니다. 데이터나 구현이 부족해 검증하지 못했다는 뜻이다.
 - Final Review가 최종 판단 위치다. 중간 단계에서 최종 메모를 반복해서 저장하지 않는다.
 - Final Review source picker는 Practical Validation Gate와 selected-route preflight를 통과한 result만 표시한다. 저장만 된 blocked / needs input / not run validation row와 selected-route preflight 미통과 row는 기록으로 남지만 최종 검토 후보에서는 숨긴다.
-- Final Review 상단은 Decision Desk command center와 flow rail로 오늘의 판단 상태, 후보 수, 숨겨진 Gate 미통과 기록, 저장된 최종 선정 기록, Selected Dashboard 연결 후보를 먼저 보여준다. 이 shell은 UI 표시 계층이며 gate / persistence logic을 바꾸지 않는다.
+- Final Review 상단은 Decision Desk command center와 flow rail로 오늘의 판단 상태, 후보 수, 숨겨진 Gate 미통과 기록, 저장된 모니터링 후보 선정 기록, Selected Dashboard 연결 후보를 먼저 보여준다. 이 shell은 UI 표시 계층이며 gate / persistence logic을 바꾸지 않는다.
 - Final Review는 후보 선택 전에 Candidate Board로 Gate 통과 후보의 decision state, suggested decision, blocker / open review 수, 주요 audit route를 비교한다.
 - Candidate Board는 후보를 select-ready, hold / re-review, blocked 순서로 정렬하고, first-review candidate, primary reason, next action을 표시한다. 이 priority는 새 투자 점수가 아니라 기존 evidence를 보기 쉽게 정렬하는 read-only 표시다.
 - Final Review는 상세 evidence table보다 Decision Cockpit을 먼저 보여준다. 이 cockpit은 selection-readiness state, suggested decision, Must Fix, open review items, monitoring seed를 같은 evidence packet에서 읽는다.
-- Final Review의 주 action은 Decision Cockpit 다음에 나오는 `최종 후보 선정 저장`이다. 이 구간은 Decision Record Checklist, selected-route gate, 선정 사유 / 운영 전 조건 / 다음 행동 문안을 보여주며, 상세 Practical Validation / Robustness / Paper Observation / Investability Packet 표는 중복 검증이 아니라 이전 검증 결과를 추적하는 Evidence Appendix다.
+- Final Review의 주 action은 Decision Cockpit 다음에 나오는 `모니터링 후보 선정 저장`이다. 이 구간은 Decision Record Checklist, selected-route gate, 선정 사유 / 운영 전 조건 / 다음 행동 문안을 보여주며, 상세 Practical Validation / Robustness / Paper Observation / Investability Packet 표는 중복 검증이 아니라 이전 검증 결과를 추적하는 Evidence Appendix다.
 - 저장된 Final Review row는 Saved Decision Review ledger에서 selected count, latest selection, detail tabs, Selected Dashboard handoff, Decision Dossier export로 다시 확인한다. 기존 hold / reject / re-review row는 과거 호환용으로 읽을 수 있지만 새 UI의 정식 저장 action은 아니다. 이 review는 과거 판단을 읽는 화면이며 새 report 파일, approval, order를 만들지 않는다.
-- Saved Decision Review의 Selected Dashboard handoff는 selected rows, dashboard rows, monitorable / blocked counts, checklist, destination을 보여준다. 이는 기존 selected-route gate나 Selected Dashboard continuity check를 다시 계산하는 중복 검증이 아니라, 저장된 최종 선정 기록이 다음 operations 화면으로 연결 가능한지 보여주는 read-only 연결 상태다.
+- Saved Decision Review의 Selected Dashboard handoff는 selected rows, dashboard rows, monitorable / blocked counts, checklist, destination을 보여준다. 이는 기존 selected-route gate나 Selected Dashboard continuity check를 다시 계산하는 중복 검증이 아니라, 저장된 모니터링 후보 선정 기록이 다음 operations 화면으로 연결 가능한지 보여주는 read-only 연결 상태다.
 - Final Review의 investability packet은 새 저장 단계를 만들지 않고 기존 validation evidence를 compact하게 읽는다.
 - Final Review의 profile-aware selection gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation, construction risk, risk contribution, component role / weight, validation efficacy, data coverage, backtest realism group을 판정한다. 같은 입력에서 만든 deployment readiness policy는 더 엄격한 live-readiness 감사 snapshot으로 보존한다.
 - Decision Dossier는 Final Review row와 Selected Dashboard timeline을 사람이 읽는 markdown으로 묶는 read-only export다. source contract consistency를 표시하지만 자동 report 저장이나 새 판단 row를 만들지 않는다.
@@ -111,7 +111,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Data Coverage Audit의 lifecycle metrics는 current snapshot, SEC identity cross-check, computed partial, actual coverage, delisting actual을 분리한다. 표시가 구체화돼도 partial evidence는 selected-route PASS 근거가 아니다.
 - Backtest Realism Audit은 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 분리해 본다. 핵심 `NEEDS_INPUT` / `BLOCKED`와 명시적 transaction cost / net cost curve / net performance / gross-only selection gap은 selected-route blocker이며, 일반 `REVIEW`는 `open_review_items`로 남긴다. Final Review gate policy는 failing Backtest Realism row criteria도 policy evidence로 보여주므로 cost / slippage sensitivity나 liquidity gap이 generic route label 뒤에 숨지 않는다. 이 연결은 core strategy runtime이나 새 저장소를 만들지 않는다.
 - Integrated Investability Gate QA는 construction risk 계열 audit, validation / coverage / realism audit, provider / robustness / paper observation / final evidence gate가 함께 작동할 때 ready는 selected-route를 허용하고, 기본 `REVIEW`는 selection을 막지 않는 open review item으로 넘기며, hard blocker는 selected-route를 차단하는 service contract를 유지한다. 동시에 `deployment_readiness_policy_snapshot`은 같은 `REVIEW`를 hold / re-review 수준으로 보존한다.
-- Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. 사용자는 먼저 `나의 포트폴리오`를 만들고, Final Review selected 후보 pool에서 selected decision을 하나씩 추가한다. 이 dashboard portfolio는 backtest 전략 정의가 아니라 사용자 모니터링 컨테이너이며, 같은 포트폴리오 안 중복 selected decision은 추가하지 않는다. 상단 Final Review Handoff는 Final Decision selected rows를 읽어 dashboard row build / monitorable / blocked 상태와 no approval / order / auto-rebalance 경계를 먼저 보여준다. Monitoring Scenario는 사용자가 지정한 가상 시작일 / 종료일 / 초기자산으로 selected component contract를 다시 실행하고, 종료일이 비어 있으면 DB 최신 시장일을 사용한다. 현재 가치, 누적 수익률, CAGR, MDD, benchmark spread, component contribution, strongest / weakest period를 표시한다. Recheck Operations Preflight는 scenario 실행 전 selected replay contract readiness와 DB symbol freshness를 하나의 read-only route로 묶는다. Final Review embedded replay contract를 먼저 보고 Current Candidate Registry는 fallback으로 사용한다. Recheck Readiness는 DB latest market date와 selected component replay contract를 read-only로 확인한다. Symbol Freshness는 replay portfolio ticker와 benchmark ticker의 DB price latest date / row count / lag를 read-only로 확인한다. Provider Evidence는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN`, stale freshness, partial / bridge / proxy coverage, missing operability / holdings / exposure를 pass로 처리하지 않는다. Continuity check는 Final Review selected row가 source contract / evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽고, timeline source mismatch는 blocked issue로 표시한다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. Review Signals는 Recheck Comparison을 CAGR / MDD / benchmark spread threshold의 policy owner로 사용하며 preflight / provider / comparison route를 계속 관찰 / 보강 필요 / 대체 검토 성격의 read-only signal board로 번역한다. 같은 dashboard portfolio 안 selected 전략이 2개 이상이면 최신 scenario 결과를 전환 비교 표로 볼 수 있다. Recheck Comparison은 최신 Monitoring Scenario가 기존 Final Review baseline을 계속 지지하는지 read-only로 비교하며, 미실행이나 오류를 pass로 처리하지 않는다. Allocation evidence boundary는 optional Actual Allocation이 수동 / session-only evidence이며 raw input / alert 저장, account / broker 연결, 주문, 자동 리밸런싱을 만들지 않음을 표시한다. Live / Deployment Readiness는 마지막 optional preflight로만 남긴다.
+- Selected Portfolio Dashboard는 모니터링 후보 선정 후 상태 확인 화면이다. 사용자는 먼저 `나의 포트폴리오`를 만들고, Final Review selected 후보 pool에서 selected decision을 하나씩 추가한다. 이 dashboard portfolio는 backtest 전략 정의가 아니라 사용자 모니터링 컨테이너이며, 같은 포트폴리오 안 중복 selected decision은 추가하지 않는다. 상단 Final Review Handoff는 Final Decision selected rows를 읽어 dashboard row build / monitorable / blocked 상태와 no approval / order / auto-rebalance 경계를 먼저 보여준다. Monitoring Scenario는 사용자가 지정한 가상 시작일 / 종료일 / 초기자산으로 selected component contract를 다시 실행하고, 종료일이 비어 있으면 DB 최신 시장일을 사용한다. 현재 가치, 누적 수익률, CAGR, MDD, benchmark spread, component contribution, strongest / weakest period를 표시한다. Recheck Operations Preflight는 scenario 실행 전 selected replay contract readiness와 DB symbol freshness를 하나의 read-only route로 묶는다. Final Review embedded replay contract를 먼저 보고 Current Candidate Registry는 fallback으로 사용한다. Recheck Readiness는 DB latest market date와 selected component replay contract를 read-only로 확인한다. Symbol Freshness는 replay portfolio ticker와 benchmark ticker의 DB price latest date / row count / lag를 read-only로 확인한다. Provider Evidence는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN`, stale freshness, partial / bridge / proxy coverage, missing operability / holdings / exposure를 pass로 처리하지 않는다. Continuity check는 Final Review selected row가 source contract / evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽고, timeline source mismatch는 blocked issue로 표시한다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. Review Signals는 Recheck Comparison을 CAGR / MDD / benchmark spread threshold의 policy owner로 사용하며 preflight / provider / comparison route를 계속 관찰 / 보강 필요 / 대체 검토 성격의 read-only signal board로 번역한다. 같은 dashboard portfolio 안 selected 전략이 2개 이상이면 최신 scenario 결과를 전환 비교 표로 볼 수 있다. Recheck Comparison은 최신 Monitoring Scenario가 기존 Final Review baseline을 계속 지지하는지 read-only로 비교하며, 미실행이나 오류를 pass로 처리하지 않는다. Allocation evidence boundary는 optional Actual Allocation이 수동 / session-only evidence이며 raw input / alert 저장, account / broker 연결, 주문, 자동 리밸런싱을 만들지 않음을 표시한다. Live / Deployment Readiness는 마지막 optional preflight로만 남긴다.
 
 ## Storage Boundary
 
