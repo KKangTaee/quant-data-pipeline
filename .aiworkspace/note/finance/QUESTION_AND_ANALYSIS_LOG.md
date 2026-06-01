@@ -13,7 +13,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
+  - none. Open a new phase only after the user approves a concrete scope.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
@@ -22,6 +22,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-01 - Phase 14 active state was stale and is removed
+- User request:
+  - Phase 14는 이전에 제거된 것으로 알고 있는데 active 문서가 남아 있는 것 같으니, 개발 재개 전에 문서 정리를 먼저 하자고 요청함.
+- Interpreted goal:
+  - 현재 worktree의 active phase pointer에서 Phase 14를 제거하고, Phase 13 carry-forward material은 승인 전 source material로만 남긴다.
+- Analysis result:
+  - `phase14-second-cycle-prioritization`과 `phase14-board-open`은 현재 실행 단위가 아니라 stale active docs였다. 현재 active phase는 없음으로 정리한다.
+- Follow-up:
+  - prototype/proxy 검증 개선 개발은 Phase 14가 아니라 현재 validation evidence audit / feature recommendation 기준으로 새 scope를 정한 뒤 재개한다.
 
 ### 2026-06-01 - Final Decision registry no longer uses the V2 filename
 - User request:
@@ -242,9 +252,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - Session closeout doc added at `docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
   - Backtest Analysis now has explicit boundaries: Real-Money is first-pass readiness, Practical Validation handoff is gated, Portfolio Mix Builder creates one weighted mix candidate, and no memo / preset / live approval / order / auto rebalance behavior is added.
-  - Remaining items are parked as follow-up candidates: separate read-only candidate comparison, saved mix inspector polish, weighted mix cost / turnover aggregation, profile-specific thresholds, and Phase 14 prioritization.
+  - Remaining items are parked as follow-up candidates: separate read-only candidate comparison, saved mix inspector polish, weighted mix cost / turnover aggregation, and profile-specific thresholds.
 - Follow-up:
-  - Next product work should move to Practical Validation / Final Review review or Phase 14 prioritization, not keep expanding Backtest Analysis 1단계 without a new explicit scope.
+  - Next product work should move to Practical Validation / Final Review review or a newly approved research / phase / task, not keep expanding Backtest Analysis 1단계 without a new explicit scope.
 
 ### 2026-05-30 - Portfolio Mix Builder post-run UX is summary-first
 - User request:
@@ -316,17 +326,6 @@ Detailed historical analysis was archived on `2026-04-13`.
   - The change is UI / wording only; runtime calculation, JSONL registry, user memo / preset storage, broker approval, order, and auto rebalance remain unchanged.
 - Follow-up:
   - User review should focus on whether Promotion, Probation, Deployment, and Validation now read as one coherent Real-Money decision flow.
-
-### 2026-05-30 - Phase 14 opens second-cycle prioritization
-- User request:
-  - Phase 13 완료 후 다음 단계 진행을 요청함.
-- Interpreted goal:
-  - Phase 13 carry-forward 후보를 바로 무작정 구현하지 않고, 2차 cycle의 첫 구현 slice를 정하기 위한 Phase 14를 연다.
-- Analysis result:
-  - High-priority 후보가 여러 개이므로 `selected replay contract hardening`, `weighted mix cost / turnover aggregation`, `profile-specific threshold policy`, historical membership/source review, broker-grade execution realism design을 impact / dependency / effort / source uncertainty / storage risk / QA 기준으로 먼저 비교해야 한다.
-  - Phase 14는 구현 phase가 아니라 prioritization / handoff phase이며, code / DB schema / new JSONL / broker automation 변경을 포함하지 않는다.
-- Follow-up:
-  - 다음 task는 `phase14-candidate-prioritization-v1`로 후보 matrix를 만들고 첫 구현 후보와 owner skill을 확정한다.
 
 ### 2026-05-30 - Phase 13 closes the first hardening cycle
 - User request:

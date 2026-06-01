@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
+  - none. Open a new phase only after the user approves a concrete scope.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current roadmap:
@@ -30,6 +30,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-01 - Removed stale Phase 14 active pointers
+- Removed the stale active Phase 14 pointer from durable index / roadmap / root handoff logs.
+- Deleted the abandoned `phase14-second-cycle-prioritization` active phase docs and `phase14-board-open` active task docs from the current workspace map.
+- Phase 13 carry-forward material remains source material only; no second-cycle phase is currently active.
+- No code, DB schema, registry JSONL, saved setup, broker/account, order, live approval, or auto rebalance path was touched.
 
 ### 2026-06-01 - Final Decision Registry Naming Cleanup
 - Renamed the current selected decision registry from `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` to `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`.
@@ -120,10 +126,6 @@ Detailed historical logs were archived on `2026-04-13`.
 - Completed `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`.
 - Real-Money now treats the old `Shortlist` value as `Promotion Suggested Route`, not as a separate validation stage.
 - No runtime calculation, DB schema, JSONL registry, user memo / preset storage, live approval, order, or auto rebalance behavior was added.
-- Opened `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`.
-- Phase 14 is a second-cycle prioritization phase: rank Phase 13 carry-forward candidates and select the first implementation slice before code changes.
-- Completed `.aiworkspace/note/finance/tasks/active/phase14-board-open/`; next task is `phase14-candidate-prioritization-v1`.
-- No code, DB schema, JSONL registry, user memo / preset storage, monitoring log auto-write, broker order, live approval, account sync, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-integrated-qa-final-closeout/`.
 - Phase 13 closeout summary added at `.aiworkspace/note/finance/phases/done/phase13-hardening-cycle-closeout.md`.
 - First hardening cycle is complete as an investability evidence workflow; it is not broker-grade trading, live approval, account sync, order, or auto rebalance readiness.

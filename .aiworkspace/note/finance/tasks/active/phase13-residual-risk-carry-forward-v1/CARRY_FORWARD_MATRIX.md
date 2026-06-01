@@ -85,10 +85,10 @@ These items must not be claimed as complete in 13-6.
 ## Next Step
 
 Phase 13 final closeout is complete.
-Use this matrix as the input to Phase 14:
+Use this matrix only as source material after the user approves a concrete next scope:
 
-- active phase: `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`
-- next task: `phase14-candidate-prioritization-v1`
+- no second-cycle phase is currently active.
+- open a new research, phase, or task only after the approved scope is explicit.
 
 Use this matrix with:
 

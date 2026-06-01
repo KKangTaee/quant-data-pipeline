@@ -80,5 +80,5 @@ Backtest Analysis
 
 - 후보끼리 read-only로 비교하는 별도 tool은 아직 분리 구현하지 않았다.
 - saved mix inspector는 여전히 raw record / detail 중심 영역이 남아 있어, 필요하면 별도 UX task로 정리한다.
-- weighted mix의 cost / turnover aggregation, profile-specific threshold, selected replay hardening은 Phase 14 이후 prioritization 대상이다.
+- weighted mix의 cost / turnover aggregation, profile-specific threshold, selected replay hardening은 사용자 승인 후 새 research / phase / task로 열 prioritization 대상이다.
 - Backtest Analysis 1단계는 여기서 닫고, 다음 검증 품질은 `Practical Validation`과 `Final Review`에서 확인한다.
