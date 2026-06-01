@@ -23,3 +23,4 @@
 - Kept direct provider fetch out of Practical Validation; the flow remains `Ingestion -> DB -> Loader -> UI`.
 - Responsive follow-up replaced truncating Streamlit metrics in Ingestion result summaries with custom wrapping stat cards, added wrapping metadata rows for DB targets / downstream use, and added compact Korean `format_func` labels for symbol-source / preset selectors.
 - Persistent run-history selection now uses compact display labels and a full `현재 선택` caption, so the selected run remains identifiable when the browser is narrow.
+- Do not style `div[data-baseweb="select"]` or `div[role="listbox"]` internals globally. It can interfere with Streamlit/BaseWeb option positioning and click targets; keep selectbox reliability native and show long values in adjacent captions/cards instead.

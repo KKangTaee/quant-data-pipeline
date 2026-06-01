@@ -11,6 +11,7 @@ Status: Implementation complete / QA complete
 - Hidden lifecycle collectors for Nasdaq Symbol Directory snapshots, SEC CIK / ticker cross-check, and computed snapshot lifecycle are exposed under `상장 / 상폐 근거` with explicit survivorship caveats.
 - Recent result, session history, and persistent run-history summaries now display Korean job titles and data-quality guidance while retaining internal English job ids for traceability.
 - Follow-up responsive polish fixed narrow-width truncation for Ingestion result summaries, runtime/build metadata, job meta rows, symbol source labels, and persistent run-history selection display.
+- Selectbox follow-up removed internal BaseWeb dropdown CSS overrides after user found the first option could appear blank or become hard to click; full-value captions remain outside the selectbox.
 
 ## Next
 

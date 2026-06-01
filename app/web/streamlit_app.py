@@ -677,18 +677,6 @@ def _install_ingestion_responsive_styles() -> None:
             margin: -0.25rem 0 0.45rem;
             overflow-wrap: anywhere;
           }
-          div[data-baseweb="select"] > div {
-            min-height: 2.75rem;
-          }
-          div[data-baseweb="select"] > div > div {
-            min-width: 0;
-            overflow: visible;
-            white-space: normal;
-          }
-          div[role="listbox"] [role="option"] {
-            min-height: 2.45rem;
-            white-space: normal;
-          }
           @media (max-width: 760px) {
             div[data-testid="column"] {
               flex: 1 1 100% !important;
