@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-01
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Last Verified: 2026-05-31
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
-- Current implementation focus: Final Review Commercial UX V1 is implementation complete with selection-only official save. Final Review now opens as a user-facing Decision Desk with command center, flow rail, Candidate Board, Decision Cockpit, Final Decision Action, Evidence Appendix, and Decision History / Dashboard Handoff. New official Final Decision V2 writes are limited to `SELECT_FOR_PRACTICAL_PORTFOLIO` after the selected-route gate passes; hold / reject / re-review are status guidance and legacy read paths. Latest candidate searches found no fresh current-gate selected V2 row; the legacy non-GTAA Quality selected row is only a migration seed if explicitly approved.
+- Current implementation focus: Final Review Selection Readiness Gate V1 is implementation complete. Final Review now separates Selected Dashboard candidate selection from future Live / Deployment Readiness: `selection_gate_policy_snapshot` controls `SELECT_FOR_PRACTICAL_PORTFOLIO` saves, `deployment_readiness_policy_snapshot` preserves stricter live-readiness findings, and default `REVIEW` rows become `open_review_items`. Latest candidate searches found no fresh pre-change current-gate selected V2 row; the legacy non-GTAA Quality selected row is only a migration seed if explicitly approved.
 
 ## By Purpose
 

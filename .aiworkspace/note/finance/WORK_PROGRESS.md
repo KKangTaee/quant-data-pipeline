@@ -23,13 +23,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete with selection-only official save. Fresh non-GTAA search found no current-gate selected V2 row; legacy V1 has a non-GTAA Quality selected row that can be used only as an explicit migration seed.
+  - Final Review Selection Readiness Gate V1 is implementation complete. Fresh pre-change candidate searches found no current-gate selected V2 row; the new gate separates Selected Dashboard candidate selection from future live-readiness audit and carries default `REVIEW` findings as open review items.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-01
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-selection-readiness-gate-v1/`.
+- Final Review now uses `selection_gate_policy_snapshot` for `SELECT_FOR_PRACTICAL_PORTFOLIO` save readiness and preserves the older stricter audit as `deployment_readiness_policy_snapshot`.
+- Default `REVIEW` findings become `open_review_items`; hard blockers / critical missing evidence still block selected-route save.
+- Weighted mix Practical Validation source conversion now preserves component `weight_reason`, role source, and compact cost / turnover / net-cost evidence snapshots.
+- Verification passed: `py_compile`, targeted Practical Validation / Final Review service contracts, and full `tests.test_service_contracts` 211 tests.
 
 ### 2026-05-31
 - Session closeout docs aligned for master merge handoff: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs now describe Final Review selection-only official save and the current candidate search outcome.

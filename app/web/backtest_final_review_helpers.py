@@ -409,7 +409,7 @@ def _build_final_review_save_evaluation(
     else:
         route = "FINAL_SELECTION_SAVE_BLOCKED"
         verdict = "최종 후보 선정 저장 전 확인 필요"
-        next_action = "decision id, 선정 사유, selected-route gate, investability packet을 확인합니다."
+        next_action = "decision id, 선정 사유, selection gate, investability packet을 확인합니다."
     return {
         "route": route,
         "score": round((len(checks) - len(blockers)) / len(checks) * 10.0, 1),
@@ -438,6 +438,13 @@ def _build_final_review_decision_row(
     now = datetime.now().isoformat(timespec="seconds")
     source_id = str(source.get("source_id") or "").strip()
     gate_policy_snapshot = dict(dict(investability_packet or {}).get("gate_policy_snapshot") or {})
+    selection_gate_policy_snapshot = dict(
+        dict(investability_packet or {}).get("selection_gate_policy_snapshot") or gate_policy_snapshot
+    )
+    deployment_readiness_policy_snapshot = dict(
+        dict(investability_packet or {}).get("deployment_readiness_policy_snapshot") or {}
+    )
+    open_review_items = list(dict(investability_packet or {}).get("open_review_items") or [])
     row = {
         "schema_version": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
         "decision_id": str(decision_id or "").strip(),
@@ -456,7 +463,10 @@ def _build_final_review_decision_row(
         "selected_components": list(paper_observation.get("active_components") or []),
         "decision_evidence_snapshot": evidence,
         "investability_evidence_packet": dict(investability_packet or {}),
-        "gate_policy_snapshot": gate_policy_snapshot,
+        "gate_policy_snapshot": selection_gate_policy_snapshot,
+        "selection_gate_policy_snapshot": selection_gate_policy_snapshot,
+        "deployment_readiness_policy_snapshot": deployment_readiness_policy_snapshot,
+        "open_review_items": open_review_items,
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),
@@ -497,7 +507,8 @@ def _build_final_review_decision_row(
         "order_instruction": False,
         "notes": (
             "Created from Backtest > Final Review. This record combines validation, robustness, "
-            "paper observation criteria, and operator judgment. It is not live approval or an order instruction."
+            "paper observation criteria, operator judgment, and open review items. "
+            "It is not live approval, deployment approval, or an order instruction."
         ),
     }
     row["phase35_handoff"] = _build_final_selection_decision_phase35_handoff(row)

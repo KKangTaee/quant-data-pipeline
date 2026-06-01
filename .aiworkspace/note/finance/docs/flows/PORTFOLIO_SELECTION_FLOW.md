@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-01
 
 ## Purpose
 
@@ -22,7 +22,7 @@ Backtest > Backtest Analysis
 |---|---|---|---|
 | 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
 | 2 | Practical Validation | 선택된 source를 source traits 기반 module gate와 practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
-| 3 | Final Review | Decision Desk command center로 오늘의 판단 상태를 먼저 보고, Candidate Board의 review priority / first-review candidate와 Decision Cockpit으로 selected-route 상태를 확인한다. selected-route gate까지 통과한 후보만 최종 선정으로 저장하며, 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내로 표시한다. 저장된 선정 기록은 Saved Decision Review ledger와 Selected Dashboard handoff로 다시 읽고 상세 Practical Validation evidence는 Appendix에서 read-only로 확인한다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
+| 3 | Final Review | Decision Desk command center로 오늘의 판단 상태를 먼저 보고, Candidate Board의 review priority / first-review candidate와 Decision Cockpit으로 selection-readiness 상태를 확인한다. `selection_gate_policy_snapshot`이 통과한 후보만 최종 선정으로 저장하며, 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내로 표시한다. `REVIEW` 항목은 기본적으로 `open_review_items`로 이어서 추적하고, 더 엄격한 live 투입 감사 성격의 판정은 `deployment_readiness_policy_snapshot`으로 보존한다. 저장된 선정 기록은 Saved Decision Review ledger와 Selected Dashboard handoff로 다시 읽고 상세 Practical Validation evidence는 Appendix에서 read-only로 확인한다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
 | 4 | Selected Portfolio Dashboard | Final Review selected row handoff 상태를 먼저 확인하고, 선정된 포트폴리오를 최신 기간, recheck readiness, symbol freshness, provider evidence, timeline, review signal, recheck comparison, 가상 투자금 / optional actual allocation boundary 기준으로 다시 확인한다 | 사용자가 명시적으로 저장할 때만 monitoring log |
 
 ## Stage Ownership
@@ -30,9 +30,11 @@ Backtest > Backtest Analysis
 | Stage | Owns | Does Not Own |
 |---|---|---|
 | Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness, Practical Validation handoff gate | 최종 판단, 별도 후보 간 read-only 비교, 후속 monitoring / deployment 판단 |
-| Practical Validation | 실전 투입 전 검증, source strategy / construction 확인, source traits 기반 module gate, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
-| Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 선정 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 최종 선정 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
+| Practical Validation | Final Review로 넘길 검증 근거 생성, source strategy / construction 확인, source traits 기반 module gate, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
+| Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 선정 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 최종 선정 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, selection-readiness gate, open review item handoff, deployment readiness policy snapshot 보존, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 실제 자금 투입 승인, broker order, account sync, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
 | Selected Portfolio Dashboard | Final Review selected row handoff 확인, 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary | broker order, live approval, auto rebalance |
+
+Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다. Final Review는 향후 그 단계가 사용할 수 있도록 엄격한 `deployment_readiness_policy_snapshot`을 남기지만, 그 snapshot이 곧 live approval이나 주문 가능 상태를 뜻하지 않는다.
 
 ## Verification Checkpoints
 
@@ -45,7 +47,7 @@ Backtest > Backtest Analysis
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
 | Candidate Readiness | Backtest Analysis > Real-Money / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
 | Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, provider, data coverage, realism, robustness, construction risk 검증 |
-| Final Decision Gate | Final Review | selected-route blocker와 최종 선택 가능 여부 판단 |
+| Final Decision Gate | Final Review | selection hard blocker와 open review item을 분리해 최종 관찰 후보로 저장 가능한지 판단 |
 | Monitoring Check | Selected Portfolio Dashboard | 선정 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
 
 ## Source Contract
@@ -62,6 +64,7 @@ PORTFOLIO_SELECTION_SOURCES
 기존 `registry_id`, Review Note, Pre-Live registry, Portfolio Proposal registry는 legacy compatibility로 남을 수 있지만, 현재 주 흐름의 필수 저장 단계는 아니다.
 Selected Dashboard의 Timeline / Continuity / Review Signals / Decision Dossier는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2` row를 같은 durable source로 표시하고, session-state recheck / drift / alert evidence는 저장된 monitoring history가 아니라 read-only context로 표시한다.
 Selected Dashboard handoff review도 같은 Final Decision V2 row를 읽으며, selected route / dashboard row build / monitorable 여부만 표시하고 새 dashboard state를 저장하지 않는다.
+Final Decision V2 row는 backward compatibility용 `gate_policy_snapshot`을 selection policy로 유지하고, `selection_gate_policy_snapshot`, `deployment_readiness_policy_snapshot`, `open_review_items`를 함께 저장해 선정 판단과 live 투입 감사 후보 항목을 분리한다.
 
 ## User-Facing Rules
 
@@ -84,29 +87,29 @@ Selected Dashboard handoff review도 같은 Final Decision V2 row를 읽으며, 
 - Final Review가 최종 판단 위치다. 중간 단계에서 최종 메모를 반복해서 저장하지 않는다.
 - Final Review source picker는 Practical Validation Gate를 통과한 result만 표시한다. 저장만 된 blocked / needs input / not run validation row는 기록으로 남지만 최종 검토 후보에서는 숨긴다.
 - Final Review 상단은 Decision Desk command center와 flow rail로 오늘의 판단 상태, 후보 수, 숨겨진 Gate 미통과 기록, 저장된 최종 선정 기록, Selected Dashboard 연결 후보를 먼저 보여준다. 이 shell은 UI 표시 계층이며 gate / persistence logic을 바꾸지 않는다.
-- Final Review는 후보 선택 전에 Candidate Board로 Gate 통과 후보의 decision state, suggested decision, blocker / review-required 수, 주요 audit route를 비교한다.
+- Final Review는 후보 선택 전에 Candidate Board로 Gate 통과 후보의 decision state, suggested decision, blocker / open review 수, 주요 audit route를 비교한다.
 - Candidate Board는 후보를 select-ready, hold / re-review, blocked 순서로 정렬하고, first-review candidate, primary reason, next action을 표시한다. 이 priority는 새 투자 점수가 아니라 기존 evidence를 보기 쉽게 정렬하는 read-only 표시다.
-- Final Review는 상세 evidence table보다 Decision Cockpit을 먼저 보여준다. 이 cockpit은 selected-route state, suggested decision, Must Fix, Must Review, monitoring seed를 같은 gate policy에서 읽는다.
+- Final Review는 상세 evidence table보다 Decision Cockpit을 먼저 보여준다. 이 cockpit은 selection-readiness state, suggested decision, Must Fix, open review items, monitoring seed를 같은 evidence packet에서 읽는다.
 - Final Review의 주 action은 Decision Cockpit 다음에 나오는 `최종 후보 선정 저장`이다. 이 구간은 Decision Record Checklist, selected-route gate, 선정 사유 / 운영 전 조건 / 다음 행동 문안을 보여주며, 상세 Practical Validation / Robustness / Paper Observation / Investability Packet 표는 중복 검증이 아니라 이전 검증 결과를 추적하는 Evidence Appendix다.
 - 저장된 Final Review row는 Saved Decision Review ledger에서 selected count, latest selection, detail tabs, Selected Dashboard handoff, Decision Dossier export로 다시 확인한다. 기존 hold / reject / re-review row는 과거 호환용으로 읽을 수 있지만 새 UI의 정식 저장 action은 아니다. 이 review는 과거 판단을 읽는 화면이며 새 report 파일, approval, order를 만들지 않는다.
 - Saved Decision Review의 Selected Dashboard handoff는 selected rows, dashboard rows, monitorable / blocked counts, checklist, destination을 보여준다. 이는 기존 selected-route gate나 Selected Dashboard continuity check를 다시 계산하는 중복 검증이 아니라, 저장된 최종 선정 기록이 다음 operations 화면으로 연결 가능한지 보여주는 read-only 연결 상태다.
 - Final Review의 investability packet은 새 저장 단계를 만들지 않고 기존 validation evidence를 compact하게 읽는다.
-- Final Review의 profile-aware gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation, construction risk, risk contribution, component role / weight, validation efficacy, data coverage, backtest realism group을 판정한다.
+- Final Review의 profile-aware selection gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation, construction risk, risk contribution, component role / weight, validation efficacy, data coverage, backtest realism group을 판정한다. 같은 입력에서 만든 deployment readiness policy는 더 엄격한 live-readiness 감사 snapshot으로 보존한다.
 - Decision Dossier는 Final Review row와 Selected Dashboard timeline을 사람이 읽는 markdown으로 묶는 read-only export다. source contract consistency를 표시하지만 자동 report 저장이나 새 판단 row를 만들지 않는다.
-- critical `NOT_RUN`, hard blocker, evidence blocker, selected-route policy blocker가 남아 있으면 실전 검토 통과 후보 선정 저장은 차단된다. 보류 / 거절 / 재검토는 화면 상태 안내로 표시하되 새 정식 저장 row를 만들지 않는다.
+- selection hard blocker, critical `NOT_RUN` / `NEEDS_INPUT`, benchmark / comparator parity blocker, gross-only 또는 net/cost 적용 부재, weighted mix component role / weight rationale 부재, Final Review evidence 미준비가 남아 있으면 최종 관찰 후보 선정 저장은 차단된다. 기본 `REVIEW` 항목은 저장을 막기보다 `open_review_items`로 Selected Dashboard와 향후 Live / Deployment Readiness에서 이어서 본다. 보류 / 거절 / 재검토는 화면 상태 안내로 표시하되 새 정식 저장 row를 만들지 않는다.
 - Structured waiver는 현재 구현하지 않는다. 향후 구현해도 `BLOCK` severity는 waiver 불가이고, 일부 `REVIEW_REQUIRED` gap만 expiry / review trigger / scope를 가진 구조화 waiver로 검토할 수 있다.
 - Provider / look-through evidence는 source mix, freshness, as-of range를 함께 본다. stale provider snapshot은 pass가 아니라 review evidence다.
 - Look-through Exposure Board는 holdings / exposure snapshot을 asset bucket, top holding, overlap, ETF별 coverage로 요약한다. Full holdings row는 DB 영역에 남고 workflow JSONL에는 compact summary만 남긴다.
 - Construction Risk Audit은 component max weight, provider look-through coverage, top holding, holdings overlap, dominant asset bucket, unknown exposure를 별도 row로 본다. provider holdings / exposure가 없거나 partial이면 ready로 보지 않는다.
 - Risk Contribution Audit은 component return matrix coverage, pairwise correlation, max risk contribution proxy, drop-one dependency, source strength를 별도 row로 본다. component matrix나 drop-one evidence가 없으면 ready로 보지 않고, DB price proxy / mixed source evidence는 `REVIEW`로 남긴다.
 - Component Role / Weight Audit은 explicit role source coverage, profile-aware weight discipline, role concentration, profile intent fit, weight rationale coverage를 별도 row로 본다. role source가 없거나 partial이면 ready로 보지 않고, role preset이나 user memo 저장을 만들지 않는다.
-- Construction Risk / Risk Contribution / Component Role / Weight Audit의 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. Final Review gate policy는 failing row criteria를 evidence에 표시한다.
+- Construction Risk / Risk Contribution / Component Role / Weight Audit의 `BLOCKED`는 selected-route blocker다. weighted mix에서 component role / weight rationale의 핵심 `NEEDS_INPUT`은 selection blocker이며, 일반 `REVIEW`는 `open_review_items`로 남긴다. 단일 component 후보에는 mix 전용 risk contribution / component role weight audit을 selection gate에서 비적용으로 낮춘다. Final Review gate policy는 non-PASS row criteria를 evidence에 표시한다.
 - Robustness Lab은 stress / rolling / sensitivity / overfit evidence를 compact summary로 묶어 Practical Validation과 Final Review가 같은 근거를 읽게 한다. Strategy-specific perturbation follow-up이나 `NOT_RUN` row는 pass가 아니다.
-- Validation Efficacy Audit은 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, storage boundary를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다.
-- Data Coverage Audit은 DB price window, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. 현재 listing / asset profile row는 current listing evidence일 뿐이므로 historical universe나 delisting coverage가 없으면 survivorship PASS로 보지 않는다.
+- Validation Efficacy Audit은 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, storage boundary를 분리해 본다. 핵심 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 기본적으로 `open_review_items`로 남긴다.
+- Data Coverage Audit은 DB price window, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 분리해 본다. 핵심 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 기본적으로 `open_review_items`로 남긴다. 현재 listing / asset profile row는 current listing evidence일 뿐이므로 historical universe나 delisting coverage가 없으면 survivorship PASS로 보지 않는다.
 - Data Coverage Audit의 lifecycle metrics는 current snapshot, SEC identity cross-check, computed partial, actual coverage, delisting actual을 분리한다. 표시가 구체화돼도 partial evidence는 selected-route PASS 근거가 아니다.
-- Backtest Realism Audit은 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. Final Review gate policy는 failing Backtest Realism row criteria도 policy evidence로 보여주므로 cost / slippage sensitivity나 liquidity gap이 generic route label 뒤에 숨지 않는다. 이 연결은 core strategy runtime이나 새 저장소를 만들지 않는다.
-- Integrated Investability Gate QA는 construction risk 계열 audit, validation / coverage / realism audit, provider / robustness / paper observation / final evidence gate가 함께 작동할 때 ready는 selected-route를 허용하고, 다중 `REVIEW`는 hold / re-review로 보내며, 다중 blocker는 selected-route를 차단하는 service contract를 유지한다.
+- Backtest Realism Audit은 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 분리해 본다. 핵심 `NEEDS_INPUT` / `BLOCKED`와 명시적 transaction cost / net cost curve / net performance / gross-only selection gap은 selected-route blocker이며, 일반 `REVIEW`는 `open_review_items`로 남긴다. Final Review gate policy는 failing Backtest Realism row criteria도 policy evidence로 보여주므로 cost / slippage sensitivity나 liquidity gap이 generic route label 뒤에 숨지 않는다. 이 연결은 core strategy runtime이나 새 저장소를 만들지 않는다.
+- Integrated Investability Gate QA는 construction risk 계열 audit, validation / coverage / realism audit, provider / robustness / paper observation / final evidence gate가 함께 작동할 때 ready는 selected-route를 허용하고, 기본 `REVIEW`는 selection을 막지 않는 open review item으로 넘기며, hard blocker는 selected-route를 차단하는 service contract를 유지한다. 동시에 `deployment_readiness_policy_snapshot`은 같은 `REVIEW`를 hold / re-review 수준으로 보존한다.
 - Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. 상단 Final Review Handoff는 Final Decision V2 selected rows를 읽어 dashboard row build / monitorable / blocked 상태와 no approval / order / auto-rebalance 경계를 먼저 보여준다. Recheck Operations Preflight는 Performance Recheck 실행 전 selected replay contract readiness와 DB symbol freshness를 하나의 read-only route로 묶는다. Final Review embedded replay contract를 먼저 보고 Current Candidate Registry는 fallback으로 사용한다. Recheck Readiness는 DB latest market date와 selected component replay contract를 read-only로 확인한다. Symbol Freshness는 replay portfolio ticker와 benchmark ticker의 DB price latest date / row count / lag를 read-only로 확인한다. Provider Evidence는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN`, stale freshness, partial / bridge / proxy coverage, missing operability / holdings / exposure를 pass로 처리하지 않는다. Continuity check는 Final Review selected row가 source contract / evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽고, timeline source mismatch는 blocked issue로 표시한다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. Review Signals는 Recheck Comparison을 CAGR / MDD / benchmark spread threshold의 policy owner로 사용하며 preflight / provider / comparison route를 하나의 read-only signal board로 번역한다. Recheck Comparison은 최신 Performance Recheck가 기존 Final Review baseline을 계속 지지하는지 read-only로 비교하며, 미실행이나 오류를 pass로 처리하지 않는다. Allocation evidence boundary는 optional Actual Allocation이 수동 / session-only evidence이며 raw input / alert 저장, account / broker 연결, 주문, 자동 리밸런싱을 만들지 않음을 표시한다.
 
 ## Storage Boundary

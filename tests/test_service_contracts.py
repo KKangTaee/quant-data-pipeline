@@ -347,6 +347,52 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(source["construction"]["target_weight_total"], 60.0)
         self.assertEqual(source["components"][0]["selection_history"][0]["selected_tickers"], ["AAPL"])
 
+    def test_saved_mix_source_preserves_weight_rationale_and_cost_snapshots(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_saved_mix_prefill
+
+        source = build_selection_source_from_saved_mix_prefill(
+            {
+                "source_kind": "weighted_portfolio_mix",
+                "weighted_portfolio_id": "mix-2",
+                "weighted_portfolio_name": "Role Aware Mix",
+                "weighted_summary": {"cagr": 0.1, "mdd": -0.2},
+                "weighted_period": {"start": "2020-01-31", "end": "2020-12-31"},
+                "weighted_curve_snapshot": [{"date": "2020-01-31", "value": 1000.0}],
+                "components": [
+                    {
+                        "registry_id": "component-core",
+                        "strategy_name": "Equal Weight",
+                        "candidate_role": "weighted_mix_component",
+                        "proposal_role": "core_anchor",
+                        "target_weight": 60.0,
+                        "weight_reason": "Core exposure",
+                        "selection_history": [{"date": "2020-01-31", "selected_tickers": ["SPY"]}],
+                        "contract": {"transaction_cost_bps": 10.0},
+                    },
+                    {
+                        "registry_id": "component-defense",
+                        "strategy_name": "Risk Parity",
+                        "candidate_role": "weighted_mix_component",
+                        "proposal_role": "defensive_sleeve",
+                        "target_weight": 40.0,
+                        "weight_reason": "Drawdown dampener",
+                        "selection_history": [{"date": "2020-01-31", "selected_tickers": ["TLT"]}],
+                        "contract": {"transaction_cost_bps": 10.0},
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual(source["components"][0]["weight_reason"], "Core exposure")
+        self.assertEqual(source["components"][1]["role_source"], "weighted_mix_component")
+        self.assertEqual(source["cost_model_snapshot"]["transaction_cost_bps"], 10.0)
+        self.assertEqual(source["turnover_evidence_snapshot"]["turnover_source"], "component_selection_history")
+        self.assertEqual(source["net_cost_curve_snapshot"]["net_cost_curve_rows"], 1)
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["cost_model_snapshot"]["cost_model_source"],
+            "component_contracts",
+        )
+
     def test_validation_source_traits_classify_single_etf_tactical_candidate(self) -> None:
         from app.services.backtest_practical_validation_modules import infer_validation_source_traits
 
@@ -6223,6 +6269,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             "validation_id": "validation-integrated-ready",
             "validation_route": "READY_FOR_FINAL_REVIEW",
             "validation_profile": {"profile_id": "balanced_core", "profile_label": "균형형"},
+            "source_traits": {"is_weighted_mix": True},
             "diagnostic_summary": {
                 "status_counts": {"PASS": 12, "REVIEW": 0, "BLOCKED": 0, "NOT_RUN": 0}
             },
@@ -6539,6 +6586,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(cockpit["monitoring_handoff"]["tracking_benchmark"], "SPY")
         self.assertEqual(board_rows[0]["Decision State"], "선정 가능")
         self.assertEqual(board_rows[0]["Select Allowed"], "Yes")
+        self.assertEqual(board_rows[0]["Open Review"], 0)
         self.assertEqual(board_rows[0]["Candidate"], "Ready candidate")
 
     def test_final_review_decision_cockpit_surfaces_blocked_candidate_board_row(self) -> None:
@@ -7054,18 +7102,23 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertFalse(packet["select_ready"])
-        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertTrue(selected_gate["Ready"])
         self.assertTrue(hold_gate["Ready"])
-        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
         self.assertEqual(packet["gate_policy_snapshot"]["blockers"], [])
-        self.assertTrue(packet["gate_policy_snapshot"]["waiver_required_for_select"])
+        self.assertFalse(packet["gate_policy_snapshot"]["waiver_required_for_select"])
+        self.assertGreaterEqual(len(packet["open_review_items"]), 4)
+        self.assertEqual(
+            packet["deployment_readiness_policy_snapshot"]["outcome"],
+            "hold_or_re_review",
+        )
         severities = self._gate_policy_severities(packet)
-        self.assertEqual(severities["provider_coverage"], "REVIEW_REQUIRED")
-        self.assertEqual(severities["validation_efficacy"], "REVIEW_REQUIRED")
-        self.assertEqual(severities["data_coverage"], "REVIEW_REQUIRED")
-        self.assertEqual(severities["backtest_realism"], "REVIEW_REQUIRED")
+        self.assertEqual(severities["provider_coverage"], "WATCH")
+        self.assertEqual(severities["validation_efficacy"], "WATCH")
+        self.assertEqual(severities["data_coverage"], "WATCH")
+        self.assertEqual(severities["backtest_realism"], "WATCH")
 
     def test_integrated_investability_gate_multiple_blockers_block_selected_route(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -7173,11 +7226,12 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             if row["Group"] == "construction_risk"
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
-        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
-        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(selected_gate["Ready"])
         self.assertTrue(hold_gate["Ready"])
-        self.assertEqual(policy_row["Severity"], "BLOCK")
+        self.assertEqual(policy_row["Severity"], "WATCH")
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
         self.assertIn("Provider look-through coverage", policy_row["Evidence"])
         self.assertIn("NEEDS_INPUT", policy_row["Current"])
 
@@ -7226,10 +7280,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             if row["Group"] == "risk_contribution"
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
-        self.assertFalse(selected_gate["Ready"])
-        self.assertEqual(policy_row["Severity"], "REVIEW_REQUIRED")
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(selected_gate["Ready"])
+        self.assertEqual(policy_row["Severity"], "WATCH")
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
         self.assertIn("Pairwise correlation", policy_row["Evidence"])
         self.assertIn("Risk contribution concentration", policy_row["Evidence"])
 
@@ -7474,9 +7529,16 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             if row["Group"] == "validation_efficacy"
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertFalse(selected_gate["Ready"])
-        self.assertEqual(policy_row["Severity"], "REVIEW_REQUIRED")
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertTrue(selected_gate["Ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertEqual(policy_row["Severity"], "WATCH")
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
+        self.assertEqual(
+            packet["deployment_readiness_policy_snapshot"]["outcome"],
+            "hold_or_re_review",
+        )
         self.assertIn("Walk-forward temporal validation", policy_row["Evidence"])
         self.assertIn("OOS holdout validation", policy_row["Evidence"])
         self.assertIn("Regime split validation", policy_row["Evidence"])
@@ -7809,13 +7871,18 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertFalse(packet["select_ready"])
-        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
-        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(selected_gate["Ready"])
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
+        self.assertEqual(
+            packet["deployment_readiness_policy_snapshot"]["outcome"],
+            "hold_or_re_review",
+        )
         self.assertTrue(
             any(
-                row["Group"] == "data_coverage" and row["Severity"] == "REVIEW_REQUIRED"
+                row["Group"] == "data_coverage" and row["Severity"] == "WATCH"
                 for row in packet["gate_policy_snapshot"]["policy_rows"]
             )
         )
@@ -7899,13 +7966,18 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertFalse(packet["select_ready"])
-        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
-        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(selected_gate["Ready"])
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
+        self.assertEqual(
+            packet["deployment_readiness_policy_snapshot"]["outcome"],
+            "hold_or_re_review",
+        )
         self.assertTrue(
             any(
-                row["Group"] == "backtest_realism" and row["Severity"] == "REVIEW_REQUIRED"
+                row["Group"] == "backtest_realism" and row["Severity"] == "WATCH"
                 for row in packet["gate_policy_snapshot"]["policy_rows"]
             )
         )
@@ -7956,9 +8028,16 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             if row["Group"] == "backtest_realism"
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertFalse(selected_gate["Ready"])
-        self.assertEqual(policy_row["Severity"], "REVIEW_REQUIRED")
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertTrue(selected_gate["Ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertEqual(policy_row["Severity"], "WATCH")
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
+        self.assertEqual(
+            packet["deployment_readiness_policy_snapshot"]["outcome"],
+            "hold_or_re_review",
+        )
         self.assertIn("Cost / slippage sensitivity evidence", policy_row["Evidence"])
         self.assertIn("Liquidity / operability evidence", policy_row["Evidence"])
 
@@ -8094,13 +8173,18 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
-        self.assertFalse(packet["select_ready"])
-        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
-        self.assertFalse(selected_gate["Ready"])
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(selected_gate["Ready"])
+        self.assertGreaterEqual(len(packet["open_review_items"]), 1)
+        self.assertEqual(
+            packet["deployment_readiness_policy_snapshot"]["outcome"],
+            "hold_or_re_review",
+        )
         self.assertTrue(
             any(
-                row["Group"] == "provider_coverage" and row["Severity"] == "REVIEW_REQUIRED"
+                row["Group"] == "provider_coverage" and row["Severity"] == "WATCH"
                 for row in packet["gate_policy_snapshot"]["policy_rows"]
             )
         )
@@ -8137,22 +8221,32 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
     def test_final_review_decision_row_stores_compact_gate_policy_snapshot(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_decision_row
 
+        selection_policy = {
+            "schema_version": "final_review_selection_gate_policy_v1",
+            "outcome": "select_ready",
+            "select_allowed": True,
+            "policy_rows": [
+                {
+                    "Criteria": "Benchmark Parity",
+                    "Group": "benchmark",
+                    "Ready": True,
+                    "Severity": "PASS",
+                }
+            ],
+        }
+        deployment_policy = {
+            "schema_version": "deployment_readiness_gate_policy_v1",
+            "outcome": "hold_or_re_review",
+            "select_allowed": False,
+            "policy_rows": [],
+        }
         packet = {
             "route": "INVESTABILITY_PACKET_READY",
             "select_ready": True,
-            "gate_policy_snapshot": {
-                "schema_version": "investability_gate_policy_v1",
-                "outcome": "select_ready",
-                "select_allowed": True,
-                "policy_rows": [
-                    {
-                        "Criteria": "Benchmark Parity",
-                        "Group": "benchmark",
-                        "Ready": True,
-                        "Severity": "PASS",
-                    }
-                ],
-            },
+            "gate_policy_snapshot": selection_policy,
+            "selection_gate_policy_snapshot": selection_policy,
+            "deployment_readiness_policy_snapshot": deployment_policy,
+            "open_review_items": [{"Group": "provider_coverage", "Criteria": "Provider / Look-through"}],
         }
 
         row = _build_final_review_decision_row(
@@ -8170,6 +8264,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         self.assertEqual(row["gate_policy_snapshot"]["outcome"], "select_ready")
         self.assertEqual(row["gate_policy_snapshot"]["policy_rows"][0]["Group"], "benchmark")
+        self.assertEqual(row["selection_gate_policy_snapshot"]["schema_version"], "final_review_selection_gate_policy_v1")
+        self.assertEqual(row["deployment_readiness_policy_snapshot"]["schema_version"], "deployment_readiness_gate_policy_v1")
+        self.assertEqual(row["open_review_items"][0]["Group"], "provider_coverage")
 
 
 class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):

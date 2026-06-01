@@ -579,6 +579,63 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
     }
 
 
+def _weighted_mix_component_cost_snapshot(components: list[dict[str, Any]]) -> dict[str, Any]:
+    cost_values = [
+        _optional_float(dict(component.get("contract") or {}).get("transaction_cost_bps"))
+        for component in components
+    ]
+    cost_values = [value for value in cost_values if value is not None]
+    if not cost_values:
+        return {}
+    unique_values = sorted({float(value) for value in cost_values})
+    snapshot = {
+        "cost_model_contract_version": "weighted_mix_component_cost_contract_v1",
+        "cost_model_source": "component_contracts",
+        "cost_application_status": "component_curve_metadata",
+        "component_cost_bps_values": unique_values,
+        "component_cost_coverage_count": len(cost_values),
+        "component_count": len(components),
+    }
+    if len(unique_values) == 1:
+        snapshot["transaction_cost_bps"] = unique_values[0]
+    return snapshot
+
+
+def _weighted_mix_component_turnover_snapshot(components: list[dict[str, Any]]) -> dict[str, Any]:
+    history_counts = [
+        len(list(component.get("selection_history") or component.get("selection_history_snapshot") or []))
+        for component in components
+    ]
+    if not any(history_counts):
+        return {}
+    return {
+        "turnover_model_contract_version": "weighted_mix_component_turnover_contract_v1",
+        "turnover_estimation_status": "component_selection_history_attached",
+        "turnover_source": "component_selection_history",
+        "turnover_observation_count": sum(history_counts),
+        "component_count": len(components),
+    }
+
+
+def _weighted_mix_component_net_cost_snapshot(
+    *,
+    prefill: dict[str, Any],
+    components: list[dict[str, Any]],
+) -> dict[str, Any]:
+    curve_rows = len(list(prefill.get("weighted_curve_snapshot") or []))
+    cost_snapshot = _weighted_mix_component_cost_snapshot(components)
+    if not cost_snapshot and curve_rows <= 0:
+        return {}
+    return {
+        "net_cost_curve_contract_version": "weighted_mix_component_net_cost_contract_v1",
+        "net_cost_curve_status": "component_curve_metadata",
+        "net_cost_curve_application_target": "weighted_mix_component_curves",
+        "net_cost_curve_rows": curve_rows or None,
+        "component_cost_coverage_count": cost_snapshot.get("component_cost_coverage_count"),
+        "total_balance_is_net_of_cost": None,
+    }
+
+
 def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> dict[str, Any]:
     """Convert a weighted mix prefill into the Clean V2 selection-source contract."""
     created_at = _now_text()
@@ -599,9 +656,22 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
     source_id = f"selection_{_slug(source_kind)}_{_slug(source_ref_id)}_{uuid4().hex[:8]}"
     weighted_summary = dict(prefill.get("weighted_summary") or {})
     weighted_period = dict(prefill.get("weighted_period") or {})
+    prefill_components = [dict(component or {}) for component in list(prefill.get("components") or [])]
+    cost_model = dict(prefill.get("cost_model_snapshot") or {}) or _weighted_mix_component_cost_snapshot(prefill_components)
+    turnover_evidence = (
+        dict(prefill.get("turnover_evidence_snapshot") or {})
+        or _weighted_mix_component_turnover_snapshot(prefill_components)
+    )
+    net_cost_curve = (
+        dict(prefill.get("net_cost_curve_snapshot") or {})
+        or _weighted_mix_component_net_cost_snapshot(prefill=prefill, components=prefill_components)
+    )
     components: list[dict[str, Any]] = []
-    for idx, raw_component in enumerate(list(prefill.get("components") or [])):
+    for idx, raw_component in enumerate(prefill_components):
         component = dict(raw_component or {})
+        component_cost_model = dict(component.get("cost_model_snapshot") or cost_model)
+        component_turnover = dict(component.get("turnover_evidence_snapshot") or turnover_evidence)
+        component_net_cost = dict(component.get("net_cost_curve_snapshot") or net_cost_curve)
         component_id = str(component.get("registry_id") or f"{source_id}_component_{idx + 1}")
         components.append(
             {
@@ -613,6 +683,8 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
                 "strategy_name": component.get("strategy_name"),
                 "proposal_role": component.get("proposal_role"),
                 "target_weight": _optional_float(component.get("target_weight")) or 0.0,
+                "weight_reason": component.get("weight_reason") or component.get("Weight Reason"),
+                "role_source": component.get("role_source") or component.get("candidate_role"),
                 "benchmark": component.get("benchmark") or "-",
                 "universe": component.get("universe") or [],
                 "baseline_cagr": _optional_float(component.get("cagr")),
@@ -629,6 +701,9 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
                 "replay_contract": {
                     "contract": dict(component.get("contract") or {}),
                     "compare_evidence": dict(component.get("compare_evidence") or {}),
+                    "cost_model_snapshot": component_cost_model,
+                    "turnover_evidence_snapshot": component_turnover,
+                    "net_cost_curve_snapshot": component_net_cost,
                     "source_kind": source_kind,
                     "source_ref_id": source_ref_id,
                 },
@@ -667,6 +742,9 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
             "status": prefill.get("data_trust_status") or f"{construction_source}_snapshot",
             "warning_count": 0,
         },
+        "cost_model_snapshot": cost_model,
+        "turnover_evidence_snapshot": turnover_evidence,
+        "net_cost_curve_snapshot": net_cost_curve,
         "real_money_signal": {
             "route": f"{construction_source}_component_snapshot",
             "blockers": [],

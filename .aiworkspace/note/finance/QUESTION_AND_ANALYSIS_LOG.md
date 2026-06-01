@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete with selection-only official save. Fresh non-GTAA search found no current-gate selected V2 row; legacy V1 has a non-GTAA Quality selected row that can be used only as an explicit migration seed.
+  - Final Review Selection Readiness Gate V1 is implementation complete. Fresh pre-change non-GTAA search found no current-gate selected V2 row; the new gate separates Selected Dashboard candidate selection from future live-readiness audit and carries default `REVIEW` findings as open review items.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-01 - Final Review selection should not equal live deployment readiness
+- User request:
+  - Final Review가 "진짜 실제 돈을 넣어도 되는가"를 묻고 싶었던 단계라면, 별도 Live / Deployment Readiness를 만들어도 결국 모든 후보가 거기서 막히지 않겠느냐고 질문하고 개선 작업을 승인함.
+- Interpreted goal:
+  - Practical Validation, Final Review, Selected Dashboard, future Live / Deployment Readiness의 질문을 분리하되, Final Review가 Portfolio Validation과 같은 목적이 되지 않도록 저장 기준과 증거 handoff를 명확히 한다.
+- Analysis result:
+  - Final Review의 현재 selected-route gate는 live/deployment audit처럼 작동해 기본 `REVIEW`까지 대부분 저장 차단으로 처리했다. 이 때문에 Practical Validation이 허용한 후보가 Final Review에서 거의 저장되지 않는 구조적 병목이 생겼다.
+  - 개선 기준은 Final Review를 Selected Dashboard에서 관찰할 최종 후보 선정 단계로 좁히고, 실제 자금 투입 판단은 future Live / Deployment Readiness로 분리하는 것이다. Final Review는 hard blocker / critical missing evidence를 막고, 기본 `REVIEW`는 `open_review_items`로 이어서 추적한다.
+- Follow-up:
+  - Live / Deployment Readiness 화면은 아직 구현하지 않았다. 향후 구현 시 `deployment_readiness_policy_snapshot`을 입력으로 쓰되, broker order / account sync / auto rebalance / live approval은 별도 승인 경계로 다룬다.
 
 ### 2026-05-31 - Non-GTAA search did not produce a fresh selected-route pass
 - User request:
