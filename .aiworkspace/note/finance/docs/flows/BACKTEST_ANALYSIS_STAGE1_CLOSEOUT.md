@@ -7,7 +7,7 @@ Last Verified: 2026-05-30
 
 이 문서는 2026-05-30 기준 `Backtest > Backtest Analysis` 1단계의 현재 완료 상태를 요약한다.
 
-Backtest Analysis는 최종 투자 판단 화면이 아니다. 이 단계의 목적은 단일 전략 또는 Portfolio Mix 후보를 만들고, 1차 후보 판단을 통과한 경우에만 `Practical Validation`으로 넘길 Clean V2 source를 만드는 것이다.
+Backtest Analysis는 최종 투자 판단 화면이 아니다. 이 단계의 목적은 단일 전략 또는 Portfolio Mix 후보를 만들고, 1차 후보 판단을 통과한 경우에만 `Practical Validation`으로 넘길 current selection source를 만드는 것이다.
 
 ## Session Weaknesses Addressed
 
@@ -50,11 +50,11 @@ Backtest Analysis
 - 사용자는 weight와 date alignment를 정해 하나의 weighted mix 후보를 만든다.
 - 상단 stepper는 `Component 실행 -> Weight 구성 -> Mix 후보 판단 -> Practical Validation` 순서로 현재 위치를 보여준다.
 - Mix 후보 판단은 mix result, 100% / 2개 이상 positive component weight, component data trust, component 1차 후보 readiness를 본다.
-- blocker가 없으면 mix 전체를 하나의 Clean V2 source로 Practical Validation에 보낸다.
+- blocker가 없으면 mix 전체를 하나의 current selection source로 Practical Validation에 보낸다.
 
 ## Current Storage Boundary
 
-- Backtest Analysis handoff는 Clean V2 selection source를 등록하는 workflow action이다.
+- Backtest Analysis handoff는 current selection source를 등록하는 workflow action이다.
 - 사용자 메모용 저장, phase별 snapshot 저장, preset 저장을 새로 만들지 않았다.
 - saved mix는 reusable setup이며 validation / approval record가 아니다.
 - Backtest run history는 local runtime artifact라 보통 커밋하지 않는다.

@@ -31,7 +31,7 @@ from app.web.backtest_portfolio_proposal_helpers import (
     _portfolio_proposal_pre_live_record_by_registry_id,
     _portfolio_proposal_pre_live_status_by_registry_id,
 )
-from app.runtime import FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION
+from app.runtime import FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION
 
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
@@ -65,7 +65,7 @@ def _final_review_practical_validation_label(row: dict[str, Any]) -> str:
     validation_id = str(row.get("validation_id") or "").strip()
     source_title = str(row.get("source_title") or row.get("selection_source_id") or "-")
     route = str(row.get("validation_route") or "-")
-    return f"Clean V2 검증 결과 | {route} | {source_title} | id={validation_id}"
+    return f"current 검증 결과 | {route} | {source_title} | id={validation_id}"
 
 
 def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
@@ -103,7 +103,7 @@ def _build_final_review_source_options(
     session_practical_source: dict[str, Any] | None = None,
     include_legacy_sources: bool = True,
 ) -> list[dict[str, Any]]:
-    """Build selectable final-review sources from V2 validation, current candidates, and saved proposals."""
+    """Build selectable final-review sources from current validation, current candidates, and saved proposals."""
     options: list[dict[str, Any]] = []
     session_practical_source = dict(session_practical_source or {})
     session_validation = dict(session_practical_source.get("validation_result") or {})
@@ -461,7 +461,7 @@ def _build_final_review_decision_row(
     )
     open_review_items = list(dict(investability_packet or {}).get("open_review_items") or [])
     row = {
-        "schema_version": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
+        "schema_version": FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
         "decision_id": str(decision_id or "").strip(),
         "created_at": now,
         "updated_at": now,

@@ -14,11 +14,13 @@ All 13 pre-cleanup JSONL files were copied to the archive before active deletion
 .aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/manifest.json
 ```
 
+Follow-up naming cleanup removed the current-file `V2` suffix. The current selected decision registry is now `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`; the previous archived legacy collision is named `FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl`.
+
 ## Active JSONL After Cleanup
 
 | Active JSONL | Rows | Reason |
 |---|---:|---|
-| `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | 4 | Current Final Review V2 selected source for Selected Dashboard |
+| `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | 4 | Current Final Review selected source for Selected Dashboard |
 | `saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | 1 | User-created dashboard portfolio with 4 GRS decision ids |
 | `saved/SAVED_PORTFOLIOS.jsonl` | 2 | Legacy saved setup still read by saved replay / overview compatibility |
 
@@ -28,7 +30,7 @@ All 13 pre-cleanup JSONL files were copied to the archive before active deletion
 |---|---:|---|
 | `registries/CANDIDATE_REVIEW_NOTES.jsonl` | 5 | archived, removed from active |
 | `registries/CURRENT_CANDIDATE_REGISTRY.jsonl` | 10 | archived, removed from active |
-| `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | 2 | archived, removed from active |
+| `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl` | 2 | archived, removed from active |
 | `registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | 1 | archived, removed from active |
 | `registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | 4 | archived, removed from active |
 | `registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | 1 | archived, removed from active |
@@ -41,19 +43,19 @@ All 13 pre-cleanup JSONL files were copied to the archive before active deletion
 
 | JSONL | Rows |
 |---|---:|
-| `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | 4 |
+| `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | 4 |
 | `saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | 1 |
 | `saved/SAVED_PORTFOLIOS.jsonl` | 2 |
 
-## GRS V2 Decision
+## GRS Decision
 
-The 4 GRS rows remain as self-contained `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` selected records. No synthetic source/result rows were created.
+The 4 GRS rows remain as self-contained `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` selected records. No synthetic source/result rows were created.
 
 Current read model remains valid:
 
 | Check | Result |
 |---|---:|
-| Final Decision V2 rows | 4 |
+| Final Decision rows | 4 |
 | Selected rows | 4 |
 | Dashboard rows | 4 |
 | Dashboard portfolios | 1 |

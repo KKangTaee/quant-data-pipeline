@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-01 - Final Decision Registry Naming Cleanup
+- Renamed the current selected decision registry from `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` to `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`.
+- Archived legacy collision is now named `FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl`; active JSONL remains 4 GRS selected rows plus the existing Selected Dashboard and saved setup files.
+- Runtime consumers, Selected Dashboard source contracts, reference guide copy, and durable storage / flow docs now point to the canonical current file name.
+- Verification kept selected rows `4`, dashboard rows `4`, assigned references `4`, missing references `0`; no DB, broker/account, order, live approval, or auto rebalance path was touched.
+
 ### 2026-06-01
 - Completed dry-run candidate sweep in `.aiworkspace/note/finance/tasks/active/final-review-pass-candidate-search-20260601/`.
 - Found two fresh Final Review selected-route pass candidates without registry/saved persistence: `GRS Liquid Macro Top2` and `GTAA Default Top3`.

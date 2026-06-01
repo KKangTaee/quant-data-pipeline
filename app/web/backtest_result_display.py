@@ -599,7 +599,7 @@ def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
     with st.container(border=True):
         st.markdown("##### 2차 실전성 검증 Handoff")
         st.caption(
-            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 Clean V2 source로 등록합니다."
+            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 current selection source로 등록합니다."
         )
         handoff_cols = st.columns([0.3, 0.7], gap="small")
         with handoff_cols[0]:

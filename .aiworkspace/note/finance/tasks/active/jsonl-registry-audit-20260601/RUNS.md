@@ -7,9 +7,9 @@
 - `.venv/bin/python` JSONL parse script over `.aiworkspace/note/finance/**/*.jsonl`
   - Result: all 13 files parsed successfully; 109 JSON object rows; 0 invalid rows.
 - `rg` over `app`, `tests`, `.aiworkspace/plugins`
-  - Confirmed current consumers for V2 registries, selected dashboard saved state, legacy registries, saved portfolios, and run history.
+  - Confirmed current consumers for current registries, selected dashboard saved state, legacy registries, saved portfolios, and run history.
 - `.venv/bin/python` read-model check using `app.runtime.portfolio_selection_v2` and `app.runtime.final_selected_portfolios`
-  - Result: Final Decision V2 selected rows 4, dashboard rows 4, assigned references 4, missing references 0.
+  - Result: Final Decision selected rows 4, dashboard rows 4, assigned references 4, missing references 0.
 - `.venv/bin/python -m pytest ...`
   - Result: not run; `.venv` has no `pytest` module.
 - `.venv/bin/python -m unittest ...`
@@ -26,7 +26,7 @@
   - 8 registry files: legacy/prototype or current-but-not-selected rows.
   - 2 run history files: local/generated history.
 - Active JSONL after cleanup:
-  - `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`
+  - `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
   - `saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl`
   - `saved/SAVED_PORTFOLIOS.jsonl`
 - Archive manifest verification:
@@ -37,6 +37,29 @@
 - Focused service contracts:
   - 6 `unittest` tests passed.
 - `git diff --check`
+  - passed.
+
+## 2026-06-01 Final Decision Name Cleanup
+
+- Renamed active current registry:
+  - `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` -> `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+- Renamed archived legacy collision:
+  - archive legacy `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` -> `FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl`
+- Kept archived current rollback copy under:
+  - `archive/.../registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+- Updated runtime consumers and durable docs to use the canonical current file name.
+- Re-ran active JSONL parse:
+  - `registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` rows `4`
+  - `saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` rows `1`
+  - `saved/SAVED_PORTFOLIOS.jsonl` rows `2`
+  - invalid rows `0`
+- Re-ran Selected Dashboard read model:
+  - selected rows `4`, dashboard rows `4`, assigned references `4`, missing references `0`.
+- Re-ran focused `py_compile` for touched runtime / service / web modules:
+  - passed.
+- Re-ran focused service contracts:
+  - 6 `unittest` tests passed.
+- Re-ran `git diff --check`:
   - passed.
 
 ## Focused service contracts

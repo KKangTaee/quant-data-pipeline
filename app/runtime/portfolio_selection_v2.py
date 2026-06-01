@@ -14,13 +14,13 @@ ARCHIVE_DIR = FINANCE_NOTE_DIR / "archive" / "legacy_portfolio_workflow_v1"
 
 PORTFOLIO_SELECTION_SOURCE_FILE = REGISTRIES_DIR / "PORTFOLIO_SELECTION_SOURCES.jsonl"
 PRACTICAL_VALIDATION_RESULT_FILE = REGISTRIES_DIR / "PRACTICAL_VALIDATION_RESULTS.jsonl"
-FINAL_SELECTION_DECISION_V2_FILE = REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl"
+FINAL_SELECTION_DECISION_FILE = REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl"
 SELECTED_PORTFOLIO_MONITORING_LOG_FILE = REGISTRIES_DIR / "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl"
 SAVED_PORTFOLIO_MIXES_FILE = SAVED_DIR / "SAVED_PORTFOLIO_MIXES.jsonl"
 
 PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION = 1
 PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION = 5
-FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION = 2
+FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION = 2
 SELECTED_PORTFOLIO_MONITORING_LOG_SCHEMA_VERSION = 1
 SAVED_PORTFOLIO_MIX_SCHEMA_VERSION = 1
 
@@ -30,7 +30,7 @@ LEGACY_PORTFOLIO_WORKFLOW_FILES = [
     REGISTRIES_DIR / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
     REGISTRIES_DIR / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
     REGISTRIES_DIR / "PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
-    REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+    REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl",
 ]
 
 
@@ -121,13 +121,23 @@ def load_practical_validation_results(limit: int | None = 100) -> list[dict[str,
     return _load_recent(PRACTICAL_VALIDATION_RESULT_FILE, limit=limit, timestamp_keys=("updated_at", "created_at"))
 
 
+def append_current_final_selection_decision(row: dict[str, Any]) -> None:
+    """Persist one Final Review decision row used by the selected dashboard."""
+    _append_jsonl_row(FINAL_SELECTION_DECISION_FILE, row)
+
+
+def load_current_final_selection_decisions(limit: int | None = 100) -> list[dict[str, Any]]:
+    return _load_recent(FINAL_SELECTION_DECISION_FILE, limit=limit, timestamp_keys=("updated_at", "created_at"))
+
+
 def append_final_selection_decision_v2(row: dict[str, Any]) -> None:
-    """Persist one Final Review V2 decision row used by the selected dashboard."""
-    _append_jsonl_row(FINAL_SELECTION_DECISION_V2_FILE, row)
+    """Backward-compatible alias for older imports."""
+    append_current_final_selection_decision(row)
 
 
 def load_final_selection_decisions_v2(limit: int | None = 100) -> list[dict[str, Any]]:
-    return _load_recent(FINAL_SELECTION_DECISION_V2_FILE, limit=limit, timestamp_keys=("updated_at", "created_at"))
+    """Backward-compatible alias for older imports."""
+    return load_current_final_selection_decisions(limit=limit)
 
 
 def append_selected_portfolio_monitoring_log(row: dict[str, Any]) -> None:
@@ -140,7 +150,7 @@ def load_selected_portfolio_monitoring_logs(limit: int | None = 100) -> list[dic
 
 
 def append_saved_portfolio_mix(row: dict[str, Any]) -> None:
-    """Persist one reusable V2 saved mix setup; this is not a validation result."""
+    """Persist one reusable saved mix setup; this is not a validation result."""
     _append_jsonl_row(SAVED_PORTFOLIO_MIXES_FILE, row)
 
 

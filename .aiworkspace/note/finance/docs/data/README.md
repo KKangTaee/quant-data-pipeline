@@ -58,7 +58,7 @@ Last Verified: 2026-06-01
 
 앱 코드는 이 위치들을 `app/workspace_paths.py`의 canonical path 상수로 읽는다.
 새 registry / saved / run-history helper를 만들 때는 `.note/finance` 경로를 직접 만들지 않는다.
-runtime-defined V2 JSONL 파일은 첫 workflow write 전에는 로컬에 없을 수 있으며, 파일 부재 자체는 저장 경계 drift가 아니다.
+runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 수 있으며, 파일 부재 자체는 저장 경계 drift가 아니다.
 
 ## Data Integrity Rules
 

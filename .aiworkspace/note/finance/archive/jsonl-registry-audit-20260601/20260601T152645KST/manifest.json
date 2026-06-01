@@ -23,21 +23,21 @@
     },
     {
       "action": "archive-remove-active",
-      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl",
       "invalid_jsonl_rows": 0,
       "reason": "legacy/prototype or current-but-not-selected active-row cleanup",
       "row_count": 2,
       "sha256": "db08b149ad1f23f4cc2033d9df7043f7225f895bab28b13cb303428bad62313a",
-      "source_path": ".aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl"
+      "source_path": ".aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl"
     },
     {
       "action": "keep-active",
-      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+      "archive_path": ".aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
       "invalid_jsonl_rows": 0,
       "reason": "current runtime input or saved setup",
       "row_count": 4,
       "sha256": "1555b7ad47263ffb5cb0e9df95e0710f4ac354330d549f67068eed5937e26d8e",
-      "source_path": ".aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl"
+      "source_path": ".aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl"
     },
     {
       "action": "archive-remove-active",

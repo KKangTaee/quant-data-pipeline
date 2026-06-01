@@ -2168,7 +2168,7 @@ def render_practical_validation_workspace() -> None:
         ),
         route_tone="neutral",
         kpis=[
-            {"label": "Selection Sources", "value": len(sources), "detail": "Clean V2 input"},
+            {"label": "Selection Sources", "value": len(sources), "detail": "current input"},
             {"label": "Validation Results", "value": len(validation_rows), "detail": "Saved records"},
             {"label": "Final Memo", "value": "Final Review", "detail": "Not stored here"},
             {"label": "Live Approval", "value": "Disabled", "detail": "Read-only evidence"},
@@ -2186,7 +2186,7 @@ def render_practical_validation_workspace() -> None:
         selectable_sources.append(dict(row))
 
     if not selectable_sources:
-        st.info("아직 Practical Validation으로 보낸 Clean V2 source가 없습니다.")
+        st.info("아직 Practical Validation으로 보낸 current selection source가 없습니다.")
         st.caption("Backtest Analysis에서 Single / Portfolio Mix / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
         return
 
@@ -2214,7 +2214,7 @@ def render_practical_validation_workspace() -> None:
         render_pv_section_header(
             eyebrow="Step 1",
             title="선택 후보 확인",
-            detail="Practical Validation이 읽는 Clean V2 source와 component snapshot을 먼저 확인합니다.",
+            detail="Practical Validation이 읽는 current selection source와 component snapshot을 먼저 확인합니다.",
             tone="neutral",
         )
         _render_source_summary(source)
@@ -2346,7 +2346,7 @@ def render_practical_validation_workspace() -> None:
             if not can_save_and_move:
                 st.caption("필수 검증 모듈을 보강한 뒤 저장하고 Final Review로 이동할 수 있습니다.")
 
-    with st.expander("Clean V2 Source JSON", expanded=False):
+    with st.expander("Selection Source JSON", expanded=False):
         st.json(source)
     with st.expander("Practical Validation Result JSON", expanded=False):
         st.json(validation_result)

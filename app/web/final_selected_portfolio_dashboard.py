@@ -45,7 +45,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     selected_portfolio_status_options,
 )
 from app.runtime import (
-    FINAL_SELECTION_DECISION_V2_FILE,
+    FINAL_SELECTION_DECISION_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
     add_selected_dashboard_portfolio_strategy,
@@ -340,13 +340,13 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
 def _render_empty_state(summary: dict[str, Any]) -> None:
     if not summary.get("final_decision_count"):
         st.info("아직 Final Review에서 저장된 최종 선정 row가 없습니다.")
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
+        st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
         return
     st.warning(
         "Final Review 기록은 있지만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 포트폴리오가 없습니다. "
         "`Backtest > Final Review`에서 최종 판단이 선정으로 저장된 row만 이 대시보드에 운영 대상으로 표시됩니다."
     )
-    st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
+    st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
 
 
 def _render_final_review_handoff(all_final_decisions: list[dict[str, Any]]) -> None:
@@ -399,7 +399,7 @@ def _render_final_review_handoff(all_final_decisions: list[dict[str, Any]]) -> N
                 st.dataframe(checklist_df, width="stretch", hide_index=True)
             boundary = dict(handoff.get("execution_boundary") or {})
             st.caption(
-                f"Source: {summary.get('registry_path') or FINAL_SELECTION_DECISION_V2_FILE} / "
+                f"Source: {summary.get('registry_path') or FINAL_SELECTION_DECISION_FILE} / "
                 f"write policy: {boundary.get('write_policy') or '-'} / "
                 f"monitoring auto-write: {boundary.get('monitoring_log_auto_write')} / "
                 f"auto rebalance: {boundary.get('auto_rebalance')}"
@@ -798,7 +798,7 @@ def _render_source_boundary(row: dict[str, Any] | None = None) -> None:
             }
         )
     _render_info_card_grid(cards, min_width=210)
-    st.code(str(FINAL_SELECTION_DECISION_V2_FILE), language="text")
+    st.code(str(FINAL_SELECTION_DECISION_FILE), language="text")
 
 
 def _decision_key(row: dict[str, Any]) -> str:
@@ -982,7 +982,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
             st.dataframe(build_selected_portfolio_continuity_table(continuity), width="stretch", hide_index=True)
         with st.expander("Selected decision source contract", expanded=not continuity_metrics.get("source_contract_consistent")):
             st.caption(
-                "Continuity, Timeline, Review Signals, and Decision Dossier should read the same Final Decision V2 row. "
+                "Continuity, Timeline, Review Signals, and Decision Dossier should read the same Final Decision row. "
                 "Session evidence is read-only context, not durable monitoring history."
             )
             st.dataframe(

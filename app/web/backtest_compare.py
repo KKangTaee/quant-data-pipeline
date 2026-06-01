@@ -319,7 +319,7 @@ def _render_portfolio_mix_flow_strip(
         ("Component 실행", "같은 기간 조건으로 mix 재료를 만듭니다."),
         ("Weight 구성", "구성 전략 비중과 date alignment를 정합니다."),
         ("Mix 후보 판단", "mix 전체가 2차 검증 후보인지 확인합니다."),
-        ("Practical Validation", "통과한 mix를 Clean V2 source로 보냅니다."),
+        ("Practical Validation", "통과한 mix를 current selection source로 보냅니다."),
     ]
     step_cards = []
     for idx, (title, caption) in enumerate(steps):
@@ -932,7 +932,7 @@ def _build_candidate_draft_readiness_evaluation(
         "selected_bundle": selected_bundle,
     }
 
-# Read Clean V2 and legacy append-only records to see whether a saved mix has
+# Read current workflow and legacy append-only records to see whether a saved mix has
 # moved beyond reusable setup storage into validation / final-review records.
 def _find_saved_mix_workflow_references(record: dict[str, Any]) -> list[dict[str, str]]:
     portfolio_id = str(record.get("portfolio_id") or "").strip()
@@ -944,12 +944,12 @@ def _find_saved_mix_workflow_references(record: dict[str, Any]) -> list[dict[str
     registry_paths = [
         REGISTRIES_DIR / "PORTFOLIO_SELECTION_SOURCES.jsonl",
         REGISTRIES_DIR / "PRACTICAL_VALIDATION_RESULTS.jsonl",
-        REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+        REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
         REGISTRIES_DIR / "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl",
         REGISTRIES_DIR / "CURRENT_CANDIDATE_REGISTRY.jsonl",
         REGISTRIES_DIR / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
         REGISTRIES_DIR / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
-        REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+        REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl",
     ]
     references: list[dict[str, str]] = []
     for path in registry_paths:
@@ -1084,9 +1084,9 @@ def _build_saved_mix_validation_evaluation(
     workflow_status = "PASS" if workflow_references else "NOT RECORDED"
     workflow_score = 3.0 if workflow_references else 0.0
     workflow_judgment = (
-        "Practical Validation / Final Review V2 기록 있음"
+        "Practical Validation / Final Review 기록 있음"
         if workflow_references
-        else "saved mix setup만 있고 Practical Validation / Final Review V2 기록은 아직 없음"
+        else "saved mix setup만 있고 Practical Validation / Final Review 기록은 아직 없음"
     )
 
     replay_score = 3.0 if replay_ready else 0.0
@@ -1096,12 +1096,12 @@ def _build_saved_mix_validation_evaluation(
         verdict = "Replay 또는 구성 전략 gate를 먼저 해결해야 합니다."
         tone = "error"
     elif workflow_status == "PASS":
-        stage_status = "V2 RECORDED"
-        verdict = "저장 mix가 Practical Validation / Final Review V2 기록에서도 확인됩니다."
+        stage_status = "WORKFLOW RECORDED"
+        verdict = "저장 mix가 Practical Validation / Final Review 기록에서도 확인됩니다."
         tone = "success"
     else:
         stage_status = "REPLAY OK"
-        verdict = "성과 replay는 가능하지만, Practical Validation / Final Review V2 기록은 아직 없습니다."
+        verdict = "성과 replay는 가능하지만, Practical Validation / Final Review 기록은 아직 없습니다."
         tone = "warning"
 
     criteria_rows = [
@@ -1134,7 +1134,7 @@ def _build_saved_mix_validation_evaluation(
             "판단": ", ".join(real_money_blocked or real_money_missing) or "특이사항 없음",
         },
         {
-            "기준": "Clean V2 Records",
+            "기준": "Workflow Records",
             "상태": workflow_status,
             "현재 값": f"{len(workflow_references)}개 참조",
             "점수": f"{workflow_score:g} / 3",
@@ -1421,7 +1421,7 @@ def _saved_mix_component_role(strategy_name: str, weight: float, max_weight: flo
         return "defensive_sleeve"
     return "diversifier"
 
-# Build the cross-panel payload that turns a replayed saved mix into a Clean V2
+# Build the cross-panel payload that turns a replayed saved mix into a current workflow
 # validation source rather than a single-strategy handoff.
 def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[str, Any]:
     weighted_bundle = dict(st.session_state.get("backtest_weighted_bundle") or {})
@@ -1503,7 +1503,7 @@ def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[st
         "components": components,
     }
 
-# Build a Clean V2 handoff payload for the weighted mix the user just created,
+# Build a current workflow handoff payload for the weighted mix the user just created,
 # without forcing a Saved Portfolio round-trip first.
 def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: dict[str, Any]) -> dict[str, Any]:
     weighted_bundle = dict(weighted_bundle or {})
@@ -1619,7 +1619,7 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
             st.caption("판정")
             st.markdown(f"**{evaluation['verdict']}**")
             st.caption("다음 행동")
-            if evaluation["stage_status"] in {"V2 RECORDED", "WORKFLOW RECORDED"}:
+            if evaluation["stage_status"] == "WORKFLOW RECORDED":
                 st.markdown("Practical Validation / Final Review 쪽 기록을 열어 실제 통과 판단을 이어서 확인합니다.")
             elif evaluation["tone"] == "warning":
                 st.markdown("이 mix를 실전 검증 후보로 쓰려면 Practical Validation source로 저장해야 합니다.")
@@ -1628,7 +1628,7 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
         st.progress(max(0.0, min(float(evaluation["score"]) / 10.0, 1.0)))
         message = (
             f"{evaluation['verdict']} "
-            "Saved mix는 reusable setup이므로, 이 보드에서 Clean V2 검증 기록 유무를 따로 확인합니다."
+            "Saved mix는 reusable setup이므로, 이 보드에서 현재 검증 기록 유무를 따로 확인합니다."
         )
         if evaluation["tone"] == "success":
             st.success(message)
@@ -1772,7 +1772,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
                     st.rerun()
         with action_cols[1]:
             st.caption(
-                "이 버튼을 누르면 선택한 개별 전략이 Clean V2 source로 저장되고 Practical Validation에서 실전 검증을 이어갑니다. "
+                "이 버튼을 누르면 선택한 개별 전략이 current selection source로 저장되고 Practical Validation에서 실전 검증을 이어갑니다. "
                 "아직 최종 선택이나 live approval은 아닙니다."
             )
 
@@ -2979,7 +2979,7 @@ def _sync_saved_portfolio_name_suggestion(weighted_bundle: dict[str, Any]) -> st
         st.session_state["saved_portfolio_name_signature"] = signature
     return suggested_name
 
-# Send the current weighted mix itself into the Clean V2 validation flow.
+# Send the current weighted mix itself into the current workflow validation flow.
 def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[str, Any]) -> None:
     compare_bundles = st.session_state.get("backtest_compare_bundles") or []
     if not compare_bundles or not weighted_bundle:
@@ -3040,7 +3040,7 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
                     st.error(f"Practical Validation handoff failed: {exc}")
         with action_cols[1]:
             st.caption(
-                "이 버튼은 개별 전략 후보가 아니라 mix 전체를 하나의 Clean V2 source로 보냅니다. "
+                "이 버튼은 개별 전략 후보가 아니라 mix 전체를 하나의 current selection source로 보냅니다. "
                 "최종 선정 저장은 Final Review에서 selected-route gate를 통과했을 때만 가능합니다."
             )
 

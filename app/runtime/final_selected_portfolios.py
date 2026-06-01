@@ -15,8 +15,8 @@ from finance.performance import portfolio_performance_summary
 
 from .candidate_registry import load_current_candidate_registry_latest
 from .portfolio_selection_v2 import (
-    FINAL_SELECTION_DECISION_V2_FILE,
-    load_final_selection_decisions_v2,
+    FINAL_SELECTION_DECISION_FILE,
+    load_current_final_selection_decisions,
 )
 
 
@@ -541,10 +541,10 @@ def _selected_decision_source_contract(
         "selection_source_id": _clean_text(raw_decision.get("selection_source_id") or row.get("selection_source_id"), ""),
         "validation_id": _clean_text(raw_decision.get("validation_id") or row.get("validation_id"), ""),
         "source_identity": f"{source_type}:{source_id}" if source_type or source_id else "",
-        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
-        "registry_file": getattr(FINAL_SELECTION_DECISION_V2_FILE, "name", str(FINAL_SELECTION_DECISION_V2_FILE)),
+        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS",
+        "registry_file": getattr(FINAL_SELECTION_DECISION_FILE, "name", str(FINAL_SELECTION_DECISION_FILE)),
         "session_evidence_sources": normalized_session_sources,
-        "evidence_scope": "final_decision_v2_plus_session_state",
+        "evidence_scope": "final_decision_plus_session_state",
         "execution_boundary": {
             "write_policy": "read_only_selected_decision_source_contract",
             "db_write": False,
@@ -554,7 +554,7 @@ def _selected_decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Selected Dashboard read models share the Final Decision V2 row and optional session-state evidence only.",
+            "notes": "Selected Dashboard read models share the Final Decision row and optional session-state evidence only.",
         },
     }
 
@@ -890,7 +890,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
             status="PASS" if final_rows else "NEEDS_INPUT",
             ready=bool(final_rows),
             current=len(final_rows),
-            evidence="Final Decision V2 rows are available" if final_rows else "No saved final decision rows",
+            evidence="Final Decision rows are available" if final_rows else "No saved final decision rows",
             next_action="Use saved decisions as the handoff source." if final_rows else "Record a final review decision first.",
         ),
         _handoff_check_row(
@@ -943,7 +943,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
         "next_action": next_action,
         "destination": "Operations > Selected Portfolio Dashboard",
         "summary": {
-            "registry_path": str(FINAL_SELECTION_DECISION_V2_FILE),
+            "registry_path": str(FINAL_SELECTION_DECISION_FILE),
             "final_decision_count": len(final_rows),
             "selected_decision_count": len(selected_rows),
             "dashboard_row_count": dashboard_row_count,
@@ -969,7 +969,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "The handoff review reads Final Decision V2 rows and does not create dashboard state or trading actions.",
+            "notes": "The handoff review reads Final Decision rows and does not create dashboard state or trading actions.",
         },
     }
 
@@ -1704,7 +1704,7 @@ def build_selected_portfolio_monitoring_timeline(
                 if operation_status == "normal"
                 else "Why Selected에서 남은 blocker와 watch 이유를 먼저 확인합니다."
             ),
-            source="FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+            source="FINAL_PORTFOLIO_SELECTION_DECISIONS",
         )
     ]
 
@@ -1913,7 +1913,7 @@ def build_selected_portfolio_continuity_check(
                 f"source={timeline_source_contract.get('source_type') or '-'}:{timeline_source_contract.get('source_id') or '-'}"
             ),
             evidence=(
-                "Timeline, Continuity, and Dossier can use the same Final Decision V2 source"
+                "Timeline, Continuity, and Dossier can use the same Final Decision source"
                 if source_contract_matches
                 else "Timeline source contract is missing or does not match the selected decision row"
             ),
@@ -2561,7 +2561,7 @@ def build_selected_portfolio_review_signal_policy(
                 else "Why Selected tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
             ),
             policy_owner="Final Review evidence packet",
-            source="FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+            source="FINAL_PORTFOLIO_SELECTION_DECISIONS",
         )
     ]
 
@@ -3757,7 +3757,7 @@ def build_selected_portfolio_open_issue_followup(row: dict[str, Any]) -> dict[st
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Open issue follow-up reads Final Decision V2 snapshots only; it does not save monitoring state.",
+            "notes": "Open issue follow-up reads Final Decision snapshots only; it does not save monitoring state.",
         },
     }
 
@@ -5047,7 +5047,7 @@ def _build_summary(
             status_counts[status] = 0
         status_counts[status] += 1
     return {
-        "registry_path": str(FINAL_SELECTION_DECISION_V2_FILE),
+        "registry_path": str(FINAL_SELECTION_DECISION_FILE),
         "final_decision_count": len(all_final_decisions),
         "selected_decision_count": len(selected_rows),
         "dashboard_row_count": len(dashboard_rows),
@@ -5059,8 +5059,8 @@ def _build_summary(
 
 
 def load_final_selected_portfolio_dashboard(limit: int | None = 250) -> dict[str, Any]:
-    """Load selected dashboard data from Final Review V2 decisions without writing new rows."""
-    all_rows = load_final_selection_decisions_v2(limit=limit)
+    """Load selected dashboard data from Final Review decisions without writing new rows."""
+    all_rows = load_current_final_selection_decisions(limit=limit)
     selected_rows = [row for row in all_rows if _is_selected_practical_portfolio(row)]
     dashboard_rows = [build_final_selected_portfolio_dashboard_row(row) for row in selected_rows]
     monitoring_portfolios = load_selected_dashboard_portfolios()

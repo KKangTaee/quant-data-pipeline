@@ -77,7 +77,7 @@ def render_backtest_tab() -> None:
             - `Practical Validation`: 선택한 단일 후보 또는 mix 후보를 실전 검증 자료로 구조화합니다.
             - `Final Review`: 검증 자료를 기준으로 selected-route gate까지 통과한 후보만 최종 선정으로 저장합니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
-            - `Operations > Selected Portfolio Dashboard`: Final Review에서 선정된 V2 decision을 읽어 선정 이후 성과와 review signal을 확인합니다.
+            - `Operations > Selected Portfolio Dashboard`: Final Review에서 선정된 current decision을 읽어 선정 이후 성과와 review signal을 확인합니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """

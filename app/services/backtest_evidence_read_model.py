@@ -1390,7 +1390,7 @@ def build_final_review_decision_record_guide(
         "blockers": blockers,
         "route_templates": route_templates,
         "record_boundary": {
-            "write_policy": "append_final_selection_decision_v2_only",
+            "write_policy": "append_final_selection_decision_only",
             "validation_rerun": False,
             "provider_fetch": False,
             "waiver_persistence": False,
@@ -1968,14 +1968,14 @@ def _decision_source_contract(
         "selection_source_id": _safe_text(raw_decision.get("selection_source_id"), ""),
         "validation_id": _safe_text(raw_decision.get("validation_id"), ""),
         "source_identity": f"{source_type}:{source_id}" if source_type or source_id else "",
-        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
-        "registry_file": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS",
+        "registry_file": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
         "timeline_contract_present": bool(timeline_contract),
         "timeline_contract_consistent": _timeline_contract_matches_decision(raw_decision, timeline_contract)
         if timeline_contract
         else None,
         "session_evidence_sources": session_sources,
-        "evidence_scope": "final_decision_v2_plus_optional_session_timeline",
+        "evidence_scope": "final_decision_plus_optional_session_timeline",
         "execution_boundary": {
             "write_policy": "read_only_decision_source_contract",
             "db_write": False,
@@ -1985,7 +1985,7 @@ def _decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Decision Dossier reads the saved Final Decision V2 row and optional Selected Dashboard session timeline only.",
+            "notes": "Decision Dossier reads the saved Final Decision row and optional Selected Dashboard session timeline only.",
         },
     }
 

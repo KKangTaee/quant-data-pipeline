@@ -36,7 +36,7 @@ from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
-    FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
+    FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
     PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
 )
 from app.services.backtest_practical_validation_source import (
@@ -591,7 +591,7 @@ def build_practical_validation_result(
     validation_profile: dict[str, Any] | None = None,
     replay_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the structured Practical Validation result used by Final Review V2."""
+    """Build the structured Practical Validation result used by Final Review."""
     now = _now_text()
     source_row = dict(source or {})
     profile_row = build_validation_profile(
@@ -701,7 +701,7 @@ def build_practical_validation_result(
             "Criteria": "Selection source",
             "Ready": bool(source_id),
             "Current": source_id or "-",
-            "Meaning": "Backtest Analysis에서 선택한 Clean V2 source가 있는지 봅니다.",
+            "Meaning": "Backtest Analysis에서 선택한 current selection source가 있는지 봅니다.",
         },
         {
             "Criteria": "Active components",
@@ -1655,7 +1655,7 @@ def build_practical_validation_result(
             "not_live_approval": True,
         },
         "selection_source_snapshot": source_row,
-        "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
+        "final_decision_schema_target": FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
     }
     data_coverage_audit = build_data_coverage_audit(result)
     result["data_coverage_audit"] = data_coverage_audit

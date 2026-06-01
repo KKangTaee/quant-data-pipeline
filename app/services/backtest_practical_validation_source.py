@@ -493,7 +493,7 @@ def _metric_snapshot_from_result(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[str, Any]:
-    """Convert a single run / compare draft into the Clean V2 selection-source contract."""
+    """Convert a single run / compare draft into the current workflow selection-source contract."""
     created_at = _now_text()
     source_kind = str(draft.get("source_kind") or "latest_backtest_run")
     strategy_name = str(draft.get("strategy_name") or draft.get("strategy_key") or "Strategy")
@@ -575,7 +575,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
             or settings.get("rebalance_interval"),
         },
         "source_snapshot": draft,
-        "notes": "Clean V2 selection source. It is not a live approval or an investment recommendation.",
+        "notes": "current selection source. It is not a live approval or an investment recommendation.",
     }
 
 
@@ -637,7 +637,7 @@ def _weighted_mix_component_net_cost_snapshot(
 
 
 def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> dict[str, Any]:
-    """Convert a weighted mix prefill into the Clean V2 selection-source contract."""
+    """Convert a weighted mix prefill into the current workflow selection-source contract."""
     created_at = _now_text()
     source_kind = str(prefill.get("source_kind") or "saved_portfolio_mix")
     source_ref_id = str(
@@ -760,7 +760,7 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
             "date_policy": dict(prefill.get("portfolio_context") or {}).get("date_policy"),
         },
         "source_snapshot": prefill,
-        "notes": "Clean V2 weighted mix selection source. It is not a live approval or an investment recommendation.",
+        "notes": "current weighted mix selection source. It is not a live approval or an investment recommendation.",
     }
 
 

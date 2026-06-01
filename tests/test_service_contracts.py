@@ -8910,7 +8910,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(timeline["source_contract"]["schema_version"], "selected_decision_source_consistency_v1")
         self.assertEqual(timeline["source_contract"]["decision_id"], "decision-selected")
         self.assertEqual(timeline["source_contract"]["source_identity"], "practical_validation_result:source-selected")
-        self.assertEqual(timeline["source_contract"]["durable_source"], "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2")
+        self.assertEqual(timeline["source_contract"]["durable_source"], "FINAL_PORTFOLIO_SELECTION_DECISIONS")
         self.assertFalse(timeline["source_contract"]["execution_boundary"]["registry_write"])
         self.assertFalse(timeline["source_contract"]["execution_boundary"]["monitoring_log_auto_write"])
 

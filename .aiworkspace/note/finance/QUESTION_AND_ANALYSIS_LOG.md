@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-01 - Final Decision registry no longer uses the V2 filename
+- User request:
+  - `V2`가 붙은 current 문서 / JSONL 이름이 헷갈리므로 현재 파일명에서는 `V2`를 떼고, 중복되는 이전 데이터는 `V1`로 이름을 바꿔 달라고 요청함.
+- Interpreted goal:
+  - current selected-dashboard source는 단순히 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`로 부르고, legacy V1 final decision history는 `_V1` 이름으로 분리한다.
+- Analysis result:
+  - current runtime source-of-truth는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이며 schema_version은 그대로 `2`다. legacy helper path는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl`로 분리했다.
+  - Dashboard read model은 selected rows `4`, dashboard rows `4`, assigned references `4`, missing references `0`으로 유지된다.
+- Follow-up:
+  - 내부 모듈명 `portfolio_selection_v2.py`와 과거 task id의 `v2`는 호환성 / 이력 이름이라 남겨뒀다. 사용자-facing current file path와 source contract에는 old Final Decision V2 이름을 쓰지 않는다.
+
 ### 2026-06-01 - Fresh Final Review selected-route pass candidates found
 - User request:
   - ETF dynamic source contract 보강 이후 Final Review를 통과하는 포트폴리오 후보를 다시 탐색해 달라고 요청함.

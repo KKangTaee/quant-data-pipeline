@@ -51,11 +51,11 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_dashboard_handoff_table,
 )
 from app.runtime import (
-    FINAL_SELECTION_DECISION_V2_FILE,
-    append_final_selection_decision_v2,
+    FINAL_SELECTION_DECISION_FILE,
+    append_current_final_selection_decision,
     build_selected_dashboard_handoff_review,
     load_current_candidate_registry_latest,
-    load_final_selection_decisions_v2,
+    load_current_final_selection_decisions,
     load_portfolio_proposals,
     load_pre_live_candidate_registry_latest,
     load_practical_validation_results,
@@ -991,7 +991,7 @@ def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 저장된 최종 후보 선정 결과가 없습니다.")
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
+        st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
         _render_selected_dashboard_handoff(final_decision_rows)
         return
 
@@ -1130,7 +1130,7 @@ def render_final_review_workspace() -> None:
         for row in practical_validation_rows
         if _is_final_review_eligible_validation_result(dict(row or {}))
     ]
-    final_decision_rows = load_final_selection_decisions_v2()
+    final_decision_rows = load_current_final_selection_decisions()
     session_practical_source = st.session_state.pop("final_review_practical_validation_source", None)
     final_practical_notice = st.session_state.pop("final_review_practical_validation_notice", None)
 
@@ -1453,7 +1453,7 @@ def render_final_review_workspace() -> None:
                 {"label": "Record Score", "value": f"{float(save_evaluation.get('score') or 0.0):.1f}"},
                 {"label": "Blockers", "value": len(save_evaluation.get("blockers") or [])},
                 {"label": "Decision ID", "value": decision_id},
-                {"label": "Storage", "value": "Final Selection v2"},
+                {"label": "Storage", "value": "Final Selection"},
             ],
         )
         final_row = _build_final_review_decision_row(
@@ -1476,7 +1476,7 @@ def render_final_review_workspace() -> None:
                 disabled=not bool(save_evaluation.get("can_save")),
                 width="stretch",
             ):
-                append_final_selection_decision_v2(final_row)
+                append_current_final_selection_decision(final_row)
                 st.session_state["final_review_decision_notice"] = (
                     f"최종 후보 선정 `{final_row['decision_id']}`를 기록했습니다. "
                     "이 기록은 live approval이나 주문 지시가 아닙니다."
@@ -1494,7 +1494,7 @@ def render_final_review_workspace() -> None:
             )
         with st.expander("최종 후보 선정 Preview", expanded=False):
             st.json(final_row)
-            st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
+            st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
 
     render_fr_section_header(
         eyebrow="Step 4",

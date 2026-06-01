@@ -2710,7 +2710,7 @@ Portfolio Proposal 탭 안에 `Save Paper Tracking Ledger`, `Save Final Selectio
 ### 예시 / 필요 상황
 - saved proposal을 선택해 weight total, blocker, robustness 질문, paper observation 기준을 한 화면에서 확인한다.
 - 최종 선정 route는 `SELECT_FOR_PRACTICAL_PORTFOLIO`이며, selected-route gate가 통과됐을 때만 정식 저장한다.
-- `최종 후보로 선정`을 누르면 `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 append-only row가 남는다.
+- `최종 후보로 선정`을 누르면 `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 append-only row가 남는다.
 - 이 기록은 Phase35 운영 가이드의 입력이며, live approval이나 broker order가 아니다.
 
 ---
@@ -2731,7 +2731,7 @@ operator reason을 함께 읽고 사람이 명시적으로 남겨야 한다.
 - Final Review에서 단일 후보 또는 saved proposal이 최종 선정 검토 가능 상태일 때
 - 후보나 portfolio proposal을 실전 후보로 선정할지, 더 관찰할지, 거절할지 기록해야 할 때
 - 저장 위치:
-  - `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`
+  - `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
 중요한 경계:
 
@@ -2763,7 +2763,7 @@ Final Review의 final selection decision이 최종 판단 원본이다.
 - 별도 저장 위치:
   - 없음
 - 원본 판단 위치:
-  - `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`
+  - `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
 중요한 경계:
 
