@@ -23,6 +23,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-01 - Fresh Final Review selected-route pass candidates found
+- User request:
+  - ETF dynamic source contract 보강 이후 Final Review를 통과하는 포트폴리오 후보를 다시 탐색해 달라고 요청함.
+- Interpreted goal:
+  - registry / saved append 없이 fresh runtime source를 만들어 Practical Validation replay와 Final Review selected-route gate까지 통과하는 후보를 확인한다.
+- Analysis result:
+  - 2016-01-29 to 2026-05-29 dry-run sweep에서 `GRS Liquid Macro Top2`와 `GTAA Default Top3`가 selected-route preflight `select_ready`와 Final Review selected gate Ready를 반환했다. `GRS Liquid Macro Top2`는 CAGR `13.31%`, MDD `-17.75%`, Sharpe `1.12`, net spread `7.18%p`, replay PASS로 가장 강한 후보다.
+  - Risk Parity와 Dual Momentum은 replay는 PASS지만 Practical Validation `BLOCKED` / selected gate blocked였고, Equal Weight regression 후보는 raw 성과가 높아도 turnover / net cost proof와 net performance policy gap 때문에 selected-route가 막혔다.
+- Follow-up:
+  - 이 탐색은 dry-run evidence이며 Final Decision V2 row를 저장하지 않았다. 사용자가 원하면 다음 단계는 GRS 후보를 UI 또는 명시적 persistence flow로 Final Review selected row에 저장하는 것이다.
+
 ### 2026-06-01 - ETF dynamic strategy sources should carry promotion policy thresholds
 - User request:
   - GRS Liquid Macro Top2처럼 실제 성과와 net cost / turnover proof가 충분한 ETF 동적 전략 후보가 `promotion_min_net_cagr_spread` 등 source contract 누락 때문에 Practical Validation selected-route preflight와 Final Review selected gate에서 막히는 문제를 해결해 달라고 요청함.
