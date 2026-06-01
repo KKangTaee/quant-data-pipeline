@@ -13,6 +13,9 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_status_display,
     build_selected_route_gate,
 )
+from app.services.backtest_selected_route_preflight import (
+    build_practical_validation_selected_route_preflight,
+)
 from app.web.backtest_portfolio_proposal_helpers import (
     FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
     _build_final_selection_decision_phase35_handoff,
@@ -70,15 +73,27 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
 
     validation = dict(row or {})
     gate = dict(validation.get("final_review_gate") or {})
+    base_eligible = False
     if "can_save_and_move" in gate:
-        return bool(gate.get("can_save_and_move"))
-    handoff = dict(validation.get("final_review_handoff") or {})
-    if "allowed" in handoff:
-        return bool(handoff.get("allowed"))
-    return (
-        str(validation.get("validation_route") or "").strip().upper() == "READY_FOR_FINAL_REVIEW"
-        and not list(validation.get("hard_blockers") or [])
-    )
+        base_eligible = bool(gate.get("can_save_and_move"))
+    else:
+        handoff = dict(validation.get("final_review_handoff") or {})
+        if "allowed" in handoff:
+            base_eligible = bool(handoff.get("allowed"))
+        else:
+            base_eligible = (
+                str(validation.get("validation_route") or "").strip().upper() == "READY_FOR_FINAL_REVIEW"
+                and not list(validation.get("hard_blockers") or [])
+            )
+    if not base_eligible:
+        return False
+    preflight = dict(validation.get("selected_route_preflight") or {})
+    if "select_allowed" not in preflight:
+        try:
+            preflight = build_practical_validation_selected_route_preflight(validation)
+        except Exception:
+            return False
+    return bool(preflight.get("select_allowed"))
 
 
 def _build_final_review_source_options(

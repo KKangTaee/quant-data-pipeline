@@ -21,7 +21,7 @@ Backtest > Backtest Analysis
 | Step | Screen | What It Does | Durable Record |
 |---|---|---|---|
 | 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
-| 2 | Practical Validation | 선택된 source를 source traits 기반 module gate와 practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
+| 2 | Practical Validation | 선택된 source를 source traits 기반 module gate, selected-route preflight, practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
 | 3 | Final Review | Decision Desk command center로 오늘의 판단 상태를 먼저 보고, Candidate Board의 review priority / first-review candidate와 Decision Cockpit으로 selection-readiness 상태를 확인한다. `selection_gate_policy_snapshot`이 통과한 후보만 최종 선정으로 저장하며, 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내로 표시한다. `REVIEW` 항목은 기본적으로 `open_review_items`로 이어서 추적하고, 더 엄격한 live 투입 감사 성격의 판정은 `deployment_readiness_policy_snapshot`으로 보존한다. 저장된 선정 기록은 Saved Decision Review ledger와 Selected Dashboard handoff로 다시 읽고 상세 Practical Validation evidence는 Appendix에서 read-only로 확인한다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
 | 4 | Selected Portfolio Dashboard | Final Review selected row handoff 상태를 먼저 확인하고, 선정된 포트폴리오를 최신 기간, recheck readiness, symbol freshness, provider evidence, timeline, review signal, recheck comparison, 가상 투자금 / optional actual allocation boundary 기준으로 다시 확인한다 | 사용자가 명시적으로 저장할 때만 monitoring log |
 
@@ -30,7 +30,7 @@ Backtest > Backtest Analysis
 | Stage | Owns | Does Not Own |
 |---|---|---|
 | Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness, Practical Validation handoff gate | 최종 판단, 별도 후보 간 read-only 비교, 후속 monitoring / deployment 판단 |
-| Practical Validation | Final Review로 넘길 검증 근거 생성, source strategy / construction 확인, source traits 기반 module gate, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
+| Practical Validation | Final Review로 넘길 검증 근거 생성, source strategy / construction 확인, source traits 기반 module gate, selected-route preflight, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
 | Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 선정 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 최종 선정 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, selection-readiness gate, open review item handoff, deployment readiness policy snapshot 보존, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 실제 자금 투입 승인, broker order, account sync, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
 | Selected Portfolio Dashboard | Final Review selected row handoff 확인, 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check / allocation evidence boundary | broker order, live approval, auto rebalance |
 
@@ -46,7 +46,7 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
 | Candidate Readiness | Backtest Analysis > Real-Money / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
-| Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, provider, data coverage, realism, robustness, construction risk 검증 |
+| Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, selected-route preflight, provider, data coverage, realism, robustness, construction risk 검증 |
 | Final Decision Gate | Final Review | selection hard blocker와 open review item을 분리해 최종 관찰 후보로 저장 가능한지 판단 |
 | Monitoring Check | Selected Portfolio Dashboard | 선정 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
 
@@ -81,11 +81,11 @@ Final Decision V2 row는 backward compatibility용 `gate_policy_snapshot`을 sel
 - Practical Validation의 `4. Final Review Gate / 검증 모듈`은 통과 / 차단 여부와 적용 module을 먼저 보여주고, blocker는 Fix Queue 카드로 해결 위치와 액션을 같이 보여준다. 화면 board는 검증 module과 1:1 개념이 아니므로 `5. 검증 근거 보드`와 `6. 보강 액션`으로 분리한다.
 - `Applied Validation Map`은 각 board가 어떤 module의 evidence인지, 현재 후보에 적용되는지, 적용되지 않으면 왜 빠졌는지를 보여주는 보조 `검증-근거 연결 지도`이며 기본 상세 영역으로 낮춘다.
 - Practical Validation의 `Latest Runtime Replay`는 별도 audit board가 아니라 `3. 최신 데이터 기준 전략 재검증` 섹션에서 재검증을 실행해 해소한다. 이 결과는 브라우저 세션에서 사용자가 직접 실행한 뒤에만 보이며, Practical Validation 탭에 새로 들어오거나 source를 바꾸면 이전 replay 표시 state를 지운다.
-- Final Review 이동은 필수 검증 module의 `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`이 해소됐을 때만 가능하다. `REVIEW`는 이동을 막지 않지만 Final Review에서 선택 / 보류 / 재검토 판단 근거로 확인해야 한다. Practical Validation module board는 `Gate Effect`와 `Gate Reason`으로 이동 차단, Final Review 확인, 후속 참고를 구분한다. `검증 결과 저장(기록용)`은 audit trail만 남기는 기능이며, Gate 미통과 row는 Final Review 후보 목록에 나타나지 않는다.
+- Final Review 이동은 필수 검증 module의 `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`이 해소됐을 때만 가능하다. `REVIEW`는 원칙적으로 Final Review에서 선택 / 보류 / 재검토 판단 근거로 확인하지만, Final Review selected-route policy가 저장 차단으로 해석하는 selection-critical `REVIEW_REQUIRED` gap은 Practical Validation의 `Selected-route Preflight`에서 `NEEDS_INPUT`으로 승격되어 이동을 막는다. Practical Validation module board는 `Gate Effect`와 `Gate Reason`으로 이동 차단, Final Review 확인, 후속 참고를 구분한다. `검증 결과 저장(기록용)`은 audit trail만 남기는 기능이며, Gate 미통과 row는 Final Review 후보 목록에 나타나지 않는다.
 - `Benchmark / Comparator Parity`는 benchmark뿐 아니라 cash, simple baseline, equal-weight baseline, custom comparator 같은 비교 기준과 후보의 기간 / coverage / frequency가 동등한지 보는 필수 검증이다.
 - `NOT_RUN`은 pass가 아니다. 데이터나 구현이 부족해 검증하지 못했다는 뜻이다.
 - Final Review가 최종 판단 위치다. 중간 단계에서 최종 메모를 반복해서 저장하지 않는다.
-- Final Review source picker는 Practical Validation Gate를 통과한 result만 표시한다. 저장만 된 blocked / needs input / not run validation row는 기록으로 남지만 최종 검토 후보에서는 숨긴다.
+- Final Review source picker는 Practical Validation Gate와 selected-route preflight를 통과한 result만 표시한다. 저장만 된 blocked / needs input / not run validation row와 selected-route preflight 미통과 row는 기록으로 남지만 최종 검토 후보에서는 숨긴다.
 - Final Review 상단은 Decision Desk command center와 flow rail로 오늘의 판단 상태, 후보 수, 숨겨진 Gate 미통과 기록, 저장된 최종 선정 기록, Selected Dashboard 연결 후보를 먼저 보여준다. 이 shell은 UI 표시 계층이며 gate / persistence logic을 바꾸지 않는다.
 - Final Review는 후보 선택 전에 Candidate Board로 Gate 통과 후보의 decision state, suggested decision, blocker / open review 수, 주요 audit route를 비교한다.
 - Candidate Board는 후보를 select-ready, hold / re-review, blocked 순서로 정렬하고, first-review candidate, primary reason, next action을 표시한다. 이 priority는 새 투자 점수가 아니라 기존 evidence를 보기 쉽게 정렬하는 read-only 표시다.
@@ -128,7 +128,7 @@ Final Decision V2 row는 backward compatibility용 `gate_policy_snapshot`을 sel
 |---|---|
 | Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/pages/backtest.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
-| Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
+| Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
 | Final Review | `app/web/backtest_final_review*.py`, `app/services/backtest_evidence_read_model.py` |
 | Selected Dashboard | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/final_selected_portfolios.py` |
 | Selection V2 persistence | `app/runtime/portfolio_selection_v2.py` |

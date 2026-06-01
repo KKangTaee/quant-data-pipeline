@@ -28,6 +28,9 @@ from app.services.backtest_practical_validation_curve_context import (
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
 from app.services.backtest_practical_validation_modules import build_validation_module_plan
+from app.services.backtest_selected_route_preflight import (
+    build_practical_validation_selected_route_preflight,
+)
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
@@ -1672,6 +1675,8 @@ def build_practical_validation_result(
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    selected_route_preflight = build_practical_validation_selected_route_preflight(result)
+    result["selected_route_preflight"] = selected_route_preflight
     module_plan = build_validation_module_plan(
         source=source_row,
         validation_profile=profile_row,
@@ -1683,6 +1688,7 @@ def build_practical_validation_result(
         risk_contribution_rows=result["risk_contribution_display_rows"],
         component_role_weight_rows=result["component_role_weight_display_rows"],
         backtest_realism_rows=result["backtest_realism_display_rows"],
+        selected_route_preflight=selected_route_preflight,
     )
     result["source_traits"] = dict(module_plan.get("source_traits") or {})
     result["validation_modules"] = list(module_plan.get("modules") or [])

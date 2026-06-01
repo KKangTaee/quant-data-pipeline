@@ -6911,3 +6911,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 source snapshot은 compact curve 중심이라 `Date`, `Total Balance`, `Total Return`만 보존했고, result frame의 `Next Ticker`, `Next Weight` 등 selection evidence가 Practical Validation handoff에서 사라졌다. 기존 registry row는 재작성하지 않고 fallback이 필요하다
 - Follow-up:
   - source builder에 compact selection history helper를 추가하고 candidate / weighted mix / saved mix handoff와 runtime replay에 연결했다. Practical Validation Step 1은 strategy / construction brief, component strategy table, performance table, monthly selection / holdings table을 표시한다
+
+### 2026-06-01 - Practical Validation이 Final Review selected-route 실패 사유를 먼저 잡아야 한다
+- User request:
+  - 사용자가 Practical Validation을 통과해 Final Review로 갔는데 Final Review에서 validation evidence 때문에 selected-route가 실패하는 흐름은 단계 의미가 맞지 않는다고 지적하고 수정 진행을 승인함
+- Interpreted goal:
+  - Final Review에서 deterministic하게 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장을 막을 evidence gap은 Practical Validation 단계에서 먼저 차단해야 함
+- Analysis result:
+  - 기존 Practical Validation module gate는 `REVIEW`를 이동 가능으로 처리했지만, Final Review selection policy는 gross-only / net-cost / 핵심 coverage 같은 selection-critical `REVIEW_REQUIRED`를 저장 차단으로 해석했다
+- Follow-up:
+  - Final Review selection policy를 Practical Validation `Selected-route Preflight`로 재사용하고, preflight 미통과 row는 Final Review source picker에서 숨기도록 구현했다. Existing registry row는 rewrite하지 않고 동적 preflight로 판정한다

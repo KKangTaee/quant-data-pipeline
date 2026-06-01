@@ -136,6 +136,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
             "selection_source_id": "source-ready",
             "source_title": "Ready source",
             "final_review_gate": {"can_save_and_move": True},
+            "selected_route_preflight": {"select_allowed": True},
         }
 
         options = _build_final_review_source_options(
@@ -618,6 +619,63 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertIn("Benchmark / Comparator Parity", display_rows)
         self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Gate Effect"], "Ready")
 
+    def test_validation_module_gate_blocks_selected_route_preflight_gaps(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": True},
+            {"Criteria": "Runtime period coverage", "Ready": True},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "PASS"},
+            {"domain": "robustness_sensitivity_overfit", "status": "PASS"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [{"strategy_key": "equal_weight", "target_weight": 100.0, "universe": ["SPY", "TLT"]}],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=pass_row,
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=[{"Criteria": "Net performance policy", "Status": "REVIEW"}],
+            selected_route_preflight={
+                "select_allowed": False,
+                "policy_outcome": "hold_or_re_review",
+                "review_required": ["Backtest Realism: Net performance policy: gross-only evidence"],
+                "next_action": "net performance evidence를 보강합니다.",
+            },
+        )
+
+        gate = plan["final_review_gate"]
+        self.assertFalse(gate["can_save_and_move"])
+        self.assertEqual(gate["route"], "BLOCKED_FOR_FINAL_REVIEW")
+        self.assertIn("selected-route", gate["verdict"])
+        self.assertEqual(gate["blocking_modules"][0]["module_id"], "selected_route_preflight")
+        modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertEqual(modules["selected_route_preflight"]["status"], "NEEDS_INPUT")
+        self.assertEqual(modules["selected_route_preflight"]["gate_effect"], "Blocks Final Review")
+        self.assertIn("gross-only", modules["selected_route_preflight"]["resolution_action"])
+
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
@@ -639,6 +697,7 @@ import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
 import app.services.backtest_practical_validation_source
 import app.services.backtest_risk_contribution_audit
+import app.services.backtest_selected_route_preflight
 import app.services.backtest_validation_efficacy
 import app.services.overview_market_intelligence
 print("streamlit" in sys.modules)
@@ -8091,6 +8150,35 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(policy_row["Severity"], "BLOCK")
         self.assertIn("Cost / slippage sensitivity evidence", policy_row["Evidence"])
         self.assertIn("NEEDS_INPUT", policy_row["Current"])
+
+    def test_practical_validation_selected_route_preflight_blocks_gross_only_review(self) -> None:
+        from app.services.backtest_selected_route_preflight import (
+            build_practical_validation_selected_route_preflight,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["backtest_realism_audit"] = {
+            "route": "BACKTEST_REALISM_REVIEW",
+            "route_label": "Review Required",
+            "rows": [
+                {
+                    "Criteria": "Net performance policy",
+                    "Status": "REVIEW",
+                    "Ready": False,
+                    "Current": "gross-only / net cost curve proof missing",
+                    "Meaning": "net performance proof is required before selected-route storage",
+                }
+            ],
+        }
+
+        preflight = build_practical_validation_selected_route_preflight(validation)
+
+        self.assertFalse(preflight["select_allowed"])
+        self.assertEqual(preflight["policy_outcome"], "hold_or_re_review")
+        self.assertEqual(preflight["route"], "SELECTED_ROUTE_PREFLIGHT_NEEDS_INPUT")
+        self.assertTrue(
+            any("Backtest Realism" in item for item in preflight["review_required"])
+        )
 
     def test_gate_policy_blocks_selected_route_on_provider_review_for_balanced_profile(self) -> None:
         from app.services.backtest_evidence_read_model import (

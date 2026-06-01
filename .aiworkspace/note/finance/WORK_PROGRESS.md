@@ -4511,3 +4511,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-source-context-v1/`에서 Step 1 source snapshot에 strategy / construction brief와 component strategy table을 추가했다.
   - 신규 candidate / weighted mix / saved mix handoff는 compact monthly selection / holdings history를 함께 넘기고, legacy source는 Step 3 runtime replay selection history를 fallback으로 읽는다.
   - Result Table은 기존 performance row를 유지하면서 selection / holdings row를 별도 표로 표시한다. Full holdings 원장이나 provider raw data는 workflow JSONL에 새로 복사하지 않는다.
+- Practical Validation Selected-route Preflight V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-selected-route-preflight-v1/`에서 Practical Validation gate와 Final Review selected-route gate의 의미를 맞췄다.
+  - Final Review selection policy를 Practical Validation에서 preflight로 먼저 실행하고, selected-route 저장을 막을 evidence gap은 `Selected-route Preflight` 필수 module의 `NEEDS_INPUT`으로 승격해 Final Review 이동을 차단한다.
+  - 기존 saved Practical Validation row는 재작성하지 않고 Final Review source picker에서 동적으로 preflight를 확인해, 과거 `READY_WITH_REVIEW` row라도 selected-route 미통과이면 후보 목록에서 숨긴다.
