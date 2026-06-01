@@ -15,6 +15,10 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_allocation_drift_boundary_table,
     build_selected_portfolio_continuity_table,
     build_selected_portfolio_current_weight_input_table,
+    build_selected_dashboard_portfolio_strategy_comparison_table,
+    build_selected_dashboard_portfolio_strategy_table,
+    build_selected_dashboard_portfolio_table,
+    build_selected_dashboard_strategy_pool_table,
     build_selected_portfolio_deployment_readiness_table,
     build_selected_portfolio_drift_alert_table,
     build_selected_portfolio_drift_table,
@@ -33,6 +37,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_symbol_freshness_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
+    selected_dashboard_portfolio_label,
     selected_portfolio_active_components,
     selected_portfolio_benchmark_options,
     selected_portfolio_component_default_symbol,
@@ -43,7 +48,9 @@ from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
+    add_selected_dashboard_portfolio_strategy,
     build_selected_dashboard_handoff_review,
+    build_selected_dashboard_portfolio_state,
     build_selected_portfolio_allocation_drift_boundary,
     build_selected_portfolio_continuity_check,
     build_selected_portfolio_current_weight_inputs,
@@ -58,8 +65,11 @@ from app.runtime import (
     build_selected_portfolio_recheck_operations_preflight,
     build_selected_portfolio_recheck_defaults,
     build_selected_portfolio_review_signal_policy,
+    delete_selected_dashboard_portfolio,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
+    remove_selected_dashboard_portfolio_strategy,
+    save_selected_dashboard_portfolio,
 )
 
 
@@ -474,6 +484,277 @@ def _render_selected_portfolio_picker(rows: list[dict[str, Any]]) -> dict[str, A
         return filtered_rows[labels.index(selected_label)]
 
 
+def _portfolio_by_id(portfolios: list[dict[str, Any]], portfolio_id: str | None) -> dict[str, Any] | None:
+    clean_id = str(portfolio_id or "").strip()
+    for portfolio in portfolios:
+        if str(portfolio.get("portfolio_id") or "") == clean_id:
+            return portfolio
+    return None
+
+
+def _selected_strategy_rows_for_portfolio(
+    portfolio: dict[str, Any],
+    dashboard_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    row_by_decision_id = {
+        str(row.get("decision_id") or ""): row
+        for row in dashboard_rows
+        if str(row.get("decision_id") or "")
+    }
+    return [
+        row_by_decision_id[decision_id]
+        for decision_id in list(portfolio.get("selected_decision_ids") or [])
+        if decision_id in row_by_decision_id
+    ]
+
+
+def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, Any] | None:
+    st.markdown("#### 1. 나의 포트폴리오")
+    st.caption(
+        "Final Review 통과 후보를 담아 관찰할 사용자 모니터링 포트폴리오를 만듭니다. "
+        "이 저장은 Dashboard 전용 saved state이며 Final Review 판단 row를 바꾸지 않습니다."
+    )
+    with st.container(border=True):
+        with st.form("selected_dashboard_create_portfolio_form", clear_on_submit=True):
+            cols = st.columns([0.35, 0.47, 0.18], gap="small")
+            with cols[0]:
+                name = st.text_input("Portfolio name", placeholder="예: 은퇴 계좌 모니터링")
+            with cols[1]:
+                description = st.text_input("Description", placeholder="선택 사항")
+            with cols[2]:
+                submitted = st.form_submit_button("Create", type="primary", width="stretch")
+            if submitted:
+                try:
+                    record = save_selected_dashboard_portfolio(name=name, description=description)
+                except ValueError as exc:
+                    st.warning(str(exc))
+                else:
+                    st.session_state["selected_dashboard_active_portfolio_id"] = record.get("portfolio_id")
+                    st.success("포트폴리오를 만들었습니다.")
+                    st.rerun()
+
+    if not portfolios:
+        st.info("아직 만든 포트폴리오가 없습니다. 먼저 이름을 입력해 새 포트폴리오를 만드세요.")
+        return None
+
+    labels = [selected_dashboard_portfolio_label(portfolio) for portfolio in portfolios]
+    current_id = st.session_state.get("selected_dashboard_active_portfolio_id")
+    current_portfolio = _portfolio_by_id(portfolios, current_id) or portfolios[0]
+    default_index = portfolios.index(current_portfolio)
+    selected_label = st.selectbox(
+        "Portfolio",
+        options=labels,
+        index=default_index,
+        key="selected_dashboard_portfolio_picker",
+    )
+    selected_portfolio = portfolios[labels.index(selected_label)]
+    st.session_state["selected_dashboard_active_portfolio_id"] = selected_portfolio.get("portfolio_id")
+
+    with st.expander("My portfolio list", expanded=False):
+        st.dataframe(build_selected_dashboard_portfolio_table(portfolios), width="stretch", hide_index=True)
+
+    delete_cols = st.columns([0.66, 0.20, 0.14], gap="small")
+    with delete_cols[0]:
+        st.caption(
+            f"선택된 포트폴리오: `{selected_portfolio.get('portfolio_id')}` / "
+            "삭제는 soft delete로 처리됩니다."
+        )
+    with delete_cols[1]:
+        confirm_delete = st.checkbox(
+            "삭제 확인",
+            key=f"selected_dashboard_confirm_delete_{selected_portfolio.get('portfolio_id')}",
+        )
+    with delete_cols[2]:
+        if st.button(
+            "Delete",
+            disabled=not confirm_delete,
+            key=f"selected_dashboard_delete_portfolio_{selected_portfolio.get('portfolio_id')}",
+            width="stretch",
+        ):
+            if delete_selected_dashboard_portfolio(str(selected_portfolio.get("portfolio_id") or "")):
+                st.session_state.pop("selected_dashboard_active_portfolio_id", None)
+                st.success("포트폴리오를 삭제했습니다.")
+                st.rerun()
+            st.warning("삭제할 포트폴리오를 찾지 못했습니다.")
+    return selected_portfolio
+
+
+def _render_strategy_selection_manager(
+    portfolio: dict[str, Any],
+    dashboard_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    st.markdown("#### 2. 포트폴리오 전략 선택")
+    st.caption(
+        "Final Review에서 최종 선별된 후보를 현재 포트폴리오에 하나씩 추가합니다. "
+        "여기서 전략은 backtest 함수가 아니라 Final Review selected decision입니다."
+    )
+    selected_ids = [str(item) for item in list(portfolio.get("selected_decision_ids") or [])]
+    selected_rows = _selected_strategy_rows_for_portfolio(portfolio, dashboard_rows)
+    with st.container(border=True):
+        if dashboard_rows:
+            pool_df = build_selected_dashboard_strategy_pool_table(
+                dashboard_rows,
+                selected_decision_ids=selected_ids,
+            )
+            with st.expander("Final Review selected strategy pool", expanded=not selected_rows):
+                st.dataframe(pool_df, width="stretch", hide_index=True)
+        else:
+            st.warning("Final Review에서 통과한 selected 후보가 아직 없습니다.")
+
+        available_rows = [
+            row for row in dashboard_rows if str(row.get("decision_id") or "") not in set(selected_ids)
+        ]
+        add_cols = st.columns([0.72, 0.28], gap="small")
+        with add_cols[0]:
+            if available_rows:
+                add_labels = [final_selected_portfolio_label(row) for row in available_rows]
+                add_label = st.selectbox(
+                    "Add selected strategy",
+                    options=add_labels,
+                    key=f"selected_dashboard_add_strategy_{portfolio.get('portfolio_id')}",
+                )
+                add_row = available_rows[add_labels.index(add_label)]
+            else:
+                add_row = None
+                st.selectbox(
+                    "Add selected strategy",
+                    options=["추가 가능한 selected 후보 없음"],
+                    disabled=True,
+                    key=f"selected_dashboard_add_strategy_empty_{portfolio.get('portfolio_id')}",
+                )
+        with add_cols[1]:
+            if st.button(
+                "Add Strategy",
+                disabled=add_row is None,
+                key=f"selected_dashboard_add_strategy_button_{portfolio.get('portfolio_id')}",
+                type="primary",
+                width="stretch",
+            ):
+                result = add_selected_dashboard_portfolio_strategy(
+                    str(portfolio.get("portfolio_id") or ""),
+                    str(add_row.get("decision_id") or ""),
+                )
+                if result.get("status") == "added":
+                    st.success("전략을 추가했습니다.")
+                    st.rerun()
+                elif result.get("status") == "duplicate":
+                    st.info("이미 추가된 전략입니다.")
+                else:
+                    st.warning(str(result.get("message") or "전략을 추가하지 못했습니다."))
+
+    if selected_rows:
+        st.markdown("##### Added strategies")
+        st.dataframe(build_selected_dashboard_portfolio_strategy_table(selected_rows), width="stretch", hide_index=True)
+        remove_cols = st.columns([0.72, 0.28], gap="small")
+        with remove_cols[0]:
+            remove_labels = [final_selected_portfolio_label(row) for row in selected_rows]
+            remove_label = st.selectbox(
+                "Remove selected strategy",
+                options=remove_labels,
+                key=f"selected_dashboard_remove_strategy_{portfolio.get('portfolio_id')}",
+            )
+            remove_row = selected_rows[remove_labels.index(remove_label)]
+        with remove_cols[1]:
+            if st.button(
+                "Remove",
+                key=f"selected_dashboard_remove_strategy_button_{portfolio.get('portfolio_id')}",
+                width="stretch",
+            ):
+                result = remove_selected_dashboard_portfolio_strategy(
+                    str(portfolio.get("portfolio_id") or ""),
+                    str(remove_row.get("decision_id") or ""),
+                )
+                if result.get("status") == "removed":
+                    st.success("전략을 제거했습니다.")
+                    st.rerun()
+                st.warning(str(result.get("message") or "전략을 제거하지 못했습니다."))
+    else:
+        st.info("현재 포트폴리오에 담긴 전략이 없습니다. Final Review selected 후보를 하나씩 추가하세요.")
+    return selected_rows
+
+
+def _render_portfolio_strategy_comparison(strategy_rows: list[dict[str, Any]]) -> None:
+    st.markdown("#### 5. 전환 비교")
+    st.caption(
+        "같은 포트폴리오 안에 담긴 selected 전략의 최신 monitoring scenario 결과를 비교합니다. "
+        "결과가 없는 전략은 먼저 모니터 시나리오를 실행해야 합니다."
+    )
+    if len(strategy_rows) < 2:
+        st.info("전환 비교는 같은 포트폴리오에 selected 전략이 2개 이상 있을 때 표시됩니다.")
+        return
+    results_by_decision_id = {
+        str(row.get("decision_id") or ""): _latest_recheck_result(row)
+        for row in strategy_rows
+    }
+    comparison_df = build_selected_dashboard_portfolio_strategy_comparison_table(
+        strategy_rows,
+        recheck_results_by_decision_id=results_by_decision_id,
+    )
+    st.dataframe(comparison_df, width="stretch", hide_index=True)
+    ready_count = sum(1 for result in results_by_decision_id.values() if result.get("status") in {"ok", "partial"})
+    render_badge_strip(
+        [
+            {"label": "Strategies", "value": len(strategy_rows), "tone": "neutral"},
+            {
+                "label": "Scenario Results",
+                "value": f"{ready_count}/{len(strategy_rows)}",
+                "tone": "positive" if ready_count == len(strategy_rows) else "warning",
+            },
+            {"label": "Auto Switch", "value": "Disabled", "tone": "neutral"},
+            {"label": "Order", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+
+
+def _render_dashboard_portfolio_workspace(
+    *,
+    dashboard_rows: list[dict[str, Any]],
+    monitoring_portfolios: list[dict[str, Any]],
+) -> None:
+    state = build_selected_dashboard_portfolio_state(
+        portfolios=monitoring_portfolios,
+        dashboard_rows=dashboard_rows,
+    )
+    metrics = dict(state.get("metrics") or {})
+    render_badge_strip(
+        [
+            {"label": "My Portfolios", "value": metrics.get("portfolio_count", 0), "tone": "neutral"},
+            {"label": "Selected Pool", "value": metrics.get("selected_strategy_pool_count", 0), "tone": "neutral"},
+            {
+                "label": "Assigned",
+                "value": metrics.get("assigned_strategy_reference_count", 0),
+                "tone": "positive" if metrics.get("assigned_strategy_reference_count") else "neutral",
+            },
+            {
+                "label": "Missing Ref",
+                "value": metrics.get("missing_reference_count", 0),
+                "tone": "warning" if metrics.get("missing_reference_count") else "neutral",
+            },
+            {"label": "Trading", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    portfolio = _render_my_portfolio_manager(list(state.get("portfolios") or []))
+    if portfolio is None:
+        return
+    selected_rows = _render_strategy_selection_manager(portfolio, dashboard_rows)
+    if not selected_rows:
+        return
+
+    st.markdown("#### 3. 모니터 시나리오")
+    st.caption("각 전략별 가상 기간과 초기자산을 입력해 선정 이후 성과와 리스크 상태를 확인합니다.")
+    tabs = st.tabs([
+        f"{index + 1}. {str(row.get('source_title') or row.get('decision_id') or 'Selected')[:42]}"
+        for index, row in enumerate(selected_rows)
+    ])
+    for tab, row in zip(tabs, selected_rows):
+        with tab:
+            _render_snapshot(row)
+            operations_evidence = _render_performance_recheck(row)
+            _render_operator_context(row, operations_evidence=operations_evidence)
+            _render_decision_dossier(row)
+    _render_portfolio_strategy_comparison(selected_rows)
+
+
 def _render_selected_row_detail(row: dict[str, Any]) -> None:
     _render_snapshot(row)
     operations_evidence = _render_performance_recheck(row)
@@ -604,10 +885,10 @@ def _render_snapshot(row: dict[str, Any]) -> None:
 
 
 def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[str, Any] | None = None) -> None:
-    st.markdown("#### Portfolio Monitoring")
+    st.markdown("#### 4. Monitoring Signals")
     st.caption(
-        "Performance Recheck 이후 이 포트폴리오가 계속 추적할 만한지 확인하는 영역입니다. "
-        "먼저 Review Signals를 보고, 필요할 때 선정 근거와 실제/가상 보유금액 배분을 확인합니다."
+        "모니터 시나리오 이후 이 전략을 계속 관찰할지, evidence 보강이 필요한지, 대체 검토가 필요한지 확인합니다. "
+        "Deployment / Live 판단은 마지막 optional preflight에서만 보조로 봅니다."
     )
     triggers = [str(trigger) for trigger in list(row.get("review_triggers") or []) if str(trigger)]
     blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
@@ -615,33 +896,39 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
     _render_info_card_grid(
         [
             {
-                "title": "1. Timeline",
+                "title": "Signal Timeline",
                 "value": "Read Only",
                 "detail": "선정, 재검증, drift, trigger preview를 시간순으로 확인",
                 "tone": "neutral",
             },
             {
-                "title": "2. Review Signals",
+                "title": "Review Signals",
                 "value": "Latest Check",
-                "detail": "성과 약화, drawdown 확대, benchmark 우위, allocation drift를 한 번에 확인",
+                "detail": "계속 관찰 / 보강 필요 / 대체 검토로 번역",
                 "tone": "neutral",
             },
             {
-                "title": "3. Why Selected",
+                "title": "Open Issues",
+                "value": "Follow-up",
+                "detail": "Final Review의 약점과 trigger를 계속 관찰",
+                "tone": "neutral",
+            },
+            {
+                "title": "Why Selected",
                 "value": row.get("evidence_route"),
                 "detail": "Final Review에서 이 포트폴리오를 통과시킨 근거",
                 "tone": "positive" if not blockers else "warning",
             },
             {
-                "title": "4. Actual Allocation",
+                "title": "Actual Allocation",
                 "value": "Optional",
                 "detail": "실제 또는 가상 보유금액을 target allocation과 비교할 때만 사용",
                 "tone": "neutral",
             },
             {
-                "title": "5. Audit",
+                "title": "Optional Preflight",
                 "value": "Read Only",
-                "detail": "승인, 주문, 자동 리밸런싱은 생성하지 않음",
+                "detail": "Live / Deployment는 마지막 보조 확인",
                 "tone": "neutral",
             },
         ],
@@ -726,14 +1013,14 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
         allocation_boundary=allocation_boundary,
     )
 
-    timeline_tab, trigger_tab, issue_tab, deployment_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
+    trigger_tab, timeline_tab, issue_tab, evidence_tab, allocation_tab, preflight_tab, audit_tab = st.tabs(
         [
-            "Timeline",
             "Review Signals",
+            "Timeline",
             "Open Issues",
-            "Deployment Readiness",
             "Why Selected",
             "Actual Allocation",
+            "Optional Preflight",
             "Audit",
         ]
     )
@@ -895,7 +1182,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
                 st.warning("남아 있는 blocker: " + ", ".join(blockers))
     with issue_tab:
         st.caption(
-            "Final Review에서 selection은 허용했지만 Dashboard / Live Readiness에서 이어서 봐야 할 open issue와 follow-up trigger입니다. "
+            "Final Review에서 selection은 허용했지만 Dashboard monitoring에서 계속 봐야 할 open issue와 follow-up trigger입니다. "
             "이 표는 monitoring log를 자동 저장하지 않습니다."
         )
         issue_metrics = dict(open_issue_followup.get("metrics") or {})
@@ -942,9 +1229,9 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
             f"monitoring auto write: {issue_boundary.get('monitoring_log_auto_write')} / "
             f"live approval: {issue_boundary.get('live_approval')}"
         )
-    with deployment_tab:
+    with preflight_tab:
         st.caption(
-            "실제 자금 투입 판단 전에 남은 blocker / review / data gap을 read-only로 묶어 봅니다. "
+            "실제 자금 투입 전에 선택적으로 확인할 blocker / review / data gap을 read-only로 묶어 봅니다. "
             "이 preflight는 승인, 주문, 계좌 연결, 자동 리밸런싱을 만들지 않습니다."
         )
         deployment_metrics = dict(deployment_preflight.get("metrics") or {})
@@ -1077,10 +1364,10 @@ def _render_execution_boundary() -> None:
 
 
 def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
-    st.markdown("#### Performance Recheck")
+    st.markdown("##### Monitoring Scenario")
     st.caption(
-        "선정 당시의 component contract를 다시 실행해, 사용자가 지정한 기간에서 포트폴리오 성과가 유지되는지 확인합니다. "
-        "기본 종료일은 DB에 있는 최신 시장일입니다."
+        "선정 당시의 component contract를 사용자가 지정한 가상 시작일 / 종료일 / 초기자산으로 다시 실행합니다. "
+        "종료일이 비어 있으면 DB에 있는 최신 시장일을 기준으로 봅니다."
     )
     defaults = build_selected_portfolio_recheck_defaults(row)
     if defaults.get("latest_market_date_error"):
@@ -1349,18 +1636,25 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     default_start = _coerce_date(defaults.get("default_start"), fallback_start)
     default_end = _coerce_date(defaults.get("default_end"), fallback_end)
     with st.container(border=True):
-        st.markdown("##### Recheck Setup")
+        st.markdown("##### Scenario Setup")
         setup_cols = st.columns([0.24, 0.24, 0.24, 0.28], gap="small")
         with setup_cols[0]:
             recheck_start = st.date_input(
-                "Recheck start",
+                "Virtual start",
                 value=default_start,
                 key=f"selected_portfolio_recheck_start_{decision_id}",
             )
         with setup_cols[1]:
+            use_latest_end = st.checkbox(
+                "Use latest end",
+                value=True,
+                key=f"selected_portfolio_recheck_use_latest_end_{decision_id}",
+                help="체크하면 DB 최신 시장일을 종료일로 사용합니다.",
+            )
             recheck_end = st.date_input(
-                "Recheck end",
+                "Virtual end",
                 value=default_end,
+                disabled=use_latest_end,
                 key=f"selected_portfolio_recheck_end_{decision_id}",
             )
         with setup_cols[2]:
@@ -1385,7 +1679,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
             )
         with action_cols[1]:
             run_clicked = st.button(
-                "Run Performance Recheck",
+                "Run Scenario",
                 key=f"selected_portfolio_run_recheck_{decision_id}",
                 type="primary",
                 width="stretch",
@@ -1397,7 +1691,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
             st.session_state[result_key] = build_selected_portfolio_performance_recheck(
                 row,
                 start=str(recheck_start),
-                end=str(recheck_end),
+                end=str(default_end if use_latest_end else recheck_end),
                 initial_capital=float(initial_capital),
             )
 
@@ -1407,7 +1701,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     }
     result = dict(st.session_state.get(result_key) or {})
     if not result:
-        st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Performance Recheck`를 누르면 최신 기간 기준 성과를 바로 계산합니다.")
+        st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Scenario`를 누르면 해당 기간 기준 성과를 바로 계산합니다.")
         return operations_payload
     if result.get("status") == "error":
         st.error(str(result.get("error") or "Performance recheck failed."))
@@ -1932,22 +2226,21 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
 def render_final_selected_portfolio_dashboard_page() -> None:
     st.title("Selected Portfolio Dashboard")
     st.caption(
-        "Final Review에서 실전 후보로 선정한 포트폴리오를 최신 기간으로 다시 계산하고, "
-        "선정 당시 근거가 유지되는지 확인하는 Phase36 대시보드입니다."
+        "Final Review에서 최종 선별된 후보를 나의 모니터링 포트폴리오에 담고, "
+        "가상 시나리오와 review signal로 선정 이후 상태를 확인합니다."
     )
 
     dashboard = load_final_selected_portfolio_dashboard()
     summary = dict(dashboard.get("summary") or {})
     rows = list(dashboard.get("dashboard_rows") or [])
+    monitoring_portfolios = list(dashboard.get("monitoring_portfolios") or [])
 
     render_status_card_grid(_summary_cards(summary))
     _render_final_review_handoff(list(dashboard.get("all_final_decisions") or []))
 
     if not rows:
         _render_empty_state(summary)
-        return
-
-    selected_row = _render_selected_portfolio_picker(rows)
-    if selected_row is None:
-        return
-    _render_selected_row_detail(selected_row)
+    _render_dashboard_portfolio_workspace(
+        dashboard_rows=rows,
+        monitoring_portfolios=monitoring_portfolios,
+    )

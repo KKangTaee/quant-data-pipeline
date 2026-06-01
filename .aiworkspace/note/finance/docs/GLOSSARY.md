@@ -2872,14 +2872,15 @@ Final Review로 넘어갈 수 있는지는 저장 여부가 아니라 필수 mod
 ## Selected Portfolio Dashboard
 
 ### 기본 설명
-Final Review에서 selected 된 포트폴리오를 운영 관점에서 다시 보는 Operations 화면이다.
+Final Review에서 selected 된 후보를 사용자가 만든 모니터링 포트폴리오에 담아 운영 관점에서 다시 보는 Operations 화면이다.
 
 ### 왜 사용되는지
-선정 당시의 판단이 이후 기간 확장 성과, monitoring signal, optional allocation check에서 계속 설명 가능한지 확인하기 위해 사용한다.
+선정 당시의 판단이 가상 시작일 / 종료일 / 초기자산 기준 이후 성과, benchmark 비교, drift / 리밸런싱 검토, monitoring signal, optional allocation check에서 계속 설명 가능한지 확인하기 위해 사용한다.
 
 ### 예시 / 필요 상황
 - Final Review에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 포트폴리오를 다시 볼 때
-- 백테스트 종료일을 오늘에 가깝게 늘려 performance recheck를 할 때
+- 나의 monitoring portfolio를 만들고 selected 후보를 하나씩 담아 비교할 때
+- 백테스트 종료일을 오늘에 가깝게 늘려 monitoring scenario를 실행할 때
 - live approval이나 주문 지시가 아니라 관찰 dashboard로만 사용할 때
 
 ---

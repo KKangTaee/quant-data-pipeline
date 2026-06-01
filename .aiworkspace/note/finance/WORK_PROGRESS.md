@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Live Readiness Follow-up V1 is implementation complete. Selected Dashboard now surfaces Final Review open issues / follow-up triggers and a read-only Deployment Readiness preflight. Fresh registry recheck found no selected-route pass, so no Final Decision V2 row was appended.
+  - Selected Dashboard Monitoring Portfolio V1 is implementation complete. Selected Dashboard now uses user-created monitoring portfolios, a Final Review selected strategy pool, per-strategy virtual monitoring scenarios, and optional preflight only; no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -32,6 +32,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-06-01
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-portfolio-v1/`.
+- `Operations > Selected Portfolio Dashboard` now starts with `1. 나의 포트폴리오`, stores dashboard setup in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, and lets users add Final Review selected candidates one by one without same-portfolio duplicates.
+- Monitoring Scenario now uses virtual start / end / capital, with latest DB market date as the default end, and Monitoring Signals / Open Issues / optional Preflight / same-portfolio transition comparison are organized after scenario execution.
+- Verification passed: compile/import checks, focused Selected Portfolio service contracts, full `tests.test_service_contracts` 217 tests, `git diff --check`, and Browser QA screenshot `selected-dashboard-monitoring-portfolio-v1-qa.png`.
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-live-readiness-followup-v1/`.
 - `Operations > Selected Portfolio Dashboard` now shows Open Issues / Follow-up and Deployment Readiness tabs sourced from selected Final Decision V2 snapshots and existing read-only dashboard evidence.
 - Deployment Readiness remains preflight-only: no live approval, order, broker/account connection, monitoring auto-write, or auto rebalance behavior was added.

@@ -17,11 +17,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Live Readiness Follow-up V1 is implementation complete. Selected Dashboard now surfaces Final Review open issues / follow-up triggers and a read-only Deployment Readiness preflight. Fresh registry recheck found no selected-route pass, so no Final Decision V2 row was appended.
+  - Selected Dashboard Monitoring Portfolio V1 is implementation complete. Selected Dashboard now treats user-created monitoring portfolios as the primary workspace, with Final Review selected candidates added one by one and Live / Deployment Readiness kept as optional preflight only.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-01 - Selected Dashboard should become a monitoring portfolio workspace
+- User request:
+  - Final Review를 통과한 후보를 실제 투자 후보로 보고, Selected Dashboard에서 사용자가 나의 포트폴리오를 만들고 Final Review selected 후보를 하나씩 담아 가상 시작일 / 종료일 / 초기자산 기준으로 선정 이후 성과와 리밸런싱 필요성을 모니터링하고 싶다고 요청함.
+- Interpreted goal:
+  - Dashboard의 "portfolio"를 backtest 전략이 아니라 사용자 monitoring container로 재정의하고, selected 후보는 strategy pool로 추가 / 제거하게 만든다. Live / Deployment Readiness는 필수 다음 단계가 아니라 optional preflight로 낮춘다.
+- Analysis result:
+  - 구현 기준은 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에 dashboard setup만 저장하고, Final Decision V2 row는 read-only source-of-truth로 유지하는 것이다. Monitoring scenario / drift / alert / comparison은 기존 selected dashboard read model과 session state를 재사용하며 approval, order, broker/account sync, auto rebalance를 만들지 않는다.
+- Follow-up:
+  - 현재 worktree에는 fresh selected V2 row가 없어 Browser QA는 empty selected-pool과 portfolio creation surface를 확인했다. 실제 selected row가 생기면 strategy add / scenario execution / transition comparison을 한 번 더 수동 확인한다.
 
 ### 2026-06-01 - Selected Dashboard should carry open issues into deployment preflight
 - User request:

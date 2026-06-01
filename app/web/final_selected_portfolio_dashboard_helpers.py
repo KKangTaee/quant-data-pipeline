@@ -61,6 +61,125 @@ def build_selected_portfolio_dashboard_table(rows: list[dict[str, Any]]) -> pd.D
     return pd.DataFrame(display_rows)
 
 
+def selected_dashboard_portfolio_label(row: dict[str, Any]) -> str:
+    name = _display_value(row.get("name"))
+    if len(name) > 72:
+        name = f"{name[:69]}..."
+    count = int(row.get("strategy_count") or len(list(row.get("selected_decision_ids") or [])) or 0)
+    return f"{name} | {count} strategies | {_display_value(row.get('updated_at'))}"
+
+
+def build_selected_dashboard_portfolio_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        display_rows.append(
+            {
+                "Name": row.get("name"),
+                "Strategies": row.get("strategy_count", len(list(row.get("selected_decision_ids") or []))),
+                "Missing": row.get("missing_strategy_count", 0),
+                "Updated At": row.get("updated_at"),
+                "Created At": row.get("created_at"),
+                "Description": row.get("description"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_dashboard_portfolio_strategy_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        display_rows.append(
+            {
+                "Decision ID": row.get("decision_id"),
+                "Strategy": row.get("source_title"),
+                "Status": row.get("operation_status_label"),
+                "Components": row.get("component_count"),
+                "Target": f"{_optional_float(row.get('target_weight_total')) or 0.0:.1f}%",
+                "Benchmark": row.get("benchmark_label"),
+                "Original Period": f"{_display_value(row.get('baseline_start'))} -> {_display_value(row.get('baseline_end'))}",
+                "Baseline CAGR": (
+                    f"{(_optional_float(row.get('baseline_cagr')) or 0.0):.2%}"
+                    if _optional_float(row.get("baseline_cagr")) is not None
+                    else "-"
+                ),
+                "Baseline MDD": (
+                    f"{(_optional_float(row.get('baseline_mdd')) or 0.0):.2%}"
+                    if _optional_float(row.get("baseline_mdd")) is not None
+                    else "-"
+                ),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_dashboard_strategy_pool_table(
+    rows: list[dict[str, Any]],
+    *,
+    selected_decision_ids: list[str] | None = None,
+) -> pd.DataFrame:
+    selected_ids = {str(item) for item in list(selected_decision_ids or [])}
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        decision_id = str(row.get("decision_id") or "")
+        display_rows.append(
+            {
+                "Decision ID": decision_id,
+                "Strategy": row.get("source_title"),
+                "Add State": "Already added" if decision_id in selected_ids else "Available",
+                "Status": row.get("operation_status_label"),
+                "Benchmark": row.get("benchmark_label"),
+                "Baseline CAGR": (
+                    f"{(_optional_float(row.get('baseline_cagr')) or 0.0):.2%}"
+                    if _optional_float(row.get("baseline_cagr")) is not None
+                    else "-"
+                ),
+                "Baseline MDD": (
+                    f"{(_optional_float(row.get('baseline_mdd')) or 0.0):.2%}"
+                    if _optional_float(row.get("baseline_mdd")) is not None
+                    else "-"
+                ),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_dashboard_portfolio_strategy_comparison_table(
+    rows: list[dict[str, Any]],
+    *,
+    recheck_results_by_decision_id: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        decision_id = str(row.get("decision_id") or "")
+        result = dict(recheck_results_by_decision_id.get(decision_id) or {})
+        portfolio_summary = dict(result.get("portfolio_summary") or {})
+        benchmark_summary = dict(result.get("benchmark_summary") or {})
+        change_summary = dict(result.get("change_summary") or {})
+        period = dict(result.get("period") or {})
+        display_rows.append(
+            {
+                "Strategy": row.get("source_title"),
+                "Scenario Status": result.get("status") or "not run",
+                "Verdict": result.get("verdict_route") or "-",
+                "Start": period.get("start") or "-",
+                "End": period.get("end") or "-",
+                "Current Value": portfolio_summary.get("end_balance"),
+                "Cumulative Return": portfolio_summary.get("total_return"),
+                "CAGR": portfolio_summary.get("cagr"),
+                "MDD": portfolio_summary.get("mdd"),
+                "Benchmark CAGR": benchmark_summary.get("cagr"),
+                "Benchmark Spread": change_summary.get("net_cagr_spread"),
+            }
+        )
+    frame = pd.DataFrame(display_rows)
+    for column in ["Cumulative Return", "CAGR", "MDD", "Benchmark CAGR", "Benchmark Spread"]:
+        if column in frame.columns:
+            frame[column] = frame[column].map(lambda value: f"{float(value):.2%}" if value is not None and not pd.isna(value) else "-")
+    if "Current Value" in frame.columns:
+        frame["Current Value"] = frame["Current Value"].map(lambda value: f"{float(value):,.0f}" if value is not None and not pd.isna(value) else "-")
+    return frame
+
+
 def build_selected_portfolio_open_issue_followup_table(followup: dict[str, Any]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in list(followup.get("rows") or []):

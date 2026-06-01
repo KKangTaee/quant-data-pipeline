@@ -8485,6 +8485,99 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         row["raw_decision"] = raw
         return row
 
+    def test_selected_dashboard_monitoring_portfolio_saved_state_crud_is_soft_delete(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            add_selected_dashboard_portfolio_strategy,
+            delete_selected_dashboard_portfolio,
+            load_selected_dashboard_portfolios,
+            remove_selected_dashboard_portfolio_strategy,
+            save_selected_dashboard_portfolio,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "SELECTED_DASHBOARD_PORTFOLIOS.jsonl"
+            record = save_selected_dashboard_portfolio(
+                name="Core Monitor",
+                description="selected candidates",
+                now="2026-06-01T10:00:00",
+                path=path,
+            )
+
+            self.assertEqual(record["schema_version"], 1)
+            self.assertEqual(record["name"], "Core Monitor")
+            self.assertEqual(record["selected_decision_ids"], [])
+            self.assertFalse(record["storage_boundary"]["final_decision_registry_write"])
+            self.assertFalse(record["storage_boundary"]["monitoring_log_auto_write"])
+
+            add_result = add_selected_dashboard_portfolio_strategy(
+                record["portfolio_id"],
+                "decision-selected",
+                now="2026-06-01T10:01:00",
+                path=path,
+            )
+            duplicate_result = add_selected_dashboard_portfolio_strategy(
+                record["portfolio_id"],
+                "decision-selected",
+                now="2026-06-01T10:02:00",
+                path=path,
+            )
+
+            self.assertEqual(add_result["status"], "added")
+            self.assertEqual(duplicate_result["status"], "duplicate")
+            portfolios = load_selected_dashboard_portfolios(path=path)
+            self.assertEqual(portfolios[0]["selected_decision_ids"], ["decision-selected"])
+
+            remove_result = remove_selected_dashboard_portfolio_strategy(
+                record["portfolio_id"],
+                "decision-selected",
+                now="2026-06-01T10:03:00",
+                path=path,
+            )
+            self.assertEqual(remove_result["status"], "removed")
+            self.assertEqual(load_selected_dashboard_portfolios(path=path)[0]["selected_decision_ids"], [])
+
+            self.assertTrue(
+                delete_selected_dashboard_portfolio(
+                    record["portfolio_id"],
+                    now="2026-06-01T10:04:00",
+                    path=path,
+                )
+            )
+            self.assertEqual(load_selected_dashboard_portfolios(path=path), [])
+            deleted_rows = load_selected_dashboard_portfolios(include_deleted=True, path=path)
+            self.assertEqual(deleted_rows[0]["deleted_at"], "2026-06-01T10:04:00")
+
+    def test_selected_dashboard_portfolio_state_joins_selected_strategy_pool(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            build_final_selected_portfolio_dashboard_row,
+            build_selected_dashboard_portfolio_state,
+        )
+
+        dashboard_row = build_final_selected_portfolio_dashboard_row(self._selected_row()["raw_decision"])
+        state = build_selected_dashboard_portfolio_state(
+            portfolios=[
+                {
+                    "portfolio_id": "p1",
+                    "name": "Core Monitor",
+                    "selected_decision_ids": ["decision-selected", "decision-selected", "missing-decision"],
+                    "updated_at": "2026-06-01T10:00:00",
+                }
+            ],
+            dashboard_rows=[dashboard_row],
+        )
+
+        self.assertEqual(state["schema_version"], "selected_dashboard_monitoring_portfolio_state_v1")
+        self.assertEqual(state["metrics"]["portfolio_count"], 1)
+        self.assertEqual(state["metrics"]["selected_strategy_pool_count"], 1)
+        self.assertEqual(state["metrics"]["duplicate_reference_count"], 1)
+        self.assertEqual(state["metrics"]["missing_reference_count"], 1)
+        portfolio = state["portfolios"][0]
+        self.assertEqual(portfolio["strategy_count"], 1)
+        self.assertEqual(portfolio["missing_strategy_count"], 1)
+        self.assertEqual(portfolio["strategy_rows"][0]["decision_id"], "decision-selected")
+        self.assertFalse(state["execution_boundary"]["final_decision_registry_write"])
+        self.assertFalse(state["execution_boundary"]["monitoring_log_auto_write"])
+
     def _ready_provider_evidence(self) -> dict:
         return {
             "schema_version": "selected_provider_evidence_v1",

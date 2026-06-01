@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-05-30
+Last Verified: 2026-06-01
 
 ## Purpose
 
@@ -52,7 +52,7 @@ Last Verified: 2026-05-30
 | File / Folder | Meaning | Policy |
 |---|---|---|
 | `.aiworkspace/note/finance/registries/` | workflow decision / source registry | 보존 대상. 명시 요청 없이 재작성하지 않음. 새 파일 추가 전 [Storage Governance](./STORAGE_GOVERNANCE.md) checklist 확인 |
-| `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup | 사용자가 명시적으로 저장한 setup. validation / final decision evidence가 아님 |
+| `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup | 사용자가 명시적으로 저장한 setup. validation / final decision evidence가 아님. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 dashboard portfolio setup |
 | `.aiworkspace/note/finance/run_history/` | local run history | 장기 문서 아님. 투자 판단 source-of-truth가 아니며 보통 커밋하지 않음 |
 | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact | 장기 문서 아님. 보통 커밋하지 않음 |
 
@@ -68,7 +68,7 @@ runtime-defined V2 JSONL 파일은 첫 workflow write 전에는 로컬에 없을
 - Practical Validation JSONL에는 compact evidence와 reason만 저장하고, full provider raw data는 DB에 둔다.
 - 새 JSONL registry는 기본적으로 만들지 않고, stage handoff나 명시적 reusable setup이 아닌 저장은 피한다.
 - static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
-- Selected Portfolio Dashboard read model은 monitoring log 자동 저장, live approval, broker order, auto rebalance를 수행하지 않는다.
+- Selected Portfolio Dashboard read model은 monitoring log 자동 저장, live approval, broker order, account sync, auto rebalance를 수행하지 않는다. 사용자 dashboard portfolio setup은 saved state로만 관리한다.
 
 ## Code Flow 문서와의 차이
 

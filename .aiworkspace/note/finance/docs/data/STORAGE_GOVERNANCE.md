@@ -1,7 +1,7 @@
 # Finance Storage Governance
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-01
 
 ## Purpose
 
@@ -31,6 +31,7 @@ Last Verified: 2026-05-31
 | `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation result and compact evidence | Keep. Gate-passed rows are Final Review input; blocked / needs input / not run rows are audit trail only. |
 | `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Final Review decision and compact packet / gate snapshot | Keep. Selected Portfolio Dashboard input. |
 | `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring check record | Explicit user action only. No automatic log sprawl. |
+| `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | User-created Selected Dashboard monitoring portfolio setup | Keep as dashboard setup, not evidence or approval. Stores portfolio names and selected decision references; soft delete uses `deleted_at`. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Reusable V2 portfolio mix setup | Keep as setup, not evidence. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl` | Legacy reusable weighted portfolio setup | Preserve as compatibility; do not expand without migration. |
 | `.aiworkspace/note/finance/run_history/*.jsonl` | Local execution history | Debug/replay artifact, not decision source-of-truth. |
@@ -46,7 +47,7 @@ The current rule is:
 - DB-backed collectors may store full structured lifecycle / provider / macro / price evidence.
 - Workflow JSONL stores only compact stage handoff, validation result, and final decision evidence.
 - V2 registry paths are runtime-defined and may not exist locally until the first workflow write. Absence of a runtime-defined file is not drift.
-- `SAVED_PORTFOLIOS.jsonl` and `SAVED_PORTFOLIO_MIXES.jsonl` are reusable setup, not validation / approval / monitoring evidence.
+- `SAVED_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIO_MIXES.jsonl`, and `SELECTED_DASHBOARD_PORTFOLIOS.jsonl` are reusable / dashboard setup, not validation / approval / monitoring evidence.
 - Selected Portfolio Dashboard read models do not auto-append monitoring logs, write registry rows, approve trades, create orders, or rebalance.
 - `run_history/*.jsonl`, `run_artifacts/`, `.playwright-mcp/`, and `.DS_Store` are generated / local artifacts and should stay unstaged unless explicitly requested.
 

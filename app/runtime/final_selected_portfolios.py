@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
 import re
-from datetime import date
+from datetime import date, datetime
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pandas as pd
 
+from app.workspace_paths import SAVED_DIR
 from finance.loaders import load_latest_market_date
 from finance.performance import portfolio_performance_summary
 
@@ -17,6 +21,9 @@ from .portfolio_selection_v2 import (
 
 
 SELECTED_PRACTICAL_PORTFOLIO_ROUTE = "SELECT_FOR_PRACTICAL_PORTFOLIO"
+SELECTED_DASHBOARD_PORTFOLIOS_FILE = SAVED_DIR / "SELECTED_DASHBOARD_PORTFOLIOS.jsonl"
+SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION = 1
+SELECTED_DASHBOARD_PORTFOLIO_STATE_SCHEMA_VERSION = "selected_dashboard_monitoring_portfolio_state_v1"
 
 FINAL_SELECTED_PORTFOLIO_STATUS_LABELS = {
     "normal": "정상 관찰",
@@ -189,6 +196,300 @@ def _optional_float(value: Any) -> float | None:
 def _clean_text(value: Any, default: str = "-") -> str:
     text = str(value or "").strip()
     return text or default
+
+
+def _selected_dashboard_portfolio_path(path: Path | None = None) -> Path:
+    return path or SELECTED_DASHBOARD_PORTFOLIOS_FILE
+
+
+def _selected_dashboard_portfolio_timestamp(now: str | None = None) -> str:
+    return str(now or datetime.now().isoformat(timespec="seconds"))
+
+
+def _selected_dashboard_json_ready(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _selected_dashboard_json_ready(child) for key, child in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_selected_dashboard_json_ready(child) for child in value]
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        try:
+            return _selected_dashboard_json_ready(value.item())
+        except Exception:
+            pass
+    try:
+        json.dumps(value, ensure_ascii=False)
+        return value
+    except TypeError:
+        return str(value)
+
+
+def _read_selected_dashboard_portfolio_rows(path: Path | None = None) -> list[dict[str, Any]]:
+    file_path = _selected_dashboard_portfolio_path(path)
+    if not file_path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in file_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _write_selected_dashboard_portfolio_rows(rows: list[dict[str, Any]], path: Path | None = None) -> None:
+    file_path = _selected_dashboard_portfolio_path(path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with file_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(_selected_dashboard_json_ready(row), ensure_ascii=False) + "\n")
+
+
+def _normalize_selected_decision_ids(values: list[Any] | tuple[Any, ...] | None) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in list(values or []):
+        decision_id = str(value or "").strip()
+        if not decision_id or decision_id in seen:
+            continue
+        seen.add(decision_id)
+        normalized.append(decision_id)
+    return normalized
+
+
+def load_selected_dashboard_portfolios(
+    *,
+    include_deleted: bool = False,
+    path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Load user-created Selected Dashboard monitoring portfolios from saved state."""
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    if not include_deleted:
+        rows = [row for row in rows if not row.get("deleted_at")]
+    return sorted(
+        rows,
+        key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""),
+        reverse=True,
+    )
+
+
+def save_selected_dashboard_portfolio(
+    *,
+    name: str,
+    description: str | None = None,
+    selected_decision_ids: list[Any] | tuple[Any, ...] | None = None,
+    portfolio_id: str | None = None,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Create or update a user monitoring portfolio without touching Final Review decisions."""
+    clean_name = str(name or "").strip()
+    if not clean_name:
+        raise ValueError("Portfolio name is required.")
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    existing_index = None
+    existing: dict[str, Any] = {}
+    if portfolio_id:
+        for index, row in enumerate(rows):
+            if str(row.get("portfolio_id") or "") == str(portfolio_id):
+                existing_index = index
+                existing = dict(row)
+                break
+    record = {
+        "schema_version": SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION,
+        "portfolio_id": str(portfolio_id or existing.get("portfolio_id") or f"selected_dashboard_portfolio_{uuid4().hex[:12]}"),
+        "created_at": existing.get("created_at") or timestamp,
+        "updated_at": timestamp,
+        "deleted_at": None,
+        "name": clean_name,
+        "description": str(description if description is not None else existing.get("description") or "").strip(),
+        "selected_decision_ids": _normalize_selected_decision_ids(
+            selected_decision_ids
+            if selected_decision_ids is not None
+            else list(existing.get("selected_decision_ids") or [])
+        ),
+        "storage_boundary": {
+            "source": str(_selected_dashboard_portfolio_path(path or SELECTED_DASHBOARD_PORTFOLIOS_FILE)),
+            "final_decision_registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+    if existing_index is None:
+        rows.append(record)
+    else:
+        rows[existing_index] = record
+    _write_selected_dashboard_portfolio_rows(rows, path)
+    return record
+
+
+def delete_selected_dashboard_portfolio(
+    portfolio_id: str,
+    *,
+    now: str | None = None,
+    path: Path | None = None,
+) -> bool:
+    """Soft-delete a dashboard monitoring portfolio."""
+    clean_id = str(portfolio_id or "").strip()
+    if not clean_id:
+        return False
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    changed = False
+    for row in rows:
+        if str(row.get("portfolio_id") or "") == clean_id and not row.get("deleted_at"):
+            row["deleted_at"] = timestamp
+            row["updated_at"] = timestamp
+            changed = True
+            break
+    if changed:
+        _write_selected_dashboard_portfolio_rows(rows, path)
+    return changed
+
+
+def _mutate_selected_dashboard_portfolio_strategy(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    action: str,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    clean_portfolio_id = str(portfolio_id or "").strip()
+    clean_decision_id = str(decision_id or "").strip()
+    if not clean_portfolio_id or not clean_decision_id:
+        return {"status": "error", "message": "portfolio_id and decision_id are required.", "portfolio": {}}
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    for index, row in enumerate(rows):
+        if str(row.get("portfolio_id") or "") != clean_portfolio_id or row.get("deleted_at"):
+            continue
+        decision_ids = _normalize_selected_decision_ids(list(row.get("selected_decision_ids") or []))
+        if action == "add":
+            if clean_decision_id in decision_ids:
+                return {"status": "duplicate", "message": "Selected strategy already exists in this portfolio.", "portfolio": dict(row)}
+            decision_ids.append(clean_decision_id)
+            status = "added"
+            message = "Selected strategy added."
+        else:
+            if clean_decision_id not in decision_ids:
+                return {"status": "not_found", "message": "Selected strategy is not in this portfolio.", "portfolio": dict(row)}
+            decision_ids = [item for item in decision_ids if item != clean_decision_id]
+            status = "removed"
+            message = "Selected strategy removed."
+        row["selected_decision_ids"] = decision_ids
+        row["updated_at"] = timestamp
+        rows[index] = row
+        _write_selected_dashboard_portfolio_rows(rows, path)
+        return {"status": status, "message": message, "portfolio": dict(row)}
+    return {"status": "not_found", "message": "Portfolio not found.", "portfolio": {}}
+
+
+def add_selected_dashboard_portfolio_strategy(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    return _mutate_selected_dashboard_portfolio_strategy(
+        portfolio_id,
+        decision_id,
+        action="add",
+        now=now,
+        path=path,
+    )
+
+
+def remove_selected_dashboard_portfolio_strategy(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    return _mutate_selected_dashboard_portfolio_strategy(
+        portfolio_id,
+        decision_id,
+        action="remove",
+        now=now,
+        path=path,
+    )
+
+
+def build_selected_dashboard_portfolio_state(
+    *,
+    portfolios: list[dict[str, Any]] | None = None,
+    dashboard_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Join user monitoring portfolios with Final Review selected dashboard rows."""
+    active_portfolios = [dict(row or {}) for row in list(portfolios or []) if not dict(row or {}).get("deleted_at")]
+    selected_rows = [dict(row or {}) for row in list(dashboard_rows or [])]
+    row_by_decision_id = {
+        str(row.get("decision_id") or "").strip(): row
+        for row in selected_rows
+        if str(row.get("decision_id") or "").strip()
+    }
+    portfolio_rows: list[dict[str, Any]] = []
+    missing_references = 0
+    duplicate_references = 0
+    for portfolio in active_portfolios:
+        raw_ids = [str(item or "").strip() for item in list(portfolio.get("selected_decision_ids") or []) if str(item or "").strip()]
+        unique_ids = _normalize_selected_decision_ids(raw_ids)
+        duplicate_references += max(len(raw_ids) - len(unique_ids), 0)
+        strategy_rows = [row_by_decision_id[decision_id] for decision_id in unique_ids if decision_id in row_by_decision_id]
+        missing_ids = [decision_id for decision_id in unique_ids if decision_id not in row_by_decision_id]
+        missing_references += len(missing_ids)
+        portfolio_rows.append(
+            {
+                **portfolio,
+                "selected_decision_ids": unique_ids,
+                "strategy_count": len(strategy_rows),
+                "missing_strategy_count": len(missing_ids),
+                "strategy_rows": strategy_rows,
+                "missing_decision_ids": missing_ids,
+            }
+        )
+    assigned_ids = {
+        decision_id
+        for portfolio in portfolio_rows
+        for decision_id in list(portfolio.get("selected_decision_ids") or [])
+    }
+    available_rows = [
+        row for row in selected_rows if str(row.get("decision_id") or "").strip() not in assigned_ids
+    ]
+    return {
+        "schema_version": SELECTED_DASHBOARD_PORTFOLIO_STATE_SCHEMA_VERSION,
+        "storage_file": str(SELECTED_DASHBOARD_PORTFOLIOS_FILE),
+        "portfolios": portfolio_rows,
+        "selected_strategy_pool": selected_rows,
+        "available_unassigned_strategy_rows": available_rows,
+        "metrics": {
+            "portfolio_count": len(portfolio_rows),
+            "selected_strategy_pool_count": len(selected_rows),
+            "assigned_strategy_reference_count": sum(len(list(row.get("selected_decision_ids") or [])) for row in portfolio_rows),
+            "available_unassigned_strategy_count": len(available_rows),
+            "missing_reference_count": missing_references,
+            "duplicate_reference_count": duplicate_references,
+        },
+        "execution_boundary": {
+            "portfolio_saved_state": True,
+            "final_decision_registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
 
 
 def _selected_allocation_read_only_boundary(*, write_policy: str, notes: str) -> dict[str, Any]:
@@ -4762,10 +5063,16 @@ def load_final_selected_portfolio_dashboard(limit: int | None = 250) -> dict[str
     all_rows = load_final_selection_decisions_v2(limit=limit)
     selected_rows = [row for row in all_rows if _is_selected_practical_portfolio(row)]
     dashboard_rows = [build_final_selected_portfolio_dashboard_row(row) for row in selected_rows]
+    monitoring_portfolios = load_selected_dashboard_portfolios()
     return {
         "all_final_decisions": all_rows,
         "selected_final_decisions": selected_rows,
         "dashboard_rows": dashboard_rows,
+        "monitoring_portfolios": monitoring_portfolios,
+        "portfolio_state": build_selected_dashboard_portfolio_state(
+            portfolios=monitoring_portfolios,
+            dashboard_rows=dashboard_rows,
+        ),
         "summary": _build_summary(
             all_final_decisions=all_rows,
             selected_rows=selected_rows,

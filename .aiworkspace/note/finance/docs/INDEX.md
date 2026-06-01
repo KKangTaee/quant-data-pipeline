@@ -23,7 +23,7 @@ Last Verified: 2026-06-01
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
-- Current implementation focus: Selected Dashboard Live Readiness Follow-up V1 is implementation complete. Final Review still uses `selection_gate_policy_snapshot` for `SELECT_FOR_PRACTICAL_PORTFOLIO` saves and preserves stricter `deployment_readiness_policy_snapshot`; Selected Dashboard now surfaces saved `open_review_items`, review triggers, and a read-only Deployment Readiness preflight. Latest registry recheck found no fresh selected-route pass, so no Final Decision V2 row was appended; the legacy non-GTAA Quality selected row remains only an explicit migration seed candidate.
+- Current implementation focus: Selected Dashboard Monitoring Portfolio V1 is implementation complete. Selected Dashboard now starts with user-created monitoring portfolios, reads Final Review selected candidates as a strategy pool, runs per-strategy virtual monitoring scenarios, keeps Live / Deployment Readiness as optional preflight, and stores only dashboard setup in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`. No live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added.
 
 ## By Purpose
 

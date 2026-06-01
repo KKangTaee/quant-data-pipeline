@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-01
 
 ## Project Summary
 
@@ -119,9 +119,9 @@ Last Verified: 2026-05-31
 | `app/web/backtest_final_review.py` | Final Review screen render, Decision Desk command center / flow ordering, Practical Validation Gate-passed Candidate Board with review priority / queue / primary reason, selected-source Decision Cockpit, hidden blocked validation count, selection-only final decision input with decision record checklist / selected-route guide, Evidence Appendix for investability packet / look-through / Robustness Lab / previous validation evidence, saved final decision review ledger with route filter and detail tabs, Selected Dashboard handoff summary, decision dossier download |
 | `app/web/backtest_final_review_components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source eligibility filter, validation reuse, paper observation snapshot, investability packet wiring, selection-only official save row construction |
-| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, Final Review handoff summary, continuity check, Recheck Operations Preflight, Recheck Readiness, Symbol Freshness, Provider Evidence freshness / coverage policy, Timeline / Review Signal Policy / Open Issues / Deployment Readiness preflight / recheck comparison / allocation monitoring controls / allocation evidence boundary / source contract tables |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / Selected Dashboard handoff table / component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / open issue follow-up / deployment readiness / recheck comparison / drift / alert / allocation boundary / source contract display helpers |
-| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, Final Review -> Selected Dashboard handoff review and continuity check, selected decision source consistency contract, open issue follow-up, deployment readiness preflight, performance recheck operations preflight, readiness, symbol freshness, selected provider evidence staleness / coverage policy, review signal policy, performance recheck, recheck comparison, drift check, alert preview, allocation drift evidence boundary, monitoring timeline |
+| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, 사용자 monitoring portfolio 생성 / 선택 / soft delete, Final Review selected strategy 추가 / 제거, strategy별 Monitoring Scenario, continuity check, Recheck Operations Preflight, Recheck Readiness, Symbol Freshness, Provider Evidence freshness / coverage policy, Timeline / Review Signal Policy / Open Issues / optional preflight / recheck comparison / allocation monitoring controls / allocation evidence boundary / source contract tables / 전환 비교 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard portfolio / selected strategy pool / strategy comparison table, Selected Dashboard handoff table, component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / open issue follow-up / deployment readiness / recheck comparison / drift / alert / allocation boundary / source contract display helpers |
+| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, dashboard portfolio saved state helper, Final Review -> Selected Dashboard handoff review and continuity check, selected decision source consistency contract, open issue follow-up, deployment readiness preflight, performance recheck operations preflight, readiness, symbol freshness, selected provider evidence staleness / coverage policy, review signal policy, performance recheck, recheck comparison, drift check, alert preview, allocation drift evidence boundary, monitoring timeline |
 
 ## Backtest Workflow Boundary
 
@@ -137,14 +137,14 @@ Backtest Analysis
 - Backtest Analysis는 후보 source를 만든다.
 - Practical Validation은 source를 실전 투입 전 조건으로 검증하고 source traits 기반 module planner로 필수 / 조건부 / 후속 참고 검증과 Final Review 이동 gate를 만든다. Step 1은 source의 단일 / mix 구성, component 전략, target weight, 원래 result table, monthly selection / holdings history를 먼저 확인하게 한다. 화면의 `Final Review Gate`, audit board, provider board, Robustness Lab은 board registry를 통해 어떤 module의 evidence인지 표시하며, 후보 특성상 적용되지 않는 조건부 board는 비적용으로 분리한다. `검증 결과 저장(기록용)`은 audit trail만 남기고, Gate 미통과 result는 Final Review 후보가 아니다.
 - Final Review는 Practical Validation Gate를 통과한 result만 source picker에 표시한다. Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row와 Construction Risk / Risk Contribution / Component Role / Weight non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, selected-route gate까지 통과한 후보만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 정식 저장한다. 보류 / 거절 / 재검토는 새 저장 row가 아니라 상태 안내이며, 저장된 선정 기록은 read-only dossier와 Selected Dashboard handoff summary로 다시 보여준다.
-- Selected Portfolio Dashboard는 Final Review selected row handoff 상태를 먼저 보여주고, 선정 이후 성과와 read-only recheck operations preflight / readiness / symbol freshness / provider evidence / monitoring timeline / review signal policy / open issue follow-up / deployment readiness preflight / recheck comparison / allocation drift evidence boundary를 확인한다. Deployment Readiness preflight도 승인 / 주문 / broker-account 연동 / 자동 리밸런싱을 만들지 않는다.
+- Selected Portfolio Dashboard는 Final Review selected row handoff 상태를 먼저 보여주고, 사용자가 만든 monitoring portfolio에 selected strategy를 하나씩 담아 strategy별 가상 시작일 / 종료일 / 초기자산 기준 성과와 read-only recheck operations preflight / readiness / symbol freshness / provider evidence / monitoring timeline / review signal policy / open issue follow-up / optional deployment preflight / recheck comparison / allocation drift evidence boundary를 확인한다. Deployment Readiness preflight도 승인 / 주문 / broker-account 연동 / 자동 리밸런싱을 만들지 않는다.
 
 ## Data Boundary
 
 | Data | Location | Commit Policy |
 |---|---|---|
 | Current / candidate / final decision registries | `.aiworkspace/note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지. 저장 경계는 `docs/data/STORAGE_GOVERNANCE.md` 기준 |
-| Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup |
+| Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 Selected Dashboard 전용 사용자 monitoring portfolio setup |
 | Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
