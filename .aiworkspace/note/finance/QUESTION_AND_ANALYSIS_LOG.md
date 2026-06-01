@@ -31,8 +31,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - 구현 결과 Ingestion은 routine operations / validation data와 manual recovery / diagnostics로 분리되고, job guide / result guidance / data-quality caveat를 표시한다.
   - 기존 lifecycle collector인 Nasdaq Symbol Directory, SEC CIK cross-check, computed snapshot lifecycle을 UI에 노출했지만 current snapshot과 partial evidence는 survivorship PASS 근거가 아니라고 명시했다.
+  - 좁은 브라우저 폭에서 Streamlit 기본 metric / selectbox가 값을 말줄임표로 자르는 문제가 확인되어, Ingestion 결과 / runtime 요약은 wrapping card로 바꾸고 selector에는 compact Korean label과 full current-selection caption을 함께 표시했다.
 - Follow-up:
   - 실제 DB freshness와 provider sparse-response coverage는 이번 UX slice만으로 검증되지 않는다. 필요하면 다음 slice에서 requested-window 대비 저장 coverage guard를 data layer로 보강한다.
+  - 현재 UI는 기존 Streamlit operator-console을 개선한 형태이며, 최적의 제품형 UI로 보려면 job catalog / active job detail / guided recovery 중심의 별도 redesign slice가 필요하다.
 
 ### 2026-05-31 - Non-GTAA search did not produce a fresh selected-route pass
 - User request:

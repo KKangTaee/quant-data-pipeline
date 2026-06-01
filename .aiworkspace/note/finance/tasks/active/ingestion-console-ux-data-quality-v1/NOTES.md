@@ -21,3 +21,5 @@
 - Added result guidance helpers so a partial / failed collection explains the next operator check instead of only showing raw metrics.
 - Added UI controls for `collect_symbol_directory_snapshots`, `collect_sec_company_ticker_crosscheck`, and `collect_computed_snapshot_lifecycle`.
 - Kept direct provider fetch out of Practical Validation; the flow remains `Ingestion -> DB -> Loader -> UI`.
+- Responsive follow-up replaced truncating Streamlit metrics in Ingestion result summaries with custom wrapping stat cards, added wrapping metadata rows for DB targets / downstream use, and added compact Korean `format_func` labels for symbol-source / preset selectors.
+- Persistent run-history selection now uses compact display labels and a full `현재 선택` caption, so the selected run remains identifiable when the browser is narrow.

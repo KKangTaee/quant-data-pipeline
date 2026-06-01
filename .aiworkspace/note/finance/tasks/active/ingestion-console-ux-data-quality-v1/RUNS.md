@@ -10,3 +10,6 @@
 - `git diff --check` passed.
 - Browser QA passed on `http://localhost:8505/ingestion`: page title copy, Korean tabs, daily market run button, lifecycle section, Nasdaq current listing button, and current-snapshot caveat were visible. Browser console showed Streamlit `_stcore/host-config` and `_stcore/health` 404s under the `/ingestion` subpath, but the page rendered and interacted normally.
 - QA screenshot: `.playwright-mcp/ingestion-console-qa.png` generated locally and intentionally left untracked.
+- Responsive polish verification passed: `py_compile`, `git diff --check`, and `.venv/bin/python -m unittest tests.test_service_contracts` passed with 207 tests.
+- Browser responsive QA passed on the in-app browser: Runtime / Build metadata no longer truncates, source selector shows Korean compact label plus full current selection, persistent run-history selector shows a compact label plus full caption, and result summary stats render as wrapping cards instead of truncated Streamlit metrics.
+- Responsive QA screenshot: `.playwright-mcp/ingestion-responsive-qa.png` generated locally and intentionally left untracked.

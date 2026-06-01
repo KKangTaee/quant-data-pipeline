@@ -35,6 +35,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Completed `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`.
 - `Workspace > Ingestion` now has Korean purpose-first job guides, routine / manual separation, result next-action guidance, and visible data-quality caveats while preserving user-controlled symbols, periods, source modes, and provider options.
 - Exposed lifecycle evidence jobs for Nasdaq current listing snapshots, SEC CIK / ticker cross-check, and computed repeated-observation summaries under `상장 / 상폐 근거`.
+- Responsive follow-up replaced truncating Ingestion result / runtime metrics with wrapping cards and added compact Korean selector labels plus full current-selection captions for narrow browser widths.
 - No DB schema, provider connector, loader contract, Practical Validation gate, JSONL registry, saved setup, live approval, order, or auto rebalance behavior was added.
 
 ### 2026-05-31

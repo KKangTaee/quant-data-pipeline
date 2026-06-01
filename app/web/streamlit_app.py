@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from datetime import date, datetime, timedelta
+from html import escape
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -358,6 +359,50 @@ SYMBOL_SOURCE_OPTIONS = [
     "Profile Filtered ETFs",
     "Profile Filtered Stocks + ETFs",
 ]
+SYMBOL_SOURCE_DISPLAY_LABELS = {
+    "Manual": "직접 입력",
+    "NYSE Stocks": "NYSE 주식 전체",
+    "NYSE ETFs": "NYSE ETF 전체",
+    "NYSE Stocks + ETFs": "NYSE 주식+ETF 전체",
+    "Profile Filtered Stocks": "프로필 필터 주식",
+    "Profile Filtered ETFs": "프로필 필터 ETF",
+    "Profile Filtered Stocks + ETFs": "프로필 필터 주식+ETF",
+}
+SYMBOL_PRESET_DISPLAY_LABELS = {
+    "Big Tech": "빅테크 기본",
+    "Core ETFs": "핵심 ETF",
+    "Dividend ETFs": "배당 ETF",
+    "US Statement Coverage 100": "미국 재무제표 100",
+    "US Statement Coverage 300": "미국 재무제표 300",
+    "US Statement Coverage 500": "미국 재무제표 500",
+    "US Statement Coverage 1000": "미국 재무제표 1000",
+    "Custom": "직접 입력",
+}
+SYMBOL_INPUT_DISPLAY_TITLES = {
+    "Diagnosis Symbols": "진단 대상",
+    "Inspection Symbols": "검사 대상",
+    "Daily Market Symbols": "일별 가격 대상",
+    "Weekly Refresh Symbols": "주간 펀더멘털 대상",
+    "Extended Statement Symbols": "상세 재무제표 대상",
+    "Pipeline Symbols": "핵심 파이프라인 대상",
+    "OHLCV Symbols": "가격 이력 대상",
+    "Fundamentals Symbols": "펀더멘털 대상",
+    "Factor Symbols": "팩터 계산 대상",
+    "Financial Statement Symbols": "재무제표 수집 대상",
+    "Shadow Rebuild Symbols": "Shadow 재구성 대상",
+}
+
+
+def _format_symbol_source_label(value: str) -> str:
+    return SYMBOL_SOURCE_DISPLAY_LABELS.get(value, value)
+
+
+def _format_symbol_preset_label(value: str) -> str:
+    return SYMBOL_PRESET_DISPLAY_LABELS.get(value, value)
+
+
+def _format_symbol_input_title(value: str) -> str:
+    return SYMBOL_INPUT_DISPLAY_TITLES.get(value, value)
 
 
 @st.cache_data(show_spinner=False)
@@ -494,6 +539,252 @@ def _status_to_banner(status: str):
     return st.error
 
 
+def _install_ingestion_responsive_styles() -> None:
+    st.markdown(
+        """
+        <style>
+          .ingestion-meta-list {
+            display: grid;
+            gap: 0.5rem;
+            margin: 0.35rem 0 0.65rem;
+          }
+          .ingestion-meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 0.35rem 0.45rem;
+            min-width: 0;
+          }
+          .ingestion-meta-label {
+            color: #7a7f8c;
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.35;
+            white-space: nowrap;
+          }
+          .ingestion-pill {
+            background: rgba(125, 130, 150, 0.12);
+            border: 1px solid rgba(49, 51, 63, 0.08);
+            border-radius: 0.4rem;
+            color: #246b3f;
+            display: inline-block;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8rem;
+            line-height: 1.35;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            padding: 0.12rem 0.36rem;
+            word-break: break-word;
+          }
+          .ingestion-text-value {
+            color: inherit;
+            display: inline-block;
+            line-height: 1.35;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: keep-all;
+          }
+          .ingestion-text-value + .ingestion-text-value::before {
+            color: #8b909b;
+            content: " · ";
+          }
+          .ingestion-stat-grid {
+            display: grid;
+            gap: 0.65rem;
+            grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+            margin: 0.75rem 0 0.95rem;
+          }
+          .ingestion-stat-card {
+            background: rgba(125, 130, 150, 0.08);
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            border-radius: 0.5rem;
+            min-width: 0;
+            padding: 0.72rem 0.82rem;
+          }
+          .ingestion-stat-card.status-success {
+            background: #eaf8ef;
+            border-color: rgba(34, 139, 73, 0.22);
+          }
+          .ingestion-stat-card.status-success .ingestion-stat-value,
+          .ingestion-stat-card.status-success .ingestion-stat-label {
+            color: #14783f;
+          }
+          .ingestion-stat-card.status-partial_success {
+            background: #fff7e6;
+            border-color: rgba(184, 121, 0, 0.22);
+          }
+          .ingestion-stat-card.status-partial_success .ingestion-stat-value,
+          .ingestion-stat-card.status-partial_success .ingestion-stat-label {
+            color: #8a5a00;
+          }
+          .ingestion-stat-card.status-failed {
+            background: #fff0f0;
+            border-color: rgba(210, 56, 56, 0.22);
+          }
+          .ingestion-stat-card.status-failed .ingestion-stat-value,
+          .ingestion-stat-card.status-failed .ingestion-stat-label {
+            color: #9f2626;
+          }
+          .ingestion-stat-label {
+            color: #6f7480;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-stat-value {
+            color: inherit;
+            font-size: clamp(1.55rem, 4.5vw, 2.35rem);
+            font-weight: 760;
+            letter-spacing: 0;
+            line-height: 1.08;
+            margin-top: 0.32rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .ingestion-meta-grid {
+            display: grid;
+            gap: 0.65rem;
+            grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+            margin: 0.35rem 0 0.75rem;
+          }
+          .ingestion-meta-card {
+            background: rgba(125, 130, 150, 0.08);
+            border: 1px solid rgba(49, 51, 63, 0.09);
+            border-radius: 0.5rem;
+            min-width: 0;
+            padding: 0.62rem 0.72rem;
+          }
+          .ingestion-meta-card-label {
+            color: #6f7480;
+            font-size: 0.76rem;
+            font-weight: 700;
+            line-height: 1.2;
+          }
+          .ingestion-meta-card-value {
+            color: inherit;
+            font-size: 1rem;
+            font-weight: 650;
+            line-height: 1.3;
+            margin-top: 0.26rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .ingestion-select-caption {
+            color: inherit;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            margin: -0.25rem 0 0.45rem;
+            overflow-wrap: anywhere;
+          }
+          div[data-baseweb="select"] > div {
+            min-height: 2.75rem;
+          }
+          div[data-baseweb="select"] > div > div {
+            min-width: 0;
+            overflow: visible;
+            white-space: normal;
+          }
+          div[role="listbox"] [role="option"] {
+            min-height: 2.45rem;
+            white-space: normal;
+          }
+          @media (max-width: 760px) {
+            div[data-testid="column"] {
+              flex: 1 1 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              width: 100% !important;
+            }
+            .ingestion-stat-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .ingestion-meta-grid {
+              grid-template-columns: minmax(0, 1fr);
+            }
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _html_join_pills(values: list[str]) -> str:
+    return " ".join(f'<span class="ingestion-pill">{escape(value)}</span>' for value in values if value)
+
+
+def _render_ingestion_meta_rows(rows: list[tuple[str, list[str], bool]]) -> None:
+    rendered_rows: list[str] = []
+    for label, values, monospace in rows:
+        clean_values = [str(value) for value in values if str(value).strip()]
+        if not clean_values:
+            continue
+        value_html = (
+            _html_join_pills(clean_values)
+            if monospace
+            else " ".join(f'<span class="ingestion-text-value">{escape(value)}</span>' for value in clean_values)
+        )
+        rendered_rows.append(
+            '<div class="ingestion-meta-row">'
+            f'<span class="ingestion-meta-label">{escape(label)}:</span>'
+            f"{value_html}</div>"
+        )
+    if rendered_rows:
+        st.markdown(
+            '<div class="ingestion-meta-list">' + "".join(rendered_rows) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _format_count(value: Any) -> str:
+    try:
+        if value is None:
+            return "0"
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return str(value or "0")
+
+
+def _format_duration(value: Any) -> str:
+    try:
+        numeric = float(value or 0)
+    except (TypeError, ValueError):
+        return str(value or "-")
+    return f"{numeric:,.2f}"
+
+
+def _render_ingestion_stat_grid(items: list[tuple[str, str, str | None]]) -> None:
+    cards = []
+    for label, value, status_class in items:
+        extra_class = f" status-{status_class}" if status_class else ""
+        cards.append(
+            f'<div class="ingestion-stat-card{extra_class}">'
+            f'<div class="ingestion-stat-label">{escape(label)}</div>'
+            f'<div class="ingestion-stat-value">{escape(str(value))}</div>'
+            "</div>"
+        )
+    st.markdown(
+        '<div class="ingestion-stat-grid">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_ingestion_meta_grid(items: list[tuple[str, str]]) -> None:
+    cards = []
+    for label, value in items:
+        cards.append(
+            '<div class="ingestion-meta-card">'
+            f'<div class="ingestion-meta-card-label">{escape(label)}</div>'
+            f'<div class="ingestion-meta-card-value">{escape(str(value or "-"))}</div>'
+            "</div>"
+        )
+    if cards:
+        st.markdown(
+            '<div class="ingestion-meta-grid">' + "".join(cards) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
 def _job_guide(job_name: str | None) -> dict[str, Any]:
     return JOB_GUIDE.get(str(job_name or ""), {})
 
@@ -520,14 +811,12 @@ def _render_job_brief(job_name: str) -> None:
     st.caption(f"내부 job id: `{job_name}`")
     st.write(guide["purpose"])
 
-    target_text = ", ".join(f"`{item}`" for item in guide.get("targets") or [])
-    used_by_text = ", ".join(str(item) for item in guide.get("used_by") or [])
-    if target_text or used_by_text:
-        col1, col2 = st.columns(2)
-        if target_text:
-            col1.caption(f"저장 위치: {target_text}")
-        if used_by_text:
-            col2.caption(f"사용 위치: {used_by_text}")
+    _render_ingestion_meta_rows(
+        [
+            ("저장 위치", [str(item) for item in guide.get("targets") or []], True),
+            ("사용 위치", [str(item) for item in guide.get("used_by") or []], False),
+        ]
+    )
 
     caveats = [str(item) for item in guide.get("caveats") or [] if str(item).strip()]
     if caveats:
@@ -740,6 +1029,22 @@ def _render_runtime_build_indicator() -> None:
         col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
 
 
+def _render_ingestion_runtime_build_indicator() -> None:
+    with st.container(border=True):
+        st.markdown("### Runtime / Build")
+        st.caption(
+            "이 정보는 현재 Streamlit 프로세스가 어떤 코드 상태로 떠 있는지 보여줍니다. "
+            "코드를 고친 뒤 결과가 기대와 다르면 먼저 이 `Loaded At`과 `Git SHA`를 확인하는 것이 좋습니다."
+        )
+        _render_ingestion_meta_grid(
+            [
+                ("Runtime Marker", APP_RUNTIME_MARKER),
+                ("Loaded At", APP_RUNTIME_LOADED_AT.strftime("%Y-%m-%d %H:%M:%S")),
+                ("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown"),
+            ]
+        )
+
+
 def _render_inline_running_hint(action: str, label: str) -> None:
     if _is_running_action(action):
         st.info(f"`{label}` is running. Progress is still synchronous, so the page will update again when the job finishes.")
@@ -933,32 +1238,37 @@ def _render_result_summary(result: JobResult) -> None:
         st.markdown(f"### {_job_title(job_name)}")
         st.caption(f"내부 job id: `{job_name}`")
         st.write(guide.get("purpose") or "")
-        target_text = ", ".join(f"`{item}`" for item in guide.get("targets") or [])
-        used_by_text = ", ".join(str(item) for item in guide.get("used_by") or [])
-        if target_text or used_by_text:
-            meta_cols = st.columns(2)
-            if target_text:
-                meta_cols[0].caption(f"저장 위치: {target_text}")
-            if used_by_text:
-                meta_cols[1].caption(f"사용 위치: {used_by_text}")
+        _render_ingestion_meta_rows(
+            [
+                ("저장 위치", [str(item) for item in guide.get("targets") or []], True),
+                ("사용 위치", [str(item) for item in guide.get("used_by") or []], False),
+            ]
+        )
 
     banner = _status_to_banner(result["status"])
     banner(f'[{_job_title(job_name)}] {result["message"]}')
 
     failed_count = len(result.get("failed_symbols") or [])
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("상태", _status_label(result["status"]))
-    col2.metric("저장 Row", result["rows_written"] or 0)
-    col3.metric("요청 대상", result["symbols_requested"] or 0)
-    col4.metric("누락 / 실패", failed_count)
-    col5.metric("소요 시간(초)", result["duration_sec"])
+    status = str(result.get("status") or "")
+    _render_ingestion_stat_grid(
+        [
+            ("상태", _status_label(status), status),
+            ("저장 Row", _format_count(result.get("rows_written")), None),
+            ("요청 대상", _format_count(result.get("symbols_requested")), None),
+            ("누락 / 실패", _format_count(failed_count), None),
+            ("소요 시간(초)", _format_duration(result.get("duration_sec")), None),
+        ]
+    )
 
     run_metadata = result.get("run_metadata") or {}
     if run_metadata:
-        meta_cols = st.columns(3)
-        meta_cols[0].metric("실행 모드", run_metadata.get("execution_mode") or "-")
-        meta_cols[1].metric("파이프라인", run_metadata.get("pipeline_type") or "-")
-        meta_cols[2].metric("Runtime Marker", run_metadata.get("runtime_marker") or "-")
+        _render_ingestion_meta_grid(
+            [
+                ("실행 모드", str(run_metadata.get("execution_mode") or "-")),
+                ("파이프라인", str(run_metadata.get("pipeline_type") or "-")),
+                ("Runtime Marker", str(run_metadata.get("runtime_marker") or "-")),
+            ]
+        )
         runtime_loaded_at = run_metadata.get("runtime_loaded_at")
         git_sha = run_metadata.get("git_sha")
         extra_parts = []
@@ -1153,9 +1463,18 @@ def _render_failure_csv_preview() -> None:
 
 def _history_record_label(record: dict[str, Any]) -> str:
     started_at = record.get("started_at") or "-"
+    if isinstance(started_at, str) and len(started_at) >= 16:
+        started_at = started_at[5:16]
     job_name = record.get("job_name") or "-"
-    status = record.get("status") or "-"
-    return f"{started_at} | {job_name} | {status}"
+    status = _status_label(record.get("status"))
+    return f"{started_at} · {_job_title(job_name)} · {status}"
+
+
+def _history_record_full_label(record: dict[str, Any]) -> str:
+    started_at = record.get("started_at") or "-"
+    job_name = record.get("job_name") or "-"
+    status = _status_label(record.get("status"))
+    return f"{started_at} | {_job_title(job_name)} | {status}"
 
 
 def _related_log_patterns(job_name: str | None) -> list[str]:
@@ -1192,13 +1511,21 @@ def _render_run_history_inspector(history: list[dict[str, Any]]) -> None:
     st.caption(
         "저장된 실행 기록을 선택해 입력값, 파이프라인 단계, runtime marker, artifact, 관련 로그를 확인합니다."
     )
-    options = { _history_record_label(item): item for item in history }
-    selected_label = st.selectbox(
+    options = list(range(len(history)))
+    st.markdown("**저장된 실행 선택**")
+    selected_idx = st.selectbox(
         "저장된 실행 선택",
-        options=list(options.keys()),
+        options=options,
+        format_func=lambda idx: _history_record_label(history[idx]),
         key="persistent_run_history_inspector",
+        label_visibility="collapsed",
     )
-    selected = options[selected_label]
+    selected = history[selected_idx]
+    selected_label = _history_record_full_label(selected)
+    st.markdown(
+        f'<div class="ingestion-select-caption">현재 선택: {escape(selected_label)}</div>',
+        unsafe_allow_html=True,
+    )
     _render_result_summary(selected)
 
     related_logs = _find_related_logs(selected)
@@ -1811,22 +2138,37 @@ def _render_symbol_source_inputs(
     default_source_mode: str = "Manual",
 ) -> dict[str, Any]:
     default_source_index = SYMBOL_SOURCE_OPTIONS.index(default_source_mode) if default_source_mode in SYMBOL_SOURCE_OPTIONS else 0
+    display_title = _format_symbol_input_title(title)
+    st.markdown(f"**{display_title} 소스**")
     source_mode = st.selectbox(
-        f"{title} Source",
+        f"{display_title} 소스",
         SYMBOL_SOURCE_OPTIONS,
         index=default_source_index,
         key=f"{prefix}_source_mode",
+        format_func=_format_symbol_source_label,
+        label_visibility="collapsed",
+    )
+    st.markdown(
+        f'<div class="ingestion-select-caption">현재 선택: {escape(_format_symbol_source_label(source_mode))}</div>',
+        unsafe_allow_html=True,
     )
 
     manual_symbols: list[str] = []
     if source_mode == "Manual":
         text_key = f"{prefix}_symbols_input"
         preset_applied_key = f"{prefix}_preset_applied"
+        st.markdown(f"**{display_title} 프리셋**")
         preset_name = st.selectbox(
-            f"{title} Preset",
+            f"{display_title} 프리셋",
             list(SYMBOL_PRESETS.keys()),
             index=0,
             key=f"{prefix}_preset",
+            format_func=_format_symbol_preset_label,
+            label_visibility="collapsed",
+        )
+        st.markdown(
+            f'<div class="ingestion-select-caption">현재 프리셋: {escape(_format_symbol_preset_label(preset_name))}</div>',
+            unsafe_allow_html=True,
         )
         if preset_name != "Custom":
             preset_value = SYMBOL_PRESETS.get(preset_name, "")
@@ -1834,7 +2176,7 @@ def _render_symbol_source_inputs(
                 st.session_state[text_key] = preset_value
                 st.session_state[preset_applied_key] = preset_name
             manual_text = st.text_area(
-                title,
+                display_title,
                 key=text_key,
                 disabled=True,
             )
@@ -1844,14 +2186,14 @@ def _render_symbol_source_inputs(
                 st.session_state[text_key] = ""
             st.session_state[preset_applied_key] = preset_name
             manual_text = st.text_area(
-                title,
+                display_title,
                 key=text_key,
             )
             manual_symbols = [s.strip() for s in manual_text.split(",") if s.strip()]
 
     source_result = resolve_symbol_source(source_mode, manual_symbols)
     if source_result["status"] == "ok":
-        st.info(f'{source_result["message"]} Count: {source_result["count"]}')
+        st.info(f'{_format_symbol_source_label(source_mode)} ready. Count: {source_result["count"]}')
         preview = ", ".join(source_result["symbols"][:10])
         if preview:
             st.caption(f"Preview: {preview}")
@@ -1968,7 +2310,7 @@ def _resolve_daily_market_execution_profile(
 
 def _render_ingestion_console() -> None:
     _render_running_banner()
-    _render_runtime_build_indicator()
+    _render_ingestion_runtime_build_indicator()
     prefill_notice = st.session_state.get("ingestion_prefill_notice")
     if prefill_notice:
         st.success(prefill_notice)
@@ -3661,6 +4003,7 @@ def _render_overview_page() -> None:
 
 
 def _render_ingestion_page() -> None:
+    _install_ingestion_responsive_styles()
     st.title("Ingestion")
     st.caption("API / 공식 파일 / provider page에서 데이터를 수집하고 DB에 저장하는 작업 공간입니다.")
     _render_ingestion_console()
