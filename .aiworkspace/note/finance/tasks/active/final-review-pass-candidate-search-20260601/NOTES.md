@@ -5,3 +5,5 @@
 - `GRS Liquid Macro Top2` is the strongest current pass among the sweep because it has materially higher CAGR / Sharpe than GTAA while keeping MDD slightly better.
 - Both GRS and GTAA still carry open review items such as cost / slippage sensitivity, liquidity / operability evidence, tax / account scope, and concentration-related WATCH rows. These are selected-route open reviews, not selected-route blockers under the current Final Review policy.
 - Equal Weight's higher raw performance is not enough because the source still lacks measurable turnover / net cost proof and promotion net policy metadata; this remains the intended regression blocker.
+- For the lower-MDD request, `GRS Macro Top1 MA200` is the cleanest "higher CAGR with lower MDD" candidate. It keeps the same liquid macro universe as the previous GRS Top2 candidate but selects only one asset each rebalance.
+- If top=1 concentration is too aggressive, `GRS QQQ Gold Bonds Top2 MA150` is the lower-drawdown alternative: CAGR remains high at `12.94%`, MDD improves to `-8.81%`, Sharpe is `1.31`, and selected-route gate is ready.

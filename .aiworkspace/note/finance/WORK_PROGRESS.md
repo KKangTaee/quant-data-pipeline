@@ -35,6 +35,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Completed dry-run candidate sweep in `.aiworkspace/note/finance/tasks/active/final-review-pass-candidate-search-20260601/`.
 - Found two fresh Final Review selected-route pass candidates without registry/saved persistence: `GRS Liquid Macro Top2` and `GTAA Default Top3`.
 - Best current candidate is `GRS Liquid Macro Top2` at CAGR `13.31%`, MDD `-17.75%`, Sharpe `1.12`, Practical Validation replay PASS, selected-route preflight ready, and Final Review selected gate Ready.
+- Lower-MDD follow-up found `GRS Macro Top1 MA200` at CAGR `18.03%`, MDD `-12.43%`, Sharpe `1.18`, selected-route ready; lower-drawdown top=2 alternative is `GRS QQQ Gold Bonds Top2 MA150` at CAGR `12.94%`, MDD `-8.81%`, Sharpe `1.31`.
 - Completed `.aiworkspace/note/finance/tasks/active/etf-dynamic-promotion-policy-contract-v1/`.
 - ETF dynamic strategies now carry strict-compatible promotion policy thresholds from Backtest Analysis source contract through execution dispatch, compare overrides, Practical Validation replay, and candidate source snapshots.
 - Fresh `GRS Liquid Macro Top2` verification passed: source has `promotion_min_net_cagr_spread=-0.02`, Practical Validation replay PASS, selected-route preflight `select_ready`, and Final Review selected gate Ready.

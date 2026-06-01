@@ -34,6 +34,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 이 탐색은 dry-run evidence이며 Final Decision V2 row를 저장하지 않았다. 사용자가 원하면 다음 단계는 GRS 후보를 UI 또는 명시적 persistence flow로 Final Review selected row에 저장하는 것이다.
 
+### 2026-06-01 - Lower-MDD GRS candidate is available
+- User request:
+  - 기존 Final Review 통과 후보의 MDD가 높아 보이므로 CAGR은 높게 유지하면서 MDD가 낮은 후보군을 하나 더 찾아 달라고 요청함.
+- Interpreted goal:
+  - 기존 selected-route gate 기준을 유지하고, GRS 변형 후보 중 MDD가 낮아진 fresh source를 dry-run으로 찾는다.
+- Analysis result:
+  - `GRS Macro Top1 MA200`가 같은 liquid macro universe에서 top `1`, MA `200`으로 CAGR `18.03%`, MDD `-12.43%`, Sharpe `1.18`, replay PASS, selected-route preflight ready, Final Review selected gate Ready를 반환했다. top=1 concentration은 tradeoff다.
+  - 더 보수적인 top=2 대안은 `GRS QQQ Gold Bonds Top2 MA150`으로 CAGR `12.94%`, MDD `-8.81%`, Sharpe `1.31`, selected-route gate Ready다.
+- Follow-up:
+  - 둘 다 dry-run evidence이며 Final Decision V2 row를 저장하지 않았다. 최종 선정 전에 top=1 concentration을 받을지, CAGR을 조금 낮추고 MDD를 크게 낮춘 top=2 구조를 택할지 결정해야 한다.
+
 ### 2026-06-01 - ETF dynamic strategy sources should carry promotion policy thresholds
 - User request:
   - GRS Liquid Macro Top2처럼 실제 성과와 net cost / turnover proof가 충분한 ETF 동적 전략 후보가 `promotion_min_net_cagr_spread` 등 source contract 누락 때문에 Practical Validation selected-route preflight와 Final Review selected gate에서 막히는 문제를 해결해 달라고 요청함.
