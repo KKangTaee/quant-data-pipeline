@@ -23,13 +23,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Portfolio Flow Redesign V1 is implementation complete. Selected Dashboard now opens with a portfolio card shelf, saves per-portfolio strategy slots, separates `전략 적용` from `모니터 시나리오 실행`, and shows portfolio-level monitoring scenario / rebalance summary before lower evidence detail; no approval / order / account sync / auto rebalance behavior was added.
+  - Selected Dashboard Product Polish V1 is implementation complete. Selected Dashboard sections 1~3 now use fixed-height portfolio cards, collapsed portfolio management, selected portfolio command band, compact strategy board, and a portfolio-wide monitoring scenario cockpit; no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-01 - Selected Dashboard Product Polish V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-product-polish-v1/`.
+- Sections 1~3 now render as fixed-height portfolio shelf -> selected portfolio command band -> compact strategy board -> portfolio-wide scenario cockpit.
+- Delete controls moved into collapsed `포트폴리오 관리`; detailed strategy / performance tables moved into expanders.
+- Browser QA screenshot `selected-dashboard-product-polish-v1-qa.png`, py_compile, focused Selected Portfolio contracts, and `git diff --check` passed.
+- Section 4 Monitoring Signals / evidence was intentionally left unchanged; no DB schema, Final Review row, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
 
 ### 2026-06-01 - Selected Dashboard Portfolio Flow Redesign V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`.

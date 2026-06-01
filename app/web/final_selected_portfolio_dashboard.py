@@ -266,6 +266,380 @@ def _dashboard_status_tone(status: str) -> str:
     return "neutral"
 
 
+def _clip_text(value: Any, *, limit: int = 120, default: str = "-") -> str:
+    text = str(value or "").strip()
+    if not text:
+        return default
+    return text if len(text) <= limit else f"{text[: max(limit - 1, 0)].rstrip()}..."
+
+
+def _inject_dashboard_product_styles() -> None:
+    st.markdown(
+        """
+        <style>
+          .fspd-shelf-card {
+            min-height: 178px;
+            height: 178px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+          }
+          .fspd-shelf-card-active {
+            border-color: rgba(15, 118, 110, 0.55);
+            box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.16), 0 1px 3px rgba(15, 23, 42, 0.08);
+          }
+          .fspd-shelf-card-create {
+            border-style: dashed;
+            background: linear-gradient(180deg, rgba(240,253,250,0.82), rgba(248,250,252,0.96));
+          }
+          .fspd-card-kicker {
+            font-size: 0.72rem;
+            font-weight: 760;
+            color: #0f766e;
+            line-height: 1.2;
+            text-transform: uppercase;
+          }
+          .fspd-card-title {
+            margin-top: 0.35rem;
+            font-size: 1rem;
+            font-weight: 780;
+            line-height: 1.25;
+            color: #111827;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          .fspd-card-desc {
+            margin-top: 0.35rem;
+            min-height: 2.4rem;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            color: #64748b;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          .fspd-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+            margin-top: 0.7rem;
+          }
+          .fspd-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            min-height: 24px;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: #0f172a;
+            font-size: 0.76rem;
+            font-weight: 720;
+            line-height: 1.2;
+            white-space: nowrap;
+          }
+          .fspd-chip-positive { background: #ccfbf1; color: #134e4a; }
+          .fspd-chip-warning { background: #fef3c7; color: #78350f; }
+          .fspd-chip-neutral { background: #e2e8f0; color: #334155; }
+          .fspd-command-band,
+          .fspd-scenario-cockpit,
+          .fspd-add-panel,
+          .fspd-strategy-card {
+            border: 1px solid rgba(148, 163, 184, 0.32);
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+          }
+          .fspd-command-band {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0.35rem 0 0.9rem;
+          }
+          .fspd-command-title {
+            font-size: 1.15rem;
+            font-weight: 820;
+            line-height: 1.25;
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
+          .fspd-command-desc {
+            margin-top: 0.45rem;
+            color: #64748b;
+            font-size: 0.86rem;
+            line-height: 1.45;
+          }
+          .fspd-command-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+          }
+          .fspd-mini-metric {
+            padding: 0.55rem 0.65rem;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+          }
+          .fspd-mini-metric span {
+            display: block;
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 720;
+          }
+          .fspd-mini-metric strong {
+            display: block;
+            margin-top: 0.2rem;
+            color: #111827;
+            font-size: 0.95rem;
+            line-height: 1.2;
+          }
+          .fspd-add-panel {
+            padding: 0.95rem;
+            margin: 0.45rem 0 0.9rem;
+            background: #f8fafc;
+          }
+          .fspd-section-label {
+            margin: 0.5rem 0 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #111827;
+          }
+          .fspd-section-help {
+            margin: 0 0 0.5rem;
+            color: #64748b;
+            font-size: 0.82rem;
+            line-height: 1.35;
+          }
+          .fspd-strategy-card {
+            padding: 0.9rem 1rem;
+            margin: 0.6rem 0 0.25rem;
+          }
+          .fspd-strategy-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+          }
+          .fspd-strategy-title {
+            font-size: 0.98rem;
+            font-weight: 820;
+            line-height: 1.25;
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
+          .fspd-strategy-subtitle {
+            margin-top: 0.25rem;
+            color: #64748b;
+            font-size: 0.8rem;
+            line-height: 1.35;
+          }
+          .fspd-strategy-meta {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.45rem;
+            margin-top: 0.8rem;
+          }
+          .fspd-scenario-cockpit {
+            display: grid;
+            grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.15fr);
+            gap: 1rem;
+            padding: 1rem;
+            margin: 0.45rem 0 0.9rem;
+          }
+          .fspd-scenario-primary {
+            padding: 0.9rem;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #f8fafc;
+          }
+          .fspd-scenario-primary span {
+            display: block;
+            color: #99f6e4;
+            font-size: 0.76rem;
+            font-weight: 760;
+          }
+          .fspd-scenario-primary strong {
+            display: block;
+            margin-top: 0.4rem;
+            font-size: 1.55rem;
+            line-height: 1.15;
+          }
+          .fspd-scenario-primary p {
+            margin: 0.45rem 0 0;
+            color: #cbd5e1;
+            font-size: 0.84rem;
+            line-height: 1.45;
+          }
+          .fspd-scenario-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.55rem;
+          }
+          .fspd-performance-board {
+            display: grid;
+            gap: 0.5rem;
+            margin: 0.35rem 0 0.85rem;
+          }
+          .fspd-performance-row {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(90px, 0.45fr));
+            gap: 0.55rem;
+            align-items: center;
+            padding: 0.7rem 0.8rem;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 8px;
+            background: #ffffff;
+          }
+          .fspd-row-title {
+            font-weight: 780;
+            line-height: 1.25;
+            color: #111827;
+            overflow-wrap: anywhere;
+          }
+          .fspd-row-sub {
+            margin-top: 0.18rem;
+            color: #64748b;
+            font-size: 0.78rem;
+          }
+          @media (max-width: 900px) {
+            .fspd-command-band,
+            .fspd-scenario-cockpit,
+            .fspd-performance-row {
+              grid-template-columns: 1fr;
+            }
+            .fspd-strategy-meta,
+            .fspd-scenario-metrics,
+            .fspd-command-metrics {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+          @media (prefers-color-scheme: dark) {
+            .fspd-shelf-card,
+            .fspd-command-band,
+            .fspd-add-panel,
+            .fspd-strategy-card,
+            .fspd-scenario-cockpit,
+            .fspd-performance-row {
+              background: #111827;
+              border-color: rgba(148, 163, 184, 0.28);
+              box-shadow: none;
+            }
+            .fspd-shelf-card-create,
+            .fspd-add-panel {
+              background: #0f172a;
+            }
+            .fspd-card-title,
+            .fspd-command-title,
+            .fspd-section-label,
+            .fspd-strategy-title,
+            .fspd-row-title,
+            .fspd-mini-metric strong {
+              color: #f8fafc;
+            }
+            .fspd-card-desc,
+            .fspd-command-desc,
+            .fspd-section-help,
+            .fspd-strategy-subtitle,
+            .fspd-row-sub,
+            .fspd-mini-metric span {
+              color: #94a3b8;
+            }
+            .fspd-mini-metric {
+              background: #0f172a;
+              border-color: rgba(148, 163, 184, 0.24);
+            }
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _chip(label: str, value: Any, *, tone: str = "neutral") -> str:
+    return (
+        f'<span class="fspd-chip fspd-chip-{escape(tone)}">'
+        f"{escape(label)} <strong>{escape(str(value if value is not None else '-'))}</strong>"
+        "</span>"
+    )
+
+
+def _mini_metric(label: str, value: Any) -> str:
+    return (
+        '<div class="fspd-mini-metric">'
+        f"<span>{escape(label)}</span>"
+        f"<strong>{escape(str(value if value is not None else '-'))}</strong>"
+        "</div>"
+    )
+
+
+def _portfolio_card_html(portfolio: dict[str, Any], *, is_active: bool = False) -> str:
+    status = str(portfolio.get("dashboard_status") or "Empty")
+    classes = "fspd-shelf-card fspd-shelf-card-active" if is_active else "fspd-shelf-card"
+    return (
+        f'<div class="{classes}">'
+        "<div>"
+        f'<div class="fspd-card-kicker">{"Selected" if is_active else "Portfolio"}</div>'
+        f'<div class="fspd-card-title">{escape(_clip_text(portfolio.get("name"), limit=72))}</div>'
+        f'<div class="fspd-card-desc">{escape(_clip_text(portfolio.get("description"), limit=96, default="설명 없음"))}</div>'
+        "</div>"
+        '<div class="fspd-chip-row">'
+        f'{_chip("Status", status, tone=_dashboard_status_tone(status))}'
+        f'{_chip("Strategies", portfolio.get("strategy_count", 0))}'
+        f'{_chip("Capital", _format_money(portfolio.get("virtual_capital_total")))}'
+        "</div>"
+        "</div>"
+    )
+
+
+def _create_portfolio_card_html() -> str:
+    return (
+        '<div class="fspd-shelf-card fspd-shelf-card-create">'
+        "<div>"
+        '<div class="fspd-card-kicker">New</div>'
+        '<div class="fspd-card-title">+ 새 포트폴리오</div>'
+        '<div class="fspd-card-desc">이름과 메모만 저장하고, 전략은 다음 단계에서 추가합니다.</div>'
+        "</div>"
+        '<div class="fspd-chip-row">'
+        f'{_chip("Setup", "사용자 저장")}'
+        "</div>"
+        "</div>"
+    )
+
+
+def _render_portfolio_command_band(portfolio: dict[str, Any]) -> None:
+    status = str(portfolio.get("dashboard_status") or "Empty")
+    html = (
+        '<div class="fspd-command-band">'
+        "<div>"
+        f'<div class="fspd-command-title">{escape(_clip_text(portfolio.get("name"), limit=120))}</div>'
+        f'<div class="fspd-command-desc">{escape(_clip_text(portfolio.get("description"), limit=180, default="이 포트폴리오에 Final Review selected 전략을 담아 모니터링합니다."))}</div>'
+        '<div class="fspd-chip-row">'
+        f'{_chip("Status", status, tone=_dashboard_status_tone(status))}'
+        f'{_chip("Source", "Final Review read-only")}'
+        f'{_chip("Trading", "Disabled")}'
+        "</div>"
+        "</div>"
+        '<div class="fspd-command-metrics">'
+        f'{_mini_metric("Strategies", portfolio.get("strategy_count", 0))}'
+        f'{_mini_metric("Total Balance", _format_money(portfolio.get("virtual_capital_total")))}'
+        f'{_mini_metric("Complete Slots", portfolio.get("complete_strategy_slot_count", 0))}'
+        f'{_mini_metric("Needs Review", portfolio.get("incomplete_strategy_slot_count", 0))}'
+        "</div>"
+        "</div>"
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
 def _render_info_card_grid(cards: list[dict[str, Any]], *, min_width: int = 210) -> None:
     html_cards: list[str] = []
     for card in cards:
@@ -557,6 +931,46 @@ def _selected_strategy_rows_for_portfolio(
     ]
 
 
+def _slot_blockers_for_row(row: dict[str, Any]) -> list[str]:
+    blockers = [str(item) for item in list(row.get("slot_blockers") or []) if str(item)]
+    if not _slot_effective_start(row):
+        blockers.append("시작 날짜가 필요합니다.")
+    if not _slot_effective_end(row):
+        blockers.append("종료 날짜 또는 latest market date가 필요합니다.")
+    if _slot_effective_capital(row) <= 0:
+        blockers.append("투자금 / balance는 0보다 커야 합니다.")
+    return blockers
+
+
+def _strategy_card_html(row: dict[str, Any], index: int) -> str:
+    slot = _slot_for_row(row)
+    blockers = _slot_blockers_for_row(row)
+    start = _slot_effective_start(row) or "-"
+    end = "Latest" if bool(slot.get("use_latest_end", True)) else (_slot_effective_end(row) or "-")
+    capital = _format_money(_slot_effective_capital(row))
+    input_status = "Ready" if not blockers else "Needs Input"
+    status_tone = "positive" if not blockers else "warning"
+    result = _latest_recheck_result(row)
+    result_status = _strategy_result_status(row, result)
+    return (
+        '<div class="fspd-strategy-card">'
+        '<div class="fspd-strategy-card-header">'
+        "<div>"
+        f'<div class="fspd-strategy-title">{index + 1}. {escape(_clip_text(row.get("source_title") or row.get("decision_id"), limit=120))}</div>'
+        f'<div class="fspd-strategy-subtitle">{escape(_clip_text(row.get("decision_id"), limit=120, default="Final Review selected strategy"))}</div>'
+        "</div>"
+        f'{_chip("Input", input_status, tone=status_tone)}'
+        "</div>"
+        '<div class="fspd-strategy-meta">'
+        f'{_mini_metric("Start", start)}'
+        f'{_mini_metric("End", end)}'
+        f'{_mini_metric("Balance", capital)}'
+        f'{_mini_metric("Scenario", result_status)}'
+        "</div>"
+        "</div>"
+    )
+
+
 def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, Any] | None:
     st.markdown("#### 1. 나의 포트폴리오")
     current_id = st.session_state.get("selected_dashboard_active_portfolio_id")
@@ -566,48 +980,29 @@ def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, 
     shelf_count = min(len(portfolios) + 1, 4) or 1
     shelf_cols = st.columns(shelf_count, gap="small")
     with shelf_cols[0]:
-        with st.container(border=True):
-            st.markdown("##### + 새 포트폴리오")
-            st.caption("이름과 메모만 저장")
-            if st.button(
-                "+ 새 포트폴리오",
-                key="selected_dashboard_open_create_portfolio",
-                type="primary" if not portfolios else "secondary",
-                width="stretch",
-            ):
-                st.session_state["selected_dashboard_show_create_portfolio"] = True
-                st.rerun()
+        st.markdown(_create_portfolio_card_html(), unsafe_allow_html=True)
+        if st.button(
+            "+ 새 포트폴리오",
+            key="selected_dashboard_open_create_portfolio",
+            type="primary" if not portfolios else "secondary",
+            width="stretch",
+        ):
+            st.session_state["selected_dashboard_show_create_portfolio"] = True
+            st.rerun()
 
     for index, portfolio in enumerate(portfolios[: shelf_count - 1], start=1):
         with shelf_cols[index]:
             portfolio_id = str(portfolio.get("portfolio_id") or "")
             is_active = selected_portfolio is not None and str(selected_portfolio.get("portfolio_id") or "") == portfolio_id
-            with st.container(border=True):
-                st.markdown(f"##### {portfolio.get('name') or '-'}")
-                st.caption(str(portfolio.get("description") or ""))
-                render_badge_strip(
-                    [
-                        {
-                            "label": "Status",
-                            "value": portfolio.get("dashboard_status") or "Empty",
-                            "tone": _dashboard_status_tone(str(portfolio.get("dashboard_status") or "")),
-                        },
-                        {"label": "Strategies", "value": portfolio.get("strategy_count", 0), "tone": "neutral"},
-                        {
-                            "label": "Capital",
-                            "value": _format_money(portfolio.get("virtual_capital_total")),
-                            "tone": "positive" if float(portfolio.get("virtual_capital_total") or 0.0) else "neutral",
-                        },
-                    ]
-                )
-                if st.button(
-                    "선택됨" if is_active else "선택",
-                    key=f"selected_dashboard_pick_card_{portfolio_id}",
-                    disabled=is_active,
-                    width="stretch",
-                ):
-                    st.session_state["selected_dashboard_active_portfolio_id"] = portfolio_id
-                    st.rerun()
+            st.markdown(_portfolio_card_html(portfolio, is_active=is_active), unsafe_allow_html=True)
+            if st.button(
+                "선택됨" if is_active else "선택",
+                key=f"selected_dashboard_pick_card_{portfolio_id}",
+                disabled=is_active,
+                width="stretch",
+            ):
+                st.session_state["selected_dashboard_active_portfolio_id"] = portfolio_id
+                st.rerun()
 
     if len(portfolios) > shelf_count - 1:
         labels = [selected_dashboard_portfolio_label(portfolio) for portfolio in portfolios]
@@ -654,32 +1049,33 @@ def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, 
     ) or selected_portfolio or portfolios[0]
     st.session_state["selected_dashboard_active_portfolio_id"] = selected_portfolio.get("portfolio_id")
 
-    with st.expander("My portfolio list", expanded=False):
+    with st.expander("전체 포트폴리오 목록", expanded=False):
         st.dataframe(build_selected_dashboard_portfolio_table(portfolios), width="stretch", hide_index=True)
 
-    delete_cols = st.columns([0.66, 0.20, 0.14], gap="small")
-    with delete_cols[0]:
-        st.caption(
-            f"선택된 포트폴리오: `{selected_portfolio.get('portfolio_id')}` / "
-            "삭제는 soft delete로 처리됩니다."
-        )
-    with delete_cols[1]:
-        confirm_delete = st.checkbox(
-            "삭제 확인",
-            key=f"selected_dashboard_confirm_delete_{selected_portfolio.get('portfolio_id')}",
-        )
-    with delete_cols[2]:
-        if st.button(
-            "Delete",
-            disabled=not confirm_delete,
-            key=f"selected_dashboard_delete_portfolio_{selected_portfolio.get('portfolio_id')}",
-            width="stretch",
-        ):
-            if delete_selected_dashboard_portfolio(str(selected_portfolio.get("portfolio_id") or "")):
-                st.session_state.pop("selected_dashboard_active_portfolio_id", None)
-                st.success("포트폴리오를 삭제했습니다.")
-                st.rerun()
-            st.warning("삭제할 포트폴리오를 찾지 못했습니다.")
+    with st.expander("포트폴리오 관리", expanded=False):
+        manage_cols = st.columns([0.58, 0.22, 0.20], gap="small")
+        with manage_cols[0]:
+            st.caption(
+                f"`{selected_portfolio.get('name') or '-'}`는 삭제 시 목록에서 숨겨지며, "
+                "Final Review 원본 판단 row는 수정하지 않습니다."
+            )
+        with manage_cols[1]:
+            confirm_delete = st.checkbox(
+                "삭제 확인",
+                key=f"selected_dashboard_confirm_delete_{selected_portfolio.get('portfolio_id')}",
+            )
+        with manage_cols[2]:
+            if st.button(
+                "포트폴리오 삭제",
+                disabled=not confirm_delete,
+                key=f"selected_dashboard_delete_portfolio_{selected_portfolio.get('portfolio_id')}",
+                width="stretch",
+            ):
+                if delete_selected_dashboard_portfolio(str(selected_portfolio.get("portfolio_id") or "")):
+                    st.session_state.pop("selected_dashboard_active_portfolio_id", None)
+                    st.success("포트폴리오를 삭제했습니다.")
+                    st.rerun()
+                st.warning("삭제할 포트폴리오를 찾지 못했습니다.")
     return selected_portfolio
 
 
@@ -688,99 +1084,88 @@ def _render_strategy_selection_manager(
     dashboard_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     st.markdown("#### 2. 포트폴리오 상세 / 전략 구성")
-    render_badge_strip(
-        [
-            {"label": "Portfolio", "value": portfolio.get("name") or "-", "tone": "neutral"},
-            {
-                "label": "Status",
-                "value": portfolio.get("dashboard_status") or "Empty",
-                "tone": _dashboard_status_tone(str(portfolio.get("dashboard_status") or "")),
-            },
-            {"label": "Strategies", "value": portfolio.get("strategy_count", 0), "tone": "neutral"},
-            {
-                "label": "Total Balance",
-                "value": _format_money(portfolio.get("virtual_capital_total")),
-                "tone": "positive" if float(portfolio.get("virtual_capital_total") or 0.0) else "neutral",
-            },
-            {"label": "Final Review Source", "value": "Read Only", "tone": "neutral"},
-        ]
-    )
-    if portfolio.get("description"):
-        st.caption(str(portfolio.get("description") or ""))
+    _render_portfolio_command_band(portfolio)
     selected_ids = [str(item) for item in list(portfolio.get("selected_decision_ids") or [])]
     selected_rows = _selected_strategy_rows_for_portfolio(portfolio, dashboard_rows)
-    with st.container(border=True):
-        st.markdown("##### + 전략 추가")
-        available_rows = [
-            row for row in dashboard_rows if str(row.get("decision_id") or "") not in set(selected_ids)
-        ]
-        add_cols = st.columns([0.58, 0.18, 0.24], gap="small")
-        with add_cols[0]:
-            if available_rows:
-                add_labels = [final_selected_portfolio_label(row) for row in available_rows]
-                add_label = st.selectbox(
-                    "전략 선택",
-                    options=add_labels,
-                    key=f"selected_dashboard_add_strategy_{portfolio.get('portfolio_id')}",
-                )
-                add_row = available_rows[add_labels.index(add_label)]
-            else:
-                add_row = None
-                st.selectbox(
-                    "전략 선택",
-                    options=["Final Review selected 후보 없음"],
-                    disabled=True,
-                    key=f"selected_dashboard_add_strategy_empty_{portfolio.get('portfolio_id')}",
-                )
-        with add_cols[1]:
-            add_capital = st.number_input(
-                "Balance",
-                min_value=1_000.0,
-                value=10_000.0,
-                step=1_000.0,
-                key=f"selected_dashboard_add_strategy_capital_{portfolio.get('portfolio_id')}",
-                disabled=add_row is None,
+    st.markdown(
+        '<div class="fspd-add-panel">'
+        '<div class="fspd-section-label">+ 전략 추가</div>'
+        '<div class="fspd-section-help">Final Review selected 후보를 이 포트폴리오의 모니터링 전략 slot으로 추가합니다.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    available_rows = [
+        row for row in dashboard_rows if str(row.get("decision_id") or "") not in set(selected_ids)
+    ]
+    add_cols = st.columns([0.62, 0.16, 0.22], gap="small")
+    with add_cols[0]:
+        if available_rows:
+            add_labels = [final_selected_portfolio_label(row) for row in available_rows]
+            add_label = st.selectbox(
+                "전략 선택",
+                options=add_labels,
+                key=f"selected_dashboard_add_strategy_{portfolio.get('portfolio_id')}",
             )
-        with add_cols[2]:
-            if st.button(
-                "+ 전략 추가",
-                disabled=add_row is None,
-                key=f"selected_dashboard_add_strategy_button_{portfolio.get('portfolio_id')}",
-                type="primary",
-                width="stretch",
-            ):
-                defaults = build_selected_portfolio_recheck_defaults(add_row or {})
-                result = add_selected_dashboard_portfolio_strategy(
-                    str(portfolio.get("portfolio_id") or ""),
-                    str(add_row.get("decision_id") or ""),
-                    start=str(defaults.get("default_start") or defaults.get("baseline_start") or ""),
-                    use_latest_end=True,
-                    initial_capital=float(add_capital),
-                )
-                if result.get("status") == "added":
-                    st.success("전략을 추가했습니다.")
-                    st.rerun()
-                elif result.get("status") == "duplicate":
-                    st.info("이미 추가된 전략입니다.")
-                else:
-                    st.warning(str(result.get("message") or "전략을 추가하지 못했습니다."))
-        if not dashboard_rows:
-            st.info("Final Review에서 모니터링 후보 선정이 필요합니다.")
-        elif not available_rows:
-            st.caption("현재 포트폴리오에 추가 가능한 selected 후보가 없습니다.")
-        with st.expander("Final Review selected 후보 풀", expanded=False):
-            pool_df = build_selected_dashboard_strategy_pool_table(
-                dashboard_rows,
-                selected_decision_ids=selected_ids,
+            add_row = available_rows[add_labels.index(add_label)]
+        else:
+            add_row = None
+            st.selectbox(
+                "전략 선택",
+                options=["Final Review selected 후보 없음"],
+                disabled=True,
+                key=f"selected_dashboard_add_strategy_empty_{portfolio.get('portfolio_id')}",
             )
-            if pool_df.empty:
-                st.info("Final Review selected 후보가 없습니다.")
+    with add_cols[1]:
+        add_capital = st.number_input(
+            "Balance",
+            min_value=1_000.0,
+            value=10_000.0,
+            step=1_000.0,
+            key=f"selected_dashboard_add_strategy_capital_{portfolio.get('portfolio_id')}",
+            disabled=add_row is None,
+        )
+    with add_cols[2]:
+        if st.button(
+            "+ 전략 추가",
+            disabled=add_row is None,
+            key=f"selected_dashboard_add_strategy_button_{portfolio.get('portfolio_id')}",
+            type="primary",
+            width="stretch",
+        ):
+            defaults = build_selected_portfolio_recheck_defaults(add_row or {})
+            result = add_selected_dashboard_portfolio_strategy(
+                str(portfolio.get("portfolio_id") or ""),
+                str(add_row.get("decision_id") or ""),
+                start=str(defaults.get("default_start") or defaults.get("baseline_start") or ""),
+                use_latest_end=True,
+                initial_capital=float(add_capital),
+            )
+            if result.get("status") == "added":
+                st.success("전략을 추가했습니다.")
+                st.rerun()
+            elif result.get("status") == "duplicate":
+                st.info("이미 추가된 전략입니다.")
             else:
-                st.dataframe(pool_df, width="stretch", hide_index=True)
+                st.warning(str(result.get("message") or "전략을 추가하지 못했습니다."))
+    if not dashboard_rows:
+        st.info("Final Review에서 모니터링 후보 선정이 필요합니다.")
+    elif not available_rows:
+        st.caption("현재 포트폴리오에 추가 가능한 selected 후보가 없습니다.")
+    with st.expander("Final Review selected 후보 풀", expanded=False):
+        pool_df = build_selected_dashboard_strategy_pool_table(
+            dashboard_rows,
+            selected_decision_ids=selected_ids,
+        )
+        if pool_df.empty:
+            st.info("Final Review selected 후보가 없습니다.")
+        else:
+            st.dataframe(pool_df, width="stretch", hide_index=True)
 
     if selected_rows:
-        st.markdown("##### 전략 리스트")
-        st.dataframe(build_selected_dashboard_portfolio_strategy_table(selected_rows), width="stretch", hide_index=True)
+        st.markdown("##### 전략 보드")
+        st.caption("각 전략은 이 포트폴리오의 독립 slot입니다. 설정을 적용한 뒤 3번에서 포트폴리오 전체 시나리오를 실행합니다.")
+        with st.expander("전략 설정 테이블", expanded=False):
+            st.dataframe(build_selected_dashboard_portfolio_strategy_table(selected_rows), width="stretch", hide_index=True)
         for index, row in enumerate(selected_rows):
             decision_id = str(row.get("decision_id") or f"decision_{index}")
             slot = _slot_for_row(row)
@@ -788,10 +1173,11 @@ def _render_strategy_selection_manager(
             default_start = _coerce_date(slot.get("start") or defaults.get("default_start"), date(2024, 1, 1))
             default_end = _coerce_date(slot.get("end") or defaults.get("default_end"), date.today())
             use_latest_end_default = bool(slot.get("use_latest_end", True))
-            with st.container(border=True):
-                st.markdown(f"##### {row.get('source_title') or decision_id}")
-                if row.get("slot_blockers"):
-                    st.warning(" / ".join(str(item) for item in list(row.get("slot_blockers") or [])))
+            st.markdown(_strategy_card_html(row, index), unsafe_allow_html=True)
+            with st.expander(f"설정 편집 / 삭제 - {row.get('source_title') or decision_id}", expanded=False):
+                blockers = _slot_blockers_for_row(row)
+                if blockers:
+                    st.warning(" / ".join(blockers))
                 with st.form(f"selected_dashboard_strategy_slot_form_{portfolio.get('portfolio_id')}_{decision_id}"):
                     form_cols = st.columns([0.20, 0.20, 0.18, 0.27, 0.15], gap="small")
                     with form_cols[0]:
@@ -871,6 +1257,7 @@ def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict
         for row in strategy_rows
         if _latest_recheck_result(row).get("status") in {"ok", "partial"}
     ]
+    configured_capital = sum(_slot_effective_capital(row) for row in strategy_rows)
     invested = sum(float(result.get("initial_capital") or 0.0) for result in results)
     current_value = sum(float(dict(result.get("portfolio_summary") or {}).get("end_balance") or 0.0) for result in results)
     profit = current_value - invested
@@ -900,6 +1287,7 @@ def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict
     return {
         "results": results,
         "curve": curve,
+        "configured_capital": configured_capital,
         "invested": invested,
         "current_value": current_value,
         "profit": profit,
@@ -909,6 +1297,87 @@ def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict
         "benchmark_spread": benchmark_spread,
         "as_of": as_of,
     }
+
+
+def _scenario_value(value: Any, *, completed: bool, formatter: str = "money") -> str:
+    if not completed:
+        return "-"
+    if formatter == "pct":
+        return _format_pct(value)
+    if formatter == "signed_money":
+        return _format_signed_money(value)
+    return _format_money(value)
+
+
+def _render_scenario_cockpit(summary: dict[str, Any], *, strategy_count: int) -> None:
+    completed = len(summary.get("results") or [])
+    all_complete = completed == strategy_count and strategy_count > 0
+    partial = 0 < completed < strategy_count
+    primary_status = "전체 집계 완료" if all_complete else ("부분 집계" if partial else "실행 전")
+    primary_detail = (
+        "선택된 포트폴리오 전체 strategy slot의 scenario 결과를 balance 기준으로 합산합니다."
+        if not partial
+        else "일부 전략만 실행되어 현재 값은 포트폴리오 전체가 아닌 부분 집계입니다."
+    )
+    completed_flag = completed > 0
+    cagr_mdd_value = (
+        f"{_scenario_value(summary.get('cagr'), completed=completed_flag, formatter='pct')} / "
+        f"{_scenario_value(summary.get('mdd'), completed=completed_flag, formatter='pct')}"
+    )
+    html = (
+        '<div class="fspd-scenario-cockpit">'
+        '<div class="fspd-scenario-primary">'
+        '<span>Portfolio-wide Monitoring Scenario</span>'
+        f"<strong>{escape(primary_status)}</strong>"
+        f"<p>{escape(primary_detail)}</p>"
+        "</div>"
+        '<div class="fspd-scenario-metrics">'
+        f'{_mini_metric("실행 상태", f"{completed}/{strategy_count}")}'
+        f'{_mini_metric("설정 투자금", _format_money(summary.get("configured_capital")))}'
+        f'{_mini_metric("평가 금액", _scenario_value(summary.get("current_value"), completed=completed_flag))}'
+        f'{_mini_metric("손익", _scenario_value(summary.get("profit"), completed=completed_flag, formatter="signed_money"))}'
+        f'{_mini_metric("총 수익률", _scenario_value(summary.get("total_return"), completed=completed_flag, formatter="pct"))}'
+        f'{_mini_metric("CAGR / MDD", cagr_mdd_value)}'
+        "</div>"
+        "</div>"
+    )
+    st.markdown(html, unsafe_allow_html=True)
+    if completed == 0:
+        st.info("이 영역은 포트폴리오 전체 성과를 보여줍니다. `포트폴리오 시나리오 실행` 또는 각 전략의 `모니터 시나리오 실행`을 누르면 합산 결과가 채워집니다.")
+    elif partial:
+        st.warning("일부 전략만 실행된 부분 집계입니다. 전체 포트폴리오 성과로 보려면 남은 전략도 실행하세요.")
+
+
+def _render_strategy_performance_board(strategy_rows: list[dict[str, Any]]) -> None:
+    rows: list[str] = []
+    for row in strategy_rows:
+        result = _latest_recheck_result(row)
+        summary = dict(result.get("portfolio_summary") or {})
+        status = _strategy_result_status(row, result)
+        rows.append(
+            '<div class="fspd-performance-row">'
+            "<div>"
+            f'<div class="fspd-row-title">{escape(_clip_text(row.get("source_title") or row.get("decision_id"), limit=90))}</div>'
+            f'<div class="fspd-row-sub">{escape(status)}</div>'
+            "</div>"
+            f'{_mini_metric("Invested", _format_money(result.get("initial_capital") or row.get("slot_initial_capital")))}'
+            f'{_mini_metric("Value", _format_money(summary.get("end_balance")))}'
+            f'{_mini_metric("Return", _format_pct(summary.get("total_return")))}'
+            f'{_mini_metric("MDD", _format_pct(summary.get("mdd")))}'
+            "</div>"
+        )
+    st.markdown(f'<div class="fspd-performance-board">{"".join(rows)}</div>', unsafe_allow_html=True)
+
+
+def _run_strategy_recheck(row: dict[str, Any]) -> dict[str, Any]:
+    result = build_selected_portfolio_performance_recheck(
+        row,
+        start=_slot_effective_start(row),
+        end=_slot_effective_end(row),
+        initial_capital=float(_slot_effective_capital(row)),
+    )
+    st.session_state[f"selected_portfolio_recheck_result_{_decision_key(row)}"] = result
+    return result
 
 
 def _strategy_result_status(row: dict[str, Any], result: dict[str, Any]) -> str:
@@ -1005,20 +1474,29 @@ def _build_rebalance_table(strategy_rows: list[dict[str, Any]]) -> pd.DataFrame:
 def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -> None:
     summary = _portfolio_summary_from_results(strategy_rows)
     completed = len(summary["results"])
-    _render_info_card_grid(
-        [
-            {"title": "총 투입금", "value": _format_money(summary.get("invested")), "detail": f"{completed}/{len(strategy_rows)} strategies run", "tone": "neutral"},
-            {"title": "현재 평가금액", "value": _format_money(summary.get("current_value")), "detail": f"기준일 {summary.get('as_of')}", "tone": "positive" if completed else "neutral"},
-            {"title": "총 손익", "value": _format_signed_money(summary.get("profit")), "detail": "scenario session 기준", "tone": "positive" if float(summary.get("profit") or 0.0) >= 0 and completed else "warning"},
-            {"title": "총 수익률", "value": _format_pct(summary.get("total_return")), "detail": "현재 가치 / 투입금", "tone": "positive" if float(summary.get("total_return") or 0.0) >= 0 and completed else "warning"},
-            {"title": "CAGR", "value": _format_pct(summary.get("cagr")), "detail": "combined value curve", "tone": "neutral"},
-            {"title": "MDD", "value": _format_pct(summary.get("mdd")), "detail": "combined value curve", "tone": "warning"},
-            {"title": "Benchmark 대비", "value": _format_pct(summary.get("benchmark_spread")), "detail": "전략별 spread 평균", "tone": "positive" if float(summary.get("benchmark_spread") or 0.0) >= 0 and completed else "warning"},
-        ],
-        min_width=150,
-    )
-    if completed == 0:
-        st.info("전략 설정을 적용한 뒤 각 전략 탭에서 `모니터 시나리오 실행`을 누르면 포트폴리오 요약이 채워집니다.")
+    runnable_rows = [row for row in strategy_rows if not _slot_blockers_for_row(row)]
+    action_cols = st.columns([0.66, 0.34], gap="small")
+    with action_cols[0]:
+        st.caption(
+            "선택된 포트폴리오 전체 strategy slot을 balance 기준으로 합산합니다. "
+            "개별 전략 탭은 상세 재검증과 evidence 확인용입니다."
+        )
+    with action_cols[1]:
+        if st.button(
+            "포트폴리오 시나리오 실행",
+            key="selected_dashboard_run_portfolio_scenarios",
+            type="primary",
+            disabled=not runnable_rows,
+            width="stretch",
+        ):
+            with st.spinner("포트폴리오 전략 시나리오를 순서대로 실행하는 중입니다..."):
+                for row in runnable_rows:
+                    _run_strategy_recheck(row)
+            st.success(f"{len(runnable_rows)}개 전략 시나리오를 실행했습니다.")
+            st.rerun()
+    _render_scenario_cockpit(summary, strategy_count=len(strategy_rows))
+    if len(runnable_rows) < len(strategy_rows):
+        st.warning(f"{len(strategy_rows) - len(runnable_rows)}개 전략은 시작일 / 종료일 / balance 설정 보강이 필요합니다.")
     curve = summary.get("curve")
     if isinstance(curve, pd.DataFrame) and not curve.empty:
         chart_view = curve[["Date", "Portfolio Value"]].copy()
@@ -1026,7 +1504,9 @@ def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -
         chart_view = chart_view.dropna(subset=["Date"]).set_index("Date")
         st.line_chart(chart_view)
     st.markdown("##### 전략별 성과")
-    st.dataframe(_build_strategy_performance_table(strategy_rows), width="stretch", hide_index=True)
+    _render_strategy_performance_board(strategy_rows)
+    with st.expander("전략별 성과 테이블", expanded=False):
+        st.dataframe(_build_strategy_performance_table(strategy_rows), width="stretch", hide_index=True)
     with st.expander("리밸런싱 정보", expanded=completed > 0):
         rebalance_df = _build_rebalance_table(strategy_rows)
         if rebalance_df.empty:
@@ -1073,6 +1553,7 @@ def _render_dashboard_portfolio_workspace(
     dashboard_rows: list[dict[str, Any]],
     monitoring_portfolios: list[dict[str, Any]],
 ) -> None:
+    _inject_dashboard_product_styles()
     state = build_selected_dashboard_portfolio_state(
         portfolios=monitoring_portfolios,
         dashboard_rows=dashboard_rows,
@@ -1102,8 +1583,8 @@ def _render_dashboard_portfolio_workspace(
     if not selected_rows:
         return
 
-    st.markdown("#### 3. 모니터 시나리오")
-    st.caption("Step 2에서 적용한 전략 row 기준으로 현재 가치, 손익, 리스크 상태를 확인합니다.")
+    st.markdown("#### 3. 포트폴리오 모니터 시나리오")
+    st.caption("이 섹션은 선택된 포트폴리오 전체 성과를 합산해서 보여줍니다. 아래 전략 탭은 개별 전략 재검증과 evidence 확인용입니다.")
     _render_portfolio_monitoring_overview(selected_rows)
     tabs = st.tabs([
         f"{index + 1}. {str(row.get('source_title') or row.get('decision_id') or 'Selected')[:42]}"
@@ -1921,13 +2402,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     start = _slot_effective_start(row)
     end = _slot_effective_end(row)
     capital = _slot_effective_capital(row)
-    slot_blockers = [str(item) for item in list(row.get("slot_blockers") or []) if str(item)]
-    if not start:
-        slot_blockers.append("시작 날짜가 필요합니다.")
-    if not end:
-        slot_blockers.append("종료 날짜 또는 latest market date가 필요합니다.")
-    if capital <= 0:
-        slot_blockers.append("투자금 / balance는 0보다 커야 합니다.")
+    slot_blockers = _slot_blockers_for_row(row)
 
     with st.container(border=True):
         st.markdown("##### Scenario Setup")
@@ -1966,12 +2441,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
     result_key = f"selected_portfolio_recheck_result_{decision_id}"
     if run_clicked:
         with st.spinner("선정 포트폴리오 contract를 재실행하는 중입니다..."):
-            st.session_state[result_key] = build_selected_portfolio_performance_recheck(
-                row,
-                start=start,
-                end=end,
-                initial_capital=float(capital),
-            )
+            st.session_state[result_key] = _run_strategy_recheck(row)
 
     operations_payload = {
         "preflight": preflight,

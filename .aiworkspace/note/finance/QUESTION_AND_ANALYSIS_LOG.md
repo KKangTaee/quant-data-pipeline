@@ -17,11 +17,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Portfolio Flow Redesign V1 is implementation complete. Selected Dashboard now treats user-created monitoring portfolios and strategy slots as the primary workspace, with monitoring scenario / rebalance summary first and evidence detail below.
+  - Selected Dashboard Product Polish V1 is implementation complete. Selected Dashboard now treats sections 1~3 as a product workspace: fixed portfolio shelf, command band, compact strategy board, and portfolio-wide scenario cockpit.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-01 - Selected Dashboard UX polish should go beyond legacy cards/tabs
+- User request:
+  - 사용자가 방향은 맞지만 UX/UI가 상용 제품처럼 정돈되지 않았고, Streamlit 한계인지 보수적 구현 때문인지 물은 뒤 1~3번 개선 진행을 승인함.
+- Interpreted goal:
+  - Section 4 evidence는 유지하고, 1~3번만 fixed shelf / command band / strategy board / portfolio-wide scenario cockpit으로 시각 계층을 개선한다.
+- Analysis result:
+  - 문제는 Streamlit 한계만이 아니라 기존 화면 패턴을 보수적으로 따른 영향이 컸다. Streamlit 안에서도 custom HTML/CSS와 정보 계층 정리로 카드 높이, 삭제 위치, strategy setup 혼잡도, portfolio scenario 의미를 개선할 수 있다.
+- Follow-up:
+  - 구현 결과 `포트폴리오 시나리오 실행`은 기존 per-strategy recheck logic을 같은 session state에 저장하고, 실행 전 / 부분 집계 / 전체 집계 완료를 명시한다. Live approval / order / broker sync / auto rebalance는 계속 disabled다.
 
 ### 2026-06-01 - Selected Dashboard should be portfolio-first and scenario-first
 - User request:
