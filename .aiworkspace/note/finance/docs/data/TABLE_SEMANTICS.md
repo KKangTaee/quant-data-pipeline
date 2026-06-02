@@ -181,6 +181,36 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 
+## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`
+
+역할:
+
+- `Workspace > Overview > Futures Monitor`에서 주요 선물 OHLCV 캔들과 개장 전 급변 상태를 read-only로 표시하기 위한 데이터 경계다.
+- `futures_instrument`는 watchlist preset / display metadata를 저장한다.
+- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 shock board / candle chart에, 1d row는 Futures Macro Thermometer의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
+- `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
+
+성격:
+
+- provider snapshot / price ledger 성격이다.
+- 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
+- UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
+- 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
+- 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
+- Historical validation은 저장된 daily futures row를 날짜별로 `date <= validation_date` 조건에서 재계산하고, 1D / 5D / 20D forward return과 비교해 과거 일관성, directional sample size, hit rate, false-positive rate, threshold sensitivity, score-forward-return relationship을 요약한다. `Max Adverse`는 해당 forward window의 endpoint가 아니라 window 안의 adverse path move 기준이다.
+- Mixed scenario는 risk-on / risk-off 방향으로 강제 분류하지 않는다. 이 경우 현재 scenario history는 occurrence count를 보여주고 directional hit rate는 N/A로 표시한다.
+- 비교 target은 futures row가 있으면 futures 자체를 우선 사용하고, 부족하면 `nyse_price_history`의 ETF proxy(`SPY`, `QQQ`, `IWM`, `TLT`, `GLD`, `UUP`)를 labeled fallback으로만 사용한다.
+
+주의:
+
+- 선물 거래 시간은 상품 / 거래소 / 휴장일별로 다르므로 NYSE cash session 상태와 동일하게 해석하지 않는다.
+- 무료 provider 기반이라 지연, 누락, rate limit, symbol coverage 변화가 발생할 수 있다.
+- `Stale`, `Missing`, `Partial` 상태는 pass가 아니라 provider freshness / coverage gap이다.
+- Macro Thermometer는 시장 해석 보조 기능이며 정규장 방향 예측이나 투자 판단 자동화가 아니다.
+- Historical validation은 과거 일관성 평가이며 예측 보장이 아니다.
+- yfinance continuous futures는 실제 roll / 만기 구조와 다를 수 있고, ETF proxy target은 futures 자체 검증이 아니다.
+- 이 table은 투자 신호, 주문, live approval, auto rebalance를 만들지 않는다.
+
 ## `etf_operability_snapshot`
 
 역할:

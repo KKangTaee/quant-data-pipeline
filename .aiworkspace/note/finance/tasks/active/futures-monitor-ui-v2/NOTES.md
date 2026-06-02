@@ -1,0 +1,28 @@
+# Futures Monitor UI V2 Notes
+
+## 2026-06-02
+
+- Benchmark direction used for the V2 skeleton:
+  - keep a persistent watchlist / data-feed status surface near the top;
+  - show macro interpretation and live chart evidence in the same workspace;
+  - keep raw provider evidence available, but lower it under diagnostics.
+- No scoring, validation, provider, or DB schema contract changed in this task.
+- Streamlit fragment refresh is still browser-open dependent. It is not a backend scheduler and does not collect futures data when no browser session is active.
+- V2.1 kept the same service read model and focused only on render density:
+  - controls are selection-first with collection controls in `Data Actions`;
+  - mini chart cards use chips instead of `st.metric` to avoid numeric truncation;
+  - macro reliability information is a compact signal strip, not a large generic KPI grid.
+- V2.2 changed the body layout from side-by-side to stacked:
+  - Macro Context is now the first full-width analysis block;
+  - Live Futures Charts owns the lower section as a 3x2 grid;
+  - the former selected full-width detail chart was removed because it duplicated the first grid card;
+  - macro collection / validation / caveat details are grouped under `Macro Evidence & Data`.
+- V2.3 removed `Focus` because, after deleting `Selected Detail`, there is no separate detail target left for it to control.
+  - The `Symbols` multiselect now defines both the selected universe and grid order.
+  - `Window` controls the visible candle lookback and `Chart` controls candle aggregation.
+  - Hourly aggregation is displayed as `60m` to match the 60m / 15m move chips already used in the chart cards.
+- V2.4 separates refresh ownership:
+  - Macro Context owns `5y / 1d` daily collection and runs in its own fragment.
+  - Live Futures Charts owns browser auto refresh and `1d / 1m` collection in a separate fragment.
+  - Top command center is not part of the 60s live auto fragment; it refreshes on ordinary page/control reruns.
+  - Live provider run summaries must filter to `interval_code='1m'`; otherwise the latest daily macro run can look like a live chart provider run.

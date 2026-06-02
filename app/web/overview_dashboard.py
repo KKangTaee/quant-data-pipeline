@@ -18,10 +18,16 @@ from app.jobs.ingestion_jobs import (
     run_diagnose_market_quote_gaps,
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
+    run_collect_futures_ohlcv,
     run_collect_macro_calendar,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
+from app.services.futures_macro_thermometer import (
+    clear_overview_futures_macro_snapshot_cache,
+    load_overview_futures_macro_snapshot,
+)
+from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_collection_ops_snapshot,
@@ -63,10 +69,13 @@ from app.web.overview_ui_components import (
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
 )
+from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 BROWSER_AUTO_REFRESH_SECONDS = 300
+FUTURES_DEFAULT_AUTO_REFRESH_SECONDS = 60
+FUTURES_FAST_AUTO_REFRESH_SECONDS = 20
 BROWSER_AUTO_REFRESH_JOB_CONFIG = {
     "SP500": {"profile": "browser_safe", "job_id": "sp500_intraday"},
     "TOP1000": {"profile": "intraday", "job_id": "top1000_intraday"},
@@ -99,6 +108,23 @@ GROUP_BY_LABELS = {
     "sector": "Sector",
     "industry": "Industry",
 }
+FUTURES_GROUP_OPTIONS = (
+    "Pre-open Core",
+    "Equity Index",
+    "Rates",
+    "Commodities",
+    "FX Futures",
+    "Optional Micro",
+    "Optional Crypto",
+    "All",
+)
+FUTURES_LOOKBACK_OPTIONS = {
+    "2H": 120,
+    "6H": 360,
+    "12H": 720,
+    "1D": 1440,
+}
+FUTURES_CHART_INTERVAL_OPTIONS = ("1m", "5m", "15m", "60m")
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 CHART_VALUE_LABEL_STYLE = {
@@ -170,6 +196,14 @@ def _group_leadership_period_label(value: str) -> str:
 
 def _group_by_label(value: str) -> str:
     return GROUP_BY_LABELS.get(value, value.title())
+
+
+def _futures_refresh_mode_label(value: str) -> str:
+    return {
+        "manual": "수동",
+        "auto_60s": "60초 자동",
+        "fast_20s": "20초 Fast",
+    }.get(value, value)
 
 
 def _event_filter_label(value: str) -> str:
@@ -1383,6 +1417,92 @@ def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) ->
     )
 
 
+def _resample_futures_candles(candles: pd.DataFrame, *, interval: str) -> pd.DataFrame:
+    if not isinstance(candles, pd.DataFrame) or candles.empty or interval == "1m":
+        return candles if isinstance(candles, pd.DataFrame) else pd.DataFrame()
+    rule = {"5m": "5min", "15m": "15min", "60m": "60min", "1h": "60min"}.get(interval)
+    if not rule or "Candle Time" not in candles:
+        return candles
+    frame = candles.copy()
+    frame["Candle Time"] = pd.to_datetime(frame["Candle Time"], errors="coerce")
+    frame = frame.dropna(subset=["Candle Time"]).sort_values("Candle Time")
+    if frame.empty:
+        return pd.DataFrame(columns=candles.columns)
+    return (
+        frame.set_index("Candle Time")
+        .resample(rule)
+        .agg(
+            {
+                "Symbol": "last",
+                "Open": "first",
+                "High": "max",
+                "Low": "min",
+                "Close": "last",
+                "Volume": "sum",
+            }
+        )
+        .dropna(subset=["Open", "High", "Low", "Close"])
+        .reset_index()
+    )
+
+
+def _build_futures_candlestick_chart(
+    candles: pd.DataFrame,
+    *,
+    height: int = 360,
+    body_size: int = 5,
+    y_title: str | None = "Price",
+) -> alt.LayerChart:
+    chart_rows = candles.copy() if isinstance(candles, pd.DataFrame) else pd.DataFrame()
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [
+                {
+                    "Candle Time": pd.Timestamp(datetime.now()),
+                    "Open": 0.0,
+                    "High": 0.0,
+                    "Low": 0.0,
+                    "Close": 0.0,
+                    "Volume": 0.0,
+                }
+            ]
+        )
+    chart_rows["Candle Time"] = pd.to_datetime(chart_rows["Candle Time"], errors="coerce")
+    chart_rows = chart_rows.dropna(subset=["Candle Time"])
+    chart_rows["Direction"] = [
+        "Up" if float(close or 0.0) >= float(open_value or 0.0) else "Down"
+        for open_value, close in zip(chart_rows["Open"], chart_rows["Close"], strict=False)
+    ]
+    color = alt.Color(
+        "Direction:N",
+        scale=alt.Scale(
+            domain=["Up", "Down"],
+            range=[OVERVIEW_COLOR_POSITIVE, OVERVIEW_COLOR_DANGER],
+        ),
+        legend=None,
+    )
+    base = alt.Chart(chart_rows).encode(x=alt.X("Candle Time:T", title=None))
+    wick = base.mark_rule(size=1.2).encode(
+        y=alt.Y("Low:Q", title=y_title, scale=alt.Scale(zero=False)),
+        y2="High:Q",
+        color=color,
+        tooltip=[
+            alt.Tooltip("Candle Time:T", title="Time"),
+            alt.Tooltip("Open:Q", format=",.4f"),
+            alt.Tooltip("High:Q", format=",.4f"),
+            alt.Tooltip("Low:Q", format=",.4f"),
+            alt.Tooltip("Close:Q", format=",.4f"),
+            alt.Tooltip("Volume:Q", format=",.0f"),
+        ],
+    )
+    body = base.mark_bar(size=body_size).encode(
+        y=alt.Y("Open:Q", scale=alt.Scale(zero=False)),
+        y2="Close:Q",
+        color=color,
+    )
+    return (wick + body).properties(height=height)
+
+
 def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str) -> None:
     result = st.session_state.get(result_key)
     if not isinstance(result, dict):
@@ -2073,6 +2193,990 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
         period=period,
         top_n=top_n,
         min_group_size=min_group_size,
+    )
+
+
+def _run_collect_futures_ohlcv_compat(
+    *,
+    symbols: list[str],
+    cadence_mode: str,
+) -> dict[str, Any]:
+    refresh_kwargs: dict[str, Any] = {
+        "symbols": symbols,
+        "period": "1d",
+        "interval": "1m",
+        "cadence_mode": cadence_mode,
+        "max_symbols": max(1, min(24, len(symbols))),
+        "batch_size": 6,
+        "sleep_sec": 0.1,
+    }
+    supported_params = signature(run_collect_futures_ohlcv).parameters
+    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
+    return run_collect_futures_ohlcv(**supported_kwargs)
+
+
+def _run_collect_futures_daily_ohlcv_compat() -> dict[str, Any]:
+    refresh_kwargs: dict[str, Any] = {
+        "symbols": list(DEFAULT_CORE_FUTURES_SYMBOLS),
+        "period": "5y",
+        "interval": "1d",
+        "cadence_mode": "manual_macro_daily",
+        "max_symbols": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+        "batch_size": 6,
+        "sleep_sec": 0.1,
+    }
+    supported_params = signature(run_collect_futures_ohlcv).parameters
+    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
+    return run_collect_futures_ohlcv(**supported_kwargs)
+
+
+def _futures_state_tone(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"calm", "ok"}:
+        return "positive"
+    if normalized in {"moving", "due", "review"}:
+        return "warning"
+    if normalized in {"sharp", "stale", "missing", "failed"}:
+        return "danger"
+    return "neutral"
+
+
+def _futures_metric_for_symbol(rows: Any, symbol: str) -> dict[str, Any]:
+    if not isinstance(rows, pd.DataFrame) or rows.empty or "Symbol" not in rows:
+        return {}
+    matches = rows[rows["Symbol"] == symbol]
+    return dict(matches.iloc[0]) if not matches.empty else {}
+
+
+def _futures_chart_symbols(snapshot: dict[str, Any]) -> list[str]:
+    symbols = [str(symbol) for symbol in snapshot.get("symbols") or [] if str(symbol).strip()]
+    ordered: list[str] = []
+    for symbol in symbols:
+        if symbol and symbol not in ordered:
+            ordered.append(symbol)
+        if len(ordered) >= 6:
+            break
+    return ordered
+
+
+def _format_futures_percent(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):+.2f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_futures_age(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):.0f}m"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _futures_value_tone(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "neutral"
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "neutral"
+    if numeric > 0:
+        return "positive"
+    if numeric < 0:
+        return "danger"
+    return "neutral"
+
+
+def _futures_chart_metric_chip(label: str, value: str, tone: str) -> str:
+    return (
+        f'<span class="ov-futures-mini-metric" style="--ov-chip-tone:{_overview_tone_color(tone)};">'
+        f'<span class="ov-futures-mini-metric-label">{escape(label)}</span>'
+        f'<span class="ov-futures-mini-metric-value">{escape(value)}</span>'
+        "</span>"
+    )
+
+
+def _render_futures_chart_card_header(metric: dict[str, Any], symbol: str) -> None:
+    state = str(metric.get("State") or "Missing")
+    state_tone = _futures_state_tone(state)
+    metric_html = "".join(
+        [
+            _futures_chart_metric_chip(
+                "60m",
+                _format_futures_percent(metric.get("60m %")),
+                _futures_value_tone(metric.get("60m %")),
+            ),
+            _futures_chart_metric_chip(
+                "15m",
+                _format_futures_percent(metric.get("15m %")),
+                _futures_value_tone(metric.get("15m %")),
+            ),
+            _futures_chart_metric_chip("Age", _format_futures_age(metric.get("Age Min")), state_tone),
+        ]
+    )
+    st.markdown(
+        f"""
+        <div class="ov-futures-chart-head">
+          <div>
+            <div class="ov-futures-chart-title">{escape(symbol)}</div>
+            <div class="ov-futures-chart-subtitle">{escape(_futures_contract_title(metric, symbol))}</div>
+          </div>
+          <span class="ov-futures-chart-state" style="--ov-chart-tone:{_overview_tone_color(state_tone)};">{escape(state)} · {_format_futures_age(metric.get("Age Min"))}</span>
+        </div>
+        <div class="ov-futures-chart-metrics">{metric_html}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _futures_live_signal_cards(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    coverage = dict(snapshot.get("coverage") or {})
+    top_move = dict(snapshot.get("top_move") or {})
+    latest_run = dict(snapshot.get("latest_run") or {})
+    latest_age = coverage.get("latest_age_minutes")
+    latest_run_status = latest_run.get("status") or "-"
+    return [
+        {
+            "label": "Status",
+            "value": snapshot.get("status") or "-",
+            "detail": f"{coverage.get('returnable_count') or 0}/{coverage.get('symbol_count') or 0} symbols",
+            "tone": "positive" if snapshot.get("status") == "OK" else "warning",
+        },
+        {
+            "label": "Top Move",
+            "value": top_move.get("Symbol") or "-",
+            "detail": (
+                f"15m {_format_futures_percent(top_move.get('15m %'))} · 60m {_format_futures_percent(top_move.get('60m %'))}"
+                if top_move.get("Symbol")
+                else "waiting for candles"
+            ),
+            "tone": _futures_state_tone(str(top_move.get("State") or "")),
+        },
+        {
+            "label": "Freshness",
+            "value": _format_futures_age(latest_age),
+            "detail": f"oldest {_format_futures_age(coverage.get('oldest_age_minutes'))}",
+            "tone": (
+                "positive"
+                if latest_age is not None and not pd.isna(latest_age) and int(latest_age or 0) <= 2
+                else "warning"
+            ),
+        },
+        {
+            "label": "Provider Run",
+            "value": latest_run_status,
+            "detail": f"{latest_run.get('rows_written') or 0} rows · yfinance",
+            "tone": _status_tone(latest_run_status),
+        },
+    ]
+
+
+def _futures_contract_title(metric: dict[str, Any], symbol: str) -> str:
+    name = str(metric.get("Name") or "").strip()
+    group = str(metric.get("Group") or "").strip()
+    if name and group:
+        return f"{name} · {group}"
+    if name:
+        return name
+    return symbol
+
+
+def _overview_tone_color(tone: str) -> str:
+    normalized = str(tone or "").strip().lower()
+    if normalized == "positive":
+        return OVERVIEW_COLOR_POSITIVE
+    if normalized == "warning":
+        return OVERVIEW_COLOR_WARNING
+    if normalized == "danger":
+        return OVERVIEW_COLOR_DANGER
+    if normalized == "primary":
+        return OVERVIEW_COLOR_PRIMARY
+    return OVERVIEW_COLOR_NEUTRAL
+
+
+def _futures_feed_state(snapshot: dict[str, Any], *, refresh_mode: str) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    latest_age = coverage.get("latest_age_minutes")
+    oldest_age = coverage.get("oldest_age_minutes")
+    status = str(snapshot.get("status") or "MISSING")
+    if latest_age is None or pd.isna(latest_age):
+        label = "Missing"
+        detail = "no stored candles"
+        tone = "danger"
+    else:
+        age_value = int(latest_age or 0)
+        if age_value <= 2 and status == "OK":
+            label = "Fresh"
+            detail = f"latest {age_value}m"
+            tone = "positive"
+        elif age_value <= 10:
+            label = "Review"
+            detail = f"latest {age_value}m"
+            tone = "warning"
+        else:
+            label = "Stale"
+            detail = f"latest {age_value}m"
+            tone = "danger"
+    cadence = "manual"
+    if refresh_mode == "auto_60s":
+        cadence = "60s browser auto"
+    elif refresh_mode == "fast_20s":
+        cadence = "20s browser auto"
+    return {
+        "label": label,
+        "detail": detail,
+        "tone": tone,
+        "cadence": cadence,
+        "latest_age": latest_age,
+        "oldest_age": oldest_age,
+    }
+
+
+def _render_futures_command_center(
+    *,
+    snapshot: dict[str, Any],
+    group: str,
+    selected_symbols: list[str],
+    lookback_label: str,
+    chart_interval: str,
+    refresh_mode: str,
+) -> None:
+    feed = _futures_feed_state(snapshot, refresh_mode=refresh_mode)
+    coverage = dict(snapshot.get("coverage") or {})
+    top_move = dict(snapshot.get("top_move") or {})
+    latest_run = dict(snapshot.get("latest_run") or {})
+    tone_color = _overview_tone_color(str(feed.get("tone") or "neutral"))
+    symbols_label = ", ".join(selected_symbols[:6]) if selected_symbols else "-"
+    if len(selected_symbols) > 6:
+        symbols_label = f"{symbols_label} +{len(selected_symbols) - 6}"
+    latest_run_label = str(latest_run.get("status") or "-")
+    latest_run_detail = (
+        f"{latest_run.get('rows_written') or 0} rows · {_snapshot_value(latest_run.get('latest_candle_time_utc'))}"
+        if latest_run
+        else "no provider run"
+    )
+    st.markdown(
+        f"""
+        <div class="ov-futures-command">
+          <div class="ov-futures-command-cell">
+            <div class="ov-futures-kicker">Futures Workspace</div>
+            <div class="ov-futures-title">{escape(group)} · {len(selected_symbols)} selected</div>
+            <div class="ov-futures-detail">{escape(symbols_label)}</div>
+            <div class="ov-futures-feed-row">
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {tone_color};">{escape(str(feed.get("label") or "-"))}</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(str(feed.get("cadence") or "-"))}</span>
+            </div>
+          </div>
+          <div class="ov-futures-command-cell">
+            <div class="ov-futures-kicker">Market Pulse</div>
+            <div class="ov-futures-title">{escape(str(top_move.get("Symbol") or "-"))}</div>
+            <div class="ov-futures-detail">15m {_format_futures_percent(top_move.get("15m %"))} · 60m {_format_futures_percent(top_move.get("60m %"))}</div>
+            <div class="ov-futures-feed-row">
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_futures_state_tone(str(top_move.get("State") or "")))};">{escape(str(top_move.get("State") or "Waiting"))}</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(lookback_label)} · {escape(chart_interval)} candles</span>
+            </div>
+          </div>
+          <div class="ov-futures-command-cell">
+            <div class="ov-futures-kicker">Data Feed</div>
+            <div class="ov-futures-title">{escape(str(feed.get("detail") or "-"))}</div>
+            <div class="ov-futures-detail">{coverage.get("returnable_count") or 0} / {coverage.get("symbol_count") or 0} symbols · oldest {_format_futures_age(feed.get("oldest_age"))}</div>
+            <div class="ov-futures-feed-row">
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_status_tone(latest_run_label))};">{escape(latest_run_label)}</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(latest_run_detail)}</span>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_futures_section_header(title: str, detail: str | None = None) -> None:
+    st.markdown(
+        f"""
+        <div class="ov-futures-section-head">
+          <div class="ov-futures-section-title">{escape(title)}</div>
+          <div class="ov-futures-section-meta">{escape(detail or "")}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _format_macro_score(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):+.0f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _macro_score_cards(scores: Any) -> list[dict[str, Any]]:
+    if not isinstance(scores, pd.DataFrame) or scores.empty:
+        return [
+            {
+                "title": "Macro Scores",
+                "value": "-",
+                "detail": "waiting for daily futures data",
+                "tone": "neutral",
+            }
+        ]
+    cards: list[dict[str, Any]] = []
+    for _, row in scores.iterrows():
+        cards.append(
+            {
+                "title": str(row.get("Score") or "-"),
+                "value": _format_macro_score(row.get("Value")),
+                "detail": f"{row.get('Direction') or '-'} · {row.get('Coverage') or '-'}",
+                "tone": str(row.get("Tone") or "neutral"),
+            }
+        )
+    return cards
+
+
+def _macro_score_badges(scores: Any) -> list[dict[str, Any]]:
+    labels = {
+        "Risk-On Score": "Risk-On",
+        "Growth Score": "Growth",
+        "Rate Pressure Score": "Rates",
+        "Dollar Pressure Score": "Dollar",
+        "Safe Haven Score": "Safe Haven",
+        "Inflation Pressure Score": "Inflation",
+    }
+    if not isinstance(scores, pd.DataFrame) or scores.empty:
+        return [{"label": "Macro", "value": "-", "tone": "neutral"}]
+    badges: list[dict[str, Any]] = []
+    for _, row in scores.iterrows():
+        score_name = str(row.get("Score") or "-")
+        badges.append(
+            {
+                "label": labels.get(score_name, score_name.replace(" Score", "")),
+                "value": _format_macro_score(row.get("Value")),
+                "tone": str(row.get("Tone") or "neutral"),
+            }
+        )
+    return badges
+
+
+def _format_macro_percent(value: Any, *, digits: int = 1) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):.{digits}f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _macro_validation_cards(macro: dict[str, Any]) -> list[dict[str, Any]]:
+    confidence = dict(macro.get("confidence") or {})
+    validation = dict(macro.get("validation") or {})
+    validation_coverage = dict(validation.get("coverage") or {})
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    sample = confidence.get("sample_size")
+    if sample is None:
+        sample = current_metrics.get("Sample 5D") or 0
+    occurrence_count = confidence.get("occurrence_count")
+    if occurrence_count is None:
+        occurrence_count = current_metrics.get("Occurrence Count") or 0
+    hit_rate = confidence.get("hit_rate_5d")
+    if hit_rate is None:
+        hit_rate = current_metrics.get("Hit Rate 5D %")
+    hit_applicable = bool(confidence.get("hit_applicable"))
+    span = validation_coverage.get("history_span_years")
+    validation_dates = validation_coverage.get("validation_dates") or 0
+    hit_detail = (
+        f"5D sample {sample or 0} · hit {_format_macro_percent(hit_rate)}"
+        if hit_applicable
+        else f"directional hit n/a · occurrences {occurrence_count or 0}"
+    )
+    return [
+        {
+            "title": "Interpretation Confidence",
+            "value": confidence.get("label") or "Not Enough History",
+            "detail": hit_detail,
+            "tone": confidence.get("tone") or "warning",
+        },
+        {
+            "title": "Historical Validation",
+            "value": validation.get("status") or "MISSING",
+            "detail": f"{validation_dates} PIT dates · {span or '-'}y stored history",
+            "tone": "positive" if validation.get("status") == "OK" else "warning",
+        },
+        {
+            "title": "Current Scenario History",
+            "value": f"{sample or occurrence_count or 0}",
+            "detail": (
+                f"mean 5D {_format_macro_percent(current_metrics.get('Mean 5D %'), digits=2)}"
+                if hit_applicable
+                else "mixed scenario occurrence count"
+            ),
+            "tone": "positive" if int(sample or occurrence_count or 0) >= 60 else "warning",
+        },
+        {
+            "title": "Validation Source",
+            "value": "futures / proxy",
+            "detail": "ETF rows are labeled fallback targets",
+            "tone": "neutral",
+        },
+    ]
+
+
+def _macro_signal_cards(macro: dict[str, Any]) -> list[dict[str, Any]]:
+    confidence = dict(macro.get("confidence") or {})
+    validation = dict(macro.get("validation") or {})
+    validation_coverage = dict(validation.get("coverage") or {})
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    sample = confidence.get("sample_size")
+    if sample is None:
+        sample = current_metrics.get("Sample 5D") or 0
+    occurrence_count = confidence.get("occurrence_count")
+    if occurrence_count is None:
+        occurrence_count = current_metrics.get("Occurrence Count") or 0
+    hit_rate = confidence.get("hit_rate_5d")
+    if hit_rate is None:
+        hit_rate = current_metrics.get("Hit Rate 5D %")
+    hit_applicable = bool(confidence.get("hit_applicable"))
+    validation_dates = validation_coverage.get("validation_dates") or 0
+    span = validation_coverage.get("history_span_years")
+    scenario = dict(macro.get("summary") or {}).get("scenario") or "해석 대기"
+    return [
+        {
+            "label": "Scenario",
+            "value": scenario,
+            "detail": "mixed는 억지 분류하지 않음",
+            "tone": "primary",
+        },
+        {
+            "label": "Confidence",
+            "value": confidence.get("label") or "Not Enough History",
+            "detail": ", ".join(list(confidence.get("reasons") or [])[:1]) or "validation pending",
+            "tone": confidence.get("tone") or "warning",
+        },
+        {
+            "label": "Validation",
+            "value": validation.get("status") or "MISSING",
+            "detail": f"{validation_dates} PIT dates · {span or '-'}y",
+            "tone": "positive" if validation.get("status") == "OK" else "warning",
+        },
+        {
+            "label": "History",
+            "value": sample or occurrence_count or 0,
+            "detail": (
+                f"5D hit {_format_macro_percent(hit_rate)}"
+                if hit_applicable
+                else "occurrences, hit n/a"
+            ),
+            "tone": "positive" if int(sample or occurrence_count or 0) >= 60 else "warning",
+        },
+    ]
+
+
+def _render_futures_signal_strip(items: list[dict[str, Any]], *, class_prefix: str) -> None:
+    html_items: list[str] = []
+    for item in items:
+        tone_color = _overview_tone_color(str(item.get("tone") or "neutral"))
+        html_items.append(
+            f'<div class="{class_prefix}-item" style="--ov-signal-tone:{tone_color};">'
+            f'<div class="{class_prefix}-label">{escape(str(item.get("label") or "-"))}</div>'
+            f'<div class="{class_prefix}-value">{escape(str(item.get("value") or "-"))}</div>'
+            f'<div class="{class_prefix}-detail">{escape(str(item.get("detail") or ""))}</div>'
+            "</div>"
+        )
+    st.markdown(
+        f'<div class="{class_prefix}-strip">{"".join(html_items)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _macro_score_tone(row: pd.Series) -> str:
+    tone = str(row.get("Tone") or "").strip()
+    if tone and tone != "neutral":
+        return tone
+    try:
+        value = float(row.get("Value"))
+    except (TypeError, ValueError):
+        return "neutral"
+    if value > 0:
+        return "positive"
+    if value < 0:
+        return "danger"
+    return "neutral"
+
+
+def _render_macro_score_lane(scores: Any) -> None:
+    badges = _macro_score_badges(scores)
+    if isinstance(scores, pd.DataFrame) and not scores.empty:
+        score_rows = []
+        for badge, (_, row) in zip(badges, scores.iterrows(), strict=False):
+            score_rows.append((badge, _macro_score_tone(row)))
+    else:
+        score_rows = [(badge, str(badge.get("tone") or "neutral")) for badge in badges]
+    html_items: list[str] = []
+    for badge, tone in score_rows:
+        tone_color = _overview_tone_color(tone)
+        html_items.append(
+            f'<span class="ov-futures-score-chip" style="--ov-chip-tone:{tone_color};">'
+            f'<span class="ov-futures-score-label">{escape(str(badge.get("label") or "-"))}</span>'
+            f'<span class="ov-futures-score-value">{escape(str(badge.get("value") or "-"))}</span>'
+            "</span>"
+        )
+    st.markdown(
+        f'<div class="ov-futures-score-lane">{"".join(html_items)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_macro_evidence_groups(groups: dict[str, Any]) -> None:
+    cols = st.columns(4, gap="small")
+    sections = [
+        ("Strong Evidence", groups.get("strong") or [], "positive"),
+        ("Weak Evidence", groups.get("weak") or [], "neutral"),
+        ("Conflicting Evidence", groups.get("conflicting") or [], "warning"),
+        ("Missing Symbols", groups.get("missing") or [], "danger"),
+    ]
+    for col, (title, items, tone) in zip(cols, sections):
+        with col:
+            st.markdown(f"**{title}**")
+            if items:
+                for item in list(items)[:5]:
+                    st.caption(str(item))
+            else:
+                st.caption("None")
+
+
+def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    if current_metrics:
+        hit_applicable = bool(current_metrics.get("Directional Hit Applicable"))
+        render_badge_strip(
+            [
+                {
+                    "label": "Current Scenario",
+                    "value": current_metrics.get("Scenario") or "-",
+                    "tone": "primary",
+                },
+                {
+                    "label": "5D Sample" if hit_applicable else "Occurrences",
+                    "value": current_metrics.get("Sample 5D") if hit_applicable else current_metrics.get("Occurrence Count") or 0,
+                    "tone": "neutral",
+                },
+                {
+                    "label": "5D Hit",
+                    "value": _format_macro_percent(current_metrics.get("Hit Rate 5D %")) if hit_applicable else "N/A",
+                    "tone": "positive" if hit_applicable and (current_metrics.get("Hit Rate 5D %") or 0) >= 55 else "warning",
+                },
+                {
+                    "label": "5D False Positive",
+                    "value": _format_macro_percent(current_metrics.get("False Positive 5D %")) if hit_applicable else "N/A",
+                    "tone": "warning",
+                },
+                {
+                    "label": "5D Max Adverse",
+                    "value": _format_macro_percent(current_metrics.get("Max Adverse 5D %"), digits=2) if hit_applicable else "N/A",
+                    "tone": "warning",
+                },
+            ]
+        )
+    scenario_summary = validation.get("scenario_summary")
+    if isinstance(scenario_summary, pd.DataFrame) and not scenario_summary.empty:
+        st.markdown("#### Historical Validation Summary")
+        preferred_cols = [
+            "Scenario",
+            "Occurrence Count",
+            "Target Family",
+            "Sample 1D",
+            "Mean 1D %",
+            "Hit Rate 1D %",
+            "False Positive 1D %",
+            "Sample 5D",
+            "Mean 5D %",
+            "Hit Rate 5D %",
+            "False Positive 5D %",
+            "Sample 20D",
+            "Mean 20D %",
+            "Hit Rate 20D %",
+            "False Positive 20D %",
+            "Max Adverse 5D %",
+        ]
+        st.dataframe(
+            scenario_summary[[col for col in preferred_cols if col in scenario_summary.columns]],
+            width="stretch",
+            hide_index=True,
+        )
+    relationships = validation.get("relationships")
+    threshold_sensitivity = validation.get("threshold_sensitivity")
+    if isinstance(relationships, pd.DataFrame) and not relationships.empty:
+        with st.expander("Score / Forward Return Relationships", expanded=False):
+            st.dataframe(relationships, width="stretch", hide_index=True)
+    if isinstance(threshold_sensitivity, pd.DataFrame) and not threshold_sensitivity.empty:
+        with st.expander("Score Threshold Sensitivity", expanded=False):
+            st.dataframe(threshold_sensitivity, width="stretch", hide_index=True)
+
+
+def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
+    macro = load_overview_futures_macro_snapshot()
+    coverage = dict(macro.get("coverage") or {})
+    scores = macro.get("scores")
+    components = macro.get("score_components")
+    symbols = macro.get("symbols")
+    summary = dict(macro.get("summary") or {})
+    confidence = dict(macro.get("confidence") or {})
+    validation = dict(macro.get("validation") or {})
+
+    _render_futures_section_header(
+        "Macro Context",
+        f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0} daily symbols · {_snapshot_value(coverage.get('latest_daily_date'))}",
+    )
+    _render_futures_signal_strip(_macro_signal_cards(macro), class_prefix="ov-futures-macro")
+    sentences = [str(sentence) for sentence in macro.get("summary_sentences") or [] if str(sentence).strip()]
+    evidence = [str(item) for item in macro.get("evidence") or [] if str(item).strip()]
+    st.markdown(
+        f"""
+        <div class="ov-futures-macro-hero">
+          <div class="ov-futures-macro-scenario">{escape(str(summary.get('scenario') or '시장 해석 대기'))}</div>
+          <div class="ov-futures-macro-sentence">{escape(sentences[0] if sentences else '저장된 일봉 선물 데이터로 시장 흐름을 해석합니다.')}</div>
+          <div class="ov-futures-macro-evidence">{escape(' · '.join(evidence[:2]) if evidence else '주요 근거는 상세 영역에서 확인합니다.')}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    _render_macro_score_lane(scores)
+    warnings = list(macro.get("warnings") or [])
+    warnings.extend(str(item) for item in validation.get("warnings") or [])
+    if warnings:
+        _render_snapshot_warnings({"warnings": warnings})
+
+    cautions = [str(item) for item in macro.get("cautions") or [] if str(item).strip()]
+    cautions.extend(str(item) for item in validation.get("caveats") or [] if str(item).strip())
+    with st.expander("Macro Evidence & Data", expanded=detail_expanded):
+        _render_futures_section_header("Daily Data", "stored 1D futures OHLCV for macro scoring")
+        data_cols = st.columns([1, 1.6], gap="medium", vertical_alignment="top")
+        with data_cols[0]:
+            if st.button(
+                "Refresh Daily Macro OHLCV",
+                key="overview_futures_macro_daily_refresh",
+                use_container_width=True,
+            ):
+                with st.spinner("Collecting futures 5y daily OHLCV from yfinance..."):
+                    _store_overview_job_result(
+                        "overview_futures_daily_ohlcv_result",
+                        _run_collect_futures_daily_ohlcv_compat(),
+                    )
+                    clear_overview_futures_macro_snapshot_cache()
+                    st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    st.rerun(scope="fragment")
+        with data_cols[1]:
+            _render_market_job_result("overview_futures_daily_ohlcv_result")
+
+        _render_futures_section_header("Evidence Groups", "strong / weak / conflicting / missing symbols")
+        _render_macro_evidence_groups(dict(macro.get("evidence_groups") or {}))
+        _render_futures_section_header("Historical Validation", "past scenario consistency, thresholds, and relationships")
+        _render_macro_validation_detail(validation)
+        if isinstance(scores, pd.DataFrame) and not scores.empty:
+            _render_futures_section_header("Score Table", "direction, coverage, and standardized move summary")
+            st.dataframe(
+                scores.drop(columns=["Tone"], errors="ignore"),
+                width="stretch",
+                hide_index=True,
+            )
+        if isinstance(components, pd.DataFrame) and not components.empty:
+            _render_futures_section_header("Score Components", "ticker-level contribution by macro score")
+            st.dataframe(components, width="stretch", hide_index=True)
+        if isinstance(symbols, pd.DataFrame) and not symbols.empty:
+            _render_futures_section_header("Symbol Standardized Moves", "daily standardized move per futures symbol")
+            st.dataframe(symbols, width="stretch", hide_index=True)
+        if cautions:
+            _render_futures_section_header("Caveats", "interpretation limits and provider caveats")
+            for caution in list(dict.fromkeys(cautions)):
+                st.caption(caution)
+
+
+def _render_futures_macro_fragment(*, detail_expanded: bool = False) -> None:
+    @st.fragment
+    def _futures_macro_context_fragment() -> None:
+        _render_futures_macro_panel(detail_expanded=detail_expanded)
+
+    _futures_macro_context_fragment()
+
+
+def _render_futures_macro_tab() -> None:
+    _render_futures_macro_fragment(detail_expanded=True)
+
+
+def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str) -> None:
+    all_candles = snapshot.get("all_candles")
+    rows = snapshot.get("rows")
+    symbols = _futures_chart_symbols(snapshot)
+    if not symbols:
+        st.info("No futures symbols are selected.")
+        return
+
+    grid_cols = st.columns(3, gap="small")
+    for index, symbol in enumerate(symbols):
+        metric = _futures_metric_for_symbol(rows, symbol)
+        symbol_candles = (
+            all_candles[all_candles["Symbol"] == symbol]
+            if isinstance(all_candles, pd.DataFrame) and not all_candles.empty and "Symbol" in all_candles
+            else pd.DataFrame()
+        )
+        display_candles = _resample_futures_candles(symbol_candles, interval=chart_interval)
+        with grid_cols[index % 3]:
+            with st.container(border=True):
+                _render_futures_chart_card_header(metric, symbol)
+                if display_candles.empty:
+                    st.info("No candles.")
+                else:
+                    st.altair_chart(
+                        _build_futures_candlestick_chart(
+                            display_candles,
+                            height=220,
+                            body_size=3,
+                            y_title=None,
+                        ),
+                        width="stretch",
+                    )
+
+
+def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str, lookback_label: str) -> None:
+    rows = snapshot.get("rows")
+    state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
+    selected_count = len([symbol for symbol in snapshot.get("symbols") or [] if str(symbol).strip()])
+    _render_futures_section_header(
+        "Live Futures Charts",
+        f"{selected_count} selected futures · {chart_interval} candles · {lookback_label} window",
+    )
+    _render_futures_signal_strip(_futures_live_signal_cards(snapshot), class_prefix="ov-futures-live")
+    warnings = list(snapshot.get("warnings") or [])
+    if warnings:
+        _render_snapshot_warnings({"warnings": warnings})
+    if state_counts:
+        state_html = "".join(
+            _futures_chart_metric_chip(str(state), str(int(count)), _futures_state_tone(str(state)))
+            for state, count in state_counts.items()
+        )
+        st.markdown(f'<div class="ov-futures-chart-metrics">{state_html}</div>', unsafe_allow_html=True)
+
+    _render_futures_mini_chart_grid(snapshot, chart_interval=chart_interval)
+
+
+def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
+    rows = snapshot.get("rows")
+    candles = snapshot.get("candles")
+    latest_run = snapshot.get("latest_run")
+    with st.expander("Diagnostics & Provider Evidence", expanded=False):
+        st.markdown("#### Shock Board")
+        if isinstance(rows, pd.DataFrame) and not rows.empty:
+            st.dataframe(rows, width="stretch", hide_index=True)
+        else:
+            st.info("Stored futures OHLCV rows are not available yet. Run Refresh Futures OHLCV first.")
+        st.markdown("#### Provider Run")
+        if isinstance(latest_run, dict) and latest_run:
+            metric_cols = st.columns(4)
+            metric_cols[0].metric("Status", latest_run.get("status") or "-")
+            metric_cols[1].metric("Rows", latest_run.get("rows_written") or 0)
+            metric_cols[2].metric("Processed", f"{latest_run.get('symbols_processed') or 0} / {latest_run.get('symbols_requested') or 0}")
+            metric_cols[3].metric("Latest Candle", _snapshot_value(latest_run.get("latest_candle_time_utc")))
+            st.caption(str(latest_run.get("message") or snapshot.get("source_note") or ""))
+        else:
+            st.info("No futures provider run has been recorded yet.")
+        _render_market_job_result("overview_futures_ohlcv_result")
+        if isinstance(candles, pd.DataFrame) and not candles.empty:
+            st.markdown("#### Selected Candle Rows")
+            st.dataframe(candles.tail(80), width="stretch", hide_index=True)
+
+
+def _render_futures_live_workspace(
+    snapshot: dict[str, Any],
+    *,
+    group: str,
+    selected_symbols: list[str],
+    selected_symbol: str,
+    lookback_label: str,
+    chart_interval: str,
+    refresh_mode: str,
+) -> None:
+    def _load_live_snapshot() -> dict[str, Any]:
+        return load_overview_futures_monitor_snapshot(
+            group=group,
+            symbols=selected_symbols,
+            selected_symbol=selected_symbol,
+            lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+        )
+
+    if refresh_mode in {"auto_60s", "fast_20s"}:
+        cadence = FUTURES_FAST_AUTO_REFRESH_SECONDS if refresh_mode == "fast_20s" else FUTURES_DEFAULT_AUTO_REFRESH_SECONDS
+
+        @st.fragment(run_every=cadence)
+        def _futures_live_auto_panel() -> None:
+            with st.spinner("Checking futures auto refresh..."):
+                _store_overview_job_result(
+                    "overview_futures_ohlcv_result",
+                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="browser_auto"),
+                )
+            refreshed_snapshot = _load_live_snapshot()
+            _render_futures_live_panel(refreshed_snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
+            _render_futures_diagnostics(refreshed_snapshot)
+
+        _futures_live_auto_panel()
+        return
+
+    _render_futures_live_panel(snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
+    _render_futures_diagnostics(snapshot)
+
+
+def _render_futures_monitor_tab() -> None:
+    st.markdown("### Futures Monitor")
+    st.caption("미국장 / 한국장 전 주요 선물 OHLCV와 급변 상태를 read-only로 확인합니다.")
+
+    control_cols = st.columns([0.95, 2.45, 0.75, 0.75, 0.8], gap="small", vertical_alignment="bottom")
+    group = str(
+        control_cols[0].selectbox(
+            "Watch Group",
+            FUTURES_GROUP_OPTIONS,
+            index=0,
+            key="overview_futures_watch_group",
+        )
+    )
+    lookback_label = str(
+        control_cols[2].selectbox(
+            "Window",
+            list(FUTURES_LOOKBACK_OPTIONS.keys()),
+            index=1,
+            key="overview_futures_lookback",
+        )
+    )
+    chart_key = "overview_futures_chart_interval"
+    if st.session_state.get(chart_key) == "1h":
+        st.session_state[chart_key] = "60m"
+    chart_interval = str(
+        control_cols[3].selectbox(
+            "Chart",
+            FUTURES_CHART_INTERVAL_OPTIONS,
+            index=1,
+            key=chart_key,
+        )
+    )
+
+    preview = load_overview_futures_monitor_snapshot(
+        group=group,
+        lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+    )
+    symbol_options = list(preview.get("symbols") or [])
+    if not symbol_options:
+        symbol_options = ["ES=F", "NQ=F", "ZN=F", "CL=F", "GC=F", "6J=F"]
+    default_symbols = symbol_options[: min(6, len(symbol_options))]
+    symbols_key = f"overview_futures_symbols_{group.replace(' ', '_').lower()}"
+    current_symbols = st.session_state.get(symbols_key)
+    if isinstance(current_symbols, list):
+        retained = [symbol for symbol in current_symbols if symbol in symbol_options]
+        if retained:
+            migration_key = f"{symbols_key}_v3x2_migrated"
+            if (
+                group == "Pre-open Core"
+                and not st.session_state.get(migration_key)
+                and len(retained) < min(6, len(symbol_options))
+            ):
+                retained.extend(symbol for symbol in default_symbols if symbol not in retained)
+                st.session_state[symbols_key] = retained
+                st.session_state[migration_key] = True
+            default_symbols = retained
+    selected_symbols = list(
+        control_cols[1].multiselect(
+            "Symbols",
+            options=symbol_options,
+            default=default_symbols,
+            key=symbols_key,
+        )
+    )
+    if not selected_symbols:
+        selected_symbols = default_symbols
+    selected_symbol = selected_symbols[0]
+
+    snapshot = load_overview_futures_monitor_snapshot(
+        group=group,
+        symbols=selected_symbols,
+        selected_symbol=selected_symbol,
+        lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+    )
+
+    mode_options = ["manual", "auto_60s"]
+    if len(selected_symbols) <= 4:
+        mode_options.append("fast_20s")
+    mode_key = "overview_futures_refresh_mode"
+    if st.session_state.get(mode_key) not in mode_options:
+        st.session_state[mode_key] = "manual"
+    refresh_mode = str(st.session_state.get(mode_key) or "manual")
+    with control_cols[4].popover("Data Actions", use_container_width=True):
+        segmented_control = getattr(st, "segmented_control", None)
+        if callable(segmented_control):
+            refresh_mode = str(
+                segmented_control(
+                    "Refresh",
+                    mode_options,
+                    key=mode_key,
+                    format_func=_futures_refresh_mode_label,
+                    help="20초 Fast는 선택 심볼 4개 이하일 때만 사용합니다.",
+                )
+            )
+        else:
+            refresh_mode = str(
+                st.radio(
+                    "Refresh",
+                    mode_options,
+                    key=mode_key,
+                    format_func=_futures_refresh_mode_label,
+                    horizontal=True,
+                    help="20초 Fast는 선택 심볼 4개 이하일 때만 사용합니다.",
+                )
+            )
+        if st.button(
+            "Refresh Futures OHLCV",
+            key="overview_futures_manual_refresh",
+            use_container_width=True,
+            type="primary",
+        ):
+            with st.spinner("Collecting futures 1m OHLCV from yfinance..."):
+                _store_overview_job_result(
+                    "overview_futures_ohlcv_result",
+                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="manual"),
+                )
+            snapshot = load_overview_futures_monitor_snapshot(
+                group=group,
+                symbols=selected_symbols,
+                selected_symbol=selected_symbol,
+                lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+            )
+        if st.button("화면 새로고침", key="overview_futures_reload", use_container_width=True):
+            st.session_state["overview_futures_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.rerun()
+        st.markdown(
+            '<div class="ov-futures-control-note">Provider fetch는 기본 60초 단위입니다. 현재 브라우저 세션이 열려 있을 때만 auto fragment가 확인합니다.</div>',
+            unsafe_allow_html=True,
+        )
+
+    _render_futures_command_center(
+        snapshot=snapshot,
+        group=group,
+        selected_symbols=selected_symbols,
+        lookback_label=lookback_label,
+        chart_interval=chart_interval,
+        refresh_mode=refresh_mode,
+    )
+    _render_futures_macro_fragment(detail_expanded=False)
+    st.divider()
+    _render_futures_live_workspace(
+        snapshot,
+        group=group,
+        selected_symbols=selected_symbols,
+        selected_symbol=selected_symbol,
+        lookback_label=lookback_label,
+        chart_interval=chart_interval,
+        refresh_mode=refresh_mode,
     )
 
 
@@ -3603,11 +4707,13 @@ def render_overview_dashboard(
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
     render_market_session_banner(_market_session_banner_model())
 
-    market_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
-        ["Market Movers", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
+    market_tab, futures_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
+        ["Market Movers", "Futures Monitor", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
     )
     with market_tab:
         _render_market_movers_tab()
+    with futures_tab:
+        _render_futures_monitor_tab()
     with group_tab:
         _render_sector_industry_tab()
     with events_tab:

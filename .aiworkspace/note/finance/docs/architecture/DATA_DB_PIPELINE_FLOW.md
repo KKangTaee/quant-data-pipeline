@@ -36,6 +36,7 @@ external source
 | BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |
 | Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장하고, row가 없는 ticker는 job result의 `symbol_diagnostics`에 missing / failure reason을 남긴다 |
 | Nasdaq earnings calendar web endpoint | Overview Events earnings alternate free provider cross-check source. yfinance estimate의 같은 symbol/date 확인에만 사용하며 official source로 보지 않는다 |
+| yfinance futures OHLCV | Overview Futures Monitor pilot source. 주요 선물 1m / daily OHLCV를 `futures_ohlcv`에 저장하되 exchange-grade realtime feed로 보지 않는다. Daily rows also feed Macro Thermometer current scoring and historical validation |
 
 ## Persistence 계층
 
@@ -50,6 +51,7 @@ external source
 | `finance/data/computed_lifecycle.py` | 기존 current snapshot lifecycle rows를 읽어 repeated observation window를 `computed_from_snapshots` partial row로 요약 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
+| `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Macro Thermometer validation is read-only and does not create a new table |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
@@ -58,7 +60,7 @@ external source
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. Korean purpose-first job guide, result next-action guidance, routine / manual 작업 구분, ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence, Nasdaq Symbol Directory current snapshot, SEC CIK / ticker cross-check, computed snapshot lifecycle, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
 
 ## Loader 계층
 
@@ -81,7 +83,7 @@ external source
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
-  P2-5A부터 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서
+  P2-5A부터 `Workspace > Ingestion > Practical Validation 검증 데이터 보강`에서
   해당 ingestion을 수동 실행할 수 있다.
   `Provider Source Map` tab은 `nyse_etf`와 `nyse_asset_profile`을 기준으로 iShares / SSGA / Invesco 공식 endpoint 후보를 검증해
   `etf_provider_source_map`에 저장한다. 이후 snapshot collector는 이 verified source map을 static map보다 먼저 사용한다.
@@ -120,6 +122,8 @@ external source
   `computed-snapshot-lifecycle-v1`부터 `finance/data/computed_lifecycle.py`는 기존 current snapshot rows의 repeated observation window를
   `source=computed_snapshot_lifecycle`, `source_type=computed_from_snapshots`, `coverage_status=partial`, `event_type=historical_membership` row로 요약한다.
   이 row도 absence를 delisting proof로 해석하지 않으며, Data Coverage Audit은 `coverage_status=actual` row만 survivorship PASS 후보로 본다.
+  `ingestion-console-ux-data-quality-v1`부터 Streamlit Ingestion UI는 이 lifecycle collector들을 `상장 / 상폐 근거` 탭 아래에 노출한다.
+  UI는 current snapshot / identity cross-check / computed partial evidence가 historical membership PASS나 active listing proof가 아니라는 caveat를 함께 보여준다.
 
 ## 데이터 무결성 체크포인트
 

@@ -28,6 +28,7 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "collect_sp500_intraday_snapshot": "overview_market_snapshot",
         "collect_top1000_intraday_snapshot": "overview_market_snapshot",
         "collect_top2000_intraday_snapshot": "overview_market_snapshot",
+        "collect_futures_ohlcv": "overview_futures_market_monitor",
         "collect_fomc_calendar": "overview_fomc_calendar_collection",
         "collect_earnings_calendar": "overview_earnings_calendar_collection",
         "collect_macro_calendar": "overview_macro_calendar_collection",
@@ -67,6 +68,7 @@ def _infer_execution_context(record: dict[str, Any]) -> str | None:
         "manual_asset_profile_collection": "Manual asset-profile refresh for the tracked stock and ETF universes.",
         "overview_sp500_universe_collection": "Overview S&P 500 universe membership refresh for market intelligence.",
         "overview_market_snapshot": "Overview market movers intraday previous-close snapshot refresh.",
+        "overview_futures_market_monitor": "Overview futures OHLCV monitor refresh for pre-open market context.",
         "overview_fomc_calendar_collection": "Overview FOMC calendar refresh from the official Fed page.",
         "overview_earnings_calendar_collection": "Overview bounded earnings calendar refresh for active event intelligence.",
         "overview_macro_calendar_collection": "Overview macro calendar refresh from official BLS and BEA release schedules.",
@@ -133,7 +135,7 @@ def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str
     if not relevant or symbol_count <= 0:
         return {
             "available": False,
-            "message": "No estimate available yet.",
+            "message": "아직 예상 소요 시간을 계산할 실행 기록이 없습니다.",
         }
 
     per_symbol = [
@@ -144,7 +146,7 @@ def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str
     if not per_symbol:
         return {
             "available": False,
-            "message": "No estimate available yet.",
+            "message": "아직 예상 소요 시간을 계산할 실행 기록이 없습니다.",
         }
 
     avg = sum(per_symbol) / len(per_symbol)
@@ -156,5 +158,5 @@ def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str
         "available": True,
         "seconds_low": low,
         "seconds_high": high,
-        "message": f"Estimated runtime: {low // 60}m {low % 60}s - {high // 60}m {high % 60}s",
+        "message": f"예상 소요 시간: {low // 60}m {low % 60}s - {high // 60}m {high % 60}s",
     }

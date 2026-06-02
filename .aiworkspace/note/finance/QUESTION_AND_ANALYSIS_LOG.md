@@ -33,6 +33,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 구현 결과 Active Portfolio Monitoring Scenario가 상단 hero가 되었고, portfolio card shelf / portfolio edit / strategy board / `포트폴리오 시나리오 업데이트`는 아래 관리 영역으로 내려갔다. Detailed readiness / provider / freshness / open issue evidence는 하단에서 선택한 1개 strategy만 lazy-render된다. No portfolio / no strategy / configured-not-run / executed 상태를 구분한다.
 
+### 2026-06-02 - Macro Thermometer confidence must be historical-consistency evidence, not a signal guarantee
+- User request:
+  - Macro Thermometer가 단순 heuristic에 머무르지 않도록 historical validation과 reliability 표시를 추가해 달라고 요청함.
+- Interpreted goal:
+  - 저장된 futures daily row를 point-in-time으로 재계산하고, 현재 scenario 옆에 sample / hit rate / confidence / caveat를 표시한다.
+- Analysis result:
+  - 새 DB table이나 registry가 아니라 `futures_ohlcv` daily row와 필요 시 `nyse_price_history` ETF proxy target을 읽는 read-only service가 적절하다. Mixed scenario는 directional hit rule로 강제하지 않는다.
+- Follow-up:
+  - `futures_macro_validation.py`를 추가하고 UI에 Interpretation Confidence, Historical Validation Summary, evidence groups, threshold sensitivity, relationship summary를 표시했다. 5y futures smoke는 target source `futures`만 사용했고, yfinance continuous futures / ETF proxy caveat를 docs와 UI에 남겼다.
+
+### 2026-06-01 - Ingestion 탭 리뷰 후속 UX와 결과 해석을 개선한다
+- User request:
+  - 사용자가 Ingestion 리뷰 결과를 바탕으로 개선을 진행하되, 버튼 / 단어 / 기술 용어를 억지로 모두 한글화하지 말고 설명 내용을 이해하기 쉽게 정리해 달라고 요청함.
+- Interpreted goal:
+  - 기존 심볼 / 기간 / source 선택 형식은 유지하고, 사용자가 실행 전 수집 범위와 실행 후 데이터 의미를 더 정확히 읽게 해야 함.
+- Analysis result:
+  - 가장 큰 gap은 화면 구조 전체 교체보다 실행 전 계약, bounded coverage 확인, result domain별 해석 부재였다. 특히 price row, provider snapshot, lifecycle partial evidence를 같은 방식으로 표시하면 coverage를 과신할 수 있음.
+- Follow-up:
+  - Ingestion workflow overview, 실행 전 contract card, bounded DB coverage quick check, domain-aware result label / interpretation callout, visible lifecycle partial-evidence warning을 추가했다.
+
 ### 2026-06-02 - Selected Dashboard scenario execution must remain explicit
 - User request:
   - 사용자가 전략 추가 직후 `3. 포트폴리오 모니터 시나리오` 또는 하단 개별 성과가 자동 실행되는 것처럼 보이고 오래 걸린다고 지적하며, 버튼을 눌렀을 때만 업데이트되도록 수정과 성능 검토를 요청함.
@@ -7044,3 +7064,113 @@ Detailed historical analysis was archived on `2026-04-13`.
   - legacy/prototype rows는 현재 selected-route gate를 통과한 V2 chain이 아니므로 V2 승격 대상이 아니며, GRS 4개는 이미 Final Decision V2 self-contained selected record로 Dashboard에서 정상 작동한다
 - Follow-up:
   - 13개 JSONL을 archive에 백업하고 10개 active JSONL을 제거했다. active에는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`, `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIOS.jsonl`만 남겼으며 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0을 재검증했다
+
+### 2026-06-02 - 선물장 OHLCV / 개장 전 급변 모니터링 방향을 조사한다
+- User request:
+  - 사용자가 선물장 지표나 OHLCV 캔들을 실시간에 가깝게 확인해, 미국장 또는 한국장 시작 전에 가파른 움직임을 파악하는 기능 방향을 조사해 달라고 요청함
+- Interpreted goal:
+  - 무료 또는 보편적 데이터 소스를 비교하고, 기존 Finance Overview / 운영툴 구조 안에서 수집 cadence, 저장 경계, UX/UI 방향을 먼저 정리해야 함
+- Analysis result:
+  - 무료 실시간 선물 API는 안정적이지 않다. 1차 MVP는 `yfinance` 1분봉을 DB-backed polling으로 저장하고, `Overview > Futures Monitor`에서 provider freshness / stale / failed 상태를 노출하는 방향이 가장 작고 현실적이다
+- Follow-up:
+  - `.aiworkspace/note/finance/researches/active/2026-06-futures-market-monitoring/`에 리서치 번들을 작성했다. 사용자 승인 후 구현은 futures collector / read model / Overview tab / Data Health 순서로 진행한다
+
+### 2026-06-02 - 선물장 모니터링 MVP를 구현한다
+- User request:
+  - 사용자가 위에서 정의한 추천 방향대로 순서대로 구현하고, 도중 의사결정이 필요할 때만 멈춰 질문해 달라고 요청함
+- Interpreted goal:
+  - 리서치 결론을 실제 Finance 운영툴에 연결해, 무료 provider 기반 선물 1분봉 OHLCV 수집 / 저장 / Overview 표시 / Data Health 확인이 가능한 MVP를 만들어야 함
+- Analysis result:
+  - DB-backed `yfinance` collector와 service read model을 추가하면 Streamlit UI가 provider를 직접 호출하지 않고도 freshness, missing, stale, shock 상태를 표시할 수 있다. 무료 provider 특성상 `REVIEW` 상태와 최신 candle age를 강하게 노출해야 한다
+- Follow-up:
+  - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에 실행 기록을 남겼다. `Overview > Futures Monitor`와 `Workspace > Ingestion` 수동 수집 진입점을 구현했고 Browser QA에서 `ES=F` candlestick chart와 stale / missing 경고를 확인했다
+
+### 2026-06-02 - Futures Monitor 차트를 2x2 그리드로 확장한다
+- User request:
+  - 사용자가 한 화면에 몇 개 차트가 보이는지 확인한 뒤, 핵심 4개 선물을 2x2 미니 차트 그리드로 보여주는 개선을 진행해 달라고 승인함
+- Interpreted goal:
+  - 기존 선택 symbol 단일 상세 차트는 유지하되, Candles 탭에서 여러 선물의 움직임을 한 화면에서 비교할 수 있어야 함
+- Analysis result:
+  - read model은 이미 선택 symbol 전체의 candle row를 읽고 있었지만 반환값은 선택 symbol candle만 노출했다. `all_candles`를 함께 반환하면 provider 호출이나 DB schema 변경 없이 4개 미니 차트를 만들 수 있다
+- Follow-up:
+  - `Overview > Futures Monitor > Candles`에 선택 symbol을 포함한 최대 4개 미니 캔들 그리드를 추가했고, missing symbol의 15m / age metric은 `-`로 표시하도록 QA 중 수정했다
+
+### 2026-06-02 - 나머지 선물 후보를 수집 검증하고 기본 watchlist를 확정한다
+- User request:
+  - 사용자가 지수 외 금리, 원자재, FX 후보도 같은 순서로 검증하고 기본 화면에 반영해 달라고 요청함
+- Interpreted goal:
+  - 후보 등록 상태를 넘어 실제 DB 수집 가능 여부를 확인하고, 개장 전 한 화면에서 볼 cross-asset 기본 2x2 구성을 정해야 함
+- Analysis result:
+  - non-optional core 16개(`ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `ZN=F`, `ZB=F`, `CL=F`, `GC=F`, `SI=F`, `HG=F`, `NG=F`, `6E=F`, `6J=F`, `6B=F`, `6A=F`, `6C=F`) 모두 yfinance 1m rows를 저장했다. 무료 provider 특성상 latest candle은 wall-clock보다 약 10분 이상 늦어 `REVIEW` freshness로 표시된다
+- Follow-up:
+  - `Overview > Futures Monitor` 기본 Watch Group을 `Pre-open Core`로 바꾸고, 기본 2x2 심볼을 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`로 확정했다
+
+### 2026-06-02 - 선물 일봉으로 글로벌 매크로 온도계를 만든다
+- User request:
+  - 사용자가 수집 중인 지수 / 금리 / 원자재 / FX 선물 일봉으로 risk-on, 금리 부담, 달러 압력, 안전자산 선호 같은 시장 해석을 자동 요약하는 기능을 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 Futures Monitor 차트는 유지하면서 별도 점수 산출 / 문장 생성 로직을 만들고, Overview UI에서 점수 / 방향성 / 근거 티커 / 주의 문구를 한 화면에 보여줘야 함
+- Analysis result:
+  - 같은 `futures_ohlcv` table에 `interval_code=1d` row를 저장하면 신규 schema 없이 일봉 해석이 가능하다. 채권선물과 FX 선물은 raw 가격 방향을 경제적 해석 방향으로 반전해야 한다
+- Follow-up:
+  - `app/services/futures_macro_thermometer.py`와 `Overview > Futures Monitor > Macro Thermometer`를 추가했다. `1y / 1d` core futures backfill smoke는 16개 symbol / 4,032 rows 성공했고, 상세 실행 기록은 `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-v1/`에 남겼다
+
+### 2026-06-02 - Macro Thermometer validation 리뷰 후속을 보정한다
+- User request:
+  - 사용자가 Macro Thermometer historical validation / confidence 보강이 충분한지 리뷰한 뒤, 지적사항을 개선해 달라고 요청함
+- Interpreted goal:
+  - 5y validation이 UI 렌더마다 과도하게 느려지지 않아야 하고, mixed scenario를 directional sample / hit-rate처럼 오해하게 만들면 안 되며, adverse / false-positive 지표도 요구사항대로 보여야 함
+- Analysis result:
+  - 기존 검증은 날짜별 target return 계산에서 같은 시리즈를 반복 정렬했고, mixed scenario의 occurrence count가 directional sample처럼 표시될 수 있었다. `Max Adverse`도 endpoint 기반이라 forward path adverse move 요구와 맞지 않았다
+- Follow-up:
+  - target return 선계산과 Overview TTL cache를 추가했고, mixed scenario는 hit-rate N/A / occurrence count로 분리했다. `Max Adverse`는 path 기준으로 바꾸고 false-positive rate를 UI summary와 threshold sensitivity에 노출했다. 상세 검증은 `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/RUNS.md`에 남겼다
+
+### 2026-06-02 - Futures Monitor UI를 prototype tab 구조에서 workspace 구조로 바꾼다
+- User request:
+  - 사용자가 Futures Monitor가 테스트 더미처럼 보이고 Macro Thermometer와 Candles가 별도 탭이라 분석 흐름이 끊긴다고 지적하며, 개선 가이드 정리 후 순서대로 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 수집 / 검증 기능은 유지하면서 상단 데이터 상태를 항상 읽을 수 있게 하고, Macro Context와 live candles를 동시에 보여주는 분석 workspace로 재배치해야 함
+- Analysis result:
+  - TradingView / Koyfin식 watchlist + chart workspace 패턴을 참고하면, 수집 버튼 중심 UI보다 command center, 상태 badge, side-by-side chart/macro context, 하단 diagnostics 구조가 더 적합하다
+- Follow-up:
+  - `Overview > Futures Monitor`를 command center + Macro Context / Live Futures Charts 동시 노출 구조로 변경했다. Shock Board / Provider Run은 diagnostics로 이동했고, manual refresh는 snapshot in-place reload로 바꿨다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/futures-monitor-ui-v2/`에 남겼다
+
+### 2026-06-02 - Futures Monitor V2.1의 control / chart / macro 정보 위계를 보정한다
+- User request:
+  - 사용자가 스크린샷 기준으로 상단 symbol/control이 과하게 공간을 차지하고, mini chart 정보가 찌그러지며, Macro Context 정보 전달이 시각적으로 애매하다고 지적함
+- Interpreted goal:
+  - 기능이나 scoring을 바꾸지 않고 화면 밀도와 정보 위계를 개선해, chart evidence와 macro reliability를 더 빠르게 읽을 수 있어야 함
+- Analysis result:
+  - 문제 원인은 데이터 부족이 아니라 `st.metric` 과대 표시, full-width `Candle Symbol` control, generic KPI card grid가 만든 공간/시선 낭비다
+- Follow-up:
+  - 상단 controls를 한 줄로 압축하고 refresh는 `Data Actions`에 넣었다. Mini chart는 60m / 15m / Age chip + 큰 chart card로 바꿨고, Macro Context는 scenario / confidence / validation / history signal strip과 score chip으로 재구성했다
+
+### 2026-06-02 - Futures Monitor를 Macro 상단 / Live 3x2 하단 구조로 재배치한다
+- User request:
+  - 사용자가 Selected Detail 차트가 2x2와 중복처럼 보이고, Macro와 Live를 좌우 column으로 나누기보다 Macro를 상단에, 선물 지표를 하단 3x2로 보여달라고 요청함
+- Interpreted goal:
+  - Macro 해석은 full-width 상단 context로 두고, 실시간 선물 차트는 하단 grid에서 비교하도록 화면 흐름을 단순화해야 함
+- Analysis result:
+  - 기존 Selected Detail은 선택 심볼의 첫 grid card와 같은 데이터를 크게 다시 보여줘 중복 인상을 만든다. 3x2 grid는 기본 Pre-open set도 6개로 확장해야 자연스럽다
+- Follow-up:
+  - Selected Detail을 제거하고 Macro Context -> Live Futures Charts 순서의 stacked layout으로 변경했다. Pre-open Core 기본은 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F` 6개로 확장했고, Macro detail은 `Macro Evidence & Data`로 통합했다
+
+### 2026-06-02 - Futures Monitor 상단 control 의미를 정리한다
+- User request:
+  - 사용자가 `Focus`, `Window`, `Chart`가 무엇을 의미하는지 확인한 뒤, 필요하면 깔끔하게 정리해 달라고 요청함
+- Interpreted goal:
+  - Selected Detail 차트가 사라진 뒤 남은 단일 focus symbol control을 제거하고, 상단 control이 실제로 화면에 영향을 주는 선택만 남겨야 함
+- Analysis result:
+  - 현재 화면에서는 `Symbols`가 3x2 chart universe와 순서를 결정하고, `Window`는 보이는 기간, `Chart`는 candle aggregation만 담당하는 구조가 가장 명확하다. 단일 focus symbol은 남겨두면 중복된 개념처럼 보인다
+- Follow-up:
+  - `Focus` control을 제거했고 command/live header는 `6 selected futures · 5m candles · 6H window`처럼 선택 집합 기준으로 표시한다. Chart hourly option은 `60m`로 노출하고 기존 `1h` session state는 `60m`로 migrate한다
+
+### 2026-06-02 - Futures Monitor Macro와 Live 갱신 범위를 분리한다
+- User request:
+  - 사용자가 60초 그래프 갱신 때 Macro Context도 같이 업데이트되는 것처럼 보이고, Macro daily refresh 버튼도 Futures Charts까지 흔드는 구조가 맞는지 지적함
+- Interpreted goal:
+  - `1d` Macro Context와 `1m` Live Futures Charts의 수집 / 렌더 갱신 경계를 분리하고, 각 영역이 자기 데이터만 갱신하도록 해야 함
+- Analysis result:
+  - 기존 auto fragment가 Macro와 Live를 함께 렌더했고, live snapshot의 latest provider run도 interval filter 없이 최신 run 전체를 읽어 daily macro run이 Data Feed에 표시될 수 있었다
+- Follow-up:
+  - Macro Context와 Live Futures Charts를 별도 Streamlit fragment로 분리했다. Macro 버튼은 fragment rerun만 호출하고, live auto refresh는 Live 영역만 실행한다. Live monitor latest run은 `interval_code='1m'`으로 필터링한다

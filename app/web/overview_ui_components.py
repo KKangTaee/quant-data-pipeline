@@ -606,6 +606,249 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-body);
   padding: 0.7rem 0;
 }
+.ov-futures-command {
+  display: grid;
+  grid-template-columns: minmax(17rem, 1.2fr) minmax(16rem, 1fr) minmax(16rem, 1fr);
+  gap: var(--ov-mi-gap-md);
+  align-items: stretch;
+  margin: 0.42rem 0 0.85rem 0;
+  padding: 0.58rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.08), rgba(37, 99, 235, 0.06) 52%, rgba(255, 255, 255, 0)),
+    var(--ov-mi-color-surface);
+}
+.ov-futures-command-cell {
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-futures-command-cell:first-child {
+  border-left: 0;
+}
+.ov-futures-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.ov-futures-title {
+  color: var(--ov-mi-color-text);
+  font-size: 1.08rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  margin-top: 0.22rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.26;
+  margin-top: 0.18rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-feed-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.35rem;
+}
+.ov-futures-feed-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.22rem 0.48rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--ov-feed-tone, var(--ov-mi-color-neutral)) 34%, transparent);
+  background: color-mix(in srgb, var(--ov-feed-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-feed-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-futures-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin: 0.48rem 0 0.5rem 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-futures-section-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-section-meta {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-futures-symbol-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin: 0.34rem 0 0.18rem 0;
+}
+.ov-futures-symbol-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-symbol-meta {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.18;
+  text-align: right;
+}
+.ov-futures-quiet-note {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin: 0.2rem 0 0.35rem 0;
+}
+.ov-futures-control-note {
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin: 0.15rem 0 0.35rem 0;
+}
+.ov-futures-live-strip,
+.ov-futures-macro-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+  margin: 0.35rem 0 0.65rem 0;
+}
+.ov-futures-live-item,
+.ov-futures-macro-item {
+  min-width: 0;
+  padding: 0.58rem 0.68rem;
+  border: 1px solid color-mix(in srgb, var(--ov-signal-tone, var(--ov-mi-color-neutral)) 28%, transparent);
+  border-top: 3px solid var(--ov-signal-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background: color-mix(in srgb, var(--ov-signal-tone, var(--ov-mi-color-neutral)) 5%, transparent);
+}
+.ov-futures-live-label,
+.ov-futures-macro-label {
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.ov-futures-live-value,
+.ov-futures-macro-value {
+  color: inherit;
+  font-size: 1.02rem;
+  font-weight: var(--ov-mi-weight-value);
+  line-height: 1.16;
+  margin-top: 0.22rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-live-detail,
+.ov-futures-macro-detail {
+  color: color-mix(in srgb, currentColor 70%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.22;
+  margin-top: 0.16rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin-bottom: 0.38rem;
+}
+.ov-futures-chart-title {
+  color: inherit;
+  font-size: 1.02rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-futures-chart-subtitle {
+  color: color-mix(in srgb, currentColor 68%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.2;
+  margin-top: 0.15rem;
+}
+.ov-futures-chart-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--ov-chart-tone, var(--ov-mi-color-neutral)) 34%, transparent);
+  background: color-mix(in srgb, var(--ov-chart-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-chart-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-futures-chart-metrics,
+.ov-futures-score-lane {
+  display: flex;
+  align-items: center;
+  gap: var(--ov-mi-gap-xs);
+  flex-wrap: wrap;
+  margin: 0.1rem 0 0.48rem 0;
+}
+.ov-futures-mini-metric,
+.ov-futures-score-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  min-height: 1.55rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--ov-chip-tone, var(--ov-mi-color-neutral)) 30%, transparent);
+  background: color-mix(in srgb, var(--ov-chip-tone, var(--ov-mi-color-neutral)) 8%, transparent);
+  color: inherit;
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-futures-mini-metric-label,
+.ov-futures-score-label {
+  color: color-mix(in srgb, currentColor 62%, transparent);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-futures-mini-metric-value,
+.ov-futures-score-value {
+  color: var(--ov-chip-tone, var(--ov-mi-color-neutral));
+  font-weight: var(--ov-mi-weight-value);
+}
+.ov-futures-macro-hero {
+  padding: 0.15rem 0 0.15rem 0;
+}
+.ov-futures-macro-scenario {
+  color: inherit;
+  font-size: 1.08rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.25;
+  margin: 0.2rem 0 0.42rem 0;
+}
+.ov-futures-macro-sentence {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  line-height: 1.42;
+  margin-bottom: 0.44rem;
+}
+.ov-futures-macro-evidence {
+  color: color-mix(in srgb, currentColor 70%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.3;
+  margin-bottom: 0.55rem;
+}
 @media (max-width: 760px) {
   .ov-mm-status-bar {
     align-items: flex-start;
@@ -638,6 +881,32 @@ def overview_ui_css() -> str:
   }
   .ov-events-badges {
     justify-content: flex-start;
+  }
+  .ov-futures-command {
+    grid-template-columns: 1fr;
+  }
+  .ov-futures-command-cell,
+  .ov-futures-command-cell:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-futures-command-cell:first-child {
+    border-top: 0;
+  }
+  .ov-futures-symbol-head,
+  .ov-futures-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ov-futures-symbol-meta {
+    text-align: left;
+  }
+  .ov-futures-live-strip,
+  .ov-futures-macro-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-futures-chart-head {
+    flex-direction: column;
   }
 }
 </style>

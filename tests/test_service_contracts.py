@@ -9,6 +9,7 @@ import unittest
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pandas as pd
@@ -5015,6 +5016,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                     {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                 ]
+            if "FROM futures_ohlcv" in sql:
+                return [
+                    {
+                        "latest_candle_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                        "active_symbols": 4,
+                        "candle_rows": 240,
+                    }
+                ]
             if "FROM market_universe_member" in sql:
                 return [
                     {
@@ -5109,6 +5118,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sp500_intraday_row["Last Auto Run"], "2026-05-28 04:05")
         self.assertEqual(sp500_intraday_row["Auto Source"], "Browser Auto")
         self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
+        futures_row = rows[rows["Area"] == "Futures Monitor 1m OHLCV"].iloc[0]
+        self.assertEqual(futures_row["Status"], "OK")
+        self.assertIn("4 symbols", futures_row["Data Freshness"])
         self.assertEqual(snapshot["coverage"]["latest_auto_at"], "2026-05-28 04:05")
         earnings_row = rows[rows["Area"] == "Earnings Calendar"].iloc[0]
         self.assertEqual(earnings_row["Status"], "Partial")
@@ -5129,6 +5141,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                     {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                     {"universe_code": "TOP2000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                ]
+            if "FROM futures_ohlcv" in sql:
+                return [
+                    {
+                        "latest_candle_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                        "active_symbols": 4,
+                        "candle_rows": 240,
+                    }
                 ]
             if "FROM market_universe_member" in sql:
                 return [
@@ -5168,6 +5188,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             del db_name, params
             if "FROM market_intraday_snapshot" in sql:
                 return []
+            if "FROM futures_ohlcv" in sql:
+                return []
             if "FROM market_universe_member" in sql:
                 return []
             if "FROM market_event_calendar" in sql:
@@ -5187,6 +5209,532 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         macro_row = snapshot["rows"][snapshot["rows"]["Area"] == "Macro Calendar"].iloc[0]
         self.assertEqual(macro_row["Status"], "Due")
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
+
+
+class FuturesMarketMonitoringContractTests(unittest.TestCase):
+    def test_futures_monitor_snapshot_scores_moves_and_stale_state(self) -> None:
+        from app.services.futures_market_monitoring import build_futures_monitor_snapshot
+
+        base = pd.Timestamp("2026-06-02 00:00:00", tz=timezone.utc)
+        candle_rows: list[dict[str, object]] = []
+        for idx in range(0, 61):
+            ts = base - pd.Timedelta(minutes=60 - idx)
+            es_close = 100.0 + idx * 0.01
+            nq_close = 100.0 + idx * 0.025
+            for symbol, close in (("ES=F", es_close), ("NQ=F", nq_close)):
+                candle_rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1m",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": close - 0.05,
+                        "high": close + 0.1,
+                        "low": close - 0.1,
+                        "close": close,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_instrument" in sql:
+                return [
+                    {"provider_symbol": "ES=F", "display_name": "E-mini S&P 500", "futures_group": "Equity Index", "source": "yfinance", "sort_order": 10},
+                    {"provider_symbol": "NQ=F", "display_name": "E-mini Nasdaq 100", "futures_group": "Equity Index", "source": "yfinance", "sort_order": 20},
+                ]
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            if "FROM futures_market_monitor_run" in sql:
+                self.assertIn("WHERE interval_code = %s", sql)
+                self.assertEqual(params, ["1m"])
+                return [
+                    {
+                        "run_id": "run-1",
+                        "interval_code": "1m",
+                        "status": "success",
+                        "symbols_requested": 2,
+                        "symbols_processed": 2,
+                        "rows_written": len(candle_rows),
+                        "latest_candle_time_utc": "2026-06-02 00:00:00",
+                        "finished_at": "2026-06-02 00:00:01",
+                    }
+                ]
+            return []
+
+        snapshot = build_futures_monitor_snapshot(
+            group="Equity Index",
+            symbols=["ES=F", "NQ=F"],
+            selected_symbol="NQ=F",
+            now=datetime(2026, 6, 2, 0, 1, tzinfo=timezone.utc),
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 2)
+        self.assertEqual(snapshot["selected_symbol"], "NQ=F")
+        self.assertFalse(snapshot["candles"].empty)
+        self.assertFalse(snapshot["all_candles"].empty)
+        self.assertEqual(set(snapshot["all_candles"]["Symbol"]), {"ES=F", "NQ=F"})
+        self.assertEqual(snapshot["top_move"]["Symbol"], "NQ=F")
+        nq_row = snapshot["rows"][snapshot["rows"]["Symbol"] == "NQ=F"].iloc[0]
+        self.assertEqual(nq_row["State"], "Sharp")
+        self.assertGreater(nq_row["60m %"], 1.0)
+
+    def test_futures_monitor_preopen_core_uses_cross_asset_symbols(self) -> None:
+        from app.services.futures_market_monitoring import build_futures_monitor_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_instrument" in sql:
+                return [
+                    {"provider_symbol": "NQ=F", "display_name": "E-mini Nasdaq 100", "futures_group": "Equity Index", "source": "yfinance", "sort_order": 20},
+                    {"provider_symbol": "ZN=F", "display_name": "10Y Treasury Note", "futures_group": "Rates", "source": "yfinance", "sort_order": 110},
+                    {"provider_symbol": "CL=F", "display_name": "WTI Crude Oil", "futures_group": "Commodities", "source": "yfinance", "sort_order": 210},
+                    {"provider_symbol": "6E=F", "display_name": "Euro FX", "futures_group": "FX Futures", "source": "yfinance", "sort_order": 310},
+                ]
+            return []
+
+        snapshot = build_futures_monitor_snapshot(group="Pre-open Core", query_fn=query_fn)
+
+        self.assertEqual(snapshot["symbols"], ["NQ=F", "ZN=F", "CL=F", "6E=F"])
+        self.assertEqual(snapshot["selected_symbol"], "NQ=F")
+        self.assertIn("Pre-open Core", snapshot["groups"])
+
+    def test_futures_collector_normalizes_yfinance_frame_and_records_run(self) -> None:
+        from finance.data import futures_market as fm
+
+        idx = pd.date_range("2026-06-02 00:00:00", periods=2, freq="min", tz=timezone.utc)
+        frame = pd.DataFrame(
+            {
+                ("Open", "ES=F"): [100.0, 101.0],
+                ("High", "ES=F"): [101.0, 102.0],
+                ("Low", "ES=F"): [99.0, 100.0],
+                ("Close", "ES=F"): [100.5, 101.5],
+                ("Adj Close", "ES=F"): [100.5, 101.5],
+                ("Volume", "ES=F"): [1000, 1100],
+            },
+            index=idx,
+        )
+
+        written_rows: list[dict[str, object]] = []
+        run_rows: list[dict[str, object]] = []
+
+        def downloader(symbols, *, period, interval):
+            self.assertEqual(symbols, ["ES=F"])
+            self.assertEqual(period, "1d")
+            self.assertEqual(interval, "1m")
+            return frame
+
+        def capture_ohlcv(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        def capture_run(row, **kwargs):
+            del kwargs
+            run_rows.append(row)
+            return 1
+
+        with (
+            patch.object(fm, "sync_futures_market_tables", return_value=None),
+            patch.object(fm, "upsert_futures_instruments", return_value=1),
+            patch.object(fm, "upsert_futures_ohlcv_rows", side_effect=capture_ohlcv),
+            patch.object(fm, "upsert_futures_monitor_run", side_effect=capture_run),
+        ):
+            result = fm.collect_and_store_futures_ohlcv(
+                ["ES=F"],
+                period="1d",
+                interval="1m",
+                downloader=downloader,
+                sleep_sec=0,
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_processed"], 1)
+        self.assertEqual(written_rows[0]["provider_symbol"], "ES=F")
+        self.assertEqual(written_rows[0]["interval_code"], "1m")
+        self.assertEqual(written_rows[0]["provider_status"], "ok")
+        self.assertEqual(run_rows[0]["status"], "success")
+        self.assertEqual(run_rows[0]["latest_candle_time_utc"], "2026-06-02 00:01:00")
+
+    def test_ingestion_job_wraps_futures_collection_summary(self) -> None:
+        from app.jobs import ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_futures_ohlcv",
+            return_value={
+                "run_id": "run-job",
+                "source": "yfinance",
+                "period": "1d",
+                "interval": "1m",
+                "cadence_mode": "manual",
+                "status": "partial_success",
+                "rows_written": 10,
+                "symbols_requested": 2,
+                "symbols_processed": 1,
+                "failed_symbols": ["NQ=F"],
+                "latest_candle_time_utc": "2026-06-02 00:01:00",
+                "diagnostics": {"batches": []},
+            },
+        ):
+            result = jobs.run_collect_futures_ohlcv(["ES=F", "NQ=F"], max_symbols=2)
+
+        self.assertEqual(result["job_name"], "collect_futures_ohlcv")
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 10)
+        self.assertEqual(result["failed_symbols"], ["NQ=F"])
+        self.assertEqual(result["details"]["target_tables"][0], "finance_price.futures_ohlcv")
+
+
+class FuturesMacroThermometerContractTests(unittest.TestCase):
+    def _daily_rows(self, final_moves: dict[str, float], *, days: int = 260) -> list[dict[str, object]]:
+        base = pd.Timestamp("2026-06-02 00:00:00", tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        rows: list[dict[str, object]] = []
+        for symbol_index, (symbol, final_move) in enumerate(final_moves.items()):
+            price = 100.0 + symbol_index * 7.0
+            for idx in range(days):
+                daily_move = 0.0003 + 0.003 * ((idx % 9) - 4) / 4
+                if idx == days - 1:
+                    daily_move = final_move
+                price *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": price * 0.995,
+                        "high": price * 1.005,
+                        "low": price * 0.99,
+                        "close": price,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return rows
+
+    def _risk_on_validation_rows(self, *, days: int = 150) -> tuple[list[str], list[dict[str, object]]]:
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "YM=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "GC=F",
+            "SI=F",
+            "HG=F",
+            "NG=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        risk_growth = {"ES=F", "NQ=F", "YM=F", "RTY=F", "HG=F", "CL=F", "6A=F"}
+        event_indices = {80, 105}
+        base = pd.Timestamp("2026-01-01 00:00:00", tz=timezone.utc)
+        rows: list[dict[str, object]] = []
+        prices = {symbol: 100.0 + idx * 5.0 for idx, symbol in enumerate(symbols)}
+        for idx in range(days):
+            for symbol in symbols:
+                daily_move = 0.0004 + 0.002 * ((idx % 7) - 3) / 3
+                if idx in event_indices and symbol in risk_growth:
+                    daily_move = 0.02
+                elif any(event_idx < idx <= event_idx + 5 for event_idx in event_indices) and symbol in risk_growth:
+                    daily_move = 0.006
+                elif idx in event_indices and symbol in {"ZN=F", "ZB=F", "6E=F", "6J=F", "6B=F", "6C=F"}:
+                    daily_move = 0.001
+                prices[symbol] *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": prices[symbol] * 0.995,
+                        "high": prices[symbol] * 1.005,
+                        "low": prices[symbol] * 0.99,
+                        "close": prices[symbol],
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return symbols, rows
+
+    def test_macro_thermometer_inverts_rates_and_fx_pressure(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "YM=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "GC=F",
+            "SI=F",
+            "HG=F",
+            "NG=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        final_moves = {symbol: 0.001 for symbol in symbols}
+        final_moves.update(
+            {
+                "ES=F": 0.018,
+                "NQ=F": 0.024,
+                "YM=F": 0.014,
+                "RTY=F": 0.02,
+                "ZN=F": -0.012,
+                "ZB=F": -0.014,
+                "6E=F": -0.01,
+                "6J=F": -0.008,
+                "6B=F": -0.011,
+                "6A=F": -0.009,
+                "6C=F": -0.008,
+            }
+        )
+        candle_rows = self._daily_rows(final_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        scores = snapshot["scores"].set_index("Score")
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertGreater(scores.loc["Risk-On Score", "Value"], 20)
+        self.assertGreater(scores.loc["Rate Pressure Score", "Value"], 20)
+        self.assertGreater(scores.loc["Dollar Pressure Score", "Value"], 20)
+        rate_components = snapshot["score_components"]
+        zn_component = rate_components[
+            (rate_components["Score"] == "Rate Pressure Score") & (rate_components["Symbol"] == "ZN=F")
+        ].iloc[0]
+        self.assertLess(zn_component["Raw Std Move"], 0)
+        self.assertGreater(zn_component["Score Move"], 0)
+
+    def test_macro_thermometer_detects_rate_pressure_scenario(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = ["ES=F", "NQ=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "HG=F", "CL=F", "6A=F"]
+        final_moves = {symbol: 0.001 for symbol in symbols}
+        final_moves.update({"NQ=F": -0.025, "ZN=F": -0.015, "ZB=F": -0.017, "GC=F": -0.018})
+        candle_rows = self._daily_rows(final_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+
+        self.assertEqual(snapshot["summary"]["scenario"], "금리 상승 부담")
+        self.assertIn("금리 상승 압력", snapshot["summary"]["summary"])
+        self.assertGreater(snapshot["scores"].set_index("Score").loc["Rate Pressure Score", "Value"], 20)
+
+    def test_macro_thermometer_warns_when_daily_history_is_short(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        candle_rows = self._daily_rows({"ES=F": 0.02, "NQ=F": 0.02}, days=20)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=["ES=F", "NQ=F"], query_fn=query_fn)
+
+        self.assertEqual(snapshot["status"], "REVIEW")
+        self.assertIn("less than 6 months", " ".join(snapshot["warnings"]))
+        self.assertEqual(snapshot["coverage"]["standardized_count"], 0)
+
+    def test_macro_validation_recomputes_point_in_time_scenario_hits(self) -> None:
+        from app.services.futures_macro_validation import build_futures_macro_validation_snapshot
+
+        symbols, candle_rows = self._risk_on_validation_rows()
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            if "FROM nyse_price_history" in sql:
+                return []
+            return []
+
+        validation = build_futures_macro_validation_snapshot(
+            symbols=symbols,
+            query_fn=query_fn,
+            current_snapshot={"summary": {"scenario": "좋은 risk-on"}},
+            min_standardized_symbols=8,
+        )
+        summary = validation["scenario_summary"]
+
+        self.assertIn(validation["status"], {"OK", "REVIEW"})
+        self.assertFalse(validation["records"].empty)
+        self.assertIn("좋은 risk-on", set(summary["Scenario"]))
+        risk_on_row = summary[summary["Scenario"] == "좋은 risk-on"].iloc[0]
+        self.assertGreaterEqual(risk_on_row["Sample 5D"], 1)
+        self.assertIsNotNone(risk_on_row["Hit Rate 5D %"])
+        self.assertGreaterEqual(risk_on_row["Hit Rate 5D %"], 50)
+
+    def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
+        from app.services.futures_macro_validation import build_interpretation_confidence
+
+        current_snapshot = {
+            "coverage": {
+                "symbol_count": 16,
+                "standardized_count": 16,
+                "min_data_days": 260,
+                "latest_daily_date": date.today().isoformat(),
+            },
+            "evidence_groups": {
+                "counts": {
+                    "strong": 4,
+                    "weak": 1,
+                    "missing": 0,
+                    "conflicting": 0,
+                }
+            },
+        }
+        validation_snapshot = {
+            "coverage": {
+                "validation_dates": 100,
+                "history_span_years": 4.0,
+            },
+            "current_scenario_metrics": {
+                "Scenario": "좋은 risk-on",
+                "Sample 5D": 80,
+                "Hit Rate 5D %": 61.0,
+                "Directional Hit Applicable": True,
+            },
+        }
+
+        confidence = build_interpretation_confidence(current_snapshot, validation_snapshot)
+
+        self.assertIn(confidence["label"], {"High Confidence", "Medium Confidence"})
+        self.assertEqual(confidence["sample_size"], 80)
+        self.assertEqual(confidence["hit_rate_5d"], 61.0)
+
+        low_snapshot = {
+            "coverage": {
+                "symbol_count": 16,
+                "standardized_count": 0,
+                "min_data_days": 20,
+                "latest_daily_date": date.today().isoformat(),
+            },
+            "evidence_groups": {"counts": {}},
+        }
+        low_confidence = build_interpretation_confidence(low_snapshot, validation_snapshot)
+
+        self.assertEqual(low_confidence["label"], "Not Enough History")
+
+    def test_mixed_scenario_confidence_does_not_report_directional_hit_sample(self) -> None:
+        from app.services.futures_macro_validation import build_interpretation_confidence
+
+        current_snapshot = {
+            "coverage": {
+                "symbol_count": 16,
+                "standardized_count": 16,
+                "min_data_days": 260,
+                "latest_daily_date": date.today().isoformat(),
+            },
+            "evidence_groups": {
+                "counts": {
+                    "strong": 3,
+                    "weak": 2,
+                    "missing": 0,
+                    "conflicting": 0,
+                }
+            },
+        }
+        validation_snapshot = {
+            "coverage": {
+                "validation_dates": 100,
+                "history_span_years": 4.0,
+            },
+            "current_scenario_metrics": {
+                "Scenario": "혼재된 매크로 흐름",
+                "Occurrence Count": 90,
+                "Sample 5D": 0,
+                "Hit Rate 5D %": None,
+                "Directional Hit Applicable": False,
+            },
+        }
+
+        confidence = build_interpretation_confidence(current_snapshot, validation_snapshot)
+
+        self.assertEqual(confidence["sample_size"], 0)
+        self.assertEqual(confidence["occurrence_count"], 90)
+        self.assertFalse(confidence["hit_applicable"])
+        self.assertIsNone(confidence["hit_rate_5d"])
+
+    def test_basket_forward_return_reports_path_max_adverse_move(self) -> None:
+        from app.services.futures_macro_validation import _basket_forward_return
+
+        dates = pd.date_range("2026-01-01", periods=6, freq="D")
+        futures_matrix = pd.DataFrame(
+            {
+                "ES=F": [100.0, 95.0, 98.0, 101.0, 103.0, 104.0],
+                "NQ=F": [100.0, 94.0, 99.0, 102.0, 103.0, 105.0],
+            },
+            index=dates,
+        )
+
+        basket = _basket_forward_return(
+            futures_matrix=futures_matrix,
+            proxy_matrix=pd.DataFrame(),
+            futures_symbols=("ES=F", "NQ=F"),
+            as_of=dates[0],
+            horizon=5,
+        )
+
+        self.assertGreater(basket.value, 0)
+        self.assertLess(basket.max_adverse, 0)
+        self.assertAlmostEqual(basket.max_adverse, -5.5, places=1)
+
+    def test_overview_macro_snapshot_cache_can_be_cleared(self) -> None:
+        import app.services.futures_macro_thermometer as macro_service
+
+        calls: list[dict[str, Any]] = []
+        original_builder = macro_service.build_futures_macro_thermometer_snapshot
+
+        def fake_builder(**kwargs: Any) -> dict[str, Any]:
+            calls.append(dict(kwargs))
+            return {"call_count": len(calls)}
+
+        try:
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+            macro_service.build_futures_macro_thermometer_snapshot = fake_builder
+
+            first = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            second = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+            third = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+
+            self.assertIs(first, second)
+            self.assertEqual(first["call_count"], 1)
+            self.assertEqual(third["call_count"], 2)
+            self.assertEqual(len(calls), 2)
+        finally:
+            macro_service.build_futures_macro_thermometer_snapshot = original_builder
+            macro_service.clear_overview_futures_macro_snapshot_cache()
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):

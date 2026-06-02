@@ -26,6 +26,8 @@
 | `market_universe_member` | Overview market intelligence용 current universe membership. 초기 구현은 S&P 500 current constituents |
 | `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
 | `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
+| `futures_instrument` | Overview Futures Monitor용 선물 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
+| `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
 | `etf_provider_source_map` | ETF별 issuer 공식 endpoint / parser mapping cache. verified row를 provider snapshot collector가 사용 |
 | `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
@@ -38,6 +40,7 @@
 |---|---|
 | `nyse_price_history` | stock / ETF 공용 OHLCV, dividend, split price ledger |
 | `market_intraday_snapshot` | Overview daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
+| `futures_ohlcv` | Overview Futures Monitor용 선물 OHLCV candle ledger. 1m row는 shock board / chart에, 1d row는 Macro Thermometer current score와 historical validation에 사용 |
 
 ### `finance_fundamental`
 
@@ -66,7 +69,7 @@
 | lifecycle evidence | symbol lifecycle / delisting / historical membership evidence | `nyse_symbol_lifecycle` |
 | profile | 현재 snapshot 성격의 profile metadata | `nyse_asset_profile` |
 | connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
-| provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation`, `market_intraday_snapshot`, `market_event_calendar` |
+| provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation`, `market_intraday_snapshot`, `market_event_calendar`, `futures_ohlcv`, `futures_market_monitor_run` |
 | issue tracking | 반복되는 수집 / coverage 이슈를 운영 판단용으로 누적 | `market_data_issue` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |

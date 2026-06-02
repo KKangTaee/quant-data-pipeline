@@ -38,6 +38,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - Verification passed so far: py_compile, focused Selected Portfolio service contracts, and `git diff --check`; Browser QA is the remaining closeout check.
 - No Final Review row mutation, saved setup cleanup, DB schema, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
 
+### 2026-06-02 - Futures Macro Thermometer Historical Validation V1
+- Completed implementation task `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`.
+- Macro Thermometer now attaches point-in-time historical validation, Interpretation Confidence, current scenario sample / hit-rate evidence, score threshold sensitivity, score-forward-return relationships, and separated strong / weak / conflicting evidence.
+- 5y / 1d core futures backfill smoke succeeded for 16/16 symbols with 20,138 rows; validation smoke produced 1,198 PIT dates with futures targets only.
+- Boundary remains read-only market context: no prediction guarantee, registry/saved write, live approval, order, alert, broker/account sync, or auto rebalance.
+
 ### 2026-06-02 - Selected Dashboard Manual Scenario Run V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`.
 - Strategy add / slot edit now changes saved setup only; current scenario results are keyed by portfolio / slot / selected decision and start / end / balance signature so stale results are not counted as fresh.
@@ -4575,3 +4581,37 @@ Detailed historical logs were archived on `2026-04-13`.
   - 사용자 승인 후 전체 JSONL 13개를 `.aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/`에 SHA-256 manifest와 함께 백업했다.
   - active JSONL은 Final Decision V2, Selected Dashboard portfolios, Saved Portfolios 3개만 남겼고 legacy/prototype/generated JSONL 10개는 active에서 제거했다.
   - 검증 결과 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0, 6개 focused service contract, `git diff --check`가 통과했다.
+- Ingestion Console UX / Data Quality follow-up:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`에서 리뷰 후속 개선을 완료했다.
+  - Ingestion 상단에 workflow overview를 추가하고, 주요 가격 수집 card에 실행 전 source / 대상 수 / 기간 / interval 계약과 bounded DB coverage quick check를 붙였다.
+  - 결과 summary는 job domain별 metric label / interpretation callout을 사용해 가격 row, lifecycle evidence row, provider snapshot의 의미를 분리한다.
+  - py_compile, `git diff --check`, service contract 207 tests, Browser DOM QA를 통과했다. Browser screenshot capture는 timeout으로 생성하지 못했다.
+- Futures Market Monitoring research:
+  - `.aiworkspace/note/finance/researches/active/2026-06-futures-market-monitoring/`에 선물장 OHLCV / 개장 전 급변 모니터링 리서치 번들을 만들었다.
+  - 로컬 `yfinance` 1분봉 smoke에서 `ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `CL=F`, `GC=F`, `ZN=F`, `6E=F` 등은 rows를 반환했고 `DX=F`, `VX=F`는 제외 대상으로 확인했다.
+  - 권장 방향은 `Overview > Futures Monitor` 탭, DB-backed `yfinance` polling, 60초 기본 cadence, Altair candlestick, provider freshness / stale / failed 상태 표시다.
+- Futures Market Monitoring MVP V1:
+  - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에서 futures schema, `yfinance` 1m OHLCV collector, ingestion job, Overview read model, Data Health 연결을 구현했다.
+  - `Overview > Futures Monitor`는 Watch Group / Symbols / Candle Symbol / Window / Chart control, Shock Board, Candles, Provider Run을 제공하며 provider age / stale / missing 상태를 표시한다.
+  - `Workspace > Ingestion`에는 수동 선물 1분봉 수집 expander를 추가했다. 기본 자동 갱신은 browser-open 60초 cadence이고 fast mode는 작은 symbol set에만 허용된다.
+  - 검증: focused / full service contracts, py_compile, UI-engine boundary, `git diff --check`, yfinance collector smoke, Browser QA screenshot 통과.
+  - 후속 UI 개선으로 Candles 탭에 선택 symbol을 포함한 최대 4개 2x2 미니 캔들 차트와 선택 symbol 상세 차트를 함께 표시하도록 바꿨다.
+  - 후속 데이터 검증에서 지수 / 금리 / 원자재 / FX core 16개가 모두 1분봉 row를 저장했고, 기본 `Pre-open Core` 2x2를 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`로 확정했다.
+- Futures Macro Thermometer V1:
+  - `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-v1/`에서 1년 일봉 기반 글로벌 매크로 해석 기능을 구현했다.
+  - `Overview > Futures Monitor > Macro Thermometer`는 Risk-On / Growth / Rate Pressure / Dollar Pressure / Safe Haven / Inflation Pressure 점수, 오늘의 해석, 근거 티커, 표준화 움직임, 주의 문구를 표시한다.
+  - 기존 1m 차트 / Shock Board는 유지하고, macro tab은 저장된 `interval_code=1d` row를 별도로 읽는다.
+  - 16개 core futures `1y / 1d` backfill smoke가 성공했고, focused service contracts는 통과했다. 최종 Browser QA / full verification은 task RUNS를 확인한다.
+- Futures Macro Thermometer Validation follow-up:
+  - `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`에서 리뷰 후속 수정까지 반영했다.
+  - 5y point-in-time validation은 target return 선계산과 Overview TTL cache를 사용하며, same-process 반복 렌더는 캐시로 즉시 반환된다.
+  - Mixed scenario는 directional hit-rate를 N/A로 표시하고 occurrence count를 분리한다. `Max Adverse`는 forward window path adverse move 기준이며 false-positive rate가 UI summary에 노출된다.
+- Futures Monitor UI V2:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-ui-v2/`에서 prototype-like tab UI를 workspace layout으로 개편했다.
+  - 상단 Futures Workspace / Market Pulse / Data Feed command center를 추가하고 Macro Context와 Live Futures Charts를 같은 화면에 배치했다.
+  - Shock Board / Provider Run / raw candle rows는 하단 diagnostics expander로 낮췄고, manual refresh의 즉시 `st.rerun()`을 제거했다.
+  - py_compile, UI-engine boundary, service contract 234 tests, Browser QA screenshot을 통과했다.
+  - V2.1 후속으로 상단 controls를 압축하고, mini chart metric을 chip strip으로 바꾸며, Macro Context를 signal strip / score chip 중심으로 다듬었다.
+  - V2.2 후속으로 Macro Context를 상단 full-width로 올리고, Live Futures Charts를 하단 3x2 grid로 바꾸며, 중복 `Selected Detail` 차트를 제거했다.
+  - V2.3 후속으로 `Focus` control을 제거하고, `Symbols`가 3x2 grid 순서를 직접 결정하도록 정리했다. `Chart` hourly option은 `1h` 대신 `60m`로 표시한다.
+  - V2.4 후속으로 Macro Context daily refresh와 Live Futures Charts auto refresh를 별도 Streamlit fragment로 분리했다. Live provider run summary는 `1m` run만 읽도록 필터링했다.

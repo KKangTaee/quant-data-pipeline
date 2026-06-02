@@ -17,6 +17,11 @@ from finance.data.etf_provider import (
     collect_and_store_etf_operability,
     discover_and_store_etf_provider_source_map,
 )
+from finance.data.futures_market import (
+    DEFAULT_CORE_FUTURES_SYMBOLS,
+    collect_and_store_futures_ohlcv,
+    normalize_futures_symbols,
+)
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.market_intelligence import (
     collect_and_store_bls_macro_calendar_ics,
@@ -840,6 +845,96 @@ def run_collect_sp500_intraday_snapshot(
         method=method,
         fallback_to_yfinance=fallback_to_yfinance,
     )
+
+
+def run_collect_futures_ohlcv(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    period: str = "1d",
+    interval: str = "1m",
+    cadence_mode: str = "manual",
+    max_symbols: int = 24,
+    batch_size: int = 8,
+    sleep_sec: float = 0.15,
+) -> JobResult:
+    job_name = "collect_futures_ohlcv"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        requested_symbols = normalize_futures_symbols(
+            symbols if symbols is not None else DEFAULT_CORE_FUTURES_SYMBOLS,
+            max_symbols=max_symbols,
+        )
+        result = collect_and_store_futures_ohlcv(
+            requested_symbols,
+            period=period,
+            interval=interval,
+            cadence_mode=cadence_mode,
+            max_symbols=max_symbols,
+            batch_size=batch_size,
+            sleep_sec=sleep_sec,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        failed_symbols = list(result.get("failed_symbols") or [])
+        requested = int(result.get("symbols_requested") or len(requested_symbols))
+        processed = int(result.get("symbols_processed") or 0)
+        finished_at = _now_str()
+        if rows_written <= 0:
+            status = "failed"
+            message = "Futures OHLCV collection wrote no rows."
+        elif failed_symbols:
+            status = "partial_success"
+            message = "Futures OHLCV collection completed with missing symbols."
+        else:
+            status = "success"
+            message = "Futures OHLCV collection completed."
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=processed,
+            failed_symbols=failed_symbols,
+            message=message,
+            details={
+                "source": result.get("source") or "yfinance",
+                "method": "yfinance_ohlcv",
+                "period": result.get("period") or period,
+                "interval": result.get("interval") or interval,
+                "cadence_mode": result.get("cadence_mode") or cadence_mode,
+                "latest_candle_time_utc": result.get("latest_candle_time_utc"),
+                "run_id": result.get("run_id"),
+                "target_tables": [
+                    "finance_price.futures_ohlcv",
+                    "finance_meta.futures_instrument",
+                    "finance_meta.futures_market_monitor_run",
+                ],
+                "diagnostics": result.get("diagnostics") or {},
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"Futures OHLCV collection failed: {exc}",
+            details={
+                "source": "yfinance",
+                "method": "yfinance_ohlcv",
+                "period": period,
+                "interval": interval,
+                "cadence_mode": cadence_mode,
+            },
+        )
 
 
 def run_collect_fomc_calendar(

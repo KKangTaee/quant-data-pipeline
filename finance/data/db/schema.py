@@ -425,6 +425,97 @@ MARKET_INTELLIGENCE_SCHEMAS = {
 }
 
 
+FUTURES_MARKET_SCHEMAS = {
+    "futures_instrument": """
+        CREATE TABLE IF NOT EXISTS futures_instrument (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          provider_symbol VARCHAR(32) NOT NULL,
+          display_name VARCHAR(255) NOT NULL,
+          futures_group VARCHAR(64) NOT NULL,
+          exchange VARCHAR(64) NULL,
+          contract_hint VARCHAR(255) NULL,
+
+          source VARCHAR(64) NOT NULL DEFAULT 'yfinance',
+          source_type ENUM('provider_symbol','official_mapping','manual_preset') NOT NULL DEFAULT 'manual_preset',
+          active TINYINT(1) NOT NULL DEFAULT 1,
+          sort_order INT NOT NULL DEFAULT 1000,
+          notes TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_provider_symbol_source (provider_symbol, source),
+          KEY ix_futures_group_active (futures_group, active),
+          KEY ix_sort_order (sort_order)
+        );
+    """,
+    "futures_market_monitor_run": """
+        CREATE TABLE IF NOT EXISTS futures_market_monitor_run (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          run_id CHAR(36) NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          period_code VARCHAR(20) NOT NULL,
+          interval_code VARCHAR(10) NOT NULL,
+          cadence_mode VARCHAR(32) NOT NULL DEFAULT 'manual',
+
+          status ENUM('success','partial_success','failed') NOT NULL DEFAULT 'failed',
+          started_at TIMESTAMP NULL,
+          finished_at TIMESTAMP NULL,
+          duration_sec DOUBLE NULL,
+
+          symbols_requested INT NOT NULL DEFAULT 0,
+          symbols_processed INT NOT NULL DEFAULT 0,
+          rows_written INT NOT NULL DEFAULT 0,
+          latest_candle_time_utc DATETIME NULL,
+
+          failed_symbols_json JSON NULL,
+          diagnostics_json JSON NULL,
+          message TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_futures_monitor_run_id (run_id),
+          KEY ix_futures_monitor_finished (finished_at),
+          KEY ix_futures_monitor_status (status),
+          KEY ix_futures_monitor_latest_candle (latest_candle_time_utc)
+        );
+    """,
+    "futures_ohlcv": """
+        CREATE TABLE IF NOT EXISTS futures_ohlcv (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          provider_symbol VARCHAR(32) NOT NULL,
+          interval_code VARCHAR(10) NOT NULL,
+          candle_time_utc DATETIME NOT NULL,
+
+          source VARCHAR(64) NOT NULL DEFAULT 'yfinance',
+          source_ref VARCHAR(255) NULL,
+
+          open DOUBLE NULL,
+          high DOUBLE NULL,
+          low DOUBLE NULL,
+          close DOUBLE NULL,
+          adj_close DOUBLE NULL,
+          volume DOUBLE NULL,
+
+          provider_status ENUM('ok','missing','error') NOT NULL DEFAULT 'ok',
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_futures_symbol_interval_time_source (provider_symbol, interval_code, candle_time_utc, source),
+          KEY ix_futures_symbol_time (provider_symbol, candle_time_utc),
+          KEY ix_futures_interval_time (interval_code, candle_time_utc),
+          KEY ix_futures_provider_status (provider_status)
+        );
+    """,
+}
+
+
 PROVIDER_SCHEMAS = {
     "etf_provider_source_map": """
         CREATE TABLE IF NOT EXISTS etf_provider_source_map (

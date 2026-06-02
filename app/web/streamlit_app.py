@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from datetime import date, datetime, timedelta
+from html import escape
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -15,13 +16,17 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.jobs.ingestion_jobs import (
+    run_collect_computed_snapshot_lifecycle,
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
+    run_collect_futures_ohlcv,
     run_collect_macro_calendar,
+    run_collect_sec_company_ticker_crosscheck,
     run_import_bls_macro_calendar_ics,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
     run_collect_sec_form25_delistings,
+    run_collect_symbol_directory_snapshots,
     run_discover_etf_provider_source_map,
     run_collect_macro_market_context,
     run_daily_market_update,
@@ -36,6 +41,7 @@ from app.jobs.ingestion_jobs import (
     run_pipeline_core_market_data,
     run_weekly_fundamental_refresh,
 )
+from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 from app.jobs.diagnostics import inspect_price_stale_symbols, inspect_statement_coverage_symbols
 from app.jobs.result_artifacts import write_run_artifacts
 from app.jobs.preflight_checks import (
@@ -61,6 +67,7 @@ from app.web.pages.backtest import render_backtest_tab
 from app.web.reference_guides import render_reference_guides_page
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
+from finance.loaders.price import load_price_window_summary
 from app.workspace_paths import GLOSSARY_DOC_PATH, PROJECT_ROOT as CANONICAL_PROJECT_ROOT
 
 
@@ -70,6 +77,247 @@ LOG_DIR = PROJECT_ROOT / "logs"
 CSV_DIR = PROJECT_ROOT / "csv"
 GLOSSARY_META_SECTION_TITLES = {"목적", "사용 원칙"}
 APP_RUNTIME_LOADED_AT = datetime.now()
+
+
+JOB_GUIDE: dict[str, dict[str, Any]] = {
+    "daily_market_update": {
+        "title": "일별 가격 업데이트",
+        "purpose": "선택한 운용 universe의 OHLCV, 배당, 분할 가격 이력을 갱신합니다.",
+        "targets": ["finance_price.nyse_price_history"],
+        "used_by": ["Backtest Analysis", "Data Coverage Audit", "Selected Dashboard symbol freshness"],
+        "caveats": [
+            "무료 provider no-data와 rate limit이 발생할 수 있습니다.",
+            "요청 기간 대비 실제 DB coverage와 최신 거래일을 결과에서 확인해야 합니다.",
+        ],
+        "next_action": "부분 성공이면 Price Stale Diagnosis로 provider gap과 DB 수집 누락을 분리하세요.",
+    },
+    "weekly_fundamental_refresh": {
+        "title": "주간 펀더멘털 / 팩터 업데이트",
+        "purpose": "정규화된 fundamentals를 수집하고 broad factor table을 다시 계산합니다.",
+        "targets": ["finance_fundamental.nyse_fundamentals", "finance_fundamental.nyse_factors"],
+        "used_by": ["Factor strategy prototype", "Backtest Analysis"],
+        "caveats": ["broad fundamentals / factors는 strict filing-time PIT source가 아닙니다."],
+        "next_action": "PIT가 중요한 전략은 Financial Statement / Shadow 계층 coverage를 함께 확인하세요.",
+    },
+    "extended_statement_refresh": {
+        "title": "상세 재무제표 확장 수집",
+        "purpose": "EDGAR 상세 statement ledger를 수집하고 statement shadow fundamentals / factors를 재구성합니다.",
+        "targets": [
+            "finance_fundamental.nyse_financial_statement_filings",
+            "finance_fundamental.nyse_financial_statement_values",
+            "finance_fundamental.nyse_fundamentals_statement",
+            "finance_fundamental.nyse_factors_statement",
+        ],
+        "used_by": ["Strict annual / quarterly factor runtime", "Statement PIT inspection"],
+        "caveats": ["period_end와 accepted_at / available_at를 구분해서 해석해야 합니다."],
+        "next_action": "부분 성공이면 Statement Coverage Diagnosis로 raw 누락과 shadow rebuild 대상을 분리하세요.",
+    },
+    "metadata_refresh": {
+        "title": "종목 메타데이터 업데이트",
+        "purpose": "현재 NYSE stock / ETF universe의 asset profile과 ETF current-operability bridge fields를 갱신합니다.",
+        "targets": ["finance_meta.nyse_asset_profile"],
+        "used_by": ["Universe filter", "ETF operability bridge", "Overview Top1000 / Top2000 universe"],
+        "caveats": ["asset profile은 current snapshot이며 historical universe proof가 아닙니다."],
+        "next_action": "Profile filter 결과가 달라졌다면 가격 / provider snapshot도 이어서 갱신하세요.",
+    },
+    "collect_fomc_calendar": {
+        "title": "FOMC 일정 수집",
+        "purpose": "Federal Reserve 공식 calendar에서 FOMC meeting 일정을 수집합니다.",
+        "targets": ["finance_meta.market_event_calendar"],
+        "used_by": ["Workspace > Overview > Events"],
+        "caveats": ["event row는 수집 시점의 calendar snapshot입니다."],
+        "next_action": "Overview Events에서 일정 fresh 상태를 확인하세요.",
+    },
+    "collect_macro_calendar": {
+        "title": "공식 매크로 발표 일정 수집",
+        "purpose": "BLS / BEA 공식 release schedule에서 CPI, PPI, Jobs, GDP 발표 일정을 수집합니다.",
+        "targets": ["finance_meta.market_event_calendar"],
+        "used_by": ["Workspace > Overview > Events"],
+        "caveats": ["BLS 자동 요청은 차단될 수 있으며, 실패 시 BLS .ics import를 사용합니다."],
+        "next_action": "partial_success면 실패 source를 확인하고 BLS .ics fallback을 실행하세요.",
+    },
+    "import_bls_macro_calendar_ics": {
+        "title": "BLS 공식 .ics 일정 가져오기",
+        "purpose": "브라우저로 받은 BLS 공식 calendar 파일에서 CPI / PPI / Jobs 발표 일정을 가져옵니다.",
+        "targets": ["finance_meta.market_event_calendar"],
+        "used_by": ["Workspace > Overview > Events"],
+        "caveats": ["업로드한 파일의 source year 범위와 최신성을 확인해야 합니다."],
+        "next_action": "Overview Events에서 BLS row가 보강됐는지 확인하세요.",
+    },
+    "collect_earnings_calendar": {
+        "title": "실적 발표 예상 일정 수집",
+        "purpose": "bounded symbol set의 upcoming earnings estimate를 yfinance와 선택적 Nasdaq cross-check로 수집합니다.",
+        "targets": ["finance_meta.market_event_calendar"],
+        "used_by": ["Workspace > Overview > Events"],
+        "caveats": ["무료 provider estimate이며 공식 확정 IR 일정이 아닙니다."],
+        "next_action": "missing / failed symbol은 Earnings Diagnostics에서 reason을 확인하세요.",
+    },
+    "collect_futures_ohlcv": {
+        "title": "선물 1분봉 OHLCV 수집",
+        "purpose": "Overview Futures Monitor에서 읽을 주요 선물 OHLCV 캔들을 yfinance pilot source로 수집합니다.",
+        "targets": [
+            "finance_price.futures_ohlcv",
+            "finance_meta.futures_instrument",
+            "finance_meta.futures_market_monitor_run",
+        ],
+        "used_by": ["Workspace > Overview > Futures Monitor", "Workspace > Overview > Data Health"],
+        "caveats": [
+            "무료 provider pilot source이며 exchange-grade realtime feed가 아닙니다.",
+            "provider 실패 / stale 상태는 Overview에서 그대로 표시합니다.",
+        ],
+        "next_action": "부분 성공이면 failed symbols를 줄여 다시 실행하거나 provider 상태를 확인하세요.",
+    },
+    "discover_etf_provider_source_map": {
+        "title": "ETF 공식 소스 매핑 발견",
+        "purpose": "ETF별 공식 운용사 endpoint와 parser mapping을 찾아 verified cache로 저장합니다.",
+        "targets": ["finance_meta.etf_provider_source_map"],
+        "used_by": ["ETF operability / holdings / exposure collection", "Provider Data Gaps"],
+        "caveats": ["provider 사이트 구조가 바뀌면 verified row도 다시 확인해야 합니다."],
+        "next_action": "verified row가 부족하면 ETF provider connector 보강 후보로 기록하세요.",
+    },
+    "collect_etf_operability_provider": {
+        "title": "ETF 운용성 스냅샷 수집",
+        "purpose": "ETF 비용, 규모, 유동성, spread, premium/discount 관련 snapshot을 수집합니다.",
+        "targets": ["finance_meta.etf_operability_snapshot"],
+        "used_by": ["Practical Validation operability / cost / liquidity"],
+        "caveats": ["current snapshot이며 과거 특정 시점의 PIT 운용성 truth가 아닙니다."],
+        "next_action": "coverage gap이 있으면 source map 또는 DB bridge 수집 경로를 확인하세요.",
+    },
+    "collect_etf_holdings_exposure": {
+        "title": "ETF 구성 / 노출 스냅샷 수집",
+        "purpose": "ETF holdings row와 asset / sector / country / currency exposure summary를 수집합니다.",
+        "targets": ["finance_meta.etf_holdings_snapshot", "finance_meta.etf_exposure_snapshot"],
+        "used_by": ["Practical Validation asset allocation / concentration / overlap"],
+        "caveats": ["current holdings snapshot이며 과거 holdings PIT truth가 아닙니다."],
+        "next_action": "partial_success이면 unsupported parser와 missing ETF를 먼저 확인하세요.",
+    },
+    "collect_macro_market_context": {
+        "title": "FRED 시장환경 수집",
+        "purpose": "VIX, yield curve, credit spread 같은 validation용 market-context series를 수집합니다.",
+        "targets": ["finance_meta.macro_series_observation"],
+        "used_by": ["Practical Validation macro / regime / risk-on-off diagnostics"],
+        "caveats": ["FRED observation date 기준이며 ALFRED vintage PIT는 아닙니다."],
+        "next_action": "Macro freshness가 stale이면 동일 series와 기간으로 다시 수집하세요.",
+    },
+    "collect_sec_form25_delistings": {
+        "title": "SEC Form 25 상폐 근거 수집",
+        "purpose": "SEC EDGAR Form 25 / 25-NSE filing metadata로 delisting evidence를 저장합니다.",
+        "targets": ["finance_meta.nyse_symbol_lifecycle"],
+        "used_by": ["Data Coverage Audit survivorship / delisting control"],
+        "caveats": ["Form 25 부재는 active listing proof가 아닙니다."],
+        "next_action": "unmapped / no Form 25 symbol은 별도 historical listing source가 필요한지 검토하세요.",
+    },
+    "collect_symbol_directory_snapshots": {
+        "title": "Nasdaq 상장 관찰치 수집",
+        "purpose": "Nasdaq public Symbol Directory current files를 partial listing_observed evidence로 저장합니다.",
+        "targets": ["finance_meta.nyse_symbol_lifecycle"],
+        "used_by": ["Data Coverage Audit lifecycle evidence"],
+        "caveats": ["current listing snapshot이며 historical membership PASS 근거가 아닙니다."],
+        "next_action": "반복 관찰이 쌓이면 computed lifecycle 요약을 실행하세요.",
+    },
+    "collect_sec_company_ticker_crosscheck": {
+        "title": "SEC CIK / 티커 교차확인",
+        "purpose": "SEC current CIK / ticker / exchange association을 identity cross-check evidence로 저장합니다.",
+        "targets": ["finance_meta.nyse_symbol_lifecycle"],
+        "used_by": ["Data Coverage Audit lifecycle evidence"],
+        "caveats": ["current identity row이며 delisting이나 historical membership proof가 아닙니다."],
+        "next_action": "requested missing symbol은 SEC ticker mapping 한계를 따로 확인하세요.",
+    },
+    "collect_computed_snapshot_lifecycle": {
+        "title": "반복 관찰 lifecycle 요약",
+        "purpose": "기존 current snapshot rows의 반복 관찰 window를 보수적인 partial lifecycle evidence로 요약합니다.",
+        "targets": ["finance_meta.nyse_symbol_lifecycle"],
+        "used_by": ["Data Coverage Audit lifecycle evidence"],
+        "caveats": ["absence를 delisting proof로 해석하지 않으며 PASS eligible evidence가 아닙니다."],
+        "next_action": "actual historical membership source가 필요한 symbol은 별도 source review로 넘기세요.",
+    },
+    "pipeline_core_market_data": {
+        "title": "핵심 시장 데이터 일괄 수집",
+        "purpose": "OHLCV, fundamentals, factor calculation을 순서대로 실행하는 수동 composite job입니다.",
+        "targets": ["finance_price.nyse_price_history", "finance_fundamental.nyse_fundamentals", "finance_fundamental.nyse_factors"],
+        "used_by": ["Backtest Analysis", "factor prototype"],
+        "caveats": ["대량 실행은 rate limit과 partial coverage 가능성이 큽니다."],
+        "next_action": "Pipeline Steps에서 어느 단계가 partial / failed인지 먼저 확인하세요.",
+    },
+    "collect_ohlcv": {
+        "title": "가격 이력 수동 수집",
+        "purpose": "선택한 symbol과 기간의 OHLCV, dividend, split row를 수동으로 수집합니다.",
+        "targets": ["finance_price.nyse_price_history"],
+        "used_by": ["Backtest Analysis", "freshness diagnostics"],
+        "caveats": ["요청 범위와 실제 provider 응답 범위가 다를 수 있습니다."],
+        "next_action": "누락 symbol은 Price Stale Diagnosis로 원인을 분류하세요.",
+    },
+    "collect_fundamentals": {
+        "title": "펀더멘털 수동 수집",
+        "purpose": "선택한 symbol의 normalized fundamentals summary를 수동으로 수집합니다.",
+        "targets": ["finance_fundamental.nyse_fundamentals"],
+        "used_by": ["Factor calculation"],
+        "caveats": ["strict filing-time PIT source가 아닙니다."],
+        "next_action": "factor 계산 전에 price와 fundamentals preflight를 확인하세요.",
+    },
+    "calculate_factors": {
+        "title": "팩터 수동 계산",
+        "purpose": "저장된 price와 fundamentals를 읽어 broad factor table을 계산합니다.",
+        "targets": ["finance_fundamental.nyse_factors"],
+        "used_by": ["Factor strategy prototype"],
+        "caveats": ["입력 price / fundamentals coverage가 부족하면 row가 생성되지 않을 수 있습니다."],
+        "next_action": "missing prerequisite warning이 있으면 OHLCV / fundamentals를 먼저 보강하세요.",
+    },
+    "collect_asset_profiles": {
+        "title": "자산 프로필 수동 수집",
+        "purpose": "NYSE universe table을 기준으로 stock / ETF profile metadata를 수집합니다.",
+        "targets": ["finance_meta.nyse_asset_profile"],
+        "used_by": ["Universe filter", "metadata refresh"],
+        "caveats": ["current profile snapshot입니다."],
+        "next_action": "profile table이 비어 있으면 NYSE universe 적재 상태부터 확인하세요.",
+    },
+    "collect_financial_statements": {
+        "title": "상세 재무제표 수동 수집",
+        "purpose": "선택한 symbol의 EDGAR detailed statement raw ledger를 수집합니다.",
+        "targets": [
+            "finance_fundamental.nyse_financial_statement_filings",
+            "finance_fundamental.nyse_financial_statement_values",
+            "finance_fundamental.nyse_financial_statement_labels",
+        ],
+        "used_by": ["Statement shadow rebuild", "PIT inspection"],
+        "caveats": ["issuer별 form 구조와 concept coverage가 다를 수 있습니다."],
+        "next_action": "routine strict coverage 복구는 Extended Statement Refresh를 우선 사용하세요.",
+    },
+    "rebuild_statement_shadow": {
+        "title": "재무제표 shadow 재구성",
+        "purpose": "이미 저장된 raw statement ledger로 statement fundamentals / factors shadow를 재구성합니다.",
+        "targets": ["finance_fundamental.nyse_fundamentals_statement", "finance_fundamental.nyse_factors_statement"],
+        "used_by": ["Strict annual / quarterly factor runtime"],
+        "caveats": ["raw statement rows가 없으면 shadow row도 생성되지 않습니다."],
+        "next_action": "raw present / shadow missing이면 이 job, raw missing이면 Extended Statement Refresh를 실행하세요.",
+    },
+}
+
+PRICE_COLLECTION_JOBS = {"daily_market_update", "collect_ohlcv"}
+COMPOSITE_PRICE_JOBS = {"pipeline_core_market_data"}
+LIFECYCLE_EVIDENCE_JOBS = {
+    "collect_sec_form25_delistings",
+    "collect_symbol_directory_snapshots",
+    "collect_sec_company_ticker_crosscheck",
+    "collect_computed_snapshot_lifecycle",
+}
+PARTIAL_LIFECYCLE_EVIDENCE_JOBS = {
+    "collect_symbol_directory_snapshots",
+    "collect_sec_company_ticker_crosscheck",
+    "collect_computed_snapshot_lifecycle",
+}
+ETF_PROVIDER_JOBS = {
+    "discover_etf_provider_source_map",
+    "collect_etf_operability_provider",
+    "collect_etf_holdings_exposure",
+}
+EVENT_CALENDAR_JOBS = {
+    "collect_fomc_calendar",
+    "collect_macro_calendar",
+    "import_bls_macro_calendar_ics",
+    "collect_earnings_calendar",
+}
+MACRO_CONTEXT_JOBS = {"collect_macro_market_context"}
 
 
 def _read_git_short_sha() -> str | None:
@@ -155,6 +403,50 @@ SYMBOL_SOURCE_OPTIONS = [
     "Profile Filtered ETFs",
     "Profile Filtered Stocks + ETFs",
 ]
+SYMBOL_SOURCE_DISPLAY_LABELS = {
+    "Manual": "직접 입력",
+    "NYSE Stocks": "NYSE 주식 전체",
+    "NYSE ETFs": "NYSE ETF 전체",
+    "NYSE Stocks + ETFs": "NYSE 주식+ETF 전체",
+    "Profile Filtered Stocks": "프로필 필터 주식",
+    "Profile Filtered ETFs": "프로필 필터 ETF",
+    "Profile Filtered Stocks + ETFs": "프로필 필터 주식+ETF",
+}
+SYMBOL_PRESET_DISPLAY_LABELS = {
+    "Big Tech": "빅테크 기본",
+    "Core ETFs": "핵심 ETF",
+    "Dividend ETFs": "배당 ETF",
+    "US Statement Coverage 100": "미국 재무제표 100",
+    "US Statement Coverage 300": "미국 재무제표 300",
+    "US Statement Coverage 500": "미국 재무제표 500",
+    "US Statement Coverage 1000": "미국 재무제표 1000",
+    "Custom": "직접 입력",
+}
+SYMBOL_INPUT_DISPLAY_TITLES = {
+    "Diagnosis Symbols": "진단 대상",
+    "Inspection Symbols": "검사 대상",
+    "Daily Market Symbols": "일별 가격 대상",
+    "Weekly Refresh Symbols": "주간 펀더멘털 대상",
+    "Extended Statement Symbols": "상세 재무제표 대상",
+    "Pipeline Symbols": "핵심 파이프라인 대상",
+    "OHLCV Symbols": "가격 이력 대상",
+    "Fundamentals Symbols": "펀더멘털 대상",
+    "Factor Symbols": "팩터 계산 대상",
+    "Financial Statement Symbols": "재무제표 수집 대상",
+    "Shadow Rebuild Symbols": "Shadow 재구성 대상",
+}
+
+
+def _format_symbol_source_label(value: str) -> str:
+    return SYMBOL_SOURCE_DISPLAY_LABELS.get(value, value)
+
+
+def _format_symbol_preset_label(value: str) -> str:
+    return SYMBOL_PRESET_DISPLAY_LABELS.get(value, value)
+
+
+def _format_symbol_input_title(value: str) -> str:
+    return SYMBOL_INPUT_DISPLAY_TITLES.get(value, value)
 
 
 @st.cache_data(show_spinner=False)
@@ -291,6 +583,690 @@ def _status_to_banner(status: str):
     return st.error
 
 
+def _install_ingestion_responsive_styles() -> None:
+    st.markdown(
+        """
+        <style>
+          .ingestion-meta-list {
+            display: grid;
+            gap: 0.5rem;
+            margin: 0.35rem 0 0.65rem;
+          }
+          .ingestion-meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 0.35rem 0.45rem;
+            min-width: 0;
+          }
+          .ingestion-meta-label {
+            color: #7a7f8c;
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.35;
+            white-space: nowrap;
+          }
+          .ingestion-pill {
+            background: rgba(125, 130, 150, 0.12);
+            border: 1px solid rgba(49, 51, 63, 0.08);
+            border-radius: 0.4rem;
+            color: #246b3f;
+            display: inline-block;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8rem;
+            line-height: 1.35;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            padding: 0.12rem 0.36rem;
+            word-break: break-word;
+          }
+          .ingestion-text-value {
+            color: inherit;
+            display: inline-block;
+            line-height: 1.35;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: keep-all;
+          }
+          .ingestion-text-value + .ingestion-text-value::before {
+            color: #8b909b;
+            content: " · ";
+          }
+          .ingestion-stat-grid {
+            display: grid;
+            gap: 0.65rem;
+            grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+            margin: 0.75rem 0 0.95rem;
+          }
+          .ingestion-stat-card {
+            background: rgba(125, 130, 150, 0.08);
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            border-radius: 0.5rem;
+            min-width: 0;
+            padding: 0.72rem 0.82rem;
+          }
+          .ingestion-stat-card.status-success {
+            background: #eaf8ef;
+            border-color: rgba(34, 139, 73, 0.22);
+          }
+          .ingestion-stat-card.status-success .ingestion-stat-value,
+          .ingestion-stat-card.status-success .ingestion-stat-label {
+            color: #14783f;
+          }
+          .ingestion-stat-card.status-partial_success {
+            background: #fff7e6;
+            border-color: rgba(184, 121, 0, 0.22);
+          }
+          .ingestion-stat-card.status-partial_success .ingestion-stat-value,
+          .ingestion-stat-card.status-partial_success .ingestion-stat-label {
+            color: #8a5a00;
+          }
+          .ingestion-stat-card.status-failed {
+            background: #fff0f0;
+            border-color: rgba(210, 56, 56, 0.22);
+          }
+          .ingestion-stat-card.status-failed .ingestion-stat-value,
+          .ingestion-stat-card.status-failed .ingestion-stat-label {
+            color: #9f2626;
+          }
+          .ingestion-stat-label {
+            color: #6f7480;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-stat-value {
+            color: inherit;
+            font-size: clamp(1.55rem, 4.5vw, 2.35rem);
+            font-weight: 760;
+            letter-spacing: 0;
+            line-height: 1.08;
+            margin-top: 0.32rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .ingestion-meta-grid {
+            display: grid;
+            gap: 0.65rem;
+            grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+            margin: 0.35rem 0 0.75rem;
+          }
+          .ingestion-meta-card {
+            background: rgba(125, 130, 150, 0.08);
+            border: 1px solid rgba(49, 51, 63, 0.09);
+            border-radius: 0.5rem;
+            min-width: 0;
+            padding: 0.62rem 0.72rem;
+          }
+          .ingestion-meta-card-label {
+            color: #6f7480;
+            font-size: 0.76rem;
+            font-weight: 700;
+            line-height: 1.2;
+          }
+          .ingestion-meta-card-value {
+            color: inherit;
+            font-size: 1rem;
+            font-weight: 650;
+            line-height: 1.3;
+            margin-top: 0.26rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .ingestion-select-caption {
+            color: inherit;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            margin: -0.25rem 0 0.45rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-workflow-grid {
+            display: grid;
+            gap: 0.75rem;
+            grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+            margin: 0.85rem 0 1.1rem;
+          }
+          .ingestion-workflow-card {
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            border-radius: 0.5rem;
+            min-width: 0;
+            padding: 0.78rem 0.86rem;
+          }
+          .ingestion-workflow-step {
+            color: #6f7480;
+            font-size: 0.75rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-transform: uppercase;
+          }
+          .ingestion-workflow-title {
+            font-size: 0.98rem;
+            font-weight: 760;
+            line-height: 1.25;
+            margin-top: 0.18rem;
+          }
+          .ingestion-workflow-body {
+            color: #6f7480;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            margin-top: 0.28rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-contract-panel,
+          .ingestion-callout {
+            border: 1px solid rgba(49, 51, 63, 0.12);
+            border-radius: 0.5rem;
+            margin: 0.7rem 0 0.9rem;
+            padding: 0.8rem 0.9rem;
+          }
+          .ingestion-callout.warning {
+            background: #fff7e6;
+            border-color: rgba(184, 121, 0, 0.24);
+          }
+          .ingestion-callout.danger {
+            background: #fff0f0;
+            border-color: rgba(210, 56, 56, 0.24);
+          }
+          .ingestion-callout.info {
+            background: rgba(41, 111, 214, 0.08);
+            border-color: rgba(41, 111, 214, 0.18);
+          }
+          .ingestion-callout.success {
+            background: #eaf8ef;
+            border-color: rgba(34, 139, 73, 0.22);
+          }
+          .ingestion-callout-title,
+          .ingestion-contract-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1.25;
+          }
+          .ingestion-callout-body {
+            font-size: 0.9rem;
+            line-height: 1.45;
+            margin-top: 0.32rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-contract-grid {
+            display: grid;
+            gap: 0.52rem;
+            grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+            margin-top: 0.62rem;
+          }
+          .ingestion-contract-item {
+            min-width: 0;
+          }
+          .ingestion-contract-label {
+            color: #6f7480;
+            font-size: 0.74rem;
+            font-weight: 800;
+            line-height: 1.2;
+          }
+          .ingestion-contract-value {
+            font-size: 0.94rem;
+            font-weight: 650;
+            line-height: 1.32;
+            margin-top: 0.18rem;
+            overflow-wrap: anywhere;
+          }
+          .ingestion-contract-note {
+            color: #6f7480;
+            font-size: 0.83rem;
+            line-height: 1.4;
+            margin-top: 0.62rem;
+            overflow-wrap: anywhere;
+          }
+          @media (max-width: 760px) {
+            div[data-testid="column"] {
+              flex: 1 1 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              width: 100% !important;
+            }
+            .ingestion-stat-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .ingestion-meta-grid {
+              grid-template-columns: minmax(0, 1fr);
+            }
+            .ingestion-workflow-grid,
+            .ingestion-contract-grid {
+              grid-template-columns: minmax(0, 1fr);
+            }
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _html_join_pills(values: list[str]) -> str:
+    return " ".join(f'<span class="ingestion-pill">{escape(value)}</span>' for value in values if value)
+
+
+def _render_ingestion_meta_rows(rows: list[tuple[str, list[str], bool]]) -> None:
+    rendered_rows: list[str] = []
+    for label, values, monospace in rows:
+        clean_values = [str(value) for value in values if str(value).strip()]
+        if not clean_values:
+            continue
+        value_html = (
+            _html_join_pills(clean_values)
+            if monospace
+            else " ".join(f'<span class="ingestion-text-value">{escape(value)}</span>' for value in clean_values)
+        )
+        rendered_rows.append(
+            '<div class="ingestion-meta-row">'
+            f'<span class="ingestion-meta-label">{escape(label)}:</span>'
+            f"{value_html}</div>"
+        )
+    if rendered_rows:
+        st.markdown(
+            '<div class="ingestion-meta-list">' + "".join(rendered_rows) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _format_count(value: Any) -> str:
+    try:
+        if value is None:
+            return "0"
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return str(value or "0")
+
+
+def _format_duration(value: Any) -> str:
+    try:
+        numeric = float(value or 0)
+    except (TypeError, ValueError):
+        return str(value or "-")
+    return f"{numeric:,.2f}"
+
+
+def _render_ingestion_stat_grid(items: list[tuple[str, str, str | None]]) -> None:
+    cards = []
+    for label, value, status_class in items:
+        extra_class = f" status-{status_class}" if status_class else ""
+        cards.append(
+            f'<div class="ingestion-stat-card{extra_class}">'
+            f'<div class="ingestion-stat-label">{escape(label)}</div>'
+            f'<div class="ingestion-stat-value">{escape(str(value))}</div>'
+            "</div>"
+        )
+    st.markdown(
+        '<div class="ingestion-stat-grid">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_ingestion_meta_grid(items: list[tuple[str, str]]) -> None:
+    cards = []
+    for label, value in items:
+        cards.append(
+            '<div class="ingestion-meta-card">'
+            f'<div class="ingestion-meta-card-label">{escape(label)}</div>'
+            f'<div class="ingestion-meta-card-value">{escape(str(value or "-"))}</div>'
+            "</div>"
+        )
+    if cards:
+        st.markdown(
+            '<div class="ingestion-meta-grid">' + "".join(cards) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _render_ingestion_workflow_overview() -> None:
+    cards = [
+        (
+            "Step 1",
+            "수집 범위 선택",
+            "심볼 source, 기간, provider 옵션은 기존처럼 사용자가 직접 정합니다.",
+        ),
+        (
+            "Step 2",
+            "Preflight 확인",
+            "입력값, 대상 수, 기존 DB coverage, 대량 실행 위험을 먼저 확인합니다.",
+        ),
+        (
+            "Step 3",
+            "DB 저장",
+            "외부 API / 공식 파일 / provider page 결과를 MySQL table에 저장합니다.",
+        ),
+        (
+            "Step 4",
+            "결과 해석",
+            "row 수, symbol 누락, partial evidence 의미를 job 유형별로 구분해서 확인합니다.",
+        ),
+    ]
+    html = []
+    for step, title, body in cards:
+        html.append(
+            '<div class="ingestion-workflow-card">'
+            f'<div class="ingestion-workflow-step">{escape(step)}</div>'
+            f'<div class="ingestion-workflow-title">{escape(title)}</div>'
+            f'<div class="ingestion-workflow-body">{escape(body)}</div>'
+            "</div>"
+        )
+    st.markdown(
+        '<div class="ingestion-workflow-grid">' + "".join(html) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_data_quality_callout(title: str, body: str, *, tone: str = "info") -> None:
+    st.markdown(
+        f'<div class="ingestion-callout {escape(tone)}">'
+        f'<div class="ingestion-callout-title">{escape(title)}</div>'
+        f'<div class="ingestion-callout-body">{escape(body)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_collection_contract(
+    title: str,
+    items: list[tuple[str, Any]],
+    *,
+    note: str | None = None,
+) -> None:
+    rendered_items = []
+    for label, value in items:
+        rendered_items.append(
+            '<div class="ingestion-contract-item">'
+            f'<div class="ingestion-contract-label">{escape(label)}</div>'
+            f'<div class="ingestion-contract-value">{escape(str(value if value not in (None, "") else "-"))}</div>'
+            "</div>"
+        )
+    note_html = (
+        f'<div class="ingestion-contract-note">{escape(note)}</div>'
+        if note
+        else ""
+    )
+    st.markdown(
+        '<div class="ingestion-contract-panel">'
+        f'<div class="ingestion-contract-title">{escape(title)}</div>'
+        '<div class="ingestion-contract-grid">'
+        + "".join(rendered_items)
+        + "</div>"
+        + note_html
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _job_domain(job_name: str | None) -> str:
+    normalized = str(job_name or "")
+    if normalized in PRICE_COLLECTION_JOBS:
+        return "price"
+    if normalized in COMPOSITE_PRICE_JOBS:
+        return "pipeline"
+    if normalized in LIFECYCLE_EVIDENCE_JOBS:
+        return "lifecycle"
+    if normalized in ETF_PROVIDER_JOBS:
+        return "provider"
+    if normalized in MACRO_CONTEXT_JOBS:
+        return "macro"
+    if normalized in EVENT_CALENDAR_JOBS:
+        return "event"
+    if "statement" in normalized:
+        return "statement"
+    if "fundamental" in normalized or "factor" in normalized:
+        return "fundamental"
+    if "profile" in normalized or "metadata" in normalized:
+        return "metadata"
+    return "generic"
+
+
+def _result_metric_labels(job_name: str | None) -> tuple[str, str, str, str, str]:
+    domain = _job_domain(job_name)
+    if domain == "lifecycle":
+        return ("상태", "증거 Row", "관찰 / 요청", "누락 Source/Symbol", "소요 시간(초)")
+    if domain in {"provider", "macro", "event"}:
+        return ("상태", "저장 Row", "수집 대상", "누락 / 실패", "소요 시간(초)")
+    if domain == "price":
+        return ("상태", "가격 Row", "요청 Symbol", "누락 / 실패", "소요 시간(초)")
+    if domain == "pipeline":
+        return ("상태", "총 저장 Row", "요청 Symbol", "누락 / 실패", "소요 시간(초)")
+    return ("상태", "저장 Row", "요청 대상", "누락 / 실패", "소요 시간(초)")
+
+
+def _format_contract_window(*, period: str | None, start: str | None, end: str | None) -> str:
+    if start or end:
+        return f"start={start or '-'}, end={end or '-'}"
+    return f"period={period or '-'}"
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _load_price_window_summary_cached(
+    symbols: tuple[str, ...],
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+) -> pd.DataFrame:
+    return load_price_window_summary(
+        symbols=list(symbols),
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+
+
+def _render_price_window_preflight(
+    *,
+    symbols: list[str],
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    max_symbols: int = 300,
+) -> None:
+    if not symbols:
+        return
+    if not start and not end:
+        st.caption(
+            "DB coverage quick check는 명시적인 start/end가 있을 때 실행합니다. "
+            "period 기반 수집은 실행 후 결과의 최신 거래일과 Price Stale Diagnosis로 확인하세요."
+        )
+        return
+    if len(symbols) > max_symbols:
+        st.caption(
+            f"DB coverage quick check는 {max_symbols}개 이하의 bounded run에서만 자동 실행합니다. "
+            f"현재 대상은 {len(symbols):,}개이므로 실행 후 결과와 진단 payload를 확인하세요."
+        )
+        return
+
+    try:
+        coverage = _load_price_window_summary_cached(tuple(symbols), start, end, timeframe)
+    except Exception as exc:
+        st.warning(f"DB coverage quick check를 실행하지 못했습니다: {exc}")
+        return
+
+    if coverage.empty:
+        _render_data_quality_callout(
+            "DB coverage quick check",
+            "선택한 대상의 기존 가격 row를 찾지 못했습니다. 이 실행은 신규 보강 또는 provider 확인 성격으로 봐야 합니다.",
+            tone="warning",
+        )
+        return
+
+    coverage = coverage.copy()
+    coverage["window_row_count"] = pd.to_numeric(coverage.get("window_row_count"), errors="coerce").fillna(0)
+    symbols_with_window = set(coverage.loc[coverage["window_row_count"] > 0, "symbol"].astype(str))
+    missing_window = [sym for sym in symbols if sym not in symbols_with_window]
+    message = (
+        f"기존 DB window row 확인: {len(symbols_with_window):,}/{len(symbols):,} symbols. "
+        "이 값은 실행 전 상태이며, provider 수집 결과와 별도로 봐야 합니다."
+    )
+    if missing_window:
+        message += f" window row가 없는 sample: {', '.join(missing_window[:8])}."
+        tone = "warning"
+    else:
+        tone = "info"
+    _render_data_quality_callout("DB coverage quick check", message, tone=tone)
+
+
+def _job_guide(job_name: str | None) -> dict[str, Any]:
+    return JOB_GUIDE.get(str(job_name or ""), {})
+
+
+def _job_title(job_name: str | None) -> str:
+    guide = _job_guide(job_name)
+    return str(guide.get("title") or job_name or "-")
+
+
+def _status_label(status: str | None) -> str:
+    return {
+        "success": "성공",
+        "partial_success": "부분 성공",
+        "failed": "실패",
+    }.get(str(status or ""), str(status or "-"))
+
+
+def _render_job_brief(job_name: str) -> None:
+    guide = _job_guide(job_name)
+    if not guide:
+        return
+
+    st.markdown(f"#### {guide['title']}")
+    st.caption(f"내부 job id: `{job_name}`")
+    st.write(guide["purpose"])
+
+    _render_ingestion_meta_rows(
+        [
+            ("저장 위치", [str(item) for item in guide.get("targets") or []], True),
+            ("사용 위치", [str(item) for item in guide.get("used_by") or []], False),
+        ]
+    )
+
+    caveats = [str(item) for item in guide.get("caveats") or [] if str(item).strip()]
+    if caveats:
+        st.caption("데이터 품질 주의: " + " / ".join(caveats))
+
+
+def _render_result_guidance(result: JobResult) -> None:
+    guide = _job_guide(result.get("job_name"))
+    guidance: list[str] = []
+    next_action = guide.get("next_action")
+    if next_action:
+        guidance.append(str(next_action))
+
+    failed_symbols = result.get("failed_symbols") or []
+    if failed_symbols:
+        guidance.append("누락 / 실패 대상이 있으므로 상세 reason과 재실행 payload를 먼저 확인하세요.")
+
+    if result.get("status") == "failed":
+        guidance.append("저장 row가 0이면 source 차단, 잘못된 입력, 이미 없는 provider row를 구분해야 합니다.")
+    elif result.get("status") == "partial_success":
+        guidance.append("부분 성공은 pass가 아니므로 downstream validation에서 coverage gap으로 남을 수 있습니다.")
+
+    if not guidance:
+        return
+
+    with st.expander("다음 확인 액션", expanded=True):
+        for item in dict.fromkeys(guidance):
+            st.markdown(f"- {item}")
+
+
+def _render_result_interpretation(result: JobResult) -> None:
+    job_name = str(result.get("job_name") or "")
+    domain = _job_domain(job_name)
+    status = str(result.get("status") or "")
+    details = result.get("details") or {}
+    failed_count = len(result.get("failed_symbols") or [])
+
+    if domain == "price":
+        missing = len(details.get("missing_symbols") or [])
+        provider_no_data = len(details.get("provider_no_data_symbols") or [])
+        rate_limited = len(details.get("rate_limited_symbols") or [])
+        if status != "success" or missing or provider_no_data or rate_limited:
+            _render_data_quality_callout(
+                "가격 수집 결과 해석",
+                "저장 row가 있더라도 요청 symbol 전체가 같은 기간을 채웠다는 뜻은 아닙니다. "
+                f"missing={missing:,}, provider no-data={provider_no_data:,}, rate-limit={rate_limited:,} 상태를 확인하고 "
+                "필요하면 rerun payload 또는 Price Stale Diagnosis로 원인을 분리하세요.",
+                tone="warning",
+            )
+        else:
+            _render_data_quality_callout(
+                "가격 수집 결과 해석",
+                "provider가 row를 반환한 대상은 저장되었습니다. 실제 backtest 기간 coverage는 Data Coverage Audit이나 "
+                "bounded DB coverage check로 다시 확인하는 것이 안전합니다.",
+                tone="info",
+            )
+        return
+
+    if domain == "pipeline":
+        steps = details.get("steps") or []
+        partial_steps = [step.get("job_name") for step in steps if step.get("status") != "success"]
+        if partial_steps:
+            _render_data_quality_callout(
+                "Pipeline 결과 해석",
+                "Composite job은 OHLCV, fundamentals, factors 중 하나만 partial이어도 downstream coverage gap이 남습니다. "
+                f"확인 필요 step: {', '.join(str(item) for item in partial_steps[:5])}.",
+                tone="warning",
+            )
+        else:
+            _render_data_quality_callout(
+                "Pipeline 결과 해석",
+                "세부 step이 모두 성공이면 기본 데이터 연결은 완료된 상태입니다. 그래도 기간 coverage와 factor prerequisite은 "
+                "실제 backtest 범위 기준으로 다시 확인하세요.",
+                tone="info",
+            )
+        return
+
+    if domain == "lifecycle":
+        if job_name in PARTIAL_LIFECYCLE_EVIDENCE_JOBS:
+            _render_data_quality_callout(
+                "Lifecycle evidence 해석",
+                "이 결과는 current snapshot 또는 repeated observation 기반 partial evidence입니다. "
+                "historical membership PASS나 active listing proof로 해석하면 안 됩니다.",
+                tone="warning",
+            )
+        else:
+            _render_data_quality_callout(
+                "Lifecycle evidence 해석",
+                "SEC Form 25 row는 delisting evidence로 유효하지만, Form 25가 없다는 사실은 active listing proof가 아닙니다.",
+                tone="info",
+            )
+        return
+
+    if domain == "provider":
+        tone = "warning" if status != "success" or failed_count else "info"
+        _render_data_quality_callout(
+            "Provider snapshot 해석",
+            "이 row는 현재 provider snapshot입니다. Practical Validation은 이 DB snapshot을 읽지만, 과거 특정 시점의 "
+            "PIT holdings / operability truth로 보지는 않습니다. partial이면 unsupported parser와 missing ETF를 먼저 확인하세요.",
+            tone=tone,
+        )
+        return
+
+    if domain == "macro":
+        _render_data_quality_callout(
+            "Macro context 해석",
+            "FRED observation date 기준 series입니다. ALFRED vintage PIT가 아니므로 과거 시점 의사결정 재현에는 한계가 있습니다.",
+            tone="info" if status == "success" else "warning",
+        )
+        return
+
+    if domain == "event":
+        _render_data_quality_callout(
+            "Event calendar 해석",
+            "시장 이벤트 row는 수집 시점의 calendar snapshot 또는 free-provider estimate입니다. 실적 발표 일정은 공식 확정 IR 일정으로 보지 않습니다.",
+            tone="info" if status == "success" else "warning",
+        )
+
+
+def _render_result_data_quality_notes(job_name: str | None) -> None:
+    guide = _job_guide(job_name)
+    caveats = [str(item) for item in guide.get("caveats") or [] if str(item).strip()]
+    if not caveats:
+        return
+    with st.expander("데이터 품질 주의", expanded=False):
+        for item in caveats:
+            st.markdown(f"- {item}")
+
+
 def _has_running_job() -> bool:
     return bool(st.session_state.running_job)
 
@@ -308,7 +1284,7 @@ def _promote_pending_job() -> None:
 
 def _schedule_job(job: dict[str, Any]) -> None:
     if _has_running_job():
-        st.warning("Another ingestion job is already running. Wait for it to finish before starting a new one.")
+        st.warning("다른 Ingestion job이 실행 중입니다. 완료 후 새 작업을 시작하세요.")
         return
     st.session_state.pending_job = job
     st.rerun()
@@ -379,10 +1355,18 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_collect_macro_market_context(**params)
     if action == "collect_sec_form25_delistings":
         return run_collect_sec_form25_delistings(**params)
+    if action == "collect_symbol_directory_snapshots":
+        return run_collect_symbol_directory_snapshots(**params)
+    if action == "collect_sec_company_ticker_crosscheck":
+        return run_collect_sec_company_ticker_crosscheck(**params)
+    if action == "collect_computed_snapshot_lifecycle":
+        return run_collect_computed_snapshot_lifecycle(**params)
     if action == "collect_fomc_calendar":
         return run_collect_fomc_calendar(**params)
     if action == "collect_earnings_calendar":
         return run_collect_earnings_calendar(**params)
+    if action == "collect_futures_ohlcv":
+        return run_collect_futures_ohlcv(**params)
     if action == "collect_macro_calendar":
         return run_collect_macro_calendar(**params)
     if action == "import_bls_macro_calendar_ics":
@@ -457,9 +1441,25 @@ def _render_runtime_build_indicator() -> None:
         col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
 
 
+def _render_ingestion_runtime_build_indicator() -> None:
+    with st.container(border=True):
+        st.markdown("### Runtime / Build")
+        st.caption(
+            "이 정보는 현재 Streamlit 프로세스가 어떤 코드 상태로 떠 있는지 보여줍니다. "
+            "코드를 고친 뒤 결과가 기대와 다르면 먼저 이 `Loaded At`과 `Git SHA`를 확인하는 것이 좋습니다."
+        )
+        _render_ingestion_meta_grid(
+            [
+                ("Runtime Marker", APP_RUNTIME_MARKER),
+                ("Loaded At", APP_RUNTIME_LOADED_AT.strftime("%Y-%m-%d %H:%M:%S")),
+                ("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown"),
+            ]
+        )
+
+
 def _render_inline_running_hint(action: str, label: str) -> None:
     if _is_running_action(action):
-        st.info(f"`{label}` is running. Progress is still synchronous, so the page will update again when the job finishes.")
+        st.info(f"`{label}` 실행 중입니다. 현재 실행은 동기 처리라 job이 끝난 뒤 화면이 다시 갱신됩니다.")
 
 
 def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
@@ -483,11 +1483,11 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     progress_bar = st.progress(0)
 
     if action in {"collect_ohlcv", "daily_market_update"}:
-        progress_text.info(f"`{label}` is running with live OHLCV progress.")
+        progress_text.info(f"`{label}` 실행 중입니다. OHLCV batch 진행률을 표시합니다.")
     elif action in {"extended_statement_refresh", "collect_financial_statements"}:
-        progress_text.info(f"`{label}` is running with live statement-ingestion progress.")
+        progress_text.info(f"`{label}` 실행 중입니다. statement ingestion 진행률을 표시합니다.")
     else:
-        progress_text.info(f"`{label}` is running with pipeline-stage progress.")
+        progress_text.info(f"`{label}` 실행 중입니다. pipeline stage 진행률을 표시합니다.")
 
     def _callback(event: dict[str, Any]) -> None:
         event_type = event.get("event")
@@ -498,20 +1498,20 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             percent = int((processed_symbols / total_symbols) * 100)
             progress_bar.progress(percent)
             progress_meta.caption(
-                "Processed "
+                "처리 "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
-                f"rows written `{event.get('rows_written', 0)}` | "
+                f"저장 rows `{event.get('rows_written', 0)}` | "
                 f"rate-limited `{event.get('rate_limited_symbols', 0)}`"
             )
             return
 
         if action in {"collect_ohlcv", "daily_market_update"} and event_type == "rate_limit_cooldown":
             progress_text.warning(
-                f"`{label}` detected provider rate limiting. Applying cooldown before the next batch window."
+                f"`{label}`에서 provider rate-limit이 감지되었습니다. 다음 batch 전에 cooldown을 적용합니다."
             )
             progress_meta.caption(
-                f"Processed `{event.get('processed_symbols', 0)}/{event.get('total_symbols', symbol_count)}` symbols | "
+                f"처리 `{event.get('processed_symbols', 0)}/{event.get('total_symbols', symbol_count)}` symbols | "
                 f"cooldown `{event.get('cooldown_sec', 0)}` sec | "
                 f"next chunk `{event.get('current_chunk_size', 0)}` | "
                 f"workers `{event.get('current_max_workers', 0)}`"
@@ -527,13 +1527,13 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             if event_type == "stage_start":
                 percent = int(((stage_index - 1) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Current stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages})")
                 return
 
             if event_type == "stage_complete":
                 percent = int((stage_index / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Completed stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages})")
                 return
 
             if event_type == "batch_progress":
@@ -544,10 +1544,10 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                 progress_bar.progress(percent)
                 if action == "pipeline_core_market_data":
                     progress_meta.caption(
-                        "Current stage: `OHLCV` | "
-                        f"processed `{processed_symbols}/{total_symbols}` symbols | "
+                        "현재 stage: `OHLCV` | "
+                        f"처리 `{processed_symbols}/{total_symbols}` symbols | "
                         f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
-                        f"rows written `{event.get('rows_written', 0)}`"
+                        f"저장 rows `{event.get('rows_written', 0)}`"
                     )
                 return
 
@@ -557,7 +1557,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             percent = int((processed_symbols / total_symbols) * 100)
             progress_bar.progress(percent)
             progress_meta.caption(
-                "Processed "
+                "처리 "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
                 f"values `{event.get('inserted_values', 0)}` | "
@@ -574,11 +1574,11 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             if event_type == "stage_start":
                 percent = int(((stage_index - 1) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Current stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages})")
             else:
                 percent = int((stage_index / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"Completed stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages})")
 
     return _callback
 
@@ -588,7 +1588,7 @@ def _render_last_completed_result() -> None:
     if result is None:
         return
 
-    st.subheader("Latest Completed Run")
+    st.subheader("최근 완료된 수집")
     _render_result_summary(result)
     st.session_state.last_completed_result = None
 
@@ -599,7 +1599,7 @@ def _render_inline_last_completed_result(*job_names: str) -> None:
         return
     if result.get("job_name") not in set(job_names):
         return
-    st.markdown("#### Latest Completed Run")
+    st.markdown("#### 최근 완료된 수집")
     _render_result_summary(result)
     st.session_state.last_completed_result = None
 
@@ -644,23 +1644,45 @@ def _render_earnings_diagnostics(details: dict[str, Any]) -> None:
 
 
 def _render_result_summary(result: JobResult) -> None:
+    job_name = str(result.get("job_name") or "")
+    guide = _job_guide(job_name)
+    if guide:
+        st.markdown(f"### {_job_title(job_name)}")
+        st.caption(f"내부 job id: `{job_name}`")
+        st.write(guide.get("purpose") or "")
+        _render_ingestion_meta_rows(
+            [
+                ("저장 위치", [str(item) for item in guide.get("targets") or []], True),
+                ("사용 위치", [str(item) for item in guide.get("used_by") or []], False),
+            ]
+        )
+
     banner = _status_to_banner(result["status"])
-    banner(f'[{result["job_name"]}] {result["message"]}')
+    banner(f'[{_job_title(job_name)}] {result["message"]}')
 
     failed_count = len(result.get("failed_symbols") or [])
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Status", result["status"])
-    col2.metric("Rows Written", result["rows_written"] or 0)
-    col3.metric("Symbols Requested", result["symbols_requested"] or 0)
-    col4.metric("Failed Symbols", failed_count)
-    col5.metric("Duration (sec)", result["duration_sec"])
+    status = str(result.get("status") or "")
+    status_label, rows_label, requested_label, failed_label, duration_label = _result_metric_labels(job_name)
+    _render_ingestion_stat_grid(
+        [
+            (status_label, _status_label(status), status),
+            (rows_label, _format_count(result.get("rows_written")), None),
+            (requested_label, _format_count(result.get("symbols_requested")), None),
+            (failed_label, _format_count(failed_count), None),
+            (duration_label, _format_duration(result.get("duration_sec")), None),
+        ]
+    )
+    _render_result_interpretation(result)
 
     run_metadata = result.get("run_metadata") or {}
     if run_metadata:
-        meta_cols = st.columns(3)
-        meta_cols[0].metric("Execution Mode", run_metadata.get("execution_mode") or "-")
-        meta_cols[1].metric("Pipeline Type", run_metadata.get("pipeline_type") or "-")
-        meta_cols[2].metric("Runtime Marker", run_metadata.get("runtime_marker") or "-")
+        _render_ingestion_meta_grid(
+            [
+                ("실행 모드", str(run_metadata.get("execution_mode") or "-")),
+                ("파이프라인", str(run_metadata.get("pipeline_type") or "-")),
+                ("Runtime Marker", str(run_metadata.get("runtime_marker") or "-")),
+            ]
+        )
         runtime_loaded_at = run_metadata.get("runtime_loaded_at")
         git_sha = run_metadata.get("git_sha")
         extra_parts = []
@@ -672,11 +1694,14 @@ def _render_result_summary(result: JobResult) -> None:
             st.caption(" | ".join(extra_parts))
 
     if failed_count:
-        st.write("Failed Symbols:", ", ".join((result.get("failed_symbols") or [])[:20]))
+        st.write("누락 / 실패 대상:", ", ".join((result.get("failed_symbols") or [])[:20]))
+
+    _render_result_guidance(result)
+    _render_result_data_quality_notes(job_name)
 
     _render_earnings_diagnostics(result.get("details") or {})
 
-    with st.expander("Result Details", expanded=False):
+    with st.expander("상세 결과 JSON", expanded=False):
         st.json(result)
 
     details = result.get("details") or {}
@@ -692,7 +1717,7 @@ def _render_result_summary(result: JobResult) -> None:
             "timing_breakdown",
         )
     ):
-        with st.expander("OHLCV Diagnostics", expanded=False):
+        with st.expander("가격 수집 진단", expanded=False):
             diag_col1, diag_col2, diag_col3, diag_col4 = st.columns(4)
             diag_col1.metric("Rate-Limited", len(details.get("rate_limited_symbols") or []))
             diag_col2.metric("Provider No-Data", len(details.get("provider_no_data_symbols") or []))
@@ -700,7 +1725,7 @@ def _render_result_summary(result: JobResult) -> None:
             diag_col4.metric("Cooldown Events", len(details.get("cooldown_events") or []))
             timing_breakdown = details.get("timing_breakdown") or {}
             if timing_breakdown:
-                st.caption("Timing Breakdown")
+                st.caption("시간 breakdown")
                 time_col1, time_col2, time_col3, time_col4 = st.columns(4)
                 time_col1.metric("Fetch (sec)", timing_breakdown.get("fetch_sec", 0.0))
                 time_col2.metric("Delete (sec)", timing_breakdown.get("delete_sec", 0.0))
@@ -712,19 +1737,19 @@ def _render_result_summary(result: JobResult) -> None:
                 time_col7.metric("Batch Count", timing_breakdown.get("batch_count", 0))
                 time_col8.metric("Avg Fetch / Batch", timing_breakdown.get("avg_fetch_sec_per_batch", 0.0))
             if details.get("rerun_rate_limited_payload"):
-                st.caption("Retry payload for rate-limited symbols")
+                st.caption("rate-limit 대상 재실행 payload")
                 st.code(details["rerun_rate_limited_payload"], language="text")
             if details.get("rerun_missing_payload"):
-                st.caption("Retry payload for missing-provider symbols")
+                st.caption("missing-provider 대상 재실행 payload")
                 st.code(details["rerun_missing_payload"], language="text")
             provider_message_batches = details.get("provider_message_batches") or []
             if provider_message_batches:
-                st.caption("Provider message excerpts")
+                st.caption("Provider message 일부")
                 st.json(provider_message_batches[:5])
 
     steps = details.get("steps")
     if steps:
-        with st.expander("Pipeline Steps", expanded=False):
+        with st.expander("파이프라인 단계", expanded=False):
             rows = []
             for idx, step in enumerate(steps, start=1):
                 rows.append(
@@ -741,7 +1766,7 @@ def _render_result_summary(result: JobResult) -> None:
 
     artifact_info = details.get("result_artifacts") or {}
     if artifact_info:
-        with st.expander("Run Artifacts", expanded=False):
+        with st.expander("실행 artifact", expanded=False):
             st.caption(
                 "Each run now emits a standardized JSON artifact, and when symbol-level issues exist it also emits a standardized failure CSV."
             )
@@ -749,20 +1774,22 @@ def _render_result_summary(result: JobResult) -> None:
 
 
 def _render_recent_results() -> None:
-    st.subheader("Recent Runs")
+    st.subheader("세션 내 최근 수집")
     results = st.session_state.recent_results
     if not results:
-        st.info("No runs executed in this session yet.")
+        st.info("현재 세션에서 실행한 수집 작업이 아직 없습니다.")
         return
 
     for idx, result in enumerate(results):
         with st.container(border=True):
-            st.markdown(f'**{idx + 1}. {result["job_name"]}**')
+            job_name = str(result.get("job_name") or "")
+            st.markdown(f"**{idx + 1}. {_job_title(job_name)}**")
+            st.caption(f"내부 job id: `{job_name}`")
             st.write(
-                f'Status: `{result["status"]}` | '
-                f'Started: `{result["started_at"]}` | '
-                f'Finished: `{result["finished_at"]}` | '
-                f'Failed Symbols: `{len(result.get("failed_symbols") or [])}`'
+                f'상태: `{_status_label(result["status"])}` | '
+                f'시작: `{result["started_at"]}` | '
+                f'종료: `{result["finished_at"]}` | '
+                f'누락 / 실패: `{len(result.get("failed_symbols") or [])}`'
             )
             run_metadata = result.get("run_metadata") or {}
             symbol_source = run_metadata.get("symbol_source")
@@ -770,16 +1797,16 @@ def _render_recent_results() -> None:
             pipeline_type = run_metadata.get("pipeline_type")
             execution_context = run_metadata.get("execution_context")
             if execution_mode:
-                st.write(f"Execution Mode: `{execution_mode}`")
+                st.write(f"실행 모드: `{execution_mode}`")
             if pipeline_type:
-                st.write(f"Pipeline Type: `{pipeline_type}`")
+                st.write(f"파이프라인: `{pipeline_type}`")
             if symbol_source:
-                st.write(f"Symbol Source: `{symbol_source}`")
+                st.write(f"심볼 소스: `{symbol_source}`")
             if execution_context:
-                st.write(f"Execution Context: {execution_context}")
+                st.write(f"실행 맥락: {execution_context}")
             st.write(result["message"])
             if result.get("failed_symbols"):
-                st.write("Failed Symbols:", ", ".join(result["failed_symbols"]))
+                st.write("누락 / 실패 대상:", ", ".join(result["failed_symbols"]))
 
 
 def _get_recent_files(directory: Path, pattern: str, limit: int = 5) -> list[Path]:
@@ -804,37 +1831,37 @@ def _read_tail(path: Path, max_lines: int = 20) -> str:
 
 
 def _render_recent_logs() -> None:
-    st.subheader("Recent Logs")
-    st.caption("Shows the 5 most recently updated `*.log` files under `logs/` and renders the last 20 lines of the selected file.")
+    st.subheader("최근 로그")
+    st.caption("`logs/` 아래에서 최근 갱신된 `*.log` 5개를 보여주고, 선택한 파일의 마지막 20줄을 표시합니다.")
     log_files = _get_recent_files(LOG_DIR, "*.log", limit=5)
     if not log_files:
-        st.info("No log files found.")
+        st.info("표시할 로그 파일이 없습니다.")
         return
 
     labels = [p.name for p in log_files]
-    selected_name = st.selectbox("Log File", labels, key="recent_log_file")
+    selected_name = st.selectbox("로그 파일", labels, key="recent_log_file")
     selected = next(p for p in log_files if p.name == selected_name)
 
-    st.caption(f"Path: {selected}")
+    st.caption(f"경로: {selected}")
     st.code(_read_tail(selected, max_lines=20), language="text")
 
 
 def _render_failure_csv_preview() -> None:
-    st.subheader("Failure CSV Preview")
+    st.subheader("실패 CSV 미리보기")
     st.caption(
-        "Shows recent `*failures*.csv` artifacts under `csv/`. "
-        "Recent web-app runs now emit standardized failure CSVs when symbol-level issues are present, so this panel should become more useful over time."
+        "`csv/` 아래의 최근 `*failures*.csv` artifact를 보여줍니다. "
+        "심볼 단위 문제가 있는 실행은 표준 failure CSV를 남기므로, 재실행 대상을 확인할 때 사용합니다."
     )
     csv_files = _get_recent_files(CSV_DIR, "*failures*.csv", limit=5)
     if not csv_files:
-        st.info("No failure CSV files found.")
+        st.info("표시할 failure CSV가 없습니다.")
         return
 
     labels = [p.name for p in csv_files]
     selected_name = st.selectbox("Failure CSV", labels, key="failure_csv_file")
     selected = next(p for p in csv_files if p.name == selected_name)
 
-    st.caption(f"Path: {selected}")
+    st.caption(f"경로: {selected}")
     try:
         df = pd.read_csv(selected)
     except Exception as exc:
@@ -850,9 +1877,18 @@ def _render_failure_csv_preview() -> None:
 
 def _history_record_label(record: dict[str, Any]) -> str:
     started_at = record.get("started_at") or "-"
+    if isinstance(started_at, str) and len(started_at) >= 16:
+        started_at = started_at[5:16]
     job_name = record.get("job_name") or "-"
-    status = record.get("status") or "-"
-    return f"{started_at} | {job_name} | {status}"
+    status = _status_label(record.get("status"))
+    return f"{started_at} · {_job_title(job_name)} · {status}"
+
+
+def _history_record_full_label(record: dict[str, Any]) -> str:
+    started_at = record.get("started_at") or "-"
+    job_name = record.get("job_name") or "-"
+    status = _status_label(record.get("status"))
+    return f"{started_at} | {_job_title(job_name)} | {status}"
 
 
 def _related_log_patterns(job_name: str | None) -> list[str]:
@@ -885,41 +1921,49 @@ def _find_related_logs(record: dict[str, Any], limit: int = 5) -> list[Path]:
 
 
 def _render_run_history_inspector(history: list[dict[str, Any]]) -> None:
-    st.markdown("#### Run Inspector")
+    st.markdown("#### 실행 기록 상세")
     st.caption(
-        "Pick a persisted run to inspect its inputs, pipeline steps, runtime marker, related artifacts, and likely log files."
+        "저장된 실행 기록을 선택해 입력값, 파이프라인 단계, runtime marker, artifact, 관련 로그를 확인합니다."
     )
-    options = { _history_record_label(item): item for item in history }
-    selected_label = st.selectbox(
-        "Inspect Persisted Run",
-        options=list(options.keys()),
+    options = list(range(len(history)))
+    st.markdown("**저장된 실행 선택**")
+    selected_idx = st.selectbox(
+        "저장된 실행 선택",
+        options=options,
+        format_func=lambda idx: _history_record_label(history[idx]),
         key="persistent_run_history_inspector",
+        label_visibility="collapsed",
     )
-    selected = options[selected_label]
+    selected = history[selected_idx]
+    selected_label = _history_record_full_label(selected)
+    st.markdown(
+        f'<div class="ingestion-select-caption">현재 선택: {escape(selected_label)}</div>',
+        unsafe_allow_html=True,
+    )
     _render_result_summary(selected)
 
     related_logs = _find_related_logs(selected)
     if related_logs:
-        with st.expander("Related Logs", expanded=False):
+        with st.expander("관련 로그", expanded=False):
             log_labels = [path.name for path in related_logs]
             log_name = st.selectbox(
-                "Related Log File",
+                "관련 로그 파일",
                 options=log_labels,
                 key=f"run_inspector_log_{selected.get('started_at')}_{selected.get('job_name')}",
             )
             chosen = next(path for path in related_logs if path.name == log_name)
-            st.caption(f"Path: {chosen}")
+            st.caption(f"경로: {chosen}")
             st.code(_read_tail(chosen, max_lines=20), language="text")
 
 
 def _render_persistent_run_history() -> None:
-    st.subheader("Persistent Run History")
+    st.subheader("누적 실행 기록")
     history = load_run_history(limit=30)
     if not history:
-        st.info("No persisted run history found yet.")
+        st.info("아직 저장된 실행 기록이 없습니다.")
         return
 
-    st.caption(f"Path: {HISTORY_FILE}")
+    st.caption(f"경로: {HISTORY_FILE}")
     rows = []
     for item in history:
         run_metadata = item.get("run_metadata") or {}
@@ -927,6 +1971,7 @@ def _render_persistent_run_history() -> None:
         rows.append(
             {
                 "started_at": item.get("started_at"),
+                "job": _job_title(item.get("job_name")),
                 "job_name": item.get("job_name"),
                 "status": item.get("status"),
                 "mode": run_metadata.get("execution_mode"),
@@ -944,7 +1989,7 @@ def _render_persistent_run_history() -> None:
 
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     st.caption(
-        "Recent runs now also carry runtime/build metadata and standardized artifact paths. Use the inspector below to see the full payload."
+        "최근 실행 기록에는 runtime/build metadata와 표준 artifact 경로가 함께 저장됩니다. 아래 상세 보기에서 전체 payload를 확인할 수 있습니다."
     )
     _render_run_history_inspector(history)
 
@@ -961,7 +2006,7 @@ def _render_check_result(result: dict[str, Any]) -> None:
 
     details = result.get("details") or {}
     if details:
-        with st.expander("Preflight Details", expanded=False):
+        with st.expander("Preflight 상세", expanded=False):
             st.json(details)
 
 
@@ -1244,7 +2289,7 @@ def _render_statement_coverage_diagnosis_result(result: dict[str, Any]) -> None:
 def _render_price_stale_diagnosis_card() -> None:
     with st.container(border=True):
         st.markdown("### Price Stale Diagnosis")
-        st.write("Run a read-only diagnosis to separate DB ingestion gaps from provider gaps and likely symbol-status issues.")
+        st.write("DB 수집 누락, provider gap, 상폐 / 심볼 변경 가능성을 분리하는 읽기 전용 진단입니다.")
         st.caption(
             "Use this after `Price Freshness Preflight` goes yellow and you want to know whether a lagging symbol is stale because DB is behind, "
             "because the provider is not returning fresh rows, or because the symbol may be delisted / changed."
@@ -1286,7 +2331,7 @@ def _render_price_stale_diagnosis_card() -> None:
         st.caption("Provider probe windows are fixed to `5d`, `1mo`, `3mo` for a quick freshness check without writing DB rows.")
 
         if st.button(
-            "Run Price Stale Diagnosis",
+            "가격 stale 원인 진단 실행",
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(diag_symbol_check),
         ):
@@ -1306,7 +2351,7 @@ def _render_price_stale_diagnosis_card() -> None:
 def _render_statement_coverage_diagnosis_card() -> None:
     with st.container(border=True):
         st.markdown("### Statement Coverage Diagnosis")
-        st.write("Run a read-only diagnosis to understand why strict statement coverage is missing and what the next action should be.")
+        st.write("strict statement coverage가 왜 부족한지와 다음 조치를 분리하는 읽기 전용 진단입니다.")
         st.caption(
             "Use this when `Statement Shadow Coverage Preview` or `Coverage Gap Drilldown` tells you a symbol is missing. "
             "This card helps separate normal re-collection cases from shadow-only rebuild cases and source-structure issues."
@@ -1355,7 +2400,7 @@ def _render_statement_coverage_diagnosis_card() -> None:
         )
 
         if st.button(
-            "Run Statement Coverage Diagnosis",
+            "재무제표 coverage 원인 진단 실행",
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(diag_symbol_check),
         ):
@@ -1456,7 +2501,7 @@ def _render_statement_pit_inspection_card() -> None:
         )
 
         if st.button(
-            "Run Statement PIT Inspection",
+            "재무제표 PIT inspection 실행",
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(inspect_symbol_check),
         ):
@@ -1507,22 +2552,37 @@ def _render_symbol_source_inputs(
     default_source_mode: str = "Manual",
 ) -> dict[str, Any]:
     default_source_index = SYMBOL_SOURCE_OPTIONS.index(default_source_mode) if default_source_mode in SYMBOL_SOURCE_OPTIONS else 0
+    display_title = _format_symbol_input_title(title)
+    st.markdown(f"**{display_title} 소스**")
     source_mode = st.selectbox(
-        f"{title} Source",
+        f"{display_title} 소스",
         SYMBOL_SOURCE_OPTIONS,
         index=default_source_index,
         key=f"{prefix}_source_mode",
+        format_func=_format_symbol_source_label,
+        label_visibility="collapsed",
+    )
+    st.markdown(
+        f'<div class="ingestion-select-caption">현재 선택: {escape(_format_symbol_source_label(source_mode))}</div>',
+        unsafe_allow_html=True,
     )
 
     manual_symbols: list[str] = []
     if source_mode == "Manual":
         text_key = f"{prefix}_symbols_input"
         preset_applied_key = f"{prefix}_preset_applied"
+        st.markdown(f"**{display_title} 프리셋**")
         preset_name = st.selectbox(
-            f"{title} Preset",
+            f"{display_title} 프리셋",
             list(SYMBOL_PRESETS.keys()),
             index=0,
             key=f"{prefix}_preset",
+            format_func=_format_symbol_preset_label,
+            label_visibility="collapsed",
+        )
+        st.markdown(
+            f'<div class="ingestion-select-caption">현재 프리셋: {escape(_format_symbol_preset_label(preset_name))}</div>',
+            unsafe_allow_html=True,
         )
         if preset_name != "Custom":
             preset_value = SYMBOL_PRESETS.get(preset_name, "")
@@ -1530,7 +2590,7 @@ def _render_symbol_source_inputs(
                 st.session_state[text_key] = preset_value
                 st.session_state[preset_applied_key] = preset_name
             manual_text = st.text_area(
-                title,
+                display_title,
                 key=text_key,
                 disabled=True,
             )
@@ -1540,17 +2600,17 @@ def _render_symbol_source_inputs(
                 st.session_state[text_key] = ""
             st.session_state[preset_applied_key] = preset_name
             manual_text = st.text_area(
-                title,
+                display_title,
                 key=text_key,
             )
             manual_symbols = [s.strip() for s in manual_text.split(",") if s.strip()]
 
     source_result = resolve_symbol_source(source_mode, manual_symbols)
     if source_result["status"] == "ok":
-        st.info(f'{source_result["message"]} Count: {source_result["count"]}')
+        st.info(f'{_format_symbol_source_label(source_mode)} 준비 완료. 대상: {source_result["count"]:,}개')
         preview = ", ".join(source_result["symbols"][:10])
         if preview:
-            st.caption(f"Preview: {preview}")
+            st.caption(f"미리보기: {preview}")
     else:
         st.error(source_result["message"])
 
@@ -1571,11 +2631,11 @@ def _render_large_run_guard(
         return False
 
     if count >= warn_threshold:
-        st.warning(f"Large run detected: {count} symbols.")
+        st.warning(f"대량 실행입니다: {count:,} symbols.")
         if estimate.get("available"):
             st.caption(estimate["message"])
         else:
-            st.caption("Estimated runtime unavailable. Large runs may take several minutes or longer.")
+            st.caption("아직 예상 소요 시간을 계산할 실행 기록이 없습니다. 대량 실행은 수 분 이상 걸릴 수 있습니다.")
 
     return True
 
@@ -1636,7 +2696,7 @@ def _resolve_daily_market_execution_profile(
     if source_mode in raw_source_modes:
         return (
             "raw_heavy",
-            "Execution profile: `raw_heavy` | smaller batches, single-worker mode, longer cooldown, raw-universe operator sweep.",
+            "Execution profile: `raw_heavy` | raw universe 대량 sweep용입니다. batch를 작게 나누고 cooldown을 길게 둡니다.",
         )
     managed_source_modes = {
         "Profile Filtered Stocks",
@@ -1649,58 +2709,59 @@ def _resolve_daily_market_execution_profile(
     ):
         return (
             "managed_refresh_short",
-            "Execution profile: `managed_refresh_short` | short-window daily refresh, larger batches, two-worker first pass, rate-limit fallback still enabled.",
+            "Execution profile: `managed_refresh_short` | 짧은 daily refresh용입니다. batch를 키우되 rate-limit fallback은 유지합니다.",
         )
     if source_mode == "Profile Filtered Stocks + ETFs":
         return (
             "managed_fast",
-            "Execution profile: `managed_fast` | larger managed-universe batches, shorter idle sleep, lighter cooldown.",
+            "Execution profile: `managed_fast` | 관리된 universe를 빠르게 갱신합니다. raw sweep보다 cooldown이 가볍습니다.",
         )
     return (
         "managed_safe",
-        "Execution profile: `managed_safe` | moderate batching for narrower or manual universes with built-in cooldown.",
+        "Execution profile: `managed_safe` | 좁은 범위나 수동 입력에 맞춘 기본 안전 모드입니다.",
     )
 
 
 def _render_ingestion_console() -> None:
     _render_running_banner()
-    _render_runtime_build_indicator()
+    _render_ingestion_runtime_build_indicator()
     prefill_notice = st.session_state.get("ingestion_prefill_notice")
     if prefill_notice:
         st.success(prefill_notice)
         st.session_state.ingestion_prefill_notice = None
     st.info(
-        "Inputs are now grouped by job. Symbol-based jobs use their own symbol input. "
-        "`Asset Profile Collection` does not use symbols; it uses the existing NYSE universe tables in MySQL."
+        "이 화면은 외부 API / 공식 파일 / provider page에서 데이터를 수집해 MySQL에 저장하는 운영 콘솔입니다. "
+        "각 작업은 기존처럼 사용자가 심볼, 기간, 소스, 옵션을 직접 정하되, 무엇을 수집하고 어디에 쓰이는지 먼저 보여줍니다."
     )
+    _render_ingestion_workflow_overview()
 
     current_progress_callback = None
     col_left, col_right = st.columns([3, 2])
 
     with col_left:
-        st.subheader("Run Jobs")
+        st.subheader("수집 작업")
         st.caption(
-            "수집 관련 작업을 `운영 파이프라인`과 `수동/진단 작업`으로 분리했습니다. "
-            "정기 운영은 앞 탭, 예외 처리/디버깅/실험은 뒤 탭에서 보시면 됩니다."
+            "정기적으로 돌리는 일상 업데이트와, 검증 데이터 보강 / 수동 복구 / 진단 작업을 분리했습니다. "
+            "영어 job id는 실행 기록 추적용으로만 보시면 됩니다."
         )
 
-        operational_tab, manual_tab = st.tabs(["Operational Pipelines", "Manual Jobs / Inspection"])
+        operational_tab, manual_tab = st.tabs(["일상 운영 / 검증 데이터", "수동 복구 / 진단"])
 
         with operational_tab:
             st.info(
-                "운영 파이프라인: 일상적으로 반복 실행하는 수집 작업입니다. "
-                "일별 가격, 주간 펀더멘털, 확장 statement refresh, metadata refresh 같은 정기 운영 작업을 담당합니다."
+                "일상 운영 / 검증 데이터: 백테스트와 Practical Validation, Overview가 DB에서 읽을 데이터를 채웁니다. "
+                "수집 결과가 부분 성공이면 downstream 화면에서도 coverage gap으로 남을 수 있습니다."
             )
 
-            with st.expander("Daily Market Update", expanded=True):
-                st.write("Refresh price history for the current operating universe.")
-                st.caption("Recommended cadence: every trading day after market close or before the next backtest/data sync.")
+            with st.expander("일별 가격 업데이트", expanded=True):
+                _render_job_brief("daily_market_update")
+                st.caption("권장 주기: 매 거래일 장 마감 후 또는 다음 backtest/data sync 전에 실행합니다.")
                 st.caption(
-                    "Recommended symbol source: use `Profile Filtered Stocks + ETFs` for routine refreshes. "
-                    "Use raw `NYSE Stocks + ETFs` only for broad operator sweeps."
+                    "권장 source: 평소 운영은 `Profile Filtered Stocks + ETFs`를 사용합니다. "
+                    "raw `NYSE Stocks + ETFs`는 넓은 universe를 다시 훑어야 할 때만 사용하세요."
                 )
-                st.caption("Current defaults: `Profile Filtered Stocks + ETFs`, `1d`, `1d`.")
-                st.caption("Writes to: `finance_price.nyse_price_history`")
+                st.caption("기본값: `Profile Filtered Stocks + ETFs`, `1d`, `1d`.")
+                st.caption("저장 테이블: `finance_price.nyse_price_history`")
                 daily_symbol_result = _render_symbol_source_inputs(
                     "daily_market",
                     "Daily Market Symbols",
@@ -1724,10 +2785,10 @@ def _render_ingestion_console() -> None:
                     daily_filtered_symbols, daily_excluded_symbols = filter_non_plain_symbols(daily_symbols_input)
                     if daily_excluded_symbols:
                         st.info(
-                            "Filtered non-plain symbols for provider stability: "
-                            f"`{len(daily_excluded_symbols)}` excluded, `{len(daily_filtered_symbols)}` remain."
+                            "provider 안정성을 위해 특수 share-class / non-plain symbol을 제외했습니다: "
+                            f"`{len(daily_excluded_symbols)}`개 제외, `{len(daily_filtered_symbols)}`개 실행 대상."
                         )
-                        st.caption(f"Excluded sample: {', '.join(daily_excluded_symbols[:10])}")
+                        st.caption(f"제외 sample: {', '.join(daily_excluded_symbols[:10])}")
                 daily_symbols_input = daily_filtered_symbols
                 daily_col1, daily_col2 = st.columns(2)
                 daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=0, key="daily_period_input")
@@ -1748,6 +2809,33 @@ def _render_ingestion_console() -> None:
                     interval=daily_interval_input,
                 )
                 st.caption(daily_profile_caption)
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", _format_symbol_source_label(daily_source_mode)),
+                        ("대상 수", f"{len(daily_symbols_input):,} symbols"),
+                        (
+                            "기간",
+                            _format_contract_window(
+                                period=daily_resolved_period,
+                                start=daily_resolved_start,
+                                end=daily_resolved_end,
+                            ),
+                        ),
+                        ("Interval", daily_interval_input),
+                        ("Execution profile", daily_execution_profile),
+                    ],
+                    note=(
+                        "이 설정으로 가격 row를 저장합니다. 저장 row 수가 있어도 요청 기간 전체 coverage를 뜻하지는 않으므로 "
+                        "결과 해석과 DB coverage quick check를 함께 보세요."
+                    ),
+                )
+                _render_price_window_preflight(
+                    symbols=daily_symbols_input,
+                    start=daily_resolved_start,
+                    end=daily_resolved_end,
+                    timeframe=daily_interval_input,
+                )
                 daily_symbol_check = check_symbol_input(daily_symbols_input)
                 _render_check_result(daily_symbol_check)
                 daily_run_allowed = _render_large_run_guard(
@@ -1756,7 +2844,7 @@ def _render_ingestion_console() -> None:
                     symbols=daily_symbols_input,
                 )
                 if st.button(
-                    "Run Daily Market Update",
+                    "일별 가격 업데이트 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(daily_symbol_check) or not daily_run_allowed,
                 ):
@@ -1801,13 +2889,105 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("daily_market_update")
 
-            with st.expander("Weekly Fundamental Refresh", expanded=False):
-                st.write("Refresh normalized fundamentals and recompute factors for the selected universe.")
-                st.caption("Recommended cadence: once per week, or after a meaningful batch of earnings / filing updates.")
-                st.caption("Recommended symbol source: match the same stock universe used by Daily Market Update so factor coverage stays aligned.")
-                st.caption("Current defaults: `NYSE Stocks`, `quarterly`.")
-                st.caption("Large NYSE stock runs can take noticeably longer than OHLCV refreshes because this job executes both fundamentals ingestion and factor recomputation.")
-                st.caption("Writes to: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
+            with st.expander("선물 OHLCV 수집", expanded=False):
+                _render_job_brief("collect_futures_ohlcv")
+                st.caption("Overview Futures Monitor에서 사용할 선물 캔들 데이터를 수집합니다.")
+                st.caption("기본값은 주요 지수 / 금리 / 원자재 / FX 선물이며, 저장 테이블은 `finance_price.futures_ohlcv`입니다.")
+                futures_symbols_text = st.text_area(
+                    "Futures Symbols",
+                    value=", ".join(DEFAULT_CORE_FUTURES_SYMBOLS),
+                    key="futures_ohlcv_symbols_input",
+                    help="Yahoo/yfinance futures ticker를 쉼표 또는 줄바꿈으로 입력합니다.",
+                )
+                futures_symbols_input = [
+                    item.strip().upper()
+                    for item in futures_symbols_text.replace("\n", ",").split(",")
+                    if item.strip()
+                ]
+                futures_col1, futures_col2, futures_col3 = st.columns(3)
+                futures_period_input = futures_col1.selectbox(
+                    "Futures Period",
+                    ["1d", "5d", "7d", "1mo", "3mo", "6mo", "1y", "2y", "5y"],
+                    index=0,
+                    key="futures_ohlcv_period_input",
+                )
+                futures_interval_input = futures_col2.selectbox(
+                    "Futures Interval",
+                    ["1m", "2m", "5m", "15m", "1h", "1d"],
+                    index=0,
+                    key="futures_ohlcv_interval_input",
+                )
+                futures_max_symbols = int(
+                    futures_col3.number_input(
+                        "Max Symbols",
+                        min_value=1,
+                        max_value=24,
+                        value=min(24, max(1, len(futures_symbols_input))),
+                        step=1,
+                        key="futures_ohlcv_max_symbols",
+                    )
+                )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", "yfinance pilot"),
+                        (
+                            "대상 수",
+                            f"{min(len(futures_symbols_input), futures_max_symbols):,} / {len(futures_symbols_input):,} symbols",
+                        ),
+                        ("기간", futures_period_input),
+                        ("Interval", futures_interval_input),
+                        ("Cadence", "manual"),
+                    ],
+                    note=(
+                        "이 수집은 선물 시장 컨텍스트용입니다. 무료 provider 지연 / 누락 가능성이 있어 "
+                        "Overview에서 stale / failed 상태를 함께 확인해야 합니다."
+                    ),
+                )
+                futures_symbol_check = check_symbol_input(futures_symbols_input)
+                _render_check_result(futures_symbol_check)
+                if st.button(
+                    "선물 OHLCV 수집 실행",
+                    use_container_width=True,
+                    disabled=_has_running_job() or _is_blocking(futures_symbol_check),
+                ):
+                    _schedule_job(
+                        {
+                            "action": "collect_futures_ohlcv",
+                            "job_name": "collect_futures_ohlcv",
+                            "spinner_text": "Running futures OHLCV collection...",
+                            "params": {
+                                "symbols": futures_symbols_input,
+                                "period": futures_period_input,
+                                "interval": futures_interval_input,
+                                "cadence_mode": "manual",
+                                "max_symbols": futures_max_symbols,
+                                "batch_size": 6,
+                                "sleep_sec": 0.1,
+                            },
+                            "run_metadata": _job_metadata(
+                                pipeline_type="overview_futures_market_monitor",
+                                execution_mode="manual",
+                                symbol_source="manual_futures_watchlist",
+                                symbol_count=min(len(futures_symbols_input), futures_max_symbols),
+                                execution_context="Manual futures OHLCV refresh for Overview Futures Monitor.",
+                                input_params={
+                                    "period": futures_period_input,
+                                    "interval": futures_interval_input,
+                                    "max_symbols": futures_max_symbols,
+                                },
+                            ),
+                        }
+                    )
+                _render_inline_last_completed_result("collect_futures_ohlcv")
+
+            with st.expander("주간 펀더멘털 / 팩터 업데이트", expanded=False):
+                _render_job_brief("weekly_fundamental_refresh")
+                st.caption("권장 주기: 주 1회 또는 earnings / filing update가 많이 쌓인 뒤 실행합니다.")
+                st.caption("권장 source: Daily Market Update와 같은 stock universe를 맞추면 factor coverage가 덜 어긋납니다.")
+                st.caption("기본값: `NYSE Stocks`, `quarterly`.")
+                st.caption("NYSE stock 대량 실행은 fundamentals 수집과 factor 재계산을 함께 수행하므로 OHLCV보다 오래 걸릴 수 있습니다.")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
                 weekly_symbol_result = _render_symbol_source_inputs(
                     "weekly_fundamental",
                     "Weekly Refresh Symbols",
@@ -1828,7 +3008,7 @@ def _render_ingestion_console() -> None:
                     symbols=weekly_symbols_input,
                 )
                 if st.button(
-                    "Run Weekly Fundamental Refresh",
+                    "주간 펀더멘털 / 팩터 업데이트 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(weekly_symbol_check) or not weekly_run_allowed,
                 ):
@@ -1858,21 +3038,21 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("weekly_fundamental_refresh")
 
-            with st.expander("Extended Statement Refresh", expanded=False):
-                st.write("Refresh detailed financial statement ledgers and rebuild statement shadow tables for longer-history and account-level analysis.")
-                st.caption("Recommended cadence: monthly, or before deep factor research and long-horizon backtest preparation.")
-                st.caption("Recommended symbol source: `Profile Filtered Stocks` or a narrower research universe, because this job is heavier than summary fundamentals refresh.")
+            with st.expander("상세 재무제표 확장 수집", expanded=False):
+                _render_job_brief("extended_statement_refresh")
+                st.caption("권장 주기: 월 1회 또는 긴 기간 factor research / backtest 준비 전에 실행합니다.")
+                st.caption("권장 source: 이 작업은 무겁기 때문에 `Profile Filtered Stocks`나 더 좁은 research universe부터 사용하세요.")
                 st.caption(
-                    "If you are looking for the older lower-level `Financial Statement Ingestion` card from the checklist, "
-                    "it still exists under the `Manual Jobs / Inspection` tab. For routine Phase 7/8 recovery work, start from this card."
+                    "기존 checklist의 낮은 수준 `Financial Statement Ingestion` card는 `수동 복구 / 진단` 탭에 남아 있습니다. "
+                    "일상적인 PIT coverage 복구는 이 확장 수집 card에서 시작하세요."
                 )
                 st.caption(
-                    "Managed annual coverage presets are also available in the symbol preset dropdown: "
+                    "symbol preset dropdown에는 관리용 coverage preset도 있습니다: "
                     "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
                 )
-                st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `0 periods (all available)`.")
+                st.caption("기본값: `Profile Filtered Stocks`, `annual`, `0 periods (all available)`.")
                 st.caption(
-                    "Writes to: "
+                    "저장 테이블: "
                     "`finance_fundamental.nyse_financial_statement_filings`, "
                     "`finance_fundamental.nyse_financial_statement_labels`, "
                     "`finance_fundamental.nyse_financial_statement_values`, "
@@ -1896,8 +3076,8 @@ def _render_ingestion_console() -> None:
                     key="ext_periods_input",
                     help="`0` means collect all available statement periods from the source. Use this for PIT recovery and quarterly history hardening.",
                 )
-                st.caption("`freq` is automatically matched to the selected `Period Type` for this operational pipeline.")
-                st.caption("Tip: `0 = all available periods`. Use a positive number only when you intentionally want a shorter rolling refresh.")
+                st.caption("`freq`는 선택한 `Period Type`에 자동으로 맞춰 실행됩니다.")
+                st.caption("Tip: `0 = all available periods`. 짧은 rolling refresh를 의도할 때만 양수를 입력하세요.")
                 ext_symbol_check = check_symbol_input(ext_symbols_input)
                 _render_check_result(ext_symbol_check)
                 ext_run_allowed = _render_large_run_guard(
@@ -1906,7 +3086,7 @@ def _render_ingestion_console() -> None:
                     symbols=ext_symbols_input,
                 )
                 if st.button(
-                    "Run Extended Statement Refresh",
+                    "상세 재무제표 확장 수집 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(ext_symbol_check) or not ext_run_allowed,
                 ):
@@ -1942,11 +3122,11 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("extended_statement_refresh")
 
-            with st.expander("Metadata Refresh", expanded=False):
-                st.write("Refresh asset profile metadata for the currently tracked stock and ETF universes.")
-                st.caption("Recommended cadence: weekly or whenever the tracked universe definition / profile filters change.")
-                st.caption("Recommended source scope: keep both `stock` and `etf` selected unless you are intentionally refreshing only one side of the universe.")
-                st.caption("Writes to: `finance_meta.nyse_asset_profile`")
+            with st.expander("종목 메타데이터 업데이트", expanded=False):
+                _render_job_brief("metadata_refresh")
+                st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")
+                st.caption("권장 scope: 한쪽만 갱신할 의도가 아니라면 `stock`과 `etf`를 함께 선택하세요.")
+                st.caption("저장 테이블: `finance_meta.nyse_asset_profile`")
                 metadata_kind_options = st.multiselect(
                     "Metadata Refresh Kinds",
                     options=["stock", "etf"],
@@ -1957,7 +3137,7 @@ def _render_ingestion_console() -> None:
                 metadata_check = check_asset_profile_prerequisites(metadata_kinds)
                 _render_check_result(metadata_check)
                 if st.button(
-                    "Run Metadata Refresh",
+                    "종목 메타데이터 업데이트 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(metadata_check),
                 ):
@@ -1988,15 +3168,16 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("metadata_refresh")
 
-            with st.expander("Overview Market Event Calendar", expanded=False):
+            with st.expander("시장 이벤트 캘린더 수집", expanded=False):
                 st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
                 st.caption(
                     "현재 구현 대상: Federal Reserve FOMC, BLS/BEA macro release schedule, "
                     "yfinance + Nasdaq cross-check 기반 earnings estimate."
                 )
                 st.caption("저장 테이블: `finance_meta.market_event_calendar`")
-                fomc_tab, macro_event_tab, earnings_tab = st.tabs(["FOMC", "Macro", "Earnings"])
+                fomc_tab, macro_event_tab, earnings_tab = st.tabs(["FOMC 일정", "매크로 발표", "실적 발표"])
                 with fomc_tab:
+                    _render_job_brief("collect_fomc_calendar")
                     current_year = date.today().year
                     fomc_year_options = list(range(current_year - 1, current_year + 3))
                     fomc_years = st.multiselect(
@@ -2007,7 +3188,7 @@ def _render_ingestion_console() -> None:
                         help="비워두면 Fed 페이지에서 파싱 가능한 모든 연도 row를 수집합니다.",
                     )
                     if st.button(
-                        "Collect FOMC Calendar",
+                        "FOMC 일정 수집",
                         use_container_width=True,
                         disabled=_has_running_job(),
                     ):
@@ -2034,6 +3215,7 @@ def _render_ingestion_console() -> None:
                             }
                         )
                 with macro_event_tab:
+                    _render_job_brief("collect_macro_calendar")
                     current_year = date.today().year
                     macro_year_options = list(range(current_year - 1, current_year + 3))
                     macro_years = st.multiselect(
@@ -2058,7 +3240,7 @@ def _render_ingestion_console() -> None:
                         "BLS request는 네트워크/정책에 따라 차단될 수 있습니다. 실패하면 job result와 Data Health에서 확인합니다."
                     )
                     if st.button(
-                        "Collect Macro Calendar",
+                        "공식 매크로 발표 일정 수집",
                         use_container_width=True,
                         disabled=_has_running_job() or not (macro_include_bls or macro_include_bea),
                     ):
@@ -2089,6 +3271,7 @@ def _render_ingestion_console() -> None:
                             }
                         )
                     st.divider()
+                    _render_job_brief("import_bls_macro_calendar_ics")
                     bls_ics_file = st.file_uploader(
                         "BLS Calendar .ics File",
                         type=["ics"],
@@ -2096,7 +3279,7 @@ def _render_ingestion_console() -> None:
                         help="BLS 공식 release schedule 캘린더 파일을 브라우저에서 내려받은 뒤 업로드합니다.",
                     )
                     if st.button(
-                        "Import BLS .ics Calendar",
+                        "BLS 공식 .ics 일정 가져오기",
                         use_container_width=True,
                         disabled=_has_running_job() or bls_ics_file is None,
                     ):
@@ -2131,6 +3314,7 @@ def _render_ingestion_console() -> None:
                                 }
                             )
                 with earnings_tab:
+                    _render_job_brief("collect_earnings_calendar")
                     earnings_source_mode = st.selectbox(
                         "Symbol Source",
                         ["Latest S&P 500 Movers", "S&P 500 Universe Batch", "Top1000 Batch", "Top2000 Batch", "Manual Symbols"],
@@ -2208,7 +3392,7 @@ def _render_ingestion_console() -> None:
                         "Latest movers mode uses the latest stored S&P 500 intraday snapshot. Universe batch modes are low-frequency sweeps; keep Max Symbols bounded and use Batch Offset to continue later."
                     )
                     if st.button(
-                        "Collect Earnings Calendar",
+                        "실적 발표 예상 일정 수집",
                         use_container_width=True,
                         disabled=_has_running_job(),
                     ):
@@ -2269,7 +3453,7 @@ def _render_ingestion_console() -> None:
                         )
                 _render_inline_last_completed_result("collect_fomc_calendar", "collect_macro_calendar", "collect_earnings_calendar")
 
-            with st.expander("Practical Validation Provider Snapshots", expanded=False):
+            with st.expander("Practical Validation 검증 데이터 보강", expanded=False):
                 st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")
                 st.caption(
                     "ETF의 운용 가능성, ETF 내부 구성, 시장 환경 데이터를 DB에 저장해 둡니다. "
@@ -2280,17 +3464,18 @@ def _render_ingestion_console() -> None:
                     "`finance_meta.etf_holdings_snapshot`, `finance_meta.etf_exposure_snapshot`, "
                     "`finance_meta.macro_series_observation`, `finance_meta.nyse_symbol_lifecycle`"
                 )
-                source_map_tab, provider_tab, holdings_tab, macro_tab, delisting_tab = st.tabs(
+                source_map_tab, provider_tab, holdings_tab, macro_tab, lifecycle_tab = st.tabs(
                     [
-                        "Provider Source Map",
-                        "ETF Operability",
-                        "ETF Holdings / Exposure",
-                        "Macro Context",
-                        "Delisting Evidence",
+                        "ETF 소스 매핑",
+                        "ETF 운용성",
+                        "ETF 구성 / 노출",
+                        "FRED 시장환경",
+                        "상장 / 상폐 근거",
                     ]
                 )
 
                 with source_map_tab:
+                    _render_job_brief("discover_etf_provider_source_map")
                     st.caption(
                         "`nyse_etf`와 ETF asset profile을 기준으로 운용사와 공식 endpoint 후보를 찾고 검증합니다. "
                         "이 테이블이 채워져야 새 ETF도 holdings / exposure 수집 대상인지 자동으로 판단할 수 있습니다."
@@ -2326,7 +3511,7 @@ def _render_ingestion_console() -> None:
                     else:
                         st.info("심볼 입력을 비우면 `nyse_etf` 전체를 대상으로 source map을 탐색합니다.")
                     if st.button(
-                        "Run Provider Source Map Discovery",
+                        "ETF 공식 소스 매핑 발견 실행",
                         use_container_width=True,
                         disabled=_has_running_job(),
                     ):
@@ -2365,6 +3550,7 @@ def _render_ingestion_console() -> None:
                     _render_inline_last_completed_result("discover_etf_provider_source_map")
 
                 with provider_tab:
+                    _render_job_brief("collect_etf_operability_provider")
                     st.caption(
                         "ETF가 현재 실전 운용 대상으로 적절한지 확인하기 위한 비용, 규모, 유동성, 가격 괴리, 레버리지 / 인버스 정보를 수집합니다. "
                         "Practical Validation에서는 거래 가능성, 비용 부담, 레버리지 / 인버스 상품 여부를 판단하는 근거로 사용합니다."
@@ -2411,7 +3597,7 @@ def _render_ingestion_console() -> None:
                     operability_check = check_symbol_input(operability_symbols)
                     _render_check_result(operability_check)
                     if st.button(
-                        "Run ETF Operability Snapshot",
+                        "ETF 운용성 스냅샷 수집",
                         use_container_width=True,
                         disabled=_has_running_job() or _is_blocking(operability_check),
                     ):
@@ -2452,6 +3638,7 @@ def _render_ingestion_console() -> None:
                     _render_inline_last_completed_result("collect_etf_operability_provider")
 
                 with holdings_tab:
+                    _render_job_brief("collect_etf_holdings_exposure")
                     st.caption(
                         "ETF 안에 무엇이 들어있는지와 자산군 / 섹터 / 국가 / 통화 노출이 어떻게 나뉘는지 수집합니다. "
                         "Practical Validation에서는 포트폴리오 자산배분, 집중도, 중복 노출을 판단하는 근거로 사용합니다. "
@@ -2489,7 +3676,7 @@ def _render_ingestion_console() -> None:
                     holdings_check = check_symbol_input(holdings_symbols)
                     _render_check_result(holdings_check)
                     if st.button(
-                        "Run ETF Holdings / Exposure Snapshot",
+                        "ETF 구성 / 노출 스냅샷 수집",
                         use_container_width=True,
                         disabled=_has_running_job() or _is_blocking(holdings_check),
                     ):
@@ -2528,6 +3715,7 @@ def _render_ingestion_console() -> None:
                     _render_inline_last_completed_result("collect_etf_holdings_exposure")
 
                 with macro_tab:
+                    _render_job_brief("collect_macro_market_context")
                     st.caption(
                         "VIX, 금리곡선, 신용스프레드 같은 시장 환경 데이터를 수집합니다. "
                         "Practical Validation에서는 현재 시장 국면과 risk-on / risk-off 환경을 해석하는 근거로 사용합니다."
@@ -2555,7 +3743,7 @@ def _render_ingestion_console() -> None:
                     macro_check = check_symbol_input(macro_series)
                     _render_check_result(macro_check)
                     if st.button(
-                        "Run Macro Context Snapshot",
+                        "FRED 시장환경 수집",
                         use_container_width=True,
                         disabled=_has_running_job() or _is_blocking(macro_check),
                     ):
@@ -2594,103 +3782,304 @@ def _render_ingestion_console() -> None:
                         )
                     _render_inline_last_completed_result("collect_macro_market_context")
 
-                with delisting_tab:
-                    st.caption(
-                        "SEC Form 25 / 25-NSE filing metadata를 읽어 delisting / withdrawal evidence를 저장합니다. "
-                        "Data Coverage Audit의 survivorship / delisting control 근거를 보강하는 용도입니다."
+                with lifecycle_tab:
+                    _render_data_quality_callout(
+                        "상장 / 상폐 근거 해석 기준",
+                        "상장 / 상폐 근거는 Data Coverage Audit의 survivorship 해석을 보강합니다. "
+                        "current snapshot 계열은 historical membership PASS 근거가 아니며, 실제 historical source나 delisting source와 구분해서 봅니다.",
+                        tone="warning",
                     )
-                    st.caption(
-                        "저장 테이블: `finance_meta.nyse_symbol_lifecycle` "
-                        "(`source_type=delisting_feed`, `coverage_status=actual`)"
+                    form25_tab, symdir_tab, sec_cik_tab, computed_tab = st.tabs(
+                        ["SEC Form 25", "Nasdaq 현재 상장", "SEC CIK 교차확인", "반복 관찰 요약"]
                     )
-                    st.caption(
-                        "Form 25가 없다는 사실은 active listing proof가 아닙니다. "
-                        "complete historical universe membership은 별도 historical listing source가 필요합니다."
-                    )
-                    sec_form25_symbols_text = st.text_area(
-                        "Symbols",
-                        value=SEC_FORM25_DEFAULT_SYMBOLS,
-                        key="sec_form25_symbols_input",
-                        help="SEC ticker / CIK mapping으로 조회할 심볼을 입력합니다. 예: 과거 delisting이 의심되는 후보 ticker 목록.",
-                    )
-                    sec_form25_symbols = _parse_csv_items(sec_form25_symbols_text)
-                    sec_form25_user_agent = st.text_input(
-                        "SEC User-Agent Override",
-                        value="",
-                        key="sec_form25_user_agent",
-                        help="선택 사항입니다. 비워두면 `SEC_USER_AGENT` 환경변수 또는 collector 기본값을 사용합니다.",
-                    )
-                    sec_form25_cols = st.columns(2)
-                    sec_form25_include_archive = sec_form25_cols[0].checkbox(
-                        "Search Archived Filing Files",
-                        value=True,
-                        key="sec_form25_include_archive",
-                        help="recent filing 목록 밖의 archive JSON 파일도 일부 확인합니다.",
-                    )
-                    sec_form25_max_archive = int(
-                        sec_form25_cols[1].number_input(
-                            "Max Archive Files",
-                            min_value=0,
-                            max_value=20,
-                            value=5,
-                            step=1,
-                            key="sec_form25_max_archive_files",
+
+                    with form25_tab:
+                        _render_job_brief("collect_sec_form25_delistings")
+                        st.caption(
+                            "SEC Form 25 / 25-NSE filing metadata를 읽어 delisting / withdrawal evidence를 저장합니다. "
+                            "Data Coverage Audit의 survivorship / delisting control 근거를 보강하는 용도입니다."
                         )
-                    )
-                    sec_form25_check = check_symbol_input(sec_form25_symbols)
-                    _render_check_result(sec_form25_check)
-                    if st.button(
-                        "Run SEC Form 25 Delisting Evidence",
-                        width="stretch",
-                        disabled=_has_running_job() or _is_blocking(sec_form25_check),
-                    ):
-                        _schedule_job(
-                            {
-                                "action": "collect_sec_form25_delistings",
-                                "job_name": "collect_sec_form25_delistings",
-                                "spinner_text": "Running SEC Form 25 delisting evidence collection...",
-                                "params": {
-                                    "symbols": sec_form25_symbols,
-                                    "user_agent": sec_form25_user_agent or None,
-                                    "include_archive_files": bool(sec_form25_include_archive),
-                                    "max_archive_files": sec_form25_max_archive,
-                                },
-                                "run_metadata": _job_metadata(
-                                    pipeline_type="data_coverage_delisting_evidence",
-                                    execution_mode="operational",
-                                    symbol_source="SEC EDGAR company_tickers / submissions API",
-                                    symbol_count=len(sec_form25_symbols),
-                                    execution_context=(
-                                        "Data Coverage Audit의 survivorship / delisting control을 보강하기 위해 "
-                                        "SEC Form 25 / 25-NSE delisting evidence를 DB lifecycle table에 수집합니다."
-                                    ),
-                                    input_params={
+                        st.caption(
+                            "저장 테이블: `finance_meta.nyse_symbol_lifecycle` "
+                            "(`source_type=delisting_feed`, `coverage_status=actual`)"
+                        )
+                        st.caption(
+                            "Form 25가 없다는 사실은 active listing proof가 아닙니다. "
+                            "complete historical universe membership은 별도 historical listing source가 필요합니다."
+                        )
+                        sec_form25_symbols_text = st.text_area(
+                            "Symbols",
+                            value=SEC_FORM25_DEFAULT_SYMBOLS,
+                            key="sec_form25_symbols_input",
+                            help="SEC ticker / CIK mapping으로 조회할 심볼을 입력합니다. 예: 과거 delisting이 의심되는 후보 ticker 목록.",
+                        )
+                        sec_form25_symbols = _parse_csv_items(sec_form25_symbols_text)
+                        sec_form25_user_agent = st.text_input(
+                            "SEC User-Agent Override",
+                            value="",
+                            key="sec_form25_user_agent",
+                            help="선택 사항입니다. 비워두면 `SEC_USER_AGENT` 환경변수 또는 collector 기본값을 사용합니다.",
+                        )
+                        sec_form25_cols = st.columns(2)
+                        sec_form25_include_archive = sec_form25_cols[0].checkbox(
+                            "Search Archived Filing Files",
+                            value=True,
+                            key="sec_form25_include_archive",
+                            help="recent filing 목록 밖의 archive JSON 파일도 일부 확인합니다.",
+                        )
+                        sec_form25_max_archive = int(
+                            sec_form25_cols[1].number_input(
+                                "Max Archive Files",
+                                min_value=0,
+                                max_value=20,
+                                value=5,
+                                step=1,
+                                key="sec_form25_max_archive_files",
+                            )
+                        )
+                        sec_form25_check = check_symbol_input(sec_form25_symbols)
+                        _render_check_result(sec_form25_check)
+                        if st.button(
+                            "SEC Form 25 상폐 근거 수집",
+                            width="stretch",
+                            disabled=_has_running_job() or _is_blocking(sec_form25_check),
+                        ):
+                            _schedule_job(
+                                {
+                                    "action": "collect_sec_form25_delistings",
+                                    "job_name": "collect_sec_form25_delistings",
+                                    "spinner_text": "Running SEC Form 25 delisting evidence collection...",
+                                    "params": {
+                                        "symbols": sec_form25_symbols,
+                                        "user_agent": sec_form25_user_agent or None,
                                         "include_archive_files": bool(sec_form25_include_archive),
                                         "max_archive_files": sec_form25_max_archive,
-                                        "user_agent_override": bool(sec_form25_user_agent),
                                     },
-                                ),
-                            }
+                                    "run_metadata": _job_metadata(
+                                        pipeline_type="data_coverage_delisting_evidence",
+                                        execution_mode="operational",
+                                        symbol_source="SEC EDGAR company_tickers / submissions API",
+                                        symbol_count=len(sec_form25_symbols),
+                                        execution_context=(
+                                            "Data Coverage Audit의 survivorship / delisting control을 보강하기 위해 "
+                                            "SEC Form 25 / 25-NSE delisting evidence를 DB lifecycle table에 수집합니다."
+                                        ),
+                                        input_params={
+                                            "include_archive_files": bool(sec_form25_include_archive),
+                                            "max_archive_files": sec_form25_max_archive,
+                                            "user_agent_override": bool(sec_form25_user_agent),
+                                        },
+                                    ),
+                                }
+                            )
+                        if _is_running_action("collect_sec_form25_delistings"):
+                            current_progress_callback = _build_progress_callback(
+                                st.session_state.running_job,
+                                label="SEC Form 25 Delisting Evidence",
+                            )
+                        _render_inline_last_completed_result("collect_sec_form25_delistings")
+
+                    with symdir_tab:
+                        _render_job_brief("collect_symbol_directory_snapshots")
+                        st.caption(
+                            "Nasdaq public Symbol Directory의 현재 listing 관찰치를 partial lifecycle evidence로 저장합니다. "
+                            "이 row는 historical membership proof가 아니라 current observation입니다."
                         )
-                    if _is_running_action("collect_sec_form25_delistings"):
-                        current_progress_callback = _build_progress_callback(
-                            st.session_state.running_job,
-                            label="SEC Form 25 Delisting Evidence",
+                        symdir_sources = st.multiselect(
+                            "수집 파일",
+                            options=["nasdaqlisted", "otherlisted"],
+                            default=["nasdaqlisted", "otherlisted"],
+                            key="symbol_directory_sources",
+                            help="nasdaqlisted는 Nasdaq-listed, otherlisted는 NYSE/NYSE American 등 other-listed current file입니다.",
                         )
-                    _render_inline_last_completed_result("collect_sec_form25_delistings")
+                        symdir_cols = st.columns(3)
+                        symdir_snapshot_date = symdir_cols[0].text_input(
+                            "Snapshot Date",
+                            value="",
+                            key="symbol_directory_snapshot_date",
+                            help="선택 사항입니다. 비워두면 source file creation date 또는 오늘 날짜를 사용합니다.",
+                        )
+                        symdir_include_test = symdir_cols[1].checkbox(
+                            "Include Test Issues",
+                            value=False,
+                            key="symbol_directory_include_test_issues",
+                        )
+                        symdir_user_agent = symdir_cols[2].text_input(
+                            "User-Agent Override",
+                            value="",
+                            key="symbol_directory_user_agent",
+                        )
+                        if st.button(
+                            "Nasdaq 상장 관찰치 수집",
+                            width="stretch",
+                            disabled=_has_running_job() or not symdir_sources,
+                        ):
+                            _schedule_job(
+                                {
+                                    "action": "collect_symbol_directory_snapshots",
+                                    "job_name": "collect_symbol_directory_snapshots",
+                                    "spinner_text": "Collecting Nasdaq Symbol Directory current snapshots...",
+                                    "params": {
+                                        "sources": tuple(symdir_sources),
+                                        "user_agent": symdir_user_agent or None,
+                                        "include_test_issues": bool(symdir_include_test),
+                                        "snapshot_date": symdir_snapshot_date or None,
+                                    },
+                                    "run_metadata": _job_metadata(
+                                        pipeline_type="data_coverage_lifecycle_current_snapshot",
+                                        execution_mode="operational",
+                                        symbol_source="Nasdaq public Symbol Directory",
+                                        symbol_count=None,
+                                        execution_context=(
+                                            "Nasdaq public Symbol Directory current files를 partial listing_observed lifecycle evidence로 저장합니다."
+                                        ),
+                                        input_params={
+                                            "sources": tuple(symdir_sources),
+                                            "include_test_issues": bool(symdir_include_test),
+                                            "snapshot_date": symdir_snapshot_date or None,
+                                            "user_agent_override": bool(symdir_user_agent),
+                                        },
+                                    ),
+                                }
+                            )
+                        _render_inline_last_completed_result("collect_symbol_directory_snapshots")
+
+                    with sec_cik_tab:
+                        _render_job_brief("collect_sec_company_ticker_crosscheck")
+                        st.caption(
+                            "SEC current CIK / ticker / exchange association을 identity cross-check로 저장합니다. "
+                            "심볼 입력을 비우면 SEC file 전체를 대상으로 합니다."
+                        )
+                        sec_cik_symbols_text = st.text_area(
+                            "Symbols",
+                            value="",
+                            key="sec_cik_crosscheck_symbols_input",
+                            help="선택 사항입니다. 특정 심볼만 확인하려면 쉼표로 입력합니다.",
+                        )
+                        sec_cik_symbols = _parse_csv_items(sec_cik_symbols_text)
+                        if sec_cik_symbols:
+                            sec_cik_check = check_symbol_input(sec_cik_symbols)
+                            _render_check_result(sec_cik_check)
+                        else:
+                            sec_cik_check = {"status": "ok", "message": "전체 SEC current association file을 대상으로 실행합니다."}
+                            st.info(sec_cik_check["message"])
+                        sec_cik_cols = st.columns(2)
+                        sec_cik_snapshot_date = sec_cik_cols[0].text_input(
+                            "Snapshot Date",
+                            value="",
+                            key="sec_cik_snapshot_date",
+                        )
+                        sec_cik_user_agent = sec_cik_cols[1].text_input(
+                            "SEC User-Agent Override",
+                            value="",
+                            key="sec_cik_user_agent",
+                        )
+                        if st.button(
+                            "SEC CIK / 티커 교차확인 수집",
+                            width="stretch",
+                            disabled=_has_running_job() or _is_blocking(sec_cik_check),
+                        ):
+                            _schedule_job(
+                                {
+                                    "action": "collect_sec_company_ticker_crosscheck",
+                                    "job_name": "collect_sec_company_ticker_crosscheck",
+                                    "spinner_text": "Collecting SEC CIK / ticker / exchange crosscheck evidence...",
+                                    "params": {
+                                        "symbols": sec_cik_symbols or None,
+                                        "user_agent": sec_cik_user_agent or None,
+                                        "snapshot_date": sec_cik_snapshot_date or None,
+                                    },
+                                    "run_metadata": _job_metadata(
+                                        pipeline_type="data_coverage_lifecycle_identity_crosscheck",
+                                        execution_mode="operational",
+                                        symbol_source="SEC company_tickers_exchange.json",
+                                        symbol_count=len(sec_cik_symbols) if sec_cik_symbols else None,
+                                        execution_context=(
+                                            "SEC current CIK / ticker / exchange association을 partial identity lifecycle evidence로 저장합니다."
+                                        ),
+                                        input_params={
+                                            "symbols": sec_cik_symbols or None,
+                                            "snapshot_date": sec_cik_snapshot_date or None,
+                                            "user_agent_override": bool(sec_cik_user_agent),
+                                        },
+                                    ),
+                                }
+                            )
+                        _render_inline_last_completed_result("collect_sec_company_ticker_crosscheck")
+
+                    with computed_tab:
+                        _render_job_brief("collect_computed_snapshot_lifecycle")
+                        st.caption(
+                            "이미 저장된 current listing snapshot rows를 읽어 반복 관찰 window를 partial lifecycle evidence로 요약합니다. "
+                            "상폐나 historical membership을 증명하지 않습니다."
+                        )
+                        computed_symbols_text = st.text_area(
+                            "Symbols",
+                            value="",
+                            key="computed_lifecycle_symbols_input",
+                            help="선택 사항입니다. 비워두면 기존 current snapshot rows 전체를 요약합니다.",
+                        )
+                        computed_symbols = _parse_csv_items(computed_symbols_text)
+                        if computed_symbols:
+                            computed_check = check_symbol_input(computed_symbols)
+                            _render_check_result(computed_check)
+                        else:
+                            computed_check = {"status": "ok", "message": "전체 current snapshot rows를 대상으로 실행합니다."}
+                            st.info(computed_check["message"])
+                        computed_min_observations = int(
+                            st.number_input(
+                                "Minimum Observation Dates",
+                                min_value=2,
+                                max_value=10,
+                                value=2,
+                                step=1,
+                                key="computed_lifecycle_min_observation_dates",
+                                help="서로 다른 관찰일이 이 값 이상인 symbol만 partial summary row를 만듭니다.",
+                            )
+                        )
+                        if st.button(
+                            "반복 관찰 lifecycle 요약 생성",
+                            width="stretch",
+                            disabled=_has_running_job() or _is_blocking(computed_check),
+                        ):
+                            _schedule_job(
+                                {
+                                    "action": "collect_computed_snapshot_lifecycle",
+                                    "job_name": "collect_computed_snapshot_lifecycle",
+                                    "spinner_text": "Computing conservative lifecycle evidence from current snapshots...",
+                                    "params": {
+                                        "symbols": computed_symbols or None,
+                                        "min_observation_dates": computed_min_observations,
+                                    },
+                                    "run_metadata": _job_metadata(
+                                        pipeline_type="data_coverage_lifecycle_computed_snapshot",
+                                        execution_mode="operational",
+                                        symbol_source="finance_meta.nyse_symbol_lifecycle current snapshots",
+                                        symbol_count=len(computed_symbols) if computed_symbols else None,
+                                        execution_context=(
+                                            "기존 current snapshot rows의 반복 관찰 window를 partial computed lifecycle evidence로 요약합니다."
+                                        ),
+                                        input_params={
+                                            "symbols": computed_symbols or None,
+                                            "min_observation_dates": computed_min_observations,
+                                        },
+                                    ),
+                                }
+                            )
+                        _render_inline_last_completed_result("collect_computed_snapshot_lifecycle")
 
         with manual_tab:
             st.info(
-                "수동/진단 작업: 예외 처리, 부분 재실행, 디버깅, 실험용 작업입니다. "
-                "정기 운영보다는 특정 심볼 재수집, 저수준 파이프라인 확인, PIT inspection 같은 보조 작업을 담당합니다."
+                "수동 복구 / 진단: 특정 심볼 재수집, 저수준 파이프라인 확인, PIT inspection 같은 보조 작업입니다. "
+                "정기 운영보다 느리거나 실험적인 작업은 이곳에서 필요한 범위만 좁혀 실행합니다."
             )
-            with st.expander("Core Market Data Pipeline", expanded=True):
-                st.write("Run OHLCV collection, fundamentals ingestion, and factor calculation in sequence.")
+            with st.expander("핵심 시장 데이터 일괄 수집", expanded=True):
+                _render_job_brief("pipeline_core_market_data")
                 st.caption(
-                    "Execution order: OHLCV -> Fundamentals -> Factors. "
-                    "This is a manual composite job for one-off full reruns on the current symbol set."
+                    "실행 순서: OHLCV -> Fundamentals -> Factors. "
+                    "현재 symbol set을 한 번에 다시 채워야 할 때 쓰는 수동 composite job입니다."
                 )
-                st.caption("Writes to: `finance_price.nyse_price_history`, `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
+                st.caption("저장 테이블: `finance_price.nyse_price_history`, `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
                 pipeline_symbol_result = _render_symbol_source_inputs("pipeline", "Pipeline Symbols")
                 pipeline_symbols_input = pipeline_symbol_result["symbols"]
                 pipe_col1, pipe_col2 = st.columns(2)
@@ -2707,8 +4096,35 @@ def _render_ingestion_console() -> None:
                 )
                 if pipeline_period_input == "7d" and not pipeline_start_input and not pipeline_end_input:
                     st.caption(
-                        f"`7d` is handled as a rolling date window: start=`{pipeline_resolved_start}`, end=`{pipeline_resolved_end}`."
+                        f"`7d`는 rolling date window로 변환됩니다: start=`{pipeline_resolved_start}`, end=`{pipeline_resolved_end}`."
                     )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", _format_symbol_source_label(pipeline_symbol_result.get("source_mode") or "Manual")),
+                        ("대상 수", f"{len(pipeline_symbols_input):,} symbols"),
+                        (
+                            "가격 기간",
+                            _format_contract_window(
+                                period=pipeline_resolved_period,
+                                start=pipeline_resolved_start,
+                                end=pipeline_resolved_end,
+                            ),
+                        ),
+                        ("Interval", pipeline_interval_input),
+                        ("Fundamental freq", pipeline_freq_input),
+                    ],
+                    note=(
+                        "Composite job은 가격, fundamentals, factors 중 한 단계만 partial이어도 downstream coverage gap이 남습니다. "
+                        "실행 결과의 Pipeline Steps를 먼저 확인하세요."
+                    ),
+                )
+                _render_price_window_preflight(
+                    symbols=pipeline_symbols_input,
+                    start=pipeline_resolved_start,
+                    end=pipeline_resolved_end,
+                    timeframe=pipeline_interval_input,
+                )
                 pipeline_symbol_check = check_symbol_input(pipeline_symbols_input)
                 _render_check_result(pipeline_symbol_check)
                 pipeline_run_allowed = _render_large_run_guard(
@@ -2717,7 +4133,7 @@ def _render_ingestion_console() -> None:
                     symbols=pipeline_symbols_input,
                 )
                 if st.button(
-                    "Run Core Pipeline",
+                    "핵심 시장 데이터 일괄 수집 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(pipeline_symbol_check) or not pipeline_run_allowed,
                 ):
@@ -2757,13 +4173,13 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("pipeline_core_market_data")
 
-            with st.expander("OHLCV Collection", expanded=False):
-                st.write("Collect market price history and store it in MySQL.")
+            with st.expander("가격 이력 수동 수집", expanded=False):
+                _render_job_brief("collect_ohlcv")
                 st.caption(
-                    "Uses the `Symbols` input. Recommended before running Factors. "
-                    "Current date-range handling is more reliable with `period` than with `end`."
+                    "`Symbols` 입력을 사용합니다. Factors 계산 전에 가격 row를 좁은 범위로 보강할 때 적합합니다. "
+                    "date-range가 애매하면 `period` 기반 실행이 더 단순합니다."
                 )
-                st.caption("Writes to: `finance_price.nyse_price_history`")
+                st.caption("저장 테이블: `finance_price.nyse_price_history`")
                 ohlcv_symbol_result = _render_symbol_source_inputs("ohlcv", "OHLCV Symbols")
                 ohlcv_symbols_input = ohlcv_symbol_result["symbols"]
                 ohlcv_col1, ohlcv_col2 = st.columns(2)
@@ -2779,8 +4195,31 @@ def _render_ingestion_console() -> None:
                 )
                 if ohlcv_period_input == "7d" and not ohlcv_start_input and not ohlcv_end_input:
                     st.caption(
-                        f"`7d` is handled as a rolling date window: start=`{ohlcv_resolved_start}`, end=`{ohlcv_resolved_end}`."
+                        f"`7d`는 rolling date window로 변환됩니다: start=`{ohlcv_resolved_start}`, end=`{ohlcv_resolved_end}`."
                     )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", _format_symbol_source_label(ohlcv_symbol_result.get("source_mode") or "Manual")),
+                        ("대상 수", f"{len(ohlcv_symbols_input):,} symbols"),
+                        (
+                            "기간",
+                            _format_contract_window(
+                                period=ohlcv_resolved_period,
+                                start=ohlcv_resolved_start,
+                                end=ohlcv_resolved_end,
+                            ),
+                        ),
+                        ("Interval", ohlcv_interval_input),
+                    ],
+                    note="수동 OHLCV 수집은 요청 범위 보강용입니다. 실행 후 missing / no-data / rate-limit payload를 확인하세요.",
+                )
+                _render_price_window_preflight(
+                    symbols=ohlcv_symbols_input,
+                    start=ohlcv_resolved_start,
+                    end=ohlcv_resolved_end,
+                    timeframe=ohlcv_interval_input,
+                )
                 ohlcv_symbol_check = check_symbol_input(ohlcv_symbols_input)
                 _render_check_result(ohlcv_symbol_check)
                 ohlcv_run_allowed = _render_large_run_guard(
@@ -2789,7 +4228,7 @@ def _render_ingestion_console() -> None:
                     symbols=ohlcv_symbols_input,
                 )
                 if st.button(
-                    "Run OHLCV Collection",
+                    "가격 이력 수동 수집 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(ohlcv_symbol_check) or not ohlcv_run_allowed,
                 ):
@@ -2827,12 +4266,12 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("collect_ohlcv")
 
-            with st.expander("Fundamentals Ingestion", expanded=False):
-                st.write("Collect normalized financial statement snapshots and store them in MySQL.")
+            with st.expander("펀더멘털 수동 수집", expanded=False):
+                _render_job_brief("collect_fundamentals")
                 st.caption(
-                    "Uses the `Symbols` input. Required before `Factor Calculation` for those symbols."
+                    "`Symbols` 입력을 사용합니다. 해당 symbol의 `Factor Calculation` 전에 필요한 normalized fundamentals를 채웁니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_fundamentals`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`")
                 fundamentals_symbol_result = _render_symbol_source_inputs("fundamentals", "Fundamentals Symbols")
                 fundamentals_symbols_input = fundamentals_symbol_result["symbols"]
                 fundamentals_freq_input = st.selectbox(
@@ -2849,7 +4288,7 @@ def _render_ingestion_console() -> None:
                     symbols=fundamentals_symbols_input,
                 )
                 if st.button(
-                    "Run Fundamentals Ingestion",
+                    "펀더멘털 수동 수집 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(fundamentals_symbol_check) or not fundamentals_run_allowed,
                 ):
@@ -2879,12 +4318,12 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("collect_fundamentals")
 
-            with st.expander("Factor Calculation", expanded=False):
-                st.write("Read stored fundamentals and prices, calculate factors, and store results.")
+            with st.expander("팩터 수동 계산", expanded=False):
+                _render_job_brief("calculate_factors")
                 st.caption(
-                    "Uses the `Symbols` input. Requires matching OHLCV and fundamentals data to already exist in MySQL."
+                    "`Symbols` 입력을 사용합니다. 같은 symbol의 OHLCV와 fundamentals가 MySQL에 먼저 있어야 계산됩니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_factors`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_factors`")
                 factor_symbol_result = _render_symbol_source_inputs("factor", "Factor Symbols")
                 factor_symbols_input = factor_symbol_result["symbols"]
                 factor_col1, factor_col2, factor_col3 = st.columns(3)
@@ -2899,7 +4338,7 @@ def _render_ingestion_console() -> None:
                     symbols=factor_symbols_input,
                 )
                 if st.button(
-                    "Run Factor Calculation",
+                    "팩터 수동 계산 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(factor_check) or not factor_run_allowed,
                 ):
@@ -2935,13 +4374,13 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("calculate_factors")
 
-            with st.expander("Asset Profile Collection", expanded=False):
-                st.write("Collect stock and ETF profile metadata using the existing NYSE universe tables.")
+            with st.expander("자산 프로필 수동 수집", expanded=False):
+                _render_job_brief("collect_asset_profiles")
                 st.caption(
-                    "Does not use the `Symbols` input. Uses the selected `Asset Profile Kinds` and reads from "
-                    "`nyse_stock` / `nyse_etf` in MySQL."
+                    "`Symbols` 입력은 사용하지 않습니다. 선택한 `Asset Profile Kinds`와 MySQL의 "
+                    "`nyse_stock` / `nyse_etf` universe table을 기준으로 실행합니다."
                 )
-                st.caption("Writes to: `finance_meta.nyse_asset_profile`")
+                st.caption("저장 테이블: `finance_meta.nyse_asset_profile`")
                 profile_kind_options = st.multiselect(
                     "Asset Profile Kinds",
                     options=["stock", "etf"],
@@ -2952,7 +4391,7 @@ def _render_ingestion_console() -> None:
                 asset_profile_check = check_asset_profile_prerequisites(kinds)
                 _render_check_result(asset_profile_check)
                 if st.button(
-                    "Run Asset Profile Collection",
+                    "자산 프로필 수동 수집 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(asset_profile_check),
                 ):
@@ -2973,21 +4412,20 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("collect_asset_profiles")
 
-            with st.expander("Financial Statement Ingestion", expanded=False):
-                st.write("Collect detailed financial statements from EDGAR for the provided symbols.")
+            with st.expander("상세 재무제표 수동 수집", expanded=False):
+                _render_job_brief("collect_financial_statements")
                 st.caption(
-                    "Uses the `Symbols` input. This job is usually slower than the normalized fundamentals job and may "
-                    "produce partial success if some issuers fail."
+                    "`Symbols` 입력을 사용합니다. normalized fundamentals보다 느리고, issuer별 실패가 있으면 partial success가 될 수 있습니다."
                 )
                 st.caption(
-                    "This is the lower-level manual ingestion card. For routine statement history recovery and quarterly coverage work, "
-                    "prefer `Extended Statement Refresh` above."
+                    "이 card는 낮은 수준의 수동 수집입니다. 일상적인 statement history 복구와 quarterly coverage 보강은 "
+                    "위의 `Extended Statement Refresh`를 우선 사용하세요."
                 )
                 st.caption(
-                    "For strict annual operator runs, the symbol preset dropdown also exposes "
-                    "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
+                    "strict annual 운영 run에는 symbol preset dropdown의 "
+                    "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, `US Statement Coverage 1000`도 사용할 수 있습니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
                 fs_symbol_result = _render_symbol_source_inputs("fs", "Financial Statement Symbols")
                 fs_symbols_input = fs_symbol_result["symbols"]
                 fs_col1, fs_col2 = st.columns(2)
@@ -3005,9 +4443,9 @@ def _render_ingestion_console() -> None:
                     value=0,
                     step=1,
                     key="fs_periods_input",
-                    help="`0` means collect all available statement periods from EDGAR for each symbol.",
+                    help="`0`이면 각 symbol에 대해 EDGAR에서 가능한 모든 statement period를 수집합니다.",
                 )
-                st.caption("Tip: `0 = all available periods`. This is recommended when rebuilding quarterly strict coverage.")
+                st.caption("Tip: `0 = all available periods`. quarterly strict coverage를 다시 채울 때 권장합니다.")
                 st.caption(
                     "`Statement Mode`는 operator용 단일 입력입니다. "
                     "내부적으로는 `freq`와 `period`를 같은 값으로 맞춰 실행합니다."
@@ -3020,7 +4458,7 @@ def _render_ingestion_console() -> None:
                     symbols=fs_symbols_input,
                 )
                 if st.button(
-                    "Run Financial Statement Ingestion",
+                    "상세 재무제표 수동 수집 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(fs_symbol_check) or not fs_run_allowed,
                 ):
@@ -3057,13 +4495,13 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("collect_financial_statements")
 
-            with st.expander("Statement Shadow Rebuild Only", expanded=False):
-                st.write("Rebuild statement shadow tables using already stored raw statement ledgers, without re-calling EDGAR.")
+            with st.expander("재무제표 shadow 재구성", expanded=False):
+                _render_job_brief("rebuild_statement_shadow")
                 st.caption(
-                    "Use this when `Statement Shadow Coverage Preview` says `raw_statement_present_but_shadow_missing`. "
-                    "This is the faster recovery path when raw statement rows already exist."
+                    "`Statement Shadow Coverage Preview`가 `raw_statement_present_but_shadow_missing`라고 표시할 때 사용합니다. "
+                    "raw statement row가 이미 있으면 이 경로가 더 빠릅니다."
                 )
-                st.caption("Writes to: `finance_fundamental.nyse_fundamentals_statement`, `finance_fundamental.nyse_factors_statement`")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals_statement`, `finance_fundamental.nyse_factors_statement`")
                 shadow_symbol_result = _render_symbol_source_inputs(
                     "shadow_rebuild",
                     "Shadow Rebuild Symbols",
@@ -3075,7 +4513,7 @@ def _render_ingestion_console() -> None:
                     ["annual", "quarterly"],
                     index=1,
                     key="shadow_rebuild_freq_input",
-                    help="Rebuild the shadow tables for the selected statement frequency using already stored raw statement rows.",
+                    help="이미 저장된 raw statement row를 사용해 선택한 statement frequency의 shadow table을 재구성합니다.",
                 )
                 shadow_symbol_check = check_symbol_input(shadow_symbols_input)
                 _render_check_result(shadow_symbol_check)
@@ -3085,7 +4523,7 @@ def _render_ingestion_console() -> None:
                     symbols=shadow_symbols_input,
                 )
                 if st.button(
-                    "Run Statement Shadow Rebuild",
+                    "재무제표 shadow 재구성 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(shadow_symbol_check) or not shadow_run_allowed,
                 ):
@@ -3115,13 +4553,13 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("rebuild_statement_shadow")
 
-            with st.expander("Price Stale Diagnosis", expanded=False):
+            with st.expander("가격 stale 원인 진단", expanded=False):
                 _render_price_stale_diagnosis_card()
 
-            with st.expander("Statement Coverage Diagnosis", expanded=False):
+            with st.expander("재무제표 coverage 원인 진단", expanded=False):
                 _render_statement_coverage_diagnosis_card()
 
-            with st.expander("Statement PIT Inspection", expanded=False):
+            with st.expander("재무제표 PIT inspection", expanded=False):
                 _render_statement_pit_inspection_card()
 
     with col_right:
@@ -3150,8 +4588,9 @@ def _render_overview_page() -> None:
 
 
 def _render_ingestion_page() -> None:
+    _install_ingestion_responsive_styles()
     st.title("Ingestion")
-    st.caption("운영 파이프라인, 수동 수집, 진단 작업을 실행하는 작업 공간입니다.")
+    st.caption("API / 공식 파일 / provider page에서 데이터를 수집하고 DB에 저장하는 작업 공간입니다.")
     _render_ingestion_console()
 
 
