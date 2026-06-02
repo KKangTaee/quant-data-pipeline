@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from html import escape
 from typing import Any
 
@@ -222,6 +222,10 @@ def _format_signed_money(value: Any, *, default: str = "-") -> str:
         return default
     sign = "+" if numeric >= 0 else "-"
     return f"{sign}{abs(numeric):,.0f}"
+
+
+def _session_timestamp() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _coerce_date(value: Any, fallback: date) -> date:
@@ -949,6 +953,28 @@ def _selected_strategy_rows_for_portfolio(
     ]
 
 
+def _active_dashboard_portfolio(portfolios: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not portfolios:
+        return None
+    current_id = str(st.session_state.get("selected_dashboard_active_portfolio_id") or "")
+    selected = _portfolio_by_id(portfolios, current_id) if current_id else None
+    selected = selected or portfolios[0]
+    st.session_state["selected_dashboard_active_portfolio_id"] = selected.get("portfolio_id")
+    return selected
+
+
+def _strategy_rows_for_active_portfolio(
+    portfolio: dict[str, Any] | None,
+    dashboard_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if portfolio is None:
+        return []
+    return [
+        _with_portfolio_context(row, portfolio)
+        for row in _selected_strategy_rows_for_portfolio(portfolio, dashboard_rows)
+    ]
+
+
 def _slot_blockers_for_row(row: dict[str, Any]) -> list[str]:
     blockers = [str(item) for item in list(row.get("slot_blockers") or []) if str(item)]
     if not _slot_effective_start(row):
@@ -1006,7 +1032,7 @@ def _with_portfolio_context(row: dict[str, Any], portfolio: dict[str, Any]) -> d
 
 
 def _render_my_portfolio_manager(portfolios: list[dict[str, Any]]) -> dict[str, Any] | None:
-    st.markdown("#### 1. 나의 포트폴리오")
+    st.markdown("#### 2. 나의 포트폴리오")
     current_id = st.session_state.get("selected_dashboard_active_portfolio_id")
     selected_portfolio = _portfolio_by_id(portfolios, current_id) if current_id else None
     show_create = bool(st.session_state.get("selected_dashboard_show_create_portfolio")) or not portfolios
@@ -1117,8 +1143,37 @@ def _render_strategy_selection_manager(
     portfolio: dict[str, Any],
     dashboard_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    st.markdown("#### 2. 포트폴리오 상세 / 전략 구성")
+    st.markdown("#### 3. 포트폴리오 상세 / 전략 보드")
     _render_portfolio_command_band(portfolio)
+    with st.expander("포트폴리오 이름 / 설명 수정", expanded=False):
+        with st.form(f"selected_dashboard_portfolio_edit_form_{portfolio.get('portfolio_id')}"):
+            edit_cols = st.columns([0.36, 0.46, 0.18], gap="small")
+            with edit_cols[0]:
+                portfolio_name = st.text_input(
+                    "포트폴리오 이름",
+                    value=str(portfolio.get("name") or ""),
+                )
+            with edit_cols[1]:
+                portfolio_description = st.text_input(
+                    "포트폴리오 설명",
+                    value=str(portfolio.get("description") or ""),
+                )
+            with edit_cols[2]:
+                portfolio_submitted = st.form_submit_button("저장", type="primary", width="stretch")
+            if portfolio_submitted:
+                try:
+                    save_selected_dashboard_portfolio(
+                        portfolio_id=str(portfolio.get("portfolio_id") or ""),
+                        name=portfolio_name,
+                        description=portfolio_description,
+                        selected_decision_ids=list(portfolio.get("selected_decision_ids") or []),
+                        strategy_slots=list(portfolio.get("strategy_slots") or []),
+                    )
+                except ValueError as exc:
+                    st.warning(str(exc))
+                else:
+                    st.success("포트폴리오 이름과 설명을 저장했습니다.")
+                    st.rerun()
     selected_ids = [str(item) for item in list(portfolio.get("selected_decision_ids") or [])]
     selected_rows = [
         _with_portfolio_context(row, portfolio)
@@ -1326,6 +1381,11 @@ def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict
         if dict(result.get("change_summary") or {}).get("net_cagr_spread") is not None
     ]
     benchmark_spread = sum(float(value) for value in benchmark_spreads) / len(benchmark_spreads) if benchmark_spreads else None
+    updated_values = [
+        str(result.get("dashboard_updated_at") or "")
+        for result in results
+        if str(result.get("dashboard_updated_at") or "")
+    ]
     return {
         "results": results,
         "curve": curve,
@@ -1338,6 +1398,7 @@ def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict
         "mdd": mdd,
         "benchmark_spread": benchmark_spread,
         "as_of": as_of,
+        "updated_at": max(updated_values) if updated_values else "-",
     }
 
 
@@ -1380,12 +1441,14 @@ def _render_scenario_cockpit(summary: dict[str, Any], *, strategy_count: int) ->
         f'{_mini_metric("손익", _scenario_value(summary.get("profit"), completed=completed_flag, formatter="signed_money"))}'
         f'{_mini_metric("총 수익률", _scenario_value(summary.get("total_return"), completed=completed_flag, formatter="pct"))}'
         f'{_mini_metric("CAGR / MDD", cagr_mdd_value)}'
+        f'{_mini_metric("기준일", summary.get("as_of") or "-")}'
+        f'{_mini_metric("마지막 업데이트", summary.get("updated_at") or "-")}'
         "</div>"
         "</div>"
     )
     st.markdown(html, unsafe_allow_html=True)
     if completed == 0:
-        st.info("이 영역은 포트폴리오 전체 성과를 보여줍니다. `포트폴리오 시나리오 실행` 또는 각 전략의 `모니터 시나리오 실행`을 누르면 합산 결과가 채워집니다.")
+        st.info("이 영역은 포트폴리오 전체 성과를 보여줍니다. 아래 전략 보드의 `포트폴리오 시나리오 업데이트`를 누르면 합산 결과가 채워집니다.")
     elif partial:
         st.warning("일부 전략만 실행된 부분 집계입니다. 전체 포트폴리오 성과로 보려면 남은 전략도 실행하세요.")
 
@@ -1421,6 +1484,7 @@ def _run_strategy_recheck(row: dict[str, Any]) -> dict[str, Any]:
     result = dict(result or {})
     result["dashboard_input_signature"] = _scenario_input_signature(row)
     result["dashboard_result_key"] = _decision_key(row)
+    result["dashboard_updated_at"] = _session_timestamp()
     st.session_state[f"selected_portfolio_recheck_result_{_decision_key(row)}"] = result
     return result
 
@@ -1516,49 +1580,67 @@ def _build_rebalance_table(strategy_rows: list[dict[str, Any]]) -> pd.DataFrame:
     return pd.DataFrame(display_rows)
 
 
+def _latest_rebalance_summary(strategy_rows: list[dict[str, Any]]) -> dict[str, str]:
+    rebalance_df = _build_rebalance_table(strategy_rows)
+    if rebalance_df.empty:
+        return {"next_rebalance": "-", "current_target_assets": "-"}
+    first = dict(rebalance_df.iloc[0].to_dict())
+    return {
+        "next_rebalance": str(first.get("Next Rebalance") or "-"),
+        "current_target_assets": str(first.get("Current Target Assets") or "-"),
+    }
+
+
+def _strategy_open_issue_count(strategy_rows: list[dict[str, Any]]) -> int:
+    total = 0
+    for row in strategy_rows:
+        raw_decision = dict(row.get("raw_decision") or {})
+        total += len([item for item in list(row.get("open_review_items") or raw_decision.get("open_review_items") or []) if item])
+        total += len([item for item in list(row.get("blockers") or []) if item])
+    return total
+
+
+def _monitoring_status(summary: dict[str, Any], strategy_rows: list[dict[str, Any]]) -> tuple[str, str]:
+    if not strategy_rows:
+        return ("설정 필요", "warning")
+    runnable_rows = [row for row in strategy_rows if not _slot_blockers_for_row(row)]
+    completed = len(summary.get("results") or [])
+    if len(runnable_rows) < len(strategy_rows):
+        return ("설정 보강", "warning")
+    if completed == 0:
+        return ("실행 대기", "warning")
+    if completed < len(strategy_rows):
+        return ("부분 집계", "warning")
+    if any(_strategy_result_status(row, _latest_recheck_result(row)) != "Good" for row in strategy_rows):
+        return ("Watch", "warning")
+    return ("Clear", "positive")
+
+
+def _render_monitoring_daily_badges(summary: dict[str, Any], strategy_rows: list[dict[str, Any]]) -> None:
+    status_label, status_tone = _monitoring_status(summary, strategy_rows)
+    rebalance = _latest_rebalance_summary(strategy_rows)
+    open_issue_count = _strategy_open_issue_count(strategy_rows)
+    render_badge_strip(
+        [
+            {"label": "Status", "value": status_label, "tone": status_tone},
+            {"label": "Next Rebalance", "value": rebalance.get("next_rebalance"), "tone": "neutral"},
+            {
+                "label": "Open Issues",
+                "value": open_issue_count,
+                "tone": "warning" if open_issue_count else "positive",
+            },
+            {"label": "Provider Freshness", "value": "하단 상세 점검", "tone": "neutral"},
+            {"label": "Scenario Updated", "value": summary.get("updated_at") or "-", "tone": "neutral"},
+            {"label": "Current Target", "value": _clip_text(rebalance.get("current_target_assets"), limit=72), "tone": "neutral"},
+        ]
+    )
+
+
 def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -> None:
     summary = _portfolio_summary_from_results(strategy_rows)
     completed = len(summary["results"])
     runnable_rows = [row for row in strategy_rows if not _slot_blockers_for_row(row)]
-    pending_rows = [row for row in runnable_rows if not _latest_recheck_result(row)]
-    action_cols = st.columns([0.66, 0.34], gap="small")
-    with action_cols[0]:
-        st.caption(
-            "선택된 포트폴리오 전체 strategy slot을 balance 기준으로 합산합니다. "
-            "이미 현재 설정으로 실행된 전략은 재사용하고, 미실행 / stale 전략만 업데이트합니다."
-        )
-    with action_cols[1]:
-        force_refresh = st.checkbox(
-            "전체 재실행",
-            value=False,
-            key="selected_dashboard_force_portfolio_scenarios",
-            help="켜면 이미 최신 결과가 있는 전략까지 다시 실행합니다.",
-        )
-        rows_to_run = runnable_rows if force_refresh else pending_rows
-        if st.button(
-            "포트폴리오 시나리오 업데이트",
-            key="selected_dashboard_run_portfolio_scenarios",
-            type="primary",
-            disabled=not rows_to_run,
-            width="stretch",
-        ):
-            progress = st.progress(0.0)
-            status = st.empty()
-            with st.spinner("포트폴리오 전략 시나리오를 순서대로 실행하는 중입니다..."):
-                for index, row in enumerate(rows_to_run, start=1):
-                    status.caption(
-                        f"{index}/{len(rows_to_run)} 실행 중 - {row.get('source_title') or row.get('decision_id') or '-'}"
-                    )
-                    _run_strategy_recheck(row)
-                    progress.progress(index / len(rows_to_run))
-            status.empty()
-            progress.empty()
-            st.success(f"{len(rows_to_run)}개 전략 시나리오를 업데이트했습니다.")
-            st.rerun()
-        if runnable_rows and not rows_to_run:
-            st.caption("현재 설정 기준으로 모든 실행 결과가 최신입니다. 다시 계산하려면 `전체 재실행`을 켜세요.")
-        elif pending_rows:
-            st.caption(f"업데이트 필요: {len(pending_rows)}개 / 최신 결과 재사용: {len(runnable_rows) - len(pending_rows)}개")
+    _render_monitoring_daily_badges(summary, strategy_rows)
     _render_scenario_cockpit(summary, strategy_count=len(strategy_rows))
     if len(runnable_rows) < len(strategy_rows):
         st.warning(f"{len(strategy_rows) - len(runnable_rows)}개 전략은 시작일 / 종료일 / balance 설정 보강이 필요합니다.")
@@ -1578,6 +1660,94 @@ def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -
             st.info("표시할 리밸런싱 정보가 없습니다.")
         else:
             st.dataframe(rebalance_df, width="stretch", hide_index=True)
+
+
+def _portfolio_update_blockers(strategy_rows: list[dict[str, Any]]) -> list[str]:
+    if not strategy_rows:
+        return ["선택된 포트폴리오에 전략이 없습니다."]
+    blockers: list[str] = []
+    decision_ids = [str(row.get("decision_id") or "").strip() for row in strategy_rows]
+    if any(not decision_id for decision_id in decision_ids):
+        blockers.append("selected decision이 연결되지 않은 strategy slot이 있습니다.")
+    duplicate_ids = sorted({decision_id for decision_id in decision_ids if decision_id and decision_ids.count(decision_id) > 1})
+    if duplicate_ids:
+        blockers.append(f"같은 selected decision이 중복되어 있습니다: {', '.join(duplicate_ids)}")
+    for index, row in enumerate(strategy_rows, start=1):
+        for blocker in _slot_blockers_for_row(row):
+            title = _clip_text(row.get("source_title") or row.get("decision_id"), limit=64)
+            blockers.append(f"{index}. {title}: {blocker}")
+    return blockers
+
+
+def _render_portfolio_scenario_update_controls(strategy_rows: list[dict[str, Any]]) -> None:
+    st.markdown("##### 포트폴리오 시나리오 업데이트")
+    st.caption(
+        "전략 slot 구성을 확인한 뒤 실행합니다. 이미 현재 설정으로 실행된 전략은 재사용하고, 미실행 / stale 전략만 업데이트합니다."
+    )
+    runnable_rows = [row for row in strategy_rows if not _slot_blockers_for_row(row)]
+    pending_rows = [row for row in runnable_rows if not _latest_recheck_result(row)]
+    blockers = _portfolio_update_blockers(strategy_rows)
+    force_refresh = st.checkbox(
+        "전체 재실행",
+        value=False,
+        key="selected_dashboard_force_portfolio_scenarios",
+        help="켜면 이미 최신 결과가 있는 전략까지 다시 실행합니다.",
+    )
+    rows_to_run = runnable_rows if force_refresh else pending_rows
+    update_cols = st.columns([0.66, 0.34], gap="small")
+    with update_cols[0]:
+        if blockers:
+            with st.expander("업데이트 제외 / 보강 이유", expanded=not runnable_rows):
+                for blocker in blockers:
+                    st.warning(blocker)
+        elif runnable_rows and not rows_to_run:
+            st.success("현재 설정 기준으로 모든 실행 결과가 최신입니다. 다시 계산하려면 `전체 재실행`을 켜세요.")
+        elif pending_rows:
+            st.info(f"업데이트 필요: {len(pending_rows)}개 / 최신 결과 재사용: {len(runnable_rows) - len(pending_rows)}개")
+    with update_cols[1]:
+        if st.button(
+            "포트폴리오 시나리오 업데이트",
+            key="selected_dashboard_run_portfolio_scenarios",
+            type="primary",
+            disabled=not rows_to_run,
+            width="stretch",
+        ):
+            progress = st.progress(0.0)
+            status = st.empty()
+            with st.spinner("포트폴리오 전략 시나리오를 순서대로 실행하는 중입니다..."):
+                for index, row in enumerate(rows_to_run, start=1):
+                    status.caption(
+                        f"{index}/{len(rows_to_run)} 실행 중 - {row.get('source_title') or row.get('decision_id') or '-'}"
+                    )
+                    _run_strategy_recheck(row)
+                    progress.progress(index / len(rows_to_run))
+            status.empty()
+            progress.empty()
+            st.success(f"{len(rows_to_run)}개 전략 시나리오를 업데이트했습니다. 상단 모니터링 요약이 갱신되었습니다.")
+            st.rerun()
+
+
+def _render_active_monitoring_scenario(
+    portfolio: dict[str, Any] | None,
+    strategy_rows: list[dict[str, Any]],
+) -> None:
+    st.markdown("#### 1. Active Portfolio Monitoring Scenario")
+    if portfolio is None:
+        with st.container(border=True):
+            st.info("아직 모니터링 포트폴리오가 없습니다. 아래에서 `+ 새 포트폴리오`를 만들어 시작하세요.")
+        return
+
+    _render_portfolio_command_band(portfolio)
+    if not strategy_rows:
+        summary = _portfolio_summary_from_results([])
+        _render_monitoring_daily_badges(summary, [])
+        _render_scenario_cockpit(summary, strategy_count=0)
+        st.info("선택된 포트폴리오에 전략이 없습니다. 아래 전략 보드에서 Final Review selected 후보를 추가하세요.")
+        return
+
+    if not any(_latest_recheck_result(row) for row in strategy_rows):
+        st.info("전략 구성이 완료되었습니다. 아래의 포트폴리오 시나리오 업데이트를 눌러 모니터링 결과를 계산하세요.")
+    _render_portfolio_monitoring_overview(strategy_rows)
 
 
 def _render_portfolio_strategy_comparison(strategy_rows: list[dict[str, Any]]) -> None:
@@ -1614,7 +1784,7 @@ def _render_portfolio_strategy_comparison(strategy_rows: list[dict[str, Any]]) -
 
 
 def _render_selected_strategy_detail(portfolio: dict[str, Any], strategy_rows: list[dict[str, Any]]) -> None:
-    st.markdown("#### 4. 전략별 상세 / 근거")
+    st.markdown("#### 4. 상세 점검")
     st.caption(
         "Streamlit 탭은 숨겨진 탭도 모두 계산하므로, 여기서는 선택한 전략 1개만 상세 근거를 엽니다. "
         "전략 추가 / 설정 변경만으로는 이 상세 재검증이 자동 실행되지 않습니다."
@@ -1686,16 +1856,18 @@ def _render_dashboard_portfolio_workspace(
             {"label": "Trading", "value": "Disabled", "tone": "neutral"},
         ]
     )
-    portfolio = _render_my_portfolio_manager(list(state.get("portfolios") or []))
+    portfolios = list(state.get("portfolios") or [])
+    active_portfolio = _active_dashboard_portfolio(portfolios)
+    active_rows = _strategy_rows_for_active_portfolio(active_portfolio, dashboard_rows)
+    _render_active_monitoring_scenario(active_portfolio, active_rows)
+
+    portfolio = _render_my_portfolio_manager(portfolios)
     if portfolio is None:
         return
     selected_rows = _render_strategy_selection_manager(portfolio, dashboard_rows)
+    _render_portfolio_scenario_update_controls(selected_rows)
     if not selected_rows:
         return
-
-    st.markdown("#### 3. 포트폴리오 모니터 시나리오")
-    st.caption("이 섹션은 선택된 포트폴리오 전체 성과를 합산해서 보여줍니다. 아래 전략별 상세는 사용자가 열어본 1개 전략만 계산합니다.")
-    _render_portfolio_monitoring_overview(selected_rows)
     _render_selected_strategy_detail(portfolio, selected_rows)
     _render_portfolio_strategy_comparison(selected_rows)
 

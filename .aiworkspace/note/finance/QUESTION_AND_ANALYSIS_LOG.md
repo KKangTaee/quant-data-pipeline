@@ -17,11 +17,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Scenario execution is explicit: strategy add / slot edit is saved setup only, portfolio scenario update runs pending / stale rows by default, and one selected strategy detail is lazy-rendered.
+  - Selected Dashboard Monitoring First UX V1 is implementation complete. Dashboard entry is daily-monitoring-first: Active Portfolio Monitoring Scenario appears before setup, while portfolio shelf / strategy board / scenario update remain below and evidence detail stays lazy.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-02 - Selected Dashboard should be daily-monitoring-first
+- User request:
+  - 사용자가 이미 모니터링 시나리오를 설정한 포트폴리오를 매일 확인할 때 아래로 스크롤해야 하는 문제를 지적하고, 화면 상단에 active portfolio monitoring scenario를 먼저 보여 달라고 요청함.
+- Interpreted goal:
+  - Selected Portfolio Dashboard는 포트폴리오를 만드는 화면이 아니라, 선택된 포트폴리오의 현재 모니터링 상태를 먼저 보여주고 필요할 때 아래에서 구성을 수정하는 화면이어야 한다.
+- Analysis result:
+  - 기존 구현은 portfolio-wide scenario cockpit과 session-state contract가 이미 분리되어 있어 runtime / 저장 계약 변경 없이 렌더 순서와 update action 위치를 바꿀 수 있었다. Scenario result는 session-only이고 saved setup은 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에 남는다.
+- Follow-up:
+  - 구현 결과 Active Portfolio Monitoring Scenario가 상단 hero가 되었고, portfolio card shelf / portfolio edit / strategy board / `포트폴리오 시나리오 업데이트`는 아래 관리 영역으로 내려갔다. Detailed readiness / provider / freshness / open issue evidence는 하단에서 선택한 1개 strategy만 lazy-render된다. No portfolio / no strategy / configured-not-run / executed 상태를 구분한다.
 
 ### 2026-06-02 - Selected Dashboard scenario execution must remain explicit
 - User request:

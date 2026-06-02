@@ -23,13 +23,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Strategy add / slot edit no longer triggers lower individual scenario detail work, portfolio scenario update runs pending / stale strategies by default, and individual evidence detail is lazy-open for one selected strategy; no approval / order / account sync / auto rebalance behavior was added.
+  - Selected Dashboard Monitoring First UX V1 is implementation complete. The dashboard now opens with Active Portfolio Monitoring Scenario first; portfolio cards, strategy board, and `포트폴리오 시나리오 업데이트` sit below it; detailed evidence remains lower and no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-02 - Selected Dashboard Monitoring First UX V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-first-ux-v1/`.
+- `Operations > Selected Portfolio Dashboard` now opens with Active Portfolio Monitoring Scenario above the portfolio shelf, with distinct no portfolio / no strategy / configured-not-run / executed states.
+- Portfolio card selection, portfolio name / description edit, strategy board, and `포트폴리오 시나리오 업데이트` moved below the hero; lower readiness / provider / freshness / open issue evidence remains lazy detail for one selected strategy.
+- Verification passed so far: py_compile, focused Selected Portfolio service contracts, and `git diff --check`; Browser QA is the remaining closeout check.
+- No Final Review row mutation, saved setup cleanup, DB schema, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
 
 ### 2026-06-02 - Selected Dashboard Manual Scenario Run V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`.
@@ -47,7 +54,7 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### 2026-06-01 - Selected Dashboard Portfolio Flow Redesign V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`.
-- `Operations > Selected Portfolio Dashboard` now reads as `1. 나의 포트폴리오` -> `2. 포트폴리오 상세 / 전략 구성` -> `3. 모니터 시나리오`, with Final Review handoff / readiness / provider / audit evidence moved below the scenario workflow.
+- At that task closeout, `Operations > Selected Portfolio Dashboard` changed to `1. 나의 포트폴리오` -> `2. 포트폴리오 상세 / 전략 구성` -> `3. 모니터 시나리오`, with Final Review handoff / readiness / provider / audit evidence moved below the scenario workflow. Later Monitoring First UX V1 moved the scenario hero above setup.
 - Dashboard saved state now supports backward-compatible strategy slots with selected decision / start / latest-end mode / balance / memo while preserving legacy `selected_decision_ids`.
 - Verification passed: py_compile, full `tests.test_service_contracts` 222 tests, `git diff --check`, and Browser QA screenshot `selected-dashboard-portfolio-flow-redesign-v1-qa.png`.
 - No Final Review decision rows, DB schema, provider fetch, broker/account sync, live approval, order, monitoring auto-write, or auto rebalance path was added.
