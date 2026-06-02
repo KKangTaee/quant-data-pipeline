@@ -4605,3 +4605,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - Shock Board / Provider Run / raw candle rows는 하단 diagnostics expander로 낮췄고, manual refresh의 즉시 `st.rerun()`을 제거했다.
   - py_compile, UI-engine boundary, service contract 234 tests, Browser QA screenshot을 통과했다.
   - V2.1 후속으로 상단 controls를 압축하고, mini chart metric을 chip strip으로 바꾸며, Macro Context를 signal strip / score chip 중심으로 다듬었다.
+  - V2.2 후속으로 Macro Context를 상단 full-width로 올리고, Live Futures Charts를 하단 3x2 grid로 바꾸며, 중복 `Selected Detail` 차트를 제거했다.

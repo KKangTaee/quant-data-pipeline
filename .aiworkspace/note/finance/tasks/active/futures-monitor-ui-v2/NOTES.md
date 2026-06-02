@@ -12,3 +12,8 @@
   - controls are selection-first with collection controls in `Data Actions`;
   - mini chart cards use chips instead of `st.metric` to avoid numeric truncation;
   - macro reliability information is a compact signal strip, not a large generic KPI grid.
+- V2.2 changed the body layout from side-by-side to stacked:
+  - Macro Context is now the first full-width analysis block;
+  - Live Futures Charts owns the lower section as a 3x2 grid;
+  - the former selected full-width detail chart was removed because it duplicated the first grid card;
+  - macro collection / validation / caveat details are grouped under `Macro Evidence & Data`.

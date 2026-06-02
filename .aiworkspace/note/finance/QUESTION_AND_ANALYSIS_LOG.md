@@ -7134,3 +7134,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 문제 원인은 데이터 부족이 아니라 `st.metric` 과대 표시, full-width `Candle Symbol` control, generic KPI card grid가 만든 공간/시선 낭비다
 - Follow-up:
   - 상단 controls를 한 줄로 압축하고 refresh는 `Data Actions`에 넣었다. Mini chart는 60m / 15m / Age chip + 큰 chart card로 바꿨고, Macro Context는 scenario / confidence / validation / history signal strip과 score chip으로 재구성했다
+
+### 2026-06-02 - Futures Monitor를 Macro 상단 / Live 3x2 하단 구조로 재배치한다
+- User request:
+  - 사용자가 Selected Detail 차트가 2x2와 중복처럼 보이고, Macro와 Live를 좌우 column으로 나누기보다 Macro를 상단에, 선물 지표를 하단 3x2로 보여달라고 요청함
+- Interpreted goal:
+  - Macro 해석은 full-width 상단 context로 두고, 실시간 선물 차트는 하단 grid에서 비교하도록 화면 흐름을 단순화해야 함
+- Analysis result:
+  - 기존 Selected Detail은 선택 심볼의 첫 grid card와 같은 데이터를 크게 다시 보여줘 중복 인상을 만든다. 3x2 grid는 기본 Pre-open set도 6개로 확장해야 자연스럽다
+- Follow-up:
+  - Selected Detail을 제거하고 Macro Context -> Live Futures Charts 순서의 stacked layout으로 변경했다. Pre-open Core 기본은 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F` 6개로 확장했고, Macro detail은 `Macro Evidence & Data`로 통합했다

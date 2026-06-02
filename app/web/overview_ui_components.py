@@ -723,7 +723,7 @@ def overview_ui_css() -> str:
 .ov-futures-live-strip,
 .ov-futures-macro-strip {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
   margin: 0.35rem 0 0.65rem 0;
 }
@@ -903,7 +903,7 @@ def overview_ui_css() -> str:
   }
   .ov-futures-live-strip,
   .ov-futures-macro-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .ov-futures-chart-head {
     flex-direction: column;

@@ -23,3 +23,17 @@
   - PASS: raw `<div>` / `<span>` leakage fixed.
   - PASS: mini chart cards show compact `60m`, `15m`, and `Age` chips with readable charts.
   - QA screenshots saved as generated artifacts: `futures-monitor-ui-v21-qa.png`, `futures-monitor-ui-v21-charts-qa.png`.
+
+## 2026-06-02 V2.2 stacked 3x2 layout
+
+- `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/services/futures_market_monitoring.py finance/data/futures_market.py` - PASS.
+- `git diff --check` - PASS.
+- `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` - PASS.
+- `uv run python -m unittest tests.test_service_contracts` - PASS, 234 tests.
+- `uv run python - <<'PY' ... run_collect_futures_ohlcv(symbols=['GC=F','6J=F'], period='1d', interval='1m') ... PY` - PASS, 796 rows written for QA data coverage.
+- Browser QA on `http://localhost:8517/` after Streamlit restart:
+  - PASS: Macro Context renders above Live Futures Charts.
+  - PASS: `Macro Evidence & Data` replaced separate `Macro Data`, `Macro validation detail`, and `Macro caveats` labels.
+  - PASS: `Selected Detail` chart removed.
+  - PASS: 3x2 grid includes `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F`.
+  - QA screenshots saved as generated artifacts: `futures-monitor-stack-v3x2-qa.png`, `futures-monitor-stack-v3x2-grid-qa.png`.

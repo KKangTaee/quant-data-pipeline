@@ -2255,7 +2255,7 @@ def _futures_chart_symbols(snapshot: dict[str, Any]) -> list[str]:
     for symbol in [selected_symbol, *symbols]:
         if symbol and symbol not in ordered:
             ordered.append(symbol)
-        if len(ordered) >= 4:
+        if len(ordered) >= 6:
             break
     return ordered
 
@@ -2821,20 +2821,6 @@ def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
 
 
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
-    with st.popover("Macro Data", use_container_width=True):
-        if st.button(
-            "Refresh Daily Macro OHLCV",
-            key="overview_futures_macro_daily_refresh",
-            use_container_width=True,
-        ):
-            with st.spinner("Collecting futures 5y daily OHLCV from yfinance..."):
-                _store_overview_job_result(
-                    "overview_futures_daily_ohlcv_result",
-                    _run_collect_futures_daily_ohlcv_compat(),
-                )
-                clear_overview_futures_macro_snapshot_cache()
-        _render_market_job_result("overview_futures_daily_ohlcv_result")
-
     macro = load_overview_futures_macro_snapshot()
     coverage = dict(macro.get("coverage") or {})
     scores = macro.get("scores")
@@ -2867,26 +2853,45 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     if warnings:
         _render_snapshot_warnings({"warnings": warnings})
 
-    with st.expander("Macro validation detail", expanded=detail_expanded):
+    cautions = [str(item) for item in macro.get("cautions") or [] if str(item).strip()]
+    cautions.extend(str(item) for item in validation.get("caveats") or [] if str(item).strip())
+    with st.expander("Macro Evidence & Data", expanded=detail_expanded):
+        _render_futures_section_header("Daily Data", "stored 1D futures OHLCV for macro scoring")
+        data_cols = st.columns([1, 1.6], gap="medium", vertical_alignment="top")
+        with data_cols[0]:
+            if st.button(
+                "Refresh Daily Macro OHLCV",
+                key="overview_futures_macro_daily_refresh",
+                use_container_width=True,
+            ):
+                with st.spinner("Collecting futures 5y daily OHLCV from yfinance..."):
+                    _store_overview_job_result(
+                        "overview_futures_daily_ohlcv_result",
+                        _run_collect_futures_daily_ohlcv_compat(),
+                    )
+                    clear_overview_futures_macro_snapshot_cache()
+        with data_cols[1]:
+            _render_market_job_result("overview_futures_daily_ohlcv_result")
+
+        _render_futures_section_header("Evidence Groups", "strong / weak / conflicting / missing symbols")
         _render_macro_evidence_groups(dict(macro.get("evidence_groups") or {}))
+        _render_futures_section_header("Historical Validation", "past scenario consistency, thresholds, and relationships")
         _render_macro_validation_detail(validation)
         if isinstance(scores, pd.DataFrame) and not scores.empty:
+            _render_futures_section_header("Score Table", "direction, coverage, and standardized move summary")
             st.dataframe(
                 scores.drop(columns=["Tone"], errors="ignore"),
                 width="stretch",
                 hide_index=True,
             )
         if isinstance(components, pd.DataFrame) and not components.empty:
-            st.markdown("#### 점수별 티커 근거")
+            _render_futures_section_header("Score Components", "ticker-level contribution by macro score")
             st.dataframe(components, width="stretch", hide_index=True)
         if isinstance(symbols, pd.DataFrame) and not symbols.empty:
-            st.markdown("#### 티커별 표준화 움직임")
+            _render_futures_section_header("Symbol Standardized Moves", "daily standardized move per futures symbol")
             st.dataframe(symbols, width="stretch", hide_index=True)
-
-    cautions = [str(item) for item in macro.get("cautions") or [] if str(item).strip()]
-    cautions.extend(str(item) for item in validation.get("caveats") or [] if str(item).strip())
-    if cautions:
-        with st.expander("Macro caveats", expanded=False):
+        if cautions:
+            _render_futures_section_header("Caveats", "interpretation limits and provider caveats")
             for caution in list(dict.fromkeys(cautions)):
                 st.caption(caution)
 
@@ -2903,7 +2908,7 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
         st.info("No futures symbols are selected.")
         return
 
-    grid_cols = st.columns(2, gap="small")
+    grid_cols = st.columns(3, gap="small")
     for index, symbol in enumerate(symbols):
         metric = _futures_metric_for_symbol(rows, symbol)
         symbol_candles = (
@@ -2912,7 +2917,7 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
             else pd.DataFrame()
         )
         display_candles = _resample_futures_candles(symbol_candles, interval=chart_interval)
-        with grid_cols[index % 2]:
+        with grid_cols[index % 3]:
             with st.container(border=True):
                 _render_futures_chart_card_header(metric, symbol)
                 if display_candles.empty:
@@ -2921,8 +2926,8 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
                     st.altair_chart(
                         _build_futures_candlestick_chart(
                             display_candles,
-                            height=245,
-                            body_size=4,
+                            height=220,
+                            body_size=3,
                             y_title=None,
                         ),
                         width="stretch",
@@ -2931,7 +2936,6 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
 
 def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str) -> None:
     rows = snapshot.get("rows")
-    candles = snapshot.get("candles")
     state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
     _render_futures_section_header(
         "Live Futures Charts",
@@ -2949,19 +2953,6 @@ def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str)
         st.markdown(f'<div class="ov-futures-chart-metrics">{state_html}</div>', unsafe_allow_html=True)
 
     _render_futures_mini_chart_grid(snapshot, chart_interval=chart_interval)
-    st.divider()
-    display_candles = _resample_futures_candles(candles, interval=chart_interval) if isinstance(candles, pd.DataFrame) else pd.DataFrame()
-    selected_metric = _futures_metric_for_symbol(rows, str(snapshot.get("selected_symbol") or ""))
-    with st.container(border=True):
-        _render_futures_section_header("Selected Detail", f"{snapshot.get('selected_symbol') or '-'} · full-width chart")
-        _render_futures_chart_card_header(selected_metric, str(snapshot.get("selected_symbol") or "-"))
-        if display_candles.empty:
-            st.info("No candles are available for the selected futures symbol.")
-        else:
-            st.altair_chart(
-                _build_futures_candlestick_chart(display_candles, height=320, body_size=5),
-                width="stretch",
-            )
 
 
 def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
@@ -2991,11 +2982,9 @@ def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
 
 
 def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: str) -> None:
-    macro_col, live_col = st.columns([0.95, 1.45], gap="large", vertical_alignment="top")
-    with macro_col:
-        _render_futures_macro_panel(detail_expanded=False)
-    with live_col:
-        _render_futures_live_panel(snapshot, chart_interval=chart_interval)
+    _render_futures_macro_panel(detail_expanded=False)
+    st.divider()
+    _render_futures_live_panel(snapshot, chart_interval=chart_interval)
     _render_futures_diagnostics(snapshot)
 
 
@@ -3042,6 +3031,15 @@ def _render_futures_monitor_tab() -> None:
     if isinstance(current_symbols, list):
         retained = [symbol for symbol in current_symbols if symbol in symbol_options]
         if retained:
+            migration_key = f"{symbols_key}_v3x2_migrated"
+            if (
+                group == "Pre-open Core"
+                and not st.session_state.get(migration_key)
+                and len(retained) < min(6, len(symbol_options))
+            ):
+                retained.extend(symbol for symbol in default_symbols if symbol not in retained)
+                st.session_state[symbols_key] = retained
+                st.session_state[migration_key] = True
             default_symbols = retained
     selected_symbols = list(
         control_cols[1].multiselect(
@@ -3058,7 +3056,7 @@ def _render_futures_monitor_tab() -> None:
         st.session_state[selected_symbol_key] = selected_symbols[0]
     selected_symbol = str(
         control_cols[2].selectbox(
-            "Detail",
+            "Focus",
             selected_symbols,
             index=0,
             key=selected_symbol_key,

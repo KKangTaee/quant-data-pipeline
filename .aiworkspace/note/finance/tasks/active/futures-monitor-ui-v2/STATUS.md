@@ -22,3 +22,9 @@
   - increased mini-chart height and card framing so chart evidence is no longer subordinate to large numbers;
   - changed Macro Context from large generic cards to scenario / confidence / validation / history signal strips plus score chips.
 - Browser QA caught and fixed raw HTML leakage in signal and score strips before closeout.
+- Implemented V2.2 stacked layout follow-up:
+  - removed the duplicated full-width `Selected Detail` chart;
+  - changed the body from Macro / Live side-by-side columns to full-width Macro Context followed by full-width Live Futures Charts;
+  - changed the live grid from 2x2 to 3x2, with up to six focused futures cards;
+  - expanded default `Pre-open Core` from 4 symbols to 6 symbols: `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F`;
+  - consolidated `Macro Data`, `Macro validation detail`, and `Macro caveats` into one `Macro Evidence & Data` panel.
