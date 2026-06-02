@@ -52,6 +52,7 @@ DEFAULT_CORE_FUTURES_SYMBOLS = tuple(
     for row in DEFAULT_FUTURES_INSTRUMENTS
     if not str(row["futures_group"]).startswith("Optional")
 )
+DEFAULT_PREOPEN_FUTURES_SYMBOLS = ("NQ=F", "ZN=F", "CL=F", "6E=F")
 
 
 def _utc_now() -> datetime:

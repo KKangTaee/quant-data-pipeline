@@ -63,7 +63,8 @@ http://localhost:8501
    - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다. Ticker leader bar는 양수일 때 sector color, 음수일 때 danger red를 사용하고, 직전 동일 기간 return은 얇은 marker로 표시한다.
 
 4. `Workspace > Overview > Futures Monitor`
-   - `Watch Group`에서 `Equity Index`, `Rates`, `Commodities`, `FX Futures`, optional 그룹을 선택한다.
+   - 기본 `Watch Group`은 `Pre-open Core`다. 기본 2x2 차트는 `NQ=F`(지수), `ZN=F`(금리), `CL=F`(원유), `6E=F`(FX)를 보여준다.
+   - `Watch Group`에서 `Equity Index`, `Rates`, `Commodities`, `FX Futures`, optional 그룹으로 바꿔 더 넓은 후보를 확인한다.
    - `Symbols`에서 볼 선물을 고른다. 20초 fast mode는 4개 이하 symbol에서만 사용한다.
    - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다.
    - 기본 자동 refresh는 60초 cadence다. 화면을 열어둔 동안만 동작하며 provider를 매초 호출하지 않는다.

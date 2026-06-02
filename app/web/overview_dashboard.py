@@ -104,6 +104,7 @@ GROUP_BY_LABELS = {
     "industry": "Industry",
 }
 FUTURES_GROUP_OPTIONS = (
+    "Pre-open Core",
     "Equity Index",
     "Rates",
     "Commodities",

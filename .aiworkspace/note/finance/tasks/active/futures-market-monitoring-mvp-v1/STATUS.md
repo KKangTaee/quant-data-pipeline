@@ -20,3 +20,8 @@
 - Symbol title follow-up:
   - Each mini chart now shows the human-readable contract name and group under the provider symbol, for example `NQ=F` -> `E-mini Nasdaq 100 · Equity Index`.
   - The selected-symbol detail chart also repeats the contract title.
+- Cross-asset verification follow-up:
+  - Ran the full non-optional core futures set across equity index, rates, commodities, and FX.
+  - All 16 symbols wrote 1m OHLCV rows through the yfinance pilot source.
+  - `Overview > Futures Monitor` now defaults to `Pre-open Core`: `NQ=F`, `ZN=F`, `CL=F`, `6E=F`.
+  - The default 2x2 grid is cross-asset by default instead of equity-index-only.

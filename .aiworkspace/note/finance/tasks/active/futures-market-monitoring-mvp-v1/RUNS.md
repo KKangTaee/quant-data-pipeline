@@ -54,3 +54,36 @@
   - Verified `Overview > Futures Monitor > Candles` shows contract subtitles under mini chart symbols, including `ES=F` -> `E-mini S&P 500 · Equity Index` and `NQ=F` -> `E-mini Nasdaq 100 · Equity Index`.
   - Browser console errors: none.
   - Screenshot: `futures-monitor-symbol-title-qa.png`.
+
+## 2026-06-02 Follow-up: Cross-Asset Core Verification
+
+- Full core futures collection:
+  - Command: `run_collect_futures_ohlcv(DEFAULT_CORE_FUTURES_SYMBOLS, period="1d", interval="1m", max_symbols=16, batch_size=4, sleep_sec=0.5)`.
+  - Result: `status=success`, `rows_written=19208`, `symbols_processed=16`, `failed_symbols=[]`, `latest_candle_time_utc=2026-06-02 02:10:00`.
+  - Batches:
+    - Equity index `ES=F`, `NQ=F`, `YM=F`, `RTY=F`: 5067 rows.
+    - Rates / major commodities `ZN=F`, `ZB=F`, `CL=F`, `GC=F`: 4773 rows.
+    - Commodities / FX `SI=F`, `HG=F`, `NG=F`, `6E=F`: 4770 rows.
+    - FX `6J=F`, `6B=F`, `6A=F`, `6C=F`: 4598 rows.
+- Symbol-level DB check:
+  - All 16 symbols had stored 1m rows after the collection run.
+  - Latest provider candles were around `2026-06-02 02:09:00` to `2026-06-02 02:10:00` UTC.
+  - Snapshot status remained `REVIEW` because free yfinance futures candles were about 10-13 minutes behind wall-clock time, which is intentionally surfaced as provider freshness risk.
+- Default watchlist decision:
+  - `Pre-open Core` uses `NQ=F` (equity index / risk growth), `ZN=F` (rates), `CL=F` (oil), and `6E=F` (FX / dollar context) as the default 2x2 grid.
+- `uv run python -m py_compile finance/data/futures_market.py app/services/futures_market_monitoring.py app/web/overview_dashboard.py tests/test_service_contracts.py`
+  - Result: PASS.
+- `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests`
+  - Result: PASS, 4 tests.
+- `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
+  - Result: PASS.
+- `git diff --check`
+  - Result: PASS.
+- `uv run python -m unittest tests.test_service_contracts`
+  - Result: PASS, 226 tests.
+- Browser QA:
+  - Ran Streamlit on `http://localhost:8515`.
+  - Verified default `Pre-open Core` opens with `NQ=F`, `ZN=F`, `CL=F`, `6E=F`.
+  - Verified the 2x2 mini chart grid renders the cross-asset set and keeps `NQ=F Detail` below.
+  - Browser console errors: none.
+  - Screenshots: `futures-preopen-core-qa-top.png`, `futures-preopen-core-qa-lower.png`.

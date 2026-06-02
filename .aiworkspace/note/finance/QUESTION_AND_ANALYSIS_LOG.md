@@ -7074,3 +7074,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - read model은 이미 선택 symbol 전체의 candle row를 읽고 있었지만 반환값은 선택 symbol candle만 노출했다. `all_candles`를 함께 반환하면 provider 호출이나 DB schema 변경 없이 4개 미니 차트를 만들 수 있다
 - Follow-up:
   - `Overview > Futures Monitor > Candles`에 선택 symbol을 포함한 최대 4개 미니 캔들 그리드를 추가했고, missing symbol의 15m / age metric은 `-`로 표시하도록 QA 중 수정했다
+
+### 2026-06-02 - 나머지 선물 후보를 수집 검증하고 기본 watchlist를 확정한다
+- User request:
+  - 사용자가 지수 외 금리, 원자재, FX 후보도 같은 순서로 검증하고 기본 화면에 반영해 달라고 요청함
+- Interpreted goal:
+  - 후보 등록 상태를 넘어 실제 DB 수집 가능 여부를 확인하고, 개장 전 한 화면에서 볼 cross-asset 기본 2x2 구성을 정해야 함
+- Analysis result:
+  - non-optional core 16개(`ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `ZN=F`, `ZB=F`, `CL=F`, `GC=F`, `SI=F`, `HG=F`, `NG=F`, `6E=F`, `6J=F`, `6B=F`, `6A=F`, `6C=F`) 모두 yfinance 1m rows를 저장했다. 무료 provider 특성상 latest candle은 wall-clock보다 약 10분 이상 늦어 `REVIEW` freshness로 표시된다
+- Follow-up:
+  - `Overview > Futures Monitor` 기본 Watch Group을 `Pre-open Core`로 바꾸고, 기본 2x2 심볼을 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`로 확정했다

@@ -4583,3 +4583,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Workspace > Ingestion`에는 수동 선물 1분봉 수집 expander를 추가했다. 기본 자동 갱신은 browser-open 60초 cadence이고 fast mode는 작은 symbol set에만 허용된다.
   - 검증: focused / full service contracts, py_compile, UI-engine boundary, `git diff --check`, yfinance collector smoke, Browser QA screenshot 통과.
   - 후속 UI 개선으로 Candles 탭에 선택 symbol을 포함한 최대 4개 2x2 미니 캔들 차트와 선택 symbol 상세 차트를 함께 표시하도록 바꿨다.
+  - 후속 데이터 검증에서 지수 / 금리 / 원자재 / FX core 16개가 모두 1분봉 row를 저장했고, 기본 `Pre-open Core` 2x2를 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`로 확정했다.

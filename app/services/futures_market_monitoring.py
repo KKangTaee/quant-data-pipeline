@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from finance.data.futures_market import DEFAULT_FUTURES_INSTRUMENTS
+from finance.data.futures_market import DEFAULT_FUTURES_INSTRUMENTS, DEFAULT_PREOPEN_FUTURES_SYMBOLS
 
 
 QueryFn = Callable[[str, str, Sequence[Any] | None], list[dict[str, Any]]]
@@ -16,6 +16,7 @@ DEFAULT_LOOKBACK_MINUTES = 360
 FUTURES_REFRESH_DUE_MINUTES = 2
 FUTURES_STALE_MINUTES = 10
 CORE_GROUPS = ("Equity Index", "Rates", "Commodities", "FX Futures")
+PREOPEN_CORE_GROUP = "Pre-open Core"
 
 CANDLE_COLUMNS = ["Candle Time", "Symbol", "Open", "High", "Low", "Close", "Volume"]
 SHOCK_COLUMNS = [
@@ -80,6 +81,9 @@ def _instrument_rows(query_fn: QueryFn) -> list[dict[str, Any]]:
 
 def _symbols_for_group(instruments: Sequence[dict[str, Any]], group: str | None) -> list[str]:
     normalized_group = str(group or "").strip()
+    if normalized_group == PREOPEN_CORE_GROUP:
+        available = {str(row.get("provider_symbol") or "").strip().upper() for row in instruments}
+        return [symbol for symbol in DEFAULT_PREOPEN_FUTURES_SYMBOLS if symbol in available]
     symbols: list[str] = []
     for row in instruments:
         if normalized_group and normalized_group != "All" and str(row.get("futures_group") or "") != normalized_group:
@@ -404,7 +408,7 @@ def build_futures_monitor_snapshot(
 ) -> dict[str, Any]:
     query = query_fn or _default_query
     instruments = _instrument_rows(query)
-    groups = ["All"] + sorted({str(row.get("futures_group") or "Other") for row in instruments})
+    groups = [PREOPEN_CORE_GROUP, "All"] + sorted({str(row.get("futures_group") or "Other") for row in instruments})
     if symbols is None:
         selected_symbols = _symbols_for_group(instruments, group)
     else:

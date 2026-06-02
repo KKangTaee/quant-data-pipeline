@@ -5278,6 +5278,26 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
         self.assertEqual(nq_row["State"], "Sharp")
         self.assertGreater(nq_row["60m %"], 1.0)
 
+    def test_futures_monitor_preopen_core_uses_cross_asset_symbols(self) -> None:
+        from app.services.futures_market_monitoring import build_futures_monitor_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_instrument" in sql:
+                return [
+                    {"provider_symbol": "NQ=F", "display_name": "E-mini Nasdaq 100", "futures_group": "Equity Index", "source": "yfinance", "sort_order": 20},
+                    {"provider_symbol": "ZN=F", "display_name": "10Y Treasury Note", "futures_group": "Rates", "source": "yfinance", "sort_order": 110},
+                    {"provider_symbol": "CL=F", "display_name": "WTI Crude Oil", "futures_group": "Commodities", "source": "yfinance", "sort_order": 210},
+                    {"provider_symbol": "6E=F", "display_name": "Euro FX", "futures_group": "FX Futures", "source": "yfinance", "sort_order": 310},
+                ]
+            return []
+
+        snapshot = build_futures_monitor_snapshot(group="Pre-open Core", query_fn=query_fn)
+
+        self.assertEqual(snapshot["symbols"], ["NQ=F", "ZN=F", "CL=F", "6E=F"])
+        self.assertEqual(snapshot["selected_symbol"], "NQ=F")
+        self.assertIn("Pre-open Core", snapshot["groups"])
+
     def test_futures_collector_normalizes_yfinance_frame_and_records_run(self) -> None:
         from finance.data import futures_market as fm
 
