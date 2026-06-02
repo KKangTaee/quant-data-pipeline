@@ -7114,3 +7114,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 검증은 날짜별 target return 계산에서 같은 시리즈를 반복 정렬했고, mixed scenario의 occurrence count가 directional sample처럼 표시될 수 있었다. `Max Adverse`도 endpoint 기반이라 forward path adverse move 요구와 맞지 않았다
 - Follow-up:
   - target return 선계산과 Overview TTL cache를 추가했고, mixed scenario는 hit-rate N/A / occurrence count로 분리했다. `Max Adverse`는 path 기준으로 바꾸고 false-positive rate를 UI summary와 threshold sensitivity에 노출했다. 상세 검증은 `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/RUNS.md`에 남겼다
+
+### 2026-06-02 - Futures Monitor UI를 prototype tab 구조에서 workspace 구조로 바꾼다
+- User request:
+  - 사용자가 Futures Monitor가 테스트 더미처럼 보이고 Macro Thermometer와 Candles가 별도 탭이라 분석 흐름이 끊긴다고 지적하며, 개선 가이드 정리 후 순서대로 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 수집 / 검증 기능은 유지하면서 상단 데이터 상태를 항상 읽을 수 있게 하고, Macro Context와 live candles를 동시에 보여주는 분석 workspace로 재배치해야 함
+- Analysis result:
+  - TradingView / Koyfin식 watchlist + chart workspace 패턴을 참고하면, 수집 버튼 중심 UI보다 command center, 상태 badge, side-by-side chart/macro context, 하단 diagnostics 구조가 더 적합하다
+- Follow-up:
+  - `Overview > Futures Monitor`를 command center + Macro Context / Live Futures Charts 동시 노출 구조로 변경했다. Shock Board / Provider Run은 diagnostics로 이동했고, manual refresh는 snapshot in-place reload로 바꿨다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/futures-monitor-ui-v2/`에 남겼다

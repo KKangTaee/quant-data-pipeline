@@ -4599,3 +4599,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`에서 리뷰 후속 수정까지 반영했다.
   - 5y point-in-time validation은 target return 선계산과 Overview TTL cache를 사용하며, same-process 반복 렌더는 캐시로 즉시 반환된다.
   - Mixed scenario는 directional hit-rate를 N/A로 표시하고 occurrence count를 분리한다. `Max Adverse`는 forward window path adverse move 기준이며 false-positive rate가 UI summary에 노출된다.
+- Futures Monitor UI V2:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-ui-v2/`에서 prototype-like tab UI를 workspace layout으로 개편했다.
+  - 상단 Futures Workspace / Market Pulse / Data Feed command center를 추가하고 Macro Context와 Live Futures Charts를 같은 화면에 배치했다.
+  - Shock Board / Provider Run / raw candle rows는 하단 diagnostics expander로 낮췄고, manual refresh의 즉시 `st.rerun()`을 제거했다.
+  - py_compile, UI-engine boundary, service contract 234 tests, Browser QA screenshot을 통과했다.

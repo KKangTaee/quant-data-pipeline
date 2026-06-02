@@ -606,6 +606,114 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-body);
   padding: 0.7rem 0;
 }
+.ov-futures-command {
+  display: grid;
+  grid-template-columns: minmax(17rem, 1.2fr) minmax(16rem, 1fr) minmax(16rem, 1fr);
+  gap: var(--ov-mi-gap-md);
+  align-items: stretch;
+  margin: 0.42rem 0 0.85rem 0;
+  padding: 0.58rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.08), rgba(37, 99, 235, 0.06) 52%, rgba(255, 255, 255, 0)),
+    var(--ov-mi-color-surface);
+}
+.ov-futures-command-cell {
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-futures-command-cell:first-child {
+  border-left: 0;
+}
+.ov-futures-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.ov-futures-title {
+  color: var(--ov-mi-color-text);
+  font-size: 1.08rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  margin-top: 0.22rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.26;
+  margin-top: 0.18rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-feed-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.35rem;
+}
+.ov-futures-feed-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.22rem 0.48rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--ov-feed-tone, var(--ov-mi-color-neutral)) 34%, transparent);
+  background: color-mix(in srgb, var(--ov-feed-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-feed-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-futures-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin: 0.48rem 0 0.5rem 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-futures-section-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-section-meta {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-futures-symbol-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin: 0.34rem 0 0.18rem 0;
+}
+.ov-futures-symbol-title {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-symbol-meta {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.18;
+  text-align: right;
+}
+.ov-futures-quiet-note {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin: 0.2rem 0 0.35rem 0;
+}
 @media (max-width: 760px) {
   .ov-mm-status-bar {
     align-items: flex-start;
@@ -638,6 +746,25 @@ def overview_ui_css() -> str:
   }
   .ov-events-badges {
     justify-content: flex-start;
+  }
+  .ov-futures-command {
+    grid-template-columns: 1fr;
+  }
+  .ov-futures-command-cell,
+  .ov-futures-command-cell:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-futures-command-cell:first-child {
+    border-top: 0;
+  }
+  .ov-futures-symbol-head,
+  .ov-futures-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ov-futures-symbol-meta {
+    text-align: left;
   }
 }
 </style>
