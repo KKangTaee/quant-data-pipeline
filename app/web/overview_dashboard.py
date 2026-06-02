@@ -23,6 +23,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
+from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
 from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
@@ -65,6 +66,7 @@ from app.web.overview_ui_components import (
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
 )
+from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
@@ -2210,6 +2212,21 @@ def _run_collect_futures_ohlcv_compat(
     return run_collect_futures_ohlcv(**supported_kwargs)
 
 
+def _run_collect_futures_daily_ohlcv_compat() -> dict[str, Any]:
+    refresh_kwargs: dict[str, Any] = {
+        "symbols": list(DEFAULT_CORE_FUTURES_SYMBOLS),
+        "period": "1y",
+        "interval": "1d",
+        "cadence_mode": "manual_macro_daily",
+        "max_symbols": len(DEFAULT_CORE_FUTURES_SYMBOLS),
+        "batch_size": 6,
+        "sleep_sec": 0.1,
+    }
+    supported_params = signature(run_collect_futures_ohlcv).parameters
+    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
+    return run_collect_futures_ohlcv(**supported_kwargs)
+
+
 def _futures_state_tone(value: str) -> str:
     normalized = str(value or "").strip().lower()
     if normalized in {"calm", "ok"}:
@@ -2266,6 +2283,99 @@ def _futures_contract_title(metric: dict[str, Any], symbol: str) -> str:
     if name:
         return name
     return symbol
+
+
+def _format_macro_score(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):+.0f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _macro_score_cards(scores: Any) -> list[dict[str, Any]]:
+    if not isinstance(scores, pd.DataFrame) or scores.empty:
+        return [
+            {
+                "title": "Macro Scores",
+                "value": "-",
+                "detail": "waiting for daily futures data",
+                "tone": "neutral",
+            }
+        ]
+    cards: list[dict[str, Any]] = []
+    for _, row in scores.iterrows():
+        cards.append(
+            {
+                "title": str(row.get("Score") or "-"),
+                "value": _format_macro_score(row.get("Value")),
+                "detail": f"{row.get('Direction') or '-'} · {row.get('Coverage') or '-'}",
+                "tone": str(row.get("Tone") or "neutral"),
+            }
+        )
+    return cards
+
+
+def _render_futures_macro_tab() -> None:
+    macro = load_overview_futures_macro_snapshot()
+    coverage = dict(macro.get("coverage") or {})
+    scores = macro.get("scores")
+    components = macro.get("score_components")
+    symbols = macro.get("symbols")
+    summary = dict(macro.get("summary") or {})
+
+    header_cols = st.columns([1.6, 1], gap="medium", vertical_alignment="top")
+    with header_cols[0]:
+        st.markdown("#### 오늘의 시장 해석")
+        st.markdown(f"**{summary.get('scenario') or '시장 해석 대기'}**")
+        for sentence in macro.get("summary_sentences") or []:
+            st.write(sentence)
+        evidence = [str(item) for item in macro.get("evidence") or [] if str(item).strip()]
+        if evidence:
+            st.markdown("**세부 근거**")
+            for item in evidence[:5]:
+                st.caption(item)
+    with header_cols[1]:
+        if st.button(
+            "Refresh Daily Macro OHLCV",
+            key="overview_futures_macro_daily_refresh",
+            use_container_width=True,
+        ):
+            with st.spinner("Collecting futures 1y daily OHLCV from yfinance..."):
+                _store_overview_job_result(
+                    "overview_futures_daily_ohlcv_result",
+                    _run_collect_futures_daily_ohlcv_compat(),
+                )
+            st.rerun()
+        st.metric("Daily Coverage", f"{coverage.get('standardized_count') or 0} / {coverage.get('symbol_count') or 0}")
+        st.caption(f"Latest daily candle: {_snapshot_value(coverage.get('latest_daily_date'))}")
+        st.caption(f"Data days: {coverage.get('min_data_days') or 0} - {coverage.get('max_data_days') or 0}")
+
+    render_status_card_grid(_macro_score_cards(scores))
+    warnings = list(macro.get("warnings") or [])
+    if warnings:
+        _render_snapshot_warnings({"warnings": warnings})
+
+    if isinstance(scores, pd.DataFrame) and not scores.empty:
+        st.dataframe(
+            scores.drop(columns=["Tone"], errors="ignore"),
+            width="stretch",
+            hide_index=True,
+        )
+    if isinstance(components, pd.DataFrame) and not components.empty:
+        st.markdown("#### 점수별 티커 근거")
+        st.dataframe(components, width="stretch", hide_index=True)
+    if isinstance(symbols, pd.DataFrame) and not symbols.empty:
+        st.markdown("#### 티커별 표준화 움직임")
+        st.dataframe(symbols, width="stretch", hide_index=True)
+
+    cautions = [str(item) for item in macro.get("cautions") or [] if str(item).strip()]
+    if cautions:
+        st.markdown("#### 주의 문구")
+        for caution in cautions:
+            st.caption(caution)
+    _render_market_job_result("overview_futures_daily_ohlcv_result")
 
 
 def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str) -> None:
@@ -2355,7 +2465,9 @@ def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: s
             ]
         )
 
-    board_tab, chart_tab, run_tab = st.tabs(["Shock Board", "Candles", "Provider Run"])
+    macro_tab, board_tab, chart_tab, run_tab = st.tabs(["Macro Thermometer", "Shock Board", "Candles", "Provider Run"])
+    with macro_tab:
+        _render_futures_macro_tab()
     with board_tab:
         if isinstance(rows, pd.DataFrame) and not rows.empty:
             st.dataframe(rows, width="stretch", hide_index=True)

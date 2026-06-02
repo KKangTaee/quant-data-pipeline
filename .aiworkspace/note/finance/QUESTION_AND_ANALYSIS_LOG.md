@@ -7084,3 +7084,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - non-optional core 16개(`ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `ZN=F`, `ZB=F`, `CL=F`, `GC=F`, `SI=F`, `HG=F`, `NG=F`, `6E=F`, `6J=F`, `6B=F`, `6A=F`, `6C=F`) 모두 yfinance 1m rows를 저장했다. 무료 provider 특성상 latest candle은 wall-clock보다 약 10분 이상 늦어 `REVIEW` freshness로 표시된다
 - Follow-up:
   - `Overview > Futures Monitor` 기본 Watch Group을 `Pre-open Core`로 바꾸고, 기본 2x2 심볼을 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`로 확정했다
+
+### 2026-06-02 - 선물 일봉으로 글로벌 매크로 온도계를 만든다
+- User request:
+  - 사용자가 수집 중인 지수 / 금리 / 원자재 / FX 선물 일봉으로 risk-on, 금리 부담, 달러 압력, 안전자산 선호 같은 시장 해석을 자동 요약하는 기능을 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 Futures Monitor 차트는 유지하면서 별도 점수 산출 / 문장 생성 로직을 만들고, Overview UI에서 점수 / 방향성 / 근거 티커 / 주의 문구를 한 화면에 보여줘야 함
+- Analysis result:
+  - 같은 `futures_ohlcv` table에 `interval_code=1d` row를 저장하면 신규 schema 없이 일봉 해석이 가능하다. 채권선물과 FX 선물은 raw 가격 방향을 경제적 해석 방향으로 반전해야 한다
+- Follow-up:
+  - `app/services/futures_macro_thermometer.py`와 `Overview > Futures Monitor > Macro Thermometer`를 추가했다. `1y / 1d` core futures backfill smoke는 16개 symbol / 4,032 rows 성공했고, 상세 실행 기록은 `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-v1/`에 남겼다

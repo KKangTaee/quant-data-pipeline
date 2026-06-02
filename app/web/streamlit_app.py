@@ -2889,7 +2889,7 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("daily_market_update")
 
-            with st.expander("선물 1분봉 OHLCV 수집", expanded=False):
+            with st.expander("선물 OHLCV 수집", expanded=False):
                 _render_job_brief("collect_futures_ohlcv")
                 st.caption("Overview Futures Monitor에서 사용할 선물 캔들 데이터를 수집합니다.")
                 st.caption("기본값은 주요 지수 / 금리 / 원자재 / FX 선물이며, 저장 테이블은 `finance_price.futures_ohlcv`입니다.")
@@ -2907,13 +2907,13 @@ def _render_ingestion_console() -> None:
                 futures_col1, futures_col2, futures_col3 = st.columns(3)
                 futures_period_input = futures_col1.selectbox(
                     "Futures Period",
-                    ["1d", "5d", "7d"],
+                    ["1d", "5d", "7d", "1mo", "3mo", "6mo", "1y"],
                     index=0,
                     key="futures_ohlcv_period_input",
                 )
                 futures_interval_input = futures_col2.selectbox(
                     "Futures Interval",
-                    ["1m", "2m", "5m", "15m"],
+                    ["1m", "2m", "5m", "15m", "1h", "1d"],
                     index=0,
                     key="futures_ohlcv_interval_input",
                 )

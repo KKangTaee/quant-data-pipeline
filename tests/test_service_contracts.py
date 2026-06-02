@@ -5386,6 +5386,131 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
         self.assertEqual(result["details"]["target_tables"][0], "finance_price.futures_ohlcv")
 
 
+class FuturesMacroThermometerContractTests(unittest.TestCase):
+    def _daily_rows(self, final_moves: dict[str, float], *, days: int = 260) -> list[dict[str, object]]:
+        base = pd.Timestamp("2026-06-02 00:00:00", tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        rows: list[dict[str, object]] = []
+        for symbol_index, (symbol, final_move) in enumerate(final_moves.items()):
+            price = 100.0 + symbol_index * 7.0
+            for idx in range(days):
+                daily_move = 0.0003 + 0.003 * ((idx % 9) - 4) / 4
+                if idx == days - 1:
+                    daily_move = final_move
+                price *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": price * 0.995,
+                        "high": price * 1.005,
+                        "low": price * 0.99,
+                        "close": price,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return rows
+
+    def test_macro_thermometer_inverts_rates_and_fx_pressure(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "YM=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "GC=F",
+            "SI=F",
+            "HG=F",
+            "NG=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        final_moves = {symbol: 0.001 for symbol in symbols}
+        final_moves.update(
+            {
+                "ES=F": 0.018,
+                "NQ=F": 0.024,
+                "YM=F": 0.014,
+                "RTY=F": 0.02,
+                "ZN=F": -0.012,
+                "ZB=F": -0.014,
+                "6E=F": -0.01,
+                "6J=F": -0.008,
+                "6B=F": -0.011,
+                "6A=F": -0.009,
+                "6C=F": -0.008,
+            }
+        )
+        candle_rows = self._daily_rows(final_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        scores = snapshot["scores"].set_index("Score")
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertGreater(scores.loc["Risk-On Score", "Value"], 20)
+        self.assertGreater(scores.loc["Rate Pressure Score", "Value"], 20)
+        self.assertGreater(scores.loc["Dollar Pressure Score", "Value"], 20)
+        rate_components = snapshot["score_components"]
+        zn_component = rate_components[
+            (rate_components["Score"] == "Rate Pressure Score") & (rate_components["Symbol"] == "ZN=F")
+        ].iloc[0]
+        self.assertLess(zn_component["Raw Std Move"], 0)
+        self.assertGreater(zn_component["Score Move"], 0)
+
+    def test_macro_thermometer_detects_rate_pressure_scenario(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = ["ES=F", "NQ=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "HG=F", "CL=F", "6A=F"]
+        final_moves = {symbol: 0.001 for symbol in symbols}
+        final_moves.update({"NQ=F": -0.025, "ZN=F": -0.015, "ZB=F": -0.017, "GC=F": -0.018})
+        candle_rows = self._daily_rows(final_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+
+        self.assertEqual(snapshot["summary"]["scenario"], "금리 상승 부담")
+        self.assertIn("금리 상승 압력", snapshot["summary"]["summary"])
+        self.assertGreater(snapshot["scores"].set_index("Score").loc["Rate Pressure Score", "Value"], 20)
+
+    def test_macro_thermometer_warns_when_daily_history_is_short(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        candle_rows = self._daily_rows({"ES=F": 0.02, "NQ=F": 0.02}, days=20)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=["ES=F", "NQ=F"], query_fn=query_fn)
+
+        self.assertEqual(snapshot["status"], "REVIEW")
+        self.assertIn("less than 6 months", " ".join(snapshot["warnings"]))
+        self.assertEqual(snapshot["coverage"]["standardized_count"], 0)
+
+
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
         from finance.data import market_intelligence as mi

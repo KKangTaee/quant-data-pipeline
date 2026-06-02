@@ -187,7 +187,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `Workspace > Overview > Futures Monitor`에서 주요 선물 OHLCV 캔들과 개장 전 급변 상태를 read-only로 표시하기 위한 데이터 경계다.
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
-- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다.
+- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 shock board / candle chart에, 1d row는 Futures Macro Thermometer의 점수 / 해석에 사용된다.
 - `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
 
 성격:
@@ -196,12 +196,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
+- 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
 
 주의:
 
 - 선물 거래 시간은 상품 / 거래소 / 휴장일별로 다르므로 NYSE cash session 상태와 동일하게 해석하지 않는다.
 - 무료 provider 기반이라 지연, 누락, rate limit, symbol coverage 변화가 발생할 수 있다.
 - `Stale`, `Missing`, `Partial` 상태는 pass가 아니라 provider freshness / coverage gap이다.
+- Macro Thermometer는 시장 해석 보조 기능이며 정규장 방향 예측이나 투자 판단 자동화가 아니다.
 - 이 table은 투자 신호, 주문, live approval, auto rebalance를 만들지 않는다.
 
 ## `etf_operability_snapshot`

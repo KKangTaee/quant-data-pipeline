@@ -4584,3 +4584,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 검증: focused / full service contracts, py_compile, UI-engine boundary, `git diff --check`, yfinance collector smoke, Browser QA screenshot 통과.
   - 후속 UI 개선으로 Candles 탭에 선택 symbol을 포함한 최대 4개 2x2 미니 캔들 차트와 선택 symbol 상세 차트를 함께 표시하도록 바꿨다.
   - 후속 데이터 검증에서 지수 / 금리 / 원자재 / FX core 16개가 모두 1분봉 row를 저장했고, 기본 `Pre-open Core` 2x2를 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`로 확정했다.
+- Futures Macro Thermometer V1:
+  - `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-v1/`에서 1년 일봉 기반 글로벌 매크로 해석 기능을 구현했다.
+  - `Overview > Futures Monitor > Macro Thermometer`는 Risk-On / Growth / Rate Pressure / Dollar Pressure / Safe Haven / Inflation Pressure 점수, 오늘의 해석, 근거 티커, 표준화 움직임, 주의 문구를 표시한다.
+  - 기존 1m 차트 / Shock Board는 유지하고, macro tab은 저장된 `interval_code=1d` row를 별도로 읽는다.
+  - 16개 core futures `1y / 1d` backfill smoke가 성공했고, focused service contracts는 통과했다. 최종 Browser QA / full verification은 task RUNS를 확인한다.

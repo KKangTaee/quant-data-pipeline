@@ -19,7 +19,7 @@ DB_PRICE = "finance_price"
 FUTURES_SOURCE = "yfinance"
 DEFAULT_FUTURES_PERIOD = "1d"
 DEFAULT_FUTURES_INTERVAL = "1m"
-VALID_FUTURES_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+VALID_FUTURES_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d"}
 
 DEFAULT_FUTURES_INSTRUMENTS: tuple[dict[str, Any], ...] = (
     {"provider_symbol": "ES=F", "display_name": "E-mini S&P 500", "futures_group": "Equity Index", "exchange": "CME", "contract_hint": "S&P 500 index futures", "sort_order": 10},
