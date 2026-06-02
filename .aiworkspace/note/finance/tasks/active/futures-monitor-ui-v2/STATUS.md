@@ -16,3 +16,9 @@
   - manual 1m futures refresh now reloads the snapshot in-place instead of forcing an immediate `st.rerun()`;
   - auto refresh updates the Futures workspace via Streamlit fragment.
 - Browser QA confirmed the new body no longer exposes `Shock Board`, `Candles`, or `Provider Run` as peer tabs.
+- Implemented V2.1 visual follow-up from user screenshot review:
+  - compressed the top controls into one row and moved refresh controls into `Data Actions`;
+  - replaced large mini-chart `st.metric` blocks with compact 60m / 15m / Age chips;
+  - increased mini-chart height and card framing so chart evidence is no longer subordinate to large numbers;
+  - changed Macro Context from large generic cards to scenario / confidence / validation / history signal strips plus score chips.
+- Browser QA caught and fixed raw HTML leakage in signal and score strips before closeout.

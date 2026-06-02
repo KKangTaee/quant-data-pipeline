@@ -7124,3 +7124,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - TradingView / Koyfin식 watchlist + chart workspace 패턴을 참고하면, 수집 버튼 중심 UI보다 command center, 상태 badge, side-by-side chart/macro context, 하단 diagnostics 구조가 더 적합하다
 - Follow-up:
   - `Overview > Futures Monitor`를 command center + Macro Context / Live Futures Charts 동시 노출 구조로 변경했다. Shock Board / Provider Run은 diagnostics로 이동했고, manual refresh는 snapshot in-place reload로 바꿨다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/futures-monitor-ui-v2/`에 남겼다
+
+### 2026-06-02 - Futures Monitor V2.1의 control / chart / macro 정보 위계를 보정한다
+- User request:
+  - 사용자가 스크린샷 기준으로 상단 symbol/control이 과하게 공간을 차지하고, mini chart 정보가 찌그러지며, Macro Context 정보 전달이 시각적으로 애매하다고 지적함
+- Interpreted goal:
+  - 기능이나 scoring을 바꾸지 않고 화면 밀도와 정보 위계를 개선해, chart evidence와 macro reliability를 더 빠르게 읽을 수 있어야 함
+- Analysis result:
+  - 문제 원인은 데이터 부족이 아니라 `st.metric` 과대 표시, full-width `Candle Symbol` control, generic KPI card grid가 만든 공간/시선 낭비다
+- Follow-up:
+  - 상단 controls를 한 줄로 압축하고 refresh는 `Data Actions`에 넣었다. Mini chart는 60m / 15m / Age chip + 큰 chart card로 바꿨고, Macro Context는 scenario / confidence / validation / history signal strip과 score chip으로 재구성했다

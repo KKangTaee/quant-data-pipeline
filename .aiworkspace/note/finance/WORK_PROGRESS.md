@@ -4604,3 +4604,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - 상단 Futures Workspace / Market Pulse / Data Feed command center를 추가하고 Macro Context와 Live Futures Charts를 같은 화면에 배치했다.
   - Shock Board / Provider Run / raw candle rows는 하단 diagnostics expander로 낮췄고, manual refresh의 즉시 `st.rerun()`을 제거했다.
   - py_compile, UI-engine boundary, service contract 234 tests, Browser QA screenshot을 통과했다.
+  - V2.1 후속으로 상단 controls를 압축하고, mini chart metric을 chip strip으로 바꾸며, Macro Context를 signal strip / score chip 중심으로 다듬었다.
