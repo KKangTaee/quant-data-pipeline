@@ -31,6 +31,7 @@ from app.runtime.backtest import (
     run_quality_value_snapshot_strict_annual_backtest_from_db,
     run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
+    run_risk_on_momentum_5d_backtest_from_db,
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
@@ -166,6 +167,40 @@ def execute_single_backtest(
 
 def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
     strategy_key = payload["strategy_key"]
+
+    if strategy_key == "risk_on_momentum_5d":
+        return run_risk_on_momentum_5d_backtest_from_db(
+            tickers=payload.get("tickers"),
+            start=payload.get("start"),
+            end=payload.get("end"),
+            timeframe=payload.get("timeframe") or "1d",
+            option=payload.get("option") or "close_based",
+            universe_mode=payload.get("universe_mode") or "top1000",
+            preset_name=payload.get("preset_name"),
+            universe_limit=payload.get("universe_limit"),
+            start_balance=payload.get("start_balance", 10_000.0),
+            execution_mode=payload.get("execution_mode", "close_based"),
+            exit_mode=payload.get("exit_mode", "fixed_pct"),
+            max_holding_days=payload.get("max_holding_days", 5),
+            stop_loss_pct=payload.get("stop_loss_pct", -2.5),
+            take_profit_pct=payload.get("take_profit_pct", 5.0),
+            max_new_positions_per_day=payload.get("max_new_positions_per_day", 3),
+            max_total_positions=payload.get("max_total_positions", 3),
+            transaction_cost_bps=payload.get("transaction_cost_bps", 0.0),
+            slippage_bps=payload.get("slippage_bps", 0.0),
+            macro_filter_enabled=payload.get("macro_filter_enabled", True),
+            macro_filter_mode=payload.get("macro_filter_mode", "hard_filter"),
+            risk_on_min=payload.get("risk_on_min", 0.0),
+            rate_pressure_max=payload.get("rate_pressure_max", 1.0),
+            dollar_pressure_max=payload.get("dollar_pressure_max", 1.0),
+            safe_haven_max=payload.get("safe_haven_max", 1.0),
+            min_price=payload.get("min_price", 5.0),
+            min_avg_dollar_volume_20d=payload.get("min_avg_dollar_volume_20d", 20_000_000.0),
+            min_avg_volume_20d=payload.get("min_avg_volume_20d", 500_000.0),
+            random_iterations=payload.get("random_iterations", 50),
+            random_seed=payload.get("random_seed", 42),
+            scanner_top_n_per_day=payload.get("scanner_top_n_per_day", 50),
+        )
 
     if strategy_key == "equal_weight":
         return run_equal_weight_backtest_from_db(

@@ -16,6 +16,7 @@ Last Verified: 2026-06-02
 | `finance/loaders/` | DB 데이터를 backtest / validation runtime 입력으로 읽는 loader |
 | `finance/engine.py` | strategy orchestration |
 | `finance/strategy.py` | portfolio simulation / rebalancing logic |
+| `finance/swing.py` | short-term swing strategy simulation / scanner logic |
 | `finance/transform.py` | signal, factor, ranking transform |
 | `finance/performance.py` | 성과 요약과 portfolio performance metric |
 | `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
@@ -85,6 +86,8 @@ Last Verified: 2026-06-02
 | Computed snapshot lifecycle collector | `finance/data/computed_lifecycle.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
+| Futures OHLCV loader | `finance/loaders/futures.py` |
+| Risk-On Momentum 5D strategy core | `finance/swing.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
 | Service contract tests | `tests/test_service_contracts.py` |
 
@@ -152,6 +155,7 @@ Backtest Analysis
 | Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 Selected Dashboard 전용 사용자 monitoring portfolio setup |
 | Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
+| Backtest generated artifacts | `.aiworkspace/note/finance/backtest_artifacts/` | full scanner / trade detail 같은 generated artifact, 보통 커밋 금지 |
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
 | Playwright output | `.playwright-mcp/` | generated artifact, 커밋 금지 |
 
@@ -165,6 +169,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
+| Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |

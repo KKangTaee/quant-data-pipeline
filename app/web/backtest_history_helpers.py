@@ -82,6 +82,19 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append(f"regime_window={meta.get('market_regime_window') or STRICT_MARKET_REGIME_DEFAULT_WINDOW}")
     if meta.get("min_avg_dollar_volume_20d_m_filter") is not None:
         parts.append(f"min_adv20d_m={float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}")
+    if meta.get("strategy_key") == "risk_on_momentum_5d":
+        if meta.get("universe_symbol_count") is not None:
+            parts.append(f"symbols={int(meta.get('universe_symbol_count') or 0)}")
+        if meta.get("max_holding_days") is not None:
+            parts.append(f"max_hold_days={int(meta.get('max_holding_days') or 0)}")
+        if meta.get("max_total_positions") is not None:
+            parts.append(f"max_positions={int(meta.get('max_total_positions') or 0)}")
+        if meta.get("stop_loss_pct") is not None:
+            parts.append(f"stop={float(meta.get('stop_loss_pct') or 0.0):.1f}%")
+        if meta.get("take_profit_pct") is not None:
+            parts.append(f"take={float(meta.get('take_profit_pct') or 0.0):.1f}%")
+        if meta.get("macro_filter_enabled") is not None:
+            parts.append(f"macro={'on' if meta.get('macro_filter_enabled') else 'off'}")
     if meta.get("benchmark_contract"):
         parts.append(f"benchmark_contract={meta.get('benchmark_contract')}")
     if meta.get("promotion_min_benchmark_coverage") is not None:
@@ -185,6 +198,7 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         "global_relative_strength",
         "risk_parity_trend",
         "dual_momentum",
+        "risk_on_momentum_5d",
     }:
         if strategy_key not in {
             "quality_snapshot",
@@ -296,6 +310,29 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         )
     if record.get("transaction_cost_bps") is not None:
         payload["transaction_cost_bps"] = float(record.get("transaction_cost_bps") or 0.0)
+    if strategy_key == "risk_on_momentum_5d":
+        payload["start_balance"] = float(record.get("start_balance") or 10_000.0)
+        payload["execution_mode"] = str(record.get("strategy_execution_mode") or "close_based")
+        payload["exit_mode"] = str(record.get("exit_mode") or "fixed_pct")
+        payload["max_holding_days"] = int(record.get("max_holding_days") or 5)
+        payload["stop_loss_pct"] = float(record.get("stop_loss_pct") or -2.5)
+        payload["take_profit_pct"] = float(record.get("take_profit_pct") or 5.0)
+        payload["max_new_positions_per_day"] = int(record.get("max_new_positions_per_day") or 3)
+        payload["max_total_positions"] = int(record.get("max_total_positions") or 3)
+        payload["slippage_bps"] = float(record.get("slippage_bps") or 0.0)
+        payload["macro_filter_enabled"] = bool(record.get("macro_filter_enabled", True))
+        payload["macro_filter_mode"] = str(record.get("macro_filter_mode") or "hard_filter")
+        payload["risk_on_min"] = float(record.get("risk_on_min") or 0.0)
+        payload["rate_pressure_max"] = float(record.get("rate_pressure_max") or 1.0)
+        payload["dollar_pressure_max"] = float(record.get("dollar_pressure_max") or 1.0)
+        payload["safe_haven_max"] = float(record.get("safe_haven_max") or 1.0)
+        payload["min_price"] = float(record.get("min_price_filter") or 5.0)
+        payload["min_avg_dollar_volume_20d"] = float(record.get("min_avg_dollar_volume_20d") or 20_000_000.0)
+        payload["min_avg_volume_20d"] = float(record.get("min_avg_volume_20d") or 500_000.0)
+        payload["random_iterations"] = int(record.get("random_iterations") or 50)
+        payload["scanner_top_n_per_day"] = int(record.get("scanner_top_n_per_day") or 50)
+        if record.get("universe_limit") is not None:
+            payload["universe_limit"] = int(record.get("universe_limit") or 0)
     if record.get("promotion_min_etf_aum_b") is not None:
         payload["promotion_min_etf_aum_b"] = float(record.get("promotion_min_etf_aum_b") or 0.0)
     if record.get("promotion_max_bid_ask_spread_pct") is not None:
@@ -464,6 +501,12 @@ def _real_money_guardrail_scope_for_strategy(
             "guardrail_scope": "ETF underperformance / drawdown guardrails",
             "interpretation": "가격 기반 ETF 전략입니다. 비용, benchmark, ETF guardrail 입력이 저장 / 재실행에서 유지되어야 합니다.",
         }
+    if name == "Risk-On Momentum 5D" or key == "risk_on_momentum_5d":
+        return {
+            "real_money_scope": "Research swing strategy",
+            "guardrail_scope": "Macro hard filter + fixed_pct exit contract",
+            "interpretation": "단기 주식 swing 리서치 전략입니다. universe, macro threshold, position/exit 입력이 저장 / 재실행에서 유지되어야 합니다.",
+        }
     if name == "Equal Weight" or key == "equal_weight":
         return {
             "real_money_scope": "Not a promotion target",
@@ -549,6 +592,22 @@ def _real_money_guardrail_replay_fields_for_strategy(
             "promotion_max_bid_ask_spread_pct",
             "underperformance_guardrail_enabled",
             "drawdown_guardrail_enabled",
+        ]
+    if name == "Risk-On Momentum 5D" or key == "risk_on_momentum_5d":
+        return [
+            "universe_mode",
+            "universe_limit",
+            "strategy_execution_mode",
+            "exit_mode",
+            "max_holding_days",
+            "stop_loss_pct",
+            "take_profit_pct",
+            "max_total_positions",
+            "macro_filter_enabled",
+            "risk_on_min",
+            "rate_pressure_max",
+            "dollar_pressure_max",
+            "safe_haven_max",
         ]
     return ["benchmark_ticker", "min_price_filter", "transaction_cost_bps"]
 

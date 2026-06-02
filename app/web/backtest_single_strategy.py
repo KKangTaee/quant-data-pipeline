@@ -8,6 +8,7 @@ from app.web.backtest_single_forms import (
     _render_global_relative_strength_form,
     _render_gtaa_form,
     _render_risk_parity_form,
+    _render_risk_on_momentum_5d_form,
     _render_single_strategy_family_form,
 )
 
@@ -71,6 +72,8 @@ def render_single_strategy_workspace() -> None:
         _render_risk_parity_form()
     elif strategy_choice == "Dual Momentum":
         _render_dual_momentum_form()
+    elif strategy_choice == "Risk-On Momentum 5D":
+        _render_risk_on_momentum_5d_form()
     else:
         _render_single_strategy_family_form(strategy_choice)
     st.divider()

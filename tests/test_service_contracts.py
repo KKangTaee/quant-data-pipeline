@@ -45,6 +45,150 @@ def _macro_regime_rows(
     return pd.DataFrame(rows)
 
 
+def _risk_on_momentum_fixture() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    symbols = ["AAA", "BBB", "CCC", "DDD"]
+    dates = pd.bdate_range("2024-01-01", periods=90)
+    price_rows: list[dict[str, object]] = []
+    for symbol_idx, symbol in enumerate(symbols):
+        base = 20.0 + symbol_idx * 5.0
+        for day_idx, day in enumerate(dates):
+            close = base * (1.0 + 0.004 * day_idx)
+            if day_idx > 55 and symbol in {"AAA", "BBB"}:
+                close *= 1.0 + 0.003 * (day_idx - 55)
+            volume = 800_000 + (20_000 * day_idx if day_idx > 55 else 2_000 * day_idx) + symbol_idx * 100_000
+            price_rows.append(
+                {
+                    "symbol": symbol,
+                    "date": day,
+                    "open": close * 0.995,
+                    "high": close * 1.01,
+                    "low": close * 0.99,
+                    "close": close,
+                    "volume": volume,
+                }
+            )
+
+    statement_rows = [
+        {
+            "symbol": symbol,
+            "period_end": pd.Timestamp(f"{year}-12-31"),
+            "latest_available_at": pd.Timestamp(f"{year + 1}-03-01"),
+            "operating_income": 100.0,
+            "total_debt": 50.0,
+            "shareholders_equity": 200.0,
+            "total_assets": 500.0,
+        }
+        for symbol in symbols
+        for year in [2020, 2021, 2022, 2023]
+    ]
+    macro_scores = pd.DataFrame(
+        {
+            "date": dates,
+            "risk_on_mean_z": 0.5,
+            "rate_pressure_mean_z": 0.0,
+            "dollar_pressure_mean_z": 0.0,
+            "safe_haven_mean_z": 0.0,
+            "standardized_symbol_count": 8,
+        }
+    )
+    return pd.DataFrame(price_rows), pd.DataFrame(statement_rows), macro_scores
+
+
+class RiskOnMomentumSwingContractTests(unittest.TestCase):
+    def test_risk_on_momentum_executes_d_plus_one_and_logs_signal_holding_days(self) -> None:
+        from finance.swing import RiskOnMomentumConfig, run_risk_on_momentum_backtest
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        result = run_risk_on_momentum_backtest(
+            prices,
+            config=RiskOnMomentumConfig(
+                start="2024-03-15",
+                end="2024-05-03",
+                start_balance=10_000.0,
+                macro_filter_enabled=True,
+                scanner_top_n_per_day=10,
+                random_seed=1,
+            ),
+            macro_scores=macro_scores,
+            statement_history=statements,
+        )
+
+        self.assertFalse(result.trade_log_df.empty)
+        closed = result.trade_log_df[result.trade_log_df["exit_reason"] != "END_OF_BACKTEST"]
+        self.assertFalse(closed.empty)
+        self.assertTrue((pd.to_datetime(closed["entry_date"]) > pd.to_datetime(closed["entry_signal_date"])).all())
+        self.assertLessEqual(int(closed["holding_days"].max()), 5)
+        self.assertFalse(result.scanner_df.empty)
+        self.assertIn("QUEUED_BUY", set(result.scanner_df["status"]))
+
+    def test_risk_on_momentum_macro_hard_filter_blocks_new_entries(self) -> None:
+        from finance.swing import RiskOnMomentumConfig, run_risk_on_momentum_backtest
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        blocked_macro = macro_scores.copy()
+        blocked_macro["risk_on_mean_z"] = -1.0
+
+        result = run_risk_on_momentum_backtest(
+            prices,
+            config=RiskOnMomentumConfig(
+                start="2024-03-15",
+                end="2024-05-03",
+                start_balance=10_000.0,
+                macro_filter_enabled=True,
+                scanner_top_n_per_day=10,
+            ),
+            macro_scores=blocked_macro,
+            statement_history=statements,
+        )
+
+        self.assertTrue(result.trade_log_df.empty)
+        self.assertFalse(result.result_df["Macro Filter Pass"].any())
+
+    def test_history_payload_restores_risk_on_momentum_settings(self) -> None:
+        from app.web.backtest_history_helpers import _build_history_payload
+
+        payload = _build_history_payload(
+            {
+                "strategy_key": "risk_on_momentum_5d",
+                "tickers": [],
+                "input_start": "2024-01-01",
+                "input_end": "2024-05-31",
+                "timeframe": "1d",
+                "option": "close_based",
+                "universe_mode": "top1000",
+                "preset_name": "Top1000",
+                "universe_limit": 1000,
+                "start_balance": 25_000.0,
+                "strategy_execution_mode": "close_based",
+                "exit_mode": "fixed_pct",
+                "max_holding_days": 5,
+                "stop_loss_pct": -2.5,
+                "take_profit_pct": 5.0,
+                "max_new_positions_per_day": 3,
+                "max_total_positions": 3,
+                "macro_filter_enabled": True,
+                "risk_on_min": 0.0,
+                "rate_pressure_max": 1.0,
+                "dollar_pressure_max": 1.0,
+                "safe_haven_max": 1.0,
+                "min_price_filter": 5.0,
+                "min_avg_dollar_volume_20d": 20_000_000.0,
+                "min_avg_volume_20d": 500_000.0,
+                "random_iterations": 50,
+                "scanner_top_n_per_day": 50,
+            }
+        )
+
+        self.assertIsNotNone(payload)
+        assert payload is not None
+        self.assertEqual(payload["strategy_key"], "risk_on_momentum_5d")
+        self.assertEqual(payload["universe_mode"], "top1000")
+        self.assertEqual(payload["max_holding_days"], 5)
+        self.assertEqual(payload["stop_loss_pct"], -2.5)
+        self.assertTrue(payload["macro_filter_enabled"])
+        self.assertEqual(payload["min_avg_dollar_volume_20d"], 20_000_000.0)
+
+
 class PracticalValidationServiceContractTests(unittest.TestCase):
     def test_source_handoff_without_persistence_is_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation as service

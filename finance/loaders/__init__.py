@@ -37,6 +37,7 @@ from .price import (
 )
 from .provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot, load_etf_operability_snapshot
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
+from .futures import load_futures_ohlcv
 from .universe import load_asset_profile_status_summary, load_symbol_lifecycle_coverage_summary, load_universe
 
 __all__ = [
@@ -44,6 +45,7 @@ __all__ = [
     "load_latest_market_date",
     "load_latest_prices",
     "load_price_history",
+    "load_futures_ohlcv",
     "load_price_freshness_summary",
     "load_price_window_summary",
     "load_price_matrix",

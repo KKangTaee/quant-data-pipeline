@@ -9,6 +9,7 @@ NON_FAMILY_STRATEGY_OPTIONS = [
     "Global Relative Strength",
     "Risk Parity Trend",
     "Dual Momentum",
+    "Risk-On Momentum 5D",
 ]
 
 STRATEGY_FAMILY_VARIANTS = {
@@ -77,6 +78,7 @@ STRATEGY_KEY_TO_DISPLAY_NAME = {
     "global_relative_strength": "Global Relative Strength",
     "risk_parity_trend": "Risk Parity Trend",
     "dual_momentum": "Dual Momentum",
+    "risk_on_momentum_5d": "Risk-On Momentum 5D",
     "quality_snapshot": "Quality Snapshot",
 }
 for family_variants in STRATEGY_FAMILY_VARIANTS.values():

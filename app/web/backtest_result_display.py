@@ -621,6 +621,94 @@ def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
             st.caption("최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
 
 
+def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
+    meta = dict(bundle.get("meta") or {})
+    metrics = dict(bundle.get("swing_metrics") or {})
+    trade_log_df = bundle.get("swing_trade_log_df")
+    scanner_df = bundle.get("swing_scanner_df")
+    monthly_df = bundle.get("swing_monthly_returns_df")
+    yearly_df = bundle.get("swing_yearly_returns_df")
+    contribution_df = bundle.get("swing_ticker_contribution_df")
+    random_df = bundle.get("swing_random_summary_df")
+    comparison_df = bundle.get("swing_benchmark_comparison_df")
+    artifact = bundle.get("swing_artifact") or meta.get("swing_artifact") or {}
+
+    st.caption("Close-based D+1 swing execution detail. This is research output, not live approval or order instruction.")
+    metric_cols = st.columns(5)
+    metric_cols[0].metric("Trades", str(int(metrics.get("total_trades") or 0)))
+    if metrics.get("win_rate") is not None and not pd.isna(metrics.get("win_rate")):
+        metric_cols[1].metric("Win Rate", f"{float(metrics.get('win_rate')):.2%}")
+    if metrics.get("cagr") is not None and not pd.isna(metrics.get("cagr")):
+        metric_cols[2].metric("CAGR", f"{float(metrics.get('cagr')):.2%}")
+    if metrics.get("mdd") is not None and not pd.isna(metrics.get("mdd")):
+        metric_cols[3].metric("MDD", f"{float(metrics.get('mdd')):.2%}")
+    if metrics.get("avg_holding_days") is not None and not pd.isna(metrics.get("avg_holding_days")):
+        metric_cols[4].metric("Avg Hold", f"{float(metrics.get('avg_holding_days')):.1f}d")
+
+    render_badge_strip(
+        [
+            {"label": "Universe", "value": meta.get("preset_name") or meta.get("universe_mode") or "-", "tone": "neutral"},
+            {"label": "Symbols", "value": meta.get("universe_symbol_count", "-"), "tone": "neutral"},
+            {"label": "Execution", "value": meta.get("strategy_execution_mode") or "-", "tone": "neutral"},
+            {"label": "Exit", "value": meta.get("exit_mode") or "-", "tone": "neutral"},
+            {"label": "Macro", "value": "ON" if meta.get("macro_filter_enabled") else "OFF", "tone": "positive" if meta.get("macro_filter_enabled") else "neutral"},
+        ]
+    )
+
+    detail_tabs = st.tabs(["Comparison", "Trade Log", "Scanner", "Periods", "Contribution", "Artifact"])
+    with detail_tabs[0]:
+        if comparison_df is not None and not comparison_df.empty:
+            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+        if random_df is not None and not random_df.empty:
+            st.markdown("##### Random Ranking Runs")
+            st.dataframe(random_df, use_container_width=True, hide_index=True)
+    with detail_tabs[1]:
+        if trade_log_df is not None and not trade_log_df.empty:
+            st.dataframe(trade_log_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No trade rows were produced for this run.")
+    with detail_tabs[2]:
+        if scanner_df is not None and not scanner_df.empty:
+            available_dates = sorted(scanner_df["date"].astype(str).unique().tolist())
+            selected_date = st.selectbox(
+                "Scanner Date",
+                options=available_dates,
+                index=max(0, len(available_dates) - 1),
+                key="risk_on_momentum_scanner_date",
+            )
+            st.dataframe(
+                scanner_df[scanner_df["date"].astype(str) == selected_date],
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.info("No scanner rows were collected for this run.")
+    with detail_tabs[3]:
+        period_cols = st.columns(2, gap="large")
+        with period_cols[0]:
+            st.markdown("##### Monthly")
+            if monthly_df is not None and not monthly_df.empty:
+                st.dataframe(monthly_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No monthly return rows.")
+        with period_cols[1]:
+            st.markdown("##### Yearly")
+            if yearly_df is not None and not yearly_df.empty:
+                st.dataframe(yearly_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No yearly return rows.")
+    with detail_tabs[4]:
+        if contribution_df is not None and not contribution_df.empty:
+            st.dataframe(contribution_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No closed-trade contribution rows.")
+    with detail_tabs[5]:
+        if artifact:
+            st.json(artifact)
+        else:
+            st.info("No generated swing artifact was attached.")
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -656,6 +744,7 @@ def _render_last_run() -> None:
         or meta.get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE
     )
     has_real_money_details = bool(meta.get("real_money_hardening"))
+    has_swing_details = bool(strategy_key == "risk_on_momentum_5d" or bundle.get("swing_trade_log_df") is not None)
 
     _render_latest_run_orientation(
         has_selection_history=has_selection_history,
@@ -683,6 +772,8 @@ def _render_last_run() -> None:
         tab_labels.append("Dynamic Universe")
     if has_real_money_details:
         tab_labels.append("Policy Signal")
+    if has_swing_details:
+        tab_labels.append("Swing Detail")
     tab_labels.extend(["Result Table", "Meta"])
     tabs = st.tabs(tab_labels)
     tab_iter = iter(tabs)
@@ -693,6 +784,7 @@ def _render_last_run() -> None:
     selection_tab = next(tab_iter) if has_selection_history else None
     dynamic_tab = next(tab_iter) if has_dynamic_details else None
     real_money_tab = next(tab_iter) if has_real_money_details else None
+    swing_tab = next(tab_iter) if has_swing_details else None
     table_tab = next(tab_iter)
     meta_tab = next(tab_iter)
 
@@ -750,6 +842,10 @@ def _render_last_run() -> None:
     if real_money_tab is not None:
         with real_money_tab:
             _render_real_money_details(bundle)
+
+    if swing_tab is not None:
+        with swing_tab:
+            _render_swing_strategy_details(bundle)
 
     with table_tab:
         st.dataframe(result_df, use_container_width=True)

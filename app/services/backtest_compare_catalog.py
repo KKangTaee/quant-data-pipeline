@@ -29,6 +29,7 @@ from app.runtime.backtest import (
     run_quality_value_snapshot_strict_annual_backtest_from_db,
     run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
+    run_risk_on_momentum_5d_backtest_from_db,
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
@@ -146,6 +147,10 @@ def run_compare_strategy(
             preset_catalog=preset_catalog,
         )
         universe_mode = params.pop("universe_mode", "preset")
+    elif strategy_name == "Risk-On Momentum 5D":
+        universe_mode = params.pop("universe_mode", "top1000")
+        preset_name = params.pop("preset_name", "Top1000")
+        tickers = list(params.pop("tickers", []))
 
     runner_signature = inspect.signature(runner)
     if not any(
@@ -163,7 +168,7 @@ def run_compare_strategy(
         start=start,
         end=end,
         timeframe=timeframe,
-        option=option,
+        option=params.pop("option", "close_based") if strategy_name == "Risk-On Momentum 5D" else option,
         universe_mode=universe_mode,
         preset_name=preset_name,
         **params,
@@ -264,6 +269,38 @@ def _strategy_compare_defaults(
                 "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
                 **_dynamic_etf_promotion_extra(),
+            },
+        }
+    if strategy_name == "Risk-On Momentum 5D":
+        return {
+            "tickers": [],
+            "preset_name": "Top1000",
+            "runner": run_risk_on_momentum_5d_backtest_from_db,
+            "extra": {
+                "universe_mode": "top1000",
+                "universe_limit": 1000,
+                "start_balance": 10_000.0,
+                "execution_mode": "close_based",
+                "exit_mode": "fixed_pct",
+                "max_holding_days": 5,
+                "stop_loss_pct": -2.5,
+                "take_profit_pct": 5.0,
+                "max_new_positions_per_day": 3,
+                "max_total_positions": 3,
+                "transaction_cost_bps": 0.0,
+                "slippage_bps": 0.0,
+                "macro_filter_enabled": True,
+                "macro_filter_mode": "hard_filter",
+                "risk_on_min": 0.0,
+                "rate_pressure_max": 1.0,
+                "dollar_pressure_max": 1.0,
+                "safe_haven_max": 1.0,
+                "min_price": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "min_avg_dollar_volume_20d": 20_000_000.0,
+                "min_avg_volume_20d": 500_000.0,
+                "random_iterations": 0,
+                "scanner_top_n_per_day": 10,
+                "option": "close_based",
             },
         }
     if strategy_name == "Quality Snapshot":

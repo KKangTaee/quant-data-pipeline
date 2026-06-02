@@ -7174,3 +7174,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 auto fragment가 Macro와 Live를 함께 렌더했고, live snapshot의 latest provider run도 interval filter 없이 최신 run 전체를 읽어 daily macro run이 Data Feed에 표시될 수 있었다
 - Follow-up:
   - Macro Context와 Live Futures Charts를 별도 Streamlit fragment로 분리했다. Macro 버튼은 fragment rerun만 호출하고, live auto refresh는 Live 영역만 실행한다. Live monitor latest run은 `interval_code='1m'`으로 필터링한다
+
+### 2026-06-02 - Risk-On Momentum 5D V1 구현을 시작한다
+- User request:
+  - 사용자가 사전 계획된 `Risk-On Momentum 5D V1`을 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 Backtest Analysis / Single Strategy 경로 안에 Top1000 기본 short-term stock swing strategy를 추가하되, UI가 provider를 직접 fetch하지 않고 DB price / annual statement shadow / futures macro Mean-Z loader를 통해 실행해야 함
+- Analysis result:
+  - V1 범위는 `close_based + fixed_pct + Equal Slot`로 제한하고, full trade / scanner detail은 registry가 아니라 generated backtest artifact에 둔다. Macro filter는 futures thermometer의 continuous Mean-Z를 hard filter로 사용한다
+- Follow-up:
+  - Core strategy, DB runtime, Single Strategy form, result `Swing Detail`, History replay fields, Compare default runner, focused tests를 구현했다. Browser QA에서 Manual universe input과 `Swing Detail` 결과 탭을 확인했고, full service contract 237 tests도 통과했다. 상세 검증과 남은 risk는 `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`를 확인한다

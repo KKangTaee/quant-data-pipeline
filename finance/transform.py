@@ -560,6 +560,73 @@ def add_avg_score(
     return out
 
 
+def add_daily_swing_features(
+    price_history: pd.DataFrame,
+    *,
+    symbol_col: str = "symbol",
+    date_col: str = "date",
+) -> pd.DataFrame:
+    """
+    Build daily close-based swing features from long-form OHLCV rows.
+
+    This helper intentionally works on loader-style long-form frames instead
+    of the older ticker-keyed strategy dict because short-horizon scanners need
+    cross-sectional ranks on each trading day.
+    """
+    if price_history is None or price_history.empty:
+        return pd.DataFrame()
+
+    required = {symbol_col, date_col, "open", "high", "low", "close", "volume"}
+    missing = required.difference(price_history.columns)
+    if missing:
+        raise KeyError(f"price_history is missing required columns: {sorted(missing)}")
+
+    d = price_history.copy()
+    d[symbol_col] = d[symbol_col].astype(str).str.upper()
+    d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
+    d = d.dropna(subset=[symbol_col, date_col]).sort_values([symbol_col, date_col]).reset_index(drop=True)
+
+    for column in ["open", "high", "low", "close", "volume"]:
+        d[column] = pd.to_numeric(d[column], errors="coerce")
+
+    grouped = d.groupby(symbol_col, sort=False)
+    close = d["close"].astype(float)
+    high = d["high"].astype(float)
+    low = d["low"].astype(float)
+    volume = d["volume"].astype(float)
+    prev_close = grouped["close"].shift(1)
+
+    d["daily_return"] = grouped["close"].pct_change(fill_method=None)
+    d["return_5d"] = close / grouped["close"].shift(5) - 1.0
+    d["return_20d"] = close / grouped["close"].shift(20) - 1.0
+    d["ma20"] = grouped["close"].transform(lambda s: s.rolling(20, min_periods=20).mean())
+    d["ma50"] = grouped["close"].transform(lambda s: s.rolling(50, min_periods=50).mean())
+    d["avg_volume_20d"] = grouped["volume"].transform(lambda s: s.rolling(20, min_periods=20).mean())
+    d["dollar_volume"] = close * volume
+    d["avg_dollar_volume_20d"] = d.groupby(symbol_col, sort=False)["dollar_volume"].transform(
+        lambda s: s.rolling(20, min_periods=20).mean()
+    )
+    d["close_5d_high"] = grouped["close"].transform(lambda s: s.rolling(5, min_periods=5).max())
+    d["history_days"] = grouped.cumcount() + 1
+    d["volume_ratio"] = volume / d["avg_volume_20d"].replace(0.0, np.nan)
+    d["ma20_distance"] = close / d["ma20"].replace(0.0, np.nan) - 1.0
+    d["ma50_distance"] = close / d["ma50"].replace(0.0, np.nan) - 1.0
+    d["volatility_20d"] = grouped["daily_return"].transform(lambda s: s.rolling(20, min_periods=20).std(ddof=0))
+
+    true_range = pd.concat(
+        [
+            high - low,
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+    d["true_range"] = true_range
+    d["atr14"] = true_range.groupby(d[symbol_col]).transform(lambda s: s.rolling(14, min_periods=14).mean())
+
+    return d
+
+
 def select_rows_by_interval_with_ends(
     dfs:dict,
     interval:int

@@ -4615,3 +4615,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - V2.2 후속으로 Macro Context를 상단 full-width로 올리고, Live Futures Charts를 하단 3x2 grid로 바꾸며, 중복 `Selected Detail` 차트를 제거했다.
   - V2.3 후속으로 `Focus` control을 제거하고, `Symbols`가 3x2 grid 순서를 직접 결정하도록 정리했다. `Chart` hourly option은 `1h` 대신 `60m`로 표시한다.
   - V2.4 후속으로 Macro Context daily refresh와 Live Futures Charts auto refresh를 별도 Streamlit fragment로 분리했다. Live provider run summary는 `1m` run만 읽도록 필터링했다.
+- Risk-On Momentum 5D V1:
+  - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`에서 Top1000 기본 short-term stock swing strategy를 구현했다.
+  - Core는 `finance/swing.py`, daily swing features는 `finance/transform.py`, futures daily loader는 `finance/loaders/futures.py`, DB wrapper / artifact writer는 `app/runtime/backtest.py`가 맡는다.
+  - `Backtest Analysis > Single Strategy` form, result `Swing Detail` tab, History replay fields, Compare default runner를 연결했다. V1은 `close_based + fixed_pct + Equal Slot`만 지원한다.
+  - Browser QA, focused tests, manual DB smoke, full service contract 237 tests, `git diff --check`가 통과했다. QA screenshot은 generated artifact `risk-on-momentum-5d-qa.png`로 남겼고 커밋 대상은 아니다.

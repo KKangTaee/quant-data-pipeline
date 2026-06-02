@@ -276,6 +276,36 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["dm_drawdown_guardrail_gap_threshold"] = float(
             (payload.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
+    elif strategy_key == "risk_on_momentum_5d":
+        if universe_mode == "top2000":
+            st.session_state["rom_universe_mode"] = "Top2000"
+        elif universe_mode in {"manual", "manual_tickers"}:
+            st.session_state["rom_universe_mode"] = "Manual"
+            st.session_state["rom_manual_tickers"] = tickers_text
+        else:
+            st.session_state["rom_universe_mode"] = "Top1000"
+        st.session_state["rom_start"] = start_date
+        st.session_state["rom_end"] = end_date
+        st.session_state["rom_start_balance"] = float(payload.get("start_balance") or 10_000.0)
+        st.session_state["rom_execution_mode"] = payload.get("execution_mode") or "close_based"
+        st.session_state["rom_exit_mode"] = payload.get("exit_mode") or "fixed_pct"
+        st.session_state["rom_max_holding_days"] = int(payload.get("max_holding_days") or 5)
+        st.session_state["rom_stop_loss_pct"] = float(payload.get("stop_loss_pct") or -2.5)
+        st.session_state["rom_take_profit_pct"] = float(payload.get("take_profit_pct") or 5.0)
+        st.session_state["rom_max_new_positions_per_day"] = int(payload.get("max_new_positions_per_day") or 3)
+        st.session_state["rom_max_total_positions"] = int(payload.get("max_total_positions") or 3)
+        st.session_state["rom_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or 0.0)
+        st.session_state["rom_slippage_bps"] = float(payload.get("slippage_bps") or 0.0)
+        st.session_state["rom_macro_filter_enabled"] = bool(payload.get("macro_filter_enabled", True))
+        st.session_state["rom_risk_on_min"] = float(payload.get("risk_on_min") or 0.0)
+        st.session_state["rom_rate_pressure_max"] = float(payload.get("rate_pressure_max") or 1.0)
+        st.session_state["rom_dollar_pressure_max"] = float(payload.get("dollar_pressure_max") or 1.0)
+        st.session_state["rom_safe_haven_max"] = float(payload.get("safe_haven_max") or 1.0)
+        st.session_state["rom_min_price"] = float(payload.get("min_price") or 5.0)
+        st.session_state["rom_min_adv20d_m"] = float(payload.get("min_avg_dollar_volume_20d", 20_000_000.0)) / 1_000_000.0
+        st.session_state["rom_min_avg_volume_20d"] = int(payload.get("min_avg_volume_20d") or 500_000)
+        st.session_state["rom_random_iterations"] = int(payload.get("random_iterations") or 50)
+        st.session_state["rom_scanner_top_n_per_day"] = int(payload.get("scanner_top_n_per_day") or 50)
     elif strategy_key == "quality_snapshot":
         st.session_state["qs_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_BROAD_PRESETS else "Manual"
         if st.session_state["qs_universe_mode"] == "Preset":
@@ -1340,6 +1370,239 @@ def _render_dual_momentum_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Dual Momentum")
+
+
+def _render_risk_on_momentum_5d_form() -> None:
+    st.markdown("### Risk-On Momentum 5D")
+    st.caption("DB-backed short-term stock swing strategy with D+1 open execution.")
+    _apply_single_strategy_prefill("risk_on_momentum_5d")
+
+    universe_mode = st.radio(
+        "Universe Mode",
+        options=["Top1000", "Top2000", "Manual"],
+        horizontal=True,
+        key="rom_universe_mode",
+    )
+    manual_tickers = ""
+    if universe_mode == "Manual":
+        manual_tickers = st.text_input(
+            "Tickers",
+            value="NVDA,MSFT,AAPL,AMZN,META,AVGO,AMD,TSLA",
+            key="rom_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+    else:
+        tickers = []
+        st.caption(f"{universe_mode} managed universe will be resolved from DB asset-profile market cap data.")
+
+    with st.form("risk_on_momentum_5d_backtest_form", clear_on_submit=False):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2021, 6, 1), key="rom_start")
+        with col2:
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="rom_end")
+        with col3:
+            start_balance = st.number_input(
+                "Start Balance",
+                min_value=1_000.0,
+                max_value=10_000_000.0,
+                value=10_000.0,
+                step=1_000.0,
+                key="rom_start_balance",
+            )
+
+        with st.expander("Execution / Exit", expanded=True):
+            exec_col, exit_col = st.columns(2)
+            with exec_col:
+                execution_mode = st.selectbox("Execution Mode", options=["close_based"], index=0, key="rom_execution_mode")
+                max_new_positions_per_day = int(
+                    st.number_input(
+                        "Max New Positions / Day",
+                        min_value=1,
+                        max_value=10,
+                        value=3,
+                        step=1,
+                        key="rom_max_new_positions_per_day",
+                    )
+                )
+                max_total_positions = int(
+                    st.number_input(
+                        "Max Total Positions",
+                        min_value=1,
+                        max_value=20,
+                        value=3,
+                        step=1,
+                        key="rom_max_total_positions",
+                    )
+                )
+            with exit_col:
+                exit_mode = st.selectbox("Exit Mode", options=["fixed_pct"], index=0, key="rom_exit_mode")
+                max_holding_days = int(
+                    st.number_input(
+                        "Max Holding Days",
+                        min_value=1,
+                        max_value=20,
+                        value=5,
+                        step=1,
+                        key="rom_max_holding_days",
+                    )
+                )
+                stop_loss_pct = st.number_input(
+                    "Stop Loss %",
+                    min_value=-50.0,
+                    max_value=0.0,
+                    value=-2.5,
+                    step=0.5,
+                    key="rom_stop_loss_pct",
+                )
+                take_profit_pct = st.number_input(
+                    "Take Profit %",
+                    min_value=0.5,
+                    max_value=100.0,
+                    value=5.0,
+                    step=0.5,
+                    key="rom_take_profit_pct",
+                )
+
+        with st.expander("Macro / Candidate Filters", expanded=True):
+            macro_filter_enabled = st.checkbox(
+                "Macro Hard Filter",
+                value=True,
+                key="rom_macro_filter_enabled",
+            )
+            macro_cols = st.columns(4)
+            with macro_cols[0]:
+                risk_on_min = st.number_input("Risk-On Min Mean Z", value=0.0, step=0.1, key="rom_risk_on_min")
+            with macro_cols[1]:
+                rate_pressure_max = st.number_input("Rate Pressure Max Mean Z", value=1.0, step=0.1, key="rom_rate_pressure_max")
+            with macro_cols[2]:
+                dollar_pressure_max = st.number_input("Dollar Pressure Max Mean Z", value=1.0, step=0.1, key="rom_dollar_pressure_max")
+            with macro_cols[3]:
+                safe_haven_max = st.number_input("Safe Haven Max Mean Z", value=1.0, step=0.1, key="rom_safe_haven_max")
+
+            filter_cols = st.columns(3)
+            with filter_cols[0]:
+                min_price = st.number_input("Min Price", min_value=0.0, value=5.0, step=1.0, key="rom_min_price")
+            with filter_cols[1]:
+                min_adv20d_m = st.number_input(
+                    "Min ADV 20D ($M)",
+                    min_value=0.0,
+                    value=20.0,
+                    step=5.0,
+                    key="rom_min_adv20d_m",
+                )
+            with filter_cols[2]:
+                min_avg_volume_20d = int(
+                    st.number_input(
+                        "Min Avg Volume 20D",
+                        min_value=0,
+                        value=500_000,
+                        step=50_000,
+                        key="rom_min_avg_volume_20d",
+                    )
+                )
+
+        with st.expander("Cost / Comparison", expanded=False):
+            cost_cols = st.columns(4)
+            with cost_cols[0]:
+                transaction_cost_bps = st.number_input(
+                    "Transaction Cost bps",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=0.0,
+                    step=1.0,
+                    key="rom_transaction_cost_bps",
+                )
+            with cost_cols[1]:
+                slippage_bps = st.number_input(
+                    "Slippage bps",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=0.0,
+                    step=1.0,
+                    key="rom_slippage_bps",
+                )
+            with cost_cols[2]:
+                random_iterations = int(
+                    st.number_input(
+                        "Random Iterations",
+                        min_value=0,
+                        max_value=100,
+                        value=50,
+                        step=5,
+                        key="rom_random_iterations",
+                    )
+                )
+            with cost_cols[3]:
+                scanner_top_n_per_day = int(
+                    st.number_input(
+                        "Scanner Rows / Day",
+                        min_value=1,
+                        max_value=200,
+                        value=50,
+                        step=5,
+                        key="rom_scanner_top_n_per_day",
+                    )
+                )
+
+        submitted = st.form_submit_button("Run Risk-On Momentum 5D Backtest", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if universe_mode == "Manual" and not tickers:
+        validation_errors.append("At least one ticker is required for Manual universe.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if max_new_positions_per_day > max_total_positions:
+        validation_errors.append("Max New Positions / Day must be less than or equal to Max Total Positions.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    universe_payload = {
+        "Top1000": ("top1000", "Top1000", 1000),
+        "Top2000": ("top2000", "Top2000", 2000),
+        "Manual": ("manual_tickers", None, len(tickers)),
+    }[universe_mode]
+    payload = {
+        "strategy_key": "risk_on_momentum_5d",
+        "tickers": tickers,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": "1d",
+        "option": "close_based",
+        "universe_mode": universe_payload[0],
+        "preset_name": universe_payload[1],
+        "universe_limit": universe_payload[2],
+        "start_balance": float(start_balance),
+        "execution_mode": execution_mode,
+        "exit_mode": exit_mode,
+        "max_holding_days": int(max_holding_days),
+        "stop_loss_pct": float(stop_loss_pct),
+        "take_profit_pct": float(take_profit_pct),
+        "max_new_positions_per_day": int(max_new_positions_per_day),
+        "max_total_positions": int(max_total_positions),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "slippage_bps": float(slippage_bps),
+        "macro_filter_enabled": bool(macro_filter_enabled),
+        "macro_filter_mode": "hard_filter" if macro_filter_enabled else "off",
+        "risk_on_min": float(risk_on_min),
+        "rate_pressure_max": float(rate_pressure_max),
+        "dollar_pressure_max": float(dollar_pressure_max),
+        "safe_haven_max": float(safe_haven_max),
+        "min_price": float(min_price),
+        "min_avg_dollar_volume_20d": float(min_adv20d_m) * 1_000_000.0,
+        "min_avg_volume_20d": int(min_avg_volume_20d),
+        "random_iterations": int(random_iterations),
+        "scanner_top_n_per_day": int(scanner_top_n_per_day),
+    }
+
+    _handle_backtest_run(payload, strategy_name="Risk-On Momentum 5D")
+
 
 def _render_quality_snapshot_form() -> None:
     st.markdown("### Quality Snapshot")
