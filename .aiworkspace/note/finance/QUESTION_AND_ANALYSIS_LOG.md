@@ -7044,3 +7044,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - legacy/prototype rows는 현재 selected-route gate를 통과한 V2 chain이 아니므로 V2 승격 대상이 아니며, GRS 4개는 이미 Final Decision V2 self-contained selected record로 Dashboard에서 정상 작동한다
 - Follow-up:
   - 13개 JSONL을 archive에 백업하고 10개 active JSONL을 제거했다. active에는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`, `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIOS.jsonl`만 남겼으며 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0을 재검증했다
+
+### 2026-06-02 - 선물장 OHLCV / 개장 전 급변 모니터링 방향을 조사한다
+- User request:
+  - 사용자가 선물장 지표나 OHLCV 캔들을 실시간에 가깝게 확인해, 미국장 또는 한국장 시작 전에 가파른 움직임을 파악하는 기능 방향을 조사해 달라고 요청함
+- Interpreted goal:
+  - 무료 또는 보편적 데이터 소스를 비교하고, 기존 Finance Overview / 운영툴 구조 안에서 수집 cadence, 저장 경계, UX/UI 방향을 먼저 정리해야 함
+- Analysis result:
+  - 무료 실시간 선물 API는 안정적이지 않다. 1차 MVP는 `yfinance` 1분봉을 DB-backed polling으로 저장하고, `Overview > Futures Monitor`에서 provider freshness / stale / failed 상태를 노출하는 방향이 가장 작고 현실적이다
+- Follow-up:
+  - `.aiworkspace/note/finance/researches/active/2026-06-futures-market-monitoring/`에 리서치 번들을 작성했다. 사용자 승인 후 구현은 futures collector / read model / Overview tab / Data Health 순서로 진행한다

@@ -4573,3 +4573,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Ingestion 상단에 workflow overview를 추가하고, 주요 가격 수집 card에 실행 전 source / 대상 수 / 기간 / interval 계약과 bounded DB coverage quick check를 붙였다.
   - 결과 summary는 job domain별 metric label / interpretation callout을 사용해 가격 row, lifecycle evidence row, provider snapshot의 의미를 분리한다.
   - py_compile, `git diff --check`, service contract 207 tests, Browser DOM QA를 통과했다. Browser screenshot capture는 timeout으로 생성하지 못했다.
+- Futures Market Monitoring research:
+  - `.aiworkspace/note/finance/researches/active/2026-06-futures-market-monitoring/`에 선물장 OHLCV / 개장 전 급변 모니터링 리서치 번들을 만들었다.
+  - 로컬 `yfinance` 1분봉 smoke에서 `ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `CL=F`, `GC=F`, `ZN=F`, `6E=F` 등은 rows를 반환했고 `DX=F`, `VX=F`는 제외 대상으로 확인했다.
+  - 권장 방향은 `Overview > Futures Monitor` 탭, DB-backed `yfinance` polling, 60초 기본 cadence, Altair candlestick, provider freshness / stale / failed 상태 표시다.
