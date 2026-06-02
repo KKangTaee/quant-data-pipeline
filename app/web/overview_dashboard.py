@@ -2215,7 +2215,7 @@ def _run_collect_futures_ohlcv_compat(
 def _run_collect_futures_daily_ohlcv_compat() -> dict[str, Any]:
     refresh_kwargs: dict[str, Any] = {
         "symbols": list(DEFAULT_CORE_FUTURES_SYMBOLS),
-        "period": "1y",
+        "period": "5y",
         "interval": "1d",
         "cadence_mode": "manual_macro_daily",
         "max_symbols": len(DEFAULT_CORE_FUTURES_SYMBOLS),
@@ -2317,6 +2317,134 @@ def _macro_score_cards(scores: Any) -> list[dict[str, Any]]:
     return cards
 
 
+def _format_macro_percent(value: Any, *, digits: int = 1) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):.{digits}f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _macro_validation_cards(macro: dict[str, Any]) -> list[dict[str, Any]]:
+    confidence = dict(macro.get("confidence") or {})
+    validation = dict(macro.get("validation") or {})
+    validation_coverage = dict(validation.get("coverage") or {})
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    sample = confidence.get("sample_size")
+    if sample is None:
+        sample = current_metrics.get("Sample 5D") or current_metrics.get("Occurrence Count") or 0
+    hit_rate = confidence.get("hit_rate_5d")
+    if hit_rate is None:
+        hit_rate = current_metrics.get("Hit Rate 5D %")
+    span = validation_coverage.get("history_span_years")
+    validation_dates = validation_coverage.get("validation_dates") or 0
+    return [
+        {
+            "title": "Interpretation Confidence",
+            "value": confidence.get("label") or "Not Enough History",
+            "detail": f"5D sample {sample or 0} · hit {_format_macro_percent(hit_rate)}",
+            "tone": confidence.get("tone") or "warning",
+        },
+        {
+            "title": "Historical Validation",
+            "value": validation.get("status") or "MISSING",
+            "detail": f"{validation_dates} PIT dates · {span or '-'}y stored history",
+            "tone": "positive" if validation.get("status") == "OK" else "warning",
+        },
+        {
+            "title": "Current Scenario Sample",
+            "value": f"{sample or 0}",
+            "detail": f"mean 5D {_format_macro_percent(current_metrics.get('Mean 5D %'), digits=2)}",
+            "tone": "positive" if int(sample or 0) >= 60 else "warning",
+        },
+        {
+            "title": "Validation Source",
+            "value": "futures / proxy",
+            "detail": "ETF rows are labeled fallback targets",
+            "tone": "neutral",
+        },
+    ]
+
+
+def _render_macro_evidence_groups(groups: dict[str, Any]) -> None:
+    cols = st.columns(4, gap="small")
+    sections = [
+        ("Strong Evidence", groups.get("strong") or [], "positive"),
+        ("Weak Evidence", groups.get("weak") or [], "neutral"),
+        ("Conflicting Evidence", groups.get("conflicting") or [], "warning"),
+        ("Missing Symbols", groups.get("missing") or [], "danger"),
+    ]
+    for col, (title, items, tone) in zip(cols, sections):
+        with col:
+            st.markdown(f"**{title}**")
+            if items:
+                for item in list(items)[:5]:
+                    st.caption(str(item))
+            else:
+                st.caption("None")
+
+
+def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    if current_metrics:
+        render_badge_strip(
+            [
+                {
+                    "label": "Current Scenario",
+                    "value": current_metrics.get("Scenario") or "-",
+                    "tone": "primary",
+                },
+                {
+                    "label": "5D Sample",
+                    "value": current_metrics.get("Sample 5D") or current_metrics.get("Occurrence Count") or 0,
+                    "tone": "neutral",
+                },
+                {
+                    "label": "5D Hit",
+                    "value": _format_macro_percent(current_metrics.get("Hit Rate 5D %")),
+                    "tone": "positive" if (current_metrics.get("Hit Rate 5D %") or 0) >= 55 else "warning",
+                },
+                {
+                    "label": "5D Max Adverse",
+                    "value": _format_macro_percent(current_metrics.get("Max Adverse 5D %"), digits=2),
+                    "tone": "warning",
+                },
+            ]
+        )
+    scenario_summary = validation.get("scenario_summary")
+    if isinstance(scenario_summary, pd.DataFrame) and not scenario_summary.empty:
+        st.markdown("#### Historical Validation Summary")
+        preferred_cols = [
+            "Scenario",
+            "Occurrence Count",
+            "Target Family",
+            "Sample 1D",
+            "Mean 1D %",
+            "Hit Rate 1D %",
+            "Sample 5D",
+            "Mean 5D %",
+            "Hit Rate 5D %",
+            "Sample 20D",
+            "Mean 20D %",
+            "Hit Rate 20D %",
+            "Max Adverse 5D %",
+        ]
+        st.dataframe(
+            scenario_summary[[col for col in preferred_cols if col in scenario_summary.columns]],
+            width="stretch",
+            hide_index=True,
+        )
+    relationships = validation.get("relationships")
+    threshold_sensitivity = validation.get("threshold_sensitivity")
+    if isinstance(relationships, pd.DataFrame) and not relationships.empty:
+        with st.expander("Score / Forward Return Relationships", expanded=False):
+            st.dataframe(relationships, width="stretch", hide_index=True)
+    if isinstance(threshold_sensitivity, pd.DataFrame) and not threshold_sensitivity.empty:
+        with st.expander("Score Threshold Sensitivity", expanded=False):
+            st.dataframe(threshold_sensitivity, width="stretch", hide_index=True)
+
+
 def _render_futures_macro_tab() -> None:
     macro = load_overview_futures_macro_snapshot()
     coverage = dict(macro.get("coverage") or {})
@@ -2324,6 +2452,8 @@ def _render_futures_macro_tab() -> None:
     components = macro.get("score_components")
     symbols = macro.get("symbols")
     summary = dict(macro.get("summary") or {})
+    confidence = dict(macro.get("confidence") or {})
+    validation = dict(macro.get("validation") or {})
 
     header_cols = st.columns([1.6, 1], gap="medium", vertical_alignment="top")
     with header_cols[0]:
@@ -2336,13 +2466,15 @@ def _render_futures_macro_tab() -> None:
             st.markdown("**세부 근거**")
             for item in evidence[:5]:
                 st.caption(item)
+        if confidence.get("label"):
+            st.caption(f"Confidence: {confidence.get('label')} · {', '.join(list(confidence.get('reasons') or [])[:2])}")
     with header_cols[1]:
         if st.button(
             "Refresh Daily Macro OHLCV",
             key="overview_futures_macro_daily_refresh",
             use_container_width=True,
         ):
-            with st.spinner("Collecting futures 1y daily OHLCV from yfinance..."):
+            with st.spinner("Collecting futures 5y daily OHLCV from yfinance..."):
                 _store_overview_job_result(
                     "overview_futures_daily_ohlcv_result",
                     _run_collect_futures_daily_ohlcv_compat(),
@@ -2352,10 +2484,16 @@ def _render_futures_macro_tab() -> None:
         st.caption(f"Latest daily candle: {_snapshot_value(coverage.get('latest_daily_date'))}")
         st.caption(f"Data days: {coverage.get('min_data_days') or 0} - {coverage.get('max_data_days') or 0}")
 
+    render_status_card_grid(_macro_validation_cards(macro))
+    _render_macro_evidence_groups(dict(macro.get("evidence_groups") or {}))
+
     render_status_card_grid(_macro_score_cards(scores))
     warnings = list(macro.get("warnings") or [])
+    warnings.extend(str(item) for item in validation.get("warnings") or [])
     if warnings:
         _render_snapshot_warnings({"warnings": warnings})
+
+    _render_macro_validation_detail(validation)
 
     if isinstance(scores, pd.DataFrame) and not scores.empty:
         st.dataframe(
@@ -2371,9 +2509,10 @@ def _render_futures_macro_tab() -> None:
         st.dataframe(symbols, width="stretch", hide_index=True)
 
     cautions = [str(item) for item in macro.get("cautions") or [] if str(item).strip()]
+    cautions.extend(str(item) for item in validation.get("caveats") or [] if str(item).strip())
     if cautions:
         st.markdown("#### 주의 문구")
-        for caution in cautions:
+        for caution in list(dict.fromkeys(cautions)):
             st.caption(caution)
     _render_market_job_result("overview_futures_daily_ohlcv_result")
 

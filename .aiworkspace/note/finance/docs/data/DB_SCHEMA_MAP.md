@@ -40,7 +40,7 @@
 |---|---|
 | `nyse_price_history` | stock / ETF 공용 OHLCV, dividend, split price ledger |
 | `market_intraday_snapshot` | Overview daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
-| `futures_ohlcv` | Overview Futures Monitor용 선물 OHLCV candle ledger. 현재 MVP는 yfinance 1m row를 저장 |
+| `futures_ohlcv` | Overview Futures Monitor용 선물 OHLCV candle ledger. 1m row는 shock board / chart에, 1d row는 Macro Thermometer current score와 historical validation에 사용 |
 
 ### `finance_fundamental`
 

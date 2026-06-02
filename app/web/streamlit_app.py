@@ -2907,7 +2907,7 @@ def _render_ingestion_console() -> None:
                 futures_col1, futures_col2, futures_col3 = st.columns(3)
                 futures_period_input = futures_col1.selectbox(
                     "Futures Period",
-                    ["1d", "5d", "7d", "1mo", "3mo", "6mo", "1y"],
+                    ["1d", "5d", "7d", "1mo", "3mo", "6mo", "1y", "2y", "5y"],
                     index=0,
                     key="futures_ohlcv_period_input",
                 )

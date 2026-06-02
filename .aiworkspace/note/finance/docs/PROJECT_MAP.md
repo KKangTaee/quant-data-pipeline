@@ -67,6 +67,7 @@ Last Verified: 2026-06-02
 | Overview market intelligence service | `app/services/overview_market_intelligence.py` |
 | Overview futures monitor service | `app/services/futures_market_monitoring.py` |
 | Overview futures macro thermometer service | `app/services/futures_macro_thermometer.py` |
+| Overview futures macro historical validation service | `app/services/futures_macro_validation.py` |
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
@@ -160,7 +161,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 
 | Situation | Start Here |
 |---|---|
-| Overview market movers / sector leadership / futures monitor 수정 | `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
+| Overview market movers / sector leadership / futures monitor 수정 | `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |

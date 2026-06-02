@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-02 - Futures Macro Thermometer Historical Validation V1
+- Completed implementation task `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`.
+- Macro Thermometer now attaches point-in-time historical validation, Interpretation Confidence, current scenario sample / hit-rate evidence, score threshold sensitivity, score-forward-return relationships, and separated strong / weak / conflicting evidence.
+- 5y / 1d core futures backfill smoke succeeded for 16/16 symbols with 20,138 rows; validation smoke produced 1,198 PIT dates with futures targets only.
+- Boundary remains read-only market context: no prediction guarantee, registry/saved write, live approval, order, alert, broker/account sync, or auto rebalance.
+
 ### 2026-06-02 - Selected Dashboard Manual Scenario Run V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`.
 - Strategy add / slot edit now changes saved setup only; current scenario results are keyed by portfolio / slot / selected decision and start / end / balance signature so stale results are not counted as fresh.

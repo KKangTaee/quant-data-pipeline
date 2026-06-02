@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-02 - Macro Thermometer confidence must be historical-consistency evidence, not a signal guarantee
+- User request:
+  - Macro Thermometer가 단순 heuristic에 머무르지 않도록 historical validation과 reliability 표시를 추가해 달라고 요청함.
+- Interpreted goal:
+  - 저장된 futures daily row를 point-in-time으로 재계산하고, 현재 scenario 옆에 sample / hit rate / confidence / caveat를 표시한다.
+- Analysis result:
+  - 새 DB table이나 registry가 아니라 `futures_ohlcv` daily row와 필요 시 `nyse_price_history` ETF proxy target을 읽는 read-only service가 적절하다. Mixed scenario는 directional hit rule로 강제하지 않는다.
+- Follow-up:
+  - `futures_macro_validation.py`를 추가하고 UI에 Interpretation Confidence, Historical Validation Summary, evidence groups, threshold sensitivity, relationship summary를 표시했다. 5y futures smoke는 target source `futures`만 사용했고, yfinance continuous futures / ETF proxy caveat를 docs와 UI에 남겼다.
+
 ### 2026-06-01 - Ingestion 탭 리뷰 후속 UX와 결과 해석을 개선한다
 - User request:
   - 사용자가 Ingestion 리뷰 결과를 바탕으로 개선을 진행하되, 버튼 / 단어 / 기술 용어를 억지로 모두 한글화하지 말고 설명 내용을 이해하기 쉽게 정리해 달라고 요청함.

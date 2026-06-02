@@ -174,6 +174,8 @@ yfinance futures OHLCV
   -> finance_price.futures_ohlcv
   -> finance_meta.futures_market_monitor_run
   -> app.services.futures_market_monitoring.build_futures_monitor_snapshot()
+  -> app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot()
+  -> app.services.futures_macro_validation.build_futures_macro_validation_snapshot()
   -> Workspace > Overview > Futures Monitor
   -> Workspace > Overview > Data Health
 ```
@@ -184,10 +186,13 @@ yfinance futures OHLCV
 - 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다.
 - 정상 화면 render는 DB row를 읽고, 수집은 Overview refresh button 또는 Ingestion job wrapper가 실행한다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
+- Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
 
 주의:
 
 - 무료 provider source이므로 exchange-grade realtime feed로 설명하지 않는다.
+- yfinance continuous futures는 실제 roll / 만기 구조와 다를 수 있다.
+- historical validation은 과거 일관성 평가이며 예측 보장이 아니다.
 - 매초 provider fetch는 하지 않는다. MVP는 60초 기본 refresh와 제한된 fast mode를 기준으로 한다.
 - futures shock state는 시장 컨텍스트이며 투자 추천이나 자동 매매 신호가 아니다.
 

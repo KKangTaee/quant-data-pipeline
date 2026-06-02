@@ -36,7 +36,7 @@ external source
 | BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |
 | Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장하고, row가 없는 ticker는 job result의 `symbol_diagnostics`에 missing / failure reason을 남긴다 |
 | Nasdaq earnings calendar web endpoint | Overview Events earnings alternate free provider cross-check source. yfinance estimate의 같은 symbol/date 확인에만 사용하며 official source로 보지 않는다 |
-| yfinance futures OHLCV | Overview Futures Monitor pilot source. 주요 선물 1m / daily OHLCV를 `futures_ohlcv`에 저장하되 exchange-grade realtime feed로 보지 않는다 |
+| yfinance futures OHLCV | Overview Futures Monitor pilot source. 주요 선물 1m / daily OHLCV를 `futures_ohlcv`에 저장하되 exchange-grade realtime feed로 보지 않는다. Daily rows also feed Macro Thermometer current scoring and historical validation |
 
 ## Persistence 계층
 
@@ -51,7 +51,7 @@ external source
 | `finance/data/computed_lifecycle.py` | 기존 current snapshot lifecycle rows를 읽어 repeated observation window를 `computed_from_snapshots` partial row로 요약 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
-| `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다 |
+| `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Macro Thermometer validation is read-only and does not create a new table |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |

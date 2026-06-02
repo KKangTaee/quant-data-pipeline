@@ -118,6 +118,8 @@ CAUTION_LINES = [
     "이 기능은 투자 판단 자동화가 아니라 시장 해석 보조 기능입니다.",
     "선물 가격은 정규장 방향을 확정적으로 예측하지 않습니다.",
     "야간 / 비정규 시간대에는 유동성이 낮아 움직임이 과장될 수 있습니다.",
+    "Historical validation은 과거 일관성 평가이며 예측 보장이 아닙니다.",
+    "yfinance continuous futures는 실제 roll / 만기 구조와 다를 수 있습니다.",
 ]
 
 
@@ -271,6 +273,10 @@ def _candle_frame(rows: Sequence[dict[str, Any]]) -> pd.DataFrame:
         return pd.DataFrame()
     frame = pd.DataFrame(records).sort_values(["provider_symbol", "ts"])
     return frame.drop_duplicates(subset=["provider_symbol", "Date"], keep="last")
+
+
+def normalize_futures_macro_daily_candles(rows: Sequence[dict[str, Any]]) -> pd.DataFrame:
+    return _candle_frame(rows)
 
 
 def compute_symbol_metrics(
@@ -484,7 +490,7 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
 
     if inflation >= 20 and rate_pressure >= 20 and nq_z <= -SIGNAL_Z_THRESHOLD:
         scenario = "인플레이션 쇼크 가능성"
-        summary = "에너지 / 원자재와 금리 상승 압력이 동시에 강해지며 성장주에 부담을 주는 흐름입니다."
+        summary = "에너지 / 원자재와 금리 상승 압력이 동시에 강해지며 성장주에 부담을 줄 가능성으로 해석됩니다."
         evidence = [
             f"Inflation Pressure Score {inflation:+d}, Rate Pressure Score {rate_pressure:+d}",
             _component_phrase(symbols, ["CL=F", "NG=F", "HG=F"], positive=True),
@@ -492,7 +498,7 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
         ]
     elif risk_on <= -20 and growth <= -20 and safe_haven >= 20:
         scenario = "경기침체 우려 / risk-off"
-        summary = "주식과 경기민감 선물이 약하고 금 / 채권 / 엔 쪽 안전자산 선호가 강화된 risk-off 흐름입니다."
+        summary = "주식과 경기민감 선물이 약하고 금 / 채권 / 엔 쪽 안전자산 선호가 강화된 risk-off 가능성으로 해석됩니다."
         evidence = [
             f"Risk-On Score {risk_on:+d}, Growth Score {growth:+d}, Safe Haven Score {safe_haven:+d}",
             _component_phrase(symbols, ["ES=F", "RTY=F", "HG=F", "CL=F"], positive=False),
@@ -500,7 +506,7 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
         ]
     elif dollar_pressure >= 20 and risk_on <= -10 and hg_z <= -SIGNAL_Z_THRESHOLD:
         scenario = "달러 강세 risk-off"
-        summary = "주요 FX 선물이 약세이고 지수 / 구리도 눌리며 달러 강세가 글로벌 위험자산에 부담을 주는 흐름입니다."
+        summary = "주요 FX 선물이 약세이고 지수 / 구리도 눌려 달러 강세가 글로벌 위험자산에 부담을 주는 흐름으로 해석됩니다."
         evidence = [
             f"Dollar Pressure Score {dollar_pressure:+d}, Risk-On Score {risk_on:+d}",
             _component_phrase(symbols, ["6E=F", "6B=F", "6A=F", "6C=F"], positive=False),
@@ -508,7 +514,7 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
         ]
     elif rate_pressure >= 20 and nq_z <= -SIGNAL_Z_THRESHOLD and gc_z <= -SIGNAL_Z_THRESHOLD:
         scenario = "금리 상승 부담"
-        summary = "ZN / ZB 가격 하락이 금리 상승 압력으로 해석되고, 나스닥과 금도 약해 성장주 / 금 가격에 부담이 나타나는 흐름입니다."
+        summary = "ZN / ZB 가격 하락이 금리 상승 압력으로 해석되고, 나스닥과 금도 약해 성장주 / 금 가격 부담을 보조적으로 볼 수 있습니다."
         evidence = [
             f"Rate Pressure Score {rate_pressure:+d}",
             f"NQ=F {nq_z:+.2f}z, GC=F {gc_z:+.2f}z",
@@ -516,14 +522,14 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
         ]
     elif nq_z >= SIGNAL_Z_THRESHOLD and es_z >= 0.2 and rty_z <= 0.2 and rate_pressure < 0:
         scenario = "기술주 중심 랠리"
-        summary = "나스닥과 S&P 500은 강하지만 러셀2000 확산은 제한적이며, 금리 부담 완화가 기술주 중심으로 반영되는 흐름입니다."
+        summary = "나스닥과 S&P 500은 강하지만 러셀2000 확산은 제한적이며, 금리 부담 완화가 기술주 중심으로 반영되는 흐름으로 해석됩니다."
         evidence = [
             f"NQ=F {nq_z:+.2f}z, ES=F {es_z:+.2f}z, RTY=F {rty_z:+.2f}z",
             f"Rate Pressure Score {rate_pressure:+d}",
         ]
     elif risk_on >= 20 and growth >= 15 and rate_pressure <= 20 and dollar_pressure <= 10:
         scenario = "좋은 risk-on"
-        summary = "지수 선물과 경기민감 proxy가 함께 강하고 금리 / 달러 부담은 제한적인 risk-on 성격이 강합니다."
+        summary = "지수 선물과 경기민감 proxy가 함께 강하고 금리 / 달러 부담은 제한적인 risk-on 가능성으로 해석됩니다."
         evidence = [
             f"Risk-On Score {risk_on:+d}, Growth Score {growth:+d}",
             _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F", "6A=F"], positive=True),
@@ -547,6 +553,109 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
         "scenario": scenario,
         "summary": summary,
         "evidence": cleaned_evidence,
+    }
+
+
+def _score_values(scores: pd.DataFrame) -> dict[str, int]:
+    out: dict[str, int] = {}
+    if not isinstance(scores, pd.DataFrame) or scores.empty:
+        return out
+    for _, row in scores.iterrows():
+        value = row.get("Value")
+        if value is None or pd.isna(value):
+            continue
+        out[str(row.get("Score") or "")] = int(value)
+    return out
+
+
+def _conflicting_score_evidence(scores: pd.DataFrame) -> list[str]:
+    values = _score_values(scores)
+    risk_on = values.get("Risk-On Score", 0)
+    growth = values.get("Growth Score", 0)
+    rate_pressure = values.get("Rate Pressure Score", 0)
+    dollar_pressure = values.get("Dollar Pressure Score", 0)
+    safe_haven = values.get("Safe Haven Score", 0)
+    inflation = values.get("Inflation Pressure Score", 0)
+    conflicts: list[str] = []
+    if risk_on >= 20 and safe_haven >= 20:
+        conflicts.append("Risk-On and Safe Haven scores are both elevated.")
+    if risk_on >= 20 and rate_pressure >= 20:
+        conflicts.append("Risk-On is elevated while Rate Pressure is also elevated.")
+    if risk_on >= 20 and dollar_pressure >= 20:
+        conflicts.append("Risk-On is elevated while Dollar Pressure is also elevated.")
+    if growth >= 20 and safe_haven >= 20:
+        conflicts.append("Growth-sensitive bid and safe-haven bid are both elevated.")
+    if risk_on <= -20 and rate_pressure <= -20:
+        conflicts.append("Risk-Off price action appears while rate pressure is easing.")
+    if risk_on <= -20 and inflation <= -20:
+        conflicts.append("Risk-Off price action appears while inflation pressure is easing.")
+    return conflicts
+
+
+def build_current_evidence_groups(scores: pd.DataFrame, components: pd.DataFrame, symbols: pd.DataFrame) -> dict[str, Any]:
+    strong: list[str] = []
+    weak: list[str] = []
+    missing: list[str] = []
+    if isinstance(components, pd.DataFrame) and not components.empty:
+        for _, row in components.iterrows():
+            score_move = _safe_float(row.get("Score Move"))
+            symbol = str(row.get("Symbol") or "").strip()
+            score = str(row.get("Score") or "").strip()
+            if not symbol or score_move is None:
+                continue
+            label = f"{score} / {symbol} {score_move:+.2f}z"
+            if abs(score_move) >= STRONG_SIGNAL_Z_THRESHOLD:
+                strong.append(label)
+            elif abs(score_move) < SIGNAL_Z_THRESHOLD:
+                weak.append(label)
+    if isinstance(symbols, pd.DataFrame) and not symbols.empty:
+        missing = [
+            str(row.get("Symbol") or "").strip()
+            for _, row in symbols.iterrows()
+            if int(row.get("Data Days") or 0) <= 0
+        ]
+    return {
+        "strong": strong[:12],
+        "weak": weak[:12],
+        "missing": missing[:12],
+        "conflicting": _conflicting_score_evidence(scores),
+        "counts": {
+            "strong": len(strong),
+            "weak": len(weak),
+            "missing": len(missing),
+            "conflicting": len(_conflicting_score_evidence(scores)),
+        },
+    }
+
+
+def build_macro_thermometer_read_model(
+    *,
+    candles: pd.DataFrame,
+    instruments: Sequence[dict[str, Any]],
+    selected_symbols: Sequence[str],
+    daily_rows: Sequence[dict[str, Any]] | None = None,
+    as_of_date: str | None = None,
+) -> dict[str, Any]:
+    symbol_metrics = compute_symbol_metrics(candles, instruments=instruments, selected_symbols=selected_symbols)
+    score_rows, component_rows = compute_macro_scores(symbol_metrics)
+    coverage = _coverage(symbol_metrics, daily_rows or [])
+    warnings = _warnings(symbol_metrics, coverage)
+    interpretation = generate_market_interpretation(score_rows, symbol_metrics)
+    evidence_groups = build_current_evidence_groups(score_rows, component_rows, symbol_metrics)
+    return {
+        "status": _status(coverage, warnings),
+        "coverage": coverage,
+        "warnings": warnings,
+        "scores": score_rows,
+        "score_components": component_rows,
+        "symbols": symbol_metrics,
+        "summary": interpretation,
+        "summary_sentences": [interpretation["summary"]],
+        "evidence": interpretation["evidence"],
+        "evidence_groups": evidence_groups,
+        "cautions": list(CAUTION_LINES),
+        "source_note": "Uses stored yfinance futures daily OHLCV; scores are standardized by recent 60D daily volatility.",
+        "as_of_date": as_of_date or date.today().isoformat(),
     }
 
 
@@ -622,32 +731,53 @@ def build_futures_macro_thermometer_snapshot(
     symbols: Sequence[str] | None = None,
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
     query_fn: QueryFn | None = None,
+    include_validation: bool = False,
 ) -> dict[str, Any]:
     query = query_fn or _default_query
     selected_symbols = [str(symbol).strip().upper() for symbol in (symbols or DEFAULT_CORE_FUTURES_SYMBOLS) if str(symbol).strip()]
     instruments = _instrument_rows(query)
     daily_rows = _load_daily_rows(query, symbols=selected_symbols, lookback_days=lookback_days)
     candles = _candle_frame(daily_rows)
-    symbol_metrics = compute_symbol_metrics(candles, instruments=instruments, selected_symbols=selected_symbols)
-    score_rows, component_rows = compute_macro_scores(symbol_metrics)
-    coverage = _coverage(symbol_metrics, daily_rows)
-    warnings = _warnings(symbol_metrics, coverage)
-    interpretation = generate_market_interpretation(score_rows, symbol_metrics)
-    return {
-        "status": _status(coverage, warnings),
-        "coverage": coverage,
-        "warnings": warnings,
-        "scores": score_rows,
-        "score_components": component_rows,
-        "symbols": symbol_metrics,
-        "summary": interpretation,
-        "summary_sentences": [interpretation["summary"]],
-        "evidence": interpretation["evidence"],
-        "cautions": list(CAUTION_LINES),
-        "source_note": "Uses stored yfinance futures daily OHLCV; scores are standardized by recent 60D daily volatility.",
-        "as_of_date": date.today().isoformat(),
-    }
+    snapshot = build_macro_thermometer_read_model(
+        candles=candles,
+        instruments=instruments,
+        selected_symbols=selected_symbols,
+        daily_rows=daily_rows,
+    )
+    if include_validation:
+        try:
+            from app.services.futures_macro_validation import (
+                build_futures_macro_validation_snapshot,
+                build_interpretation_confidence,
+            )
+
+            validation = build_futures_macro_validation_snapshot(
+                symbols=selected_symbols,
+                query_fn=query,
+                current_snapshot=snapshot,
+            )
+            confidence = build_interpretation_confidence(snapshot, validation)
+        except Exception as exc:
+            validation = {
+                "status": "ERROR",
+                "warnings": [f"Historical validation could not run: {exc}"],
+                "scenario_summary": pd.DataFrame(),
+                "current_scenario_metrics": {},
+            }
+            confidence = {
+                "label": "Not Enough History",
+                "tone": "warning",
+                "score": 0,
+                "reasons": ["Historical validation could not run."],
+            }
+        snapshot["validation"] = validation
+        snapshot["confidence"] = confidence
+        if str(confidence.get("label") or "") in {"Low Confidence", "Not Enough History"}:
+            snapshot["summary_sentences"].append("다만 과거 표본이나 데이터 조건이 부족해 이 해석의 신뢰도는 낮게 봐야 합니다.")
+    return snapshot
 
 
 def load_overview_futures_macro_snapshot(**kwargs: Any) -> dict[str, Any]:
+    kwargs.setdefault("include_validation", True)
+    kwargs.setdefault("lookback_days", 365 * 5 + 90)
     return build_futures_macro_thermometer_snapshot(**kwargs)

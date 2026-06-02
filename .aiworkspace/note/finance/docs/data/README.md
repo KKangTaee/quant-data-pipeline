@@ -41,7 +41,7 @@ Last Verified: 2026-06-01
 | `market_data_issue` | Overview quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
 | `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, and other market events. Macro rows use official BLS / BEA schedule sources, with BLS `.ics` import fallback when backend requests are blocked; earnings rows carry source validation and lifecycle status metadata, while missing ticker diagnostics remain in job results/artifacts. |
 | `futures_instrument` | Overview Futures Monitor watchlist preset / display metadata for yfinance pilot futures symbols |
-| `futures_ohlcv` | Overview Futures Monitor 1m / daily OHLCV candle ledger for selected futures symbols. Daily rows also feed the Futures Macro Thermometer |
+| `futures_ohlcv` | Overview Futures Monitor 1m / daily OHLCV candle ledger for selected futures symbols. Daily rows feed the Futures Macro Thermometer current scores and point-in-time historical validation |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |

@@ -5414,6 +5414,57 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 )
         return rows
 
+    def _risk_on_validation_rows(self, *, days: int = 150) -> tuple[list[str], list[dict[str, object]]]:
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "YM=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "GC=F",
+            "SI=F",
+            "HG=F",
+            "NG=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        risk_growth = {"ES=F", "NQ=F", "YM=F", "RTY=F", "HG=F", "CL=F", "6A=F"}
+        event_indices = {80, 105}
+        base = pd.Timestamp("2026-01-01 00:00:00", tz=timezone.utc)
+        rows: list[dict[str, object]] = []
+        prices = {symbol: 100.0 + idx * 5.0 for idx, symbol in enumerate(symbols)}
+        for idx in range(days):
+            for symbol in symbols:
+                daily_move = 0.0004 + 0.002 * ((idx % 7) - 3) / 3
+                if idx in event_indices and symbol in risk_growth:
+                    daily_move = 0.02
+                elif any(event_idx < idx <= event_idx + 5 for event_idx in event_indices) and symbol in risk_growth:
+                    daily_move = 0.006
+                elif idx in event_indices and symbol in {"ZN=F", "ZB=F", "6E=F", "6J=F", "6B=F", "6C=F"}:
+                    daily_move = 0.001
+                prices[symbol] *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": prices[symbol] * 0.995,
+                        "high": prices[symbol] * 1.005,
+                        "low": prices[symbol] * 0.99,
+                        "close": prices[symbol],
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return symbols, rows
+
     def test_macro_thermometer_inverts_rates_and_fx_pressure(self) -> None:
         from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
 
@@ -5509,6 +5560,85 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "REVIEW")
         self.assertIn("less than 6 months", " ".join(snapshot["warnings"]))
         self.assertEqual(snapshot["coverage"]["standardized_count"], 0)
+
+    def test_macro_validation_recomputes_point_in_time_scenario_hits(self) -> None:
+        from app.services.futures_macro_validation import build_futures_macro_validation_snapshot
+
+        symbols, candle_rows = self._risk_on_validation_rows()
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            if "FROM nyse_price_history" in sql:
+                return []
+            return []
+
+        validation = build_futures_macro_validation_snapshot(
+            symbols=symbols,
+            query_fn=query_fn,
+            current_snapshot={"summary": {"scenario": "좋은 risk-on"}},
+            min_standardized_symbols=8,
+        )
+        summary = validation["scenario_summary"]
+
+        self.assertIn(validation["status"], {"OK", "REVIEW"})
+        self.assertFalse(validation["records"].empty)
+        self.assertIn("좋은 risk-on", set(summary["Scenario"]))
+        risk_on_row = summary[summary["Scenario"] == "좋은 risk-on"].iloc[0]
+        self.assertGreaterEqual(risk_on_row["Sample 5D"], 1)
+        self.assertIsNotNone(risk_on_row["Hit Rate 5D %"])
+        self.assertGreaterEqual(risk_on_row["Hit Rate 5D %"], 50)
+
+    def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
+        from app.services.futures_macro_validation import build_interpretation_confidence
+
+        current_snapshot = {
+            "coverage": {
+                "symbol_count": 16,
+                "standardized_count": 16,
+                "min_data_days": 260,
+                "latest_daily_date": date.today().isoformat(),
+            },
+            "evidence_groups": {
+                "counts": {
+                    "strong": 4,
+                    "weak": 1,
+                    "missing": 0,
+                    "conflicting": 0,
+                }
+            },
+        }
+        validation_snapshot = {
+            "coverage": {
+                "validation_dates": 100,
+                "history_span_years": 4.0,
+            },
+            "current_scenario_metrics": {
+                "Scenario": "좋은 risk-on",
+                "Sample 5D": 80,
+                "Hit Rate 5D %": 61.0,
+            },
+        }
+
+        confidence = build_interpretation_confidence(current_snapshot, validation_snapshot)
+
+        self.assertIn(confidence["label"], {"High Confidence", "Medium Confidence"})
+        self.assertEqual(confidence["sample_size"], 80)
+        self.assertEqual(confidence["hit_rate_5d"], 61.0)
+
+        low_snapshot = {
+            "coverage": {
+                "symbol_count": 16,
+                "standardized_count": 0,
+                "min_data_days": 20,
+                "latest_daily_date": date.today().isoformat(),
+            },
+            "evidence_groups": {"counts": {}},
+        }
+        low_confidence = build_interpretation_confidence(low_snapshot, validation_snapshot)
+
+        self.assertEqual(low_confidence["label"], "Not Enough History")
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
