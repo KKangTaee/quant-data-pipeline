@@ -431,6 +431,7 @@ def build_futures_monitor_snapshot(
         if active_selected and not candles.empty
         else pd.DataFrame(columns=CANDLE_COLUMNS)
     )
+    all_candles = candles[CANDLE_COLUMNS] if not candles.empty else pd.DataFrame(columns=CANDLE_COLUMNS)
     return {
         "status": status,
         "group": group,
@@ -443,6 +444,7 @@ def build_futures_monitor_snapshot(
         "warnings": _warnings(coverage),
         "top_move": _top_move(metrics),
         "rows": pd.DataFrame(metrics, columns=SHOCK_COLUMNS),
+        "all_candles": all_candles,
         "candles": selected_candles,
         "latest_run": latest_run,
         "source_note": "yfinance pilot source; not exchange-grade realtime.",

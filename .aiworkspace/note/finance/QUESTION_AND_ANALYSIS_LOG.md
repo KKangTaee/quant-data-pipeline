@@ -7064,3 +7064,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - DB-backed `yfinance` collector와 service read model을 추가하면 Streamlit UI가 provider를 직접 호출하지 않고도 freshness, missing, stale, shock 상태를 표시할 수 있다. 무료 provider 특성상 `REVIEW` 상태와 최신 candle age를 강하게 노출해야 한다
 - Follow-up:
   - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에 실행 기록을 남겼다. `Overview > Futures Monitor`와 `Workspace > Ingestion` 수동 수집 진입점을 구현했고 Browser QA에서 `ES=F` candlestick chart와 stale / missing 경고를 확인했다
+
+### 2026-06-02 - Futures Monitor 차트를 2x2 그리드로 확장한다
+- User request:
+  - 사용자가 한 화면에 몇 개 차트가 보이는지 확인한 뒤, 핵심 4개 선물을 2x2 미니 차트 그리드로 보여주는 개선을 진행해 달라고 승인함
+- Interpreted goal:
+  - 기존 선택 symbol 단일 상세 차트는 유지하되, Candles 탭에서 여러 선물의 움직임을 한 화면에서 비교할 수 있어야 함
+- Analysis result:
+  - read model은 이미 선택 symbol 전체의 candle row를 읽고 있었지만 반환값은 선택 symbol candle만 노출했다. `all_candles`를 함께 반환하면 provider 호출이나 DB schema 변경 없이 4개 미니 차트를 만들 수 있다
+- Follow-up:
+  - `Overview > Futures Monitor > Candles`에 선택 symbol을 포함한 최대 4개 미니 캔들 그리드를 추가했고, missing symbol의 15m / age metric은 `-`로 표시하도록 QA 중 수정했다

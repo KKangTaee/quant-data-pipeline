@@ -5271,6 +5271,8 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["returnable_count"], 2)
         self.assertEqual(snapshot["selected_symbol"], "NQ=F")
         self.assertFalse(snapshot["candles"].empty)
+        self.assertFalse(snapshot["all_candles"].empty)
+        self.assertEqual(set(snapshot["all_candles"]["Symbol"]), {"ES=F", "NQ=F"})
         self.assertEqual(snapshot["top_move"]["Symbol"], "NQ=F")
         nq_row = snapshot["rows"][snapshot["rows"]["Symbol"] == "NQ=F"].iloc[0]
         self.assertEqual(nq_row["State"], "Sharp")

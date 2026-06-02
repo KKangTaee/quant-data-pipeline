@@ -68,7 +68,7 @@ http://localhost:8501
    - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다.
    - 기본 자동 refresh는 60초 cadence다. 화면을 열어둔 동안만 동작하며 provider를 매초 호출하지 않는다.
    - Shock Board에서 15m / 60m 움직임, range spike, volume spike, `Calm / Moving / Sharp / Stale / Missing` 상태를 확인한다.
-   - Candles 탭에서 선택 symbol의 캔들을 본다. `1m / 5m / 15m / 1h` view는 저장된 1m row에서 표시용으로 집계한다.
+   - Candles 탭에서 선택 symbol을 포함한 최대 4개 미니 캔들 차트와 선택 symbol 상세 캔들을 본다. `1m / 5m / 15m / 1h` view는 저장된 1m row에서 표시용으로 집계한다.
    - Provider Run 탭에서 latest run status, rows, processed / requested, latest candle time을 확인한다.
    - Futures Monitor는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 

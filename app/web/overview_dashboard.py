@@ -1440,7 +1440,13 @@ def _resample_futures_candles(candles: pd.DataFrame, *, interval: str) -> pd.Dat
     )
 
 
-def _build_futures_candlestick_chart(candles: pd.DataFrame) -> alt.LayerChart:
+def _build_futures_candlestick_chart(
+    candles: pd.DataFrame,
+    *,
+    height: int = 360,
+    body_size: int = 5,
+    y_title: str | None = "Price",
+) -> alt.LayerChart:
     chart_rows = candles.copy() if isinstance(candles, pd.DataFrame) else pd.DataFrame()
     if chart_rows.empty:
         chart_rows = pd.DataFrame(
@@ -1471,7 +1477,7 @@ def _build_futures_candlestick_chart(candles: pd.DataFrame) -> alt.LayerChart:
     )
     base = alt.Chart(chart_rows).encode(x=alt.X("Candle Time:T", title=None))
     wick = base.mark_rule(size=1.2).encode(
-        y=alt.Y("Low:Q", title="Price", scale=alt.Scale(zero=False)),
+        y=alt.Y("Low:Q", title=y_title, scale=alt.Scale(zero=False)),
         y2="High:Q",
         color=color,
         tooltip=[
@@ -1483,12 +1489,12 @@ def _build_futures_candlestick_chart(candles: pd.DataFrame) -> alt.LayerChart:
             alt.Tooltip("Volume:Q", format=",.0f"),
         ],
     )
-    body = base.mark_bar(size=5).encode(
+    body = base.mark_bar(size=body_size).encode(
         y=alt.Y("Open:Q", scale=alt.Scale(zero=False)),
         y2="Close:Q",
         color=color,
     )
-    return (wick + body).properties(height=360)
+    return (wick + body).properties(height=height)
 
 
 def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str) -> None:
@@ -2214,6 +2220,80 @@ def _futures_state_tone(value: str) -> str:
     return "neutral"
 
 
+def _futures_metric_for_symbol(rows: Any, symbol: str) -> dict[str, Any]:
+    if not isinstance(rows, pd.DataFrame) or rows.empty or "Symbol" not in rows:
+        return {}
+    matches = rows[rows["Symbol"] == symbol]
+    return dict(matches.iloc[0]) if not matches.empty else {}
+
+
+def _futures_chart_symbols(snapshot: dict[str, Any]) -> list[str]:
+    symbols = [str(symbol) for symbol in snapshot.get("symbols") or [] if str(symbol).strip()]
+    selected_symbol = str(snapshot.get("selected_symbol") or "").strip()
+    ordered: list[str] = []
+    for symbol in [selected_symbol, *symbols]:
+        if symbol and symbol not in ordered:
+            ordered.append(symbol)
+        if len(ordered) >= 4:
+            break
+    return ordered
+
+
+def _format_futures_percent(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):+.2f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_futures_age(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):.0f}m"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str) -> None:
+    all_candles = snapshot.get("all_candles")
+    rows = snapshot.get("rows")
+    symbols = _futures_chart_symbols(snapshot)
+    if not symbols:
+        st.info("No futures symbols are selected.")
+        return
+
+    grid_cols = st.columns(2, gap="small")
+    for index, symbol in enumerate(symbols):
+        metric = _futures_metric_for_symbol(rows, symbol)
+        symbol_candles = (
+            all_candles[all_candles["Symbol"] == symbol]
+            if isinstance(all_candles, pd.DataFrame) and not all_candles.empty and "Symbol" in all_candles
+            else pd.DataFrame()
+        )
+        display_candles = _resample_futures_candles(symbol_candles, interval=chart_interval)
+        with grid_cols[index % 2]:
+            st.markdown(f"#### {symbol}")
+            metric_cols = st.columns(3)
+            metric_cols[0].metric("State", str(metric.get("State") or "Missing"))
+            metric_cols[1].metric("15m", _format_futures_percent(metric.get("15m %")))
+            metric_cols[2].metric("Age", _format_futures_age(metric.get("Age Min")))
+            if display_candles.empty:
+                st.info("No candles.")
+            else:
+                st.altair_chart(
+                    _build_futures_candlestick_chart(
+                        display_candles,
+                        height=190,
+                        body_size=3,
+                        y_title=None,
+                    ),
+                    width="stretch",
+                )
+
+
 def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: str) -> None:
     coverage = dict(snapshot.get("coverage") or {})
     top_move = dict(snapshot.get("top_move") or {})
@@ -2270,6 +2350,8 @@ def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: s
         else:
             st.info("Stored futures OHLCV rows are not available yet. Run Refresh Futures OHLCV first.")
     with chart_tab:
+        _render_futures_mini_chart_grid(snapshot, chart_interval=chart_interval)
+        st.divider()
         display_candles = _resample_futures_candles(candles, interval=chart_interval) if isinstance(candles, pd.DataFrame) else pd.DataFrame()
         if display_candles.empty:
             st.info("No candles are available for the selected futures symbol.")

@@ -23,3 +23,22 @@
   - Verified `Overview > Futures Monitor` renders status cards, `Shock Board`, `Candles`, `Provider Run`, stale / missing warnings, and an `ES=F` candlestick chart.
   - Browser console errors: none.
   - Screenshot: `.playwright-mcp/futures-monitor-qa.png`.
+
+## 2026-06-02 Follow-up: 2x2 Mini Chart Grid
+
+- `uv run python -m py_compile app/web/overview_dashboard.py app/services/futures_market_monitoring.py tests/test_service_contracts.py`
+  - Result: PASS.
+- `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests`
+  - Result: PASS, 3 tests.
+- `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
+  - Result: PASS.
+- `git diff --check`
+  - Result: PASS.
+- `uv run python -m unittest tests.test_service_contracts`
+  - Result: PASS, 225 tests.
+- Browser QA:
+  - Ran Streamlit on `http://localhost:8512`.
+  - Verified `Overview > Futures Monitor > Candles` renders a two-column mini chart grid for selected symbols.
+  - Verified `ES=F` / `NQ=F` mini candlesticks render, `YM=F` / `RTY=F` missing cards show `-` for unavailable 15m / age metrics, and the selected-symbol detail chart remains below.
+  - Browser console errors: none.
+  - Screenshots: `futures-monitor-grid-qa-top-fixed.png`, `futures-monitor-grid-qa-lower-fixed.png`.

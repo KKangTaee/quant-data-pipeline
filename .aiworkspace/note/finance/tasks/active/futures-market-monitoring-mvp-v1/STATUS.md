@@ -14,3 +14,6 @@
   - `app/web/streamlit_app.py` adds a manual futures OHLCV collection control in `Workspace > Ingestion`.
 - Durable docs updated for schema, table semantics, data flow, project map, and Overview market intelligence runbook.
 - Focused contracts, full `tests.test_service_contracts`, UI-engine boundary check, collector smoke, and Browser QA passed.
+- Follow-up UI change:
+  - `Candles` now renders a 2x2 mini candlestick grid for up to four selected futures symbols, with the selected symbol pinned first.
+  - The selected symbol detail chart and latest candle table remain below the mini grid.
