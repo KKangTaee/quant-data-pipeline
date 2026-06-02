@@ -17,3 +17,6 @@
 - Follow-up UI change:
   - `Candles` now renders a 2x2 mini candlestick grid for up to four selected futures symbols, with the selected symbol pinned first.
   - The selected symbol detail chart and latest candle table remain below the mini grid.
+- Symbol title follow-up:
+  - Each mini chart now shows the human-readable contract name and group under the provider symbol, for example `NQ=F` -> `E-mini Nasdaq 100 · Equity Index`.
+  - The selected-symbol detail chart also repeats the contract title.

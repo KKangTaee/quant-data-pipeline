@@ -2257,6 +2257,16 @@ def _format_futures_age(value: Any) -> str:
         return "-"
 
 
+def _futures_contract_title(metric: dict[str, Any], symbol: str) -> str:
+    name = str(metric.get("Name") or "").strip()
+    group = str(metric.get("Group") or "").strip()
+    if name and group:
+        return f"{name} · {group}"
+    if name:
+        return name
+    return symbol
+
+
 def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str) -> None:
     all_candles = snapshot.get("all_candles")
     rows = snapshot.get("rows")
@@ -2276,6 +2286,7 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
         display_candles = _resample_futures_candles(symbol_candles, interval=chart_interval)
         with grid_cols[index % 2]:
             st.markdown(f"#### {symbol}")
+            st.caption(_futures_contract_title(metric, symbol))
             metric_cols = st.columns(3)
             metric_cols[0].metric("State", str(metric.get("State") or "Missing"))
             metric_cols[1].metric("15m", _format_futures_percent(metric.get("15m %")))
@@ -2353,6 +2364,9 @@ def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: s
         _render_futures_mini_chart_grid(snapshot, chart_interval=chart_interval)
         st.divider()
         display_candles = _resample_futures_candles(candles, interval=chart_interval) if isinstance(candles, pd.DataFrame) else pd.DataFrame()
+        selected_metric = _futures_metric_for_symbol(rows, str(snapshot.get("selected_symbol") or ""))
+        st.markdown(f"#### {snapshot.get('selected_symbol') or '-'} Detail")
+        st.caption(_futures_contract_title(selected_metric, str(snapshot.get("selected_symbol") or "-")))
         if display_candles.empty:
             st.info("No candles are available for the selected futures symbol.")
         else:

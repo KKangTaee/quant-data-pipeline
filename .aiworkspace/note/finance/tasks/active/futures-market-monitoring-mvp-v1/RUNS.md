@@ -42,3 +42,15 @@
   - Verified `ES=F` / `NQ=F` mini candlesticks render, `YM=F` / `RTY=F` missing cards show `-` for unavailable 15m / age metrics, and the selected-symbol detail chart remains below.
   - Browser console errors: none.
   - Screenshots: `futures-monitor-grid-qa-top-fixed.png`, `futures-monitor-grid-qa-lower-fixed.png`.
+
+## 2026-06-02 Follow-up: Human-Readable Symbol Titles
+
+- `uv run python -m py_compile app/web/overview_dashboard.py`
+  - Result: PASS.
+- `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests`
+  - Result: PASS, 3 tests.
+- Browser QA:
+  - Ran Streamlit on `http://localhost:8514`.
+  - Verified `Overview > Futures Monitor > Candles` shows contract subtitles under mini chart symbols, including `ES=F` -> `E-mini S&P 500 · Equity Index` and `NQ=F` -> `E-mini Nasdaq 100 · Equity Index`.
+  - Browser console errors: none.
+  - Screenshot: `futures-monitor-symbol-title-qa.png`.
