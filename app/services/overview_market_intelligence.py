@@ -190,6 +190,14 @@ OPS_INTRADAY_TARGETS = [
         "due_action": "Refresh Top2000 daily snapshot before using daily movers.",
     },
 ]
+OPS_FUTURES_TARGETS = [
+    {
+        "area": "Futures Monitor 1m OHLCV",
+        "job_names": ["collect_futures_ohlcv"],
+        "missing_action": "Run Refresh Futures OHLCV from Overview > Futures Monitor.",
+        "due_action": "Refresh Futures OHLCV before using pre-open futures context.",
+    },
+]
 OPS_EVENT_TARGETS = [
     {
         "area": "FOMC Calendar",
@@ -225,6 +233,7 @@ OPS_SCHEDULE_CADENCE_MINUTES = {
     "collect_sp500_intraday_snapshot": 5,
     "collect_top1000_intraday_snapshot": 15,
     "collect_top2000_intraday_snapshot": 30,
+    "collect_futures_ohlcv": 1,
     "collect_fomc_calendar": 24 * 60,
     "collect_earnings_calendar": 24 * 60,
     "collect_macro_calendar": 24 * 60,
@@ -2064,6 +2073,25 @@ def _latest_event_ops_rows(query_fn: QueryFn, *, today: date) -> dict[str, dict[
     return {str(row.get("event_type") or "").upper(): row for row in rows}
 
 
+def _latest_futures_ops_row(query_fn: QueryFn) -> dict[str, Any] | None:
+    try:
+        rows = query_fn(
+            "finance_price",
+            """
+            SELECT
+                MAX(candle_time_utc) AS latest_candle_time,
+                COUNT(DISTINCT provider_symbol) AS active_symbols,
+                COUNT(*) AS candle_rows
+            FROM futures_ohlcv
+            WHERE interval_code = %s
+            """,
+            ["1m"],
+        )
+    except Exception:
+        return None
+    return dict(rows[0]) if rows else None
+
+
 def _intraday_ops_status(row: dict[str, Any] | None) -> tuple[str, str, str]:
     if not row or not row.get("latest_snapshot_time"):
         return "Missing", "No stored 5m snapshot", "Run the daily snapshot collector."
@@ -2075,6 +2103,20 @@ def _intraday_ops_status(row: dict[str, Any] | None) -> tuple[str, str, str]:
     if age <= MARKET_INTRADAY_STALE_MINUTES:
         return "Due", f"{age}m old", "Refresh if you need live daily movers."
     return "Stale", f"{age}m old", "Refresh before using daily movers."
+
+
+def _futures_ops_status(row: dict[str, Any] | None) -> tuple[str, str, str]:
+    if not row or not row.get("latest_candle_time") or int(row.get("active_symbols") or 0) <= 0:
+        return "Missing", "No stored 1m futures candles", "Run Refresh Futures OHLCV."
+    age = _stale_minutes(row.get("latest_candle_time"))
+    if age is None:
+        return "Missing", "Futures candle age unknown", "Run Refresh Futures OHLCV."
+    active_symbols = int(row.get("active_symbols") or 0)
+    if age <= 2:
+        return "OK", f"{age}m old; {active_symbols} symbols", "No action needed."
+    if age <= 10:
+        return "Due", f"{age}m old; {active_symbols} symbols", "Refresh if you need current pre-open context."
+    return "Stale", f"{age}m old; {active_symbols} symbols", "Refresh before using futures context."
 
 
 def _days_based_ops_status(
@@ -2208,6 +2250,7 @@ def build_collection_ops_snapshot(
         intraday_rows = _latest_intraday_ops_rows(query)
         universe_rows = _latest_universe_ops_rows(query)
         event_rows = _latest_event_ops_rows(query, today=today_value)
+        futures_row = _latest_futures_ops_row(query)
     except Exception as exc:
         return _empty_ops_snapshot(message=f"Collection ops snapshot failed: {exc}")
 
@@ -2236,6 +2279,19 @@ def build_collection_ops_snapshot(
         base_status, freshness, default_action = _intraday_ops_status(
             intraday_rows.get(str(target["universe_code"]))
         )
+        rows.append(
+            _ops_row(
+                area=str(target["area"]),
+                base_status=base_status,
+                data_freshness=freshness,
+                next_action=str(target["missing_action"] if base_status == "Missing" else target["due_action"] or default_action),
+                job_names=list(target["job_names"]),
+                history_rows=history,
+            )
+        )
+
+    for target in OPS_FUTURES_TARGETS:
+        base_status, freshness, default_action = _futures_ops_status(futures_row)
         rows.append(
             _ops_row(
                 area=str(target["area"]),

@@ -5,7 +5,7 @@ Last Verified: 2026-05-30
 
 ## Purpose
 
-이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
+이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Futures Monitor, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
 
 ## When To Use
 
@@ -13,6 +13,7 @@ Last Verified: 2026-05-30
 - FOMC calendar row를 갱신해야 할 때
 - CPI / PPI / Employment Situation / GDP 같은 macro release calendar row를 갱신해야 할 때
 - latest S&P 500 movers 또는 수동 ticker의 upcoming earnings event를 갱신해야 할 때
+- 선물장 OHLCV와 개장 전 급변 상태를 Overview Futures Monitor에서 확인하고 싶을 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
@@ -61,11 +62,21 @@ http://localhost:8501
    - weekly / monthly period는 EOD DB 기준이다. 최신 raw EOD row가 sparse하면 `Effective EOD Date`와 fallback reason이 status에 표시된다.
    - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다. Ticker leader bar는 양수일 때 sector color, 음수일 때 danger red를 사용하고, 직전 동일 기간 return은 얇은 marker로 표시한다.
 
-4. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
+4. `Workspace > Overview > Futures Monitor`
+   - `Watch Group`에서 `Equity Index`, `Rates`, `Commodities`, `FX Futures`, optional 그룹을 선택한다.
+   - `Symbols`에서 볼 선물을 고른다. 20초 fast mode는 4개 이하 symbol에서만 사용한다.
+   - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다.
+   - 기본 자동 refresh는 60초 cadence다. 화면을 열어둔 동안만 동작하며 provider를 매초 호출하지 않는다.
+   - Shock Board에서 15m / 60m 움직임, range spike, volume spike, `Calm / Moving / Sharp / Stale / Missing` 상태를 확인한다.
+   - Candles 탭에서 선택 symbol의 캔들을 본다. `1m / 5m / 15m / 1h` view는 저장된 1m row에서 표시용으로 집계한다.
+   - Provider Run 탭에서 latest run status, rows, processed / requested, latest candle time을 확인한다.
+   - Futures Monitor는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
+
+5. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
 
-5. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
+6. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
    - BLS source는 CPI / PPI / Employment Situation release schedule을 읽어 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
    - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
@@ -74,7 +85,7 @@ http://localhost:8501
    - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
    - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
 
-6. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
+7. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
    - 기본은 `Latest S&P 500 Movers` source를 사용한다.
    - broader coverage는 `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`를 사용한다.
    - broader mode는 `Max Symbols`, `Batch Offset`, `Ticker Cooldown Sec`을 작게 잡아 저빈도로 실행한다.
@@ -87,7 +98,7 @@ http://localhost:8501
    - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
    - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
-7. `Workspace > Overview > Events`
+8. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
    - `Window`, `Source Type`, `Validation`, `Importance` filter로 캘린더 범위와 source quality를 좁힌다.
    - 상단 summary strip에서 next event, this week, next 30D, needs review counts를 먼저 확인한다.
@@ -101,16 +112,16 @@ http://localhost:8501
    - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
-8. `Workspace > Overview > Data Health`
-   - Market Intelligence 운영 대상 7개를 한 화면에서 확인한다.
-   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, FOMC calendar, Macro calendar, Earnings calendar다.
+9. `Workspace > Overview > Data Health`
+   - Market Intelligence 운영 대상 8개를 한 화면에서 확인한다.
+   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, Futures 1m OHLCV, FOMC calendar, Macro calendar, Earnings calendar다.
    - 상태는 `OK`, `Due`, `Stale`, `Missing`, `Failed`, `Partial`로 표시된다.
    - `Latest Success`, `Latest Issue`, `Rows`, `Processed`, `Failed`, `Duration Sec`은 Overview refresh button이 남긴 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`의 local run history를 읽는다.
    - `Last Auto Run`, `Auto Source`, `Next Auto Due`, `Last Manual Run`, `Failure Streak`은 scheduled automation, browser-session auto refresh, 수동 refresh가 섞여 있을 때 실행 경로를 구분하기 위한 운영 지표다.
    - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
-9. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
+10. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
    - `Market Movers > 데이터 갱신`의 `자동 갱신` 모드는 브라우저 세션이 살아 있을 때만 현재 선택한 daily coverage의 due 여부를 확인한다.
    - S&P 500은 `browser_safe` profile을 사용하고, Top1000 / Top2000은 `intraday` profile에 선택 job_id를 넘겨 한 coverage만 실행한다.
    - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.

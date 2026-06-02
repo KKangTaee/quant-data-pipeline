@@ -181,6 +181,29 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 
+## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`
+
+역할:
+
+- `Workspace > Overview > Futures Monitor`에서 주요 선물 OHLCV 캔들과 개장 전 급변 상태를 read-only로 표시하기 위한 데이터 경계다.
+- `futures_instrument`는 watchlist preset / display metadata를 저장한다.
+- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다.
+- `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
+
+성격:
+
+- provider snapshot / price ledger 성격이다.
+- 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
+- UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
+- 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
+
+주의:
+
+- 선물 거래 시간은 상품 / 거래소 / 휴장일별로 다르므로 NYSE cash session 상태와 동일하게 해석하지 않는다.
+- 무료 provider 기반이라 지연, 누락, rate limit, symbol coverage 변화가 발생할 수 있다.
+- `Stale`, `Missing`, `Partial` 상태는 pass가 아니라 provider freshness / coverage gap이다.
+- 이 table은 투자 신호, 주문, live approval, auto rebalance를 만들지 않는다.
+
 ## `etf_operability_snapshot`
 
 역할:

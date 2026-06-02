@@ -1,13 +1,13 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-05-30
+Last Verified: 2026-06-02
 
 ## Feature Runbooks
 
 | Runbook | Use When |
 |---|---|
-| [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview Market Movers / Sector / Events refresh 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
+| [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview Market Movers / Sector / Futures Monitor / Events refresh 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
 
 ## Local App
 

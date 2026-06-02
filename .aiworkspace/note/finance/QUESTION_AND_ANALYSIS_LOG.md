@@ -7054,3 +7054,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 무료 실시간 선물 API는 안정적이지 않다. 1차 MVP는 `yfinance` 1분봉을 DB-backed polling으로 저장하고, `Overview > Futures Monitor`에서 provider freshness / stale / failed 상태를 노출하는 방향이 가장 작고 현실적이다
 - Follow-up:
   - `.aiworkspace/note/finance/researches/active/2026-06-futures-market-monitoring/`에 리서치 번들을 작성했다. 사용자 승인 후 구현은 futures collector / read model / Overview tab / Data Health 순서로 진행한다
+
+### 2026-06-02 - 선물장 모니터링 MVP를 구현한다
+- User request:
+  - 사용자가 위에서 정의한 추천 방향대로 순서대로 구현하고, 도중 의사결정이 필요할 때만 멈춰 질문해 달라고 요청함
+- Interpreted goal:
+  - 리서치 결론을 실제 Finance 운영툴에 연결해, 무료 provider 기반 선물 1분봉 OHLCV 수집 / 저장 / Overview 표시 / Data Health 확인이 가능한 MVP를 만들어야 함
+- Analysis result:
+  - DB-backed `yfinance` collector와 service read model을 추가하면 Streamlit UI가 provider를 직접 호출하지 않고도 freshness, missing, stale, shock 상태를 표시할 수 있다. 무료 provider 특성상 `REVIEW` 상태와 최신 candle age를 강하게 노출해야 한다
+- Follow-up:
+  - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에 실행 기록을 남겼다. `Overview > Futures Monitor`와 `Workspace > Ingestion` 수동 수집 진입점을 구현했고 Browser QA에서 `ES=F` candlestick chart와 stale / missing 경고를 확인했다

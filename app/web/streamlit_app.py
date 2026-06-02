@@ -19,6 +19,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_computed_snapshot_lifecycle,
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
+    run_collect_futures_ohlcv,
     run_collect_macro_calendar,
     run_collect_sec_company_ticker_crosscheck,
     run_import_bls_macro_calendar_ics,
@@ -40,6 +41,7 @@ from app.jobs.ingestion_jobs import (
     run_pipeline_core_market_data,
     run_weekly_fundamental_refresh,
 )
+from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 from app.jobs.diagnostics import inspect_price_stale_symbols, inspect_statement_coverage_symbols
 from app.jobs.result_artifacts import write_run_artifacts
 from app.jobs.preflight_checks import (
@@ -149,6 +151,21 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "used_by": ["Workspace > Overview > Events"],
         "caveats": ["무료 provider estimate이며 공식 확정 IR 일정이 아닙니다."],
         "next_action": "missing / failed symbol은 Earnings Diagnostics에서 reason을 확인하세요.",
+    },
+    "collect_futures_ohlcv": {
+        "title": "선물 1분봉 OHLCV 수집",
+        "purpose": "Overview Futures Monitor에서 읽을 주요 선물 OHLCV 캔들을 yfinance pilot source로 수집합니다.",
+        "targets": [
+            "finance_price.futures_ohlcv",
+            "finance_meta.futures_instrument",
+            "finance_meta.futures_market_monitor_run",
+        ],
+        "used_by": ["Workspace > Overview > Futures Monitor", "Workspace > Overview > Data Health"],
+        "caveats": [
+            "무료 provider pilot source이며 exchange-grade realtime feed가 아닙니다.",
+            "provider 실패 / stale 상태는 Overview에서 그대로 표시합니다.",
+        ],
+        "next_action": "부분 성공이면 failed symbols를 줄여 다시 실행하거나 provider 상태를 확인하세요.",
     },
     "discover_etf_provider_source_map": {
         "title": "ETF 공식 소스 매핑 발견",
@@ -1348,6 +1365,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_collect_fomc_calendar(**params)
     if action == "collect_earnings_calendar":
         return run_collect_earnings_calendar(**params)
+    if action == "collect_futures_ohlcv":
+        return run_collect_futures_ohlcv(**params)
     if action == "collect_macro_calendar":
         return run_collect_macro_calendar(**params)
     if action == "import_bls_macro_calendar_ics":
@@ -2869,6 +2888,98 @@ def _render_ingestion_console() -> None:
                         label="Daily Market Update",
                     )
                 _render_inline_last_completed_result("daily_market_update")
+
+            with st.expander("선물 1분봉 OHLCV 수집", expanded=False):
+                _render_job_brief("collect_futures_ohlcv")
+                st.caption("Overview Futures Monitor에서 사용할 선물 캔들 데이터를 수집합니다.")
+                st.caption("기본값은 주요 지수 / 금리 / 원자재 / FX 선물이며, 저장 테이블은 `finance_price.futures_ohlcv`입니다.")
+                futures_symbols_text = st.text_area(
+                    "Futures Symbols",
+                    value=", ".join(DEFAULT_CORE_FUTURES_SYMBOLS),
+                    key="futures_ohlcv_symbols_input",
+                    help="Yahoo/yfinance futures ticker를 쉼표 또는 줄바꿈으로 입력합니다.",
+                )
+                futures_symbols_input = [
+                    item.strip().upper()
+                    for item in futures_symbols_text.replace("\n", ",").split(",")
+                    if item.strip()
+                ]
+                futures_col1, futures_col2, futures_col3 = st.columns(3)
+                futures_period_input = futures_col1.selectbox(
+                    "Futures Period",
+                    ["1d", "5d", "7d"],
+                    index=0,
+                    key="futures_ohlcv_period_input",
+                )
+                futures_interval_input = futures_col2.selectbox(
+                    "Futures Interval",
+                    ["1m", "2m", "5m", "15m"],
+                    index=0,
+                    key="futures_ohlcv_interval_input",
+                )
+                futures_max_symbols = int(
+                    futures_col3.number_input(
+                        "Max Symbols",
+                        min_value=1,
+                        max_value=24,
+                        value=min(24, max(1, len(futures_symbols_input))),
+                        step=1,
+                        key="futures_ohlcv_max_symbols",
+                    )
+                )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("Source", "yfinance pilot"),
+                        (
+                            "대상 수",
+                            f"{min(len(futures_symbols_input), futures_max_symbols):,} / {len(futures_symbols_input):,} symbols",
+                        ),
+                        ("기간", futures_period_input),
+                        ("Interval", futures_interval_input),
+                        ("Cadence", "manual"),
+                    ],
+                    note=(
+                        "이 수집은 선물 시장 컨텍스트용입니다. 무료 provider 지연 / 누락 가능성이 있어 "
+                        "Overview에서 stale / failed 상태를 함께 확인해야 합니다."
+                    ),
+                )
+                futures_symbol_check = check_symbol_input(futures_symbols_input)
+                _render_check_result(futures_symbol_check)
+                if st.button(
+                    "선물 OHLCV 수집 실행",
+                    use_container_width=True,
+                    disabled=_has_running_job() or _is_blocking(futures_symbol_check),
+                ):
+                    _schedule_job(
+                        {
+                            "action": "collect_futures_ohlcv",
+                            "job_name": "collect_futures_ohlcv",
+                            "spinner_text": "Running futures OHLCV collection...",
+                            "params": {
+                                "symbols": futures_symbols_input,
+                                "period": futures_period_input,
+                                "interval": futures_interval_input,
+                                "cadence_mode": "manual",
+                                "max_symbols": futures_max_symbols,
+                                "batch_size": 6,
+                                "sleep_sec": 0.1,
+                            },
+                            "run_metadata": _job_metadata(
+                                pipeline_type="overview_futures_market_monitor",
+                                execution_mode="manual",
+                                symbol_source="manual_futures_watchlist",
+                                symbol_count=min(len(futures_symbols_input), futures_max_symbols),
+                                execution_context="Manual futures OHLCV refresh for Overview Futures Monitor.",
+                                input_params={
+                                    "period": futures_period_input,
+                                    "interval": futures_interval_input,
+                                    "max_symbols": futures_max_symbols,
+                                },
+                            ),
+                        }
+                    )
+                _render_inline_last_completed_result("collect_futures_ohlcv")
 
             with st.expander("주간 펀더멘털 / 팩터 업데이트", expanded=False):
                 _render_job_brief("weekly_fundamental_refresh")

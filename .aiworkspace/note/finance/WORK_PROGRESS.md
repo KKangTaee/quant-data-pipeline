@@ -4577,3 +4577,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/researches/active/2026-06-futures-market-monitoring/`에 선물장 OHLCV / 개장 전 급변 모니터링 리서치 번들을 만들었다.
   - 로컬 `yfinance` 1분봉 smoke에서 `ES=F`, `NQ=F`, `YM=F`, `RTY=F`, `CL=F`, `GC=F`, `ZN=F`, `6E=F` 등은 rows를 반환했고 `DX=F`, `VX=F`는 제외 대상으로 확인했다.
   - 권장 방향은 `Overview > Futures Monitor` 탭, DB-backed `yfinance` polling, 60초 기본 cadence, Altair candlestick, provider freshness / stale / failed 상태 표시다.
+- Futures Market Monitoring MVP V1:
+  - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에서 futures schema, `yfinance` 1m OHLCV collector, ingestion job, Overview read model, Data Health 연결을 구현했다.
+  - `Overview > Futures Monitor`는 Watch Group / Symbols / Candle Symbol / Window / Chart control, Shock Board, Candles, Provider Run을 제공하며 provider age / stale / missing 상태를 표시한다.
+  - `Workspace > Ingestion`에는 수동 선물 1분봉 수집 expander를 추가했다. 기본 자동 갱신은 browser-open 60초 cadence이고 fast mode는 작은 symbol set에만 허용된다.
+  - 검증: focused / full service contracts, py_compile, UI-engine boundary, `git diff --check`, yfinance collector smoke, Browser QA screenshot 통과.

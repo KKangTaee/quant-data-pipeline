@@ -18,10 +18,12 @@ from app.jobs.ingestion_jobs import (
     run_diagnose_market_quote_gaps,
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
+    run_collect_futures_ohlcv,
     run_collect_macro_calendar,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
+from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_collection_ops_snapshot,
@@ -67,6 +69,8 @@ from app.web.overview_ui_components import (
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 BROWSER_AUTO_REFRESH_SECONDS = 300
+FUTURES_DEFAULT_AUTO_REFRESH_SECONDS = 60
+FUTURES_FAST_AUTO_REFRESH_SECONDS = 20
 BROWSER_AUTO_REFRESH_JOB_CONFIG = {
     "SP500": {"profile": "browser_safe", "job_id": "sp500_intraday"},
     "TOP1000": {"profile": "intraday", "job_id": "top1000_intraday"},
@@ -99,6 +103,22 @@ GROUP_BY_LABELS = {
     "sector": "Sector",
     "industry": "Industry",
 }
+FUTURES_GROUP_OPTIONS = (
+    "Equity Index",
+    "Rates",
+    "Commodities",
+    "FX Futures",
+    "Optional Micro",
+    "Optional Crypto",
+    "All",
+)
+FUTURES_LOOKBACK_OPTIONS = {
+    "2H": 120,
+    "6H": 360,
+    "12H": 720,
+    "1D": 1440,
+}
+FUTURES_CHART_INTERVAL_OPTIONS = ("1m", "5m", "15m", "1h")
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 CHART_VALUE_LABEL_STYLE = {
@@ -170,6 +190,14 @@ def _group_leadership_period_label(value: str) -> str:
 
 def _group_by_label(value: str) -> str:
     return GROUP_BY_LABELS.get(value, value.title())
+
+
+def _futures_refresh_mode_label(value: str) -> str:
+    return {
+        "manual": "수동",
+        "auto_60s": "60초 자동",
+        "fast_20s": "20초 Fast",
+    }.get(value, value)
 
 
 def _event_filter_label(value: str) -> str:
@@ -1383,6 +1411,86 @@ def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) ->
     )
 
 
+def _resample_futures_candles(candles: pd.DataFrame, *, interval: str) -> pd.DataFrame:
+    if not isinstance(candles, pd.DataFrame) or candles.empty or interval == "1m":
+        return candles if isinstance(candles, pd.DataFrame) else pd.DataFrame()
+    rule = {"5m": "5min", "15m": "15min", "1h": "1h"}.get(interval)
+    if not rule or "Candle Time" not in candles:
+        return candles
+    frame = candles.copy()
+    frame["Candle Time"] = pd.to_datetime(frame["Candle Time"], errors="coerce")
+    frame = frame.dropna(subset=["Candle Time"]).sort_values("Candle Time")
+    if frame.empty:
+        return pd.DataFrame(columns=candles.columns)
+    return (
+        frame.set_index("Candle Time")
+        .resample(rule)
+        .agg(
+            {
+                "Symbol": "last",
+                "Open": "first",
+                "High": "max",
+                "Low": "min",
+                "Close": "last",
+                "Volume": "sum",
+            }
+        )
+        .dropna(subset=["Open", "High", "Low", "Close"])
+        .reset_index()
+    )
+
+
+def _build_futures_candlestick_chart(candles: pd.DataFrame) -> alt.LayerChart:
+    chart_rows = candles.copy() if isinstance(candles, pd.DataFrame) else pd.DataFrame()
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [
+                {
+                    "Candle Time": pd.Timestamp(datetime.now()),
+                    "Open": 0.0,
+                    "High": 0.0,
+                    "Low": 0.0,
+                    "Close": 0.0,
+                    "Volume": 0.0,
+                }
+            ]
+        )
+    chart_rows["Candle Time"] = pd.to_datetime(chart_rows["Candle Time"], errors="coerce")
+    chart_rows = chart_rows.dropna(subset=["Candle Time"])
+    chart_rows["Direction"] = [
+        "Up" if float(close or 0.0) >= float(open_value or 0.0) else "Down"
+        for open_value, close in zip(chart_rows["Open"], chart_rows["Close"], strict=False)
+    ]
+    color = alt.Color(
+        "Direction:N",
+        scale=alt.Scale(
+            domain=["Up", "Down"],
+            range=[OVERVIEW_COLOR_POSITIVE, OVERVIEW_COLOR_DANGER],
+        ),
+        legend=None,
+    )
+    base = alt.Chart(chart_rows).encode(x=alt.X("Candle Time:T", title=None))
+    wick = base.mark_rule(size=1.2).encode(
+        y=alt.Y("Low:Q", title="Price", scale=alt.Scale(zero=False)),
+        y2="High:Q",
+        color=color,
+        tooltip=[
+            alt.Tooltip("Candle Time:T", title="Time"),
+            alt.Tooltip("Open:Q", format=",.4f"),
+            alt.Tooltip("High:Q", format=",.4f"),
+            alt.Tooltip("Low:Q", format=",.4f"),
+            alt.Tooltip("Close:Q", format=",.4f"),
+            alt.Tooltip("Volume:Q", format=",.0f"),
+        ],
+    )
+    body = base.mark_bar(size=5).encode(
+        y=alt.Y("Open:Q", scale=alt.Scale(zero=False)),
+        y2="Close:Q",
+        color=color,
+    )
+    return (wick + body).properties(height=360)
+
+
 def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str) -> None:
     result = st.session_state.get(result_key)
     if not isinstance(result, dict):
@@ -2074,6 +2182,256 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
         top_n=top_n,
         min_group_size=min_group_size,
     )
+
+
+def _run_collect_futures_ohlcv_compat(
+    *,
+    symbols: list[str],
+    cadence_mode: str,
+) -> dict[str, Any]:
+    refresh_kwargs: dict[str, Any] = {
+        "symbols": symbols,
+        "period": "1d",
+        "interval": "1m",
+        "cadence_mode": cadence_mode,
+        "max_symbols": max(1, min(24, len(symbols))),
+        "batch_size": 6,
+        "sleep_sec": 0.1,
+    }
+    supported_params = signature(run_collect_futures_ohlcv).parameters
+    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
+    return run_collect_futures_ohlcv(**supported_kwargs)
+
+
+def _futures_state_tone(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"calm", "ok"}:
+        return "positive"
+    if normalized in {"moving", "due", "review"}:
+        return "warning"
+    if normalized in {"sharp", "stale", "missing", "failed"}:
+        return "danger"
+    return "neutral"
+
+
+def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: str) -> None:
+    coverage = dict(snapshot.get("coverage") or {})
+    top_move = dict(snapshot.get("top_move") or {})
+    rows = snapshot.get("rows")
+    candles = snapshot.get("candles")
+    state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
+    render_status_card_grid(
+        [
+            {
+                "title": "Futures Status",
+                "value": snapshot.get("status") or "-",
+                "detail": f"{coverage.get('returnable_count') or 0} / {coverage.get('symbol_count') or 0} symbols",
+                "tone": "positive" if snapshot.get("status") == "OK" else "warning",
+            },
+            {
+                "title": "Top Move",
+                "value": top_move.get("Symbol") or "-",
+                "detail": (
+                    f"15m {top_move.get('15m %'):+.2f}% / 60m {top_move.get('60m %'):+.2f}%"
+                    if top_move.get("Symbol") and top_move.get("15m %") is not None and top_move.get("60m %") is not None
+                    else "waiting for enough candles"
+                ),
+                "tone": _futures_state_tone(str(top_move.get("State") or "")),
+            },
+            {
+                "title": "Latest Age",
+                "value": f"{coverage.get('latest_age_minutes')}m" if coverage.get("latest_age_minutes") is not None else "-",
+                "detail": f"oldest {coverage.get('oldest_age_minutes')}m" if coverage.get("oldest_age_minutes") is not None else "no candles",
+                "tone": "positive" if (coverage.get("latest_age_minutes") is not None and int(coverage.get("latest_age_minutes") or 0) <= 2) else "warning",
+            },
+            {
+                "title": "Provider",
+                "value": "yfinance",
+                "detail": "pilot source, not exchange-grade realtime",
+                "tone": "neutral",
+            },
+        ]
+    )
+    warnings = list(snapshot.get("warnings") or [])
+    if warnings:
+        _render_snapshot_warnings({"warnings": warnings})
+    if state_counts:
+        render_badge_strip(
+            [
+                {"label": str(state), "value": int(count), "tone": _futures_state_tone(str(state))}
+                for state, count in state_counts.items()
+            ]
+        )
+
+    board_tab, chart_tab, run_tab = st.tabs(["Shock Board", "Candles", "Provider Run"])
+    with board_tab:
+        if isinstance(rows, pd.DataFrame) and not rows.empty:
+            st.dataframe(rows, width="stretch", hide_index=True)
+        else:
+            st.info("Stored futures OHLCV rows are not available yet. Run Refresh Futures OHLCV first.")
+    with chart_tab:
+        display_candles = _resample_futures_candles(candles, interval=chart_interval) if isinstance(candles, pd.DataFrame) else pd.DataFrame()
+        if display_candles.empty:
+            st.info("No candles are available for the selected futures symbol.")
+        else:
+            st.altair_chart(_build_futures_candlestick_chart(display_candles), width="stretch")
+            st.dataframe(display_candles.tail(60), width="stretch", hide_index=True)
+    with run_tab:
+        latest_run = snapshot.get("latest_run")
+        if isinstance(latest_run, dict) and latest_run:
+            metric_cols = st.columns(4)
+            metric_cols[0].metric("Status", latest_run.get("status") or "-")
+            metric_cols[1].metric("Rows", latest_run.get("rows_written") or 0)
+            metric_cols[2].metric("Processed", f"{latest_run.get('symbols_processed') or 0} / {latest_run.get('symbols_requested') or 0}")
+            metric_cols[3].metric("Latest Candle", _snapshot_value(latest_run.get("latest_candle_time_utc")))
+            st.caption(str(latest_run.get("message") or snapshot.get("source_note") or ""))
+        else:
+            st.info("No futures provider run has been recorded yet.")
+        _render_market_job_result("overview_futures_ohlcv_result")
+
+
+def _render_futures_monitor_tab() -> None:
+    st.markdown("### Futures Monitor")
+    st.caption("미국장 / 한국장 전 주요 선물 OHLCV와 급변 상태를 read-only로 확인합니다.")
+
+    control_cols = st.columns([1.1, 1.25, 1, 0.9], gap="small", vertical_alignment="bottom")
+    group = str(
+        control_cols[0].selectbox(
+            "Watch Group",
+            FUTURES_GROUP_OPTIONS,
+            index=0,
+            key="overview_futures_watch_group",
+        )
+    )
+    lookback_label = str(
+        control_cols[2].selectbox(
+            "Window",
+            list(FUTURES_LOOKBACK_OPTIONS.keys()),
+            index=1,
+            key="overview_futures_lookback",
+        )
+    )
+    chart_interval = str(
+        control_cols[3].selectbox(
+            "Chart",
+            FUTURES_CHART_INTERVAL_OPTIONS,
+            index=1,
+            key="overview_futures_chart_interval",
+        )
+    )
+
+    preview = load_overview_futures_monitor_snapshot(
+        group=group,
+        lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+    )
+    symbol_options = list(preview.get("symbols") or [])
+    if not symbol_options:
+        symbol_options = ["ES=F", "NQ=F", "ZN=F", "CL=F", "GC=F", "6J=F"]
+    default_symbols = symbol_options[: min(6, len(symbol_options))]
+    symbols_key = f"overview_futures_symbols_{group.replace(' ', '_').lower()}"
+    current_symbols = st.session_state.get(symbols_key)
+    if isinstance(current_symbols, list):
+        retained = [symbol for symbol in current_symbols if symbol in symbol_options]
+        if retained:
+            default_symbols = retained
+    selected_symbols = list(
+        control_cols[1].multiselect(
+            "Symbols",
+            options=symbol_options,
+            default=default_symbols,
+            key=symbols_key,
+        )
+    )
+    if not selected_symbols:
+        selected_symbols = default_symbols
+    selected_symbol_key = "overview_futures_selected_symbol"
+    if st.session_state.get(selected_symbol_key) not in selected_symbols:
+        st.session_state[selected_symbol_key] = selected_symbols[0]
+    selected_symbol = str(
+        st.selectbox(
+            "Candle Symbol",
+            selected_symbols,
+            index=0,
+            key=selected_symbol_key,
+        )
+    )
+
+    snapshot = load_overview_futures_monitor_snapshot(
+        group=group,
+        symbols=selected_symbols,
+        selected_symbol=selected_symbol,
+        lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+    )
+
+    refresh_cols = st.columns([0.9, 1, 1, 1.8], gap="small", vertical_alignment="bottom")
+    mode_options = ["manual", "auto_60s"]
+    if len(selected_symbols) <= 4:
+        mode_options.append("fast_20s")
+    mode_key = "overview_futures_refresh_mode"
+    if st.session_state.get(mode_key) not in mode_options:
+        st.session_state[mode_key] = "manual"
+    segmented_control = getattr(refresh_cols[0], "segmented_control", None)
+    if callable(segmented_control):
+        refresh_mode = str(
+            segmented_control(
+                "Refresh",
+                mode_options,
+                key=mode_key,
+                format_func=_futures_refresh_mode_label,
+                help="20초 Fast는 선택 심볼 4개 이하일 때만 사용합니다.",
+            )
+        )
+    else:
+        refresh_mode = str(
+            refresh_cols[0].radio(
+                "Refresh",
+                mode_options,
+                key=mode_key,
+                format_func=_futures_refresh_mode_label,
+                horizontal=True,
+                help="20초 Fast는 선택 심볼 4개 이하일 때만 사용합니다.",
+            )
+        )
+    if refresh_cols[1].button(
+        "Refresh Futures OHLCV",
+        key="overview_futures_manual_refresh",
+        use_container_width=True,
+        type="primary",
+    ):
+        with st.spinner("Collecting futures 1m OHLCV from yfinance..."):
+            _store_overview_job_result(
+                "overview_futures_ohlcv_result",
+                _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="manual"),
+            )
+        st.rerun()
+    if refresh_cols[2].button("화면 새로고침", key="overview_futures_reload", use_container_width=True):
+        st.session_state["overview_futures_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+    refresh_cols[3].caption(
+        "Provider fetch는 기본 60초 단위입니다. 화면은 countdown처럼 자주 갱신될 수 있지만 provider를 매초 호출하지 않습니다."
+    )
+
+    if refresh_mode in {"auto_60s", "fast_20s"}:
+        cadence = FUTURES_FAST_AUTO_REFRESH_SECONDS if refresh_mode == "fast_20s" else FUTURES_DEFAULT_AUTO_REFRESH_SECONDS
+
+        @st.fragment(run_every=cadence)
+        def _futures_auto_refresh_panel() -> None:
+            with st.spinner("Checking futures auto refresh..."):
+                _store_overview_job_result(
+                    "overview_futures_ohlcv_result",
+                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="browser_auto"),
+                )
+            refreshed_snapshot = load_overview_futures_monitor_snapshot(
+                group=group,
+                symbols=selected_symbols,
+                selected_symbol=selected_symbol,
+                lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+            )
+            _render_futures_snapshot_body(refreshed_snapshot, chart_interval=chart_interval)
+
+        _futures_auto_refresh_panel()
+    else:
+        _render_futures_snapshot_body(snapshot, chart_interval=chart_interval)
 
 
 def _group_trend_selection_key(group_by: str) -> str:
@@ -3603,11 +3961,13 @@ def render_overview_dashboard(
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
     render_market_session_banner(_market_session_banner_model())
 
-    market_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
-        ["Market Movers", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
+    market_tab, futures_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
+        ["Market Movers", "Futures Monitor", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
     )
     with market_tab:
         _render_market_movers_tab()
+    with futures_tab:
+        _render_futures_monitor_tab()
     with group_tab:
         _render_sector_industry_tab()
     with events_tab:

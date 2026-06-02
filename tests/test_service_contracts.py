@@ -5015,6 +5015,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                     {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                 ]
+            if "FROM futures_ohlcv" in sql:
+                return [
+                    {
+                        "latest_candle_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                        "active_symbols": 4,
+                        "candle_rows": 240,
+                    }
+                ]
             if "FROM market_universe_member" in sql:
                 return [
                     {
@@ -5109,6 +5117,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sp500_intraday_row["Last Auto Run"], "2026-05-28 04:05")
         self.assertEqual(sp500_intraday_row["Auto Source"], "Browser Auto")
         self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
+        futures_row = rows[rows["Area"] == "Futures Monitor 1m OHLCV"].iloc[0]
+        self.assertEqual(futures_row["Status"], "OK")
+        self.assertIn("4 symbols", futures_row["Data Freshness"])
         self.assertEqual(snapshot["coverage"]["latest_auto_at"], "2026-05-28 04:05")
         earnings_row = rows[rows["Area"] == "Earnings Calendar"].iloc[0]
         self.assertEqual(earnings_row["Status"], "Partial")
@@ -5129,6 +5140,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                     {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
                     {"universe_code": "TOP2000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                ]
+            if "FROM futures_ohlcv" in sql:
+                return [
+                    {
+                        "latest_candle_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                        "active_symbols": 4,
+                        "candle_rows": 240,
+                    }
                 ]
             if "FROM market_universe_member" in sql:
                 return [
@@ -5168,6 +5187,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             del db_name, params
             if "FROM market_intraday_snapshot" in sql:
                 return []
+            if "FROM futures_ohlcv" in sql:
+                return []
             if "FROM market_universe_member" in sql:
                 return []
             if "FROM market_event_calendar" in sql:
@@ -5187,6 +5208,160 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         macro_row = snapshot["rows"][snapshot["rows"]["Area"] == "Macro Calendar"].iloc[0]
         self.assertEqual(macro_row["Status"], "Due")
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
+
+
+class FuturesMarketMonitoringContractTests(unittest.TestCase):
+    def test_futures_monitor_snapshot_scores_moves_and_stale_state(self) -> None:
+        from app.services.futures_market_monitoring import build_futures_monitor_snapshot
+
+        base = pd.Timestamp("2026-06-02 00:00:00", tz=timezone.utc)
+        candle_rows: list[dict[str, object]] = []
+        for idx in range(0, 61):
+            ts = base - pd.Timedelta(minutes=60 - idx)
+            es_close = 100.0 + idx * 0.01
+            nq_close = 100.0 + idx * 0.025
+            for symbol, close in (("ES=F", es_close), ("NQ=F", nq_close)):
+                candle_rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1m",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": close - 0.05,
+                        "high": close + 0.1,
+                        "low": close - 0.1,
+                        "close": close,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_instrument" in sql:
+                return [
+                    {"provider_symbol": "ES=F", "display_name": "E-mini S&P 500", "futures_group": "Equity Index", "source": "yfinance", "sort_order": 10},
+                    {"provider_symbol": "NQ=F", "display_name": "E-mini Nasdaq 100", "futures_group": "Equity Index", "source": "yfinance", "sort_order": 20},
+                ]
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            if "FROM futures_market_monitor_run" in sql:
+                return [
+                    {
+                        "run_id": "run-1",
+                        "status": "success",
+                        "symbols_requested": 2,
+                        "symbols_processed": 2,
+                        "rows_written": len(candle_rows),
+                        "latest_candle_time_utc": "2026-06-02 00:00:00",
+                        "finished_at": "2026-06-02 00:00:01",
+                    }
+                ]
+            return []
+
+        snapshot = build_futures_monitor_snapshot(
+            group="Equity Index",
+            symbols=["ES=F", "NQ=F"],
+            selected_symbol="NQ=F",
+            now=datetime(2026, 6, 2, 0, 1, tzinfo=timezone.utc),
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 2)
+        self.assertEqual(snapshot["selected_symbol"], "NQ=F")
+        self.assertFalse(snapshot["candles"].empty)
+        self.assertEqual(snapshot["top_move"]["Symbol"], "NQ=F")
+        nq_row = snapshot["rows"][snapshot["rows"]["Symbol"] == "NQ=F"].iloc[0]
+        self.assertEqual(nq_row["State"], "Sharp")
+        self.assertGreater(nq_row["60m %"], 1.0)
+
+    def test_futures_collector_normalizes_yfinance_frame_and_records_run(self) -> None:
+        from finance.data import futures_market as fm
+
+        idx = pd.date_range("2026-06-02 00:00:00", periods=2, freq="min", tz=timezone.utc)
+        frame = pd.DataFrame(
+            {
+                ("Open", "ES=F"): [100.0, 101.0],
+                ("High", "ES=F"): [101.0, 102.0],
+                ("Low", "ES=F"): [99.0, 100.0],
+                ("Close", "ES=F"): [100.5, 101.5],
+                ("Adj Close", "ES=F"): [100.5, 101.5],
+                ("Volume", "ES=F"): [1000, 1100],
+            },
+            index=idx,
+        )
+
+        written_rows: list[dict[str, object]] = []
+        run_rows: list[dict[str, object]] = []
+
+        def downloader(symbols, *, period, interval):
+            self.assertEqual(symbols, ["ES=F"])
+            self.assertEqual(period, "1d")
+            self.assertEqual(interval, "1m")
+            return frame
+
+        def capture_ohlcv(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        def capture_run(row, **kwargs):
+            del kwargs
+            run_rows.append(row)
+            return 1
+
+        with (
+            patch.object(fm, "sync_futures_market_tables", return_value=None),
+            patch.object(fm, "upsert_futures_instruments", return_value=1),
+            patch.object(fm, "upsert_futures_ohlcv_rows", side_effect=capture_ohlcv),
+            patch.object(fm, "upsert_futures_monitor_run", side_effect=capture_run),
+        ):
+            result = fm.collect_and_store_futures_ohlcv(
+                ["ES=F"],
+                period="1d",
+                interval="1m",
+                downloader=downloader,
+                sleep_sec=0,
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_processed"], 1)
+        self.assertEqual(written_rows[0]["provider_symbol"], "ES=F")
+        self.assertEqual(written_rows[0]["interval_code"], "1m")
+        self.assertEqual(written_rows[0]["provider_status"], "ok")
+        self.assertEqual(run_rows[0]["status"], "success")
+        self.assertEqual(run_rows[0]["latest_candle_time_utc"], "2026-06-02 00:01:00")
+
+    def test_ingestion_job_wraps_futures_collection_summary(self) -> None:
+        from app.jobs import ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_futures_ohlcv",
+            return_value={
+                "run_id": "run-job",
+                "source": "yfinance",
+                "period": "1d",
+                "interval": "1m",
+                "cadence_mode": "manual",
+                "status": "partial_success",
+                "rows_written": 10,
+                "symbols_requested": 2,
+                "symbols_processed": 1,
+                "failed_symbols": ["NQ=F"],
+                "latest_candle_time_utc": "2026-06-02 00:01:00",
+                "diagnostics": {"batches": []},
+            },
+        ):
+            result = jobs.run_collect_futures_ohlcv(["ES=F", "NQ=F"], max_symbols=2)
+
+        self.assertEqual(result["job_name"], "collect_futures_ohlcv")
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 10)
+        self.assertEqual(result["failed_symbols"], ["NQ=F"])
+        self.assertEqual(result["details"]["target_tables"][0], "finance_price.futures_ohlcv")
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
