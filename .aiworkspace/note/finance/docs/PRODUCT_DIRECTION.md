@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-05-30
+Last Verified: 2026-06-01
 
 ## Product Summary
 
@@ -15,8 +15,8 @@ Last Verified: 2026-05-30
 
 - 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
 - Practical Validation은 후보를 12개 진단으로 검증한다.
-- Final Review는 select / hold / reject / re-review 판단을 남긴다.
-- Selected Portfolio Dashboard는 최종 선정된 포트폴리오의 이후 성과와 monitoring signal을 확인한다.
+- Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장한다.
+- Selected Portfolio Dashboard는 사용자가 만든 monitoring portfolio에 최종 선정 후보를 담고, 이후 성과와 monitoring signal을 확인한다.
 - Ingestion은 백테스트와 Practical Validation에 필요한 DB-backed data snapshot을 수집한다.
 
 ## Core Pillars

@@ -13,28 +13,141 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
+  - none. Open a new phase only after the user approves a concrete scope.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete with selection-only official save. Fresh non-GTAA search found no current-gate selected V2 row; legacy V1 has a non-GTAA Quality selected row that can be used only as an explicit migration seed.
+  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Scenario execution is explicit: strategy add / slot edit is saved setup only, portfolio scenario update runs pending / stale rows by default, and one selected strategy detail is lazy-rendered.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
 
-### 2026-06-01 - Ingestion should explain jobs without changing collection control
+### 2026-06-01 - Ingestion 탭 리뷰 후속 UX와 결과 해석을 개선한다
 - User request:
-  - `Workspace > Ingestion` 탭의 기능, 수집 데이터 결함 가능성, UX/UI 문제를 리뷰한 뒤 개발 진행을 승인함.
+  - 사용자가 Ingestion 리뷰 결과를 바탕으로 개선을 진행하되, 버튼 / 단어 / 기술 용어를 억지로 모두 한글화하지 말고 설명 내용을 이해하기 쉽게 정리해 달라고 요청함.
 - Interpreted goal:
-  - 사용자가 원하는 심볼 / 기간 / provider / 옵션을 직접 정하는 Run Job 형태는 유지하면서, 각 job이 무엇을 수집하고 어디에 저장되며 어떤 검증에 쓰이는지 한국어로 명확히 보여준다.
+  - 기존 심볼 / 기간 / source 선택 형식은 유지하고, 사용자가 실행 전 수집 범위와 실행 후 데이터 의미를 더 정확히 읽게 해야 함.
 - Analysis result:
-  - 구현 결과 Ingestion은 routine operations / validation data와 manual recovery / diagnostics로 분리되고, job guide / result guidance / data-quality caveat를 표시한다.
-  - 기존 lifecycle collector인 Nasdaq Symbol Directory, SEC CIK cross-check, computed snapshot lifecycle을 UI에 노출했지만 current snapshot과 partial evidence는 survivorship PASS 근거가 아니라고 명시했다.
-  - 좁은 브라우저 폭에서 Streamlit 기본 metric / selectbox가 값을 말줄임표로 자르는 문제가 확인되어, Ingestion 결과 / runtime 요약은 wrapping card로 바꾸고 selector에는 compact Korean label과 full current-selection caption을 함께 표시했다.
+  - 가장 큰 gap은 화면 구조 전체 교체보다 실행 전 계약, bounded coverage 확인, result domain별 해석 부재였다. 특히 price row, provider snapshot, lifecycle partial evidence를 같은 방식으로 표시하면 coverage를 과신할 수 있음.
 - Follow-up:
-  - 실제 DB freshness와 provider sparse-response coverage는 이번 UX slice만으로 검증되지 않는다. 필요하면 다음 slice에서 requested-window 대비 저장 coverage guard를 data layer로 보강한다.
-  - 현재 UI는 기존 Streamlit operator-console을 개선한 형태이며, 최적의 제품형 UI로 보려면 job catalog / active job detail / guided recovery 중심의 별도 redesign slice가 필요하다.
+  - Ingestion workflow overview, 실행 전 contract card, bounded DB coverage quick check, domain-aware result label / interpretation callout, visible lifecycle partial-evidence warning을 추가했다.
+
+### 2026-06-02 - Selected Dashboard scenario execution must remain explicit
+- User request:
+  - 사용자가 전략 추가 직후 `3. 포트폴리오 모니터 시나리오` 또는 하단 개별 성과가 자동 실행되는 것처럼 보이고 오래 걸린다고 지적하며, 버튼을 눌렀을 때만 업데이트되도록 수정과 성능 검토를 요청함.
+- Interpreted goal:
+  - Strategy add / slot edit는 saved setup만 바꾸고, scenario result는 명시적인 portfolio-wide 또는 strategy별 실행 action이 있을 때만 새로 계산한다.
+- Analysis result:
+  - Portfolio-wide recheck 자체는 버튼 뒤에 있었지만, Streamlit `tabs`가 숨겨진 strategy detail 탭까지 eager render해 recheck defaults / preflight / provider evidence 조회가 전략 수만큼 자동 실행됐다. 또한 session result key가 decision-only라 다른 portfolio / slot 설정과 결과가 섞일 수 있었다.
+- Follow-up:
+  - 구현 결과 scenario result를 portfolio / slot / selected decision / start / end / balance signature로 판정하고, stale 결과는 합산하지 않는다. Portfolio update는 pending / stale 전략만 기본 실행하고 `전체 재실행`으로 full refresh한다. 개별 evidence detail은 사용자가 선택한 1개 strategy만 연다. Full replay는 여전히 selected component contract를 순차 실행하므로 장기적으로 cache / background job / per-strategy incremental queue가 개선 후보로 남는다.
+
+### 2026-06-01 - Selected Dashboard UX polish should go beyond legacy cards/tabs
+- User request:
+  - 사용자가 방향은 맞지만 UX/UI가 상용 제품처럼 정돈되지 않았고, Streamlit 한계인지 보수적 구현 때문인지 물은 뒤 1~3번 개선 진행을 승인함.
+- Interpreted goal:
+  - Section 4 evidence는 유지하고, 1~3번만 fixed shelf / command band / strategy board / portfolio-wide scenario cockpit으로 시각 계층을 개선한다.
+- Analysis result:
+  - 문제는 Streamlit 한계만이 아니라 기존 화면 패턴을 보수적으로 따른 영향이 컸다. Streamlit 안에서도 custom HTML/CSS와 정보 계층 정리로 카드 높이, 삭제 위치, strategy setup 혼잡도, portfolio scenario 의미를 개선할 수 있다.
+- Follow-up:
+  - 구현 결과 `포트폴리오 시나리오 실행`은 기존 per-strategy recheck logic을 같은 session state에 저장하고, 실행 전 / 부분 집계 / 전체 집계 완료를 명시한다. Live approval / order / broker sync / auto rebalance는 계속 disabled다.
+
+### 2026-06-01 - Selected Dashboard should be portfolio-first and scenario-first
+- User request:
+  - 사용자가 `Operations > Selected Portfolio Dashboard`를 사용자가 만든 나의 포트폴리오, 전략 구성, 모니터링 시나리오 중심으로 다시 설계해 달라고 요청함.
+- Interpreted goal:
+  - Final Review handoff / readiness / provider evidence를 첫 화면 주인공에서 내리고, 포트폴리오 생성 / 선택, selected 전략 slot 설정, portfolio-level scenario / 리밸런싱 정보가 먼저 읽히게 만든다.
+- Analysis result:
+  - 기존 화면은 handoff / evidence 확인이 먼저 보이고 portfolio manager와 strategy recheck가 뒤따라 UX가 운영 대시보드처럼 느껴지지 않았다. 저장 모델은 `strategy_slots`를 추가하되 legacy `selected_decision_ids`를 계속 읽어야 한다.
+- Follow-up:
+  - 구현 결과 `전략 적용`과 `모니터 시나리오 실행`을 분리하고 evidence detail을 하단으로 낮췄다. Scenario 결과는 session-only이며 live approval / order / broker-account sync / auto rebalance는 계속 disabled다.
+
+### 2026-06-01 - Phase 14 active state was stale and is removed
+- User request:
+  - Phase 14는 이전에 제거된 것으로 알고 있는데 active 문서가 남아 있는 것 같으니, 개발 재개 전에 문서 정리를 먼저 하자고 요청함.
+- Interpreted goal:
+  - 현재 worktree의 active phase pointer에서 Phase 14를 제거하고, Phase 13 carry-forward material은 승인 전 source material로만 남긴다.
+- Analysis result:
+  - `phase14-second-cycle-prioritization`과 `phase14-board-open`은 현재 실행 단위가 아니라 stale active docs였다. 현재 active phase는 없음으로 정리한다.
+- Follow-up:
+  - prototype/proxy 검증 개선 개발은 Phase 14가 아니라 현재 validation evidence audit / feature recommendation 기준으로 새 scope를 정한 뒤 재개한다.
+
+### 2026-06-01 - Final Decision registry no longer uses the V2 filename
+- User request:
+  - `V2`가 붙은 current 문서 / JSONL 이름이 헷갈리므로 현재 파일명에서는 `V2`를 떼고, 중복되는 이전 데이터는 `V1`로 이름을 바꿔 달라고 요청함.
+- Interpreted goal:
+  - current selected-dashboard source는 단순히 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`로 부르고, legacy V1 final decision history는 `_V1` 이름으로 분리한다.
+- Analysis result:
+  - current runtime source-of-truth는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이며 schema_version은 그대로 `2`다. legacy helper path는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl`로 분리했다.
+  - Dashboard read model은 selected rows `4`, dashboard rows `4`, assigned references `4`, missing references `0`으로 유지된다.
+- Follow-up:
+  - 내부 모듈명 `portfolio_selection_v2.py`와 과거 task id의 `v2`는 호환성 / 이력 이름이라 남겨뒀다. 사용자-facing current file path와 source contract에는 old Final Decision V2 이름을 쓰지 않는다.
+
+### 2026-06-01 - Fresh Final Review selected-route pass candidates found
+- User request:
+  - ETF dynamic source contract 보강 이후 Final Review를 통과하는 포트폴리오 후보를 다시 탐색해 달라고 요청함.
+- Interpreted goal:
+  - registry / saved append 없이 fresh runtime source를 만들어 Practical Validation replay와 Final Review selected-route gate까지 통과하는 후보를 확인한다.
+- Analysis result:
+  - 2016-01-29 to 2026-05-29 dry-run sweep에서 `GRS Liquid Macro Top2`와 `GTAA Default Top3`가 selected-route preflight `select_ready`와 Final Review selected gate Ready를 반환했다. `GRS Liquid Macro Top2`는 CAGR `13.31%`, MDD `-17.75%`, Sharpe `1.12`, net spread `7.18%p`, replay PASS로 가장 강한 후보다.
+  - Risk Parity와 Dual Momentum은 replay는 PASS지만 Practical Validation `BLOCKED` / selected gate blocked였고, Equal Weight regression 후보는 raw 성과가 높아도 turnover / net cost proof와 net performance policy gap 때문에 selected-route가 막혔다.
+- Follow-up:
+  - 이 탐색은 dry-run evidence이며 Final Decision V2 row를 저장하지 않았다. 사용자가 원하면 다음 단계는 GRS 후보를 UI 또는 명시적 persistence flow로 Final Review selected row에 저장하는 것이다.
+
+### 2026-06-01 - Lower-MDD GRS candidate is available
+- User request:
+  - 기존 Final Review 통과 후보의 MDD가 높아 보이므로 CAGR은 높게 유지하면서 MDD가 낮은 후보군을 하나 더 찾아 달라고 요청함.
+- Interpreted goal:
+  - 기존 selected-route gate 기준을 유지하고, GRS 변형 후보 중 MDD가 낮아진 fresh source를 dry-run으로 찾는다.
+- Analysis result:
+  - `GRS Macro Top1 MA200`가 같은 liquid macro universe에서 top `1`, MA `200`으로 CAGR `18.03%`, MDD `-12.43%`, Sharpe `1.18`, replay PASS, selected-route preflight ready, Final Review selected gate Ready를 반환했다. top=1 concentration은 tradeoff다.
+  - 더 보수적인 top=2 대안은 `GRS QQQ Gold Bonds Top2 MA150`으로 CAGR `12.94%`, MDD `-8.81%`, Sharpe `1.31`, selected-route gate Ready다.
+- Follow-up:
+  - 둘 다 dry-run evidence이며 Final Decision V2 row를 저장하지 않았다. 최종 선정 전에 top=1 concentration을 받을지, CAGR을 조금 낮추고 MDD를 크게 낮춘 top=2 구조를 택할지 결정해야 한다.
+
+### 2026-06-01 - ETF dynamic strategy sources should carry promotion policy thresholds
+- User request:
+  - GRS Liquid Macro Top2처럼 실제 성과와 net cost / turnover proof가 충분한 ETF 동적 전략 후보가 `promotion_min_net_cagr_spread` 등 source contract 누락 때문에 Practical Validation selected-route preflight와 Final Review selected gate에서 막히는 문제를 해결해 달라고 요청함.
+- Interpreted goal:
+  - Final Review gate를 완화하지 않고, Backtest Analysis fresh source contract에서 GTAA / Global Relative Strength / Risk Parity / Dual Momentum이 strict-compatible promotion policy metadata를 자연스럽게 갖게 만든다.
+- Analysis result:
+  - `_apply_real_money_hardening`은 이미 policy sink 역할을 하고 있었고, 누락 지점은 ETF dynamic runtime / execution dispatch / replay / compare override의 upstream propagation이었다. 해당 경로에 `promotion_min_benchmark_coverage`, `promotion_min_net_cagr_spread`, `promotion_min_liquidity_clean_coverage`, rolling / drawdown policy defaults를 보강했다.
+  - Fresh GRS Liquid Macro Top2 검증에서 `promotion_min_net_cagr_spread=-0.02`, `net_cagr_spread=0.0718244521`, Practical Validation replay PASS, selected-route preflight `select_ready`, Final Review selected gate Ready를 확인했다.
+- Follow-up:
+  - 기존 registry / saved row migration은 하지 않았다. 오래된 row는 rerun/replay 전까지 policy field가 비어 있을 수 있으며, net-cost / turnover proof가 부족한 Equal Weight-style 후보는 계속 selected-route gate에서 막힌다.
+
+### 2026-06-01 - Selected Dashboard should become a monitoring portfolio workspace
+- User request:
+  - Final Review를 통과한 후보를 실제 투자 후보로 보고, Selected Dashboard에서 사용자가 나의 포트폴리오를 만들고 Final Review selected 후보를 하나씩 담아 가상 시작일 / 종료일 / 초기자산 기준으로 선정 이후 성과와 리밸런싱 필요성을 모니터링하고 싶다고 요청함.
+- Interpreted goal:
+  - Dashboard의 "portfolio"를 backtest 전략이 아니라 사용자 monitoring container로 재정의하고, selected 후보는 strategy pool로 추가 / 제거하게 만든다. Live / Deployment Readiness는 필수 다음 단계가 아니라 optional preflight로 낮춘다.
+- Analysis result:
+  - 구현 기준은 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에 dashboard setup만 저장하고, Final Decision V2 row는 read-only source-of-truth로 유지하는 것이다. Monitoring scenario / drift / alert / comparison은 기존 selected dashboard read model과 session state를 재사용하며 approval, order, broker/account sync, auto rebalance를 만들지 않는다.
+- Follow-up:
+  - 현재 worktree에는 fresh selected V2 row가 없어 Browser QA는 empty selected-pool과 portfolio creation surface를 확인했다. 실제 selected row가 생기면 strategy add / scenario execution / transition comparison을 한 번 더 수동 확인한다.
+
+### 2026-06-01 - Selected Dashboard should carry open issues into deployment preflight
+- User request:
+  - Final Review selected gate 분리 이후 5~7차 작업으로 Selected Dashboard open issue / follow-up 확인, Live / Deployment Readiness read-only preflight, 후보 재탐색 후 fresh selected row 생성 여부 확인을 진행해 달라고 승인함.
+- Interpreted goal:
+  - Final Review가 `REVIEW` 항목을 저장 차단하지 않는 대신, Selected Dashboard에서 해당 항목을 사라지지 않게 보여주고 future deployment 판단으로 이어지는 read-only preflight를 만든다.
+- Analysis result:
+  - Open Issues / Follow-up는 Final Decision V2의 `open_review_items`와 review trigger를 읽고, Deployment Readiness preflight는 `deployment_readiness_policy_snapshot`과 recheck / provider / continuity / review signal / allocation evidence를 묶는다.
+  - 2026-06-01 registry recheck 기준 Practical Validation row는 2개, Final Review eligible은 GTAA 1개뿐이며, 해당 후보도 selection outcome `hold_or_re_review`라 selected-route pass가 아니다. non-GTAA는 legacy current/proposal registry에만 있어 Clean V2 Practical Validation-passed source가 아니다.
+- Follow-up:
+  - no selected V2 row 상태에서는 Selected Dashboard가 empty state로 남는다. 다음 후보 탐색은 Backtest Analysis에서 non-GTAA Clean V2 source를 만들고 Practical Validation 필수 gate를 fresh로 통과시키는 쪽으로 진행해야 한다.
+
+### 2026-06-01 - Final Review selection should not equal live deployment readiness
+- User request:
+  - Final Review가 "진짜 실제 돈을 넣어도 되는가"를 묻고 싶었던 단계라면, 별도 Live / Deployment Readiness를 만들어도 결국 모든 후보가 거기서 막히지 않겠느냐고 질문하고 개선 작업을 승인함.
+- Interpreted goal:
+  - Practical Validation, Final Review, Selected Dashboard, future Live / Deployment Readiness의 질문을 분리하되, Final Review가 Portfolio Validation과 같은 목적이 되지 않도록 저장 기준과 증거 handoff를 명확히 한다.
+- Analysis result:
+  - Final Review의 현재 selected-route gate는 live/deployment audit처럼 작동해 기본 `REVIEW`까지 대부분 저장 차단으로 처리했다. 이 때문에 Practical Validation이 허용한 후보가 Final Review에서 거의 저장되지 않는 구조적 병목이 생겼다.
+  - 개선 기준은 Final Review를 Selected Dashboard에서 관찰할 모니터링 후보 선정 단계로 좁히고, 실제 자금 투입 판단은 future Live / Deployment Readiness로 분리하는 것이다. Final Review는 hard blocker / critical missing evidence를 막고, 기본 `REVIEW`는 `open_review_items`로 이어서 추적한다.
+- Follow-up:
+  - Live / Deployment Readiness 화면은 아직 구현하지 않았다. 향후 구현 시 `deployment_readiness_policy_snapshot`을 입력으로 쓰되, broker order / account sync / auto rebalance / live approval은 별도 승인 경계로 다룬다.
 
 ### 2026-05-31 - Non-GTAA search did not produce a fresh selected-route pass
 - User request:
@@ -52,7 +165,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request:
   - Final Review에서 비선정 저장 판단이 필요한지 질문했고, 정식 저장은 최종 통과 후보에만 활성화되도록 요청함.
 - Interpreted goal:
-  - Final Review의 주 action을 최종 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
+  - Final Review의 주 action을 모니터링 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
 - Analysis result:
   - 구현 기준은 `SELECT_FOR_PRACTICAL_PORTFOLIO` + selected-route gate pass + operator reason + unique decision id다.
   - 기존 hold / reject / re-review row는 Saved Decision Review / read model 호환을 위해 읽을 수 있지만, 새 UI의 정식 저장 action은 만들지 않는다.
@@ -179,9 +292,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - Session closeout doc added at `docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`.
   - Backtest Analysis now has explicit boundaries: Real-Money is first-pass readiness, Practical Validation handoff is gated, Portfolio Mix Builder creates one weighted mix candidate, and no memo / preset / live approval / order / auto rebalance behavior is added.
-  - Remaining items are parked as follow-up candidates: separate read-only candidate comparison, saved mix inspector polish, weighted mix cost / turnover aggregation, profile-specific thresholds, and Phase 14 prioritization.
+  - Remaining items are parked as follow-up candidates: separate read-only candidate comparison, saved mix inspector polish, weighted mix cost / turnover aggregation, and profile-specific thresholds.
 - Follow-up:
-  - Next product work should move to Practical Validation / Final Review review or Phase 14 prioritization, not keep expanding Backtest Analysis 1단계 without a new explicit scope.
+  - Next product work should move to Practical Validation / Final Review review or a newly approved research / phase / task, not keep expanding Backtest Analysis 1단계 without a new explicit scope.
 
 ### 2026-05-30 - Portfolio Mix Builder post-run UX is summary-first
 - User request:
@@ -253,17 +366,6 @@ Detailed historical analysis was archived on `2026-04-13`.
   - The change is UI / wording only; runtime calculation, JSONL registry, user memo / preset storage, broker approval, order, and auto rebalance remain unchanged.
 - Follow-up:
   - User review should focus on whether Promotion, Probation, Deployment, and Validation now read as one coherent Real-Money decision flow.
-
-### 2026-05-30 - Phase 14 opens second-cycle prioritization
-- User request:
-  - Phase 13 완료 후 다음 단계 진행을 요청함.
-- Interpreted goal:
-  - Phase 13 carry-forward 후보를 바로 무작정 구현하지 않고, 2차 cycle의 첫 구현 slice를 정하기 위한 Phase 14를 연다.
-- Analysis result:
-  - High-priority 후보가 여러 개이므로 `selected replay contract hardening`, `weighted mix cost / turnover aggregation`, `profile-specific threshold policy`, historical membership/source review, broker-grade execution realism design을 impact / dependency / effort / source uncertainty / storage risk / QA 기준으로 먼저 비교해야 한다.
-  - Phase 14는 구현 phase가 아니라 prioritization / handoff phase이며, code / DB schema / new JSONL / broker automation 변경을 포함하지 않는다.
-- Follow-up:
-  - 다음 task는 `phase14-candidate-prioritization-v1`로 후보 matrix를 만들고 첫 구현 후보와 owner skill을 확정한다.
 
 ### 2026-05-30 - Phase 13 closes the first hardening cycle
 - User request:
@@ -6893,12 +6995,52 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 append하지 않았고 Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인했다. 후보 보강은 evidence mapping / realism / provider / risk contribution 쪽에서 진행해야 한다
 
-### 2026-06-01 - Ingestion 탭 리뷰 후속 UX와 결과 해석을 개선한다
+### 2026-05-31 - Practical Validation에서 후보 전략과 월별 선택 종목을 보여준다
 - User request:
-  - 사용자가 Ingestion 리뷰 결과를 바탕으로 개선을 진행하되, 버튼 / 단어 / 기술 용어를 억지로 모두 한글화하지 말고 설명 내용을 이해하기 쉽게 정리해 달라고 요청함
+  - 사용자가 Practical Validation의 `검증할 후보 source` 선택 후 Step 1에서 어떤 전략 / mix 구성인지와 각 달 선택 종목이 보이지 않는다고 지적하고, 먼저 분석 방향을 확인한 뒤 개발 진행을 승인함
 - Interpreted goal:
-  - 기존 심볼 / 기간 / source 선택 형식은 유지하고, 사용자가 실행 전 수집 범위와 실행 후 데이터 의미를 더 정확히 읽게 해야 함
+  - Backtest Analysis가 넘긴 단일 / mix 후보의 구성, component strategy, target weight, 월별 selection / holdings evidence를 Practical Validation Step 1에서 바로 읽을 수 있어야 함
 - Analysis result:
-  - 가장 큰 gap은 화면 구조 전체 교체보다 실행 전 계약, bounded coverage 확인, result domain별 해석 부재였다. 특히 price row, provider snapshot, lifecycle partial evidence를 같은 방식으로 표시하면 coverage를 과신할 수 있음
+  - 기존 source snapshot은 compact curve 중심이라 `Date`, `Total Balance`, `Total Return`만 보존했고, result frame의 `Next Ticker`, `Next Weight` 등 selection evidence가 Practical Validation handoff에서 사라졌다. 기존 registry row는 재작성하지 않고 fallback이 필요하다
 - Follow-up:
-  - Ingestion workflow overview, 실행 전 contract card, bounded DB coverage quick check, domain-aware result label / interpretation callout, visible lifecycle partial-evidence warning을 추가했다
+  - source builder에 compact selection history helper를 추가하고 candidate / weighted mix / saved mix handoff와 runtime replay에 연결했다. Practical Validation Step 1은 strategy / construction brief, component strategy table, performance table, monthly selection / holdings table을 표시한다
+
+### 2026-06-01 - Practical Validation이 Final Review selected-route 실패 사유를 먼저 잡아야 한다
+- User request:
+  - 사용자가 Practical Validation을 통과해 Final Review로 갔는데 Final Review에서 validation evidence 때문에 selected-route가 실패하는 흐름은 단계 의미가 맞지 않는다고 지적하고 수정 진행을 승인함
+- Interpreted goal:
+  - Final Review에서 deterministic하게 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장을 막을 evidence gap은 Practical Validation 단계에서 먼저 차단해야 함
+- Analysis result:
+  - 기존 Practical Validation module gate는 `REVIEW`를 이동 가능으로 처리했지만, Final Review selection policy는 gross-only / net-cost / 핵심 coverage 같은 selection-critical `REVIEW_REQUIRED`를 저장 차단으로 해석했다
+- Follow-up:
+  - Final Review selection policy를 Practical Validation `Selected-route Preflight`로 재사용하고, preflight 미통과 row는 Final Review source picker에서 숨기도록 구현했다. Existing registry row는 rewrite하지 않고 동적 preflight로 판정한다
+
+### 2026-06-01 - Final Review 통과 후보를 Dashboard에 노출한다
+- User request:
+  - 사용자가 최종 통과한 후보들을 저장해서 Selected Portfolio Dashboard에 노출되도록 해 달라고 요청함
+- Interpreted goal:
+  - Final Review selected-route gate를 완화하지 않고, fresh 재검증에서 통과한 후보만 Final Decision V2와 Dashboard saved state에 남겨야 함
+- Analysis result:
+  - `GRS Liquid Macro Top2`, `GRS Macro Top1 MA200`, `GRS QQQ Gold Bonds Top2 MA150`, `GRS Macro Top3 MA200`는 replay PASS / Practical Validation READY / selected-route ready / investability packet ready였다. `GTAA Default Top3`는 fresh run에서 Practical Validation `BLOCKED`로 바뀌어 저장 대상에서 제외했다
+- Follow-up:
+  - Final Decision V2에 4개 row를 append하고 `Final Review 통과 후보 2026-06-01` dashboard portfolio에 4개 decision id를 배정했다. Dashboard는 read-only이며 live approval, order, broker/account linkage, auto rebalance는 모두 disabled다
+
+### 2026-06-01 - Finance JSONL registry cleanup 전 read-only audit을 한다
+- User request:
+  - 사용자가 DB는 건드리지 않고 `.aiworkspace/note/finance/**/*.jsonl` 전체를 최신 프로그램 상태 기준으로 audit하고, 승인 전에는 삭제 / 재작성 없이 inventory와 정리안만 제시해 달라고 요청함
+- Interpreted goal:
+  - V1 / V2 / legacy compatibility / saved setup / local run history를 구분하고, GRS 4개 selected decision과 Selected Dashboard assignment를 유지하는 cleanup plan을 만들어야 함
+- Analysis result:
+  - 13개 JSONL, 109 row 모두 parse 성공. GRS 4개 Final Decision V2는 source/result registry counterpart는 없지만, 현재 Selected Dashboard read model은 Final Decision V2 self-contained record로 정상 작동하며 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0이다
+- Follow-up:
+  - `.aiworkspace/note/finance/tasks/active/jsonl-registry-audit-20260601/DRY_RUN_REPORT.md`에 dry-run report를 작성했다. 승인 전 archive/delete/rewrite는 하지 않았고, source/result synthetic migration도 gate 재실행 없이는 하지 않는 방향을 권장했다
+
+### 2026-06-01 - 초창기 prototype JSONL을 active에서 정리한다
+- User request:
+  - 사용자가 V1 / prototype 저장 데이터가 무엇인지 혼란스럽고, 실제 삭제가 필요한지 V2 승격이 필요한지 정리한 뒤 권장안대로 진행해 달라고 승인함
+- Interpreted goal:
+  - 초창기 candidate / proposal / pre-live / V1 final / generated run history를 active workflow에서 제거하되, 원본은 archive에 남기고 GRS 4개 Selected Dashboard 상태는 유지해야 함
+- Analysis result:
+  - legacy/prototype rows는 현재 selected-route gate를 통과한 V2 chain이 아니므로 V2 승격 대상이 아니며, GRS 4개는 이미 Final Decision V2 self-contained selected record로 Dashboard에서 정상 작동한다
+- Follow-up:
+  - 13개 JSONL을 archive에 백업하고 10개 active JSONL을 제거했다. active에는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`, `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIOS.jsonl`만 남겼으며 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0을 재검증했다

@@ -572,7 +572,7 @@ def _render_persistent_backtest_history(*, open_backtest_page=None) -> None:
             "`Load Into Form`은 저장된 입력값만 `Single Strategy` 화면으로 불러옵니다. "
             "이후 form에서 다시 실행해야 최신 결과가 갱신됩니다. "
             "`Run Again`은 저장된 payload를 즉시 다시 실행하고, 최신 결과 화면으로 자동 이동합니다. "
-            "`Practical Validation으로 보내기`는 저장된 결과를 Clean V2 source로 저장하고 실전 검증 화면으로 보냅니다."
+            "`Practical Validation으로 보내기`는 저장된 결과를 current selection source로 저장하고 실전 검증 화면으로 보냅니다."
         )
 
 

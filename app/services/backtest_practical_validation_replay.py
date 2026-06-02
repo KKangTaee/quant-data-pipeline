@@ -8,6 +8,7 @@ from uuid import uuid4
 import pandas as pd
 
 from app.services.backtest_practical_validation_curve import curve_records_from_df, optional_float
+from app.services.backtest_practical_validation_source import compact_selection_history_from_result_df
 from app.runtime.backtest import (
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
@@ -26,6 +27,13 @@ from app.runtime.backtest import (
     GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS,
     GTAA_DEFAULT_SIGNAL_INTERVAL,
     GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+    STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
@@ -144,6 +152,39 @@ def _float_value(value: Any, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return float(default)
+
+
+def _dynamic_etf_promotion_policy_kwargs(payload: dict[str, Any]) -> dict[str, float]:
+    return {
+        "promotion_min_benchmark_coverage": _float_value(
+            payload.get("promotion_min_benchmark_coverage"),
+            STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+        ),
+        "promotion_min_net_cagr_spread": _float_value(
+            payload.get("promotion_min_net_cagr_spread"),
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        ),
+        "promotion_min_liquidity_clean_coverage": _float_value(
+            payload.get("promotion_min_liquidity_clean_coverage"),
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        ),
+        "promotion_max_underperformance_share": _float_value(
+            payload.get("promotion_max_underperformance_share"),
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        ),
+        "promotion_min_worst_rolling_excess_return": _float_value(
+            payload.get("promotion_min_worst_rolling_excess_return"),
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        ),
+        "promotion_max_strategy_drawdown": _float_value(
+            payload.get("promotion_max_strategy_drawdown"),
+            STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+        ),
+        "promotion_max_drawdown_gap_vs_benchmark": _float_value(
+            payload.get("promotion_max_drawdown_gap_vs_benchmark"),
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        ),
+    }
 
 
 def _bool_value(value: Any, default: bool) -> bool:
@@ -448,6 +489,7 @@ def _run_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("drawdown_guardrail_gap_threshold"),
                 STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
         )
     if key == "global_relative_strength":
         return run_global_relative_strength_backtest_from_db(
@@ -462,6 +504,7 @@ def _run_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("trend_filter_window"),
                 GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
         )
     if key == "risk_parity_trend":
         return run_risk_parity_trend_backtest_from_db(
@@ -496,6 +539,7 @@ def _run_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("drawdown_guardrail_gap_threshold"),
                 STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
         )
     if key == "dual_momentum":
         return run_dual_momentum_backtest_from_db(
@@ -530,6 +574,7 @@ def _run_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("drawdown_guardrail_gap_threshold"),
                 STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
         )
     raise ValueError(f"지원하지 않는 Practical Validation replay strategy입니다: {key or '-'}")
 
@@ -693,6 +738,11 @@ def run_practical_validation_actual_replay(
                         }
                     },
                     "result_curve": curve_records_from_df(result_df),
+                    "selection_history": compact_selection_history_from_result_df(
+                        result_df,
+                        component_title=title,
+                        component_weight=optional_float(component.get("target_weight")) or 0.0,
+                    ),
                     "_result_df": result_df,
                 }
             )

@@ -77,6 +77,51 @@ class BacktestExecutionResult:
     elapsed_seconds: float = 0.0
 
 
+def _payload_or_default(payload: Mapping[str, Any], key: str, default: Any) -> Any:
+    value = payload.get(key)
+    return default if value is None else value
+
+
+def _dynamic_etf_promotion_policy_kwargs(payload: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "promotion_min_benchmark_coverage": _payload_or_default(
+            payload,
+            "promotion_min_benchmark_coverage",
+            STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+        ),
+        "promotion_min_net_cagr_spread": _payload_or_default(
+            payload,
+            "promotion_min_net_cagr_spread",
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        ),
+        "promotion_min_liquidity_clean_coverage": _payload_or_default(
+            payload,
+            "promotion_min_liquidity_clean_coverage",
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        ),
+        "promotion_max_underperformance_share": _payload_or_default(
+            payload,
+            "promotion_max_underperformance_share",
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        ),
+        "promotion_min_worst_rolling_excess_return": _payload_or_default(
+            payload,
+            "promotion_min_worst_rolling_excess_return",
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        ),
+        "promotion_max_strategy_drawdown": _payload_or_default(
+            payload,
+            "promotion_max_strategy_drawdown",
+            STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+        ),
+        "promotion_max_drawdown_gap_vs_benchmark": _payload_or_default(
+            payload,
+            "promotion_max_drawdown_gap_vs_benchmark",
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        ),
+    }
+
+
 def execute_single_backtest(
     payload: Mapping[str, Any],
     *,
@@ -212,6 +257,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "promotion_max_bid_ask_spread_pct",
                 ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
             universe_mode=payload["universe_mode"],
             preset_name=payload["preset_name"],
         )
@@ -240,6 +286,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "promotion_max_bid_ask_spread_pct",
                 ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
             universe_mode=payload["universe_mode"],
             preset_name=payload["preset_name"],
         )
@@ -288,6 +335,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "promotion_max_bid_ask_spread_pct",
                 ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
             universe_mode=payload["universe_mode"],
             preset_name=payload["preset_name"],
         )
@@ -336,6 +384,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
                 "promotion_max_bid_ask_spread_pct",
                 ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
             ),
+            **_dynamic_etf_promotion_policy_kwargs(payload),
             universe_mode=payload["universe_mode"],
             preset_name=payload["preset_name"],
         )

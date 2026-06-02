@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [Phase 14 Second-Cycle Prioritization](./phases/active/phase14-second-cycle-prioritization/PLAN.md)
+  - none. Open a new phase only after the user approves a concrete scope.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current roadmap:
@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Final Review Commercial UX V1 is implementation complete with selection-only official save. Fresh non-GTAA search found no current-gate selected V2 row; legacy V1 has a non-GTAA Quality selected row that can be used only as an explicit migration seed.
+  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Strategy add / slot edit no longer triggers lower individual scenario detail work, portfolio scenario update runs pending / stale strategies by default, and individual evidence detail is lazy-open for one selected strategy; no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -31,12 +31,61 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-02 - Selected Dashboard Manual Scenario Run V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`.
+- Strategy add / slot edit now changes saved setup only; current scenario results are keyed by portfolio / slot / selected decision and start / end / balance signature so stale results are not counted as fresh.
+- `포트폴리오 시나리오 업데이트` runs pending / stale strategies by default and `전체 재실행` forces a full refresh; individual strategy evidence is opened for one selected strategy instead of eager-rendered tabs.
+- Verification passed: py_compile, focused Selected Portfolio contracts, `git diff --check`, Browser text QA, and screenshot `selected-dashboard-manual-scenario-run-v1-qa.png`.
+- Full scenario replay can still be slow because selected strategy contracts are replayed sequentially; no async worker, DB schema, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
+
+### 2026-06-01 - Selected Dashboard Product Polish V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-product-polish-v1/`.
+- Sections 1~3 now render as fixed-height portfolio shelf -> selected portfolio command band -> compact strategy board -> portfolio-wide scenario cockpit.
+- Delete controls moved into collapsed `포트폴리오 관리`; detailed strategy / performance tables moved into expanders.
+- Browser QA screenshot `selected-dashboard-product-polish-v1-qa.png`, py_compile, focused Selected Portfolio contracts, and `git diff --check` passed.
+- Section 4 Monitoring Signals / evidence was intentionally left unchanged; no DB schema, Final Review row, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
+
+### 2026-06-01 - Selected Dashboard Portfolio Flow Redesign V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`.
+- `Operations > Selected Portfolio Dashboard` now reads as `1. 나의 포트폴리오` -> `2. 포트폴리오 상세 / 전략 구성` -> `3. 모니터 시나리오`, with Final Review handoff / readiness / provider / audit evidence moved below the scenario workflow.
+- Dashboard saved state now supports backward-compatible strategy slots with selected decision / start / latest-end mode / balance / memo while preserving legacy `selected_decision_ids`.
+- Verification passed: py_compile, full `tests.test_service_contracts` 222 tests, `git diff --check`, and Browser QA screenshot `selected-dashboard-portfolio-flow-redesign-v1-qa.png`.
+- No Final Review decision rows, DB schema, provider fetch, broker/account sync, live approval, order, monitoring auto-write, or auto rebalance path was added.
+
+### 2026-06-01 - Removed stale Phase 14 active pointers
+- Removed the stale active Phase 14 pointer from durable index / roadmap / root handoff logs.
+- Deleted the abandoned `phase14-second-cycle-prioritization` active phase docs and `phase14-board-open` active task docs from the current workspace map.
+- Phase 13 carry-forward material remains source material only; no second-cycle phase is currently active.
+- No code, DB schema, registry JSONL, saved setup, broker/account, order, live approval, or auto rebalance path was touched.
+
+### 2026-06-01 - Final Decision Registry Naming Cleanup
+- Renamed the current selected decision registry from `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` to `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`.
+- Archived legacy collision is now named `FINAL_PORTFOLIO_SELECTION_DECISIONS_V1.jsonl`; active JSONL remains 4 GRS selected rows plus the existing Selected Dashboard and saved setup files.
+- Runtime consumers, Selected Dashboard source contracts, reference guide copy, and durable storage / flow docs now point to the canonical current file name.
+- Verification kept selected rows `4`, dashboard rows `4`, assigned references `4`, missing references `0`; no DB, broker/account, order, live approval, or auto rebalance path was touched.
+
 ### 2026-06-01
-- Completed `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`.
-- `Workspace > Ingestion` now has Korean purpose-first job guides, routine / manual separation, result next-action guidance, and visible data-quality caveats while preserving user-controlled symbols, periods, source modes, and provider options.
-- Exposed lifecycle evidence jobs for Nasdaq current listing snapshots, SEC CIK / ticker cross-check, and computed repeated-observation summaries under `상장 / 상폐 근거`.
-- Responsive follow-up replaced truncating Ingestion result / runtime metrics with wrapping cards and added compact Korean selector labels plus full current-selection captions for narrow browser widths.
-- No DB schema, provider connector, loader contract, Practical Validation gate, JSONL registry, saved setup, live approval, order, or auto rebalance behavior was added.
+- Completed dry-run candidate sweep in `.aiworkspace/note/finance/tasks/active/final-review-pass-candidate-search-20260601/`.
+- Found two fresh Final Review selected-route pass candidates without registry/saved persistence: `GRS Liquid Macro Top2` and `GTAA Default Top3`.
+- Best current candidate is `GRS Liquid Macro Top2` at CAGR `13.31%`, MDD `-17.75%`, Sharpe `1.12`, Practical Validation replay PASS, selected-route preflight ready, and Final Review selected gate Ready.
+- Lower-MDD follow-up found `GRS Macro Top1 MA200` at CAGR `18.03%`, MDD `-12.43%`, Sharpe `1.18`, selected-route ready; lower-drawdown top=2 alternative is `GRS QQQ Gold Bonds Top2 MA150` at CAGR `12.94%`, MDD `-8.81%`, Sharpe `1.31`.
+- Completed `.aiworkspace/note/finance/tasks/active/etf-dynamic-promotion-policy-contract-v1/`.
+- ETF dynamic strategies now carry strict-compatible promotion policy thresholds from Backtest Analysis source contract through execution dispatch, compare overrides, Practical Validation replay, and candidate source snapshots.
+- Fresh `GRS Liquid Macro Top2` verification passed: source has `promotion_min_net_cagr_spread=-0.02`, Practical Validation replay PASS, selected-route preflight `select_ready`, and Final Review selected gate Ready.
+- Final Review gate policy was not relaxed; proof-deficient Equal Weight-style missing net-cost / turnover evidence remains blocked by selected-route preflight.
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-portfolio-v1/`.
+- `Operations > Selected Portfolio Dashboard` now starts with `1. 나의 포트폴리오`, stores dashboard setup in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`, and lets users add Final Review selected candidates one by one without same-portfolio duplicates.
+- Monitoring Scenario now uses virtual start / end / capital, with latest DB market date as the default end, and Monitoring Signals / Open Issues / optional Preflight / same-portfolio transition comparison are organized after scenario execution.
+- Verification passed: compile/import checks, focused Selected Portfolio service contracts, full `tests.test_service_contracts` 217 tests, `git diff --check`, and Browser QA screenshot `selected-dashboard-monitoring-portfolio-v1-qa.png`.
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-live-readiness-followup-v1/`.
+- `Operations > Selected Portfolio Dashboard` now shows Open Issues / Follow-up and Deployment Readiness tabs sourced from selected Final Decision V2 snapshots and existing read-only dashboard evidence.
+- Deployment Readiness remains preflight-only: no live approval, order, broker/account connection, monitoring auto-write, or auto rebalance behavior was added.
+- Candidate recheck found 2 Practical Validation rows, 1 Final Review eligible GTAA row, and 0 selected-route pass; non-GTAA candidates exist only in legacy current/proposal registries, so no fresh selected row was appended.
+- Completed `.aiworkspace/note/finance/tasks/active/final-review-selection-readiness-gate-v1/`.
+- Final Review now uses `selection_gate_policy_snapshot` for `SELECT_FOR_PRACTICAL_PORTFOLIO` save readiness and preserves the older stricter audit as `deployment_readiness_policy_snapshot`.
+- Default `REVIEW` findings become `open_review_items`; hard blockers / critical missing evidence still block selected-route save.
+- Weighted mix Practical Validation source conversion now preserves component `weight_reason`, role source, and compact cost / turnover / net-cost evidence snapshots.
+- Verification passed: `py_compile`, targeted Practical Validation / Final Review service contracts, and full `tests.test_service_contracts` 211 tests.
 
 ### 2026-05-31
 - Session closeout docs aligned for master merge handoff: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs now describe Final Review selection-only official save and the current candidate search outcome.
@@ -98,10 +147,6 @@ Detailed historical logs were archived on `2026-04-13`.
 - Completed `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`.
 - Real-Money now treats the old `Shortlist` value as `Promotion Suggested Route`, not as a separate validation stage.
 - No runtime calculation, DB schema, JSONL registry, user memo / preset storage, live approval, order, or auto rebalance behavior was added.
-- Opened `.aiworkspace/note/finance/phases/active/phase14-second-cycle-prioritization/`.
-- Phase 14 is a second-cycle prioritization phase: rank Phase 13 carry-forward candidates and select the first implementation slice before code changes.
-- Completed `.aiworkspace/note/finance/tasks/active/phase14-board-open/`; next task is `phase14-candidate-prioritization-v1`.
-- No code, DB schema, JSONL registry, user memo / preset storage, monitoring log auto-write, broker order, live approval, account sync, or auto rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/phase13-integrated-qa-final-closeout/`.
 - Phase 13 closeout summary added at `.aiworkspace/note/finance/phases/done/phase13-hardening-cycle-closeout.md`.
 - First hardening cycle is complete as an investability evidence workflow; it is not broker-grade trading, live approval, account sync, order, or auto rebalance readiness.
@@ -4503,6 +4548,26 @@ Detailed historical logs were archived on `2026-04-13`.
   - Practical Validation 통과 또는 Final Review evidence-ready 후보는 있었지만, Final Review selected-route investability gate `select_allowed=True`를 만족한 후보는 없었다.
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에는 아무 row도 append하지 않았고, Selected Portfolio Dashboard read model은 `dashboard_rows=0`, `HANDOFF_NO_FINAL_DECISION`으로 확인됐다.
   - 다음 보강 1순위는 `EW Growth/Commodity 30 + GTAA Clean-6 70`의 backtest realism, component role / weight rationale propagation, provider/look-through, risk contribution, stress/validation efficacy evidence다.
+- Practical Validation Source Context V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-source-context-v1/`에서 Step 1 source snapshot에 strategy / construction brief와 component strategy table을 추가했다.
+  - 신규 candidate / weighted mix / saved mix handoff는 compact monthly selection / holdings history를 함께 넘기고, legacy source는 Step 3 runtime replay selection history를 fallback으로 읽는다.
+  - Result Table은 기존 performance row를 유지하면서 selection / holdings row를 별도 표로 표시한다. Full holdings 원장이나 provider raw data는 workflow JSONL에 새로 복사하지 않는다.
+- Practical Validation Selected-route Preflight V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-selected-route-preflight-v1/`에서 Practical Validation gate와 Final Review selected-route gate의 의미를 맞췄다.
+  - Final Review selection policy를 Practical Validation에서 preflight로 먼저 실행하고, selected-route 저장을 막을 evidence gap은 `Selected-route Preflight` 필수 module의 `NEEDS_INPUT`으로 승격해 Final Review 이동을 차단한다.
+  - 기존 saved Practical Validation row는 재작성하지 않고 Final Review source picker에서 동적으로 preflight를 확인해, 과거 `READY_WITH_REVIEW` row라도 selected-route 미통과이면 후보 목록에서 숨긴다.
+- Final Review pass candidate dashboard exposure:
+  - `.aiworkspace/note/finance/tasks/active/final-review-pass-candidate-search-20260601/`에서 통과 후보를 fresh 재검증한 뒤 Final Decision V2에 4개 GRS 후보를 append했다.
+  - `Final Review 통과 후보 2026-06-01` dashboard saved portfolio를 만들어 4개 selected decision id를 배정했고, Selected Dashboard Browser QA에서 `My Portfolios=1`, `Selected Pool=4`, `Assigned=4`를 확인했다.
+  - `GTAA Default Top3`는 fresh run에서 Practical Validation / investability packet이 block되어 저장하지 않았다. live approval / order / auto rebalance는 모두 disabled 상태다.
+- JSONL registry audit dry run:
+  - `.aiworkspace/note/finance/tasks/active/jsonl-registry-audit-20260601/`에서 `.aiworkspace/note/finance/**/*.jsonl` read-only inventory와 cleanup plan을 작성했다.
+  - JSONL 13개 / 109 row parse, GRS Final Decision V2 4개 selected row, Dashboard row 4개, assigned reference 4개를 확인했다.
+  - 승인 전 archive/delete/rewrite는 하지 않았다. 권장안은 GRS 4개를 Final Decision V2 self-contained selected record로 유지하고 synthetic source/result row는 만들지 않는 것이다.
+- JSONL registry cleanup:
+  - 사용자 승인 후 전체 JSONL 13개를 `.aiworkspace/note/finance/archive/jsonl-registry-audit-20260601/20260601T152645KST/`에 SHA-256 manifest와 함께 백업했다.
+  - active JSONL은 Final Decision V2, Selected Dashboard portfolios, Saved Portfolios 3개만 남겼고 legacy/prototype/generated JSONL 10개는 active에서 제거했다.
+  - 검증 결과 selected rows 4 / dashboard rows 4 / assigned 4 / missing 0, 6개 focused service contract, `git diff --check`가 통과했다.
 - Ingestion Console UX / Data Quality follow-up:
   - `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`에서 리뷰 후속 개선을 완료했다.
   - Ingestion 상단에 workflow overview를 추가하고, 주요 가격 수집 card에 실행 전 source / 대상 수 / 기간 / interval 계약과 bounded DB coverage quick check를 붙였다.

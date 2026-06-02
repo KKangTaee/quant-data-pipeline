@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-06-02
 
 ## Purpose
 
@@ -22,8 +22,8 @@ Last Verified: 2026-05-31
 
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
-- Current active phase: [Phase 14 Second-Cycle Prioritization](../phases/active/phase14-second-cycle-prioritization/PLAN.md)
-- Current implementation focus: Final Review Commercial UX V1 is implementation complete with selection-only official save. Final Review now opens as a user-facing Decision Desk with command center, flow rail, Candidate Board, Decision Cockpit, Final Decision Action, Evidence Appendix, and Decision History / Dashboard Handoff. New official Final Decision V2 writes are limited to `SELECT_FOR_PRACTICAL_PORTFOLIO` after the selected-route gate passes; hold / reject / re-review are status guidance and legacy read paths. Latest candidate searches found no fresh current-gate selected V2 row; the legacy non-GTAA Quality selected row is only a migration seed if explicitly approved.
+- Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
+- Current implementation focus: Selected Dashboard Manual Scenario Run V1 is implementation complete after Product Polish V1. Selected Dashboard sections 1~3 keep the fixed portfolio shelf / command band / strategy board / portfolio-wide cockpit, but strategy add or slot edits no longer trigger lower detail work. `포트폴리오 시나리오 업데이트` runs only pending / stale strategy scenarios by default, `전체 재실행` forces a full refresh, and individual strategy detail renders only after the user opens one selected strategy. Saved setup remains `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; Final Review rows remain read-only; no live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added.
 
 ## By Purpose
 

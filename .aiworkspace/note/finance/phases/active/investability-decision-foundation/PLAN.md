@@ -20,7 +20,7 @@ Backtest 중심 탐색 도구를 "실전 검토 가능한 포트폴리오 후보
 구체적으로는 아래 상태를 만든다.
 
 - 후보의 source chain과 검증 근거를 한 화면에서 설명할 수 있다.
-- critical gap이 남아 있으면 `실전 검토 통과 후보`로 선정되지 않는다.
+- critical gap이 남아 있으면 `모니터링 후보`로 선정되지 않는다.
 - full provider / holdings / macro raw data는 DB에 두고, JSONL에는 compact evidence만 남긴다.
 - 새 저장 기능은 source-of-truth일 때만 추가한다.
 - 무료 API / 공식 source를 우선 사용하고, 없을 때만 ingestion layer에서 crawler를 통해 DB에 저장한다.
@@ -57,7 +57,7 @@ Backtest 중심 탐색 도구를 "실전 검토 가능한 포트폴리오 후보
 | Free-source first | 필요한 데이터는 무료 API / 공식 source를 먼저 찾고, 없으면 ingestion crawler + DB 저장으로 처리한다 |
 | UI no direct fetch | Streamlit UI는 provider / FRED / web을 직접 호출하지 않고 service / loader를 통해 읽는다 |
 | `NOT_RUN` is not pass | 실행하지 못한 검증은 통과가 아니라 데이터 또는 구현 공백이다 |
-| No live trading boundary | 선정은 실전 검토 통과 후보 또는 tracking 대상이지 live approval이 아니다 |
+| No live trading boundary | 선정은 Selected Dashboard 모니터링 후보 또는 tracking 대상이지 live approval이 아니다 |
 
 ## Development Flow
 

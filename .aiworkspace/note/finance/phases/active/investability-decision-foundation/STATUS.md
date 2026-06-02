@@ -38,7 +38,7 @@ Last Updated: 2026-05-28
 - No user memo storage.
 - Main workflow JSONL chain stays limited to source / validation / final decision unless explicitly approved.
 - Critical `NOT_RUN` is not pass.
-- Selected route means `실전 검토 통과 후보`, not live approval.
+- Selected route means `모니터링 후보 선정`, not live approval.
 - UI does not fetch provider or macro data directly.
 - Stale provider snapshot evidence is REVIEW, not PASS.
 - Look-through board rows are compact summaries; full holdings / exposure rows stay in DB.

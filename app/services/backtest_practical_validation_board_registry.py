@@ -35,6 +35,7 @@ BOARD_SPECS = [
             "construction_risk",
             "backtest_realism",
             "stress_robustness",
+            "selected_route_preflight",
         ],
         "primary_module_ids": [],
         "applies_when": "always",

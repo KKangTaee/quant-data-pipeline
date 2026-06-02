@@ -1,25 +1,32 @@
 from __future__ import annotations
 
+import json
 import re
-from datetime import date
+from datetime import date, datetime
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pandas as pd
 
+from app.workspace_paths import SAVED_DIR
 from finance.loaders import load_latest_market_date
 from finance.performance import portfolio_performance_summary
 
 from .candidate_registry import load_current_candidate_registry_latest
 from .portfolio_selection_v2 import (
-    FINAL_SELECTION_DECISION_V2_FILE,
-    load_final_selection_decisions_v2,
+    FINAL_SELECTION_DECISION_FILE,
+    load_current_final_selection_decisions,
 )
 
 
 SELECTED_PRACTICAL_PORTFOLIO_ROUTE = "SELECT_FOR_PRACTICAL_PORTFOLIO"
+SELECTED_DASHBOARD_PORTFOLIOS_FILE = SAVED_DIR / "SELECTED_DASHBOARD_PORTFOLIOS.jsonl"
+SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION = 1
+SELECTED_DASHBOARD_PORTFOLIO_STATE_SCHEMA_VERSION = "selected_dashboard_monitoring_portfolio_state_v1"
 
 FINAL_SELECTED_PORTFOLIO_STATUS_LABELS = {
-    "normal": "정상 관찰",
+    "normal": "모니터링 기준 통과",
     "watch": "관찰 필요",
     "rebalance_needed": "리밸런싱 확인 필요",
     "re_review_needed": "재검토 필요",
@@ -61,6 +68,8 @@ SELECTED_PROVIDER_STALENESS_CONTRACT_SCHEMA_VERSION = "selected_provider_evidenc
 SELECTED_REVIEW_SIGNAL_POLICY_SCHEMA_VERSION = "selected_review_signal_policy_v1"
 SELECTED_DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consistency_v1"
 SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION = "selected_dashboard_handoff_v1"
+SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION = "selected_open_issue_followup_v1"
+SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_SCHEMA_VERSION = "selected_deployment_readiness_preflight_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -123,9 +132,20 @@ SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS = {
 }
 SELECTED_DASHBOARD_HANDOFF_ROUTE_LABELS = {
     "HANDOFF_NO_FINAL_DECISION": "최종 판단 없음",
-    "HANDOFF_NO_SELECTED_DECISION": "선정 row 없음",
+    "HANDOFF_NO_SELECTED_DECISION": "모니터링 후보 row 없음",
     "HANDOFF_BLOCKED": "Dashboard 연결 차단",
     "HANDOFF_READY": "Dashboard 연결 가능",
+}
+SELECTED_OPEN_ISSUE_FOLLOWUP_ROUTE_LABELS = {
+    "OPEN_ISSUES_CLEAR": "Follow-up clear",
+    "OPEN_ISSUES_PRESENT": "Follow-up 확인 필요",
+    "OPEN_ISSUES_NEEDS_INPUT": "Follow-up 입력 필요",
+}
+SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_ROUTE_LABELS = {
+    "DEPLOYMENT_READINESS_READY": "Deployment preflight clear",
+    "DEPLOYMENT_READINESS_REVIEW": "Deployment review 필요",
+    "DEPLOYMENT_READINESS_NEEDS_INPUT": "Deployment 입력 필요",
+    "DEPLOYMENT_READINESS_BLOCKED": "Deployment 차단",
 }
 _SELECTED_PROVIDER_REQUIRED_AREAS = {"ETF Operability", "ETF Holdings", "ETF Exposure"}
 _SELECTED_PROVIDER_STATUS_RANK = {
@@ -140,6 +160,12 @@ _TIMELINE_STATUS_RANK = {
     "WATCH": 2,
     "NEEDS_INPUT": 3,
     "BREACHED": 4,
+}
+_DEPLOYMENT_STATUS_RANK = {
+    "PASS": 0,
+    "REVIEW": 1,
+    "NEEDS_INPUT": 2,
+    "BLOCKED": 3,
 }
 _ALLOCATION_DRIFT_DISABLED_FIELDS = (
     "db_write",
@@ -170,6 +196,539 @@ def _optional_float(value: Any) -> float | None:
 def _clean_text(value: Any, default: str = "-") -> str:
     text = str(value or "").strip()
     return text or default
+
+
+def _selected_dashboard_portfolio_path(path: Path | None = None) -> Path:
+    return path or SELECTED_DASHBOARD_PORTFOLIOS_FILE
+
+
+def _selected_dashboard_portfolio_timestamp(now: str | None = None) -> str:
+    return str(now or datetime.now().isoformat(timespec="seconds"))
+
+
+def _selected_dashboard_json_ready(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _selected_dashboard_json_ready(child) for key, child in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_selected_dashboard_json_ready(child) for child in value]
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        try:
+            return _selected_dashboard_json_ready(value.item())
+        except Exception:
+            pass
+    try:
+        json.dumps(value, ensure_ascii=False)
+        return value
+    except TypeError:
+        return str(value)
+
+
+def _read_selected_dashboard_portfolio_rows(path: Path | None = None) -> list[dict[str, Any]]:
+    file_path = _selected_dashboard_portfolio_path(path)
+    if not file_path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in file_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _write_selected_dashboard_portfolio_rows(rows: list[dict[str, Any]], path: Path | None = None) -> None:
+    file_path = _selected_dashboard_portfolio_path(path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with file_path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(_selected_dashboard_json_ready(row), ensure_ascii=False) + "\n")
+
+
+def _normalize_selected_decision_ids(values: list[Any] | tuple[Any, ...] | None) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in list(values or []):
+        decision_id = str(value or "").strip()
+        if not decision_id or decision_id in seen:
+            continue
+        seen.add(decision_id)
+        normalized.append(decision_id)
+    return normalized
+
+
+def _normalize_selected_dashboard_strategy_slot(value: Any) -> dict[str, Any] | None:
+    if isinstance(value, str):
+        raw = {"decision_id": value}
+    else:
+        raw = dict(value or {})
+    decision_id = str(raw.get("decision_id") or raw.get("selected_decision_id") or "").strip()
+    if not decision_id:
+        return None
+    capital = _optional_float(raw.get("initial_capital"))
+    if capital is None:
+        capital = _optional_float(raw.get("balance"))
+    use_latest_end = raw.get("use_latest_end")
+    if use_latest_end is None:
+        use_latest_end = not str(raw.get("end") or "").strip()
+    return {
+        "slot_id": str(raw.get("slot_id") or f"slot_{decision_id}").strip(),
+        "decision_id": decision_id,
+        "start": str(raw.get("start") or raw.get("start_date") or "").strip(),
+        "end": str(raw.get("end") or raw.get("end_date") or "").strip(),
+        "use_latest_end": bool(use_latest_end),
+        "initial_capital": float(capital) if capital is not None else None,
+        "memo": str(raw.get("memo") or "").strip(),
+    }
+
+
+def _normalize_selected_dashboard_strategy_slots(
+    values: list[Any] | tuple[Any, ...] | None,
+    *,
+    selected_decision_ids: list[Any] | tuple[Any, ...] | None = None,
+) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for value in list(values or []):
+        slot = _normalize_selected_dashboard_strategy_slot(value)
+        if slot is None:
+            continue
+        decision_id = str(slot.get("decision_id") or "")
+        if decision_id in seen:
+            continue
+        seen.add(decision_id)
+        normalized.append(slot)
+    for decision_id in _normalize_selected_decision_ids(list(selected_decision_ids or [])):
+        if decision_id in seen:
+            continue
+        seen.add(decision_id)
+        normalized.append(
+            {
+                "slot_id": f"slot_{decision_id}",
+                "decision_id": decision_id,
+                "start": "",
+                "end": "",
+                "use_latest_end": True,
+                "initial_capital": None,
+                "memo": "",
+            }
+        )
+    return normalized
+
+
+def _strategy_slots_from_portfolio_row(row: dict[str, Any]) -> list[dict[str, Any]]:
+    return _normalize_selected_dashboard_strategy_slots(
+        list(row.get("strategy_slots") or []),
+        selected_decision_ids=list(row.get("selected_decision_ids") or []),
+    )
+
+
+def _selected_dashboard_slot_blockers(slot: dict[str, Any], *, row_found: bool) -> list[str]:
+    blockers: list[str] = []
+    if not str(slot.get("decision_id") or "").strip():
+        blockers.append("Final Review selected decision을 선택해야 합니다.")
+    if not row_found:
+        blockers.append("Final Review selected 후보 원본을 찾을 수 없습니다.")
+    if not str(slot.get("start") or "").strip():
+        blockers.append("시작 날짜가 필요합니다.")
+    if not bool(slot.get("use_latest_end")) and not str(slot.get("end") or "").strip():
+        blockers.append("latest를 쓰지 않으면 종료 날짜가 필요합니다.")
+    capital = _optional_float(slot.get("initial_capital"))
+    if capital is None or capital <= 0.0:
+        blockers.append("투자금 / balance는 0보다 커야 합니다.")
+    return blockers
+
+
+def load_selected_dashboard_portfolios(
+    *,
+    include_deleted: bool = False,
+    path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Load user-created Selected Dashboard monitoring portfolios from saved state."""
+    rows = []
+    for row in _read_selected_dashboard_portfolio_rows(path):
+        normalized_row = dict(row)
+        slots = _strategy_slots_from_portfolio_row(normalized_row)
+        normalized_row["strategy_slots"] = slots
+        normalized_row["selected_decision_ids"] = _normalize_selected_decision_ids(
+            [slot.get("decision_id") for slot in slots]
+        )
+        rows.append(normalized_row)
+    if not include_deleted:
+        rows = [row for row in rows if not row.get("deleted_at")]
+    return sorted(
+        rows,
+        key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""),
+        reverse=True,
+    )
+
+
+def save_selected_dashboard_portfolio(
+    *,
+    name: str,
+    description: str | None = None,
+    selected_decision_ids: list[Any] | tuple[Any, ...] | None = None,
+    strategy_slots: list[Any] | tuple[Any, ...] | None = None,
+    portfolio_id: str | None = None,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Create or update a user monitoring portfolio without touching Final Review decisions."""
+    clean_name = str(name or "").strip()
+    if not clean_name:
+        raise ValueError("Portfolio name is required.")
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    existing_index = None
+    existing: dict[str, Any] = {}
+    if portfolio_id:
+        for index, row in enumerate(rows):
+            if str(row.get("portfolio_id") or "") == str(portfolio_id):
+                existing_index = index
+                existing = dict(row)
+                break
+    normalized_slots = _normalize_selected_dashboard_strategy_slots(
+        strategy_slots if strategy_slots is not None else list(existing.get("strategy_slots") or []),
+        selected_decision_ids=(
+            selected_decision_ids
+            if selected_decision_ids is not None
+            else list(existing.get("selected_decision_ids") or [])
+        ),
+    )
+    normalized_decision_ids = _normalize_selected_decision_ids(
+        [slot.get("decision_id") for slot in normalized_slots]
+    )
+    record = {
+        "schema_version": SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION,
+        "portfolio_id": str(portfolio_id or existing.get("portfolio_id") or f"selected_dashboard_portfolio_{uuid4().hex[:12]}"),
+        "created_at": existing.get("created_at") or timestamp,
+        "updated_at": timestamp,
+        "deleted_at": None,
+        "name": clean_name,
+        "description": str(description if description is not None else existing.get("description") or "").strip(),
+        "selected_decision_ids": normalized_decision_ids,
+        "strategy_slots": normalized_slots,
+        "storage_boundary": {
+            "source": str(_selected_dashboard_portfolio_path(path or SELECTED_DASHBOARD_PORTFOLIOS_FILE)),
+            "final_decision_registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+    if existing_index is None:
+        rows.append(record)
+    else:
+        rows[existing_index] = record
+    _write_selected_dashboard_portfolio_rows(rows, path)
+    return record
+
+
+def delete_selected_dashboard_portfolio(
+    portfolio_id: str,
+    *,
+    now: str | None = None,
+    path: Path | None = None,
+) -> bool:
+    """Soft-delete a dashboard monitoring portfolio."""
+    clean_id = str(portfolio_id or "").strip()
+    if not clean_id:
+        return False
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    changed = False
+    for row in rows:
+        if str(row.get("portfolio_id") or "") == clean_id and not row.get("deleted_at"):
+            row["deleted_at"] = timestamp
+            row["updated_at"] = timestamp
+            changed = True
+            break
+    if changed:
+        _write_selected_dashboard_portfolio_rows(rows, path)
+    return changed
+
+
+def _mutate_selected_dashboard_portfolio_strategy(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    action: str,
+    start: str | None = None,
+    end: str | None = None,
+    use_latest_end: bool | None = None,
+    initial_capital: float | None = None,
+    memo: str | None = None,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    clean_portfolio_id = str(portfolio_id or "").strip()
+    clean_decision_id = str(decision_id or "").strip()
+    if not clean_portfolio_id or not clean_decision_id:
+        return {"status": "error", "message": "portfolio_id and decision_id are required.", "portfolio": {}}
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    for index, row in enumerate(rows):
+        if str(row.get("portfolio_id") or "") != clean_portfolio_id or row.get("deleted_at"):
+            continue
+        slots = _strategy_slots_from_portfolio_row(dict(row))
+        decision_ids = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
+        if action == "add":
+            if clean_decision_id in decision_ids:
+                return {"status": "duplicate", "message": "Selected strategy already exists in this portfolio.", "portfolio": dict(row)}
+            slot = _normalize_selected_dashboard_strategy_slot(
+                {
+                    "decision_id": clean_decision_id,
+                    "start": start or "",
+                    "end": end or "",
+                    "use_latest_end": True if use_latest_end is None else bool(use_latest_end),
+                    "initial_capital": initial_capital,
+                    "memo": memo or "",
+                }
+            )
+            if slot is not None:
+                slots.append(slot)
+            status = "added"
+            message = "Selected strategy added."
+        else:
+            if clean_decision_id not in decision_ids:
+                return {"status": "not_found", "message": "Selected strategy is not in this portfolio.", "portfolio": dict(row)}
+            slots = [slot for slot in slots if str(slot.get("decision_id") or "") != clean_decision_id]
+            status = "removed"
+            message = "Selected strategy removed."
+        decision_ids = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
+        row["selected_decision_ids"] = decision_ids
+        row["strategy_slots"] = slots
+        row["updated_at"] = timestamp
+        rows[index] = row
+        _write_selected_dashboard_portfolio_rows(rows, path)
+        return {"status": status, "message": message, "portfolio": dict(row)}
+    return {"status": "not_found", "message": "Portfolio not found.", "portfolio": {}}
+
+
+def add_selected_dashboard_portfolio_strategy(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    use_latest_end: bool | None = None,
+    initial_capital: float | None = None,
+    memo: str | None = None,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    return _mutate_selected_dashboard_portfolio_strategy(
+        portfolio_id,
+        decision_id,
+        action="add",
+        start=start,
+        end=end,
+        use_latest_end=use_latest_end,
+        initial_capital=initial_capital,
+        memo=memo,
+        now=now,
+        path=path,
+    )
+
+
+def remove_selected_dashboard_portfolio_strategy(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    return _mutate_selected_dashboard_portfolio_strategy(
+        portfolio_id,
+        decision_id,
+        action="remove",
+        now=now,
+        path=path,
+    )
+
+
+def update_selected_dashboard_portfolio_strategy_slot(
+    portfolio_id: str,
+    decision_id: str,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    use_latest_end: bool | None = None,
+    initial_capital: float | None = None,
+    memo: str | None = None,
+    now: str | None = None,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Update one saved strategy slot without mutating Final Review decision rows."""
+    clean_portfolio_id = str(portfolio_id or "").strip()
+    clean_decision_id = str(decision_id or "").strip()
+    if not clean_portfolio_id or not clean_decision_id:
+        return {"status": "error", "message": "portfolio_id and decision_id are required.", "portfolio": {}}
+    rows = _read_selected_dashboard_portfolio_rows(path)
+    timestamp = _selected_dashboard_portfolio_timestamp(now)
+    for index, row in enumerate(rows):
+        if str(row.get("portfolio_id") or "") != clean_portfolio_id or row.get("deleted_at"):
+            continue
+        slots = _strategy_slots_from_portfolio_row(dict(row))
+        updated = False
+        for slot in slots:
+            if str(slot.get("decision_id") or "") != clean_decision_id:
+                continue
+            if start is not None:
+                slot["start"] = str(start or "").strip()
+            if end is not None:
+                slot["end"] = str(end or "").strip()
+            if use_latest_end is not None:
+                slot["use_latest_end"] = bool(use_latest_end)
+                if bool(use_latest_end):
+                    slot["end"] = ""
+            if initial_capital is not None:
+                slot["initial_capital"] = float(initial_capital)
+            if memo is not None:
+                slot["memo"] = str(memo or "").strip()
+            updated = True
+            break
+        if not updated:
+            return {"status": "not_found", "message": "Selected strategy is not in this portfolio.", "portfolio": dict(row)}
+        row["strategy_slots"] = slots
+        row["selected_decision_ids"] = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
+        row["updated_at"] = timestamp
+        rows[index] = row
+        _write_selected_dashboard_portfolio_rows(rows, path)
+        return {"status": "updated", "message": "Selected strategy slot updated.", "portfolio": dict(row)}
+    return {"status": "not_found", "message": "Portfolio not found.", "portfolio": {}}
+
+
+def build_selected_dashboard_portfolio_state(
+    *,
+    portfolios: list[dict[str, Any]] | None = None,
+    dashboard_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Join user monitoring portfolios with Final Review selected dashboard rows."""
+    active_portfolios = [dict(row or {}) for row in list(portfolios or []) if not dict(row or {}).get("deleted_at")]
+    selected_rows = [dict(row or {}) for row in list(dashboard_rows or [])]
+    row_by_decision_id = {
+        str(row.get("decision_id") or "").strip(): row
+        for row in selected_rows
+        if str(row.get("decision_id") or "").strip()
+    }
+    portfolio_rows: list[dict[str, Any]] = []
+    missing_references = 0
+    duplicate_references = 0
+    for portfolio in active_portfolios:
+        raw_ids = [str(item or "").strip() for item in list(portfolio.get("selected_decision_ids") or []) if str(item or "").strip()]
+        raw_slots = list(portfolio.get("strategy_slots") or [])
+        raw_slot_ids = [
+            str(slot.get("decision_id") or "")
+            for slot in [
+                _normalize_selected_dashboard_strategy_slot(raw_slot)
+                for raw_slot in raw_slots
+            ]
+            if slot and str(slot.get("decision_id") or "")
+        ]
+        slots = _strategy_slots_from_portfolio_row(portfolio)
+        unique_ids = _normalize_selected_decision_ids([slot.get("decision_id") for slot in slots])
+        duplicate_references += max(len(raw_ids) - len(_normalize_selected_decision_ids(raw_ids)), 0)
+        duplicate_references += max(len(raw_slot_ids) - len(_normalize_selected_decision_ids(raw_slot_ids)), 0)
+        strategy_rows = []
+        incomplete_slot_count = 0
+        complete_slot_count = 0
+        virtual_capital_total = 0.0
+        for slot in slots:
+            decision_id = str(slot.get("decision_id") or "")
+            selected_row = row_by_decision_id.get(decision_id)
+            effective_slot = dict(slot)
+            if selected_row is not None:
+                if not str(effective_slot.get("start") or "").strip():
+                    effective_slot["start"] = selected_row.get("baseline_start") or ""
+                if _optional_float(effective_slot.get("initial_capital")) is None:
+                    effective_slot["initial_capital"] = 10000.0
+            blockers = _selected_dashboard_slot_blockers(effective_slot, row_found=selected_row is not None)
+            if blockers:
+                incomplete_slot_count += 1
+            else:
+                complete_slot_count += 1
+                virtual_capital_total += float(_optional_float(effective_slot.get("initial_capital")) or 0.0)
+            if selected_row is None:
+                continue
+            strategy_rows.append(
+                {
+                    **selected_row,
+                    "dashboard_slot": effective_slot,
+                    "slot_id": effective_slot.get("slot_id"),
+                    "slot_start": effective_slot.get("start"),
+                    "slot_end": effective_slot.get("end"),
+                    "slot_use_latest_end": bool(effective_slot.get("use_latest_end")),
+                    "slot_initial_capital": effective_slot.get("initial_capital"),
+                    "slot_memo": effective_slot.get("memo"),
+                    "slot_input_complete": not blockers,
+                    "slot_blockers": blockers,
+                }
+            )
+        missing_ids = [decision_id for decision_id in unique_ids if decision_id not in row_by_decision_id]
+        missing_references += len(missing_ids)
+        if not unique_ids:
+            dashboard_status = "Empty"
+        elif missing_ids or incomplete_slot_count:
+            dashboard_status = "Needs Review"
+        else:
+            dashboard_status = "Ready"
+        portfolio_rows.append(
+            {
+                **portfolio,
+                "selected_decision_ids": unique_ids,
+                "strategy_slots": slots,
+                "strategy_count": len(strategy_rows),
+                "missing_strategy_count": len(missing_ids),
+                "complete_strategy_slot_count": complete_slot_count,
+                "incomplete_strategy_slot_count": incomplete_slot_count,
+                "virtual_capital_total": round(virtual_capital_total, 4),
+                "dashboard_status": dashboard_status,
+                "strategy_rows": strategy_rows,
+                "missing_decision_ids": missing_ids,
+            }
+        )
+    assigned_ids = {
+        decision_id
+        for portfolio in portfolio_rows
+        for decision_id in list(portfolio.get("selected_decision_ids") or [])
+    }
+    available_rows = [
+        row for row in selected_rows if str(row.get("decision_id") or "").strip() not in assigned_ids
+    ]
+    return {
+        "schema_version": SELECTED_DASHBOARD_PORTFOLIO_STATE_SCHEMA_VERSION,
+        "storage_file": str(SELECTED_DASHBOARD_PORTFOLIOS_FILE),
+        "portfolios": portfolio_rows,
+        "selected_strategy_pool": selected_rows,
+        "available_unassigned_strategy_rows": available_rows,
+        "metrics": {
+            "portfolio_count": len(portfolio_rows),
+            "selected_strategy_pool_count": len(selected_rows),
+            "assigned_strategy_reference_count": sum(len(list(row.get("selected_decision_ids") or [])) for row in portfolio_rows),
+            "available_unassigned_strategy_count": len(available_rows),
+            "missing_reference_count": missing_references,
+            "duplicate_reference_count": duplicate_references,
+            "complete_strategy_slot_count": sum(int(row.get("complete_strategy_slot_count") or 0) for row in portfolio_rows),
+            "incomplete_strategy_slot_count": sum(int(row.get("incomplete_strategy_slot_count") or 0) for row in portfolio_rows),
+            "virtual_capital_total": round(sum(float(row.get("virtual_capital_total") or 0.0) for row in portfolio_rows), 4),
+        },
+        "execution_boundary": {
+            "portfolio_saved_state": True,
+            "final_decision_registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
 
 
 def _selected_allocation_read_only_boundary(*, write_policy: str, notes: str) -> dict[str, Any]:
@@ -221,10 +780,10 @@ def _selected_decision_source_contract(
         "selection_source_id": _clean_text(raw_decision.get("selection_source_id") or row.get("selection_source_id"), ""),
         "validation_id": _clean_text(raw_decision.get("validation_id") or row.get("validation_id"), ""),
         "source_identity": f"{source_type}:{source_id}" if source_type or source_id else "",
-        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
-        "registry_file": getattr(FINAL_SELECTION_DECISION_V2_FILE, "name", str(FINAL_SELECTION_DECISION_V2_FILE)),
+        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS",
+        "registry_file": getattr(FINAL_SELECTION_DECISION_FILE, "name", str(FINAL_SELECTION_DECISION_FILE)),
         "session_evidence_sources": normalized_session_sources,
-        "evidence_scope": "final_decision_v2_plus_session_state",
+        "evidence_scope": "final_decision_plus_session_state",
         "execution_boundary": {
             "write_policy": "read_only_selected_decision_source_contract",
             "db_write": False,
@@ -234,7 +793,7 @@ def _selected_decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Selected Dashboard read models share the Final Decision V2 row and optional session-state evidence only.",
+            "notes": "Selected Dashboard read models share the Final Decision row and optional session-state evidence only.",
         },
     }
 
@@ -376,7 +935,7 @@ def _derive_operation_status(
     blockers: list[str],
 ) -> tuple[str, str]:
     if not _is_selected_practical_portfolio(row):
-        return "blocked", "Final Review에서 실전 후보로 선정된 row가 아닙니다."
+        return "blocked", "Final Review에서 Selected Dashboard 모니터링 후보로 선정된 row가 아닙니다."
     if not active_components:
         return "blocked", "선정된 component가 없어 운영 대상으로 볼 수 없습니다."
     if abs(target_weight_total - 100.0) > 0.01:
@@ -403,7 +962,7 @@ def _derive_operation_status(
         watch_routes.append(f"paper={paper_route}")
     if watch_routes:
         return "watch", " / ".join(watch_routes)
-    return "normal", "최종 선정 기록, component, 목표 비중, evidence blocker 기준이 운영 대시보드 첫 범위를 통과했습니다."
+    return "normal", "선정 기록, component, 목표 비중, evidence blocker 기준이 모니터링 대시보드 첫 범위를 통과했습니다."
 
 
 def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -549,20 +1108,20 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
 
     if not final_rows:
         route = "HANDOFF_NO_FINAL_DECISION"
-        next_action = "Final Review에서 최종 후보 선정 저장을 먼저 진행합니다."
-        verdict = "Selected Dashboard로 넘길 최종 선정 row가 아직 없습니다."
+        next_action = "Final Review에서 모니터링 후보 선정 저장을 먼저 진행합니다."
+        verdict = "Selected Dashboard로 넘길 모니터링 후보 row가 아직 없습니다."
     elif not selected_rows:
         route = "HANDOFF_NO_SELECTED_DECISION"
-        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 선정 row를 저장해야 합니다."
-        verdict = "저장된 Final Review row는 있지만 선정된 dashboard 대상 row가 없습니다."
+        next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 모니터링 후보 row를 저장해야 합니다."
+        verdict = "저장된 Final Review row는 있지만 모니터링 dashboard 대상 row가 없습니다."
     elif monitorable_count == 0:
         route = "HANDOFF_BLOCKED"
-        next_action = "선정 row의 component, target weight, Final Review blocker를 보강합니다."
-        verdict = "선정 row가 모두 dashboard 운영 대상으로 보기 전에 막혀 있습니다."
+        next_action = "모니터링 후보 row의 component, target weight, Final Review blocker를 보강합니다."
+        verdict = "모니터링 후보 row가 모두 dashboard 운영 대상으로 보기 전에 막혀 있습니다."
     else:
         route = "HANDOFF_READY"
         next_action = "Operations > Selected Portfolio Dashboard에서 recheck / readiness / provider / timeline을 이어서 확인합니다."
-        verdict = "선정 row가 Selected Dashboard read-only 점검 대상으로 연결됩니다."
+        verdict = "모니터링 후보 row가 Selected Dashboard read-only 점검 대상으로 연결됩니다."
 
     checklist = [
         _handoff_check_row(
@@ -570,7 +1129,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
             status="PASS" if final_rows else "NEEDS_INPUT",
             ready=bool(final_rows),
             current=len(final_rows),
-            evidence="Final Decision V2 rows are available" if final_rows else "No saved final decision rows",
+            evidence="Final Decision rows are available" if final_rows else "No saved final decision rows",
             next_action="Use saved decisions as the handoff source." if final_rows else "Record a final review decision first.",
         ),
         _handoff_check_row(
@@ -623,7 +1182,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
         "next_action": next_action,
         "destination": "Operations > Selected Portfolio Dashboard",
         "summary": {
-            "registry_path": str(FINAL_SELECTION_DECISION_V2_FILE),
+            "registry_path": str(FINAL_SELECTION_DECISION_FILE),
             "final_decision_count": len(final_rows),
             "selected_decision_count": len(selected_rows),
             "dashboard_row_count": dashboard_row_count,
@@ -649,7 +1208,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "The handoff review reads Final Decision V2 rows and does not create dashboard state or trading actions.",
+            "notes": "The handoff review reads Final Decision rows and does not create dashboard state or trading actions.",
         },
     }
 
@@ -1380,11 +1939,11 @@ def build_selected_portfolio_monitoring_timeline(
             signal=operation_label,
             evidence=_clean_text(selected.get("status_reason")),
             next_action=(
-                "선정 row를 운영 대상으로 계속 읽습니다."
+                "모니터링 후보 row를 운영 대상으로 계속 읽습니다."
                 if operation_status == "normal"
                 else "Why Selected에서 남은 blocker와 watch 이유를 먼저 확인합니다."
             ),
-            source="FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+            source="FINAL_PORTFOLIO_SELECTION_DECISIONS",
         )
     ]
 
@@ -1593,7 +2152,7 @@ def build_selected_portfolio_continuity_check(
                 f"source={timeline_source_contract.get('source_type') or '-'}:{timeline_source_contract.get('source_id') or '-'}"
             ),
             evidence=(
-                "Timeline, Continuity, and Dossier can use the same Final Decision V2 source"
+                "Timeline, Continuity, and Dossier can use the same Final Decision source"
                 if source_contract_matches
                 else "Timeline source contract is missing or does not match the selected decision row"
             ),
@@ -2241,7 +2800,7 @@ def build_selected_portfolio_review_signal_policy(
                 else "Why Selected tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
             ),
             policy_owner="Final Review evidence packet",
-            source="FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+            source="FINAL_PORTFOLIO_SELECTION_DECISIONS",
         )
     ]
 
@@ -3291,6 +3850,409 @@ def build_selected_portfolio_recheck_operations_preflight(
     }
 
 
+def _selected_raw_decision(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(row.get("raw_decision") or row or {})
+
+
+def _selected_policy_snapshot(row: dict[str, Any], key: str) -> dict[str, Any]:
+    raw_decision = _selected_raw_decision(row)
+    packet = dict(raw_decision.get("investability_evidence_packet") or row.get("investability_evidence_packet") or {})
+    if key == "deployment":
+        return dict(
+            raw_decision.get("deployment_readiness_policy_snapshot")
+            or packet.get("deployment_readiness_policy_snapshot")
+            or {}
+        )
+    if key == "selection":
+        return dict(
+            raw_decision.get("selection_gate_policy_snapshot")
+            or raw_decision.get("gate_policy_snapshot")
+            or packet.get("selection_gate_policy_snapshot")
+            or packet.get("gate_policy_snapshot")
+            or {}
+        )
+    return {}
+
+
+def _selected_open_review_items(row: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_decision = _selected_raw_decision(row)
+    packet = dict(raw_decision.get("investability_evidence_packet") or row.get("investability_evidence_packet") or {})
+    items = raw_decision.get("open_review_items")
+    if items is None:
+        items = packet.get("open_review_items")
+    return [dict(item or {}) for item in list(items or []) if isinstance(item, dict)]
+
+
+def _selected_followup_status(value: Any) -> str:
+    normalized = str(value or "").strip().upper()
+    if normalized in {"BLOCK", "BLOCKED", "BREACHED", "ERROR"}:
+        return "BLOCKED"
+    if normalized in {"NEEDS_INPUT", "NOT_RUN", "MISSING", "NEEDS_DATA"}:
+        return "NEEDS_INPUT"
+    if normalized in {"PASS", "READY", "CLEAR", "OK"}:
+        return "PASS"
+    return "REVIEW"
+
+
+def _selected_open_issue_row(
+    *,
+    area: str,
+    status: str,
+    current: Any,
+    evidence: Any,
+    next_action: Any,
+    source: str,
+) -> dict[str, Any]:
+    normalized_status = _selected_followup_status(status)
+    return {
+        "Area": _clean_text(area),
+        "Status": normalized_status,
+        "Ready": normalized_status == "PASS",
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+        "Source": _clean_text(source),
+    }
+
+
+def build_selected_portfolio_open_issue_followup(row: dict[str, Any]) -> dict[str, Any]:
+    """Expose Final Review open review items on the Selected Dashboard without creating new state."""
+
+    raw_decision = _selected_raw_decision(row)
+    open_items = _selected_open_review_items(row)
+    rows: list[dict[str, Any]] = []
+    for item in open_items:
+        deployment_effect = item.get("Deployment Gate Effect") or item.get("deployment_gate_effect")
+        status = deployment_effect or item.get("Severity") or item.get("Status") or "REVIEW"
+        rows.append(
+            _selected_open_issue_row(
+                area=item.get("Criteria") or item.get("Group") or "Open review item",
+                status=status,
+                current=item.get("Current") or status,
+                evidence=item.get("Evidence") or "Final Review selection allowed this item as follow-up evidence.",
+                next_action=item.get("Required Action") or item.get("Next Action") or "Dashboard / Deployment readiness에서 이어서 확인합니다.",
+                source=item.get("Group") or "open_review_items",
+            )
+        )
+
+    review_triggers = [
+        str(trigger).strip()
+        for trigger in list(row.get("review_triggers") or dict(raw_decision.get("paper_tracking_snapshot") or {}).get("review_triggers") or [])
+        if str(trigger).strip()
+    ]
+    for trigger in review_triggers:
+        rows.append(
+            _selected_open_issue_row(
+                area="Review Trigger",
+                status="REVIEW",
+                current=trigger,
+                evidence="Final Review에 저장된 monitoring trigger입니다.",
+                next_action="Performance Recheck / Review Signals에서 trigger breach 여부를 확인합니다.",
+                source="paper_tracking_snapshot.review_triggers",
+            )
+        )
+
+    status_counts = {status: 0 for status in _DEPLOYMENT_STATUS_RANK}
+    for issue_row in rows:
+        status = str(issue_row.get("Status") or "REVIEW")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    needs_input_count = int(status_counts.get("NEEDS_INPUT", 0))
+    blocked_count = int(status_counts.get("BLOCKED", 0))
+    open_issue_count = len(open_items)
+    if blocked_count or needs_input_count:
+        route = "OPEN_ISSUES_NEEDS_INPUT"
+        conclusion = "선정 후보의 follow-up 중 입력 또는 차단 성격의 항목이 있습니다."
+        next_action = "해당 issue의 Required Action을 먼저 확인하고 필요한 evidence를 보강합니다."
+    elif rows:
+        route = "OPEN_ISSUES_PRESENT"
+        conclusion = "선정은 가능했지만 Dashboard / Deployment Readiness에서 이어서 볼 follow-up이 있습니다."
+        next_action = "Review Signals, Provider Evidence, Performance Recheck와 함께 open issue를 확인합니다."
+    else:
+        route = "OPEN_ISSUES_CLEAR"
+        conclusion = "Final Review에서 이어서 볼 open review item이 없습니다."
+        next_action = "정기 recheck와 monitoring trigger만 확인합니다."
+
+    return {
+        "schema_version": SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_OPEN_ISSUE_FOLLOWUP_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "next_action": next_action,
+        "rows": rows,
+        "metrics": {
+            "open_review_item_count": open_issue_count,
+            "review_trigger_count": len(review_triggers),
+            "row_count": len(rows),
+            "review_count": int(status_counts.get("REVIEW", 0)),
+            "needs_input_count": needs_input_count,
+            "blocked_count": blocked_count,
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_selected_open_issue_followup",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Open issue follow-up reads Final Decision snapshots only; it does not save monitoring state.",
+        },
+    }
+
+
+def _deployment_status_from_policy_severity(value: Any) -> str:
+    normalized = str(value or "").strip().upper()
+    if normalized == "BLOCK":
+        return "BLOCKED"
+    if normalized in {"REVIEW_REQUIRED", "WATCH", "REVIEW"}:
+        return "REVIEW"
+    if normalized in {"NEEDS_INPUT", "NOT_RUN", "MISSING"}:
+        return "NEEDS_INPUT"
+    return "PASS"
+
+
+def _deployment_status_from_route(route: Any) -> str:
+    normalized = str(route or "").strip().upper()
+    if not normalized:
+        return "NEEDS_INPUT"
+    if any(token in normalized for token in ("BLOCKED", "BREACHED", "ERROR")):
+        return "BLOCKED"
+    if any(token in normalized for token in ("NEEDS_DATA", "NEEDS_INPUT", "MISSING", "NOT_RUN")):
+        return "NEEDS_INPUT"
+    if any(token in normalized for token in ("READY", "CLEAR", "OPTIONAL", "PASS")):
+        return "PASS"
+    if any(token in normalized for token in ("REVIEW", "WATCH", "STALE", "PRESENT")):
+        return "REVIEW"
+    return "PASS"
+
+
+def _deployment_preflight_row(
+    *,
+    area: str,
+    status: str,
+    current: Any,
+    evidence: Any,
+    next_action: Any,
+    source: str,
+) -> dict[str, Any]:
+    normalized_status = _selected_followup_status(status)
+    return {
+        "Area": _clean_text(area),
+        "Status": normalized_status,
+        "Ready": normalized_status == "PASS",
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+        "Source": _clean_text(source),
+    }
+
+
+def build_selected_portfolio_deployment_readiness_preflight(
+    row: dict[str, Any],
+    *,
+    recheck_preflight: dict[str, Any] | None = None,
+    provider_evidence: dict[str, Any] | None = None,
+    continuity_check: dict[str, Any] | None = None,
+    review_signal_policy: dict[str, Any] | None = None,
+    allocation_boundary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Combine selected-row evidence into a read-only live/deployment readiness preflight."""
+
+    deployment_policy = _selected_policy_snapshot(row, "deployment")
+    open_issue_followup = build_selected_portfolio_open_issue_followup(row)
+    rows: list[dict[str, Any]] = []
+
+    if deployment_policy:
+        rows.append(
+            _deployment_preflight_row(
+                area="Deployment Gate Policy",
+                status=_deployment_status_from_route(deployment_policy.get("outcome")),
+                current=deployment_policy.get("outcome") or "-",
+                evidence="Final Review가 저장한 strict deployment-readiness policy snapshot입니다.",
+                next_action=deployment_policy.get("next_action") or "Policy rows의 non-PASS 항목을 확인합니다.",
+                source=deployment_policy.get("schema_version") or "deployment_readiness_policy_snapshot",
+            )
+        )
+        for policy_row in list(deployment_policy.get("policy_rows") or []):
+            policy_item = dict(policy_row or {})
+            severity = policy_item.get("Severity") or "PASS"
+            status = _deployment_status_from_policy_severity(severity)
+            if status == "PASS":
+                continue
+            rows.append(
+                _deployment_preflight_row(
+                    area=f"Policy: {policy_item.get('Criteria') or policy_item.get('Group') or 'Policy row'}",
+                    status=status,
+                    current=policy_item.get("Current") or severity,
+                    evidence=policy_item.get("Evidence") or "-",
+                    next_action=policy_item.get("Required Action") or "Deployment 전 policy evidence를 보강합니다.",
+                    source=policy_item.get("Group") or "deployment_policy_row",
+                )
+            )
+    else:
+        rows.append(
+            _deployment_preflight_row(
+                area="Deployment Gate Policy",
+                status="NEEDS_INPUT",
+                current="missing",
+                evidence="Final Decision row에 deployment_readiness_policy_snapshot이 없습니다.",
+                next_action="Final Review selection-readiness gate가 분리된 이후 생성된 selected row로 다시 확인합니다.",
+                source="deployment_readiness_policy_snapshot",
+            )
+        )
+
+    open_metrics = dict(open_issue_followup.get("metrics") or {})
+    rows.append(
+        _deployment_preflight_row(
+            area="Open Issues / Follow-up",
+            status=_deployment_status_from_route(open_issue_followup.get("route")),
+            current=f"open={open_metrics.get('open_review_item_count', 0)} / triggers={open_metrics.get('review_trigger_count', 0)}",
+            evidence=open_issue_followup.get("conclusion") or "-",
+            next_action=open_issue_followup.get("next_action") or "-",
+            source=open_issue_followup.get("schema_version") or SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION,
+        )
+    )
+
+    optional_inputs = [
+        (
+            "Recheck Operations Preflight",
+            recheck_preflight,
+            "route",
+            "route_label",
+            "conclusion",
+            "Performance Recheck readiness와 symbol freshness를 확인합니다.",
+        ),
+        (
+            "Provider Evidence",
+            provider_evidence,
+            "route",
+            "route_label",
+            "conclusion",
+            "Provider / holdings / exposure evidence를 보강합니다.",
+        ),
+        (
+            "Continuity Check",
+            continuity_check,
+            "route",
+            "route_label",
+            "next_action",
+            "Final Review -> Dashboard continuity를 확인합니다.",
+        ),
+        (
+            "Review Signals",
+            review_signal_policy,
+            "route",
+            "route_label",
+            "conclusion",
+            "Review Signal의 Watch / Breach row를 확인합니다.",
+        ),
+        (
+            "Allocation Boundary",
+            allocation_boundary,
+            "route",
+            "route_label",
+            "conclusion",
+            "Optional allocation evidence boundary를 확인합니다.",
+        ),
+    ]
+    for area, payload, route_key, label_key, evidence_key, next_action in optional_inputs:
+        payload_dict = dict(payload or {})
+        if not payload_dict:
+            rows.append(
+                _deployment_preflight_row(
+                    area=area,
+                    status="NEEDS_INPUT" if area in {"Recheck Operations Preflight", "Provider Evidence"} else "REVIEW",
+                    current="not evaluated",
+                    evidence="Selected Dashboard에서 아직 해당 read-only evidence를 만들지 않았습니다.",
+                    next_action=next_action,
+                    source="selected_dashboard_session",
+                )
+            )
+            continue
+        route = payload_dict.get(route_key)
+        rows.append(
+            _deployment_preflight_row(
+                area=area,
+                status=_deployment_status_from_route(route),
+                current=payload_dict.get(label_key) or route or "-",
+                evidence=payload_dict.get(evidence_key) or "-",
+                next_action=next_action,
+                source=payload_dict.get("schema_version") or area,
+            )
+        )
+
+    rows.append(
+        _deployment_preflight_row(
+            area="Execution Boundary",
+            status="PASS",
+            current="read_only / no approval / no order / no auto rebalance",
+            evidence="이 화면은 실제 자금 투입 승인이나 주문 지시를 생성하지 않습니다.",
+            next_action="필요하면 별도 human approval / account / order workflow에서 판단합니다.",
+            source="selected_dashboard_boundary",
+        )
+    )
+
+    status_counts = {status: 0 for status in _DEPLOYMENT_STATUS_RANK}
+    for preflight_row in rows:
+        status = str(preflight_row.get("Status") or "NEEDS_INPUT")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    blocked_count = int(status_counts.get("BLOCKED", 0))
+    needs_input_count = int(status_counts.get("NEEDS_INPUT", 0))
+    review_count = int(status_counts.get("REVIEW", 0))
+    if blocked_count:
+        route = "DEPLOYMENT_READINESS_BLOCKED"
+        conclusion = "실제 투입 판단 전에 해소해야 할 blocker가 남아 있습니다."
+        next_action = "BLOCKED row를 먼저 해결한 뒤 deployment readiness를 다시 확인합니다."
+    elif needs_input_count:
+        route = "DEPLOYMENT_READINESS_NEEDS_INPUT"
+        conclusion = "실제 투입 판단에 필요한 입력 또는 evidence가 부족합니다."
+        next_action = "NEEDS_INPUT row의 source evidence를 보강합니다."
+    elif review_count:
+        route = "DEPLOYMENT_READINESS_REVIEW"
+        conclusion = "hard blocker는 없지만 실제 투입 판단 전 review 항목이 남아 있습니다."
+        next_action = "REVIEW row를 확인하고 human approval 전에 조건을 명확히 합니다."
+    else:
+        route = "DEPLOYMENT_READINESS_READY"
+        conclusion = "read-only preflight 기준으로 남은 blocker가 없습니다. 이는 live approval이 아닙니다."
+        next_action = "별도 human approval / broker workflow가 없다면 주문을 만들지 않습니다."
+
+    return {
+        "schema_version": SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "next_action": next_action,
+        "rows": rows,
+        "open_issue_followup": open_issue_followup,
+        "deployment_policy_snapshot": deployment_policy,
+        "metrics": {
+            "row_count": len(rows),
+            "blocked_count": blocked_count,
+            "needs_input_count": needs_input_count,
+            "review_count": review_count,
+            "pass_count": int(status_counts.get("PASS", 0)),
+            "open_review_item_count": open_metrics.get("open_review_item_count", 0),
+            "review_trigger_count": open_metrics.get("review_trigger_count", 0),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_deployment_readiness_preflight",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "input_persistence": False,
+            "alert_persistence": False,
+            "account_connection": False,
+            "broker_sync": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Deployment readiness preflight is read-only and does not create approval, account, order, or rebalance records.",
+        },
+    }
+
+
 def _provider_symbol_candidates_from_value(value: Any) -> list[str]:
     if isinstance(value, str):
         raw_values = re.split(r"[,/\s]+", value)
@@ -4324,7 +5286,7 @@ def _build_summary(
             status_counts[status] = 0
         status_counts[status] += 1
     return {
-        "registry_path": str(FINAL_SELECTION_DECISION_V2_FILE),
+        "registry_path": str(FINAL_SELECTION_DECISION_FILE),
         "final_decision_count": len(all_final_decisions),
         "selected_decision_count": len(selected_rows),
         "dashboard_row_count": len(dashboard_rows),
@@ -4336,14 +5298,20 @@ def _build_summary(
 
 
 def load_final_selected_portfolio_dashboard(limit: int | None = 250) -> dict[str, Any]:
-    """Load selected dashboard data from Final Review V2 decisions without writing new rows."""
-    all_rows = load_final_selection_decisions_v2(limit=limit)
+    """Load selected dashboard data from Final Review decisions without writing new rows."""
+    all_rows = load_current_final_selection_decisions(limit=limit)
     selected_rows = [row for row in all_rows if _is_selected_practical_portfolio(row)]
     dashboard_rows = [build_final_selected_portfolio_dashboard_row(row) for row in selected_rows]
+    monitoring_portfolios = load_selected_dashboard_portfolios()
     return {
         "all_final_decisions": all_rows,
         "selected_final_decisions": selected_rows,
         "dashboard_rows": dashboard_rows,
+        "monitoring_portfolios": monitoring_portfolios,
+        "portfolio_state": build_selected_dashboard_portfolio_state(
+            portfolios=monitoring_portfolios,
+            dashboard_rows=dashboard_rows,
+        ),
         "summary": _build_summary(
             all_final_decisions=all_rows,
             selected_rows=selected_rows,

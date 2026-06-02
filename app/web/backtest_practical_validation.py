@@ -54,7 +54,7 @@ DIAGNOSTIC_EXPLANATIONS = {
     "leveraged_inverse_etf_suitability": "레버리지, 인버스, 일간 목표 상품이 포함되어 운용 목적과 충돌하지 않는지 확인합니다.",
     "operability_cost_liquidity": "ETF 비용, 규모, 거래대금, 스프레드, premium/discount가 실전 운용에 충분한지 확인합니다.",
     "robustness_sensitivity_overfit": "기간, 구성요소, 비중 변화에 결과가 과도하게 흔들리거나 과최적화된 흔적이 있는지 확인합니다.",
-    "monitoring_baseline_seed": "선정 이후 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
+    "monitoring_baseline_seed": "모니터링에서 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
 }
 
 GATE_FIX_GUIDANCE = {
@@ -131,6 +131,169 @@ def _format_component_summary_df(component_df: pd.DataFrame) -> pd.DataFrame:
         if column in display_df.columns:
             display_df[column] = display_df[column].map(_format_percent_value)
     return display_df
+
+
+def _format_weight_percent_value(value: Any) -> str:
+    numeric = _optional_float_for_display(value)
+    if numeric is None:
+        return "-"
+    if abs(numeric) <= 2.0:
+        return f"{numeric:.2%}"
+    return f"{numeric:.2f}%"
+
+
+def _optional_float_for_display(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip():
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(numeric):
+        return None
+    return numeric
+
+
+def _list_value(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, float) and pd.isna(value):
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [item for item in value if item not in (None, "")]
+    text = str(value or "").strip()
+    if not text:
+        return []
+    return [part.strip().strip("'").strip('"') for part in text.strip("[]").split(",") if part.strip()]
+
+
+def _format_list_value(value: Any, *, max_items: int = 8) -> str:
+    items = [str(item).strip() for item in _list_value(value) if str(item).strip()]
+    if not items:
+        return "-"
+    shown = items[:max_items]
+    suffix = f" +{len(items) - max_items}" if len(items) > max_items else ""
+    return ", ".join(shown) + suffix
+
+
+def _format_weight_list(value: Any) -> str:
+    weights = []
+    for item in _list_value(value):
+        numeric = _optional_float_for_display(item)
+        if numeric is not None:
+            weights.append(_format_weight_percent_value(numeric))
+    return ", ".join(weights) if weights else "-"
+
+
+def _component_settings(source: dict[str, Any], component: dict[str, Any]) -> dict[str, Any]:
+    source_settings = dict(dict(source.get("source_snapshot") or {}).get("settings_snapshot") or {})
+    replay_contract = dict(component.get("replay_contract") or {})
+    settings = dict(source_settings)
+    settings.update(dict(replay_contract.get("settings_snapshot") or {}))
+    settings.update(dict(replay_contract.get("contract") or {}))
+    settings.update(dict(component.get("contract") or {}))
+    return settings
+
+
+def _settings_label(settings: dict[str, Any], key: str, default: str = "-") -> str:
+    value = settings.get(key)
+    if value in (None, "", []):
+        return default
+    if isinstance(value, dict):
+        return ", ".join(f"{k}:{v}" for k, v in value.items()) or default
+    if isinstance(value, (list, tuple, set)):
+        return ", ".join(str(item) for item in value) or default
+    return str(value)
+
+
+def _component_strategy_rows(source: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for component in list(source.get("components") or []):
+        component_row = dict(component or {})
+        settings = _component_settings(source, component_row)
+        score_horizons = settings.get("score_lookback_months") or settings.get("score_return_columns")
+        rows.append(
+            {
+                "Component": (
+                    component_row.get("title")
+                    or component_row.get("strategy_name")
+                    or component_row.get("component_id")
+                    or "-"
+                ),
+                "Strategy": (
+                    component_row.get("strategy_name")
+                    or component_row.get("strategy_key")
+                    or component_row.get("strategy_family")
+                    or "-"
+                ),
+                "Role": component_row.get("proposal_role") or component_row.get("candidate_role") or "-",
+                "Target Weight": _format_weight_percent_value(component_row.get("target_weight")),
+                "Benchmark": component_row.get("benchmark") or settings.get("benchmark_ticker") or "-",
+                "Universe": _format_list_value(component_row.get("universe") or settings.get("tickers")),
+                "Top": _settings_label(settings, "top", "-"),
+                "Score Horizons": _format_list_value(score_horizons, max_items=6),
+                "Rebalance": _settings_label(settings, "rebalance_freq", None)
+                or _settings_label(settings, "factor_freq", None)
+                or _settings_label(settings, "rebalance_interval", "-"),
+                "Trend / Risk-Off": (
+                    f"MA{settings.get('trend_filter_window')} / {settings.get('risk_off_mode')}"
+                    if settings.get("trend_filter_window") or settings.get("risk_off_mode")
+                    else "-"
+                ),
+                "Data Trust": component_row.get("data_trust_status") or "-",
+            }
+        )
+    return rows
+
+
+def _render_source_strategy_brief(source: dict[str, Any]) -> None:
+    construction = dict(source.get("construction") or {})
+    component_rows = _component_strategy_rows(source)
+    component_count = len(component_rows)
+    source_type = str(construction.get("source") or source.get("source_kind") or "-")
+    selection_rows = _selection_history_rows(source)
+    target_weight_total = _optional_float_for_display(construction.get("target_weight_total"))
+    render_pv_card_grid(
+        [
+            {
+                "kicker": "Source Strategy",
+                "title": source.get("source_title") or source.get("selection_source_id") or "-",
+                "status": "Single Strategy" if component_count <= 1 else "Portfolio Mix",
+                "detail": f"{source_type} / {component_count} component(s)",
+                "tone": "neutral",
+            },
+            {
+                "kicker": "Construction",
+                "title": "Target Weight",
+                "status": _format_weight_percent_value(construction.get("target_weight_total")),
+                "detail": (
+                    f"Date policy {construction.get('date_policy') or '-'}, "
+                    f"rebalance {construction.get('rebalance_cadence') or '-'}"
+                ),
+                "tone": (
+                    "positive"
+                    if target_weight_total is not None and abs(target_weight_total - 100.0) < 0.01
+                    else "warning"
+                ),
+            },
+            {
+                "kicker": "Selection Evidence",
+                "title": "Monthly holdings",
+                "status": "Available" if selection_rows else "Not captured",
+                "detail": (
+                    "Stored source snapshot"
+                    if selection_rows
+                    else "Run Step 3 replay for legacy sources"
+                ),
+                "tone": "positive" if selection_rows else "warning",
+            },
+        ],
+        min_width=230,
+    )
+    if component_rows:
+        st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
 
 
 def _format_number_value(value: Any) -> str:
@@ -241,6 +404,49 @@ def _format_source_result_table(curve_df: pd.DataFrame) -> pd.DataFrame:
     return display_df[ordered_columns]
 
 
+def _selection_history_rows(source: dict[str, Any]) -> list[dict[str, Any]]:
+    root_rows = list(source.get("selection_history") or [])
+    if root_rows:
+        return [dict(row or {}) for row in root_rows]
+    rows: list[dict[str, Any]] = []
+    for component in list(source.get("components") or []):
+        component_row = dict(component or {})
+        title = component_row.get("title") or component_row.get("strategy_name") or component_row.get("component_id")
+        component_weight = component_row.get("target_weight")
+        for raw_row in list(component_row.get("selection_history") or []):
+            row = dict(raw_row or {})
+            row.setdefault("component", title)
+            row.setdefault("component_weight", component_weight)
+            rows.append(row)
+    return rows
+
+
+def _format_selection_history_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        row_dict = dict(row or {})
+        display_rows.append(
+            {
+                "Date": _format_date_value(row_dict.get("date") or row_dict.get("Date")),
+                "Component": row_dict.get("component") or row_dict.get("Component") or "-",
+                "Component Weight": _format_weight_percent_value(row_dict.get("component_weight")),
+                "Selected Tickers": _format_list_value(
+                    row_dict.get("selected_tickers") or row_dict.get("Selected Tickers"),
+                    max_items=12,
+                ),
+                "Target Weights": _format_weight_list(row_dict.get("target_weights") or row_dict.get("Target Weights")),
+                "Selected Count": row_dict.get("selected_count") or "-",
+                "Raw Selected": _format_list_value(row_dict.get("raw_selected_tickers"), max_items=12),
+                "Overlay Rejected": _format_list_value(row_dict.get("overlay_rejected_tickers"), max_items=12),
+                "Cash Share": _format_weight_percent_value(row_dict.get("cash_share")),
+                "Total Balance": _format_number_value(row_dict.get("total_balance")),
+                "Total Return": _format_percent_value(row_dict.get("total_return")),
+                "Interpretation": row_dict.get("interpretation") or "-",
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def _render_source_equity_curve(source: dict[str, Any]) -> None:
     portfolio_df = _source_curve_dataframe(source, "result_curve", "Candidate")
     benchmark_df = _source_curve_dataframe(source, "benchmark_curve", "Benchmark")
@@ -275,8 +481,9 @@ def _render_source_backtest_snapshot(source: dict[str, Any]) -> None:
     data_trust = dict(source.get("data_trust") or {})
     result_curve_df = _source_curve_dataframe(source, "result_curve", "Candidate")
     component_df = source_components_dataframe(source)
-    summary_tab, curve_tab, table_tab, component_tab = st.tabs(
-        ["Summary", "Equity Curve", "Result Table", "Components"]
+    selection_rows = _selection_history_rows(source)
+    summary_tab, curve_tab, table_tab, component_tab, selection_tab = st.tabs(
+        ["Summary", "Equity Curve", "Result Table", "Components", "Selection History"]
     )
     with summary_tab:
         render_pv_card_grid(
@@ -319,12 +526,23 @@ def _render_source_backtest_snapshot(source: dict[str, Any]) -> None:
         if result_curve_df.empty:
             st.info("표시할 saved result table snapshot이 없습니다.")
         else:
+            st.markdown("##### Performance Result")
             st.dataframe(_format_source_result_table(result_curve_df), width="stretch", hide_index=True)
+        if selection_rows:
+            st.markdown("##### Monthly Selection / Holdings")
+            st.dataframe(_format_selection_history_table(selection_rows), width="stretch", hide_index=True)
+        else:
+            st.info("이 source에는 월별 선택 종목 snapshot이 저장되어 있지 않습니다. 기존 source라면 Step 3 replay 실행 후 재검증 결과에서 확인하세요.")
     with component_tab:
         if component_df.empty:
             st.info("선택된 source에 component snapshot이 없습니다.")
         else:
             st.dataframe(_format_component_summary_df(component_df), width="stretch", hide_index=True)
+    with selection_tab:
+        if not selection_rows:
+            st.info("표시할 selection history snapshot이 없습니다.")
+        else:
+            st.dataframe(_format_selection_history_table(selection_rows), width="stretch", hide_index=True)
 
 
 def _render_source_summary(source: dict[str, Any]) -> None:
@@ -347,6 +565,7 @@ def _render_source_summary(source: dict[str, Any]) -> None:
             {"label": "Weight Total", "value": f"{construction.get('target_weight_total', 0)}%", "tone": "neutral"},
         ]
     )
+    _render_source_strategy_brief(source)
     _render_source_backtest_snapshot(source)
 
 
@@ -560,6 +779,18 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
         coverage_rows = list(period_coverage.get("component_rows") or [])
         if coverage_rows:
             st.dataframe(pd.DataFrame(coverage_rows), width="stretch", hide_index=True)
+        replay_selection_rows: list[dict[str, Any]] = []
+        for row in component_rows:
+            component_title = row.get("title") or row.get("component_id")
+            component_weight = row.get("target_weight")
+            for raw_selection_row in list(row.get("selection_history") or []):
+                selection_row = dict(raw_selection_row or {})
+                selection_row.setdefault("component", component_title)
+                selection_row.setdefault("component_weight", component_weight)
+                replay_selection_rows.append(selection_row)
+        if replay_selection_rows:
+            with st.expander("Runtime replay monthly selection / holdings", expanded=False):
+                st.dataframe(_format_selection_history_table(replay_selection_rows), width="stretch", hide_index=True)
     else:
         st.info("이 탭의 현재 세션에서는 아직 최신 runtime 재검증을 실행하지 않았습니다. 버튼을 눌러야 결과가 표시됩니다.")
     return dict(replay_result) if isinstance(replay_result, dict) else None
@@ -1907,7 +2138,7 @@ def render_practical_validation_workspace() -> None:
     render_pv_styles()
     st.markdown("### Practical Validation")
     st.caption(
-        "Backtest Analysis에서 선택한 후보를 실전 투입 전 관점으로 검증합니다. "
+        "Backtest Analysis에서 선택한 후보를 Final Review로 넘기기 전 검증 근거로 구조화합니다. "
         "최종 사용자 메모와 최종 판단은 Final Review에서만 남깁니다."
     )
 
@@ -1923,7 +2154,7 @@ def render_practical_validation_workspace() -> None:
 
     render_pv_command_center(
         eyebrow="Practical Validation Workbench",
-        title="실전 검증을 위한 후보 통제 화면",
+        title="검증 근거를 위한 후보 통제 화면",
         detail=(
             "선택 source, 검증 프로필, 최신 runtime replay, module gate, evidence board, provider action을 "
             "하나의 의사결정 흐름으로 확인합니다."
@@ -1937,7 +2168,7 @@ def render_practical_validation_workspace() -> None:
         ),
         route_tone="neutral",
         kpis=[
-            {"label": "Selection Sources", "value": len(sources), "detail": "Clean V2 input"},
+            {"label": "Selection Sources", "value": len(sources), "detail": "current input"},
             {"label": "Validation Results", "value": len(validation_rows), "detail": "Saved records"},
             {"label": "Final Memo", "value": "Final Review", "detail": "Not stored here"},
             {"label": "Live Approval", "value": "Disabled", "detail": "Read-only evidence"},
@@ -1955,7 +2186,7 @@ def render_practical_validation_workspace() -> None:
         selectable_sources.append(dict(row))
 
     if not selectable_sources:
-        st.info("아직 Practical Validation으로 보낸 Clean V2 source가 없습니다.")
+        st.info("아직 Practical Validation으로 보낸 current selection source가 없습니다.")
         st.caption("Backtest Analysis에서 Single / Portfolio Mix / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
         return
 
@@ -1983,7 +2214,7 @@ def render_practical_validation_workspace() -> None:
         render_pv_section_header(
             eyebrow="Step 1",
             title="선택 후보 확인",
-            detail="Practical Validation이 읽는 Clean V2 source와 component snapshot을 먼저 확인합니다.",
+            detail="Practical Validation이 읽는 current selection source와 component snapshot을 먼저 확인합니다.",
             tone="neutral",
         )
         _render_source_summary(source)
@@ -2058,7 +2289,7 @@ def render_practical_validation_workspace() -> None:
             detail=(
                 "검증 결과 저장은 감사용 기록을 남기는 기능입니다. Final Review 이동과 후보 노출은 필수 검증 모듈의 "
                 "BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
-                "Final Review의 정식 저장은 selected-route gate까지 통과한 최종 후보 선정만 허용합니다."
+                "Final Review의 정식 저장은 selected-route gate까지 통과한 Selected Dashboard 모니터링 후보 선정만 허용합니다."
             ),
             tone="positive" if can_save_and_move else "danger",
         )
@@ -2115,7 +2346,7 @@ def render_practical_validation_workspace() -> None:
             if not can_save_and_move:
                 st.caption("필수 검증 모듈을 보강한 뒤 저장하고 Final Review로 이동할 수 있습니다.")
 
-    with st.expander("Clean V2 Source JSON", expanded=False):
+    with st.expander("Selection Source JSON", expanded=False):
         st.json(source)
     with st.expander("Practical Validation Result JSON", expanded=False):
         st.json(validation_result)

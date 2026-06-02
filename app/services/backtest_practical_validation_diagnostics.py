@@ -28,12 +28,15 @@ from app.services.backtest_practical_validation_curve_context import (
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
 from app.services.backtest_practical_validation_modules import build_validation_module_plan
+from app.services.backtest_selected_route_preflight import (
+    build_practical_validation_selected_route_preflight,
+)
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
-    FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
+    FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
     PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
 )
 from app.services.backtest_practical_validation_source import (
@@ -588,7 +591,7 @@ def build_practical_validation_result(
     validation_profile: dict[str, Any] | None = None,
     replay_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the structured Practical Validation result used by Final Review V2."""
+    """Build the structured Practical Validation result used by Final Review."""
     now = _now_text()
     source_row = dict(source or {})
     profile_row = build_validation_profile(
@@ -625,7 +628,7 @@ def build_practical_validation_result(
     if str(data_trust.get("status") or "").lower() in {"error", "blocked"}:
         hard_blockers.append(f"Data Trust blocked: {data_trust.get('status')}")
     if real_money.get("deployment") in {"blocked", "deployment_blocked"}:
-        hard_blockers.append("Real-Money deployment blocked")
+        hard_blockers.append("Promotion policy deployment blocker")
 
     if data_trust.get("warning_count"):
         review_gaps.append(f"Data Trust warning {data_trust.get('warning_count')}개")
@@ -698,13 +701,13 @@ def build_practical_validation_result(
             "Criteria": "Selection source",
             "Ready": bool(source_id),
             "Current": source_id or "-",
-            "Meaning": "Backtest Analysis에서 선택한 Clean V2 source가 있는지 봅니다.",
+            "Meaning": "Backtest Analysis에서 선택한 current selection source가 있는지 봅니다.",
         },
         {
             "Criteria": "Active components",
             "Ready": bool(active_components),
             "Current": str(len(active_components)),
-            "Meaning": "실전 검증할 component가 있는지 봅니다.",
+            "Meaning": "검증 근거를 만들 component가 있는지 봅니다.",
         },
         {
             "Criteria": "Target weight total",
@@ -1427,10 +1430,10 @@ def build_practical_validation_result(
         route = "READY_FOR_FINAL_REVIEW"
         if review_gaps or not_run_domains:
             verdict = "Final Review로 이동 가능: REVIEW / NOT_RUN 항목을 최종 판단 근거로 함께 확인해야 합니다."
-            next_action = "Final Review에서 보강 필요 상태를 확인하고, selected-route gate가 통과될 때만 최종 선정으로 저장합니다."
+            next_action = "Final Review에서 보강 필요 상태를 확인하고, selected-route gate가 통과될 때만 모니터링 후보로 저장합니다."
         else:
-            verdict = "Final Review로 이동 가능: 실전 후보 검증 자료가 구성되었습니다."
-            next_action = "Final Review에서 selected-route gate를 확인한 뒤 최종 후보 선정 저장을 진행합니다."
+            verdict = "Final Review로 이동 가능: 후보 검증 근거 자료가 구성되었습니다."
+            next_action = "Final Review에서 selected-route gate를 확인한 뒤 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
 
     component_rows = [
         {
@@ -1652,7 +1655,7 @@ def build_practical_validation_result(
             "not_live_approval": True,
         },
         "selection_source_snapshot": source_row,
-        "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
+        "final_decision_schema_target": FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
     }
     data_coverage_audit = build_data_coverage_audit(result)
     result["data_coverage_audit"] = data_coverage_audit
@@ -1672,6 +1675,8 @@ def build_practical_validation_result(
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    selected_route_preflight = build_practical_validation_selected_route_preflight(result)
+    result["selected_route_preflight"] = selected_route_preflight
     module_plan = build_validation_module_plan(
         source=source_row,
         validation_profile=profile_row,
@@ -1683,6 +1688,7 @@ def build_practical_validation_result(
         risk_contribution_rows=result["risk_contribution_display_rows"],
         component_role_weight_rows=result["component_role_weight_display_rows"],
         backtest_realism_rows=result["backtest_realism_display_rows"],
+        selected_route_preflight=selected_route_preflight,
     )
     result["source_traits"] = dict(module_plan.get("source_traits") or {})
     result["validation_modules"] = list(module_plan.get("modules") or [])

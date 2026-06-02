@@ -84,7 +84,7 @@ If waiver UI is implemented later:
 - Put it behind an explicit advanced section.
 - Show the original gap and severity next to the waiver controls.
 - Require expiry / review trigger before enabling selected route.
-- Keep the final copy as `실전 검토 통과 후보`, not approval.
+- Keep the final copy as `모니터링 후보 선정`, not approval.
 
 ## Implementation Status
 

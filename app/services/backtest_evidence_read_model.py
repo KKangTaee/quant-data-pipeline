@@ -18,7 +18,7 @@ DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
-    SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
     "HOLD_FOR_MORE_PAPER_TRACKING": "내용 부족 / 관찰 필요",
     "REJECT_FOR_PRACTICAL_USE": "투자하면 안 됨",
     "RE_REVIEW_REQUIRED": "재검토 필요",
@@ -26,8 +26,8 @@ FINAL_REVIEW_DECISION_LABELS = {
 FINAL_REVIEW_STATUS_DISPLAY = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
         "route": "FINAL_REVIEW_DECISION_COMPLETE",
-        "verdict": "최종 판단 완료: 실전 검토 통과 후보로 선정됨",
-        "next_action": "이 기록은 투자 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
+        "verdict": "최종 판단 완료: Selected Dashboard 모니터링 후보로 선정됨",
+        "next_action": "이 기록은 모니터링 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
     },
     "HOLD_FOR_MORE_PAPER_TRACKING": {
         "route": "FINAL_REVIEW_HOLD_FOR_MORE_OBSERVATION",
@@ -36,7 +36,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
     },
     "REJECT_FOR_PRACTICAL_USE": {
         "route": "FINAL_REVIEW_REJECTED",
-        "verdict": "최종 판단 완료: 실전 후보에서 제외됨",
+        "verdict": "최종 판단 완료: 모니터링 후보에서 제외됨",
         "next_action": "필요하면 후보 탐색, Compare, Portfolio Proposal 단계로 되돌아갑니다.",
     },
     "RE_REVIEW_REQUIRED": {
@@ -47,7 +47,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
 }
 FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
-        "reason": "Decision Cockpit과 investability gate가 선정 가능 상태이며, 남은 blocker 없이 실전 검토 통과 후보로 기록한다.",
+        "reason": "Decision Cockpit과 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Selected Dashboard 추적 후보로 기록한다.",
         "constraints": "실제 투자 전 투입 금액, 리밸런싱 규칙, 중단 / 재검토 기준, 세금 / 계좌 조건은 별도로 확인한다.",
         "next_action": "Selected Portfolio Dashboard에서 read-only monitoring / recheck 기준을 확인한다.",
     },
@@ -57,7 +57,7 @@ FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
         "next_action": "추가 관찰 또는 evidence 보강 후 Final Review에서 다시 판단한다.",
     },
     "REJECT_FOR_PRACTICAL_USE": {
-        "reason": "현재 검증 근거와 gate evidence로는 실전 후보로 사용하기 어렵다고 판단한다.",
+        "reason": "현재 검증 근거와 gate evidence로는 모니터링 후보로 사용하기 어렵다고 판단한다.",
         "constraints": "동일 source를 다시 검토하려면 blocker 해소나 후보 재구성이 먼저 필요하다.",
         "next_action": "필요하면 Backtest Analysis, Practical Validation, Portfolio Mix 단계로 돌아가 새 후보를 만든다.",
     },
@@ -76,6 +76,10 @@ FINAL_REVIEW_SAVED_DECISION_FILTER_OPTIONS = (
     "Unknown",
 )
 GATE_POLICY_SCHEMA_VERSION = "investability_gate_policy_v1"
+SELECTION_GATE_POLICY_SCHEMA_VERSION = "final_review_selection_gate_policy_v1"
+DEPLOYMENT_READINESS_GATE_POLICY_SCHEMA_VERSION = "deployment_readiness_gate_policy_v1"
+GATE_POLICY_MODE_SELECTION = "selection_readiness"
+GATE_POLICY_MODE_DEPLOYMENT = "deployment_readiness"
 GATE_POLICY_GROUP_LABELS = {
     "data_trust": "Data Trust / Source Contract",
     "benchmark": "Benchmark / Comparator Parity",
@@ -221,6 +225,45 @@ _POLICY_SEVERITY_RANK = {
     "REVIEW_REQUIRED": 2,
     "BLOCK": 3,
 }
+_SELECTION_STATUS_BLOCKING_GROUPS = {
+    "data_trust",
+    "benchmark",
+    "stress_robustness",
+    "paper_observation",
+    "final_review_evidence",
+    "leveraged_inverse",
+}
+_SELECTION_VALIDATION_EFFICACY_BLOCKING_TERMS = {
+    "runtime replay",
+    "runtime period",
+    "period coverage",
+    "benchmark parity",
+    "pit",
+    "look-ahead",
+    "lookahead",
+    "survivorship",
+}
+_SELECTION_DATA_COVERAGE_BLOCKING_TERMS = {
+    "price db window",
+    "price coverage",
+    "window coverage",
+    "pit",
+    "survivorship",
+    "delisting",
+}
+_SELECTION_BACKTEST_REALISM_BLOCKING_TERMS = {
+    "transaction cost",
+    "net cost curve",
+    "net performance",
+    "execution boundary",
+    "cost input",
+    "gross",
+}
+_SELECTION_COMPONENT_ROLE_BLOCKING_TERMS = {
+    "component role source",
+    "weight rationale",
+    "profile intent",
+}
 
 
 def _safe_text(value: Any, fallback: str = "-") -> str:
@@ -234,6 +277,13 @@ def _as_list(value: Any) -> list[Any]:
     if value in (None, ""):
         return []
     return [value]
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _ready_from_check(check: dict[str, Any]) -> bool:
@@ -301,8 +351,20 @@ def _policy_severity(
     status: str,
     critical_groups: set[str],
     review_groups: set[str],
+    policy_mode: str = GATE_POLICY_MODE_DEPLOYMENT,
+    criteria: str = "",
+    current: Any = "",
+    evidence: Any = "",
 ) -> str:
     normalized = str(status or "").upper()
+    if policy_mode == GATE_POLICY_MODE_SELECTION:
+        return _selection_policy_severity(
+            group=group,
+            status=normalized,
+            criteria=criteria,
+            current=current,
+            evidence=evidence,
+        )
     if normalized in {"BLOCKED", "BLOCK", "NOT_RUN", "NEEDS_INPUT", "MISSING"}:
         return "BLOCK" if group in critical_groups else "REVIEW_REQUIRED"
     if normalized == "REVIEW":
@@ -312,6 +374,86 @@ def _policy_severity(
             return "REVIEW_REQUIRED"
         return "WATCH"
     return "PASS"
+
+
+def _text_has_any(value: str, terms: set[str]) -> bool:
+    text = value.lower()
+    return any(term in text for term in terms)
+
+
+def _selection_policy_severity(
+    *,
+    group: str,
+    status: str,
+    criteria: str,
+    current: Any,
+    evidence: Any,
+) -> str:
+    if status in {"", "PASS", "OK", "READY"}:
+        return "PASS"
+    joined = " ".join(
+        [
+            str(criteria or ""),
+            str(current or ""),
+            str(evidence or ""),
+        ]
+    ).lower()
+    if status in {"BLOCKED", "BLOCK"}:
+        return "BLOCK"
+    if status in {"NOT_RUN", "NEEDS_INPUT", "MISSING"}:
+        if group in _SELECTION_STATUS_BLOCKING_GROUPS:
+            return "BLOCK"
+        if group == "validation_efficacy" and _text_has_any(joined, _SELECTION_VALIDATION_EFFICACY_BLOCKING_TERMS):
+            return "BLOCK"
+        if group == "data_coverage" and _text_has_any(joined, _SELECTION_DATA_COVERAGE_BLOCKING_TERMS):
+            return "BLOCK"
+        if group == "backtest_realism" and _text_has_any(joined, _SELECTION_BACKTEST_REALISM_BLOCKING_TERMS):
+            return "BLOCK"
+        if group == "component_role_weight" and _text_has_any(joined, _SELECTION_COMPONENT_ROLE_BLOCKING_TERMS):
+            return "BLOCK"
+        return "WATCH"
+    if status == "REVIEW":
+        if group == "benchmark":
+            return "REVIEW_REQUIRED"
+        specific_joined = " ".join([str(criteria or ""), str(current or "")]).lower()
+        if group == "backtest_realism" and _text_has_any(
+            specific_joined,
+            {"transaction cost", "net cost curve", "net performance", "gross"},
+        ):
+            return "REVIEW_REQUIRED"
+        return "WATCH"
+    return "PASS"
+
+
+def _selection_source_is_weighted_mix(validation: dict[str, Any]) -> bool:
+    traits = dict(validation.get("source_traits") or {})
+    if "is_weighted_mix" in traits:
+        return bool(traits.get("is_weighted_mix"))
+    source = dict(validation.get("selection_source_snapshot") or validation.get("source_snapshot") or {})
+    construction = dict(source.get("construction") or {})
+    source_kind = str(source.get("source_kind") or validation.get("source_kind") or "").lower()
+    construction_source = str(construction.get("source") or "").lower()
+    if "weighted" in source_kind or "mix" in construction_source:
+        return True
+    components = list(
+        source.get("components")
+        or validation.get("component_rows")
+        or validation.get("selected_components")
+        or []
+    )
+    active = [
+        component
+        for component in components
+        if (_float_or_none(dict(component or {}).get("target_weight") or dict(component or {}).get("Weight")) or 0.0)
+        > 0.0
+    ]
+    return len(active) > 1
+
+
+def _selection_not_applicable_groups(validation: dict[str, Any]) -> set[str]:
+    if _selection_source_is_weighted_mix(validation):
+        return set()
+    return {"risk_contribution", "component_role_weight"}
 
 
 def _gate_group_from_gap(gap: dict[str, Any]) -> str:
@@ -380,7 +522,11 @@ def _merge_audit_rows_into_policy(
     group: str,
     critical_groups: set[str],
     review_groups: set[str],
+    policy_mode: str = GATE_POLICY_MODE_DEPLOYMENT,
+    skipped_groups: set[str] | None = None,
 ) -> None:
+    if group in set(skipped_groups or set()):
+        return
     for raw_row in _as_list(dict(audit or {}).get("rows")):
         if not isinstance(raw_row, dict):
             continue
@@ -399,6 +545,10 @@ def _merge_audit_rows_into_policy(
             status=status,
             critical_groups=critical_groups,
             review_groups=review_groups,
+            policy_mode=policy_mode,
+            criteria=_safe_text(row.get("Criteria") or row.get("criteria"), "Audit row"),
+            current=row.get("Current") or row.get("current") or status,
+            evidence=row.get("Meaning") or row.get("Evidence") or row.get("evidence"),
         )
         criteria = _safe_text(row.get("Criteria") or row.get("criteria"), "Audit row")
         evidence = _safe_text(
@@ -427,6 +577,7 @@ def build_investability_gate_policy(
     decision_evidence: dict[str, Any],
     packet_checks: list[dict[str, Any]] | None = None,
     critical_gaps: list[dict[str, Any]] | None = None,
+    policy_mode: str = GATE_POLICY_MODE_DEPLOYMENT,
 ) -> dict[str, Any]:
     """Summarize profile-aware gate policy without persisting raw validation data."""
 
@@ -434,8 +585,20 @@ def build_investability_gate_policy(
     paper_observation = dict(paper_observation or {})
     decision_evidence = dict(decision_evidence or {})
     profile_id, profile_label, critical_groups, review_groups = _profile_gate_policy_sets(validation)
+    mode = policy_mode if policy_mode in {GATE_POLICY_MODE_SELECTION, GATE_POLICY_MODE_DEPLOYMENT} else GATE_POLICY_MODE_DEPLOYMENT
+    skipped_groups = _selection_not_applicable_groups(validation) if mode == GATE_POLICY_MODE_SELECTION else set()
     states: dict[str, dict[str, Any]] = {}
     for group in sorted(critical_groups | review_groups):
+        if group in skipped_groups:
+            _merge_policy_state(
+                states,
+                group=group,
+                severity="PASS",
+                current="NOT_APPLICABLE",
+                evidence="Current source traits mark this audit as not applicable for Final Review selection.",
+                required_action="추가 조치 없음",
+            )
+            continue
         _merge_policy_state(
             states,
             group=group,
@@ -450,6 +613,8 @@ def build_investability_gate_policy(
         group = GATE_POLICY_SECTION_GROUPS.get(section)
         if not group:
             continue
+        if group in skipped_groups:
+            continue
         current = check_row.get("Current") or "-"
         status = _policy_status_from_current(ready=_ready_from_check(check_row), current=current)
         severity = _policy_severity(
@@ -457,6 +622,10 @@ def build_investability_gate_policy(
             status=status,
             critical_groups=critical_groups,
             review_groups=review_groups,
+            policy_mode=mode,
+            criteria=section,
+            current=current,
+            evidence=check_row.get("Meaning") or section,
         )
         _merge_policy_state(
             states,
@@ -474,6 +643,8 @@ def build_investability_gate_policy(
         group = GATE_POLICY_DOMAIN_GROUPS.get(domain)
         if not group:
             continue
+        if group in skipped_groups:
+            continue
         status = str(diagnostic_row.get("status") or "NOT_RUN").upper()
         if status not in {"BLOCKED", "NOT_RUN", "REVIEW"}:
             continue
@@ -482,6 +653,10 @@ def build_investability_gate_policy(
             status=status,
             critical_groups=critical_groups,
             review_groups=review_groups,
+            policy_mode=mode,
+            criteria=diagnostic_row.get("title") or domain,
+            current=status,
+            evidence=diagnostic_row.get("summary") or diagnostic_row.get("title") or domain,
         )
         _merge_policy_state(
             states,
@@ -496,12 +671,18 @@ def build_investability_gate_policy(
             continue
         gap_row = dict(gap or {})
         group = _gate_group_from_gap(gap_row)
+        if group in skipped_groups:
+            continue
         status = "BLOCKED" if str(gap_row.get("Severity") or "").upper() == "BLOCK" else "REVIEW"
         severity = _policy_severity(
             group=group,
             status=status,
             critical_groups=critical_groups,
             review_groups=review_groups,
+            policy_mode=mode,
+            criteria=gap_row.get("Area"),
+            current=status,
+            evidence=gap_row.get("Gap"),
         )
         _merge_policy_state(
             states,
@@ -517,6 +698,8 @@ def build_investability_gate_policy(
         group="validation_efficacy",
         critical_groups=critical_groups,
         review_groups=review_groups,
+        policy_mode=mode,
+        skipped_groups=skipped_groups,
     )
     _merge_audit_rows_into_policy(
         states,
@@ -524,6 +707,8 @@ def build_investability_gate_policy(
         group="construction_risk",
         critical_groups=critical_groups,
         review_groups=review_groups,
+        policy_mode=mode,
+        skipped_groups=skipped_groups,
     )
     _merge_audit_rows_into_policy(
         states,
@@ -531,6 +716,8 @@ def build_investability_gate_policy(
         group="risk_contribution",
         critical_groups=critical_groups,
         review_groups=review_groups,
+        policy_mode=mode,
+        skipped_groups=skipped_groups,
     )
     _merge_audit_rows_into_policy(
         states,
@@ -538,6 +725,8 @@ def build_investability_gate_policy(
         group="component_role_weight",
         critical_groups=critical_groups,
         review_groups=review_groups,
+        policy_mode=mode,
+        skipped_groups=skipped_groups,
     )
     _merge_audit_rows_into_policy(
         states,
@@ -545,12 +734,14 @@ def build_investability_gate_policy(
         group="backtest_realism",
         critical_groups=critical_groups,
         review_groups=review_groups,
+        policy_mode=mode,
+        skipped_groups=skipped_groups,
     )
     if decision_evidence.get("route") not in {"READY_FOR_FINAL_DECISION", None, ""}:
         _merge_policy_state(
             states,
             group="final_review_evidence",
-            severity="REVIEW_REQUIRED",
+            severity="BLOCK" if mode == GATE_POLICY_MODE_SELECTION else "REVIEW_REQUIRED",
             current=decision_evidence.get("route") or "-",
             evidence=decision_evidence.get("verdict") or "Final Review evidence is not ready",
             required_action=decision_evidence.get("next_action") or GATE_POLICY_GROUP_ACTIONS["final_review_evidence"],
@@ -573,17 +764,31 @@ def build_investability_gate_policy(
         if severity != "PASS":
             current_values = [item for item in current_values if item != "PASS"] or ["-"]
             evidence_values = [item for item in evidence_values if item != "No policy finding"] or ["-"]
+        if ready and severity == "WATCH":
+            selected_route_label = "Allowed with watch"
+        elif ready:
+            selected_route_label = "Allowed"
+        else:
+            selected_route_label = "Blocked"
         policy_rows.append(
             {
                 "Criteria": _finding_label(group),
                 "Group": group,
-                "Policy": "critical" if group in critical_groups else "review-required",
+                "Policy": (
+                    "not-applicable"
+                    if group in skipped_groups
+                    else "selection"
+                    if mode == GATE_POLICY_MODE_SELECTION
+                    else "critical"
+                    if group in critical_groups
+                    else "review-required"
+                ),
                 "Ready": ready,
                 "Severity": severity,
                 "Current": "; ".join(current_values),
                 "Evidence": "; ".join(evidence_values),
                 "Required Action": state.get("required_action") or GATE_POLICY_GROUP_ACTIONS.get(group, "-"),
-                "Selected Route": "Allowed" if ready else "Blocked",
+                "Selected Route": selected_route_label,
             }
         )
     blockers = [
@@ -599,21 +804,28 @@ def build_investability_gate_policy(
     if blockers:
         outcome = "blocked"
         suggested_decision_route = "RE_REVIEW_REQUIRED"
-        next_action = "critical blocker를 해소한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "critical blocker를 해소한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
     elif review_required:
         outcome = "hold_or_re_review"
         suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
-        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 최종 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
     else:
         outcome = "select_ready"
         suggested_decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
-        next_action = "Final Review에서 최종 후보 선정 저장을 진행합니다."
+        next_action = "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
     return {
-        "schema_version": GATE_POLICY_SCHEMA_VERSION,
+        "schema_version": (
+            SELECTION_GATE_POLICY_SCHEMA_VERSION
+            if mode == GATE_POLICY_MODE_SELECTION
+            else DEPLOYMENT_READINESS_GATE_POLICY_SCHEMA_VERSION
+        ),
+        "legacy_schema_version": GATE_POLICY_SCHEMA_VERSION,
+        "policy_mode": mode,
         "profile_id": profile_id,
         "profile_label": profile_label,
         "critical_groups": sorted(critical_groups),
         "review_required_groups": sorted(review_groups),
+        "not_applicable_groups": sorted(skipped_groups),
         "outcome": outcome,
         "select_allowed": outcome == "select_ready",
         "suggested_decision_route": suggested_decision_route,
@@ -727,6 +939,67 @@ def _assumption_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _open_review_items_from_policies(
+    *,
+    selection_policy: dict[str, Any],
+    deployment_policy: dict[str, Any],
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    selection_rows = {
+        str(row.get("Group") or ""): dict(row or {})
+        for row in list(selection_policy.get("policy_rows") or [])
+        if isinstance(row, dict)
+    }
+    for raw_row in list(deployment_policy.get("policy_rows") or []):
+        row = dict(raw_row or {})
+        group = str(row.get("Group") or "")
+        severity = str(row.get("Severity") or "")
+        if severity not in {"WATCH", "REVIEW_REQUIRED"}:
+            continue
+        selection_row = selection_rows.get(group, {})
+        if str(selection_row.get("Severity") or "") == "BLOCK":
+            continue
+        key = (group, str(row.get("Criteria") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(
+            {
+                "Group": group,
+                "Criteria": row.get("Criteria") or _finding_label(group),
+                "Severity": "OPEN_REVIEW",
+                "Current": row.get("Current") or "-",
+                "Evidence": row.get("Evidence") or "-",
+                "Required Action": row.get("Required Action") or GATE_POLICY_GROUP_ACTIONS.get(group, "-"),
+                "Selection Gate Effect": "Open review item",
+                "Deployment Gate Effect": severity,
+            }
+        )
+    for raw_row in list(selection_policy.get("policy_rows") or []):
+        row = dict(raw_row or {})
+        if str(row.get("Severity") or "") != "WATCH":
+            continue
+        group = str(row.get("Group") or "")
+        key = (group, str(row.get("Criteria") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(
+            {
+                "Group": group,
+                "Criteria": row.get("Criteria") or _finding_label(group),
+                "Severity": "OPEN_REVIEW",
+                "Current": row.get("Current") or "-",
+                "Evidence": row.get("Evidence") or "-",
+                "Required Action": row.get("Required Action") or GATE_POLICY_GROUP_ACTIONS.get(group, "-"),
+                "Selection Gate Effect": "Open review item",
+                "Deployment Gate Effect": "-",
+            }
+        )
+    return items
+
+
 def build_investability_evidence_packet(
     *,
     source: dict[str, Any],
@@ -822,7 +1095,7 @@ def build_investability_evidence_packet(
             "Section": "Paper Observation",
             "Ready": not bool(paper_observation.get("blockers")),
             "Current": paper_observation.get("route") or "-",
-            "Meaning": "선정 이후 관찰 benchmark와 trigger seed가 있는지 봅니다.",
+            "Meaning": "모니터링에서 관찰할 benchmark와 trigger seed가 있는지 봅니다.",
         },
         {
             "Section": "Critical Gaps",
@@ -902,39 +1175,60 @@ def build_investability_evidence_packet(
     validation_for_gate_policy.setdefault("construction_risk_audit", construction_risk_audit)
     validation_for_gate_policy.setdefault("risk_contribution_audit", risk_contribution_audit)
     validation_for_gate_policy.setdefault("component_role_weight_audit", component_role_weight_audit)
-    gate_policy = build_investability_gate_policy(
+    selection_gate_policy = build_investability_gate_policy(
         validation=validation_for_gate_policy,
         paper_observation=paper_observation,
         decision_evidence=decision_evidence,
         packet_checks=checks,
         critical_gaps=critical_gaps,
+        policy_mode=GATE_POLICY_MODE_SELECTION,
+    )
+    deployment_gate_policy = build_investability_gate_policy(
+        validation=validation_for_gate_policy,
+        paper_observation=paper_observation,
+        decision_evidence=decision_evidence,
+        packet_checks=checks,
+        critical_gaps=critical_gaps,
+        policy_mode=GATE_POLICY_MODE_DEPLOYMENT,
+    )
+    open_review_items = _open_review_items_from_policies(
+        selection_policy=selection_gate_policy,
+        deployment_policy=deployment_gate_policy,
     )
     checks.append(
         {
-            "Section": "Validation Gate Policy",
-            "Ready": bool(gate_policy.get("select_allowed")),
-            "Current": gate_policy.get("outcome") or "-",
-            "Meaning": "profile-aware gate matrix가 실전 검토 통과 후보 선정 가능 여부를 판정합니다.",
+            "Section": "Selection Gate Policy",
+            "Ready": bool(selection_gate_policy.get("select_allowed")),
+            "Current": selection_gate_policy.get("outcome") or "-",
+            "Meaning": "Final Review selection gate가 Dashboard 추적 후보 선정 가능 여부를 판정합니다.",
+        }
+    )
+    checks.append(
+        {
+            "Section": "Deployment Readiness Policy",
+            "Ready": bool(deployment_gate_policy.get("select_allowed")),
+            "Current": deployment_gate_policy.get("outcome") or "-",
+            "Meaning": "향후 Live / Deployment Readiness에서 이어서 볼 엄격한 감사 상태입니다.",
         }
     )
     score = round(
         sum(1 for check in checks if bool(check.get("Ready"))) / len(checks) * 10.0,
         1,
     ) if checks else 0.0
-    policy_blockers = list(gate_policy.get("blockers") or [])
-    policy_review_required = list(gate_policy.get("review_required") or [])
+    policy_blockers = list(selection_gate_policy.get("blockers") or [])
+    policy_review_required = list(selection_gate_policy.get("review_required") or [])
     if policy_blockers:
         route = "INVESTABILITY_PACKET_BLOCKED"
-        verdict = "실전 후보 선정 차단: validation gate policy blocker가 남아 있습니다."
-        next_action = "validation evidence를 보강한 뒤 Final Review에서 선정 가능 여부를 다시 확인합니다."
+        verdict = "모니터링 후보 선정 차단: selection gate blocker가 남아 있습니다."
+        next_action = "validation evidence를 보강한 뒤 Final Review에서 모니터링 후보 가능 여부를 다시 확인합니다."
     elif policy_review_required:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
-        verdict = "실전 후보 선정 전 추가 검토가 필요합니다."
+        verdict = "모니터링 후보 선정 전 반드시 해소해야 할 review가 남아 있습니다."
         next_action = "부족한 evidence를 보강한 뒤 selected-route gate를 다시 확인합니다."
     elif decision_evidence.get("route") == "READY_FOR_FINAL_DECISION":
         route = "INVESTABILITY_PACKET_READY"
-        verdict = "실전 검토 통과 후보로 기록 가능한 evidence packet입니다."
-        next_action = "Final Review에서 최종 후보 선정 저장을 진행합니다."
+        verdict = "Selected Dashboard에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
+        next_action = "Final Review에서 모니터링 후보 선정 저장을 진행하고 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
     else:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "hard blocker는 없지만 Final Review evidence가 아직 완전하지 않습니다."
@@ -949,7 +1243,10 @@ def build_investability_evidence_packet(
         "source_chain": source_chain,
         "checks": checks,
         "critical_gaps": critical_gaps,
-        "gate_policy_snapshot": gate_policy,
+        "gate_policy_snapshot": selection_gate_policy,
+        "selection_gate_policy_snapshot": selection_gate_policy,
+        "deployment_readiness_policy_snapshot": deployment_gate_policy,
+        "open_review_items": open_review_items,
         "assumptions_and_limits": assumptions,
         "validation_efficacy_audit": validation_efficacy_audit,
         "data_coverage_audit": data_coverage_audit,
@@ -965,7 +1262,10 @@ def build_investability_evidence_packet(
             "provider_status": _provider_status_summary(validation),
             "decision_evidence_route": decision_evidence.get("route"),
             "robustness_route": robustness.get("robustness_route"),
-            "gate_policy_outcome": gate_policy.get("outcome"),
+            "gate_policy_outcome": selection_gate_policy.get("outcome"),
+            "selection_gate_policy_outcome": selection_gate_policy.get("outcome"),
+            "deployment_readiness_policy_outcome": deployment_gate_policy.get("outcome"),
+            "open_review_items": len(open_review_items),
             "validation_efficacy_route": validation_efficacy_audit.get("route"),
             "data_coverage_route": data_coverage_audit.get("route"),
             "construction_risk_route": construction_risk_audit.get("route"),
@@ -985,7 +1285,7 @@ def build_selected_route_gate(
 
     route = str(decision_route or "").strip()
     packet = dict(investability_packet or {})
-    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    gate_policy = dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
     selected = route == SELECT_FOR_PRACTICAL_PORTFOLIO
     select_allowed = bool(gate_policy.get("select_allowed")) if gate_policy else bool(packet.get("select_ready"))
     ready = (not selected) or select_allowed
@@ -995,7 +1295,7 @@ def build_selected_route_gate(
         "Ready": ready,
         "Current": current,
         "Meaning": (
-            "실전 검토 통과 후보 선정은 validation gate policy가 허용할 때만 저장합니다."
+            "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
             if selected
             else "보류 / 거절 / 재검토는 정식 저장하지 않는 상태 안내입니다."
         ),
@@ -1013,7 +1313,7 @@ def build_final_review_decision_record_guide(
     route = str(decision_route or "").strip()
     evidence = dict(decision_evidence or {})
     packet = dict(investability_packet or {})
-    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    gate_policy = dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
     suggested_route = (
         gate_policy.get("suggested_decision_route")
         or evidence.get("suggested_decision_route")
@@ -1035,17 +1335,17 @@ def build_final_review_decision_record_guide(
         route_state = "SELECT_ROUTE_BLOCKED"
         route_state_label = "선정 저장 차단"
         notice_level = "warning"
-        notice = "최종 후보 선정 저장은 기존 investability gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
+        notice = "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
     elif selected:
         route_state = "SELECT_ROUTE_READY"
         route_state_label = "선정 기록 가능"
         notice_level = "success"
-        notice = "현재 selected-route gate가 선정 기록을 허용합니다. 판단 사유를 남기면 최종 검토 기록으로 저장할 수 있습니다."
+        notice = "현재 selection gate가 선정 기록을 허용합니다. 판단 사유를 남기면 최종 검토 기록으로 저장할 수 있습니다."
     else:
         route_state = "NON_SELECT_NOT_STORED"
         route_state_label = "상태 안내만 표시"
         notice_level = "info"
-        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 최종 후보 선정이 가능할 때만 활성화됩니다."
+        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 모니터링 후보 선정이 가능할 때만 활성화됩니다."
     checklist_rows = [
         {
             "Criteria": "Suggested decision",
@@ -1063,7 +1363,7 @@ def build_final_review_decision_record_guide(
             "Criteria": "Official selection route",
             "Ready": selected,
             "Current": "selection save" if selected else "status only",
-            "Meaning": "Final Review의 정식 저장은 최종 선정 route만 허용합니다.",
+            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다.",
         },
         selected_gate,
         {
@@ -1096,7 +1396,7 @@ def build_final_review_decision_record_guide(
         "blockers": blockers,
         "route_templates": route_templates,
         "record_boundary": {
-            "write_policy": "append_final_selection_decision_v2_only",
+            "write_policy": "append_final_selection_decision_only",
             "validation_rerun": False,
             "provider_fetch": False,
             "waiver_persistence": False,
@@ -1128,14 +1428,14 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
     if outcome == "select_ready" or route == "INVESTABILITY_PACKET_READY":
         return (
             "SELECT_READY",
-            "선정 가능",
-            "현재 gate policy상 실전 검토 통과 후보로 저장할 수 있습니다.",
+            "모니터링 후보 가능",
+            "현재 gate policy상 Selected Dashboard 모니터링 후보로 저장할 수 있습니다.",
         )
     if outcome == "blocked" or route == "INVESTABILITY_PACKET_BLOCKED":
         return (
             "SELECT_BLOCKED",
             "선정 차단",
-            "critical blocker가 남아 있어 최종 후보 선정 저장이 차단됩니다.",
+            "critical blocker가 남아 있어 모니터링 후보 선정 저장이 차단됩니다.",
         )
     return (
         "HOLD_OR_RE_REVIEW",
@@ -1166,9 +1466,9 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
     state = str(dict(cockpit or {}).get("state") or "").upper()
     if state == "SELECT_READY":
         return (
-            "최종 후보 선정",
-            "선정 가능 후보입니다. Decision Cockpit을 확인한 뒤 최종 후보 선정 저장으로 진행합니다.",
-            "선정 가능",
+            "모니터링 후보 선정",
+            "모니터링 후보로 저장 가능한 상태입니다. Decision Cockpit을 확인한 뒤 Selected Dashboard 추적 후보로 저장합니다.",
+            "모니터링 후보 가능",
         )
     if state == "SELECT_BLOCKED":
         return (
@@ -1204,7 +1504,7 @@ def build_final_review_decision_cockpit(
     paper_observation = dict(paper_observation or {})
     decision_evidence = dict(decision_evidence or {})
     packet = dict(investability_packet or {})
-    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    gate_policy = dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
     source_chain = dict(packet.get("source_chain") or {})
     summary = dict(packet.get("summary") or {})
     state, state_label, verdict = _decision_cockpit_state(gate_policy, packet)
@@ -1239,6 +1539,7 @@ def build_final_review_decision_cockpit(
         "must_fix_rows": must_fix,
         "must_review_rows": must_review,
         "watch_rows": watch_rows,
+        "open_review_items": list(packet.get("open_review_items") or []),
         "ready_rows": ready_rows,
         "monitoring_handoff": {
             "route": paper_observation.get("route"),
@@ -1255,6 +1556,7 @@ def build_final_review_decision_cockpit(
             "policy_blockers": len(gate_policy.get("blockers") or []),
             "policy_review_required": len(gate_policy.get("review_required") or []),
             "critical_gaps": len(packet.get("critical_gaps") or []),
+            "open_review_items": len(packet.get("open_review_items") or []),
             "provider_status": summary.get("provider_status") or "-",
             "validation_efficacy_route": summary.get("validation_efficacy_route") or "-",
             "data_coverage_route": summary.get("data_coverage_route") or "-",
@@ -1312,6 +1614,7 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
                 "Select Allowed": "Yes" if cockpit.get("select_allowed") else "No",
                 "Blockers": metrics.get("policy_blockers", 0),
                 "Review Required": metrics.get("policy_review_required", 0),
+                "Open Review": metrics.get("open_review_items", 0),
                 "Critical Gaps": metrics.get("critical_gaps", 0),
                 "NOT_RUN": summary.get("not_run", 0),
                 "Provider": summary.get("provider_status") or "-",
@@ -1328,6 +1631,7 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
                     state_priority,
                     int(metrics.get("policy_blockers", 0) or 0),
                     int(metrics.get("policy_review_required", 0) or 0),
+                    int(metrics.get("open_review_items", 0) or 0),
                     int(metrics.get("critical_gaps", 0) or 0),
                     int(summary.get("not_run", 0) or 0),
                     -sortable_score,
@@ -1335,7 +1639,7 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
                 ),
             }
         )
-    rows.sort(key=lambda row: tuple(row.get("_sort_key") or (99, 99, 99, 99, 99, 0, 9999)))
+    rows.sort(key=lambda row: tuple(row.get("_sort_key") or (99, 99, 99, 99, 99, 99, 0, 9999)))
     for rank, row in enumerate(rows, start=1):
         row["Rank"] = rank
         row["Review Priority"] = f"P{rank}"
@@ -1348,7 +1652,7 @@ def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict
 
     rows = build_final_review_candidate_board_rows(candidates)
     total = len(rows)
-    select_ready = sum(1 for row in rows if row.get("Decision State") == "선정 가능")
+    select_ready = sum(1 for row in rows if row.get("Decision State") == "모니터링 후보 가능")
     blocked = sum(1 for row in rows if row.get("Decision State") == "선정 차단")
     hold_or_re_review = max(0, total - select_ready - blocked)
     first_row = dict(rows[0] or {}) if rows else {}
@@ -1400,9 +1704,10 @@ def build_final_review_decision_display_rows(rows: list[dict[str, Any]]) -> list
     display_rows: list[dict[str, Any]] = []
     for row in rows:
         evidence = dict(row.get("decision_evidence_snapshot") or {})
-        gate_policy = dict(row.get("gate_policy_snapshot") or {})
+        gate_policy = dict(row.get("selection_gate_policy_snapshot") or row.get("gate_policy_snapshot") or {})
         if not gate_policy:
-            gate_policy = dict(dict(row.get("investability_evidence_packet") or {}).get("gate_policy_snapshot") or {})
+            packet = dict(row.get("investability_evidence_packet") or {})
+            gate_policy = dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
         status_display = build_final_review_status_display(row)
         display_rows.append(
             {
@@ -1437,11 +1742,11 @@ def _saved_decision_route_family(route: Any) -> str:
 
 
 def _decision_gate_policy(row: dict[str, Any]) -> dict[str, Any]:
-    gate_policy = dict(row.get("gate_policy_snapshot") or {})
+    gate_policy = dict(row.get("selection_gate_policy_snapshot") or row.get("gate_policy_snapshot") or {})
     if gate_policy:
         return gate_policy
     packet = dict(row.get("investability_evidence_packet") or {})
-    return dict(packet.get("gate_policy_snapshot") or {})
+    return dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
 
 
 def build_saved_final_review_decision_review(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1569,7 +1874,13 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
     display_rows: list[dict[str, Any]] = []
     packet = dict(raw_decision.get("investability_evidence_packet") or {})
-    gate_policy = dict(raw_decision.get("gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    gate_policy = dict(
+        raw_decision.get("selection_gate_policy_snapshot")
+        or raw_decision.get("gate_policy_snapshot")
+        or packet.get("selection_gate_policy_snapshot")
+        or packet.get("gate_policy_snapshot")
+        or {}
+    )
     look_through = dict(risk_snapshot.get("provider_look_through_board") or {})
     if not look_through:
         provider_context = dict(risk_snapshot.get("provider_coverage") or {})
@@ -1663,14 +1974,14 @@ def _decision_source_contract(
         "selection_source_id": _safe_text(raw_decision.get("selection_source_id"), ""),
         "validation_id": _safe_text(raw_decision.get("validation_id"), ""),
         "source_identity": f"{source_type}:{source_id}" if source_type or source_id else "",
-        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
-        "registry_file": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+        "durable_source": "FINAL_PORTFOLIO_SELECTION_DECISIONS",
+        "registry_file": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
         "timeline_contract_present": bool(timeline_contract),
         "timeline_contract_consistent": _timeline_contract_matches_decision(raw_decision, timeline_contract)
         if timeline_contract
         else None,
         "session_evidence_sources": session_sources,
-        "evidence_scope": "final_decision_v2_plus_optional_session_timeline",
+        "evidence_scope": "final_decision_plus_optional_session_timeline",
         "execution_boundary": {
             "write_policy": "read_only_decision_source_contract",
             "db_write": False,
@@ -1680,7 +1991,7 @@ def _decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Decision Dossier reads the saved Final Decision V2 row and optional Selected Dashboard session timeline only.",
+            "notes": "Decision Dossier reads the saved Final Decision row and optional Selected Dashboard session timeline only.",
         },
     }
 
@@ -1825,7 +2136,13 @@ def build_decision_dossier(
     raw_decision = dict(row.get("raw_decision") or row or {})
     evidence = dict(raw_decision.get("decision_evidence_snapshot") or {})
     packet = dict(raw_decision.get("investability_evidence_packet") or {})
-    gate_policy = dict(raw_decision.get("gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    gate_policy = dict(
+        raw_decision.get("selection_gate_policy_snapshot")
+        or raw_decision.get("gate_policy_snapshot")
+        or packet.get("selection_gate_policy_snapshot")
+        or packet.get("gate_policy_snapshot")
+        or {}
+    )
     risk_snapshot = dict(raw_decision.get("risk_and_validation_snapshot") or {})
     robustness = dict(risk_snapshot.get("robustness_validation") or {})
     paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})

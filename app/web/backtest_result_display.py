@@ -343,8 +343,8 @@ def _render_latest_run_orientation(
             {
                 "label": "C",
                 "title": "Candidate Readiness",
-                "detail": "Real-Money 신호와 blocker로 후보 검토 가능성을 봅니다.",
-                "status": "Real-Money" if has_real_money_details else "Not available",
+                "detail": "Promotion policy signal과 blocker로 다음 검토 가능성을 봅니다.",
+                "status": "Policy Signal" if has_real_money_details else "Not available",
                 "tone": _availability_tone(has_real_money_details),
             },
             {
@@ -360,14 +360,14 @@ def _render_latest_run_orientation(
         [
             {"label": "Selection History", "value": "Available" if has_selection_history else "Strategy-specific", "tone": _availability_tone(has_selection_history)},
             {"label": "Dynamic Universe", "value": "Available" if has_dynamic_details else "Not included", "tone": "positive" if has_dynamic_details else "neutral"},
-            {"label": "Real-Money", "value": "Available" if has_real_money_details else "Not included", "tone": _availability_tone(has_real_money_details)},
+            {"label": "Policy Signal", "value": "Available" if has_real_money_details else "Not included", "tone": _availability_tone(has_real_money_details)},
             {"label": "Meta", "value": "Available", "tone": "positive"},
         ]
     )
     if not has_selection_history:
         st.caption(
             "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
-            "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Real-Money에서 실행 조건을 확인합니다."
+            "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
         )
 
 def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
@@ -599,7 +599,7 @@ def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
     with st.container(border=True):
         st.markdown("##### 2차 실전성 검증 Handoff")
         st.caption(
-            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 Clean V2 source로 등록합니다."
+            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 current selection source로 등록합니다."
         )
         handoff_cols = st.columns([0.3, 0.7], gap="small")
         with handoff_cols[0]:
@@ -682,7 +682,7 @@ def _render_last_run() -> None:
     if has_dynamic_details:
         tab_labels.append("Dynamic Universe")
     if has_real_money_details:
-        tab_labels.append("Real-Money")
+        tab_labels.append("Policy Signal")
     tab_labels.extend(["Result Table", "Meta"])
     tabs = st.tabs(tab_labels)
     tab_iter = iter(tabs)
@@ -1318,7 +1318,7 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
 
     if promotion == "real_money_candidate":
         promotion_score = 4.0
-        promotion_judgment = "강한 통과 신호"
+        promotion_judgment = "강한 handoff policy signal"
     elif promotion == "production_candidate":
         promotion_score = 3.0
         promotion_judgment = "비교 가능, 추가 검토 필요"
@@ -1360,7 +1360,7 @@ def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any
         verdict = "후보 검토 진행 가능"
         tone = "success"
         route_label = "Portfolio Mix Builder 또는 Practical Validation"
-        next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 실전 검증 근거를 확인합니다."
+        next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 검증 근거를 확인합니다."
     elif can_move_to_compare:
         verdict = "후보 검토 가능, 개선 항목 동시 확인"
         tone = "warning"
@@ -1465,14 +1465,14 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
         with st.expander("점수 계산 기준 보기", expanded=False):
             st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
             st.caption(
-                "`real_money_candidate`는 가장 강한 Compare 진입 신호이고, "
-                "`production_candidate`는 후보 검토는 가능하지만 최종 판단 전 추가 검토가 필요한 상태입니다."
+                "`real_money_candidate`는 가장 강한 handoff policy signal이고, "
+                "`production_candidate`는 후보 검토는 가능하지만 Final Review 전 추가 검토가 필요한 상태입니다."
             )
 
 def _render_real_money_details(bundle: dict[str, Any]) -> None:
     meta = bundle.get("meta") or {}
     if not meta.get("real_money_hardening"):
-        st.caption("이 결과에는 Phase 12 real-money hardening 정보가 없습니다.")
+        st.caption("이 결과에는 Phase 12 promotion policy signal hardening 정보가 없습니다.")
         return
 
     result_df = bundle.get("result_df")

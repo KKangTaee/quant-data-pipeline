@@ -281,7 +281,7 @@ def _module_gate_reason(module: dict[str, Any]) -> str:
     if _module_blocks_gate(module):
         return f"Final Review 이동 전 보강 필요: {module.get('next_action') or module.get('reason') or status}"
     if _module_needs_review(module):
-        return f"이동 가능하지만 Final Review 판단 근거로 확인: {module.get('next_action') or module.get('reason') or status}"
+        return f"이동 가능하지만 PASS가 아니므로 Final Review 판단 근거로 확인: {module.get('next_action') or module.get('reason') or status}"
     requirement = str(module.get("requirement") or "").upper()
     if requirement == "REFERENCE":
         return "Practical Validation 이동 차단 기준은 아니며 후속 화면의 참고 근거입니다."
@@ -330,6 +330,19 @@ def _module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _preflight_issue_summary(preflight: dict[str, Any]) -> str:
+    issues = list(preflight.get("blockers") or []) + list(preflight.get("review_required") or [])
+    for issue in issues:
+        text = str(issue or "").strip()
+        if text:
+            return text
+    for row in list(preflight.get("policy_rows") or []):
+        row_data = dict(row or {})
+        if str(row_data.get("Severity") or "").upper() in {"BLOCK", "REVIEW_REQUIRED"}:
+            return f"{row_data.get('Criteria') or row_data.get('Group')}: {row_data.get('Evidence') or row_data.get('Current') or '-'}"
+    return str(preflight.get("next_action") or "Final Review selected-route policy를 다시 확인합니다.")
+
+
 def build_validation_module_plan(
     *,
     source: dict[str, Any],
@@ -342,6 +355,7 @@ def build_validation_module_plan(
     risk_contribution_rows: list[dict[str, Any]],
     component_role_weight_rows: list[dict[str, Any]],
     backtest_realism_rows: list[dict[str, Any]],
+    selected_route_preflight: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the module-level Practical Validation plan and Final Review gate."""
 
@@ -639,6 +653,33 @@ def build_validation_module_plan(
             resolution_action="세금, 계좌 유형, 주문 단위는 최종 판단의 보류 / 선택 사유로 남깁니다.",
         ),
     ]
+    preflight = dict(selected_route_preflight or {})
+    if preflight:
+        preflight_allowed = bool(preflight.get("select_allowed"))
+        preflight_outcome = str(preflight.get("policy_outcome") or preflight.get("route") or "-")
+        preflight_issue = _preflight_issue_summary(preflight)
+        modules.append(
+            _module(
+                module_id="selected_route_preflight",
+                label="Selected-route Preflight",
+                group="Required for Final Review",
+                status="PASS" if preflight_allowed else "NEEDS_INPUT",
+                requirement="REQUIRED",
+                stage_owner="practical_validation",
+                reason="Final Review selected-route gate가 저장을 막을 deterministic evidence gap을 Practical Validation 단계에서 먼저 확인합니다.",
+                next_action=(
+                    preflight.get("next_action")
+                    or "Final Review 이동 전에 selected-route preflight의 blocker / review-required 항목을 보강합니다."
+                ),
+                profile_effect=f"selection policy outcome: {preflight_outcome}",
+                resolution_surface="Practical Validation evidence boards / Final Review Gate",
+                resolution_action=(
+                    "selected-route policy 통과 상태입니다."
+                    if preflight_allowed
+                    else preflight_issue
+                ),
+            )
+        )
 
     for module in modules:
         module["gate_effect"] = _module_gate_effect(module)
@@ -659,18 +700,28 @@ def build_validation_module_plan(
         status = _status(module.get("status"))
         status_counts[status] = status_counts.get(status, 0) + 1
 
+    selected_route_preflight_blocked = any(
+        module.get("module_id") == "selected_route_preflight" for module in blockers
+    )
     if blockers:
         gate_route = "BLOCKED_FOR_FINAL_REVIEW"
-        gate_verdict = "필수 검증 모듈에 보강이 필요한 항목이 있어 Final Review 이동을 막습니다."
-        next_action = "필수 모듈의 BLOCKED / NEEDS_INPUT / NOT_RUN 항목을 먼저 해결합니다."
+        if selected_route_preflight_blocked:
+            gate_verdict = "Final Review selected-route 저장을 막을 evidence gap이 있어 Final Review 이동을 막습니다."
+            next_action = (
+                preflight.get("next_action")
+                or "Selected-route Preflight의 blocker / review-required 항목을 먼저 해결합니다."
+            )
+        else:
+            gate_verdict = "필수 검증 모듈에 보강이 필요한 항목이 있어 Final Review 이동을 막습니다."
+            next_action = "필수 모듈의 BLOCKED / NEEDS_INPUT / NOT_RUN 항목을 먼저 해결합니다."
     elif review_modules:
         gate_route = "READY_WITH_REVIEW"
-        gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목을 최종 판단 근거로 확인해야 합니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 보강 필요 상태와 최종 선정 가능 여부를 확인합니다."
+        gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목은 PASS가 아니며 최종 판단 근거로 확인해야 합니다."
+        next_action = "검증 결과를 저장하고 Final Review에서 보강 필요 상태와 모니터링 후보 선정 가능 여부를 확인합니다."
     else:
         gate_route = "READY_FOR_FINAL_REVIEW"
         gate_verdict = "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 최종 후보 선정 저장을 진행합니다."
+        next_action = "검증 결과를 저장하고 Final Review에서 모니터링 후보 선정 가능 여부를 확인합니다."
 
     board_map = build_validation_board_map(modules=modules, source_traits=traits)
 
@@ -695,6 +746,7 @@ def build_validation_module_plan(
             "can_save_and_move": not blockers,
             "verdict": gate_verdict,
             "next_action": next_action,
+            "selected_route_preflight": preflight,
             "blocking_modules": [
                 _module_gate_row(module)
                 for module in blockers
