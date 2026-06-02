@@ -7104,3 +7104,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 같은 `futures_ohlcv` table에 `interval_code=1d` row를 저장하면 신규 schema 없이 일봉 해석이 가능하다. 채권선물과 FX 선물은 raw 가격 방향을 경제적 해석 방향으로 반전해야 한다
 - Follow-up:
   - `app/services/futures_macro_thermometer.py`와 `Overview > Futures Monitor > Macro Thermometer`를 추가했다. `1y / 1d` core futures backfill smoke는 16개 symbol / 4,032 rows 성공했고, 상세 실행 기록은 `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-v1/`에 남겼다
+
+### 2026-06-02 - Macro Thermometer validation 리뷰 후속을 보정한다
+- User request:
+  - 사용자가 Macro Thermometer historical validation / confidence 보강이 충분한지 리뷰한 뒤, 지적사항을 개선해 달라고 요청함
+- Interpreted goal:
+  - 5y validation이 UI 렌더마다 과도하게 느려지지 않아야 하고, mixed scenario를 directional sample / hit-rate처럼 오해하게 만들면 안 되며, adverse / false-positive 지표도 요구사항대로 보여야 함
+- Analysis result:
+  - 기존 검증은 날짜별 target return 계산에서 같은 시리즈를 반복 정렬했고, mixed scenario의 occurrence count가 directional sample처럼 표시될 수 있었다. `Max Adverse`도 endpoint 기반이라 forward path adverse move 요구와 맞지 않았다
+- Follow-up:
+  - target return 선계산과 Overview TTL cache를 추가했고, mixed scenario는 hit-rate N/A / occurrence count로 분리했다. `Max Adverse`는 path 기준으로 바꾸고 false-positive rate를 UI summary와 threshold sensitivity에 노출했다. 상세 검증은 `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/RUNS.md`에 남겼다

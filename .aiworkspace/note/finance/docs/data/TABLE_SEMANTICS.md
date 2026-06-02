@@ -197,7 +197,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
-- Historical validation은 저장된 daily futures row를 날짜별로 `date <= validation_date` 조건에서 재계산하고, 1D / 5D / 20D forward return과 비교해 과거 일관성, sample size, hit rate, threshold sensitivity, score-forward-return relationship을 요약한다.
+- Historical validation은 저장된 daily futures row를 날짜별로 `date <= validation_date` 조건에서 재계산하고, 1D / 5D / 20D forward return과 비교해 과거 일관성, directional sample size, hit rate, false-positive rate, threshold sensitivity, score-forward-return relationship을 요약한다. `Max Adverse`는 해당 forward window의 endpoint가 아니라 window 안의 adverse path move 기준이다.
+- Mixed scenario는 risk-on / risk-off 방향으로 강제 분류하지 않는다. 이 경우 현재 scenario history는 occurrence count를 보여주고 directional hit rate는 N/A로 표시한다.
 - 비교 target은 futures row가 있으면 futures 자체를 우선 사용하고, 부족하면 `nyse_price_history`의 ETF proxy(`SPY`, `QQQ`, `IWM`, `TLT`, `GLD`, `UUP`)를 labeled fallback으로만 사용한다.
 
 주의:

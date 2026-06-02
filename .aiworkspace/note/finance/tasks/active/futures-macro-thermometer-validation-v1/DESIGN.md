@@ -38,7 +38,8 @@ This is still a stored-provider historical reconstruction. yfinance continuous f
 - missing symbol count
 - conflicting score count
 - latest daily candle age
-- current scenario historical sample size / hit rate
+- current scenario directional historical sample size / hit rate when the scenario has a directional rule
+- current scenario occurrence count when the scenario is mixed and should not be forced into risk-on / risk-off
 
 Confidence labels:
 
@@ -54,6 +55,6 @@ Macro Thermometer should show:
 - Current scenario and cautious interpretation
 - Interpretation Confidence card
 - Historical Validation Summary card
-- Current scenario sample size / hit rate
+- Current scenario directional sample size / hit rate, or occurrence count with hit-rate N/A for mixed scenarios
 - Strong evidence / weak evidence / conflicting evidence sections
 - Caveats that validation is historical consistency evidence, not a prediction guarantee

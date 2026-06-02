@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date
+from time import monotonic
 from typing import Any
 
 import pandas as pd
@@ -18,6 +19,8 @@ MIN_RECOMMENDED_DAYS = 126
 FULL_POSITION_DAYS = 252
 SIGNAL_Z_THRESHOLD = 0.5
 STRONG_SIGNAL_Z_THRESHOLD = 1.0
+OVERVIEW_MACRO_SNAPSHOT_CACHE_TTL_SECONDS = 900
+_OVERVIEW_MACRO_SNAPSHOT_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
 
 SYMBOL_ROLE_LABELS = {
     "ES=F": "S&P 500 risk appetite",
@@ -777,7 +780,39 @@ def build_futures_macro_thermometer_snapshot(
     return snapshot
 
 
+def clear_overview_futures_macro_snapshot_cache() -> None:
+    _OVERVIEW_MACRO_SNAPSHOT_CACHE.clear()
+
+
 def load_overview_futures_macro_snapshot(**kwargs: Any) -> dict[str, Any]:
+    force_refresh = bool(kwargs.pop("force_refresh", False))
+    cache_ttl_seconds = int(kwargs.pop("cache_ttl_seconds", OVERVIEW_MACRO_SNAPSHOT_CACHE_TTL_SECONDS))
     kwargs.setdefault("include_validation", True)
     kwargs.setdefault("lookback_days", 365 * 5 + 90)
-    return build_futures_macro_thermometer_snapshot(**kwargs)
+    if kwargs.get("query_fn") is not None:
+        return build_futures_macro_thermometer_snapshot(**kwargs)
+
+    selected_symbols = tuple(
+        str(symbol).strip().upper()
+        for symbol in (kwargs.get("symbols") or DEFAULT_CORE_FUTURES_SYMBOLS)
+        if str(symbol).strip()
+    )
+    cache_key = (
+        selected_symbols,
+        int(kwargs.get("lookback_days") or 0),
+        bool(kwargs.get("include_validation")),
+    )
+    now = monotonic()
+    cached = _OVERVIEW_MACRO_SNAPSHOT_CACHE.get(cache_key)
+    if (
+        cached is not None
+        and not force_refresh
+        and cache_ttl_seconds > 0
+        and now - cached[0] <= cache_ttl_seconds
+    ):
+        return cached[1]
+
+    snapshot = build_futures_macro_thermometer_snapshot(**kwargs)
+    if cache_ttl_seconds > 0:
+        _OVERVIEW_MACRO_SNAPSHOT_CACHE[cache_key] = (now, snapshot)
+    return snapshot

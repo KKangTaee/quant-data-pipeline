@@ -23,7 +23,10 @@ from app.jobs.ingestion_jobs import (
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
-from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
+from app.services.futures_macro_thermometer import (
+    clear_overview_futures_macro_snapshot_cache,
+    load_overview_futures_macro_snapshot,
+)
 from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
@@ -2333,17 +2336,26 @@ def _macro_validation_cards(macro: dict[str, Any]) -> list[dict[str, Any]]:
     current_metrics = dict(validation.get("current_scenario_metrics") or {})
     sample = confidence.get("sample_size")
     if sample is None:
-        sample = current_metrics.get("Sample 5D") or current_metrics.get("Occurrence Count") or 0
+        sample = current_metrics.get("Sample 5D") or 0
+    occurrence_count = confidence.get("occurrence_count")
+    if occurrence_count is None:
+        occurrence_count = current_metrics.get("Occurrence Count") or 0
     hit_rate = confidence.get("hit_rate_5d")
     if hit_rate is None:
         hit_rate = current_metrics.get("Hit Rate 5D %")
+    hit_applicable = bool(confidence.get("hit_applicable"))
     span = validation_coverage.get("history_span_years")
     validation_dates = validation_coverage.get("validation_dates") or 0
+    hit_detail = (
+        f"5D sample {sample or 0} · hit {_format_macro_percent(hit_rate)}"
+        if hit_applicable
+        else f"directional hit n/a · occurrences {occurrence_count or 0}"
+    )
     return [
         {
             "title": "Interpretation Confidence",
             "value": confidence.get("label") or "Not Enough History",
-            "detail": f"5D sample {sample or 0} · hit {_format_macro_percent(hit_rate)}",
+            "detail": hit_detail,
             "tone": confidence.get("tone") or "warning",
         },
         {
@@ -2353,10 +2365,14 @@ def _macro_validation_cards(macro: dict[str, Any]) -> list[dict[str, Any]]:
             "tone": "positive" if validation.get("status") == "OK" else "warning",
         },
         {
-            "title": "Current Scenario Sample",
-            "value": f"{sample or 0}",
-            "detail": f"mean 5D {_format_macro_percent(current_metrics.get('Mean 5D %'), digits=2)}",
-            "tone": "positive" if int(sample or 0) >= 60 else "warning",
+            "title": "Current Scenario History",
+            "value": f"{sample or occurrence_count or 0}",
+            "detail": (
+                f"mean 5D {_format_macro_percent(current_metrics.get('Mean 5D %'), digits=2)}"
+                if hit_applicable
+                else "mixed scenario occurrence count"
+            ),
+            "tone": "positive" if int(sample or occurrence_count or 0) >= 60 else "warning",
         },
         {
             "title": "Validation Source",
@@ -2388,6 +2404,7 @@ def _render_macro_evidence_groups(groups: dict[str, Any]) -> None:
 def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
     current_metrics = dict(validation.get("current_scenario_metrics") or {})
     if current_metrics:
+        hit_applicable = bool(current_metrics.get("Directional Hit Applicable"))
         render_badge_strip(
             [
                 {
@@ -2396,18 +2413,23 @@ def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
                     "tone": "primary",
                 },
                 {
-                    "label": "5D Sample",
-                    "value": current_metrics.get("Sample 5D") or current_metrics.get("Occurrence Count") or 0,
+                    "label": "5D Sample" if hit_applicable else "Occurrences",
+                    "value": current_metrics.get("Sample 5D") if hit_applicable else current_metrics.get("Occurrence Count") or 0,
                     "tone": "neutral",
                 },
                 {
                     "label": "5D Hit",
-                    "value": _format_macro_percent(current_metrics.get("Hit Rate 5D %")),
-                    "tone": "positive" if (current_metrics.get("Hit Rate 5D %") or 0) >= 55 else "warning",
+                    "value": _format_macro_percent(current_metrics.get("Hit Rate 5D %")) if hit_applicable else "N/A",
+                    "tone": "positive" if hit_applicable and (current_metrics.get("Hit Rate 5D %") or 0) >= 55 else "warning",
+                },
+                {
+                    "label": "5D False Positive",
+                    "value": _format_macro_percent(current_metrics.get("False Positive 5D %")) if hit_applicable else "N/A",
+                    "tone": "warning",
                 },
                 {
                     "label": "5D Max Adverse",
-                    "value": _format_macro_percent(current_metrics.get("Max Adverse 5D %"), digits=2),
+                    "value": _format_macro_percent(current_metrics.get("Max Adverse 5D %"), digits=2) if hit_applicable else "N/A",
                     "tone": "warning",
                 },
             ]
@@ -2422,12 +2444,15 @@ def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
             "Sample 1D",
             "Mean 1D %",
             "Hit Rate 1D %",
+            "False Positive 1D %",
             "Sample 5D",
             "Mean 5D %",
             "Hit Rate 5D %",
+            "False Positive 5D %",
             "Sample 20D",
             "Mean 20D %",
             "Hit Rate 20D %",
+            "False Positive 20D %",
             "Max Adverse 5D %",
         ]
         st.dataframe(
@@ -2479,6 +2504,7 @@ def _render_futures_macro_tab() -> None:
                     "overview_futures_daily_ohlcv_result",
                     _run_collect_futures_daily_ohlcv_compat(),
                 )
+                clear_overview_futures_macro_snapshot_cache()
             st.rerun()
         st.metric("Daily Coverage", f"{coverage.get('standardized_count') or 0} / {coverage.get('symbol_count') or 0}")
         st.caption(f"Latest daily candle: {_snapshot_value(coverage.get('latest_daily_date'))}")

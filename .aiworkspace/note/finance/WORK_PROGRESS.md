@@ -4595,3 +4595,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Overview > Futures Monitor > Macro Thermometer`는 Risk-On / Growth / Rate Pressure / Dollar Pressure / Safe Haven / Inflation Pressure 점수, 오늘의 해석, 근거 티커, 표준화 움직임, 주의 문구를 표시한다.
   - 기존 1m 차트 / Shock Board는 유지하고, macro tab은 저장된 `interval_code=1d` row를 별도로 읽는다.
   - 16개 core futures `1y / 1d` backfill smoke가 성공했고, focused service contracts는 통과했다. 최종 Browser QA / full verification은 task RUNS를 확인한다.
+- Futures Macro Thermometer Validation follow-up:
+  - `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`에서 리뷰 후속 수정까지 반영했다.
+  - 5y point-in-time validation은 target return 선계산과 Overview TTL cache를 사용하며, same-process 반복 렌더는 캐시로 즉시 반환된다.
+  - Mixed scenario는 directional hit-rate를 N/A로 표시하고 occurrence count를 분리한다. `Max Adverse`는 forward window path adverse move 기준이며 false-positive rate가 UI summary에 노출된다.

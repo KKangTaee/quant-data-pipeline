@@ -9,6 +9,7 @@ import unittest
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pandas as pd
@@ -5618,6 +5619,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 "Scenario": "좋은 risk-on",
                 "Sample 5D": 80,
                 "Hit Rate 5D %": 61.0,
+                "Directional Hit Applicable": True,
             },
         }
 
@@ -5639,6 +5641,97 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         low_confidence = build_interpretation_confidence(low_snapshot, validation_snapshot)
 
         self.assertEqual(low_confidence["label"], "Not Enough History")
+
+    def test_mixed_scenario_confidence_does_not_report_directional_hit_sample(self) -> None:
+        from app.services.futures_macro_validation import build_interpretation_confidence
+
+        current_snapshot = {
+            "coverage": {
+                "symbol_count": 16,
+                "standardized_count": 16,
+                "min_data_days": 260,
+                "latest_daily_date": date.today().isoformat(),
+            },
+            "evidence_groups": {
+                "counts": {
+                    "strong": 3,
+                    "weak": 2,
+                    "missing": 0,
+                    "conflicting": 0,
+                }
+            },
+        }
+        validation_snapshot = {
+            "coverage": {
+                "validation_dates": 100,
+                "history_span_years": 4.0,
+            },
+            "current_scenario_metrics": {
+                "Scenario": "혼재된 매크로 흐름",
+                "Occurrence Count": 90,
+                "Sample 5D": 0,
+                "Hit Rate 5D %": None,
+                "Directional Hit Applicable": False,
+            },
+        }
+
+        confidence = build_interpretation_confidence(current_snapshot, validation_snapshot)
+
+        self.assertEqual(confidence["sample_size"], 0)
+        self.assertEqual(confidence["occurrence_count"], 90)
+        self.assertFalse(confidence["hit_applicable"])
+        self.assertIsNone(confidence["hit_rate_5d"])
+
+    def test_basket_forward_return_reports_path_max_adverse_move(self) -> None:
+        from app.services.futures_macro_validation import _basket_forward_return
+
+        dates = pd.date_range("2026-01-01", periods=6, freq="D")
+        futures_matrix = pd.DataFrame(
+            {
+                "ES=F": [100.0, 95.0, 98.0, 101.0, 103.0, 104.0],
+                "NQ=F": [100.0, 94.0, 99.0, 102.0, 103.0, 105.0],
+            },
+            index=dates,
+        )
+
+        basket = _basket_forward_return(
+            futures_matrix=futures_matrix,
+            proxy_matrix=pd.DataFrame(),
+            futures_symbols=("ES=F", "NQ=F"),
+            as_of=dates[0],
+            horizon=5,
+        )
+
+        self.assertGreater(basket.value, 0)
+        self.assertLess(basket.max_adverse, 0)
+        self.assertAlmostEqual(basket.max_adverse, -5.5, places=1)
+
+    def test_overview_macro_snapshot_cache_can_be_cleared(self) -> None:
+        import app.services.futures_macro_thermometer as macro_service
+
+        calls: list[dict[str, Any]] = []
+        original_builder = macro_service.build_futures_macro_thermometer_snapshot
+
+        def fake_builder(**kwargs: Any) -> dict[str, Any]:
+            calls.append(dict(kwargs))
+            return {"call_count": len(calls)}
+
+        try:
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+            macro_service.build_futures_macro_thermometer_snapshot = fake_builder
+
+            first = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            second = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+            third = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+
+            self.assertIs(first, second)
+            self.assertEqual(first["call_count"], 1)
+            self.assertEqual(third["call_count"], 2)
+            self.assertEqual(len(calls), 2)
+        finally:
+            macro_service.build_futures_macro_thermometer_snapshot = original_builder
+            macro_service.clear_overview_futures_macro_snapshot_cache()
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):

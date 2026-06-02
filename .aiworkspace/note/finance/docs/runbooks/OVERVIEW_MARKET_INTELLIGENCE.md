@@ -69,7 +69,7 @@ http://localhost:8501
    - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다.
    - `Macro Thermometer` 탭은 core 16개 선물의 저장된 1d OHLCV를 읽어 Risk-On, Growth, Rate Pressure, Dollar Pressure, Safe Haven, Inflation Pressure score, 오늘의 시장 해석, Interpretation Confidence, historical validation summary를 표시한다.
    - Macro Thermometer가 비어 있거나 `Not Enough History` / 3년 미만 warning이 있으면 `Refresh Daily Macro OHLCV`를 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
-   - Historical Validation Summary는 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 scenario의 sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다.
+   - Historical Validation Summary는 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 scenario의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. Mixed scenario는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
    - 기본 자동 refresh는 60초 cadence다. 화면을 열어둔 동안만 동작하며 provider를 매초 호출하지 않는다.
    - Shock Board에서 15m / 60m 움직임, range spike, volume spike, `Calm / Moving / Sharp / Stale / Missing` 상태를 확인한다.
    - Candles 탭에서 선택 symbol을 포함한 최대 4개 미니 캔들 차트와 선택 symbol 상세 캔들을 본다. `1m / 5m / 15m / 1h` view는 저장된 1m row에서 표시용으로 집계한다.
@@ -225,7 +225,7 @@ PY
 - Sector / Industry Positive Group Detail ticker bars use sector colors for positive returns, danger red for negative returns, and high-contrast previous-period return markers.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
-- Futures Macro Thermometer shows six standardized daily score cards, scenario summary, Interpretation Confidence, current scenario historical sample / hit rate, strong / weak / conflicting evidence groups, score components, symbol-level 1D / 3D / 5D / 20D / 60D returns, 60D volatility standardized move, 252D position, historical validation summary, score threshold sensitivity, score-forward-return relationships, and caution copy.
+- Futures Macro Thermometer shows six standardized daily score cards, scenario summary, Interpretation Confidence, current scenario directional sample / hit rate or mixed-scenario occurrence count, strong / weak / conflicting evidence groups, score components, symbol-level 1D / 3D / 5D / 20D / 60D returns, 60D volatility standardized move, 252D position, historical validation summary, score threshold sensitivity, false-positive rates, score-forward-return relationships, and caution copy.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.

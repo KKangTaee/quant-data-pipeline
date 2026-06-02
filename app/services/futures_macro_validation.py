@@ -50,6 +50,7 @@ VALIDATION_CAVEATS = [
 @dataclass(frozen=True)
 class BasketReturn:
     value: float | None
+    max_adverse: float | None
     source: str
     symbols: str
 
@@ -161,6 +162,211 @@ def _forward_return(matrix: pd.DataFrame, symbol: str, as_of: Any, horizon: int)
     return ((float(future) / float(current)) - 1.0) * 100.0
 
 
+def _forward_path_returns(matrix: pd.DataFrame, symbol: str, as_of: Any, horizon: int) -> list[float]:
+    if not isinstance(matrix, pd.DataFrame) or matrix.empty or symbol not in matrix.columns:
+        return []
+    as_of_ts = pd.to_datetime(as_of, errors="coerce")
+    if pd.isna(as_of_ts):
+        return []
+    as_of_ts = as_of_ts.normalize()
+    series = pd.to_numeric(matrix[symbol], errors="coerce").dropna().sort_index()
+    if series.empty:
+        return []
+    index = pd.DatetimeIndex(series.index).sort_values()
+    current_pos = int(index.searchsorted(as_of_ts, side="right") - 1)
+    if current_pos < 0:
+        return []
+    current = _safe_float(series.iloc[current_pos])
+    if current in (None, 0):
+        return []
+    out: list[float] = []
+    for step in range(1, int(horizon) + 1):
+        future_pos = current_pos + step
+        if future_pos >= len(index):
+            break
+        future = _safe_float(series.iloc[future_pos])
+        if future is None:
+            continue
+        out.append(((float(future) / float(current)) - 1.0) * 100.0)
+    return out
+
+
+def _forward_metric_frame(
+    matrix: pd.DataFrame,
+    symbol: str,
+    *,
+    as_of_index: pd.DatetimeIndex,
+    horizon: int,
+    invert: bool = False,
+) -> pd.DataFrame:
+    columns = ["return", *[f"step_{step}" for step in range(1, int(horizon) + 1)]]
+    empty = pd.DataFrame(index=as_of_index, columns=columns, dtype=float)
+    if not isinstance(matrix, pd.DataFrame) or matrix.empty or symbol not in matrix.columns:
+        return empty
+
+    series = pd.to_numeric(matrix[symbol], errors="coerce").dropna().sort_index()
+    if series.empty:
+        return empty
+    series.index = pd.to_datetime(series.index, errors="coerce").normalize()
+    series = series[~pd.isna(series.index)]
+    if series.empty:
+        return empty
+    series = series[~series.index.duplicated(keep="last")]
+
+    sign = -1.0 if invert else 1.0
+    data = {
+        f"step_{step}": sign * (((series.shift(-step) / series) - 1.0) * 100.0)
+        for step in range(1, int(horizon) + 1)
+    }
+    frame = pd.DataFrame(data, index=series.index)
+    frame["return"] = frame[f"step_{int(horizon)}"]
+    valid_endpoint = frame["return"].notna()
+    for column in columns:
+        frame[column] = frame[column].where(valid_endpoint)
+    return frame[columns].reindex(as_of_index, method="ffill")
+
+
+def _source_label(source_kinds: set[str]) -> str:
+    if source_kinds == {"futures"}:
+        return "futures"
+    if source_kinds == {"ETF proxy"}:
+        return "ETF proxy"
+    if source_kinds:
+        return "mixed futures / ETF proxy"
+    return "missing"
+
+
+def _basket_forward_frame(
+    *,
+    futures_matrix: pd.DataFrame,
+    proxy_matrix: pd.DataFrame,
+    futures_symbols: Sequence[str],
+    proxy_symbols: Sequence[str] = (),
+    as_of_index: pd.DatetimeIndex,
+    horizon: int,
+    invert_futures: bool = False,
+    invert_proxy: bool = False,
+) -> pd.DataFrame:
+    columns = ["value", "max_adverse", "source", "symbols"]
+    if as_of_index.empty:
+        return pd.DataFrame(columns=columns)
+
+    metric_columns = ["return", *[f"step_{step}" for step in range(1, int(horizon) + 1)]]
+    member_frames: list[pd.DataFrame] = []
+    member_sources: list[pd.Series] = []
+    member_symbols: list[pd.Series] = []
+
+    for symbol in futures_symbols:
+        member = _forward_metric_frame(
+            futures_matrix,
+            symbol,
+            as_of_index=as_of_index,
+            horizon=horizon,
+            invert=invert_futures,
+        )
+        source = pd.Series(index=as_of_index, dtype=object)
+        used_symbol = pd.Series(index=as_of_index, dtype=object)
+        futures_mask = member["return"].notna()
+        source.loc[futures_mask] = "futures"
+        used_symbol.loc[futures_mask] = symbol
+
+        proxy_symbol = FUTURES_PROXY_MAP.get(symbol)
+        if proxy_symbol:
+            proxy = _forward_metric_frame(
+                proxy_matrix,
+                proxy_symbol,
+                as_of_index=as_of_index,
+                horizon=horizon,
+                invert=invert_proxy,
+            )
+            proxy_mask = member["return"].isna() & proxy["return"].notna()
+            if proxy_mask.any():
+                member.loc[proxy_mask, metric_columns] = proxy.loc[proxy_mask, metric_columns]
+                source.loc[proxy_mask] = "ETF proxy"
+                used_symbol.loc[proxy_mask] = proxy_symbol
+
+        if member["return"].notna().any():
+            member_frames.append(member)
+            member_sources.append(source)
+            member_symbols.append(used_symbol)
+
+    if member_frames:
+        returns_frame = pd.concat([frame["return"] for frame in member_frames], axis=1)
+        value = returns_frame.mean(axis=1, skipna=True)
+        member_count = returns_frame.notna().sum(axis=1)
+        step_frames = []
+        for step in range(1, int(horizon) + 1):
+            step_frame = pd.concat([frame[f"step_{step}"] for frame in member_frames], axis=1)
+            step_frames.append(step_frame.mean(axis=1, skipna=True))
+        max_adverse = pd.concat(step_frames, axis=1).min(axis=1, skipna=True)
+    else:
+        value = pd.Series(index=as_of_index, dtype=float)
+        max_adverse = pd.Series(index=as_of_index, dtype=float)
+        member_count = pd.Series(0, index=as_of_index)
+
+    proxy_frames: list[pd.DataFrame] = []
+    proxy_symbols_used: list[str] = []
+    for symbol in proxy_symbols:
+        proxy = _forward_metric_frame(
+            proxy_matrix,
+            symbol,
+            as_of_index=as_of_index,
+            horizon=horizon,
+            invert=invert_proxy,
+        )
+        if proxy["return"].notna().any():
+            proxy_frames.append(proxy)
+            proxy_symbols_used.append(symbol)
+
+    proxy_value = pd.Series(index=as_of_index, dtype=float)
+    proxy_adverse = pd.Series(index=as_of_index, dtype=float)
+    if proxy_frames:
+        proxy_returns = pd.concat([frame["return"] for frame in proxy_frames], axis=1)
+        proxy_value = proxy_returns.mean(axis=1, skipna=True)
+        proxy_steps = []
+        for step in range(1, int(horizon) + 1):
+            proxy_step_frame = pd.concat([frame[f"step_{step}"] for frame in proxy_frames], axis=1)
+            proxy_steps.append(proxy_step_frame.mean(axis=1, skipna=True))
+        proxy_adverse = pd.concat(proxy_steps, axis=1).min(axis=1, skipna=True)
+
+    proxy_fallback_mask = (member_count <= 0) & proxy_value.notna()
+    if proxy_fallback_mask.any():
+        value.loc[proxy_fallback_mask] = proxy_value.loc[proxy_fallback_mask]
+        max_adverse.loc[proxy_fallback_mask] = proxy_adverse.loc[proxy_fallback_mask]
+
+    source_values: list[str] = []
+    symbol_values: list[str] = []
+    for as_of_ts in as_of_index:
+        source_kinds: set[str] = set()
+        symbols: list[str] = []
+        if int(member_count.loc[as_of_ts] or 0) > 0:
+            for source, used_symbol in zip(member_sources, member_symbols):
+                source_value = source.loc[as_of_ts]
+                symbol_value = used_symbol.loc[as_of_ts]
+                if isinstance(source_value, str) and source_value:
+                    source_kinds.add(source_value)
+                if isinstance(symbol_value, str) and symbol_value:
+                    symbols.append(symbol_value)
+        elif bool(proxy_fallback_mask.loc[as_of_ts]):
+            source_kinds.add("ETF proxy")
+            for symbol, frame in zip(proxy_symbols_used, proxy_frames):
+                if pd.notna(frame.loc[as_of_ts, "return"]):
+                    symbols.append(symbol)
+        source_values.append(_source_label(source_kinds))
+        symbol_values.append(", ".join(symbols) if symbols else "-")
+
+    return pd.DataFrame(
+        {
+            "value": value,
+            "max_adverse": max_adverse,
+            "source": source_values,
+            "symbols": symbol_values,
+        },
+        index=as_of_index,
+        columns=columns,
+    )
+
+
 def _basket_forward_return(
     *,
     futures_matrix: pd.DataFrame,
@@ -173,12 +379,16 @@ def _basket_forward_return(
     invert_proxy: bool = False,
 ) -> BasketReturn:
     returns: list[float] = []
+    path_returns: list[list[float]] = []
     source_kinds: set[str] = set()
     used_symbols: list[str] = []
     for symbol in futures_symbols:
         ret = _forward_return(futures_matrix, symbol, as_of, horizon)
         if ret is not None:
             returns.append(-ret if invert_futures else ret)
+            path = _forward_path_returns(futures_matrix, symbol, as_of, horizon)
+            if path:
+                path_returns.append([-value if invert_futures else value for value in path])
             source_kinds.add("futures")
             used_symbols.append(symbol)
             continue
@@ -187,6 +397,9 @@ def _basket_forward_return(
             proxy_ret = _forward_return(proxy_matrix, proxy_symbol, as_of, horizon)
             if proxy_ret is not None:
                 returns.append(-proxy_ret if invert_proxy else proxy_ret)
+                path = _forward_path_returns(proxy_matrix, proxy_symbol, as_of, horizon)
+                if path:
+                    path_returns.append([-value if invert_proxy else value for value in path])
                 source_kinds.add("ETF proxy")
                 used_symbols.append(proxy_symbol)
     if not returns:
@@ -194,17 +407,26 @@ def _basket_forward_return(
             ret = _forward_return(proxy_matrix, symbol, as_of, horizon)
             if ret is not None:
                 returns.append(-ret if invert_proxy else ret)
+                path = _forward_path_returns(proxy_matrix, symbol, as_of, horizon)
+                if path:
+                    path_returns.append([-value if invert_proxy else value for value in path])
                 source_kinds.add("ETF proxy")
                 used_symbols.append(symbol)
     if not returns:
-        return BasketReturn(None, "missing", "-")
+        return BasketReturn(None, None, "missing", "-")
     if source_kinds == {"futures"}:
         source = "futures"
     elif source_kinds == {"ETF proxy"}:
         source = "ETF proxy"
     else:
         source = "mixed futures / ETF proxy"
-    return BasketReturn(sum(returns) / len(returns), source, ", ".join(used_symbols))
+    adverse_points: list[float] = []
+    for step_index in range(max((len(path) for path in path_returns), default=0)):
+        step_values = [path[step_index] for path in path_returns if len(path) > step_index]
+        if step_values:
+            adverse_points.append(sum(step_values) / len(step_values))
+    max_adverse = min(adverse_points) if adverse_points else None
+    return BasketReturn(sum(returns) / len(returns), max_adverse, source, ", ".join(used_symbols))
 
 
 def _target_returns_for_date(
@@ -268,8 +490,79 @@ def _target_returns_for_date(
         for family, basket in baskets.items():
             prefix = f"{family} {horizon}D"
             out[f"{prefix} %"] = _round(basket.value, 3)
+            out[f"{prefix} Max Adverse %"] = _round(basket.max_adverse, 3)
             out[f"{prefix} Source"] = basket.source
             out[f"{prefix} Symbols"] = basket.symbols
+    return out
+
+
+def _precompute_target_returns_for_index(
+    *,
+    futures_matrix: pd.DataFrame,
+    proxy_matrix: pd.DataFrame,
+    as_of_index: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    if as_of_index.empty:
+        return pd.DataFrame()
+
+    out = pd.DataFrame(index=as_of_index)
+    for horizon in VALIDATION_HORIZONS:
+        baskets = {
+            "Risk Asset": _basket_forward_frame(
+                futures_matrix=futures_matrix,
+                proxy_matrix=proxy_matrix,
+                futures_symbols=("ES=F", "NQ=F", "RTY=F"),
+                as_of_index=as_of_index,
+                horizon=horizon,
+            ),
+            "Growth Asset": _basket_forward_frame(
+                futures_matrix=futures_matrix,
+                proxy_matrix=proxy_matrix,
+                futures_symbols=("NQ=F",),
+                proxy_symbols=("QQQ",),
+                as_of_index=as_of_index,
+                horizon=horizon,
+            ),
+            "Safe Haven": _basket_forward_frame(
+                futures_matrix=futures_matrix,
+                proxy_matrix=proxy_matrix,
+                futures_symbols=("GC=F", "ZN=F", "ZB=F", "6J=F"),
+                proxy_symbols=("GLD", "TLT"),
+                as_of_index=as_of_index,
+                horizon=horizon,
+            ),
+            "Rates Duration": _basket_forward_frame(
+                futures_matrix=futures_matrix,
+                proxy_matrix=proxy_matrix,
+                futures_symbols=("ZN=F", "ZB=F"),
+                proxy_symbols=("TLT",),
+                as_of_index=as_of_index,
+                horizon=horizon,
+            ),
+            "Gold": _basket_forward_frame(
+                futures_matrix=futures_matrix,
+                proxy_matrix=proxy_matrix,
+                futures_symbols=("GC=F",),
+                proxy_symbols=("GLD",),
+                as_of_index=as_of_index,
+                horizon=horizon,
+            ),
+            "Dollar": _basket_forward_frame(
+                futures_matrix=futures_matrix,
+                proxy_matrix=proxy_matrix,
+                futures_symbols=("6E=F", "6J=F", "6B=F", "6A=F", "6C=F"),
+                proxy_symbols=("UUP",),
+                as_of_index=as_of_index,
+                horizon=horizon,
+                invert_futures=True,
+            ),
+        }
+        for family, basket in baskets.items():
+            prefix = f"{family} {horizon}D"
+            out[f"{prefix} %"] = basket["value"].map(lambda value: _round(value, 3))
+            out[f"{prefix} Max Adverse %"] = basket["max_adverse"].map(lambda value: _round(value, 3))
+            out[f"{prefix} Source"] = basket["source"]
+            out[f"{prefix} Symbols"] = basket["symbols"]
     return out
 
 
@@ -294,6 +587,63 @@ def _scenario_rule(scenario: Any) -> tuple[str | None, int, str]:
     return None, 0, "mixed scenario; no forced directional hit rule"
 
 
+def _direction_label(value: float | None) -> str:
+    if value is None:
+        return "-"
+    if value >= 0.05:
+        return "Up"
+    if value <= -0.05:
+        return "Down"
+    return "Flat"
+
+
+def _build_symbol_metrics_for_date(
+    *,
+    as_of_ts: pd.Timestamp,
+    selected_symbols: Sequence[str],
+    instruments: Sequence[dict[str, Any]],
+    close_matrix: pd.DataFrame,
+    returns: pd.DataFrame,
+    standardized: pd.DataFrame,
+    rolling_vol: pd.DataFrame,
+    data_days: pd.DataFrame,
+) -> pd.DataFrame:
+    by_symbol = {
+        str(row.get("provider_symbol") or "").strip().upper(): row
+        for row in instruments
+    }
+    rows: list[dict[str, Any]] = []
+    for symbol in selected_symbols:
+        info = by_symbol.get(symbol, {"provider_symbol": symbol, "display_name": symbol, "futures_group": "Other"})
+        close_value = _safe_float(close_matrix.at[as_of_ts, symbol]) if symbol in close_matrix.columns else None
+        one_day_return = _safe_float(returns.at[as_of_ts, symbol] * 100.0) if symbol in returns.columns else None
+        vol_value = _safe_float(rolling_vol.at[as_of_ts, symbol]) if symbol in rolling_vol.columns else None
+        std_value = _safe_float(standardized.at[as_of_ts, symbol]) if symbol in standardized.columns else None
+        days_value = int(data_days.at[as_of_ts, symbol]) if symbol in data_days.columns and not pd.isna(data_days.at[as_of_ts, symbol]) else 0
+        rows.append(
+            {
+                "Group": info.get("futures_group") or "Other",
+                "Symbol": symbol,
+                "Name": info.get("display_name") or symbol,
+                "Close": _round(close_value, 4),
+                "Latest Date": as_of_ts.date().isoformat(),
+                "1D %": _round(one_day_return, 2),
+                "3D %": None,
+                "5D %": None,
+                "20D %": None,
+                "60D %": None,
+                "60D Vol %": _round(vol_value * 100.0 if vol_value is not None else None, 2),
+                "Std Move": _round(std_value, 2),
+                "252D Position %": None,
+                "Data Days": days_value,
+                "Direction": _direction_label(one_day_return),
+                "Role": "",
+                "Source": info.get("source") or "yfinance",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _build_validation_records(
     *,
     candles: pd.DataFrame,
@@ -305,14 +655,29 @@ def _build_validation_records(
 ) -> pd.DataFrame:
     if not isinstance(candles, pd.DataFrame) or candles.empty:
         return pd.DataFrame()
-    validation_dates = sorted(str(value) for value in candles["Date"].dropna().unique())
+    close_matrix = futures_matrix.reindex(columns=list(selected_symbols)).sort_index()
+    returns = close_matrix.pct_change(fill_method=None)
+    rolling_vol = returns.rolling(60, min_periods=60).std(ddof=0)
+    standardized = returns / rolling_vol
+    data_days = close_matrix.notna().cumsum()
+    standardized_counts = standardized.notna().sum(axis=1)
+    validation_index = standardized_counts[standardized_counts >= max(1, int(min_standardized_symbols))].index
+    target_return_frame = _precompute_target_returns_for_index(
+        futures_matrix=futures_matrix,
+        proxy_matrix=proxy_matrix,
+        as_of_index=pd.DatetimeIndex(validation_index),
+    )
     rows: list[dict[str, Any]] = []
-    for as_of_date in validation_dates:
-        pit_candles = candles[candles["Date"] <= as_of_date]
-        symbol_metrics = compute_symbol_metrics(
-            pit_candles,
-            instruments=instruments,
+    for as_of_ts in validation_index:
+        symbol_metrics = _build_symbol_metrics_for_date(
+            as_of_ts=as_of_ts,
             selected_symbols=selected_symbols,
+            instruments=instruments,
+            close_matrix=close_matrix,
+            returns=returns,
+            standardized=standardized,
+            rolling_vol=rolling_vol,
+            data_days=data_days,
         )
         standardized_count = int(symbol_metrics["Std Move"].notna().sum()) if not symbol_metrics.empty else 0
         if standardized_count < max(1, int(min_standardized_symbols)):
@@ -321,16 +686,16 @@ def _build_validation_records(
         interpretation = generate_market_interpretation(scores, symbol_metrics)
         values = _score_value_map(scores)
         evidence_groups = build_current_evidence_groups(scores, components, symbol_metrics)
-        target_returns = _target_returns_for_date(
-            futures_matrix=futures_matrix,
-            proxy_matrix=proxy_matrix,
-            as_of=as_of_date,
+        target_returns = (
+            dict(target_return_frame.loc[as_of_ts])
+            if isinstance(target_return_frame, pd.DataFrame) and not target_return_frame.empty and as_of_ts in target_return_frame.index
+            else {}
         )
-        if not any(target_returns.get(f"{family} {horizon}D %") is not None for family in ("Risk Asset", "Growth Asset", "Safe Haven", "Dollar") for horizon in VALIDATION_HORIZONS):
+        if not any(_safe_float(target_returns.get(f"{family} {horizon}D %")) is not None for family in ("Risk Asset", "Growth Asset", "Safe Haven", "Dollar") for horizon in VALIDATION_HORIZONS):
             continue
         family, direction, hit_rule = _scenario_rule(interpretation.get("scenario"))
         row: dict[str, Any] = {
-            "Date": as_of_date,
+            "Date": as_of_ts.date().isoformat(),
             "Scenario": interpretation.get("scenario"),
             "Scenario Summary": interpretation.get("summary"),
             "Hit Family": family,
@@ -374,17 +739,25 @@ def _scenario_summary(records: pd.DataFrame) -> pd.DataFrame:
             "Occurrence Count": int(len(group)),
             "Target Family": family or "Mixed",
             "Hit Rule": hit_rule,
+            "Directional Hit Applicable": bool(family and direction != 0),
         }
         for horizon in VALIDATION_HORIZONS:
             target_col = f"{family} {horizon}D %" if family else None
+            adverse_col = f"{family} {horizon}D Max Adverse %" if family else None
             returns = pd.to_numeric(group[target_col], errors="coerce").dropna() if target_col and target_col in group else pd.Series(dtype=float)
+            adverse_returns = (
+                pd.to_numeric(group[adverse_col], errors="coerce").dropna()
+                if adverse_col and adverse_col in group
+                else pd.Series(dtype=float)
+            )
             aligned, hits = _hit_series(group, family=family, direction=direction, horizon=horizon)
+            aligned_adverse = adverse_returns * float(direction) if not adverse_returns.empty else pd.Series(dtype=float)
             row[f"Sample {horizon}D"] = int(len(returns))
             row[f"Mean {horizon}D %"] = _round(float(returns.mean()), 3) if not returns.empty else None
             row[f"Median {horizon}D %"] = _round(float(returns.median()), 3) if not returns.empty else None
             row[f"Hit Rate {horizon}D %"] = _round(float(hits.mean() * 100.0), 1) if len(hits) else None
             row[f"False Positive {horizon}D %"] = _round(float((1.0 - hits.mean()) * 100.0), 1) if len(hits) else None
-            row[f"Max Adverse {horizon}D %"] = _round(float(aligned.min()), 3) if not aligned.empty else None
+            row[f"Max Adverse {horizon}D %"] = _round(float(aligned_adverse.min()), 3) if not aligned_adverse.empty else None
         rows.append(row)
     out = pd.DataFrame(rows)
     if out.empty:
@@ -429,6 +802,7 @@ def _threshold_sensitivity(records: pd.DataFrame) -> pd.DataFrame:
                             "Mean Forward Return %": _round(float(returns.mean()), 3) if not returns.empty else None,
                             "Median Forward Return %": _round(float(returns.median()), 3) if not returns.empty else None,
                             "Hit Rate %": _round(float(hits.mean() * 100.0), 1) if len(hits) else None,
+                            "False Positive %": _round(float((1.0 - hits.mean()) * 100.0), 1) if len(hits) else None,
                         }
                     )
     return pd.DataFrame(rows)
@@ -618,8 +992,10 @@ def build_interpretation_confidence(
             "label": "Not Enough History",
             "tone": "warning",
             "score": 0,
-            "sample_size": int(current_metrics.get("Sample 5D") or current_metrics.get("Occurrence Count") or 0),
+            "sample_size": int(current_metrics.get("Sample 5D") or 0),
+            "occurrence_count": int(current_metrics.get("Occurrence Count") or 0),
             "hit_rate_5d": current_metrics.get("Hit Rate 5D %"),
+            "hit_applicable": bool(current_metrics.get("Directional Hit Applicable")),
             "latest_candle_age_days": latest_age,
             "reasons": ["60D volatility or daily history is not sufficient for current symbols."],
             "inputs": {
@@ -676,24 +1052,28 @@ def build_interpretation_confidence(
         reasons.append(f"Latest daily candle is {latest_age} days old.")
 
     validation_dates = int(validation_coverage.get("validation_dates") or 0)
-    scenario_sample = int(current_metrics.get("Sample 5D") or current_metrics.get("Occurrence Count") or 0)
+    scenario_sample = int(current_metrics.get("Sample 5D") or 0)
+    occurrence_count = int(current_metrics.get("Occurrence Count") or 0)
     hit_rate = _safe_float(current_metrics.get("Hit Rate 5D %"))
+    hit_applicable = bool(current_metrics.get("Directional Hit Applicable")) and hit_rate is not None and scenario_sample > 0
     if validation_dates <= 0:
         score -= 3
         reasons.append("Historical validation has no usable point-in-time records.")
-    elif scenario_sample >= 60:
+    elif hit_applicable and scenario_sample >= 60:
         score += 2
-        reasons.append("Current scenario has a useful historical sample.")
-    elif scenario_sample >= 30:
+        reasons.append("Current scenario has a useful directional historical sample.")
+    elif hit_applicable and scenario_sample >= 30:
         score += 1
-        reasons.append("Current scenario has a moderate historical sample.")
-    elif scenario_sample >= 10:
-        reasons.append("Current scenario has a small historical sample.")
+        reasons.append("Current scenario has a moderate directional historical sample.")
+    elif hit_applicable and scenario_sample >= 10:
+        reasons.append("Current scenario has a small directional historical sample.")
+    elif not hit_applicable and occurrence_count >= 30:
+        reasons.append("Current mixed scenario has historical occurrences, but no directional hit-rate rule.")
     else:
         score -= 2
-        reasons.append("Current scenario historical sample is too small.")
+        reasons.append("Current scenario directional historical sample is too small.")
 
-    if hit_rate is not None:
+    if hit_applicable:
         if hit_rate >= 55:
             score += 1
             reasons.append("Current scenario 5D hit rate is above a basic consistency threshold.")
@@ -701,9 +1081,9 @@ def build_interpretation_confidence(
             score -= 1
             reasons.append("Current scenario 5D hit rate is below a basic consistency threshold.")
     else:
-        reasons.append("Current mixed scenario is not forced into a directional hit-rate rule.")
+        reasons.append("Current scenario is not forced into a directional hit-rate rule.")
 
-    if validation_dates < 30 or scenario_sample < 5:
+    if validation_dates < 30 or (hit_applicable and scenario_sample < 5) or (not hit_applicable and occurrence_count < 5):
         label = "Not Enough History"
         tone = "warning"
     elif score >= 6:
@@ -720,8 +1100,10 @@ def build_interpretation_confidence(
         "label": label,
         "tone": tone,
         "score": int(score),
-        "sample_size": scenario_sample,
+        "sample_size": scenario_sample if hit_applicable else 0,
+        "occurrence_count": occurrence_count,
         "hit_rate_5d": _round(hit_rate, 1) if hit_rate is not None else None,
+        "hit_applicable": hit_applicable,
         "latest_candle_age_days": latest_age,
         "reasons": reasons[:8],
         "inputs": {
