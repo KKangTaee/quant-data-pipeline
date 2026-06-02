@@ -7154,3 +7154,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 현재 화면에서는 `Symbols`가 3x2 chart universe와 순서를 결정하고, `Window`는 보이는 기간, `Chart`는 candle aggregation만 담당하는 구조가 가장 명확하다. 단일 focus symbol은 남겨두면 중복된 개념처럼 보인다
 - Follow-up:
   - `Focus` control을 제거했고 command/live header는 `6 selected futures · 5m candles · 6H window`처럼 선택 집합 기준으로 표시한다. Chart hourly option은 `60m`로 노출하고 기존 `1h` session state는 `60m`로 migrate한다
+
+### 2026-06-02 - Futures Monitor Macro와 Live 갱신 범위를 분리한다
+- User request:
+  - 사용자가 60초 그래프 갱신 때 Macro Context도 같이 업데이트되는 것처럼 보이고, Macro daily refresh 버튼도 Futures Charts까지 흔드는 구조가 맞는지 지적함
+- Interpreted goal:
+  - `1d` Macro Context와 `1m` Live Futures Charts의 수집 / 렌더 갱신 경계를 분리하고, 각 영역이 자기 데이터만 갱신하도록 해야 함
+- Analysis result:
+  - 기존 auto fragment가 Macro와 Live를 함께 렌더했고, live snapshot의 latest provider run도 interval filter 없이 최신 run 전체를 읽어 daily macro run이 Data Feed에 표시될 수 있었다
+- Follow-up:
+  - Macro Context와 Live Futures Charts를 별도 Streamlit fragment로 분리했다. Macro 버튼은 fragment rerun만 호출하고, live auto refresh는 Live 영역만 실행한다. Live monitor latest run은 `interval_code='1m'`으로 필터링한다

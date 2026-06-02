@@ -123,7 +123,7 @@ def _load_candle_rows(
         return []
 
 
-def _load_latest_run(query_fn: QueryFn) -> dict[str, Any] | None:
+def _load_latest_run(query_fn: QueryFn, *, interval: str = DEFAULT_INTERVAL) -> dict[str, Any] | None:
     try:
         rows = query_fn(
             "finance_meta",
@@ -133,10 +133,11 @@ def _load_latest_run(query_fn: QueryFn) -> dict[str, Any] | None:
                    symbols_requested, symbols_processed, rows_written,
                    latest_candle_time_utc, failed_symbols_json, message
             FROM futures_market_monitor_run
+            WHERE interval_code = %s
             ORDER BY COALESCE(finished_at, started_at) DESC
             LIMIT 1
             """,
-            None,
+            [interval],
         )
     except Exception:
         return None
@@ -424,7 +425,7 @@ def build_futures_monitor_snapshot(
     )
     candles = _candle_frame(candle_rows)
     metrics = _metric_rows(candles, instruments=instruments, selected_symbols=selected_symbols, now=now)
-    latest_run = _load_latest_run(query)
+    latest_run = _load_latest_run(query, interval=interval)
     coverage = _coverage_from_metrics(metrics, latest_run)
     status = _status(coverage)
     active_selected = str(selected_symbol or selected_symbols[0]).strip().upper() if selected_symbols else None

@@ -2868,6 +2868,8 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
                         _run_collect_futures_daily_ohlcv_compat(),
                     )
                     clear_overview_futures_macro_snapshot_cache()
+                    st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    st.rerun(scope="fragment")
         with data_cols[1]:
             _render_market_job_result("overview_futures_daily_ohlcv_result")
 
@@ -2894,8 +2896,16 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
                 st.caption(caution)
 
 
+def _render_futures_macro_fragment(*, detail_expanded: bool = False) -> None:
+    @st.fragment
+    def _futures_macro_context_fragment() -> None:
+        _render_futures_macro_panel(detail_expanded=detail_expanded)
+
+    _futures_macro_context_fragment()
+
+
 def _render_futures_macro_tab() -> None:
-    _render_futures_macro_panel(detail_expanded=True)
+    _render_futures_macro_fragment(detail_expanded=True)
 
 
 def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str) -> None:
@@ -2980,9 +2990,41 @@ def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
             st.dataframe(candles.tail(80), width="stretch", hide_index=True)
 
 
-def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: str, lookback_label: str) -> None:
-    _render_futures_macro_panel(detail_expanded=False)
-    st.divider()
+def _render_futures_live_workspace(
+    snapshot: dict[str, Any],
+    *,
+    group: str,
+    selected_symbols: list[str],
+    selected_symbol: str,
+    lookback_label: str,
+    chart_interval: str,
+    refresh_mode: str,
+) -> None:
+    def _load_live_snapshot() -> dict[str, Any]:
+        return load_overview_futures_monitor_snapshot(
+            group=group,
+            symbols=selected_symbols,
+            selected_symbol=selected_symbol,
+            lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+        )
+
+    if refresh_mode in {"auto_60s", "fast_20s"}:
+        cadence = FUTURES_FAST_AUTO_REFRESH_SECONDS if refresh_mode == "fast_20s" else FUTURES_DEFAULT_AUTO_REFRESH_SECONDS
+
+        @st.fragment(run_every=cadence)
+        def _futures_live_auto_panel() -> None:
+            with st.spinner("Checking futures auto refresh..."):
+                _store_overview_job_result(
+                    "overview_futures_ohlcv_result",
+                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="browser_auto"),
+                )
+            refreshed_snapshot = _load_live_snapshot()
+            _render_futures_live_panel(refreshed_snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
+            _render_futures_diagnostics(refreshed_snapshot)
+
+        _futures_live_auto_panel()
+        return
+
     _render_futures_live_panel(snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
     _render_futures_diagnostics(snapshot)
 
@@ -3117,43 +3159,25 @@ def _render_futures_monitor_tab() -> None:
             unsafe_allow_html=True,
         )
 
-    if refresh_mode in {"auto_60s", "fast_20s"}:
-        cadence = FUTURES_FAST_AUTO_REFRESH_SECONDS if refresh_mode == "fast_20s" else FUTURES_DEFAULT_AUTO_REFRESH_SECONDS
-
-        @st.fragment(run_every=cadence)
-        def _futures_auto_workspace_panel() -> None:
-            with st.spinner("Checking futures auto refresh..."):
-                _store_overview_job_result(
-                    "overview_futures_ohlcv_result",
-                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="browser_auto"),
-                )
-            refreshed_snapshot = load_overview_futures_monitor_snapshot(
-                group=group,
-                symbols=selected_symbols,
-                selected_symbol=selected_symbol,
-                lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
-            )
-            _render_futures_command_center(
-                snapshot=refreshed_snapshot,
-                group=group,
-                selected_symbols=selected_symbols,
-                lookback_label=lookback_label,
-                chart_interval=chart_interval,
-                refresh_mode=refresh_mode,
-            )
-            _render_futures_snapshot_body(refreshed_snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
-
-        _futures_auto_workspace_panel()
-    else:
-        _render_futures_command_center(
-            snapshot=snapshot,
-            group=group,
-            selected_symbols=selected_symbols,
-            lookback_label=lookback_label,
-            chart_interval=chart_interval,
-            refresh_mode=refresh_mode,
-        )
-        _render_futures_snapshot_body(snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
+    _render_futures_command_center(
+        snapshot=snapshot,
+        group=group,
+        selected_symbols=selected_symbols,
+        lookback_label=lookback_label,
+        chart_interval=chart_interval,
+        refresh_mode=refresh_mode,
+    )
+    _render_futures_macro_fragment(detail_expanded=False)
+    st.divider()
+    _render_futures_live_workspace(
+        snapshot,
+        group=group,
+        selected_symbols=selected_symbols,
+        selected_symbol=selected_symbol,
+        lookback_label=lookback_label,
+        chart_interval=chart_interval,
+        refresh_mode=refresh_mode,
+    )
 
 
 def _group_trend_selection_key(group_by: str) -> str:

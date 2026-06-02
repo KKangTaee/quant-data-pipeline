@@ -5247,9 +5247,12 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
             if "FROM futures_ohlcv" in sql:
                 return candle_rows
             if "FROM futures_market_monitor_run" in sql:
+                self.assertIn("WHERE interval_code = %s", sql)
+                self.assertEqual(params, ["1m"])
                 return [
                     {
                         "run_id": "run-1",
+                        "interval_code": "1m",
                         "status": "success",
                         "symbols_requested": 2,
                         "symbols_processed": 2,

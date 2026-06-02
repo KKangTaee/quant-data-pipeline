@@ -33,3 +33,8 @@
   - kept grid ordering tied to the selected `Symbols` list, capped at six cards;
   - renamed the hourly chart interval display from `1h` to `60m` and migrated stale session state to `60m`;
   - changed top and live headers to describe the selected set, candle interval, and window instead of a single focus symbol.
+- Implemented V2.4 refresh boundary follow-up:
+  - split Macro Context into its own Streamlit fragment so `Refresh Daily Macro OHLCV` reruns only the macro block;
+  - moved browser auto refresh into a Live Futures Charts fragment so 60s / 20s refresh no longer rerenders Macro Context;
+  - kept top controls / command center outside the auto-refresh fragment;
+  - filtered live monitor `latest_run` by `interval_code='1m'` so daily macro runs do not appear as live chart provider runs.

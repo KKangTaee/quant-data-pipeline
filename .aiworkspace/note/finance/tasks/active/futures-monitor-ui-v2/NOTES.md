@@ -21,3 +21,8 @@
   - The `Symbols` multiselect now defines both the selected universe and grid order.
   - `Window` controls the visible candle lookback and `Chart` controls candle aggregation.
   - Hourly aggregation is displayed as `60m` to match the 60m / 15m move chips already used in the chart cards.
+- V2.4 separates refresh ownership:
+  - Macro Context owns `5y / 1d` daily collection and runs in its own fragment.
+  - Live Futures Charts owns browser auto refresh and `1d / 1m` collection in a separate fragment.
+  - Top command center is not part of the 60s live auto fragment; it refreshes on ordinary page/control reruns.
+  - Live provider run summaries must filter to `interval_code='1m'`; otherwise the latest daily macro run can look like a live chart provider run.
