@@ -124,7 +124,7 @@ FUTURES_LOOKBACK_OPTIONS = {
     "12H": 720,
     "1D": 1440,
 }
-FUTURES_CHART_INTERVAL_OPTIONS = ("1m", "5m", "15m", "1h")
+FUTURES_CHART_INTERVAL_OPTIONS = ("1m", "5m", "15m", "60m")
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 CHART_VALUE_LABEL_STYLE = {
@@ -1420,7 +1420,7 @@ def _build_group_ticker_contribution_donut(rows: pd.DataFrame, *, top_n: int) ->
 def _resample_futures_candles(candles: pd.DataFrame, *, interval: str) -> pd.DataFrame:
     if not isinstance(candles, pd.DataFrame) or candles.empty or interval == "1m":
         return candles if isinstance(candles, pd.DataFrame) else pd.DataFrame()
-    rule = {"5m": "5min", "15m": "15min", "1h": "1h"}.get(interval)
+    rule = {"5m": "5min", "15m": "15min", "60m": "60min", "1h": "60min"}.get(interval)
     if not rule or "Candle Time" not in candles:
         return candles
     frame = candles.copy()
@@ -2250,9 +2250,8 @@ def _futures_metric_for_symbol(rows: Any, symbol: str) -> dict[str, Any]:
 
 def _futures_chart_symbols(snapshot: dict[str, Any]) -> list[str]:
     symbols = [str(symbol) for symbol in snapshot.get("symbols") or [] if str(symbol).strip()]
-    selected_symbol = str(snapshot.get("selected_symbol") or "").strip()
     ordered: list[str] = []
-    for symbol in [selected_symbol, *symbols]:
+    for symbol in symbols:
         if symbol and symbol not in ordered:
             ordered.append(symbol)
         if len(ordered) >= 6:
@@ -2442,7 +2441,6 @@ def _render_futures_command_center(
     snapshot: dict[str, Any],
     group: str,
     selected_symbols: list[str],
-    selected_symbol: str,
     lookback_label: str,
     chart_interval: str,
     refresh_mode: str,
@@ -2466,7 +2464,7 @@ def _render_futures_command_center(
         <div class="ov-futures-command">
           <div class="ov-futures-command-cell">
             <div class="ov-futures-kicker">Futures Workspace</div>
-            <div class="ov-futures-title">{escape(group)} · {escape(selected_symbol)}</div>
+            <div class="ov-futures-title">{escape(group)} · {len(selected_symbols)} selected</div>
             <div class="ov-futures-detail">{escape(symbols_label)}</div>
             <div class="ov-futures-feed-row">
               <span class="ov-futures-feed-pill" style="--ov-feed-tone: {tone_color};">{escape(str(feed.get("label") or "-"))}</span>
@@ -2479,7 +2477,7 @@ def _render_futures_command_center(
             <div class="ov-futures-detail">15m {_format_futures_percent(top_move.get("15m %"))} · 60m {_format_futures_percent(top_move.get("60m %"))}</div>
             <div class="ov-futures-feed-row">
               <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_futures_state_tone(str(top_move.get("State") or "")))};">{escape(str(top_move.get("State") or "Waiting"))}</span>
-              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(lookback_label)} / {escape(chart_interval)}</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(lookback_label)} · {escape(chart_interval)} candles</span>
             </div>
           </div>
           <div class="ov-futures-command-cell">
@@ -2934,12 +2932,13 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
                     )
 
 
-def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str) -> None:
+def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str, lookback_label: str) -> None:
     rows = snapshot.get("rows")
     state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
+    selected_count = len([symbol for symbol in snapshot.get("symbols") or [] if str(symbol).strip()])
     _render_futures_section_header(
         "Live Futures Charts",
-        f"{chart_interval} candles · selected {snapshot.get('selected_symbol') or '-'}",
+        f"{selected_count} selected futures · {chart_interval} candles · {lookback_label} window",
     )
     _render_futures_signal_strip(_futures_live_signal_cards(snapshot), class_prefix="ov-futures-live")
     warnings = list(snapshot.get("warnings") or [])
@@ -2981,10 +2980,10 @@ def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
             st.dataframe(candles.tail(80), width="stretch", hide_index=True)
 
 
-def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: str) -> None:
+def _render_futures_snapshot_body(snapshot: dict[str, Any], *, chart_interval: str, lookback_label: str) -> None:
     _render_futures_macro_panel(detail_expanded=False)
     st.divider()
-    _render_futures_live_panel(snapshot, chart_interval=chart_interval)
+    _render_futures_live_panel(snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
     _render_futures_diagnostics(snapshot)
 
 
@@ -2992,7 +2991,7 @@ def _render_futures_monitor_tab() -> None:
     st.markdown("### Futures Monitor")
     st.caption("미국장 / 한국장 전 주요 선물 OHLCV와 급변 상태를 read-only로 확인합니다.")
 
-    control_cols = st.columns([0.95, 2.05, 0.75, 0.65, 0.65, 0.75], gap="small", vertical_alignment="bottom")
+    control_cols = st.columns([0.95, 2.45, 0.75, 0.75, 0.8], gap="small", vertical_alignment="bottom")
     group = str(
         control_cols[0].selectbox(
             "Watch Group",
@@ -3002,19 +3001,22 @@ def _render_futures_monitor_tab() -> None:
         )
     )
     lookback_label = str(
-        control_cols[3].selectbox(
+        control_cols[2].selectbox(
             "Window",
             list(FUTURES_LOOKBACK_OPTIONS.keys()),
             index=1,
             key="overview_futures_lookback",
         )
     )
+    chart_key = "overview_futures_chart_interval"
+    if st.session_state.get(chart_key) == "1h":
+        st.session_state[chart_key] = "60m"
     chart_interval = str(
-        control_cols[4].selectbox(
+        control_cols[3].selectbox(
             "Chart",
             FUTURES_CHART_INTERVAL_OPTIONS,
             index=1,
-            key="overview_futures_chart_interval",
+            key=chart_key,
         )
     )
 
@@ -3051,17 +3053,7 @@ def _render_futures_monitor_tab() -> None:
     )
     if not selected_symbols:
         selected_symbols = default_symbols
-    selected_symbol_key = "overview_futures_selected_symbol"
-    if st.session_state.get(selected_symbol_key) not in selected_symbols:
-        st.session_state[selected_symbol_key] = selected_symbols[0]
-    selected_symbol = str(
-        control_cols[2].selectbox(
-            "Focus",
-            selected_symbols,
-            index=0,
-            key=selected_symbol_key,
-        )
-    )
+    selected_symbol = selected_symbols[0]
 
     snapshot = load_overview_futures_monitor_snapshot(
         group=group,
@@ -3077,7 +3069,7 @@ def _render_futures_monitor_tab() -> None:
     if st.session_state.get(mode_key) not in mode_options:
         st.session_state[mode_key] = "manual"
     refresh_mode = str(st.session_state.get(mode_key) or "manual")
-    with control_cols[5].popover("Data Actions", use_container_width=True):
+    with control_cols[4].popover("Data Actions", use_container_width=True):
         segmented_control = getattr(st, "segmented_control", None)
         if callable(segmented_control):
             refresh_mode = str(
@@ -3145,12 +3137,11 @@ def _render_futures_monitor_tab() -> None:
                 snapshot=refreshed_snapshot,
                 group=group,
                 selected_symbols=selected_symbols,
-                selected_symbol=selected_symbol,
                 lookback_label=lookback_label,
                 chart_interval=chart_interval,
                 refresh_mode=refresh_mode,
             )
-            _render_futures_snapshot_body(refreshed_snapshot, chart_interval=chart_interval)
+            _render_futures_snapshot_body(refreshed_snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
 
         _futures_auto_workspace_panel()
     else:
@@ -3158,12 +3149,11 @@ def _render_futures_monitor_tab() -> None:
             snapshot=snapshot,
             group=group,
             selected_symbols=selected_symbols,
-            selected_symbol=selected_symbol,
             lookback_label=lookback_label,
             chart_interval=chart_interval,
             refresh_mode=refresh_mode,
         )
-        _render_futures_snapshot_body(snapshot, chart_interval=chart_interval)
+        _render_futures_snapshot_body(snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
 
 
 def _group_trend_selection_key(group_by: str) -> str:

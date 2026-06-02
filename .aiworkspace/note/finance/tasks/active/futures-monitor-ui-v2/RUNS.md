@@ -37,3 +37,17 @@
   - PASS: `Selected Detail` chart removed.
   - PASS: 3x2 grid includes `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F`.
   - QA screenshots saved as generated artifacts: `futures-monitor-stack-v3x2-qa.png`, `futures-monitor-stack-v3x2-grid-qa.png`.
+
+## 2026-06-02 V2.3 control cleanup
+
+- `uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py finance/data/futures_market.py app/services/futures_market_monitoring.py` - PASS.
+- `git diff --check` - PASS.
+- `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` - PASS.
+- `uv run python -m unittest tests.test_service_contracts` - PASS, 234 tests.
+- Browser QA on `http://localhost:8517/`:
+  - PASS: top controls show `Watch Group`, `Symbols`, `Window`, `Chart`, and `Data Actions`; `Focus` is no longer visible.
+  - PASS: chart dropdown exposes `1m`, `5m`, `15m`, and `60m`; `1h` is no longer exposed.
+  - PASS: command center shows `Pre-open Core · 6 selected`.
+  - PASS: Live Futures Charts header shows `6 selected futures · 5m candles · 6H window`.
+  - PASS: `Selected Detail` remains removed and the 3x2 chart grid remains below Macro Context.
+  - QA screenshot saved as generated artifact: `futures-monitor-clean-controls-qa.png`.

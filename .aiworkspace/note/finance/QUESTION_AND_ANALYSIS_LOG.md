@@ -7144,3 +7144,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 Selected Detail은 선택 심볼의 첫 grid card와 같은 데이터를 크게 다시 보여줘 중복 인상을 만든다. 3x2 grid는 기본 Pre-open set도 6개로 확장해야 자연스럽다
 - Follow-up:
   - Selected Detail을 제거하고 Macro Context -> Live Futures Charts 순서의 stacked layout으로 변경했다. Pre-open Core 기본은 `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F` 6개로 확장했고, Macro detail은 `Macro Evidence & Data`로 통합했다
+
+### 2026-06-02 - Futures Monitor 상단 control 의미를 정리한다
+- User request:
+  - 사용자가 `Focus`, `Window`, `Chart`가 무엇을 의미하는지 확인한 뒤, 필요하면 깔끔하게 정리해 달라고 요청함
+- Interpreted goal:
+  - Selected Detail 차트가 사라진 뒤 남은 단일 focus symbol control을 제거하고, 상단 control이 실제로 화면에 영향을 주는 선택만 남겨야 함
+- Analysis result:
+  - 현재 화면에서는 `Symbols`가 3x2 chart universe와 순서를 결정하고, `Window`는 보이는 기간, `Chart`는 candle aggregation만 담당하는 구조가 가장 명확하다. 단일 focus symbol은 남겨두면 중복된 개념처럼 보인다
+- Follow-up:
+  - `Focus` control을 제거했고 command/live header는 `6 selected futures · 5m candles · 6H window`처럼 선택 집합 기준으로 표시한다. Chart hourly option은 `60m`로 노출하고 기존 `1h` session state는 `60m`로 migrate한다

@@ -17,3 +17,7 @@
   - Live Futures Charts owns the lower section as a 3x2 grid;
   - the former selected full-width detail chart was removed because it duplicated the first grid card;
   - macro collection / validation / caveat details are grouped under `Macro Evidence & Data`.
+- V2.3 removed `Focus` because, after deleting `Selected Detail`, there is no separate detail target left for it to control.
+  - The `Symbols` multiselect now defines both the selected universe and grid order.
+  - `Window` controls the visible candle lookback and `Chart` controls candle aggregation.
+  - Hourly aggregation is displayed as `60m` to match the 60m / 15m move chips already used in the chart cards.

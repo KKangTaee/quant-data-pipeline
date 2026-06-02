@@ -4606,3 +4606,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - py_compile, UI-engine boundary, service contract 234 tests, Browser QA screenshot을 통과했다.
   - V2.1 후속으로 상단 controls를 압축하고, mini chart metric을 chip strip으로 바꾸며, Macro Context를 signal strip / score chip 중심으로 다듬었다.
   - V2.2 후속으로 Macro Context를 상단 full-width로 올리고, Live Futures Charts를 하단 3x2 grid로 바꾸며, 중복 `Selected Detail` 차트를 제거했다.
+  - V2.3 후속으로 `Focus` control을 제거하고, `Symbols`가 3x2 grid 순서를 직접 결정하도록 정리했다. `Chart` hourly option은 `1h` 대신 `60m`로 표시한다.

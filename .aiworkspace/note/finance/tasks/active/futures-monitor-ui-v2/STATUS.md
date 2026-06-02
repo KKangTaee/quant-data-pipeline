@@ -28,3 +28,8 @@
   - changed the live grid from 2x2 to 3x2, with up to six focused futures cards;
   - expanded default `Pre-open Core` from 4 symbols to 6 symbols: `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F`;
   - consolidated `Macro Data`, `Macro validation detail`, and `Macro caveats` into one `Macro Evidence & Data` panel.
+- Implemented V2.3 control cleanup follow-up:
+  - removed the now-redundant `Focus` control after the full-width selected detail chart was deleted;
+  - kept grid ordering tied to the selected `Symbols` list, capped at six cards;
+  - renamed the hourly chart interval display from `1h` to `60m` and migrated stale session state to `60m`;
+  - changed top and live headers to describe the selected set, candle interval, and window instead of a single focus symbol.
