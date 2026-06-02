@@ -82,6 +82,32 @@ def _render_compare_altair_chart(
     st.altair_chart(chart + end_points + end_labels, use_container_width=True)
 
 
+def _render_swing_curve_chart(curve_df: pd.DataFrame | None, *, title: str) -> None:
+    if curve_df is None or curve_df.empty:
+        st.info("No comparison curve rows were produced for this suite.")
+        return
+    chart_df = curve_df.copy()
+    chart_df["Date"] = pd.to_datetime(chart_df["Date"], errors="coerce")
+    chart_df["cumulative_return"] = pd.to_numeric(chart_df["cumulative_return"], errors="coerce")
+    chart = (
+        alt.Chart(chart_df.dropna(subset=["Date", "cumulative_return"]))
+        .mark_line(point=False)
+        .encode(
+            x=alt.X("Date:T", title="Date"),
+            y=alt.Y("cumulative_return:Q", title="Cumulative Return", axis=alt.Axis(format="%")),
+            color=alt.Color("label:N", title="Variant"),
+            tooltip=[
+                alt.Tooltip("Date:T", title="Date"),
+                alt.Tooltip("label:N", title="Variant"),
+                alt.Tooltip("cumulative_return:Q", title="Cumulative Return", format=".2%"),
+                alt.Tooltip("total_balance:Q", title="Total Balance", format=",.2f"),
+            ],
+        )
+        .properties(title=title, height=280)
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+
 def _data_trust_result_integrity(meta: dict[str, Any]) -> dict[str, str]:
     price_freshness = meta.get("price_freshness") or {}
     status = str(price_freshness.get("status") or "").strip().lower()
@@ -631,9 +657,19 @@ def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
     contribution_df = bundle.get("swing_ticker_contribution_df")
     random_df = bundle.get("swing_random_summary_df")
     comparison_df = bundle.get("swing_benchmark_comparison_df")
+    v2_comparison_df = bundle.get("swing_comparison_df")
+    exit_curve_df = bundle.get("swing_exit_curve_df")
+    macro_curve_df = bundle.get("swing_macro_curve_df")
+    holding_curve_df = bundle.get("swing_holding_curve_df")
+    sensitivity_df = bundle.get("swing_sensitivity_df")
+    yearly_stability_df = bundle.get("swing_yearly_stability_df")
+    monthly_stability_df = bundle.get("swing_monthly_stability_df")
+    ticker_dependency_df = bundle.get("swing_ticker_dependency_df")
+    trade_cause_summary_df = bundle.get("swing_trade_cause_summary_df")
+    quality_warning_df = bundle.get("swing_quality_warning_df")
     artifact = bundle.get("swing_artifact") or meta.get("swing_artifact") or {}
 
-    st.caption("Close-based D+1 swing execution detail. This is research output, not live approval or order instruction.")
+    st.caption("Close-based D+1 daily swing research detail. V2 analysis is historical research evidence, not Practical Validation, live approval, or order instruction.")
     metric_cols = st.columns(5)
     metric_cols[0].metric("Trades", str(int(metrics.get("total_trades") or 0)))
     if metrics.get("win_rate") is not None and not pd.isna(metrics.get("win_rate")):
@@ -651,23 +687,102 @@ def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
             {"label": "Symbols", "value": meta.get("universe_symbol_count", "-"), "tone": "neutral"},
             {"label": "Execution", "value": meta.get("strategy_execution_mode") or "-", "tone": "neutral"},
             {"label": "Exit", "value": meta.get("exit_mode") or "-", "tone": "neutral"},
-            {"label": "Macro", "value": "ON" if meta.get("macro_filter_enabled") else "OFF", "tone": "positive" if meta.get("macro_filter_enabled") else "neutral"},
+            {"label": "Macro", "value": meta.get("macro_filter_mode") or ("ON" if meta.get("macro_filter_enabled") else "OFF"), "tone": "positive" if meta.get("macro_filter_enabled") else "neutral"},
         ]
     )
 
-    detail_tabs = st.tabs(["Comparison", "Trade Log", "Scanner", "Periods", "Contribution", "Artifact"])
+    detail_tabs = st.tabs([
+        "Comparison",
+        "Sensitivity",
+        "Stability",
+        "Trade Causes",
+        "Quality Warnings",
+        "Trade Log",
+        "Scanner",
+        "Periods",
+        "Contribution",
+        "Artifact",
+    ])
     with detail_tabs[0]:
+        st.markdown("##### V2 One-Variable Comparisons")
+        if v2_comparison_df is not None and not v2_comparison_df.empty:
+            st.dataframe(v2_comparison_df, use_container_width=True, hide_index=True)
+            chart_cols = st.columns(3)
+            with chart_cols[0]:
+                _render_swing_curve_chart(exit_curve_df, title="Exit Mode Comparison")
+            with chart_cols[1]:
+                _render_swing_curve_chart(macro_curve_df, title="Macro Mode Comparison")
+            with chart_cols[2]:
+                _render_swing_curve_chart(holding_curve_df, title="Holding Period Comparison")
+        else:
+            st.info("V2 comparison suite was not run for this result.")
+        st.markdown("##### Benchmarks / Random Ranking")
         if comparison_df is not None and not comparison_df.empty:
             st.dataframe(comparison_df, use_container_width=True, hide_index=True)
         if random_df is not None and not random_df.empty:
-            st.markdown("##### Random Ranking Runs")
             st.dataframe(random_df, use_container_width=True, hide_index=True)
     with detail_tabs[1]:
+        st.caption("Sensitivity rows are bounded presets for overfit and cost-fragility inspection, not an optimizer.")
+        if sensitivity_df is not None and not sensitivity_df.empty:
+            st.dataframe(sensitivity_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("V2 sensitivity suite was not run for this result.")
+    with detail_tabs[2]:
+        stability_tabs = st.tabs(["Yearly", "Monthly", "Ticker Dependency"])
+        with stability_tabs[0]:
+            if yearly_stability_df is not None and not yearly_stability_df.empty:
+                st.dataframe(yearly_stability_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No yearly stability rows.")
+        with stability_tabs[1]:
+            if monthly_stability_df is not None and not monthly_stability_df.empty:
+                st.dataframe(monthly_stability_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No monthly stability rows.")
+        with stability_tabs[2]:
+            if ticker_dependency_df is not None and not ticker_dependency_df.empty:
+                st.dataframe(ticker_dependency_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No ticker dependency rows.")
+    with detail_tabs[3]:
+        if trade_cause_summary_df is not None and not trade_cause_summary_df.empty:
+            st.dataframe(trade_cause_summary_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No trade cause summary rows.")
+        if trade_log_df is not None and not trade_log_df.empty:
+            with st.expander("Trade Cause Detail", expanded=False):
+                detail_cols = [
+                    col
+                    for col in [
+                        "entry_signal_date",
+                        "exit_signal_date",
+                        "symbol",
+                        "exit_reason_code",
+                        "net_return_pct",
+                        "holding_days",
+                        "ranking_score",
+                        "ranking_score_raw",
+                        "entry_macro_penalty_total",
+                        "entry_return_20d",
+                        "entry_return_5d",
+                        "entry_volume_ratio",
+                        "entry_ma20_distance",
+                        "entry_ma50_distance",
+                    ]
+                    if col in trade_log_df.columns
+                ]
+                st.dataframe(trade_log_df[detail_cols], use_container_width=True, hide_index=True)
+    with detail_tabs[4]:
+        if quality_warning_df is not None and not quality_warning_df.empty:
+            st.dataframe(quality_warning_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No quality warning rows were produced.")
+    with detail_tabs[5]:
         if trade_log_df is not None and not trade_log_df.empty:
             st.dataframe(trade_log_df, use_container_width=True, hide_index=True)
         else:
             st.info("No trade rows were produced for this run.")
-    with detail_tabs[2]:
+    with detail_tabs[6]:
         if scanner_df is not None and not scanner_df.empty:
             available_dates = sorted(scanner_df["date"].astype(str).unique().tolist())
             selected_date = st.selectbox(
@@ -683,7 +798,7 @@ def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
             )
         else:
             st.info("No scanner rows were collected for this run.")
-    with detail_tabs[3]:
+    with detail_tabs[7]:
         period_cols = st.columns(2, gap="large")
         with period_cols[0]:
             st.markdown("##### Monthly")
@@ -697,12 +812,12 @@ def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
                 st.dataframe(yearly_df, use_container_width=True, hide_index=True)
             else:
                 st.info("No yearly return rows.")
-    with detail_tabs[4]:
+    with detail_tabs[8]:
         if contribution_df is not None and not contribution_df.empty:
             st.dataframe(contribution_df, use_container_width=True, hide_index=True)
         else:
             st.info("No closed-trade contribution rows.")
-    with detail_tabs[5]:
+    with detail_tabs[9]:
         if artifact:
             st.json(artifact)
         else:

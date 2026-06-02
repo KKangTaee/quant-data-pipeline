@@ -184,6 +184,9 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
             max_holding_days=payload.get("max_holding_days", 5),
             stop_loss_pct=payload.get("stop_loss_pct", -2.5),
             take_profit_pct=payload.get("take_profit_pct", 5.0),
+            atr_period=payload.get("atr_period", 14),
+            stop_atr_multiple=payload.get("stop_atr_multiple", 1.0),
+            take_profit_atr_multiple=payload.get("take_profit_atr_multiple", 2.0),
             max_new_positions_per_day=payload.get("max_new_positions_per_day", 3),
             max_total_positions=payload.get("max_total_positions", 3),
             transaction_cost_bps=payload.get("transaction_cost_bps", 0.0),
@@ -194,12 +197,17 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
             rate_pressure_max=payload.get("rate_pressure_max", 1.0),
             dollar_pressure_max=payload.get("dollar_pressure_max", 1.0),
             safe_haven_max=payload.get("safe_haven_max", 1.0),
+            rate_pressure_penalty_weight=payload.get("rate_pressure_penalty_weight", 10.0),
+            dollar_pressure_penalty_weight=payload.get("dollar_pressure_penalty_weight", 10.0),
+            safe_haven_penalty_weight=payload.get("safe_haven_penalty_weight", 10.0),
             min_price=payload.get("min_price", 5.0),
             min_avg_dollar_volume_20d=payload.get("min_avg_dollar_volume_20d", 20_000_000.0),
             min_avg_volume_20d=payload.get("min_avg_volume_20d", 500_000.0),
             random_iterations=payload.get("random_iterations", 50),
             random_seed=payload.get("random_seed", 42),
             scanner_top_n_per_day=payload.get("scanner_top_n_per_day", 50),
+            run_comparison_suite=payload.get("run_comparison_suite", True),
+            run_sensitivity_suite=payload.get("run_sensitivity_suite", False),
         )
 
     if strategy_key == "equal_weight":

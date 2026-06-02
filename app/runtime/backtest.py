@@ -91,6 +91,13 @@ from finance.swing import (
     prepare_swing_feature_frame,
     run_risk_on_momentum_backtest,
 )
+from finance.swing_analysis import (
+    build_quality_warnings,
+    build_swing_comparison_suite,
+    build_swing_sensitivity_suite,
+    build_swing_stability_tables,
+    build_trade_cause_summary,
+)
 
 
 class BacktestInputError(ValueError):
@@ -2635,6 +2642,7 @@ def _write_risk_on_momentum_artifact(
     macro_off_result: Any | None,
     random_summary_df: pd.DataFrame,
     benchmark_comparison_df: pd.DataFrame,
+    v2_analysis: dict[str, Any] | None,
     config: RiskOnMomentumConfig,
     meta: dict[str, Any],
 ) -> dict[str, Any]:
@@ -2662,6 +2670,10 @@ def _write_risk_on_momentum_artifact(
         "random_summary": _dataframe_records(random_summary_df),
         "macro_off_metrics": macro_off_result.metrics if macro_off_result is not None else {},
         "macro_off_result": _dataframe_records(macro_off_result.result_df if macro_off_result is not None else None),
+        "v2_analysis": {
+            key: _dataframe_records(value) if isinstance(value, pd.DataFrame) else value
+            for key, value in dict(v2_analysis or {}).items()
+        },
     }
     artifact_path = artifact_dir / "risk_on_momentum_5d_run.json"
     artifact_path.write_text(
@@ -2693,6 +2705,9 @@ def run_risk_on_momentum_5d_backtest_from_db(
     max_holding_days: int = 5,
     stop_loss_pct: float = -2.5,
     take_profit_pct: float = 5.0,
+    atr_period: int = 14,
+    stop_atr_multiple: float = 1.0,
+    take_profit_atr_multiple: float = 2.0,
     max_new_positions_per_day: int = 3,
     max_total_positions: int = 3,
     transaction_cost_bps: float = 0.0,
@@ -2703,12 +2718,17 @@ def run_risk_on_momentum_5d_backtest_from_db(
     rate_pressure_max: float = 1.0,
     dollar_pressure_max: float = 1.0,
     safe_haven_max: float = 1.0,
+    rate_pressure_penalty_weight: float = 10.0,
+    dollar_pressure_penalty_weight: float = 10.0,
+    safe_haven_penalty_weight: float = 10.0,
     min_price: float = 5.0,
     min_avg_dollar_volume_20d: float = 20_000_000.0,
     min_avg_volume_20d: float = 500_000.0,
     random_iterations: int = 50,
     random_seed: int = 42,
     scanner_top_n_per_day: int = 50,
+    run_comparison_suite: bool = True,
+    run_sensitivity_suite: bool = False,
 ) -> dict[str, Any]:
     _validate_backtest_date_range(start, end)
     resolved_tickers, resolved_mode, resolved_preset, resolved_limit, universe_source = _resolve_risk_on_momentum_universe(
@@ -2791,6 +2811,9 @@ def run_risk_on_momentum_5d_backtest_from_db(
         max_holding_days=int(max_holding_days),
         stop_loss_pct=float(stop_loss_pct),
         take_profit_pct=float(take_profit_pct),
+        atr_period=int(atr_period),
+        stop_atr_multiple=float(stop_atr_multiple),
+        take_profit_atr_multiple=float(take_profit_atr_multiple),
         max_new_positions_per_day=int(max_new_positions_per_day),
         max_total_positions=int(max_total_positions),
         transaction_cost_bps=float(transaction_cost_bps),
@@ -2801,6 +2824,9 @@ def run_risk_on_momentum_5d_backtest_from_db(
         rate_pressure_max=float(rate_pressure_max),
         dollar_pressure_max=float(dollar_pressure_max),
         safe_haven_max=float(safe_haven_max),
+        rate_pressure_penalty_weight=float(rate_pressure_penalty_weight),
+        dollar_pressure_penalty_weight=float(dollar_pressure_penalty_weight),
+        safe_haven_penalty_weight=float(safe_haven_penalty_weight),
         min_price=float(min_price),
         min_avg_dollar_volume_20d=float(min_avg_dollar_volume_20d),
         min_avg_volume_20d=float(min_avg_volume_20d),
@@ -2890,6 +2916,40 @@ def run_risk_on_momentum_5d_backtest_from_db(
         )
     benchmark_comparison_df = pd.DataFrame(comparison_rows)
 
+    v2_analysis: dict[str, Any] = {}
+    if bool(run_comparison_suite):
+        v2_analysis.update(
+            build_swing_comparison_suite(
+                candidate_price_history,
+                config=config,
+                primary_result=primary,
+                macro_scores=macro_scores,
+                statement_history=statement_history,
+                prepared_features=prepared_features,
+            )
+        )
+    sensitivity_df = pd.DataFrame()
+    if bool(run_sensitivity_suite):
+        sensitivity_df = build_swing_sensitivity_suite(
+            candidate_price_history,
+            config=config,
+            macro_scores=macro_scores,
+            statement_history=statement_history,
+            prepared_features=prepared_features,
+        )
+        v2_analysis["sensitivity_df"] = sensitivity_df
+    v2_analysis.update(build_swing_stability_tables(primary))
+    v2_analysis["trade_cause_summary_df"] = build_trade_cause_summary(primary.trade_log_df)
+    v2_analysis["quality_warning_df"] = build_quality_warnings(
+        result=primary,
+        random_summary_df=random_summary_df,
+        benchmark_comparison_df=benchmark_comparison_df,
+        sensitivity_df=sensitivity_df,
+        price_freshness=price_freshness,
+        macro_scores=macro_scores,
+        macro_filter_enabled=bool(macro_filter_enabled),
+    )
+
     meta_input = {
         "tickers": resolved_tickers[:50],
         "start": start,
@@ -2921,6 +2981,8 @@ def run_risk_on_momentum_5d_backtest_from_db(
     bundle["swing_random_summary_df"] = random_summary_df
     bundle["swing_benchmark_comparison_df"] = benchmark_comparison_df
     bundle["swing_macro_off_result_df"] = macro_off_result.result_df
+    for key, value in v2_analysis.items():
+        bundle[f"swing_{key}"] = value
 
     bundle["meta"].update(
         {
@@ -2932,6 +2994,9 @@ def run_risk_on_momentum_5d_backtest_from_db(
             "max_holding_days": int(max_holding_days),
             "stop_loss_pct": float(stop_loss_pct),
             "take_profit_pct": float(take_profit_pct),
+            "atr_period": int(atr_period),
+            "stop_atr_multiple": float(stop_atr_multiple),
+            "take_profit_atr_multiple": float(take_profit_atr_multiple),
             "max_new_positions_per_day": int(max_new_positions_per_day),
             "max_total_positions": int(max_total_positions),
             "slippage_bps": float(slippage_bps),
@@ -2941,10 +3006,16 @@ def run_risk_on_momentum_5d_backtest_from_db(
             "rate_pressure_max": float(rate_pressure_max),
             "dollar_pressure_max": float(dollar_pressure_max),
             "safe_haven_max": float(safe_haven_max),
+            "rate_pressure_penalty_weight": float(rate_pressure_penalty_weight),
+            "dollar_pressure_penalty_weight": float(dollar_pressure_penalty_weight),
+            "safe_haven_penalty_weight": float(safe_haven_penalty_weight),
             "min_avg_dollar_volume_20d": float(min_avg_dollar_volume_20d),
             "min_avg_volume_20d": float(min_avg_volume_20d),
             "random_iterations": int(random_iterations),
             "scanner_top_n_per_day": int(scanner_top_n_per_day),
+            "run_comparison_suite": bool(run_comparison_suite),
+            "run_sensitivity_suite": bool(run_sensitivity_suite),
+            "v2_analysis_keys": sorted(v2_analysis),
             "universe_limit": resolved_limit,
             "universe_symbol_count": len(resolved_tickers),
             "universe_symbol_preview": resolved_tickers[:25],
@@ -2961,6 +3032,7 @@ def run_risk_on_momentum_5d_backtest_from_db(
         macro_off_result=macro_off_result,
         random_summary_df=random_summary_df,
         benchmark_comparison_df=benchmark_comparison_df,
+        v2_analysis=v2_analysis,
         config=config,
         meta=bundle["meta"],
     )

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 
+from .indicators import add_atr
+
 """
     2️⃣ transform.py — Pure Data Transformation Layer
     📌 역할
@@ -591,10 +593,7 @@ def add_daily_swing_features(
 
     grouped = d.groupby(symbol_col, sort=False)
     close = d["close"].astype(float)
-    high = d["high"].astype(float)
-    low = d["low"].astype(float)
     volume = d["volume"].astype(float)
-    prev_close = grouped["close"].shift(1)
 
     d["daily_return"] = grouped["close"].pct_change(fill_method=None)
     d["return_5d"] = close / grouped["close"].shift(5) - 1.0
@@ -613,16 +612,7 @@ def add_daily_swing_features(
     d["ma50_distance"] = close / d["ma50"].replace(0.0, np.nan) - 1.0
     d["volatility_20d"] = grouped["daily_return"].transform(lambda s: s.rolling(20, min_periods=20).std(ddof=0))
 
-    true_range = pd.concat(
-        [
-            high - low,
-            (high - prev_close).abs(),
-            (low - prev_close).abs(),
-        ],
-        axis=1,
-    ).max(axis=1)
-    d["true_range"] = true_range
-    d["atr14"] = true_range.groupby(d[symbol_col]).transform(lambda s: s.rolling(14, min_periods=14).mean())
+    d = add_atr(d, period=14, symbol_col=symbol_col, date_col=date_col)
 
     return d
 

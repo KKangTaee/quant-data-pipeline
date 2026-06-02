@@ -1,12 +1,13 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-03
 
 ## Current Work
 
 | Track | Status | Notes |
 |---|---|---|
+| Risk-On Momentum 5D V2 | Implementation complete / QA in progress | `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v2/`; V2 stays inside `Backtest Analysis` as a Daily Swing research lane. Added simple rolling ATR indicator module, ATR-based close signal / D+1 open exit, macro `ranking_penalty`, V2 comparison / sensitivity / stability / trade-cause / quality-warning analysis, History replay metadata, Compare-safe defaults, and expanded `Swing Detail` tabs. Practical Validation / Final Review / Selected Dashboard daily signal governance remains deferred and requires user confirmation before implementation |
 | Risk-On Momentum 5D V1 | Implementation complete / QA in progress | `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`; `Backtest Analysis > Single Strategy`에 Top1000 기본 short-term stock swing strategy를 추가했다. Core는 `finance/swing.py`, daily features는 `finance/transform.py`, futures macro loader는 `finance/loaders/futures.py`가 맡고, runtime은 DB price / annual statement shadow / futures Mean-Z rows를 결합한다. 결과는 Summary / Equity Curve와 별도 `Swing Detail` 탭, generated backtest artifact, History replay settings로 확인한다. V1은 `close_based + fixed_pct + Equal Slot`만 지원하며 live approval / broker order / auto rebalance는 추가하지 않았다 |
 | Selected Dashboard Monitoring First UX V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-first-ux-v1/`; `Operations > Selected Portfolio Dashboard` now opens daily-monitoring-first with Active Portfolio Monitoring Scenario above the portfolio shelf. Empty / no-strategy / configured-not-run / executed states are distinct, daily badges summarize status / next rebalance / open issues / provider freshness pointer / scenario timestamp / current target, and the scenario hero shows value curve, strategy performance, and rebalance summary when results exist. Portfolio cards, portfolio name / description edit, strategy board, and `포트폴리오 시나리오 업데이트` moved below the hero; detailed readiness / provider / freshness / open issue evidence stays lower. No live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
 | Futures Market Monitoring MVP V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`; `Overview > Futures Monitor` now reads DB-backed `yfinance` 1m futures OHLCV, defaults to cross-asset `Pre-open Core` (`NQ=F`, `ZN=F`, `CL=F`, `6E=F`), shows watch group / symbol controls, shock board, 2x2 mini candlestick grid plus selected-symbol detail chart, provider run evidence, stale / missing warnings, and bounded browser-open refresh modes. `Workspace > Ingestion` has a manual futures collection control; no exchange-grade realtime feed, broker action, or server scheduler was added |

@@ -95,6 +95,26 @@ def _risk_on_momentum_fixture() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
 
 
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
+    def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:
+        from finance.indicators import add_atr
+
+        rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "date": "2024-01-01", "high": 12.0, "low": 10.0, "close": 11.0},
+                {"symbol": "AAA", "date": "2024-01-02", "high": 14.0, "low": 11.0, "close": 13.0},
+                {"symbol": "AAA", "date": "2024-01-03", "high": 15.0, "low": 12.0, "close": 12.5},
+            ]
+        )
+
+        result = add_atr(rows, period=2)
+
+        self.assertAlmostEqual(float(result.loc[0, "true_range"]), 2.0)
+        self.assertAlmostEqual(float(result.loc[1, "true_range"]), 3.0)
+        self.assertAlmostEqual(float(result.loc[2, "true_range"]), 3.0)
+        self.assertTrue(pd.isna(result.loc[0, "atr2"]))
+        self.assertAlmostEqual(float(result.loc[1, "atr2"]), 2.5)
+        self.assertAlmostEqual(float(result.loc[2, "atr2"]), 3.0)
+
     def test_risk_on_momentum_executes_d_plus_one_and_logs_signal_holding_days(self) -> None:
         from finance.swing import RiskOnMomentumConfig, run_risk_on_momentum_backtest
 
@@ -144,6 +164,80 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertTrue(result.trade_log_df.empty)
         self.assertFalse(result.result_df["Macro Filter Pass"].any())
 
+    def test_risk_on_momentum_atr_based_uses_signal_date_atr(self) -> None:
+        from finance.swing import RiskOnMomentumConfig, prepare_swing_feature_frame, run_risk_on_momentum_backtest
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        features = prepare_swing_feature_frame(prices, statement_history=statements)
+        result = run_risk_on_momentum_backtest(
+            prices,
+            config=RiskOnMomentumConfig(
+                start="2024-03-15",
+                end="2024-05-03",
+                start_balance=10_000.0,
+                exit_mode="atr_based",
+                atr_period=14,
+                stop_atr_multiple=0.8,
+                take_profit_atr_multiple=1.2,
+                macro_filter_enabled=True,
+                scanner_top_n_per_day=10,
+                random_seed=1,
+            ),
+            macro_scores=macro_scores,
+            statement_history=statements,
+            prepared_features=features,
+        )
+
+        closed = result.trade_log_df[result.trade_log_df["exit_reason"] != "END_OF_BACKTEST"].copy()
+        self.assertFalse(closed.empty)
+        first = closed.iloc[0]
+        feature_row = features[
+            (features["symbol"] == first["symbol"])
+            & (pd.to_datetime(features["date"]).dt.strftime("%Y-%m-%d") == first["entry_signal_date"])
+        ].iloc[0]
+        self.assertEqual(first["exit_mode"], "atr_based")
+        self.assertAlmostEqual(float(first["entry_atr"]), float(feature_row["atr14"]))
+        self.assertEqual(int(first["atr_period"]), 14)
+
+    def test_risk_on_momentum_ranking_penalty_allows_pressure_without_hard_filtering(self) -> None:
+        from finance.swing import RiskOnMomentumConfig, run_risk_on_momentum_backtest
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        pressure_macro = macro_scores.copy()
+        pressure_macro["risk_on_mean_z"] = 0.5
+        pressure_macro["rate_pressure_mean_z"] = 2.0
+
+        hard_filter_result = run_risk_on_momentum_backtest(
+            prices,
+            config=RiskOnMomentumConfig(
+                start="2024-03-15",
+                end="2024-05-03",
+                macro_filter_enabled=True,
+                macro_filter_mode="hard_filter",
+                scanner_top_n_per_day=10,
+            ),
+            macro_scores=pressure_macro,
+            statement_history=statements,
+        )
+        penalty_result = run_risk_on_momentum_backtest(
+            prices,
+            config=RiskOnMomentumConfig(
+                start="2024-03-15",
+                end="2024-05-03",
+                macro_filter_enabled=True,
+                macro_filter_mode="ranking_penalty",
+                rate_pressure_penalty_weight=10.0,
+                scanner_top_n_per_day=10,
+            ),
+            macro_scores=pressure_macro,
+            statement_history=statements,
+        )
+
+        self.assertTrue(hard_filter_result.trade_log_df.empty)
+        self.assertFalse(penalty_result.trade_log_df.empty)
+        self.assertTrue((penalty_result.scanner_df["macro_penalty_total"] > 0).any())
+        self.assertEqual(set(penalty_result.trade_log_df["macro_filter_mode"]), {"ranking_penalty"})
+
     def test_history_payload_restores_risk_on_momentum_settings(self) -> None:
         from app.web.backtest_history_helpers import _build_history_payload
 
@@ -160,22 +254,31 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
                 "universe_limit": 1000,
                 "start_balance": 25_000.0,
                 "strategy_execution_mode": "close_based",
-                "exit_mode": "fixed_pct",
+                "exit_mode": "atr_based",
                 "max_holding_days": 5,
                 "stop_loss_pct": -2.5,
                 "take_profit_pct": 5.0,
+                "atr_period": 14,
+                "stop_atr_multiple": 1.0,
+                "take_profit_atr_multiple": 2.0,
                 "max_new_positions_per_day": 3,
                 "max_total_positions": 3,
                 "macro_filter_enabled": True,
+                "macro_filter_mode": "ranking_penalty",
                 "risk_on_min": 0.0,
                 "rate_pressure_max": 1.0,
                 "dollar_pressure_max": 1.0,
                 "safe_haven_max": 1.0,
+                "rate_pressure_penalty_weight": 9.0,
+                "dollar_pressure_penalty_weight": 8.0,
+                "safe_haven_penalty_weight": 7.0,
                 "min_price_filter": 5.0,
                 "min_avg_dollar_volume_20d": 20_000_000.0,
                 "min_avg_volume_20d": 500_000.0,
                 "random_iterations": 50,
                 "scanner_top_n_per_day": 50,
+                "run_comparison_suite": True,
+                "run_sensitivity_suite": True,
             }
         )
 
@@ -185,8 +288,71 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertEqual(payload["universe_mode"], "top1000")
         self.assertEqual(payload["max_holding_days"], 5)
         self.assertEqual(payload["stop_loss_pct"], -2.5)
+        self.assertEqual(payload["exit_mode"], "atr_based")
+        self.assertEqual(payload["macro_filter_mode"], "ranking_penalty")
+        self.assertEqual(payload["stop_atr_multiple"], 1.0)
+        self.assertEqual(payload["rate_pressure_penalty_weight"], 9.0)
         self.assertTrue(payload["macro_filter_enabled"])
         self.assertEqual(payload["min_avg_dollar_volume_20d"], 20_000_000.0)
+
+    def test_risk_on_momentum_v2_analysis_frames_are_generated(self) -> None:
+        from finance.swing import RiskOnMomentumConfig, run_risk_on_momentum_backtest
+        from finance.swing_analysis import (
+            build_quality_warnings,
+            build_swing_comparison_suite,
+            build_swing_sensitivity_suite,
+            build_swing_stability_tables,
+            build_trade_cause_summary,
+        )
+
+        prices, statements, macro_scores = _risk_on_momentum_fixture()
+        config = RiskOnMomentumConfig(
+            start="2024-03-15",
+            end="2024-05-03",
+            start_balance=10_000.0,
+            macro_filter_enabled=True,
+            scanner_top_n_per_day=10,
+        )
+        result = run_risk_on_momentum_backtest(
+            prices,
+            config=config,
+            macro_scores=macro_scores,
+            statement_history=statements,
+        )
+
+        comparison = build_swing_comparison_suite(
+            prices,
+            config=config,
+            primary_result=result,
+            macro_scores=macro_scores,
+            statement_history=statements,
+            prepared_features=None,
+        )
+        sensitivity = build_swing_sensitivity_suite(
+            prices,
+            config=config,
+            macro_scores=macro_scores,
+            statement_history=statements,
+            prepared_features=None,
+        )
+        stability = build_swing_stability_tables(result)
+        trade_causes = build_trade_cause_summary(result.trade_log_df)
+        warnings = build_quality_warnings(
+            result=result,
+            random_summary_df=pd.DataFrame(),
+            benchmark_comparison_df=pd.DataFrame(),
+            sensitivity_df=sensitivity,
+            price_freshness={"status": "ok"},
+            macro_scores=macro_scores,
+            macro_filter_enabled=True,
+        )
+
+        self.assertIn("comparison_df", comparison)
+        self.assertFalse(comparison["comparison_df"].empty)
+        self.assertFalse(sensitivity.empty)
+        self.assertIn("yearly_stability_df", stability)
+        self.assertFalse(trade_causes.empty)
+        self.assertFalse(warnings.empty)
 
 
 class PracticalValidationServiceContractTests(unittest.TestCase):

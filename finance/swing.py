@@ -7,6 +7,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from .indicators import add_atr
+from .swing_macro import MacroEvaluation, build_macro_lookup
 from .transform import add_daily_swing_features
 
 
@@ -61,6 +63,9 @@ class RiskOnMomentumConfig:
     rate_pressure_max: float = 1.0
     dollar_pressure_max: float = 1.0
     safe_haven_max: float = 1.0
+    rate_pressure_penalty_weight: float = 10.0
+    dollar_pressure_penalty_weight: float = 10.0
+    safe_haven_penalty_weight: float = 10.0
     macro_max_staleness_days: int = 5
     min_price: float = 5.0
     min_avg_dollar_volume_20d: float = 20_000_000.0
@@ -90,6 +95,7 @@ class Position:
     stop_price: float
     take_profit_price: float
     atr_at_entry: float | None
+    entry_features: dict[str, Any]
     macro_snapshot: dict[str, Any]
 
 
@@ -110,10 +116,6 @@ def _normalize_percent(value: float) -> float:
     return value / 100.0 if abs(value) > 1.0 else value
 
 
-def _date_key(value: Any) -> pd.Timestamp:
-    return pd.Timestamp(value).normalize()
-
-
 def _safe_float(value: Any) -> float | None:
     try:
         if value in (None, ""):
@@ -126,13 +128,46 @@ def _safe_float(value: Any) -> float | None:
     return parsed
 
 
+def _atr_column(config: RiskOnMomentumConfig) -> str:
+    return f"atr{int(config.atr_period)}"
+
+
+def _ensure_atr_feature(features: pd.DataFrame, config: RiskOnMomentumConfig) -> pd.DataFrame:
+    atr_col = _atr_column(config)
+    if atr_col in features.columns:
+        return features
+    return add_atr(features, period=int(config.atr_period), symbol_col="symbol", date_col="date")
+
+
+def _position_exit_prices(
+    *,
+    entry_price: float,
+    entry_atr: float | None,
+    config: RiskOnMomentumConfig,
+) -> tuple[float, float] | None:
+    if config.exit_mode == "atr_based":
+        if entry_atr is None or entry_atr <= 0:
+            return None
+        stop_price = entry_price - float(config.stop_atr_multiple) * float(entry_atr)
+        take_profit_price = entry_price + float(config.take_profit_atr_multiple) * float(entry_atr)
+        return float(stop_price), float(take_profit_price)
+
+    stop_loss = _normalize_percent(config.stop_loss_pct)
+    take_profit = _normalize_percent(config.take_profit_pct)
+    return float(entry_price * (1.0 + stop_loss)), float(entry_price * (1.0 + take_profit))
+
+
+def _exit_reason_code(reason: Any) -> str:
+    return str(reason or "other").strip().lower()
+
+
 def _validate_config(config: RiskOnMomentumConfig) -> None:
     if config.execution_mode != "close_based":
-        raise ValueError("Risk-On Momentum 5D V1 only supports execution_mode='close_based'.")
-    if config.exit_mode != "fixed_pct":
-        raise ValueError("Risk-On Momentum 5D V1 only supports exit_mode='fixed_pct'.")
-    if config.macro_filter_mode not in {"hard_filter", "off"}:
-        raise ValueError("Risk-On Momentum 5D V1 only supports macro_filter_mode='hard_filter' or 'off'.")
+        raise ValueError("Risk-On Momentum 5D supports execution_mode='close_based'.")
+    if config.exit_mode not in {"fixed_pct", "atr_based"}:
+        raise ValueError("exit_mode must be 'fixed_pct' or 'atr_based'.")
+    if config.macro_filter_mode not in {"hard_filter", "ranking_penalty", "off"}:
+        raise ValueError("macro_filter_mode must be 'hard_filter', 'ranking_penalty', or 'off'.")
     if config.allow_duplicate_positions:
         raise ValueError("Risk-On Momentum 5D V1 does not support duplicate simultaneous positions.")
     if config.allow_pyramiding:
@@ -143,10 +178,23 @@ def _validate_config(config: RiskOnMomentumConfig) -> None:
         raise ValueError("max_new_positions_per_day must be positive.")
     if int(config.max_holding_days) <= 0:
         raise ValueError("max_holding_days must be positive.")
+    if int(config.atr_period) <= 0:
+        raise ValueError("atr_period must be positive.")
+    if float(config.stop_atr_multiple) <= 0:
+        raise ValueError("stop_atr_multiple must be positive.")
+    if float(config.take_profit_atr_multiple) <= 0:
+        raise ValueError("take_profit_atr_multiple must be positive.")
     if float(config.start_balance) <= 0:
         raise ValueError("start_balance must be positive.")
     if config.ranking_mode not in {"score", "random"}:
         raise ValueError("ranking_mode must be 'score' or 'random'.")
+    for name in [
+        "rate_pressure_penalty_weight",
+        "dollar_pressure_penalty_weight",
+        "safe_haven_penalty_weight",
+    ]:
+        if float(getattr(config, name)) < 0:
+            raise ValueError(f"{name} must be non-negative.")
 
 
 def build_futures_macro_mean_z_scores(futures_history: pd.DataFrame) -> pd.DataFrame:
@@ -342,54 +390,6 @@ def prepare_swing_feature_frame(
     return features.sort_values(["date", "symbol"]).reset_index(drop=True)
 
 
-def _macro_lookup_builder(macro_scores: pd.DataFrame | None):
-    if macro_scores is None or macro_scores.empty:
-        dates = pd.DatetimeIndex([])
-        frame = pd.DataFrame()
-    else:
-        frame = macro_scores.copy()
-        frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
-        frame = frame.dropna(subset=["date"]).sort_values("date").drop_duplicates(subset=["date"], keep="last")
-        dates = pd.DatetimeIndex(frame["date"])
-
-    def lookup(signal_date: pd.Timestamp, config: RiskOnMomentumConfig) -> tuple[bool, str, dict[str, Any]]:
-        if not config.macro_filter_enabled or config.macro_filter_mode == "off":
-            return True, "disabled", {}
-        if frame.empty or dates.empty:
-            return False, "missing_macro_scores", {}
-        index = dates.searchsorted(_date_key(signal_date), side="right") - 1
-        if index < 0:
-            return False, "missing_macro_scores", {}
-        row = frame.iloc[int(index)]
-        score_date = _date_key(row["date"])
-        staleness = (_date_key(signal_date) - score_date).days
-        snapshot = {
-            "macro_score_date": score_date.strftime("%Y-%m-%d"),
-            "macro_staleness_days": int(staleness),
-            "risk_on_mean_z": _safe_float(row.get("risk_on_mean_z")),
-            "rate_pressure_mean_z": _safe_float(row.get("rate_pressure_mean_z")),
-            "dollar_pressure_mean_z": _safe_float(row.get("dollar_pressure_mean_z")),
-            "safe_haven_mean_z": _safe_float(row.get("safe_haven_mean_z")),
-            "standardized_symbol_count": int(row.get("standardized_symbol_count") or 0),
-        }
-        if staleness > int(config.macro_max_staleness_days):
-            return False, "stale_macro_scores", snapshot
-        checks = [
-            snapshot["risk_on_mean_z"] is not None and snapshot["risk_on_mean_z"] > float(config.risk_on_min),
-            snapshot["rate_pressure_mean_z"] is not None
-            and snapshot["rate_pressure_mean_z"] <= float(config.rate_pressure_max),
-            snapshot["dollar_pressure_mean_z"] is not None
-            and snapshot["dollar_pressure_mean_z"] <= float(config.dollar_pressure_max),
-            snapshot["safe_haven_mean_z"] is not None
-            and snapshot["safe_haven_mean_z"] <= float(config.safe_haven_max),
-        ]
-        if all(checks):
-            return True, "pass", snapshot
-        return False, "hard_filter_failed", snapshot
-
-    return lookup
-
-
 def _rank_candidates(day_rows: pd.DataFrame, config: RiskOnMomentumConfig, rng: np.random.Generator) -> pd.DataFrame:
     eligible = day_rows[
         (day_rows["close"] >= float(config.min_price))
@@ -443,6 +443,7 @@ def _rank_candidates(day_rows: pd.DataFrame, config: RiskOnMomentumConfig, rng: 
     )
     if config.ranking_mode == "random":
         candidates["ranking_score"] = rng.random(len(candidates))
+    candidates["ranking_score_raw"] = candidates["ranking_score"]
     return candidates.sort_values(["ranking_score", "symbol"], ascending=[False, True]).reset_index(drop=True)
 
 
@@ -567,6 +568,7 @@ def run_risk_on_momentum_backtest(
     )
     if features.empty:
         raise ValueError("No usable price rows were available for Risk-On Momentum 5D.")
+    features = _ensure_atr_feature(features, config)
 
     features["date"] = pd.to_datetime(features["date"], errors="coerce").dt.normalize()
     start_ts = pd.to_datetime(config.start).normalize() if config.start else features["date"].min()
@@ -578,7 +580,7 @@ def run_risk_on_momentum_backtest(
         raise ValueError("At least two trading dates are required for D+1 execution.")
 
     by_date = {pd.Timestamp(date_value).normalize(): frame for date_value, frame in features.groupby("date", sort=True)}
-    macro_lookup = _macro_lookup_builder(macro_scores)
+    macro_lookup = build_macro_lookup(macro_scores)
     rng = np.random.default_rng(int(config.random_seed))
 
     cash = float(config.start_balance)
@@ -591,8 +593,7 @@ def run_risk_on_momentum_backtest(
     previous_total: float | None = None
     cost_frac = max(float(config.transaction_cost_bps), 0.0) / 10_000.0
     slippage_frac = max(float(config.slippage_bps), 0.0) / 10_000.0
-    stop_loss = _normalize_percent(config.stop_loss_pct)
-    take_profit = _normalize_percent(config.take_profit_pct)
+    atr_col = _atr_column(config)
 
     for idx, signal_date in enumerate(dates):
         day_rows = by_date.get(signal_date, pd.DataFrame())
@@ -639,17 +640,30 @@ def run_risk_on_momentum_backtest(
                         "gross_return_pct": exit_price / position.entry_price - 1.0,
                         "net_return_pct": net_proceeds / (position.entry_notional + position.entry_fee) - 1.0,
                         "exit_reason": order["reason"],
+                        "exit_reason_code": _exit_reason_code(order["reason"]),
                         "holding_days": holding_days,
                         "ranking_score": position.ranking_score,
+                        "ranking_score_raw": position.entry_features.get("ranking_score_raw"),
+                        "entry_return_20d": position.entry_features.get("return_20d"),
+                        "entry_return_5d": position.entry_features.get("return_5d"),
+                        "entry_volume_ratio": position.entry_features.get("volume_ratio"),
+                        "entry_ma20_distance": position.entry_features.get("ma20_distance"),
+                        "entry_ma50_distance": position.entry_features.get("ma50_distance"),
                         "entry_macro_risk_on_mean_z": position.macro_snapshot.get("risk_on_mean_z"),
                         "entry_macro_rate_pressure_mean_z": position.macro_snapshot.get("rate_pressure_mean_z"),
                         "entry_macro_dollar_pressure_mean_z": position.macro_snapshot.get("dollar_pressure_mean_z"),
                         "entry_macro_safe_haven_mean_z": position.macro_snapshot.get("safe_haven_mean_z"),
+                        "entry_macro_penalty_total": position.macro_snapshot.get("macro_penalty_total"),
+                        "macro_filter_mode": config.macro_filter_mode,
                         "execution_mode": config.execution_mode,
                         "exit_mode": config.exit_mode,
+                        "atr_period": int(config.atr_period),
                         "stop_price": position.stop_price,
                         "take_profit_price": position.take_profit_price,
                         "atr_at_entry": position.atr_at_entry,
+                        "entry_atr": position.atr_at_entry,
+                        "stop_atr_multiple": float(config.stop_atr_multiple),
+                        "take_profit_atr_multiple": float(config.take_profit_atr_multiple),
                         "entry_fee": position.entry_fee,
                         "exit_fee": exit_fee,
                         "total_fee": position.entry_fee + exit_fee,
@@ -685,8 +699,16 @@ def run_risk_on_momentum_backtest(
                 entry_notional = spend / (1.0 + cost_frac)
                 entry_fee = entry_notional * cost_frac
                 quantity = entry_notional / entry_price
+                entry_atr = _safe_float(order.get("entry_atr"))
+                exit_prices = _position_exit_prices(
+                    entry_price=entry_price,
+                    entry_atr=entry_atr,
+                    config=config,
+                )
+                if exit_prices is None:
+                    continue
+                stop_price, take_profit_price = exit_prices
                 cash -= entry_notional + entry_fee
-                atr_at_entry = _safe_float(row.get("atr14"))
                 positions[symbol] = Position(
                     symbol=symbol,
                     signal_date=pd.Timestamp(order["signal_date"]),
@@ -696,9 +718,10 @@ def run_risk_on_momentum_backtest(
                     entry_notional=entry_notional,
                     entry_fee=entry_fee,
                     ranking_score=float(order.get("ranking_score") or 0.0),
-                    stop_price=entry_price * (1.0 + stop_loss),
-                    take_profit_price=entry_price * (1.0 + take_profit),
-                    atr_at_entry=atr_at_entry,
+                    stop_price=stop_price,
+                    take_profit_price=take_profit_price,
+                    atr_at_entry=entry_atr,
+                    entry_features=dict(order.get("entry_features") or {}),
                     macro_snapshot=dict(order.get("macro_snapshot") or {}),
                 )
             pending_buys = remaining_buys
@@ -712,7 +735,10 @@ def run_risk_on_momentum_backtest(
         total_return = np.nan if previous_total is None else total_balance / previous_total - 1.0
         previous_total = total_balance
 
-        macro_pass, macro_reason, macro_snapshot = macro_lookup(signal_date, config)
+        macro_eval: MacroEvaluation = macro_lookup(signal_date, config)
+        macro_pass = bool(macro_eval.passed)
+        macro_reason = macro_eval.reason
+        macro_snapshot = dict(macro_eval.snapshot)
         result_rows.append(
             {
                 "Date": signal_date,
@@ -723,6 +749,8 @@ def run_risk_on_momentum_backtest(
                 "Held Symbols": sorted(positions),
                 "Macro Filter Pass": macro_pass,
                 "Macro Filter Reason": macro_reason,
+                "Macro Filter Mode": config.macro_filter_mode,
+                "Macro Penalty Total": float(macro_eval.penalty_total),
                 "Pending Buy Count": 0,
                 "Pending Sell Count": 0,
             }
@@ -763,16 +791,37 @@ def run_risk_on_momentum_backtest(
         if macro_pass and next_date_exists and available_new > 0:
             ranked = _rank_candidates(day_rows, config, rng)
             if not ranked.empty:
+                ranked["macro_penalty_total"] = float(macro_eval.penalty_total)
+                if float(macro_eval.penalty_total) > 0:
+                    ranked["ranking_score"] = ranked["ranking_score_raw"] - float(macro_eval.penalty_total)
+                    ranked = ranked.sort_values(["ranking_score", "symbol"], ascending=[False, True]).reset_index(drop=True)
                 entry_ranked = ranked[ranked["entry_condition"].fillna(False)].copy()
+                if config.exit_mode == "atr_based":
+                    entry_atr_values = (
+                        pd.to_numeric(entry_ranked[atr_col], errors="coerce")
+                        if atr_col in entry_ranked.columns
+                        else pd.Series(np.nan, index=entry_ranked.index)
+                    )
+                    entry_ranked = entry_ranked[entry_atr_values.fillna(0.0) > 0]
                 if not config.allow_duplicate_positions:
                     entry_ranked = entry_ranked[~entry_ranked["symbol"].isin(held_symbols)]
                 selected = entry_ranked.head(available_new)
                 for _, row in selected.iterrows():
+                    entry_features = {
+                        "ranking_score_raw": _safe_float(row.get("ranking_score_raw")),
+                        "return_20d": _safe_float(row.get("return_20d")),
+                        "return_5d": _safe_float(row.get("return_5d")),
+                        "volume_ratio": _safe_float(row.get("volume_ratio")),
+                        "ma20_distance": _safe_float(row.get("ma20_distance")),
+                        "ma50_distance": _safe_float(row.get("ma50_distance")),
+                    }
                     buy_orders.append(
                         {
                             "symbol": str(row["symbol"]),
                             "signal_date": signal_date,
                             "ranking_score": float(row.get("ranking_score") or 0.0),
+                            "entry_atr": _safe_float(row.get(atr_col)),
+                            "entry_features": entry_features,
                             "macro_snapshot": macro_snapshot,
                         }
                     )
@@ -797,6 +846,8 @@ def run_risk_on_momentum_backtest(
                         "symbol": symbol,
                         "status": status,
                         "ranking_score": float(row.get("ranking_score") or 0.0),
+                        "ranking_score_raw": _safe_float(row.get("ranking_score_raw")),
+                        "macro_penalty_total": float(row.get("macro_penalty_total") or 0.0),
                         "return_20d": _safe_float(row.get("return_20d")),
                         "return_20d_percentile": _safe_float(row.get("return_20d_percentile")),
                         "return_5d": _safe_float(row.get("return_5d")),
@@ -806,9 +857,11 @@ def run_risk_on_momentum_backtest(
                         "financial_filter_pass": bool(row.get("financial_filter_pass")),
                         "financial_filter_reason": row.get("financial_filter_reason"),
                         "atr14": _safe_float(row.get("atr14")),
+                        atr_col: _safe_float(row.get(atr_col)),
                         "volatility_20d": _safe_float(row.get("volatility_20d")),
                         "macro_filter_pass": macro_pass,
                         "macro_filter_reason": macro_reason,
+                        "macro_filter_mode": config.macro_filter_mode,
                     }
                 )
 
@@ -843,17 +896,30 @@ def run_risk_on_momentum_backtest(
                 "gross_return_pct": float(close_price) / position.entry_price - 1.0,
                 "net_return_pct": gross_proceeds / (position.entry_notional + position.entry_fee) - 1.0,
                 "exit_reason": "END_OF_BACKTEST",
+                "exit_reason_code": "end_of_backtest",
                 "holding_days": sum(1 for date_value in dates if position.entry_date <= date_value <= final_date),
                 "ranking_score": position.ranking_score,
+                "ranking_score_raw": position.entry_features.get("ranking_score_raw"),
+                "entry_return_20d": position.entry_features.get("return_20d"),
+                "entry_return_5d": position.entry_features.get("return_5d"),
+                "entry_volume_ratio": position.entry_features.get("volume_ratio"),
+                "entry_ma20_distance": position.entry_features.get("ma20_distance"),
+                "entry_ma50_distance": position.entry_features.get("ma50_distance"),
                 "entry_macro_risk_on_mean_z": position.macro_snapshot.get("risk_on_mean_z"),
                 "entry_macro_rate_pressure_mean_z": position.macro_snapshot.get("rate_pressure_mean_z"),
                 "entry_macro_dollar_pressure_mean_z": position.macro_snapshot.get("dollar_pressure_mean_z"),
                 "entry_macro_safe_haven_mean_z": position.macro_snapshot.get("safe_haven_mean_z"),
+                "entry_macro_penalty_total": position.macro_snapshot.get("macro_penalty_total"),
+                "macro_filter_mode": config.macro_filter_mode,
                 "execution_mode": config.execution_mode,
                 "exit_mode": config.exit_mode,
+                "atr_period": int(config.atr_period),
                 "stop_price": position.stop_price,
                 "take_profit_price": position.take_profit_price,
                 "atr_at_entry": position.atr_at_entry,
+                "entry_atr": position.atr_at_entry,
+                "stop_atr_multiple": float(config.stop_atr_multiple),
+                "take_profit_atr_multiple": float(config.take_profit_atr_multiple),
                 "entry_fee": position.entry_fee,
                 "exit_fee": 0.0,
                 "total_fee": position.entry_fee,

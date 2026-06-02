@@ -7184,3 +7184,9 @@ Detailed historical analysis was archived on `2026-04-13`.
   - V1 범위는 `close_based + fixed_pct + Equal Slot`로 제한하고, full trade / scanner detail은 registry가 아니라 generated backtest artifact에 둔다. Macro filter는 futures thermometer의 continuous Mean-Z를 hard filter로 사용한다
 - Follow-up:
   - Core strategy, DB runtime, Single Strategy form, result `Swing Detail`, History replay fields, Compare default runner, focused tests를 구현했다. Browser QA에서 Manual universe input과 `Swing Detail` 결과 탭을 확인했고, full service contract 237 tests도 통과했다. 상세 검증과 남은 risk는 `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`를 확인한다
+### 2026-06-03 - Risk-On Momentum 5D V2는 Backtest Analysis 연구 lane으로 구현한다
+
+- User request: V1 이후 Risk-On Momentum 5D V2 고도화 계획을 구현하되 Practical Validation / Final Review / Selected Dashboard governance는 바로 연결하지 말라고 요청함.
+- Interpreted goal: ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality warning analysis를 Backtest Analysis Daily Swing research surface에 추가한다.
+- Analysis result: Strategy core는 `finance/swing.py`, indicator / macro / repeated analysis helper는 별도 finance module로 분리하고 UI / history / artifact는 기존 Backtest Analysis 경계 안에 연결하는 것이 안전하다.
+- Follow-up: Daily Swing Practical Validation module, Final Review route, Daily Signal / Paper Strategy Monitor lane은 별도 설계 승인 후 구현한다.

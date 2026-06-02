@@ -292,20 +292,29 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["rom_max_holding_days"] = int(payload.get("max_holding_days") or 5)
         st.session_state["rom_stop_loss_pct"] = float(payload.get("stop_loss_pct") or -2.5)
         st.session_state["rom_take_profit_pct"] = float(payload.get("take_profit_pct") or 5.0)
+        st.session_state["rom_atr_period"] = int(payload.get("atr_period") or 14)
+        st.session_state["rom_stop_atr_multiple"] = float(payload.get("stop_atr_multiple") or 1.0)
+        st.session_state["rom_take_profit_atr_multiple"] = float(payload.get("take_profit_atr_multiple") or 2.0)
         st.session_state["rom_max_new_positions_per_day"] = int(payload.get("max_new_positions_per_day") or 3)
         st.session_state["rom_max_total_positions"] = int(payload.get("max_total_positions") or 3)
         st.session_state["rom_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or 0.0)
         st.session_state["rom_slippage_bps"] = float(payload.get("slippage_bps") or 0.0)
         st.session_state["rom_macro_filter_enabled"] = bool(payload.get("macro_filter_enabled", True))
+        st.session_state["rom_macro_filter_mode"] = payload.get("macro_filter_mode") or ("hard_filter" if payload.get("macro_filter_enabled", True) else "off")
         st.session_state["rom_risk_on_min"] = float(payload.get("risk_on_min") or 0.0)
         st.session_state["rom_rate_pressure_max"] = float(payload.get("rate_pressure_max") or 1.0)
         st.session_state["rom_dollar_pressure_max"] = float(payload.get("dollar_pressure_max") or 1.0)
         st.session_state["rom_safe_haven_max"] = float(payload.get("safe_haven_max") or 1.0)
+        st.session_state["rom_rate_pressure_penalty_weight"] = float(payload.get("rate_pressure_penalty_weight") or 10.0)
+        st.session_state["rom_dollar_pressure_penalty_weight"] = float(payload.get("dollar_pressure_penalty_weight") or 10.0)
+        st.session_state["rom_safe_haven_penalty_weight"] = float(payload.get("safe_haven_penalty_weight") or 10.0)
         st.session_state["rom_min_price"] = float(payload.get("min_price") or 5.0)
         st.session_state["rom_min_adv20d_m"] = float(payload.get("min_avg_dollar_volume_20d", 20_000_000.0)) / 1_000_000.0
         st.session_state["rom_min_avg_volume_20d"] = int(payload.get("min_avg_volume_20d") or 500_000)
         st.session_state["rom_random_iterations"] = int(payload.get("random_iterations") or 50)
         st.session_state["rom_scanner_top_n_per_day"] = int(payload.get("scanner_top_n_per_day") or 50)
+        st.session_state["rom_run_comparison_suite"] = bool(payload.get("run_comparison_suite", True))
+        st.session_state["rom_run_sensitivity_suite"] = bool(payload.get("run_sensitivity_suite", False))
     elif strategy_key == "quality_snapshot":
         st.session_state["qs_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_BROAD_PRESETS else "Manual"
         if st.session_state["qs_universe_mode"] == "Preset":
@@ -1436,7 +1445,7 @@ def _render_risk_on_momentum_5d_form() -> None:
                     )
                 )
             with exit_col:
-                exit_mode = st.selectbox("Exit Mode", options=["fixed_pct"], index=0, key="rom_exit_mode")
+                exit_mode = st.selectbox("Exit Mode", options=["fixed_pct", "atr_based"], index=0, key="rom_exit_mode")
                 max_holding_days = int(
                     st.number_input(
                         "Max Holding Days",
@@ -1463,13 +1472,45 @@ def _render_risk_on_momentum_5d_form() -> None:
                     step=0.5,
                     key="rom_take_profit_pct",
                 )
+                atr_settings = st.columns(3)
+                with atr_settings[0]:
+                    atr_period = int(
+                        st.number_input(
+                            "ATR Period",
+                            min_value=2,
+                            max_value=100,
+                            value=14,
+                            step=1,
+                            key="rom_atr_period",
+                        )
+                    )
+                with atr_settings[1]:
+                    stop_atr_multiple = st.number_input(
+                        "Stop ATR x",
+                        min_value=0.1,
+                        max_value=10.0,
+                        value=1.0,
+                        step=0.1,
+                        key="rom_stop_atr_multiple",
+                    )
+                with atr_settings[2]:
+                    take_profit_atr_multiple = st.number_input(
+                        "Take ATR x",
+                        min_value=0.1,
+                        max_value=20.0,
+                        value=2.0,
+                        step=0.1,
+                        key="rom_take_profit_atr_multiple",
+                    )
 
         with st.expander("Macro / Candidate Filters", expanded=True):
-            macro_filter_enabled = st.checkbox(
-                "Macro Hard Filter",
-                value=True,
-                key="rom_macro_filter_enabled",
+            macro_filter_mode = st.selectbox(
+                "Macro Filter Mode",
+                options=["hard_filter", "ranking_penalty", "off"],
+                index=0,
+                key="rom_macro_filter_mode",
             )
+            macro_filter_enabled = macro_filter_mode != "off"
             macro_cols = st.columns(4)
             with macro_cols[0]:
                 risk_on_min = st.number_input("Risk-On Min Mean Z", value=0.0, step=0.1, key="rom_risk_on_min")
@@ -1479,6 +1520,35 @@ def _render_risk_on_momentum_5d_form() -> None:
                 dollar_pressure_max = st.number_input("Dollar Pressure Max Mean Z", value=1.0, step=0.1, key="rom_dollar_pressure_max")
             with macro_cols[3]:
                 safe_haven_max = st.number_input("Safe Haven Max Mean Z", value=1.0, step=0.1, key="rom_safe_haven_max")
+
+            penalty_cols = st.columns(3)
+            with penalty_cols[0]:
+                rate_pressure_penalty_weight = st.number_input(
+                    "Rate Penalty Weight",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=10.0,
+                    step=1.0,
+                    key="rom_rate_pressure_penalty_weight",
+                )
+            with penalty_cols[1]:
+                dollar_pressure_penalty_weight = st.number_input(
+                    "Dollar Penalty Weight",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=10.0,
+                    step=1.0,
+                    key="rom_dollar_pressure_penalty_weight",
+                )
+            with penalty_cols[2]:
+                safe_haven_penalty_weight = st.number_input(
+                    "Safe-Haven Penalty Weight",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=10.0,
+                    step=1.0,
+                    key="rom_safe_haven_penalty_weight",
+                )
 
             filter_cols = st.columns(3)
             with filter_cols[0]:
@@ -1544,6 +1614,20 @@ def _render_risk_on_momentum_5d_form() -> None:
                         key="rom_scanner_top_n_per_day",
                     )
                 )
+            suite_cols = st.columns(2)
+            with suite_cols[0]:
+                run_comparison_suite = st.checkbox(
+                    "Run V2 Comparison Suite",
+                    value=True,
+                    key="rom_run_comparison_suite",
+                )
+            with suite_cols[1]:
+                run_sensitivity_suite = st.checkbox(
+                    "Run V2 Sensitivity Suite",
+                    value=False,
+                    key="rom_run_sensitivity_suite",
+                )
+            st.caption("V2 suites are historical research diagnostics for daily swing behavior, not Practical Validation or live trading approval.")
 
         submitted = st.form_submit_button("Run Risk-On Momentum 5D Backtest", use_container_width=True)
 
@@ -1584,21 +1668,29 @@ def _render_risk_on_momentum_5d_form() -> None:
         "max_holding_days": int(max_holding_days),
         "stop_loss_pct": float(stop_loss_pct),
         "take_profit_pct": float(take_profit_pct),
+        "atr_period": int(atr_period),
+        "stop_atr_multiple": float(stop_atr_multiple),
+        "take_profit_atr_multiple": float(take_profit_atr_multiple),
         "max_new_positions_per_day": int(max_new_positions_per_day),
         "max_total_positions": int(max_total_positions),
         "transaction_cost_bps": float(transaction_cost_bps),
         "slippage_bps": float(slippage_bps),
         "macro_filter_enabled": bool(macro_filter_enabled),
-        "macro_filter_mode": "hard_filter" if macro_filter_enabled else "off",
+        "macro_filter_mode": macro_filter_mode,
         "risk_on_min": float(risk_on_min),
         "rate_pressure_max": float(rate_pressure_max),
         "dollar_pressure_max": float(dollar_pressure_max),
         "safe_haven_max": float(safe_haven_max),
+        "rate_pressure_penalty_weight": float(rate_pressure_penalty_weight),
+        "dollar_pressure_penalty_weight": float(dollar_pressure_penalty_weight),
+        "safe_haven_penalty_weight": float(safe_haven_penalty_weight),
         "min_price": float(min_price),
         "min_avg_dollar_volume_20d": float(min_adv20d_m) * 1_000_000.0,
         "min_avg_volume_20d": int(min_avg_volume_20d),
         "random_iterations": int(random_iterations),
         "scanner_top_n_per_day": int(scanner_top_n_per_day),
+        "run_comparison_suite": bool(run_comparison_suite),
+        "run_sensitivity_suite": bool(run_sensitivity_suite),
     }
 
     _handle_backtest_run(payload, strategy_name="Risk-On Momentum 5D")

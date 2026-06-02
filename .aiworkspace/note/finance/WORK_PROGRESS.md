@@ -4620,3 +4620,6 @@ Detailed historical logs were archived on `2026-04-13`.
   - Core는 `finance/swing.py`, daily swing features는 `finance/transform.py`, futures daily loader는 `finance/loaders/futures.py`, DB wrapper / artifact writer는 `app/runtime/backtest.py`가 맡는다.
   - `Backtest Analysis > Single Strategy` form, result `Swing Detail` tab, History replay fields, Compare default runner를 연결했다. V1은 `close_based + fixed_pct + Equal Slot`만 지원한다.
   - Browser QA, focused tests, manual DB smoke, full service contract 237 tests, `git diff --check`가 통과했다. QA screenshot은 generated artifact `risk-on-momentum-5d-qa.png`로 남겼고 커밋 대상은 아니다.
+- Risk-On Momentum 5D V2:
+  - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v2/`에서 Daily Swing Backtest Analysis 고도화를 구현했다.
+  - ATR / macro ranking penalty / comparison-sensitivity-stability-quality analysis는 Backtest Analysis 연구 surface로 남기고, Practical Validation / Final Review / Selected Dashboard daily signal governance는 구현하지 않았다.
