@@ -9495,6 +9495,38 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertFalse(item["execution_boundary"]["order_instruction"])
             self.assertFalse(item["execution_boundary"]["auto_rebalance"])
 
+    def test_operations_console_model_uses_korean_user_facing_copy(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 2,
+                    "dashboard_row_count": 2,
+                    "status_counts": {"normal": 2, "watch": 0, "rebalance_needed": 0, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 2,
+                        "missing_reference_count": 0,
+                    }
+                },
+            },
+            run_history=[],
+            candidate_records=[],
+        )
+
+        self.assertIn("일상 점검", model["action_queue"][0]["title"])
+        self.assertIn("모니터링 후보", model["action_queue"][0]["reason"])
+        self.assertIn("수동", model["stage_roadmap"][2]["output"])
+        self.assertIn("주문 지시", model["stage_roadmap"][2]["output"])
+        audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
+        self.assertIn("선정 포트폴리오", audit_by_surface["portfolio_monitoring"]["role"])
+        self.assertIn("삭제하지 않음", audit_by_surface["candidate_library"]["change"])
+        self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
+        self.assertIn("복구", model["lanes"][2]["detail"])
+
     def test_portfolio_monitoring_rebalance_table_uses_target_snapshot_language(self) -> None:
         from app.web.final_selected_portfolio_dashboard import _build_rebalance_table
 

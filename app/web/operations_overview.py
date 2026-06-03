@@ -57,33 +57,33 @@ def _build_stage_roadmap() -> list[dict[str, str]]:
     return [
         {
             "stage": "1차",
-            "title": "Operations IA Foundation",
+            "title": "Operations 정보 구조 기반",
             "status": "completed",
-            "output": "Operations Overview, Portfolio Monitoring, System / Data Health, Archive / Recovery lanes.",
+            "output": "Operations Overview에 Portfolio Monitoring, System / Data Health, Archive / Recovery lane을 분리했습니다.",
         },
         {
             "stage": "2차",
-            "title": "Surface Audit",
+            "title": "화면 기능 감사",
             "status": "completed",
-            "output": "Keep primary monitoring / system health; demote history and candidate tools to archive recovery.",
+            "output": "Portfolio Monitoring과 System / Data Health는 primary로 유지하고, history / candidate 도구는 archive recovery로 낮췄습니다.",
         },
         {
             "stage": "3차",
-            "title": "Rebalance Semantics",
+            "title": "리밸런싱 의미 정정",
             "status": "completed",
-            "output": "Treat rebalance rows as target snapshots and next manual review dates, not order instructions.",
+            "output": "리밸런싱 row를 주문 지시가 아니라 target snapshot과 다음 수동 검토일로 표시합니다.",
         },
         {
             "stage": "4차",
-            "title": "Archive Demotion",
+            "title": "Archive 도구 격하",
             "status": "completed",
-            "output": "Backtest Run History and Candidate Library remain available as recovery / audit tools.",
+            "output": "Backtest Run History와 Candidate Library는 복구 / 감사 도구로 보존했습니다.",
         },
         {
             "stage": "5차",
             "title": "Operations Console",
             "status": "completed",
-            "output": "Show action queue, primary operations, archive tools, and execution boundary on the landing surface.",
+            "output": "첫 화면에서 점검 queue, primary operations, archive 도구, 실행 경계를 함께 확인합니다.",
         },
     ]
 
@@ -95,40 +95,40 @@ def _build_surface_audit() -> list[dict[str, Any]]:
             "surface": "Operations > Portfolio Monitoring",
             "primary_operations": True,
             "decision": "keep_primary_improve",
-            "role": "Selected portfolio monitoring, review signals, target snapshot checks.",
-            "change": "Keep as the main user-facing Operations surface and clarify rebalance semantics.",
+            "role": "선정 포트폴리오 모니터링, review signal, target snapshot 점검을 담당합니다.",
+            "change": "사용자가 주로 보는 Operations 화면으로 유지하고 리밸런싱 의미를 명확히 했습니다.",
         },
         {
             "surface_key": "system_data_health",
             "surface": "Operations > System / Data Health",
             "primary_operations": True,
             "decision": "keep_primary_improve",
-            "role": "Run health, failure artifacts, logs, and data/system triage.",
-            "change": "Keep as primary system health surface; execution still belongs in Ingestion or replay tools.",
+            "role": "실행 상태, 실패 artifact, log, 데이터 / 시스템 triage를 담당합니다.",
+            "change": "primary system health 화면으로 유지합니다. 실제 수집 실행은 Ingestion 또는 replay 도구에서 처리합니다.",
         },
         {
             "surface_key": "backtest_run_history",
             "surface": "Operations > Archive: Backtest Runs",
             "primary_operations": False,
             "decision": "keep_as_archive_recovery",
-            "role": "Recover or audit old backtest runs and restore forms when needed.",
-            "change": "Do not delete; keep below primary operations as recovery tooling.",
+            "role": "과거 backtest run을 복구 / 감사하고 필요할 때 form을 복원합니다.",
+            "change": "삭제하지 않음. primary operations 아래의 복구 도구로 유지합니다.",
         },
         {
             "surface_key": "candidate_library",
             "surface": "Operations > Archive: Candidates",
             "primary_operations": False,
             "decision": "keep_as_archive_recovery",
-            "role": "Inspect legacy/current/pre-live candidate snapshots and rebuild result curves.",
-            "change": "Do not delete; keep below primary operations as candidate archive tooling.",
+            "role": "legacy / current / pre-live candidate snapshot을 확인하고 result curve를 재생성합니다.",
+            "change": "삭제하지 않음. primary operations 아래의 후보 archive 도구로 유지합니다.",
         },
         {
             "surface_key": "reference_reports",
             "surface": "Reference > Guides",
             "primary_operations": False,
             "decision": "keep_reference_future_reports",
-            "role": "Explain workflow meaning and future manual report handoff.",
-            "change": "Keep as reference; report export remains a later scope.",
+            "role": "workflow 의미와 향후 수동 report handoff 기준을 설명합니다.",
+            "change": "Reference로 유지합니다. report export 구현은 이후 별도 범위입니다.",
         },
     ]
 
@@ -148,12 +148,12 @@ def _build_action_queue(
         actions.append(
             {
                 "key": "fix_portfolio_monitoring_blockers",
-                "title": "Portfolio blockers need review",
+                "title": "포트폴리오 blocker 확인 필요",
                 "tone": "danger",
                 "target_key": "portfolio_monitoring",
                 "target_surface": "Operations > Portfolio Monitoring",
-                "reason": f"Blocked rows: {blocked_count}, missing references: {missing_count}.",
-                "next_action": "Open Portfolio Monitoring and resolve blocked or missing selected references.",
+                "reason": f"차단된 row: {blocked_count}개, 누락된 reference: {missing_count}개입니다.",
+                "next_action": "Portfolio Monitoring을 열고 차단되었거나 누락된 selected reference를 먼저 확인합니다.",
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
@@ -161,12 +161,12 @@ def _build_action_queue(
         actions.append(
             {
                 "key": "review_portfolio_monitoring",
-                "title": "Portfolio monitoring needs review",
+                "title": "포트폴리오 모니터링 검토 필요",
                 "tone": "warning",
                 "target_key": "portfolio_monitoring",
                 "target_surface": "Operations > Portfolio Monitoring",
-                "reason": f"{watch_count} selected rows are watch / rebalance-review / re-review candidates.",
-                "next_action": "Open Portfolio Monitoring and inspect target snapshots, review signals, and open issues.",
+                "reason": f"{watch_count}개 selected row가 관찰 / 리밸런싱 검토 / 재검토 후보입니다.",
+                "next_action": "Portfolio Monitoring을 열고 target snapshot, review signal, open issue를 확인합니다.",
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
@@ -174,12 +174,12 @@ def _build_action_queue(
         actions.append(
             {
                 "key": "routine_portfolio_monitoring",
-                "title": "Portfolio monitoring ready",
+                "title": "포트폴리오 일상 점검 가능",
                 "tone": "positive",
                 "target_key": "portfolio_monitoring",
                 "target_surface": "Operations > Portfolio Monitoring",
-                "reason": f"{dashboard_rows} selected rows are available for routine monitoring.",
-                "next_action": "Open Portfolio Monitoring when you want to refresh or inspect monitoring scenarios.",
+                "reason": f"{dashboard_rows}개 모니터링 후보 row를 일상 점검할 수 있습니다.",
+                "next_action": "모니터링 scenario를 새로 계산하거나 상태를 확인할 때 Portfolio Monitoring을 엽니다.",
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
@@ -187,12 +187,12 @@ def _build_action_queue(
         actions.append(
             {
                 "key": "no_selected_rows",
-                "title": "No selected monitoring rows",
+                "title": "선정된 모니터링 row 없음",
                 "tone": "neutral",
                 "target_key": "reference_guides",
                 "target_surface": "Reference > Guides",
-                "reason": "Final Review has not produced selected monitoring rows yet.",
-                "next_action": "Use Backtest -> Final Review to create selected monitoring candidates first.",
+                "reason": "아직 Final Review에서 selected monitoring row가 만들어지지 않았습니다.",
+                "next_action": "먼저 Backtest -> Final Review에서 모니터링 후보를 저장합니다.",
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
@@ -202,12 +202,12 @@ def _build_action_queue(
         actions.append(
             {
                 "key": "inspect_system_data_health",
-                "title": "System / data health needs attention",
+                "title": "시스템 / 데이터 상태 확인 필요",
                 "tone": "danger" if "fail" in normalized_status or normalized_status in {"failed", "failure", "error"} else "warning",
                 "target_key": "system_data_health",
                 "target_surface": "Operations > System / Data Health",
-                "reason": f"Latest run status is {latest_status or '-'}; run count: {run_history_count}.",
-                "next_action": "Open System / Data Health before relying on fresh monitoring evidence.",
+                "reason": f"최근 실행 상태는 {latest_status or '-'}이고, 확인 가능한 run은 {run_history_count}개입니다.",
+                "next_action": "최신 monitoring evidence를 신뢰하기 전에 System / Data Health를 먼저 확인합니다.",
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
@@ -215,12 +215,12 @@ def _build_action_queue(
         actions.append(
             {
                 "key": "archive_recovery_available",
-                "title": "Archive / recovery tools available",
+                "title": "Archive / Recovery 도구 사용 가능",
                 "tone": "neutral",
                 "target_key": "archive_backtest_runs" if run_history_count else "archive_candidates",
                 "target_surface": "Operations > Archive / Recovery",
-                "reason": f"Backtest runs: {run_history_count}, candidate snapshots: {candidate_count}.",
-                "next_action": "Use archive tools only when recovering or auditing previous work.",
+                "reason": f"Backtest run {run_history_count}개, candidate snapshot {candidate_count}개를 확인할 수 있습니다.",
+                "next_action": "이전 작업을 복구하거나 감사할 때만 archive 도구를 사용합니다.",
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
@@ -269,7 +269,7 @@ def build_operations_overview_model(
             ),
             "tone": "danger" if blocked_count or missing_count else ("warning" if watch_count or not dashboard_rows else "positive"),
             "target_surface": "Operations > Portfolio Monitoring",
-            "detail": "Final Review selected rows and user monitoring portfolios.",
+            "detail": "Final Review에서 선정된 모니터링 후보와 사용자 portfolio setup을 확인합니다.",
             "metrics": {
                 "selected_decision_count": selected_count,
                 "dashboard_row_count": dashboard_rows,
@@ -279,7 +279,7 @@ def build_operations_overview_model(
                 "blocked_count": blocked_count,
                 "missing_reference_count": missing_count,
             },
-            "links": [{"target_key": "portfolio_monitoring", "label": "Open Portfolio Monitoring", "icon": "📊"}],
+            "links": [{"target_key": "portfolio_monitoring", "label": "Portfolio Monitoring 열기", "icon": "📊"}],
         },
         {
             "key": "system_data_health",
@@ -288,13 +288,13 @@ def build_operations_overview_model(
             "status": system_status,
             "tone": _system_tone(latest_status),
             "target_surface": "Operations > System / Data Health",
-            "detail": "Run health, failure artifacts, logs, and ingestion handoff.",
+            "detail": "실행 상태, 실패 artifact, log, ingestion handoff를 확인합니다.",
             "metrics": {
                 "run_count": len(run_history),
                 "latest_job": latest_run.get("job_name") or "-",
                 "latest_status": latest_status,
             },
-            "links": [{"target_key": "system_data_health", "label": "Open System / Data Health", "icon": "🧾"}],
+            "links": [{"target_key": "system_data_health", "label": "System / Data Health 열기", "icon": "🧾"}],
         },
         {
             "key": "archive_recovery",
@@ -303,14 +303,14 @@ def build_operations_overview_model(
             "status": "Available" if run_history or candidate_records else "Empty",
             "tone": "neutral",
             "target_surface": "Operations > Archive / Recovery",
-            "detail": "Replay old backtests and inspect saved candidates when recovery is needed.",
+            "detail": "복구가 필요할 때 과거 backtest를 다시 열고 저장 후보를 확인합니다.",
             "metrics": {
                 "backtest_run_count": len(run_history),
                 "candidate_count": len(candidate_records),
             },
             "links": [
-                {"target_key": "archive_backtest_runs", "label": "Open Backtest Runs", "icon": "🗂️"},
-                {"target_key": "archive_candidates", "label": "Open Candidates", "icon": "📌"},
+                {"target_key": "archive_backtest_runs", "label": "Backtest Runs 열기", "icon": "🗂️"},
+                {"target_key": "archive_candidates", "label": "Candidates 열기", "icon": "📌"},
             ],
         },
         {
@@ -320,12 +320,12 @@ def build_operations_overview_model(
             "status": "Guide Ready",
             "tone": "neutral",
             "target_surface": "Reference > Guides",
-            "detail": "Workflow meaning, decision boundaries, and future report handoff.",
+            "detail": "workflow 의미, 판단 경계, 향후 report handoff 기준을 확인합니다.",
             "metrics": {
                 "report_export": "Planned",
                 "guide": "Available",
             },
-            "links": [{"target_key": "reference_guides", "label": "Open Guides", "icon": "📚"}],
+            "links": [{"target_key": "reference_guides", "label": "Guides 열기", "icon": "📚"}],
         },
     ]
     return {
@@ -358,7 +358,61 @@ def build_operations_overview_model(
 def _format_metric_value(value: Any) -> str:
     if isinstance(value, (int, float)):
         return f"{value:,}"
-    return str(value or "-")
+    mapping = {
+        "success": "성공",
+        "failed": "실패",
+        "failure": "실패",
+        "error": "오류",
+        "partial_success": "부분 성공",
+        "warning": "주의",
+        "review_required": "검토 필요",
+        "No runs": "실행 기록 없음",
+        "Planned": "예정",
+        "Available": "사용 가능",
+    }
+    text = str(value or "-")
+    return mapping.get(text, text)
+
+
+def _status_label(value: Any) -> str:
+    mapping = {
+        "No Selected Rows": "선정 row 없음",
+        "Blocked": "차단",
+        "Review Needed": "검토 필요",
+        "Ready": "준비됨",
+        "Healthy": "정상",
+        "No Runs": "실행 기록 없음",
+        "Attention Needed": "확인 필요",
+        "Available": "사용 가능",
+        "Empty": "비어 있음",
+        "Guide Ready": "가이드 준비됨",
+    }
+    return mapping.get(str(value or ""), str(value or "-"))
+
+
+def _priority_label(value: Any) -> str:
+    mapping = {"primary": "주요", "secondary": "보조"}
+    return mapping.get(str(value or ""), str(value or "-"))
+
+
+def _metric_label(value: str) -> str:
+    mapping = {
+        "selected_decision_count": "선정 후보",
+        "dashboard_row_count": "Dashboard Row",
+        "portfolio_count": "Portfolio",
+        "assigned_strategy_count": "배정 전략",
+        "watch_or_review_count": "검토 필요",
+        "blocked_count": "차단",
+        "missing_reference_count": "누락 Reference",
+        "run_count": "실행 기록",
+        "latest_job": "최근 Job",
+        "latest_status": "최근 상태",
+        "backtest_run_count": "Backtest Run",
+        "candidate_count": "Candidate",
+        "report_export": "Report Export",
+        "guide": "Guide",
+    }
+    return mapping.get(value, value.replace("_", " ").title())
 
 
 def _lane_cards(model: dict[str, Any]) -> list[dict[str, Any]]:
@@ -367,7 +421,7 @@ def _lane_cards(model: dict[str, Any]) -> list[dict[str, Any]]:
         cards.append(
             {
                 "title": lane.get("title"),
-                "value": lane.get("status"),
+                "value": _status_label(lane.get("status")),
                 "detail": lane.get("target_surface"),
                 "tone": lane.get("tone"),
             }
@@ -379,8 +433,8 @@ def _render_lane(lane: dict[str, Any], *, page_targets: dict[str, Any]) -> None:
     with st.container(border=True):
         render_badge_strip(
             [
-                {"label": "Lane", "value": lane.get("priority"), "tone": "positive" if lane.get("priority") == "primary" else "neutral"},
-                {"label": "Status", "value": lane.get("status"), "tone": lane.get("tone")},
+                {"label": "구분", "value": _priority_label(lane.get("priority")), "tone": "positive" if lane.get("priority") == "primary" else "neutral"},
+                {"label": "상태", "value": _status_label(lane.get("status")), "tone": lane.get("tone")},
             ]
         )
         st.markdown(f"#### {lane.get('title') or '-'}")
@@ -389,7 +443,7 @@ def _render_lane(lane: dict[str, Any], *, page_targets: dict[str, Any]) -> None:
         if metric_items:
             columns = st.columns(len(metric_items), gap="small")
             for column, (label, value) in zip(columns, metric_items):
-                column.metric(label.replace("_", " ").title(), _format_metric_value(value))
+                column.metric(_metric_label(str(label)), _format_metric_value(value))
         link_columns = st.columns(max(len(lane.get("links") or []), 1), gap="small")
         for column, link in zip(link_columns, list(lane.get("links") or [])):
             target = page_targets.get(str(link.get("target_key") or ""))
@@ -411,28 +465,54 @@ def _render_action_queue(model: dict[str, Any], *, page_targets: dict[str, Any])
         with st.container(border=True):
             render_badge_strip(
                 [
-                    {"label": "Action", "value": action.get("title"), "tone": action.get("tone")},
-                    {"label": "Target", "value": action.get("target_surface"), "tone": "neutral"},
-                    {"label": "Order / Rebalance", "value": "Disabled", "tone": "neutral"},
+                    {"label": "점검 항목", "value": action.get("title"), "tone": action.get("tone")},
+                    {"label": "이동 위치", "value": action.get("target_surface"), "tone": "neutral"},
+                    {"label": "주문 / 자동 리밸런싱", "value": "비활성", "tone": "neutral"},
                 ]
             )
             st.caption(str(action.get("reason") or ""))
-            st.markdown(f"**Next:** {action.get('next_action') or '-'}")
+            st.markdown(f"**다음 행동:** {action.get('next_action') or '-'}")
             target = page_targets.get(str(action.get("target_key") or ""))
             if target is not None:
-                st.page_link(target, label=f"Open {action.get('target_surface')}", use_container_width=True)
+                st.page_link(target, label=f"{action.get('target_surface')} 열기", use_container_width=True)
 
 
 def _render_stage_roadmap(model: dict[str, Any]) -> None:
     with st.expander("Operations restructuring roadmap", expanded=False):
         st.caption("이 화면은 1차 보강에서 끝난 것이 아니라 2~5차까지 반영한 최종 Operations Console 기준입니다.")
-        st.dataframe(list(model.get("stage_roadmap") or []), width="stretch", hide_index=True)
+        rows = []
+        for row in list(model.get("stage_roadmap") or []):
+            rows.append(
+                {
+                    "차수": row.get("stage"),
+                    "제목": row.get("title"),
+                    "상태": "완료" if row.get("status") == "completed" else row.get("status"),
+                    "산출물": row.get("output"),
+                }
+            )
+        st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _render_surface_audit(model: dict[str, Any]) -> None:
     with st.expander("Operations surface audit / keep-improve-archive decisions", expanded=False):
         st.caption("삭제가 아니라 유지 / 개선 / archive 격하 기준을 먼저 고정한 감사표입니다.")
-        st.dataframe(list(model.get("surface_audit") or []), width="stretch", hide_index=True)
+        decision_labels = {
+            "keep_primary_improve": "주요 화면으로 유지 / 개선",
+            "keep_as_archive_recovery": "Archive / Recovery로 보존",
+            "keep_reference_future_reports": "Reference로 유지 / report는 후속 범위",
+        }
+        rows = []
+        for row in list(model.get("surface_audit") or []):
+            rows.append(
+                {
+                    "화면": row.get("surface"),
+                    "주요 운영 화면": "예" if row.get("primary_operations") else "아니오",
+                    "결정": decision_labels.get(str(row.get("decision") or ""), row.get("decision")),
+                    "역할": row.get("role"),
+                    "변경 내용": row.get("change"),
+                }
+            )
+        st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_operations_overview_page(*, page_targets: dict[str, Any] | None = None) -> None:
@@ -454,9 +534,9 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(
         [
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-            {"label": "Order", "value": "Disabled", "tone": "neutral"},
-            {"label": "Auto Rebalance", "value": "Disabled", "tone": "neutral"},
+            {"label": "Live Approval", "value": "비활성", "tone": "neutral"},
+            {"label": "Order", "value": "비활성", "tone": "neutral"},
+            {"label": "Auto Rebalance", "value": "비활성", "tone": "neutral"},
         ]
     )
 
