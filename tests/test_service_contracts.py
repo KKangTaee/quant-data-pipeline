@@ -5116,6 +5116,56 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Dollar Volume"], 2500000.0)
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Days"], 5)
 
+    def test_market_mover_catalyst_links_include_context_without_fetching_articles(self) -> None:
+        from app.services.overview_market_intelligence import build_market_mover_catalyst_links
+
+        rows = build_market_mover_catalyst_links(
+            symbol="AAA",
+            name="AAA Corp",
+            period="weekly",
+            coverage="TOP1000",
+            rank=2,
+            rank_source="Volume Rank",
+        )
+
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(rows.iloc[0]["Source"], "Yahoo Finance")
+        self.assertEqual(rows.iloc[0]["URL"], "https://finance.yahoo.com/quote/AAA")
+        self.assertIn("AAA", rows.iloc[1]["Search Query"])
+        self.assertIn("AAA Corp", rows.iloc[1]["Search Query"])
+        self.assertIn("Weekly", rows.iloc[1]["Search Query"])
+        self.assertIn("Top 1000 by market cap", rows.iloc[1]["Search Query"])
+        self.assertIn("Volume Rank 2", rows.iloc[1]["Search Query"])
+        self.assertIn("news.google.com/search", rows.iloc[1]["URL"])
+        self.assertIn("SEC", rows.iloc[2]["Source"])
+        self.assertIn("sec.gov/edgar/search", rows.iloc[2]["URL"])
+        self.assertIn("Investor Relations", rows.iloc[3]["Source"])
+        self.assertIn("www.google.com/search", rows.iloc[3]["URL"])
+
+    def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
+        from app.web.overview_dashboard import _market_mover_catalyst_candidates
+
+        return_rows = pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "AAA", "Name": "AAA Corp"},
+                {"Rank": 2, "Symbol": "BBB", "Name": "BBB Corp"},
+            ]
+        )
+        volume_rows = pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "BBB", "Name": "BBB Corp"},
+                {"Rank": 2, "Symbol": "AAA", "Name": "AAA Corp"},
+            ]
+        )
+
+        candidates = _market_mover_catalyst_candidates(return_rows, volume_rows)
+
+        self.assertEqual([item["id"] for item in candidates], ["return:1:AAA", "return:2:BBB", "volume:1:BBB", "volume:2:AAA"])
+        self.assertEqual(candidates[0]["rank_source"], "Return Rank")
+        self.assertEqual(candidates[2]["rank_source"], "Volume Rank")
+        self.assertIn("Return #1", candidates[0]["label"])
+        self.assertIn("Volume #1", candidates[2]["label"])
+
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
 

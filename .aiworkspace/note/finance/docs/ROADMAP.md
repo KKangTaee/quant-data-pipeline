@@ -138,7 +138,7 @@ Last Verified: 2026-06-03
 | Overview Market Intelligence Sector / Industry Trend | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`; S&P 500 / Top1000 / Top2000 coverage, Daily / Weekly / Monthly latest ranking + trend chart 완료 |
 | Overview Scheduled Refresh Automation | Complete | `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`; 브라우저 없는 run-once orchestrator, Data Health auto/manual/failure-streak 표시, quote gap issue persistence 완료 |
 | Overview Browser Auto Refresh | Complete | `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`; Overview를 열어둔 동안만 `browser_safe` S&P 500 Daily snapshot check를 5분 cadence 조건으로 실행하는 Market Movers `데이터 갱신` UI / heartbeat 작업 완료 |
-| Overview Market Movers Second Pass | Active | `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`; 선택 coverage 기반 browser auto refresh, volume rank, sector-colored bars, previous-period momentum context 구현 중 |
+| Overview Market Movers Second Pass | Active | `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`; 선택 coverage 기반 browser auto refresh, volume rank, sector-colored bars, previous-period momentum context, Catalyst Links 구현 중. Catalyst Links는 Return / Volume rank ticker에서 Yahoo Finance / Google News / SEC / IR 검색 출발점만 제공하고 AI 요약 / 기사 수집 / 웹 크롤링은 하지 않음 |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
 ## Practical Validation V2 Roadmap

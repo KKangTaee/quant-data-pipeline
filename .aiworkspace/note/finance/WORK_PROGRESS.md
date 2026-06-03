@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-03 - Market Movers Catalyst Links V1
+- Added Catalyst Links to `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`.
+- `Overview > Market Movers` now lets users pick Return Rank / Volume Rank tickers and open Yahoo Finance, Google News, SEC company search, and IR / earnings search start points.
+- Link queries include period / coverage / rank / symbol / name context; no AI summary, article body collection, web crawling, provider fetch, DB schema, registry, saved setup, broker/account, order, live approval, or auto rebalance path was added.
+- Verification evidence and residual risks are in the task `RUNS.md` / `RISKS.md`; Browser QA screenshot is `market-movers-catalyst-links-qa-20260603.png` and remains generated/untracked.
+
 ### 2026-06-03 - Futures Monitor Live Charts Missing Fix
 - Fixed `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/` follow-up for `Overview > Futures Monitor`.
 - Root cause was yfinance returning empty `1d / 1m` data for active futures symbols while `2d / 1m` returned usable candles.

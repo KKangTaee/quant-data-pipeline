@@ -48,6 +48,8 @@ http://localhost:8501
    - `Return Rank` 탭에서 symbol-level return ranking과 직전 동일 기간 return / momentum delta를 확인한다.
    - `Volume Rank` 탭에서 daily는 당일 거래량 / 거래대금을, weekly / monthly / yearly는 평균 일거래량 / 평균 일거래대금과 기간 합계를 함께 확인한다.
    - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
+   - `Catalyst Links`에서 Return Rank 또는 Volume Rank ticker를 선택하면 Yahoo Finance, Google News, SEC company search, 회사 IR / earnings 검색 링크를 열 수 있다.
+   - Catalyst Links는 period / coverage / rank / symbol / name을 검색어에 넣은 manual 확인 출발점이다. AI 요약, 기사 본문 수집, 웹 크롤링, DB 저장은 실행하지 않는다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
    - daily intraday missing row는 `Diagnose Missing Quotes`로 원인 후보를 확인한다. 결과는 `finance_meta.market_data_issue`에 반복 issue로 누적된다.
@@ -217,6 +219,8 @@ PY
 - Market Movers displays `Return Rank`, `Volume Rank`, and `Sector Pulse` chart tabs.
 - Market Movers builds a separate `volume_rows` ranking. Daily ranks the latest stored snapshot / EOD day by dollar volume with raw volume beside it; weekly / monthly / yearly rank average daily dollar volume and expose average / total volume metrics in the Volume table.
 - Market Movers return rows include `Volume`, `Dollar Volume`, `Previous Return %`, and `Momentum Delta pp`; positive return bars use sector colors and negative bars use the danger red.
+- Market Movers `Catalyst Links` renders a ticker selector sourced from Return Rank and Volume Rank rows, then shows Yahoo Finance, Google News, SEC company search, and IR / earnings outbound links with period / coverage / rank / symbol / name context.
+- Catalyst Links remain read-only outbound start points and do not summarize, crawl, collect article bodies, fetch provider pages, mutate DB schema, or write workflow JSONL.
 - Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
 - Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
 - Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.

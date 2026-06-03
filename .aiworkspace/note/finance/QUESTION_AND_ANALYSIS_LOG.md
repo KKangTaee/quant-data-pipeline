@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-03 - Market Movers catalyst review should start from links, not app-side crawling
+- User request:
+  - 사용자가 Market Movers의 Return Rank / Volume Rank 선택 ticker 기준으로 1차 Catalyst Links 기능을 추가하되, AI 요약 / 기사 본문 수집 / 웹 크롤링은 하지 말라고 요청함.
+- Interpreted goal:
+  - 앱이 원인을 판단하지 않고, period / coverage / rank / symbol / name 맥락을 담은 외부 확인 링크만 제공해 사용자가 직접 catalyst를 조사하게 한다.
+- Analysis result:
+  - DB schema나 ingestion 추가 없이 `overview_market_intelligence` service read model에서 Yahoo Finance, Google News, SEC company search, IR / earnings 검색 URL을 만들고, `overview_dashboard`는 선택된 Return / Volume rank row의 링크만 렌더링하는 것이 맞다.
+- Follow-up:
+  - V1은 generic search URL 기반이라 stale / irrelevant result와 회사명 disambiguation은 수동 검토로 남는다. 자동 catalyst 분류, article fetch, summary, registry persistence는 별도 승인 없이는 추가하지 않는다.
+
 ### 2026-06-03 - Futures 1d intraday blanks need a bounded 2d fallback
 - User request:
   - 사용자가 8501의 `Futures Monitor > Live Futures Charts`가 missing으로 보이는 문제를 해결해 달라고 요청함.

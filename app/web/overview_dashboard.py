@@ -28,6 +28,7 @@ from app.services.futures_macro_thermometer import (
     load_overview_futures_macro_snapshot,
 )
 from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
+from app.services.overview_market_intelligence import build_market_mover_catalyst_links
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_collection_ops_snapshot,
@@ -3409,6 +3410,106 @@ def _render_market_movers_refresh_bar(
     _render_market_job_result(intraday_result_key)
 
 
+def _rank_token(value: Any, fallback: int) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return str(fallback)
+    if pd.isna(numeric):
+        return str(fallback)
+    if numeric.is_integer():
+        return str(int(numeric))
+    return str(value)
+
+
+def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFrame) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def append_from_frame(frame: pd.DataFrame, *, rank_source: str, id_prefix: str, label_prefix: str) -> None:
+        if not isinstance(frame, pd.DataFrame) or frame.empty:
+            return
+        for offset, (_, row) in enumerate(frame.iterrows(), start=1):
+            symbol = str(row.get("Symbol") or "").strip().upper()
+            if not symbol:
+                continue
+            rank = _rank_token(row.get("Rank"), offset)
+            candidate_id = f"{id_prefix}:{rank}:{symbol}"
+            if candidate_id in seen:
+                continue
+            seen.add(candidate_id)
+            name = str(row.get("Name") or "").strip() or symbol
+            candidates.append(
+                {
+                    "id": candidate_id,
+                    "symbol": symbol,
+                    "name": name,
+                    "rank": rank,
+                    "rank_source": rank_source,
+                    "label": f"{label_prefix} #{rank} · {symbol} · {name}",
+                }
+            )
+
+    append_from_frame(rows, rank_source="Return Rank", id_prefix="return", label_prefix="Return")
+    append_from_frame(volume_rows, rank_source="Volume Rank", id_prefix="volume", label_prefix="Volume")
+    return candidates
+
+
+def _render_market_mover_catalyst_links(
+    rows: pd.DataFrame,
+    volume_rows: pd.DataFrame,
+    *,
+    universe_code: str,
+    period: str,
+) -> None:
+    candidates = _market_mover_catalyst_candidates(rows, volume_rows)
+    if not candidates:
+        return
+
+    st.markdown("#### Catalyst Links")
+    st.caption("Manual verification start points only. No AI summary, article body collection, or crawling is run.")
+    candidate_by_id = {item["id"]: item for item in candidates}
+    option_ids = list(candidate_by_id)
+    selection_key = "overview_market_mover_catalyst_selection"
+    if st.session_state.get(selection_key) not in candidate_by_id:
+        st.session_state[selection_key] = option_ids[0]
+    selected_id = str(
+        st.selectbox(
+            "Symbol",
+            option_ids,
+            format_func=lambda value: candidate_by_id.get(str(value), {}).get("label", str(value)),
+            key=selection_key,
+        )
+    )
+    selected = candidate_by_id[selected_id]
+    links = build_market_mover_catalyst_links(
+        symbol=str(selected["symbol"]),
+        name=str(selected["name"]),
+        period=period,
+        coverage=universe_code,
+        rank=selected["rank"],
+        rank_source=str(selected["rank_source"]),
+    )
+    link_columns = st.columns(2, gap="small")
+    for index, (_, link) in enumerate(links.iterrows()):
+        source = str(link.get("Source") or "Open")
+        label = {
+            "SEC Company Search": "SEC Search",
+            "Investor Relations / Earnings Search": "IR / Earnings",
+        }.get(source, source)
+        link_columns[index % 2].link_button(
+            label,
+            str(link.get("URL") or ""),
+            use_container_width=True,
+            help=str(link.get("Purpose") or ""),
+        )
+    st.dataframe(
+        links[["Source", "Search Query", "Purpose"]],
+        width="stretch",
+        hide_index=True,
+    )
+
+
 def _render_market_movers_snapshot_panel(
     snapshot: dict[str, Any],
     *,
@@ -3452,6 +3553,12 @@ def _render_market_movers_snapshot_panel(
                 height=_market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
                 hide_index=True,
             )
+    _render_market_mover_catalyst_links(
+        rows,
+        volume_rows,
+        universe_code=universe_code,
+        period=period,
+    )
 
 
 def _render_market_movers_tab() -> None:

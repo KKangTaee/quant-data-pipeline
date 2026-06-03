@@ -9,3 +9,4 @@
 - 2026-05-30: Reduced non-daily Top1000 / Top2000 render overhead by limiting latest-price diagnostics to missing rows and forcing the symbol / timeframe / date index for point and volume reads.
 - 2026-05-30: Adjusted Healthcare positive bar color away from red and color-coded previous-return markers so negative previous returns are visibly distinct.
 - 2026-05-30: Improved previous-return marker contrast by rendering a white halo behind each marker and using a high-contrast positive marker color instead of sector-like green.
+- 2026-06-03: Added Market Movers Catalyst Links read model and UI panel. Return Rank / Volume Rank ticker selections now produce Yahoo Finance, Google News, SEC company search, and IR / earnings search links with period / coverage / rank / symbol / name context; no article body collection, AI summary, crawler, DB schema, or provider fetch path was added.

@@ -15,12 +15,15 @@ Market Movers는 사용자가 장중 시장 리더와 약한 구간을 빠르게
 - Market Movers chart를 return ranking, volume ranking, sector pulse로 확장한다.
 - 양수 return bar는 sector color, 음수 return bar는 기존 danger red로 표시한다.
 - Momentum 비교는 매매 신호가 아니라 후보 탐색용 보조 정보로 표시한다.
+- Return Rank / Volume Rank에서 선택 가능한 ticker 기준으로 Catalyst Links를 제공한다.
+- Catalyst Links는 Yahoo Finance, Google News, SEC company search, 회사 IR / earnings 검색으로 이동하는 outbound start point만 제공한다.
 
 ## Out Of Scope
 
 - live alert, broker order, auto rebalance.
 - 모든 coverage를 한 번에 돌리는 unattended broad refresh.
 - Relative Volume 정식 지표. 평균 거래량 window가 필요하므로 후속으로 남긴다.
+- AI 요약, 기사 본문 수집, 웹 크롤링, provider / website 직접 fetch.
 - Backtest / Practical Validation workflow 변경.
 
 ## Expected Files

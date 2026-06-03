@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from datetime import date, timedelta
 from typing import Any
+from urllib.parse import quote, quote_plus, urlencode
 
 import pandas as pd
 
@@ -65,6 +66,18 @@ VOLUME_COLUMNS = [
     "Start Date",
     "End Date",
     "Price Source",
+]
+CATALYST_LINK_COLUMNS = [
+    "Source",
+    "Symbol",
+    "Name",
+    "Period",
+    "Coverage",
+    "Rank Type",
+    "Rank",
+    "Search Query",
+    "Purpose",
+    "URL",
 ]
 MISSING_COLUMNS = [
     "Symbol",
@@ -2389,6 +2402,131 @@ def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFr
         for index, row in enumerate(ranked, start=1)
     ]
     return _rows_frame(out, columns=MOVERS_COLUMNS)
+
+
+def _market_mover_link_context(
+    *,
+    symbol: str,
+    name: str,
+    period: str,
+    coverage: str,
+    rank: int | str | None,
+    rank_source: str,
+) -> dict[str, str]:
+    normalized_symbol = str(symbol or "").strip().upper()
+    normalized_name = str(name or "").strip() or normalized_symbol
+    normalized_period = str(period or "daily").strip().lower()
+    period_label = PERIOD_LABELS.get(normalized_period, normalized_period.title())
+    normalized_coverage = str(coverage or "").strip().upper()
+    coverage_label = UNIVERSE_LABELS.get(normalized_coverage, str(coverage or "").strip() or "Selected coverage")
+    rank_label = str(rank).strip() if rank not in (None, "") else "-"
+    rank_source_label = str(rank_source or "Rank").strip() or "Rank"
+    rank_context = f"{rank_source_label} {rank_label}" if rank_label != "-" else rank_source_label
+    base_query = (
+        f"{normalized_symbol} {normalized_name} {period_label} market mover "
+        f"{coverage_label} {rank_context}"
+    )
+    return {
+        "symbol": normalized_symbol,
+        "name": normalized_name,
+        "period_label": period_label,
+        "coverage_label": coverage_label,
+        "rank_label": rank_label,
+        "rank_source_label": rank_source_label,
+        "rank_context": rank_context,
+        "base_query": base_query,
+    }
+
+
+def _google_news_url(query: str) -> str:
+    return "https://news.google.com/search?" + urlencode(
+        {"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"}
+    )
+
+
+def _google_search_url(query: str) -> str:
+    return "https://www.google.com/search?" + urlencode({"q": query})
+
+
+def build_market_mover_catalyst_links(
+    *,
+    symbol: str,
+    name: str | None,
+    period: str,
+    coverage: str,
+    rank: int | str | None,
+    rank_source: str = "Return Rank",
+) -> pd.DataFrame:
+    """Build outbound research-start links for a selected Market Movers row."""
+
+    context = _market_mover_link_context(
+        symbol=symbol,
+        name=name or "",
+        period=period,
+        coverage=coverage,
+        rank=rank,
+        rank_source=rank_source,
+    )
+    normalized_symbol = context["symbol"]
+    if not normalized_symbol:
+        return _rows_frame([], columns=CATALYST_LINK_COLUMNS)
+
+    yahoo_symbol = quote(normalized_symbol.replace(".", "-"), safe="")
+    base_query = context["base_query"]
+    news_query = f"{base_query} stock news catalyst earnings guidance"
+    sec_query = f"{base_query} SEC filings 8-K 10-Q 10-K earnings"
+    ir_query = f"{base_query} investor relations earnings results press release"
+    rows = [
+        {
+            "Source": "Yahoo Finance",
+            "Symbol": normalized_symbol,
+            "Name": context["name"],
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+            "Search Query": base_query,
+            "Purpose": "Quote, chart, news, and analysis landing page.",
+            "URL": f"https://finance.yahoo.com/quote/{yahoo_symbol}",
+        },
+        {
+            "Source": "Google News",
+            "Symbol": normalized_symbol,
+            "Name": context["name"],
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+            "Search Query": news_query,
+            "Purpose": "Recent headlines for manual catalyst review.",
+            "URL": _google_news_url(news_query),
+        },
+        {
+            "Source": "SEC Company Search",
+            "Symbol": normalized_symbol,
+            "Name": context["name"],
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+            "Search Query": sec_query,
+            "Purpose": "Company filings search for 8-K, 10-Q, 10-K, and related disclosures.",
+            "URL": f"https://www.sec.gov/edgar/search/#/q={quote_plus(sec_query)}",
+        },
+        {
+            "Source": "Investor Relations / Earnings Search",
+            "Symbol": normalized_symbol,
+            "Name": context["name"],
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+            "Search Query": ir_query,
+            "Purpose": "Company IR, earnings release, and presentation discovery.",
+            "URL": _google_search_url(ir_query),
+        },
+    ]
+    return _rows_frame(rows, columns=CATALYST_LINK_COLUMNS)
 
 
 def _current_period_volume_dates(date_window: dict[str, Any], *, period: str) -> list[str]:

@@ -17,3 +17,13 @@
 - 2026-05-30: Focused Overview service / automation tests passed, 33 tests.
 - 2026-05-30: Browser QA on `http://localhost:8501` confirmed Healthcare filtered bars are teal and previous-return negative markers are red; screenshot saved to `/tmp/overview-healthcare-chart-color-marker-qa.png`.
 - 2026-05-30: Added previous-return marker halo / high-contrast positive marker pass; QA screenshot saved to `/tmp/overview-previous-marker-halo-qa.png`.
+- 2026-06-03: TDD red confirmed `build_market_mover_catalyst_links` was missing before service implementation.
+- 2026-06-03: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_catalyst_links_include_context_without_fetching_articles` passed.
+- 2026-06-03: TDD red confirmed `_market_mover_catalyst_candidates` was missing before UI selector helper implementation.
+- 2026-06-03: Catalyst focused contract tests passed for service link context and Return / Volume rank selector candidates.
+- 2026-06-03: `uv run python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py` passed.
+- 2026-06-03: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` passed, 18 tests.
+- 2026-06-03: `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` passed with `Result: PASS`.
+- 2026-06-03: `git diff --check` passed.
+- 2026-06-03: Browser QA on fresh Streamlit server `http://localhost:8520` confirmed `Catalyst Links` renders under Market Movers, shows four outbound links, and link hrefs include symbol / name / period / coverage / rank context. In-app screenshot capture timed out; fallback Playwright screenshot saved to `market-movers-catalyst-links-qa-20260603.png` and left untracked.
+- 2026-06-03: Final verification after doc sync passed: `uv run python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py`, `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`, `git diff --check`, and full `uv run python -m unittest tests.test_service_contracts` passed, 247 tests.
