@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-03 - Futures Monitor Live Charts Missing Fix
+- Fixed `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/` follow-up for `Overview > Futures Monitor`.
+- Root cause was yfinance returning empty `1d / 1m` data for active futures symbols while `2d / 1m` returned usable candles.
+- Collector now retries empty 1d / 1m symbols once with 2d / 1m, records `fallback_retries`, and keeps stale / missing warnings visible.
+- Refreshed current Pre-open Core data and restarted 8501; Browser QA confirmed Live Futures Charts at `6/6 symbols` with Provider Run `success`.
+
 ### 2026-06-02 - Selected Dashboard Monitoring First UX V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-first-ux-v1/`.
 - `Operations > Selected Portfolio Dashboard` now opens with Active Portfolio Monitoring Scenario above the portfolio shelf, with distinct no portfolio / no strategy / configured-not-run / executed states.

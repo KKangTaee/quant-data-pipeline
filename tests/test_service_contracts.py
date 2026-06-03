@@ -5713,6 +5713,85 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
         self.assertEqual(run_rows[0]["status"], "success")
         self.assertEqual(run_rows[0]["latest_candle_time_utc"], "2026-06-02 00:01:00")
 
+    def test_futures_collector_recovers_empty_1d_intraday_symbols_with_2d_retry(self) -> None:
+        from finance.data import futures_market as fm
+
+        one_day_idx = pd.date_range("2026-06-03 04:00:00", periods=2, freq="min", tz=timezone.utc)
+        one_day_frame = pd.DataFrame(
+            {
+                ("Open", "NQ=F"): [None, None],
+                ("High", "NQ=F"): [None, None],
+                ("Low", "NQ=F"): [None, None],
+                ("Close", "NQ=F"): [None, None],
+                ("Adj Close", "NQ=F"): [None, None],
+                ("Volume", "NQ=F"): [None, None],
+                ("Open", "ZN=F"): [110.0, 110.1],
+                ("High", "ZN=F"): [110.2, 110.3],
+                ("Low", "ZN=F"): [109.9, 110.0],
+                ("Close", "ZN=F"): [110.1, 110.2],
+                ("Adj Close", "ZN=F"): [110.1, 110.2],
+                ("Volume", "ZN=F"): [100, 120],
+            },
+            index=one_day_idx,
+        )
+        two_day_idx = pd.date_range("2026-06-03 03:58:00", periods=2, freq="min", tz=timezone.utc)
+        two_day_frame = pd.DataFrame(
+            {
+                ("Open", "NQ=F"): [19000.0, 19001.0],
+                ("High", "NQ=F"): [19002.0, 19003.0],
+                ("Low", "NQ=F"): [18999.0, 19000.0],
+                ("Close", "NQ=F"): [19001.0, 19002.0],
+                ("Adj Close", "NQ=F"): [19001.0, 19002.0],
+                ("Volume", "NQ=F"): [500, 520],
+            },
+            index=two_day_idx,
+        )
+        calls: list[tuple[tuple[str, ...], str, str]] = []
+        written_rows: list[dict[str, object]] = []
+        run_rows: list[dict[str, object]] = []
+
+        def downloader(symbols, *, period, interval):
+            calls.append((tuple(symbols), period, interval))
+            if period == "1d":
+                return one_day_frame
+            if period == "2d":
+                return two_day_frame
+            return pd.DataFrame()
+
+        def capture_ohlcv(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        def capture_run(row, **kwargs):
+            del kwargs
+            run_rows.append(row)
+            return 1
+
+        with (
+            patch.object(fm, "sync_futures_market_tables", return_value=None),
+            patch.object(fm, "upsert_futures_instruments", return_value=1),
+            patch.object(fm, "upsert_futures_ohlcv_rows", side_effect=capture_ohlcv),
+            patch.object(fm, "upsert_futures_monitor_run", side_effect=capture_run),
+        ):
+            result = fm.collect_and_store_futures_ohlcv(
+                ["NQ=F", "ZN=F"],
+                period="1d",
+                interval="1m",
+                downloader=downloader,
+                sleep_sec=0,
+            )
+
+        self.assertEqual(calls, [(("NQ=F", "ZN=F"), "1d", "1m"), (("NQ=F",), "2d", "1m")])
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 4)
+        self.assertEqual(result["symbols_processed"], 2)
+        self.assertEqual(result["failed_symbols"], [])
+        self.assertEqual({row["provider_symbol"] for row in written_rows}, {"NQ=F", "ZN=F"})
+        self.assertEqual(run_rows[0]["status"], "success")
+        self.assertEqual(run_rows[0]["failed_symbols_json"], [])
+        self.assertEqual(run_rows[0]["diagnostics_json"]["fallback_retries"][0]["period"], "2d")
+
     def test_ingestion_job_wraps_futures_collection_summary(self) -> None:
         from app.jobs import ingestion_jobs as jobs
 

@@ -63,16 +63,16 @@ http://localhost:8501
    - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다. Ticker leader bar는 양수일 때 sector color, 음수일 때 danger red를 사용하고, 직전 동일 기간 return은 얇은 marker로 표시한다.
 
 4. `Workspace > Overview > Futures Monitor`
-   - 기본 `Watch Group`은 `Pre-open Core`다. 기본 2x2 차트는 `NQ=F`(지수), `ZN=F`(금리), `CL=F`(원유), `6E=F`(FX)를 보여준다.
+   - 기본 `Watch Group`은 `Pre-open Core`다. 현재 기본 차트 후보는 `NQ=F`(지수), `ZN=F`(금리), `CL=F`(원유), `6E=F`(FX), `GC=F`(금), `6J=F`(엔)를 보여준다.
    - `Watch Group`에서 `Equity Index`, `Rates`, `Commodities`, `FX Futures`, optional 그룹으로 바꿔 더 넓은 후보를 확인한다.
    - `Symbols`에서 볼 선물을 고른다. 20초 fast mode는 4개 이하 symbol에서만 사용한다.
-   - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다.
+   - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다. yfinance가 `1d / 1m`에서 일부 symbol을 빈 응답으로 반환하면 collector가 해당 symbol만 `2d / 1m`으로 한 번 보강 수집하고, Provider Run diagnostics의 `fallback_retries`에 회복 여부를 남긴다.
    - `Macro Thermometer` 탭은 core 16개 선물의 저장된 1d OHLCV를 읽어 Risk-On, Growth, Rate Pressure, Dollar Pressure, Safe Haven, Inflation Pressure score, 오늘의 시장 해석, Interpretation Confidence, historical validation summary를 표시한다.
    - Macro Thermometer가 비어 있거나 `Not Enough History` / 3년 미만 warning이 있으면 `Refresh Daily Macro OHLCV`를 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
    - Historical Validation Summary는 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 scenario의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. Mixed scenario는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
    - 기본 자동 refresh는 60초 cadence다. 화면을 열어둔 동안만 동작하며 provider를 매초 호출하지 않는다.
    - Shock Board에서 15m / 60m 움직임, range spike, volume spike, `Calm / Moving / Sharp / Stale / Missing` 상태를 확인한다.
-   - Candles 탭에서 선택 symbol을 포함한 최대 4개 미니 캔들 차트와 선택 symbol 상세 캔들을 본다. `1m / 5m / 15m / 1h` view는 저장된 1m row에서 표시용으로 집계한다.
+   - Candles 탭에서 선택 symbol을 포함한 최대 6개 미니 캔들 차트를 본다. `1m / 5m / 15m / 1h` view는 저장된 1m row에서 표시용으로 집계한다.
    - Provider Run 탭에서 latest run status, rows, processed / requested, latest candle time을 확인한다.
    - Futures Monitor는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 

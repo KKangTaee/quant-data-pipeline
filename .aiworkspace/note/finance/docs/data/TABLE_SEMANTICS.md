@@ -196,6 +196,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 1차 MVP source는 `yfinance`이며, exchange-grade realtime feed가 아니다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 `futures_ohlcv`와 run diagnostics를 읽는다.
 - 반복 수집은 `(provider_symbol, interval_code, candle_time_utc, source)` 기준 UPSERT로 idempotent하게 동작한다.
+- yfinance `1d / 1m` 요청이 일부 futures symbol에서 빈 응답을 줄 수 있어, collector는 missing symbol만 `2d / 1m`으로 한 번 보강 수집한다. 이 보강은 같은 `futures_ohlcv` UPSERT key로 저장되고 `fallback_retries` diagnostics로 남는다.
 - 일봉 macro 해석은 `today_return / rolling_60d_volatility` 표준화 움직임과 252거래일 위치를 사용하며, 채권선물 / FX 선물은 경제적 해석 방향으로 변환해 점수화한다.
 - Historical validation은 저장된 daily futures row를 날짜별로 `date <= validation_date` 조건에서 재계산하고, 1D / 5D / 20D forward return과 비교해 과거 일관성, directional sample size, hit rate, false-positive rate, threshold sensitivity, score-forward-return relationship을 요약한다. `Max Adverse`는 해당 forward window의 endpoint가 아니라 window 안의 adverse path move 기준이다.
 - Mixed scenario는 risk-on / risk-off 방향으로 강제 분류하지 않는다. 이 경우 현재 scenario history는 occurrence count를 보여주고 directional hit rate는 N/A로 표시한다.

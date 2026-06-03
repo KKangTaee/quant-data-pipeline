@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-03 - Futures 1d intraday blanks need a bounded 2d fallback
+- User request:
+  - 사용자가 8501의 `Futures Monitor > Live Futures Charts`가 missing으로 보이는 문제를 해결해 달라고 요청함.
+- Interpreted goal:
+  - UI render 문제가 아니라 DB-backed futures 1m collection / read model의 coverage gap을 찾아 현재 화면에서 chart row가 회복되게 한다.
+- Analysis result:
+  - yfinance는 `NQ=F`, `6E=F`, `6J=F`에 대해 `period=1d`, `interval=1m`에서 빈 응답을 냈지만, 같은 symbol의 `period=2d`, `interval=1m`은 최신 candles를 반환했다. 따라서 source fetch 단계에서 empty-symbol만 보강 수집하는 것이 root fix다.
+- Follow-up:
+  - collector가 empty 1d / 1m symbol만 2d / 1m으로 한 번 retry하고 `fallback_retries` diagnostics를 남긴다. stale provider age는 여전히 REVIEW warning으로 표시하며 exchange-grade realtime으로 해석하지 않는다.
+
 ### 2026-06-02 - Selected Dashboard should be daily-monitoring-first
 - User request:
   - 사용자가 이미 모니터링 시나리오를 설정한 포트폴리오를 매일 확인할 때 아래로 스크롤해야 하는 문제를 지적하고, 화면 상단에 active portfolio monitoring scenario를 먼저 보여 달라고 요청함.

@@ -1,5 +1,12 @@
 # Futures Market Monitoring MVP V1 Status
 
+## 2026-06-03
+
+- Fixed `Overview > Futures Monitor > Live Futures Charts` missing coverage after yfinance returned empty `period=1d`, `interval=1m` data for `NQ=F`, `6E=F`, and `6J=F`.
+- Root cause: Yahoo/yfinance returned no 1d intraday rows for some futures while `period=2d`, `interval=1m` returned the latest candles for the same symbols.
+- `finance/data/futures_market.py` now retries only empty 1d / 1m futures symbols once with 2d / 1m, removes recovered symbols from failed coverage, and records `fallback_retries` in run diagnostics.
+- Restarted the 8501 Streamlit server so the running app loaded the new collector; refreshed the current Pre-open Core set and verified Live Futures Charts at 6/6 returnable symbols with Provider Run `success`.
+
 ## 2026-06-02
 
 - Started after user approval to implement the researched Futures Monitor direction.

@@ -378,6 +378,15 @@ def _download_prices(symbols: Sequence[str], *, period: str, interval: str) -> p
     )
 
 
+def _fallback_period_for_empty_intraday_symbols(period: str, interval: str) -> str | None:
+    """Return the bounded second-pass period for Yahoo futures intraday blanks."""
+    if str(period or "").strip().lower() != "1d":
+        return None
+    if str(interval or "").strip().lower() != "1m":
+        return None
+    return "2d"
+
+
 def collect_and_store_futures_ohlcv(
     symbols: str | Iterable[Any] | None = None,
     *,
@@ -477,6 +486,47 @@ def collect_and_store_futures_ohlcv(
         if sleep_sec and offset + len(batch) < len(normalized_symbols):
             sleep(max(0.0, float(sleep_sec)))
 
+    fallback_retries: list[dict[str, Any]] = []
+    fallback_period = _fallback_period_for_empty_intraday_symbols(normalized_period, normalized_interval)
+    failed_unique = [symbol for symbol in normalized_symbols if symbol in set(failed_symbols)]
+    if fallback_period and failed_unique:
+        recovered_symbols: set[str] = set()
+        for offset in range(0, len(failed_unique), max(1, int(batch_size or 1))):
+            batch = failed_unique[offset : offset + max(1, int(batch_size or 1))]
+            batch_started = _utc_now()
+            frame = price_downloader(batch, period=fallback_period, interval=normalized_interval)
+            batch_rows = 0
+            batch_recovered: list[str] = []
+            batch_failed: list[str] = []
+            for symbol in batch:
+                rows = _normalize_ohlcv_rows(
+                    frame,
+                    symbol=symbol,
+                    interval=normalized_interval,
+                    collected_at=collected_at,
+                )
+                if rows:
+                    recovered_symbols.add(symbol)
+                    batch_recovered.append(symbol)
+                    batch_rows += len(rows)
+                    all_rows.extend(rows)
+                else:
+                    batch_failed.append(symbol)
+            fallback_retries.append(
+                {
+                    "period": fallback_period,
+                    "interval": normalized_interval,
+                    "symbols": batch,
+                    "recovered_symbols": batch_recovered,
+                    "failed_symbols": batch_failed,
+                    "rows": batch_rows,
+                    "duration_sec": round((_utc_now() - batch_started).total_seconds(), 3),
+                }
+            )
+            if sleep_sec and offset + len(batch) < len(failed_unique):
+                sleep(max(0.0, float(sleep_sec)))
+        failed_symbols = [symbol for symbol in failed_unique if symbol not in recovered_symbols]
+
     rows_written = upsert_futures_ohlcv_rows(
         all_rows,
         host=host,
@@ -497,6 +547,7 @@ def collect_and_store_futures_ohlcv(
     )
     diagnostics = {
         "batches": batches,
+        "fallback_retries": fallback_retries,
         "default_source": "yfinance pilot source; not exchange-grade realtime",
     }
     upsert_futures_monitor_run(

@@ -1,5 +1,39 @@
 # Futures Market Monitoring MVP V1 Runs
 
+## 2026-06-03 Live Futures Charts Missing Fix
+
+- Reproduction on `http://localhost:8501`:
+  - Result: `Overview > Futures Monitor > Live Futures Charts` showed `3/6 symbols`, with `NQ=F`, `6E=F`, and `6J=F` missing after latest yfinance 1d / 1m runs.
+- DB evidence:
+  - `futures_ohlcv` had older rows for the missing symbols but `rows_in_6h=0`.
+  - Recent `futures_market_monitor_run` rows had `partial_success` and `failed_symbols_json=["6E=F", "6J=F", "NQ=F"]`.
+- Provider evidence:
+  - yfinance `period=1d`, `interval=1m` returned empty rows for `NQ=F`, `6E=F`, `6J=F`.
+  - yfinance `period=2d`, `interval=1m` returned current rows for the same symbols.
+- TDD:
+  - `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests.test_futures_collector_recovers_empty_1d_intraday_symbols_with_2d_retry`
+  - Result before implementation: FAIL, missing second downloader call.
+  - Result after implementation: PASS.
+- Focused contracts:
+  - `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests`
+  - Result: PASS, 5 tests.
+- Compile / full contracts / boundary:
+  - `uv run python -m py_compile finance/data/futures_market.py app/jobs/ingestion_jobs.py app/services/futures_market_monitoring.py app/web/overview_dashboard.py`
+  - Result: PASS.
+  - `uv run python -m unittest tests.test_service_contracts`
+  - Result: PASS, 244 tests. Streamlit cache and `edgar` deprecation warnings were emitted by dependencies.
+  - `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
+  - Result: PASS, hard violations none.
+  - `git diff --check`
+  - Result: PASS.
+- Runtime refresh:
+  - `run_collect_futures_ohlcv(["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"], period="1d", interval="1m", cadence_mode="manual_fix_after_restart", max_symbols=6, batch_size=6, sleep_sec=0)`
+  - Result: `status=success`, `rows_written=3973`, `symbols_processed=6`, `failed_symbols=[]`, fallback recovered `NQ=F`, `6E=F`, `6J=F`.
+- Browser QA:
+  - Restarted Streamlit on port 8501 because the existing process had `--server.runOnSave false`.
+  - Verified `Live Futures Charts` shows `6/6 symbols`, Provider Run `success`, no missing warning, and a stale warning only because yfinance latest candles were 11-21 minutes old.
+  - Screenshot: `.playwright-mcp/futures-monitor-live-charts-fixed-20260603.jpg` (generated artifact, not for commit).
+
 ## 2026-06-02
 
 - `uv run python -m py_compile finance/data/futures_market.py finance/data/db/schema.py app/jobs/ingestion_jobs.py app/jobs/run_history.py app/services/futures_market_monitoring.py app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/streamlit_app.py`

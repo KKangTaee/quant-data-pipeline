@@ -185,6 +185,7 @@ yfinance futures OHLCV
 - 1차 source는 Yahoo/yfinance provider symbol 기반의 pilot feed다.
 - 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다.
 - 정상 화면 render는 DB row를 읽고, 수집은 Overview refresh button 또는 Ingestion job wrapper가 실행한다.
+- yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패와 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
 
