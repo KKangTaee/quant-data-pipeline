@@ -5128,7 +5128,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             rank_source="Volume Rank",
         )
 
-        self.assertEqual(len(rows), 4)
+        self.assertEqual(len(rows), 6)
         self.assertEqual(rows.iloc[0]["Source"], "Yahoo Finance")
         self.assertEqual(rows.iloc[0]["URL"], "https://finance.yahoo.com/quote/AAA")
         self.assertIn("AAA", rows.iloc[1]["Search Query"])
@@ -5141,6 +5141,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("sec.gov/edgar/search", rows.iloc[2]["URL"])
         self.assertIn("Investor Relations", rows.iloc[3]["Source"])
         self.assertIn("www.google.com/search", rows.iloc[3]["URL"])
+        self.assertEqual(rows.iloc[4]["Source"], "Google News KR")
+        self.assertIn("뉴스", rows.iloc[4]["Search Query"])
+        self.assertIn("hl=ko", rows.iloc[4]["URL"])
+        self.assertIn("ceid=KR%3Ako", rows.iloc[4]["URL"])
+        self.assertEqual(rows.iloc[5]["Source"], "Naver News")
+        self.assertIn("주가", rows.iloc[5]["Search Query"])
+        self.assertIn("search.naver.com/search.naver", rows.iloc[5]["URL"])
 
     def test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata(self) -> None:
         from app.services.overview_market_intelligence import build_market_mover_why_it_moved_read_model
@@ -5175,8 +5182,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["movement"]["Return %"], 12.34)
         self.assertEqual(model["movement"]["Momentum Delta pp"], 9.13)
         self.assertEqual(model["metadata"]["status"], "NOT_REQUESTED")
-        self.assertEqual(len(model["links"]), 4)
+        self.assertEqual(len(model["links"]), 6)
         self.assertEqual(model["links"].iloc[0]["Source"], "Yahoo Finance")
+        self.assertIn("Google News KR", set(model["links"]["Source"]))
+        self.assertIn("Naver News", set(model["links"]["Source"]))
 
     def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
         from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
@@ -5293,6 +5302,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(candidates[0]["mover"]["Sector"], "Technology")
         self.assertEqual(candidates[0]["mover"]["Return %"], 12.34)
         self.assertEqual(candidates[0]["mover"]["Momentum Delta pp"], 9.13)
+
+    def test_market_mover_metadata_tables_configure_url_as_clickable_link(self) -> None:
+        from app.web.overview_dashboard import _market_mover_metadata_column_config
+
+        config = _market_mover_metadata_column_config()
+
+        self.assertIn("URL", config)
+        self.assertEqual(config["URL"]["type_config"]["type"], "link")
+        self.assertEqual(config["URL"]["type_config"]["display_text"], "Open")
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot

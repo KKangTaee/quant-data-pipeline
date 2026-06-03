@@ -2441,14 +2441,18 @@ def _market_mover_link_context(
     }
 
 
-def _google_news_url(query: str) -> str:
+def _google_news_url(query: str, *, hl: str = "en-US", gl: str = "US", ceid: str = "US:en") -> str:
     return "https://news.google.com/search?" + urlencode(
-        {"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"}
+        {"q": query, "hl": hl, "gl": gl, "ceid": ceid}
     )
 
 
 def _google_search_url(query: str) -> str:
     return "https://www.google.com/search?" + urlencode({"q": query})
+
+
+def _naver_news_url(query: str) -> str:
+    return "https://search.naver.com/search.naver?" + urlencode({"where": "news", "query": query})
 
 
 def build_market_mover_catalyst_links(
@@ -2479,6 +2483,7 @@ def build_market_mover_catalyst_links(
     news_query = f"{base_query} stock news catalyst earnings guidance"
     sec_query = f"{base_query} SEC filings 8-K 10-Q 10-K earnings"
     ir_query = f"{base_query} investor relations earnings results press release"
+    korean_news_query = f"{normalized_symbol} {context['name']} 주가 뉴스 실적 공시 급등 급락"
     rows = [
         {
             "Source": "Yahoo Finance",
@@ -2527,6 +2532,30 @@ def build_market_mover_catalyst_links(
             "Search Query": ir_query,
             "Purpose": "Company IR, earnings release, and presentation discovery.",
             "URL": _google_search_url(ir_query),
+        },
+        {
+            "Source": "Google News KR",
+            "Symbol": normalized_symbol,
+            "Name": context["name"],
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+            "Search Query": korean_news_query,
+            "Purpose": "Korean-language Google News search for manual catalyst review.",
+            "URL": _google_news_url(korean_news_query, hl="ko", gl="KR", ceid="KR:ko"),
+        },
+        {
+            "Source": "Naver News",
+            "Symbol": normalized_symbol,
+            "Name": context["name"],
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+            "Search Query": korean_news_query,
+            "Purpose": "Naver News search for Korean-language manual catalyst review.",
+            "URL": _naver_news_url(korean_news_query),
         },
     ]
     return _rows_frame(rows, columns=CATALYST_LINK_COLUMNS)

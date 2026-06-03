@@ -3459,6 +3459,10 @@ def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFr
     return candidates
 
 
+def _market_mover_metadata_column_config() -> dict[str, Any]:
+    return {"URL": st.column_config.LinkColumn("URL", display_text="Open")}
+
+
 def _render_market_mover_metadata_result(metadata: dict[str, Any]) -> None:
     status = str(metadata.get("status") or "NOT_REQUESTED")
     messages = [str(message) for message in metadata.get("messages") or [] if str(message).strip()]
@@ -3480,14 +3484,15 @@ def _render_market_mover_metadata_result(metadata: dict[str, Any]) -> None:
     news = metadata.get("news")
     sec_filings = metadata.get("sec_filings")
     news_tab, sec_tab = st.tabs(["News Metadata", "SEC Filing Metadata"])
+    column_config = _market_mover_metadata_column_config()
     with news_tab:
         if isinstance(news, pd.DataFrame) and not news.empty:
-            st.dataframe(news, width="stretch", hide_index=True)
+            st.dataframe(news, width="stretch", hide_index=True, column_config=column_config)
         else:
             st.info("No compact news metadata to display.")
     with sec_tab:
         if isinstance(sec_filings, pd.DataFrame) and not sec_filings.empty:
-            st.dataframe(sec_filings, width="stretch", hide_index=True)
+            st.dataframe(sec_filings, width="stretch", hide_index=True, column_config=column_config)
         else:
             st.info("No compact SEC filing metadata to display.")
 
