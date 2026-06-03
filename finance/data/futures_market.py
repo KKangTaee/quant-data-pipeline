@@ -20,6 +20,7 @@ FUTURES_SOURCE = "yfinance"
 DEFAULT_FUTURES_PERIOD = "1d"
 DEFAULT_FUTURES_INTERVAL = "1m"
 VALID_FUTURES_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d"}
+MIN_1D_INTRADAY_ROWS_BEFORE_FALLBACK = 120
 
 DEFAULT_FUTURES_INSTRUMENTS: tuple[dict[str, Any], ...] = (
     {"provider_symbol": "ES=F", "display_name": "E-mini S&P 500", "futures_group": "Equity Index", "exchange": "CME", "contract_hint": "S&P 500 index futures", "sort_order": 10},
@@ -378,8 +379,8 @@ def _download_prices(symbols: Sequence[str], *, period: str, interval: str) -> p
     )
 
 
-def _fallback_period_for_empty_intraday_symbols(period: str, interval: str) -> str | None:
-    """Return the bounded second-pass period for Yahoo futures intraday blanks."""
+def _fallback_period_for_intraday_coverage(period: str, interval: str) -> str | None:
+    """Return the bounded second-pass period for Yahoo futures intraday gaps."""
     if str(period or "").strip().lower() != "1d":
         return None
     if str(interval or "").strip().lower() != "1m":
@@ -459,6 +460,8 @@ def collect_and_store_futures_ohlcv(
     price_downloader = downloader or _download_prices
     all_rows: list[dict[str, Any]] = []
     failed_symbols: list[str] = []
+    sparse_symbols: list[str] = []
+    initial_rows_by_symbol: dict[str, int] = {}
     batches: list[dict[str, Any]] = []
     for offset in range(0, len(normalized_symbols), max(1, int(batch_size or 1))):
         batch = normalized_symbols[offset : offset + max(1, int(batch_size or 1))]
@@ -472,8 +475,14 @@ def collect_and_store_futures_ohlcv(
                 interval=normalized_interval,
                 collected_at=collected_at,
             )
+            initial_rows_by_symbol[symbol] = len(rows)
             if not rows:
                 failed_symbols.append(symbol)
+            elif (
+                _fallback_period_for_intraday_coverage(normalized_period, normalized_interval)
+                and len(rows) < MIN_1D_INTRADAY_ROWS_BEFORE_FALLBACK
+            ):
+                sparse_symbols.append(symbol)
             batch_rows += len(rows)
             all_rows.extend(rows)
         batches.append(
@@ -487,12 +496,17 @@ def collect_and_store_futures_ohlcv(
             sleep(max(0.0, float(sleep_sec)))
 
     fallback_retries: list[dict[str, Any]] = []
-    fallback_period = _fallback_period_for_empty_intraday_symbols(normalized_period, normalized_interval)
-    failed_unique = [symbol for symbol in normalized_symbols if symbol in set(failed_symbols)]
-    if fallback_period and failed_unique:
+    fallback_period = _fallback_period_for_intraday_coverage(normalized_period, normalized_interval)
+    fallback_candidates = [
+        symbol
+        for symbol in normalized_symbols
+        if symbol in set(failed_symbols) or symbol in set(sparse_symbols)
+    ]
+    if fallback_period and fallback_candidates:
         recovered_symbols: set[str] = set()
-        for offset in range(0, len(failed_unique), max(1, int(batch_size or 1))):
-            batch = failed_unique[offset : offset + max(1, int(batch_size or 1))]
+        fallback_rows_by_symbol: dict[str, list[dict[str, Any]]] = {}
+        for offset in range(0, len(fallback_candidates), max(1, int(batch_size or 1))):
+            batch = fallback_candidates[offset : offset + max(1, int(batch_size or 1))]
             batch_started = _utc_now()
             frame = price_downloader(batch, period=fallback_period, interval=normalized_interval)
             batch_rows = 0
@@ -509,23 +523,42 @@ def collect_and_store_futures_ohlcv(
                     recovered_symbols.add(symbol)
                     batch_recovered.append(symbol)
                     batch_rows += len(rows)
-                    all_rows.extend(rows)
+                    fallback_rows_by_symbol[symbol] = rows
                 else:
                     batch_failed.append(symbol)
+            reason = (
+                "sparse_1d_intraday_rows"
+                if any(initial_rows_by_symbol.get(symbol, 0) > 0 for symbol in batch)
+                else "empty_1d_intraday_rows"
+            )
             fallback_retries.append(
                 {
                     "period": fallback_period,
                     "interval": normalized_interval,
+                    "reason": reason,
                     "symbols": batch,
                     "recovered_symbols": batch_recovered,
                     "failed_symbols": batch_failed,
+                    "initial_rows_by_symbol": {
+                        symbol: initial_rows_by_symbol.get(symbol, 0)
+                        for symbol in batch
+                    },
                     "rows": batch_rows,
                     "duration_sec": round((_utc_now() - batch_started).total_seconds(), 3),
                 }
             )
-            if sleep_sec and offset + len(batch) < len(failed_unique):
+            if sleep_sec and offset + len(batch) < len(fallback_candidates):
                 sleep(max(0.0, float(sleep_sec)))
-        failed_symbols = [symbol for symbol in failed_unique if symbol not in recovered_symbols]
+        if recovered_symbols:
+            all_rows = [
+                row
+                for row in all_rows
+                if str(row.get("provider_symbol") or "").upper() not in recovered_symbols
+            ]
+            for symbol in normalized_symbols:
+                if symbol in fallback_rows_by_symbol:
+                    all_rows.extend(fallback_rows_by_symbol[symbol])
+        failed_symbols = [symbol for symbol in failed_symbols if symbol not in recovered_symbols]
 
     rows_written = upsert_futures_ohlcv_rows(
         all_rows,

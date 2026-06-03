@@ -34,6 +34,39 @@
   - Verified `Live Futures Charts` shows `6/6 symbols`, Provider Run `success`, no missing warning, and a stale warning only because yfinance latest candles were 11-21 minutes old.
   - Screenshot: `.playwright-mcp/futures-monitor-live-charts-fixed-20260603.jpg` (generated artifact, not for commit).
 
+## 2026-06-03 Sparse 1d Intraday Follow-up
+
+- Reproduction:
+  - User screenshot showed `ZN=F`, `CL=F`, and `GC=F` as technically present but visually wrong: only one or two recent candles in the 6H chart window.
+- Provider evidence:
+  - yfinance `period=1d`, `interval=1m` returned non-empty but sparse frames for the affected futures symbols.
+  - yfinance `period=2d`, `interval=1m` returned dense rows for the same symbols in the current 6H window.
+- TDD:
+  - `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests.test_futures_collector_recovers_sparse_1d_intraday_symbols_with_2d_retry`
+  - Result before implementation: FAIL, missing second downloader call.
+  - Result after implementation: PASS.
+- Focused contracts:
+  - `uv run python -m unittest tests.test_service_contracts.FuturesMarketMonitoringContractTests`
+  - Result: PASS, 6 tests.
+- Compile / full contracts / boundary:
+  - `uv run python -m py_compile finance/data/futures_market.py app/jobs/ingestion_jobs.py app/services/futures_market_monitoring.py app/web/overview_dashboard.py`
+  - Result: PASS.
+  - `uv run python -m unittest tests.test_service_contracts`
+  - Result: PASS, 245 tests. Streamlit cache and `edgar` deprecation warnings were emitted by dependencies.
+  - `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
+  - Result: PASS, hard violations none.
+  - `git diff --check`
+  - Result: PASS.
+- Runtime refresh:
+  - `run_collect_futures_ohlcv(["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"], period="1d", interval="1m", cadence_mode="manual_sparse_fix", max_symbols=6, batch_size=6, sleep_sec=0)`
+  - Result: `status=success`, `rows_written=8103`, `symbols_processed=6`, `failed_symbols=[]`, fallback reason `sparse_1d_intraday_rows`.
+  - Initial 1d row counts were sparse: `NQ=F=23`, `ZN=F=13`, `CL=F=32`, `6E=F=15`, `GC=F=33`, `6J=F=20`.
+  - DB 6H row check after refresh: `NQ=F=339`, `ZN=F=273`, `CL=F=346`, `6E=F=310`, `GC=F=349`, `6J=F=303`.
+- Browser QA:
+  - Restarted Streamlit on port 8501 after the code change.
+  - Verified `Live Futures Charts` shows `6/6 symbols`, Provider Run `success`, and dense 3x2 candlestick cards for `ZN=F`, `CL=F`, and `GC=F`.
+  - Screenshot: `.playwright-mcp/futures-monitor-chart-cards-sparse-fallback-fixed-20260603.png` (generated artifact, not for commit).
+
 ## 2026-06-02
 
 - `uv run python -m py_compile finance/data/futures_market.py finance/data/db/schema.py app/jobs/ingestion_jobs.py app/jobs/run_history.py app/services/futures_market_monitoring.py app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/streamlit_app.py`

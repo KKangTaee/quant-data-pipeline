@@ -6,6 +6,8 @@
 - Root cause: Yahoo/yfinance returned no 1d intraday rows for some futures while `period=2d`, `interval=1m` returned the latest candles for the same symbols.
 - `finance/data/futures_market.py` now retries only empty 1d / 1m futures symbols once with 2d / 1m, removes recovered symbols from failed coverage, and records `fallback_retries` in run diagnostics.
 - Restarted the 8501 Streamlit server so the running app loaded the new collector; refreshed the current Pre-open Core set and verified Live Futures Charts at 6/6 returnable symbols with Provider Run `success`.
+- Follow-up sparse fix: yfinance later returned non-empty but extremely short `1d / 1m` frames for rates, crude, gold, and FX symbols. The collector now treats 1d / 1m symbols with fewer than 120 normalized rows as sparse, retries them once with 2d / 1m, replaces the sparse initial rows when fallback recovers, and records initial row counts in `fallback_retries`.
+- Refreshed `NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F` after the sparse fix; DB 6h coverage recovered to dense rows for all six symbols and Browser QA on port 8501 verified the Live Futures Charts 3x2 grid.
 
 ## 2026-06-02
 

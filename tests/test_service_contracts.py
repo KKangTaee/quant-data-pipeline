@@ -5658,15 +5658,15 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
     def test_futures_collector_normalizes_yfinance_frame_and_records_run(self) -> None:
         from finance.data import futures_market as fm
 
-        idx = pd.date_range("2026-06-02 00:00:00", periods=2, freq="min", tz=timezone.utc)
+        idx = pd.date_range("2026-06-02 00:00:00", periods=120, freq="min", tz=timezone.utc)
         frame = pd.DataFrame(
             {
-                ("Open", "ES=F"): [100.0, 101.0],
-                ("High", "ES=F"): [101.0, 102.0],
-                ("Low", "ES=F"): [99.0, 100.0],
-                ("Close", "ES=F"): [100.5, 101.5],
-                ("Adj Close", "ES=F"): [100.5, 101.5],
-                ("Volume", "ES=F"): [1000, 1100],
+                ("Open", "ES=F"): [100.0 + idx * 0.01 for idx in range(120)],
+                ("High", "ES=F"): [101.0 + idx * 0.01 for idx in range(120)],
+                ("Low", "ES=F"): [99.0 + idx * 0.01 for idx in range(120)],
+                ("Close", "ES=F"): [100.5 + idx * 0.01 for idx in range(120)],
+                ("Adj Close", "ES=F"): [100.5 + idx * 0.01 for idx in range(120)],
+                ("Volume", "ES=F"): [1000 + idx for idx in range(120)],
             },
             index=idx,
         )
@@ -5705,32 +5705,32 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["rows_written"], 120)
         self.assertEqual(result["symbols_processed"], 1)
         self.assertEqual(written_rows[0]["provider_symbol"], "ES=F")
         self.assertEqual(written_rows[0]["interval_code"], "1m")
         self.assertEqual(written_rows[0]["provider_status"], "ok")
         self.assertEqual(run_rows[0]["status"], "success")
-        self.assertEqual(run_rows[0]["latest_candle_time_utc"], "2026-06-02 00:01:00")
+        self.assertEqual(run_rows[0]["latest_candle_time_utc"], "2026-06-02 01:59:00")
 
     def test_futures_collector_recovers_empty_1d_intraday_symbols_with_2d_retry(self) -> None:
         from finance.data import futures_market as fm
 
-        one_day_idx = pd.date_range("2026-06-03 04:00:00", periods=2, freq="min", tz=timezone.utc)
+        one_day_idx = pd.date_range("2026-06-03 04:00:00", periods=120, freq="min", tz=timezone.utc)
         one_day_frame = pd.DataFrame(
             {
-                ("Open", "NQ=F"): [None, None],
-                ("High", "NQ=F"): [None, None],
-                ("Low", "NQ=F"): [None, None],
-                ("Close", "NQ=F"): [None, None],
-                ("Adj Close", "NQ=F"): [None, None],
-                ("Volume", "NQ=F"): [None, None],
-                ("Open", "ZN=F"): [110.0, 110.1],
-                ("High", "ZN=F"): [110.2, 110.3],
-                ("Low", "ZN=F"): [109.9, 110.0],
-                ("Close", "ZN=F"): [110.1, 110.2],
-                ("Adj Close", "ZN=F"): [110.1, 110.2],
-                ("Volume", "ZN=F"): [100, 120],
+                ("Open", "NQ=F"): [None] * 120,
+                ("High", "NQ=F"): [None] * 120,
+                ("Low", "NQ=F"): [None] * 120,
+                ("Close", "NQ=F"): [None] * 120,
+                ("Adj Close", "NQ=F"): [None] * 120,
+                ("Volume", "NQ=F"): [None] * 120,
+                ("Open", "ZN=F"): [110.0 + idx * 0.01 for idx in range(120)],
+                ("High", "ZN=F"): [110.2 + idx * 0.01 for idx in range(120)],
+                ("Low", "ZN=F"): [109.9 + idx * 0.01 for idx in range(120)],
+                ("Close", "ZN=F"): [110.1 + idx * 0.01 for idx in range(120)],
+                ("Adj Close", "ZN=F"): [110.1 + idx * 0.01 for idx in range(120)],
+                ("Volume", "ZN=F"): [100 + idx for idx in range(120)],
             },
             index=one_day_idx,
         )
@@ -5784,13 +5784,88 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
 
         self.assertEqual(calls, [(("NQ=F", "ZN=F"), "1d", "1m"), (("NQ=F",), "2d", "1m")])
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["rows_written"], 4)
+        self.assertEqual(result["rows_written"], 122)
         self.assertEqual(result["symbols_processed"], 2)
         self.assertEqual(result["failed_symbols"], [])
         self.assertEqual({row["provider_symbol"] for row in written_rows}, {"NQ=F", "ZN=F"})
         self.assertEqual(run_rows[0]["status"], "success")
         self.assertEqual(run_rows[0]["failed_symbols_json"], [])
         self.assertEqual(run_rows[0]["diagnostics_json"]["fallback_retries"][0]["period"], "2d")
+
+    def test_futures_collector_recovers_sparse_1d_intraday_symbols_with_2d_retry(self) -> None:
+        from finance.data import futures_market as fm
+
+        sparse_idx = pd.date_range("2026-06-03 04:00:00", periods=24, freq="min", tz=timezone.utc)
+        full_idx = pd.date_range("2026-06-02 22:35:00", periods=180, freq="min", tz=timezone.utc)
+        one_day_frame = pd.DataFrame(
+            {
+                ("Open", "CL=F"): [94.0 + idx * 0.01 for idx in range(24)],
+                ("High", "CL=F"): [94.1 + idx * 0.01 for idx in range(24)],
+                ("Low", "CL=F"): [93.9 + idx * 0.01 for idx in range(24)],
+                ("Close", "CL=F"): [94.05 + idx * 0.01 for idx in range(24)],
+                ("Adj Close", "CL=F"): [94.05 + idx * 0.01 for idx in range(24)],
+                ("Volume", "CL=F"): [10 + idx for idx in range(24)],
+            },
+            index=sparse_idx,
+        )
+        two_day_frame = pd.DataFrame(
+            {
+                ("Open", "CL=F"): [93.0 + idx * 0.01 for idx in range(180)],
+                ("High", "CL=F"): [93.1 + idx * 0.01 for idx in range(180)],
+                ("Low", "CL=F"): [92.9 + idx * 0.01 for idx in range(180)],
+                ("Close", "CL=F"): [93.05 + idx * 0.01 for idx in range(180)],
+                ("Adj Close", "CL=F"): [93.05 + idx * 0.01 for idx in range(180)],
+                ("Volume", "CL=F"): [100 + idx for idx in range(180)],
+            },
+            index=full_idx,
+        )
+        calls: list[tuple[tuple[str, ...], str, str]] = []
+        written_rows: list[dict[str, object]] = []
+        run_rows: list[dict[str, object]] = []
+
+        def downloader(symbols, *, period, interval):
+            calls.append((tuple(symbols), period, interval))
+            if period == "1d":
+                return one_day_frame
+            if period == "2d":
+                return two_day_frame
+            return pd.DataFrame()
+
+        def capture_ohlcv(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        def capture_run(row, **kwargs):
+            del kwargs
+            run_rows.append(row)
+            return 1
+
+        with (
+            patch.object(fm, "sync_futures_market_tables", return_value=None),
+            patch.object(fm, "upsert_futures_instruments", return_value=1),
+            patch.object(fm, "upsert_futures_ohlcv_rows", side_effect=capture_ohlcv),
+            patch.object(fm, "upsert_futures_monitor_run", side_effect=capture_run),
+        ):
+            result = fm.collect_and_store_futures_ohlcv(
+                ["CL=F"],
+                period="1d",
+                interval="1m",
+                downloader=downloader,
+                sleep_sec=0,
+            )
+
+        self.assertEqual(calls, [(("CL=F",), "1d", "1m"), (("CL=F",), "2d", "1m")])
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 180)
+        self.assertEqual(result["failed_symbols"], [])
+        self.assertEqual(len(written_rows), 180)
+        self.assertEqual(written_rows[0]["candle_time_utc"], "2026-06-02 22:35:00")
+        retry = run_rows[0]["diagnostics_json"]["fallback_retries"][0]
+        self.assertEqual(retry["symbols"], ["CL=F"])
+        self.assertEqual(retry["recovered_symbols"], ["CL=F"])
+        self.assertEqual(retry["reason"], "sparse_1d_intraday_rows")
+        self.assertEqual(retry["initial_rows_by_symbol"], {"CL=F": 24})
 
     def test_ingestion_job_wraps_futures_collection_summary(self) -> None:
         from app.jobs import ingestion_jobs as jobs

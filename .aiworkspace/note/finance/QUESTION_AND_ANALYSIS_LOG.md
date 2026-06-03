@@ -7207,3 +7207,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Backtest Analysis 안에서 S&P 500 constituent 기반 daily swing research run을 선택할 수 있어야 하며, Top1000과 혼동되는 market-cap Top500 fallback은 피해야 함.
 - Analysis result: 기존 `load_market_cap_universe_members("SP500")` 경로가 S&P 500 membership row를 읽고 있으므로 새 수집기 없이 runtime resolver와 Single Strategy form에 `sp500` mode를 추가하면 된다.
 - Follow-up: `snp500` 입력 alias도 `SP500`으로 해석한다. 멤버십 row가 없으면 S&P 500 universe refresh 필요 오류를 낸다.
+
+### 2026-06-03 - Futures Monitor chart가 sparse하게 보이는 원인을 보정한다
+
+- User request: `Overview > Futures Monitor > Live Futures Charts`에서 금리(`ZN=F`), 원유(`CL=F`), 금(`GC=F`) 선물 차트가 잘못 나오는 이유를 물었고, 원인 설명 후 수정을 승인함.
+- Interpreted goal: 차트 렌더 문제가 아니라 provider / DB coverage 문제인지 검증하고, 1d / 1m 응답이 너무 적어 6H chart가 왜곡되는 경우도 collector에서 복구해야 함.
+- Analysis result: yfinance `period=1d`, `interval=1m`은 해당 symbols에 대해 13-33개 row만 반환했지만 `period=2d`, `interval=1m`은 같은 시간대의 dense rows를 반환했다.
+- Follow-up: collector가 empty뿐 아니라 sparse 1d / 1m symbols도 한 번 `2d / 1m`으로 보강 수집하고 recovered sparse rows를 대체하도록 수정했다. 상세 검증은 `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/RUNS.md`에 남겼다.

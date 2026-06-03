@@ -4621,6 +4621,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - V2.2 후속으로 Macro Context를 상단 full-width로 올리고, Live Futures Charts를 하단 3x2 grid로 바꾸며, 중복 `Selected Detail` 차트를 제거했다.
   - V2.3 후속으로 `Focus` control을 제거하고, `Symbols`가 3x2 grid 순서를 직접 결정하도록 정리했다. `Chart` hourly option은 `1h` 대신 `60m`로 표시한다.
   - V2.4 후속으로 Macro Context daily refresh와 Live Futures Charts auto refresh를 별도 Streamlit fragment로 분리했다. Live provider run summary는 `1m` run만 읽도록 필터링했다.
+- Futures Monitor yfinance intraday fallback:
+  - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에서 yfinance `1d / 1m` futures 응답이 빈 frame이거나 지나치게 희소할 때 해당 symbol만 `2d / 1m`으로 한 번 보강 수집하도록 수정했다.
+  - `ZN=F`, `CL=F`, `GC=F`처럼 몇 개 candle만 그려지는 문제는 provider가 sparse 1d intraday rows를 반환한 것이 원인이었고, fallback 성공 시 초기 sparse rows를 대체한다.
+  - 8501 Browser QA에서 `Live Futures Charts` 6/6 symbol, Provider Run `success`, dense 3x2 chart grid를 확인했다.
 - Risk-On Momentum 5D V1:
   - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`에서 Top1000 기본 short-term stock swing strategy를 구현했다.
   - Core는 `finance/swing.py`, daily swing features는 `finance/transform.py`, futures daily loader는 `finance/loaders/futures.py`, DB wrapper / artifact writer는 `app/runtime/backtest.py`가 맡는다.
