@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-03
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Last Verified: 2026-06-02
 Backtest > Backtest Analysis
   -> Backtest > Practical Validation
   -> Backtest > Final Review
-  -> Operations > Selected Portfolio Dashboard
+  -> Operations > Portfolio Monitoring
 ```
 
 | Step | Screen | What It Does | Durable Record |
@@ -23,7 +23,7 @@ Backtest > Backtest Analysis
 | 1 | Backtest Analysis | 단일 전략 실행 또는 Portfolio Mix Builder로 weighted mix 후보를 만들고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
 | 2 | Practical Validation | 선택된 source를 source traits 기반 module gate, selected-route preflight, practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
 | 3 | Final Review | Decision Desk command center로 오늘의 판단 상태를 먼저 보고, Candidate Board의 review priority / first-review candidate와 Decision Cockpit으로 selection-readiness 상태를 확인한다. `selection_gate_policy_snapshot`이 통과한 후보만 Selected Dashboard 모니터링 후보로 저장하며, 보류 / 거절 / 재검토는 저장 action이 아니라 상태 안내로 표시한다. `REVIEW` 항목은 기본적으로 `open_review_items`로 이어서 추적하고, 더 엄격한 live 투입 감사 성격의 판정은 `deployment_readiness_policy_snapshot`으로 보존한다. 저장된 선정 기록은 Saved Decision Review ledger와 Selected Dashboard handoff로 다시 읽고 상세 Practical Validation evidence는 Appendix에서 read-only로 확인한다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` |
-| 4 | Selected Portfolio Dashboard | 사용자가 만든 나의 모니터링 포트폴리오 fixed-height card shelf에서 portfolio를 선택하고, 선택된 portfolio command band 아래에서 Final Review selected 후보를 compact strategy slot board로 담아 start / latest-end mode / balance / memo를 적용한다. 그 다음 portfolio-wide `포트폴리오 시나리오 업데이트`로 pending / stale strategy scenario만 기본 실행하고, 필요 시 `전체 재실행`으로 full refresh한다. Portfolio-level 현재 가치, 손익, 수익률, CAGR, MDD, benchmark 비교, 전략별 성과, 리밸런싱 target을 먼저 확인하고, strategy별 recheck readiness / provider / open issue / deployment evidence는 사용자가 선택한 1개 전략 상세를 열 때만 본다 | `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` for dashboard portfolio setup; scenario result는 session state; 사용자가 명시적으로 저장할 때만 monitoring log |
+| 4 | Operations > Portfolio Monitoring | 기존 Selected Portfolio Dashboard route다. 사용자가 만든 나의 모니터링 포트폴리오 fixed-height card shelf에서 portfolio를 선택하고, 선택된 portfolio command band 아래에서 Final Review selected 후보를 compact strategy slot board로 담아 start / latest-end mode / balance / memo를 적용한다. 그 다음 portfolio-wide `포트폴리오 시나리오 업데이트`로 pending / stale strategy scenario만 기본 실행하고, 필요 시 `전체 재실행`으로 full refresh한다. Portfolio-level 현재 가치, 손익, 수익률, CAGR, MDD, benchmark 비교, 전략별 성과, 리밸런싱 target을 먼저 확인하고, strategy별 recheck readiness / provider / open issue / deployment evidence는 사용자가 선택한 1개 전략 상세를 열 때만 본다 | `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` for dashboard portfolio setup; scenario result는 session state; 사용자가 명시적으로 저장할 때만 monitoring log |
 
 ## Stage Ownership
 
@@ -32,7 +32,7 @@ Backtest > Backtest Analysis
 | Backtest Analysis | 단일 후보 생성, Portfolio Mix 후보 생성, saved mix replay, 1차 후보 readiness, Practical Validation handoff gate | 최종 판단, 별도 후보 간 read-only 비교, 후속 monitoring / deployment 판단 |
 | Practical Validation | Final Review로 넘길 검증 근거 생성, source strategy / construction 확인, source traits 기반 module gate, selected-route preflight, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모, full holdings 원장 저장 |
 | Final Review | Gate-passed 후보 비교, Decision Desk command center / flow rail, Candidate Board review priority / queue, Decision Cockpit에서 모니터링 후보 가능 / 보류 / 재검토 / 거절 상태 안내, Decision Record Checklist와 선정 문안으로 모니터링 후보 저장 가능 여부 확인, Saved Decision Review ledger로 저장된 선정 기록 재확인, Selected Dashboard handoff로 dashboard 대상 row / monitorable / blocked 상태 확인, Evidence Appendix에서 investability evidence packet / construction risk / risk contribution / component role weight / validation efficacy / data coverage / backtest realism 근거 read-only 확인, selection-readiness gate, open review item handoff, deployment readiness policy snapshot 보존, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 비선정 판단 저장, 실제 자금 투입 승인, broker order, account sync, 자동 report 파일 생성, dashboard monitoring 자동 저장 |
-| Selected Portfolio Dashboard | 사용자 dashboard portfolio 생성 / 선택 / soft delete, Final Review selected 후보 pool에서 strategy slot 추가 / 설정 적용 / 제거, 명시적 scenario update와 portfolio-level 성과 재확인, strategy별 리밸런싱 target 표시, 선택한 1개 전략의 lazy detail에서 Final Review -> dashboard continuity check / read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison / optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교 | broker order, live approval, account / broker sync, auto rebalance |
+| Operations > Portfolio Monitoring | 사용자 dashboard portfolio 생성 / 선택 / soft delete, Final Review selected 후보 pool에서 strategy slot 추가 / 설정 적용 / 제거, 명시적 scenario update와 portfolio-level 성과 재확인, strategy별 리밸런싱 target 표시, 선택한 1개 전략의 lazy detail에서 Final Review -> dashboard continuity check / read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison / optional allocation check / allocation evidence boundary, 같은 portfolio 안 전략 간 전환 비교 | broker order, live approval, account / broker sync, auto rebalance |
 
 Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다. Final Review는 향후 그 단계가 사용할 수 있도록 엄격한 `deployment_readiness_policy_snapshot`을 남기지만, 그 snapshot이 곧 live approval이나 주문 가능 상태를 뜻하지 않는다.
 
@@ -70,6 +70,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 ## User-Facing Rules
 
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
+- `Operations > Operations Overview`는 선정 후 monitoring / system health / archive recovery의 입구이며, Backtest 후보 생성 단계가 아니다.
 - Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.

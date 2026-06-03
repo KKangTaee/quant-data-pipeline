@@ -7164,3 +7164,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 auto fragment가 Macro와 Live를 함께 렌더했고, live snapshot의 latest provider run도 interval filter 없이 최신 run 전체를 읽어 daily macro run이 Data Feed에 표시될 수 있었다
 - Follow-up:
   - Macro Context와 Live Futures Charts를 별도 Streamlit fragment로 분리했다. Macro 버튼은 fragment rerun만 호출하고, live auto refresh는 Live 영역만 실행한다. Live monitor latest run은 `interval_code='1m'`으로 필터링한다
+
+### 2026-06-03 - Operations 탭을 단계별로 개편한다
+- User request:
+  - 사용자가 Operations 탭의 recommended restructuring을 단계별로 진행해 달라고 요청함
+- Interpreted goal:
+  - Selected Portfolio Dashboard는 post-selection monitoring으로 Operations에 유지하되, Operations 안에서 primary monitoring / system health와 legacy archive 도구를 구분해야 함
+- Analysis result:
+  - `Operations Overview` landing page를 추가하고, Selected Dashboard는 `Portfolio Monitoring`, Ops Review는 `System / Data Health`, Run History와 Candidate Library는 Archive recovery label로 낮추는 additive IA가 가장 안전함
+- Follow-up:
+  - `app/web/operations_overview.py`와 navigation label 정리를 구현했고, registry / saved schema / live order / auto rebalance는 변경하지 않았다. 상세 실행 기록은 `.aiworkspace/note/finance/tasks/active/operations-overview-ia-v1/`에 남겼다

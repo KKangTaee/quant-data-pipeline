@@ -61,6 +61,7 @@ from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_previ
 from app.web.backtest_candidate_library import render_candidate_library_page
 from app.web.backtest_history import render_backtest_run_history_page
 from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
+from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
@@ -4712,31 +4713,45 @@ def main() -> None:
     overview_page = st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview")
     ingestion_page = st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion")
     backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
-    ops_review_page = st.Page(_render_ops_review_page, title="Ops Review", icon="🧾", url_path="ops-review")
+    ops_review_page = st.Page(_render_ops_review_page, title="System / Data Health", icon="🧾", url_path="ops-review")
 
     def open_backtest_page() -> None:
         st.switch_page(backtest_page)
 
     backtest_history_page = st.Page(
         lambda: _render_backtest_run_history_page(open_backtest_page),
-        title="Backtest Run History",
+        title="Archive: Backtest Runs",
         icon="🗂️",
         url_path="backtest-run-history",
     )
     candidate_library_page = st.Page(
         _render_candidate_library_page,
-        title="Candidate Library",
+        title="Archive: Candidates",
         icon="📌",
         url_path="candidate-library",
     )
     selected_portfolio_dashboard_page = st.Page(
         _render_selected_portfolio_dashboard_page,
-        title="Selected Portfolio Dashboard",
+        title="Portfolio Monitoring",
         icon="📊",
         url_path="selected-portfolio-dashboard",
     )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
+    operations_overview_page = st.Page(
+        lambda: render_operations_overview_page(
+            page_targets={
+                "portfolio_monitoring": selected_portfolio_dashboard_page,
+                "system_data_health": ops_review_page,
+                "archive_backtest_runs": backtest_history_page,
+                "archive_candidates": candidate_library_page,
+                "reference_guides": guides_page,
+            }
+        ),
+        title="Operations Overview",
+        icon="🧭",
+        url_path="operations",
+    )
 
     navigation = st.navigation(
         {
@@ -4746,8 +4761,9 @@ def main() -> None:
                 backtest_page,
             ],
             "Operations": [
-                ops_review_page,
+                operations_overview_page,
                 selected_portfolio_dashboard_page,
+                ops_review_page,
                 backtest_history_page,
                 candidate_library_page,
             ],

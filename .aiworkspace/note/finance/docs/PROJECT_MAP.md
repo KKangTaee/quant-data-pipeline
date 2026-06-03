@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-03
 
 ## Project Summary
 
@@ -75,6 +75,7 @@ Last Verified: 2026-06-02
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py` |
 | Final Review UI components | `app/web/backtest_final_review_components.py` |
+| Operations Overview | `app/web/operations_overview.py` |
 | Selected Portfolio Dashboard | `app/web/final_selected_portfolio_dashboard.py` |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
@@ -124,6 +125,7 @@ Last Verified: 2026-06-02
 | `app/web/backtest_final_review.py` | Final Review screen render, Decision Desk command center / flow ordering, Practical Validation Gate-passed Candidate Board with review priority / queue / primary reason, selected-source Decision Cockpit, hidden blocked validation count, selection-only final decision input with decision record checklist / selected-route guide, Evidence Appendix for investability packet / look-through / Robustness Lab / previous validation evidence, saved final decision review ledger with route filter and detail tabs, Selected Dashboard handoff summary, decision dossier download |
 | `app/web/backtest_final_review_components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source eligibility filter, validation reuse, paper observation snapshot, investability packet wiring, selection-only official save row construction |
+| `app/web/operations_overview.py` | Operations landing page render와 Streamlit-free read model. Portfolio Monitoring, System / Data Health, Archive / Recovery, Reference / Reports lane을 만들고 selected dashboard summary, run history, candidate library count를 읽어 route cards와 no-live boundary를 표시 |
 | `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, fixed-height portfolio card shelf / 생성 / 선택 / collapsed portfolio management soft delete, selected portfolio command band, Final Review selected strategy slot 추가 / compact strategy board / 설정 적용 / 제거, portfolio-wide Monitoring Scenario cockpit / pending-stale scenario update / value curve / strategy performance / rebalance target table, 선택한 1개 전략의 lazy Monitoring Scenario detail, continuity / Monitoring Signals / Open Issues / optional preflight / allocation monitoring / Decision Dossier / 하단 evidence detail |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard portfolio / selected strategy pool / strategy slot / strategy comparison table, Selected Dashboard handoff table, component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / open issue follow-up / deployment readiness / recheck comparison / drift / alert / allocation boundary / source contract display helpers |
 | `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, dashboard portfolio saved state and backward-compatible strategy slot helper, Final Review -> Selected Dashboard handoff review and continuity check, selected decision source consistency contract, open issue follow-up, deployment readiness preflight, performance recheck operations preflight, readiness, symbol freshness, selected provider evidence staleness / coverage policy, review signal policy, performance recheck, recheck comparison, drift check, alert preview, allocation drift evidence boundary, monitoring timeline |
@@ -134,7 +136,7 @@ Last Verified: 2026-06-02
 Backtest Analysis
   -> Practical Validation
   -> Final Review
-  -> Operations > Selected Portfolio Dashboard
+  -> Operations > Portfolio Monitoring
 ```
 
 역할:
@@ -142,7 +144,7 @@ Backtest Analysis
 - Backtest Analysis는 후보 source를 만든다.
 - Practical Validation은 source를 실전 투입 전 조건으로 검증하고 source traits 기반 module planner로 필수 / 조건부 / 후속 참고 검증과 Final Review 이동 gate를 만든다. Step 1은 source의 단일 / mix 구성, component 전략, target weight, 원래 result table, monthly selection / holdings history를 먼저 확인하게 한다. 화면의 `Final Review Gate`, audit board, provider board, Robustness Lab은 board registry를 통해 어떤 module의 evidence인지 표시하며, 후보 특성상 적용되지 않는 조건부 board는 비적용으로 분리한다. `검증 결과 저장(기록용)`은 audit trail만 남기고, Gate 미통과 result는 Final Review 후보가 아니다.
 - Final Review는 Practical Validation Gate를 통과한 result만 source picker에 표시한다. Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row와 Construction Risk / Risk Contribution / Component Role / Weight non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, selected-route gate까지 통과한 후보만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 정식 저장한다. 보류 / 거절 / 재검토는 새 저장 row가 아니라 상태 안내이며, 저장된 선정 기록은 read-only dossier와 Selected Dashboard handoff summary로 다시 보여준다.
-- Selected Portfolio Dashboard는 사용자가 만든 monitoring portfolio fixed-height card shelf를 먼저 보여주고, 선택한 portfolio를 command band로 재구성한 뒤 Final Review selected strategy slot을 compact strategy board에 담아 start / latest-end mode / balance / memo를 저장한다. Delete / raw setup management는 collapsed management 영역으로 낮춘다. Portfolio Monitoring Scenario는 slot 저장과 분리되며, `포트폴리오 시나리오 업데이트`가 pending / stale strategy만 기본 실행하고 `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. Scenario 결과는 portfolio / slot / selected decision / start / end / balance signature가 맞을 때만 portfolio-wide 현재 가치 / 손익 / 수익률 / CAGR / MDD / benchmark spread / rebalance target으로 합산한다. 개별 strategy Monitoring Scenario와 read-only recheck readiness / symbol freshness / provider evidence / continuity / timeline / review signal / open issue / optional deployment preflight / allocation boundary는 사용자가 선택한 1개 전략 상세를 열 때만 렌더링한다. Deployment Readiness preflight도 승인 / 주문 / broker-account 연동 / 자동 리밸런싱을 만들지 않는다.
+- Operations Overview는 Operations의 입구로, Portfolio Monitoring과 System / Data Health를 primary lane으로 보여주고 Backtest Run History / Candidate Library는 Archive / Recovery로 낮춘다. 기존 Selected Portfolio Dashboard route는 `Portfolio Monitoring` navigation label 아래 유지되며, 사용자가 만든 monitoring portfolio fixed-height card shelf를 먼저 보여주고 선택한 portfolio를 command band로 재구성한 뒤 Final Review selected strategy slot을 compact strategy board에 담아 start / latest-end mode / balance / memo를 저장한다. Delete / raw setup management는 collapsed management 영역으로 낮춘다. Portfolio Monitoring Scenario는 slot 저장과 분리되며, `포트폴리오 시나리오 업데이트`가 pending / stale strategy만 기본 실행하고 `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. Scenario 결과는 portfolio / slot / selected decision / start / end / balance signature가 맞을 때만 portfolio-wide 현재 가치 / 손익 / 수익률 / CAGR / MDD / benchmark spread / rebalance target으로 합산한다. 개별 strategy Monitoring Scenario와 read-only recheck readiness / symbol freshness / provider evidence / continuity / timeline / review signal / open issue / optional deployment preflight / allocation boundary는 사용자가 선택한 1개 전략 상세를 열 때만 렌더링한다. Deployment Readiness preflight도 승인 / 주문 / broker-account 연동 / 자동 리밸런싱을 만들지 않는다.
 
 ## Data Boundary
 

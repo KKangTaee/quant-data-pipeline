@@ -9387,6 +9387,72 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(portfolio["virtual_capital_total"], 30000.0)
         self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
 
+    def test_operations_overview_model_groups_primary_and_archive_lanes(self) -> None:
+        spec = importlib.util.find_spec("app.web.operations_overview")
+        self.assertIsNotNone(spec, "Operations Overview read model module should exist")
+
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "final_decision_count": 4,
+                    "selected_decision_count": 2,
+                    "dashboard_row_count": 2,
+                    "status_counts": {"normal": 1, "watch": 1, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 2,
+                        "missing_reference_count": 0,
+                    }
+                },
+            },
+            run_history=[
+                {
+                    "job_name": "daily_market_update",
+                    "status": "failed",
+                    "started_at": "2026-06-03T09:00:00",
+                }
+            ],
+            candidate_records=[{"registry_id": "cand-1"}, {"registry_id": "cand-2"}],
+        )
+
+        self.assertEqual(model["schema_version"], "operations_overview_v1")
+        self.assertEqual(
+            [lane["key"] for lane in model["lanes"]],
+            ["portfolio_monitoring", "system_data_health", "archive_recovery", "reference_reports"],
+        )
+        lane_by_key = {lane["key"]: lane for lane in model["lanes"]}
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["priority"], "primary")
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["status"], "Review Needed")
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["selected_decision_count"], 2)
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["watch_or_review_count"], 1)
+        self.assertEqual(lane_by_key["system_data_health"]["status"], "Attention Needed")
+        self.assertEqual(lane_by_key["archive_recovery"]["priority"], "secondary")
+        self.assertEqual(lane_by_key["archive_recovery"]["metrics"]["candidate_count"], 2)
+        self.assertEqual(lane_by_key["archive_recovery"]["metrics"]["backtest_run_count"], 1)
+
+    def test_operations_overview_model_keeps_execution_boundary_disabled(self) -> None:
+        spec = importlib.util.find_spec("app.web.operations_overview")
+        self.assertIsNotNone(spec, "Operations Overview read model module should exist")
+
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={"summary": {}, "portfolio_state": {"metrics": {}}},
+            run_history=[],
+            candidate_records=[],
+        )
+
+        self.assertFalse(model["execution_boundary"]["live_approval"])
+        self.assertFalse(model["execution_boundary"]["broker_order"])
+        self.assertFalse(model["execution_boundary"]["account_sync"])
+        self.assertFalse(model["execution_boundary"]["auto_rebalance"])
+        self.assertFalse(model["execution_boundary"]["registry_write"])
+        self.assertEqual(model["lanes"][0]["target_surface"], "Operations > Portfolio Monitoring")
+
     def _ready_provider_evidence(self) -> dict:
         return {
             "schema_version": "selected_provider_evidence_v1",

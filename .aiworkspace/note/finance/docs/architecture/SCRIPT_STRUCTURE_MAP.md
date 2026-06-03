@@ -25,8 +25,9 @@
 |---|---|
 | `app/workspace_paths.py` | active worktree root 탐색과 canonical `.aiworkspace/note/finance`의 registries / saved / run_history / docs / artifact path 상수 |
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
+| `app/web/operations_overview.py` | `Operations > Operations Overview` landing page render와 Streamlit-free Operations lane read model. Portfolio Monitoring, System / Data Health, Archive / Recovery, Reference / Reports를 구분하고 no-live approval / order / auto rebalance boundary를 표시 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
-| `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
+| `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Sector / Industry, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Sector / Industry ranking/trend, Events view routing을 조정 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, cached market intelligence service wrapper |
 | `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
@@ -39,9 +40,9 @@
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
 | `app/web/backtest_compare.py` | `Backtest > Portfolio Mix Builder` 화면 render, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff, preset catalog assembly |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display, summary / chart / data trust / real-money detail / selection history / compare result render wrapper |
-| `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
+| `app/web/backtest_history.py` | `Operations > Archive: Backtest Runs` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
 | `app/web/backtest_history_helpers.py` | Backtest history row 변환, replay payload 복원, History replay parity / Real-Money scope table helper |
-| `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
+| `app/web/backtest_candidate_library.py` | `Operations > Archive: Candidates` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel, legacy product card / stepper helper |
 | `app/web/backtest_practical_validation_components.py` | Practical Validation 전용 visual shell. Command Center, section header, card grid, step rail, alert panel CSS / HTML helper를 제공하며 service/gate 로직은 포함하지 않는다 |
 | `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 current selection source의 strategy / construction / selection history 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, 전용 workbench shell 기반 Control Center, Fix Queue, summary-first evidence workspace, Applied Validation Map, Provider Action Center, Look-through Board / Robustness Lab 표시, provider gap / replay service 실행 버튼, service 결과를 session state에 반영하는 화면 render |

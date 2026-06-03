@@ -3127,9 +3127,9 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
 
 
 def render_final_selected_portfolio_dashboard_page() -> None:
-    st.title("Selected Portfolio Dashboard")
+    st.title("Portfolio Monitoring")
     st.caption(
-        "Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
+        "Selected Portfolio Dashboard: Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
         "가상 시나리오와 review signal로 모니터링 이후 상태를 확인합니다."
     )
 

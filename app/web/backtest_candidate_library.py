@@ -30,9 +30,9 @@ from app.runtime.backtest import BacktestDataError, BacktestInputError
 
 # Render the Operations-owned saved candidate inspector and replay surface.
 def render_candidate_library_page() -> None:
-    st.title("Candidate Library")
+    st.title("Archive: Candidates")
     st.caption(
-        "저장된 Current Candidate / Pre-Live 후보를 다시 열어 보고, 필요하면 저장된 contract로 결과 곡선을 재생성합니다."
+        "Archive / Recovery: 저장된 Current Candidate / Pre-Live 후보를 다시 열어 보고, 필요하면 저장된 contract로 결과 곡선을 재생성합니다."
     )
 
     records = load_candidate_library_records()

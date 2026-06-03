@@ -1,7 +1,7 @@
 # Web Backtest UI Flow
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-03
 
 ## 목적
 
@@ -13,8 +13,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
+| `app/web/operations_overview.py` | `Operations > Operations Overview` landing page. Selected Dashboard, System / Data Health, Archive / Recovery, Reference / Reports lane을 보여주고 no-live approval / order / auto rebalance boundary를 표시한다 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
-| `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
+| `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Market Movers, Sector / Industry, Events, Data Health, Candidate Ops dashboard render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Sector / Industry ranking/trend, Events agenda/calendar/quality/raw views를 조정한다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, candidate priority scoring, cached market intelligence service wrapper |
 | `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
@@ -141,12 +142,13 @@ Legacy / compatibility 흐름:
 - `Candidate Review`, `Portfolio Proposal`, 기존 Pre-Live registry, 기존 proposal registry는 바로 삭제하지 않는다. 다만 새 주 흐름의 필수 join 조건이 아니라 legacy inspector / archive compatibility로 낮춘다.
 - 기존 `Single Strategy`, `Compare & Portfolio Builder`, `Candidate Review`, `Portfolio Proposal` route request는 `backtest_workflow_routes.py`에서 3단계 stage로 매핑한다.
 
-Operations 보조 화면:
+Operations 화면:
 
-- `Operations > Ops Review`: 웹앱 ingestion / refresh / factor job의 run health를 점검한다. triage flow, 최근 실행 상태, action inbox, failure CSV, run artifact, related logs, runtime snapshot을 보여주며, job 실행은 `Ingestion`, backtest replay는 `Backtest Run History`, 후보 replay는 `Candidate Library`로 분리한다.
-- `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
-- `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
-- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 selected strategy pool로 읽고, 사용자가 만든 dashboard portfolio에 strategy slot으로 추가해 모니터링한다. 각 slot은 start / latest-end mode / balance / memo를 저장하고 `전략 적용` 이후 별도 `모니터 시나리오 실행` 또는 `포트폴리오 시나리오 업데이트`으로 selected component contract를 replay한다. Dashboard는 fixed-height portfolio shelf, selected portfolio command band, compact strategy board, portfolio-wide scenario cockpit 순서로 읽힌다. Portfolio-wide cockpit은 pending / stale strategy만 기본 업데이트하고 value / P&L / return / CAGR / MDD / benchmark spread / value curve / 전략별 성과 / 리밸런싱 target을 먼저 보여준다. Snapshot, Final Review -> dashboard continuity check, source contract, Monitoring Signals의 Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit은 사용자가 선택한 1개 strategy 상세를 열 때만 보여준다. Recheck Operations Preflight / Recheck Readiness / Symbol Freshness / Provider Evidence도 하단 상세 점검으로 낮춘다. 같은 dashboard portfolio 안 전략이 2개 이상이면 최신 scenario 결과로 전환 비교를 표시한다. Preflight / Readiness / Symbol Freshness / Provider Evidence / Continuity / Timeline / Recheck Comparison / Allocation Boundary / Dossier는 read-only이며, live approval / broker order / account sync / auto rebalance는 disabled로 둔다.
+- `Operations > Operations Overview`: Operations landing page다. Portfolio Monitoring, System / Data Health, Archive / Recovery, Reference / Reports lane을 먼저 보여주고, selected monitoring과 system run health를 primary로, Backtest Run History와 Candidate Library를 secondary archive / recovery 도구로 해석하게 한다.
+- `Operations > Portfolio Monitoring`: 기존 Selected Portfolio Dashboard route다. `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 selected strategy pool로 읽고, 사용자가 만든 dashboard portfolio에 strategy slot으로 추가해 모니터링한다. 각 slot은 start / latest-end mode / balance / memo를 저장하고 `전략 적용` 이후 별도 `모니터 시나리오 실행` 또는 `포트폴리오 시나리오 업데이트`으로 selected component contract를 replay한다. Dashboard는 fixed-height portfolio shelf, selected portfolio command band, compact strategy board, portfolio-wide scenario cockpit 순서로 읽힌다. Portfolio-wide cockpit은 pending / stale strategy만 기본 업데이트하고 value / P&L / return / CAGR / MDD / benchmark spread / value curve / 전략별 성과 / 리밸런싱 target을 먼저 보여준다. Snapshot, Final Review -> dashboard continuity check, source contract, Monitoring Signals의 Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / Decision Dossier / Audit은 사용자가 선택한 1개 strategy 상세를 열 때만 보여준다. Recheck Operations Preflight / Recheck Readiness / Symbol Freshness / Provider Evidence도 하단 상세 점검으로 낮춘다. 같은 dashboard portfolio 안 전략이 2개 이상이면 최신 scenario 결과로 전환 비교를 표시한다. Preflight / Readiness / Symbol Freshness / Provider Evidence / Continuity / Timeline / Recheck Comparison / Allocation Boundary / Dossier는 read-only이며, live approval / broker order / account sync / auto rebalance는 disabled로 둔다.
+- `Operations > System / Data Health`: 웹앱 ingestion / refresh / factor job의 run health를 점검한다. triage flow, 최근 실행 상태, action inbox, failure CSV, run artifact, related logs, runtime snapshot을 보여주며, job 실행은 `Ingestion`, backtest replay는 `Archive: Backtest Runs`, 후보 replay는 `Archive: Candidates`로 분리한다.
+- `Operations > Archive: Backtest Runs`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 archive / recovery 도구로 둔다.
+- `Operations > Archive: Candidates`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 archive / recovery 도구다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -237,7 +239,7 @@ Backtest > Final Review
 | `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks / decision dossier를 Streamlit-free read model로 변환 |
 | `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, 나의 포트폴리오 fixed-height card shelf 생성 / 선택 / collapsed management soft delete, selected portfolio command band, Final Review selected strategy pool에서 slot 추가 / compact strategy board / 설정 적용 / 제거, portfolio-wide Monitoring Scenario cockpit / pending-stale update / value curve / strategy performance / rebalance target, 선택한 1개 strategy의 Snapshot / Monitoring Scenario / 하단 readiness + symbol freshness + provider evidence detail, Continuity check, Monitoring Timeline / Review Signals / Open Issues / Why Selected / optional Actual Allocation / allocation evidence boundary / optional preflight / Decision Dossier / Audit / 전환 비교 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard portfolio table, selected strategy pool table, selected strategy comparison table, component table, timeline table, recheck preflight table, recheck readiness table, symbol freshness table, provider evidence table, recheck comparison table, value / holding input table, drift table, alert preview table, allocation boundary table, filter helper |
-| `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
+| `app/web/streamlit_app.py` | Operations navigation에 `Operations Overview`, `Portfolio Monitoring`, `System / Data Health`, archive pages 등록 |
 
 데이터 기준:
 

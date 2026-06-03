@@ -4608,3 +4608,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - V2.2 후속으로 Macro Context를 상단 full-width로 올리고, Live Futures Charts를 하단 3x2 grid로 바꾸며, 중복 `Selected Detail` 차트를 제거했다.
   - V2.3 후속으로 `Focus` control을 제거하고, `Symbols`가 3x2 grid 순서를 직접 결정하도록 정리했다. `Chart` hourly option은 `1h` 대신 `60m`로 표시한다.
   - V2.4 후속으로 Macro Context daily refresh와 Live Futures Charts auto refresh를 별도 Streamlit fragment로 분리했다. Live provider run summary는 `1m` run만 읽도록 필터링했다.
+- Operations Overview IA V1:
+  - `.aiworkspace/note/finance/tasks/active/operations-overview-ia-v1/`에서 Operations landing page와 navigation label 정리를 구현했다.
+  - `Operations > Operations Overview`는 Portfolio Monitoring / System Data Health / Archive Recovery / Reference Reports lane을 표시한다.
+  - 기존 Selected Dashboard route는 `Portfolio Monitoring`으로 유지하고, Backtest Run History / Candidate Library는 Archive recovery 도구로 낮췄다.
+  - live approval / order / account sync / auto rebalance / registry rewrite는 추가하지 않았다.

@@ -588,9 +588,9 @@ def render_real_money_guardrail_parity_snapshot(
 
 # Render the Operations-owned Backtest run history surface.
 def render_backtest_run_history_page(*, open_backtest_page: Callable[[], None] | None = None) -> None:
-    st.title("Backtest Run History")
+    st.title("Archive: Backtest Runs")
     st.caption(
-        "저장된 백테스트 실행 기록을 운영 관점에서 다시 열고, form 복원, 재실행, Practical Validation 전달을 처리합니다."
+        "Archive / Recovery: 저장된 백테스트 실행 기록을 다시 열고, form 복원, 재실행, Practical Validation 전달을 처리합니다."
     )
     st.info(
         "이 화면은 후보 검토의 본 단계가 아니라 과거 실행을 재현하고 감사하는 운영 도구입니다. "

@@ -559,9 +559,9 @@ def render_operations_dashboard(
         missing_artifacts=missing_artifacts,
     )
 
-    st.title("Operations Dashboard")
+    st.title("System / Data Health")
     st.caption(
-        "웹앱 실행 기록, failure artifact, log, runtime 상태를 운영 관점에서 점검합니다. "
+        "Operations system/data health: 웹앱 실행 기록, failure artifact, log, runtime 상태를 점검합니다. "
         "후보 replay나 백테스트 재실행은 전용 Operations 화면으로 분리합니다."
     )
     _render_triage_flow(
