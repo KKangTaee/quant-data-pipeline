@@ -2551,7 +2551,12 @@ def _resolve_risk_on_momentum_universe(
             raise BacktestInputError("Manual Risk-On Momentum universe requires at least one ticker.")
         return manual, "manual_tickers", None, len(manual), "manual_tickers"
 
-    if raw_mode in {"top2000", "top_2000"}:
+    if raw_mode in {"sp500", "snp500", "s&p500", "s&p_500", "s_p_500", "s-and-p-500"}:
+        normalized_limit = 500
+        universe_code = "SP500"
+        normalized_mode = "sp500"
+        normalized_preset = preset_name or "S&P 500"
+    elif raw_mode in {"top2000", "top_2000"}:
         normalized_limit = int(universe_limit or 2000)
         universe_code = "TOP2000"
         normalized_mode = "top2000"
@@ -2574,6 +2579,11 @@ def _resolve_risk_on_momentum_universe(
         if str(row.get("symbol") or "").strip()
     ]
     source = f"market_cap_universe_members:{universe_code}"
+    if universe_code == "SP500" and not symbols:
+        raise BacktestDataError(
+            "No S&P 500 universe rows were found for Risk-On Momentum. "
+            "Refresh the S&P 500 universe membership first."
+        )
     if not symbols:
         symbols = [
             str(symbol).strip().upper()

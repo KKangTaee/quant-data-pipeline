@@ -4623,3 +4623,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Risk-On Momentum 5D V2:
   - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v2/`에서 Daily Swing Backtest Analysis 고도화를 구현했다.
   - ATR / macro ranking penalty / comparison-sensitivity-stability-quality analysis는 Backtest Analysis 연구 surface로 남기고, Practical Validation / Final Review / Selected Dashboard daily signal governance는 구현하지 않았다.
+- Risk-On Momentum 5D S&P 500 universe follow-up:
+  - Single Strategy form에 `S&P 500` universe mode를 추가했고 runtime resolver는 `sp500` / `snp500` 입력을 `SP500` managed universe로 해석한다.
+  - S&P 500 멤버십 row가 없으면 Top500으로 조용히 대체하지 않고 universe refresh 필요 오류를 반환한다.
+  - focused compile / Risk-On service contract tests / DB membership smoke / hygiene check를 통과했다.

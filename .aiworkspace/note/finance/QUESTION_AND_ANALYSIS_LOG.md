@@ -7190,3 +7190,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality warning analysis를 Backtest Analysis Daily Swing research surface에 추가한다.
 - Analysis result: Strategy core는 `finance/swing.py`, indicator / macro / repeated analysis helper는 별도 finance module로 분리하고 UI / history / artifact는 기존 Backtest Analysis 경계 안에 연결하는 것이 안전하다.
 - Follow-up: Daily Swing Practical Validation module, Final Review route, Daily Signal / Paper Strategy Monitor lane은 별도 설계 승인 후 구현한다.
+
+### 2026-06-03 - Risk-On Momentum 5D universe에 S&P 500을 추가한다
+
+- User request: Risk-On Momentum 5D의 universe mode가 Top1000 / Top2000 / Manual뿐이므로 S&P 500도 추가해 달라고 요청함.
+- Interpreted goal: Backtest Analysis 안에서 S&P 500 constituent 기반 daily swing research run을 선택할 수 있어야 하며, Top1000과 혼동되는 market-cap Top500 fallback은 피해야 함.
+- Analysis result: 기존 `load_market_cap_universe_members("SP500")` 경로가 S&P 500 membership row를 읽고 있으므로 새 수집기 없이 runtime resolver와 Single Strategy form에 `sp500` mode를 추가하면 된다.
+- Follow-up: `snp500` 입력 alias도 `SP500`으로 해석한다. 멤버십 row가 없으면 S&P 500 universe refresh 필요 오류를 낸다.

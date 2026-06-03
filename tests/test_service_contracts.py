@@ -295,6 +295,49 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertTrue(payload["macro_filter_enabled"])
         self.assertEqual(payload["min_avg_dollar_volume_20d"], 20_000_000.0)
 
+    def test_risk_on_momentum_sp500_universe_resolves_market_universe(self) -> None:
+        from app.runtime import backtest as runtime
+
+        with (
+            patch.object(
+                runtime,
+                "load_market_cap_universe_members",
+                return_value=[{"symbol": "AAPL"}, {"symbol": "MSFT"}],
+            ) as load_universe,
+            patch.object(runtime, "load_top_symbols_from_asset_profile") as fallback_universe,
+        ):
+            symbols, mode, preset, limit, source = runtime._resolve_risk_on_momentum_universe(
+                tickers=[],
+                universe_mode="snp500",
+                preset_name=None,
+                universe_limit=None,
+            )
+
+        load_universe.assert_called_once_with("SP500", universe_limit=500)
+        fallback_universe.assert_not_called()
+        self.assertEqual(symbols, ["AAPL", "MSFT"])
+        self.assertEqual(mode, "sp500")
+        self.assertEqual(preset, "S&P 500")
+        self.assertEqual(limit, 500)
+        self.assertEqual(source, "market_cap_universe_members:SP500")
+
+    def test_risk_on_momentum_sp500_universe_requires_membership_rows(self) -> None:
+        from app.runtime import backtest as runtime
+
+        with (
+            patch.object(runtime, "load_market_cap_universe_members", return_value=[]),
+            patch.object(runtime, "load_top_symbols_from_asset_profile") as fallback_universe,
+        ):
+            with self.assertRaises(runtime.BacktestDataError):
+                runtime._resolve_risk_on_momentum_universe(
+                    tickers=[],
+                    universe_mode="sp500",
+                    preset_name=None,
+                    universe_limit=None,
+                )
+
+        fallback_universe.assert_not_called()
+
     def test_risk_on_momentum_v2_analysis_frames_are_generated(self) -> None:
         from finance.swing import RiskOnMomentumConfig, run_risk_on_momentum_backtest
         from finance.swing_analysis import (

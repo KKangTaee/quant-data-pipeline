@@ -2879,7 +2879,7 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
             {
                 "확인 영역": "Cadence / 데이터",
                 "현재 상태": "Daily close-based stock swing strategy",
-                "확인 포인트": "Top1000/Top2000/Manual 주식 universe, daily OHLCV, annual statement shadow, futures macro Mean-Z를 사용합니다.",
+                "확인 포인트": "S&P 500/Top1000/Top2000/Manual 주식 universe, daily OHLCV, annual statement shadow, futures macro Mean-Z를 사용합니다.",
             },
             {
                 "확인 영역": "Execution",
@@ -2888,12 +2888,12 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
             },
             {
                 "확인 영역": "Risk / Exit",
-                "현재 상태": "V1 fixed_pct stop/take-profit + max holding days",
-                "확인 포인트": "ATR/intraday/trailing exit은 아직 deferred입니다.",
+                "현재 상태": "fixed_pct 또는 atr_based exit + max holding days",
+                "확인 포인트": "ATR exit은 signal-date ATR을 D+1 open entry 기준으로 고정해 해석합니다.",
             },
             {
                 "확인 영역": "비교 / 상세",
-                "현재 상태": "Macro Off, Random Ranking, SPY/QQQ Buy & Hold 비교 + trade/scanner artifact",
+                "현재 상태": "Macro Off, Random Ranking, SPY/QQQ Buy & Hold, V2 comparison/sensitivity + trade/scanner artifact",
                 "확인 포인트": "실행 결과는 generated backtest artifact에도 보존됩니다.",
             },
             {

@@ -277,7 +277,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             (payload.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
     elif strategy_key == "risk_on_momentum_5d":
-        if universe_mode == "top2000":
+        if universe_mode == "sp500":
+            st.session_state["rom_universe_mode"] = "S&P 500"
+        elif universe_mode == "top2000":
             st.session_state["rom_universe_mode"] = "Top2000"
         elif universe_mode in {"manual", "manual_tickers"}:
             st.session_state["rom_universe_mode"] = "Manual"
@@ -1388,7 +1390,7 @@ def _render_risk_on_momentum_5d_form() -> None:
 
     universe_mode = st.radio(
         "Universe Mode",
-        options=["Top1000", "Top2000", "Manual"],
+        options=["Top1000", "Top2000", "S&P 500", "Manual"],
         horizontal=True,
         key="rom_universe_mode",
     )
@@ -1650,6 +1652,7 @@ def _render_risk_on_momentum_5d_form() -> None:
     universe_payload = {
         "Top1000": ("top1000", "Top1000", 1000),
         "Top2000": ("top2000", "Top2000", 2000),
+        "S&P 500": ("sp500", "S&P 500", 500),
         "Manual": ("manual_tickers", None, len(tickers)),
     }[universe_mode]
     payload = {
