@@ -5142,12 +5142,137 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Investor Relations", rows.iloc[3]["Source"])
         self.assertIn("www.google.com/search", rows.iloc[3]["URL"])
 
+    def test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata(self) -> None:
+        from app.services.overview_market_intelligence import build_market_mover_why_it_moved_read_model
+
+        model = build_market_mover_why_it_moved_read_model(
+            mover={
+                "Rank": 2,
+                "Symbol": "AAA",
+                "Name": "AAA Corp",
+                "Sector": "Technology",
+                "Industry": "Software",
+                "Market Cap": 1234567890,
+                "Return %": 12.34,
+                "Volume": 987654,
+                "Dollar Volume": 54321000.25,
+                "Previous Return %": 3.21,
+                "Momentum Delta pp": 9.13,
+            },
+            period="weekly",
+            coverage="TOP1000",
+            rank_source="Volume Rank",
+        )
+
+        self.assertEqual(model["status"], "READY")
+        self.assertEqual(model["mode"], "manual_investigation")
+        self.assertEqual(model["identity"]["Symbol"], "AAA")
+        self.assertEqual(model["identity"]["Sector"], "Technology")
+        self.assertEqual(model["context"]["Period"], "Weekly")
+        self.assertEqual(model["context"]["Coverage"], "Top 1000 by market cap")
+        self.assertEqual(model["context"]["Rank Type"], "Volume Rank")
+        self.assertEqual(model["context"]["Rank"], "2")
+        self.assertEqual(model["movement"]["Return %"], 12.34)
+        self.assertEqual(model["movement"]["Momentum Delta pp"], 9.13)
+        self.assertEqual(model["metadata"]["status"], "NOT_REQUESTED")
+        self.assertEqual(len(model["links"]), 4)
+        self.assertEqual(model["links"].iloc[0]["Source"], "Yahoo Finance")
+
+    def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
+        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+
+        def news_fetcher(symbol: str, max_items: int) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(max_items, 2)
+            return [
+                {
+                    "title": "AAA shares rise after guidance update",
+                    "publisher": "Market Desk",
+                    "published_at": "2026-06-03T13:00:00Z",
+                    "url": "https://example.com/news/aaa",
+                    "body": "article body should not enter compact metadata",
+                }
+            ]
+
+        def sec_fetcher(symbol: str, max_items: int, user_agent: str | None, request_timeout: float) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(max_items, 2)
+            self.assertGreater(request_timeout, 0)
+            return [
+                {
+                    "form": "8-K",
+                    "filing_date": "2026-06-02",
+                    "title": "Current report",
+                    "url": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+                    "document": "filing body should not enter compact metadata",
+                }
+            ]
+
+        metadata = fetch_market_mover_compact_metadata(
+            "aaa",
+            max_news=2,
+            max_filings=2,
+            news_fetcher=news_fetcher,
+            sec_fetcher=sec_fetcher,
+        )
+
+        self.assertEqual(metadata["status"], "OK")
+        self.assertEqual(metadata["symbol"], "AAA")
+        self.assertEqual(list(metadata["news"].columns), ["Title", "Source", "Published At", "URL"])
+        self.assertEqual(metadata["news"].iloc[0]["Title"], "AAA shares rise after guidance update")
+        self.assertNotIn("Body", metadata["news"].columns)
+        self.assertEqual(list(metadata["sec_filings"].columns), ["Form", "Filing Date", "Title", "URL"])
+        self.assertEqual(metadata["sec_filings"].iloc[0]["Form"], "8-K")
+        self.assertNotIn("Document", metadata["sec_filings"].columns)
+
+    def test_market_mover_compact_metadata_fetcher_distinguishes_empty_and_failed(self) -> None:
+        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+
+        empty = fetch_market_mover_compact_metadata(
+            "AAA",
+            news_fetcher=lambda symbol, max_items: [],
+            sec_fetcher=lambda symbol, max_items, user_agent, request_timeout: [],
+        )
+
+        self.assertEqual(empty["status"], "NO_METADATA")
+        self.assertEqual(empty["messages"], ["No compact news or SEC filing metadata returned for AAA."])
+
+        def failing_news(symbol: str, max_items: int) -> list[dict[str, object]]:
+            raise RuntimeError("news timeout")
+
+        def failing_sec(symbol: str, max_items: int, user_agent: str | None, request_timeout: float) -> list[dict[str, object]]:
+            raise RuntimeError("sec timeout")
+
+        failed = fetch_market_mover_compact_metadata(
+            "AAA",
+            news_fetcher=failing_news,
+            sec_fetcher=failing_sec,
+        )
+
+        self.assertEqual(failed["status"], "FAILED")
+        self.assertEqual(failed["news"].empty, True)
+        self.assertEqual(failed["sec_filings"].empty, True)
+        self.assertIn("News metadata lookup failed: news timeout", failed["messages"])
+        self.assertIn("SEC metadata lookup failed: sec timeout", failed["messages"])
+
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
         from app.web.overview_dashboard import _market_mover_catalyst_candidates
 
         return_rows = pd.DataFrame(
             [
-                {"Rank": 1, "Symbol": "AAA", "Name": "AAA Corp"},
+                {
+                    "Rank": 1,
+                    "Symbol": "AAA",
+                    "Name": "AAA Corp",
+                    "Sector": "Technology",
+                    "Industry": "Software",
+                    "Market Cap": 1234567890,
+                    "Return %": 12.34,
+                    "Volume": 987654,
+                    "Dollar Volume": 54321000.25,
+                    "Previous Return %": 3.21,
+                    "Momentum Delta pp": 9.13,
+                },
                 {"Rank": 2, "Symbol": "BBB", "Name": "BBB Corp"},
             ]
         )
@@ -5165,6 +5290,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(candidates[2]["rank_source"], "Volume Rank")
         self.assertIn("Return #1", candidates[0]["label"])
         self.assertIn("Volume #1", candidates[2]["label"])
+        self.assertEqual(candidates[0]["mover"]["Sector"], "Technology")
+        self.assertEqual(candidates[0]["mover"]["Return %"], 12.34)
+        self.assertEqual(candidates[0]["mover"]["Momentum Delta pp"], 9.13)
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot

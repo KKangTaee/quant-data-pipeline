@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-03 - Market Movers Why It Moved V1.5
+- Expanded `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` from Catalyst Links into `Overview > Market Movers > Why It Moved`.
+- The panel shows selected Return / Volume rank ticker identity, movement context, outbound research links, and button-triggered compact news / SEC metadata in session state only.
+- Boundary remains manual investigation: no automatic catalyst judgement, AI summary, article / filing body collection, DB schema, registry JSONL, saved setup, broker/account, order, live approval, or auto rebalance path was added.
+- Verification evidence and residual risks are in the task `RUNS.md` / `RISKS.md`; Browser QA screenshot is `why-it-moved-panel-focused-qa-20260603.png` and remains generated/untracked.
+
 ### 2026-06-03 - Market Movers Catalyst Links V1
 - Added Catalyst Links to `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`.
 - `Overview > Market Movers` now lets users pick Return Rank / Volume Rank tickers and open Yahoo Finance, Google News, SEC company search, and IR / earnings search start points.

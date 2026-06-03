@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-03 - Why It Moved should remain an investigation panel, not a catalyst classifier
+- User request:
+  - 사용자가 Market Movers Catalyst Links를 Why It Moved V1.5로 확장하되, 자동 catalyst 판정 / AI 요약 / article 또는 filing 본문 수집 / DB·JSONL 저장 없이 button-triggered session-only metadata lookup으로 구현해 달라고 요청함.
+- Interpreted goal:
+  - 선택 ticker의 기업 정보, movement context, outbound research links, 최신 news / SEC metadata 상태를 한 패널에서 확인하게 하되 원인 판단은 사용자가 직접 하게 한다.
+- Analysis result:
+  - `overview_market_intelligence` service가 Streamlit-free read model과 compact metadata helper를 갖고, `overview_dashboard`는 selectbox 변경만으로 fetch하지 않으며 버튼 클릭 시 현재 ticker 1개 결과를 `st.session_state`에만 저장하는 구조가 맞다.
+- Follow-up:
+  - DB-backed compact metadata는 source retention, freshness, replay, provider throttling, schema / registry policy를 정한 후속 V2 조건으로만 검토한다.
+
 ### 2026-06-03 - Market Movers catalyst review should start from links, not app-side crawling
 - User request:
   - 사용자가 Market Movers의 Return Rank / Volume Rank 선택 ticker 기준으로 1차 Catalyst Links 기능을 추가하되, AI 요약 / 기사 본문 수집 / 웹 크롤링은 하지 말라고 요청함.

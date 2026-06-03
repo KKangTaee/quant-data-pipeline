@@ -28,7 +28,10 @@ from app.services.futures_macro_thermometer import (
     load_overview_futures_macro_snapshot,
 )
 from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
-from app.services.overview_market_intelligence import build_market_mover_catalyst_links
+from app.services.overview_market_intelligence import (
+    build_market_mover_why_it_moved_read_model,
+    fetch_market_mover_compact_metadata,
+)
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_collection_ops_snapshot,
@@ -3446,6 +3449,7 @@ def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFr
                     "name": name,
                     "rank": rank,
                     "rank_source": rank_source,
+                    "mover": row.to_dict(),
                     "label": f"{label_prefix} #{rank} · {symbol} · {name}",
                 }
             )
@@ -3455,7 +3459,66 @@ def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFr
     return candidates
 
 
-def _render_market_mover_catalyst_links(
+def _render_market_mover_metadata_result(metadata: dict[str, Any]) -> None:
+    status = str(metadata.get("status") or "NOT_REQUESTED")
+    messages = [str(message) for message in metadata.get("messages") or [] if str(message).strip()]
+    fetched_at = str(metadata.get("fetched_at_utc") or "").strip()
+
+    if status == "NOT_REQUESTED":
+        st.info("Metadata lookup has not been run for this selection.")
+        return
+    if status == "NO_METADATA":
+        st.warning("No compact news or SEC filing metadata returned for this lookup.")
+    elif status == "FAILED":
+        st.error("Compact metadata lookup failed.")
+    else:
+        st.success(f"Compact metadata lookup complete{f' · {fetched_at}' if fetched_at else ''}.")
+
+    for message in messages:
+        st.caption(message)
+
+    news = metadata.get("news")
+    sec_filings = metadata.get("sec_filings")
+    news_tab, sec_tab = st.tabs(["News Metadata", "SEC Filing Metadata"])
+    with news_tab:
+        if isinstance(news, pd.DataFrame) and not news.empty:
+            st.dataframe(news, width="stretch", hide_index=True)
+        else:
+            st.info("No compact news metadata to display.")
+    with sec_tab:
+        if isinstance(sec_filings, pd.DataFrame) and not sec_filings.empty:
+            st.dataframe(sec_filings, width="stretch", hide_index=True)
+        else:
+            st.info("No compact SEC filing metadata to display.")
+
+
+def _render_market_mover_fact_grid(items: list[tuple[str, Any]], *, value_size: str = "1rem") -> None:
+    blocks: list[str] = []
+    for label, value in items:
+        display_value = str(value if value not in (None, "") else "-")
+        blocks.append(
+            (
+                '<div style="min-width:0;">'
+                f'<div style="font-size:0.78rem;color:{OVERVIEW_COLOR_TEXT_MUTED};font-weight:700;margin-bottom:0.2rem;">'
+                f'{escape(str(label))}'
+                "</div>"
+                f'<div style="font-size:{value_size};font-weight:700;line-height:1.25;overflow-wrap:anywhere;">'
+                f'{escape(display_value)}'
+                "</div>"
+                "</div>"
+            )
+        )
+    st.markdown(
+        (
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));'
+            'gap:0.9rem 1.2rem;margin:0.25rem 0 1rem;">'
+            f"{''.join(blocks)}</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _render_market_mover_why_it_moved_panel(
     rows: pd.DataFrame,
     volume_rows: pd.DataFrame,
     *,
@@ -3466,11 +3529,11 @@ def _render_market_mover_catalyst_links(
     if not candidates:
         return
 
-    st.markdown("#### Catalyst Links")
-    st.caption("Manual verification start points only. No AI summary, article body collection, or crawling is run.")
+    st.markdown("#### Why It Moved")
+    st.caption("Manual catalyst investigation panel. No automatic cause judgement, AI summary, body collection, or DB write is run.")
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
-    selection_key = "overview_market_mover_catalyst_selection"
+    selection_key = "overview_market_mover_why_it_moved_selection"
     if st.session_state.get(selection_key) not in candidate_by_id:
         st.session_state[selection_key] = option_ids[0]
     selected_id = str(
@@ -3482,32 +3545,82 @@ def _render_market_mover_catalyst_links(
         )
     )
     selected = candidate_by_id[selected_id]
-    links = build_market_mover_catalyst_links(
-        symbol=str(selected["symbol"]),
-        name=str(selected["name"]),
+    mover = dict(selected.get("mover") or {})
+    mover["Rank"] = selected.get("rank")
+    mover["Symbol"] = selected.get("symbol")
+    mover["Name"] = selected.get("name")
+    model = build_market_mover_why_it_moved_read_model(
+        mover=mover,
         period=period,
         coverage=universe_code,
-        rank=selected["rank"],
         rank_source=str(selected["rank_source"]),
     )
-    link_columns = st.columns(2, gap="small")
-    for index, (_, link) in enumerate(links.iterrows()):
-        source = str(link.get("Source") or "Open")
-        label = {
-            "SEC Company Search": "SEC Search",
-            "Investor Relations / Earnings Search": "IR / Earnings",
-        }.get(source, source)
-        link_columns[index % 2].link_button(
-            label,
-            str(link.get("URL") or ""),
-            use_container_width=True,
-            help=str(link.get("Purpose") or ""),
-        )
-    st.dataframe(
-        links[["Source", "Search Query", "Purpose"]],
-        width="stretch",
-        hide_index=True,
+    identity = model.get("identity") or {}
+    context = model.get("context") or {}
+    movement = model.get("movement") or {}
+
+    _render_market_mover_fact_grid(
+        [
+            ("Symbol", identity.get("Symbol")),
+            ("Name", identity.get("Name")),
+            ("Sector", identity.get("Sector")),
+            ("Industry", identity.get("Industry")),
+            ("Market Cap", _compact_number(identity.get("Market Cap"), prefix="$")),
+        ],
+        value_size="1.15rem",
     )
+    _render_market_mover_fact_grid(
+        [
+            ("Period", context.get("Period")),
+            ("Coverage", context.get("Coverage")),
+            ("Rank Type", context.get("Rank Type")),
+            ("Rank", context.get("Rank")),
+            ("Return %", _format_signed(movement.get("Return %"))),
+            ("Volume", _compact_number(movement.get("Volume"))),
+            ("Dollar Volume", _compact_number(movement.get("Dollar Volume"), prefix="$")),
+            ("Previous Return %", _format_signed(movement.get("Previous Return %"))),
+            ("Momentum Delta", _format_signed(movement.get("Momentum Delta pp"), suffix=" pp")),
+        ],
+        value_size="1.05rem",
+    )
+
+    links = model.get("links")
+    if isinstance(links, pd.DataFrame) and not links.empty:
+        st.markdown("##### Research Links")
+        link_columns = st.columns(2, gap="small")
+        for index, (_, link) in enumerate(links.iterrows()):
+            source = str(link.get("Source") or "Open")
+            label = {
+                "SEC Company Search": "SEC Search",
+                "Investor Relations / Earnings Search": "IR / Earnings",
+            }.get(source, source)
+            link_columns[index % 2].link_button(
+                label,
+                str(link.get("URL") or ""),
+                use_container_width=True,
+                help=str(link.get("Purpose") or ""),
+            )
+        st.dataframe(
+            links[["Source", "Search Query", "Purpose"]],
+            width="stretch",
+            hide_index=True,
+        )
+
+    metadata_store_key = "overview_market_mover_why_it_moved_metadata"
+    metadata_store = st.session_state.get(metadata_store_key)
+    if not isinstance(metadata_store, dict):
+        metadata_store = {}
+        st.session_state[metadata_store_key] = metadata_store
+    metadata_key = f"{universe_code}:{period}:{selected_id}"
+    current_metadata = metadata_store.get(metadata_key) or model.get("metadata") or {}
+
+    st.markdown("##### Compact Metadata")
+    if st.button("Fetch compact metadata", key=f"overview_market_mover_why_it_moved_fetch_{metadata_key}"):
+        with st.spinner(f"Fetching compact metadata for {identity.get('Symbol') or selected.get('symbol')}..."):
+            current_metadata = fetch_market_mover_compact_metadata(str(identity.get("Symbol") or selected.get("symbol") or ""))
+            metadata_store[metadata_key] = current_metadata
+            st.session_state[metadata_store_key] = metadata_store
+    _render_market_mover_metadata_result(dict(current_metadata))
 
 
 def _render_market_movers_snapshot_panel(
@@ -3553,7 +3666,7 @@ def _render_market_movers_snapshot_panel(
                 height=_market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
                 hide_index=True,
             )
-    _render_market_mover_catalyst_links(
+    _render_market_mover_why_it_moved_panel(
         rows,
         volume_rows,
         universe_code=universe_code,

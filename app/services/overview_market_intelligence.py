@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Sequence
-from datetime import date, timedelta
+from datetime import date, datetime, timezone, timedelta
 from typing import Any
 from urllib.parse import quote, quote_plus, urlencode
 
@@ -79,6 +80,8 @@ CATALYST_LINK_COLUMNS = [
     "Purpose",
     "URL",
 ]
+WHY_IT_MOVED_NEWS_COLUMNS = ["Title", "Source", "Published At", "URL"]
+WHY_IT_MOVED_SEC_COLUMNS = ["Form", "Filing Date", "Title", "URL"]
 MISSING_COLUMNS = [
     "Symbol",
     "Name",
@@ -2527,6 +2530,374 @@ def build_market_mover_catalyst_links(
         },
     ]
     return _rows_frame(rows, columns=CATALYST_LINK_COLUMNS)
+
+
+def _clean_optional_text(value: Any, *, uppercase: bool = False) -> str | None:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    text = str(value).strip()
+    if not text:
+        return None
+    return text.upper() if uppercase else text
+
+
+def _coerce_optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _metadata_timestamp(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        timestamp = value
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+        return timestamp.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value), timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        except (OverflowError, OSError, ValueError):
+            return None
+    text = str(value).strip()
+    return text or None
+
+
+def _nested_value(mapping: dict[str, Any], *keys: str) -> Any:
+    current: Any = mapping
+    for key in keys:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
+def build_market_mover_metadata_not_requested_state(symbol: str | None = None) -> dict[str, Any]:
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True)
+    return {
+        "status": "NOT_REQUESTED",
+        "symbol": normalized_symbol,
+        "fetched_at_utc": None,
+        "news": _rows_frame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+        "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
+        "messages": ["Metadata lookup has not been run in this session."],
+    }
+
+
+def build_market_mover_why_it_moved_read_model(
+    *,
+    mover: dict[str, Any],
+    period: str,
+    coverage: str,
+    rank_source: str = "Return Rank",
+) -> dict[str, Any]:
+    """Build the session-only manual investigation read model for one selected mover."""
+
+    row = dict(mover or {})
+    symbol = _clean_optional_text(row.get("Symbol"), uppercase=True)
+    if not symbol:
+        return {
+            "status": "NO_SYMBOL",
+            "mode": "manual_investigation",
+            "identity": {},
+            "context": {},
+            "movement": {},
+            "links": _rows_frame([], columns=CATALYST_LINK_COLUMNS),
+            "metadata": build_market_mover_metadata_not_requested_state(None),
+            "boundary_note": "Manual investigation panel; no automatic catalyst judgement is produced.",
+        }
+
+    name = _clean_optional_text(row.get("Name")) or symbol
+    context = _market_mover_link_context(
+        symbol=symbol,
+        name=name,
+        period=period,
+        coverage=coverage,
+        rank=row.get("Rank"),
+        rank_source=rank_source,
+    )
+    identity = {
+        "Symbol": symbol,
+        "Name": name,
+        "Sector": _clean_optional_text(row.get("Sector")) or "Unknown",
+        "Industry": _clean_optional_text(row.get("Industry")) or "Unknown",
+        "Market Cap": _coerce_optional_int(row.get("Market Cap")),
+    }
+    movement = {
+        "Return %": _coerce_optional_float(row.get("Return %")),
+        "Volume": _coerce_optional_int(row.get("Volume")),
+        "Dollar Volume": _coerce_optional_float(row.get("Dollar Volume")),
+        "Previous Return %": _coerce_optional_float(row.get("Previous Return %")),
+        "Momentum Delta pp": _coerce_optional_float(row.get("Momentum Delta pp")),
+    }
+    links = build_market_mover_catalyst_links(
+        symbol=symbol,
+        name=name,
+        period=period,
+        coverage=coverage,
+        rank=row.get("Rank"),
+        rank_source=rank_source,
+    )
+    return {
+        "status": "READY",
+        "mode": "manual_investigation",
+        "identity": identity,
+        "context": {
+            "Period": context["period_label"],
+            "Coverage": context["coverage_label"],
+            "Rank Type": context["rank_source_label"],
+            "Rank": context["rank_label"],
+        },
+        "movement": movement,
+        "links": links,
+        "metadata": build_market_mover_metadata_not_requested_state(symbol),
+        "boundary_note": "Manual investigation panel; no automatic catalyst judgement is produced.",
+    }
+
+
+def _normalize_news_metadata(rows: list[dict[str, Any]], *, max_items: int) -> pd.DataFrame:
+    out: list[dict[str, Any]] = []
+    for item in rows[: max(0, max_items)]:
+        if not isinstance(item, dict):
+            continue
+        content = item.get("content") if isinstance(item.get("content"), dict) else {}
+        provider = content.get("provider") if isinstance(content.get("provider"), dict) else {}
+        title = (
+            _clean_optional_text(item.get("title"))
+            or _clean_optional_text(content.get("title"))
+            or _clean_optional_text(item.get("headline"))
+        )
+        url = (
+            _clean_optional_text(item.get("url"))
+            or _clean_optional_text(item.get("link"))
+            or _clean_optional_text(_nested_value(content, "clickThroughUrl", "url"))
+            or _clean_optional_text(_nested_value(content, "canonicalUrl", "url"))
+        )
+        if not title or not url:
+            continue
+        source = (
+            _clean_optional_text(item.get("publisher"))
+            or _clean_optional_text(item.get("source"))
+            or _clean_optional_text(provider.get("displayName"))
+            or _clean_optional_text(provider.get("name"))
+            or "Unknown"
+        )
+        published_at = (
+            _metadata_timestamp(item.get("published_at"))
+            or _metadata_timestamp(item.get("providerPublishTime"))
+            or _metadata_timestamp(content.get("pubDate"))
+            or _metadata_timestamp(content.get("displayTime"))
+        )
+        out.append(
+            {
+                "Title": title,
+                "Source": source,
+                "Published At": published_at,
+                "URL": url,
+            }
+        )
+    return _rows_frame(out, columns=WHY_IT_MOVED_NEWS_COLUMNS)
+
+
+def _normalize_sec_filing_metadata(rows: list[dict[str, Any]], *, max_items: int) -> pd.DataFrame:
+    out: list[dict[str, Any]] = []
+    for item in rows[: max(0, max_items)]:
+        if not isinstance(item, dict):
+            continue
+        form = _clean_optional_text(item.get("form")) or _clean_optional_text(item.get("form_type"))
+        filing_date = (
+            _metadata_timestamp(item.get("filing_date"))
+            or _metadata_timestamp(item.get("filingDate"))
+        )
+        title = (
+            _clean_optional_text(item.get("title"))
+            or _clean_optional_text(item.get("description"))
+            or _clean_optional_text(item.get("primaryDocDescription"))
+            or form
+        )
+        url = _clean_optional_text(item.get("url")) or _clean_optional_text(item.get("source_ref"))
+        if not form or not url:
+            continue
+        out.append(
+            {
+                "Form": form,
+                "Filing Date": filing_date,
+                "Title": title,
+                "URL": url,
+            }
+        )
+    return _rows_frame(out, columns=WHY_IT_MOVED_SEC_COLUMNS)
+
+
+def _fetch_yfinance_news_metadata(symbol: str, max_items: int) -> list[dict[str, Any]]:
+    import yfinance as yf
+
+    ticker = yf.Ticker(symbol)
+    news = ticker.news or []
+    return [item for item in news[: max(0, max_items)] if isinstance(item, dict)]
+
+
+def _sec_filing_metadata_url(cik: int, accession_no: str, primary_document: str | None) -> str:
+    from finance.data.sec_delisting import SEC_FILING_ARCHIVE_URL_TEMPLATE, SEC_FILING_DIRECTORY_URL_TEMPLATE
+
+    accession_clean = str(accession_no or "").replace("-", "")
+    cik_text = str(int(cik))
+    if primary_document:
+        return SEC_FILING_ARCHIVE_URL_TEMPLATE.format(
+            cik=cik_text,
+            accession=accession_clean,
+            primary_document=primary_document,
+        )
+    return SEC_FILING_DIRECTORY_URL_TEMPLATE.format(cik=cik_text, accession=accession_clean)
+
+
+def _fetch_sec_recent_filing_metadata(
+    symbol: str,
+    max_items: int,
+    user_agent: str | None,
+    request_timeout: float,
+) -> list[dict[str, Any]]:
+    from finance.data.sec_delisting import (
+        DEFAULT_SEC_USER_AGENT,
+        SEC_COMPANY_TICKERS_URL,
+        SEC_SUBMISSIONS_URL_TEMPLATE,
+        fetch_sec_json,
+        normalize_sec_ticker_map,
+    )
+
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True)
+    if not normalized_symbol:
+        return []
+    effective_user_agent = str(user_agent or os.getenv("SEC_USER_AGENT") or DEFAULT_SEC_USER_AGENT).strip()
+    ticker_map = normalize_sec_ticker_map(fetch_sec_json(SEC_COMPANY_TICKERS_URL, effective_user_agent, request_timeout))
+    company = ticker_map.get(normalized_symbol)
+    if not company:
+        return []
+    cik = int(company["cik"])
+    submissions = fetch_sec_json(SEC_SUBMISSIONS_URL_TEMPLATE.format(cik=cik), effective_user_agent, request_timeout)
+    recent = ((submissions.get("filings") or {}).get("recent") or {}) if isinstance(submissions, dict) else {}
+    if not isinstance(recent, dict):
+        return []
+
+    columns = {
+        "form": recent.get("form") or [],
+        "accessionNumber": recent.get("accessionNumber") or [],
+        "filingDate": recent.get("filingDate") or [],
+        "primaryDocument": recent.get("primaryDocument") or [],
+        "primaryDocDescription": recent.get("primaryDocDescription") or [],
+    }
+    max_len = max((len(values) for values in columns.values() if isinstance(values, list)), default=0)
+    rows: list[dict[str, Any]] = []
+    for idx in range(max_len):
+        if len(rows) >= max(0, max_items):
+            break
+        accession_no = columns["accessionNumber"][idx] if idx < len(columns["accessionNumber"]) else None
+        form = columns["form"][idx] if idx < len(columns["form"]) else None
+        if not accession_no or not form:
+            continue
+        primary_document = columns["primaryDocument"][idx] if idx < len(columns["primaryDocument"]) else None
+        filing_date = columns["filingDate"][idx] if idx < len(columns["filingDate"]) else None
+        title = columns["primaryDocDescription"][idx] if idx < len(columns["primaryDocDescription"]) else None
+        rows.append(
+            {
+                "form": form,
+                "filing_date": filing_date,
+                "title": title or form,
+                "url": _sec_filing_metadata_url(cik, str(accession_no), str(primary_document or "").strip() or None),
+            }
+        )
+    return rows
+
+
+def fetch_market_mover_compact_metadata(
+    symbol: str,
+    *,
+    max_news: int = 5,
+    max_filings: int = 5,
+    news_fetcher: Callable[[str, int], list[dict[str, Any]]] | None = None,
+    sec_fetcher: Callable[[str, int, str | None, float], list[dict[str, Any]]] | None = None,
+    user_agent: str | None = None,
+    request_timeout: float = 8.0,
+) -> dict[str, Any]:
+    """Fetch compact, session-only news and SEC metadata for one selected mover."""
+
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True)
+    fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    if not normalized_symbol:
+        return {
+            "status": "FAILED",
+            "symbol": None,
+            "fetched_at_utc": fetched_at,
+            "news": _rows_frame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+            "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
+            "messages": ["Symbol is required for compact metadata lookup."],
+        }
+
+    messages: list[str] = []
+    had_failure = False
+    news_rows: list[dict[str, Any]] = []
+    sec_rows: list[dict[str, Any]] = []
+
+    try:
+        news_rows = (news_fetcher or _fetch_yfinance_news_metadata)(normalized_symbol, max(0, int(max_news)))
+    except Exception as exc:
+        had_failure = True
+        messages.append(f"News metadata lookup failed: {exc}")
+
+    try:
+        sec_rows = (sec_fetcher or _fetch_sec_recent_filing_metadata)(
+            normalized_symbol,
+            max(0, int(max_filings)),
+            user_agent,
+            float(request_timeout),
+        )
+    except Exception as exc:
+        had_failure = True
+        messages.append(f"SEC metadata lookup failed: {exc}")
+
+    news = _normalize_news_metadata(news_rows, max_items=max_news)
+    sec_filings = _normalize_sec_filing_metadata(sec_rows, max_items=max_filings)
+    has_metadata = not news.empty or not sec_filings.empty
+    if has_metadata:
+        status = "OK"
+    elif had_failure:
+        status = "FAILED"
+    else:
+        status = "NO_METADATA"
+        messages.append(f"No compact news or SEC filing metadata returned for {normalized_symbol}.")
+
+    return {
+        "status": status,
+        "symbol": normalized_symbol,
+        "fetched_at_utc": fetched_at,
+        "news": news,
+        "sec_filings": sec_filings,
+        "messages": messages,
+    }
 
 
 def _current_period_volume_dates(date_window: dict[str, Any], *, period: str) -> list[str]:
