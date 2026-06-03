@@ -3463,6 +3463,10 @@ def _market_mover_metadata_column_config() -> dict[str, Any]:
     return {"URL": st.column_config.LinkColumn("URL", display_text="Open")}
 
 
+def _market_mover_research_link_column_config() -> dict[str, Any]:
+    return {"URL": st.column_config.LinkColumn("URL", display_text="Open")}
+
+
 def _render_market_mover_metadata_result(metadata: dict[str, Any]) -> None:
     status = str(metadata.get("status") or "NOT_REQUESTED")
     messages = [str(message) for message in metadata.get("messages") or [] if str(message).strip()]
@@ -3475,6 +3479,8 @@ def _render_market_mover_metadata_result(metadata: dict[str, Any]) -> None:
         st.warning("No compact news or SEC filing metadata returned for this lookup.")
     elif status == "FAILED":
         st.error("Compact metadata lookup failed.")
+    elif status == "PARTIAL":
+        st.warning(f"Compact metadata lookup partially completed{f' · {fetched_at}' if fetched_at else ''}.")
     else:
         st.success(f"Compact metadata lookup complete{f' · {fetched_at}' if fetched_at else ''}.")
 
@@ -3591,25 +3597,13 @@ def _render_market_mover_why_it_moved_panel(
 
     links = model.get("links")
     if isinstance(links, pd.DataFrame) and not links.empty:
-        st.markdown("##### Research Links")
-        link_columns = st.columns(2, gap="small")
-        for index, (_, link) in enumerate(links.iterrows()):
-            source = str(link.get("Source") or "Open")
-            label = {
-                "SEC Company Search": "SEC Search",
-                "Investor Relations / Earnings Search": "IR / Earnings",
-            }.get(source, source)
-            link_columns[index % 2].link_button(
-                label,
-                str(link.get("URL") or ""),
-                use_container_width=True,
-                help=str(link.get("Purpose") or ""),
+        with st.expander("External searches", expanded=False):
+            st.dataframe(
+                links[["Source", "URL", "Search Query", "Purpose"]],
+                width="stretch",
+                hide_index=True,
+                column_config=_market_mover_research_link_column_config(),
             )
-        st.dataframe(
-            links[["Source", "Search Query", "Purpose"]],
-            width="stretch",
-            hide_index=True,
-        )
 
     metadata_store_key = "overview_market_mover_why_it_moved_metadata"
     metadata_store = st.session_state.get(metadata_store_key)

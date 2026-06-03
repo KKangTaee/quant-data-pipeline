@@ -5264,6 +5264,30 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("News metadata lookup failed: news timeout", failed["messages"])
         self.assertIn("SEC metadata lookup failed: sec timeout", failed["messages"])
 
+    def test_market_mover_compact_metadata_fetcher_marks_partial_provider_failure(self) -> None:
+        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+
+        def sec_timeout(symbol: str, max_items: int, user_agent: str | None, request_timeout: float) -> list[dict[str, object]]:
+            raise RuntimeError("sec timeout")
+
+        metadata = fetch_market_mover_compact_metadata(
+            "AAA",
+            news_fetcher=lambda symbol, max_items: [
+                {
+                    "title": "AAA shares rise",
+                    "publisher": "Market Desk",
+                    "published_at": "2026-06-03T13:00:00Z",
+                    "url": "https://example.com/news/aaa",
+                }
+            ],
+            sec_fetcher=sec_timeout,
+        )
+
+        self.assertEqual(metadata["status"], "PARTIAL")
+        self.assertEqual(metadata["news"].empty, False)
+        self.assertEqual(metadata["sec_filings"].empty, True)
+        self.assertIn("SEC metadata lookup failed: sec timeout", metadata["messages"])
+
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
         from app.web.overview_dashboard import _market_mover_catalyst_candidates
 
@@ -5307,6 +5331,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         from app.web.overview_dashboard import _market_mover_metadata_column_config
 
         config = _market_mover_metadata_column_config()
+
+        self.assertIn("URL", config)
+        self.assertEqual(config["URL"]["type_config"]["type"], "link")
+        self.assertEqual(config["URL"]["type_config"]["display_text"], "Open")
+
+    def test_market_mover_research_link_tables_share_clickable_url_config(self) -> None:
+        from app.web.overview_dashboard import _market_mover_research_link_column_config
+
+        config = _market_mover_research_link_column_config()
 
         self.assertIn("URL", config)
         self.assertEqual(config["URL"]["type_config"]["type"], "link")

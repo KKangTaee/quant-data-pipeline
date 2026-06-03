@@ -2911,7 +2911,9 @@ def fetch_market_mover_compact_metadata(
     news = _normalize_news_metadata(news_rows, max_items=max_news)
     sec_filings = _normalize_sec_filing_metadata(sec_rows, max_items=max_filings)
     has_metadata = not news.empty or not sec_filings.empty
-    if has_metadata:
+    if has_metadata and had_failure:
+        status = "PARTIAL"
+    elif has_metadata:
         status = "OK"
     elif had_failure:
         status = "FAILED"

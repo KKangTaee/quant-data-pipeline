@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-04 - Why It Moved needs a UX pass before it stops feeling like a prototype
+- User request:
+  - 사용자가 research link 버튼은 필요 없을 것 같다고 확인했고, 현재 Why It Moved 기능을 리뷰한 뒤 개선점과 prototype 수준 여부를 설명해 달라고 요청함.
+- Interpreted goal:
+  - V1.5의 no-classifier / session-only boundary는 유지하면서, 잘못된 성공 표시와 버튼 noise를 줄이고 다음 UX/UI 방향을 정리해야 함.
+- Analysis result:
+  - provider 한쪽만 실패했는데 다른 metadata가 있으면 `OK`로 보이는 점은 investigation state를 과신하게 만든다. 6개 outbound 버튼은 primary action처럼 보여 compact metadata workflow를 방해한다. 현재 UI는 기능 prototype이며, source status / evidence grouping / freshness cue / next-check hierarchy가 아직 부족하다.
+- Follow-up:
+  - `PARTIAL` 상태를 추가하고 external searches를 collapsed clickable table로 낮췄다. 후속 UX pass는 movement header, provider status strip, News / SEC / External Searches grouping, Korean-source lane policy를 먼저 설계한 뒤 진행한다.
+
 ### 2026-06-03 - Why It Moved should remain an investigation panel, not a catalyst classifier
 - User request:
   - 사용자가 Market Movers Catalyst Links를 Why It Moved V1.5로 확장하되, 자동 catalyst 판정 / AI 요약 / article 또는 filing 본문 수집 / DB·JSONL 저장 없이 button-triggered session-only metadata lookup으로 구현해 달라고 요청함.

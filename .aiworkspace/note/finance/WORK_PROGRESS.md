@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-04 - Market Movers Why It Moved Review Follow-up
+- Stabilized `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` after UX/code review.
+- Compact metadata now distinguishes provider partial failure with `PARTIAL` instead of green `OK`.
+- The six outbound research buttons were removed; external searches now live in a collapsed clickable-link table with Korean Google / Naver rows preserved.
+- Why It Moved is still treated as a prototype-level manual investigation panel; next UX pass should improve information hierarchy before adding classifier, persistence, or provider expansion.
+
 ### 2026-06-03 - Market Movers Why It Moved V1.5
 - Expanded `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` from Catalyst Links into `Overview > Market Movers > Why It Moved`.
 - The panel shows selected Return / Volume rank ticker identity, movement context, outbound research links, and button-triggered compact news / SEC metadata in session state only.
