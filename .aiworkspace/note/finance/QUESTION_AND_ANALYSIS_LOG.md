@@ -7174,3 +7174,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Operations Overview` landing page를 추가하고, Selected Dashboard는 `Portfolio Monitoring`, Ops Review는 `System / Data Health`, Run History와 Candidate Library는 Archive recovery label로 낮추는 additive IA가 가장 안전함
 - Follow-up:
   - `app/web/operations_overview.py`와 navigation label 정리를 구현했고, registry / saved schema / live order / auto rebalance는 변경하지 않았다. 상세 실행 기록은 `.aiworkspace/note/finance/tasks/active/operations-overview-ia-v1/`에 남겼다
+
+### 2026-06-03 - Operations 2차~5차를 끝까지 진행한다
+- User request:
+  - 사용자가 2차부터 5차까지 단계별로 작업하고, 중간 의사결정이 필요하면 질문해 달라고 요청함
+- Interpreted goal:
+  - 1차 보강으로 끝내지 않고 Operations 기능 감사, 리밸런싱 의미 정정, archive 격하, 최종 Operations Console까지 이어서 완성해야 함
+- Analysis result:
+  - 삭제 여부는 아직 되돌리기 어려운 판단이므로 Backtest Run History / Candidate Library는 제거하지 않고 archive / recovery로 보존하는 것이 맞다. 리밸런싱 표는 주문처럼 보이는 컬럼명을 target snapshot / next review 언어로 바꿔야 한다
+- Follow-up:
+  - `Operations Console` action queue, 1차~5차 roadmap, surface audit decisions, target snapshot table semantics를 구현했다. live approval / order / account sync / auto rebalance / registry rewrite / report export는 추가하지 않았다

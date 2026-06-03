@@ -25,7 +25,7 @@
 |---|---|
 | `app/workspace_paths.py` | active worktree root 탐색과 canonical `.aiworkspace/note/finance`의 registries / saved / run_history / docs / artifact path 상수 |
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
-| `app/web/operations_overview.py` | `Operations > Operations Overview` landing page render와 Streamlit-free Operations lane read model. Portfolio Monitoring, System / Data Health, Archive / Recovery, Reference / Reports를 구분하고 no-live approval / order / auto rebalance boundary를 표시 |
+| `app/web/operations_overview.py` | `Operations > Operations Overview` / `Operations Console` render와 Streamlit-free Operations read model. Today action queue, 1차~5차 restructure roadmap, surface audit decisions, Portfolio Monitoring / System Data Health primary lane, Archive / Recovery secondary tools, no-live approval / order / auto rebalance boundary를 표시 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Sector / Industry, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Sector / Industry ranking/trend, Events view routing을 조정 |

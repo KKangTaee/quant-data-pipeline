@@ -1504,10 +1504,11 @@ def _build_rebalance_table(strategy_rows: list[dict[str, Any]]) -> pd.DataFrame:
                 {
                     "Strategy": row.get("source_title"),
                     "Component": component_row.get("title") or component_row.get("strategy_name") or "-",
-                    "Last Rebalance": latest.get("date") or component_row.get("period_end") or "-",
-                    "Next Rebalance": _next_month_end(latest.get("date") or component_row.get("period_end"), interval=interval),
-                    "Current Target Assets": ", ".join(allocation_parts) or "-",
-                    "Next Target Asset": "Recomputed at next rebalance",
+                    "Target Snapshot Date": latest.get("date") or component_row.get("period_end") or "-",
+                    "Next Review Date": _next_month_end(latest.get("date") or component_row.get("period_end"), interval=interval),
+                    "Current Target Snapshot": ", ".join(allocation_parts) or "-",
+                    "Target Meaning": "Target weights from the latest monitoring scenario; recomputed only during manual review.",
+                    "Execution Boundary": "No order, account sync, or auto rebalance.",
                     "Cash / Defensive Sleeve": (
                         f"{float(cash_share):.1%}" if cash_share is not None else ("BIL / cash ticker" if "BIL" in tickers else "-")
                     ),
@@ -1572,10 +1573,14 @@ def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -
     _render_strategy_performance_board(strategy_rows)
     with st.expander("전략별 성과 테이블", expanded=False):
         st.dataframe(_build_strategy_performance_table(strategy_rows), width="stretch", hide_index=True)
-    with st.expander("리밸런싱 정보", expanded=completed > 0):
+    with st.expander("Target Snapshot / Review Schedule", expanded=completed > 0):
+        st.info(
+            "`Target Snapshot Date`는 마지막 monitoring scenario가 산출한 목표 비중 기준일입니다. "
+            "`Next Review Date`는 다음 수동 재계산 예정일이며, 표의 `Current Target Snapshot`은 주문 지시나 자동 리밸런싱 명령이 아닙니다."
+        )
         rebalance_df = _build_rebalance_table(strategy_rows)
         if rebalance_df.empty:
-            st.info("표시할 리밸런싱 정보가 없습니다.")
+            st.info("표시할 target snapshot / review schedule 정보가 없습니다.")
         else:
             st.dataframe(rebalance_df, width="stretch", hide_index=True)
 

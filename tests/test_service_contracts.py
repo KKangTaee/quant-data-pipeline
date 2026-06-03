@@ -9453,6 +9453,90 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(model["execution_boundary"]["registry_write"])
         self.assertEqual(model["lanes"][0]["target_surface"], "Operations > Portfolio Monitoring")
 
+    def test_operations_console_model_exposes_v2_v5_audit_and_action_queue(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 3,
+                    "dashboard_row_count": 3,
+                    "status_counts": {"normal": 1, "watch": 1, "rebalance_needed": 1, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 3,
+                        "missing_reference_count": 0,
+                    }
+                },
+            },
+            run_history=[{"job_name": "daily_market_update", "status": "failed"}],
+            candidate_records=[{"registry_id": "cand-1"}],
+        )
+
+        self.assertEqual(model["console_version"], "operations_console_v2_v5")
+        self.assertEqual([stage["stage"] for stage in model["stage_roadmap"]], ["1차", "2차", "3차", "4차", "5차"])
+        self.assertTrue(all(stage["status"] == "completed" for stage in model["stage_roadmap"]))
+
+        audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
+        self.assertEqual(audit_by_surface["portfolio_monitoring"]["decision"], "keep_primary_improve")
+        self.assertEqual(audit_by_surface["system_data_health"]["decision"], "keep_primary_improve")
+        self.assertEqual(audit_by_surface["backtest_run_history"]["decision"], "keep_as_archive_recovery")
+        self.assertFalse(audit_by_surface["backtest_run_history"]["primary_operations"])
+        self.assertEqual(audit_by_surface["candidate_library"]["decision"], "keep_as_archive_recovery")
+        self.assertFalse(audit_by_surface["candidate_library"]["primary_operations"])
+
+        action_keys = {item["key"] for item in model["action_queue"]}
+        self.assertIn("review_portfolio_monitoring", action_keys)
+        self.assertIn("inspect_system_data_health", action_keys)
+        self.assertNotIn("place_order", action_keys)
+        for item in model["action_queue"]:
+            self.assertFalse(item["execution_boundary"]["order_instruction"])
+            self.assertFalse(item["execution_boundary"]["auto_rebalance"])
+
+    def test_portfolio_monitoring_rebalance_table_uses_target_snapshot_language(self) -> None:
+        from app.web.final_selected_portfolio_dashboard import _build_rebalance_table
+
+        table = _build_rebalance_table(
+            [
+                {
+                    "source_title": "GRS Liquid Macro Top2",
+                    "raw_decision": {
+                        "selected_components": [
+                            {
+                                "title": "GRS Liquid Macro Top2",
+                                "selection_history": [
+                                    {
+                                        "date": "2026-05-29",
+                                        "selected_tickers": ["QQQ", "SPY"],
+                                        "target_weights": [0.503, 0.503],
+                                        "cash_share": 0.0,
+                                    }
+                                ],
+                                "replay_contract": {"settings_snapshot": {"rebalance_interval": 1}},
+                            }
+                        ]
+                    },
+                }
+            ]
+        )
+
+        self.assertIn("Target Snapshot Date", table.columns)
+        self.assertIn("Next Review Date", table.columns)
+        self.assertIn("Current Target Snapshot", table.columns)
+        self.assertIn("Target Meaning", table.columns)
+        self.assertIn("Execution Boundary", table.columns)
+        self.assertNotIn("Last Rebalance", table.columns)
+        self.assertNotIn("Next Rebalance", table.columns)
+
+        row = table.iloc[0].to_dict()
+        self.assertEqual(row["Target Snapshot Date"], "2026-05-29")
+        self.assertEqual(row["Next Review Date"], "2026-06-30")
+        self.assertIn("QQQ 50.3%", row["Current Target Snapshot"])
+        self.assertIn("manual review", row["Target Meaning"])
+        self.assertIn("No order", row["Execution Boundary"])
+
     def _ready_provider_evidence(self) -> dict:
         return {
             "schema_version": "selected_provider_evidence_v1",
