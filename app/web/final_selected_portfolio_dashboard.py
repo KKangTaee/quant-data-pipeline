@@ -1714,7 +1714,7 @@ def _render_portfolio_scenario_update_controls(strategy_rows: list[dict[str, Any
         ):
             progress = st.progress(0.0)
             status = st.empty()
-            with st.spinner("포트폴리오 전략 시나리오를 순서대로 실행하는 중입니다..."):
+            with st.spinner("포트폴리오 전략 시나리오를 순서대로 실행하는 중입니다...", show_time=True):
                 for index, row in enumerate(rows_to_run, start=1):
                     status.caption(
                         f"{index}/{len(rows_to_run)} 실행 중 - {row.get('source_title') or row.get('decision_id') or '-'}"
@@ -2756,7 +2756,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> dict[str, Any]:
             )
 
     if run_clicked:
-        with st.spinner("선정 포트폴리오 contract를 재실행하는 중입니다..."):
+        with st.spinner("선정 포트폴리오 contract를 재실행하는 중입니다...", show_time=True):
             _run_strategy_recheck(row)
 
     operations_payload = {
