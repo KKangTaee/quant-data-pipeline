@@ -5,7 +5,7 @@ import re
 from collections.abc import Callable, Sequence
 from datetime import date, datetime, timezone, timedelta
 from typing import Any
-from urllib.parse import parse_qs, quote, quote_plus, unquote, urlencode, urlparse
+from urllib.parse import parse_qs, quote, quote_plus, unquote, urlencode, urljoin, urlparse
 
 import pandas as pd
 
@@ -2946,6 +2946,7 @@ def _sec_preview_payload(
     fetched_at_utc: str | None = None,
     preview_type: str = "SEC filing preview",
     sections: list[dict[str, Any]] | None = None,
+    digest: dict[str, Any] | None = None,
     messages: list[str] | None = None,
 ) -> dict[str, Any]:
     normalized = _normalize_sec_preview_filing(filing)
@@ -2961,6 +2962,7 @@ def _sec_preview_payload(
         "storage_boundary": "session_only",
         "preview_type": preview_type,
         "sections": list(sections or []),
+        "digest": digest or _empty_sec_filing_digest(),
         "messages": list(messages or []),
     }
 
@@ -3131,6 +3133,194 @@ def _extract_periodic_preview_sections(lines: list[str]) -> list[dict[str, Any]]
     return sections[:WHY_IT_MOVED_SEC_PREVIEW_MAX_SECTIONS]
 
 
+def _empty_sec_filing_digest() -> dict[str, Any]:
+    return {
+        "type": "empty",
+        "storage_boundary": "session_only",
+        "cards": [],
+        "tables": [],
+        "exhibits": [],
+        "messages": [],
+    }
+
+
+def _sec_item_code(heading: str) -> str | None:
+    match = re.search(r"\bitem\s+\d+[a-z]?(?:\.\d{2})?", str(heading or ""), flags=re.IGNORECASE)
+    if not match:
+        return None
+    return re.sub(r"\s+", " ", match.group(0)).strip().title()
+
+
+def _sec_digest_hint(heading: str) -> str:
+    normalized = str(heading or "").lower()
+    if normalized == "table of contents":
+        return "table_of_contents"
+    if "9.01" in normalized or "exhibit" in normalized:
+        return "exhibits_or_attachments"
+    if "financial statements" in normalized:
+        return "financial_statements"
+    if "management's discussion" in normalized or "management’s discussion" in normalized or "md&a" in normalized:
+        return "mda"
+    if "risk factors" in normalized:
+        return "risk_factors"
+    if "2.02" in normalized or "results of operations" in normalized:
+        return "earnings_or_results"
+    if "7.01" in normalized or "regulation fd" in normalized:
+        return "regulation_fd"
+    if "8.01" in normalized or "other events" in normalized:
+        return "other_events"
+    if normalized.startswith("part "):
+        return "part_heading"
+    return "section_locator"
+
+
+def _sec_digest_card(section: dict[str, Any]) -> dict[str, Any]:
+    heading = str(section.get("heading") or "").strip()
+    snippet = str(section.get("snippet") or "").strip()
+    if len(snippet) > WHY_IT_MOVED_SEC_PREVIEW_SNIPPET_CHARS:
+        snippet = snippet[:WHY_IT_MOVED_SEC_PREVIEW_SNIPPET_CHARS].rstrip() + "..."
+    return {
+        "kind": str(section.get("kind") or "SEC section"),
+        "heading": heading,
+        "item_code": _sec_item_code(heading),
+        "hint": _sec_digest_hint(heading),
+        "snippet": snippet,
+        "table_count": 0,
+    }
+
+
+def _sec_table_heading(table: Any) -> str:
+    for previous in table.find_all_previous(["h1", "h2", "h3", "h4", "div", "p"], limit=12):
+        text = re.sub(r"\s+", " ", str(previous.get_text(" ", strip=True) or "")).strip()
+        if not text:
+            continue
+        if _is_sec_preview_heading(text) or len(text) <= 96:
+            return text
+    return "SEC filing table"
+
+
+def _dedupe_table_columns(columns: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: dict[str, int] = {}
+    for idx, column in enumerate(columns[:6]):
+        cleaned = re.sub(r"\s+", " ", str(column or "")).strip() or f"Column {idx + 1}"
+        count = seen.get(cleaned, 0)
+        seen[cleaned] = count + 1
+        out.append(cleaned if count == 0 else f"{cleaned} {count + 1}")
+    return out
+
+
+def _extract_sec_table_previews(html_text: str, *, max_tables: int = 3, max_rows: int = 3) -> list[dict[str, Any]]:
+    soup = _parse_sec_html(html_text)
+    tables: list[dict[str, Any]] = []
+    for table in soup.find_all("table"):
+        row_values: list[tuple[list[str], bool]] = []
+        for row in table.find_all("tr"):
+            cells = row.find_all(["th", "td"])
+            values = [re.sub(r"\s+", " ", str(cell.get_text(" ", strip=True) or "")).strip() for cell in cells]
+            values = [value for value in values if value]
+            if values:
+                row_values.append((values, bool(row.find_all("th"))))
+        if len(row_values) < 2:
+            continue
+        raw_columns = row_values[0][0]
+        columns = _dedupe_table_columns(raw_columns)
+        rows: list[dict[str, str]] = []
+        for values, _has_header in row_values[1 : max_rows + 1]:
+            row_dict: dict[str, str] = {}
+            for idx, column in enumerate(columns):
+                row_dict[column] = values[idx] if idx < len(values) else ""
+            rows.append(row_dict)
+        if not rows:
+            continue
+        tables.append(
+            {
+                "heading": _sec_table_heading(table),
+                "columns": columns,
+                "rows": rows,
+                "bounded": True,
+                "row_count": len(rows),
+            }
+        )
+        if len(tables) >= max_tables:
+            break
+    return tables
+
+
+def _extract_sec_exhibit_links(html_text: str, *, base_url: str | None = None, max_items: int = 5) -> list[dict[str, str]]:
+    soup = _parse_sec_html(html_text)
+    exhibits: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for table in soup.find_all("table"):
+        for row in table.find_all("tr"):
+            cells = row.find_all(["th", "td"])
+            values = [re.sub(r"\s+", " ", str(cell.get_text(" ", strip=True) or "")).strip() for cell in cells]
+            row_text = " ".join(values)
+            if not re.search(r"\b\d{1,3}(?:\.\d+)?\b", row_text):
+                continue
+            if "exhibit" not in row_text.lower() and not re.search(r"\b99\.\d+\b", row_text):
+                continue
+            exhibit_match = re.search(r"\b\d{1,3}(?:\.\d+)?\b", row_text)
+            exhibit = exhibit_match.group(0) if exhibit_match else "-"
+            link = row.find("a", href=True)
+            href = str(link.get("href") or "").strip() if link else ""
+            open_url = urljoin(str(base_url or ""), href) if href else ""
+            description = " ".join(value for value in values if value != exhibit).strip() or row_text
+            key = (exhibit, open_url or description)
+            if key in seen:
+                continue
+            seen.add(key)
+            exhibits.append(
+                {
+                    "Exhibit": exhibit,
+                    "Description": description,
+                    "Open": open_url,
+                }
+            )
+            if len(exhibits) >= max_items:
+                return exhibits
+    return exhibits
+
+
+def _build_sec_filing_digest(
+    html_text: str,
+    *,
+    normalized_filing: dict[str, Any],
+    sections: list[dict[str, Any]],
+) -> dict[str, Any]:
+    digest = _empty_sec_filing_digest()
+    form = str(normalized_filing.get("form") or "").strip().upper()
+    official_url = str(normalized_filing.get("official_url") or "").strip()
+    if form.startswith("8-K"):
+        digest["type"] = "8k_items"
+        cards = [_sec_digest_card(section) for section in sections]
+        digest["exhibits"] = _extract_sec_exhibit_links(html_text, base_url=official_url)
+    elif form.startswith("10-Q") or form.startswith("10-K"):
+        digest["type"] = "periodic_sections"
+        cards = [
+            _sec_digest_card(section)
+            for section in sections
+            if _sec_digest_hint(str(section.get("heading") or "")) != "part_heading"
+        ]
+        digest["tables"] = _extract_sec_table_previews(html_text)
+    else:
+        digest["type"] = "generic_sections"
+        cards = [_sec_digest_card(section) for section in sections]
+        digest["tables"] = _extract_sec_table_previews(html_text, max_tables=2)
+        digest["exhibits"] = _extract_sec_exhibit_links(html_text, base_url=official_url)
+
+    table_counts: dict[str, int] = {}
+    for table in digest["tables"]:
+        key = _section_key(str(table.get("heading") or ""))
+        table_counts[key] = table_counts.get(key, 0) + 1
+    for card in cards:
+        card["table_count"] = table_counts.get(_section_key(str(card.get("heading") or "")), 0)
+    digest["cards"] = cards[:WHY_IT_MOVED_SEC_PREVIEW_MAX_SECTIONS]
+    if not digest["cards"] and not digest["tables"] and not digest["exhibits"]:
+        digest["messages"] = ["No bounded SEC digest clues were found; use the official Open link."]
+    return digest
+
+
 def parse_market_mover_sec_filing_preview(
     html_text: str,
     *,
@@ -3160,6 +3350,11 @@ def parse_market_mover_sec_filing_preview(
     else:
         sections = _extract_periodic_preview_sections(lines) or _extract_8k_preview_sections(lines)
         preview_type = "SEC filing section locator"
+    digest = _build_sec_filing_digest(
+        str(html_text or ""),
+        normalized_filing=normalized,
+        sections=sections,
+    )
     status = "OK" if sections else "PARTIAL"
     messages = [] if sections else ["No bounded SEC preview sections were found; use the official Open link."]
     return _sec_preview_payload(
@@ -3168,6 +3363,7 @@ def parse_market_mover_sec_filing_preview(
         fetched_at_utc=fetched_at_utc,
         preview_type=preview_type,
         sections=sections,
+        digest=digest,
         messages=messages,
     )
 

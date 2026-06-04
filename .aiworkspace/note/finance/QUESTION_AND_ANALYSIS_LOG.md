@@ -7261,3 +7261,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 SEC metadata table과 official Open link를 유지하면서, 사용자가 선택한 filing 1건을 버튼으로만 앱 안에서 bounded preview할 수 있어야 함.
 - Analysis result: SEC EDGAR / BamSEC / Quartr / AlphaSense UX는 compact filing metadata, source status, search snippets, official source traceability를 보여준다. 현재 범위에서는 selected-filing reader preview와 explicit failure boundary만 채택하는 것이 맞다.
 - Follow-up: V1.7은 session-only SEC preview, 8-K Item / 10-Q·10-K section locator, nested iXBRL sanitizer regression, Browser QA screenshot까지 완료했다. DB schema, registry / saved JSONL, filing body 저장, AI summary, sentiment, automatic cause judgement는 추가하지 않았다.
+
+### 2026-06-05 - Why It Moved SEC 공시 preview를 V1.8 Digest로 확장한다
+
+- User request: main-dev에서 Why It Moved 개선을 이어가되 SEC 공시는 링크 이동보다 앱 안에서 공시 내용을 텍스트/표 단서로 볼 수 있게 하고, 한국 뉴스는 별도 조사/정책 문제로 분리해 달라고 요청함.
+- Interpreted goal: V1.7 selected-filing preview를 유지하면서 공시 원문 전체 덤프가 아닌 manual investigation용 digest를 추가해야 함.
+- Analysis result: SEC / filing-reader UX의 핵심은 metadata list, selected document reader, section / snippet / exhibit jump다. 현재 범위에서는 8-K Item / Exhibit, 10-Q·10-K TOC / MD&A / Risk Factors / Financial Statements / bounded table clues만 채택한다.
+- Follow-up: V1.8 digest를 구현했다. 한국 뉴스 metadata는 credentialed provider policy 후속으로 남겼고, DB schema / registry / saved JSONL / filing body / AI summary / sentiment / automatic cause judgement는 추가하지 않았다.

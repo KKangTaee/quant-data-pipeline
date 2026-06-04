@@ -5421,6 +5421,50 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("raw_html", preview)
         self.assertNotIn("body", preview)
 
+    def test_market_mover_sec_filing_preview_builds_8k_digest_cards_and_exhibit_clues(self) -> None:
+        from app.services.overview_market_intelligence import parse_market_mover_sec_filing_preview
+
+        html = """
+        <html>
+          <body>
+            <div>Item 2.02 Results of Operations and Financial Condition.</div>
+            <p>AAA reported revenue of $1.2 billion and adjusted EBITDA of $200 million.</p>
+            <div>Item 7.01 Regulation FD Disclosure.</div>
+            <p>AAA furnished an investor presentation for manual review.</p>
+            <div>Item 9.01 Financial Statements and Exhibits.</div>
+            <table>
+              <tr><th>Exhibit No.</th><th>Description</th></tr>
+              <tr><td>99.1</td><td><a href="/Archives/edgar/data/1/0001/ex991.htm">Press release dated June 4, 2026</a></td></tr>
+            </table>
+          </body>
+        </html>
+        """
+
+        preview = parse_market_mover_sec_filing_preview(
+            html,
+            filing={
+                "Form": "8-K",
+                "Filing Date": "2026-06-04",
+                "Title": "Current report",
+                "URL": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+            },
+            fetched_at_utc="2026-06-04T01:02:03Z",
+        )
+
+        digest = preview["digest"]
+        self.assertEqual(digest["type"], "8k_items")
+        self.assertEqual(digest["storage_boundary"], "session_only")
+        self.assertEqual([card["item_code"] for card in digest["cards"]], ["Item 2.02", "Item 7.01", "Item 9.01"])
+        self.assertEqual(digest["cards"][0]["hint"], "earnings_or_results")
+        self.assertIn("revenue of $1.2 billion", digest["cards"][0]["snippet"])
+        self.assertLessEqual(len(digest["cards"][0]["snippet"]), 420)
+        self.assertEqual(digest["cards"][2]["hint"], "exhibits_or_attachments")
+        self.assertEqual(digest["exhibits"][0]["Exhibit"], "99.1")
+        self.assertEqual(digest["exhibits"][0]["Open"], "https://www.sec.gov/Archives/edgar/data/1/0001/ex991.htm")
+        self.assertIn("Press release", digest["exhibits"][0]["Description"])
+        self.assertNotIn("raw_html", digest)
+        self.assertNotIn("body", digest)
+
     def test_market_mover_sec_filing_preview_ignores_nested_ixbrl_metadata(self) -> None:
         from app.services.overview_market_intelligence import parse_market_mover_sec_filing_preview
 
@@ -5497,6 +5541,99 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         mda = next(section for section in preview["sections"] if section["heading"].startswith("Item 2."))
         self.assertIn("Management discusses revenue trends", mda["snippet"])
         self.assertLessEqual(len(mda["snippet"]), 420)
+
+    def test_market_mover_sec_filing_preview_builds_periodic_digest_with_bounded_table_clues(self) -> None:
+        from app.services.overview_market_intelligence import parse_market_mover_sec_filing_preview
+
+        html = """
+        <html>
+          <body>
+            <div>Table of Contents</div>
+            <div>Part I</div>
+            <div>Item 1. Financial Statements</div>
+            <div>Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations</div>
+            <div>Item 1A. Risk Factors</div>
+            <h1>PART I</h1>
+            <h2>Item 1. Financial Statements</h2>
+            <table>
+              <tr><th>Metric</th><th>Three Months Ended</th><th>Six Months Ended</th></tr>
+              <tr><td>Total revenue</td><td>$1,200</td><td>$2,400</td></tr>
+              <tr><td>Gross margin</td><td>44%</td><td>43%</td></tr>
+              <tr><td>Net income</td><td>$120</td><td>$210</td></tr>
+              <tr><td>Long extra row should be bounded</td><td>ignored</td><td>ignored</td></tr>
+            </table>
+            <h2>Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations</h2>
+            <p>Management discusses revenue trends, liquidity, and capital resources.</p>
+            <h2>Item 1A. Risk Factors</h2>
+            <p>There have been no material changes to the company's risk factors.</p>
+          </body>
+        </html>
+        """
+
+        preview = parse_market_mover_sec_filing_preview(
+            html,
+            filing={
+                "Form": "10-Q",
+                "Filing Date": "2026-05-01",
+                "Title": "Quarterly report",
+                "URL": "https://www.sec.gov/ix?doc=/Archives/edgar/data/1/0001/a10q.htm",
+            },
+            fetched_at_utc="2026-06-04T01:02:03Z",
+        )
+
+        digest = preview["digest"]
+        self.assertEqual(digest["type"], "periodic_sections")
+        self.assertEqual([card["hint"] for card in digest["cards"][:4]], [
+            "table_of_contents",
+            "financial_statements",
+            "mda",
+            "risk_factors",
+        ])
+        self.assertTrue(digest["tables"])
+        table = digest["tables"][0]
+        self.assertEqual(table["heading"], "Item 1. Financial Statements")
+        self.assertEqual(table["columns"], ["Metric", "Three Months Ended", "Six Months Ended"])
+        self.assertEqual(len(table["rows"]), 3)
+        self.assertEqual(table["rows"][0]["Metric"], "Total revenue")
+        self.assertNotIn("Long extra row should be bounded", str(table["rows"]))
+        self.assertEqual(digest["cards"][1]["table_count"], 1)
+        self.assertNotIn("raw_html", digest)
+
+    def test_market_mover_sec_digest_ui_model_keeps_official_and_exhibit_links_clickable(self) -> None:
+        from app.web.overview_dashboard import _market_mover_sec_digest_display_model
+
+        model = _market_mover_sec_digest_display_model(
+            {
+                "status": "OK",
+                "official_url": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+                "digest": {
+                    "type": "8k_items",
+                    "cards": [
+                        {
+                            "heading": "Item 9.01 Financial Statements and Exhibits.",
+                            "item_code": "Item 9.01",
+                            "hint": "exhibits_or_attachments",
+                            "snippet": "Exhibit 99.1 is attached.",
+                        }
+                    ],
+                    "exhibits": [
+                        {
+                            "Exhibit": "99.1",
+                            "Description": "Press release",
+                            "Open": "https://www.sec.gov/Archives/edgar/data/1/0001/ex991.htm",
+                        }
+                    ],
+                    "tables": [],
+                    "messages": [],
+                },
+            }
+        )
+
+        self.assertEqual(model["label"], "공시 Digest")
+        self.assertEqual(model["cards"][0]["hint"], "exhibits_or_attachments")
+        self.assertEqual(list(model["exhibits"].columns), ["Exhibit", "Description", "Open"])
+        self.assertEqual(model["exhibits"].iloc[0]["Open"], "https://www.sec.gov/Archives/edgar/data/1/0001/ex991.htm")
+        self.assertIn("Open", model["link_columns"])
 
     def test_market_mover_sec_filing_preview_fetch_contract_handles_status_boundaries(self) -> None:
         from app.services.overview_market_intelligence import fetch_market_mover_sec_filing_preview

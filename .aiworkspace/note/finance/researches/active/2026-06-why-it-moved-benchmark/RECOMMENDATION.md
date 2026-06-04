@@ -191,7 +191,14 @@ Browser QA:
 - SEC form priority and form hints.
 - News source/domain visibility.
 
-### V1.8 Korean Source Policy
+### V1.8 SEC Filing Digest
+
+- Keep selected-filing / button-triggered / session-only boundary.
+- Add bounded digest cards for 8-K Item headings and 10-Q / 10-K section locations.
+- Show exhibit and small table clues when available.
+- Do not store filing body, summarize, classify cause, or change DB schema.
+
+### V1.9 Korean Source Policy
 
 - Decide whether Korean metadata fetch is worth adding.
 - If yes, define provider, credential, quota, terms, body exclusion, session-only/storage policy.

@@ -1,7 +1,7 @@
 # Why It Moved Benchmark Sources
 
 Status: Active
-Access Date: 2026-06-04
+Access Date: 2026-06-05
 
 ## Sources
 
@@ -79,3 +79,42 @@ Access Date: 2026-06-04
   - official EDGAR company search, full-text search, latest filings, daily filing by form type, APIs, RSS feeds.
 - Limits:
   - Full-text filing search / API ingestion / RSS persistence require separate V2 storage and source policy.
+
+### SEC EDGAR Full Text Search
+
+- URL: https://www.sec.gov/edgar/search/
+- Evidence label: official source, rechecked 2026-06-05 with Browser.
+- Supports:
+  - result filtering by entity, form / filing type, and filed date.
+  - result table separates form/file metadata from `Open document` and `Open filing` actions.
+- Limits:
+  - This source supports official-link preservation and selected-document reading, not automatic cause judgement.
+
+### BamSEC Key Exhibits / Document Search
+
+- URL: https://help.bamsec.com/docs/key-exhibits
+- URL: https://help.bamsec.com/hc/en-us/articles/45646409684755-Document-Search
+- Evidence label: documented help pages, rechecked 2026-06-05.
+- Supports:
+  - filing/exhibit navigation, chronological exhibit lists, and document search within filings / transcripts.
+- Limits:
+  - Product details may require account access; this project only borrows bounded exhibit / document navigation patterns.
+
+### Quartr Filings Search
+
+- URL: https://quartr.com/features/filings-search
+- Evidence label: documented feature page, rechecked 2026-06-05.
+- Supports:
+  - filing search results with company, filing type, date, text snippet, and jump-to-location behavior.
+- Limits:
+  - Global search and snippets are product capabilities; current implementation stays limited to selected SEC filing preview.
+
+### AlphaSense SEC Filings / Company Documents
+
+- URL: https://help.alpha-sense.com/hc/en-us/articles/41887692936083-SEC-Filings-Overview
+- URL: https://help.alpha-sense.com/en/articles/5578740-search-library-identifying-the-right-sources-for-my-search
+- Evidence label: documented help pages, rechecked 2026-06-05.
+- Supports:
+  - company documents / SEC filings as auditable source sets inside a broader research search workflow.
+- Limits:
+  - AI / summary / broad document-search patterns remain out of current Why It Moved boundary.

@@ -4666,3 +4666,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 기존 SEC metadata table은 유지하고, 선택한 filing 1건만 버튼으로 session-only bounded preview한다.
   - 8-K Item / 10-Q·10-K section locator parser와 nested iXBRL sanitizer regression을 service contracts에 추가했다.
   - Browser QA screenshot은 `why-it-moved-v17-sec-preview-qa-20260604.png`로 생성했고 generated artifact라 커밋 대상이 아니다.
+- Overview Market Movers Why It Moved V1.8:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`에서 SEC filing preview를 `공시 Digest`로 확장했다.
+  - Digest는 선택 filing 1건의 8-K Item / Exhibit 단서와 10-Q·10-K section / bounded table 단서를 session-only로 보여준다.
+  - 기존 SEC metadata table, official SEC link, button-triggered fetch, no DB / no JSONL / no body / no AI summary / no classifier boundary는 유지했다.
+  - QA screenshot은 `why-it-moved-v18-sec-digest-qa-20260605.png`로 생성했고 generated artifact라 커밋 대상이 아니다.

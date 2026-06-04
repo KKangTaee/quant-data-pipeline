@@ -155,6 +155,7 @@ Tabs or stacked sections:
 ## Implementation Priority
 
 1. V1.6: UI hierarchy only, no provider changes.
-2. V1.7: metadata display quality, status counts, SEC form priority.
-3. V1.8: Korean source provider policy decision.
-4. V2: DB-backed compact metadata only after retention / freshness / replay policy.
+2. V1.7: metadata display quality, status counts, SEC form priority and selected-filing preview.
+3. V1.8: SEC filing digest for selected filing only, including bounded 8-K Item / Exhibit and 10-Q / 10-K section / table clues.
+4. V1.9 or separate task: Korean source provider policy decision.
+5. V2: DB-backed compact metadata only after retention / freshness / replay policy.

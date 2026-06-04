@@ -3570,6 +3570,24 @@ def _market_mover_sec_preview_session_key(metadata_key: str, filing_option: dict
     return f"overview_market_mover_sec_preview:{metadata_key}:{filing_option.get('id') or ''}"
 
 
+def _market_mover_sec_digest_display_model(preview: dict[str, Any]) -> dict[str, Any]:
+    digest = preview.get("digest") if isinstance(preview, dict) else {}
+    if not isinstance(digest, dict):
+        digest = {}
+    cards = [card for card in digest.get("cards") or [] if isinstance(card, dict)]
+    exhibits = digest.get("exhibits") or []
+    exhibit_frame = pd.DataFrame(exhibits, columns=["Exhibit", "Description", "Open"])
+    return {
+        "label": "공시 Digest",
+        "type": str(digest.get("type") or "empty"),
+        "cards": cards,
+        "tables": [table for table in digest.get("tables") or [] if isinstance(table, dict)],
+        "exhibits": exhibit_frame,
+        "messages": [str(message).strip() for message in digest.get("messages") or [] if str(message).strip()],
+        "link_columns": ["Open"],
+    }
+
+
 def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
     if tone == "success":
         return OVERVIEW_COLOR_POSITIVE, "rgba(24, 130, 84, 0.10)", "rgba(24, 130, 84, 0.28)"
@@ -3763,6 +3781,46 @@ def _render_market_mover_sec_preview_result(preview: dict[str, Any]) -> None:
             hide_index=True,
             column_config=_market_mover_open_link_column_config("열기"),
         )
+
+    digest_model = _market_mover_sec_digest_display_model(preview)
+    has_digest = bool(
+        digest_model["cards"]
+        or digest_model["tables"]
+        or (isinstance(digest_model["exhibits"], pd.DataFrame) and not digest_model["exhibits"].empty)
+        or digest_model["messages"]
+    )
+    if has_digest:
+        st.markdown(f"###### {digest_model['label']}")
+        st.caption("공시 원문 전체가 아니라 조사 위치를 잡기 위한 bounded digest입니다.")
+        for message in digest_model["messages"]:
+            st.caption(message)
+        if digest_model["cards"]:
+            card_rows = [
+                {
+                    "단서": str(card.get("item_code") or card.get("kind") or "-"),
+                    "유형": str(card.get("hint") or "-"),
+                    "제목": str(card.get("heading") or "-"),
+                    "표": card.get("table_count") or 0,
+                    "Snippet": str(card.get("snippet") or "-"),
+                }
+                for card in digest_model["cards"]
+            ]
+            st.dataframe(pd.DataFrame(card_rows), width="stretch", hide_index=True)
+        exhibits = digest_model["exhibits"]
+        if isinstance(exhibits, pd.DataFrame) and not exhibits.empty:
+            st.markdown("###### Exhibit 단서")
+            st.dataframe(
+                exhibits,
+                width="stretch",
+                hide_index=True,
+                column_config=_market_mover_open_link_column_config("Open"),
+            )
+        for idx, table in enumerate(digest_model["tables"], start=1):
+            rows = table.get("rows") or []
+            with st.expander(f"표 단서 {idx}: {table.get('heading') or 'SEC filing table'}", expanded=idx == 1):
+                st.caption("작은 표 일부만 표시합니다. 전체 표와 원문은 Official SEC 링크에서 확인하세요.")
+                if rows:
+                    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     sections = list(preview.get("sections") or [])
     if not sections:
