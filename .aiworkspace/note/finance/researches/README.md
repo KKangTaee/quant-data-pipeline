@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-06-why-it-moved-benchmark/` | Overview > Market Movers > Why It Moved를 prototype-level link / metadata panel에서 manual investigation board로 개선하기 위한 벤치마킹과 V1.6 UX 가이드 |
 | `active/2026-05-overview-market-intelligence/` | Workspace > Overview를 market movers, sector / industry leadership, event calendar 중심으로 개편할 수 있는지 조사 |
 | `active/2026-06-futures-market-monitoring/` | 선물장 OHLCV / 개장 전 급변 신호를 Overview에서 read-only로 모니터링하기 위한 데이터 소스, cadence, UX 방향 조사 |
 | `active/2026-05-ui-platform-research/` | Streamlit UX/UI를 Python quant engine + API + React/Next.js product surface로 분리할지 조사 |
