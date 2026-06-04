@@ -48,11 +48,12 @@ http://localhost:8501
    - `Return Rank` 탭에서 symbol-level return ranking과 직전 동일 기간 return / momentum delta를 확인한다.
    - `Volume Rank` 탭에서 daily는 당일 거래량 / 거래대금을, weekly / monthly / yearly는 평균 일거래량 / 평균 일거래대금과 기간 합계를 함께 확인한다.
    - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
-   - `Why It Moved`에서 Return Rank 또는 Volume Rank ticker를 선택하면 선택 ticker의 Symbol / Name / Sector / Industry / Market Cap, period / coverage / rank context, return / volume / dollar volume / previous return / momentum delta를 한곳에서 확인한다.
-   - Yahoo Finance / Google News / SEC company search / IR earnings / Google News KR / Naver News outbound search는 `External searches` expander의 클릭 가능한 `Open` link table에서 확인한다. 이 링크들은 앱 내부 조회나 저장을 실행하지 않는 보조 research start point다.
+   - `Why It Moved`에서 Return Rank 또는 Volume Rank ticker를 선택하면 먼저 선택 ticker의 movement summary header를 확인한다. Header는 Symbol / Name / Sector / Industry / Market Cap, period / coverage / rank context, return / previous return / momentum delta / volume / dollar volume을 묶어서 보여준다.
+   - Movement header 아래 metadata status strip에서 `Lookup status`, News row count 또는 failure, SEC row count 또는 failure, `fetched_at`, `Session-only` boundary를 확인한다. `PARTIAL`은 warning 상태이며 complete success가 아니다.
    - `Why It Moved`는 manual catalyst investigation panel이다. 자동 원인 판정기, AI 요약, 감성 분석, article / filing body collector가 아니다.
    - Ticker selectbox 변경은 외부 조회를 실행하지 않는다. `Fetch compact metadata` 버튼을 눌렀을 때만 현재 선택 ticker 1개에 대해 bounded news / SEC metadata lookup을 실행한다.
-   - Compact news metadata는 title, source / publisher, published time, URL만 표시한다. Compact SEC metadata는 form, filing date, title / description, URL만 표시한다. metadata table의 URL은 클릭 가능한 `Open` link로 표시한다. 조회 상태는 `not requested`, `OK`, `partial`, `no metadata`, `failed`를 구분한다. `partial`은 한 provider가 실패했지만 다른 provider row가 있는 상태이며 complete lookup으로 해석하지 않는다.
+   - `Investigation Leads`에서 `News Metadata`, `SEC Filings`, `External Searches`를 확인한다. Compact news metadata는 title, source / publisher, published time, URL만 표시한다. Compact SEC metadata는 form, filing date, title / description, URL만 표시하고, SEC table은 form / filing date / title / `Open` 중심으로 표시한다. metadata table의 URL은 클릭 가능한 `Open` link로 표시한다. 조회 상태는 `not requested`, `OK`, `partial`, `no metadata`, `failed`를 구분한다. `partial`은 한 provider가 실패했지만 다른 provider row가 있는 상태이며 complete lookup으로 해석하지 않는다.
+   - Yahoo Finance / Google News / SEC company search / IR earnings / Google News KR / Naver News outbound search는 `Investigation Leads > External Searches` expander의 클릭 가능한 `Open` link table에서 확인한다. 이 링크들은 앱 내부 조회나 저장을 실행하지 않는 보조 research start point이며, 기본 상태는 collapsed다.
    - 조회 결과는 Streamlit session state에만 남는다. DB schema, workflow registry JSONL, saved setup JSONL, run history에는 쓰지 않는다. DB-backed compact metadata는 retention / freshness / replay semantics가 승인된 후속 V2 조건으로만 검토한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
@@ -223,11 +224,12 @@ PY
 - Market Movers displays `Return Rank`, `Volume Rank`, and `Sector Pulse` chart tabs.
 - Market Movers builds a separate `volume_rows` ranking. Daily ranks the latest stored snapshot / EOD day by dollar volume with raw volume beside it; weekly / monthly / yearly rank average daily dollar volume and expose average / total volume metrics in the Volume table.
 - Market Movers return rows include `Volume`, `Dollar Volume`, `Previous Return %`, and `Momentum Delta pp`; positive return bars use sector colors and negative bars use the danger red.
-- Market Movers `Why It Moved` renders a ticker selector sourced from Return Rank and Volume Rank rows, then shows selected ticker identity, rank / coverage / period context, and return / volume / momentum context.
-- Market Movers `Why It Moved` keeps Yahoo Finance, Google News, SEC company search, IR / earnings, Google News KR, and Naver News as collapsed `External searches` rows with clickable `Open` URLs instead of primary action buttons.
+- Market Movers `Why It Moved` renders a ticker selector sourced from Return Rank and Volume Rank rows, then shows a movement summary header with selected ticker identity, rank / coverage / period context, return / previous return / momentum delta, volume, and dollar volume.
+- Market Movers `Why It Moved` shows a metadata status strip before the fetch button: lookup status, News rows / failure, SEC rows / failure, fetched timestamp, and `Session-only` storage boundary. `PARTIAL` is warning-level evidence, not a complete lookup.
+- Market Movers `Why It Moved` uses `Investigation Leads` sections for `News Metadata`, `SEC Filings`, and collapsed `External Searches`. Yahoo Finance, Google News, SEC company search, IR / earnings, Google News KR, and Naver News stay as collapsed external rows with clickable `Open` URLs instead of primary action buttons.
 - `Why It Moved` remains a manual investigation panel. It does not summarize, crawl, collect article bodies, collect filing bodies, run sentiment analysis, auto-classify catalysts, mutate DB schema, or write workflow JSONL / saved setup rows.
-- `Fetch compact metadata` is button-only and selected-ticker-only. The not-yet-run state is visible before lookup; `OK`, `PARTIAL`, no metadata, and failed lookup states are separate. Metadata URL columns render as clickable `Open` links.
-- Compact metadata is session-only. DB-backed metadata persistence is not part of V1.5 and requires a later V2 storage / freshness / retention decision.
+- `Fetch compact metadata` is button-only and selected-ticker-only. The not-yet-run state is visible before lookup; `OK`, `PARTIAL`, no metadata, and failed lookup states are separate. Metadata URL columns render as clickable `Open` links. SEC filings are displayed as form / filing date / title / open and sorted by date with form-priority tie-breaks.
+- Compact metadata is session-only. DB-backed metadata persistence is not part of V1.6 and requires a later V2 storage / freshness / retention decision.
 - Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
 - Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
 - Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.

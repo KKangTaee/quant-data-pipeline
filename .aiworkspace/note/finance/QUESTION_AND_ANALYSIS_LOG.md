@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-04 - Why It Moved should be an investigation board, not an explanation engine
+- User request:
+  - benchmark research를 반영해 `Overview > Market Movers > Why It Moved V1.6 UX Pass`를 구현하되 automatic catalyst classifier, AI summary, article / filing body 수집, DB / JSONL 저장 없이 manual investigation board로 개선해 달라고 요청함.
+- Interpreted goal:
+  - V1.5의 session-only / button-only metadata lookup 경계를 유지하면서, prototype-like fact grid와 raw metadata layout을 movement summary, source status, News / SEC / External source lanes로 재구성해야 함.
+- Analysis result:
+  - benchmark pattern은 stock detail UX가 identity + movement context를 먼저 보여주고 source categories를 분리한다는 점이다. 이 프로젝트에서는 원인 판정 대신 `Lookup status`, provider row/failure state, `Session-only` boundary를 먼저 보여주는 것이 안전하다.
+- Follow-up:
+  - V1.6 implementation completed in `overview-market-movers-second-pass`. 후속은 metadata display quality, Korean source provider policy, DB-backed compact metadata retention / freshness / replay policy를 승인 후 별도 scope로 다룬다.
+
 ### 2026-06-04 - Why It Moved needs a UX pass before it stops feeling like a prototype
 - User request:
   - 사용자가 research link 버튼은 필요 없을 것 같다고 확인했고, 현재 Why It Moved 기능을 리뷰한 뒤 개선점과 prototype 수준 여부를 설명해 달라고 요청함.

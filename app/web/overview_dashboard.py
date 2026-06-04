@@ -29,8 +29,10 @@ from app.services.futures_macro_thermometer import (
 )
 from app.services.futures_market_monitoring import load_overview_futures_monitor_snapshot
 from app.services.overview_market_intelligence import (
+    build_market_mover_metadata_status_strip,
     build_market_mover_why_it_moved_read_model,
     fetch_market_mover_compact_metadata,
+    sort_market_mover_sec_filings_by_form_priority,
 )
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
@@ -3459,74 +3461,227 @@ def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFr
     return candidates
 
 
+def _market_mover_open_link_column_config(column_name: str = "Open") -> dict[str, Any]:
+    return {column_name: st.column_config.LinkColumn(column_name, display_text="Open")}
+
+
 def _market_mover_metadata_column_config() -> dict[str, Any]:
-    return {"URL": st.column_config.LinkColumn("URL", display_text="Open")}
+    return _market_mover_open_link_column_config("Open")
 
 
 def _market_mover_research_link_column_config() -> dict[str, Any]:
-    return {"URL": st.column_config.LinkColumn("URL", display_text="Open")}
+    return _market_mover_open_link_column_config("Open")
 
 
-def _render_market_mover_metadata_result(metadata: dict[str, Any]) -> None:
-    status = str(metadata.get("status") or "NOT_REQUESTED")
-    messages = [str(message) for message in metadata.get("messages") or [] if str(message).strip()]
-    fetched_at = str(metadata.get("fetched_at_utc") or "").strip()
-
-    if status == "NOT_REQUESTED":
-        st.info("Metadata lookup has not been run for this selection.")
-        return
-    if status == "NO_METADATA":
-        st.warning("No compact news or SEC filing metadata returned for this lookup.")
-    elif status == "FAILED":
-        st.error("Compact metadata lookup failed.")
-    elif status == "PARTIAL":
-        st.warning(f"Compact metadata lookup partially completed{f' · {fetched_at}' if fetched_at else ''}.")
-    else:
-        st.success(f"Compact metadata lookup complete{f' · {fetched_at}' if fetched_at else ''}.")
-
-    for message in messages:
-        st.caption(message)
-
-    news = metadata.get("news")
-    sec_filings = metadata.get("sec_filings")
-    news_tab, sec_tab = st.tabs(["News Metadata", "SEC Filing Metadata"])
-    column_config = _market_mover_metadata_column_config()
-    with news_tab:
-        if isinstance(news, pd.DataFrame) and not news.empty:
-            st.dataframe(news, width="stretch", hide_index=True, column_config=column_config)
-        else:
-            st.info("No compact news metadata to display.")
-    with sec_tab:
-        if isinstance(sec_filings, pd.DataFrame) and not sec_filings.empty:
-            st.dataframe(sec_filings, width="stretch", hide_index=True, column_config=column_config)
-        else:
-            st.info("No compact SEC filing metadata to display.")
+def _market_mover_open_link_frame(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return pd.DataFrame(columns=columns)
+    display = frame.copy()
+    if "Open" not in display.columns:
+        display["Open"] = display["URL"] if "URL" in display.columns else ""
+    out = pd.DataFrame(index=display.index)
+    for column in columns:
+        out[column] = display[column] if column in display.columns else ""
+    return out.reset_index(drop=True)
 
 
-def _render_market_mover_fact_grid(items: list[tuple[str, Any]], *, value_size: str = "1rem") -> None:
-    blocks: list[str] = []
+def _market_mover_external_search_table_model(links: pd.DataFrame) -> dict[str, Any]:
+    return {
+        "label": "External Searches",
+        "expanded": False,
+        "rows": _market_mover_open_link_frame(links, ["Source", "Open", "Search Query", "Purpose"]),
+        "column_config": _market_mover_research_link_column_config(),
+    }
+
+
+def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
+    if tone == "success":
+        return OVERVIEW_COLOR_POSITIVE, "rgba(24, 130, 84, 0.10)", "rgba(24, 130, 84, 0.28)"
+    if tone == "warning":
+        return OVERVIEW_COLOR_WARNING, "rgba(214, 137, 16, 0.10)", "rgba(214, 137, 16, 0.30)"
+    if tone == "error":
+        return OVERVIEW_COLOR_DANGER, "rgba(197, 48, 48, 0.10)", "rgba(197, 48, 48, 0.30)"
+    return OVERVIEW_COLOR_TEXT, OVERVIEW_COLOR_SURFACE_SUBTLE, OVERVIEW_COLOR_BORDER
+
+
+def _market_mover_summary_group_html(title: str, items: list[tuple[str, Any]]) -> str:
+    facts: list[str] = []
     for label, value in items:
         display_value = str(value if value not in (None, "") else "-")
-        blocks.append(
+        facts.append(
             (
                 '<div style="min-width:0;">'
-                f'<div style="font-size:0.78rem;color:{OVERVIEW_COLOR_TEXT_MUTED};font-weight:700;margin-bottom:0.2rem;">'
+                f'<div style="font-size:0.72rem;color:{OVERVIEW_COLOR_TEXT_MUTED};font-weight:700;margin-bottom:0.15rem;">'
                 f'{escape(str(label))}'
                 "</div>"
-                f'<div style="font-size:{value_size};font-weight:700;line-height:1.25;overflow-wrap:anywhere;">'
+                '<div style="font-size:0.95rem;font-weight:750;line-height:1.22;overflow-wrap:anywhere;">'
                 f'{escape(display_value)}'
                 "</div>"
                 "</div>"
             )
         )
+    return (
+        '<div style="min-width:0;">'
+        f'<div style="font-size:0.75rem;color:{OVERVIEW_COLOR_PRIMARY};font-weight:800;'
+        'text-transform:uppercase;margin-bottom:0.55rem;">'
+        f'{escape(title)}</div>'
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));'
+        f'gap:0.7rem 0.9rem;">{"".join(facts)}</div>'
+        "</div>"
+    )
+
+
+def _render_market_mover_movement_summary_header(
+    identity: dict[str, Any],
+    context: dict[str, Any],
+    movement: dict[str, Any],
+) -> None:
+    groups = [
+        _market_mover_summary_group_html(
+            "Identity",
+            [
+                ("Symbol", identity.get("Symbol")),
+                ("Name", identity.get("Name")),
+                ("Sector", identity.get("Sector")),
+                ("Industry", identity.get("Industry")),
+                ("Market Cap", _compact_number(identity.get("Market Cap"), prefix="$")),
+            ],
+        ),
+        _market_mover_summary_group_html(
+            "Rank Context",
+            [
+                ("Period", context.get("Period")),
+                ("Coverage", context.get("Coverage")),
+                ("Rank Type", context.get("Rank Type")),
+                ("Rank", context.get("Rank")),
+            ],
+        ),
+        _market_mover_summary_group_html(
+            "Movement",
+            [
+                ("Return %", _format_signed(movement.get("Return %"))),
+                ("Previous Return %", _format_signed(movement.get("Previous Return %"))),
+                ("Momentum Delta", _format_signed(movement.get("Momentum Delta pp"), suffix=" pp")),
+                ("Volume", _compact_number(movement.get("Volume"))),
+                ("Dollar Volume", _compact_number(movement.get("Dollar Volume"), prefix="$")),
+            ],
+        ),
+    ]
     st.markdown(
         (
-            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));'
-            'gap:0.9rem 1.2rem;margin:0.25rem 0 1rem;">'
-            f"{''.join(blocks)}</div>"
+            f'<div style="border:1px solid {OVERVIEW_COLOR_BORDER};border-radius:8px;'
+            f'background:{OVERVIEW_COLOR_SURFACE};padding:1rem;margin:0.55rem 0 0.85rem;">'
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));'
+            f'gap:1.1rem 1.25rem;">{"".join(groups)}</div></div>'
         ),
         unsafe_allow_html=True,
     )
+
+
+def _render_market_mover_metadata_status_strip(metadata: dict[str, Any]) -> None:
+    strip = build_market_mover_metadata_status_strip(metadata)
+    blocks: list[str] = []
+    for item in strip.get("items") or []:
+        tone = str(item.get("tone") or "neutral")
+        color, background, border = _market_mover_tone_style(tone)
+        blocks.append(
+            (
+                f'<div style="border:1px solid {border};background:{background};border-radius:8px;'
+                'padding:0.7rem 0.8rem;min-width:0;">'
+                f'<div style="font-size:0.72rem;color:{OVERVIEW_COLOR_TEXT_MUTED};font-weight:800;'
+                f'margin-bottom:0.25rem;">{escape(str(item.get("label") or ""))}</div>'
+                f'<div style="font-size:0.92rem;color:{color};font-weight:800;line-height:1.2;'
+                f'overflow-wrap:anywhere;">{escape(str(item.get("value") or "-"))}</div>'
+                "</div>"
+            )
+        )
+    st.markdown(
+        (
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));'
+            f'gap:0.65rem;margin:0.1rem 0 0.8rem;">{"".join(blocks)}</div>'
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def _market_mover_metadata_messages(metadata: dict[str, Any]) -> list[str]:
+    return [str(message).strip() for message in metadata.get("messages") or [] if str(message).strip()]
+
+
+def _market_mover_lane_failed(messages: list[str], provider: str) -> bool:
+    prefix = f"{provider.lower()} metadata lookup failed:"
+    return any(message.lower().startswith(prefix) for message in messages)
+
+
+def _render_market_mover_metadata_lane(
+    title: str,
+    caption: str,
+    frame: pd.DataFrame,
+    columns: list[str],
+    *,
+    failed: bool,
+    empty_message: str,
+) -> None:
+    st.markdown(f"###### {title}")
+    st.caption(caption)
+    display = _market_mover_open_link_frame(frame, columns)
+    if failed:
+        st.error(f"{title} lookup failed. Check provider messages in the status strip context.")
+    if not display.empty:
+        st.dataframe(
+            display,
+            width="stretch",
+            hide_index=True,
+            column_config=_market_mover_metadata_column_config(),
+        )
+    elif not failed:
+        st.info(empty_message)
+
+
+def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd.DataFrame) -> None:
+    status = str(metadata.get("status") or "NOT_REQUESTED").strip().upper()
+    messages = _market_mover_metadata_messages(metadata)
+    if messages:
+        for message in messages:
+            st.caption(message)
+
+    news = metadata.get("news")
+    if not isinstance(news, pd.DataFrame):
+        news = pd.DataFrame(columns=["Title", "Source", "Published At", "URL"])
+    sec_filings = metadata.get("sec_filings")
+    if isinstance(sec_filings, pd.DataFrame):
+        sec_filings = sort_market_mover_sec_filings_by_form_priority(sec_filings)
+    else:
+        sec_filings = pd.DataFrame(columns=["Form", "Filing Date", "Title", "URL"])
+
+    not_requested_message = "Run Fetch compact metadata to populate this session-only lane."
+    _render_market_mover_metadata_lane(
+        "News Metadata",
+        "Headline metadata only. No article body, AI summary, sentiment score, or cause judgement is collected.",
+        news,
+        ["Title", "Source", "Published At", "Open"],
+        failed=_market_mover_lane_failed(messages, "News"),
+        empty_message=not_requested_message if status == "NOT_REQUESTED" else "No compact news metadata returned.",
+    )
+    _render_market_mover_metadata_lane(
+        "SEC Filings",
+        "Official filing metadata leads. Form priority is applied only for scan order; filing content is not parsed.",
+        sec_filings,
+        ["Form", "Filing Date", "Title", "Open"],
+        failed=_market_mover_lane_failed(messages, "SEC"),
+        empty_message=not_requested_message if status == "NOT_REQUESTED" else "No compact SEC filing metadata returned.",
+    )
+
+    table_model = _market_mover_external_search_table_model(links)
+    if isinstance(table_model.get("rows"), pd.DataFrame) and not table_model["rows"].empty:
+        with st.expander(str(table_model["label"]), expanded=bool(table_model["expanded"])):
+            st.caption("Outbound search starts only. Opening these links does not fetch, parse, or store source content in the app.")
+            st.dataframe(
+                table_model["rows"],
+                width="stretch",
+                hide_index=True,
+                column_config=table_model["column_config"],
+            )
 
 
 def _render_market_mover_why_it_moved_panel(
@@ -3570,40 +3725,11 @@ def _render_market_mover_why_it_moved_panel(
     context = model.get("context") or {}
     movement = model.get("movement") or {}
 
-    _render_market_mover_fact_grid(
-        [
-            ("Symbol", identity.get("Symbol")),
-            ("Name", identity.get("Name")),
-            ("Sector", identity.get("Sector")),
-            ("Industry", identity.get("Industry")),
-            ("Market Cap", _compact_number(identity.get("Market Cap"), prefix="$")),
-        ],
-        value_size="1.15rem",
-    )
-    _render_market_mover_fact_grid(
-        [
-            ("Period", context.get("Period")),
-            ("Coverage", context.get("Coverage")),
-            ("Rank Type", context.get("Rank Type")),
-            ("Rank", context.get("Rank")),
-            ("Return %", _format_signed(movement.get("Return %"))),
-            ("Volume", _compact_number(movement.get("Volume"))),
-            ("Dollar Volume", _compact_number(movement.get("Dollar Volume"), prefix="$")),
-            ("Previous Return %", _format_signed(movement.get("Previous Return %"))),
-            ("Momentum Delta", _format_signed(movement.get("Momentum Delta pp"), suffix=" pp")),
-        ],
-        value_size="1.05rem",
-    )
-
     links = model.get("links")
-    if isinstance(links, pd.DataFrame) and not links.empty:
-        with st.expander("External searches", expanded=False):
-            st.dataframe(
-                links[["Source", "URL", "Search Query", "Purpose"]],
-                width="stretch",
-                hide_index=True,
-                column_config=_market_mover_research_link_column_config(),
-            )
+    if not isinstance(links, pd.DataFrame):
+        links = pd.DataFrame(columns=["Source", "URL", "Search Query", "Purpose"])
+
+    _render_market_mover_movement_summary_header(identity, context, movement)
 
     metadata_store_key = "overview_market_mover_why_it_moved_metadata"
     metadata_store = st.session_state.get(metadata_store_key)
@@ -3613,13 +3739,17 @@ def _render_market_mover_why_it_moved_panel(
     metadata_key = f"{universe_code}:{period}:{selected_id}"
     current_metadata = metadata_store.get(metadata_key) or model.get("metadata") or {}
 
-    st.markdown("##### Compact Metadata")
+    status_container = st.container()
     if st.button("Fetch compact metadata", key=f"overview_market_mover_why_it_moved_fetch_{metadata_key}"):
         with st.spinner(f"Fetching compact metadata for {identity.get('Symbol') or selected.get('symbol')}..."):
             current_metadata = fetch_market_mover_compact_metadata(str(identity.get("Symbol") or selected.get("symbol") or ""))
             metadata_store[metadata_key] = current_metadata
             st.session_state[metadata_store_key] = metadata_store
-    _render_market_mover_metadata_result(dict(current_metadata))
+    with status_container:
+        _render_market_mover_metadata_status_strip(dict(current_metadata))
+
+    st.markdown("##### Investigation Leads")
+    _render_market_mover_investigation_leads(dict(current_metadata), links)
 
 
 def _render_market_movers_snapshot_panel(

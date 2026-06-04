@@ -5288,6 +5288,90 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(metadata["sec_filings"].empty, True)
         self.assertIn("SEC metadata lookup failed: sec timeout", metadata["messages"])
 
+    def test_market_mover_metadata_status_strip_distinguishes_lookup_states(self) -> None:
+        from app.services.overview_market_intelligence import (
+            WHY_IT_MOVED_NEWS_COLUMNS,
+            WHY_IT_MOVED_SEC_COLUMNS,
+            build_market_mover_metadata_not_requested_state,
+            build_market_mover_metadata_status_strip,
+        )
+
+        not_requested = build_market_mover_metadata_status_strip(
+            build_market_mover_metadata_not_requested_state("AAA")
+        )
+        self.assertEqual(not_requested["lookup"]["value"], "Not requested")
+        self.assertEqual(not_requested["lookup"]["tone"], "neutral")
+        self.assertEqual(not_requested["news"]["value"], "Not requested")
+        self.assertEqual(not_requested["sec"]["value"], "Not requested")
+        self.assertEqual(not_requested["storage"]["value"], "Session-only")
+
+        partial = build_market_mover_metadata_status_strip(
+            {
+                "status": "PARTIAL",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+                "news": pd.DataFrame(
+                    [{"Title": "AAA moves", "Source": "Desk", "Published At": "2026-06-04", "URL": "https://example.com"}],
+                    columns=WHY_IT_MOVED_NEWS_COLUMNS,
+                ),
+                "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
+                "messages": ["SEC metadata lookup failed: timeout"],
+            }
+        )
+        self.assertEqual(partial["lookup"]["value"], "Partial")
+        self.assertEqual(partial["lookup"]["tone"], "warning")
+        self.assertEqual(partial["news"]["value"], "1 row")
+        self.assertEqual(partial["sec"]["value"], "Failed")
+        self.assertEqual(partial["fetched_at"]["value"], "2026-06-04T01:02:03Z")
+
+        failed = build_market_mover_metadata_status_strip(
+            {
+                "status": "FAILED",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+                "news": pd.DataFrame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+                "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
+                "messages": [
+                    "News metadata lookup failed: timeout",
+                    "SEC metadata lookup failed: timeout",
+                ],
+            }
+        )
+        self.assertEqual(failed["lookup"]["value"], "Failed")
+        self.assertEqual(failed["lookup"]["tone"], "error")
+        self.assertEqual(failed["news"]["value"], "Failed")
+        self.assertEqual(failed["sec"]["value"], "Failed")
+
+        no_metadata = build_market_mover_metadata_status_strip(
+            {
+                "status": "NO_METADATA",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+                "news": pd.DataFrame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+                "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
+                "messages": ["No compact news or SEC filing metadata returned for AAA."],
+            }
+        )
+        self.assertEqual(no_metadata["lookup"]["value"], "No metadata")
+        self.assertEqual(no_metadata["lookup"]["tone"], "warning")
+        self.assertEqual(no_metadata["news"]["value"], "0 rows")
+        self.assertEqual(no_metadata["sec"]["value"], "0 rows")
+
+    def test_market_mover_sec_filings_sort_by_form_priority_deterministically(self) -> None:
+        from app.services.overview_market_intelligence import sort_market_mover_sec_filings_by_form_priority
+
+        filings = pd.DataFrame(
+            [
+                {"Form": "4", "Filing Date": "2026-06-04", "Title": "Insider", "URL": "https://example.com/4"},
+                {"Form": "10-Q", "Filing Date": "2026-06-04", "Title": "Quarterly", "URL": "https://example.com/10q"},
+                {"Form": "SC 13G", "Filing Date": "2026-06-04", "Title": "Other", "URL": "https://example.com/13g"},
+                {"Form": "8-K", "Filing Date": "2026-06-04", "Title": "Current", "URL": "https://example.com/8k"},
+                {"Form": "10-K", "Filing Date": "2026-06-03", "Title": "Annual", "URL": "https://example.com/10k"},
+            ]
+        )
+
+        sorted_filings = sort_market_mover_sec_filings_by_form_priority(filings)
+
+        self.assertEqual(list(sorted_filings["Form"]), ["8-K", "10-Q", "4", "SC 13G", "10-K"])
+        self.assertEqual(list(sorted_filings.columns), ["Form", "Filing Date", "Title", "URL"])
+
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
         from app.web.overview_dashboard import _market_mover_catalyst_candidates
 
@@ -5332,18 +5416,41 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         config = _market_mover_metadata_column_config()
 
-        self.assertIn("URL", config)
-        self.assertEqual(config["URL"]["type_config"]["type"], "link")
-        self.assertEqual(config["URL"]["type_config"]["display_text"], "Open")
+        self.assertIn("Open", config)
+        self.assertEqual(config["Open"]["type_config"]["type"], "link")
+        self.assertEqual(config["Open"]["type_config"]["display_text"], "Open")
 
     def test_market_mover_research_link_tables_share_clickable_url_config(self) -> None:
-        from app.web.overview_dashboard import _market_mover_research_link_column_config
+        from app.web.overview_dashboard import _market_mover_external_search_table_model
 
-        config = _market_mover_research_link_column_config()
+        table_model = _market_mover_external_search_table_model(
+            pd.DataFrame(
+                [
+                    {
+                        "Source": "Google News KR",
+                        "URL": "https://news.google.com/search?q=AAA",
+                        "Search Query": "AAA 뉴스",
+                        "Purpose": "Korean-language search.",
+                    },
+                    {
+                        "Source": "Naver News",
+                        "URL": "https://search.naver.com/search.naver?where=news&query=AAA",
+                        "Search Query": "AAA 뉴스",
+                        "Purpose": "Naver search.",
+                    },
+                ]
+            )
+        )
+        config = table_model["column_config"]
 
-        self.assertIn("URL", config)
-        self.assertEqual(config["URL"]["type_config"]["type"], "link")
-        self.assertEqual(config["URL"]["type_config"]["display_text"], "Open")
+        self.assertEqual(table_model["label"], "External Searches")
+        self.assertFalse(table_model["expanded"])
+        self.assertEqual(list(table_model["rows"].columns), ["Source", "Open", "Search Query", "Purpose"])
+        self.assertIn("Google News KR", set(table_model["rows"]["Source"]))
+        self.assertIn("Naver News", set(table_model["rows"]["Source"]))
+        self.assertIn("Open", config)
+        self.assertEqual(config["Open"]["type_config"]["type"], "link")
+        self.assertEqual(config["Open"]["type_config"]["display_text"], "Open")
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot

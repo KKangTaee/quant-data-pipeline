@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-04 - Market Movers Why It Moved V1.6 UX Pass
+- Implemented `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` V1.6 investigation board.
+- `Overview > Market Movers > Why It Moved` now shows movement summary header, metadata status strip, button-only compact metadata fetch, and `Investigation Leads` sections for News / SEC / collapsed External Searches.
+- Boundary remains manual and session-only: no automatic catalyst judgement, AI summary, article / filing body collection, DB schema, registry JSONL, or saved setup write was added.
+- Verification evidence is in task `RUNS.md`; Browser QA screenshot is `why-it-moved-v16-browser-qa-20260604.png` and remains generated/untracked.
+
 ### 2026-06-04 - Market Movers Why It Moved Review Follow-up
 - Stabilized `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` after UX/code review.
 - Compact metadata now distinguishes provider partial failure with `PARTIAL` instead of green `OK`.

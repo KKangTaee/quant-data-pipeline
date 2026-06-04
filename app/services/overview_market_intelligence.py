@@ -82,6 +82,22 @@ CATALYST_LINK_COLUMNS = [
 ]
 WHY_IT_MOVED_NEWS_COLUMNS = ["Title", "Source", "Published At", "URL"]
 WHY_IT_MOVED_SEC_COLUMNS = ["Form", "Filing Date", "Title", "URL"]
+WHY_IT_MOVED_STATUS_LABELS = {
+    "NOT_REQUESTED": ("Not requested", "neutral"),
+    "OK": ("Complete", "success"),
+    "PARTIAL": ("Partial", "warning"),
+    "FAILED": ("Failed", "error"),
+    "NO_METADATA": ("No metadata", "warning"),
+}
+SEC_FILING_FORM_PRIORITY = {
+    "8-K": 0,
+    "10-Q": 1,
+    "10-K": 2,
+    "S-1": 3,
+    "S-3": 4,
+    "S-8": 5,
+    "4": 6,
+}
 MISSING_COLUMNS = [
     "Symbol",
     "Name",
@@ -2637,6 +2653,80 @@ def build_market_mover_metadata_not_requested_state(symbol: str | None = None) -
     }
 
 
+def _count_metadata_rows(value: Any) -> int:
+    if isinstance(value, pd.DataFrame):
+        return int(len(value.index))
+    if isinstance(value, list):
+        return int(len(value))
+    return 0
+
+
+def _row_count_label(count: int) -> str:
+    return f"{count} row" if count == 1 else f"{count} rows"
+
+
+def _metadata_provider_failed(messages: list[str], provider: str) -> bool:
+    prefix = f"{provider.lower()} metadata lookup failed:"
+    return any(message.lower().startswith(prefix) for message in messages)
+
+
+def _metadata_provider_status_item(
+    *,
+    label: str,
+    count: int,
+    failed: bool,
+    lookup_status: str,
+) -> dict[str, Any]:
+    if lookup_status == "NOT_REQUESTED":
+        return {"label": label, "value": "Not requested", "tone": "neutral", "row_count": 0}
+    if failed:
+        return {"label": label, "value": "Failed", "tone": "error", "row_count": count}
+    tone = "success" if count > 0 else "neutral"
+    if count == 0 and lookup_status in {"PARTIAL", "NO_METADATA"}:
+        tone = "warning"
+    return {"label": label, "value": _row_count_label(count), "tone": tone, "row_count": count}
+
+
+def build_market_mover_metadata_status_strip(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    """Summarize compact metadata lookup state without implying catalyst judgement."""
+
+    payload = dict(metadata or {})
+    status = str(payload.get("status") or "NOT_REQUESTED").strip().upper()
+    label, tone = WHY_IT_MOVED_STATUS_LABELS.get(status, (status.replace("_", " ").title(), "neutral"))
+    messages = [str(message).strip() for message in payload.get("messages") or [] if str(message).strip()]
+    news_count = _count_metadata_rows(payload.get("news"))
+    sec_count = _count_metadata_rows(payload.get("sec_filings"))
+    news_item = _metadata_provider_status_item(
+        label="News",
+        count=news_count,
+        failed=_metadata_provider_failed(messages, "News"),
+        lookup_status=status,
+    )
+    sec_item = _metadata_provider_status_item(
+        label="SEC",
+        count=sec_count,
+        failed=_metadata_provider_failed(messages, "SEC"),
+        lookup_status=status,
+    )
+    fetched_at = str(payload.get("fetched_at_utc") or "").strip() or "-"
+    strip = {
+        "status": status,
+        "lookup": {"label": "Lookup status", "value": label, "tone": tone},
+        "news": news_item,
+        "sec": sec_item,
+        "fetched_at": {"label": "Fetched at", "value": fetched_at, "tone": "neutral"},
+        "storage": {"label": "Storage", "value": "Session-only", "tone": "neutral"},
+    }
+    strip["items"] = [
+        strip["lookup"],
+        strip["news"],
+        strip["sec"],
+        strip["fetched_at"],
+        strip["storage"],
+    ]
+    return strip
+
+
 def build_market_mover_why_it_moved_read_model(
     *,
     mover: dict[str, Any],
@@ -2752,6 +2842,34 @@ def _normalize_news_metadata(rows: list[dict[str, Any]], *, max_items: int) -> p
     return _rows_frame(out, columns=WHY_IT_MOVED_NEWS_COLUMNS)
 
 
+def _sec_form_priority_value(form: Any) -> int:
+    text = _clean_optional_text(form, uppercase=True) or ""
+    normalized = text.split("/", 1)[0]
+    return SEC_FILING_FORM_PRIORITY.get(normalized, len(SEC_FILING_FORM_PRIORITY))
+
+
+def sort_market_mover_sec_filings_by_form_priority(sec_filings: pd.DataFrame) -> pd.DataFrame:
+    """Keep SEC metadata compact: newest rows first, prioritized forms within the same date."""
+
+    if not isinstance(sec_filings, pd.DataFrame) or sec_filings.empty:
+        return _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS)
+
+    work = sec_filings.copy()
+    for column in WHY_IT_MOVED_SEC_COLUMNS:
+        if column not in work.columns:
+            work[column] = None
+    work = work[WHY_IT_MOVED_SEC_COLUMNS].copy()
+    work["__date"] = pd.to_datetime(work["Filing Date"], errors="coerce", utc=True)
+    work["__form_priority"] = work["Form"].map(_sec_form_priority_value)
+    work["__input_order"] = range(len(work))
+    work = work.sort_values(
+        ["__date", "__form_priority", "__input_order"],
+        ascending=[False, True, True],
+        na_position="last",
+    )
+    return work.drop(columns=["__date", "__form_priority", "__input_order"]).reset_index(drop=True)
+
+
 def _normalize_sec_filing_metadata(rows: list[dict[str, Any]], *, max_items: int) -> pd.DataFrame:
     out: list[dict[str, Any]] = []
     for item in rows[: max(0, max_items)]:
@@ -2779,7 +2897,7 @@ def _normalize_sec_filing_metadata(rows: list[dict[str, Any]], *, max_items: int
                 "URL": url,
             }
         )
-    return _rows_frame(out, columns=WHY_IT_MOVED_SEC_COLUMNS)
+    return sort_market_mover_sec_filings_by_form_priority(_rows_frame(out, columns=WHY_IT_MOVED_SEC_COLUMNS))
 
 
 def _fetch_yfinance_news_metadata(symbol: str, max_items: int) -> list[dict[str, Any]]:
