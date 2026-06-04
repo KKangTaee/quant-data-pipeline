@@ -4661,3 +4661,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Single Strategy form에 `S&P 500` universe mode를 추가했고 runtime resolver는 `sp500` / `snp500` 입력을 `SP500` managed universe로 해석한다.
   - S&P 500 멤버십 row가 없으면 Top500으로 조용히 대체하지 않고 universe refresh 필요 오류를 반환한다.
   - focused compile / Risk-On service contract tests / DB membership smoke / hygiene check를 통과했다.
+- Overview Market Movers Why It Moved V1.7:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`에서 SEC filing preview를 추가했다.
+  - 기존 SEC metadata table은 유지하고, 선택한 filing 1건만 버튼으로 session-only bounded preview한다.
+  - 8-K Item / 10-Q·10-K section locator parser와 nested iXBRL sanitizer regression을 service contracts에 추가했다.
+  - Browser QA screenshot은 `why-it-moved-v17-sec-preview-qa-20260604.png`로 생성했고 generated artifact라 커밋 대상이 아니다.

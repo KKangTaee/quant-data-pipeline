@@ -7254,3 +7254,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 차트 렌더 문제가 아니라 provider / DB coverage 문제인지 검증하고, 1d / 1m 응답이 너무 적어 6H chart가 왜곡되는 경우도 collector에서 복구해야 함.
 - Analysis result: yfinance `period=1d`, `interval=1m`은 해당 symbols에 대해 13-33개 row만 반환했지만 `period=2d`, `interval=1m`은 같은 시간대의 dense rows를 반환했다.
 - Follow-up: collector가 empty뿐 아니라 sparse 1d / 1m symbols도 한 번 `2d / 1m`으로 보강 수집하고 recovered sparse rows를 대체하도록 수정했다. 상세 검증은 `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/RUNS.md`에 남겼다.
+
+### 2026-06-04 - Why It Moved SEC 공시 preview를 V1.7로 개선한다
+
+- User request: `Overview > Market Movers > Why It Moved`의 SEC 공시 섹션을 filing reader benchmark 기반으로 개선하되 automatic catalyst classifier나 durable storage로 확장하지 말라고 요청함.
+- Interpreted goal: 기존 SEC metadata table과 official Open link를 유지하면서, 사용자가 선택한 filing 1건을 버튼으로만 앱 안에서 bounded preview할 수 있어야 함.
+- Analysis result: SEC EDGAR / BamSEC / Quartr / AlphaSense UX는 compact filing metadata, source status, search snippets, official source traceability를 보여준다. 현재 범위에서는 selected-filing reader preview와 explicit failure boundary만 채택하는 것이 맞다.
+- Follow-up: V1.7은 session-only SEC preview, 8-K Item / 10-Q·10-K section locator, nested iXBRL sanitizer regression, Browser QA screenshot까지 완료했다. DB schema, registry / saved JSONL, filing body 저장, AI summary, sentiment, automatic cause judgement는 추가하지 않았다.

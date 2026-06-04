@@ -31,6 +31,7 @@ from app.services.futures_market_monitoring import load_overview_futures_monitor
 from app.services.overview_market_intelligence import (
     build_market_mover_metadata_status_strip,
     build_market_mover_why_it_moved_read_model,
+    fetch_market_mover_sec_filing_preview,
     fetch_market_mover_compact_metadata,
     sort_market_mover_sec_filings_by_form_priority,
 )
@@ -3538,6 +3539,37 @@ def _market_mover_external_search_table_model(links: pd.DataFrame) -> dict[str, 
     }
 
 
+def _market_mover_sec_filing_preview_options(sec_filings: pd.DataFrame) -> list[dict[str, Any]]:
+    if not isinstance(sec_filings, pd.DataFrame) or sec_filings.empty:
+        return []
+    options: list[dict[str, Any]] = []
+    for index, row in sec_filings.reset_index(drop=True).iterrows():
+        filing = row.to_dict()
+        url = str(filing.get("URL") or filing.get("Open") or "").strip()
+        if not url:
+            continue
+        form = str(filing.get("Form") or "-").strip() or "-"
+        filing_date = str(filing.get("Filing Date") or "-").strip() or "-"
+        title = str(filing.get("Title") or form).strip() or form
+        options.append(
+            {
+                "id": f"{index}:{url}",
+                "label": f"{form} · {filing_date} · {title}",
+                "filing": {
+                    "Form": filing.get("Form"),
+                    "Filing Date": filing.get("Filing Date"),
+                    "Title": filing.get("Title"),
+                    "URL": url,
+                },
+            }
+        )
+    return options
+
+
+def _market_mover_sec_preview_session_key(metadata_key: str, filing_option: dict[str, Any]) -> str:
+    return f"overview_market_mover_sec_preview:{metadata_key}:{filing_option.get('id') or ''}"
+
+
 def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
     if tone == "success":
         return OVERVIEW_COLOR_POSITIVE, "rgba(24, 130, 84, 0.10)", "rgba(24, 130, 84, 0.28)"
@@ -3687,7 +3719,98 @@ def _render_market_mover_metadata_lane(
         st.info(empty_message)
 
 
-def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd.DataFrame) -> None:
+def _render_market_mover_sec_preview_result(preview: dict[str, Any]) -> None:
+    status = str(preview.get("status") or "NOT_REQUESTED").strip().upper()
+    status_text = {
+        "OK": "원문 미리보기 조회 완료",
+        "PARTIAL": "부분 미리보기",
+        "OVERSIZE": "문서 과대",
+        "NON_HTML": "미지원 응답",
+        "PARSE_FAILED": "파싱 실패",
+        "FAILED": "조회 실패",
+    }.get(status, status)
+    status_line = (
+        f"Fetch status: {status_text} · fetched_at: {preview.get('fetched_at_utc') or '-'} · "
+        "session-only preview"
+    )
+    if status == "OK":
+        st.success(status_line)
+    elif status in {"PARTIAL", "OVERSIZE", "NON_HTML", "PARSE_FAILED"}:
+        st.warning(status_line)
+    else:
+        st.error(status_line)
+
+    for message in preview.get("messages") or []:
+        st.caption(str(message))
+
+    meta_frame = pd.DataFrame(
+        [
+            {
+                "Form": preview.get("form") or "-",
+                "Filing Date": preview.get("filing_date") or "-",
+                "Title": preview.get("title") or "-",
+                "Accession": preview.get("accession") or "-",
+                "Document": preview.get("document") or "-",
+            }
+        ]
+    )
+    st.dataframe(meta_frame, width="stretch", hide_index=True)
+    official_url = str(preview.get("official_url") or "").strip()
+    if official_url:
+        st.dataframe(
+            pd.DataFrame([{"출처": "Official SEC", "열기": official_url}]),
+            width="stretch",
+            hide_index=True,
+            column_config=_market_mover_open_link_column_config("열기"),
+        )
+
+    sections = list(preview.get("sections") or [])
+    if not sections:
+        st.info("앱 안 미리보기 섹션이 없습니다. Official SEC 링크로 원문을 확인하세요.")
+        return
+    for idx, section in enumerate(sections, start=1):
+        heading = str(section.get("heading") or f"Section {idx}").strip()
+        with st.expander(f"{idx}. {heading}", expanded=idx == 1):
+            kind = str(section.get("kind") or preview.get("preview_type") or "SEC section")
+            st.caption(kind)
+            st.write(str(section.get("snippet") or "Bounded snippet unavailable."))
+
+
+def _render_market_mover_sec_preview_controls(sec_filings: pd.DataFrame, *, metadata_key: str) -> None:
+    options = _market_mover_sec_filing_preview_options(sec_filings)
+    if not options:
+        return
+    option_by_id = {option["id"]: option for option in options}
+    select_key = f"overview_market_mover_sec_preview_select_{metadata_key}"
+    if st.session_state.get(select_key) not in option_by_id:
+        st.session_state[select_key] = options[0]["id"]
+    selected_id = str(
+        st.selectbox(
+            "원문 미리보기 대상 공시",
+            list(option_by_id),
+            format_func=lambda value: option_by_id.get(str(value), {}).get("label", str(value)),
+            key=select_key,
+        )
+    )
+    selected_option = option_by_id[selected_id]
+    preview_store_key = "overview_market_mover_sec_filing_previews"
+    preview_store = st.session_state.get(preview_store_key)
+    if not isinstance(preview_store, dict):
+        preview_store = {}
+        st.session_state[preview_store_key] = preview_store
+    preview_key = _market_mover_sec_preview_session_key(metadata_key, selected_option)
+    if st.button("선택 공시 원문 미리보기", key=f"overview_market_mover_sec_preview_fetch_{preview_key}"):
+        with st.spinner("선택한 SEC 공시 원문에서 bounded preview를 가져오는 중..."):
+            preview_store[preview_key] = fetch_market_mover_sec_filing_preview(selected_option["filing"])
+            st.session_state[preview_store_key] = preview_store
+    current_preview = preview_store.get(preview_key)
+    if isinstance(current_preview, dict):
+        _render_market_mover_sec_preview_result(current_preview)
+    else:
+        st.caption("대상 공시를 바꿔도 외부 조회는 실행되지 않습니다. 버튼을 누른 공시 1건만 이번 세션에 미리보기로 표시합니다.")
+
+
+def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd.DataFrame, *, metadata_key: str) -> None:
     status = str(metadata.get("status") or "NOT_REQUESTED").strip().upper()
     messages = _market_mover_metadata_messages(metadata)
     if messages:
@@ -3720,6 +3843,9 @@ def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd
         failed=_market_mover_lane_failed(messages, "SEC"),
         empty_message=not_requested_message if status == "NOT_REQUESTED" else "간단 SEC 공시 메타데이터가 반환되지 않았습니다.",
     )
+    if isinstance(sec_filings, pd.DataFrame) and not sec_filings.empty:
+        st.caption("원문 미리보기는 선택한 공시 1건에 대해 버튼을 눌렀을 때만 조회하며, 원문 전체나 파싱 결과를 저장하지 않습니다.")
+        _render_market_mover_sec_preview_controls(sec_filings, metadata_key=metadata_key)
 
     table_model = _market_mover_external_search_table_model(links)
     if isinstance(table_model.get("rows"), pd.DataFrame) and not table_model["rows"].empty:
@@ -3798,7 +3924,7 @@ def _render_market_mover_why_it_moved_panel(
         _render_market_mover_metadata_status_strip(dict(current_metadata))
 
     st.markdown("##### 조사 단서")
-    _render_market_mover_investigation_leads(dict(current_metadata), links)
+    _render_market_mover_investigation_leads(dict(current_metadata), links, metadata_key=metadata_key)
 
 
 def _render_market_movers_snapshot_panel(

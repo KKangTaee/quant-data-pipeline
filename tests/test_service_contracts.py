@@ -5374,6 +5374,237 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(list(sorted_filings["Form"]), ["8-K", "10-Q", "4", "SC 13G", "10-K"])
         self.assertEqual(list(sorted_filings.columns), ["Form", "Filing Date", "Title", "URL"])
 
+    def test_market_mover_sec_filing_preview_extracts_8k_item_headings(self) -> None:
+        from app.services.overview_market_intelligence import parse_market_mover_sec_filing_preview
+
+        html = """
+        <html>
+          <head><title>8-K</title><script>hiddenNoise()</script><style>.x{}</style></head>
+          <body>
+            <ix:header>inline xbrl metadata noise</ix:header>
+            <div>Item 2.02 Results of Operations and Financial Condition.</div>
+            <p>AAA reported updated quarterly revenue and margin information for the current period.</p>
+            <p>This paragraph is supporting context for the same item and should be bounded.</p>
+            <div>Item 7.01 Regulation FD Disclosure.</div>
+            <p>AAA furnished an investor presentation for manual review.</p>
+            <div>Item 9.01 Financial Statements and Exhibits.</div>
+            <p>Exhibit 99.1 is attached to the report.</p>
+          </body>
+        </html>
+        """
+        preview = parse_market_mover_sec_filing_preview(
+            html,
+            filing={
+                "Form": "8-K",
+                "Filing Date": "2026-06-04",
+                "Title": "Current report",
+                "URL": "https://www.sec.gov/Archives/edgar/data/1/0000000001-26-000001-index.htm",
+            },
+            fetched_at_utc="2026-06-04T01:02:03Z",
+        )
+
+        self.assertEqual(preview["status"], "OK")
+        self.assertEqual(preview["form"], "8-K")
+        self.assertEqual(preview["filing_date"], "2026-06-04")
+        self.assertEqual(preview["title"], "Current report")
+        self.assertEqual(preview["official_url"], "https://www.sec.gov/Archives/edgar/data/1/0000000001-26-000001-index.htm")
+        self.assertEqual(preview["storage_boundary"], "session_only")
+        self.assertEqual(preview["preview_type"], "8-K item headings")
+        self.assertEqual([section["heading"] for section in preview["sections"]], [
+            "Item 2.02 Results of Operations and Financial Condition.",
+            "Item 7.01 Regulation FD Disclosure.",
+            "Item 9.01 Financial Statements and Exhibits.",
+        ])
+        self.assertIn("updated quarterly revenue", preview["sections"][0]["snippet"])
+        self.assertNotIn("hiddenNoise", preview["sections"][0]["snippet"])
+        self.assertNotIn("inline xbrl metadata noise", preview["sections"][0]["snippet"])
+        self.assertNotIn("raw_html", preview)
+        self.assertNotIn("body", preview)
+
+    def test_market_mover_sec_filing_preview_ignores_nested_ixbrl_metadata(self) -> None:
+        from app.services.overview_market_intelligence import parse_market_mover_sec_filing_preview
+
+        html = """
+        <html>
+          <body>
+            <ix:header>
+              <ix:hidden>
+                <ix:nonFraction name="dei:EntityRegistrantName">Metadata Company Name</ix:nonFraction>
+              </ix:hidden>
+            </ix:header>
+            <div>Item 8.01 Other Events.</div>
+            <p>AAA disclosed official event context for manual review.</p>
+          </body>
+        </html>
+        """
+        preview = parse_market_mover_sec_filing_preview(
+            html,
+            filing={
+                "Form": "8-K",
+                "Filing Date": "2026-06-04",
+                "Title": "Current report",
+                "URL": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+            },
+            fetched_at_utc="2026-06-04T01:02:03Z",
+        )
+
+        self.assertEqual(preview["status"], "OK")
+        self.assertEqual(preview["sections"][0]["heading"], "Item 8.01 Other Events.")
+        self.assertIn("official event context", preview["sections"][0]["snippet"])
+        self.assertNotIn("Metadata Company Name", preview["sections"][0]["snippet"])
+
+    def test_market_mover_sec_filing_preview_extracts_10q_toc_and_section_locations(self) -> None:
+        from app.services.overview_market_intelligence import parse_market_mover_sec_filing_preview
+
+        html = """
+        <html>
+          <body>
+            <div>Table of Contents</div>
+            <div>Part I</div>
+            <div>Item 1. Financial Statements</div>
+            <div>Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations</div>
+            <div>Part II</div>
+            <div>Item 1A. Risk Factors</div>
+            <h1>PART I</h1>
+            <h2>Item 1. Financial Statements</h2>
+            <p>Condensed consolidated statements are included for the quarter.</p>
+            <h2>Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations</h2>
+            <p>Management discusses revenue trends, gross margin, liquidity, and capital resources.</p>
+            <h2>Item 1A. Risk Factors</h2>
+            <p>There have been no material changes to the risk factors.</p>
+          </body>
+        </html>
+        """
+        preview = parse_market_mover_sec_filing_preview(
+            html,
+            filing={
+                "Form": "10-Q",
+                "Filing Date": "2026-05-01",
+                "Title": "Quarterly report",
+                "URL": "https://www.sec.gov/ix?doc=/Archives/edgar/data/1/0001/a10q.htm",
+            },
+            fetched_at_utc="2026-06-04T01:02:03Z",
+        )
+
+        self.assertEqual(preview["status"], "OK")
+        self.assertEqual(preview["preview_type"], "10-Q/10-K section locator")
+        headings = [section["heading"] for section in preview["sections"]]
+        self.assertIn("Table of Contents", headings)
+        self.assertIn("PART I", headings)
+        self.assertIn("Item 1. Financial Statements", headings)
+        self.assertIn("Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations", headings)
+        self.assertIn("Item 1A. Risk Factors", headings)
+        mda = next(section for section in preview["sections"] if section["heading"].startswith("Item 2."))
+        self.assertIn("Management discusses revenue trends", mda["snippet"])
+        self.assertLessEqual(len(mda["snippet"]), 420)
+
+    def test_market_mover_sec_filing_preview_fetch_contract_handles_status_boundaries(self) -> None:
+        from app.services.overview_market_intelligence import fetch_market_mover_sec_filing_preview
+
+        calls: list[str] = []
+
+        def html_fetcher(url: str, user_agent: str | None, request_timeout: float) -> dict[str, object]:
+            calls.append(url)
+            self.assertGreater(request_timeout, 0)
+            return {
+                "status_code": 200,
+                "content_type": "text/html; charset=utf-8",
+                "text": "<html><body><div>Item 8.01 Other Events.</div><p>Bounded official filing context.</p></body></html>",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+            }
+
+        preview = fetch_market_mover_sec_filing_preview(
+            {
+                "Form": "8-K",
+                "Filing Date": "2026-06-04",
+                "Title": "Current report",
+                "URL": "https://www.sec.gov/Archives/edgar/data/1/000000000126000001/a8k.htm",
+            },
+            html_fetcher=html_fetcher,
+        )
+
+        self.assertEqual(calls, ["https://www.sec.gov/Archives/edgar/data/1/000000000126000001/a8k.htm"])
+        self.assertEqual(preview["status"], "OK")
+        self.assertEqual(preview["accession"], "000000000126000001")
+        self.assertEqual(preview["document"], "a8k.htm")
+        self.assertEqual(preview["fetched_at_utc"], "2026-06-04T01:02:03Z")
+        self.assertIn("Bounded official filing context", preview["sections"][0]["snippet"])
+
+    def test_market_mover_sec_filing_preview_fetch_contract_rejects_oversize_non_html_and_missing_url(self) -> None:
+        from app.services.overview_market_intelligence import fetch_market_mover_sec_filing_preview
+
+        oversize = fetch_market_mover_sec_filing_preview(
+            {"Form": "10-K", "URL": "https://www.sec.gov/Archives/edgar/data/1/0001/a10k.htm"},
+            html_fetcher=lambda url, user_agent, request_timeout: {
+                "status_code": 200,
+                "content_type": "text/html",
+                "text": "<html><body>" + ("A" * 80) + "</body></html>",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+            },
+            max_bytes=40,
+        )
+        self.assertEqual(oversize["status"], "OVERSIZE")
+        self.assertEqual(oversize["sections"], [])
+        self.assertIn("too large", oversize["messages"][0])
+        self.assertEqual(oversize["official_url"], "https://www.sec.gov/Archives/edgar/data/1/0001/a10k.htm")
+
+        non_html = fetch_market_mover_sec_filing_preview(
+            {"Form": "8-K", "URL": "https://www.sec.gov/Archives/edgar/data/1/0001/primary_doc.xml"},
+            html_fetcher=lambda url, user_agent, request_timeout: {
+                "status_code": 200,
+                "content_type": "application/xml",
+                "text": "<ownershipDocument></ownershipDocument>",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+            },
+        )
+        self.assertEqual(non_html["status"], "NON_HTML")
+        self.assertEqual(non_html["sections"], [])
+        self.assertIn("non-HTML", non_html["messages"][0])
+        self.assertEqual(non_html["official_url"], "https://www.sec.gov/Archives/edgar/data/1/0001/primary_doc.xml")
+
+        missing_url = fetch_market_mover_sec_filing_preview({"Form": "8-K"})
+        self.assertEqual(missing_url["status"], "FAILED")
+        self.assertEqual(missing_url["sections"], [])
+        self.assertIn("Official SEC URL is required", missing_url["messages"][0])
+
+    def test_market_mover_sec_preview_ui_helpers_do_not_fetch_on_selection_change(self) -> None:
+        from app.web.overview_dashboard import (
+            _market_mover_sec_filing_preview_options,
+            _market_mover_sec_preview_session_key,
+        )
+
+        filings = pd.DataFrame(
+            [
+                {
+                    "Form": "8-K",
+                    "Filing Date": "2026-06-04",
+                    "Title": "Current report",
+                    "URL": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+                },
+                {
+                    "Form": "10-Q",
+                    "Filing Date": "2026-05-01",
+                    "Title": "Quarterly report",
+                    "URL": "https://www.sec.gov/Archives/edgar/data/1/0002/a10q.htm",
+                },
+            ]
+        )
+        calls: list[str] = []
+
+        options = _market_mover_sec_filing_preview_options(filings)
+        selected = options[1]
+        session_key = _market_mover_sec_preview_session_key("SP500:daily:return:1:AAA", selected)
+
+        self.assertEqual(calls, [])
+        self.assertEqual([option["id"] for option in options], [
+            "0:https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+            "1:https://www.sec.gov/Archives/edgar/data/1/0002/a10q.htm",
+        ])
+        self.assertEqual(options[0]["label"], "8-K · 2026-06-04 · Current report")
+        self.assertEqual(selected["filing"]["Form"], "10-Q")
+        self.assertIn("SP500:daily:return:1:AAA", session_key)
+        self.assertIn("https://www.sec.gov/Archives/edgar/data/1/0002/a10q.htm", session_key)
+
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
         from app.web.overview_dashboard import _market_mover_catalyst_candidates
 
