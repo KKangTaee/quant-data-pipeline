@@ -3427,6 +3427,49 @@ def _rank_token(value: Any, fallback: int) -> str:
     return str(value)
 
 
+MARKET_MOVER_UI_LABELS = {
+    "Source": "출처",
+    "Open": "열기",
+    "Search Query": "검색어",
+    "Purpose": "용도",
+    "Title": "제목",
+    "Published At": "게시 시각",
+    "Form": "양식",
+    "Filing Date": "공시일",
+}
+MARKET_MOVER_SUMMARY_LABELS = {
+    "Symbol": "종목",
+    "Name": "회사명",
+    "Sector": "섹터",
+    "Industry": "산업",
+    "Market Cap": "시가총액",
+    "Period": "기간",
+    "Coverage": "범위",
+    "Rank Type": "순위 기준",
+    "Rank": "순위",
+    "Return %": "수익률",
+    "Previous Return %": "직전 수익률",
+    "Momentum Delta": "모멘텀 변화",
+    "Volume": "거래량",
+    "Dollar Volume": "거래대금",
+}
+MARKET_MOVER_CONTEXT_VALUE_LABELS = {
+    "Daily": "일간",
+    "Weekly": "주간",
+    "Monthly": "월간",
+    "Yearly": "연간",
+    "Return Rank": "수익률 순위",
+    "Volume Rank": "거래량 순위",
+    "Unknown": "미확인",
+}
+
+
+def _market_mover_display_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return MARKET_MOVER_CONTEXT_VALUE_LABELS.get(value, value)
+    return value
+
+
 def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFrame) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -3456,38 +3499,39 @@ def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFr
                 }
             )
 
-    append_from_frame(rows, rank_source="Return Rank", id_prefix="return", label_prefix="Return")
-    append_from_frame(volume_rows, rank_source="Volume Rank", id_prefix="volume", label_prefix="Volume")
+    append_from_frame(rows, rank_source="Return Rank", id_prefix="return", label_prefix="수익률")
+    append_from_frame(volume_rows, rank_source="Volume Rank", id_prefix="volume", label_prefix="거래량")
     return candidates
 
 
-def _market_mover_open_link_column_config(column_name: str = "Open") -> dict[str, Any]:
-    return {column_name: st.column_config.LinkColumn(column_name, display_text="Open")}
+def _market_mover_open_link_column_config(column_name: str = "열기") -> dict[str, Any]:
+    return {column_name: st.column_config.LinkColumn(column_name, display_text="열기")}
 
 
 def _market_mover_metadata_column_config() -> dict[str, Any]:
-    return _market_mover_open_link_column_config("Open")
+    return _market_mover_open_link_column_config("열기")
 
 
 def _market_mover_research_link_column_config() -> dict[str, Any]:
-    return _market_mover_open_link_column_config("Open")
+    return _market_mover_open_link_column_config("열기")
 
 
 def _market_mover_open_link_frame(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     if not isinstance(frame, pd.DataFrame) or frame.empty:
-        return pd.DataFrame(columns=columns)
+        return pd.DataFrame(columns=[MARKET_MOVER_UI_LABELS.get(column, column) for column in columns])
     display = frame.copy()
     if "Open" not in display.columns:
         display["Open"] = display["URL"] if "URL" in display.columns else ""
     out = pd.DataFrame(index=display.index)
     for column in columns:
-        out[column] = display[column] if column in display.columns else ""
+        display_label = MARKET_MOVER_UI_LABELS.get(column, column)
+        out[display_label] = display[column] if column in display.columns else ""
     return out.reset_index(drop=True)
 
 
 def _market_mover_external_search_table_model(links: pd.DataFrame) -> dict[str, Any]:
     return {
-        "label": "External Searches",
+        "label": "외부 검색",
         "expanded": False,
         "rows": _market_mover_open_link_frame(links, ["Source", "Open", "Search Query", "Purpose"]),
         "column_config": _market_mover_research_link_column_config(),
@@ -3507,12 +3551,13 @@ def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
 def _market_mover_summary_group_html(title: str, items: list[tuple[str, Any]]) -> str:
     facts: list[str] = []
     for label, value in items:
-        display_value = str(value if value not in (None, "") else "-")
+        display_label = MARKET_MOVER_SUMMARY_LABELS.get(str(label), str(label))
+        display_value = str(_market_mover_display_value(value) if value not in (None, "") else "-")
         facts.append(
             (
                 '<div style="min-width:0;">'
                 f'<div style="font-size:0.72rem;color:{OVERVIEW_COLOR_TEXT_MUTED};font-weight:700;margin-bottom:0.15rem;">'
-                f'{escape(str(label))}'
+                f'{escape(display_label)}'
                 "</div>"
                 '<div style="font-size:0.95rem;font-weight:750;line-height:1.22;overflow-wrap:anywhere;">'
                 f'{escape(display_value)}'
@@ -3538,7 +3583,7 @@ def _render_market_mover_movement_summary_header(
 ) -> None:
     groups = [
         _market_mover_summary_group_html(
-            "Identity",
+            "기본 정보",
             [
                 ("Symbol", identity.get("Symbol")),
                 ("Name", identity.get("Name")),
@@ -3548,7 +3593,7 @@ def _render_market_mover_movement_summary_header(
             ],
         ),
         _market_mover_summary_group_html(
-            "Rank Context",
+            "순위 맥락",
             [
                 ("Period", context.get("Period")),
                 ("Coverage", context.get("Coverage")),
@@ -3557,7 +3602,7 @@ def _render_market_mover_movement_summary_header(
             ],
         ),
         _market_mover_summary_group_html(
-            "Movement",
+            "움직임",
             [
                 ("Return %", _format_signed(movement.get("Return %"))),
                 ("Previous Return %", _format_signed(movement.get("Previous Return %"))),
@@ -3609,8 +3654,12 @@ def _market_mover_metadata_messages(metadata: dict[str, Any]) -> list[str]:
 
 
 def _market_mover_lane_failed(messages: list[str], provider: str) -> bool:
-    prefix = f"{provider.lower()} metadata lookup failed:"
-    return any(message.lower().startswith(prefix) for message in messages)
+    normalized = str(provider or "").strip().lower()
+    prefixes = {
+        "news": ("news metadata lookup failed:", "뉴스 메타데이터 조회 실패:"),
+        "sec": ("sec metadata lookup failed:", "sec 메타데이터 조회 실패:"),
+    }.get(normalized, (f"{normalized} metadata lookup failed:",))
+    return any(message.lower().startswith(prefix) for message in messages for prefix in prefixes)
 
 
 def _render_market_mover_metadata_lane(
@@ -3626,7 +3675,7 @@ def _render_market_mover_metadata_lane(
     st.caption(caption)
     display = _market_mover_open_link_frame(frame, columns)
     if failed:
-        st.error(f"{title} lookup failed. Check provider messages in the status strip context.")
+        st.error(f"{title} 조회가 실패했습니다. 상태 메시지를 확인하세요.")
     if not display.empty:
         st.dataframe(
             display,
@@ -3654,28 +3703,28 @@ def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd
     else:
         sec_filings = pd.DataFrame(columns=["Form", "Filing Date", "Title", "URL"])
 
-    not_requested_message = "Run Fetch compact metadata to populate this session-only lane."
+    not_requested_message = "간단 메타데이터 조회를 실행하면 이번 세션에만 이 영역이 채워집니다."
     _render_market_mover_metadata_lane(
-        "News Metadata",
-        "Headline metadata only. No article body, AI summary, sentiment score, or cause judgement is collected.",
+        "뉴스 메타데이터",
+        "헤드라인 메타데이터만 표시합니다. 기사 본문, AI 요약, 감성 점수, 원인 판정은 수집하지 않습니다.",
         news,
         ["Title", "Source", "Published At", "Open"],
         failed=_market_mover_lane_failed(messages, "News"),
-        empty_message=not_requested_message if status == "NOT_REQUESTED" else "No compact news metadata returned.",
+        empty_message=not_requested_message if status == "NOT_REQUESTED" else "간단 뉴스 메타데이터가 반환되지 않았습니다.",
     )
     _render_market_mover_metadata_lane(
-        "SEC Filings",
-        "Official filing metadata leads. Form priority is applied only for scan order; filing content is not parsed.",
+        "SEC 공시",
+        "공식 공시 메타데이터 단서입니다. 양식 우선순위는 표시 순서에만 쓰이며 공시 본문은 파싱하지 않습니다.",
         sec_filings,
         ["Form", "Filing Date", "Title", "Open"],
         failed=_market_mover_lane_failed(messages, "SEC"),
-        empty_message=not_requested_message if status == "NOT_REQUESTED" else "No compact SEC filing metadata returned.",
+        empty_message=not_requested_message if status == "NOT_REQUESTED" else "간단 SEC 공시 메타데이터가 반환되지 않았습니다.",
     )
 
     table_model = _market_mover_external_search_table_model(links)
     if isinstance(table_model.get("rows"), pd.DataFrame) and not table_model["rows"].empty:
         with st.expander(str(table_model["label"]), expanded=bool(table_model["expanded"])):
-            st.caption("Outbound search starts only. Opening these links does not fetch, parse, or store source content in the app.")
+            st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
             st.dataframe(
                 table_model["rows"],
                 width="stretch",
@@ -3696,7 +3745,7 @@ def _render_market_mover_why_it_moved_panel(
         return
 
     st.markdown("#### Why It Moved")
-    st.caption("Manual catalyst investigation panel. No automatic cause judgement, AI summary, body collection, or DB write is run.")
+    st.caption("수동 조사 패널입니다. 자동 원인 판정, AI 요약, 원문 수집, DB 저장은 실행하지 않습니다.")
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
     selection_key = "overview_market_mover_why_it_moved_selection"
@@ -3704,7 +3753,7 @@ def _render_market_mover_why_it_moved_panel(
         st.session_state[selection_key] = option_ids[0]
     selected_id = str(
         st.selectbox(
-            "Symbol",
+            "종목",
             option_ids,
             format_func=lambda value: candidate_by_id.get(str(value), {}).get("label", str(value)),
             key=selection_key,
@@ -3740,15 +3789,15 @@ def _render_market_mover_why_it_moved_panel(
     current_metadata = metadata_store.get(metadata_key) or model.get("metadata") or {}
 
     status_container = st.container()
-    if st.button("Fetch compact metadata", key=f"overview_market_mover_why_it_moved_fetch_{metadata_key}"):
-        with st.spinner(f"Fetching compact metadata for {identity.get('Symbol') or selected.get('symbol')}..."):
+    if st.button("간단 메타데이터 조회", key=f"overview_market_mover_why_it_moved_fetch_{metadata_key}"):
+        with st.spinner(f"{identity.get('Symbol') or selected.get('symbol')} 간단 메타데이터를 조회하는 중..."):
             current_metadata = fetch_market_mover_compact_metadata(str(identity.get("Symbol") or selected.get("symbol") or ""))
             metadata_store[metadata_key] = current_metadata
             st.session_state[metadata_store_key] = metadata_store
     with status_container:
         _render_market_mover_metadata_status_strip(dict(current_metadata))
 
-    st.markdown("##### Investigation Leads")
+    st.markdown("##### 조사 단서")
     _render_market_mover_investigation_leads(dict(current_metadata), links)
 
 

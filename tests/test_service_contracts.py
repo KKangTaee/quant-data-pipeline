@@ -5244,7 +5244,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
         self.assertEqual(empty["status"], "NO_METADATA")
-        self.assertEqual(empty["messages"], ["No compact news or SEC filing metadata returned for AAA."])
+        self.assertEqual(empty["messages"], ["AAA에 대해 간단 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."])
 
         def failing_news(symbol: str, max_items: int) -> list[dict[str, object]]:
             raise RuntimeError("news timeout")
@@ -5261,8 +5261,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(failed["status"], "FAILED")
         self.assertEqual(failed["news"].empty, True)
         self.assertEqual(failed["sec_filings"].empty, True)
-        self.assertIn("News metadata lookup failed: news timeout", failed["messages"])
-        self.assertIn("SEC metadata lookup failed: sec timeout", failed["messages"])
+        self.assertIn("뉴스 메타데이터 조회 실패: news timeout", failed["messages"])
+        self.assertIn("SEC 메타데이터 조회 실패: sec timeout", failed["messages"])
 
     def test_market_mover_compact_metadata_fetcher_marks_partial_provider_failure(self) -> None:
         from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
@@ -5286,7 +5286,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(metadata["status"], "PARTIAL")
         self.assertEqual(metadata["news"].empty, False)
         self.assertEqual(metadata["sec_filings"].empty, True)
-        self.assertIn("SEC metadata lookup failed: sec timeout", metadata["messages"])
+        self.assertIn("SEC 메타데이터 조회 실패: sec timeout", metadata["messages"])
 
     def test_market_mover_metadata_status_strip_distinguishes_lookup_states(self) -> None:
         from app.services.overview_market_intelligence import (
@@ -5299,11 +5299,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         not_requested = build_market_mover_metadata_status_strip(
             build_market_mover_metadata_not_requested_state("AAA")
         )
-        self.assertEqual(not_requested["lookup"]["value"], "Not requested")
+        self.assertEqual(not_requested["lookup"]["label"], "조회 상태")
+        self.assertEqual(not_requested["lookup"]["value"], "조회 전")
         self.assertEqual(not_requested["lookup"]["tone"], "neutral")
-        self.assertEqual(not_requested["news"]["value"], "Not requested")
-        self.assertEqual(not_requested["sec"]["value"], "Not requested")
-        self.assertEqual(not_requested["storage"]["value"], "Session-only")
+        self.assertEqual(not_requested["news"]["value"], "조회 전")
+        self.assertEqual(not_requested["sec"]["value"], "조회 전")
+        self.assertEqual(not_requested["storage"]["label"], "저장 경계")
+        self.assertEqual(not_requested["storage"]["value"], "세션 전용")
 
         partial = build_market_mover_metadata_status_strip(
             {
@@ -5314,13 +5316,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     columns=WHY_IT_MOVED_NEWS_COLUMNS,
                 ),
                 "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
-                "messages": ["SEC metadata lookup failed: timeout"],
+                "messages": ["SEC 메타데이터 조회 실패: timeout"],
             }
         )
-        self.assertEqual(partial["lookup"]["value"], "Partial")
+        self.assertEqual(partial["lookup"]["value"], "부분 완료")
         self.assertEqual(partial["lookup"]["tone"], "warning")
-        self.assertEqual(partial["news"]["value"], "1 row")
-        self.assertEqual(partial["sec"]["value"], "Failed")
+        self.assertEqual(partial["news"]["value"], "1건")
+        self.assertEqual(partial["sec"]["value"], "실패")
         self.assertEqual(partial["fetched_at"]["value"], "2026-06-04T01:02:03Z")
 
         failed = build_market_mover_metadata_status_strip(
@@ -5330,15 +5332,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "news": pd.DataFrame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
                 "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
                 "messages": [
-                    "News metadata lookup failed: timeout",
-                    "SEC metadata lookup failed: timeout",
+                    "뉴스 메타데이터 조회 실패: timeout",
+                    "SEC 메타데이터 조회 실패: timeout",
                 ],
             }
         )
-        self.assertEqual(failed["lookup"]["value"], "Failed")
+        self.assertEqual(failed["lookup"]["value"], "실패")
         self.assertEqual(failed["lookup"]["tone"], "error")
-        self.assertEqual(failed["news"]["value"], "Failed")
-        self.assertEqual(failed["sec"]["value"], "Failed")
+        self.assertEqual(failed["news"]["value"], "실패")
+        self.assertEqual(failed["sec"]["value"], "실패")
 
         no_metadata = build_market_mover_metadata_status_strip(
             {
@@ -5346,13 +5348,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "fetched_at_utc": "2026-06-04T01:02:03Z",
                 "news": pd.DataFrame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
                 "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
-                "messages": ["No compact news or SEC filing metadata returned for AAA."],
+                "messages": ["AAA에 대해 간단 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."],
             }
         )
-        self.assertEqual(no_metadata["lookup"]["value"], "No metadata")
+        self.assertEqual(no_metadata["lookup"]["value"], "메타데이터 없음")
         self.assertEqual(no_metadata["lookup"]["tone"], "warning")
-        self.assertEqual(no_metadata["news"]["value"], "0 rows")
-        self.assertEqual(no_metadata["sec"]["value"], "0 rows")
+        self.assertEqual(no_metadata["news"]["value"], "0건")
+        self.assertEqual(no_metadata["sec"]["value"], "0건")
 
     def test_market_mover_sec_filings_sort_by_form_priority_deterministically(self) -> None:
         from app.services.overview_market_intelligence import sort_market_mover_sec_filings_by_form_priority
@@ -5405,8 +5407,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in candidates], ["return:1:AAA", "return:2:BBB", "volume:1:BBB", "volume:2:AAA"])
         self.assertEqual(candidates[0]["rank_source"], "Return Rank")
         self.assertEqual(candidates[2]["rank_source"], "Volume Rank")
-        self.assertIn("Return #1", candidates[0]["label"])
-        self.assertIn("Volume #1", candidates[2]["label"])
+        self.assertIn("수익률 #1", candidates[0]["label"])
+        self.assertIn("거래량 #1", candidates[2]["label"])
         self.assertEqual(candidates[0]["mover"]["Sector"], "Technology")
         self.assertEqual(candidates[0]["mover"]["Return %"], 12.34)
         self.assertEqual(candidates[0]["mover"]["Momentum Delta pp"], 9.13)
@@ -5416,9 +5418,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         config = _market_mover_metadata_column_config()
 
-        self.assertIn("Open", config)
-        self.assertEqual(config["Open"]["type_config"]["type"], "link")
-        self.assertEqual(config["Open"]["type_config"]["display_text"], "Open")
+        self.assertIn("열기", config)
+        self.assertEqual(config["열기"]["type_config"]["type"], "link")
+        self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
 
     def test_market_mover_research_link_tables_share_clickable_url_config(self) -> None:
         from app.web.overview_dashboard import _market_mover_external_search_table_model
@@ -5443,14 +5445,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         config = table_model["column_config"]
 
-        self.assertEqual(table_model["label"], "External Searches")
+        self.assertEqual(table_model["label"], "외부 검색")
         self.assertFalse(table_model["expanded"])
-        self.assertEqual(list(table_model["rows"].columns), ["Source", "Open", "Search Query", "Purpose"])
-        self.assertIn("Google News KR", set(table_model["rows"]["Source"]))
-        self.assertIn("Naver News", set(table_model["rows"]["Source"]))
-        self.assertIn("Open", config)
-        self.assertEqual(config["Open"]["type_config"]["type"], "link")
-        self.assertEqual(config["Open"]["type_config"]["display_text"], "Open")
+        self.assertEqual(list(table_model["rows"].columns), ["출처", "열기", "검색어", "용도"])
+        self.assertIn("Google News KR", set(table_model["rows"]["출처"]))
+        self.assertIn("Naver News", set(table_model["rows"]["출처"]))
+        self.assertIn("열기", config)
+        self.assertEqual(config["열기"]["type_config"]["type"], "link")
+        self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot

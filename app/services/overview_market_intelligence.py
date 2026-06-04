@@ -83,11 +83,11 @@ CATALYST_LINK_COLUMNS = [
 WHY_IT_MOVED_NEWS_COLUMNS = ["Title", "Source", "Published At", "URL"]
 WHY_IT_MOVED_SEC_COLUMNS = ["Form", "Filing Date", "Title", "URL"]
 WHY_IT_MOVED_STATUS_LABELS = {
-    "NOT_REQUESTED": ("Not requested", "neutral"),
-    "OK": ("Complete", "success"),
-    "PARTIAL": ("Partial", "warning"),
-    "FAILED": ("Failed", "error"),
-    "NO_METADATA": ("No metadata", "warning"),
+    "NOT_REQUESTED": ("조회 전", "neutral"),
+    "OK": ("완료", "success"),
+    "PARTIAL": ("부분 완료", "warning"),
+    "FAILED": ("실패", "error"),
+    "NO_METADATA": ("메타데이터 없음", "warning"),
 }
 SEC_FILING_FORM_PRIORITY = {
     "8-K": 0,
@@ -2649,7 +2649,7 @@ def build_market_mover_metadata_not_requested_state(symbol: str | None = None) -
         "fetched_at_utc": None,
         "news": _rows_frame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
         "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
-        "messages": ["Metadata lookup has not been run in this session."],
+        "messages": ["이번 세션에서 메타데이터 조회를 아직 실행하지 않았습니다."],
     }
 
 
@@ -2662,12 +2662,21 @@ def _count_metadata_rows(value: Any) -> int:
 
 
 def _row_count_label(count: int) -> str:
-    return f"{count} row" if count == 1 else f"{count} rows"
+    return f"{count}건"
+
+
+def _metadata_provider_failure_prefixes(provider: str) -> tuple[str, ...]:
+    normalized = str(provider or "").strip().lower()
+    if normalized == "news":
+        return ("news metadata lookup failed:", "뉴스 메타데이터 조회 실패:")
+    if normalized == "sec":
+        return ("sec metadata lookup failed:", "sec 메타데이터 조회 실패:")
+    return (f"{normalized} metadata lookup failed:",)
 
 
 def _metadata_provider_failed(messages: list[str], provider: str) -> bool:
-    prefix = f"{provider.lower()} metadata lookup failed:"
-    return any(message.lower().startswith(prefix) for message in messages)
+    prefixes = _metadata_provider_failure_prefixes(provider)
+    return any(message.lower().startswith(prefix) for message in messages for prefix in prefixes)
 
 
 def _metadata_provider_status_item(
@@ -2678,9 +2687,9 @@ def _metadata_provider_status_item(
     lookup_status: str,
 ) -> dict[str, Any]:
     if lookup_status == "NOT_REQUESTED":
-        return {"label": label, "value": "Not requested", "tone": "neutral", "row_count": 0}
+        return {"label": label, "value": "조회 전", "tone": "neutral", "row_count": 0}
     if failed:
-        return {"label": label, "value": "Failed", "tone": "error", "row_count": count}
+        return {"label": label, "value": "실패", "tone": "error", "row_count": count}
     tone = "success" if count > 0 else "neutral"
     if count == 0 and lookup_status in {"PARTIAL", "NO_METADATA"}:
         tone = "warning"
@@ -2711,11 +2720,11 @@ def build_market_mover_metadata_status_strip(metadata: dict[str, Any] | None) ->
     fetched_at = str(payload.get("fetched_at_utc") or "").strip() or "-"
     strip = {
         "status": status,
-        "lookup": {"label": "Lookup status", "value": label, "tone": tone},
+        "lookup": {"label": "조회 상태", "value": label, "tone": tone},
         "news": news_item,
         "sec": sec_item,
-        "fetched_at": {"label": "Fetched at", "value": fetched_at, "tone": "neutral"},
-        "storage": {"label": "Storage", "value": "Session-only", "tone": "neutral"},
+        "fetched_at": {"label": "조회 시각", "value": fetched_at, "tone": "neutral"},
+        "storage": {"label": "저장 경계", "value": "세션 전용", "tone": "neutral"},
     }
     strip["items"] = [
         strip["lookup"],
@@ -3013,7 +3022,7 @@ def fetch_market_mover_compact_metadata(
         news_rows = (news_fetcher or _fetch_yfinance_news_metadata)(normalized_symbol, max(0, int(max_news)))
     except Exception as exc:
         had_failure = True
-        messages.append(f"News metadata lookup failed: {exc}")
+        messages.append(f"뉴스 메타데이터 조회 실패: {exc}")
 
     try:
         sec_rows = (sec_fetcher or _fetch_sec_recent_filing_metadata)(
@@ -3024,7 +3033,7 @@ def fetch_market_mover_compact_metadata(
         )
     except Exception as exc:
         had_failure = True
-        messages.append(f"SEC metadata lookup failed: {exc}")
+        messages.append(f"SEC 메타데이터 조회 실패: {exc}")
 
     news = _normalize_news_metadata(news_rows, max_items=max_news)
     sec_filings = _normalize_sec_filing_metadata(sec_rows, max_items=max_filings)
@@ -3037,7 +3046,7 @@ def fetch_market_mover_compact_metadata(
         status = "FAILED"
     else:
         status = "NO_METADATA"
-        messages.append(f"No compact news or SEC filing metadata returned for {normalized_symbol}.")
+        messages.append(f"{normalized_symbol}에 대해 간단 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다.")
 
     return {
         "status": status,
