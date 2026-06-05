@@ -5296,6 +5296,54 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "snapshot_status": "actual",
                 },
                 {
+                    "series_id": "CNN_FNG_STOCK_PRICE_STRENGTH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Stock Price Strength",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 33.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_PUT_CALL_OPTIONS",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Put / Call Options",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 96.6,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "extreme greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_MARKET_VOLATILITY_VIX",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Market Volatility",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 50.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "neutral"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
                     "series_id": "CNN_FNG_JUNK_BOND_DEMAND",
                     "observation_date": pd.Timestamp("2026-06-04"),
                     "source": "cnn_fear_greed",
@@ -5307,6 +5355,22 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "value": 6.6,
                     "coverage_status": "actual",
                     "missing_fields_json": json.dumps({"rating": "extreme fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_SAFE_HAVEN_DEMAND",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Safe Haven Demand",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 71.8,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "greed"}),
                     "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
                     "staleness_days": 1,
                     "snapshot_status": "actual",
@@ -5358,10 +5422,22 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(analysis["phase_label"], "혼합 중립")
         self.assertIn("내부는 엇갈린", analysis["headline"])
         self.assertEqual(analysis["data_confidence"]["status"], "High")
-        self.assertEqual(analysis["driver_summary"]["greed_count"], 1)
-        self.assertEqual(analysis["driver_summary"]["fear_count"], 2)
-        self.assertEqual(analysis["analysis_steps"][0]["title"], "데이터 상태")
-        self.assertEqual(analysis["analysis_steps"][2]["status"], "Split")
+        self.assertEqual(analysis["driver_summary"]["greed_count"], 3)
+        self.assertEqual(analysis["driver_summary"]["fear_count"], 3)
+        self.assertEqual(analysis["driver_summary"]["neutral_count"], 1)
+        self.assertEqual(
+            [step["title"] for step in analysis["analysis_steps"]],
+            ["지금 결론", "왜 이렇게 보나", "강한 신호", "약한 신호", "그래서 어떻게 보나", "다음 확인"],
+        )
+        self.assertIn("중립", analysis["analysis_steps"][0]["status"])
+        self.assertIn("지수는 버티지만", analysis["analysis_steps"][4]["detail"])
+        explanations = analysis["component_explanations"]
+        self.assertEqual(len(explanations), 7)
+        momentum = next(item for item in explanations if item["series"] == "Market Momentum")
+        self.assertIn("S&P 500", momentum["what_it_checks"])
+        self.assertIn("지수 추세", momentum["current_reading"])
+        breadth = next(item for item in explanations if item["series"] == "Stock Price Breadth")
+        self.assertIn("시장 폭", breadth["current_reading"])
         self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
 
     def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:

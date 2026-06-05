@@ -249,8 +249,8 @@ PY
 - Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then a 6-step analysis path covering data state, fear-greed reading, CNN driver split, AAII pessimism, combined market context, and next checks.
-- Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
+- Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then `시장 심리 읽기 - 6단계` covering current conclusion, why it reads that way, strong signals, weak signals, combined interpretation, and next checks.
+- Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, CNN component learning notes, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
 - Overview Data Health displays 9 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
 - Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.

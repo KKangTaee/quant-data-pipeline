@@ -216,6 +216,57 @@ AAII_HISTORICAL_AVERAGES = {
     "neutral": 31.5,
     "bearish": 30.5,
 }
+CNN_COMPONENT_LEARNING_NOTES = {
+    "Market Momentum": {
+        "label_ko": "지수 추세",
+        "what_it_checks": "S&P 500이 125일 이동평균 대비 얼마나 강한지 봅니다.",
+        "greed_meaning": "지수 자체의 추세가 강해 투자자들이 위험을 받아들이는 쪽입니다.",
+        "fear_meaning": "지수가 중기 평균 아래로 약해져 투자자들이 조심스러워진 상태입니다.",
+        "neutral_meaning": "지수 추세가 뚜렷하게 한쪽으로 치우치지 않았습니다.",
+    },
+    "Stock Price Strength": {
+        "label_ko": "신고가 확산",
+        "what_it_checks": "NYSE 52주 신고가 종목과 신저가 종목의 균형을 봅니다.",
+        "greed_meaning": "많은 종목이 신고가를 만들며 상승 리더십이 넓어지는 상태입니다.",
+        "fear_meaning": "신고가보다 약한 종목이 많아 상승 리더십이 좁아진 상태입니다.",
+        "neutral_meaning": "신고가와 신저가 압력이 크게 기울지 않았습니다.",
+    },
+    "Stock Price Breadth": {
+        "label_ko": "시장 폭",
+        "what_it_checks": "상승 종목 거래량과 하락 종목 거래량의 균형을 봅니다.",
+        "greed_meaning": "상승 종목 쪽으로 거래가 넓게 붙어 시장 참여가 강합니다.",
+        "fear_meaning": "상승 참여 폭이 약해 지수 상승이 일부 종목에 기대고 있을 수 있습니다.",
+        "neutral_meaning": "상승/하락 참여 폭이 뚜렷하게 갈리지 않았습니다.",
+    },
+    "Put / Call Options": {
+        "label_ko": "옵션 포지션",
+        "what_it_checks": "풋옵션과 콜옵션 수요의 균형을 봅니다.",
+        "greed_meaning": "방어적 풋 수요보다 상승 또는 위험선호 옵션 수요가 강합니다.",
+        "fear_meaning": "풋옵션 수요가 늘어 하락 방어 심리가 강합니다.",
+        "neutral_meaning": "옵션 시장의 상승/방어 수요가 크게 치우치지 않았습니다.",
+    },
+    "Market Volatility": {
+        "label_ko": "변동성",
+        "what_it_checks": "VIX가 50일 평균 대비 얼마나 높거나 낮은지 봅니다.",
+        "greed_meaning": "변동성 압력이 낮아 시장이 비교적 안정을 가격에 반영합니다.",
+        "fear_meaning": "변동성 압력이 높아 투자자들이 급락 위험을 더 크게 봅니다.",
+        "neutral_meaning": "변동성은 현재 공포/탐욕 어느 쪽도 강하게 말하지 않습니다.",
+    },
+    "Junk Bond Demand": {
+        "label_ko": "신용 위험선호",
+        "what_it_checks": "고위험 회사채와 우량채의 금리 스프레드를 봅니다.",
+        "greed_meaning": "고위험 채권 수요가 강해 신용시장도 위험을 받아들이는 쪽입니다.",
+        "fear_meaning": "고위험 채권 수요가 약해 신용시장은 방어적으로 움직입니다.",
+        "neutral_meaning": "신용시장의 위험선호가 크게 기울지 않았습니다.",
+    },
+    "Safe Haven Demand": {
+        "label_ko": "주식 vs 안전자산",
+        "what_it_checks": "최근 20거래일 주식과 국채 성과 차이를 봅니다.",
+        "greed_meaning": "국채보다 주식 선호가 강해 위험자산 선호가 우세합니다.",
+        "fear_meaning": "주식보다 국채 선호가 강해 방어적 심리가 우세합니다.",
+        "neutral_meaning": "주식과 국채 선호가 크게 갈리지 않았습니다.",
+    },
+}
 OPS_INTRADAY_TARGETS = [
     {
         "area": "S&P 500 Daily Snapshot",
@@ -628,16 +679,49 @@ def _sentiment_table_row(row: pd.Series, *, label: str) -> dict[str, Any]:
 def _sentiment_score_bucket(value: Any) -> dict[str, str]:
     numeric = _safe_float(value)
     if numeric is None:
-        return {"label": "Missing", "direction": "neutral", "tone": "warning"}
+        return {"label": "Missing", "label_ko": "데이터 없음", "direction": "neutral", "tone": "warning"}
     if numeric < 25:
-        return {"label": "Extreme Fear", "direction": "fear", "tone": "danger"}
+        return {"label": "Extreme Fear", "label_ko": "극단적 공포", "direction": "fear", "tone": "danger"}
     if numeric < 45:
-        return {"label": "Fear", "direction": "fear", "tone": "warning"}
+        return {"label": "Fear", "label_ko": "공포", "direction": "fear", "tone": "warning"}
     if numeric < 55:
-        return {"label": "Neutral", "direction": "neutral", "tone": "neutral"}
+        return {"label": "Neutral", "label_ko": "중립", "direction": "neutral", "tone": "neutral"}
     if numeric < 75:
-        return {"label": "Greed", "direction": "greed", "tone": "positive"}
-    return {"label": "Extreme Greed", "direction": "greed", "tone": "positive"}
+        return {"label": "Greed", "label_ko": "탐욕", "direction": "greed", "tone": "positive"}
+    return {"label": "Extreme Greed", "label_ko": "극단적 탐욕", "direction": "greed", "tone": "positive"}
+
+
+def _cnn_component_note(series: Any) -> dict[str, str]:
+    key = str(series or "")
+    return CNN_COMPONENT_LEARNING_NOTES.get(
+        key,
+        {
+            "label_ko": key or "-",
+            "what_it_checks": "CNN Fear & Greed를 구성하는 세부 시장 행동 지표입니다.",
+            "greed_meaning": "이 값이 높으면 해당 지표는 위험선호 쪽으로 해석합니다.",
+            "fear_meaning": "이 값이 낮으면 해당 지표는 방어적 심리 쪽으로 해석합니다.",
+            "neutral_meaning": "이 값이 중립이면 해당 지표만으로는 방향성이 강하지 않습니다.",
+        },
+    )
+
+
+def _cnn_component_current_reading(series: Any, bucket: dict[str, str]) -> str:
+    note = _cnn_component_note(series)
+    direction = bucket.get("direction")
+    label_ko = note.get("label_ko") or str(series or "-")
+    if direction == "greed":
+        return f"{label_ko}: {note['greed_meaning']}"
+    if direction == "fear":
+        return f"{label_ko}: {note['fear_meaning']}"
+    return f"{label_ko}: {note['neutral_meaning']}"
+
+
+def _join_component_labels(rows: list[dict[str, Any]]) -> str:
+    labels = []
+    for row in rows:
+        note = _cnn_component_note(row.get("series"))
+        labels.append(note.get("label_ko") or str(row.get("series") or "-"))
+    return ", ".join(labels) if labels else "해당 신호 없음"
 
 
 def _sentiment_driver_groups(component_rows: list[dict[str, Any]]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int]]:
@@ -645,13 +729,18 @@ def _sentiment_driver_groups(component_rows: list[dict[str, Any]]) -> tuple[dict
     for row in component_rows:
         bucket = _sentiment_score_bucket(row.get("Score"))
         direction = bucket["direction"]
+        note = _cnn_component_note(row.get("Series"))
         groups[direction].append(
             {
                 "series": row.get("Series") or "-",
+                "label_ko": note["label_ko"],
                 "score": row.get("Score"),
                 "rating": row.get("Rating") or "-",
+                "rating_label_ko": bucket["label_ko"],
                 "tone": bucket["tone"],
                 "direction": direction,
+                "what_it_checks": note["what_it_checks"],
+                "current_reading": _cnn_component_current_reading(row.get("Series"), bucket),
             }
         )
     summary = {
@@ -662,31 +751,54 @@ def _sentiment_driver_groups(component_rows: list[dict[str, Any]]) -> tuple[dict
     return groups, summary
 
 
+def _sentiment_component_explanations(component_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    explanations: list[dict[str, Any]] = []
+    for row in component_rows:
+        bucket = _sentiment_score_bucket(row.get("Score"))
+        note = _cnn_component_note(row.get("Series"))
+        explanations.append(
+            {
+                "series": row.get("Series") or "-",
+                "label_ko": note["label_ko"],
+                "score": row.get("Score"),
+                "rating": row.get("Rating") or "-",
+                "rating_label_ko": bucket["label_ko"],
+                "direction": bucket["direction"],
+                "tone": bucket["tone"],
+                "what_it_checks": note["what_it_checks"],
+                "greed_meaning": note["greed_meaning"],
+                "fear_meaning": note["fear_meaning"],
+                "current_reading": _cnn_component_current_reading(row.get("Series"), bucket),
+            }
+        )
+    return explanations
+
+
 def _aaii_pessimism_status(*, bearish: float | None, spread: float | None) -> dict[str, str]:
     if bearish is None:
         return {
-            "status": "Missing",
+            "status": "데이터 없음",
             "tone": "warning",
-            "detail": "AAII bearish sentiment is not available.",
+            "detail": "AAII bearish sentiment가 아직 없습니다.",
         }
     bearish_gap = bearish - AAII_HISTORICAL_AVERAGES["bearish"]
     spread_text = "-" if spread is None else f"{spread:+.1f}pp"
     if bearish >= 50 or (spread is not None and spread <= -20):
-        status = "Heavy pessimism"
+        status = "비관 강함"
         tone = "danger"
     elif bearish >= 35 or (spread is not None and spread < 0):
-        status = "Elevated"
+        status = "비관 우위"
         tone = "warning"
     elif bearish <= 25 and spread is not None and spread > 10:
-        status = "Complacent"
+        status = "낙관 우위"
         tone = "positive"
     else:
-        status = "Balanced"
+        status = "균형"
         tone = "neutral"
     return {
         "status": status,
         "tone": tone,
-        "detail": f"Bearish {bearish:.1f}% is {bearish_gap:+.1f}pp vs AAII long-run average; spread {spread_text}.",
+        "detail": f"Bearish {bearish:.1f}%는 장기 평균보다 {bearish_gap:+.1f}pp 높고, bull-bear spread는 {spread_text}입니다.",
     }
 
 
@@ -743,7 +855,7 @@ def _market_sentiment_phase(
             "phase_label": "혼합 중립",
             "tone": "neutral",
             "headline": "중립이지만 내부는 엇갈린 시장 심리입니다.",
-            "summary": "헤드라인 score는 중립권이지만 일부 CNN component는 탐욕, 일부는 공포를 가리킵니다. AAII도 약한 비관 쪽입니다.",
+            "summary": "헤드라인 점수는 중립권이지만 일부 CNN 구성요소는 탐욕, 일부는 공포를 가리킵니다. AAII도 약한 비관 쪽입니다.",
         }
     if cnn_score >= 55:
         return {
@@ -782,53 +894,56 @@ def _build_market_sentiment_analysis(
         stale_count=stale_count,
     )
     cnn_bucket = _sentiment_score_bucket(cnn_score)
-    driver_status = "Split" if driver_summary["greed_count"] and driver_summary["fear_count"] else cnn_bucket["label"]
     aaii_status = _aaii_pessimism_status(bearish=aaii_bearish, spread=aaii_spread)
     data_confidence = {
         "status": "High" if missing_count == 0 and stale_count == 0 else "Review",
         "tone": "positive" if missing_count == 0 and stale_count == 0 else "warning",
-        "detail": f"{coverage.get('source_count') or 0} sources ready; {missing_count} missing; {stale_count} stale.",
+        "detail": f"{coverage.get('source_count') or 0}개 source 준비, missing {missing_count}, stale {stale_count}.",
     }
+    greed_rows = driver_groups["greed"]
+    fear_rows = driver_groups["fear"]
+    neutral_rows = driver_groups["neutral"]
+    greed_labels = _join_component_labels(greed_rows)
+    fear_labels = _join_component_labels(fear_rows)
+    neutral_clause = "" if not neutral_rows else f" 중립 신호는 {_join_component_labels(neutral_rows)}입니다."
+    cnn_score_text = "-" if cnn_score is None else f"{cnn_score:.1f}"
+    aaii_spread_text = "-" if aaii_spread is None else f"{aaii_spread:+.1f}pp"
     analysis_steps = [
         {
-            "title": "데이터 상태",
-            "status": "Fresh" if data_confidence["status"] == "High" else data_confidence["status"],
-            "tone": data_confidence["tone"],
-            "detail": data_confidence["detail"],
-        },
-        {
-            "title": "공포·탐욕 판정",
-            "status": cnn_bucket["label"],
-            "tone": cnn_bucket["tone"],
-            "detail": "-" if cnn_score is None else f"CNN Fear & Greed {cnn_score:.1f}; rating {coverage.get('cnn_rating') or cnn_bucket['label'].lower()}.",
-        },
-        {
-            "title": "내부 드라이버",
-            "status": driver_status,
-            "tone": "warning" if driver_status == "Split" else cnn_bucket["tone"],
-            "detail": (
-                f"{driver_summary['greed_count']} greed drivers, "
-                f"{driver_summary['fear_count']} fear drivers, "
-                f"{driver_summary['neutral_count']} neutral drivers."
-            ),
-        },
-        {
-            "title": "AAII 비관론",
-            "status": aaii_status["status"],
-            "tone": aaii_status["tone"],
-            "detail": aaii_status["detail"],
-        },
-        {
-            "title": "종합 문맥",
+            "title": "지금 결론",
             "status": phase["phase_label"],
             "tone": phase["tone"],
-            "detail": phase["summary"],
+            "detail": f"{phase['headline']} {phase['summary']}",
+        },
+        {
+            "title": "왜 이렇게 보나",
+            "status": f"CNN {cnn_score_text} · AAII spread {aaii_spread_text}",
+            "tone": cnn_bucket["tone"],
+            "detail": f"CNN 헤드라인은 {cnn_bucket['label_ko']}권이고, {aaii_status['detail']} 그래서 겉으로는 중립에 가깝지만 설문은 약한 비관을 보탭니다.",
+        },
+        {
+            "title": "강한 신호",
+            "status": f"{driver_summary['greed_count']}개 탐욕 쪽",
+            "tone": "positive" if greed_rows else "neutral",
+            "detail": f"{greed_labels} 신호는 위험선호를 가리킵니다.",
+        },
+        {
+            "title": "약한 신호",
+            "status": f"{driver_summary['fear_count']}개 공포 쪽",
+            "tone": "warning" if fear_rows else "neutral",
+            "detail": f"{fear_labels}는 시장 참여 폭, 상승 리더십, 신용시장 중 일부가 약하다는 신호입니다.{neutral_clause}",
+        },
+        {
+            "title": "그래서 어떻게 보나",
+            "status": phase["phase_label"],
+            "tone": phase["tone"],
+            "detail": "지수는 버티지만 내부 체력은 확인이 필요한 상태입니다. 강한 상승장 확신보다는 혼합 중립으로 두고 breadth, credit, macro 확인을 붙입니다.",
         },
         {
             "title": "다음 확인",
-            "status": "Confirm",
+            "status": "확인 필요",
             "tone": "neutral",
-            "detail": "Market Movers breadth, Futures Macro Thermometer, Events calendar로 sentiment와 price/macro context가 같은 방향인지 확인합니다.",
+            "detail": "Market Movers breadth, Futures Macro Thermometer, Events calendar가 같은 방향인지 보면 이 중립이 건강한 중립인지, 취약한 중립인지 갈라집니다.",
         },
     ]
     return {
@@ -836,21 +951,25 @@ def _build_market_sentiment_analysis(
         "data_confidence": data_confidence,
         "driver_summary": driver_summary,
         "driver_groups": driver_groups,
+        "component_explanations": _sentiment_component_explanations(component_rows),
         "analysis_steps": analysis_steps,
         "next_checks": [
             {
                 "target": "Market Movers breadth",
-                "reason": "Sentiment가 중립/혼합일 때 실제 상승 종목 비중과 sector breadth가 확인 역할을 합니다.",
+                "reason": "상승 종목 비중이 넓으면 건강한 중립, 좁으면 일부 대형주 중심 중립일 수 있습니다.",
+                "watch_for": "상승 종목 수, sector breadth, Stock Price Breadth와 같은 방향인지 확인",
                 "tone": "neutral",
             },
             {
                 "target": "Futures Macro Thermometer",
-                "reason": "선물 기반 risk-on / rate / dollar pressure가 sentiment와 충돌하는지 확인합니다.",
+                "reason": "주식 심리와 금리/달러/원자재 압력이 충돌하면 headline 중립을 그대로 믿기 어렵습니다.",
+                "watch_for": "risk-on, rate pressure, dollar pressure가 sentiment와 같은 방향인지 확인",
                 "tone": "neutral",
             },
             {
                 "target": "Events calendar",
-                "reason": "FOMC, CPI, earnings 같은 이벤트가 심리 급변의 촉매인지 확인합니다.",
+                "reason": "FOMC, CPI, earnings 같은 이벤트가 심리 급변의 원인인지 확인합니다.",
+                "watch_for": "다가오는 고중요 이벤트와 stale estimate 여부",
                 "tone": "neutral",
             },
         ],

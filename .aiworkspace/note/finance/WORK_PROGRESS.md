@@ -36,6 +36,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - CNN Fear & Greed and AAII Sentiment Survey now collect into `finance_meta.macro_series_observation`; actual smoke wrote 348 rows: CNN 260, AAII 88.
 - `Workspace > Overview` now has a Sentiment tab after Futures Monitor, plus Ingestion manual refresh and Data Health Market Sentiment target.
 - User-review follow-up improved Sentiment from raw prototype cards into a guided context workflow: mixed-neutral headline, data confidence, 6-step analysis check, CNN driver split, AAII pessimism context, and next checks.
+- Follow-up learning polish now keeps the 6 analysis items visible as `지금 결론 / 왜 이렇게 보나 / 강한 신호 / 약한 신호 / 그래서 어떻게 보나 / 다음 확인`, and adds CNN component learning notes for all 7 components.
 - Verification passed: focused service contracts, py_compile/chart smoke, actual collector smoke, Browser QA on `http://127.0.0.1:8502`, and screenshot `overview-market-sentiment-v1-qa.png`.
 - Remaining roadmap: 2차 Practical Validation context overlay, 3차 scheduled ops hardening if needed.
 

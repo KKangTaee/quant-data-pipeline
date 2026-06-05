@@ -36,11 +36,12 @@ CNN official page JSON / AAII official survey HTML
 
 - `phase` / `phase_label` / `headline`: CNN Fear & Greed, AAII bearish, bull-bear spread, CNN component split을 조합한 현재 시장 심리 문맥.
 - `data_confidence`: CNN / AAII freshness, missing, stale 상태를 먼저 보여주는 신뢰도 요약.
-- `analysis_steps`: 데이터 상태, 공포·탐욕 판정, CNN 내부 드라이버, AAII 비관론, 종합 문맥, 다음 확인 순서의 사용자 읽기 경로.
-- `driver_groups`: CNN component를 greed / fear / neutral로 나눠 headline 뒤의 내부 엇갈림을 설명한다.
-- `next_checks`: sentiment만으로 결론 내리지 않도록 Market Movers, Futures Macro Thermometer, Events calendar로 이어지는 확인 항목.
+- `analysis_steps`: `지금 결론 -> 왜 이렇게 보나 -> 강한 신호 -> 약한 신호 -> 그래서 어떻게 보나 -> 다음 확인` 순서의 6단계 학습형 읽기 경로.
+- `driver_groups`: CNN component를 greed / fear / neutral로 나눠 headline 뒤의 내부 엇갈림을 한국어 label로 요약한다.
+- `component_explanations`: CNN 7개 component가 무엇을 보는지와 현재 점수가 어떤 의미인지 학습 카드로 설명한다.
+- `next_checks`: sentiment만으로 결론 내리지 않도록 Market Movers, Futures Macro Thermometer, Events calendar로 이어지는 확인 이유와 볼 항목.
 
-`app.web.overview_dashboard`는 Sentiment 탭 상단을 `시장 심리 컨텍스트` band로 열고, 그 아래에 분석 체크, 데이터 카드, 드라이버 분해, 다음 확인, 추세 / 구성 / 원천 근거 탭을 순서대로 배치한다.
+`app.web.overview_dashboard`는 Sentiment 탭 상단을 `시장 심리 컨텍스트` band로 열고, 그 아래에 `시장 심리 읽기 - 6단계`, 데이터 카드, 드라이버 분해, CNN 구성요소 학습 노트, 다음 확인, 추세 / 구성 / 원천 근거 탭을 순서대로 배치한다.
 
 ## Source Risk
 

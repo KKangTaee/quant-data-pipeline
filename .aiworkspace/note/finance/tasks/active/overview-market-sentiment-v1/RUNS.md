@@ -15,3 +15,5 @@
 | 2026-06-05 | `.venv/bin/python -m unittest tests.test_service_contracts` | PASS: 245 tests |
 | 2026-06-05 | `.venv/bin/python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/overview_dashboard_helpers.py` and `git diff --check` | PASS |
 | 2026-06-05 | Browser DOM QA `http://127.0.0.1:8502` | PASS: `시장 심리 컨텍스트`, `분석 체크`, `혼합 중립`, `드라이버 분해`, `다음 확인` present; no traceback / code block leak |
+| 2026-06-05 | Focused `OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context` | RED: old step titles `데이터 상태 / 공포·탐욕 판정 / 내부 드라이버`; GREEN after 6-step learning read model and `component_explanations` |
+| 2026-06-05 | Browser QA `http://127.0.0.1:8502` | PASS: `시장 심리 읽기 - 6단계`, all 6 step titles, `CNN 구성요소 학습 노트`, `보는 것 / 현재 읽기`, `다음 확인` visible; no traceback / code block leak / `안전자산가` particle issue. Screenshots: `overview-market-sentiment-learning-final-qa.png`, `overview-market-sentiment-learning-components-qa.png` |

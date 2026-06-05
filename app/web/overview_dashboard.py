@@ -3809,40 +3809,52 @@ def _render_sentiment_analysis_panel(analysis: dict[str, Any]) -> None:
             gap: 0.58rem;
             margin: 0.35rem 0 0.85rem 0;
           }
+          .ov-sentiment-step-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 0.72rem;
+            margin: 0.4rem 0 0.95rem 0;
+          }
           .ov-sentiment-step {
-            min-height: 114px;
-            padding: 0.72rem 0.78rem;
+            min-height: 148px;
+            padding: 0.86rem 0.92rem;
             border: 1px solid rgba(100, 116, 139, 0.16);
-            border-top: 3px solid var(--ov-step-tone, #64748b);
+            border-left: 4px solid var(--ov-step-tone, #64748b);
             border-radius: 8px;
-            background: rgba(248, 250, 252, 0.88);
+            background: rgba(255, 255, 255, 0.94);
           }
           .ov-sentiment-step-num {
+            display: inline-flex;
+            align-items: center;
+            min-height: 1.32rem;
+            padding: 0.12rem 0.42rem;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--ov-step-tone, #64748b) 11%, transparent);
             color: var(--ov-step-tone, #64748b);
-            font-size: 0.74rem;
+            font-size: 0.72rem;
             font-weight: 820;
           }
           .ov-sentiment-step-title {
-            margin-top: 0.18rem;
+            margin-top: 0.42rem;
             color: #111827;
-            font-size: 0.88rem;
+            font-size: 0.98rem;
             line-height: 1.25;
             font-weight: 800;
             overflow-wrap: anywhere;
           }
           .ov-sentiment-step-status {
-            margin-top: 0.36rem;
-            color: var(--ov-step-tone, #64748b);
-            font-size: 0.78rem;
+            margin-top: 0.34rem;
+            color: #111827;
+            font-size: 0.82rem;
             line-height: 1.2;
             font-weight: 780;
             overflow-wrap: anywhere;
           }
           .ov-sentiment-step-detail {
-            margin-top: 0.28rem;
+            margin-top: 0.34rem;
             color: #334155;
-            font-size: 0.76rem;
-            line-height: 1.35;
+            font-size: 0.8rem;
+            line-height: 1.45;
             overflow-wrap: anywhere;
           }
           .ov-sentiment-driver {
@@ -3866,6 +3878,39 @@ def _render_sentiment_analysis_panel(analysis: dict[str, Any]) -> None:
             font-size: 0.75rem;
             line-height: 1.32;
             overflow-wrap: anywhere;
+          }
+          .ov-sentiment-learning {
+            min-height: 184px;
+            padding: 0.78rem 0.82rem;
+            border: 1px solid rgba(100, 116, 139, 0.16);
+            border-top: 4px solid var(--ov-learning-tone, #64748b);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.94);
+          }
+          .ov-sentiment-learning-title {
+            color: #111827;
+            font-size: 0.92rem;
+            line-height: 1.25;
+            font-weight: 820;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-learning-score {
+            margin-top: 0.3rem;
+            color: var(--ov-learning-tone, #64748b);
+            font-size: 0.82rem;
+            line-height: 1.24;
+            font-weight: 800;
+          }
+          .ov-sentiment-learning-body {
+            margin-top: 0.34rem;
+            color: #334155;
+            font-size: 0.76rem;
+            line-height: 1.38;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-learning-body strong {
+            color: #111827;
+            font-weight: 780;
           }
         </style>
         """,
@@ -3915,8 +3960,8 @@ def _render_sentiment_analysis_steps(analysis: dict[str, Any]) -> None:
             f'<div class="ov-sentiment-step-detail">{escape(str(step.get("detail") or ""))}</div>'
             "</div>"
         )
-    st.markdown("#### 분석 체크")
-    st.markdown(f'<div class="ov-sentiment-grid">{"".join(html_steps)}</div>', unsafe_allow_html=True)
+    st.markdown("#### 시장 심리 읽기 - 6단계")
+    st.markdown(f'<div class="ov-sentiment-step-grid">{"".join(html_steps)}</div>', unsafe_allow_html=True)
 
 
 def _render_sentiment_driver_groups(analysis: dict[str, Any]) -> None:
@@ -3930,8 +3975,8 @@ def _render_sentiment_driver_groups(analysis: dict[str, Any]) -> None:
     for key, title, color in labels:
         rows = list(groups.get(key) or [])
         if rows:
-            detail = " · ".join(
-                f"{row.get('series')}: {row.get('score')} ({row.get('rating')})"
+            detail = " / ".join(
+                f"{row.get('label_ko') or row.get('series')}: {row.get('score')} ({row.get('rating_label_ko') or row.get('rating')})"
                 for row in rows[:4]
             )
         else:
@@ -3946,6 +3991,33 @@ def _render_sentiment_driver_groups(analysis: dict[str, Any]) -> None:
     st.markdown(f'<div class="ov-sentiment-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
 
 
+def _render_sentiment_component_learning_cards(analysis: dict[str, Any]) -> None:
+    explanations = list(analysis.get("component_explanations") or [])
+    if not explanations:
+        return
+    tone_colors = {
+        "positive": OVERVIEW_COLOR_POSITIVE,
+        "warning": OVERVIEW_COLOR_WARNING,
+        "danger": OVERVIEW_COLOR_DANGER,
+        "neutral": OVERVIEW_COLOR_NEUTRAL,
+    }
+    html_cards: list[str] = []
+    for item in explanations:
+        tone_color = tone_colors.get(_sentiment_tone(item.get("tone") or "neutral"), OVERVIEW_COLOR_NEUTRAL)
+        score = "-" if item.get("score") is None else f"{float(item.get('score')):.1f}"
+        title = f"{item.get('label_ko') or '-'} · {item.get('series') or '-'}"
+        html_cards.append(
+            f'<div class="ov-sentiment-learning" style="--ov-learning-tone:{tone_color};">'
+            f'<div class="ov-sentiment-learning-title">{escape(str(title))}</div>'
+            f'<div class="ov-sentiment-learning-score">현재 {score} · {escape(str(item.get("rating_label_ko") or item.get("rating") or "-"))}</div>'
+            f'<div class="ov-sentiment-learning-body"><strong>보는 것</strong><br>{escape(str(item.get("what_it_checks") or ""))}</div>'
+            f'<div class="ov-sentiment-learning-body"><strong>현재 읽기</strong><br>{escape(str(item.get("current_reading") or ""))}</div>'
+            "</div>"
+        )
+    st.markdown("#### CNN 구성요소 학습 노트")
+    st.markdown(f'<div class="ov-sentiment-step-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+
+
 def _render_sentiment_next_checks(analysis: dict[str, Any]) -> None:
     checks = list(analysis.get("next_checks") or [])
     if not checks:
@@ -3955,7 +4027,8 @@ def _render_sentiment_next_checks(analysis: dict[str, Any]) -> None:
         html_cards.append(
             f'<div class="ov-sentiment-driver" style="--ov-driver-tone:{OVERVIEW_COLOR_PRIMARY};">'
             f'<div class="ov-sentiment-driver-title">{escape(str(check.get("target") or "-"))}</div>'
-            f'<div class="ov-sentiment-driver-detail">{escape(str(check.get("reason") or ""))}</div>'
+            f'<div class="ov-sentiment-driver-detail"><strong>왜</strong> {escape(str(check.get("reason") or ""))}</div>'
+            f'<div class="ov-sentiment-driver-detail"><strong>볼 것</strong> {escape(str(check.get("watch_for") or ""))}</div>'
             "</div>"
         )
     st.markdown("#### 다음 확인")
@@ -4042,6 +4115,7 @@ def _render_market_sentiment_tab() -> None:
         return
 
     _render_sentiment_driver_groups(analysis)
+    _render_sentiment_component_learning_cards(analysis)
     _render_sentiment_next_checks(analysis)
 
     trend_tab, components_tab, table_tab = st.tabs(["추세 근거", "CNN 구성 상세", "원천 테이블"])

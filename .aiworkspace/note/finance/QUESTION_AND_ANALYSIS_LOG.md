@@ -31,7 +31,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - CNN headline score만으로 결론 내리면 과신 위험이 있으므로 `데이터 상태 -> 공포·탐욕 판정 -> CNN 내부 드라이버 -> AAII 비관론 -> 종합 문맥 -> 다음 확인` 순서가 적절하다. AAII bearish는 historical average 대비 상태와 bull-bear spread를 함께 읽는다.
 - Follow-up:
-  - Sentiment read model에 `analysis`를 추가하고, UI는 혼합 중립 headline, data confidence, driver split, next checks를 먼저 보여준다. 이 해석은 market context이며 Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
+  - Sentiment read model에 `analysis`를 추가하고, UI는 혼합 중립 headline, data confidence, 6단계 학습형 읽기 경로, CNN component learning notes, driver split, next checks를 먼저 보여준다. 이 해석은 market context이며 Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
 
 ### 2026-06-05 - CNN / AAII sentiment belongs in Overview as context, not validation approval
 - User request:
