@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-05 - Sentiment tab should explain context before showing raw evidence
+- User request:
+  - 사용자가 CNN Fear & Greed / AAII 비관론 노출이 prototype card처럼 보이므로, 지금이 공포인지 탐욕인지, 비관론 수준이 어떤지, 그래서 시장 상황을 어떻게 읽어야 하는지 단계별 context로 설명해 달라고 요청함.
+- Interpreted goal:
+  - 기존 수집 / 저장 / freshness 노출은 유지하되, Overview Sentiment의 첫 화면을 raw metric card가 아니라 해석 workflow로 바꾼다.
+- Analysis result:
+  - CNN headline score만으로 결론 내리면 과신 위험이 있으므로 `데이터 상태 -> 공포·탐욕 판정 -> CNN 내부 드라이버 -> AAII 비관론 -> 종합 문맥 -> 다음 확인` 순서가 적절하다. AAII bearish는 historical average 대비 상태와 bull-bear spread를 함께 읽는다.
+- Follow-up:
+  - Sentiment read model에 `analysis`를 추가하고, UI는 혼합 중립 headline, data confidence, driver split, next checks를 먼저 보여준다. 이 해석은 market context이며 Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
+
 ### 2026-06-05 - CNN / AAII sentiment belongs in Overview as context, not validation approval
 - User request:
   - CNN Fear & Greed와 AAII 비관론지수를 수집해 브라우저 화면에 노출하고, 프로젝트에서 가장 합리적인 위치를 분석한 뒤 구현해 달라고 요청함.

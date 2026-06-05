@@ -3679,6 +3679,13 @@ def _sentiment_status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _sentiment_tone(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"positive", "warning", "danger", "neutral"}:
+        return normalized
+    return _sentiment_status_tone(value)
+
+
 def _sentiment_trend_chart(rows: pd.DataFrame) -> alt.Chart:
     if rows.empty:
         rows = pd.DataFrame([{"Date": date.today().isoformat(), "Series": "No Data", "Value": 0.0, "Source": "-"}])
@@ -3735,8 +3742,228 @@ def _sentiment_component_chart(rows: pd.DataFrame) -> alt.Chart:
     )
 
 
+def _render_sentiment_analysis_panel(analysis: dict[str, Any]) -> None:
+    phase_label = escape(str(analysis.get("phase_label") or "-"))
+    headline = escape(str(analysis.get("headline") or "-"))
+    summary = escape(str(analysis.get("summary") or ""))
+    tone = escape(_sentiment_tone(analysis.get("tone") or "neutral"))
+    data_confidence = dict(analysis.get("data_confidence") or {})
+    confidence_status = escape(str(data_confidence.get("status") or "-"))
+    confidence_detail = escape(str(data_confidence.get("detail") or ""))
+
+    st.markdown(
+        """
+        <style>
+          .ov-sentiment-brief {
+            margin: 0.45rem 0 0.8rem 0;
+            padding: 0.92rem 1rem;
+            border: 1px solid rgba(100, 116, 139, 0.18);
+            border-left: 4px solid var(--ov-sentiment-tone, #64748b);
+            border-radius: 8px;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--ov-sentiment-tone, #64748b) 8%, transparent), rgba(255,255,255,0.96));
+          }
+          .ov-sentiment-eyebrow {
+            color: #475569;
+            font-size: 0.75rem;
+            font-weight: 760;
+            letter-spacing: 0;
+            text-transform: uppercase;
+          }
+          .ov-sentiment-headline {
+            margin-top: 0.34rem;
+            color: #111827;
+            font-size: 1.08rem;
+            line-height: 1.26;
+            font-weight: 820;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-summary {
+            margin-top: 0.35rem;
+            max-width: 76rem;
+            color: #334155;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-meta {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            margin-top: 0.58rem;
+          }
+          .ov-sentiment-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 1.38rem;
+            padding: 0.16rem 0.52rem;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--ov-sentiment-tone, #64748b) 13%, transparent);
+            color: #111827;
+            font-size: 0.76rem;
+            font-weight: 760;
+            line-height: 1.15;
+          }
+          .ov-sentiment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 0.58rem;
+            margin: 0.35rem 0 0.85rem 0;
+          }
+          .ov-sentiment-step {
+            min-height: 114px;
+            padding: 0.72rem 0.78rem;
+            border: 1px solid rgba(100, 116, 139, 0.16);
+            border-top: 3px solid var(--ov-step-tone, #64748b);
+            border-radius: 8px;
+            background: rgba(248, 250, 252, 0.88);
+          }
+          .ov-sentiment-step-num {
+            color: var(--ov-step-tone, #64748b);
+            font-size: 0.74rem;
+            font-weight: 820;
+          }
+          .ov-sentiment-step-title {
+            margin-top: 0.18rem;
+            color: #111827;
+            font-size: 0.88rem;
+            line-height: 1.25;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-step-status {
+            margin-top: 0.36rem;
+            color: var(--ov-step-tone, #64748b);
+            font-size: 0.78rem;
+            line-height: 1.2;
+            font-weight: 780;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-step-detail {
+            margin-top: 0.28rem;
+            color: #334155;
+            font-size: 0.76rem;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-driver {
+            min-height: 92px;
+            padding: 0.62rem 0.7rem;
+            border: 1px solid rgba(100, 116, 139, 0.16);
+            border-left: 3px solid var(--ov-driver-tone, #64748b);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.92);
+          }
+          .ov-sentiment-driver-title {
+            color: #111827;
+            font-size: 0.82rem;
+            line-height: 1.25;
+            font-weight: 780;
+            overflow-wrap: anywhere;
+          }
+          .ov-sentiment-driver-detail {
+            margin-top: 0.22rem;
+            color: #334155;
+            font-size: 0.75rem;
+            line-height: 1.32;
+            overflow-wrap: anywhere;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    tone_color = {
+        "positive": OVERVIEW_COLOR_POSITIVE,
+        "warning": OVERVIEW_COLOR_WARNING,
+        "danger": OVERVIEW_COLOR_DANGER,
+        "neutral": OVERVIEW_COLOR_NEUTRAL,
+    }.get(tone, OVERVIEW_COLOR_NEUTRAL)
+    st.markdown(
+        f"""
+        <section class="ov-sentiment-brief" style="--ov-sentiment-tone:{tone_color};">
+          <div class="ov-sentiment-eyebrow">시장 심리 컨텍스트</div>
+          <div class="ov-sentiment-headline">{headline}</div>
+          <div class="ov-sentiment-summary">{summary}</div>
+          <div class="ov-sentiment-meta">
+            <span class="ov-sentiment-pill">{phase_label}</span>
+            <span class="ov-sentiment-pill">데이터 신뢰도: {confidence_status}</span>
+            <span class="ov-sentiment-pill">{confidence_detail}</span>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_sentiment_analysis_steps(analysis: dict[str, Any]) -> None:
+    steps = list(analysis.get("analysis_steps") or [])
+    if not steps:
+        return
+    html_steps: list[str] = []
+    for index, step in enumerate(steps, start=1):
+        tone = _sentiment_tone(step.get("tone") or "neutral")
+        tone_color = {
+            "positive": OVERVIEW_COLOR_POSITIVE,
+            "warning": OVERVIEW_COLOR_WARNING,
+            "danger": OVERVIEW_COLOR_DANGER,
+            "neutral": OVERVIEW_COLOR_NEUTRAL,
+        }.get(tone, OVERVIEW_COLOR_NEUTRAL)
+        html_steps.append(
+            f'<div class="ov-sentiment-step" style="--ov-step-tone:{tone_color};">'
+            f'<div class="ov-sentiment-step-num">STEP {index}</div>'
+            f'<div class="ov-sentiment-step-title">{escape(str(step.get("title") or "-"))}</div>'
+            f'<div class="ov-sentiment-step-status">{escape(str(step.get("status") or "-"))}</div>'
+            f'<div class="ov-sentiment-step-detail">{escape(str(step.get("detail") or ""))}</div>'
+            "</div>"
+        )
+    st.markdown("#### 분석 체크")
+    st.markdown(f'<div class="ov-sentiment-grid">{"".join(html_steps)}</div>', unsafe_allow_html=True)
+
+
+def _render_sentiment_driver_groups(analysis: dict[str, Any]) -> None:
+    groups = dict(analysis.get("driver_groups") or {})
+    labels = [
+        ("greed", "탐욕 드라이버", OVERVIEW_COLOR_POSITIVE),
+        ("fear", "공포 드라이버", OVERVIEW_COLOR_WARNING),
+        ("neutral", "중립 드라이버", OVERVIEW_COLOR_NEUTRAL),
+    ]
+    html_cards: list[str] = []
+    for key, title, color in labels:
+        rows = list(groups.get(key) or [])
+        if rows:
+            detail = " · ".join(
+                f"{row.get('series')}: {row.get('score')} ({row.get('rating')})"
+                for row in rows[:4]
+            )
+        else:
+            detail = "이 구간의 활성 드라이버가 없습니다."
+        html_cards.append(
+            f'<div class="ov-sentiment-driver" style="--ov-driver-tone:{color};">'
+            f'<div class="ov-sentiment-driver-title">{escape(title)} · {len(rows)}</div>'
+            f'<div class="ov-sentiment-driver-detail">{escape(detail)}</div>'
+            "</div>"
+        )
+    st.markdown("#### 드라이버 분해")
+    st.markdown(f'<div class="ov-sentiment-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+
+
+def _render_sentiment_next_checks(analysis: dict[str, Any]) -> None:
+    checks = list(analysis.get("next_checks") or [])
+    if not checks:
+        return
+    html_cards: list[str] = []
+    for check in checks:
+        html_cards.append(
+            f'<div class="ov-sentiment-driver" style="--ov-driver-tone:{OVERVIEW_COLOR_PRIMARY};">'
+            f'<div class="ov-sentiment-driver-title">{escape(str(check.get("target") or "-"))}</div>'
+            f'<div class="ov-sentiment-driver-detail">{escape(str(check.get("reason") or ""))}</div>'
+            "</div>"
+        )
+    st.markdown("#### 다음 확인")
+    st.markdown(f'<div class="ov-sentiment-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+
+
 def _render_market_sentiment_tab() -> None:
-    st.markdown("### Sentiment")
+    st.markdown("### 시장 심리 컨텍스트")
     control_cols = st.columns([1.1, 1, 1], gap="small", vertical_alignment="bottom")
     if control_cols[0].button(
         "시장 심리 갱신",
@@ -3755,18 +3982,21 @@ def _render_market_sentiment_tab() -> None:
     ):
         load_overview_market_sentiment_snapshot.clear()
         st.rerun()
-    control_cols[2].caption("CNN / AAII stored observations")
+    control_cols[2].caption("CNN / AAII 저장 데이터 기준")
 
     _render_market_job_result("overview_market_sentiment_result")
     snapshot = load_overview_market_sentiment_snapshot()
     coverage = dict(snapshot.get("coverage") or {})
+    analysis = dict(snapshot.get("analysis") or {})
+    _render_sentiment_analysis_panel(analysis)
+    _render_sentiment_analysis_steps(analysis)
     render_status_card_grid(
         [
             {
-                "title": "Sentiment Status",
-                "value": snapshot.get("status") or "-",
+                "title": "데이터 신뢰도",
+                "value": dict(analysis.get("data_confidence") or {}).get("status") or snapshot.get("status") or "-",
                 "detail": f"{coverage.get('missing_count') or 0} missing · {coverage.get('stale_count') or 0} stale",
-                "tone": _sentiment_status_tone(snapshot.get("status")),
+                "tone": _sentiment_tone(dict(analysis.get("data_confidence") or {}).get("tone") or snapshot.get("status")),
             },
             {
                 "title": "CNN Fear & Greed",
@@ -3811,7 +4041,10 @@ def _render_market_sentiment_tab() -> None:
         st.info("Stored sentiment rows are not available yet. Run Market Sentiment refresh first.")
         return
 
-    trend_tab, components_tab, table_tab = st.tabs(["Trend", "CNN Components", "Table"])
+    _render_sentiment_driver_groups(analysis)
+    _render_sentiment_next_checks(analysis)
+
+    trend_tab, components_tab, table_tab = st.tabs(["추세 근거", "CNN 구성 상세", "원천 테이블"])
     with trend_tab:
         st.altair_chart(_sentiment_trend_chart(history_rows if isinstance(history_rows, pd.DataFrame) else pd.DataFrame()), width="stretch")
     with components_tab:

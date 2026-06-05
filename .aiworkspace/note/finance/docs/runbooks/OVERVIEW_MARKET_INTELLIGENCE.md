@@ -249,7 +249,8 @@ PY
 - Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Sentiment displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, trend chart, and stored row table from `macro_series_observation`.
+- Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then a 6-step analysis path covering data state, fear-greed reading, CNN driver split, AAII pessimism, combined market context, and next checks.
+- Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
 - Overview Data Health displays 9 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
 - Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
@@ -268,6 +269,7 @@ PY
 | Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Import the official BLS `.ics` file, retry BLS later, or treat current Macro view as GDP-only until BLS rows are available |
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Market Sentiment collection is partial | CNN or AAII official source changed, blocked the request, or returned an interstitial | Inspect `collect_market_sentiment` job details; refresh later or use Browser check to confirm whether the official public page still shows the table |
+| Sentiment tab still shows only raw cards after deployment | Streamlit served an old imported module or cache schema | Restart the Streamlit process and clear the Overview cache via normal app reload; confirm the top `시장 심리 컨텍스트` band and `분석 체크` section are visible |
 | Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
 | Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Scheduled refresh exits as locked | A previous automation run is still active, or a stale lock file remains | Wait for the run to finish; if the process is gone and the lock is older than the stale threshold, rerun after the CLI clears it |

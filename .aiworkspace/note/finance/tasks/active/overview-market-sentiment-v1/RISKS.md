@@ -5,6 +5,7 @@
 | CNN internal JSON endpoint changes or blocks requests | Fear & Greed collection partial / failed | Keep source failure in job result and UI stale/missing state |
 | AAII bot protection blocks default Python HTML access | AAII collection partial / failed | Use official HTML table with browser-like document headers and `curl_cffi` browser impersonation; expose failure instead of fabricating values |
 | Sentiment interpreted as trading signal | Misleading user flow | UI copy and docs keep market-context-only boundary |
+| Interpretation copy feels too decisive | User may read context as forecast / approval | Keep phase language contextual, include driver split and next-check targets, and leave Practical Validation / live trading boundaries unchanged |
 
 ## Resolved During QA
 

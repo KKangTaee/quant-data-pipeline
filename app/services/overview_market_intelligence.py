@@ -211,6 +211,11 @@ SENTIMENT_SERIES_LABELS = {
     "CNN_FNG_JUNK_BOND_DEMAND": "Junk Bond Demand",
     "CNN_FNG_SAFE_HAVEN_DEMAND": "Safe Haven Demand",
 }
+AAII_HISTORICAL_AVERAGES = {
+    "bullish": 38.0,
+    "neutral": 31.5,
+    "bearish": 30.5,
+}
 OPS_INTRADAY_TARGETS = [
     {
         "area": "S&P 500 Daily Snapshot",
@@ -511,6 +516,38 @@ def _empty_ops_snapshot(*, message: str) -> dict[str, Any]:
     }
 
 
+def _empty_sentiment_analysis(*, status: str, message: str) -> dict[str, Any]:
+    return {
+        "phase": "DATA_REVIEW",
+        "phase_label": "데이터 확인",
+        "tone": "danger" if status == "ERROR" else "warning",
+        "headline": "시장 심리 해석에 필요한 데이터가 부족합니다.",
+        "summary": message,
+        "data_confidence": {
+            "status": "Blocked" if status == "ERROR" else "Needs refresh",
+            "tone": "danger" if status == "ERROR" else "warning",
+            "detail": message,
+        },
+        "driver_summary": {"greed_count": 0, "fear_count": 0, "neutral_count": 0},
+        "driver_groups": {"greed": [], "fear": [], "neutral": []},
+        "analysis_steps": [
+            {
+                "title": "데이터 상태",
+                "status": status,
+                "tone": "danger" if status == "ERROR" else "warning",
+                "detail": message,
+            }
+        ],
+        "next_checks": [
+            {
+                "target": "Market Sentiment refresh",
+                "reason": "CNN / AAII observations must be available before reading sentiment context.",
+                "tone": "warning",
+            }
+        ],
+    }
+
+
 def _empty_sentiment_snapshot(*, status: str, message: str) -> dict[str, Any]:
     return {
         "status": status,
@@ -526,6 +563,7 @@ def _empty_sentiment_snapshot(*, status: str, message: str) -> dict[str, Any]:
             "stale_count": 0,
             "missing_count": 2,
         },
+        "analysis": _empty_sentiment_analysis(status=status, message=message),
         "warnings": [message] if message else [],
     }
 
@@ -584,6 +622,238 @@ def _sentiment_table_row(row: pd.Series, *, label: str) -> dict[str, Any]:
         "Staleness Days": _safe_float(row.get("staleness_days")),
         "Status": _sentiment_status(row),
         "Source": row.get("source") or "-",
+    }
+
+
+def _sentiment_score_bucket(value: Any) -> dict[str, str]:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return {"label": "Missing", "direction": "neutral", "tone": "warning"}
+    if numeric < 25:
+        return {"label": "Extreme Fear", "direction": "fear", "tone": "danger"}
+    if numeric < 45:
+        return {"label": "Fear", "direction": "fear", "tone": "warning"}
+    if numeric < 55:
+        return {"label": "Neutral", "direction": "neutral", "tone": "neutral"}
+    if numeric < 75:
+        return {"label": "Greed", "direction": "greed", "tone": "positive"}
+    return {"label": "Extreme Greed", "direction": "greed", "tone": "positive"}
+
+
+def _sentiment_driver_groups(component_rows: list[dict[str, Any]]) -> tuple[dict[str, list[dict[str, Any]]], dict[str, int]]:
+    groups: dict[str, list[dict[str, Any]]] = {"greed": [], "fear": [], "neutral": []}
+    for row in component_rows:
+        bucket = _sentiment_score_bucket(row.get("Score"))
+        direction = bucket["direction"]
+        groups[direction].append(
+            {
+                "series": row.get("Series") or "-",
+                "score": row.get("Score"),
+                "rating": row.get("Rating") or "-",
+                "tone": bucket["tone"],
+                "direction": direction,
+            }
+        )
+    summary = {
+        "greed_count": len(groups["greed"]),
+        "fear_count": len(groups["fear"]),
+        "neutral_count": len(groups["neutral"]),
+    }
+    return groups, summary
+
+
+def _aaii_pessimism_status(*, bearish: float | None, spread: float | None) -> dict[str, str]:
+    if bearish is None:
+        return {
+            "status": "Missing",
+            "tone": "warning",
+            "detail": "AAII bearish sentiment is not available.",
+        }
+    bearish_gap = bearish - AAII_HISTORICAL_AVERAGES["bearish"]
+    spread_text = "-" if spread is None else f"{spread:+.1f}pp"
+    if bearish >= 50 or (spread is not None and spread <= -20):
+        status = "Heavy pessimism"
+        tone = "danger"
+    elif bearish >= 35 or (spread is not None and spread < 0):
+        status = "Elevated"
+        tone = "warning"
+    elif bearish <= 25 and spread is not None and spread > 10:
+        status = "Complacent"
+        tone = "positive"
+    else:
+        status = "Balanced"
+        tone = "neutral"
+    return {
+        "status": status,
+        "tone": tone,
+        "detail": f"Bearish {bearish:.1f}% is {bearish_gap:+.1f}pp vs AAII long-run average; spread {spread_text}.",
+    }
+
+
+def _market_sentiment_phase(
+    *,
+    cnn_score: float | None,
+    aaii_bearish: float | None,
+    aaii_spread: float | None,
+    driver_summary: dict[str, int],
+    missing_count: int,
+    stale_count: int,
+) -> dict[str, str]:
+    if missing_count or cnn_score is None or aaii_bearish is None:
+        return {
+            "phase": "DATA_REVIEW",
+            "phase_label": "데이터 확인",
+            "tone": "warning",
+            "headline": "시장 심리 해석에 필요한 핵심 데이터가 부족합니다.",
+            "summary": "CNN Fear & Greed와 AAII bearish sentiment를 갱신한 뒤 다시 확인하세요.",
+        }
+    if stale_count:
+        return {
+            "phase": "STALE_REVIEW",
+            "phase_label": "신선도 확인",
+            "tone": "warning",
+            "headline": "저장된 시장 심리 데이터가 오래됐습니다.",
+            "summary": "해석은 가능하지만 최신 시장 상태로 보기 전에 수집을 갱신하는 편이 안전합니다.",
+        }
+
+    greed_count = int(driver_summary.get("greed_count") or 0)
+    fear_count = int(driver_summary.get("fear_count") or 0)
+    split_drivers = greed_count > 0 and fear_count > 0
+    if cnn_score < 25 and aaii_bearish >= 45:
+        return {
+            "phase": "FEAR_STRESS",
+            "phase_label": "공포 압력",
+            "tone": "danger",
+            "headline": "공포 심리가 강하게 우세합니다.",
+            "summary": "CNN score와 AAII bearish가 동시에 방어적입니다. 가격 반등보다 위험 관리 확인이 먼저입니다.",
+        }
+    if cnn_score >= 75 and aaii_spread is not None and aaii_spread >= 10:
+        return {
+            "phase": "EUPHORIA_RISK",
+            "phase_label": "탐욕 과열",
+            "tone": "warning",
+            "headline": "탐욕 심리가 과열권에 가깝습니다.",
+            "summary": "강한 위험 선호가 보이지만 과열과 crowding 가능성을 함께 확인해야 합니다.",
+        }
+    if (45 <= cnn_score < 55 and (split_drivers or (aaii_spread is not None and aaii_spread <= 0))) or (
+        cnn_score < 60 and split_drivers and aaii_spread is not None and aaii_spread <= 0
+    ):
+        return {
+            "phase": "MIXED_NEUTRAL",
+            "phase_label": "혼합 중립",
+            "tone": "neutral",
+            "headline": "중립이지만 내부는 엇갈린 시장 심리입니다.",
+            "summary": "헤드라인 score는 중립권이지만 일부 CNN component는 탐욕, 일부는 공포를 가리킵니다. AAII도 약한 비관 쪽입니다.",
+        }
+    if cnn_score >= 55:
+        return {
+            "phase": "GREED_LEANING",
+            "phase_label": "탐욕 우위",
+            "tone": "positive",
+            "headline": "탐욕 심리가 우위입니다.",
+            "summary": "위험 선호가 우세하지만 AAII와 breadth가 같은 방향인지 확인해야 합니다.",
+        }
+    return {
+        "phase": "FEAR_LEANING",
+        "phase_label": "공포 우위",
+        "tone": "warning",
+        "headline": "공포 심리가 우위입니다.",
+        "summary": "방어적 심리가 우세합니다. 반등 신호보다 breadth와 credit confirmation을 먼저 확인하세요.",
+    }
+
+
+def _build_market_sentiment_analysis(
+    *,
+    coverage: dict[str, Any],
+    component_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    cnn_score = _safe_float(coverage.get("cnn_score"))
+    aaii_bearish = _safe_float(coverage.get("aaii_bearish"))
+    aaii_spread = _safe_float(coverage.get("aaii_bull_bear_spread"))
+    missing_count = int(coverage.get("missing_count") or 0)
+    stale_count = int(coverage.get("stale_count") or 0)
+    driver_groups, driver_summary = _sentiment_driver_groups(component_rows)
+    phase = _market_sentiment_phase(
+        cnn_score=cnn_score,
+        aaii_bearish=aaii_bearish,
+        aaii_spread=aaii_spread,
+        driver_summary=driver_summary,
+        missing_count=missing_count,
+        stale_count=stale_count,
+    )
+    cnn_bucket = _sentiment_score_bucket(cnn_score)
+    driver_status = "Split" if driver_summary["greed_count"] and driver_summary["fear_count"] else cnn_bucket["label"]
+    aaii_status = _aaii_pessimism_status(bearish=aaii_bearish, spread=aaii_spread)
+    data_confidence = {
+        "status": "High" if missing_count == 0 and stale_count == 0 else "Review",
+        "tone": "positive" if missing_count == 0 and stale_count == 0 else "warning",
+        "detail": f"{coverage.get('source_count') or 0} sources ready; {missing_count} missing; {stale_count} stale.",
+    }
+    analysis_steps = [
+        {
+            "title": "데이터 상태",
+            "status": "Fresh" if data_confidence["status"] == "High" else data_confidence["status"],
+            "tone": data_confidence["tone"],
+            "detail": data_confidence["detail"],
+        },
+        {
+            "title": "공포·탐욕 판정",
+            "status": cnn_bucket["label"],
+            "tone": cnn_bucket["tone"],
+            "detail": "-" if cnn_score is None else f"CNN Fear & Greed {cnn_score:.1f}; rating {coverage.get('cnn_rating') or cnn_bucket['label'].lower()}.",
+        },
+        {
+            "title": "내부 드라이버",
+            "status": driver_status,
+            "tone": "warning" if driver_status == "Split" else cnn_bucket["tone"],
+            "detail": (
+                f"{driver_summary['greed_count']} greed drivers, "
+                f"{driver_summary['fear_count']} fear drivers, "
+                f"{driver_summary['neutral_count']} neutral drivers."
+            ),
+        },
+        {
+            "title": "AAII 비관론",
+            "status": aaii_status["status"],
+            "tone": aaii_status["tone"],
+            "detail": aaii_status["detail"],
+        },
+        {
+            "title": "종합 문맥",
+            "status": phase["phase_label"],
+            "tone": phase["tone"],
+            "detail": phase["summary"],
+        },
+        {
+            "title": "다음 확인",
+            "status": "Confirm",
+            "tone": "neutral",
+            "detail": "Market Movers breadth, Futures Macro Thermometer, Events calendar로 sentiment와 price/macro context가 같은 방향인지 확인합니다.",
+        },
+    ]
+    return {
+        **phase,
+        "data_confidence": data_confidence,
+        "driver_summary": driver_summary,
+        "driver_groups": driver_groups,
+        "analysis_steps": analysis_steps,
+        "next_checks": [
+            {
+                "target": "Market Movers breadth",
+                "reason": "Sentiment가 중립/혼합일 때 실제 상승 종목 비중과 sector breadth가 확인 역할을 합니다.",
+                "tone": "neutral",
+            },
+            {
+                "target": "Futures Macro Thermometer",
+                "reason": "선물 기반 risk-on / rate / dollar pressure가 sentiment와 충돌하는지 확인합니다.",
+                "tone": "neutral",
+            },
+            {
+                "target": "Events calendar",
+                "reason": "FOMC, CPI, earnings 같은 이벤트가 심리 급변의 촉매인지 확인합니다.",
+                "tone": "neutral",
+            },
+        ],
     }
 
 
@@ -686,20 +956,22 @@ def build_market_sentiment_snapshot(
     if stale_count:
         warnings.append("One or more sentiment observations are stale or partial.")
     status = "OK" if missing_core == 0 and stale_count == 0 else "REVIEW" if table_rows else "MISSING"
+    coverage = {
+        "cnn_score": _safe_float(cnn_row.get("value")) if cnn_row is not None else None,
+        "cnn_rating": cnn_meta.get("rating") if cnn_row is not None else None,
+        "aaii_bearish": _safe_float(aaii_bearish_row.get("value")) if aaii_bearish_row is not None else None,
+        "aaii_bull_bear_spread": _safe_float(aaii_spread_row.get("value")) if aaii_spread_row is not None else None,
+        "source_count": len({str(row.get("Source") or "") for row in table_rows if row.get("Source")}),
+        "stale_count": stale_count,
+        "missing_count": missing_core,
+    }
     return {
         "status": status,
         "rows": pd.DataFrame(table_rows, columns=SENTIMENT_COLUMNS),
         "component_rows": pd.DataFrame(component_rows, columns=SENTIMENT_COMPONENT_COLUMNS),
         "history_rows": history_out,
-        "coverage": {
-            "cnn_score": _safe_float(cnn_row.get("value")) if cnn_row is not None else None,
-            "cnn_rating": cnn_meta.get("rating") if cnn_row is not None else None,
-            "aaii_bearish": _safe_float(aaii_bearish_row.get("value")) if aaii_bearish_row is not None else None,
-            "aaii_bull_bear_spread": _safe_float(aaii_spread_row.get("value")) if aaii_spread_row is not None else None,
-            "source_count": len({str(row.get("Source") or "") for row in table_rows if row.get("Source")}),
-            "stale_count": stale_count,
-            "missing_count": missing_core,
-        },
+        "coverage": coverage,
+        "analysis": _build_market_sentiment_analysis(coverage=coverage, component_rows=component_rows),
         "warnings": warnings,
     }
 

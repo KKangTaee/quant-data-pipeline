@@ -431,7 +431,8 @@ def load_overview_market_events_snapshot(
 
 # Load the DB-backed CNN / AAII sentiment snapshot for the Overview Sentiment tab.
 @st.cache_data(ttl=120, show_spinner=False)
-def load_overview_market_sentiment_snapshot() -> dict[str, Any]:
+def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentiment-analysis-v2") -> dict[str, Any]:
+    del cache_schema_version
     return build_market_sentiment_snapshot()
 
 

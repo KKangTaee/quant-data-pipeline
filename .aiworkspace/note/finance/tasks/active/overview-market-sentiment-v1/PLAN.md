@@ -10,6 +10,7 @@ Overview는 이미 market movers, futures, events, data health를 묶어 현재 
 - 1차: `Workspace > Overview > Sentiment` 탭에서 현재값, trend, source freshness, missing/stale 상태를 표시한다.
 - 1차: `Workspace > Ingestion`과 Overview 화면에서 manual refresh를 제공한다.
 - 1차: Overview Data Health에 Market Sentiment target을 추가한다.
+- 1차 후속: Sentiment 탭을 단순 지표 노출에서 `데이터 상태 -> 공포/탐욕 판정 -> CNN 내부 드라이버 -> AAII 비관론 -> 종합 문맥 -> 다음 확인` 순서의 해석 UX로 개선한다.
 
 ## Out Of Scope
 
@@ -20,6 +21,6 @@ Overview는 이미 market movers, futures, events, data health를 묶어 현재 
 ## Done
 
 - 수집기는 idempotent UPSERT를 사용한다.
-- UI는 provider 실패 / stale / missing을 숨기지 않는다.
+- UI는 provider 실패 / stale / missing을 숨기지 않고, 데이터 신뢰도와 해석 단계를 함께 보여준다.
 - CNN / AAII source 차단 시 job result에 실패 source를 남긴다.
 - service contract tests와 Browser QA를 통과한다.
