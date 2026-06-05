@@ -20,6 +20,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
     run_collect_macro_calendar,
+    run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
@@ -36,6 +37,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_market_events_snapshot,
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
+    load_overview_market_sentiment_snapshot,
 )
 from app.web.overview_ui_components import (
     OVERVIEW_COLOR_DANGER,
@@ -180,6 +182,18 @@ class GroupLeadershipControls:
 
 def _coverage_label(value: str) -> str:
     return MARKET_COVERAGE_LABELS.get(value, value)
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value in (None, ""):
+            return None
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(numeric):
+        return None
+    return numeric
 
 
 def _universe_limit(value: str) -> int:
@@ -3654,6 +3668,160 @@ def _render_sector_industry_tab() -> None:
             st.dataframe(ticker_leader_rows, width="stretch", hide_index=True)
 
 
+def _sentiment_status_tone(status: Any) -> str:
+    normalized = str(status or "").upper()
+    if normalized == "OK":
+        return "positive"
+    if normalized in {"REVIEW", "DUE"}:
+        return "warning"
+    if normalized in {"MISSING", "ERROR", "STALE"}:
+        return "danger"
+    return "neutral"
+
+
+def _sentiment_trend_chart(rows: pd.DataFrame) -> alt.Chart:
+    if rows.empty:
+        rows = pd.DataFrame([{"Date": date.today().isoformat(), "Series": "No Data", "Value": 0.0, "Source": "-"}])
+    chart_rows = rows.copy()
+    chart_rows["Date Parsed"] = pd.to_datetime(chart_rows.get("Date"), errors="coerce")
+    chart_rows["Value"] = pd.to_numeric(chart_rows.get("Value"), errors="coerce")
+    chart_rows = chart_rows.dropna(subset=["Date Parsed", "Value"])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame([{"Date Parsed": pd.Timestamp(date.today()), "Series": "No Data", "Value": 0.0, "Source": "-"}])
+    return (
+        alt.Chart(chart_rows)
+        .mark_line(point=True, strokeWidth=2)
+        .encode(
+            x=alt.X("Date Parsed:T", title=None, axis=alt.Axis(format="%b %d", labelAngle=-35)),
+            y=alt.Y("Value:Q", title=None),
+            color=alt.Color(
+                "Series:N",
+                title=None,
+                legend=alt.Legend(orient="bottom"),
+                scale=alt.Scale(range=OVERVIEW_SERIES_COLORS),
+            ),
+            tooltip=["Date Parsed:T", "Series:N", "Value:Q", "Source:N"],
+        )
+        .properties(height=260)
+    )
+
+
+def _sentiment_component_chart(rows: pd.DataFrame) -> alt.Chart:
+    if rows.empty:
+        rows = pd.DataFrame([{"Series": "No Data", "Score": 0.0, "Rating": "-", "Status": "-"}])
+    chart_rows = rows.copy()
+    chart_rows["Score"] = pd.to_numeric(chart_rows.get("Score"), errors="coerce").fillna(0.0)
+    chart_rows["Bar Color"] = chart_rows["Score"].map(
+        lambda value: OVERVIEW_COLOR_DANGER
+        if value < 25
+        else OVERVIEW_COLOR_WARNING
+        if value < 45
+        else OVERVIEW_COLOR_NEUTRAL
+        if value < 55
+        else OVERVIEW_COLOR_POSITIVE
+        if value < 75
+        else OVERVIEW_COLOR_PRIMARY
+    )
+    return (
+        alt.Chart(chart_rows)
+        .mark_bar(cornerRadiusEnd=3)
+        .encode(
+            x=alt.X("Score:Q", title=None, scale=alt.Scale(domain=[0, 100])),
+            y=alt.Y("Series:N", sort="-x", title=None, axis=alt.Axis(labelLimit=180)),
+            color=alt.Color("Bar Color:N", scale=None, legend=None),
+            tooltip=["Series:N", "Score:Q", "Rating:N", "Status:N"],
+        )
+        .properties(height=max(220, min(390, len(chart_rows) * 38)))
+    )
+
+
+def _render_market_sentiment_tab() -> None:
+    st.markdown("### Sentiment")
+    control_cols = st.columns([1.1, 1, 1], gap="small", vertical_alignment="bottom")
+    if control_cols[0].button(
+        "시장 심리 갱신",
+        key="overview_market_sentiment_refresh",
+        use_container_width=True,
+        type="primary",
+    ):
+        with st.spinner("Refreshing CNN Fear & Greed / AAII sentiment..."):
+            _store_overview_job_result("overview_market_sentiment_result", run_collect_market_sentiment())
+            load_overview_market_sentiment_snapshot.clear()
+        st.rerun()
+    if control_cols[1].button(
+        "화면 새로고침",
+        key="overview_market_sentiment_reload",
+        use_container_width=True,
+    ):
+        load_overview_market_sentiment_snapshot.clear()
+        st.rerun()
+    control_cols[2].caption("CNN / AAII stored observations")
+
+    _render_market_job_result("overview_market_sentiment_result")
+    snapshot = load_overview_market_sentiment_snapshot()
+    coverage = dict(snapshot.get("coverage") or {})
+    render_status_card_grid(
+        [
+            {
+                "title": "Sentiment Status",
+                "value": snapshot.get("status") or "-",
+                "detail": f"{coverage.get('missing_count') or 0} missing · {coverage.get('stale_count') or 0} stale",
+                "tone": _sentiment_status_tone(snapshot.get("status")),
+            },
+            {
+                "title": "CNN Fear & Greed",
+                "value": "-" if coverage.get("cnn_score") is None else f"{float(coverage['cnn_score']):.1f}",
+                "detail": str(coverage.get("cnn_rating") or "-"),
+                "tone": "positive"
+                if _safe_float(coverage.get("cnn_score")) is not None and float(coverage["cnn_score"]) >= 55
+                else "warning"
+                if _safe_float(coverage.get("cnn_score")) is not None and float(coverage["cnn_score"]) < 45
+                else "neutral",
+            },
+            {
+                "title": "AAII Bearish",
+                "value": "-" if coverage.get("aaii_bearish") is None else f"{float(coverage['aaii_bearish']):.1f}%",
+                "detail": "weekly bearish sentiment",
+                "tone": "warning"
+                if _safe_float(coverage.get("aaii_bearish")) is not None and float(coverage["aaii_bearish"]) >= 40
+                else "neutral",
+            },
+            {
+                "title": "Bull-Bear Spread",
+                "value": "-"
+                if coverage.get("aaii_bull_bear_spread") is None
+                else f"{float(coverage['aaii_bull_bear_spread']):+.1f} pp",
+                "detail": "AAII bullish minus bearish",
+                "tone": "positive"
+                if _safe_float(coverage.get("aaii_bull_bear_spread")) is not None
+                and float(coverage["aaii_bull_bear_spread"]) > 0
+                else "warning"
+                if _safe_float(coverage.get("aaii_bull_bear_spread")) is not None
+                else "neutral",
+            },
+        ]
+    )
+    for warning in snapshot.get("warnings") or []:
+        st.warning(str(warning))
+
+    rows = snapshot.get("rows")
+    component_rows = snapshot.get("component_rows")
+    history_rows = snapshot.get("history_rows")
+    if not isinstance(rows, pd.DataFrame) or rows.empty:
+        st.info("Stored sentiment rows are not available yet. Run Market Sentiment refresh first.")
+        return
+
+    trend_tab, components_tab, table_tab = st.tabs(["Trend", "CNN Components", "Table"])
+    with trend_tab:
+        st.altair_chart(_sentiment_trend_chart(history_rows if isinstance(history_rows, pd.DataFrame) else pd.DataFrame()), width="stretch")
+    with components_tab:
+        st.altair_chart(_sentiment_component_chart(component_rows if isinstance(component_rows, pd.DataFrame) else pd.DataFrame()), width="stretch")
+        if isinstance(component_rows, pd.DataFrame) and not component_rows.empty:
+            st.dataframe(component_rows, width="stretch", hide_index=True)
+    with table_tab:
+        st.dataframe(rows, width="stretch", hide_index=True)
+
+
 def _event_type_label(value: Any) -> str:
     labels = {
         "FOMC_MEETING": "FOMC",
@@ -4707,13 +4875,15 @@ def render_overview_dashboard(
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
     render_market_session_banner(_market_session_banner_model())
 
-    market_tab, futures_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
-        ["Market Movers", "Futures Monitor", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
+    market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
+        ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
     )
     with market_tab:
         _render_market_movers_tab()
     with futures_tab:
         _render_futures_monitor_tab()
+    with sentiment_tab:
+        _render_market_sentiment_tab()
     with group_tab:
         _render_sector_industry_tab()
     with events_tab:

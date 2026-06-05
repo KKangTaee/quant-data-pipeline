@@ -1,11 +1,11 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-05-30
+Last Verified: 2026-06-05
 
 ## Purpose
 
-이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Futures Monitor, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
+이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Futures Monitor, Sentiment, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
 
 ## When To Use
 
@@ -14,6 +14,7 @@ Last Verified: 2026-05-30
 - CPI / PPI / Employment Situation / GDP 같은 macro release calendar row를 갱신해야 할 때
 - latest S&P 500 movers 또는 수동 ticker의 upcoming earnings event를 갱신해야 할 때
 - 선물장 OHLCV와 개장 전 급변 상태를 Overview Futures Monitor에서 확인하고 싶을 때
+- CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
@@ -76,11 +77,20 @@ http://localhost:8501
    - Provider Run 탭에서 latest run status, rows, processed / requested, latest candle time을 확인한다.
    - Futures Monitor는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
-5. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
+5. `Workspace > Overview > Sentiment`
+   - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집해 `finance_meta.macro_series_observation`에 저장한다.
+   - 같은 수집은 `Workspace > Ingestion > 시장 심리 수집`에서도 실행할 수 있으며, CNN / AAII source를 개별 checkbox로 켜고 끌 수 있다.
+   - 상단 카드에서 `Sentiment Status`, CNN score / rating, AAII bearish %, AAII bull-bear spread를 먼저 확인한다.
+   - `Trend` 탭은 stored CNN score / AAII bearish / bull-bear spread history를 보여주고, `CNN Components`는 CNN component score를 보여준다.
+   - `Table` 탭은 source, observation date, staleness, status를 함께 보여준다.
+   - 이 화면은 시장 심리 context이며 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance로 해석하지 않는다.
+   - AAII official page가 automated backend request를 차단하면 job result와 Overview status에 failed / missing state를 남기고 값을 임의 생성하지 않는다.
+
+6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
 
-6. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
+7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
    - BLS source는 CPI / PPI / Employment Situation release schedule을 읽어 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
    - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
@@ -89,7 +99,7 @@ http://localhost:8501
    - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
    - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
 
-7. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
+8. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
    - 기본은 `Latest S&P 500 Movers` source를 사용한다.
    - broader coverage는 `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`를 사용한다.
    - broader mode는 `Max Symbols`, `Batch Offset`, `Ticker Cooldown Sec`을 작게 잡아 저빈도로 실행한다.
@@ -102,7 +112,7 @@ http://localhost:8501
    - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
    - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
-8. `Workspace > Overview > Events`
+9. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
    - `Window`, `Source Type`, `Validation`, `Importance` filter로 캘린더 범위와 source quality를 좁힌다.
    - 상단 summary strip에서 next event, this week, next 30D, needs review counts를 먼저 확인한다.
@@ -116,16 +126,16 @@ http://localhost:8501
    - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
-9. `Workspace > Overview > Data Health`
-   - Market Intelligence 운영 대상 8개를 한 화면에서 확인한다.
-   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, Futures 1m OHLCV, FOMC calendar, Macro calendar, Earnings calendar다.
+10. `Workspace > Overview > Data Health`
+   - Market Intelligence 운영 대상 9개를 한 화면에서 확인한다.
+   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, Futures 1m OHLCV, Market Sentiment, FOMC calendar, Macro calendar, Earnings calendar다.
    - 상태는 `OK`, `Due`, `Stale`, `Missing`, `Failed`, `Partial`로 표시된다.
    - `Latest Success`, `Latest Issue`, `Rows`, `Processed`, `Failed`, `Duration Sec`은 Overview refresh button이 남긴 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`의 local run history를 읽는다.
    - `Last Auto Run`, `Auto Source`, `Next Auto Due`, `Last Manual Run`, `Failure Streak`은 scheduled automation, browser-session auto refresh, 수동 refresh가 섞여 있을 때 실행 경로를 구분하기 위한 운영 지표다.
    - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
-10. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
+11. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
    - `Market Movers > 데이터 갱신`의 `자동 갱신` 모드는 브라우저 세션이 살아 있을 때만 현재 선택한 daily coverage의 due 여부를 확인한다.
    - S&P 500은 `browser_safe` profile을 사용하고, Top1000 / Top2000은 `intraday` profile에 선택 job_id를 넘겨 한 coverage만 실행한다.
    - 브라우저를 닫거나 Overview 페이지 연결이 끊기면 이 자동 check도 멈춘다.
@@ -239,7 +249,8 @@ PY
 - Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
+- Overview Sentiment displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, trend chart, and stored row table from `macro_series_observation`.
+- Overview Data Health displays 9 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
 - Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
@@ -256,6 +267,7 @@ PY
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
 | Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Import the official BLS `.ics` file, retry BLS later, or treat current Macro view as GDP-only until BLS rows are available |
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
+| Market Sentiment collection is partial | CNN or AAII official source changed, blocked the request, or returned an interstitial | Inspect `collect_market_sentiment` job details; refresh later or use Browser check to confirm whether the official public page still shows the table |
 | Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
 | Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Scheduled refresh exits as locked | A previous automation run is still active, or a stale lock file remains | Wait for the run to finish; if the process is gone and the lock is older than the stale threshold, rerun after the CLI clears it |
@@ -264,7 +276,7 @@ PY
 ## Verification Commands
 
 ```bash
-uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py
+uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
 uv run python -m unittest tests.test_service_contracts
 uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 git diff --check

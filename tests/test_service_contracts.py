@@ -5210,6 +5210,163 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(macro_row["Status"], "Due")
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
 
+    def test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context(self) -> None:
+        from app.services.overview_market_intelligence import build_market_sentiment_snapshot
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed Index",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 54.7,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "neutral", "previous_close": 54.0}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 37.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bull-Bear Spread",
+                    "category": "sentiment_survey",
+                    "units": "percentage_point",
+                    "value": -0.7,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_STOCK_PRICE_BREADTH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Stock Price Breadth",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 31.4,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+        history_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "cnn_fear_greed",
+                    "value": 54.0,
+                    "category": "sentiment_index",
+                },
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "value": 54.7,
+                    "category": "sentiment_index",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "value": 37.0,
+                    "category": "sentiment_survey",
+                },
+            ]
+        )
+
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=snapshot_rows,
+            history_rows=history_rows,
+            today=date(2026, 6, 5),
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["cnn_score"], 54.7)
+        self.assertEqual(snapshot["coverage"]["cnn_rating"], "neutral")
+        self.assertEqual(snapshot["coverage"]["aaii_bearish"], 37.0)
+        self.assertEqual(snapshot["coverage"]["aaii_bull_bear_spread"], -0.7)
+        self.assertEqual(snapshot["rows"].iloc[0]["Series"], "CNN Fear & Greed")
+        self.assertEqual(snapshot["component_rows"].iloc[0]["Series"], "Stock Price Breadth")
+        self.assertFalse(snapshot["history_rows"].empty)
+
+    def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return []
+            if "FROM futures_ohlcv" in sql:
+                return []
+            if "FROM market_universe_member" in sql:
+                return []
+            if "FROM market_event_calendar" in sql:
+                return []
+            if "FROM macro_series_observation" in sql:
+                return [
+                    {
+                        "latest_observation_date": "2026-06-04",
+                        "latest_collected_at": "2026-06-04 23:10:00",
+                        "series_count": 2,
+                    }
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(
+            today=date(2026, 6, 5),
+            query_fn=query_fn,
+            history_rows=[
+                {
+                    "job_name": "collect_market_sentiment",
+                    "status": "success",
+                    "finished_at": "2026-06-04 23:11:00",
+                    "rows_written": 260,
+                    "symbols_processed": 2,
+                    "failed_symbols": [],
+                    "duration_sec": 1.5,
+                    "message": "Market sentiment collection completed.",
+                }
+            ],
+        )
+
+        sentiment_row = snapshot["rows"][snapshot["rows"]["Area"] == "Market Sentiment"].iloc[0]
+        self.assertEqual(sentiment_row["Status"], "OK")
+        self.assertEqual(sentiment_row["Rows"], 260)
+        self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
+
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
     def test_futures_monitor_snapshot_scores_moves_and_stale_state(self) -> None:
@@ -5738,6 +5895,117 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
+    def test_cnn_fear_greed_parser_builds_overall_history_and_component_rows(self) -> None:
+        from finance.data import sentiment
+
+        ts_current = int(pd.Timestamp("2026-06-04 23:10:00", tz=timezone.utc).timestamp() * 1000)
+        ts_previous = int(pd.Timestamp("2026-06-03 00:00:00", tz=timezone.utc).timestamp() * 1000)
+        payload = {
+            "fear_and_greed": {
+                "score": 54.7,
+                "rating": "neutral",
+                "timestamp": "2026-06-04T23:10:00+00:00",
+                "previous_close": 54.0,
+                "previous_1_week": 60.1,
+            },
+            "fear_and_greed_historical": {
+                "data": [
+                    {"x": ts_previous, "y": 54.0, "rating": "neutral"},
+                    {"x": ts_current, "y": 54.7, "rating": "neutral"},
+                ]
+            },
+            "stock_price_breadth": {
+                "score": 31.4,
+                "rating": "fear",
+                "timestamp": ts_current,
+            },
+        }
+
+        rows = sentiment.parse_cnn_fear_greed_graphdata(payload, collected_at="2026-06-04 23:11:00")
+        by_key = {(row["series_id"], row["observation_date"]): row for row in rows}
+
+        self.assertIn(("CNN_FEAR_GREED", "2026-06-04"), by_key)
+        self.assertEqual(by_key[("CNN_FEAR_GREED", "2026-06-04")]["value"], 54.7)
+        self.assertEqual(json.loads(by_key[("CNN_FEAR_GREED", "2026-06-04")]["missing_fields_json"])["rating"], "neutral")
+        component = by_key[("CNN_FNG_STOCK_PRICE_BREADTH", "2026-06-04")]
+        self.assertEqual(component["category"], "sentiment_component")
+        self.assertEqual(component["value"], 31.4)
+        self.assertEqual(json.loads(component["missing_fields_json"])["rating"], "fear")
+
+    def test_aaii_sentiment_parser_builds_bearish_and_spread_rows(self) -> None:
+        from finance.data import sentiment
+
+        html = """
+        <table>
+          <tr><th>Reported Date</th><th>Bullish</th><th>Neutral</th><th>Bearish</th></tr>
+          <tr><td>Jun 3</td><td>36.3%</td><td>26.7%</td><td>37.0%</td></tr>
+          <tr><td>May 27</td><td>35.6%</td><td>22.6%</td><td>41.9%</td></tr>
+        </table>
+        """
+
+        rows = sentiment.parse_aaii_sentiment_rows_from_html(
+            html,
+            collected_at="2026-06-04 14:50:00",
+            today=date(2026, 6, 5),
+        )
+        by_key = {(row["series_id"], row["observation_date"]): row for row in rows}
+
+        self.assertEqual(by_key[("AAII_BEARISH", "2026-06-03")]["value"], 37.0)
+        self.assertEqual(by_key[("AAII_BULLISH", "2026-06-03")]["value"], 36.3)
+        self.assertEqual(by_key[("AAII_NEUTRAL", "2026-06-03")]["value"], 26.7)
+        self.assertAlmostEqual(by_key[("AAII_BULL_BEAR_SPREAD", "2026-06-03")]["value"], -0.7)
+        self.assertEqual(by_key[("AAII_BEARISH", "2026-06-03")]["source"], "aaii_sentiment_survey")
+
+    def test_aaii_fetcher_uses_browser_document_headers(self) -> None:
+        from finance.data import sentiment
+
+        captured_headers: dict[str, str] = {}
+
+        def fake_fetcher(request, timeout: int) -> bytes:
+            del timeout
+            captured_headers.update({key.lower(): value for key, value in request.header_items()})
+            return b"""
+            <table>
+              <tr><th>Reported Date</th><th>Bullish</th><th>Neutral</th><th>Bearish</th></tr>
+              <tr><td>Jun 3</td><td>36.3%</td><td>26.7%</td><td>37.0%</td></tr>
+            </table>
+            """
+
+        rows = sentiment.fetch_aaii_sentiment_rows(
+            retries=1,
+            today=date(2026, 6, 5),
+            fetcher=fake_fetcher,
+        )
+
+        by_series = {row["series_id"]: row for row in rows}
+        self.assertEqual(by_series["AAII_BEARISH"]["value"], 37.0)
+        self.assertIn("chrome/", captured_headers["user-agent"].lower())
+        self.assertEqual(captured_headers["referer"], "https://www.aaii.com/sentimentsurvey")
+        self.assertEqual(captured_headers["sec-fetch-mode"], "navigate")
+
+    def test_ingestion_job_wraps_market_sentiment_collection_summary(self) -> None:
+        from app.jobs import ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_market_sentiment",
+            return_value={
+                "requested": 2,
+                "stored": 260,
+                "coverage": {"actual": 260},
+                "sources": ["cnn_fear_greed", "aaii_sentiment_survey"],
+                "missing": [],
+                "failed": [],
+            },
+        ):
+            result = jobs.run_collect_market_sentiment()
+
+        self.assertEqual(result["job_name"], "collect_market_sentiment")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 260)
+        self.assertEqual(result["symbols_processed"], 2)
+        self.assertEqual(result["details"]["target_tables"], ["finance_meta.macro_series_observation"])
+
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
         from finance.data import market_intelligence as mi
 

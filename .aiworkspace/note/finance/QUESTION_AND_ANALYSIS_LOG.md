@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-05 - CNN / AAII sentiment belongs in Overview as context, not validation approval
+- User request:
+  - CNN Fear & Greed와 AAII 비관론지수를 수집해 브라우저 화면에 노출하고, 프로젝트에서 가장 합리적인 위치를 분석한 뒤 구현해 달라고 요청함.
+- Interpreted goal:
+  - 공포탐욕지수와 AAII Bearish Sentiment를 market context로 저장하고 Overview에서 freshness / missing state와 함께 읽게 한다.
+- Analysis result:
+  - 별도 table보다 기존 `finance_meta.macro_series_observation`의 long-form observation 구조가 적합하다. 화면 위치는 `Workspace > Overview`의 `Futures Monitor` 다음 `Sentiment` 탭이 가장 자연스럽다.
+- Follow-up:
+  - `finance.data.sentiment`, `finance.loaders.sentiment`, `collect_market_sentiment`, Overview Sentiment tab, Ingestion manual refresh, Data Health target을 추가했다. 이 context는 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
+
 ### 2026-06-02 - Macro Thermometer confidence must be historical-consistency evidence, not a signal guarantee
 - User request:
   - Macro Thermometer가 단순 heuristic에 머무르지 않도록 historical validation과 reliability 표시를 추가해 달라고 요청함.

@@ -37,6 +37,8 @@ external source
 | Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장하고, row가 없는 ticker는 job result의 `symbol_diagnostics`에 missing / failure reason을 남긴다 |
 | Nasdaq earnings calendar web endpoint | Overview Events earnings alternate free provider cross-check source. yfinance estimate의 같은 symbol/date 확인에만 사용하며 official source로 보지 않는다 |
 | yfinance futures OHLCV | Overview Futures Monitor pilot source. 주요 선물 1m / daily OHLCV를 `futures_ohlcv`에 저장하되 exchange-grade realtime feed로 보지 않는다. Daily rows also feed Macro Thermometer current scoring and historical validation |
+| CNN Fear & Greed official page JSON | Overview Sentiment context source. CNN page referer와 browser-like request를 사용해 overall score / rating / component score를 `macro_series_observation`에 저장한다 |
+| AAII Sentiment Survey official historical HTML | Overview Sentiment context source. official historical table의 bullish / neutral / bearish weekly survey row와 bull-bear spread를 `macro_series_observation`에 저장한다 |
 
 ## Persistence 계층
 
@@ -54,13 +56,14 @@ external source
 | `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Macro Thermometer validation is read-only and does not create a new table |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
+| `finance/data/sentiment.py` | CNN Fear & Greed / AAII Sentiment Survey 수집 / 저장 경계. 별도 table을 만들지 않고 `macro_series_observation`에 sentiment series를 idempotent UPSERT한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. Korean purpose-first job guide, result next-action guidance, routine / manual 작업 구분, ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence, Nasdaq Symbol Directory current snapshot, SEC CIK / ticker cross-check, computed snapshot lifecycle, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. Korean purpose-first job guide, result next-action guidance, routine / manual 작업 구분, ETF operability, ETF holdings / exposure, macro context, market sentiment, SEC Form 25 delisting evidence, Nasdaq Symbol Directory current snapshot, SEC CIK / ticker cross-check, computed snapshot lifecycle, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
 
 ## Loader 계층
 
@@ -70,6 +73,7 @@ external source
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
+| `finance/loaders/sentiment.py` | Overview sentiment read path. `macro_series_observation`에서 CNN / AAII latest snapshot과 history를 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement values / labels / strict snapshot / timing audit 조회 |
@@ -93,8 +97,8 @@ external source
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
   `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
-  `macro_series_observation`은 FRED market-context observation을 long-form으로 저장하고,
-  `finance/loaders/macro.py`가 validation 기준일 근처 snapshot과 staleness를 읽는다.
+  `macro_series_observation`은 FRED market-context observation과 CNN / AAII sentiment observation을 long-form으로 저장하고,
+  `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment latest/history를 읽는다.
   `regime-split-validation-v1`부터 Practical Validation은 같은 loader의 historical observation read path를 사용해
   VIX / yield curve / credit spread 월별 regime bucket evidence를 read-only로 계산한다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,

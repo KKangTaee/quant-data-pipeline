@@ -70,6 +70,7 @@ Last Verified: 2026-06-03
 | Overview futures macro historical validation service | `app/services/futures_macro_validation.py` |
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
+| Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
@@ -86,6 +87,7 @@ Last Verified: 2026-06-03
 | Computed snapshot lifecycle collector | `finance/data/computed_lifecycle.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
+| Market sentiment loader | `finance/loaders/sentiment.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
 | Service contract tests | `tests/test_service_contracts.py` |
 
@@ -116,6 +118,8 @@ Last Verified: 2026-06-03
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |
 | `finance/loaders/macro.py` | macro market-context read path |
+| `finance/data/sentiment.py` | CNN Fear & Greed / AAII sentiment 수집 |
+| `finance/loaders/sentiment.py` | Overview market sentiment read path |
 
 ## Final Review / Selected Portfolio Evidence Files
 
@@ -163,7 +167,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 
 | Situation | Start Here |
 |---|---|
-| Overview market movers / sector leadership / futures monitor 수정 | `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
+| Overview market movers / sector leadership / futures monitor / sentiment 수정 | `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |

@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Sequence
 from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
+
+from finance.loaders.sentiment import (
+    CNN_COMPONENT_SERIES,
+    CORE_SENTIMENT_SERIES,
+    load_market_sentiment_history,
+    load_market_sentiment_snapshot,
+)
 
 
 QueryFn = Callable[[str, str, Sequence[Any] | None], list[dict[str, Any]]]
@@ -167,6 +175,42 @@ OPS_COLUMNS = [
     "Next Action",
     "Message",
 ]
+SENTIMENT_COLUMNS = [
+    "Series",
+    "Value",
+    "Label",
+    "Observation Date",
+    "Staleness Days",
+    "Status",
+    "Source",
+]
+SENTIMENT_COMPONENT_COLUMNS = [
+    "Series",
+    "Score",
+    "Rating",
+    "Observation Date",
+    "Status",
+]
+SENTIMENT_HISTORY_COLUMNS = [
+    "Date",
+    "Series",
+    "Value",
+    "Source",
+]
+SENTIMENT_SERIES_LABELS = {
+    "CNN_FEAR_GREED": "CNN Fear & Greed",
+    "AAII_BULLISH": "AAII Bullish",
+    "AAII_NEUTRAL": "AAII Neutral",
+    "AAII_BEARISH": "AAII Bearish",
+    "AAII_BULL_BEAR_SPREAD": "AAII Bull-Bear Spread",
+    "CNN_FNG_MARKET_MOMENTUM_SP500": "Market Momentum",
+    "CNN_FNG_STOCK_PRICE_STRENGTH": "Stock Price Strength",
+    "CNN_FNG_STOCK_PRICE_BREADTH": "Stock Price Breadth",
+    "CNN_FNG_PUT_CALL_OPTIONS": "Put / Call Options",
+    "CNN_FNG_MARKET_VOLATILITY_VIX": "Market Volatility",
+    "CNN_FNG_JUNK_BOND_DEMAND": "Junk Bond Demand",
+    "CNN_FNG_SAFE_HAVEN_DEMAND": "Safe Haven Demand",
+}
 OPS_INTRADAY_TARGETS = [
     {
         "area": "S&P 500 Daily Snapshot",
@@ -198,6 +242,12 @@ OPS_FUTURES_TARGETS = [
         "due_action": "Refresh Futures OHLCV before using pre-open futures context.",
     },
 ]
+OPS_SENTIMENT_TARGET = {
+    "area": "Market Sentiment",
+    "job_names": ["collect_market_sentiment"],
+    "missing_action": "Run Refresh Market Sentiment from Overview > Sentiment or Ingestion.",
+    "due_action": "Refresh CNN Fear & Greed / AAII sentiment before relying on market sentiment context.",
+}
 OPS_EVENT_TARGETS = [
     {
         "area": "FOMC Calendar",
@@ -234,6 +284,7 @@ OPS_SCHEDULE_CADENCE_MINUTES = {
     "collect_top1000_intraday_snapshot": 15,
     "collect_top2000_intraday_snapshot": 30,
     "collect_futures_ohlcv": 1,
+    "collect_market_sentiment": 24 * 60,
     "collect_fomc_calendar": 24 * 60,
     "collect_earnings_calendar": 24 * 60,
     "collect_macro_calendar": 24 * 60,
@@ -457,6 +508,199 @@ def _empty_ops_snapshot(*, message: str) -> dict[str, Any]:
             "latest_issue_at": None,
         },
         "warnings": [message] if message else [],
+    }
+
+
+def _empty_sentiment_snapshot(*, status: str, message: str) -> dict[str, Any]:
+    return {
+        "status": status,
+        "rows": pd.DataFrame(columns=SENTIMENT_COLUMNS),
+        "component_rows": pd.DataFrame(columns=SENTIMENT_COMPONENT_COLUMNS),
+        "history_rows": pd.DataFrame(columns=SENTIMENT_HISTORY_COLUMNS),
+        "coverage": {
+            "cnn_score": None,
+            "cnn_rating": None,
+            "aaii_bearish": None,
+            "aaii_bull_bear_spread": None,
+            "source_count": 0,
+            "stale_count": 0,
+            "missing_count": 2,
+        },
+        "warnings": [message] if message else [],
+    }
+
+
+def _metadata_from_row(row: pd.Series | dict[str, Any]) -> dict[str, Any]:
+    raw = row.get("missing_fields_json") if isinstance(row, pd.Series) else row.get("missing_fields_json")
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    try:
+        parsed = json.loads(str(raw))
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _latest_sentiment_row(frame: pd.DataFrame, series_id: str) -> pd.Series | None:
+    if frame.empty or "series_id" not in frame:
+        return None
+    rows = frame[frame["series_id"].astype(str).str.upper() == series_id].copy()
+    if rows.empty:
+        return None
+    rows["observation_date_sort"] = pd.to_datetime(rows.get("observation_date"), errors="coerce")
+    rows = rows.sort_values("observation_date_sort", ascending=False)
+    return rows.iloc[0]
+
+
+def _sentiment_status(row: pd.Series | None) -> str:
+    if row is None:
+        return "Missing"
+    if str(row.get("snapshot_status") or row.get("coverage_status") or "").lower() not in {"actual", "ok"}:
+        return "Stale"
+    return "OK"
+
+
+def _sentiment_display_value(series_id: str, value: Any) -> str:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return "-"
+    if series_id == "AAII_BULL_BEAR_SPREAD":
+        return f"{numeric:+.1f} pp"
+    if series_id.startswith("AAII_"):
+        return f"{numeric:.1f}%"
+    return f"{numeric:.1f}"
+
+
+def _sentiment_table_row(row: pd.Series, *, label: str) -> dict[str, Any]:
+    series_id = str(row.get("series_id") or "").upper()
+    metadata = _metadata_from_row(row)
+    return {
+        "Series": label,
+        "Value": _sentiment_display_value(series_id, row.get("value")),
+        "Label": metadata.get("rating") or "-",
+        "Observation Date": _iso_date(row.get("observation_date")) or "-",
+        "Staleness Days": _safe_float(row.get("staleness_days")),
+        "Status": _sentiment_status(row),
+        "Source": row.get("source") or "-",
+    }
+
+
+def build_market_sentiment_snapshot(
+    *,
+    snapshot_rows: pd.DataFrame | None = None,
+    history_rows: pd.DataFrame | None = None,
+    today: date | None = None,
+    max_history_days: int = 180,
+) -> dict[str, Any]:
+    """Build the Overview sentiment read model from stored CNN / AAII observations."""
+    today_value = today or date.today()
+    start_date = (pd.Timestamp(today_value) - pd.Timedelta(days=max_history_days)).strftime("%Y-%m-%d")
+    end_date = pd.Timestamp(today_value).strftime("%Y-%m-%d")
+    try:
+        snapshot_frame = (
+            snapshot_rows.copy()
+            if isinstance(snapshot_rows, pd.DataFrame)
+            else load_market_sentiment_snapshot(as_of_date=end_date, max_staleness_days=14)
+        )
+        history_frame = (
+            history_rows.copy()
+            if isinstance(history_rows, pd.DataFrame)
+            else load_market_sentiment_history(
+                series_ids=("CNN_FEAR_GREED", "AAII_BEARISH", "AAII_BULL_BEAR_SPREAD"),
+                start=start_date,
+                end=end_date,
+            )
+        )
+    except Exception as exc:
+        return _empty_sentiment_snapshot(status="ERROR", message=f"Market sentiment snapshot failed: {exc}")
+
+    if snapshot_frame.empty:
+        return _empty_sentiment_snapshot(
+            status="MISSING",
+            message="Stored CNN Fear & Greed / AAII sentiment rows are not available. Run Market Sentiment refresh.",
+        )
+
+    for frame in (snapshot_frame, history_frame):
+        for column in ("observation_date", "collected_at"):
+            if column in frame:
+                frame[column] = pd.to_datetime(frame[column], errors="coerce")
+        if "value" in frame:
+            frame["value"] = pd.to_numeric(frame["value"], errors="coerce")
+
+    ordered_core = ["CNN_FEAR_GREED", "AAII_BEARISH", "AAII_BULL_BEAR_SPREAD", "AAII_BULLISH", "AAII_NEUTRAL"]
+    table_rows: list[dict[str, Any]] = []
+    missing_core = 0
+    stale_count = 0
+    for series_id in ordered_core:
+        row = _latest_sentiment_row(snapshot_frame, series_id)
+        if row is None:
+            if series_id in {"CNN_FEAR_GREED", "AAII_BEARISH"}:
+                missing_core += 1
+            continue
+        status = _sentiment_status(row)
+        if status != "OK":
+            stale_count += 1
+        table_rows.append(_sentiment_table_row(row, label=SENTIMENT_SERIES_LABELS.get(series_id, series_id)))
+
+    component_rows: list[dict[str, Any]] = []
+    for series_id in CNN_COMPONENT_SERIES:
+        row = _latest_sentiment_row(snapshot_frame, series_id)
+        if row is None:
+            continue
+        metadata = _metadata_from_row(row)
+        component_rows.append(
+            {
+                "Series": SENTIMENT_SERIES_LABELS.get(series_id, series_id),
+                "Score": round(float(row.get("value")), 1) if _safe_float(row.get("value")) is not None else None,
+                "Rating": metadata.get("rating") or "-",
+                "Observation Date": _iso_date(row.get("observation_date")) or "-",
+                "Status": _sentiment_status(row),
+            }
+        )
+
+    history_out = pd.DataFrame(columns=SENTIMENT_HISTORY_COLUMNS)
+    if isinstance(history_frame, pd.DataFrame) and not history_frame.empty:
+        visible_history = history_frame[
+            history_frame.get("series_id", pd.Series(dtype=str)).astype(str).str.upper().isin(
+                {"CNN_FEAR_GREED", "AAII_BEARISH", "AAII_BULL_BEAR_SPREAD"}
+            )
+        ].copy()
+        if not visible_history.empty:
+            visible_history["Date"] = visible_history["observation_date"].map(_iso_date)
+            visible_history["Series"] = visible_history["series_id"].map(
+                lambda value: SENTIMENT_SERIES_LABELS.get(str(value).upper(), str(value))
+            )
+            visible_history["Value"] = visible_history["value"].map(lambda value: round(float(value), 2) if _safe_float(value) is not None else None)
+            visible_history["Source"] = visible_history.get("source", pd.Series(dtype=str))
+            history_out = visible_history[SENTIMENT_HISTORY_COLUMNS].dropna(subset=["Date"]).sort_values(["Date", "Series"])
+
+    cnn_row = _latest_sentiment_row(snapshot_frame, "CNN_FEAR_GREED")
+    cnn_meta = _metadata_from_row(cnn_row) if cnn_row is not None else {}
+    aaii_bearish_row = _latest_sentiment_row(snapshot_frame, "AAII_BEARISH")
+    aaii_spread_row = _latest_sentiment_row(snapshot_frame, "AAII_BULL_BEAR_SPREAD")
+    warnings: list[str] = []
+    if missing_core:
+        warnings.append("CNN Fear & Greed or AAII bearish sentiment is missing from stored observations.")
+    if stale_count:
+        warnings.append("One or more sentiment observations are stale or partial.")
+    status = "OK" if missing_core == 0 and stale_count == 0 else "REVIEW" if table_rows else "MISSING"
+    return {
+        "status": status,
+        "rows": pd.DataFrame(table_rows, columns=SENTIMENT_COLUMNS),
+        "component_rows": pd.DataFrame(component_rows, columns=SENTIMENT_COMPONENT_COLUMNS),
+        "history_rows": history_out,
+        "coverage": {
+            "cnn_score": _safe_float(cnn_row.get("value")) if cnn_row is not None else None,
+            "cnn_rating": cnn_meta.get("rating") if cnn_row is not None else None,
+            "aaii_bearish": _safe_float(aaii_bearish_row.get("value")) if aaii_bearish_row is not None else None,
+            "aaii_bull_bear_spread": _safe_float(aaii_spread_row.get("value")) if aaii_spread_row is not None else None,
+            "source_count": len({str(row.get("Source") or "") for row in table_rows if row.get("Source")}),
+            "stale_count": stale_count,
+            "missing_count": missing_core,
+        },
+        "warnings": warnings,
     }
 
 
@@ -2092,6 +2336,27 @@ def _latest_futures_ops_row(query_fn: QueryFn) -> dict[str, Any] | None:
     return dict(rows[0]) if rows else None
 
 
+def _latest_sentiment_ops_row(query_fn: QueryFn) -> dict[str, Any] | None:
+    try:
+        placeholders = ",".join(["%s"] * len(CORE_SENTIMENT_SERIES))
+        rows = query_fn(
+            "finance_meta",
+            f"""
+            SELECT
+                MAX(observation_date) AS latest_observation_date,
+                MAX(collected_at) AS latest_collected_at,
+                COUNT(DISTINCT series_id) AS series_count
+            FROM macro_series_observation
+            WHERE series_id IN ({placeholders})
+              AND source IN (%s, %s)
+            """,
+            [*CORE_SENTIMENT_SERIES, "cnn_fear_greed", "aaii_sentiment_survey"],
+        )
+    except Exception:
+        return None
+    return dict(rows[0]) if rows else None
+
+
 def _intraday_ops_status(row: dict[str, Any] | None) -> tuple[str, str, str]:
     if not row or not row.get("latest_snapshot_time"):
         return "Missing", "No stored 5m snapshot", "Run the daily snapshot collector."
@@ -2117,6 +2382,24 @@ def _futures_ops_status(row: dict[str, Any] | None) -> tuple[str, str, str]:
     if age <= 10:
         return "Due", f"{age}m old; {active_symbols} symbols", "Refresh if you need current pre-open context."
     return "Stale", f"{age}m old; {active_symbols} symbols", "Refresh before using futures context."
+
+
+def _sentiment_ops_status(row: dict[str, Any] | None, *, today: date) -> tuple[str, str, str]:
+    series_count = int((row or {}).get("series_count") or 0)
+    latest_observation = _iso_date((row or {}).get("latest_observation_date"))
+    if not row or not latest_observation or series_count <= 0:
+        return "Missing", "No stored CNN / AAII sentiment observations", "Run Refresh Market Sentiment."
+    age = _stale_days(latest_observation, today=today)
+    if age is None:
+        return "Due", f"Latest date unknown; {series_count}/5 series", "Run Refresh Market Sentiment."
+    freshness = f"{age}d old; latest {latest_observation}; {series_count}/5 series"
+    if series_count < 2:
+        return "Due", freshness, "Refresh CNN Fear & Greed and AAII sentiment."
+    if age <= 7:
+        return "OK", freshness, "No action needed."
+    if age <= 14:
+        return "Due", freshness, "Refresh sentiment if you need current market context."
+    return "Stale", freshness, "Refresh before using sentiment context."
 
 
 def _days_based_ops_status(
@@ -2251,6 +2534,7 @@ def build_collection_ops_snapshot(
         universe_rows = _latest_universe_ops_rows(query)
         event_rows = _latest_event_ops_rows(query, today=today_value)
         futures_row = _latest_futures_ops_row(query)
+        sentiment_row = _latest_sentiment_ops_row(query)
     except Exception as exc:
         return _empty_ops_snapshot(message=f"Collection ops snapshot failed: {exc}")
 
@@ -2302,6 +2586,25 @@ def build_collection_ops_snapshot(
                 history_rows=history,
             )
         )
+
+    sentiment_status, sentiment_freshness, sentiment_default_action = _sentiment_ops_status(
+        sentiment_row,
+        today=today_value,
+    )
+    rows.append(
+        _ops_row(
+            area=str(OPS_SENTIMENT_TARGET["area"]),
+            base_status=sentiment_status,
+            data_freshness=sentiment_freshness,
+            next_action=str(
+                OPS_SENTIMENT_TARGET["missing_action"]
+                if sentiment_status == "Missing"
+                else OPS_SENTIMENT_TARGET["due_action"] or sentiment_default_action
+            ),
+            job_names=list(OPS_SENTIMENT_TARGET["job_names"]),
+            history_rows=history,
+        )
+    )
 
     for target in OPS_EVENT_TARGETS:
         target_event_types = list(target.get("event_types") or [target["event_type"]])
