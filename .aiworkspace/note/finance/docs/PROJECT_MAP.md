@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-03
+Last Verified: 2026-06-05
 
 ## Project Summary
 
@@ -16,8 +16,12 @@ Last Verified: 2026-06-03
 | `finance/loaders/` | DB 데이터를 backtest / validation runtime 입력으로 읽는 loader |
 | `finance/engine.py` | strategy orchestration |
 | `finance/strategy.py` | portfolio simulation / rebalancing logic |
+| `finance/swing.py` | short-term swing strategy simulation / scanner logic |
 | `finance/transform.py` | signal, factor, ranking transform |
 | `finance/performance.py` | 성과 요약과 portfolio performance metric |
+| `finance/indicators.py` | reusable indicator helpers such as simple rolling ATR / True Range |
+| `finance/swing_macro.py` | Risk-On Momentum 5D macro hard filter / ranking penalty evaluation |
+| `finance/swing_analysis.py` | Risk-On Momentum 5D comparison, sensitivity, stability, trade-cause, quality warning analysis |
 | `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
 | `app/runtime/` | Streamlit-free runtime / repository boundary. DB-backed backtest wrapper, JSONL registry / saved setup helper, selected portfolio runtime model |
 | `app/workspace_paths.py` | active worktree root와 canonical `.aiworkspace/note/finance` JSONL / docs / artifact 경로 상수 |
@@ -88,6 +92,8 @@ Last Verified: 2026-06-03
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
 | Market sentiment loader | `finance/loaders/sentiment.py` |
+| Futures OHLCV loader | `finance/loaders/futures.py` |
+| Risk-On Momentum 5D strategy core | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
 | Service contract tests | `tests/test_service_contracts.py` |
 
@@ -130,7 +136,7 @@ Last Verified: 2026-06-03
 | `app/web/backtest_final_review_components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source eligibility filter, validation reuse, paper observation snapshot, investability packet wiring, selection-only official save row construction |
 | `app/web/operations_overview.py` | Operations Console landing page render와 Streamlit-free read model. selected dashboard summary, run history, candidate library count를 읽어 today action queue, 1차~5차 roadmap, surface audit decisions, Portfolio Monitoring / System Data Health primary lane, Archive / Recovery secondary tools, no-live boundary를 표시 |
-| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, fixed-height portfolio card shelf / 생성 / 선택 / collapsed portfolio management soft delete, selected portfolio command band, Final Review selected strategy slot 추가 / compact strategy board / 설정 적용 / 제거, portfolio-wide Monitoring Scenario cockpit / pending-stale scenario update / value curve / strategy performance / rebalance target table, 선택한 1개 전략의 lazy Monitoring Scenario detail, continuity / Monitoring Signals / Open Issues / optional preflight / allocation monitoring / Decision Dossier / 하단 evidence detail |
+| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render. Active Portfolio Monitoring Scenario hero / empty-not-configured-run state handling / value curve / strategy performance / rebalance summary를 먼저 보여주고, portfolio card shelf 생성 / 선택 / collapsed portfolio management soft delete / portfolio name-description edit / Final Review selected strategy slot compact board / 설정 적용 / 제거 / strategy-board 아래 pending-stale scenario update를 관리한다. 선택한 1개 전략의 lazy Monitoring Scenario detail, continuity / Monitoring Signals / Open Issues / optional preflight / allocation monitoring / Decision Dossier / 하단 evidence detail을 read-only로 렌더링한다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard portfolio / selected strategy pool / strategy slot / strategy comparison table, Selected Dashboard handoff table, component / continuity / timeline / recheck preflight / recheck readiness / symbol freshness / provider evidence policy / review signal policy / open issue follow-up / deployment readiness / recheck comparison / drift / alert / allocation boundary / source contract display helpers |
 | `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, dashboard portfolio saved state and backward-compatible strategy slot helper, Final Review -> Selected Dashboard handoff review and continuity check, selected decision source consistency contract, open issue follow-up, deployment readiness preflight, performance recheck operations preflight, readiness, symbol freshness, selected provider evidence staleness / coverage policy, review signal policy, performance recheck, recheck comparison, drift check, alert preview, allocation drift evidence boundary, monitoring timeline |
 
@@ -148,7 +154,7 @@ Backtest Analysis
 - Backtest Analysis는 후보 source를 만든다.
 - Practical Validation은 source를 실전 투입 전 조건으로 검증하고 source traits 기반 module planner로 필수 / 조건부 / 후속 참고 검증과 Final Review 이동 gate를 만든다. Step 1은 source의 단일 / mix 구성, component 전략, target weight, 원래 result table, monthly selection / holdings history를 먼저 확인하게 한다. 화면의 `Final Review Gate`, audit board, provider board, Robustness Lab은 board registry를 통해 어떤 module의 evidence인지 표시하며, 후보 특성상 적용되지 않는 조건부 board는 비적용으로 분리한다. `검증 결과 저장(기록용)`은 audit trail만 남기고, Gate 미통과 result는 Final Review 후보가 아니다.
 - Final Review는 Practical Validation Gate를 통과한 result만 source picker에 표시한다. Provider / Look-through / Robustness Lab / Construction Risk / Risk Contribution / Component Role Weight / Validation Efficacy / Data Coverage / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정한다. Validation Efficacy의 walk-forward / OOS / regime non-PASS row와 Construction Risk / Risk Contribution / Component Role / Weight non-PASS row도 selected-route blocker 또는 review-required 근거로 표시하고, selected-route gate까지 통과한 후보만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 정식 저장한다. 보류 / 거절 / 재검토는 새 저장 row가 아니라 상태 안내이며, 저장된 선정 기록은 read-only dossier와 Selected Dashboard handoff summary로 다시 보여준다.
-- Operations Console은 Operations의 입구로, today action queue를 먼저 보여준 뒤 Portfolio Monitoring과 System / Data Health를 primary lane으로, Backtest Run History / Candidate Library를 Archive / Recovery secondary tool로 낮춘다. 기존 Selected Portfolio Dashboard route는 `Portfolio Monitoring` navigation label 아래 유지되며, 사용자가 만든 monitoring portfolio fixed-height card shelf를 먼저 보여주고 선택한 portfolio를 command band로 재구성한 뒤 Final Review selected strategy slot을 compact strategy board에 담아 start / latest-end mode / balance / memo를 저장한다. Delete / raw setup management는 collapsed management 영역으로 낮춘다. Portfolio Monitoring Scenario는 slot 저장과 분리되며, `포트폴리오 시나리오 업데이트`가 pending / stale strategy만 기본 실행하고 `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. Scenario 결과는 portfolio / slot / selected decision / start / end / balance signature가 맞을 때만 portfolio-wide 현재 가치 / 손익 / 수익률 / CAGR / MDD / benchmark spread / target snapshot으로 합산한다. 리밸런싱 표는 `Target Snapshot Date`, `Next Review Date`, `Current Target Snapshot`으로 표시되며 주문 지시나 자동 리밸런싱이 아니다. 개별 strategy Monitoring Scenario와 read-only recheck readiness / symbol freshness / provider evidence / continuity / timeline / review signal / open issue / optional deployment preflight / allocation boundary는 사용자가 선택한 1개 전략 상세를 열 때만 렌더링한다. Deployment Readiness preflight도 승인 / 주문 / broker-account 연동 / 자동 리밸런싱을 만들지 않는다.
+- Operations Console은 Operations의 입구로, today action queue를 먼저 보여준 뒤 Portfolio Monitoring과 System / Data Health를 primary lane으로, Backtest Run History / Candidate Library를 Archive / Recovery secondary tool로 낮춘다. 기존 Selected Portfolio Dashboard route는 `Portfolio Monitoring` navigation label 아래 유지된다. Portfolio Monitoring 화면은 Active Portfolio Monitoring Scenario를 상단 hero로 먼저 보여주며, active portfolio가 없으면 생성 안내를, portfolio가 있지만 전략이 없으면 strategy board 안내를, 전략은 있지만 scenario가 없으면 아래 `포트폴리오 시나리오 업데이트` 실행 안내를 보여준다. Scenario 결과가 있으면 portfolio-wide 현재 가치 / 손익 / 수익률 / CAGR / MDD / 기준일 / session update timestamp / value curve / 전략별 성과 / target snapshot을 상단에서 확인한다. Portfolio card shelf는 hero 아래 active selector로 두고, portfolio 이름 / 설명 edit, Final Review selected strategy slot board, start / latest-end mode / balance / memo 저장, pending-stale scenario update action은 그 아래 관리 영역에 둔다. Scenario 결과는 portfolio / slot / selected decision / start / end / balance signature가 맞을 때만 합산한다. 리밸런싱 표는 `Target Snapshot Date`, `Next Review Date`, `Current Target Snapshot`으로 표시되며 주문 지시나 자동 리밸런싱이 아니다. 개별 strategy Monitoring Scenario와 read-only recheck readiness / symbol freshness / provider evidence / continuity / timeline / review signal / open issue / optional deployment preflight / allocation boundary는 사용자가 선택한 1개 전략 상세를 열 때만 렌더링한다. Deployment Readiness preflight도 승인 / 주문 / broker-account 연동 / 자동 리밸런싱을 만들지 않는다.
 
 ## Data Boundary
 
@@ -158,6 +164,7 @@ Backtest Analysis
 | Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 Selected Dashboard 전용 사용자 monitoring portfolio setup |
 | Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
+| Backtest generated artifacts | `.aiworkspace/note/finance/backtest_artifacts/` | full scanner / trade detail 같은 generated artifact, 보통 커밋 금지 |
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
 | Playwright output | `.playwright-mcp/` | generated artifact, 커밋 금지 |
 
@@ -171,6 +178,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
+| Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |

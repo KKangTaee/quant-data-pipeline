@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Scenario execution is explicit: strategy add / slot edit is saved setup only, portfolio scenario update runs pending / stale rows by default, and one selected strategy detail is lazy-rendered.
+  - Recent merged work preserves both Overview Market Sentiment V1 and Selected Dashboard Monitoring First UX V1 decisions.
+  - Overview Sentiment is market context, not validation approval. Selected Dashboard is daily-monitoring-first: Active Portfolio Monitoring Scenario appears before setup, while portfolio shelf / strategy board / scenario update remain below and evidence detail stays lazy.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
@@ -42,6 +43,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 별도 table보다 기존 `finance_meta.macro_series_observation`의 long-form observation 구조가 적합하다. 화면 위치는 `Workspace > Overview`의 `Futures Monitor` 다음 `Sentiment` 탭이 가장 자연스럽다.
 - Follow-up:
   - `finance.data.sentiment`, `finance.loaders.sentiment`, `collect_market_sentiment`, Overview Sentiment tab, Ingestion manual refresh, Data Health target을 추가했다. 이 context는 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
+
+### 2026-06-02 - Selected Dashboard should be daily-monitoring-first
+- User request:
+  - 사용자가 이미 모니터링 시나리오를 설정한 포트폴리오를 매일 확인할 때 아래로 스크롤해야 하는 문제를 지적하고, 화면 상단에 active portfolio monitoring scenario를 먼저 보여 달라고 요청함.
+- Interpreted goal:
+  - Selected Portfolio Dashboard는 포트폴리오를 만드는 화면이 아니라, 선택된 포트폴리오의 현재 모니터링 상태를 먼저 보여주고 필요할 때 아래에서 구성을 수정하는 화면이어야 한다.
+- Analysis result:
+  - 기존 구현은 portfolio-wide scenario cockpit과 session-state contract가 이미 분리되어 있어 runtime / 저장 계약 변경 없이 렌더 순서와 update action 위치를 바꿀 수 있었다. Scenario result는 session-only이고 saved setup은 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에 남는다.
+- Follow-up:
+  - 구현 결과 Active Portfolio Monitoring Scenario가 상단 hero가 되었고, portfolio card shelf / portfolio edit / strategy board / `포트폴리오 시나리오 업데이트`는 아래 관리 영역으로 내려갔다. Detailed readiness / provider / freshness / open issue evidence는 하단에서 선택한 1개 strategy만 lazy-render된다. No portfolio / no strategy / configured-not-run / executed 상태를 구분한다.
 
 ### 2026-06-02 - Macro Thermometer confidence must be historical-consistency evidence, not a signal guarantee
 - User request:
@@ -7204,3 +7215,27 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 삭제 여부는 아직 되돌리기 어려운 판단이므로 Backtest Run History / Candidate Library는 제거하지 않고 archive / recovery로 보존하는 것이 맞다. 리밸런싱 표는 주문처럼 보이는 컬럼명을 target snapshot / next review 언어로 바꿔야 한다
 - Follow-up:
   - `Operations Console` action queue, 1차~5차 roadmap, surface audit decisions, target snapshot table semantics를 구현했다. live approval / order / account sync / auto rebalance / registry rewrite / report export는 추가하지 않았다
+
+### 2026-06-03 - Risk-On Momentum 5D V2는 Backtest Analysis 연구 lane으로 구현한다
+
+- User request: V1 이후 Risk-On Momentum 5D V2 고도화 계획을 구현하되 Practical Validation / Final Review / Selected Dashboard governance는 바로 연결하지 말라고 요청함.
+- Interpreted goal: ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality warning analysis를 Backtest Analysis Daily Swing research surface에 추가한다.
+- Analysis result: Strategy core는 `finance/swing.py`, indicator / macro / repeated analysis helper는 별도 finance module로 분리하고 UI / history / artifact는 기존 Backtest Analysis 경계 안에 연결하는 것이 안전하다.
+- Follow-up: Daily Swing Practical Validation module, Final Review route, Daily Signal / Paper Strategy Monitor lane은 별도 설계 승인 후 구현한다.
+
+### 2026-06-03 - Risk-On Momentum 5D universe에 S&P 500을 추가한다
+
+- User request: Risk-On Momentum 5D의 universe mode가 Top1000 / Top2000 / Manual뿐이므로 S&P 500도 추가해 달라고 요청함.
+- Interpreted goal: Backtest Analysis 안에서 S&P 500 constituent 기반 daily swing research run을 선택할 수 있어야 하며, Top1000과 혼동되는 market-cap Top500 fallback은 피해야 함.
+- Analysis result: 기존 `load_market_cap_universe_members("SP500")` 경로가 S&P 500 membership row를 읽고 있으므로 새 수집기 없이 runtime resolver와 Single Strategy form에 `sp500` mode를 추가하면 된다.
+- Follow-up: `snp500` 입력 alias도 `SP500`으로 해석한다. 멤버십 row가 없으면 S&P 500 universe refresh 필요 오류를 낸다.
+
+### 2026-06-02 - Risk-On Momentum 5D V1 구현을 시작한다
+- User request:
+  - 사용자가 사전 계획된 `Risk-On Momentum 5D V1`을 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 Backtest Analysis / Single Strategy 경로 안에 Top1000 기본 short-term stock swing strategy를 추가하되, UI가 provider를 직접 fetch하지 않고 DB price / annual statement shadow / futures macro Mean-Z loader를 통해 실행해야 함
+- Analysis result:
+  - V1 범위는 `close_based + fixed_pct + Equal Slot`로 제한하고, full trade / scanner detail은 registry가 아니라 generated backtest artifact에 둔다. Macro filter는 futures thermometer의 continuous Mean-Z를 hard filter로 사용한다
+- Follow-up:
+  - Core strategy, DB runtime, Single Strategy form, result `Swing Detail`, History replay fields, Compare default runner, focused tests를 구현했다. Browser QA에서 Manual universe input과 `Swing Detail` 결과 탭을 확인했고, full service contract 237 tests도 통과했다. 상세 검증과 남은 risk는 `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`를 확인한다

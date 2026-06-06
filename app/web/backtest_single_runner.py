@@ -33,7 +33,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
         st.json(payload)
 
     spinner_text = f"Running {strategy_name} backtest from DB..."
-    with st.spinner(spinner_text):
+    with st.spinner(spinner_text, show_time=True):
         result = execute_single_backtest(payload, strategy_name=strategy_name)
 
     if not result.ok:

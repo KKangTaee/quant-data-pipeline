@@ -3179,7 +3179,7 @@ def _render_saved_portfolio_workspace() -> None:
     with action_cols[0]:
         if st.button("Mix 재실행 및 검증", key="saved_portfolio_run", use_container_width=True):
             try:
-                with st.spinner("Running saved mix from stored compare context..."):
+                with st.spinner("Running saved mix from stored compare context...", show_time=True):
                     _run_saved_portfolio_record(selected_record)
                 st.session_state.backtest_saved_portfolio_notice = (
                     f"저장된 portfolio mix `{selected_record.get('name')}`를 다시 실행했습니다."
@@ -6112,7 +6112,7 @@ def _render_strategy_compare_workspace() -> None:
             st.session_state.backtest_compare_error_kind = "input"
             st.session_state.backtest_compare_error = "Global Relative Strength Score Horizons must contain at least one lookback window."
         else:
-            with st.spinner("Running multi-strategy comparison from DB..."):
+            with st.spinner("Running multi-strategy comparison from DB...", show_time=True):
                 result = execute_strategy_compare(
                     selected_strategy_execution_names,
                     start=compare_start.isoformat(),

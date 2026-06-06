@@ -116,6 +116,9 @@
 | `finance/strategy.py` | 실제 portfolio simulation / rebalancing logic |
 | `finance/transform.py` | Strategy 공용 전처리, signal / factor / ranking transform helper |
 | `finance/performance.py` | 성과 요약, portfolio performance metric, weighted portfolio 계산 helper |
+| `finance/indicators.py` | Reusable indicator helper. Risk-On Momentum 5D V2 uses simple rolling True Range / ATR here instead of embedding ATR math in the strategy loop |
+| `finance/swing_macro.py` | Risk-On Momentum 5D macro evaluation helper. Hard filter and ranking penalty mode share this Streamlit-free logic |
+| `finance/swing_analysis.py` | Risk-On Momentum 5D V2 repeated-run analysis helper. Exit / macro / holding comparison, sensitivity, stability, trade-cause, and quality warning rows are built here |
 | `finance/display.py` | CLI / notebook 성격의 display helper |
 | `finance/visualize.py` | 백테스트 결과 시각화 helper |
 

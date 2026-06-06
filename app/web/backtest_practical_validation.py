@@ -712,7 +712,7 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
         "실패해도 저장 snapshot / DB price proxy 기반 진단은 계속 볼 수 있습니다."
     )
     if st.button("전략 재검증 실행", key=f"{replay_key}_run", width="stretch"):
-        with st.spinner("기존 strategy runtime으로 Practical Validation source를 재검증 중입니다..."):
+        with st.spinner("기존 strategy runtime으로 Practical Validation source를 재검증 중입니다...", show_time=True):
             replay_result = run_practical_validation_actual_replay(source, mode=mode)
         st.session_state[replay_key] = replay_result
         if replay_result.get("status") == "PASS":
@@ -1216,7 +1216,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         return True
 
     if st.button("부족한 Provider 데이터 일괄 수집 / 보강", key=f"{result_key}_run", width="stretch"):
-        with st.spinner("현재 source에 필요한 provider snapshot을 수집 / 보강 중입니다..."):
+        with st.spinner("현재 source에 필요한 provider snapshot을 수집 / 보강 중입니다...", show_time=True):
             results = run_provider_gap_collection(validation_result)
         st.session_state[result_key] = results
         st.rerun()

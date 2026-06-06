@@ -23,7 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Manual Scenario Run V1 is implementation complete. Strategy add / slot edit no longer triggers lower individual scenario detail work, portfolio scenario update runs pending / stale strategies by default, and individual evidence detail is lazy-open for one selected strategy; no approval / order / account sync / auto rebalance behavior was added.
+  - Recent merged work has two independent completed surfaces: Overview Market Sentiment V1 and Selected Dashboard Monitoring First UX V1.
+  - Overview Sentiment now collects CNN Fear & Greed / AAII sentiment and presents a guided market-context reading flow. Selected Dashboard now opens with Active Portfolio Monitoring Scenario first; portfolio setup stays below it and no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
@@ -39,6 +40,13 @@ Detailed historical logs were archived on `2026-04-13`.
 - Follow-up learning polish now keeps the 6 analysis items visible as `지금 결론 / 왜 이렇게 보나 / 강한 신호 / 약한 신호 / 그래서 어떻게 보나 / 다음 확인`, and adds CNN component learning notes for all 7 components.
 - Verification passed: focused service contracts, py_compile/chart smoke, actual collector smoke, Browser QA on `http://127.0.0.1:8502`, and screenshot `overview-market-sentiment-v1-qa.png`.
 - Remaining roadmap: 2차 Practical Validation context overlay, 3차 scheduled ops hardening if needed.
+
+### 2026-06-02 - Selected Dashboard Monitoring First UX V1
+- Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-first-ux-v1/`.
+- `Operations > Selected Portfolio Dashboard` now opens with Active Portfolio Monitoring Scenario above the portfolio shelf, with distinct no portfolio / no strategy / configured-not-run / executed states.
+- Portfolio card selection, portfolio name / description edit, strategy board, and `포트폴리오 시나리오 업데이트` moved below the hero; lower readiness / provider / freshness / open issue evidence remains lazy detail for one selected strategy.
+- Verification passed so far: py_compile, focused Selected Portfolio service contracts, and `git diff --check`; Browser QA is the remaining closeout check.
+- No Final Review row mutation, saved setup cleanup, DB schema, broker/account, order, live approval, monitoring auto-write, or auto rebalance path was added.
 
 ### 2026-06-02 - Futures Macro Thermometer Historical Validation V1
 - Completed implementation task `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`.
@@ -62,7 +70,7 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### 2026-06-01 - Selected Dashboard Portfolio Flow Redesign V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`.
-- `Operations > Selected Portfolio Dashboard` now reads as `1. 나의 포트폴리오` -> `2. 포트폴리오 상세 / 전략 구성` -> `3. 모니터 시나리오`, with Final Review handoff / readiness / provider / audit evidence moved below the scenario workflow.
+- At that task closeout, `Operations > Selected Portfolio Dashboard` changed to `1. 나의 포트폴리오` -> `2. 포트폴리오 상세 / 전략 구성` -> `3. 모니터 시나리오`, with Final Review handoff / readiness / provider / audit evidence moved below the scenario workflow. Later Monitoring First UX V1 moved the scenario hero above setup.
 - Dashboard saved state now supports backward-compatible strategy slots with selected decision / start / latest-end mode / balance / memo while preserving legacy `selected_decision_ids`.
 - Verification passed: py_compile, full `tests.test_service_contracts` 222 tests, `git diff --check`, and Browser QA screenshot `selected-dashboard-portfolio-flow-redesign-v1-qa.png`.
 - No Final Review decision rows, DB schema, provider fetch, broker/account sync, live approval, order, monitoring auto-write, or auto rebalance path was added.
@@ -4627,3 +4635,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Operations > Operations Overview`는 `Operations Console`로서 today action queue, 1차~5차 roadmap, surface audit, primary/secondary lane을 표시한다.
   - Portfolio Monitoring의 리밸런싱 표는 `Target Snapshot Date`, `Next Review Date`, `Current Target Snapshot`으로 바꿔 주문/자동 리밸런싱이 아님을 명시했다.
   - Backtest Run History와 Candidate Library는 삭제하지 않고 Archive / Recovery 도구로 보존했다.
+- Risk-On Momentum 5D V1:
+  - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`에서 Top1000 기본 short-term stock swing strategy를 구현했다.
+  - Core는 `finance/swing.py`, daily swing features는 `finance/transform.py`, futures daily loader는 `finance/loaders/futures.py`, DB wrapper / artifact writer는 `app/runtime/backtest.py`가 맡는다.
+  - `Backtest Analysis > Single Strategy` form, result `Swing Detail` tab, History replay fields, Compare default runner를 연결했다. V1은 `close_based + fixed_pct + Equal Slot`만 지원한다.
+  - Browser QA, focused tests, manual DB smoke, full service contract 237 tests, `git diff --check`가 통과했다. QA screenshot은 generated artifact `risk-on-momentum-5d-qa.png`로 남겼고 커밋 대상은 아니다.
+- Risk-On Momentum 5D V2:
+  - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v2/`에서 Daily Swing Backtest Analysis 고도화를 구현했다.
+  - ATR / macro ranking penalty / comparison-sensitivity-stability-quality analysis는 Backtest Analysis 연구 surface로 남기고, Practical Validation / Final Review / Selected Dashboard daily signal governance는 구현하지 않았다.
+- Risk-On Momentum 5D S&P 500 universe follow-up:
+  - Single Strategy form에 `S&P 500` universe mode를 추가했고 runtime resolver는 `sp500` / `snp500` 입력을 `SP500` managed universe로 해석한다.
+  - S&P 500 멤버십 row가 없으면 Top500으로 조용히 대체하지 않고 universe refresh 필요 오류를 반환한다.
+  - focused compile / Risk-On service contract tests / DB membership smoke / hygiene check를 통과했다.

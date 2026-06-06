@@ -2874,6 +2874,35 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
         return []
 
     common_history = "History / Load Into Form / Run Again 지원"
+    if name == "Risk-On Momentum 5D":
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Daily close-based stock swing strategy",
+                "확인 포인트": "S&P 500/Top1000/Top2000/Manual 주식 universe, daily OHLCV, annual statement shadow, futures macro Mean-Z를 사용합니다.",
+            },
+            {
+                "확인 영역": "Execution",
+                "현재 상태": "D+1 open execution + Equal Slot sizing",
+                "확인 포인트": "신호는 종가 기준으로 만들고, 다음 거래일 시가에 진입/청산합니다.",
+            },
+            {
+                "확인 영역": "Risk / Exit",
+                "현재 상태": "fixed_pct 또는 atr_based exit + max holding days",
+                "확인 포인트": "ATR exit은 signal-date ATR을 D+1 open entry 기준으로 고정해 해석합니다.",
+            },
+            {
+                "확인 영역": "비교 / 상세",
+                "현재 상태": "Macro Off, Random Ranking, SPY/QQQ Buy & Hold, V2 comparison/sensitivity + trade/scanner artifact",
+                "확인 포인트": "실행 결과는 generated backtest artifact에도 보존됩니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "universe, macro threshold, position/exit 설정이 history / replay에서 복원되어야 합니다.",
+            },
+        ]
+
     if name.endswith("(Strict Annual)"):
         return [
             {
@@ -3126,6 +3155,8 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     universe_mode = payload.get("universe_mode")
     if universe_mode == "preset" and preset_name:
         lines.append(f"모집군: preset `{preset_name}`")
+    elif universe_mode in {"top1000", "top2000"}:
+        lines.append(f"모집군: `{preset_name or universe_mode}`")
     elif tickers:
         lines.append(f"모집군: 수동 ticker `{','.join(tickers[:10])}`")
 
@@ -3139,6 +3170,17 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Min Avg Dollar Volume 20D: `{payload.get('min_avg_dollar_volume_20d_m_filter')}M`")
     if payload.get("transaction_cost_bps") is not None:
         lines.append(f"Transaction Cost: `{payload.get('transaction_cost_bps')}` bps")
+    if strategy_key == "risk_on_momentum_5d":
+        if payload.get("max_holding_days") is not None:
+            lines.append(f"Max Holding Days: `{payload.get('max_holding_days')}`")
+        if payload.get("max_total_positions") is not None:
+            lines.append(f"Max Positions: `{payload.get('max_total_positions')}`")
+        if payload.get("stop_loss_pct") is not None or payload.get("take_profit_pct") is not None:
+            lines.append(
+                f"Exit: stop `{payload.get('stop_loss_pct', '-')}` / take-profit `{payload.get('take_profit_pct', '-')}`"
+            )
+        if payload.get("macro_filter_enabled") is not None:
+            lines.append(f"Macro Filter: `{'on' if payload.get('macro_filter_enabled') else 'off'}`")
     if payload.get("promotion_min_etf_aum_b") is not None:
         lines.append(f"Min ETF AUM: `${float(payload.get('promotion_min_etf_aum_b')):.1f}B`")
     if payload.get("promotion_max_bid_ask_spread_pct") is not None:

@@ -176,7 +176,7 @@ def _render_candidate_replay(record: dict[str, Any]) -> None:
         if st.button("Rebuild Result Curve", key="candidate_library_rebuild_result", use_container_width=True):
             try:
                 payload = build_candidate_replay_payload(current)
-                with st.spinner("Rebuilding candidate result from stored contract..."):
+                with st.spinner("Rebuilding candidate result from stored contract...", show_time=True):
                     bundle = run_candidate_replay_payload(payload, current_row=current)
                 replay_state[registry_id] = {"payload": payload, "bundle": bundle}
                 st.session_state.candidate_library_replay_state = replay_state
