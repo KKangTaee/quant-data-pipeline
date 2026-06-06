@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Market Movers Why It Moved Google News KR RSS
+- Updated `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` so `Why It Moved > 한국어 뉴스` uses keyless Google News KR RSS metadata/snippet instead of Naver credentialed API lookup.
+- The lane remains button-triggered, selected-ticker-only, session-only, and limited to `제목 / 출처 / 게시 시각 / 단서 / 열기`; SEC filings remain table-only.
+- No article body, AI summary, sentiment, catalyst classifier, DB schema, registry JSONL, or saved JSONL write path was added.
+- Verification and Browser QA evidence are in task `RUNS.md`; screenshot `why-it-moved-google-news-kr-rss-qa-20260607.png` remains generated/untracked.
+
 ### 2026-06-06 - Market Movers Why It Moved Korean News Metadata
 - Added a `한국어 뉴스` lane to `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` while keeping SEC filings table-only after the rollback.
 - `간단 메타데이터 조회` now includes Naver News Search API metadata/snippet when credentials are configured; missing credentials show setup guidance and do not fail the whole lookup.

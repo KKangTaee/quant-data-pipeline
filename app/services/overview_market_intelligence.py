@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 import re
+import urllib.request
 from collections.abc import Callable, Sequence
 from datetime import date, datetime, timezone, timedelta
 from html import unescape
 from typing import Any
 from urllib.parse import quote, quote_plus, urlencode, urlparse
+from xml.etree import ElementTree
 
 import pandas as pd
 
@@ -85,6 +87,7 @@ CATALYST_LINK_COLUMNS = [
 WHY_IT_MOVED_NEWS_COLUMNS = ["Title", "Source", "Published At", "URL"]
 WHY_IT_MOVED_KOREAN_NEWS_COLUMNS = ["Title", "Source", "Published At", "Snippet", "URL"]
 WHY_IT_MOVED_SEC_COLUMNS = ["Form", "Filing Date", "Title", "URL"]
+GOOGLE_NEWS_KR_RSS_SEARCH_URL = "https://news.google.com/rss/search"
 WHY_IT_MOVED_STATUS_LABELS = {
     "NOT_REQUESTED": ("조회 전", "neutral"),
     "OK": ("완료", "success"),
@@ -2907,7 +2910,7 @@ def _normalize_korean_news_metadata(rows: list[dict[str, Any]], *, max_items: in
             _clean_news_search_text(item.get("source"))
             or _clean_news_search_text(item.get("publisher"))
             or _source_from_url(url)
-            or "Naver News"
+            or "Google News KR RSS"
         )
         out.append(
             {
@@ -2987,53 +2990,59 @@ def _fetch_yfinance_news_metadata(symbol: str, max_items: int) -> list[dict[str,
     return [item for item in news[: max(0, max_items)] if isinstance(item, dict)]
 
 
-def _naver_news_credentials_available() -> bool:
-    return bool(
-        _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_ID"))
-        and _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_SECRET"))
-    )
-
-
-def _naver_news_search_query(symbol: str, name: str | None) -> str:
+def _google_news_kr_rss_search_query(symbol: str, name: str | None) -> str:
     normalized_symbol = _clean_optional_text(symbol, uppercase=True) or ""
     normalized_name = _clean_optional_text(name) or ""
     parts = [part for part in [normalized_symbol, normalized_name] if part]
     return " ".join(dict.fromkeys(parts + ["주가", "뉴스", "실적", "공시", "급등", "급락"]))
 
 
-def _fetch_naver_news_metadata(
+def _fetch_google_news_kr_rss_metadata(
     symbol: str,
     name: str | None,
     max_items: int,
     request_timeout: float,
 ) -> list[dict[str, Any]]:
-    import requests
-
-    if max(0, int(max_items)) <= 0:
+    limit = max(0, int(max_items))
+    if limit <= 0:
         return []
-    client_id = _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_ID"))
-    client_secret = _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_SECRET"))
-    if not client_id or not client_secret:
+    query = _google_news_kr_rss_search_query(symbol, name)
+    if not query:
         return []
 
-    response = requests.get(
-        "https://openapi.naver.com/v1/search/news.json",
-        params={
-            "query": _naver_news_search_query(symbol, name),
-            "display": max(1, min(100, max(0, int(max_items)))),
-            "start": 1,
-            "sort": "date",
-        },
-        headers={
-            "X-Naver-Client-Id": client_id,
-            "X-Naver-Client-Secret": client_secret,
-        },
-        timeout=float(request_timeout),
+    url = GOOGLE_NEWS_KR_RSS_SEARCH_URL + "?" + urlencode(
+        {
+            "q": query,
+            "hl": "ko",
+            "gl": "KR",
+            "ceid": "KR:ko",
+        }
     )
-    response.raise_for_status()
-    payload = response.json()
-    items = payload.get("items") if isinstance(payload, dict) else []
-    return [item for item in items or [] if isinstance(item, dict)]
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; quant-data-pipeline/1.0)"},
+    )
+    with urllib.request.urlopen(request, timeout=float(request_timeout)) as response:
+        payload = response.read()
+
+    if not payload:
+        return []
+    root = ElementTree.fromstring(payload)
+    rows: list[dict[str, Any]] = []
+    for item in root.findall("./channel/item")[:limit]:
+        source_node = item.find("source")
+        link = _clean_optional_text(item.findtext("link"))
+        rows.append(
+            {
+                "title": item.findtext("title"),
+                "link": link,
+                "url": link,
+                "description": item.findtext("description"),
+                "pubDate": item.findtext("pubDate"),
+                "source": source_node.text if source_node is not None else "Google News KR RSS",
+            }
+        )
+    return [row for row in rows if row.get("title") and row.get("link")]
 
 
 def _sec_filing_metadata_url(cik: int, accession_no: str, primary_document: str | None) -> str:
@@ -3150,15 +3159,12 @@ def fetch_market_mover_compact_metadata(
         messages.append(f"뉴스 메타데이터 조회 실패: {exc}")
 
     try:
-        if korean_news_fetcher is None and not _naver_news_credentials_available():
-            messages.append("한국어 뉴스 메타데이터 설정 없음: NAVER_SEARCH_CLIENT_ID / NAVER_SEARCH_CLIENT_SECRET")
-        else:
-            korean_news_rows = (korean_news_fetcher or _fetch_naver_news_metadata)(
-                normalized_symbol,
-                normalized_name,
-                max(0, int(max_korean_news)),
-                float(request_timeout),
-            )
+        korean_news_rows = (korean_news_fetcher or _fetch_google_news_kr_rss_metadata)(
+            normalized_symbol,
+            normalized_name,
+            max(0, int(max_korean_news)),
+            float(request_timeout),
+        )
     except Exception as exc:
         had_failure = True
         messages.append(f"한국어 뉴스 메타데이터 조회 실패: {exc}")

@@ -5282,8 +5282,91 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("<b>", korean_news.iloc[0]["Title"])
         self.assertNotIn("Body", korean_news.columns)
 
-    def test_market_mover_compact_metadata_fetcher_treats_korean_news_as_optional_when_unconfigured(self) -> None:
-        from unittest.mock import patch
+    def test_market_mover_google_news_kr_rss_fetcher_builds_keyless_metadata_rows(self) -> None:
+        from urllib.parse import parse_qs, urlparse
+
+        import app.services.overview_market_intelligence as service
+
+        self.assertTrue(
+            hasattr(service, "_fetch_google_news_kr_rss_metadata"),
+            "Google News KR RSS metadata fetcher should exist as the default keyless Korean news provider.",
+        )
+
+        observed_request: dict[str, object] = {}
+        payload = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0">
+          <channel>
+            <item>
+              <title><![CDATA[AAA \xec\xa3\xbc\xea\xb0\x80 \xea\xb8\x89\xeb\x93\xb1 - Investing.com \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4]]></title>
+              <link>https://news.google.com/rss/articles/aaa</link>
+              <pubDate>Sat, 06 Jun 2026 09:15:00 GMT</pubDate>
+              <source url="https://kr.investing.com">Investing.com \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4</source>
+              <description><![CDATA[<a href="https://example.kr/aaa">AAA</a> \xec\x8b\xa4\xec\xa0\x81 \xeb\xb0\x9c\xed\x91\x9c \xec\x9d\xb4\xed\x9b\x84 \xec\x83\x81\xec\x8a\xb9...]]></description>
+            </item>
+          </channel>
+        </rss>"""
+
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def read(self) -> bytes:
+                return payload
+
+        def fake_urlopen(request: object, timeout: float) -> FakeResponse:
+            observed_request["url"] = getattr(request, "full_url", "")
+            observed_request["headers"] = dict(request.header_items())
+            observed_request["timeout"] = timeout
+            return FakeResponse()
+
+        with patch("urllib.request.urlopen", fake_urlopen):
+            rows = service._fetch_google_news_kr_rss_metadata("aaa", "AAA Corp", 3, 4.5)
+
+        request_url = str(observed_request["url"])
+        query = parse_qs(urlparse(request_url).query)
+        self.assertEqual(urlparse(request_url).netloc, "news.google.com")
+        self.assertEqual(urlparse(request_url).path, "/rss/search")
+        self.assertIn("AAA", query["q"][0])
+        self.assertIn("AAA Corp", query["q"][0])
+        self.assertIn("주가", query["q"][0])
+        self.assertEqual(query["hl"], ["ko"])
+        self.assertEqual(query["gl"], ["KR"])
+        self.assertEqual(query["ceid"], ["KR:ko"])
+        self.assertGreater(len(str(observed_request["headers"].get("User-agent") or "")), 0)
+        self.assertEqual(observed_request["timeout"], 4.5)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["title"], "AAA 주가 급등 - Investing.com 한국어")
+        self.assertEqual(rows[0]["link"], "https://news.google.com/rss/articles/aaa")
+        self.assertEqual(rows[0]["source"], "Investing.com 한국어")
+        self.assertIn("실적 발표 이후 상승", rows[0]["description"])
+        self.assertEqual(rows[0]["pubDate"], "Sat, 06 Jun 2026 09:15:00 GMT")
+        self.assertNotIn("body", rows[0])
+
+    def test_market_mover_compact_metadata_fetcher_uses_google_news_kr_without_naver_credentials(self) -> None:
+        import app.services.overview_market_intelligence as service
+
+        calls: list[tuple[str, str | None, int, float]] = []
+
+        def google_news_fetcher(
+            symbol: str,
+            name: str | None,
+            max_items: int,
+            request_timeout: float,
+        ) -> list[dict[str, object]]:
+            calls.append((symbol, name, max_items, request_timeout))
+            return [
+                {
+                    "title": "AAA 주가 급등 - 한국경제",
+                    "link": "https://news.google.com/rss/articles/aaa",
+                    "source": "한국경제",
+                    "description": "AAA 실적 발표 이후 상승했다는 검색 결과 단서입니다.",
+                    "pubDate": "Sat, 06 Jun 2026 09:15:00 GMT",
+                    "body": "article body should not enter compact metadata",
+                }
+            ]
 
         from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
 
@@ -5291,9 +5374,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             "os.environ",
             {"NAVER_SEARCH_CLIENT_ID": "", "NAVER_SEARCH_CLIENT_SECRET": ""},
             clear=False,
-        ):
+        ), patch.object(service, "_fetch_google_news_kr_rss_metadata", google_news_fetcher, create=True):
             metadata = fetch_market_mover_compact_metadata(
                 "AAA",
+                name="AAA Corp",
+                max_korean_news=3,
                 news_fetcher=lambda symbol, max_items: [
                     {
                         "title": "AAA shares rise",
@@ -5306,11 +5391,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             )
 
         self.assertEqual(metadata["status"], "OK")
-        self.assertTrue(metadata["korean_news"].empty)
-        self.assertIn(
-            "한국어 뉴스 메타데이터 설정 없음: NAVER_SEARCH_CLIENT_ID / NAVER_SEARCH_CLIENT_SECRET",
-            metadata["messages"],
-        )
+        self.assertEqual(calls, [("AAA", "AAA Corp", 3, 8.0)])
+        self.assertFalse(metadata["korean_news"].empty)
+        self.assertEqual(metadata["korean_news"].iloc[0]["Source"], "한국경제")
+        self.assertEqual(metadata["korean_news"].iloc[0]["URL"], "https://news.google.com/rss/articles/aaa")
+        self.assertNotIn("Body", metadata["korean_news"].columns)
+        self.assertFalse(any("NAVER_SEARCH" in message for message in metadata["messages"]))
 
     def test_market_mover_compact_metadata_fetcher_distinguishes_empty_and_failed(self) -> None:
         from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata

@@ -3720,11 +3720,11 @@ def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd
     )
     _render_market_mover_metadata_lane(
         "한국어 뉴스",
-        "네이버 뉴스 검색 metadata/snippet만 표시합니다. 기사 본문, AI 요약, 감성 점수, 원인 판정은 수집하지 않습니다.",
+        "Google News KR RSS metadata/snippet만 표시합니다. 기사 본문, AI 요약, 감성 점수, 원인 판정은 수집하지 않습니다.",
         korean_news,
         ["Title", "Source", "Published At", "Snippet", "Open"],
         failed=_market_mover_lane_failed(messages, "Korean News"),
-        empty_message=not_requested_message if status == "NOT_REQUESTED" else "한국어 뉴스 메타데이터가 반환되지 않았습니다.",
+        empty_message=not_requested_message if status == "NOT_REQUESTED" else "Google News KR RSS 한국어 뉴스 메타데이터가 반환되지 않았습니다.",
     )
     _render_market_mover_metadata_lane(
         "SEC 공시",

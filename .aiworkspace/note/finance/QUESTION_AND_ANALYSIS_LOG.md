@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Korean news can start keyless through Google News KR RSS
+- User request:
+  - Naver API key 발급 전에는 네이버를 제쳐두고 keyless Google News KR만으로 `Why It Moved` 한국어 뉴스 단서를 진행할 수 있는지 물었고, 진행을 승인함.
+- Interpreted goal:
+  - Korean article body scraping이나 AI 원인 판정이 아니라, 사용자가 직접 확인할 수 있는 한국어 headline/snippet metadata를 API key 없이 추가한다.
+- Analysis result:
+  - Google News KR RSS는 dedicated developer API는 아니지만 keyless RSS metadata route로 쓸 수 있다. 앱은 RSS item의 title / source / pubDate / description / link만 session-only로 표시하고, article body / DB persistence는 금지한다.
+- Follow-up:
+  - `overview-market-movers-second-pass`에 Google News KR RSS provider를 적용했다. RSS 안정성, redirect URL, duplicate/stale result risk는 task `RISKS.md`에 남겼다.
+
 ### 2026-06-06 - Korean news should be metadata/snippet, not article scraping
 - User request:
   - SEC 공시는 table-only로 유지하고, `Why It Moved`의 영어 뉴스 metadata만으로는 부족하므로 관련 한글 기사도 앱 안에서 단서로 볼 방법을 개선해 달라고 요청함.

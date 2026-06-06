@@ -4,7 +4,7 @@
 
 `Overview > Market Movers > Why It Moved`는 자동 원인 판정기가 아니라 manual investigation board다. 사용자가 V1.7 / V1.8 SEC preview와 digest를 검토한 뒤 "표 아래 추가물"이 제품 판단에 앞서 너무 앞서 나갔다고 판단했으므로, 현재 SEC lane은 metadata table-only 상태로 유지한다.
 
-뉴스 쪽은 사용자가 "왜 주가가 움직였는지 직접 확인하기 위한 한글 기사 단서"를 원하므로, 기사 본문 수집이나 요약 대신 credentialed Korean news metadata lane을 추가한다. 이 lane은 Naver News Search API의 bounded search-result fields만 사용한다.
+뉴스 쪽은 사용자가 "왜 주가가 움직였는지 직접 확인하기 위한 한글 기사 단서"를 원하므로, 기사 본문 수집이나 요약 대신 keyless Korean news metadata lane을 둔다. 이 lane은 Google News KR RSS의 bounded search-result metadata/snippet만 사용한다.
 
 ## Current SEC Lane Scope
 
@@ -36,10 +36,10 @@
 
 `조사 단서`는 기존 `뉴스 메타데이터`, `SEC 공시`, collapsed `외부 검색`에 더해 `한국어 뉴스` lane을 가진다.
 
-- `한국어 뉴스`는 `NAVER_SEARCH_CLIENT_ID` / `NAVER_SEARCH_CLIENT_SECRET`가 있을 때만 Naver official Search API를 호출한다.
+- `한국어 뉴스`는 API key 없이 Google News KR RSS를 호출한다.
 - 표시 column은 `제목 / 출처 / 게시 시각 / 단서 / 열기`다.
-- `title`과 `description`의 Naver `<b>` highlight tag는 제거하고, `description`은 bounded snippet인 `단서`로만 표시한다.
-- clickable URL은 `originallink`를 우선 사용하고, 없으면 `link` / `url`을 fallback한다.
-- Naver credentials가 없으면 optional setup message를 표시하고 전체 lookup failure로 취급하지 않는다.
-- Naver request가 실패하면 `한국어 뉴스 메타데이터 조회 실패` provider failure로 표시한다. 다른 provider row가 있으면 `PARTIAL`이다.
+- RSS `title`과 `description` HTML은 제거하고, `description`은 bounded snippet인 `단서`로만 표시한다.
+- clickable URL은 RSS `link` / `url`을 사용한다.
+- Naver credentials나 setup message는 필요하지 않다.
+- Google News KR RSS request가 실패하면 `한국어 뉴스 메타데이터 조회 실패` provider failure로 표시한다. 다른 provider row가 있으면 `PARTIAL`이다.
 - 기사 본문 수집, AI summary, sentiment, automatic catalyst judgement, DB schema, registry JSONL, saved JSONL, article body 저장은 추가하지 않는다.
