@@ -23,6 +23,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-06 - Korean news should be metadata/snippet, not article scraping
+- User request:
+  - SEC 공시는 table-only로 유지하고, `Why It Moved`의 영어 뉴스 metadata만으로는 부족하므로 관련 한글 기사도 앱 안에서 단서로 볼 방법을 개선해 달라고 요청함.
+- Interpreted goal:
+  - 원인 자동판정이 아니라 사용자가 직접 왜 움직였는지 조사할 수 있게 Korean-language source metadata를 추가하되, article body / AI summary / sentiment / durable storage는 금지한다.
+- Analysis result:
+  - Naver News Search API는 `title`, `originallink`, `link`, `description`, `pubDate` 같은 bounded search-result fields를 주므로 기사 scraping 없이 `제목 / 출처 / 게시 시각 / 단서 / 열기` lane을 만들 수 있다.
+- Follow-up:
+  - `overview-market-movers-second-pass`에 Korean news lane을 구현했다. Naver credentials가 없으면 setup guidance만 표시하고, DB-backed retention / freshness / replay는 별도 V2 decision으로 남긴다.
+
 ### 2026-06-04 - Why It Moved should be an investigation board, not an explanation engine
 - User request:
   - benchmark research를 반영해 `Overview > Market Movers > Why It Moved V1.6 UX Pass`를 구현하되 automatic catalyst classifier, AI summary, article / filing body 수집, DB / JSONL 저장 없이 manual investigation board로 개선해 달라고 요청함.

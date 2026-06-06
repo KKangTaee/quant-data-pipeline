@@ -4,8 +4,9 @@ import os
 import re
 from collections.abc import Callable, Sequence
 from datetime import date, datetime, timezone, timedelta
+from html import unescape
 from typing import Any
-from urllib.parse import quote, quote_plus, urlencode
+from urllib.parse import quote, quote_plus, urlencode, urlparse
 
 import pandas as pd
 
@@ -82,6 +83,7 @@ CATALYST_LINK_COLUMNS = [
     "URL",
 ]
 WHY_IT_MOVED_NEWS_COLUMNS = ["Title", "Source", "Published At", "URL"]
+WHY_IT_MOVED_KOREAN_NEWS_COLUMNS = ["Title", "Source", "Published At", "Snippet", "URL"]
 WHY_IT_MOVED_SEC_COLUMNS = ["Form", "Filing Date", "Title", "URL"]
 WHY_IT_MOVED_STATUS_LABELS = {
     "NOT_REQUESTED": ("조회 전", "neutral"),
@@ -2649,6 +2651,7 @@ def build_market_mover_metadata_not_requested_state(symbol: str | None = None) -
         "symbol": normalized_symbol,
         "fetched_at_utc": None,
         "news": _rows_frame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+        "korean_news": _rows_frame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
         "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
         "messages": ["이번 세션에서 메타데이터 조회를 아직 실행하지 않았습니다."],
     }
@@ -2670,6 +2673,8 @@ def _metadata_provider_failure_prefixes(provider: str) -> tuple[str, ...]:
     normalized = str(provider or "").strip().lower()
     if normalized == "news":
         return ("news metadata lookup failed:", "뉴스 메타데이터 조회 실패:")
+    if normalized in {"korean news", "korean_news", "korean-news", "한국어 뉴스"}:
+        return ("korean news metadata lookup failed:", "한국어 뉴스 메타데이터 조회 실패:")
     if normalized == "sec":
         return ("sec metadata lookup failed:", "sec 메타데이터 조회 실패:")
     return (f"{normalized} metadata lookup failed:",)
@@ -2705,11 +2710,18 @@ def build_market_mover_metadata_status_strip(metadata: dict[str, Any] | None) ->
     label, tone = WHY_IT_MOVED_STATUS_LABELS.get(status, (status.replace("_", " ").title(), "neutral"))
     messages = [str(message).strip() for message in payload.get("messages") or [] if str(message).strip()]
     news_count = _count_metadata_rows(payload.get("news"))
+    korean_news_count = _count_metadata_rows(payload.get("korean_news"))
     sec_count = _count_metadata_rows(payload.get("sec_filings"))
     news_item = _metadata_provider_status_item(
         label="News",
         count=news_count,
         failed=_metadata_provider_failed(messages, "News"),
+        lookup_status=status,
+    )
+    korean_news_item = _metadata_provider_status_item(
+        label="한국어 뉴스",
+        count=korean_news_count,
+        failed=_metadata_provider_failed(messages, "Korean News"),
         lookup_status=status,
     )
     sec_item = _metadata_provider_status_item(
@@ -2723,6 +2735,7 @@ def build_market_mover_metadata_status_strip(metadata: dict[str, Any] | None) ->
         "status": status,
         "lookup": {"label": "조회 상태", "value": label, "tone": tone},
         "news": news_item,
+        "korean_news": korean_news_item,
         "sec": sec_item,
         "fetched_at": {"label": "조회 시각", "value": fetched_at, "tone": "neutral"},
         "storage": {"label": "저장 경계", "value": "세션 전용", "tone": "neutral"},
@@ -2730,6 +2743,7 @@ def build_market_mover_metadata_status_strip(metadata: dict[str, Any] | None) ->
     strip["items"] = [
         strip["lookup"],
         strip["news"],
+        strip["korean_news"],
         strip["sec"],
         strip["fetched_at"],
         strip["storage"],
@@ -2852,6 +2866,61 @@ def _normalize_news_metadata(rows: list[dict[str, Any]], *, max_items: int) -> p
     return _rows_frame(out, columns=WHY_IT_MOVED_NEWS_COLUMNS)
 
 
+def _clean_news_search_text(value: Any) -> str | None:
+    text = _clean_optional_text(value)
+    if not text:
+        return None
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = unescape(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text or None
+
+
+def _source_from_url(url: str | None) -> str | None:
+    parsed = urlparse(str(url or "").strip())
+    host = parsed.netloc.strip()
+    if host.startswith("www."):
+        host = host[4:]
+    return host or None
+
+
+def _truncate_metadata_snippet(value: Any, *, limit: int = 240) -> str | None:
+    text = _clean_news_search_text(value)
+    if not text:
+        return None
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 1)].rstrip() + "..."
+
+
+def _normalize_korean_news_metadata(rows: list[dict[str, Any]], *, max_items: int) -> pd.DataFrame:
+    out: list[dict[str, Any]] = []
+    for item in rows[: max(0, max_items)]:
+        if not isinstance(item, dict):
+            continue
+        title = _clean_news_search_text(item.get("title"))
+        url = _clean_optional_text(item.get("originallink")) or _clean_optional_text(item.get("original_link"))
+        url = url or _clean_optional_text(item.get("link")) or _clean_optional_text(item.get("url"))
+        if not title or not url:
+            continue
+        source = (
+            _clean_news_search_text(item.get("source"))
+            or _clean_news_search_text(item.get("publisher"))
+            or _source_from_url(url)
+            or "Naver News"
+        )
+        out.append(
+            {
+                "Title": title,
+                "Source": source,
+                "Published At": _metadata_timestamp(item.get("pubDate")) or _metadata_timestamp(item.get("published_at")),
+                "Snippet": _truncate_metadata_snippet(item.get("description")) or "",
+                "URL": url,
+            }
+        )
+    return _rows_frame(out, columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS)
+
+
 def _sec_form_priority_value(form: Any) -> int:
     text = _clean_optional_text(form, uppercase=True) or ""
     normalized = text.split("/", 1)[0]
@@ -2916,6 +2985,55 @@ def _fetch_yfinance_news_metadata(symbol: str, max_items: int) -> list[dict[str,
     ticker = yf.Ticker(symbol)
     news = ticker.news or []
     return [item for item in news[: max(0, max_items)] if isinstance(item, dict)]
+
+
+def _naver_news_credentials_available() -> bool:
+    return bool(
+        _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_ID"))
+        and _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_SECRET"))
+    )
+
+
+def _naver_news_search_query(symbol: str, name: str | None) -> str:
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True) or ""
+    normalized_name = _clean_optional_text(name) or ""
+    parts = [part for part in [normalized_symbol, normalized_name] if part]
+    return " ".join(dict.fromkeys(parts + ["주가", "뉴스", "실적", "공시", "급등", "급락"]))
+
+
+def _fetch_naver_news_metadata(
+    symbol: str,
+    name: str | None,
+    max_items: int,
+    request_timeout: float,
+) -> list[dict[str, Any]]:
+    import requests
+
+    if max(0, int(max_items)) <= 0:
+        return []
+    client_id = _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_ID"))
+    client_secret = _clean_optional_text(os.getenv("NAVER_SEARCH_CLIENT_SECRET"))
+    if not client_id or not client_secret:
+        return []
+
+    response = requests.get(
+        "https://openapi.naver.com/v1/search/news.json",
+        params={
+            "query": _naver_news_search_query(symbol, name),
+            "display": max(1, min(100, max(0, int(max_items)))),
+            "start": 1,
+            "sort": "date",
+        },
+        headers={
+            "X-Naver-Client-Id": client_id,
+            "X-Naver-Client-Secret": client_secret,
+        },
+        timeout=float(request_timeout),
+    )
+    response.raise_for_status()
+    payload = response.json()
+    items = payload.get("items") if isinstance(payload, dict) else []
+    return [item for item in items or [] if isinstance(item, dict)]
 
 
 def _sec_filing_metadata_url(cik: int, accession_no: str, primary_document: str | None) -> str:
@@ -2993,9 +3111,12 @@ def _fetch_sec_recent_filing_metadata(
 def fetch_market_mover_compact_metadata(
     symbol: str,
     *,
+    name: str | None = None,
     max_news: int = 5,
+    max_korean_news: int = 5,
     max_filings: int = 5,
     news_fetcher: Callable[[str, int], list[dict[str, Any]]] | None = None,
+    korean_news_fetcher: Callable[[str, str | None, int, float], list[dict[str, Any]]] | None = None,
     sec_fetcher: Callable[[str, int, str | None, float], list[dict[str, Any]]] | None = None,
     user_agent: str | None = None,
     request_timeout: float = 8.0,
@@ -3010,6 +3131,7 @@ def fetch_market_mover_compact_metadata(
             "symbol": None,
             "fetched_at_utc": fetched_at,
             "news": _rows_frame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+            "korean_news": _rows_frame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
             "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
             "messages": ["Symbol is required for compact metadata lookup."],
         }
@@ -3017,13 +3139,29 @@ def fetch_market_mover_compact_metadata(
     messages: list[str] = []
     had_failure = False
     news_rows: list[dict[str, Any]] = []
+    korean_news_rows: list[dict[str, Any]] = []
     sec_rows: list[dict[str, Any]] = []
+    normalized_name = _clean_optional_text(name)
 
     try:
         news_rows = (news_fetcher or _fetch_yfinance_news_metadata)(normalized_symbol, max(0, int(max_news)))
     except Exception as exc:
         had_failure = True
         messages.append(f"뉴스 메타데이터 조회 실패: {exc}")
+
+    try:
+        if korean_news_fetcher is None and not _naver_news_credentials_available():
+            messages.append("한국어 뉴스 메타데이터 설정 없음: NAVER_SEARCH_CLIENT_ID / NAVER_SEARCH_CLIENT_SECRET")
+        else:
+            korean_news_rows = (korean_news_fetcher or _fetch_naver_news_metadata)(
+                normalized_symbol,
+                normalized_name,
+                max(0, int(max_korean_news)),
+                float(request_timeout),
+            )
+    except Exception as exc:
+        had_failure = True
+        messages.append(f"한국어 뉴스 메타데이터 조회 실패: {exc}")
 
     try:
         sec_rows = (sec_fetcher or _fetch_sec_recent_filing_metadata)(
@@ -3037,8 +3175,9 @@ def fetch_market_mover_compact_metadata(
         messages.append(f"SEC 메타데이터 조회 실패: {exc}")
 
     news = _normalize_news_metadata(news_rows, max_items=max_news)
+    korean_news = _normalize_korean_news_metadata(korean_news_rows, max_items=max_korean_news)
     sec_filings = _normalize_sec_filing_metadata(sec_rows, max_items=max_filings)
-    has_metadata = not news.empty or not sec_filings.empty
+    has_metadata = not news.empty or not korean_news.empty or not sec_filings.empty
     if has_metadata and had_failure:
         status = "PARTIAL"
     elif has_metadata:
@@ -3047,13 +3186,14 @@ def fetch_market_mover_compact_metadata(
         status = "FAILED"
     else:
         status = "NO_METADATA"
-        messages.append(f"{normalized_symbol}에 대해 간단 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다.")
+        messages.append(f"{normalized_symbol}에 대해 간단 뉴스, 한국어 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다.")
 
     return {
         "status": status,
         "symbol": normalized_symbol,
         "fetched_at_utc": fetched_at,
         "news": news,
+        "korean_news": korean_news,
         "sec_filings": sec_filings,
         "messages": messages,
     }

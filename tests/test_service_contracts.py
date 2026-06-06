@@ -5223,6 +5223,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             max_filings=2,
             news_fetcher=news_fetcher,
             sec_fetcher=sec_fetcher,
+            korean_news_fetcher=lambda symbol, name, max_items, request_timeout: [],
         )
 
         self.assertEqual(metadata["status"], "OK")
@@ -5230,9 +5231,86 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(list(metadata["news"].columns), ["Title", "Source", "Published At", "URL"])
         self.assertEqual(metadata["news"].iloc[0]["Title"], "AAA shares rise after guidance update")
         self.assertNotIn("Body", metadata["news"].columns)
+        self.assertEqual(list(metadata["korean_news"].columns), ["Title", "Source", "Published At", "Snippet", "URL"])
+        self.assertNotIn("Body", metadata["korean_news"].columns)
         self.assertEqual(list(metadata["sec_filings"].columns), ["Form", "Filing Date", "Title", "URL"])
         self.assertEqual(metadata["sec_filings"].iloc[0]["Form"], "8-K")
         self.assertNotIn("Document", metadata["sec_filings"].columns)
+
+    def test_market_mover_compact_metadata_fetcher_adds_korean_news_metadata_lane(self) -> None:
+        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+
+        def korean_news_fetcher(
+            symbol: str,
+            name: str | None,
+            max_items: int,
+            request_timeout: float,
+        ) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(name, "AAA Corp")
+            self.assertEqual(max_items, 2)
+            self.assertGreater(request_timeout, 0)
+            return [
+                {
+                    "title": "<b>AAA</b> 주가 급등",
+                    "originallink": "https://news.example.kr/aaa-original",
+                    "link": "https://n.news.naver.com/article/001/0001",
+                    "description": "<b>AAA</b>가 실적 발표 이후 상승했다는 기사 패시지입니다.",
+                    "pubDate": "Sat, 06 Jun 2026 09:15:00 +0900",
+                    "body": "Korean article body must not enter compact metadata",
+                }
+            ]
+
+        metadata = fetch_market_mover_compact_metadata(
+            "aaa",
+            name="AAA Corp",
+            max_news=0,
+            max_korean_news=2,
+            max_filings=0,
+            news_fetcher=lambda symbol, max_items: [],
+            korean_news_fetcher=korean_news_fetcher,
+            sec_fetcher=lambda symbol, max_items, user_agent, request_timeout: [],
+        )
+
+        self.assertEqual(metadata["status"], "OK")
+        korean_news = metadata["korean_news"]
+        self.assertEqual(list(korean_news.columns), ["Title", "Source", "Published At", "Snippet", "URL"])
+        self.assertEqual(korean_news.iloc[0]["Title"], "AAA 주가 급등")
+        self.assertEqual(korean_news.iloc[0]["URL"], "https://news.example.kr/aaa-original")
+        self.assertEqual(korean_news.iloc[0]["Source"], "news.example.kr")
+        self.assertIn("실적 발표 이후 상승", korean_news.iloc[0]["Snippet"])
+        self.assertNotIn("<b>", korean_news.iloc[0]["Title"])
+        self.assertNotIn("Body", korean_news.columns)
+
+    def test_market_mover_compact_metadata_fetcher_treats_korean_news_as_optional_when_unconfigured(self) -> None:
+        from unittest.mock import patch
+
+        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+
+        with patch.dict(
+            "os.environ",
+            {"NAVER_SEARCH_CLIENT_ID": "", "NAVER_SEARCH_CLIENT_SECRET": ""},
+            clear=False,
+        ):
+            metadata = fetch_market_mover_compact_metadata(
+                "AAA",
+                news_fetcher=lambda symbol, max_items: [
+                    {
+                        "title": "AAA shares rise",
+                        "publisher": "Market Desk",
+                        "published_at": "2026-06-03T13:00:00Z",
+                        "url": "https://example.com/news/aaa",
+                    }
+                ],
+                sec_fetcher=lambda symbol, max_items, user_agent, request_timeout: [],
+            )
+
+        self.assertEqual(metadata["status"], "OK")
+        self.assertTrue(metadata["korean_news"].empty)
+        self.assertIn(
+            "한국어 뉴스 메타데이터 설정 없음: NAVER_SEARCH_CLIENT_ID / NAVER_SEARCH_CLIENT_SECRET",
+            metadata["messages"],
+        )
 
     def test_market_mover_compact_metadata_fetcher_distinguishes_empty_and_failed(self) -> None:
         from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
@@ -5240,11 +5318,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         empty = fetch_market_mover_compact_metadata(
             "AAA",
             news_fetcher=lambda symbol, max_items: [],
+            korean_news_fetcher=lambda symbol, name, max_items, request_timeout: [],
             sec_fetcher=lambda symbol, max_items, user_agent, request_timeout: [],
         )
 
         self.assertEqual(empty["status"], "NO_METADATA")
-        self.assertEqual(empty["messages"], ["AAA에 대해 간단 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."])
+        self.assertEqual(empty["messages"], ["AAA에 대해 간단 뉴스, 한국어 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."])
 
         def failing_news(symbol: str, max_items: int) -> list[dict[str, object]]:
             raise RuntimeError("news timeout")
@@ -5255,6 +5334,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         failed = fetch_market_mover_compact_metadata(
             "AAA",
             news_fetcher=failing_news,
+            korean_news_fetcher=lambda symbol, name, max_items, request_timeout: [],
             sec_fetcher=failing_sec,
         )
 
@@ -5280,6 +5360,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "url": "https://example.com/news/aaa",
                 }
             ],
+            korean_news_fetcher=lambda symbol, name, max_items, request_timeout: [],
             sec_fetcher=sec_timeout,
         )
 
@@ -5291,6 +5372,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def test_market_mover_metadata_status_strip_distinguishes_lookup_states(self) -> None:
         from app.services.overview_market_intelligence import (
             WHY_IT_MOVED_NEWS_COLUMNS,
+            WHY_IT_MOVED_KOREAN_NEWS_COLUMNS,
             WHY_IT_MOVED_SEC_COLUMNS,
             build_market_mover_metadata_not_requested_state,
             build_market_mover_metadata_status_strip,
@@ -5303,6 +5385,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(not_requested["lookup"]["value"], "조회 전")
         self.assertEqual(not_requested["lookup"]["tone"], "neutral")
         self.assertEqual(not_requested["news"]["value"], "조회 전")
+        self.assertEqual(not_requested["korean_news"]["value"], "조회 전")
         self.assertEqual(not_requested["sec"]["value"], "조회 전")
         self.assertEqual(not_requested["storage"]["label"], "저장 경계")
         self.assertEqual(not_requested["storage"]["value"], "세션 전용")
@@ -5315,6 +5398,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     [{"Title": "AAA moves", "Source": "Desk", "Published At": "2026-06-04", "URL": "https://example.com"}],
                     columns=WHY_IT_MOVED_NEWS_COLUMNS,
                 ),
+                "korean_news": pd.DataFrame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
                 "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
                 "messages": ["SEC 메타데이터 조회 실패: timeout"],
             }
@@ -5322,17 +5406,36 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(partial["lookup"]["value"], "부분 완료")
         self.assertEqual(partial["lookup"]["tone"], "warning")
         self.assertEqual(partial["news"]["value"], "1건")
+        self.assertEqual(partial["korean_news"]["value"], "0건")
         self.assertEqual(partial["sec"]["value"], "실패")
         self.assertEqual(partial["fetched_at"]["value"], "2026-06-04T01:02:03Z")
+
+        korean_failed = build_market_mover_metadata_status_strip(
+            {
+                "status": "PARTIAL",
+                "fetched_at_utc": "2026-06-04T01:02:03Z",
+                "news": pd.DataFrame(
+                    [{"Title": "AAA moves", "Source": "Desk", "Published At": "2026-06-04", "URL": "https://example.com"}],
+                    columns=WHY_IT_MOVED_NEWS_COLUMNS,
+                ),
+                "korean_news": pd.DataFrame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
+                "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
+                "messages": ["한국어 뉴스 메타데이터 조회 실패: timeout"],
+            }
+        )
+        self.assertEqual(korean_failed["korean_news"]["value"], "실패")
+        self.assertEqual(korean_failed["korean_news"]["tone"], "error")
 
         failed = build_market_mover_metadata_status_strip(
             {
                 "status": "FAILED",
                 "fetched_at_utc": "2026-06-04T01:02:03Z",
                 "news": pd.DataFrame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+                "korean_news": pd.DataFrame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
                 "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
                 "messages": [
                     "뉴스 메타데이터 조회 실패: timeout",
+                    "한국어 뉴스 메타데이터 조회 실패: timeout",
                     "SEC 메타데이터 조회 실패: timeout",
                 ],
             }
@@ -5340,6 +5443,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(failed["lookup"]["value"], "실패")
         self.assertEqual(failed["lookup"]["tone"], "error")
         self.assertEqual(failed["news"]["value"], "실패")
+        self.assertEqual(failed["korean_news"]["value"], "실패")
         self.assertEqual(failed["sec"]["value"], "실패")
 
         no_metadata = build_market_mover_metadata_status_strip(
@@ -5347,13 +5451,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "status": "NO_METADATA",
                 "fetched_at_utc": "2026-06-04T01:02:03Z",
                 "news": pd.DataFrame([], columns=WHY_IT_MOVED_NEWS_COLUMNS),
+                "korean_news": pd.DataFrame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
                 "sec_filings": pd.DataFrame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
-                "messages": ["AAA에 대해 간단 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."],
+                "messages": ["AAA에 대해 간단 뉴스, 한국어 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."],
             }
         )
         self.assertEqual(no_metadata["lookup"]["value"], "메타데이터 없음")
         self.assertEqual(no_metadata["lookup"]["tone"], "warning")
         self.assertEqual(no_metadata["news"]["value"], "0건")
+        self.assertEqual(no_metadata["korean_news"]["value"], "0건")
         self.assertEqual(no_metadata["sec"]["value"], "0건")
 
     def test_market_mover_sec_filings_sort_by_form_priority_deterministically(self) -> None:
@@ -5448,6 +5554,29 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("열기", config)
         self.assertEqual(config["열기"]["type_config"]["type"], "link")
         self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
+
+    def test_market_mover_korean_news_display_model_keeps_snippet_and_clickable_open_link(self) -> None:
+        from app.web.overview_dashboard import _market_mover_metadata_column_config, _market_mover_open_link_frame
+
+        frame = pd.DataFrame(
+            [
+                {
+                    "Title": "AAA 주가 급등",
+                    "Source": "news.example.kr",
+                    "Published At": "Sat, 06 Jun 2026 09:15:00 +0900",
+                    "Snippet": "실적 발표 이후 상승했다는 기사 패시지입니다.",
+                    "URL": "https://news.example.kr/aaa-original",
+                }
+            ]
+        )
+
+        display = _market_mover_open_link_frame(frame, ["Title", "Source", "Published At", "Snippet", "Open"])
+        config = _market_mover_metadata_column_config()
+
+        self.assertEqual(list(display.columns), ["제목", "출처", "게시 시각", "단서", "열기"])
+        self.assertEqual(display.iloc[0]["단서"], "실적 발표 이후 상승했다는 기사 패시지입니다.")
+        self.assertEqual(display.iloc[0]["열기"], "https://news.example.kr/aaa-original")
+        self.assertEqual(config["열기"]["type_config"]["type"], "link")
 
     def test_market_mover_research_link_tables_share_clickable_url_config(self) -> None:
         from app.web.overview_dashboard import _market_mover_external_search_table_model

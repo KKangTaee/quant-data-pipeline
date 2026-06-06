@@ -3434,6 +3434,7 @@ MARKET_MOVER_UI_LABELS = {
     "Purpose": "용도",
     "Title": "제목",
     "Published At": "게시 시각",
+    "Snippet": "단서",
     "Form": "양식",
     "Filing Date": "공시일",
 }
@@ -3657,6 +3658,8 @@ def _market_mover_lane_failed(messages: list[str], provider: str) -> bool:
     normalized = str(provider or "").strip().lower()
     prefixes = {
         "news": ("news metadata lookup failed:", "뉴스 메타데이터 조회 실패:"),
+        "korean news": ("korean news metadata lookup failed:", "한국어 뉴스 메타데이터 조회 실패:"),
+        "korean_news": ("korean news metadata lookup failed:", "한국어 뉴스 메타데이터 조회 실패:"),
         "sec": ("sec metadata lookup failed:", "sec 메타데이터 조회 실패:"),
     }.get(normalized, (f"{normalized} metadata lookup failed:",))
     return any(message.lower().startswith(prefix) for message in messages for prefix in prefixes)
@@ -3697,6 +3700,9 @@ def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd
     news = metadata.get("news")
     if not isinstance(news, pd.DataFrame):
         news = pd.DataFrame(columns=["Title", "Source", "Published At", "URL"])
+    korean_news = metadata.get("korean_news")
+    if not isinstance(korean_news, pd.DataFrame):
+        korean_news = pd.DataFrame(columns=["Title", "Source", "Published At", "Snippet", "URL"])
     sec_filings = metadata.get("sec_filings")
     if isinstance(sec_filings, pd.DataFrame):
         sec_filings = sort_market_mover_sec_filings_by_form_priority(sec_filings)
@@ -3711,6 +3717,14 @@ def _render_market_mover_investigation_leads(metadata: dict[str, Any], links: pd
         ["Title", "Source", "Published At", "Open"],
         failed=_market_mover_lane_failed(messages, "News"),
         empty_message=not_requested_message if status == "NOT_REQUESTED" else "간단 뉴스 메타데이터가 반환되지 않았습니다.",
+    )
+    _render_market_mover_metadata_lane(
+        "한국어 뉴스",
+        "네이버 뉴스 검색 metadata/snippet만 표시합니다. 기사 본문, AI 요약, 감성 점수, 원인 판정은 수집하지 않습니다.",
+        korean_news,
+        ["Title", "Source", "Published At", "Snippet", "Open"],
+        failed=_market_mover_lane_failed(messages, "Korean News"),
+        empty_message=not_requested_message if status == "NOT_REQUESTED" else "한국어 뉴스 메타데이터가 반환되지 않았습니다.",
     )
     _render_market_mover_metadata_lane(
         "SEC 공시",
@@ -3791,7 +3805,10 @@ def _render_market_mover_why_it_moved_panel(
     status_container = st.container()
     if st.button("간단 메타데이터 조회", key=f"overview_market_mover_why_it_moved_fetch_{metadata_key}"):
         with st.spinner(f"{identity.get('Symbol') or selected.get('symbol')} 간단 메타데이터를 조회하는 중..."):
-            current_metadata = fetch_market_mover_compact_metadata(str(identity.get("Symbol") or selected.get("symbol") or ""))
+            current_metadata = fetch_market_mover_compact_metadata(
+                str(identity.get("Symbol") or selected.get("symbol") or ""),
+                name=str(identity.get("Name") or selected.get("name") or ""),
+            )
             metadata_store[metadata_key] = current_metadata
             st.session_state[metadata_store_key] = metadata_store
     with status_container:

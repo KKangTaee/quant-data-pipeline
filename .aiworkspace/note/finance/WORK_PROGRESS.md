@@ -31,6 +31,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-06 - Market Movers Why It Moved Korean News Metadata
+- Added a `한국어 뉴스` lane to `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` while keeping SEC filings table-only after the rollback.
+- `간단 메타데이터 조회` now includes Naver News Search API metadata/snippet when credentials are configured; missing credentials show setup guidance and do not fail the whole lookup.
+- Boundaries remain manual/session-only: no article body, AI summary, sentiment, catalyst classifier, DB schema, registry JSONL, or saved JSONL write path was added.
+- Verification and Browser QA evidence are in the task `RUNS.md`; screenshot `why-it-moved-korean-news-metadata-qa-fresh-20260606.png` remains generated/untracked.
+
 ### 2026-06-04 - Market Movers Why It Moved V1.6 UX Pass
 - Implemented `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` V1.6 investigation board.
 - `Overview > Market Movers > Why It Moved` now shows movement summary header, metadata status strip, button-only compact metadata fetch, and `Investigation Leads` sections for News / SEC / collapsed External Searches.
