@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Overview Market Sentiment V1 3차
+- Implemented 3차 in `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/`.
+- CNN Fear & Greed / AAII market sentiment context overlay now appears in `Backtest > Final Review` and `Operations > Portfolio Monitoring` as a read-only market backdrop, sharing the same DB-backed read model used by Practical Validation.
+- Boundary remains context-only: no selected-route gate change, monitoring signal, registry rewrite, saved setup mutation, live approval, broker order, account sync, or auto rebalance.
+- Verification closeout details are in the task `RUNS.md`.
+
 ### 2026-06-05 - Overview Market Sentiment V1
 - Completed `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/` 1차 scope.
 - CNN Fear & Greed and AAII Sentiment Survey now collect into `finance_meta.macro_series_observation`; actual smoke wrote 348 rows: CNN 260, AAII 88.

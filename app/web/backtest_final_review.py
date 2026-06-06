@@ -15,6 +15,7 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_decision_record_guide,
     build_saved_final_review_decision_review,
 )
+from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
@@ -124,6 +125,109 @@ def _policy_rows_preview(rows: list[dict[str, Any]], *, empty_message: str) -> s
     if len(rows) > 2:
         previews.append(f"외 {len(rows) - 2}개")
     return " / ".join(previews)
+
+
+def _format_sentiment_score(value: Any) -> str:
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_sentiment_pct(value: Any) -> str:
+    try:
+        return f"{float(value):.1f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_sentiment_pp(value: Any) -> str:
+    try:
+        return f"{float(value):+.1f} pp"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _render_market_sentiment_context_overlay() -> None:
+    overlay = build_market_sentiment_context_overlay(surface="Final Review")
+    risk_context = dict(overlay.get("risk_context") or {})
+    metrics = dict(overlay.get("metrics") or {})
+    boundary = dict(overlay.get("boundary") or {})
+    tone = str(risk_context.get("tone") or "neutral")
+    render_fr_section_header(
+        eyebrow="Market Context",
+        title="시장 심리 Context Overlay",
+        detail=(
+            "CNN Fear & Greed / AAII sentiment를 Final Review 판단의 배경으로만 보여줍니다. "
+            "Candidate Board priority, selected-route gate, 저장 가능 여부는 기존 evidence owner가 계속 결정합니다."
+        ),
+        tone=tone,
+    )
+    with st.container(border=True):
+        render_fr_action_panel(
+            title=f"{risk_context.get('state_label') or 'Neutral'} · {risk_context.get('source_phase_label') or '-'}",
+            detail=f"{overlay.get('headline') or ''} {overlay.get('summary') or ''}".strip(),
+            route_label="Boundary",
+            route_value="Context only",
+            route_detail=str(boundary.get("message") or ""),
+            route_tone=tone,
+            meta_items=[
+                {"label": "Gate Effect", "value": boundary.get("gate_effect") or "none"},
+                {"label": "Trade Signal", "value": "Disabled"},
+                {"label": "Registry Write", "value": "No"},
+                {"label": "Live Approval", "value": "Disabled"},
+            ],
+        )
+        render_fr_lane_grid(
+            [
+                {
+                    "kicker": "CNN Fear & Greed",
+                    "title": _format_sentiment_score(metrics.get("cnn_fear_greed")),
+                    "status": metrics.get("cnn_rating") or overlay.get("status") or "-",
+                    "detail": "0~100 headline sentiment score",
+                    "tone": tone,
+                },
+                {
+                    "kicker": "AAII Bearish",
+                    "title": _format_sentiment_pct(metrics.get("aaii_bearish")),
+                    "status": "weekly survey",
+                    "detail": "높을수록 개인투자자 비관이 강합니다.",
+                    "tone": "warning" if (metrics.get("aaii_bearish") or 0) and float(metrics.get("aaii_bearish") or 0) >= 35 else "neutral",
+                },
+                {
+                    "kicker": "AAII Bull-Bear Spread",
+                    "title": _format_sentiment_pp(metrics.get("aaii_bull_bear_spread")),
+                    "status": "bullish - bearish",
+                    "detail": "양수는 낙관 우위, 음수는 비관 우위입니다.",
+                    "tone": "positive" if (metrics.get("aaii_bull_bear_spread") or 0) and float(metrics.get("aaii_bull_bear_spread") or 0) > 0 else "warning",
+                },
+                {
+                    "kicker": "Data Confidence",
+                    "title": dict(overlay.get("data_confidence") or {}).get("status") or overlay.get("status") or "-",
+                    "status": f"missing {metrics.get('missing_count') or 0} / stale {metrics.get('stale_count') or 0}",
+                    "detail": dict(overlay.get("data_confidence") or {}).get("detail") or "Stored DB rows",
+                    "tone": dict(overlay.get("data_confidence") or {}).get("tone") or "neutral",
+                },
+            ],
+            min_width=190,
+        )
+        render_badge_strip(
+            [
+                {"label": "PASS / BLOCKER", "value": "No effect", "tone": "neutral"},
+                {"label": "Saved Setup", "value": "No write", "tone": "neutral"},
+                {"label": "Order / Rebalance", "value": "Disabled", "tone": "neutral"},
+                {"label": "Surface", "value": overlay.get("surface") or "Final Review", "tone": "neutral"},
+            ]
+        )
+        warnings = list(overlay.get("warnings") or [])
+        if warnings:
+            st.warning(" / ".join(str(item) for item in warnings))
+        evidence_rows = list(overlay.get("evidence_rows") or [])
+        if evidence_rows:
+            with st.expander("CNN / AAII context evidence", expanded=False):
+                st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
+        if overlay.get("next_action"):
+            st.caption(str(overlay["next_action"]))
 
 
 def _provider_look_through_board(validation: dict[str, Any]) -> dict[str, Any]:
@@ -1227,6 +1331,7 @@ def render_final_review_workspace() -> None:
             },
         ]
     )
+    _render_market_sentiment_context_overlay()
     if hidden_validation_count > 0:
         st.caption(
             f"Practical Validation 저장 기록 {hidden_validation_count}개는 Final Review Gate를 통과하지 않아 검토 대상 목록에서 숨겼습니다."

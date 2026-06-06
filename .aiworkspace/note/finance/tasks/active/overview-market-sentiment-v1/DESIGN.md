@@ -43,9 +43,9 @@ CNN official page JSON / AAII official survey HTML
 
 `app.web.overview_dashboard`는 Sentiment 탭 상단을 `시장 심리 컨텍스트` band로 열고, 그 아래에 `시장 심리 읽기 - 6단계`, 데이터 카드, 드라이버 분해, CNN 구성요소 학습 노트, 다음 확인, 추세 / 구성 / 원천 근거 탭을 순서대로 배치한다.
 
-## Practical Validation 2차 Overlay
+## Practical Validation 2차 / Downstream 3차 Overlay
 
-2차에서는 Overview의 DB-backed sentiment snapshot을 `app.services.backtest_practical_validation.build_market_sentiment_context_overlay()`가 Practical Validation 전용 read model로 변환한다.
+2차에서는 Overview의 DB-backed sentiment snapshot을 `app.services.backtest_practical_validation.build_market_sentiment_context_overlay()`가 Practical Validation용 read model로 변환한다.
 
 ```text
 finance_meta.macro_series_observation
@@ -53,9 +53,13 @@ finance_meta.macro_series_observation
   -> app.services.overview_market_intelligence.build_market_sentiment_snapshot
   -> app.services.backtest_practical_validation.build_market_sentiment_context_overlay
   -> app.web.backtest_practical_validation
+  -> app.web.backtest_final_review
+  -> app.web.final_selected_portfolio_dashboard
 ```
 
-Overlay는 `risk-on / neutral / risk-off` 해석, CNN / AAII 핵심 수치, data confidence, stale / missing warning을 보여준다. 단, `boundary.context_only=true`, `gate_effect=none`, `affects_pass_blocker=false`, `registry_write=false`를 명시해 Final Review Gate, selected-route preflight, validation module status, registry save, saved setup, live approval / order / auto rebalance와 분리한다.
+Overlay는 `risk-on / neutral / risk-off` 해석, CNN / AAII 핵심 수치, data confidence, stale / missing warning을 보여준다. 단, `boundary.context_only=true`, `gate_effect=none`, `affects_pass_blocker=false`, `registry_write=false`, `saved_setup_write=false`, `monitoring_signal=false`를 명시해 Final Review Gate, selected-route preflight, validation module status, registry save, saved setup, monitoring signal, live approval / order / auto rebalance와 분리한다.
+
+3차에서는 같은 read model을 `surface` label과 함께 Final Review Decision Desk 아래, Portfolio Monitoring 진입부에 표시한다. Final Review에서는 Candidate Board priority나 selected-route save readiness를 바꾸지 않고, Portfolio Monitoring에서는 Monitoring Scenario / Review Signals / portfolio saved setup을 바꾸지 않는다.
 
 ## Source Risk
 

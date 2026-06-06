@@ -480,6 +480,72 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
             {"CNN Fear & Greed", "AAII Bearish", "AAII Bull-Bear Spread"},
         )
 
+    def test_market_sentiment_overlay_remains_context_only_on_downstream_surfaces(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed Index",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 26.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 48.5,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+
+        overlays = [
+            service.build_market_sentiment_context_overlay(
+                snapshot_rows=snapshot_rows,
+                history_rows=pd.DataFrame(),
+                today=date(2026, 6, 5),
+                surface=surface,
+            )
+            for surface in ("Final Review", "Operations > Portfolio Monitoring")
+        ]
+
+        self.assertEqual([overlay["surface"] for overlay in overlays], ["Final Review", "Operations > Portfolio Monitoring"])
+        self.assertEqual({overlay["risk_context"]["state"] for overlay in overlays}, {"risk-off"})
+        for overlay in overlays:
+            boundary = overlay["boundary"]
+            self.assertTrue(boundary["context_only"])
+            self.assertEqual(boundary["gate_effect"], "none")
+            self.assertFalse(boundary["affects_pass_blocker"])
+            self.assertFalse(boundary["trade_signal"])
+            self.assertFalse(boundary["live_approval"])
+            self.assertFalse(boundary["broker_order"])
+            self.assertFalse(boundary["auto_rebalance"])
+            self.assertFalse(boundary["registry_write"])
+            self.assertFalse(boundary["saved_setup_write"])
+            self.assertFalse(boundary["monitoring_signal"])
+            self.assertIn(overlay["surface"], boundary["message"])
+
     def test_source_handoff_without_persistence_is_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation as service
 

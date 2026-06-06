@@ -861,7 +861,7 @@ def _format_pp(value: Any) -> str:
 
 
 def _render_market_sentiment_context_overlay() -> None:
-    overlay = build_market_sentiment_context_overlay()
+    overlay = build_market_sentiment_context_overlay(surface="Practical Validation")
     risk_context = dict(overlay.get("risk_context") or {})
     metrics = dict(overlay.get("metrics") or {})
     boundary = dict(overlay.get("boundary") or {})

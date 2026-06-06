@@ -24,6 +24,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Sentiment context can follow the selection flow without becoming a gate
+- User request:
+  - 사용자가 Overview Market Sentiment V1의 3단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 2차 Practical Validation overlay를 넘어 Final Review와 Portfolio Monitoring에서도 CNN Fear & Greed / AAII sentiment를 현재 시장 배경으로 보여주되, 판단 / 저장 / 운영 경계는 바꾸지 않는다.
+- Analysis result:
+  - Final Review의 Decision Desk 아래와 Portfolio Monitoring 진입부가 가장 자연스럽다. 두 위치 모두 이미 gate / monitoring owner가 분리되어 있어 sentiment를 별도 read-only overlay로 넣으면 selected-route gate, Monitoring Scenario, saved setup, registry write와 분리할 수 있다.
+- Follow-up:
+  - `build_market_sentiment_context_overlay(surface=...)` contract에 `saved_setup_write=false`, `monitoring_signal=false`를 추가하고 두 화면에 context-only UI를 연결한다. 이 context는 PASS/BLOCKER, live approval, order, broker/account sync, auto rebalance가 아니다.
+
 ### 2026-06-05 - Sentiment tab should explain context before showing raw evidence
 - User request:
   - 사용자가 CNN Fear & Greed / AAII 비관론 노출이 prototype card처럼 보이므로, 지금이 공포인지 탐욕인지, 비관론 수준이 어떤지, 그래서 시장 상황을 어떻게 읽어야 하는지 단계별 context로 설명해 달라고 요청함.

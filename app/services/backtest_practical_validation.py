@@ -122,8 +122,9 @@ def build_market_sentiment_context_overlay(
     snapshot_rows: pd.DataFrame | None = None,
     history_rows: pd.DataFrame | None = None,
     today: date | None = None,
+    surface: str = "Practical Validation",
 ) -> dict[str, Any]:
-    """Build a read-only Practical Validation overlay from stored CNN / AAII sentiment."""
+    """Build a read-only market sentiment overlay from stored CNN / AAII sentiment."""
 
     snapshot = build_market_sentiment_snapshot(
         snapshot_rows=snapshot_rows,
@@ -134,8 +135,10 @@ def build_market_sentiment_context_overlay(
     coverage = dict(snapshot.get("coverage") or {})
     risk_context = _sentiment_risk_context(analysis)
     evidence_rows = _sentiment_evidence_rows(snapshot.get("rows"))
+    surface_label = str(surface or "Practical Validation").strip() or "Practical Validation"
     return {
         "title": "Market Sentiment Context Overlay",
+        "surface": surface_label,
         "status": str(snapshot.get("status") or "MISSING"),
         "risk_context": risk_context,
         "headline": str(analysis.get("headline") or "시장 심리 context를 확인할 수 없습니다."),
@@ -153,11 +156,12 @@ def build_market_sentiment_context_overlay(
         "evidence_rows": evidence_rows,
         "warnings": list(snapshot.get("warnings") or []),
         "next_action": (
-            "Sentiment is context only. Keep Final Review Gate, selected-route preflight, and validation modules as the decision owner."
+            f"Sentiment is context only on {surface_label}. Keep Final Review Gate, selected-route preflight, and validation modules as the decision owner."
             if str(snapshot.get("status") or "").upper() == "OK"
             else "Refresh Market Sentiment from Workspace > Overview > Sentiment or Workspace > Ingestion before relying on this context."
         ),
         "boundary": {
+            "surface": surface_label,
             "context_only": True,
             "gate_effect": "none",
             "affects_pass_blocker": False,
@@ -166,8 +170,10 @@ def build_market_sentiment_context_overlay(
             "broker_order": False,
             "auto_rebalance": False,
             "registry_write": False,
+            "saved_setup_write": False,
+            "monitoring_signal": False,
             "message": (
-                "CNN Fear & Greed / AAII sentiment is displayed as market context only. "
+                f"CNN Fear & Greed / AAII sentiment is displayed on {surface_label} as market context only. "
                 "It does not pass, block, approve, order, or auto-rebalance any candidate."
             ),
         },

@@ -23,7 +23,7 @@ Last Verified: 2026-06-02
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current implementation focus: Overview Market Sentiment V1 2차 is implementation complete. `Backtest > Practical Validation` now has a CNN Fear & Greed / AAII market sentiment context overlay for risk-on / neutral / risk-off reference only. It is not a Practical Validation PASS/BLOCKER, selected-route gate input, live approval, broker order, account sync, registry rewrite, saved setup change, or auto rebalance.
+- Current implementation focus: Overview Market Sentiment V1 3차 is implementation complete. CNN Fear & Greed / AAII market sentiment now appears as context-only overlay in `Backtest > Practical Validation`, `Backtest > Final Review`, and `Operations > Portfolio Monitoring`. It is not a Practical Validation PASS/BLOCKER, selected-route gate input, monitoring signal, live approval, broker order, account sync, registry rewrite, saved setup change, or auto rebalance.
 
 ## By Purpose
 

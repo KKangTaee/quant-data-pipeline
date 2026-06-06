@@ -7,6 +7,7 @@
 | Sentiment interpreted as trading signal | Misleading user flow | UI copy and docs keep market-context-only boundary |
 | Interpretation copy feels too decisive | User may read context as forecast / approval | Keep phase language contextual, include driver split and next-check targets, and leave Practical Validation / live trading boundaries unchanged |
 | Practical Validation overlay is mistaken for a gate module | User may think risk-off blocks a candidate or risk-on approves one | Render as a separate context overlay, not a numbered validation step; service output uses `context_only`, `gate_effect=none`, and `registry_write=false` |
+| Downstream overlay is mistaken for selected-route or monitoring signal input | User may think Final Review / Portfolio Monitoring sentiment changes save readiness or scenario signals | Surface overlay below/near command context only, and keep service boundary `saved_setup_write=false`, `monitoring_signal=false`, `registry_write=false`, `gate_effect=none` |
 
 ## Resolved During QA
 

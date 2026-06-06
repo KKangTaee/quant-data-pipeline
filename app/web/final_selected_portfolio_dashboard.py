@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from app.services.backtest_evidence_read_model import build_decision_dossier
+from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_dashboard_handoff_checklist_table,
@@ -201,6 +202,27 @@ def _format_pct(value: Any, *, default: str = "-") -> str:
     if pd.isna(numeric):
         return default
     return f"{numeric:.2%}"
+
+
+def _format_sentiment_score(value: Any) -> str:
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_sentiment_pct(value: Any) -> str:
+    try:
+        return f"{float(value):.1f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_sentiment_pp(value: Any) -> str:
+    try:
+        return f"{float(value):+.1f} pp"
+    except (TypeError, ValueError):
+        return "-"
 
 
 def _format_money(value: Any, *, default: str = "-") -> str:
@@ -778,6 +800,79 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
             "tone": "neutral",
         },
     ]
+
+
+def _render_market_sentiment_context_overlay() -> None:
+    overlay = build_market_sentiment_context_overlay(surface="Operations > Portfolio Monitoring")
+    risk_context = dict(overlay.get("risk_context") or {})
+    metrics = dict(overlay.get("metrics") or {})
+    boundary = dict(overlay.get("boundary") or {})
+    tone = str(risk_context.get("tone") or "neutral")
+
+    with st.container(border=True):
+        st.markdown("#### 시장 심리 Context Overlay")
+        st.caption(
+            "CNN Fear & Greed / AAII sentiment를 현재 모니터링 화면의 시장 배경으로만 보여줍니다. "
+            "Monitoring Scenario, Review Signal, saved setup, broker order, auto rebalance에는 연결되지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {"label": "Risk Context", "value": risk_context.get("state_label") or "Neutral", "tone": tone},
+                {"label": "Source Phase", "value": risk_context.get("source_phase_label") or "-", "tone": tone},
+                {"label": "Boundary", "value": "Context only", "tone": "neutral"},
+                {"label": "Monitoring Signal", "value": "Disabled", "tone": "neutral"},
+                {"label": "Saved Setup", "value": "No write", "tone": "neutral"},
+            ]
+        )
+        st.caption(f"{overlay.get('headline') or ''} {overlay.get('summary') or ''}".strip())
+        _render_info_card_grid(
+            [
+                {
+                    "title": "CNN Fear & Greed",
+                    "value": _format_sentiment_score(metrics.get("cnn_fear_greed")),
+                    "detail": metrics.get("cnn_rating") or overlay.get("status") or "-",
+                    "tone": tone,
+                },
+                {
+                    "title": "AAII Bearish",
+                    "value": _format_sentiment_pct(metrics.get("aaii_bearish")),
+                    "detail": "weekly survey",
+                    "tone": "warning" if (metrics.get("aaii_bearish") or 0) and float(metrics.get("aaii_bearish") or 0) >= 35 else "neutral",
+                },
+                {
+                    "title": "AAII Bull-Bear Spread",
+                    "value": _format_sentiment_pp(metrics.get("aaii_bull_bear_spread")),
+                    "detail": "bullish - bearish",
+                    "tone": "positive" if (metrics.get("aaii_bull_bear_spread") or 0) and float(metrics.get("aaii_bull_bear_spread") or 0) > 0 else "warning",
+                },
+                {
+                    "title": "Data Confidence",
+                    "value": dict(overlay.get("data_confidence") or {}).get("status") or overlay.get("status") or "-",
+                    "detail": f"missing {metrics.get('missing_count') or 0} / stale {metrics.get('stale_count') or 0}",
+                    "tone": dict(overlay.get("data_confidence") or {}).get("tone") or "neutral",
+                },
+            ],
+            min_width=190,
+        )
+        render_badge_strip(
+            [
+                {"label": "PASS / BLOCKER", "value": "No effect", "tone": "neutral"},
+                {"label": "Registry Write", "value": "No", "tone": "neutral"},
+                {"label": "Order / Rebalance", "value": "Disabled", "tone": "neutral"},
+                {"label": "Surface", "value": overlay.get("surface") or "Portfolio Monitoring", "tone": "neutral"},
+            ]
+        )
+        if boundary.get("message"):
+            st.caption(str(boundary["message"]))
+        warnings = list(overlay.get("warnings") or [])
+        if warnings:
+            st.warning(" / ".join(str(item) for item in warnings))
+        evidence_rows = list(overlay.get("evidence_rows") or [])
+        if evidence_rows:
+            with st.expander("CNN / AAII context evidence", expanded=False):
+                st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
+        if overlay.get("next_action"):
+            st.caption(str(overlay["next_action"]))
 
 
 def _render_empty_state(summary: dict[str, Any]) -> None:
@@ -3309,6 +3404,7 @@ def render_final_selected_portfolio_dashboard_page() -> None:
         "Selected Portfolio Dashboard: Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
         "가상 시나리오와 review signal로 모니터링 이후 상태를 확인합니다."
     )
+    _render_market_sentiment_context_overlay()
 
     dashboard = load_final_selected_portfolio_dashboard()
     summary = dict(dashboard.get("summary") or {})
