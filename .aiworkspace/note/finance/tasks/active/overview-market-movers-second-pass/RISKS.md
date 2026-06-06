@@ -18,3 +18,4 @@
 - V1.8 bounded table previews can miss important rows, footnotes, hidden iXBRL context, or table structure in large filings. They should help the user decide where to open the official SEC document, not replace the document.
 - V1.8 exhibit extraction is conservative and table/link based. If a filing uses unusual exhibit markup, no exhibit clue may appear even when an exhibit exists.
 - Korean news metadata is intentionally deferred. Adding it without API credential / quota / source policy could create scraping, licensing, freshness, and storage ambiguity.
+- 2026-06-06 rollback: V1.7 / V1.8 preview-specific risks are inactive while the SEC lane is table-only. The remaining product risk is expectation mismatch: users may expect 10-Q / 10-K financial-statement tables from a generic SEC metadata row, so any future table preview should be explicitly designed and labeled as a separate periodic-filing / XBRL feature.

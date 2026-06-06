@@ -4671,3 +4671,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Digest는 선택 filing 1건의 8-K Item / Exhibit 단서와 10-Q·10-K section / bounded table 단서를 session-only로 보여준다.
   - 기존 SEC metadata table, official SEC link, button-triggered fetch, no DB / no JSONL / no body / no AI summary / no classifier boundary는 유지했다.
   - QA screenshot은 `why-it-moved-v18-sec-digest-qa-20260605.png`로 생성했고 generated artifact라 커밋 대상이 아니다.
+- Overview Market Movers SEC preview rollback:
+  - 사용자 검토 후 V1.7 selected-filing preview와 V1.8 `공시 Digest`를 table 아래 추가물로 보고 rollback했다.
+  - 현재 `Why It Moved > SEC 공시`는 compact metadata table(`양식 / 공시일 / 제목 / 열기`)과 official SEC clickable link만 유지한다.
+  - 후속 재무제표 표 preview는 8-K digest가 아니라 별도 10-Q / 10-K 또는 SEC XBRL/companyfacts feature로 설계해야 한다.

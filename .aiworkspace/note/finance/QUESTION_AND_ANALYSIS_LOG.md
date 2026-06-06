@@ -7268,3 +7268,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: V1.7 selected-filing preview를 유지하면서 공시 원문 전체 덤프가 아닌 manual investigation용 digest를 추가해야 함.
 - Analysis result: SEC / filing-reader UX의 핵심은 metadata list, selected document reader, section / snippet / exhibit jump다. 현재 범위에서는 8-K Item / Exhibit, 10-Q·10-K TOC / MD&A / Risk Factors / Financial Statements / bounded table clues만 채택한다.
 - Follow-up: V1.8 digest를 구현했다. 한국 뉴스 metadata는 credentialed provider policy 후속으로 남겼고, DB schema / registry / saved JSONL / filing body / AI summary / sentiment / automatic cause judgement는 추가하지 않았다.
+
+### 2026-06-06 - Why It Moved SEC preview / Digest를 table-only로 되돌린다
+
+- User request: SEC 공시 섹션에서 기존 제목과 `Form / Filing Date / Title / Open` 표는 남기고, 그 아래 추가했던 원문 미리보기 / Digest를 rollback해 다시 제대로 파악하고 싶다고 요청함.
+- Interpreted goal: V1.7 / V1.8 selected-filing preview 기능을 현재 제품 surface에서 제거하고, SEC lane을 compact metadata table + official SEC link 상태로 되돌려야 함.
+- Analysis result: 이전 Digest는 8-K / 10-Q / 10-K의 의미를 다시 정리하기 전 product UX로는 너무 앞서 나간 형태다. 재무제표 표 preview는 별도 10-Q / 10-K 또는 SEC XBRL/companyfacts feature로 재설계하는 것이 맞다.
+- Follow-up: 서비스 / UI preview fetch·parse·digest helper와 contract tests를 제거하고 table-only rollback contract로 대체했다. 상세 실행과 검증은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`를 본다.
