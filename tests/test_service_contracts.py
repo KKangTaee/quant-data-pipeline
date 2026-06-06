@@ -399,6 +399,87 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
 
 
 class PracticalValidationServiceContractTests(unittest.TestCase):
+    def test_market_sentiment_overlay_is_context_only_for_practical_validation(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed Index",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 62.4,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 28.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bull-Bear Spread",
+                    "category": "sentiment_survey",
+                    "units": "percentage_point",
+                    "value": 12.5,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+
+        overlay = service.build_market_sentiment_context_overlay(
+            snapshot_rows=snapshot_rows,
+            history_rows=pd.DataFrame(),
+            today=date(2026, 6, 5),
+        )
+
+        self.assertEqual(overlay["status"], "OK")
+        self.assertEqual(overlay["risk_context"]["state"], "risk-on")
+        self.assertEqual(overlay["risk_context"]["source_phase"], "GREED_LEANING")
+        self.assertEqual(overlay["metrics"]["cnn_fear_greed"], 62.4)
+        self.assertEqual(overlay["metrics"]["aaii_bull_bear_spread"], 12.5)
+        self.assertIn("탐욕", overlay["headline"])
+        self.assertTrue(overlay["boundary"]["context_only"])
+        self.assertEqual(overlay["boundary"]["gate_effect"], "none")
+        self.assertFalse(overlay["boundary"]["affects_pass_blocker"])
+        self.assertFalse(overlay["boundary"]["trade_signal"])
+        self.assertFalse(overlay["boundary"]["live_approval"])
+        self.assertFalse(overlay["boundary"]["broker_order"])
+        self.assertFalse(overlay["boundary"]["auto_rebalance"])
+        self.assertFalse(overlay["boundary"]["registry_write"])
+        self.assertEqual(
+            {row["Metric"] for row in overlay["evidence_rows"]},
+            {"CNN Fear & Greed", "AAII Bearish", "AAII Bull-Bear Spread"},
+        )
+
     def test_source_handoff_without_persistence_is_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation as service
 

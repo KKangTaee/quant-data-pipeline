@@ -6,6 +6,7 @@
 | AAII bot protection blocks default Python HTML access | AAII collection partial / failed | Use official HTML table with browser-like document headers and `curl_cffi` browser impersonation; expose failure instead of fabricating values |
 | Sentiment interpreted as trading signal | Misleading user flow | UI copy and docs keep market-context-only boundary |
 | Interpretation copy feels too decisive | User may read context as forecast / approval | Keep phase language contextual, include driver split and next-check targets, and leave Practical Validation / live trading boundaries unchanged |
+| Practical Validation overlay is mistaken for a gate module | User may think risk-off blocks a candidate or risk-on approves one | Render as a separate context overlay, not a numbered validation step; service output uses `context_only`, `gate_effect=none`, and `registry_write=false` |
 
 ## Resolved During QA
 

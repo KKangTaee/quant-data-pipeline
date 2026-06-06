@@ -9,6 +9,7 @@ import streamlit as st
 from app.services.backtest_practical_validation import (
     VALIDATION_PROFILE_OPTIONS,
     VALIDATION_PROFILE_QUESTIONS,
+    build_market_sentiment_context_overlay,
     build_provider_gap_collection_plan,
     build_provider_gap_rows,
     build_practical_validation_result,
@@ -843,6 +844,94 @@ def _board_summary_cards(validation_result: dict[str, Any], board_ids: list[str]
             }
         )
     return cards
+
+
+def _format_pct(value: Any) -> str:
+    try:
+        return f"{float(value):.1f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _format_pp(value: Any) -> str:
+    try:
+        return f"{float(value):+.1f} pp"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _render_market_sentiment_context_overlay() -> None:
+    overlay = build_market_sentiment_context_overlay()
+    risk_context = dict(overlay.get("risk_context") or {})
+    metrics = dict(overlay.get("metrics") or {})
+    boundary = dict(overlay.get("boundary") or {})
+    tone = str(risk_context.get("tone") or "neutral")
+    render_pv_section_header(
+        eyebrow="Context Overlay",
+        title="시장 심리 Context Overlay",
+        detail=(
+            "CNN Fear & Greed / AAII sentiment를 현재 후보 검증의 참고 맥락으로만 보여줍니다. "
+            "이 값은 PASS, BLOCKER, live approval, order, auto rebalance에 연결되지 않습니다."
+        ),
+        tone=tone,
+    )
+    render_pv_alert_panel(
+        title=f"{risk_context.get('state_label') or 'Neutral'} · {risk_context.get('source_phase_label') or '-'}",
+        detail=f"{overlay.get('headline') or ''} {overlay.get('summary') or ''}".strip(),
+        tone=tone,
+    )
+    render_badge_strip(
+        [
+            {"label": "Boundary", "value": "Context only", "tone": "neutral"},
+            {"label": "Gate Effect", "value": boundary.get("gate_effect") or "none", "tone": "neutral"},
+            {"label": "Trade Signal", "value": "Disabled", "tone": "neutral"},
+            {"label": "Registry Write", "value": "No", "tone": "neutral"},
+        ]
+    )
+    render_pv_card_grid(
+        [
+            {
+                "kicker": "CNN Fear & Greed",
+                "title": "-" if metrics.get("cnn_fear_greed") is None else f"{float(metrics['cnn_fear_greed']):.1f}",
+                "status": metrics.get("cnn_rating") or overlay.get("status") or "-",
+                "detail": "0~100 headline sentiment score",
+                "tone": tone,
+            },
+            {
+                "kicker": "AAII Bearish",
+                "title": _format_pct(metrics.get("aaii_bearish")),
+                "status": "weekly survey",
+                "detail": "높을수록 개인투자자 비관이 강합니다.",
+                "tone": "warning" if (metrics.get("aaii_bearish") or 0) and float(metrics.get("aaii_bearish") or 0) >= 35 else "neutral",
+            },
+            {
+                "kicker": "AAII Bull-Bear Spread",
+                "title": _format_pp(metrics.get("aaii_bull_bear_spread")),
+                "status": "bullish - bearish",
+                "detail": "양수는 낙관 우위, 음수는 비관 우위입니다.",
+                "tone": "positive" if (metrics.get("aaii_bull_bear_spread") or 0) and float(metrics.get("aaii_bull_bear_spread") or 0) > 0 else "warning",
+            },
+            {
+                "kicker": "Data Confidence",
+                "title": dict(overlay.get("data_confidence") or {}).get("status") or overlay.get("status") or "-",
+                "status": f"missing {metrics.get('missing_count') or 0} / stale {metrics.get('stale_count') or 0}",
+                "detail": dict(overlay.get("data_confidence") or {}).get("detail") or "Stored DB rows",
+                "tone": dict(overlay.get("data_confidence") or {}).get("tone") or "neutral",
+            },
+        ],
+        min_width=190,
+    )
+    if boundary.get("message"):
+        st.caption(str(boundary["message"]))
+    warnings = list(overlay.get("warnings") or [])
+    if warnings:
+        st.warning(" / ".join(str(item) for item in warnings))
+    evidence_rows = list(overlay.get("evidence_rows") or [])
+    if evidence_rows:
+        with st.expander("CNN / AAII context evidence", expanded=False):
+            st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
+    if overlay.get("next_action"):
+        st.caption(str(overlay["next_action"]))
 
 
 def _replay_status_from_result(replay_result: dict[str, Any] | None) -> str:
@@ -2184,6 +2273,9 @@ def render_practical_validation_workspace() -> None:
         if source_id in existing_ids:
             continue
         selectable_sources.append(dict(row))
+
+    with st.container(border=True):
+        _render_market_sentiment_context_overlay()
 
     if not selectable_sources:
         st.info("아직 Practical Validation으로 보낸 current selection source가 없습니다.")

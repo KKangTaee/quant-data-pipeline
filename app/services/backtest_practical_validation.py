@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
+
+import pandas as pd
 
 from app.jobs.ingestion_jobs import (
     run_collect_etf_holdings_exposure,
@@ -19,6 +22,7 @@ from app.services.backtest_practical_validation_source import (
     build_validation_profile,
     source_components_dataframe,
 )
+from app.services.overview_market_intelligence import build_market_sentiment_snapshot
 from app.runtime import append_portfolio_selection_source, append_practical_validation_result
 from finance.data.etf_provider import (
     EXPOSURE_PROVIDER_SOURCES,
@@ -65,6 +69,109 @@ def build_practical_validation_result(
         validation_profile=validation_profile,
         replay_result=replay_result,
     )
+
+
+def _sentiment_risk_context(analysis: dict[str, Any]) -> dict[str, str]:
+    phase = str(analysis.get("phase") or "DATA_REVIEW").upper()
+    if phase in {"GREED_LEANING", "EUPHORIA_RISK"}:
+        state = "risk-on"
+        state_label = "Risk-on"
+        tone = "positive" if phase == "GREED_LEANING" else "warning"
+    elif phase in {"FEAR_STRESS", "FEAR_LEANING"}:
+        state = "risk-off"
+        state_label = "Risk-off"
+        tone = "danger" if phase == "FEAR_STRESS" else "warning"
+    elif phase in {"MIXED_NEUTRAL", "STALE_REVIEW", "DATA_REVIEW"}:
+        state = "neutral"
+        state_label = "Neutral"
+        tone = "neutral" if phase == "MIXED_NEUTRAL" else "warning"
+    else:
+        state = "neutral"
+        state_label = "Neutral"
+        tone = str(analysis.get("tone") or "neutral")
+    return {
+        "state": state,
+        "state_label": state_label,
+        "source_phase": phase,
+        "source_phase_label": str(analysis.get("phase_label") or "-"),
+        "tone": tone,
+    }
+
+
+def _sentiment_evidence_rows(rows: Any) -> list[dict[str, Any]]:
+    if not isinstance(rows, pd.DataFrame) or rows.empty:
+        return []
+    evidence_rows: list[dict[str, Any]] = []
+    for row in rows.to_dict("records"):
+        metric = str(row.get("Series") or "-")
+        evidence_rows.append(
+            {
+                "Metric": metric,
+                "Value": row.get("Value") or "-",
+                "Label": row.get("Label") or "-",
+                "Observation Date": row.get("Observation Date") or "-",
+                "Status": row.get("Status") or "-",
+                "Source": row.get("Source") or "-",
+            }
+        )
+    return evidence_rows
+
+
+def build_market_sentiment_context_overlay(
+    *,
+    snapshot_rows: pd.DataFrame | None = None,
+    history_rows: pd.DataFrame | None = None,
+    today: date | None = None,
+) -> dict[str, Any]:
+    """Build a read-only Practical Validation overlay from stored CNN / AAII sentiment."""
+
+    snapshot = build_market_sentiment_snapshot(
+        snapshot_rows=snapshot_rows,
+        history_rows=history_rows,
+        today=today,
+    )
+    analysis = dict(snapshot.get("analysis") or {})
+    coverage = dict(snapshot.get("coverage") or {})
+    risk_context = _sentiment_risk_context(analysis)
+    evidence_rows = _sentiment_evidence_rows(snapshot.get("rows"))
+    return {
+        "title": "Market Sentiment Context Overlay",
+        "status": str(snapshot.get("status") or "MISSING"),
+        "risk_context": risk_context,
+        "headline": str(analysis.get("headline") or "시장 심리 context를 확인할 수 없습니다."),
+        "summary": str(analysis.get("summary") or ""),
+        "data_confidence": dict(analysis.get("data_confidence") or {}),
+        "metrics": {
+            "cnn_fear_greed": coverage.get("cnn_score"),
+            "cnn_rating": coverage.get("cnn_rating"),
+            "aaii_bearish": coverage.get("aaii_bearish"),
+            "aaii_bull_bear_spread": coverage.get("aaii_bull_bear_spread"),
+            "source_count": coverage.get("source_count"),
+            "missing_count": coverage.get("missing_count"),
+            "stale_count": coverage.get("stale_count"),
+        },
+        "evidence_rows": evidence_rows,
+        "warnings": list(snapshot.get("warnings") or []),
+        "next_action": (
+            "Sentiment is context only. Keep Final Review Gate, selected-route preflight, and validation modules as the decision owner."
+            if str(snapshot.get("status") or "").upper() == "OK"
+            else "Refresh Market Sentiment from Workspace > Overview > Sentiment or Workspace > Ingestion before relying on this context."
+        ),
+        "boundary": {
+            "context_only": True,
+            "gate_effect": "none",
+            "affects_pass_blocker": False,
+            "trade_signal": False,
+            "live_approval": False,
+            "broker_order": False,
+            "auto_rebalance": False,
+            "registry_write": False,
+            "message": (
+                "CNN Fear & Greed / AAII sentiment is displayed as market context only. "
+                "It does not pass, block, approve, order, or auto-rebalance any candidate."
+            ),
+        },
+    }
 
 
 def save_practical_validation_result(result: dict[str, Any]) -> None:
@@ -381,6 +488,7 @@ __all__ = [
     "PROVIDER_GAP_STATE_PREFIX",
     "VALIDATION_PROFILE_OPTIONS",
     "VALIDATION_PROFILE_QUESTIONS",
+    "build_market_sentiment_context_overlay",
     "build_provider_gap_collection_plan",
     "build_provider_gap_rows",
     "build_practical_validation_result",

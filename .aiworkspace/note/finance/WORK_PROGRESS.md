@@ -4647,3 +4647,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Single Strategy form에 `S&P 500` universe mode를 추가했고 runtime resolver는 `sp500` / `snp500` 입력을 `SP500` managed universe로 해석한다.
   - S&P 500 멤버십 row가 없으면 Top500으로 조용히 대체하지 않고 universe refresh 필요 오류를 반환한다.
   - focused compile / Risk-On service contract tests / DB membership smoke / hygiene check를 통과했다.
+- Overview Market Sentiment V1 2차:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/`에서 Practical Validation sentiment context overlay를 완료했다.
+  - `Backtest > Practical Validation`은 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여주며, `context_only`, `gate_effect=none`, `registry_write=false` 경계를 표시한다.
+  - 기존 Practical Validation Gate / selected-route preflight / registry / saved setup / live approval / order / auto rebalance 경계는 변경하지 않았다.
+  - 검증: service contracts 255 tests, py_compile, `git diff --check`, Browser QA screenshot 완료.

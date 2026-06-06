@@ -7239,3 +7239,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - V1 범위는 `close_based + fixed_pct + Equal Slot`로 제한하고, full trade / scanner detail은 registry가 아니라 generated backtest artifact에 둔다. Macro filter는 futures thermometer의 continuous Mean-Z를 hard filter로 사용한다
 - Follow-up:
   - Core strategy, DB runtime, Single Strategy form, result `Swing Detail`, History replay fields, Compare default runner, focused tests를 구현했다. Browser QA에서 Manual universe input과 `Swing Detail` 결과 탭을 확인했고, full service contract 237 tests도 통과했다. 상세 검증과 남은 risk는 `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`를 확인한다
+
+### 2026-06-06 - Overview Market Sentiment V1 2차를 Practical Validation에 연결한다
+- User request:
+  - CNN Fear & Greed / AAII sentiment를 Practical Validation 화면에 시장 심리 context overlay로 연결하되, trade signal / PASS-BLOCKER / live approval / order / auto rebalance로 쓰지 말라고 요청함
+- Interpreted goal:
+  - 후보 검증자가 현재 시장 심리가 risk-on / neutral / risk-off 중 어디에 가까운지 참고하되, 기존 validation gate와 저장 경계는 유지해야 함
+- Analysis result:
+  - Overlay는 저장된 `macro_series_observation`을 Overview sentiment snapshot으로 읽고 Practical Validation 전용 read model로 변환하는 것이 가장 안전하다. 결과 JSONL에 섞지 않고 `context_only`, `gate_effect=none`, `registry_write=false`를 명시한다
+- Follow-up:
+  - `Backtest > Practical Validation`에 context overlay band를 추가했다. Final Review Gate, selected-route preflight, registry, saved setup, live trading boundary는 변경하지 않았다
