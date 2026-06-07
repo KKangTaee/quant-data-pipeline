@@ -4819,4 +4819,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/reference-contextual-links-v4-20260608/`에서 주요 workflow 화면의 `Reference help` expander를 추가했다.
   - `app/services/reference_contextual_help.py`가 Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring별 guide focus / glossary terms / next checks / boundary를 소유한다.
   - 화면 helper는 read-only entry point이며 Guides / Glossary 링크만 제공하고 validation gate, selected decision, saved setup, provider fetch, broker order, auto rebalance를 바꾸지 않는다.
-  - 남은 흐름은 5차 Reference drift guard / QA polish다.
+  - 5차는 Reference drift guard / QA polish다.
+- Reference Drift Guard / QA Polish V5:
+  - `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`에서 contextual help drift report와 표시 polish를 추가했다.
+  - guard는 Glossary term, Reference link target, duplicate surface key, raw guide focus marker를 Streamlit-free로 점검한다.
+  - Reference 검색 deep-linking, Ingestion / Overview 전체 surface 확장, DB / registry / saved JSONL rewrite는 하지 않았다.

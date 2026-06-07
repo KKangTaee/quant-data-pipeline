@@ -155,13 +155,15 @@ Operations 화면:
 
 ## 현재 Reference Guide 제품 흐름
 
-`Reference > Guides`는 2026-06-08 Reference Center V4 이후 제품 전체 운영 guide로 읽는다.
+`Reference > Guides`는 2026-06-08 Reference Center V5 이후 제품 전체 운영 guide로 읽는다.
 첫 화면은 portfolio-selection 전용 hero가 아니라 task-first `Reference Center`다.
 이 화면은 read-only 안내 surface이며 ingestion job, provider fetch, registry write, saved setup write,
 broker order, live approval, auto rebalance를 직접 실행하지 않는다.
 Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring은 접힌 `Reference help` expander로
 `Guides` / `Glossary` entry point와 현재 화면의 먼저 확인할 항목을 보여준다.
 이 contextual help도 read-only이며 validation gate, selected decision, saved setup, provider fetch를 바꾸지 않는다.
+5차부터 contextual help catalog는 shared Glossary concept dictionary term, Reference link target, surface key duplicate, raw guide focus marker drift를
+Streamlit-free report로 점검한다.
 
 ```text
 Reference > Guides
@@ -198,7 +200,7 @@ Reference Center의 주요 묶음은 아래와 같다.
 | `기록 / 저장 경계` | DB / workflow registry / saved setup / run history / generated artifact를 어떤 화면이 만들고 읽는지 보여준다 |
 | `문제 해결 Playbook` | stale Overview / Futures, ingestion 성공 후 UI stale, provider snapshot missing, Practical Validation `NOT_RUN`, Final Review 후보 미노출, Portfolio Monitoring stale scenario, archive recovery를 증상별로 확인한다. 각 playbook은 check steps와 evidence location을 표시한다 |
 
-4차 contextual help가 붙은 1차 화면은 아래와 같다.
+4차 contextual help가 붙고 5차 drift guard 대상이 된 1차 화면은 아래와 같다.
 
 | 화면 | helper key | 주요 연결 |
 |---|---|---|

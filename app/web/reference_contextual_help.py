@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from html import escape
-
 import streamlit as st
 
 from app.services.reference_contextual_help import get_reference_contextual_help
 
 
 def _markdown_list(items: list[object]) -> str:
-    return "\n".join(f"- {escape(str(item))}" for item in items if str(item or "").strip())
+    return "\n".join(f"- {str(item)}" for item in items if str(item or "").strip())
 
 
 def render_reference_contextual_help(surface_key: str, *, expanded: bool = False) -> None:
@@ -32,8 +30,8 @@ def render_reference_contextual_help(surface_key: str, *, expanded: bool = False
             if not links:
                 st.caption("-")
             for link in links:
-                label = escape(str(link.get("label") or "Reference"))
-                target = escape(str(link.get("target") or "/guides"))
+                label = str(link.get("label") or "Reference")
+                target = str(link.get("target") or "/guides")
                 st.markdown(f"- [{label}]({target})")
 
         next_checks = _markdown_list(list(item.get("next_checks") or []))

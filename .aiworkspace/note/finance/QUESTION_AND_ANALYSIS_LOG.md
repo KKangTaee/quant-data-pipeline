@@ -7529,3 +7529,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 1차 Reference Center의 task card / 요약 표만으로는 부족하므로, 사용자가 실제로 막힌 상황에서 확인 순서, failure state, evidence location을 따라갈 수 있어야 함.
 - Analysis result: 상세 내용은 Streamlit-free catalog에 두고 UI는 선택한 journey / playbook을 렌더링만 하는 구조가 drift와 boundary risk를 줄인다.
 - Follow-up: journey steps / failure states, provider snapshot / ingestion success UI stale / archive recovery playbooks, check steps / evidence locations를 추가했다. Reference는 read-only guide이며 job 실행 / provider fetch / registry write / live trading action은 추가하지 않았다.
+
+### 2026-06-08 - Reference 5차로 drift guard와 QA polish를 추가한다
+
+- User request: 사용자가 Reference 개편 5차 작업 진행을 요청함.
+- Interpreted goal: 4차 contextual links가 붙은 뒤 Glossary term / Reference route boundary와 어긋나지 않도록 자동 점검하고, 화면 guide path 표시를 정리해야 함.
+- Analysis result: guard는 `app/services/reference_contextual_help.py`에 Streamlit-free report로 두고, renderer는 catalog text 표시만 담당하는 것이 UI-engine boundary에 맞다.
+- Follow-up: `build_reference_contextual_help_drift_report()`를 추가하고 raw `>` guide focus copy를 slash path로 정리했다. Reference query deep-linking과 신규 surface 확장은 후속 선택 사항으로 남긴다.

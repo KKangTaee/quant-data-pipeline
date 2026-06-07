@@ -31,7 +31,7 @@
 | `app/web/reference_contextual_help.py` | Backtest Analysis / Practical Validation / Final Review / Operations Console / Portfolio Monitoring에 붙는 read-only Reference help expander render |
 | `app/services/reference_guides_catalog.py` | `Reference > Guides`용 Streamlit-free guide catalog. task cards, journeys, journey steps / failure states, shared status concepts, records map, troubleshooting playbook steps / evidence locations를 제공 |
 | `app/services/reference_glossary_catalog.py` | `Reference > Guides`와 `Reference > Glossary`가 공유하는 Streamlit-free concept dictionary, markdown glossary section parser, search helper |
-| `app/services/reference_contextual_help.py` | 주요 workflow 화면이 공유하는 Streamlit-free contextual Reference help catalog와 surface lookup helper |
+| `app/services/reference_contextual_help.py` | 주요 workflow 화면이 공유하는 Streamlit-free contextual Reference help catalog, surface lookup helper, Glossary / link boundary drift report |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Why It Moved, Sector / Industry, Sentiment, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Market Movers manual investigation panel, Sector / Industry ranking/trend, Sentiment context, Events view routing을 조정. 수집 action은 `app/jobs/overview_actions.py` facade를 호출한다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, cached market intelligence service wrapper |

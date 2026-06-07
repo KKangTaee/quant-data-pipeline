@@ -53,6 +53,21 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
 
         self.assertIsNone(get_reference_contextual_help("unknown_surface"))
 
+    def test_contextual_help_drift_report_matches_glossary_terms_and_links(self) -> None:
+        from app.services.reference_contextual_help import (
+            build_reference_contextual_help_drift_report,
+        )
+
+        report = build_reference_contextual_help_drift_report()
+
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["missing_glossary_terms"], [])
+        self.assertEqual(report["invalid_links"], [])
+        self.assertEqual(report["duplicate_surface_keys"], [])
+        self.assertEqual(report["raw_guide_focus_markers"], [])
+        self.assertGreaterEqual(report["metrics"]["surface_count"], 5)
+        self.assertGreaterEqual(report["metrics"]["glossary_term_count"], 5)
+
 
 if __name__ == "__main__":
     unittest.main()

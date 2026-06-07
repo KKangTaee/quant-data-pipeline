@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-contextual-links-v4-20260608`
+- `reference-drift-guard-qa-polish-v5-20260608`
 
 Latest completed docs cleanup task:
 
@@ -50,7 +50,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-08:
 
-- `tasks/active`: 187 task folders
+- `tasks/active`: 188 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.

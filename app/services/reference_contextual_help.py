@@ -3,6 +3,11 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from app.services.reference_glossary_catalog import get_reference_concept_dictionary
+
+
+ALLOWED_REFERENCE_HELP_TARGETS = {"/guides", "/glossary"}
+
 
 REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
     {
@@ -10,7 +15,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "surface": "Backtest > Backtest Analysis",
         "title": "후보 source를 만들 때 막히면",
         "summary": "Single Strategy와 Portfolio Mix Builder에서 만든 결과가 어떤 다음 단계로 이어지는지 확인합니다.",
-        "guide_focus": "제품 흐름 > Backtest Analysis / Portfolio Selection Journey",
+        "guide_focus": "제품 흐름 / Backtest Analysis / Portfolio Selection Journey",
         "glossary_terms": ["Promotion Policy Signal", "Data Trust", "Saved Portfolio"],
         "next_checks": [
             "Data Trust가 warning이면 Ingestion / System Data Health에서 source 상태를 먼저 확인합니다.",
@@ -31,7 +36,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "surface": "Backtest > Practical Validation",
         "title": "검증 row가 왜 막혔는지 볼 때",
         "summary": "NOT_RUN, REVIEW, BLOCKED 상태가 pass인지 blocker인지 구분하고 evidence owner를 찾습니다.",
-        "guide_focus": "상태 / 용어 > NOT_RUN / REVIEW / BLOCKED, 문제 해결 > Practical Validation NOT_RUN",
+        "guide_focus": "상태 / 용어 / NOT_RUN / REVIEW / BLOCKED, 문제 해결 / Practical Validation NOT_RUN",
         "glossary_terms": ["NOT_RUN", "REVIEW", "BLOCKED", "Provider Coverage"],
         "next_checks": [
             "NOT_RUN은 pass가 아니라 실행되지 않았거나 evidence가 없는 상태입니다.",
@@ -52,7 +57,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "surface": "Backtest > Final Review",
         "title": "모니터링 후보로 저장해도 되는지 볼 때",
         "summary": "selected-route gate, decision record, Selected Dashboard handoff의 의미를 확인합니다.",
-        "guide_focus": "제품 흐름 > Final Review, 상태 / 용어 > Selected-route Gate",
+        "guide_focus": "제품 흐름 / Final Review, 상태 / 용어 / Selected-route Gate",
         "glossary_terms": ["Selected-route Gate", "Provider Coverage", "Data Trust"],
         "next_checks": [
             "Practical Validation Gate를 통과한 후보만 Final Review 검토 대상입니다.",
@@ -73,7 +78,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "surface": "Operations > Operations Console",
         "title": "운영 화면의 우선순위를 볼 때",
         "summary": "Primary Operations와 Archive / Reference의 역할을 구분합니다.",
-        "guide_focus": "제품 흐름 > Archive / Recovery, 기록 경계 > run history / candidate library",
+        "guide_focus": "제품 흐름 / Archive / Recovery, 기록 경계 / run history / candidate library",
         "glossary_terms": ["Saved Portfolio", "Portfolio Monitoring Scenario"],
         "next_checks": [
             "Portfolio Monitoring과 System / Data Health는 primary operations입니다.",
@@ -94,7 +99,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "surface": "Operations > Portfolio Monitoring",
         "title": "모니터링 시나리오가 stale이거나 비어 있을 때",
         "summary": "Final Review selected row, portfolio setup, scenario replay 결과의 차이를 확인합니다.",
-        "guide_focus": "제품 흐름 > Operations > Portfolio Monitoring, 문제 해결 > stale scenario",
+        "guide_focus": "제품 흐름 / Operations / Portfolio Monitoring, 문제 해결 / stale scenario",
         "glossary_terms": ["Portfolio Monitoring Scenario", "Saved Portfolio", "Selected-route Gate"],
         "next_checks": [
             "Final Review에서 저장된 selected decision row가 있는지 확인합니다.",
@@ -123,3 +128,89 @@ def get_reference_contextual_help(surface_key: str) -> dict[str, Any] | None:
         if item["surface_key"] == normalized_key:
             return deepcopy(item)
     return None
+
+
+def _duplicate_surface_keys(catalog: list[dict[str, Any]]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for item in catalog:
+        key = str(item.get("surface_key") or "").strip()
+        if not key:
+            continue
+        if key in seen:
+            duplicates.add(key)
+        seen.add(key)
+    return sorted(duplicates)
+
+
+def build_reference_contextual_help_drift_report() -> dict[str, Any]:
+    """Return a Streamlit-free alignment report for contextual Reference help."""
+    catalog = get_reference_contextual_help_catalog()
+    concept_terms = {
+        str(row.get("term") or "").strip()
+        for row in get_reference_concept_dictionary()
+        if str(row.get("term") or "").strip()
+    }
+
+    missing_glossary_terms: list[dict[str, str]] = []
+    invalid_links: list[dict[str, str]] = []
+    raw_guide_focus_markers: list[dict[str, str]] = []
+    contextual_terms: set[str] = set()
+    link_count = 0
+
+    for item in catalog:
+        surface_key = str(item.get("surface_key") or "").strip()
+        guide_focus = str(item.get("guide_focus") or "")
+        if ">" in guide_focus:
+            raw_guide_focus_markers.append(
+                {
+                    "surface_key": surface_key,
+                    "guide_focus": guide_focus,
+                }
+            )
+
+        for term in list(item.get("glossary_terms") or []):
+            normalized_term = str(term or "").strip()
+            if not normalized_term:
+                continue
+            contextual_terms.add(normalized_term)
+            if normalized_term not in concept_terms:
+                missing_glossary_terms.append(
+                    {
+                        "surface_key": surface_key,
+                        "term": normalized_term,
+                    }
+                )
+
+        for link in list(item.get("links") or []):
+            link_count += 1
+            target = str(link.get("target") or "").strip()
+            if target not in ALLOWED_REFERENCE_HELP_TARGETS:
+                invalid_links.append(
+                    {
+                        "surface_key": surface_key,
+                        "target": target,
+                    }
+                )
+
+    duplicate_surface_keys = _duplicate_surface_keys(catalog)
+    has_issues = any(
+        [
+            missing_glossary_terms,
+            invalid_links,
+            duplicate_surface_keys,
+            raw_guide_focus_markers,
+        ]
+    )
+    return {
+        "status": "REVIEW" if has_issues else "PASS",
+        "metrics": {
+            "surface_count": len(catalog),
+            "glossary_term_count": len(contextual_terms),
+            "link_count": link_count,
+        },
+        "missing_glossary_terms": missing_glossary_terms,
+        "invalid_links": invalid_links,
+        "duplicate_surface_keys": duplicate_surface_keys,
+        "raw_guide_focus_markers": raw_guide_focus_markers,
+    }
