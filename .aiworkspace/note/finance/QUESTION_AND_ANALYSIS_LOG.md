@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed structure work is Backtest Compare Components Split 9차 in [backtest-compare-components-split-20260607](./tasks/active/backtest-compare-components-split-20260607/DESIGN.md).
+  - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Refactor round should close before opening another broad split
+- User request:
+  - 9차 이후 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 새 기능 개발이 아니라 5차~9차 구조정리 흐름을 닫고, 남은 작업을 active work와 follow-up으로 분리한다.
+- Analysis result:
+  - `app/web/backtest_compare.py`는 여전히 크지만, 추가 분리는 saved replay / weighted result / strategy-specific form body처럼 별도 ownership을 가진 후속 task로 여는 것이 맞다. 이번 10차는 boundary baseline, generated artifact hygiene, manifest / roadmap 상태를 닫는 closeout으로 처리한다.
+- Follow-up:
+  - 다음 code work는 Backtest Compare follow-up split 중 하나 또는 별도 large-surface refactor round로 승인받고 시작한다.
 
 ### 2026-06-07 - Backtest Compare split should start with visual components
 - User request:

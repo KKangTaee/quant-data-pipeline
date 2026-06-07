@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed structure work is Backtest Compare Components Split 9차 in [backtest-compare-components-split-20260607](./tasks/active/backtest-compare-components-split-20260607/DESIGN.md).
+  - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Refactor Round Closeout 10차
+- Opened `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/` as the 10차 structure / refactor baseline closeout record.
+- Audited 5차~9차 outputs, large-file residuals, `.note/finance` path risk, and UI / engine boundary posture.
+- Closed the current refactor round as a usable baseline; remaining splits are explicit follow-up candidates, not active work.
+- Next candidates are Backtest Compare form / replay / weighted-result splits, a future large-surface refactor round, or physical task / phase archive migration.
 
 ### 2026-06-07 - Backtest Compare Components Split 9차
 - Opened `.aiworkspace/note/finance/tasks/active/backtest-compare-components-split-20260607/` as the 9차 Backtest Compare Streamlit split first-pass record.

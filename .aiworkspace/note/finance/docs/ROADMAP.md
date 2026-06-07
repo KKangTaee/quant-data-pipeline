@@ -19,13 +19,18 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 7차 large Streamlit split은 7A Ingestion Console physical split과 7B Ingestion diagnostic facade까지 완료됐고,
-8차 runtime 대형 파일 분해의 8A Risk-On Momentum runtime split, 8B real-money / readiness helper split, 8C strict quality / value family split도 완료 상태다.
-9차 Backtest Compare Streamlit split은 첫 pass로 Portfolio Mix Builder visual component extraction까지 완료됐다.
+현재 5차~10차 code structure / refactor baseline round는 closeout됐다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/backtest-compare-components-split-20260607/`
-- 목적: `app/web/backtest_compare.py`의 Portfolio Mix Builder visual shell을 `app/web/backtest_compare_components.py`로 이동해 Compare 본문을 실행 / 상태 orchestration 중심으로 낮춘다.
-- 이번 차수에서 하지 않은 일: strategy math / runtime / service 변경, saved portfolio schema 변경, registry / saved JSONL rewrite, `_render_strategy_compare_workspace` 대형 form body split, push / PR 생성.
+- 5차: UI / service / runtime / jobs / finance layer boundary and refactor baseline audit.
+- 6차: Overview / Ingestion collection-read action boundary cleanup.
+- 7차 / 7B: Ingestion Console physical split and read-only diagnostic facade extraction.
+- 8차: Backtest runtime Risk-On Momentum, real-money / readiness, strict quality / value family split.
+- 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
+- 10차: final structure audit, residual split decision, and handoff closeout.
+
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/`
+- 목적: 5차~9차에서 만든 리팩토링 기준선을 닫고, 남은 대형 파일 / split 후보를 새 active work로 오해하지 않도록 후속 후보로 분리한다.
+- 이번 차수에서 하지 않은 일: strategy math / runtime / service 변경, saved portfolio schema 변경, registry / saved JSONL rewrite, additional code split, physical task / phase archive migration, push / PR 생성.
 
 ## Product Tracks
 
@@ -86,6 +91,7 @@ Recent completed docs cleanup tasks:
 
 Recent completed structure audit tasks:
 
+- `refactor-round-closeout-20260607`
 - `backtest-compare-components-split-20260607`
 - `ingestion-diagnostic-facade-20260607`
 - `runtime-backtest-strict-family-split-20260607`
@@ -103,6 +109,7 @@ State manifest pointers:
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 - post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
+- Refactor Round Closeout: `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/AUDIT.md`
 - Backtest Compare Components Split: `.aiworkspace/note/finance/tasks/active/backtest-compare-components-split-20260607/DESIGN.md`
 - Ingestion Diagnostic Facade: `.aiworkspace/note/finance/tasks/active/ingestion-diagnostic-facade-20260607/DESIGN.md`
 - Runtime Backtest Strict Family split: `.aiworkspace/note/finance/tasks/active/runtime-backtest-strict-family-split-20260607/DESIGN.md`
@@ -119,6 +126,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
 | Backtest Compare follow-up splits | 9차 first pass moved the visual shell, but saved replay, weighted result, and strategy-specific form body still remain in `app/web/backtest_compare.py` | Moving saved replay / weighted result / strategy form sections into focused modules while preserving service/runtime boundaries |
+| Large-surface second refactor round | 10차 closeout confirmed large files remain in Backtest Compare, Overview, Operations / Portfolio Monitoring runtime, and Overview services | Opening a new focused refactor round that changes module ownership or public call paths |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |

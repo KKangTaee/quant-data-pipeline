@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `backtest-compare-components-split-20260607`
+- `refactor-round-closeout-20260607`
 
 Latest completed docs cleanup task:
 
@@ -24,6 +24,7 @@ Recent post-merge cleanup records:
 
 Recent structure audit records:
 
+- `refactor-round-closeout-20260607`: 10차 structure / refactor baseline closeout, residual split decision, and handoff audit
 - `backtest-compare-components-split-20260607`: 9차 Backtest Compare Streamlit split first pass / Portfolio Mix Builder visual component extraction
 - `ingestion-diagnostic-facade-20260607`: 7차 large Streamlit file split 7B / Ingestion read-only diagnostic facade extraction
 - `runtime-backtest-strict-family-split-20260607`: 8차 runtime large file split 8C / strict quality-value runtime wrapper extraction
@@ -49,7 +50,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-07:
 
-- `tasks/active`: 180 task folders
+- `tasks/active`: 181 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.
@@ -62,7 +63,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 | Collection / read boundary cleanup | 6차 Overview / Ingestion action boundary record | `overview-ingestion-action-boundary-20260607` |
 | Large Streamlit file split | 7차 Ingestion Console and 9차 Backtest Compare split records | `backtest-compare-components-split-20260607`, `ingestion-diagnostic-facade-20260607`, `streamlit-ingestion-console-split-20260607` |
 | Runtime large file split | 8차 Backtest runtime split records | `runtime-backtest-strict-family-split-20260607`, `runtime-backtest-real-money-split-20260607`, `runtime-backtest-risk-on-momentum-split-20260607` |
-| Code structure audit | 5차 refactor baseline record | `code-boundary-refactor-audit-20260607` |
+| Code structure audit | 5차 refactor baseline and 10차 closeout records | `refactor-round-closeout-20260607`, `code-boundary-refactor-audit-20260607` |
 | Overview / market context | Overview Market Intelligence, Sentiment, Futures, Why It Moved, Events, automation | `overview-market-sentiment-v1`, `overview-market-movers-second-pass`, `futures-market-monitoring-mvp-v1`, `futures-macro-thermometer-validation-v1`, `overview-scheduled-refresh-automation` |
 | Backtest Analysis / strategy research | Candidate source generation, portfolio mix builder, Risk-On Momentum research lane | `backtest-portfolio-mix-builder-flow-v1`, `backtest-portfolio-mix-builder-ux-v1`, `risk-on-momentum-5d-v1`, `risk-on-momentum-5d-v2` |
 | Practical Validation / Final Review | Validation modules, selected-route gate, evidence read model, Final Review UX | `practical-validation-module-gate-v1`, `practical-validation-selected-route-preflight-v1`, `final-review-selection-readiness-gate-v1`, `final-review-commercial-ux-v1` |
