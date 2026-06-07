@@ -15,6 +15,7 @@ OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v2"
 OPERATIONS_CONSOLE_VERSION = "operations_console_v2"
 OPERATIONS_PORTFOLIO_SUMMARY_SCHEMA_VERSION = "operations_portfolio_summary_v1"
 OPERATIONS_EVIDENCE_HEALTH_SCHEMA_VERSION = "operations_evidence_health_v1"
+OPERATIONS_REVIEW_QUEUE_SCHEMA_VERSION = "operations_review_queue_v1"
 
 
 def _safe_int(value: Any) -> int:
@@ -415,84 +416,158 @@ def _disabled_action_boundary() -> dict[str, bool]:
     }
 
 
+def _queue_action(
+    *,
+    key: str,
+    title: str,
+    tone: str,
+    priority: str,
+    sort_rank: int,
+    evidence_key: str,
+    summary_metric: str,
+    target_key: str,
+    target_surface: str,
+    reason: str,
+    next_action: str,
+) -> dict[str, Any]:
+    return {
+        "key": key,
+        "title": title,
+        "tone": tone,
+        "priority": priority,
+        "sort_rank": sort_rank,
+        "evidence_key": evidence_key,
+        "summary_metric": summary_metric,
+        "target_key": target_key,
+        "target_surface": target_surface,
+        "reason": reason,
+        "next_action": next_action,
+        "execution_boundary": _disabled_action_boundary(),
+    }
+
+
 def _build_action_queue(
     *,
     dashboard_rows: int,
     watch_count: int,
     blocked_count: int,
     missing_count: int,
+    portfolio_summary: dict[str, Any],
     latest_status: str,
     run_history_count: int,
 ) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
-    if blocked_count or missing_count:
+    incomplete_slot_count = _safe_int(portfolio_summary.get("incomplete_strategy_slot_count"))
+    blocking_setup_count = blocked_count + missing_count + incomplete_slot_count
+    stale_scenario_count = _safe_int(portfolio_summary.get("stale_scenario_count"))
+    pending_scenario_count = _safe_int(portfolio_summary.get("pending_scenario_count"))
+    open_review_count = _safe_int(portfolio_summary.get("open_review_item_count"))
+
+    if blocking_setup_count:
         actions.append(
-            {
-                "key": "fix_portfolio_monitoring_blockers",
-                "title": "포트폴리오 blocker 확인 필요",
-                "tone": "danger",
-                "target_key": "portfolio_monitoring",
-                "target_surface": "Operations > Portfolio Monitoring",
-                "reason": f"차단된 row: {blocked_count}개, 누락된 reference: {missing_count}개입니다.",
-                "next_action": "Portfolio Monitoring을 열고 차단되었거나 누락된 selected reference를 먼저 확인합니다.",
-                "execution_boundary": _disabled_action_boundary(),
-            }
-        )
-    elif watch_count:
-        actions.append(
-            {
-                "key": "review_portfolio_monitoring",
-                "title": "포트폴리오 모니터링 검토 필요",
-                "tone": "warning",
-                "target_key": "portfolio_monitoring",
-                "target_surface": "Operations > Portfolio Monitoring",
-                "reason": f"{watch_count}개 selected row가 관찰 / 리밸런싱 검토 / 재검토 후보입니다.",
-                "next_action": "Portfolio Monitoring을 열고 target snapshot, review signal, open issue를 확인합니다.",
-                "execution_boundary": _disabled_action_boundary(),
-            }
-        )
-    elif dashboard_rows:
-        actions.append(
-            {
-                "key": "routine_portfolio_monitoring",
-                "title": "포트폴리오 일상 점검 가능",
-                "tone": "positive",
-                "target_key": "portfolio_monitoring",
-                "target_surface": "Operations > Portfolio Monitoring",
-                "reason": f"{dashboard_rows}개 모니터링 후보 row를 일상 점검할 수 있습니다.",
-                "next_action": "모니터링 scenario를 새로 계산하거나 상태를 확인할 때 Portfolio Monitoring을 엽니다.",
-                "execution_boundary": _disabled_action_boundary(),
-            }
-        )
-    else:
-        actions.append(
-            {
-                "key": "no_selected_rows",
-                "title": "선정된 모니터링 row 없음",
-                "tone": "neutral",
-                "target_key": "reference_guides",
-                "target_surface": "Reference > Guides",
-                "reason": "아직 Final Review에서 selected monitoring row가 만들어지지 않았습니다.",
-                "next_action": "먼저 Backtest -> Final Review에서 모니터링 후보를 저장합니다.",
-                "execution_boundary": _disabled_action_boundary(),
-            }
+            _queue_action(
+                key="resolve_monitoring_setup_blockers",
+                title="포트폴리오 설정 blocker 먼저 확인",
+                tone="danger",
+                priority="P0",
+                sort_rank=10,
+                evidence_key="open_review",
+                summary_metric=f"{blocking_setup_count} blockers",
+                target_key="portfolio_monitoring",
+                target_surface="Operations > Portfolio Monitoring",
+                reason=f"차단된 row {blocked_count}개, 누락 reference {missing_count}개, 미완료 slot {incomplete_slot_count}개입니다.",
+                next_action="Portfolio Monitoring을 열고 차단 / 누락 / 미완료 strategy slot을 먼저 정리합니다.",
+            )
         )
 
     normalized_status = str(latest_status or "").strip().lower()
     if normalized_status not in {"success", "no runs"}:
+        failed_system = "fail" in normalized_status or normalized_status in {"failed", "failure", "error"}
         actions.append(
-            {
-                "key": "inspect_system_data_health",
-                "title": "시스템 / 데이터 상태 확인 필요",
-                "tone": "danger" if "fail" in normalized_status or normalized_status in {"failed", "failure", "error"} else "warning",
-                "target_key": "system_data_health",
-                "target_surface": "Operations > System / Data Health",
-                "reason": f"최근 실행 상태는 {latest_status or '-'}이고, 확인 가능한 run은 {run_history_count}개입니다.",
-                "next_action": "최신 monitoring evidence를 신뢰하기 전에 System / Data Health를 먼저 확인합니다.",
-                "execution_boundary": _disabled_action_boundary(),
-            }
+            _queue_action(
+                key="inspect_system_data_health",
+                title="시스템 / 데이터 상태 확인 필요",
+                tone="danger" if failed_system else "warning",
+                priority="P0" if failed_system else "P2",
+                sort_rank=15 if failed_system else 35,
+                evidence_key="system_run_health",
+                summary_metric=str(latest_status or "-"),
+                target_key="system_data_health",
+                target_surface="Operations > System / Data Health",
+                reason=f"최근 실행 상태는 {latest_status or '-'}이고, 확인 가능한 run은 {run_history_count}개입니다.",
+                next_action="최신 monitoring evidence를 신뢰하기 전에 System / Data Health를 확인합니다.",
+            )
         )
-    return actions[:4]
+
+    if stale_scenario_count or pending_scenario_count:
+        actions.append(
+            _queue_action(
+                key="refresh_monitoring_scenarios",
+                title="모니터링 scenario freshness 확인",
+                tone="warning",
+                priority="P1",
+                sort_rank=20,
+                evidence_key="scenario_freshness",
+                summary_metric=f"{stale_scenario_count} stale / {pending_scenario_count} pending",
+                target_key="portfolio_monitoring",
+                target_surface="Operations > Portfolio Monitoring",
+                reason=f"stale scenario {stale_scenario_count}개, pending scenario {pending_scenario_count}개가 있습니다.",
+                next_action="Portfolio Monitoring에서 pending / stale strategy의 scenario update 필요 여부를 확인합니다.",
+            )
+        )
+
+    if open_review_count or watch_count:
+        actions.append(
+            _queue_action(
+                key="review_portfolio_monitoring",
+                title="포트폴리오 모니터링 검토 필요",
+                tone="warning",
+                priority="P2",
+                sort_rank=30,
+                evidence_key="open_review",
+                summary_metric=f"{open_review_count} open review",
+                target_key="portfolio_monitoring",
+                target_surface="Operations > Portfolio Monitoring",
+                reason=f"{open_review_count}개 open review와 {watch_count}개 관찰 / 재검토 row가 있습니다.",
+                next_action="Portfolio Monitoring을 열고 review signal, open issue, target snapshot을 확인합니다.",
+            )
+        )
+
+    has_portfolio_action = any(action.get("target_key") == "portfolio_monitoring" for action in actions)
+    if dashboard_rows and not has_portfolio_action:
+        actions.append(
+            _queue_action(
+                key="routine_portfolio_monitoring",
+                title="포트폴리오 일상 점검 가능",
+                tone="positive",
+                priority="P3",
+                sort_rank=50,
+                evidence_key="selected_evidence",
+                summary_metric=f"{dashboard_rows} selected rows",
+                target_key="portfolio_monitoring",
+                target_surface="Operations > Portfolio Monitoring",
+                reason=f"{dashboard_rows}개 모니터링 후보 row를 일상 점검할 수 있습니다.",
+                next_action="모니터링 scenario를 새로 계산하거나 상태를 확인할 때 Portfolio Monitoring을 엽니다.",
+            )
+        )
+    elif dashboard_rows <= 0:
+        actions.append(
+            _queue_action(
+                key="no_selected_rows",
+                title="선정된 모니터링 row 없음",
+                tone="neutral",
+                priority="P3",
+                sort_rank=60,
+                evidence_key="selected_evidence",
+                summary_metric="0 selected rows",
+                target_key="reference_guides",
+                target_surface="Reference > Guides",
+                reason="아직 Final Review에서 selected monitoring row가 만들어지지 않았습니다.",
+                next_action="먼저 Backtest -> Final Review에서 모니터링 후보를 저장합니다.",
+            )
+        )
+
+    return sorted(actions, key=lambda action: (_safe_int(action.get("sort_rank")), str(action.get("key") or "")))[:4]
 
 
 def build_operations_overview_model(
@@ -587,11 +662,13 @@ def build_operations_overview_model(
         "portfolio_summary": portfolio_summary,
         "evidence_health": evidence_health,
         "lanes": lanes,
+        "action_queue_schema_version": OPERATIONS_REVIEW_QUEUE_SCHEMA_VERSION,
         "action_queue": _build_action_queue(
             dashboard_rows=dashboard_rows,
             watch_count=watch_count,
             blocked_count=blocked_count,
             missing_count=missing_count,
+            portfolio_summary=portfolio_summary,
             latest_status=latest_status,
             run_history_count=len(run_history),
         ),
@@ -773,11 +850,13 @@ def _render_action_queue(model: dict[str, Any], *, page_targets: dict[str, Any])
         with st.container(border=True):
             render_badge_strip(
                 [
-                    {"label": "점검 항목", "value": action.get("title"), "tone": action.get("tone")},
-                    {"label": "이동 위치", "value": action.get("target_surface"), "tone": "neutral"},
+                    {"label": "Priority", "value": action.get("priority"), "tone": action.get("tone")},
+                    {"label": "Evidence", "value": action.get("evidence_key"), "tone": "neutral"},
+                    {"label": "Metric", "value": action.get("summary_metric"), "tone": "neutral"},
                     {"label": "주문 / 자동 리밸런싱", "value": "비활성", "tone": "neutral"},
                 ]
             )
+            st.markdown(f"#### {action.get('title') or '-'}")
             st.caption(str(action.get("reason") or ""))
             st.markdown(f"**다음 행동:** {action.get('next_action') or '-'}")
             target = page_targets.get(str(action.get("target_key") or ""))

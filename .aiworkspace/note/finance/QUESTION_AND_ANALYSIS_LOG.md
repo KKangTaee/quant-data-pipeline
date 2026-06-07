@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Operations queue should be priority and evidence ordered
+- User request:
+  - Operations Overview V2 4차 작업 진행을 요청함.
+- Interpreted goal:
+  - Evidence Health 다음에 나오는 daily queue를 단순 안내 목록이 아니라 운영 우선순위가 있는 review queue로 재정렬한다.
+- Analysis result:
+  - Queue는 이미 로드된 portfolio summary / evidence health / run history 상태만 사용한다. P0 setup blocker와 system/data failure, P1 scenario freshness, P2 open review, P3 routine/no-selected-row 안내로 정렬하고 각 row에 evidence key와 summary metric을 붙인다.
+- Follow-up:
+  - 5차는 Operations V2 최종 QA / 문서 closeout으로, archive helper code 삭제 여부는 별도 audit로 분리하는 것이 안전하다.
+
 ### 2026-06-07 - Operations evidence health should stay lightweight
 - User request:
   - Operations Overview V2 3차 작업 진행을 요청함.

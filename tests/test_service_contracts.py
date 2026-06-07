@@ -11383,6 +11383,87 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
         self.assertEqual(len(model["lanes"]), 2)
 
+    def test_operations_review_queue_prioritizes_blockers_scenarios_reviews_and_system_health(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 3,
+                    "dashboard_row_count": 3,
+                    "status_counts": {"normal": 1, "watch": 1, "blocked": 1},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 3,
+                        "missing_reference_count": 1,
+                        "incomplete_strategy_slot_count": 1,
+                    },
+                    "portfolios": [
+                        {
+                            "portfolio_id": "p1",
+                            "strategy_rows": [
+                                {
+                                    "decision_id": "decision-1",
+                                    "scenario_status": "stale",
+                                    "latest_scenario_date": "2026-05-28",
+                                    "open_review_items": [{"Group": "provider"}],
+                                },
+                                {
+                                    "decision_id": "decision-2",
+                                    "scenario_status": "current",
+                                    "latest_scenario_date": "2026-06-02",
+                                    "raw_decision": {
+                                        "open_review_items": [{"Group": "risk"}],
+                                    },
+                                },
+                                {
+                                    "decision_id": "decision-3",
+                                    "slot_input_complete": False,
+                                    "slot_blockers": ["start date required"],
+                                },
+                            ],
+                        }
+                    ],
+                },
+            },
+            run_history=[{"job_name": "daily_market_update", "status": "failed"}],
+            candidate_records=[],
+        )
+
+        self.assertEqual(model["action_queue_schema_version"], "operations_review_queue_v1")
+        queue = model["action_queue"]
+        self.assertEqual(
+            [item["key"] for item in queue],
+            [
+                "resolve_monitoring_setup_blockers",
+                "inspect_system_data_health",
+                "refresh_monitoring_scenarios",
+                "review_portfolio_monitoring",
+            ],
+        )
+        self.assertEqual([item["priority"] for item in queue], ["P0", "P0", "P1", "P2"])
+        self.assertEqual([item["evidence_key"] for item in queue], ["open_review", "system_run_health", "scenario_freshness", "open_review"])
+        self.assertEqual(queue[0]["summary_metric"], "3 blockers")
+        self.assertEqual(queue[1]["target_surface"], "Operations > System / Data Health")
+        self.assertIn("stale", queue[2]["reason"])
+        self.assertIn("open review", queue[3]["reason"].lower())
+        self.assertEqual([item["sort_rank"] for item in queue], sorted(item["sort_rank"] for item in queue))
+        for item in queue:
+            self.assertFalse(item["execution_boundary"]["registry_write"])
+            self.assertFalse(item["execution_boundary"]["order_instruction"])
+            self.assertFalse(item["execution_boundary"]["auto_rebalance"])
+
+    def test_operations_review_queue_source_renders_priority_and_evidence(self) -> None:
+        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
+
+        self.assertIn("Priority", source)
+        self.assertIn("Evidence", source)
+        self.assertIn("summary_metric", source)
+        self.assertIn("sort_rank", source)
+        self.assertIn("operations_review_queue_v1", source)
+
     def test_operations_overview_model_adds_portfolio_first_summary(self) -> None:
         from app.web.operations_overview import build_operations_overview_model
 

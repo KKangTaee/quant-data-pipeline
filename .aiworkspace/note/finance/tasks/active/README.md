@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-08
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `operations-review-queue-refinement-20260608` | Completed record | Operations Overview V2 4차. Today's Operations Queue를 priority / evidence / metric 기반 review queue로 재정렬해 setup blocker, system run failure, scenario freshness, open review, routine monitoring을 분리한 기록이다. |
 | `operations-evidence-health-strip-20260607` | Completed record | Operations Overview V2 3차. Operations Console 상단에 Evidence Health mini strip을 추가해 scenario freshness / selected evidence readiness / open review / system run health를 한 줄로 확인하게 한 기록이다. |
 | `operations-portfolio-first-summary-20260607` | Completed record | Operations Overview V2 2차. Operations Console 상단에 Portfolio Monitoring Status summary를 추가해 active portfolio / assigned strategy / stale scenario / blocked / missing / open review / next review를 먼저 읽게 한 기록이다. |
 | `operations-cockpit-cleanup-20260607` | Completed record | Operations Overview V2 1차 cleanup. 사용자-facing Operations Overview에서 archive / development-history decision table과 roadmap 흔적을 제거하고 Portfolio Monitoring / System Data Health 중심 cockpit copy로 정리한 기록이다. |
@@ -54,4 +55,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-07 기준 185개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-08 기준 186개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.

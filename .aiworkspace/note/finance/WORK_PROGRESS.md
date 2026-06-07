@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Operations Review Queue Refinement 4차
+- Opened `.aiworkspace/note/finance/tasks/active/operations-review-queue-refinement-20260608/` for Operations Overview V2 4차.
+- Refined Today's Operations Queue into a priority / evidence / metric ordered review queue.
+- Queue ordering now separates setup blockers, system run failure, scenario freshness, open review, routine monitoring, and no-selected-row guidance.
+- Boundary remains read-only: no provider DB detail fetch, registry / saved JSONL rewrite, scenario execution change, archive helper deletion, broker order, account sync, or auto rebalance.
+
 ### 2026-06-07 - Operations Evidence Health Strip 3차
 - Opened `.aiworkspace/note/finance/tasks/active/operations-evidence-health-strip-20260607/` for Operations Overview V2 3차.
 - Added an Evidence Health mini strip between Portfolio Monitoring Status and Today's Operations Queue.
