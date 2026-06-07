@@ -3884,6 +3884,42 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
         self.assertIs(backtest.run_risk_on_momentum_5d_backtest_from_db, run_risk_on_momentum_5d_backtest_from_db)
 
+    def test_backtest_runtime_facade_delegates_real_money_helpers_to_dedicated_module(self) -> None:
+        import ast
+
+        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.runtime.backtest_real_money", imported_modules)
+        self.assertNotIn("_apply_real_money_hardening", function_names)
+        self.assertNotIn("_build_deployment_readiness_contract", function_names)
+        self.assertNotIn("_apply_transaction_cost_postprocess", function_names)
+        self.assertNotIn("_build_benchmark_result_df", function_names)
+
+    def test_real_money_runtime_module_owns_facade_helper_contracts(self) -> None:
+        from app.runtime import backtest
+        from app.runtime.backtest_real_money import (
+            ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+            _apply_real_money_hardening,
+            _apply_transaction_cost_postprocess,
+            _build_deployment_readiness_contract,
+        )
+
+        self.assertIs(backtest._apply_real_money_hardening, _apply_real_money_hardening)
+        self.assertIs(backtest._apply_transaction_cost_postprocess, _apply_transaction_cost_postprocess)
+        self.assertIs(backtest._build_deployment_readiness_contract, _build_deployment_readiness_contract)
+        self.assertEqual(backtest.ETF_REAL_MONEY_DEFAULT_BENCHMARK, ETF_REAL_MONEY_DEFAULT_BENCHMARK)
+
 
 class FinanceWorkspacePathContractTests(unittest.TestCase):
     def test_runtime_and_job_paths_use_canonical_aiworkspace_note_root(self) -> None:

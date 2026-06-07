@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 8차 work is Risk-On Momentum runtime split in [runtime-backtest-risk-on-momentum-split-20260607](./tasks/active/runtime-backtest-risk-on-momentum-split-20260607/DESIGN.md).
+  - Latest completed 8차 work is Real-Money runtime helper split in [runtime-backtest-real-money-split-20260607](./tasks/active/runtime-backtest-real-money-split-20260607/DESIGN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Runtime real-money helpers should be a helper-family module
+- User request:
+  - 8A 다음 단계로 runtime 대형 파일 분해를 계속 진행해 달라고 요청함.
+- Interpreted goal:
+  - strategy runner 동작을 바꾸지 않고 `app/runtime/backtest.py`에 남은 real-money / guardrail / benchmark / deployment readiness helper family를 분리한다.
+- Analysis result:
+  - `_apply_real_money_hardening`은 거래비용 / turnover, benchmark overlay, validation / promotion / shortlist / probation / monitoring / deployment readiness, ETF operability policy helper를 한 덩어리로 사용한다. 따라서 순환 import를 만들지 않으려면 이 helper family 전체를 `app/runtime/backtest_real_money.py`로 이동하고 `app.runtime.backtest`는 compatibility facade로 re-export하는 구조가 맞다.
+- Follow-up:
+  - 다음 runtime split은 strict quality / value / quality-value annual and quarterly wrappers를 family module로 옮기는 8C가 자연스럽다.
 
 ### 2026-06-07 - Runtime split should keep `app.runtime.backtest` as compatibility facade
 - User request:

@@ -19,11 +19,11 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 8차 runtime 대형 파일 분해의 8A Risk-On Momentum runtime split은 완료 상태다.
+현재 8차 runtime 대형 파일 분해의 8A Risk-On Momentum runtime split과 8B real-money / readiness helper split은 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/runtime-backtest-risk-on-momentum-split-20260607/`
-- 목적: `app/runtime/backtest.py`를 public compatibility facade로 유지하면서 `Risk-On Momentum 5D` runtime orchestration을 `app/runtime/backtest_risk_on_momentum.py`로 이동한다.
-- 이번 차수에서 하지 않은 일: real-money / guardrail contract split, strict quality/value family split, strategy math 변경, generated backtest artifact 생성/커밋, registry / saved JSONL rewrite, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/runtime-backtest-real-money-split-20260607/`
+- 목적: `app/runtime/backtest.py`를 public compatibility facade로 유지하면서 real-money / guardrail / benchmark / deployment readiness helper family를 `app/runtime/backtest_real_money.py`로 이동한다.
+- 이번 차수에서 하지 않은 일: strict quality/value family split, strategy math 변경, result metadata schema 변경, generated backtest artifact 생성/커밋, registry / saved JSONL rewrite, push / PR 생성.
 
 ## Product Tracks
 
@@ -84,6 +84,7 @@ Recent completed docs cleanup tasks:
 
 Recent completed structure audit tasks:
 
+- `runtime-backtest-real-money-split-20260607`
 - `runtime-backtest-risk-on-momentum-split-20260607`
 - `streamlit-ingestion-console-split-20260607`
 - `overview-ingestion-action-boundary-20260607`
@@ -97,6 +98,7 @@ State manifest pointers:
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 - post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
+- Runtime Backtest Real-Money split: `.aiworkspace/note/finance/tasks/active/runtime-backtest-real-money-split-20260607/DESIGN.md`
 - Runtime Backtest Risk-On Momentum split: `.aiworkspace/note/finance/tasks/active/runtime-backtest-risk-on-momentum-split-20260607/DESIGN.md`
 - Streamlit Ingestion Console split: `.aiworkspace/note/finance/tasks/active/streamlit-ingestion-console-split-20260607/DESIGN.md`
 - Overview / Ingestion action boundary: `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md`
@@ -110,8 +112,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 |---|---|---|
 | Ingestion diagnostic facade | 7A split moved Ingestion render/state/job UI out of `streamlit_app.py`, but read-only diagnostics still live inside the Streamlit Ingestion module | Moving diagnostic orchestration into `app/services` or `app/jobs` while preserving manual, bounded, non-persistent behavior |
 | Backtest Compare Streamlit split | `app/web/backtest_compare.py` remains a large mixed render / orchestration file after the Ingestion split | Moving repeated Compare render/result sections into focused modules while preserving service/runtime boundaries |
-| Runtime real-money contract split | 8A moved Risk-On Momentum out of `backtest.py`, but ETF / strict real-money, guardrail, deployment readiness helpers still make the runtime facade broad | Moving contract helper families to focused runtime modules while keeping `app.runtime.backtest` public imports stable |
-| Runtime strict family split | Strict quality / value annual and quarterly wrappers still live in `app/runtime/backtest.py` after 8A | Splitting quality / value / quality-value family modules without changing result bundle or history contracts |
+| Runtime strict family split | Strict quality / value annual and quarterly wrappers still live in `app/runtime/backtest.py` after 8B | Splitting quality / value / quality-value family modules without changing result bundle or history contracts |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |

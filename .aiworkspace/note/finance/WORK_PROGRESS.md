@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 8차 work is Risk-On Momentum runtime split in [runtime-backtest-risk-on-momentum-split-20260607](./tasks/active/runtime-backtest-risk-on-momentum-split-20260607/DESIGN.md).
+  - Latest completed 8차 work is Real-Money runtime helper split in [runtime-backtest-real-money-split-20260607](./tasks/active/runtime-backtest-real-money-split-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Runtime Backtest Real-Money split 8차
+- Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-real-money-split-20260607/` as the 8차 runtime large-file split 8B record.
+- Moved real-money / guardrail / benchmark / deployment readiness helper implementation from `app/runtime/backtest.py` into `app/runtime/backtest_real_money.py`.
+- Kept `app.runtime.backtest` constants and helper functions as public compatibility imports used by UI / services / replay tests.
+- Follow-up remains strict quality / value family runtime wrapper split.
 
 ### 2026-06-07 - Runtime Backtest Risk-On Momentum split 8차
 - Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-risk-on-momentum-split-20260607/` as the 8차 runtime large-file split record.

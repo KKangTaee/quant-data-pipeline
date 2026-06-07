@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `runtime-backtest-real-money-split-20260607` | Completed record | 8차 runtime 대형 파일 분해 8B. `app/runtime/backtest.py`의 real-money / guardrail / benchmark / deployment readiness helper family를 `app/runtime/backtest_real_money.py`로 이동하고 public facade import를 유지한 기록이다. |
 | `runtime-backtest-risk-on-momentum-split-20260607` | Completed record | 8차 runtime 대형 파일 분해 8A. `app/runtime/backtest.py`의 Risk-On Momentum 5D runtime slice를 `app/runtime/backtest_risk_on_momentum.py`로 이동하고 public facade import를 유지한 기록이다. |
 | `streamlit-ingestion-console-split-20260607` | Completed record | 7차 대형 Streamlit 파일 분해 7A. `streamlit_app.py`를 Finance Console shell로 낮추고 `Workspace > Ingestion` render/state/job UI를 `app/web/ingestion_console.py`로 분리한 기록이다. |
 | `overview-ingestion-action-boundary-20260607` | Completed record | 6차 수집 / 조회 경계 정리. Overview bounded refresh를 `app/jobs/overview_actions.py` action facade로 모으고, Overview UI의 직접 ingestion / automation / run-history import를 제거한 기록이다. |
@@ -46,4 +47,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-07 기준 176개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-07 기준 177개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.

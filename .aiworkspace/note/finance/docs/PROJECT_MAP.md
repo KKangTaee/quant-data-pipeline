@@ -103,6 +103,7 @@ Last Verified: 2026-06-07
 | Futures OHLCV loader | `finance/loaders/futures.py` |
 | Risk-On Momentum 5D strategy core | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py` |
 | Risk-On Momentum 5D DB runtime | `app/runtime/backtest_risk_on_momentum.py`; compatibility export remains in `app/runtime/backtest.py` |
+| Backtest real-money / readiness runtime helpers | `app/runtime/backtest_real_money.py`; compatibility exports remain in `app/runtime/backtest.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
 | Service contract tests | `tests/test_service_contracts.py` |
 
@@ -188,6 +189,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
 | Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |
+| Backtest real-money / guardrail / deployment readiness helper 수정 | `app/runtime/backtest_real_money.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/web/backtest_history_helpers.py`, related `app/services/backtest_*` replay / execution callers |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |

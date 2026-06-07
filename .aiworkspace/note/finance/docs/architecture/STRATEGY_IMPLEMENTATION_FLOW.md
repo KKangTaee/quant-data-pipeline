@@ -16,7 +16,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 | preprocessing | `finance/transform.py` | MA, return, date alignment, snapshot shaping |
 | orchestration | `finance/engine.py` | price strategy chaining |
 | DB-backed sample/runtime helper | `finance/sample.py` | 수동 smoke와 reusable helper |
-| runtime adapter | `app/runtime/backtest.py`, family modules such as `app/runtime/backtest_risk_on_momentum.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
+| runtime adapter | `app/runtime/backtest.py`, family / helper modules such as `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest_real_money.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
 | web UI | `app/web/pages/backtest.py` | form, compare, history, saved replay |
 
 ## 새 전략 추가 순서
@@ -64,7 +64,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 - `Global Relative Strength`는 Phase 24에서 추가된 price-only ETF allocation family다.
 - `Global Relative Strength`는 trailing return score로 상위 ETF를 고르고, trend filter를 통과하지 못한 슬롯은 cash proxy로 둔다.
 - ETF family는 데이터 이력 부족이나 결측 ticker를 조용히 무시하지 않고 `excluded_tickers`, `malformed_price_rows`, warning metadata로 남겨야 한다.
-- ETF family의 real-money / guardrail surface는 live approval이 아니라 실행 부담과 후보 검토 상태를 읽기 위한 진단 계층이다.
+- ETF family의 real-money / guardrail surface는 live approval이 아니라 실행 부담과 후보 검토 상태를 읽기 위한 진단 계층이다. 8B 이후 helper implementation owner는 `app/runtime/backtest_real_money.py`이고, `app/runtime/backtest.py`는 compatibility export를 유지한다.
 
 ### Factor / fundamental 전략
 
