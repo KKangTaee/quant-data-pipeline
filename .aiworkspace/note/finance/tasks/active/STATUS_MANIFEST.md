@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-08
 
 ## Current State
 
@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-glossary-concept-dictionary-v3-20260607`
+- `reference-contextual-links-v4-20260608`
 
 Latest completed docs cleanup task:
 
@@ -48,9 +48,9 @@ The current active task source of truth is:
 
 ## Review Count
 
-Reviewed on 2026-06-07:
+Reviewed on 2026-06-08:
 
-- `tasks/active`: 186 task folders
+- `tasks/active`: 187 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.

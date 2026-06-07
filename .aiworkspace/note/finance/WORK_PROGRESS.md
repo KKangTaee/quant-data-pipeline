@@ -4815,3 +4815,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `app/services/reference_glossary_catalog.py`가 curated operational concepts, markdown glossary parser, search helper를 소유하고, `Guides`와 `Glossary`가 이를 함께 사용한다.
   - 검증: RED/GREEN catalog tests, 296 focused/service tests, py_compile, UI-engine boundary, `git diff --check`, Browser QA render screenshot 통과.
   - 남은 흐름은 4차 contextual links, 5차 Reference drift guard / QA polish다.
+- Reference Contextual Links V4:
+  - `.aiworkspace/note/finance/tasks/active/reference-contextual-links-v4-20260608/`에서 주요 workflow 화면의 `Reference help` expander를 추가했다.
+  - `app/services/reference_contextual_help.py`가 Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring별 guide focus / glossary terms / next checks / boundary를 소유한다.
+  - 화면 helper는 read-only entry point이며 Guides / Glossary 링크만 제공하고 validation gate, selected decision, saved setup, provider fetch, broker order, auto rebalance를 바꾸지 않는다.
+  - 남은 흐름은 5차 Reference drift guard / QA polish다.

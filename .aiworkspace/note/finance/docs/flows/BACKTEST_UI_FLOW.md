@@ -15,6 +15,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/streamlit_app.py` | top navigation과 page entry |
 | `app/web/operations_overview.py` | `Operations > Operations Overview` / `Operations Console` landing page. Today action queue, completed 1차~5차 roadmap, surface audit decisions, Portfolio Monitoring / System Data Health primary lane, Archive / Recovery secondary tools, and no-live approval / order / auto rebalance boundary를 표시한다 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
+| `app/web/reference_contextual_help.py` | 주요 workflow 화면의 read-only Reference help expander |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Market Movers, Why It Moved, Sector / Industry, Sentiment, Events, Data Health, Candidate Ops dashboard render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Market Movers manual investigation panel, Sector / Industry ranking/trend, Sentiment context, Events agenda/calendar/quality/raw views를 조정한다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, candidate priority scoring, cached market intelligence service wrapper |
@@ -154,10 +155,13 @@ Operations 화면:
 
 ## 현재 Reference Guide 제품 흐름
 
-`Reference > Guides`는 2026-06-07 Reference Center V3 이후 제품 전체 운영 guide로 읽는다.
+`Reference > Guides`는 2026-06-08 Reference Center V4 이후 제품 전체 운영 guide로 읽는다.
 첫 화면은 portfolio-selection 전용 hero가 아니라 task-first `Reference Center`다.
 이 화면은 read-only 안내 surface이며 ingestion job, provider fetch, registry write, saved setup write,
 broker order, live approval, auto rebalance를 직접 실행하지 않는다.
+Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring은 접힌 `Reference help` expander로
+`Guides` / `Glossary` entry point와 현재 화면의 먼저 확인할 항목을 보여준다.
+이 contextual help도 read-only이며 validation gate, selected decision, saved setup, provider fetch를 바꾸지 않는다.
 
 ```text
 Reference > Guides
@@ -193,6 +197,16 @@ Reference Center의 주요 묶음은 아래와 같다.
 | `자주 막히는 상태 / 용어` | `NOT_RUN`, `REVIEW`, `BLOCKED`, `Data Trust`, `Provider Coverage`, `Portfolio Monitoring Scenario`를 shared concept dictionary로 검색 / 필터한다. `Reference > Glossary`도 같은 curated concept rows를 먼저 보여준 뒤 durable `GLOSSARY.md` section을 함께 검색한다 |
 | `기록 / 저장 경계` | DB / workflow registry / saved setup / run history / generated artifact를 어떤 화면이 만들고 읽는지 보여준다 |
 | `문제 해결 Playbook` | stale Overview / Futures, ingestion 성공 후 UI stale, provider snapshot missing, Practical Validation `NOT_RUN`, Final Review 후보 미노출, Portfolio Monitoring stale scenario, archive recovery를 증상별로 확인한다. 각 playbook은 check steps와 evidence location을 표시한다 |
+
+4차 contextual help가 붙은 1차 화면은 아래와 같다.
+
+| 화면 | helper key | 주요 연결 |
+|---|---|---|
+| `Backtest > Backtest Analysis` | `backtest_analysis` | Promotion Policy Signal, Data Trust, Saved Portfolio |
+| `Backtest > Practical Validation` | `practical_validation` | NOT_RUN, REVIEW, BLOCKED, Provider Coverage |
+| `Backtest > Final Review` | `final_review` | Selected-route Gate, Provider Coverage, Data Trust |
+| `Operations > Operations Console` | `operations_console` | Saved Portfolio, Portfolio Monitoring Scenario |
+| `Operations > Portfolio Monitoring` | `portfolio_monitoring` | Portfolio Monitoring Scenario, Saved Portfolio, Selected-route Gate |
 
 Portfolio Selection Journey는 기존 guide를 보존하되 Reference Center 안의 별도 view로 낮춘다.
 사용자는 `Reference 보기`에서 `Portfolio Selection Journey`를 선택한 뒤

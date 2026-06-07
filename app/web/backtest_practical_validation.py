@@ -35,6 +35,7 @@ from app.web.backtest_practical_validation_components import (
     render_pv_styles,
 )
 from app.web.backtest_ui_components import render_badge_strip
+from app.web.reference_contextual_help import render_reference_contextual_help
 from app.runtime import (
     PORTFOLIO_SELECTION_SOURCE_FILE,
     PRACTICAL_VALIDATION_RESULT_FILE,
@@ -2230,6 +2231,7 @@ def render_practical_validation_workspace() -> None:
         "Backtest Analysis에서 선택한 후보를 Final Review로 넘기기 전 검증 근거로 구조화합니다. "
         "최종 사용자 메모와 최종 판단은 Final Review에서만 남깁니다."
     )
+    render_reference_contextual_help("practical_validation")
 
     sources = load_portfolio_selection_sources(limit=100)
     validation_rows = load_practical_validation_results(limit=100)

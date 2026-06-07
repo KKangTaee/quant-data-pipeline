@@ -8,6 +8,7 @@ from app.jobs.run_history import load_run_history
 from app.runtime.candidate_library import load_candidate_library_records
 from app.runtime.final_selected_portfolios import load_final_selected_portfolio_dashboard
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
+from app.web.reference_contextual_help import render_reference_contextual_help
 
 
 OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v1"
@@ -530,6 +531,7 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
 
     st.title("Operations Console")
     st.caption("선정 후 portfolio monitoring과 system/data health를 먼저 보고, archive/recovery는 필요할 때만 여는 운영 화면입니다.")
+    render_reference_contextual_help("operations_console")
     _render_action_queue(model, page_targets=page_targets)
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(

@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Reference should appear inside the workflow screens
+- User request:
+  - Reference 탭 개편의 4차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차~3차에서 만든 Reference Center / Glossary를 실제 업무 화면에서 발견 가능하게 만든다.
+- Analysis result:
+  - 첫 연결 범위는 Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring이 적절하다. 각 화면은 현재 workflow의 owner screen이고, 사용자가 `NOT_RUN`, selected-route gate, monitoring scenario stale 같은 용어에서 막힐 가능성이 높다. 공용 service catalog와 얇은 Streamlit renderer를 분리하면 UI 화면은 한 줄 호출만 갖고, 도움말 문구 drift는 줄일 수 있다.
+- Follow-up:
+  - 5차는 Reference drift guard / QA polish다. `GLOSSARY.md` deep-link query, Ingestion / Overview까지의 확대, visual polish는 별도 후속으로 둔다.
+
 ### 2026-06-07 - Reference Glossary should share operational concepts with Guides
 - User request:
   - Reference 탭 개편의 3차 작업 진행을 요청함.

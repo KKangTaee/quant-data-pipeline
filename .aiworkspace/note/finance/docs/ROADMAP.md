@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-08
 
 ## Current State After Master Merge
 
@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/reference-glossary-concept-dictionary-v3-20260607/`
-- 목적: `Reference > Guides`와 `Reference > Glossary`가 같은 Streamlit-free concept dictionary / search helper를 사용해 `NOT_RUN`, `BLOCKED`, `Provider Coverage`, `Portfolio Monitoring Scenario` 같은 운영 용어를 같은 의미로 보여주게 한다.
-- 이번 차수에서 하지 않은 일: `GLOSSARY.md` 전체 rewrite, 주요 화면 contextual link 연결, DB / registry / saved JSONL rewrite, provider fetch, live approval / broker order / auto rebalance.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/reference-contextual-links-v4-20260608/`
+- 목적: Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring에서 `Guides` / `Glossary`로 이어지는 read-only contextual Reference help를 제공한다.
+- 이번 차수에서 하지 않은 일: `GLOSSARY.md` 전체 rewrite, Reference 검색 URL query deep-linking, Ingestion / Overview 전체 surface 연결, DB / registry / saved JSONL rewrite, provider fetch, live approval / broker order / auto rebalance.
 
 ## Product Tracks
 
