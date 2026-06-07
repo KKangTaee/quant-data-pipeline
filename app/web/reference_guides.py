@@ -9,12 +9,19 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.services.reference_guides_catalog import get_reference_center_catalog
+
 
 GUIDE_ROUTE_OPTIONS = [
     "단일 후보",
     "여러 후보 묶음",
     "저장된 Mix",
     "보류 / 재검토",
+]
+
+REFERENCE_VIEW_OPTIONS = [
+    "Reference Center",
+    "Portfolio Selection Journey",
 ]
 
 
@@ -31,7 +38,7 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("analysis", "1\\nBacktest Analysis", "run"),
                 ("validation", "2\\nPractical Validation", "gate"),
                 ("final", "3\\nFinal Review", "final"),
-                ("dashboard", "4\\nSelected Dashboard", "compare"),
+                ("dashboard", "4\\nPortfolio Monitoring", "compare"),
             ],
             "edges": [
                 ("analysis", "validation", "selection source"),
@@ -51,7 +58,7 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("weights", "1B\\nMix Weight", "proposal"),
                 ("validation", "2\\nPractical Validation", "gate"),
                 ("final", "3\\nFinal Review", "final"),
-                ("dashboard", "4\\nSelected Dashboard", "compare"),
+                ("dashboard", "4\\nPortfolio Monitoring", "compare"),
             ],
             "edges": [
                 ("compare", "weights", "비중 구성"),
@@ -72,7 +79,7 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("replay", "1B\\nMix Replay", "gate"),
                 ("validation", "2\\nPractical Validation", "gate"),
                 ("final", "3\\nFinal Review", "final"),
-                ("dashboard", "4\\nSelected Dashboard", "compare"),
+                ("dashboard", "4\\nPortfolio Monitoring", "compare"),
             ],
             "edges": [
                 ("saved", "replay", "replay"),
@@ -128,11 +135,11 @@ def _decision_gate_rows() -> list[dict[str, str]]:
             "screen": "Final Review",
         },
         {
-            "gate": "Selected Portfolio Dashboard에서 관찰 대상으로 볼 수 있는가",
+            "gate": "Portfolio Monitoring에서 관찰 대상으로 볼 수 있는가",
             "go": "Final Decision이 SELECT_FOR_PRACTICAL_PORTFOLIO이고 active component / 비중 기준이 정상",
             "review": "모니터링 후보 row는 있지만 drift, blocker, 최신 성과 재확인이 필요",
             "stop": "Final Review 모니터링 후보 row가 없거나 live approval / order로 오해되는 운영 행위",
-            "screen": "Operations > Selected Portfolio Dashboard",
+            "screen": "Operations > Portfolio Monitoring",
         },
     ]
 
@@ -166,10 +173,10 @@ def _stage_timeline_rows() -> list[dict[str, str]]:
         {
             "step": "4",
             "phase": "사후 관찰",
-            "screen": "Operations > Selected Portfolio Dashboard",
+            "screen": "Operations > Portfolio Monitoring",
             "title": "모니터링 후보 row 읽기",
             "check": "Final Review에서 저장된 current decision을 read-only로 읽고 drift / recheck signal을 확인합니다.",
-            "output": "Selected Portfolio Dashboard",
+            "output": "Portfolio Monitoring",
         },
     ]
 
@@ -315,13 +322,13 @@ def _concept_rows() -> list[dict[str, str]]:
         },
         {
             "개념": "Final Review",
-            "제품 안에서의 의미": "selected-route gate까지 통과한 후보를 Selected Dashboard 모니터링 후보로 저장하는 마지막 판단 화면",
+            "제품 안에서의 의미": "selected-route gate까지 통과한 후보를 Portfolio Monitoring 후보로 저장하는 마지막 판단 화면",
             "사용자가 볼 곳": "Backtest > Final Review",
         },
         {
-            "개념": "Selected Portfolio Dashboard",
+            "개념": "Portfolio Monitoring",
             "제품 안에서의 의미": "Final Review에서 저장된 모니터링 후보 포트폴리오를 읽어보는 read-only 운영 화면",
-            "사용자가 볼 곳": "Operations > Selected Portfolio Dashboard",
+            "사용자가 볼 곳": "Operations > Portfolio Monitoring",
         },
         {
             "개념": "Legacy Candidate / Proposal",
@@ -376,7 +383,7 @@ def _document_reference_rows() -> list[dict[str, str]]:
         {
             "상황": "후보 생성부터 선정 후 관찰까지 사용자 흐름을 볼 때",
             "문서": ".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md",
-            "역할": "Backtest Analysis -> Practical Validation -> Final Review -> Selected Dashboard 흐름과 stage ownership",
+            "역할": "Backtest Analysis -> Practical Validation -> Final Review -> Portfolio Monitoring 흐름과 stage ownership",
         },
         {
             "상황": "Backtest 화면이 어떤 순서로 동작하는지 볼 때",
@@ -396,7 +403,7 @@ def _document_reference_rows() -> list[dict[str, str]]:
         {
             "상황": "모니터링 후보 포트폴리오 운영 대시보드를 확인할 때",
             "문서": ".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md",
-            "역할": "Selected Portfolio Dashboard가 Final Review selected row를 read-only로 읽는 운영 경계",
+            "역할": "Portfolio Monitoring이 Final Review selected row를 read-only로 읽는 운영 경계",
         },
         {
             "상황": "용어가 헷갈릴 때",
@@ -436,14 +443,14 @@ def _registry_detail_rows() -> list[dict[str, str]]:
             "흐름 단계": "3단계 Final Review",
             "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
             "담는 데이터": "모니터링 후보 선정 판단, operator reason, inline paper observation",
-            "화면 위치": "Backtest > Final Review / Operations > Selected Portfolio Dashboard",
-            "읽는 법": "Selected Portfolio Dashboard의 source-of-truth입니다.",
+            "화면 위치": "Backtest > Final Review / Operations > Portfolio Monitoring",
+            "읽는 법": "Portfolio Monitoring의 source-of-truth입니다.",
         },
         {
             "흐름 단계": "4단계 사후 관찰",
             "파일": "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl",
             "담는 데이터": "모니터링 후보 선정 후 별도 monitoring snapshot을 저장할 때 쓰는 current workflow 보조 ledger",
-            "화면 위치": "Operations > Selected Portfolio Dashboard",
+            "화면 위치": "Operations > Portfolio Monitoring",
             "읽는 법": "현재 dashboard의 필수 입력은 아니며, selected row 관찰 보조 기록입니다.",
         },
         {
@@ -564,6 +571,67 @@ def _render_page_style() -> None:
             font-size: 0.78rem;
             font-weight: 700;
             padding: 0.28rem 0.62rem;
+          }
+          .qg-center-band {
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 1rem 1.1rem;
+            margin: 0.35rem 0 1rem;
+          }
+          .qg-center-title {
+            color: #111827;
+            font-size: 1.35rem;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 0.25rem;
+          }
+          .qg-center-copy {
+            color: #374151;
+            font-size: 0.94rem;
+            line-height: 1.5;
+            max-width: 980px;
+          }
+          .qg-task-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 0.72rem;
+            margin: 0.65rem 0 1rem;
+          }
+          .qg-task-card {
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.86rem;
+            min-height: 210px;
+          }
+          .qg-task-owner {
+            color: #2f6f9f;
+            font-size: 0.73rem;
+            font-weight: 800;
+            line-height: 1.35;
+            margin-bottom: 0.3rem;
+          }
+          .qg-task-title {
+            color: #111827;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.35;
+            margin-bottom: 0.28rem;
+          }
+          .qg-task-copy {
+            color: #374151;
+            font-size: 0.82rem;
+            line-height: 1.44;
+            margin-bottom: 0.45rem;
+          }
+          .qg-task-boundary {
+            border-top: 1px solid #e5e7eb;
+            color: #64748b;
+            font-size: 0.76rem;
+            font-weight: 700;
+            line-height: 1.4;
+            padding-top: 0.42rem;
           }
           .qg-card-grid {
             display: grid;
@@ -763,13 +831,131 @@ def _render_hero(runtime_marker: str | None, git_sha: str | None) -> None:
           </div>
           <div class="qg-status-strip">
             <span class="qg-chip">Current workflow: Backtest Analysis -> Practical Validation -> Final Review</span>
-            <span class="qg-chip">Operations follow-up: Selected Portfolio Dashboard</span>
+            <span class="qg-chip">Operations follow-up: Portfolio Monitoring</span>
             <span class="qg-chip">Runtime {runtime_text}</span>
             <span class="qg-chip">Git {git_text}</span>
           </div>
         </section>
         """
     )
+
+
+def _render_reference_center_hero(runtime_marker: str | None, git_sha: str | None) -> None:
+    runtime_text = escape(runtime_marker or "-")
+    git_text = escape(git_sha or "-")
+    st.html(
+        f"""
+        <section class="qg-center-band">
+          <div class="qg-card-kicker">Reference Center</div>
+          <div class="qg-center-title">제품 전체 운영 기준을 빠르게 찾는 안내 화면</div>
+          <div class="qg-center-copy">
+            데이터가 최신인지, 어떤 화면에서 후보를 만들지, 검증 상태가 무엇을 막는지,
+            선정 후 모니터링을 어떻게 읽을지 작업 기준으로 확인합니다.
+          </div>
+          <div class="qg-status-strip">
+            <span class="qg-chip">Read-only guide</span>
+            <span class="qg-chip">No provider fetch</span>
+            <span class="qg-chip">No broker order</span>
+            <span class="qg-chip">Runtime {runtime_text}</span>
+            <span class="qg-chip">Git {git_text}</span>
+          </div>
+        </section>
+        """
+    )
+
+
+def _render_task_cards(catalog: dict[str, list[dict[str, str]]]) -> None:
+    st.markdown("### 먼저 고를 작업")
+    st.caption("현재 막힌 지점이나 확인하려는 흐름을 기준으로 owner screen과 안전한 다음 행동을 찾습니다.")
+    cards: list[str] = []
+    for row in catalog["task_cards"]:
+        cards.append(
+            f"""
+            <div class="qg-task-card">
+              <div class="qg-task-owner">{escape(row["owner_screen"])}</div>
+              <div class="qg-task-title">{escape(row["title"])}</div>
+              <div class="qg-task-copy">{escape(row["summary"])}</div>
+              <div class="qg-task-copy"><strong>Safe action:</strong> {escape(row["safe_action"])}</div>
+              <div class="qg-task-boundary">{escape(row["does_not_do"])}</div>
+            </div>
+            """
+        )
+    st.html(f'<div class="qg-task-grid">{"".join(cards)}</div>')
+
+
+def _render_current_product_flow(catalog: dict[str, list[dict[str, str]]]) -> None:
+    st.markdown("### 현재 제품 흐름")
+    st.caption("Reference는 아래 화면의 owner와 기록 경계를 설명합니다. 직접 실행하거나 저장하지는 않습니다.")
+    st.dataframe(
+        pd.DataFrame(catalog["journeys"])[
+            ["title", "when_to_use", "screens", "records", "go_review_stop", "boundary"]
+        ],
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def _render_status_lookup(catalog: dict[str, list[dict[str, str]]]) -> None:
+    st.markdown("### 자주 막히는 상태 / 용어")
+    query = st.text_input(
+        "상태 / 용어 검색",
+        placeholder="예: NOT_RUN, BLOCKED, Data Trust, Provider Coverage",
+        key="reference_guides_status_query",
+    )
+    rows = catalog["concepts"]
+    if query.strip():
+        needle = query.strip().lower()
+        rows = [
+            row
+            for row in rows
+            if needle
+            in " ".join(str(value) for value in row.values()).lower()
+        ]
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if not rows:
+        st.info("검색 결과가 없습니다. Glossary와 문서 / 경로 drawer도 함께 확인하세요.")
+
+
+def _render_records_map(catalog: dict[str, list[dict[str, str]]]) -> None:
+    st.markdown("### 기록 / 저장 경계")
+    st.caption("어떤 화면이 무엇을 만들고 다시 읽는지 확인합니다. Reference는 이 기록을 수정하지 않습니다.")
+    st.dataframe(pd.DataFrame(catalog["records"]), width="stretch", hide_index=True)
+
+
+def _render_troubleshooting_playbooks(catalog: dict[str, list[dict[str, str]]]) -> None:
+    st.markdown("### 문제 해결 Playbook")
+    options = [row["title"] for row in catalog["playbooks"]]
+    selected = st.selectbox(
+        "문제 상황 선택",
+        options=options,
+        key="reference_guides_playbook",
+    )
+    playbook = next(row for row in catalog["playbooks"] if row["title"] == selected)
+    with st.container(border=True):
+        st.markdown(f"#### {playbook['title']}")
+        st.caption(f"Owner: {playbook['owner_screen']}")
+        st.markdown(f"**증상:** {playbook['symptom']}")
+        st.markdown(f"**First check:** {playbook['first_check']}")
+        st.markdown(f"**Safe action:** {playbook['safe_action']}")
+        st.warning(f"Stop condition: {playbook['stop_condition']}")
+
+
+def _render_reference_center() -> None:
+    catalog = get_reference_center_catalog()
+    st.info(
+        "Reference는 읽기 전용 안내 화면입니다. 데이터 수집, registry 저장, provider fetch, broker order, "
+        "auto rebalance는 각 owner screen에서만 다룹니다."
+    )
+    _render_task_cards(catalog)
+    tabs = st.tabs(["제품 흐름", "상태 / 용어", "기록 경계", "문제 해결"])
+    with tabs[0]:
+        _render_current_product_flow(catalog)
+    with tabs[1]:
+        _render_status_lookup(catalog)
+    with tabs[2]:
+        _render_records_map(catalog)
+    with tabs[3]:
+        _render_troubleshooting_playbooks(catalog)
 
 
 def _render_orientation_cards(selected_route: str, route: dict[str, Any]) -> None:
@@ -960,7 +1146,7 @@ def _render_reference_drawer() -> None:
                 - `1`: Backtest Analysis에서 단일 / Portfolio Mix / 저장 mix 후보 source를 만든다.
                 - `2`: Practical Validation에서 검증 프로필, Input Evidence, 12개 Practical Diagnostics를 확인한다.
                 - `3`: Final Review에서 모니터링 후보 선정과 이유를 current decision으로 남긴다.
-                - `4`: Selected Portfolio Dashboard에서 모니터링 후보 row를 read-only로 관찰한다.
+                - `4`: Portfolio Monitoring에서 모니터링 후보 row를 read-only로 관찰한다.
                 """
             )
     with tabs[2]:
@@ -968,11 +1154,11 @@ def _render_reference_drawer() -> None:
         st.info(
             "Saved Portfolio는 재사용 setup이고, current selection source는 검증 입력입니다. "
             "저장된 Mix는 Candidate Review나 legacy Proposal을 필수로 거치지 않고 Practical Validation으로 연결합니다. "
-            "Selected Portfolio Dashboard는 새 저장소가 아니라 Final Selection Decision을 읽는 운영 화면입니다."
+            "Portfolio Monitoring은 새 저장소가 아니라 Final Selection Decision을 읽는 운영 화면입니다."
         )
     with tabs[3]:
         st.warning(
-            "`SELECT_FOR_PRACTICAL_PORTFOLIO`는 Selected Dashboard 모니터링 후보 선정 신호이지 live approval, broker order, 자동매매 지시가 아닙니다."
+            "`SELECT_FOR_PRACTICAL_PORTFOLIO`는 Portfolio Monitoring 후보 선정 신호이지 live approval, broker order, 자동매매 지시가 아닙니다."
         )
         st.markdown(
             """
@@ -980,7 +1166,7 @@ def _render_reference_drawer() -> None:
             - `Backtest Analysis`는 후보 source를 만드는 1단계입니다.
             - `Practical Validation`은 source를 profile-aware practical diagnostics 결과로 구조화하는 2단계입니다.
             - `Final Review`는 현재 workflow의 마지막 판단 기록입니다.
-            - `Selected Portfolio Dashboard`는 Final Review selected row를 Operations에서 다시 읽는 화면입니다.
+            - `Portfolio Monitoring`은 Final Review selected row를 Operations에서 다시 읽는 화면입니다.
             - `Candidate Review / Portfolio Proposal`은 기존 기록을 읽기 위한 legacy compatibility 경로입니다.
             - `Live Approval / Order`는 현재 제품 범위 밖입니다.
             """
@@ -1014,11 +1200,40 @@ def render_reference_guides_page(
     git_sha: str | None = None,
     render_runtime_snapshot: Callable[[], None] | None = None,
 ) -> None:
-    """Render the product-facing reference guide for portfolio selection workflows."""
+    """Render the product-facing Reference guide for the finance console."""
 
     _render_page_style()
     st.title("Guides")
-    st.caption("포트폴리오 후보 선정 흐름을 빠르게 고르고, 다음 화면과 멈춤 기준을 확인하는 안내 화면입니다.")
+    st.caption("제품 전체 운영 흐름, 상태 해석, 기록 경계, 문제 해결 기준을 빠르게 찾는 안내 화면입니다.")
+    _render_reference_center_hero(runtime_marker, git_sha)
+
+    mode_key = "reference_guides_view_mode"
+    if st.session_state.get(mode_key) not in REFERENCE_VIEW_OPTIONS:
+        st.session_state[mode_key] = REFERENCE_VIEW_OPTIONS[0]
+
+    if hasattr(st, "segmented_control"):
+        st.segmented_control(
+            "Reference 보기",
+            options=REFERENCE_VIEW_OPTIONS,
+            selection_mode="single",
+            required=True,
+            key=mode_key,
+            width="stretch",
+        )
+        selected_mode = str(st.session_state.get(mode_key) or REFERENCE_VIEW_OPTIONS[0])
+    else:
+        selected_mode = st.radio(
+            "Reference 보기",
+            options=REFERENCE_VIEW_OPTIONS,
+            horizontal=True,
+            key=mode_key,
+        )
+
+    if selected_mode == "Reference Center":
+        _render_reference_center()
+        _render_runtime_reference(loaded_at, render_runtime_snapshot)
+        return
+
     _render_hero(runtime_marker, git_sha)
 
     routes = _route_cards()

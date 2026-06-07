@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `futures-monitor-stale-refresh-fix-20260607`
+- `reference-guides-center-v1-20260607`
 
 Latest completed docs cleanup task:
 

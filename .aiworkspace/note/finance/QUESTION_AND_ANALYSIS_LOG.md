@@ -7495,3 +7495,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: provider가 늦거나 선물장이 닫힌 상황에서도 저장된 최신 futures OHLCV를 화면에서 확인할 수 있어야 하며, stale 데이터는 fresh처럼 보이면 안 됨.
 - Analysis result: 수집기는 empty/sparse `1d / 1m` 응답 fallback을 이미 갖고 있었지만, Overview service read path가 `UTC_TIMESTAMP() - lookback`으로만 조회해 최신 저장 candle이 현재 시각 기준 window 밖이면 DB row가 있어도 `MISSING`처럼 보였다.
 - Follow-up: `app/services/futures_market_monitoring.py`가 각 symbol의 latest stored candle 기준으로 chart window를 읽도록 수정했다. 상태 계산은 현재 시각 대비 `Stale`로 유지한다.
+
+### 2026-06-07 - Reference 탭을 현재 제품 흐름에 맞게 1차 개편한다
+
+- User request: 오래전에 중단된 `Reference` 탭을 현재 프로그램 방향과 구조에 맞게 전체적으로 개선하고, 벤치마킹 기반으로 단계별 가이드를 잡은 뒤 진행해 달라고 요청함.
+- Interpreted goal: `Reference > Guides`를 포트폴리오 후보 선정 전용 guide에서 Overview / Ingestion / Backtest / Validation / Operations까지 안내하는 task-first Reference Center로 바꿔야 함.
+- Analysis result: 기존 Guide의 route selector / timeline / Go-Review-Stop 구조는 유지 가치가 있지만 첫 화면이 product-wide help center 역할을 못한다. Reference는 read-only guide여야 하며 job 실행, provider fetch, registry write, live approval / order / auto rebalance를 추가하면 안 된다.
+- Follow-up: 1차로 catalog service와 Reference Center shell을 구현하고, 기존 guide는 `Portfolio Selection Journey`로 보존했다. 후속 차수는 Glossary 통합, contextual links, Browser QA 기반 polish다.
