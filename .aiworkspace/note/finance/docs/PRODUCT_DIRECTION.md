@@ -62,8 +62,6 @@ Last Verified: 2026-06-07
 - `Operations > Operations Console`
 - `Operations > Portfolio Monitoring`
 - `Operations > System / Data Health`
-- `Operations > Archive: Backtest Runs`
-- `Operations > Archive: Candidates`
 - `Reference > Guides`
 
 현재 구현 완료로 보는 큰 흐름:
@@ -72,6 +70,6 @@ Last Verified: 2026-06-07
 - Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
 - Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.
 - Practical Validation V2 P2 / P3, Final Review selection readiness, Operations > Portfolio Monitoring read-only monitoring / recheck 연결은 closeout 완료 상태다.
-- Operations는 Operations Console을 입구로 삼고, Portfolio Monitoring과 System / Data Health를 primary lane으로, Run History와 Candidate Library를 archive / recovery lane으로 둔다.
+- Operations는 Operations Console을 입구로 삼고, Portfolio Monitoring과 System / Data Health만 사용자-facing 운영 탭으로 둔다. Backtest Run History와 Candidate Library archive 화면은 상단 Operations 탭에서 제거했으며, 과거 데이터 / helper code 삭제는 별도 audit 전까지 하지 않는다.
 
 현재 active phase는 없다. 다음 개발은 사용자가 승인한 구체적 scope를 새 task 또는 phase로 열어 진행한다.

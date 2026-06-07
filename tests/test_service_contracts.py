@@ -11256,7 +11256,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(portfolio["virtual_capital_total"], 30000.0)
         self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
 
-    def test_operations_overview_model_groups_primary_and_archive_lanes(self) -> None:
+    def test_operations_overview_model_keeps_only_monitoring_and_health_lanes(self) -> None:
         spec = importlib.util.find_spec("app.web.operations_overview")
         self.assertIsNotNone(spec, "Operations Overview read model module should exist")
 
@@ -11291,7 +11291,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(model["schema_version"], "operations_overview_v1")
         self.assertEqual(
             [lane["key"] for lane in model["lanes"]],
-            ["portfolio_monitoring", "system_data_health", "archive_recovery", "reference_reports"],
+            ["portfolio_monitoring", "system_data_health"],
         )
         lane_by_key = {lane["key"]: lane for lane in model["lanes"]}
         self.assertEqual(lane_by_key["portfolio_monitoring"]["priority"], "primary")
@@ -11299,9 +11299,8 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["selected_decision_count"], 2)
         self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["watch_or_review_count"], 1)
         self.assertEqual(lane_by_key["system_data_health"]["status"], "Attention Needed")
-        self.assertEqual(lane_by_key["archive_recovery"]["priority"], "secondary")
-        self.assertEqual(lane_by_key["archive_recovery"]["metrics"]["candidate_count"], 2)
-        self.assertEqual(lane_by_key["archive_recovery"]["metrics"]["backtest_run_count"], 1)
+        self.assertNotIn("archive_recovery", lane_by_key)
+        self.assertNotIn("reference_reports", lane_by_key)
 
     def test_operations_overview_model_keeps_execution_boundary_disabled(self) -> None:
         spec = importlib.util.find_spec("app.web.operations_overview")
@@ -11345,20 +11344,19 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         )
 
         self.assertEqual(model["console_version"], "operations_console_v2_v5")
-        self.assertEqual([stage["stage"] for stage in model["stage_roadmap"]], ["1차", "2차", "3차", "4차", "5차"])
-        self.assertTrue(all(stage["status"] == "completed" for stage in model["stage_roadmap"]))
 
         audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
         self.assertEqual(audit_by_surface["portfolio_monitoring"]["decision"], "keep_primary_improve")
         self.assertEqual(audit_by_surface["system_data_health"]["decision"], "keep_primary_improve")
-        self.assertEqual(audit_by_surface["backtest_run_history"]["decision"], "keep_as_archive_recovery")
+        self.assertEqual(audit_by_surface["backtest_run_history"]["decision"], "removed_from_operations_navigation")
         self.assertFalse(audit_by_surface["backtest_run_history"]["primary_operations"])
-        self.assertEqual(audit_by_surface["candidate_library"]["decision"], "keep_as_archive_recovery")
+        self.assertEqual(audit_by_surface["candidate_library"]["decision"], "removed_from_operations_navigation")
         self.assertFalse(audit_by_surface["candidate_library"]["primary_operations"])
 
         action_keys = {item["key"] for item in model["action_queue"]}
         self.assertIn("review_portfolio_monitoring", action_keys)
         self.assertIn("inspect_system_data_health", action_keys)
+        self.assertNotIn("archive_recovery_available", action_keys)
         self.assertNotIn("place_order", action_keys)
         for item in model["action_queue"]:
             self.assertFalse(item["execution_boundary"]["order_instruction"])
@@ -11388,13 +11386,21 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
 
         self.assertIn("일상 점검", model["action_queue"][0]["title"])
         self.assertIn("모니터링 후보", model["action_queue"][0]["reason"])
-        self.assertIn("수동", model["stage_roadmap"][2]["output"])
-        self.assertIn("주문 지시", model["stage_roadmap"][2]["output"])
         audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
         self.assertIn("선정 포트폴리오", audit_by_surface["portfolio_monitoring"]["role"])
-        self.assertIn("삭제하지 않음", audit_by_surface["candidate_library"]["change"])
+        self.assertIn("상단 탭에서 제거", audit_by_surface["candidate_library"]["change"])
         self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
-        self.assertIn("복구", model["lanes"][2]["detail"])
+        self.assertEqual(len(model["lanes"]), 2)
+
+    def test_operations_navigation_hides_archive_pages_from_top_level_tabs(self) -> None:
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+        operations_block = source.split('"Operations": [', 1)[1].split("],", 1)[0]
+
+        self.assertIn("operations_overview_page", operations_block)
+        self.assertIn("selected_portfolio_dashboard_page", operations_block)
+        self.assertIn("ops_review_page", operations_block)
+        self.assertNotIn("backtest_history_page", operations_block)
+        self.assertNotIn("candidate_library_page", operations_block)
 
     def test_portfolio_monitoring_rebalance_table_uses_target_snapshot_language(self) -> None:
         from app.web.final_selected_portfolio_dashboard import _build_rebalance_table

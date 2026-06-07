@@ -72,7 +72,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 ## User-Facing Rules
 
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
-- `Operations > Operations Overview`는 선정 후 monitoring / system health / archive recovery의 Operations Console 입구이며, Backtest 후보 생성 단계가 아니다. Today action queue는 검토 우선순위만 안내하고 주문 / 자동 리밸런싱을 만들지 않는다.
+- `Operations > Operations Overview`는 선정 후 monitoring / system health의 Operations Console 입구이며, Backtest 후보 생성 단계가 아니다. Today action queue는 검토 우선순위만 안내하고 주문 / 자동 리밸런싱을 만들지 않는다. Backtest Run History와 Candidate Library archive 화면은 현재 Operations 상단 탭에 노출하지 않는다.
 - Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.

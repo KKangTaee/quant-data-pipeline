@@ -7427,6 +7427,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `Operations Console` action queue, 1차~5차 roadmap, surface audit decisions, target snapshot table semantics를 구현했다. live approval / order / account sync / auto rebalance / registry rewrite / report export는 추가하지 않았다
 
+### 2026-06-07 - Operations archive 탭은 제거한다
+
+- User request:
+  - 사용자가 Portfolio Monitoring 외 archive 성격의 데이터 / 화면은 이제 별 의미가 없으므로 없애도 된다고 승인함.
+- Interpreted goal:
+  - Operations의 정체성을 `Portfolio Monitoring + System / Data Health`로 좁히고, Backtest Run History / Candidate Library를 상단 Operations 탭에서 제거한다.
+- Analysis result:
+  - UI 탭 제거와 데이터 삭제는 분리한다. 현재 차수에서는 top navigation / Overview lane에서 archive를 제거하되, run history / candidate registry / helper code 삭제는 별도 audit 전까지 하지 않는 것이 안전하다.
+- Follow-up:
+  - `app/web/streamlit_app.py`, `app/web/operations_overview.py`, 관련 docs / tests를 갱신했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/operations-archive-tabs-removal-20260607/`에 남겼다.
+
 ### 2026-06-03 - Risk-On Momentum 5D V2는 Backtest Analysis 연구 lane으로 구현한다
 
 - User request: V1 이후 Risk-On Momentum 5D V2 고도화 계획을 구현하되 Practical Validation / Final Review / Selected Dashboard governance는 바로 연결하지 말라고 요청함.

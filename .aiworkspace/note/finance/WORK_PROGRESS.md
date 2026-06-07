@@ -4766,6 +4766,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Operations > Operations Overview`는 `Operations Console`로서 today action queue, 1차~5차 roadmap, surface audit, primary/secondary lane을 표시한다.
   - Portfolio Monitoring의 리밸런싱 표는 `Target Snapshot Date`, `Next Review Date`, `Current Target Snapshot`으로 바꿔 주문/자동 리밸런싱이 아님을 명시했다.
   - Backtest Run History와 Candidate Library는 삭제하지 않고 Archive / Recovery 도구로 보존했다.
+- Operations Archive Tabs Removal:
+  - `.aiworkspace/note/finance/tasks/active/operations-archive-tabs-removal-20260607/`에서 Operations 상단 archive 탭 제거를 완료했다.
+  - 현재 Operations top navigation은 `Operations Overview`, `Portfolio Monitoring`, `System / Data Health`만 남긴다.
+  - Backtest Run History / Candidate Library 데이터와 helper code는 삭제하지 않고, 실제 삭제는 별도 audit 후 판단한다.
+  - focused unittest 4개, py_compile, `git diff --check`를 검증 기준으로 삼았다.
 - Risk-On Momentum 5D V1:
   - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`에서 Top1000 기본 short-term stock swing strategy를 구현했다.
   - Core는 `finance/swing.py`, daily swing features는 `finance/transform.py`, futures daily loader는 `finance/loaders/futures.py`, DB wrapper / artifact writer는 `app/runtime/backtest.py`가 맡는다.

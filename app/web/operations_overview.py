@@ -59,7 +59,7 @@ def _build_stage_roadmap() -> list[dict[str, str]]:
             "stage": "1차",
             "title": "Operations 정보 구조 기반",
             "status": "completed",
-            "output": "Operations Overview에 Portfolio Monitoring, System / Data Health, Archive / Recovery lane을 분리했습니다.",
+            "output": "Operations Overview에 Portfolio Monitoring, System / Data Health lane을 분리했습니다.",
         },
         {
             "stage": "2차",
@@ -75,9 +75,9 @@ def _build_stage_roadmap() -> list[dict[str, str]]:
         },
         {
             "stage": "4차",
-            "title": "Archive 도구 격하",
+            "title": "Archive 도구 탭 제거",
             "status": "completed",
-            "output": "Backtest Run History와 Candidate Library는 복구 / 감사 도구로 보존했습니다.",
+            "output": "Backtest Run History와 Candidate Library를 Operations 상단 탭에서 제거했습니다.",
         },
         {
             "stage": "5차",
@@ -108,27 +108,19 @@ def _build_surface_audit() -> list[dict[str, Any]]:
         },
         {
             "surface_key": "backtest_run_history",
-            "surface": "Operations > Archive: Backtest Runs",
+            "surface": "Hidden archive: Backtest Runs",
             "primary_operations": False,
-            "decision": "keep_as_archive_recovery",
+            "decision": "removed_from_operations_navigation",
             "role": "과거 backtest run을 복구 / 감사하고 필요할 때 form을 복원합니다.",
-            "change": "삭제하지 않음. primary operations 아래의 복구 도구로 유지합니다.",
+            "change": "Operations 상단 탭에서 제거했습니다. 데이터 / helper code는 즉시 삭제하지 않습니다.",
         },
         {
             "surface_key": "candidate_library",
-            "surface": "Operations > Archive: Candidates",
+            "surface": "Hidden archive: Candidates",
             "primary_operations": False,
-            "decision": "keep_as_archive_recovery",
+            "decision": "removed_from_operations_navigation",
             "role": "legacy / current / pre-live candidate snapshot을 확인하고 result curve를 재생성합니다.",
-            "change": "삭제하지 않음. primary operations 아래의 후보 archive 도구로 유지합니다.",
-        },
-        {
-            "surface_key": "reference_reports",
-            "surface": "Reference > Guides",
-            "primary_operations": False,
-            "decision": "keep_reference_future_reports",
-            "role": "workflow 의미와 향후 수동 report handoff 기준을 설명합니다.",
-            "change": "Reference로 유지합니다. report export 구현은 이후 별도 범위입니다.",
+            "change": "Operations 상단 탭에서 제거했습니다. legacy registry 정리는 별도 audit 후 판단합니다.",
         },
     ]
 
@@ -211,19 +203,6 @@ def _build_action_queue(
                 "execution_boundary": _disabled_action_boundary(),
             }
         )
-    if run_history_count or candidate_count:
-        actions.append(
-            {
-                "key": "archive_recovery_available",
-                "title": "Archive / Recovery 도구 사용 가능",
-                "tone": "neutral",
-                "target_key": "archive_backtest_runs" if run_history_count else "archive_candidates",
-                "target_surface": "Operations > Archive / Recovery",
-                "reason": f"Backtest run {run_history_count}개, candidate snapshot {candidate_count}개를 확인할 수 있습니다.",
-                "next_action": "이전 작업을 복구하거나 감사할 때만 archive 도구를 사용합니다.",
-                "execution_boundary": _disabled_action_boundary(),
-            }
-        )
     return actions[:4]
 
 
@@ -296,42 +275,11 @@ def build_operations_overview_model(
             },
             "links": [{"target_key": "system_data_health", "label": "System / Data Health 열기", "icon": "🧾"}],
         },
-        {
-            "key": "archive_recovery",
-            "title": "Archive / Recovery",
-            "priority": "secondary",
-            "status": "Available" if run_history or candidate_records else "Empty",
-            "tone": "neutral",
-            "target_surface": "Operations > Archive / Recovery",
-            "detail": "복구가 필요할 때 과거 backtest를 다시 열고 저장 후보를 확인합니다.",
-            "metrics": {
-                "backtest_run_count": len(run_history),
-                "candidate_count": len(candidate_records),
-            },
-            "links": [
-                {"target_key": "archive_backtest_runs", "label": "Backtest Runs 열기", "icon": "🗂️"},
-                {"target_key": "archive_candidates", "label": "Candidates 열기", "icon": "📌"},
-            ],
-        },
-        {
-            "key": "reference_reports",
-            "title": "Reference / Reports",
-            "priority": "secondary",
-            "status": "Guide Ready",
-            "tone": "neutral",
-            "target_surface": "Reference > Guides",
-            "detail": "workflow 의미, 판단 경계, 향후 report handoff 기준을 확인합니다.",
-            "metrics": {
-                "report_export": "Planned",
-                "guide": "Available",
-            },
-            "links": [{"target_key": "reference_guides", "label": "Guides 열기", "icon": "📚"}],
-        },
     ]
     return {
         "schema_version": OPERATIONS_OVERVIEW_SCHEMA_VERSION,
         "console_version": OPERATIONS_CONSOLE_VERSION,
-        "operations_model": "Portfolio Monitoring + System/Data Health + Archive/Recovery",
+        "operations_model": "Portfolio Monitoring + System/Data Health",
         "lanes": lanes,
         "stage_roadmap": _build_stage_roadmap(),
         "surface_audit": _build_surface_audit(),
@@ -460,7 +408,7 @@ def _render_lane(lane: dict[str, Any], *, page_targets: dict[str, Any]) -> None:
 
 def _render_action_queue(model: dict[str, Any], *, page_targets: dict[str, Any]) -> None:
     st.markdown("### Today's Operations Queue")
-    st.caption("먼저 확인할 항목만 보여줍니다. 모든 항목은 검토 / 복구 / 감사용이며 주문이나 자동 리밸런싱을 만들지 않습니다.")
+    st.caption("먼저 확인할 항목만 보여줍니다. 모든 항목은 모니터링 검토 / 시스템 점검용이며 주문이나 자동 리밸런싱을 만들지 않습니다.")
     for action in list(model.get("action_queue") or []):
         with st.container(border=True):
             render_badge_strip(
@@ -494,12 +442,11 @@ def _render_stage_roadmap(model: dict[str, Any]) -> None:
 
 
 def _render_surface_audit(model: dict[str, Any]) -> None:
-    with st.expander("Operations surface audit / keep-improve-archive decisions", expanded=False):
-        st.caption("삭제가 아니라 유지 / 개선 / archive 격하 기준을 먼저 고정한 감사표입니다.")
+    with st.expander("Operations surface decisions", expanded=False):
+        st.caption("Portfolio Monitoring과 System / Data Health만 Operations 상단 탭에 남기고, archive 화면은 숨긴 결정표입니다.")
         decision_labels = {
             "keep_primary_improve": "주요 화면으로 유지 / 개선",
-            "keep_as_archive_recovery": "Archive / Recovery로 보존",
-            "keep_reference_future_reports": "Reference로 유지 / report는 후속 범위",
+            "removed_from_operations_navigation": "Operations 상단 탭에서 제거",
         }
         rows = []
         for row in list(model.get("surface_audit") or []):
@@ -529,7 +476,7 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
     page_targets = dict(page_targets or {})
 
     st.title("Operations Console")
-    st.caption("선정 후 portfolio monitoring과 system/data health를 먼저 보고, archive/recovery는 필요할 때만 여는 운영 화면입니다.")
+    st.caption("선정 후 portfolio monitoring과 system/data health만 남긴 운영 화면입니다. 과거 archive 도구는 상단 탭에서 제거했습니다.")
     _render_action_queue(model, page_targets=page_targets)
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(
@@ -542,17 +489,11 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
 
     lanes = list(model.get("lanes") or [])
     primary_lanes = [lane for lane in lanes if lane.get("priority") == "primary"]
-    secondary_lanes = [lane for lane in lanes if lane.get("priority") != "primary"]
 
     st.markdown("### Primary Operations")
     for lane in primary_lanes:
         _render_lane(lane, page_targets=page_targets)
 
-    st.markdown("### Archive / Reference")
-    for lane in secondary_lanes:
-        _render_lane(lane, page_targets=page_targets)
-
-    _render_stage_roadmap(model)
     _render_surface_audit(model)
     with st.expander("Execution Boundary", expanded=False):
         st.json(model.get("execution_boundary") or {})

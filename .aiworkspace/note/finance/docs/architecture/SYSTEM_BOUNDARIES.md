@@ -113,7 +113,8 @@ Final Review does not create broker orders, live approval, account sync, auto re
 
 Operations Console is the Operations entry point.
 
-It should put Portfolio Monitoring and System / Data Health first, and treat Backtest Run History / Candidate Library as archive / recovery tools.
+It should put only Portfolio Monitoring and System / Data Health in the user-facing Operations navigation.
+Backtest Run History and Candidate Library are no longer top-level Operations tabs; their data/helper paths are preserved until a separate archive deletion audit is approved.
 It can summarize today action queue and no-live boundary, but it does not create candidate sources or run validation gates.
 
 ### Operations > Portfolio Monitoring

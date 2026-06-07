@@ -12,8 +12,6 @@ DIRECT_RUN_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(DIRECT_RUN_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(DIRECT_RUN_PROJECT_ROOT))
 
-from app.web.backtest_candidate_library import render_candidate_library_page
-from app.web.backtest_history import render_backtest_run_history_page
 from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
 from app.web.ingestion_console import (
     apply_pending_ingestion_prefill,
@@ -210,15 +208,6 @@ def _render_ops_review_page() -> None:
     )
 
 
-def _render_backtest_run_history_page(open_backtest_page) -> None:
-    render_backtest_run_history_page(open_backtest_page=open_backtest_page)
-
-
-# Render the saved candidate library and replay surface under Operations.
-def _render_candidate_library_page() -> None:
-    render_candidate_library_page()
-
-
 def _render_selected_portfolio_dashboard_page() -> None:
     render_final_selected_portfolio_dashboard_page()
 
@@ -311,21 +300,6 @@ def main() -> None:
     backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
     ops_review_page = st.Page(_render_ops_review_page, title="System / Data Health", icon="🧾", url_path="ops-review")
 
-    def open_backtest_page() -> None:
-        st.switch_page(backtest_page)
-
-    backtest_history_page = st.Page(
-        lambda: _render_backtest_run_history_page(open_backtest_page),
-        title="Archive: Backtest Runs",
-        icon="🗂️",
-        url_path="backtest-run-history",
-    )
-    candidate_library_page = st.Page(
-        _render_candidate_library_page,
-        title="Archive: Candidates",
-        icon="📌",
-        url_path="candidate-library",
-    )
     selected_portfolio_dashboard_page = st.Page(
         _render_selected_portfolio_dashboard_page,
         title="Portfolio Monitoring",
@@ -339,8 +313,6 @@ def main() -> None:
             page_targets={
                 "portfolio_monitoring": selected_portfolio_dashboard_page,
                 "system_data_health": ops_review_page,
-                "archive_backtest_runs": backtest_history_page,
-                "archive_candidates": candidate_library_page,
                 "reference_guides": guides_page,
             }
         ),
@@ -360,8 +332,6 @@ def main() -> None:
                 operations_overview_page,
                 selected_portfolio_dashboard_page,
                 ops_review_page,
-                backtest_history_page,
-                candidate_library_page,
             ],
             "Reference": [
                 guides_page,
