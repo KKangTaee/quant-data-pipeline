@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `futures-monitor-stale-refresh-fix-20260607` | Completed record | Overview Futures Monitor가 현재 UTC lookback 밖의 최신 저장 1m candle을 `Missing`처럼 숨기지 않고, latest stored candle 기준으로 차트를 표시하면서 stale status를 유지하도록 고친 기록이다. |
 | `refactor-round-closeout-20260607` | Completed record | 10차 구조정리 라운드 closeout. 5차~9차 리팩토링 기준선을 감사하고, 남은 Backtest Compare / Overview / Operations split 후보를 후속 작업으로 분리한 기록이다. |
 | `backtest-compare-components-split-20260607` | Completed record | 9차 Backtest Compare Streamlit split first pass. Portfolio Mix Builder visual shell을 `app/web/backtest_compare_components.py`로 이동하고 `app/web/backtest_compare.py`를 실행 / 상태 orchestration 중심으로 낮춘 기록이다. |
 | `ingestion-diagnostic-facade-20260607` | Completed record | 7차 대형 Streamlit 파일 분해 7B. Ingestion read-only diagnostic orchestration을 `app/services/ingestion_diagnostics.py`로 이동하고 `app/web/ingestion_console.py`는 렌더 / 세션 상태에 집중하게 한 기록이다. |

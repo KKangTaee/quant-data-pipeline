@@ -6886,6 +6886,79 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
         self.assertEqual(nq_row["State"], "Sharp")
         self.assertGreater(nq_row["60m %"], 1.0)
 
+    def test_futures_monitor_anchors_chart_window_to_latest_stored_candle(self) -> None:
+        from app.services.futures_market_monitoring import build_futures_monitor_snapshot
+
+        latest = pd.Timestamp("2026-06-05 21:00:00", tz=timezone.utc)
+        candle_rows: list[dict[str, object]] = []
+        for idx in range(0, 61):
+            ts = latest - pd.Timedelta(minutes=60 - idx)
+            candle_rows.append(
+                {
+                    "provider_symbol": "NQ=F",
+                    "interval_code": "1m",
+                    "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                    "open": 19000.0 + idx,
+                    "high": 19001.0 + idx,
+                    "low": 18999.0 + idx,
+                    "close": 19000.5 + idx,
+                    "volume": 1000 + idx,
+                    "source": "yfinance",
+                    "provider_status": "ok",
+                }
+            )
+        candle_sqls: list[str] = []
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_instrument" in sql:
+                return [
+                    {
+                        "provider_symbol": "NQ=F",
+                        "display_name": "E-mini Nasdaq 100",
+                        "futures_group": "Equity Index",
+                        "source": "yfinance",
+                        "sort_order": 20,
+                    }
+                ]
+            if "FROM futures_ohlcv" in sql:
+                candle_sqls.append(sql)
+                if "UTC_TIMESTAMP" in sql:
+                    return []
+                return candle_rows
+            if "FROM futures_market_monitor_run" in sql:
+                return [
+                    {
+                        "run_id": "run-stale",
+                        "interval_code": "1m",
+                        "status": "success",
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "rows_written": len(candle_rows),
+                        "latest_candle_time_utc": "2026-06-05 21:00:00",
+                        "finished_at": "2026-06-05 21:00:01",
+                    }
+                ]
+            return []
+
+        snapshot = build_futures_monitor_snapshot(
+            group="Equity Index",
+            symbols=["NQ=F"],
+            selected_symbol="NQ=F",
+            lookback_minutes=60,
+            now=datetime(2026, 6, 6, 9, 0, tzinfo=timezone.utc),
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "REVIEW")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
+        self.assertFalse(snapshot["candles"].empty)
+        nq_row = snapshot["rows"][snapshot["rows"]["Symbol"] == "NQ=F"].iloc[0]
+        self.assertEqual(nq_row["State"], "Stale")
+        self.assertEqual(nq_row["Latest Candle UTC"], "2026-06-05 21:00")
+        self.assertTrue(candle_sqls)
+        self.assertNotIn("UTC_TIMESTAMP", candle_sqls[0])
+
     def test_futures_monitor_preopen_core_uses_cross_asset_symbols(self) -> None:
         from app.services.futures_market_monitoring import build_futures_monitor_snapshot
 

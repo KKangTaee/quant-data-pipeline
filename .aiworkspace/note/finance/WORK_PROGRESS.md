@@ -4797,3 +4797,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Backtest > Practical Validation`은 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여주며, `context_only`, `gate_effect=none`, `registry_write=false` 경계를 표시한다.
   - 기존 Practical Validation Gate / selected-route preflight / registry / saved setup / live approval / order / auto rebalance 경계는 변경하지 않았다.
   - 검증: service contracts 255 tests, py_compile, `git diff --check`, Browser QA screenshot 완료.
+- Futures Monitor stale refresh fix:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-stale-refresh-fix-20260607/`에서 Overview Futures Monitor의 간헐적 미갱신 원인을 추적하고 수정했다.
+  - 원인은 service candle query가 현재 UTC 기준 lookback만 읽어, yfinance 지연 / 휴장 / 주말 상태의 latest stored candle을 `Missing`처럼 숨긴 것이었다.
+  - 이제 차트 window는 각 symbol의 latest stored candle 기준으로 읽고, freshness는 실제 현재 시각 대비 `Stale`로 표시한다.
+  - 검증: failing regression -> fix -> focused futures tests 15개, full service contracts 288개, py_compile, `git diff --check`, UI-engine boundary, Browser QA 통과.

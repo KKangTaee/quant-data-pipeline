@@ -7488,3 +7488,10 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Overlay는 저장된 `macro_series_observation`을 Overview sentiment snapshot으로 읽고 Practical Validation 전용 read model로 변환하는 것이 가장 안전하다. 결과 JSONL에 섞지 않고 `context_only`, `gate_effect=none`, `registry_write=false`를 명시한다
 - Follow-up:
   - `Backtest > Practical Validation`에 context overlay band를 추가했다. Final Review Gate, selected-route preflight, registry, saved setup, live trading boundary는 변경하지 않았다
+
+### 2026-06-07 - Futures Monitor가 갱신 후에도 그래프 / 데이터가 비어 보이는 원인을 고친다
+
+- User request: `Workspace > Overview > Futures Monitor`에서 업데이트를 실행해도 선물 그래프와 데이터가 간헐적으로 갱신되지 않는 문제의 원인 파악과 해결을 요청함.
+- Interpreted goal: provider가 늦거나 선물장이 닫힌 상황에서도 저장된 최신 futures OHLCV를 화면에서 확인할 수 있어야 하며, stale 데이터는 fresh처럼 보이면 안 됨.
+- Analysis result: 수집기는 empty/sparse `1d / 1m` 응답 fallback을 이미 갖고 있었지만, Overview service read path가 `UTC_TIMESTAMP() - lookback`으로만 조회해 최신 저장 candle이 현재 시각 기준 window 밖이면 DB row가 있어도 `MISSING`처럼 보였다.
+- Follow-up: `app/services/futures_market_monitoring.py`가 각 symbol의 latest stored candle 기준으로 chart window를 읽도록 수정했다. 상태 계산은 현재 시각 대비 `Stale`로 유지한다.

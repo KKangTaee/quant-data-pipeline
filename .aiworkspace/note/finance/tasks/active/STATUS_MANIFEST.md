@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `refactor-round-closeout-20260607`
+- `futures-monitor-stale-refresh-fix-20260607`
 
 Latest completed docs cleanup task:
 
@@ -64,7 +64,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 | Large Streamlit file split | 7차 Ingestion Console and 9차 Backtest Compare split records | `backtest-compare-components-split-20260607`, `ingestion-diagnostic-facade-20260607`, `streamlit-ingestion-console-split-20260607` |
 | Runtime large file split | 8차 Backtest runtime split records | `runtime-backtest-strict-family-split-20260607`, `runtime-backtest-real-money-split-20260607`, `runtime-backtest-risk-on-momentum-split-20260607` |
 | Code structure audit | 5차 refactor baseline and 10차 closeout records | `refactor-round-closeout-20260607`, `code-boundary-refactor-audit-20260607` |
-| Overview / market context | Overview Market Intelligence, Sentiment, Futures, Why It Moved, Events, automation | `overview-market-sentiment-v1`, `overview-market-movers-second-pass`, `futures-market-monitoring-mvp-v1`, `futures-macro-thermometer-validation-v1`, `overview-scheduled-refresh-automation` |
+| Overview / market context | Overview Market Intelligence, Sentiment, Futures, Why It Moved, Events, automation | `overview-market-sentiment-v1`, `overview-market-movers-second-pass`, `futures-market-monitoring-mvp-v1`, `futures-monitor-stale-refresh-fix-20260607`, `futures-macro-thermometer-validation-v1`, `overview-scheduled-refresh-automation` |
 | Backtest Analysis / strategy research | Candidate source generation, portfolio mix builder, Risk-On Momentum research lane | `backtest-portfolio-mix-builder-flow-v1`, `backtest-portfolio-mix-builder-ux-v1`, `risk-on-momentum-5d-v1`, `risk-on-momentum-5d-v2` |
 | Practical Validation / Final Review | Validation modules, selected-route gate, evidence read model, Final Review UX | `practical-validation-module-gate-v1`, `practical-validation-selected-route-preflight-v1`, `final-review-selection-readiness-gate-v1`, `final-review-commercial-ux-v1` |
 | Operations / Portfolio Monitoring | Operations Console and selected portfolio monitoring work | `operations-console-restructure-v2-v5`, `selected-dashboard-monitoring-first-ux-v1`, `selected-dashboard-manual-scenario-run-v1`, `allocation-drift-evidence-boundary-v1` |

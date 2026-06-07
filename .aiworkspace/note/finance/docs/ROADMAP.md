@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/`
-- 목적: 5차~9차에서 만든 리팩토링 기준선을 닫고, 남은 대형 파일 / split 후보를 새 active work로 오해하지 않도록 후속 후보로 분리한다.
-- 이번 차수에서 하지 않은 일: strategy math / runtime / service 변경, saved portfolio schema 변경, registry / saved JSONL rewrite, additional code split, physical task / phase archive migration, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-stale-refresh-fix-20260607/`
+- 목적: `Workspace > Overview > Futures Monitor`가 yfinance 지연 / 휴장 / 주말 상태에서 저장된 최신 선물 1m candle을 `Missing`처럼 숨기지 않고, latest stored data를 표시하되 실제 freshness는 `Stale`로 남기게 한다.
+- 이번 차수에서 하지 않은 일: provider 교체, DB schema 변경, OS scheduler 변경, Macro Thermometer scoring 변경, registry / saved JSONL rewrite.
 
 ## Product Tracks
 
