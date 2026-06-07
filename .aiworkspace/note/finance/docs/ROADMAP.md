@@ -19,11 +19,11 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 2차 병합 후 구조 / 경계 문서 정리는 완료 상태다.
+현재 3차 병합 후 active task / phase 상태 정리는 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/post-merge-boundary-docs-alignment-20260607/`
-- 목적: 최근 merged work의 UI / service / runtime / loader / DB / storage 경계를 한 문서 기준으로 정렬한다.
-- 이번 차수에서 하지 않는 일: 코드 변경, registry / saved JSONL rewrite, `.note/` 삭제, active task / phase 대량 이동.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/post-merge-active-state-cleanup-20260607/`
+- 목적: `tasks/active`와 `phases/active`에 남은 완료 기록을 retained work record로 해석하도록 manifest / README / roadmap state를 정렬한다.
+- 이번 차수에서 하지 않은 일: 코드 변경, registry / saved JSONL rewrite, `.note/` 삭제, 170개 task / 11개 phase board 대량 이동.
 
 ## Product Tracks
 
@@ -75,16 +75,19 @@ Current active task:
 
 - none
 
-Latest completed docs task:
+Recent completed docs cleanup tasks:
 
+- `post-merge-active-state-cleanup-20260607`
 - `post-merge-boundary-docs-alignment-20260607`
-
-Previous 1차 post-merge docs alignment record:
-
 - `post-merge-docs-alignment-20260607`
 
 Retained completed boards in `phases/active/` should not be treated as newly open phase work.
 Their closeout summaries live under `.aiworkspace/note/finance/phases/done/` when available.
+
+State manifest pointers:
+
+- task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
+- phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 
 Untracked legacy `.note/` exists locally after merge review. It is not the current canonical workspace path and should not be staged by default.
 
@@ -92,7 +95,7 @@ Untracked legacy `.note/` exists locally after merge review. It is not the curre
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
-| Active task / phase archive cleanup | `tasks/active` and `phases/active` are too large to read as literal active state | Moving folders, deleting retained boards, or changing archive layout |
+| Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |
 | Overview scheduler hardening | Browser-session refresh exists; OS scheduler / launchd production operation is a separate decision | Enabling unattended scheduled collection |

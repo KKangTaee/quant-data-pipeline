@@ -24,7 +24,7 @@ Last Verified: 2026-06-07
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Post-Merge Boundary Docs Alignment 2026-06-07](../tasks/active/post-merge-boundary-docs-alignment-20260607/PLAN.md).
+- Latest completed task: [Post-Merge Active State Cleanup 2026-06-07](../tasks/active/post-merge-active-state-cleanup-20260607/PLAN.md).
 - Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
@@ -46,9 +46,9 @@ Last Verified: 2026-06-07
 
 | 위치 | 역할 |
 |---|---|
-| `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리하는 phase 단위 계획과 통합 기록. 현재 완료 board도 handoff 용도로 남아 있으므로 README와 roadmap의 active 표시를 함께 확인 |
-| `.aiworkspace/note/finance/phases/done/` | 완료된 phase의 closeout summary |
-| `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과. 과거 완료 task도 retained work record로 남아 있을 수 있으므로 현재 작업은 README와 roadmap에서 확인 |
+| `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리한 phase 단위 계획과 통합 기록. 현재 완료 board도 handoff 용도로 남아 있으므로 `STATUS_MANIFEST.md`, README, roadmap의 active 표시를 함께 확인 |
+| `.aiworkspace/note/finance/phases/done/` | 완료된 phase의 closeout summary. full board archive가 아니라 summary 중심 |
+| `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과. 과거 완료 task도 retained work record로 남아 있으므로 `STATUS_MANIFEST.md`, README, roadmap에서 current active 상태를 확인 |
 | `.aiworkspace/note/finance/researches/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `.aiworkspace/note/finance/agent/` | Codex 반복 실수, 교훈, 운영 팁 |
 | `.aiworkspace/note/finance/reports/backtests/` | 전략 탐색, 후보 근거, validation report |

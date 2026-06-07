@@ -5,6 +5,7 @@ Last Verified: 2026-06-07
 
 이 폴더는 Main phase worktree가 관리하는 phase 기록을 둔다.
 현재는 완료된 phase board도 handoff / trace 용도로 남아 있으므로, 이 폴더의 하위 폴더가 모두 현재 active phase라는 뜻은 아니다.
+현재 phase 상태는 [STATUS_MANIFEST.md](./STATUS_MANIFEST.md)와 아래 `Current Active Phases`를 먼저 본다.
 
 권장 구조:
 
@@ -26,6 +27,11 @@ active 폴더에 남아 있는 완료 phase board는 과거 task 추적과 hando
 | Phase | Status | Notes |
 |---|---|---|
 | `none` | No active phase | 새 phase는 사용자가 구체적인 scope를 승인한 뒤 연다. |
+
+## State Manifest
+
+- 2026-06-07 기준 `phases/active`에는 11개 retained board가 남아 있다.
+- 전체 retained board 목록과 closeout pointer는 [STATUS_MANIFEST.md](./STATUS_MANIFEST.md)를 본다.
 
 ## Implementation-Complete Boards Retained In Active Folder
 

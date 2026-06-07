@@ -39,8 +39,8 @@ Last Verified: 2026-06-07
 | `.aiworkspace/note/finance/docs/` | 장기 프로젝트 지식 |
 | `.aiworkspace/note/finance/researches/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `.aiworkspace/note/finance/reports/backtests/` | backtest 결과 report, 전략 hub, 후보 근거, validation report |
-| `.aiworkspace/note/finance/tasks/active/` | 현재 실행 task 기록 |
-| `.aiworkspace/note/finance/phases/active/` | phase 단위 계획과 통합 기록 |
+| `.aiworkspace/note/finance/tasks/active/` | 실행 task 기록과 retained completed work record. current active 판정은 `STATUS_MANIFEST.md` / README / roadmap을 먼저 본다 |
+| `.aiworkspace/note/finance/phases/active/` | phase 단위 계획과 retained board 기록. current active phase 판정은 `STATUS_MANIFEST.md` / README / roadmap을 먼저 본다 |
 | `.aiworkspace/note/finance/registries/` | workflow JSONL registry |
 | `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup |
 | `.aiworkspace/plugins/quant-finance-workflow/` | repo-local finance Codex skill / helper script source |

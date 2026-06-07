@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 2차 work is post-merge structure / boundary documentation alignment in [post-merge-boundary-docs-alignment-20260607](./tasks/active/post-merge-boundary-docs-alignment-20260607/PLAN.md).
+  - Latest completed 3차 work is post-merge active task / phase state cleanup in [post-merge-active-state-cleanup-20260607](./tasks/active/post-merge-active-state-cleanup-20260607/PLAN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Active folder cleanup should be manifest-first, not mass-move-first
+- User request:
+  - 3차로 active task / phase 상태 정리를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 병합 후 남은 `tasks/active`와 `phases/active` 폴더가 실제 open work처럼 보이지 않게 current state를 정리한다.
+- Analysis result:
+  - `tasks/active`에는 170개 task folder, `phases/active`에는 11개 phase board가 남아 있었다. `tasks/done`은 README만 있고 `phases/done`은 closeout summary 중심이므로 대량 이동은 링크 churn이 크다. 이번 3차는 manifest / README / roadmap 기준 정리가 가장 안전하다.
+- Follow-up:
+  - Physical archive migration은 별도 승인 scope로 남긴다. 현재 active task / phase는 none이며, retained folder 해석은 각 `STATUS_MANIFEST.md`를 기준으로 한다.
 
 ### 2026-06-07 - Boundary docs need a central source-of-truth
 - User request:
