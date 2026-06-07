@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 4차 work is post-merge verification / handoff in [post-merge-verification-handoff-20260607](./tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md).
+  - Latest completed 5차 work is code boundary / refactor baseline audit in [code-boundary-refactor-audit-20260607](./tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Refactor should start with action boundary, not file splitting
+- User request:
+  - 5차로 코드 구조 감사 / 리팩토링 기준선 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - 기능 개발 없이 현재 코드 경계와 대형 파일을 점검하고, 다음 구조정리 순서를 정한다.
+- Analysis result:
+  - hard UI / engine boundary는 통과한다. 그러나 Overview는 context-only surface 문서와 달리 bounded refresh job trigger를 가진 mixed surface다. 큰 파일 분해는 가능하지만, 먼저 Overview / Ingestion action boundary 정책을 정해야 안전하다.
+- Follow-up:
+  - 6차는 Overview refresh를 공식 예외로 둘지, action facade로 모을지, Ingestion / automation으로 되돌릴지 결정하는 작업으로 시작한다.
 
 ### 2026-06-07 - Post-merge cleanup handoff should be docs-only and explicit
 - User request:

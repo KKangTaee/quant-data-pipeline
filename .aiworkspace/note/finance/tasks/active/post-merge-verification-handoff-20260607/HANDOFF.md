@@ -8,9 +8,9 @@ Last Updated: 2026-06-07
 Current active phase: none.
 Current active task: none.
 
-Master has the post-merge documentation cleanup commits locally. The branch is ahead of `origin/master`; push / PR is intentionally outside this task unless explicitly requested.
+Master has the post-merge documentation cleanup and follow-on code boundary audit records locally. Push / PR is intentionally outside this task unless explicitly requested.
 
-Untracked `.note/` remains local legacy material and should not be staged by default.
+Legacy `.note/` was removed after user approval and is not part of the current local state.
 
 ## What Was Completed
 
@@ -20,6 +20,7 @@ Untracked `.note/` remains local legacy material and should not be staged by def
 | 2차 | Architecture / data / flow boundary alignment | `tasks/active/post-merge-boundary-docs-alignment-20260607/`, `docs/architecture/SYSTEM_BOUNDARIES.md` |
 | 3차 | Active task / phase state manifest alignment | `tasks/active/post-merge-active-state-cleanup-20260607/`, `tasks/active/STATUS_MANIFEST.md`, `phases/active/STATUS_MANIFEST.md` |
 | 4차 | Verification and handoff | `tasks/active/post-merge-verification-handoff-20260607/` |
+| 5차 | Code boundary / refactor baseline audit | `tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md` |
 
 ## Read Order For Next Work
 
@@ -30,6 +31,7 @@ Untracked `.note/` remains local legacy material and should not be staged by def
 5. `tasks/active/STATUS_MANIFEST.md`
 6. `phases/active/STATUS_MANIFEST.md`
 7. This `HANDOFF.md`
+8. `tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md`
 
 ## Current Product Interpretation
 
@@ -61,11 +63,11 @@ Important boundaries:
 | Overview Why It Moved V2 | Durable metadata, filing/body handling, AI summary, or catalyst classifier require a storage/source policy first. |
 | Risk-On Momentum 5D governance | Strategy exists as a research lane but is not connected to Practical Validation / Final Review / Portfolio Monitoring signal policy. |
 | Overview scheduler hardening | Browser-session refresh exists; unattended OS scheduler operation is a separate approval. |
+| Overview / Ingestion action boundary | Follow-on 5차 audit found that Overview is a mixed context / bounded refresh surface; decide whether to formalize this as an exception, introduce an action facade, or move triggers back to Ingestion / automation. |
 | Second-cycle investability hardening | Phase 13 carry-forward can seed a new phase only after a user-approved scope. |
 
 ## Do Not Do By Default
 
-- Do not stage `.note/`.
 - Do not rewrite `.aiworkspace/note/finance/registries/*.jsonl`.
 - Do not rewrite `.aiworkspace/note/finance/saved/*.jsonl`.
 - Do not commit run history, generated artifacts, temp CSV, `.DS_Store`, or `.playwright-mcp`.

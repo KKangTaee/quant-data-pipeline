@@ -19,11 +19,11 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 4차 병합 후 검증 및 handoff 정리는 완료 상태다.
+현재 5차 코드 구조 감사 / 리팩토링 기준선 정리는 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/`
-- 목적: 1차~3차 문서 정리 결과를 검증하고, 다음 작업자가 읽을 handoff를 남긴다.
-- 이번 차수에서 하지 않은 일: 코드 변경, UI / Browser QA, DB / ingestion / backtest runtime 실행, registry / saved JSONL rewrite, `.note/` 삭제, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/`
+- 목적: 1차~4차 문서 / handoff 정리 이후 실제 코드 경계, 대형 파일, refactor 우선순위를 점검한다.
+- 이번 차수에서 하지 않은 일: 코드 동작 변경, UI layout 변경, DB / ingestion / backtest runtime 실행, registry / saved JSONL rewrite, push / PR 생성.
 
 ## Product Tracks
 
@@ -82,6 +82,10 @@ Recent completed docs cleanup tasks:
 - `post-merge-boundary-docs-alignment-20260607`
 - `post-merge-docs-alignment-20260607`
 
+Recent completed structure audit tasks:
+
+- `code-boundary-refactor-audit-20260607`
+
 Retained completed boards in `phases/active/` should not be treated as newly open phase work.
 Their closeout summaries live under `.aiworkspace/note/finance/phases/done/` when available.
 
@@ -90,13 +94,16 @@ State manifest pointers:
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 - post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
+- code refactor audit: `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md`
 
-Untracked legacy `.note/` exists locally after merge review. It is not the current canonical workspace path and should not be staged by default.
+Legacy `.note/` was removed after user approval and is no longer part of the current local state.
 
 ## Next Decisions
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
+| Overview / Ingestion action boundary | 5차 audit found that Overview is a mixed context / bounded refresh surface even though the durable boundary says Ingestion is the only collector trigger surface | Deciding whether Overview refresh is an approved exception, moving refresh calls behind an action facade, or moving collection triggers back to Ingestion / automation |
+| Ingestion diagnostic facade | 5차 audit found that some Ingestion read-only diagnostics and live source inspections are orchestrated directly from the top-level Streamlit app | Moving diagnostic orchestration into `app/services` or `app/jobs` while preserving manual, bounded, non-persistent behavior |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |

@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 4차 work is post-merge verification / handoff in [post-merge-verification-handoff-20260607](./tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md).
+  - Latest completed 5차 work is code boundary / refactor baseline audit in [code-boundary-refactor-audit-20260607](./tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Code boundary / refactor baseline audit 5차
+- Opened `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/` as the 5차 structure audit record.
+- Verified UI / engine boundary checker PASS, Streamlit imports remain under `app/web`, production `app.services` / `app.runtime -> app.web` reverse import was not found, and local Streamlit health returned `ok`.
+- Identified next refactor baseline: Overview / Ingestion action boundary first, then Ingestion Console split, Backtest Compare split, runtime facade split, legacy compatibility catalog, and verification hardening.
+- No code behavior, registry / saved JSONL, DB schema, ingestion collector, runtime execution, push, or PR was changed.
 
 ### 2026-06-07 - Post-merge verification / handoff 4차
 - Opened `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/` as the 4차 verification and handoff record.
