@@ -11288,7 +11288,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             candidate_records=[{"registry_id": "cand-1"}, {"registry_id": "cand-2"}],
         )
 
-        self.assertEqual(model["schema_version"], "operations_overview_v1")
+        self.assertEqual(model["schema_version"], "operations_overview_v2")
         self.assertEqual(
             [lane["key"] for lane in model["lanes"]],
             ["portfolio_monitoring", "system_data_health"],
@@ -11321,7 +11321,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(model["execution_boundary"]["registry_write"])
         self.assertEqual(model["lanes"][0]["target_surface"], "Operations > Portfolio Monitoring")
 
-    def test_operations_console_model_exposes_v2_v5_audit_and_action_queue(self) -> None:
+    def test_operations_console_model_hides_cleanup_artifacts_and_keeps_action_queue(self) -> None:
         from app.web.operations_overview import build_operations_overview_model
 
         model = build_operations_overview_model(
@@ -11343,15 +11343,9 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             candidate_records=[{"registry_id": "cand-1"}],
         )
 
-        self.assertEqual(model["console_version"], "operations_console_v2_v5")
-
-        audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
-        self.assertEqual(audit_by_surface["portfolio_monitoring"]["decision"], "keep_primary_improve")
-        self.assertEqual(audit_by_surface["system_data_health"]["decision"], "keep_primary_improve")
-        self.assertEqual(audit_by_surface["backtest_run_history"]["decision"], "removed_from_operations_navigation")
-        self.assertFalse(audit_by_surface["backtest_run_history"]["primary_operations"])
-        self.assertEqual(audit_by_surface["candidate_library"]["decision"], "removed_from_operations_navigation")
-        self.assertFalse(audit_by_surface["candidate_library"]["primary_operations"])
+        self.assertEqual(model["console_version"], "operations_console_v2")
+        self.assertNotIn("stage_roadmap", model)
+        self.assertNotIn("surface_audit", model)
 
         action_keys = {item["key"] for item in model["action_queue"]}
         self.assertIn("review_portfolio_monitoring", action_keys)
@@ -11362,7 +11356,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertFalse(item["execution_boundary"]["order_instruction"])
             self.assertFalse(item["execution_boundary"]["auto_rebalance"])
 
-    def test_operations_console_model_uses_korean_user_facing_copy(self) -> None:
+    def test_operations_console_model_uses_korean_operator_facing_copy(self) -> None:
         from app.web.operations_overview import build_operations_overview_model
 
         model = build_operations_overview_model(
@@ -11386,11 +11380,17 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
 
         self.assertIn("일상 점검", model["action_queue"][0]["title"])
         self.assertIn("모니터링 후보", model["action_queue"][0]["reason"])
-        audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
-        self.assertIn("선정 포트폴리오", audit_by_surface["portfolio_monitoring"]["role"])
-        self.assertIn("상단 탭에서 제거", audit_by_surface["candidate_library"]["change"])
         self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
         self.assertEqual(len(model["lanes"]), 2)
+
+    def test_operations_overview_source_hides_development_history_titles(self) -> None:
+        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Operations restructuring roadmap", source)
+        self.assertNotIn("Operations surface decisions", source)
+        self.assertNotIn("Hidden archive", source)
+        self.assertNotIn("Archive 도구", source)
+        self.assertNotIn("과거 archive", source)
 
     def test_operations_navigation_hides_archive_pages_from_top_level_tabs(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")

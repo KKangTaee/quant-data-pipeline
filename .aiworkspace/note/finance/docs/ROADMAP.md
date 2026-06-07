@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/`
-- 목적: 5차~9차에서 만든 리팩토링 기준선을 닫고, 남은 대형 파일 / split 후보를 새 active work로 오해하지 않도록 후속 후보로 분리한다.
-- 이번 차수에서 하지 않은 일: strategy math / runtime / service 변경, saved portfolio schema 변경, registry / saved JSONL rewrite, additional code split, physical task / phase archive migration, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/operations-cockpit-cleanup-20260607/`
+- 목적: Operations Overview V2 1차로 archive / development-history decision table을 사용자-facing 운영 화면에서 제거하고 Portfolio Monitoring / System Data Health 중심 cockpit copy로 정리한다.
+- 이번 차수에서 하지 않은 일: portfolio-first summary counters, evidence health mini strip, review queue 재정렬, archive data/helper 삭제, broker sync / order / auto rebalance.
 
 ## Product Tracks
 
@@ -48,7 +48,7 @@ Workspace > Ingestion
 | Workstream | Status | Durable Notes |
 |---|---|---|
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
-| Operations Overview IA / Operations Console V2-V5 | Complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Backtest Runs / Candidate Library archive pages are removed from the Operations top navigation; data deletion is deferred. |
+| Operations Overview IA / Operations Console V2-V5 | Complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path; Backtest Runs / Candidate Library data deletion is deferred. |
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |

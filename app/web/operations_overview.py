@@ -5,13 +5,12 @@ from typing import Any
 import streamlit as st
 
 from app.jobs.run_history import load_run_history
-from app.runtime.candidate_library import load_candidate_library_records
 from app.runtime.final_selected_portfolios import load_final_selected_portfolio_dashboard
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 
 
-OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v1"
-OPERATIONS_CONSOLE_VERSION = "operations_console_v2_v5"
+OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v2"
+OPERATIONS_CONSOLE_VERSION = "operations_console_v2"
 
 
 def _safe_int(value: Any) -> int:
@@ -53,78 +52,6 @@ def _disabled_action_boundary() -> dict[str, bool]:
     }
 
 
-def _build_stage_roadmap() -> list[dict[str, str]]:
-    return [
-        {
-            "stage": "1차",
-            "title": "Operations 정보 구조 기반",
-            "status": "completed",
-            "output": "Operations Overview에 Portfolio Monitoring, System / Data Health lane을 분리했습니다.",
-        },
-        {
-            "stage": "2차",
-            "title": "화면 기능 감사",
-            "status": "completed",
-            "output": "Portfolio Monitoring과 System / Data Health는 primary로 유지하고, history / candidate 도구는 archive recovery로 낮췄습니다.",
-        },
-        {
-            "stage": "3차",
-            "title": "리밸런싱 의미 정정",
-            "status": "completed",
-            "output": "리밸런싱 row를 주문 지시가 아니라 target snapshot과 다음 수동 검토일로 표시합니다.",
-        },
-        {
-            "stage": "4차",
-            "title": "Archive 도구 탭 제거",
-            "status": "completed",
-            "output": "Backtest Run History와 Candidate Library를 Operations 상단 탭에서 제거했습니다.",
-        },
-        {
-            "stage": "5차",
-            "title": "Operations Console",
-            "status": "completed",
-            "output": "첫 화면에서 점검 queue, primary operations, archive 도구, 실행 경계를 함께 확인합니다.",
-        },
-    ]
-
-
-def _build_surface_audit() -> list[dict[str, Any]]:
-    return [
-        {
-            "surface_key": "portfolio_monitoring",
-            "surface": "Operations > Portfolio Monitoring",
-            "primary_operations": True,
-            "decision": "keep_primary_improve",
-            "role": "선정 포트폴리오 모니터링, review signal, target snapshot 점검을 담당합니다.",
-            "change": "사용자가 주로 보는 Operations 화면으로 유지하고 리밸런싱 의미를 명확히 했습니다.",
-        },
-        {
-            "surface_key": "system_data_health",
-            "surface": "Operations > System / Data Health",
-            "primary_operations": True,
-            "decision": "keep_primary_improve",
-            "role": "실행 상태, 실패 artifact, log, 데이터 / 시스템 triage를 담당합니다.",
-            "change": "primary system health 화면으로 유지합니다. 실제 수집 실행은 Ingestion 또는 replay 도구에서 처리합니다.",
-        },
-        {
-            "surface_key": "backtest_run_history",
-            "surface": "Hidden archive: Backtest Runs",
-            "primary_operations": False,
-            "decision": "removed_from_operations_navigation",
-            "role": "과거 backtest run을 복구 / 감사하고 필요할 때 form을 복원합니다.",
-            "change": "Operations 상단 탭에서 제거했습니다. 데이터 / helper code는 즉시 삭제하지 않습니다.",
-        },
-        {
-            "surface_key": "candidate_library",
-            "surface": "Hidden archive: Candidates",
-            "primary_operations": False,
-            "decision": "removed_from_operations_navigation",
-            "role": "legacy / current / pre-live candidate snapshot을 확인하고 result curve를 재생성합니다.",
-            "change": "Operations 상단 탭에서 제거했습니다. legacy registry 정리는 별도 audit 후 판단합니다.",
-        },
-    ]
-
-
 def _build_action_queue(
     *,
     dashboard_rows: int,
@@ -133,7 +60,6 @@ def _build_action_queue(
     missing_count: int,
     latest_status: str,
     run_history_count: int,
-    candidate_count: int,
 ) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     if blocked_count or missing_count:
@@ -210,9 +136,9 @@ def build_operations_overview_model(
     *,
     selected_dashboard: dict[str, Any],
     run_history: list[dict[str, Any]],
-    candidate_records: list[dict[str, Any]],
+    candidate_records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Build a Streamlit-free IA model for the Operations landing page."""
+    """Build a Streamlit-free operator model for the Operations landing page."""
 
     dashboard_summary = dict(selected_dashboard.get("summary") or {})
     portfolio_state = dict(selected_dashboard.get("portfolio_state") or {})
@@ -281,8 +207,6 @@ def build_operations_overview_model(
         "console_version": OPERATIONS_CONSOLE_VERSION,
         "operations_model": "Portfolio Monitoring + System/Data Health",
         "lanes": lanes,
-        "stage_roadmap": _build_stage_roadmap(),
-        "surface_audit": _build_surface_audit(),
         "action_queue": _build_action_queue(
             dashboard_rows=dashboard_rows,
             watch_count=watch_count,
@@ -290,7 +214,6 @@ def build_operations_overview_model(
             missing_count=missing_count,
             latest_status=latest_status,
             run_history_count=len(run_history),
-            candidate_count=len(candidate_records),
         ),
         "execution_boundary": {
             "live_approval": False,
@@ -425,58 +348,19 @@ def _render_action_queue(model: dict[str, Any], *, page_targets: dict[str, Any])
                 st.page_link(target, label=f"{action.get('target_surface')} 열기", use_container_width=True)
 
 
-def _render_stage_roadmap(model: dict[str, Any]) -> None:
-    with st.expander("Operations restructuring roadmap", expanded=False):
-        st.caption("이 화면은 1차 보강에서 끝난 것이 아니라 2~5차까지 반영한 최종 Operations Console 기준입니다.")
-        rows = []
-        for row in list(model.get("stage_roadmap") or []):
-            rows.append(
-                {
-                    "차수": row.get("stage"),
-                    "제목": row.get("title"),
-                    "상태": "완료" if row.get("status") == "completed" else row.get("status"),
-                    "산출물": row.get("output"),
-                }
-            )
-        st.dataframe(rows, width="stretch", hide_index=True)
-
-
-def _render_surface_audit(model: dict[str, Any]) -> None:
-    with st.expander("Operations surface decisions", expanded=False):
-        st.caption("Portfolio Monitoring과 System / Data Health만 Operations 상단 탭에 남기고, archive 화면은 숨긴 결정표입니다.")
-        decision_labels = {
-            "keep_primary_improve": "주요 화면으로 유지 / 개선",
-            "removed_from_operations_navigation": "Operations 상단 탭에서 제거",
-        }
-        rows = []
-        for row in list(model.get("surface_audit") or []):
-            rows.append(
-                {
-                    "화면": row.get("surface"),
-                    "주요 운영 화면": "예" if row.get("primary_operations") else "아니오",
-                    "결정": decision_labels.get(str(row.get("decision") or ""), row.get("decision")),
-                    "역할": row.get("role"),
-                    "변경 내용": row.get("change"),
-                }
-            )
-        st.dataframe(rows, width="stretch", hide_index=True)
-
-
 def render_operations_overview_page(*, page_targets: dict[str, Any] | None = None) -> None:
     """Render the Operations command center without mutating workflow registries."""
 
     selected_dashboard = load_final_selected_portfolio_dashboard()
     run_history = load_run_history(limit=30)
-    candidate_records = load_candidate_library_records()
     model = build_operations_overview_model(
         selected_dashboard=selected_dashboard,
         run_history=run_history,
-        candidate_records=candidate_records,
     )
     page_targets = dict(page_targets or {})
 
     st.title("Operations Console")
-    st.caption("선정 후 portfolio monitoring과 system/data health만 남긴 운영 화면입니다. 과거 archive 도구는 상단 탭에서 제거했습니다.")
+    st.caption("선정 후 portfolio monitoring 상태와 system/data health를 확인하는 운영 화면입니다.")
     _render_action_queue(model, page_targets=page_targets)
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(
@@ -494,6 +378,5 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
     for lane in primary_lanes:
         _render_lane(lane, page_targets=page_targets)
 
-    _render_surface_audit(model)
     with st.expander("Execution Boundary", expanded=False):
         st.json(model.get("execution_boundary") or {})

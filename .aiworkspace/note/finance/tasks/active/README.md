@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `operations-cockpit-cleanup-20260607` | Completed record | Operations Overview V2 1차 cleanup. 사용자-facing Operations Overview에서 archive / development-history decision table과 roadmap 흔적을 제거하고 Portfolio Monitoring / System Data Health 중심 cockpit copy로 정리한 기록이다. |
 | `refactor-round-closeout-20260607` | Completed record | 10차 구조정리 라운드 closeout. 5차~9차 리팩토링 기준선을 감사하고, 남은 Backtest Compare / Overview / Operations split 후보를 후속 작업으로 분리한 기록이다. |
 | `backtest-compare-components-split-20260607` | Completed record | 9차 Backtest Compare Streamlit split first pass. Portfolio Mix Builder visual shell을 `app/web/backtest_compare_components.py`로 이동하고 `app/web/backtest_compare.py`를 실행 / 상태 orchestration 중심으로 낮춘 기록이다. |
 | `ingestion-diagnostic-facade-20260607` | Completed record | 7차 대형 Streamlit 파일 분해 7B. Ingestion read-only diagnostic orchestration을 `app/services/ingestion_diagnostics.py`로 이동하고 `app/web/ingestion_console.py`는 렌더 / 세션 상태에 집중하게 한 기록이다. |

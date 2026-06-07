@@ -27,7 +27,7 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 | Backtest Analysis | 단일 전략, compare, saved mix로 후보 source 생성 | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
 | Practical Validation | 후보 source를 12개 진단과 module gate로 검증하고, Gate 미통과 저장-only row는 audit trail로만 남긴다 | `app/web/backtest_practical_validation*.py` |
 | Final Review | Practical Validation Gate를 통과한 후보만 source picker에 표시하고 최종 select / hold / reject / re-review 판단 | `app/web/backtest_final_review*.py` |
-| Operations Console | 선정 후 monitoring, system / data health, archive / recovery 입구 | `app/web/operations_overview.py` |
+| Operations Console | 선정 후 monitoring과 system / data health 확인 입구 | `app/web/operations_overview.py` |
 | Portfolio Monitoring | 선정 이후 성과 재확인과 read-only monitoring / recheck signal 확인 | `app/web/final_selected_portfolio_dashboard*.py` |
 
 ## Practical Validation Provider Flow

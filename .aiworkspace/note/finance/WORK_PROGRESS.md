@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Operations Cockpit Cleanup 1차
+- Opened `.aiworkspace/note/finance/tasks/active/operations-cockpit-cleanup-20260607/` for Operations Overview V2 1차 cleanup.
+- Removed user-facing archive / development-history artifacts from `Operations > Operations Overview`; Portfolio Monitoring and System / Data Health remain the only primary Operations lanes.
+- Updated docs and tests around the new `operations_overview_v2` read model.
+- Next Operations V2 steps remain portfolio-first status summary, evidence health mini strip, and review queue refinement.
+
 ### 2026-06-07 - Refactor Round Closeout 10차
 - Opened `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/` as the 10차 structure / refactor baseline closeout record.
 - Audited 5차~9차 outputs, large-file residuals, `.note/finance` path risk, and UI / engine boundary posture.

@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Operations Overview should read as cockpit, not cleanup history
+- User request:
+  - Operations Overview V2 중 1차 작업 진행을 요청함.
+- Interpreted goal:
+  - 새 지표 확장 전에 archive / development-history 노출을 제거해 Operations의 첫 화면을 portfolio monitoring + system/data health cockpit으로 정리한다.
+- Analysis result:
+  - `surface_audit`, `stage_roadmap`, archive decision table은 운영자가 매일 보는 화면의 정보가 아니므로 user-facing read model / renderer에서 제거했다. Archive data/helper 삭제, portfolio-first counters, evidence strip은 후속 차수로 남겼다.
+- Follow-up:
+  - 2차는 active portfolio / assigned strategy / stale / blocked / open review / next review date summary를 Overview 상단에 추가하는 작업이 자연스럽다.
+
 ### 2026-06-07 - Refactor round should close before opening another broad split
 - User request:
   - 9차 이후 다음 단계 진행을 요청함.
