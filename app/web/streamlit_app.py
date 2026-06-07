@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import subprocess
 
+import pandas as pd
 import streamlit as st
 
 # Ensure the project root is importable when Streamlit executes this file directly.
@@ -26,12 +27,17 @@ from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
 from app.web.reference_guides import render_reference_guides_page
+from app.services.reference_glossary_catalog import (
+    get_reference_concept_dictionary,
+    load_glossary_sections_from_markdown,
+    search_glossary_sections,
+    search_reference_concepts,
+)
 from app.workspace_paths import GLOSSARY_DOC_PATH, PROJECT_ROOT
 
 
 LOG_DIR = PROJECT_ROOT / "logs"
 CSV_DIR = PROJECT_ROOT / "csv"
-GLOSSARY_META_SECTION_TITLES = {"목적", "사용 원칙"}
 APP_RUNTIME_LOADED_AT = datetime.now()
 
 
@@ -90,61 +96,30 @@ def _install_copy_shortcut_guard() -> None:
 
 @st.cache_data(show_spinner=False)
 def _load_glossary_sections() -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    if not GLOSSARY_DOC_PATH.exists():
-        return [], []
+    return load_glossary_sections_from_markdown(GLOSSARY_DOC_PATH)
 
-    text = GLOSSARY_DOC_PATH.read_text(encoding="utf-8")
-    sections: list[dict[str, str]] = []
-    current_title: str | None = None
-    current_lines: list[str] = []
 
-    for line in text.splitlines():
-        if line.startswith("## "):
-            if current_title is not None:
-                sections.append(
-                    {
-                        "title": current_title,
-                        "body": "\n".join(current_lines).strip(),
-                    }
-                )
-            current_title = line[3:].strip()
-            current_lines = []
-            continue
-        if current_title is not None:
-            current_lines.append(line)
+@st.cache_data(show_spinner=False)
+def _load_reference_concepts() -> list[dict[str, object]]:
+    return get_reference_concept_dictionary()
 
-    if current_title is not None:
-        sections.append(
+
+def _format_concept_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    formatted: list[dict[str, object]] = []
+    for row in rows:
+        formatted.append(
             {
-                "title": current_title,
-                "body": "\n".join(current_lines).strip(),
+                "term": row.get("term", ""),
+                "category": row.get("category", ""),
+                "plain_meaning": row.get("plain_meaning", ""),
+                "owner_screen": row.get("owner_screen", ""),
+                "progress_implication": row.get("progress_implication", ""),
+                "where_to_fix": row.get("where_to_fix", ""),
+                "source": row.get("source", ""),
+                "keywords": ", ".join(str(item) for item in row.get("keywords", []) or []),
             }
         )
-
-    meta_sections = [section for section in sections if section["title"] in GLOSSARY_META_SECTION_TITLES]
-    term_sections = [section for section in sections if section["title"] not in GLOSSARY_META_SECTION_TITLES]
-    return meta_sections, term_sections
-
-
-def _filter_glossary_sections(
-    sections: list[dict[str, str]],
-    query: str,
-    *,
-    search_body: bool,
-) -> list[dict[str, str]]:
-    normalized_query = query.strip().lower()
-    if not normalized_query:
-        return sections
-
-    matched: list[dict[str, str]] = []
-    for section in sections:
-        title = str(section.get("title") or "")
-        body = str(section.get("body") or "")
-        title_hit = normalized_query in title.lower()
-        body_hit = search_body and normalized_query in body.lower()
-        if title_hit or body_hit:
-            matched.append(section)
-    return matched
+    return formatted
 
 
 def _render_running_banner() -> None:
@@ -234,12 +209,13 @@ def _render_guides_page() -> None:
 
 def _render_glossary_page() -> None:
     st.title("Glossary")
-    st.caption("현재 퀀트 프로그램에서 쓰는 용어를 검색하고 다시 확인하는 reference 페이지입니다.")
+    st.caption("현재 퀀트 프로그램에서 쓰는 용어와 상태 의미를 검색하고 다시 확인하는 reference 페이지입니다.")
     _render_runtime_build_indicator()
 
     meta_sections, term_sections = _load_glossary_sections()
-    if not term_sections and not meta_sections:
-        st.error("`.aiworkspace/note/finance/docs/GLOSSARY.md`를 읽지 못했습니다. 문서 경로를 먼저 확인해 주세요.")
+    concept_rows = _load_reference_concepts()
+    if not term_sections and not meta_sections and not concept_rows:
+        st.error("Glossary 문서와 concept dictionary를 읽지 못했습니다. 문서 경로와 service catalog를 먼저 확인해 주세요.")
         st.code(str(GLOSSARY_DOC_PATH), language="text")
         return
 
@@ -258,12 +234,14 @@ def _render_glossary_page() -> None:
             key="reference_glossary_search_body",
         )
 
-        matched_sections = _filter_glossary_sections(term_sections, query, search_body=search_body)
-        metric_cols = st.columns(3)
-        metric_cols[0].metric("총 용어 수", len(term_sections))
-        metric_cols[1].metric("검색 결과", len(matched_sections))
-        metric_cols[2].metric("검색 범위", "제목+본문" if search_body else "제목만")
-        st.caption("source: `.aiworkspace/note/finance/docs/GLOSSARY.md`")
+        matched_concepts = search_reference_concepts(concept_rows, query)
+        matched_sections = search_glossary_sections(term_sections, query, search_body=search_body)
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("핵심 운영 용어", len(concept_rows))
+        metric_cols[1].metric("문서 용어 수", len(term_sections))
+        metric_cols[2].metric("Concept 결과", len(matched_concepts))
+        metric_cols[3].metric("문서 결과", len(matched_sections))
+        st.caption("source: shared concept dictionary + `.aiworkspace/note/finance/docs/GLOSSARY.md`")
 
     if meta_sections:
         with st.expander("이 reference를 어떻게 읽으면 되나", expanded=False):
@@ -272,12 +250,19 @@ def _render_glossary_page() -> None:
                     st.markdown(f"#### {section['title']}")
                     st.markdown(section["body"])
 
-    if query.strip() and not matched_sections:
+    if query.strip() and not matched_concepts and not matched_sections:
         st.warning("검색 결과가 없습니다. 검색어를 조금 줄이거나 영어/한글 핵심 단어만 넣어 다시 확인해 주세요.")
         st.caption("예: `promotion`, `guardrail`, `유동성`, `benchmark`, `PIT`")
         return
 
-    st.markdown("### 용어 목록")
+    st.markdown("### 핵심 운영 용어")
+    st.caption("Guides의 상태 / 용어 lookup과 같은 curated concept dictionary입니다.")
+    if matched_concepts:
+        st.dataframe(pd.DataFrame(_format_concept_rows(matched_concepts)), width="stretch", hide_index=True)
+    else:
+        st.info("핵심 운영 용어 결과가 없습니다. 아래 문서 용어 검색 결과를 확인하세요.")
+
+    st.markdown("### 문서 용어 목록")
     if not query.strip():
         st.caption("검색어가 없어서 전체 용어를 보여주고 있습니다.")
     elif len(matched_sections) <= 5:

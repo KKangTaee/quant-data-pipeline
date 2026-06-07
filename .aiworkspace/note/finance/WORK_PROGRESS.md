@@ -4810,3 +4810,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/reference-guides-journey-playbooks-v2-20260607/`에서 Reference Center의 journey detail과 troubleshooting playbook을 확장했다.
   - 제품 흐름 tab은 journey별 확인 순서 / failure state / downstream owner를 보여주고, 문제 해결 tab은 playbook별 check steps와 evidence locations를 보여준다.
   - 3차는 Glossary / searchable concept dictionary 통합, 4차는 주요 화면 contextual links 연결로 남긴다.
+- Reference Glossary / Concept Dictionary V3:
+  - `.aiworkspace/note/finance/tasks/active/reference-glossary-concept-dictionary-v3-20260607/`에서 Guides status lookup과 Glossary page를 shared concept dictionary로 통합했다.
+  - `app/services/reference_glossary_catalog.py`가 curated operational concepts, markdown glossary parser, search helper를 소유하고, `Guides`와 `Glossary`가 이를 함께 사용한다.
+  - 검증: RED/GREEN catalog tests, 296 focused/service tests, py_compile, UI-engine boundary, `git diff --check`, Browser QA render screenshot 통과.
+  - 남은 흐름은 4차 contextual links, 5차 Reference drift guard / QA polish다.

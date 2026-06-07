@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-guides-journey-playbooks-v2-20260607`
+- `reference-glossary-concept-dictionary-v3-20260607`
 
 Latest completed docs cleanup task:
 
@@ -50,7 +50,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-07:
 
-- `tasks/active`: 181 task folders
+- `tasks/active`: 186 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.

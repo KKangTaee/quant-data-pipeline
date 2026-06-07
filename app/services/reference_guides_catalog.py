@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from app.services.reference_glossary_catalog import get_reference_concept_dictionary
+
 REFERENCE_TASK_CARDS: list[dict[str, Any]] = [
     {
         "key": "market_context",
@@ -447,52 +449,6 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
 }
 
 
-REFERENCE_CONCEPTS: list[dict[str, Any]] = [
-    {
-        "term": "NOT_RUN",
-        "plain_meaning": "검증이 실행되지 않았거나 필요한 evidence가 아직 없습니다.",
-        "owner_screen": "Practical Validation / Final Review",
-        "progress_implication": "pass가 아니라 evidence missing / not executed",
-        "where_to_fix": "Ingestion, Backtest source, provider snapshot, selected-route preflight를 확인합니다.",
-    },
-    {
-        "term": "REVIEW",
-        "plain_meaning": "진행은 가능할 수 있지만 해석과 보강 조건을 남겨야 합니다.",
-        "owner_screen": "Practical Validation / Final Review / Portfolio Monitoring",
-        "progress_implication": "기본적으로 open review item이며 hard blocker와 분리합니다.",
-        "where_to_fix": "해당 audit row의 owner screen과 evidence source를 확인합니다.",
-    },
-    {
-        "term": "BLOCKED",
-        "plain_meaning": "현재 조건에서는 다음 단계로 넘기면 안 되는 hard blocker입니다.",
-        "owner_screen": "Backtest Analysis / Practical Validation / Final Review",
-        "progress_implication": "selected-route progression is stopped until fixed",
-        "where_to_fix": "데이터, source contract, component weight, benchmark parity, cost evidence를 원인 화면에서 보강합니다.",
-    },
-    {
-        "term": "Data Trust",
-        "plain_meaning": "결과가 어떤 데이터 freshness와 coverage 조건에서 만들어졌는지 보여주는 신뢰도 신호입니다.",
-        "owner_screen": "Backtest Analysis",
-        "progress_implication": "warning 또는 blocked이면 Practical Validation에 넘기기 전 원인을 설명해야 합니다.",
-        "where_to_fix": "Workspace > Ingestion과 System / Data Health에서 source 상태를 확인합니다.",
-    },
-    {
-        "term": "Provider Coverage",
-        "plain_meaning": "ETF holdings, exposure, issuer/provider snapshot이 실제/partial/proxy 중 어떤 근거인지 나타냅니다.",
-        "owner_screen": "Practical Validation / Portfolio Monitoring",
-        "progress_implication": "partial or proxy coverage is review evidence, not pass.",
-        "where_to_fix": "Ingestion provider snapshot job과 Provider Data Gaps를 확인합니다.",
-    },
-    {
-        "term": "Portfolio Monitoring Scenario",
-        "plain_meaning": "selected decision strategy slot을 사용자가 지정한 start/latest mode와 balance로 다시 보는 session replay입니다.",
-        "owner_screen": "Operations > Portfolio Monitoring",
-        "progress_implication": "사후 관찰 근거이며 새 최종 판단이나 주문 지시가 아닙니다.",
-        "where_to_fix": "scenario stale state, slot signature, latest market date를 확인합니다.",
-    },
-]
-
-
 REFERENCE_RECORDS: list[dict[str, Any]] = [
     {
         "record": "PORTFOLIO_SELECTION_SOURCES.jsonl",
@@ -820,7 +776,7 @@ def get_reference_center_catalog() -> dict[str, list[dict[str, Any]]]:
     return {
         "task_cards": deepcopy(REFERENCE_TASK_CARDS),
         "journeys": _merge_catalog_details(REFERENCE_JOURNEYS, REFERENCE_JOURNEY_DETAILS),
-        "concepts": deepcopy(REFERENCE_CONCEPTS),
+        "concepts": get_reference_concept_dictionary(),
         "records": deepcopy(REFERENCE_RECORDS),
         "playbooks": _merge_catalog_details(REFERENCE_PLAYBOOKS, REFERENCE_PLAYBOOK_DETAILS),
     }

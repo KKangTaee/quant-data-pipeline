@@ -154,7 +154,7 @@ Operations 화면:
 
 ## 현재 Reference Guide 제품 흐름
 
-`Reference > Guides`는 2026-06-07 Reference Center V2 이후 제품 전체 운영 guide로 읽는다.
+`Reference > Guides`는 2026-06-07 Reference Center V3 이후 제품 전체 운영 guide로 읽는다.
 첫 화면은 portfolio-selection 전용 hero가 아니라 task-first `Reference Center`다.
 이 화면은 read-only 안내 surface이며 ingestion job, provider fetch, registry write, saved setup write,
 broker order, live approval, auto rebalance를 직접 실행하지 않는다.
@@ -168,6 +168,8 @@ Reference > Guides
         -> 확인 순서
         -> 자주 막히는 상태
      -> 자주 막히는 상태 / 용어
+        -> shared concept dictionary
+        -> Glossary와 같은 operational concept search
      -> 기록 / 저장 경계
      -> 문제 해결 Playbook
         -> 확인 순서
@@ -188,7 +190,7 @@ Reference Center의 주요 묶음은 아래와 같다.
 |---|---|
 | `먼저 고를 작업` | 시장 / 데이터 상태, 데이터 갱신 / 복구, 후보 만들기, 검증 / 최종 판단, 선정 후 모니터링, 문제 해결을 task card로 고른다 |
 | `현재 제품 흐름` | Overview, Ingestion / Data Health, Backtest Analysis, Practical Validation / Final Review, Portfolio Monitoring, Archive / Recovery journey를 owner screen / record / boundary로 보여주고, 선택한 journey의 확인 순서 / failure state / downstream owner를 함께 보여준다 |
-| `자주 막히는 상태 / 용어` | `NOT_RUN`, `REVIEW`, `BLOCKED`, `Data Trust`, `Provider Coverage`, `Portfolio Monitoring Scenario`를 검색 / 필터로 해석한다 |
+| `자주 막히는 상태 / 용어` | `NOT_RUN`, `REVIEW`, `BLOCKED`, `Data Trust`, `Provider Coverage`, `Portfolio Monitoring Scenario`를 shared concept dictionary로 검색 / 필터한다. `Reference > Glossary`도 같은 curated concept rows를 먼저 보여준 뒤 durable `GLOSSARY.md` section을 함께 검색한다 |
 | `기록 / 저장 경계` | DB / workflow registry / saved setup / run history / generated artifact를 어떤 화면이 만들고 읽는지 보여준다 |
 | `문제 해결 Playbook` | stale Overview / Futures, ingestion 성공 후 UI stale, provider snapshot missing, Practical Validation `NOT_RUN`, Final Review 후보 미노출, Portfolio Monitoring stale scenario, archive recovery를 증상별로 확인한다. 각 playbook은 check steps와 evidence location을 표시한다 |
 

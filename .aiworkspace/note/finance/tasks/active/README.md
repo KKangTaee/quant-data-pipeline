@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `reference-glossary-concept-dictionary-v3-20260607` | Completed record | `Reference > Guides`와 `Reference > Glossary`가 같은 Streamlit-free concept dictionary와 search helper를 쓰도록 통합한 3차 기록이다. |
 | `reference-guides-journey-playbooks-v2-20260607` | Completed record | `Reference > Guides`의 journey 상세, failure state, troubleshooting check step, evidence location을 확장한 2차 기록이다. |
 | `reference-guides-center-v1-20260607` | Completed record | `Reference > Guides`를 task-first Reference Center로 개편하고, 기존 portfolio-selection guide를 `Portfolio Selection Journey`로 보존한 기록이다. |
 | `futures-monitor-stale-refresh-fix-20260607` | Completed record | Overview Futures Monitor가 현재 UTC lookback 밖의 최신 저장 1m candle을 `Missing`처럼 숨기지 않고, latest stored candle 기준으로 차트를 표시하면서 stale status를 유지하도록 고친 기록이다. |
@@ -54,4 +55,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-07 기준 181개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-07 기준 186개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.

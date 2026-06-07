@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.services.reference_glossary_catalog import search_reference_concepts
 from app.services.reference_guides_catalog import get_reference_center_catalog
 
 
@@ -940,19 +941,24 @@ def _render_status_lookup(catalog: dict[str, list[dict[str, Any]]]) -> None:
     st.markdown("### 자주 막히는 상태 / 용어")
     query = st.text_input(
         "상태 / 용어 검색",
-        placeholder="예: NOT_RUN, BLOCKED, Data Trust, Provider Coverage",
+        placeholder="예: NOT_RUN, BLOCKED, Data Trust, Provider Coverage, scenario stale",
         key="reference_guides_status_query",
     )
-    rows = catalog["concepts"]
-    if query.strip():
-        needle = query.strip().lower()
-        rows = [
-            row
-            for row in rows
-            if needle
-            in " ".join(str(value) for value in row.values()).lower()
-        ]
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    rows = search_reference_concepts(catalog["concepts"], query)
+    display_rows = []
+    for row in rows:
+        display_rows.append(
+            {
+                "term": row.get("term", ""),
+                "category": row.get("category", ""),
+                "plain_meaning": row.get("plain_meaning", ""),
+                "owner_screen": row.get("owner_screen", ""),
+                "progress_implication": row.get("progress_implication", ""),
+                "where_to_fix": row.get("where_to_fix", ""),
+                "source": row.get("source", ""),
+            }
+        )
+    st.dataframe(pd.DataFrame(display_rows), width="stretch", hide_index=True)
     if not rows:
         st.info("검색 결과가 없습니다. Glossary와 문서 / 경로 drawer도 함께 확인하세요.")
 

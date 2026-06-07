@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Reference Glossary should share operational concepts with Guides
+- User request:
+  - Reference 탭 개편의 3차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차 Reference Center와 2차 journey / playbook 확장 이후, `Guides` 상태 lookup과 `Glossary` page가 서로 다른 용어 소스를 갖지 않게 통합한다.
+- Analysis result:
+  - Durable `GLOSSARY.md`는 긴 문서 용어 사전으로 유지하고, UI-critical operational status / concept rows는 `app/services/reference_glossary_catalog.py`의 Streamlit-free shared dictionary가 소유하는 구조가 맞다. `Guides`와 `Glossary`는 같은 concept row를 표시하고, Glossary는 추가로 markdown section parser를 통해 기존 문서 용어를 함께 보여준다.
+- Follow-up:
+  - 4차는 Backtest / Operations 주요 화면에서 Reference contextual link 또는 help drawer를 연결한다. 5차는 Reference drift guard와 QA polish를 다룬다.
+
 ### 2026-06-07 - Refactor round should close before opening another broad split
 - User request:
   - 9차 이후 다음 단계 진행을 요청함.

@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-stale-refresh-fix-20260607/`
-- 목적: `Workspace > Overview > Futures Monitor`가 yfinance 지연 / 휴장 / 주말 상태에서 저장된 최신 선물 1m candle을 `Missing`처럼 숨기지 않고, latest stored data를 표시하되 실제 freshness는 `Stale`로 남기게 한다.
-- 이번 차수에서 하지 않은 일: provider 교체, DB schema 변경, OS scheduler 변경, Macro Thermometer scoring 변경, registry / saved JSONL rewrite.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/reference-glossary-concept-dictionary-v3-20260607/`
+- 목적: `Reference > Guides`와 `Reference > Glossary`가 같은 Streamlit-free concept dictionary / search helper를 사용해 `NOT_RUN`, `BLOCKED`, `Provider Coverage`, `Portfolio Monitoring Scenario` 같은 운영 용어를 같은 의미로 보여주게 한다.
+- 이번 차수에서 하지 않은 일: `GLOSSARY.md` 전체 rewrite, 주요 화면 contextual link 연결, DB / registry / saved JSONL rewrite, provider fetch, live approval / broker order / auto rebalance.
 
 ## Product Tracks
 
