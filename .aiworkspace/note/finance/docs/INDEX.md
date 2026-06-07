@@ -24,7 +24,7 @@ Last Verified: 2026-06-07
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Post-Merge Active State Cleanup 2026-06-07](../tasks/active/post-merge-active-state-cleanup-20260607/PLAN.md).
+- Latest completed task: [Post-Merge Verification Handoff 2026-06-07](../tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md).
 - Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose

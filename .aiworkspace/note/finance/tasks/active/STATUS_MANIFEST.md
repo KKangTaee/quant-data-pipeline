@@ -9,13 +9,14 @@ Current active task: none.
 
 Latest completed docs cleanup task:
 
-- `post-merge-active-state-cleanup-20260607`
+- `post-merge-verification-handoff-20260607`
 
 Recent post-merge cleanup records:
 
 - `post-merge-docs-alignment-20260607`: 1차 product / roadmap / current state alignment
 - `post-merge-boundary-docs-alignment-20260607`: 2차 architecture / data / flow boundary alignment
 - `post-merge-active-state-cleanup-20260607`: 3차 active task / phase state manifest alignment
+- `post-merge-verification-handoff-20260607`: 4차 verification / handoff alignment
 
 ## What `tasks/active/` Means Right Now
 
@@ -42,7 +43,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 
 | Group | Meaning | Representative Folders |
 |---|---|---|
-| Post-merge docs cleanup | Current 1차~3차 cleanup records | `post-merge-docs-alignment-20260607`, `post-merge-boundary-docs-alignment-20260607`, `post-merge-active-state-cleanup-20260607` |
+| Post-merge docs cleanup | Current 1차~4차 cleanup records | `post-merge-docs-alignment-20260607`, `post-merge-boundary-docs-alignment-20260607`, `post-merge-active-state-cleanup-20260607`, `post-merge-verification-handoff-20260607` |
 | Overview / market context | Overview Market Intelligence, Sentiment, Futures, Why It Moved, Events, automation | `overview-market-sentiment-v1`, `overview-market-movers-second-pass`, `futures-market-monitoring-mvp-v1`, `futures-macro-thermometer-validation-v1`, `overview-scheduled-refresh-automation` |
 | Backtest Analysis / strategy research | Candidate source generation, portfolio mix builder, Risk-On Momentum research lane | `backtest-portfolio-mix-builder-flow-v1`, `backtest-portfolio-mix-builder-ux-v1`, `risk-on-momentum-5d-v1`, `risk-on-momentum-5d-v2` |
 | Practical Validation / Final Review | Validation modules, selected-route gate, evidence read model, Final Review UX | `practical-validation-module-gate-v1`, `practical-validation-selected-route-preflight-v1`, `final-review-selection-readiness-gate-v1`, `final-review-commercial-ux-v1` |

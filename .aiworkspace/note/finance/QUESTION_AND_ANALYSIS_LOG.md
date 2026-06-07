@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 3차 work is post-merge active task / phase state cleanup in [post-merge-active-state-cleanup-20260607](./tasks/active/post-merge-active-state-cleanup-20260607/PLAN.md).
+  - Latest completed 4차 work is post-merge verification / handoff in [post-merge-verification-handoff-20260607](./tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Post-merge cleanup handoff should be docs-only and explicit
+- User request:
+  - 4차로 검증 및 handoff를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 1차~3차 정리 결과가 다음 작업자에게 안전하게 전달되도록 검증 evidence와 read order를 남긴다.
+- Analysis result:
+  - 현재 작업은 코드 검증보다 문서 포인터 / manifest / stale pointer / generated artifact exclusion 검증이 핵심이다. UI / DB / runtime은 변경하지 않았으므로 Browser QA나 backtest 실행은 범위 밖이다.
+- Follow-up:
+  - `post-merge-verification-handoff-20260607/HANDOFF.md`를 handoff entry point로 둔다. Push / PR, `.note/` cleanup, physical archive migration은 별도 승인 scope로 남긴다.
 
 ### 2026-06-07 - Active folder cleanup should be manifest-first, not mass-move-first
 - User request:

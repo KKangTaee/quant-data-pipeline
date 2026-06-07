@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 3차 work is post-merge active task / phase state cleanup in [post-merge-active-state-cleanup-20260607](./tasks/active/post-merge-active-state-cleanup-20260607/PLAN.md).
+  - Latest completed 4차 work is post-merge verification / handoff in [post-merge-verification-handoff-20260607](./tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Post-merge verification / handoff 4차
+- Opened `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/` as the 4차 verification and handoff record.
+- Verified docs-only hygiene, active state pointers, manifest presence, stale pointer absence, and latest cleanup commits.
+- Added `HANDOFF.md` with next read order, current product interpretation, remaining decisions, and default do-not-stage boundaries.
+- No code, registry / saved JSONL rewrite, `.note/` cleanup, UI QA, DB / ingestion / backtest run, push, or PR was included.
 
 ### 2026-06-07 - Post-merge active state cleanup 3차
 - Opened `.aiworkspace/note/finance/tasks/active/post-merge-active-state-cleanup-20260607/` as the 3차 cleanup record.

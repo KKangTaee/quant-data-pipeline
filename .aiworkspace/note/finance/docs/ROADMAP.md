@@ -19,11 +19,11 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 3차 병합 후 active task / phase 상태 정리는 완료 상태다.
+현재 4차 병합 후 검증 및 handoff 정리는 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/post-merge-active-state-cleanup-20260607/`
-- 목적: `tasks/active`와 `phases/active`에 남은 완료 기록을 retained work record로 해석하도록 manifest / README / roadmap state를 정렬한다.
-- 이번 차수에서 하지 않은 일: 코드 변경, registry / saved JSONL rewrite, `.note/` 삭제, 170개 task / 11개 phase board 대량 이동.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/`
+- 목적: 1차~3차 문서 정리 결과를 검증하고, 다음 작업자가 읽을 handoff를 남긴다.
+- 이번 차수에서 하지 않은 일: 코드 변경, UI / Browser QA, DB / ingestion / backtest runtime 실행, registry / saved JSONL rewrite, `.note/` 삭제, push / PR 생성.
 
 ## Product Tracks
 
@@ -77,6 +77,7 @@ Current active task:
 
 Recent completed docs cleanup tasks:
 
+- `post-merge-verification-handoff-20260607`
 - `post-merge-active-state-cleanup-20260607`
 - `post-merge-boundary-docs-alignment-20260607`
 - `post-merge-docs-alignment-20260607`
@@ -88,6 +89,7 @@ State manifest pointers:
 
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
+- post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
 
 Untracked legacy `.note/` exists locally after merge review. It is not the current canonical workspace path and should not be staged by default.
 
