@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Operations V2 closeout should separate normal navigation from direct-route noise
+- User request:
+  - Operations Overview V2 5차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차~4차 Operations V2 개편을 최종 QA / 문서 / runbook 기준으로 닫는다.
+- Analysis result:
+  - 정상 사용자 흐름은 root `/`에서 top navigation의 `Operations Overview`를 누르는 경로이며, 이 경로는 같은 `/operations` URL에 도달해도 Page not found dialog가 없다. 직접 `/operations` first-load에서는 Streamlit local routing dialog가 보일 수 있으므로 QA runbook에 별도 diagnostic으로 남긴다.
+- Follow-up:
+  - Operations V2 자체는 closeout하고, archive helper code / historical data deletion은 별도 audit / migration task로 승인받고 다룬다.
+
 ### 2026-06-08 - Operations queue should be priority and evidence ordered
 - User request:
   - Operations Overview V2 4차 작업 진행을 요청함.

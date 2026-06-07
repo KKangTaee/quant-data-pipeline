@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Operations V2 Closeout 5차
+- Opened `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/` for Operations Overview V2 5차 closeout.
+- Confirmed normal browser QA path is root `/` -> top navigation -> `Operations Overview`; this path reaches `/operations` without the Page not found dialog.
+- Added `docs/runbooks/OPERATIONS_OVERVIEW_QA.md` for Operations Overview QA, direct-route diagnostic, focused tests, and artifact hygiene.
+- Operations V2 is closed as 1차 archive cleanup, 2차 portfolio summary, 3차 Evidence Health, 4차 review queue, 5차 QA/docs closeout. Archive helper deletion remains a separate audit / migration decision.
+
 ### 2026-06-08 - Operations Review Queue Refinement 4차
 - Opened `.aiworkspace/note/finance/tasks/active/operations-review-queue-refinement-20260608/` for Operations Overview V2 4차.
 - Refined Today's Operations Queue into a priority / evidence / metric ordered review queue.

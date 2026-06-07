@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `operations-v2-closeout-20260608` | Completed record | Operations Overview V2 5차 closeout. 1차~4차 개편을 최종 QA / runbook / durable docs 기준으로 닫고 normal top-navigation QA path와 direct route diagnostic을 분리한 기록이다. |
 | `operations-review-queue-refinement-20260608` | Completed record | Operations Overview V2 4차. Today's Operations Queue를 priority / evidence / metric 기반 review queue로 재정렬해 setup blocker, system run failure, scenario freshness, open review, routine monitoring을 분리한 기록이다. |
 | `operations-evidence-health-strip-20260607` | Completed record | Operations Overview V2 3차. Operations Console 상단에 Evidence Health mini strip을 추가해 scenario freshness / selected evidence readiness / open review / system run health를 한 줄로 확인하게 한 기록이다. |
 | `operations-portfolio-first-summary-20260607` | Completed record | Operations Overview V2 2차. Operations Console 상단에 Portfolio Monitoring Status summary를 추가해 active portfolio / assigned strategy / stale scenario / blocked / missing / open review / next review를 먼저 읽게 한 기록이다. |
@@ -55,4 +56,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-08 기준 186개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-08 기준 187개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
