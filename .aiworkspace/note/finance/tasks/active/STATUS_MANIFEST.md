@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-guides-center-v1-20260607`
+- `reference-guides-journey-playbooks-v2-20260607`
 
 Latest completed docs cleanup task:
 

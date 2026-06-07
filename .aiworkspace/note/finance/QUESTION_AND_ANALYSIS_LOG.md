@@ -7502,3 +7502,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `Reference > Guides`를 포트폴리오 후보 선정 전용 guide에서 Overview / Ingestion / Backtest / Validation / Operations까지 안내하는 task-first Reference Center로 바꿔야 함.
 - Analysis result: 기존 Guide의 route selector / timeline / Go-Review-Stop 구조는 유지 가치가 있지만 첫 화면이 product-wide help center 역할을 못한다. Reference는 read-only guide여야 하며 job 실행, provider fetch, registry write, live approval / order / auto rebalance를 추가하면 안 된다.
 - Follow-up: 1차로 catalog service와 Reference Center shell을 구현하고, 기존 guide는 `Portfolio Selection Journey`로 보존했다. 후속 차수는 Glossary 통합, contextual links, Browser QA 기반 polish다.
+
+### 2026-06-07 - Reference 2차로 journey / playbook 상세를 확장한다
+
+- User request: 사용자가 Reference 개편 2차 작업 진행을 요청함.
+- Interpreted goal: 1차 Reference Center의 task card / 요약 표만으로는 부족하므로, 사용자가 실제로 막힌 상황에서 확인 순서, failure state, evidence location을 따라갈 수 있어야 함.
+- Analysis result: 상세 내용은 Streamlit-free catalog에 두고 UI는 선택한 journey / playbook을 렌더링만 하는 구조가 drift와 boundary risk를 줄인다.
+- Follow-up: journey steps / failure states, provider snapshot / ingestion success UI stale / archive recovery playbooks, check steps / evidence locations를 추가했다. Reference는 read-only guide이며 job 실행 / provider fetch / registry write / live trading action은 추가하지 않았다.

@@ -883,7 +883,7 @@ def _render_task_cards(catalog: dict[str, list[dict[str, str]]]) -> None:
     st.html(f'<div class="qg-task-grid">{"".join(cards)}</div>')
 
 
-def _render_current_product_flow(catalog: dict[str, list[dict[str, str]]]) -> None:
+def _render_current_product_flow(catalog: dict[str, list[dict[str, Any]]]) -> None:
     st.markdown("### 현재 제품 흐름")
     st.caption("Reference는 아래 화면의 owner와 기록 경계를 설명합니다. 직접 실행하거나 저장하지는 않습니다.")
     st.dataframe(
@@ -893,9 +893,50 @@ def _render_current_product_flow(catalog: dict[str, list[dict[str, str]]]) -> No
         width="stretch",
         hide_index=True,
     )
+    _render_journey_detail(catalog)
 
 
-def _render_status_lookup(catalog: dict[str, list[dict[str, str]]]) -> None:
+def _render_journey_detail(catalog: dict[str, list[dict[str, Any]]]) -> None:
+    st.markdown("#### Journey 상세 보기")
+    st.caption("선택한 흐름에서 어떤 순서로 확인하고, 어떤 실패 상태에서 멈춰야 하는지 봅니다.")
+    options = [row["title"] for row in catalog["journeys"]]
+    selected = st.selectbox(
+        "Journey 선택",
+        options=options,
+        key="reference_guides_journey_detail",
+    )
+    journey = next(row for row in catalog["journeys"] if row["title"] == selected)
+    with st.container(border=True):
+        st.markdown(f"##### {journey['title']}")
+        st.caption(f"Owner screens: {journey['screens']}")
+        st.markdown(f"**언제 쓰나:** {journey['when_to_use']}")
+        st.markdown(f"**기록:** {journey['records']}")
+        st.warning(f"Boundary: {journey['boundary']}")
+
+        step_rows = list(journey.get("steps") or [])
+        if step_rows:
+            st.markdown("##### 확인 순서")
+            st.dataframe(
+                pd.DataFrame(step_rows)[
+                    ["order", "owner_screen", "check", "safe_next", "downstream", "stop_condition"]
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+
+        failure_rows = list(journey.get("failure_states") or [])
+        if failure_rows:
+            st.markdown("##### 자주 막히는 상태")
+            st.dataframe(
+                pd.DataFrame(failure_rows)[
+                    ["state", "owner_screen", "first_check", "safe_next", "stop_condition"]
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+
+
+def _render_status_lookup(catalog: dict[str, list[dict[str, Any]]]) -> None:
     st.markdown("### 자주 막히는 상태 / 용어")
     query = st.text_input(
         "상태 / 용어 검색",
@@ -916,13 +957,13 @@ def _render_status_lookup(catalog: dict[str, list[dict[str, str]]]) -> None:
         st.info("검색 결과가 없습니다. Glossary와 문서 / 경로 drawer도 함께 확인하세요.")
 
 
-def _render_records_map(catalog: dict[str, list[dict[str, str]]]) -> None:
+def _render_records_map(catalog: dict[str, list[dict[str, Any]]]) -> None:
     st.markdown("### 기록 / 저장 경계")
     st.caption("어떤 화면이 무엇을 만들고 다시 읽는지 확인합니다. Reference는 이 기록을 수정하지 않습니다.")
     st.dataframe(pd.DataFrame(catalog["records"]), width="stretch", hide_index=True)
 
 
-def _render_troubleshooting_playbooks(catalog: dict[str, list[dict[str, str]]]) -> None:
+def _render_troubleshooting_playbooks(catalog: dict[str, list[dict[str, Any]]]) -> None:
     st.markdown("### 문제 해결 Playbook")
     options = [row["title"] for row in catalog["playbooks"]]
     selected = st.selectbox(
@@ -938,6 +979,18 @@ def _render_troubleshooting_playbooks(catalog: dict[str, list[dict[str, str]]]) 
         st.markdown(f"**First check:** {playbook['first_check']}")
         st.markdown(f"**Safe action:** {playbook['safe_action']}")
         st.warning(f"Stop condition: {playbook['stop_condition']}")
+        check_rows = list(playbook.get("check_steps") or [])
+        if check_rows:
+            st.markdown("##### 확인 순서")
+            st.dataframe(
+                pd.DataFrame(check_rows)[["order", "owner_screen", "check", "pass_signal"]],
+                width="stretch",
+                hide_index=True,
+            )
+        evidence_locations = list(playbook.get("evidence_locations") or [])
+        if evidence_locations:
+            st.markdown("##### Evidence 위치")
+            st.code("\n".join(evidence_locations), language="text")
 
 
 def _render_reference_center() -> None:

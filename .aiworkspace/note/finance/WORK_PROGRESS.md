@@ -4806,3 +4806,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/reference-guides-center-v1-20260607/`에서 `Reference > Guides`를 task-first Reference Center로 개편했다.
   - Streamlit-free `app/services/reference_guides_catalog.py`에 task cards, journeys, status concepts, records map, troubleshooting playbooks를 분리했고, 기존 portfolio-selection guide는 `Portfolio Selection Journey`로 보존했다.
   - Reference는 read-only 안내 surface이며 provider fetch / registry write / broker order / auto rebalance를 추가하지 않았다.
+- Reference Guides Journey / Playbooks V2:
+  - `.aiworkspace/note/finance/tasks/active/reference-guides-journey-playbooks-v2-20260607/`에서 Reference Center의 journey detail과 troubleshooting playbook을 확장했다.
+  - 제품 흐름 tab은 journey별 확인 순서 / failure state / downstream owner를 보여주고, 문제 해결 tab은 playbook별 check steps와 evidence locations를 보여준다.
+  - 3차는 Glossary / searchable concept dictionary 통합, 4차는 주요 화면 contextual links 연결로 남긴다.

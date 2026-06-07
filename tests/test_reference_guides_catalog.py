@@ -71,6 +71,42 @@ class ReferenceGuidesCatalogContractTests(unittest.TestCase):
         self.assertIn("NOT_RUN", playbooks)
         self.assertIn("Final Review", playbooks["final_review_source_missing"]["owner_screen"])
 
+    def test_journey_details_include_ordered_steps_and_failure_states(self) -> None:
+        from app.services.reference_guides_catalog import get_reference_center_catalog
+
+        catalog = get_reference_center_catalog()
+        journeys = {row["key"]: row for row in catalog["journeys"]}
+
+        market_context = journeys["daily_market_context"]
+        market_steps = market_context["steps"]
+        self.assertGreaterEqual(len(market_steps), 3)
+        self.assertEqual(market_steps[0]["owner_screen"], "Workspace > Overview")
+        self.assertIn("Futures Monitor", market_steps[0]["check"])
+        self.assertIn("downstream", market_steps[0])
+
+        data_repair = journeys["data_freshness_repair"]
+        data_failures = {row["state"]: row for row in data_repair["failure_states"]}
+        self.assertIn("UI가 최신 수집 결과를 못 읽음", data_failures)
+        self.assertIn("System / Data Health", data_failures["UI가 최신 수집 결과를 못 읽음"]["owner_screen"])
+        self.assertIn("Reference", data_failures["UI가 최신 수집 결과를 못 읽음"]["stop_condition"])
+
+    def test_playbooks_include_check_steps_and_evidence_locations(self) -> None:
+        from app.services.reference_guides_catalog import get_reference_center_catalog
+
+        catalog = get_reference_center_catalog()
+        playbooks = {row["key"]: row for row in catalog["playbooks"]}
+
+        provider_gap = playbooks["provider_snapshot_missing"]
+        self.assertGreaterEqual(len(provider_gap["check_steps"]), 3)
+        self.assertEqual(provider_gap["check_steps"][0]["order"], "1")
+        self.assertIn("Provider Data Gaps", provider_gap["check_steps"][0]["check"])
+        self.assertIn("evidence_locations", provider_gap)
+        self.assertIn("ETF provider snapshot DB tables", provider_gap["evidence_locations"])
+
+        archive_recovery = playbooks["archive_recovery"]
+        self.assertIn("Operations > Archive: Backtest Runs", archive_recovery["owner_screen"])
+        self.assertIn("BACKTEST_RUN_HISTORY.jsonl", archive_recovery["evidence_locations"])
+
 
 if __name__ == "__main__":
     unittest.main()
