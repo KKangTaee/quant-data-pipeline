@@ -68,3 +68,35 @@ Operations
     - Future selected portfolio report export
     - Future monitoring review snapshots
 ```
+
+## 2026-06-07 Pattern Update
+
+Because `Operations Overview` and archive labels already exist, the next pattern is not "add a hub" but "turn the hub into the operating cockpit."
+
+```text
+Operations
+  Portfolio Monitoring Cockpit
+    - Current selected portfolio state
+    - Stale / missing / blocked monitoring status
+    - Review signal and open issue count
+    - Target snapshot and optional actual allocation / drift evidence
+  Evidence Health
+    - DB / ingestion freshness relevant to monitoring
+    - Latest run health
+    - Provider / symbol freshness warnings
+  Recovery Drawer
+    - Backtest run restore
+    - Candidate snapshot replay
+    - Legacy registry bridge until retired
+  Reports / Dossier
+    - Manual monitoring review snapshot
+    - Decision dossier handoff
+```
+
+### UI Direction
+
+- Put portfolio monitoring status above development history, surface audit, and archive metrics.
+- Keep `System / Data Health` visible, but make it the answer to "can I trust today's evidence?" rather than a generic ops log page.
+- Move implementation history such as completed 1차~5차 roadmap out of the main user path. If retained, keep it in docs or a low-priority reference expander.
+- Treat archive pages as recovery drawers. They can remain in top navigation for Streamlit constraints, but the page copy and Overview links should make them feel secondary.
+- Do not create a new standalone `Operations` tab unless it clarifies one of the three user questions: portfolio state, evidence health, or recovery.

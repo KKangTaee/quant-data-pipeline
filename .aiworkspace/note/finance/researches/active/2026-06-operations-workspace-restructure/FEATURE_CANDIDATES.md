@@ -104,3 +104,66 @@ Success criteria:
 - Auto rebalance.
 - Scheduler-driven automatic portfolio scenario replay that writes monitoring logs.
 - Full React/API navigation rewrite as the first step.
+
+## 2026-06-07 Candidate Refresh
+
+The earlier P0 `Operations Overview / Command Center` has been implemented. Current candidates should therefore shift from "create IA" to "make Operations useful and less prototype-like."
+
+| Priority | Candidate | Impact | Effort | Risk | Confidence | Fit | Recommendation |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| P0 | Operations Cockpit Cleanup | 5 | 2 | 2 | 5 | 5 | Do first. |
+| P0 | Portfolio Monitoring First Summary | 5 | 3 | 3 | 4 | 5 | Do with or immediately after cleanup. |
+| P1 | Archive Visibility Demotion | 3 | 2 | 3 | 4 | 4 | Do after confirming Streamlit nav limits. |
+| P1 | Monitoring Evidence Health Strip | 4 | 3 | 3 | 4 | 5 | Pair with Portfolio Monitoring V2. |
+| P2 | Manual Monitoring Report Snapshot | 3 | 4 | 3 | 3 | 4 | Defer until semantics stabilize. |
+
+### P0. Operations Cockpit Cleanup
+
+Problem:
+
+- Current Operations Overview is structurally correct but still carries development-roadmap and surface-audit artifacts in the user-facing surface.
+
+Expected workflow change:
+
+- User opens Operations and immediately sees portfolio monitoring state, evidence health, and next action. Development history is hidden or moved out of the operating path.
+
+Likely code areas:
+
+- `app/web/operations_overview.py`
+- `app/web/streamlit_app.py` only if navigation order/copy changes
+- docs/flows sync after approval
+
+### P0. Portfolio Monitoring First Summary
+
+Problem:
+
+- Portfolio Monitoring is the anchor surface, but Operations Overview still treats it as one lane among several status cards.
+
+Expected workflow change:
+
+- Operations Overview shows a portfolio-first summary: active portfolio count, assigned selected strategies, stale scenario count, blocked/missing references, open review items, next review date when available.
+
+Likely code areas:
+
+- `app/runtime/final_selected_portfolios.py` if existing summary lacks the needed compact fields
+- `app/web/operations_overview.py`
+- `app/web/final_selected_portfolio_dashboard.py` only if corresponding labels need alignment
+
+### P1. Archive Visibility Demotion
+
+Problem:
+
+- Archive pages are semantically demoted inside their bodies, but top navigation still makes them peer pages.
+
+Expected workflow change:
+
+- Archive tools remain accessible for recovery, but the main Operations user journey starts from Overview or Portfolio Monitoring.
+
+Likely code areas:
+
+- `app/web/streamlit_app.py`
+- `app/web/operations_overview.py`
+
+Implementation caution:
+
+- Do not delete archive tools until registry read/write paths and recovery alternatives are audited.

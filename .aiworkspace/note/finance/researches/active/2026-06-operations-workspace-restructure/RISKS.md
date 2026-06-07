@@ -39,3 +39,26 @@
 - Should `Selected Portfolio Dashboard` be renamed in UI to `Portfolio Monitoring` while keeping route compatibility?
 - Should Archive/Recovery be a visible section on the Overview page only, or should it become a navigation subgroup if Streamlit supports the desired shape?
 - Which legacy registries are still needed by active users versus kept only for audit compatibility?
+
+## 2026-06-07 Risk Refresh
+
+Resolved / changed:
+
+- `Operations Overview` is now first in the Operations group, so the old open question about whether to add it is resolved.
+- `Selected Portfolio Dashboard` is now user-facing `Portfolio Monitoring`; legacy file / URL names remain for compatibility.
+- `Ops Review` is now user-facing `System / Data Health`.
+
+Current risks:
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| User-facing Operations Overview still exposes development history / completed roadmap language | Medium | Move roadmap/audit material to docs or keep behind lower-priority reference; lead with portfolio monitoring state. |
+| Archive pages remain peer pages in top navigation even after semantic demotion | Medium | Keep pages for recovery, but route users from Overview first; consider nav demotion only after Streamlit constraints are checked. |
+| Removing archive tools before registry path audit | High | Inventory read/write and recovery handoff paths before deletion. |
+| Adding a new tab for every unclear concept | Medium | Use the rule: new tab only if it answers portfolio state, evidence health, recovery, or report handoff better than existing lanes. |
+
+Updated open questions:
+
+- Can Streamlit navigation support hiding or nesting Archive pages without making recovery too hard?
+- Which portfolio-level summary fields are already available from `load_final_selected_portfolio_dashboard()`, and which require runtime read-model extension?
+- Should development history remain visible anywhere in the product UI, or move entirely to `.aiworkspace` docs?

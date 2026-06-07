@@ -76,3 +76,33 @@
 3. `Backtest Run History`와 `Candidate Library`는 `Archive / Recovery Tools`로 낮춘다.
 4. Selected Dashboard는 `Selected Portfolio Dashboard`라는 현재 route를 유지하되, 화면/문구상 "선정 후 monitoring portfolio"임을 더 분명히 한다.
 5. 진짜 삭제는 사용 빈도와 대체 경로가 확인된 뒤에만 한다.
+
+## 2026-06-07 Refresh
+
+현재 code / docs 기준으로 2026-06-03 리서치의 1차 결론 일부는 이미 구현됐다.
+
+| Area | Current fact | Implication |
+| --- | --- | --- |
+| Navigation | `Operations` group now contains `Operations Overview`, `Portfolio Monitoring`, `System / Data Health`, `Archive: Backtest Runs`, `Archive: Candidates`. | 단순히 Overview를 추가하는 일은 완료 상태다. 다음 개편은 top navigation peer 문제와 화면 정체성 보강이다. |
+| Operations landing | `app/web/operations_overview.py` renders `Operations Console`, Today's Operations Queue, primary lanes, archive/reference lanes, no-live boundary, and completed 1차~5차 roadmap. | 현재 약점은 landing 부재가 아니라 landing이 prototype/debug 설명을 일부 품고 있고 실제 사용자가 "오늘 무엇을 봐야 하는가"를 더 강하게 밀어주지 못하는 점이다. |
+| Portfolio Monitoring | `Operations > Portfolio Monitoring` is already the user-facing name; legacy file/path names keep `selected-portfolio-dashboard` compatibility. | 삭제/이동 대상이 아니다. Operations의 anchor surface로 더 강화해야 한다. |
+| System / Data Health | `Ops Review` was renamed to `System / Data Health` in navigation and routes users to Ingestion / Archive tools for execution or replay. | 유지하되 Operations에서의 역할은 "inspect / triage"로 제한한다. |
+| Archive screens | Run History and Candidate Library already have archive/recovery titles and warning copy. | 즉시 제거할 근거는 없다. 다만 top navigation에 primary lane과 같은 레벨로 계속 노출되는 점은 UX debt다. |
+
+### Updated Weaknesses
+
+- `Operations Overview`가 이미 존재하지만, 구현 문구 안에 "1차~5차 완료" 같은 개발 이력이 남아 있어 사용자용 운영 콘솔보다 작업 기록처럼 보일 수 있다.
+- top navigation에서는 archive pages가 여전히 primary pages와 같은 레벨이다. 화면 안에서는 demotion이 되었지만, 첫 인상에서는 demotion이 충분하지 않다.
+- `Operations`의 product identity가 아직 `Portfolio Monitoring + System/Data Health + Archive/Recovery`라는 구조 설명에 머문다. 실제 사용자는 "오늘 포트폴리오 상태가 변했나", "데이터가 믿을 만한가", "과거 실행을 복구해야 하나" 순서로 읽어야 한다.
+- Portfolio Monitoring을 제외한 기능의 필요성은 "primary operations"가 아니라 "supporting operations"로 봐야 한다. 삭제 기준은 기능이 낡았는지가 아니라 active workflow에서 대체 경로가 있는지, audit/replay 손실이 없는지다.
+
+### Keep / Improve / Remove Guidance
+
+| Surface | Current decision | Reason |
+| --- | --- | --- |
+| Portfolio Monitoring | Keep and improve as primary | Final Review 이후의 유일한 user-facing monitoring surface다. |
+| Operations Overview | Keep, but redesign as current-state cockpit | 이미 구현됐지만 개발 이력/설명보다 live operating queue와 portfolio state를 앞세워야 한다. |
+| System / Data Health | Keep as support-primary | 데이터/실행 신뢰도 확인은 monitoring 판단 전에 필요하지만, execution screen은 아니다. |
+| Archive: Backtest Runs | Keep as archive/recovery; consider hiding behind Overview later | run reproduction, form restore, validation handoff가 있어 삭제하면 감사/복구 능력을 잃는다. |
+| Archive: Candidates | Keep as archive/recovery until legacy registry read paths are retired | legacy/current/pre-live snapshot inspection value가 남아 있다. |
+| Development roadmap/audit expanders in Operations Overview | Remove or move to Reference/docs in a future UI pass | 제품 화면에서 task closeout처럼 보이는 정보는 Operations identity를 흐린다. |
