@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed structure work is Ingestion Diagnostic Facade 7B in [ingestion-diagnostic-facade-20260607](./tasks/active/ingestion-diagnostic-facade-20260607/DESIGN.md).
+  - Latest completed structure work is Backtest Compare Components Split 9차 in [backtest-compare-components-split-20260607](./tasks/active/backtest-compare-components-split-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Backtest Compare Components Split 9차
+- Opened `.aiworkspace/note/finance/tasks/active/backtest-compare-components-split-20260607/` as the 9차 Backtest Compare Streamlit split first-pass record.
+- Added `app/web/backtest_compare_components.py` for Portfolio Mix Builder CSS, flow stepper, section heading, and component result card render.
+- `app/web/backtest_compare.py` remains the Compare orchestration owner for strategy execution, saved replay, weighted bundle creation, registry handoff, and Practical Validation handoff.
+- Remaining follow-up candidates are saved replay / weighted result / strategy-specific form body splits.
 
 ### 2026-06-07 - Ingestion Diagnostic Facade 7B
 - Opened `.aiworkspace/note/finance/tasks/active/ingestion-diagnostic-facade-20260607/` as the 7차 large Streamlit split 7B record.

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from html import escape
-
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
@@ -21,6 +19,13 @@ from app.workspace_paths import REGISTRIES_DIR
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
 )
+from app.web.backtest_compare_components import (
+    html_text as _html_text,
+    render_component_result_overview_cards,
+    render_portfolio_mix_builder_css,
+    render_portfolio_mix_flow_strip,
+    render_portfolio_mix_section_head,
+)
 from app.web.backtest_result_display import *  # noqa: F401,F403
 from app.web.backtest_result_display import _build_next_step_readiness_evaluation
 
@@ -34,319 +39,6 @@ def _compare_preset_catalog() -> ComparePresetCatalog:
         value_strict_presets=VALUE_STRICT_PRESETS,
         strict_annual_compare_default_preset=STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
         strict_quarterly_prototype_default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
-    )
-
-
-def _render_portfolio_mix_builder_css() -> None:
-    st.markdown(
-        """
-        <style>
-        .pmx-stepper, .pmx-section-head, .pmx-card-grid, .pmx-handoff-card {
-            --pmx-surface: var(--secondary-background-color);
-            --pmx-border: rgba(128, 128, 128, 0.28);
-            --pmx-text: var(--text-color);
-            --pmx-muted: #8a94a6;
-        }
-        .pmx-stepper {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.75rem;
-            margin: 0.9rem 0 1.1rem;
-        }
-        .pmx-step {
-            min-height: 5.25rem;
-            border: 1px solid var(--pmx-border);
-            border-radius: 8px;
-            padding: 0.8rem 0.9rem;
-            background: var(--pmx-surface);
-        }
-        .pmx-step.done {
-            border-color: #a7d7b9;
-            background: rgba(19, 115, 51, 0.10);
-        }
-        .pmx-step.active {
-            border-color: #ff6b6b;
-            background: rgba(255, 107, 107, 0.10);
-        }
-        .pmx-step.ready {
-            border-color: #a7d7b9;
-            background: rgba(19, 115, 51, 0.10);
-        }
-        .pmx-step.pending {
-            background: var(--pmx-surface);
-            color: var(--pmx-muted);
-        }
-        .pmx-step.blocked {
-            border-color: #f2b8b5;
-            background: rgba(180, 35, 24, 0.10);
-        }
-        .pmx-step-index {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 1.35rem;
-            height: 1.35rem;
-            margin-right: 0.35rem;
-            border-radius: 999px;
-            background: rgba(128, 128, 128, 0.18);
-            color: var(--pmx-text);
-            font-size: 0.78rem;
-            font-weight: 700;
-        }
-        .pmx-step.done .pmx-step-index {
-            background: #dff3e6;
-            color: #137333;
-        }
-        .pmx-step.active .pmx-step-index {
-            background: #ffe3e3;
-            color: #c92a2a;
-        }
-        .pmx-step.ready .pmx-step-index {
-            background: #dff3e6;
-            color: #137333;
-        }
-        .pmx-step-title {
-            display: block;
-            margin-top: 0.15rem;
-            font-weight: 750;
-            color: var(--pmx-text);
-        }
-        .pmx-step-caption {
-            display: block;
-            margin-top: 0.35rem;
-            font-size: 0.84rem;
-            line-height: 1.35;
-            color: var(--pmx-muted);
-        }
-        .pmx-section-head {
-            margin: 0.4rem 0 0.75rem;
-            padding: 0.95rem 1rem;
-            border: 1px solid var(--pmx-border);
-            border-left: 4px solid #ff6b6b;
-            border-radius: 8px;
-            background: var(--pmx-surface);
-        }
-        .pmx-section-head strong {
-            display: block;
-            color: var(--pmx-text);
-            font-size: 1rem;
-        }
-        .pmx-section-head span {
-            display: block;
-            margin-top: 0.3rem;
-            color: var(--pmx-muted);
-            font-size: 0.9rem;
-            line-height: 1.45;
-        }
-        .pmx-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 0.75rem;
-            margin: 0.7rem 0 1rem;
-        }
-        .pmx-component-card {
-            border: 1px solid var(--pmx-border);
-            border-radius: 8px;
-            padding: 0.85rem 0.9rem;
-            background: var(--pmx-surface);
-        }
-        .pmx-component-title {
-            font-weight: 750;
-            color: var(--pmx-text);
-            margin-bottom: 0.25rem;
-        }
-        .pmx-component-contract {
-            min-height: 1.8rem;
-            color: var(--pmx-muted);
-            font-size: 0.82rem;
-            line-height: 1.3;
-            margin-bottom: 0.65rem;
-        }
-        .pmx-metric-row {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.45rem;
-            margin-bottom: 0.65rem;
-        }
-        .pmx-metric {
-            padding: 0.45rem;
-            border-radius: 7px;
-            background: rgba(128, 128, 128, 0.12);
-        }
-        .pmx-metric small {
-            display: block;
-            color: var(--pmx-muted);
-            font-size: 0.72rem;
-            line-height: 1.1;
-        }
-        .pmx-metric strong {
-            display: block;
-            margin-top: 0.2rem;
-            color: var(--pmx-text);
-            font-size: 0.86rem;
-        }
-        .pmx-chip-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.35rem;
-        }
-        .pmx-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            border-radius: 999px;
-            padding: 0.2rem 0.5rem;
-            font-size: 0.78rem;
-            font-weight: 650;
-            background: #f2f4f7;
-            color: #344054;
-        }
-        .pmx-chip.pass {
-            background: #e7f6ec;
-            color: #137333;
-        }
-        .pmx-chip.review {
-            background: #fff4d6;
-            color: #8a5b00;
-        }
-        .pmx-chip.fail {
-            background: #ffe4e4;
-            color: #b42318;
-        }
-        .pmx-chip.neutral {
-            background: #f2f4f7;
-            color: #344054;
-        }
-        .pmx-handoff-card {
-            border: 1px solid var(--pmx-border);
-            border-radius: 8px;
-            padding: 1rem;
-            background: var(--pmx-surface);
-            margin: 0.5rem 0 0.9rem;
-        }
-        .pmx-handoff-card.pass {
-            border-color: #a7d7b9;
-            background: rgba(19, 115, 51, 0.10);
-        }
-        .pmx-handoff-card.review {
-            border-color: #efd28d;
-            background: rgba(255, 196, 0, 0.10);
-        }
-        .pmx-handoff-card.fail {
-            border-color: #f2b8b5;
-            background: rgba(180, 35, 24, 0.10);
-        }
-        .pmx-handoff-title {
-            display: block;
-            color: var(--pmx-text);
-            font-weight: 800;
-            margin-bottom: 0.35rem;
-        }
-        .pmx-handoff-body {
-            display: block;
-            color: var(--pmx-muted);
-            font-size: 0.9rem;
-            line-height: 1.45;
-        }
-        @media (max-width: 900px) {
-            .pmx-stepper {
-                grid-template-columns: 1fr 1fr;
-            }
-            .pmx-metric-row {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        @media (max-width: 560px) {
-            .pmx-stepper,
-            .pmx-card-grid,
-            .pmx-metric-row {
-                grid-template-columns: 1fr;
-            }
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _html_text(value: Any) -> str:
-    return escape(str(value if value is not None else "-"))
-
-
-def _metric_text(value: Any, kind: str) -> str:
-    try:
-        numeric_value = float(value)
-    except (TypeError, ValueError):
-        return "-"
-    if pd.isna(numeric_value):
-        return "-"
-    if kind == "currency":
-        return _format_currency(numeric_value)
-    if kind == "percent":
-        return _format_percent(numeric_value)
-    if kind == "ratio":
-        return _format_ratio(numeric_value)
-    return f"{numeric_value:,.2f}"
-
-
-def _status_chip_tone(value: Any) -> str:
-    normalized = str(value or "").strip().lower()
-    if not normalized or normalized == "-":
-        return "neutral"
-    if any(token in normalized for token in ["pass", "ready", "가능", "없음", "clean", "created"]):
-        return "pass"
-    if any(token in normalized for token in ["review", "conditional", "warning", "cadence", "확인", "필요"]):
-        return "review"
-    if any(token in normalized for token in ["fail", "hold", "block", "error", "disabled", "차단"]):
-        return "fail"
-    return "neutral"
-
-
-def _render_portfolio_mix_flow_strip(
-    *,
-    component_ready: bool,
-    mix_ready: bool,
-    can_send_to_practical_validation: bool | None = None,
-) -> None:
-    if not component_ready:
-        active_index = 0
-    elif not mix_ready:
-        active_index = 1
-    else:
-        active_index = 2
-
-    steps = [
-        ("Component 실행", "같은 기간 조건으로 mix 재료를 만듭니다."),
-        ("Weight 구성", "구성 전략 비중과 date alignment를 정합니다."),
-        ("Mix 후보 판단", "mix 전체가 2차 검증 후보인지 확인합니다."),
-        ("Practical Validation", "통과한 mix를 current selection source로 보냅니다."),
-    ]
-    step_cards = []
-    for idx, (title, caption) in enumerate(steps):
-        if idx < active_index:
-            css_class = "done"
-        elif idx == active_index:
-            css_class = "active"
-            if idx == 2 and can_send_to_practical_validation is False:
-                css_class = "blocked"
-        else:
-            css_class = "pending"
-        if idx == 3 and mix_ready and can_send_to_practical_validation is True:
-            css_class = "ready"
-        step_cards.append(
-            f'<div class="pmx-step {css_class}">'
-            f'<span class="pmx-step-index">{idx + 1}</span>'
-            f'<span class="pmx-step-title">{_html_text(title)}</span>'
-            f'<span class="pmx-step-caption">{_html_text(caption)}</span>'
-            "</div>"
-        )
-    st.markdown(f'<div class="pmx-stepper">{"".join(step_cards)}</div>', unsafe_allow_html=True)
-
-
-def _render_portfolio_mix_section_head(title: str, body: str) -> None:
-    st.markdown(
-        f'<div class="pmx-section-head"><strong>{_html_text(title)}</strong><span>{_html_text(body)}</span></div>',
-        unsafe_allow_html=True,
     )
 
 
@@ -1963,29 +1655,7 @@ def _render_component_result_overview(bundles: list[dict[str, Any]]) -> None:
     if not overview_rows:
         return
 
-    cards = []
-    for row in overview_rows:
-        trust = row.get("Data Trust") or "-"
-        promotion = row.get("Promotion") or "-"
-        execution_preview = row.get("Execution Preview") or "-"
-        cards.append(
-            '<div class="pmx-component-card">'
-            f'<div class="pmx-component-title">{_html_text(row.get("Strategy"))}</div>'
-            f'<div class="pmx-component-contract">{_html_text(row.get("Contract"))}</div>'
-            '<div class="pmx-metric-row">'
-            f'<div class="pmx-metric"><small>End</small><strong>{_html_text(_metric_text(row.get("End Balance"), "currency"))}</strong></div>'
-            f'<div class="pmx-metric"><small>CAGR</small><strong>{_html_text(_metric_text(row.get("CAGR"), "percent"))}</strong></div>'
-            f'<div class="pmx-metric"><small>MDD</small><strong>{_html_text(_metric_text(row.get("MDD"), "percent"))}</strong></div>'
-            f'<div class="pmx-metric"><small>Sharpe</small><strong>{_html_text(_metric_text(row.get("Sharpe"), "ratio"))}</strong></div>'
-            '</div>'
-            '<div class="pmx-chip-row">'
-            f'<span class="pmx-chip {_status_chip_tone(trust)}">Data {_html_text(trust)}</span>'
-            f'<span class="pmx-chip {_status_chip_tone(promotion)}">Promotion {_html_text(promotion)}</span>'
-            f'<span class="pmx-chip {_status_chip_tone(execution_preview)}">Source {_html_text(execution_preview)}</span>'
-            '</div>'
-            '</div>'
-        )
-    st.markdown(f'<div class="pmx-card-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    render_component_result_overview_cards(overview_rows)
 
 
 def _component_chart_mode() -> str:
@@ -2035,7 +1705,7 @@ def _render_compare_results() -> None:
     drawdown_view = _build_drawdown_compare_view(bundles)
     return_view = _build_total_return_compare_view(bundles)
 
-    _render_portfolio_mix_section_head(
+    render_portfolio_mix_section_head(
         "구성 포트폴리오 실행 결과",
         "이 결과는 mix 후보를 만들기 위한 재료입니다. 개별 전략을 바로 넘기지 않고, 아래 weight 구성 후 mix 전체를 하나의 후보로 판단합니다.",
     )
@@ -2639,7 +2309,7 @@ def _render_weighted_portfolio_builder() -> None:
     default_weight = round(100 / len(strategy_names), 2)
     _apply_weighted_portfolio_prefill(strategy_names)
 
-    _render_portfolio_mix_section_head(
+    render_portfolio_mix_section_head(
         "2. Mix Weight 구성",
         "방금 실행한 구성 포트폴리오들을 하나의 mix 후보로 섞습니다. 여기서 만든 결과가 1차 후보 판단의 대상입니다.",
     )
@@ -2703,7 +2373,7 @@ def _render_weighted_portfolio_builder() -> None:
     if not submitted:
         weighted_bundle = st.session_state.backtest_weighted_bundle
         if weighted_bundle:
-            _render_portfolio_mix_section_head(
+            render_portfolio_mix_section_head(
                 "3. Mix 후보 결과 확인",
                 "생성된 weighted portfolio 결과를 먼저 확인한 뒤, 아래 1차 판단에서 Practical Validation으로 보낼 수 있는지 봅니다.",
             )
@@ -4611,7 +4281,7 @@ def _render_strategy_compare_workspace() -> None:
                 list(st.session_state.get("backtest_compare_bundles") or []),
             ).get("can_send_to_practical_validation")
         )
-    _render_portfolio_mix_flow_strip(
+    render_portfolio_mix_flow_strip(
         component_ready=current_component_ready,
         mix_ready=current_mix_ready,
         can_send_to_practical_validation=current_can_send,
@@ -6178,7 +5848,7 @@ def _render_strategy_compare_workspace() -> None:
 
 # Render and operate the Portfolio Mix Builder workspace.
 def render_compare_portfolio_workspace() -> None:
-    _render_portfolio_mix_builder_css()
+    render_portfolio_mix_builder_css()
     saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
     if saved_notice:
         st.success(saved_notice)

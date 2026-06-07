@@ -32,7 +32,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. data trust row와 weighted component contribution view 담당 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. component 실행 결과 bundle을 weighted portfolio result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun / weighted bundle / replay context 조립 담당 |
-| `app/web/backtest_compare.py` | `Portfolio Mix Builder` 화면 render, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff |
+| `app/web/backtest_compare.py` | `Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff |
+| `app/web/backtest_compare_components.py` | Portfolio Mix Builder visual shell. CSS, flow stepper, section heading, component result card render를 담당하며 compare 실행 / 저장 / handoff 로직은 포함하지 않는다 |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, swing detail, compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |

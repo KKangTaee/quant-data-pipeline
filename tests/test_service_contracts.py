@@ -3894,6 +3894,46 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertTrue(callable(run_statement_coverage_diagnosis))
         self.assertTrue(callable(run_statement_pit_inspection))
 
+    def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
+        import ast
+
+        source = Path("app/web/backtest_compare.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.web.backtest_compare_components", imported_modules)
+        self.assertNotIn("_render_portfolio_mix_builder_css", function_names)
+        self.assertNotIn("_render_portfolio_mix_flow_strip", function_names)
+        self.assertNotIn("_render_portfolio_mix_section_head", function_names)
+        self.assertNotIn("_html_text", function_names)
+        self.assertNotIn("_status_chip_tone", function_names)
+
+    def test_backtest_compare_components_module_owns_visual_entrypoints(self) -> None:
+        from app.web.backtest_compare_components import (
+            html_text,
+            render_component_result_overview_cards,
+            render_portfolio_mix_builder_css,
+            render_portfolio_mix_flow_strip,
+            render_portfolio_mix_section_head,
+            status_chip_tone,
+        )
+
+        self.assertTrue(callable(render_portfolio_mix_builder_css))
+        self.assertTrue(callable(render_portfolio_mix_flow_strip))
+        self.assertTrue(callable(render_portfolio_mix_section_head))
+        self.assertTrue(callable(render_component_result_overview_cards))
+        self.assertEqual(html_text("<unsafe>"), "&lt;unsafe&gt;")
+        self.assertEqual(status_chip_tone("Ready For Next Review"), "pass")
+
     def test_backtest_runtime_facade_delegates_risk_on_momentum_to_dedicated_module(self) -> None:
         import ast
 

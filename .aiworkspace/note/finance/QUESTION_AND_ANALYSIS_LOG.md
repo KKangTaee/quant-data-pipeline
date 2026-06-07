@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed structure work is Ingestion Diagnostic Facade 7B in [ingestion-diagnostic-facade-20260607](./tasks/active/ingestion-diagnostic-facade-20260607/DESIGN.md).
+  - Latest completed structure work is Backtest Compare Components Split 9차 in [backtest-compare-components-split-20260607](./tasks/active/backtest-compare-components-split-20260607/DESIGN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Backtest Compare split should start with visual components
+- User request:
+  - 9차 작업으로 Backtest Compare Streamlit split 진행을 승인함.
+- Interpreted goal:
+  - `app/web/backtest_compare.py`의 대형 Streamlit 책임을 줄이되 strategy math, runtime, service, registry behavior는 바꾸지 않는다.
+- Analysis result:
+  - 가장 안전한 first pass는 Portfolio Mix Builder visual shell 분리다. CSS / stepper / section heading / component result card는 실행 / 저장 / handoff와 독립적이므로 `app/web/backtest_compare_components.py`가 소유하고, `app/web/backtest_compare.py`는 orchestration owner로 유지한다.
+- Follow-up:
+  - saved replay, weighted result, strategy-specific form body는 별도 후속 split 후보로 남긴다.
 
 ### 2026-06-07 - Ingestion diagnostics should be a service facade
 - User request:
