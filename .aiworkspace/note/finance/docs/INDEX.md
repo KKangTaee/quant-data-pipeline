@@ -23,7 +23,8 @@ Last Verified: 2026-06-07
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [Post-Merge Docs Alignment 2026-06-07](../tasks/active/post-merge-docs-alignment-20260607/PLAN.md).
+- Current active task: none.
+- Latest completed task: [Post-Merge Boundary Docs Alignment 2026-06-07](../tasks/active/post-merge-boundary-docs-alignment-20260607/PLAN.md).
 - Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
@@ -34,7 +35,7 @@ Last Verified: 2026-06-07
 | 현재 개발 순서와 active task 확인 | [Roadmap](./ROADMAP.md) |
 | 코드 위치와 책임 확인 | [Project Map](./PROJECT_MAP.md) |
 | 용어 의미 확인 | [Glossary](./GLOSSARY.md) |
-| 시스템 구조 확인 | [Architecture](./architecture/README.md) |
+| 시스템 구조와 layer 경계 확인 | [Architecture](./architecture/README.md) / [System Boundaries](./architecture/SYSTEM_BOUNDARIES.md) |
 | 사용자 / 런타임 흐름 확인 | [Flows](./flows/README.md) |
 | DB / JSONL / 저장 경계 확인 | [Data](./data/README.md) |
 | 실행 / 검증 / 운영 절차 확인 | [Runbooks](./runbooks/README.md) |

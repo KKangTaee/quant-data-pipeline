@@ -36,7 +36,7 @@ Last Verified: 2026-06-07
 | Evidence First | 백테스트 수익률보다 데이터 신뢰도와 검증 근거를 우선한다 |
 | DB-Backed Runtime | UI에서 직접 원격 fetch하지 않고, ingestion과 loader를 통해 DB 데이터를 사용한다 |
 | Practical Validation | 실전 운용 전 ETF 비용, 유동성, holdings, macro, stress, sensitivity를 확인한다 |
-| Clear Workflow Boundary | Backtest Analysis, Practical Validation, Final Review, Selected Dashboard의 책임을 분리한다 |
+| Clear Workflow Boundary | Backtest Analysis, Practical Validation, Final Review, Operations > Portfolio Monitoring의 책임을 분리한다 |
 | Context Is Not Approval | sentiment, futures macro, Why It Moved는 시장 배경 / 조사 단서이며 PASS, BLOCKER, trade signal, monitoring signal이 아니다 |
 | No Live Trading | 현재 시스템은 live approval, broker order, auto rebalance를 만들지 않는다 |
 
@@ -71,7 +71,7 @@ Last Verified: 2026-06-07
 - Overview Market Intelligence는 market movers, Why It Moved manual investigation, sector / industry leadership, futures monitor, macro thermometer, events calendar, sentiment, data health, browser-session auto refresh까지 production baseline을 갖췄다.
 - Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
 - Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.
-- Practical Validation V2 P2 / P3, Final Review selection readiness, Selected Dashboard read-only monitoring / recheck 연결은 closeout 완료 상태다.
+- Practical Validation V2 P2 / P3, Final Review selection readiness, Operations > Portfolio Monitoring read-only monitoring / recheck 연결은 closeout 완료 상태다.
 - Operations는 Operations Console을 입구로 삼고, Portfolio Monitoring과 System / Data Health를 primary lane으로, Run History와 Candidate Library를 archive / recovery lane으로 둔다.
 
 현재 active phase는 없다. 다음 개발은 사용자가 승인한 구체적 scope를 새 task 또는 phase로 열어 진행한다.

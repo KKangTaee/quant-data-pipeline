@@ -5,6 +5,8 @@
 이 문서는 finance data collection, DB persistence, loader read path가 어떻게 연결되는지 설명한다.
 새 table, collector, UPSERT, loader를 추가할 때 먼저 확인한다.
 
+Layer ownership과 product surface boundary는 [SYSTEM_BOUNDARIES.md](./SYSTEM_BOUNDARIES.md)를 기준으로 한다.
+
 ## 현재 큰 흐름
 
 ```text
@@ -13,9 +15,20 @@ external source
   -> finance/data/db/schema.py
   -> MySQL tables
   -> finance/loaders/*
-  -> app/runtime/backtest.py or finance/sample.py
-  -> strategy runtime
+  -> finance/* strategy / analysis runtime
+  -> app/runtime/*
+  -> app/services/*
+  -> app/web/* surfaces
 ```
+
+대표 소비 경로:
+
+| Consumer | Reads Through | Boundary |
+|---|---|---|
+| Backtest Analysis | `app/runtime/backtest.py`, `finance/loaders/*`, `finance/*` runtime | 후보 source와 result bundle 생성. Final approval / monitoring policy는 소유하지 않는다 |
+| Practical Validation / Final Review | `app/services/backtest_*`, `finance/loaders/provider.py`, `finance/loaders/macro.py`, `finance/loaders/sentiment.py` | compact evidence와 gate / selected-route read model 생성. Full provider / macro / holdings row는 DB에 둔다 |
+| Workspace > Overview | `app/services/overview_market_intelligence.py`, futures / sentiment services | market context / data health only. Trade signal이나 validation PASS / BLOCKER가 아니다 |
+| Operations > Portfolio Monitoring | `app/runtime/final_selected_portfolios.py`, `app/services/backtest_practical_validation.py` sentiment overlay | read-only monitoring / explicit scenario update. No broker order, live approval, auto rebalance |
 
 ## 주요 데이터 소스
 
@@ -54,7 +67,7 @@ external source
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
 | `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Macro Thermometer validation is read-only and does not create a new table |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
-| `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
+| `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/sentiment.py` | CNN Fear & Greed / AAII Sentiment Survey 수집 / 저장 경계. 별도 table을 만들지 않고 `macro_series_observation`에 sentiment series를 idempotent UPSERT한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
@@ -127,6 +140,14 @@ external source
   이 row도 absence를 delisting proof로 해석하지 않으며, Data Coverage Audit은 `coverage_status=actual` row만 survivorship PASS 후보로 본다.
   `ingestion-console-ux-data-quality-v1`부터 Streamlit Ingestion UI는 이 lifecycle collector들을 `상장 / 상폐 근거` 탭 아래에 노출한다.
   UI는 current snapshot / identity cross-check / computed partial evidence가 historical membership PASS나 active listing proof가 아니라는 caveat를 함께 보여준다.
+
+## Boundary Summary
+
+- External provider / FRED / crawler calls belong in `finance/data/*` or job wrappers, not normal render paths.
+- Loaders read DB state and shape it for runtime / service use; they do not persist new rows.
+- `app/services/*` can interpret compact evidence and normalize errors, but should remain Streamlit-free.
+- `app/web/*` renders forms, session state, and explicit actions. It should not become a collector, schema owner, or strategy engine.
+- Context-only data such as sentiment, futures thermometer, and Why It Moved metadata can inform the user, but it does not become a validation gate or monitoring signal without a separate approved task.
 
 ## 데이터 무결성 체크포인트
 

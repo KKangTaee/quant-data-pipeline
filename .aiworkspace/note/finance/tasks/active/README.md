@@ -27,7 +27,14 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `post-merge-docs-alignment-20260607` | In progress | master 병합 후 현재 제품 흐름 / 완료된 merged work / active 상태 / 문서 경계를 1차로 정리한다. |
+| none | - | 현재 새 active task는 없다. 최신 완료 task는 아래 retained record를 확인한다. |
+
+## Recent Completed / Retained Current Work
+
+| Task | Status | Notes |
+|---|---|---|
+| `post-merge-boundary-docs-alignment-20260607` | Completed record | 2차 구조 / 경계 문서 정리. UI / service / runtime / loader / DB / storage boundary를 durable docs에 맞춘 기록이다. |
+| `post-merge-docs-alignment-20260607` | Completed record | 1차 post-merge docs alignment. 현재 제품 흐름 / 완료된 merged work / active 상태를 정리한 기록이다. |
 
 ## Retained Work Records
 

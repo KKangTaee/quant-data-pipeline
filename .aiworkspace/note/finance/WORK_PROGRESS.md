@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current 1차 work is post-merge documentation alignment in [post-merge-docs-alignment-20260607](./tasks/active/post-merge-docs-alignment-20260607/PLAN.md).
+  - Latest completed 2차 work is post-merge structure / boundary documentation alignment in [post-merge-boundary-docs-alignment-20260607](./tasks/active/post-merge-boundary-docs-alignment-20260607/PLAN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Post-merge boundary docs alignment 2차
+- Opened `.aiworkspace/note/finance/tasks/active/post-merge-boundary-docs-alignment-20260607/` as the current 2차 docs task.
+- Added `docs/architecture/SYSTEM_BOUNDARIES.md` as the layer / product-surface / storage boundary checkpoint.
+- Aligned architecture / data / flow maps around `finance/data -> DB -> loaders -> runtime/services -> app/web`, context-only evidence, and Operations > Portfolio Monitoring storage boundaries.
+- No code, registry / saved JSONL rewrite, `.note/` cleanup, or active task / phase folder migration was included.
 
 ### 2026-06-07 - Post-merge docs alignment 1차
 - Opened `.aiworkspace/note/finance/tasks/active/post-merge-docs-alignment-20260607/` after reviewing the master merge state.

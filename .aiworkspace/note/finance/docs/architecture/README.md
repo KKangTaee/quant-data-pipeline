@@ -16,6 +16,8 @@ External Sources
   -> app/web Streamlit UI
 ```
 
+Layer ownership과 storage / surface boundary를 먼저 판정해야 하면 [SYSTEM_BOUNDARIES.md](./SYSTEM_BOUNDARIES.md)를 기준으로 한다.
+
 ## Layer Responsibilities
 
 | Layer | Responsibility |
@@ -47,6 +49,7 @@ External Sources
 
 | Need | Document |
 |---|---|
+| layer / storage / product surface 경계 판정 | [SYSTEM_BOUNDARIES.md](./SYSTEM_BOUNDARIES.md) |
 | 어떤 script가 어떤 책임을 갖는지 빠르게 확인 | [SCRIPT_STRUCTURE_MAP.md](./SCRIPT_STRUCTURE_MAP.md) |
 | UI payload에서 strategy runtime과 result bundle까지의 흐름 확인 | [BACKTEST_RUNTIME_FLOW.md](./BACKTEST_RUNTIME_FLOW.md) |
 | data collection, DB persistence, loader read path 확인 | [DATA_DB_PIPELINE_FLOW.md](./DATA_DB_PIPELINE_FLOW.md) |

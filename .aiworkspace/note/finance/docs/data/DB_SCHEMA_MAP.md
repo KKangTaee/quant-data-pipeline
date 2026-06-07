@@ -1,5 +1,8 @@
 # DB Schema Map
 
+Status: Active
+Last Verified: 2026-06-07
+
 ## 목적
 
 이 문서는 finance 프로젝트에서 현재 사용하는 DB와 주요 table을 빠르게 확인하기 위한 지도다.
@@ -32,7 +35,7 @@
 | `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
 | `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
-| `macro_series_observation` | FRED market-context series observation. VIX / yield curve / credit spread를 long-form으로 저장 |
+| `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
 
 ### `finance_price`
 

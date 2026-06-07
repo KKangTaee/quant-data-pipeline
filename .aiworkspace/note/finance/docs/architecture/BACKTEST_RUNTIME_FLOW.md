@@ -5,6 +5,8 @@
 이 문서는 백테스트 실행이 UI 입력에서 finance strategy 결과까지 어떻게 이동하는지 설명한다.
 전략 실행 오류, payload 복원 오류, result bundle 누락을 볼 때 먼저 확인한다.
 
+Layer ownership과 storage / product surface boundary는 [SYSTEM_BOUNDARIES.md](./SYSTEM_BOUNDARIES.md)를 기준으로 한다.
+
 ## 현재 큰 흐름
 
 Single Strategy 실행 흐름:
@@ -46,6 +48,23 @@ app/web/streamlit_app.py
   -> saved replay result context
 ```
 
+Risk-On Momentum 5D 흐름은 기존 rebalance engine과 다른 Daily Swing 연구 lane이다.
+
+```text
+app/web/streamlit_app.py
+  -> app/web/pages/backtest.py
+  -> app/runtime/backtest.py::run_risk_on_momentum_5d_backtest_from_db
+  -> finance/loaders/price.py / futures.py / fundamentals.py
+  -> finance/transform.py
+  -> finance/swing.py
+  -> finance/indicators.py / finance/swing_macro.py / finance/swing_analysis.py
+  -> result bundle + generated swing artifacts
+  -> Backtest Analysis Swing Detail
+```
+
+이 lane은 Backtest Analysis 후보 연구 surface다.
+Practical Validation / Final Review / Portfolio Monitoring daily signal governance 연결은 별도 승인 task 전까지 deferred다.
+
 ## 핵심 파일
 
 | 파일 | 역할 |
@@ -85,6 +104,15 @@ app/web/streamlit_app.py
 - `run_value_snapshot_strict_annual_backtest_from_db(...)`
 - `run_quality_value_snapshot_strict_annual_backtest_from_db(...)`
 - quarterly prototype strict family runtime 함수들
+
+## Boundary Summary
+
+- `app/web/*`는 form, session state, history display, user feedback을 소유한다.
+- `app/services/*`는 Streamlit-free dispatch, error normalization, read model, evidence interpretation을 소유한다.
+- `app/runtime/backtest.py`는 UI payload를 DB-backed runtime call로 바꾸고 registry / saved helper와 연결한다.
+- `finance/loaders/*`는 DB read path와 point-in-time snapshot을 소유하며 external fetch나 registry write를 하지 않는다.
+- `finance/*` strategy modules는 계산과 분석을 소유하며 UI session state나 live approval을 만들지 않는다.
+- result bundle / metadata / warnings는 사용자가 data trust와 runtime assumption을 읽기 위한 계약이며, broker order나 auto rebalance 지시가 아니다.
 
 ## Result bundle 기준
 

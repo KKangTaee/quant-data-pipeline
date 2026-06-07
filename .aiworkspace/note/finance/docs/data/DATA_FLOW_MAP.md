@@ -2,7 +2,8 @@
 
 ## 목적
 
-이 문서는 finance 프로젝트의 주요 데이터가 어디서 와서 어떤 DB table과 loader를 거쳐 strategy runtime으로 들어가는지 설명한다.
+이 문서는 finance 프로젝트의 주요 데이터가 어디서 와서 어떤 DB table과 loader를 거쳐 strategy runtime과 app surface로 들어가는지 설명한다.
+Layer ownership과 storage class 판정은 [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md)를 함께 본다.
 
 ## 전체 흐름
 
@@ -12,8 +13,10 @@ external source
   -> finance/data/db/schema.py
   -> MySQL tables
   -> finance/loaders/*
-  -> app/runtime/backtest.py or finance/sample.py
-  -> finance/strategy.py
+  -> finance/* strategy / analysis runtime
+  -> app/runtime/*
+  -> app/services/*
+  -> app/web/* surfaces
 ```
 
 ## Universe 흐름
@@ -281,7 +284,10 @@ CNN Fear & Greed JSON / AAII official historical HTML
   -> finance.loaders.sentiment.load_market_sentiment_snapshot()
   -> finance.loaders.sentiment.load_market_sentiment_history()
   -> app.services.overview_market_intelligence.build_market_sentiment_snapshot()
+  -> app.services.backtest_practical_validation.build_market_sentiment_context_overlay()
   -> Workspace > Overview > Sentiment / Data Health
+  -> Backtest > Practical Validation / Final Review context overlay
+  -> Operations > Portfolio Monitoring context overlay
 ```
 
 의미:
@@ -291,7 +297,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 - Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 같은 long-form table에 저장한다.
 - AAII official page는 backend default HTTP client가 interstitial을 받을 수 있어 browser-like document request / TLS impersonation path를 사용한다. 실패하면 값을 꾸미지 않고 job result와 Overview status에 failed / missing state를 남긴다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
-- `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, 이 context는 trade signal, live approval, order, auto rebalance가 아니다.
+- `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, surface-specific overlay는 Practical Validation / Final Review / Portfolio Monitoring에서도 같은 context를 읽는다. 이 context는 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
@@ -353,6 +359,8 @@ EDGAR
 MySQL tables
   -> finance/loaders/*
   -> app/runtime/backtest.py
+  -> app/services/* read models
+  -> app/web/* render surfaces
   -> result bundle / metadata / warnings
 ```
 
@@ -360,3 +368,4 @@ MySQL tables
 
 - table 의미는 이 폴더에서 확인한다.
 - loader / runtime code flow는 `docs/architecture/DATA_DB_PIPELINE_FLOW.md`와 `docs/architecture/BACKTEST_RUNTIME_FLOW.md`에서 확인한다.
+- layer ownership과 JSONL / saved / report 저장 경계는 `docs/architecture/SYSTEM_BOUNDARIES.md`와 `docs/data/STORAGE_GOVERNANCE.md`에서 확인한다.

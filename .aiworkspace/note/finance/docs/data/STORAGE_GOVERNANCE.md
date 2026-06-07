@@ -1,7 +1,7 @@
 # Finance Storage Governance
 
 Status: Active
-Last Verified: 2026-06-01
+Last Verified: 2026-06-07
 
 ## Purpose
 
@@ -20,7 +20,8 @@ Last Verified: 2026-06-01
 - full holdings, full macro series, full provider response, raw crawler output은 DB / ingestion 경계에 둔다.
 - UI는 provider / FRED / crawler를 직접 fetch하지 않는다. `Ingestion -> DB -> Loader -> UI` 흐름을 유지한다.
 - `NOT_RUN`은 pass가 아니며, 저장 record에서도 실행 불가 / 데이터 부재로 남긴다.
-- Final Review와 Selected Portfolio Dashboard의 record는 live approval, broker order, auto rebalance가 아니다.
+- Final Review와 Operations > Portfolio Monitoring의 record는 live approval, broker order, auto rebalance가 아니다.
+- Overview Sentiment, Futures Monitor, Macro Thermometer, Why It Moved metadata는 market context / investigation evidence이며 workflow JSONL이나 saved setup을 자동 생성하지 않는다.
 - Structured waiver는 현재 구현하지 않는다. 향후 필요해도 `BLOCK`은 waiver 불가이며, 일부 `REVIEW_REQUIRED` gap만 compact final decision evidence로 검토한다.
 
 ## Current Storage Model
@@ -29,9 +30,9 @@ Last Verified: 2026-06-01
 |---|---|---|
 | `.aiworkspace/note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Backtest Analysis가 만든 validation candidate source | Keep. Main workflow source-of-truth. |
 | `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation result and compact evidence | Keep. Gate-passed rows are Final Review input; blocked / needs input / not run rows are audit trail only. |
-| `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | Final Review decision and compact packet / gate snapshot | Keep. Selected Portfolio Dashboard input. |
+| `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | Final Review decision and compact packet / gate snapshot | Keep. Operations > Portfolio Monitoring input. |
 | `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring check record | Explicit user action only. No automatic log sprawl. |
-| `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | User-created Selected Dashboard monitoring portfolio setup | Keep as dashboard setup, not evidence or approval. Stores portfolio names and selected decision references; soft delete uses `deleted_at`. |
+| `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | User-created Operations > Portfolio Monitoring portfolio setup. File name keeps the legacy dashboard term | Keep as dashboard setup, not evidence or approval. Stores portfolio names, selected decision strategy slots, start / latest-end mode, balance, memo, and soft delete state. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Reusable portfolio mix setup | Keep as setup, not evidence. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl` | Legacy reusable weighted portfolio setup | Preserve as compatibility; do not expand without migration. |
 | `.aiworkspace/note/finance/run_history/*.jsonl` | Local execution history | Debug/replay artifact, not decision source-of-truth. |
@@ -55,8 +56,8 @@ The current rule is:
 - DB-backed collectors may store full structured lifecycle / provider / macro / price evidence.
 - Workflow JSONL stores only compact stage handoff, validation result, and final decision evidence.
 - runtime registry paths are runtime-defined and may not exist locally until the first workflow write. Absence of a runtime-defined file is not drift.
-- `SAVED_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIO_MIXES.jsonl`, and `SELECTED_DASHBOARD_PORTFOLIOS.jsonl` are reusable / dashboard setup, not validation / approval / monitoring evidence.
-- Selected Portfolio Dashboard read models do not auto-append monitoring logs, write registry rows, approve trades, create orders, or rebalance.
+- `SAVED_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIO_MIXES.jsonl`, and `SELECTED_DASHBOARD_PORTFOLIOS.jsonl` are reusable / Portfolio Monitoring setup, not validation / approval / monitoring evidence.
+- Operations > Portfolio Monitoring read models do not auto-append monitoring logs, write registry rows, approve trades, create orders, or rebalance.
 - `run_history/*.jsonl`, `run_artifacts/`, `.playwright-mcp/`, and `.DS_Store` are generated / local artifacts and should stay unstaged unless explicitly requested.
 
 ## Legacy Registry Boundary
@@ -105,6 +106,11 @@ Waiver-specific persistence rule:
 - If free API coverage is insufficient, crawler output must enter through `finance/data/*` ingestion and DB persistence.
 - Parser/source metadata should include enough provenance to explain coverage and staleness.
 - Practical Validation and Final Review should read crawler-derived evidence through loaders, not through UI-side HTTP calls.
+- Context-only UI such as Why It Moved can show bounded session metadata or outbound links, but article body / filing body / raw crawler output needs a separate storage policy before persistence.
+
+## Related Boundary Doc
+
+Layer ownership, product-surface responsibility, and storage class decisions start from [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md).
 
 ## Migration Policy
 

@@ -19,10 +19,10 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 진행 중인 1차 작업은 병합 후 문서 정리다.
+현재 2차 병합 후 구조 / 경계 문서 정리는 완료 상태다.
 
-- Active task: `.aiworkspace/note/finance/tasks/active/post-merge-docs-alignment-20260607/`
-- 목적: 최근 merged work의 코드 / 문서 흐름을 현재 제품 지도, roadmap, architecture / flow docs에 맞춰 정리한다.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/post-merge-boundary-docs-alignment-20260607/`
+- 목적: 최근 merged work의 UI / service / runtime / loader / DB / storage 경계를 한 문서 기준으로 정렬한다.
 - 이번 차수에서 하지 않는 일: 코드 변경, registry / saved JSONL rewrite, `.note/` 삭제, active task / phase 대량 이동.
 
 ## Product Tracks
@@ -73,6 +73,14 @@ Current active phase:
 
 Current active task:
 
+- none
+
+Latest completed docs task:
+
+- `post-merge-boundary-docs-alignment-20260607`
+
+Previous 1차 post-merge docs alignment record:
+
 - `post-merge-docs-alignment-20260607`
 
 Retained completed boards in `phases/active/` should not be treated as newly open phase work.
@@ -108,3 +116,4 @@ Untracked legacy `.note/` exists locally after merge review. It is not the curre
 - Update `PRODUCT_DIRECTION.md` when the product purpose or user-facing workflow changes.
 - Update `PROJECT_MAP.md` when ownership boundaries or entry points change.
 - Update architecture / flow / data docs when runtime, storage, or user workflow boundaries change.
+- Use `docs/architecture/SYSTEM_BOUNDARIES.md` as the first checkpoint for layer / storage / product surface boundary changes.

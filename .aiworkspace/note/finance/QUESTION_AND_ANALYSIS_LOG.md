@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current 1차 work is post-merge documentation alignment in [post-merge-docs-alignment-20260607](./tasks/active/post-merge-docs-alignment-20260607/PLAN.md).
+  - Latest completed 2차 work is post-merge structure / boundary documentation alignment in [post-merge-boundary-docs-alignment-20260607](./tasks/active/post-merge-boundary-docs-alignment-20260607/PLAN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Boundary docs need a central source-of-truth
+- User request:
+  - 2차로 구조 / 경계 문서 정리를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 병합 후 흩어진 UI / service / runtime / loader / DB / storage 책임 경계를 durable docs에서 한 기준으로 읽게 만든다.
+- Analysis result:
+  - code flow 문서는 이미 존재하지만 layer ownership, context-only surface, registry / saved / report storage class 판정이 여러 문서에 흩어져 있었다. `SYSTEM_BOUNDARIES.md`를 새 checkpoint로 두고 architecture / data / flow index에서 그 문서를 가리키는 구조가 맞다.
+- Follow-up:
+  - 2차는 문서 alignment만 수행한다. `.note/` cleanup, active folder migration, Risk-On Momentum 5D governance, Why It Moved V2 storage policy는 별도 승인 scope로 남긴다.
 
 ### 2026-06-07 - Post-merge docs need state-model cleanup, not code changes
 - User request:
