@@ -17,6 +17,7 @@ app/web/streamlit_app.py
   -> app/web/backtest_single_runner.py
   -> app/services/backtest_execution.py
   -> app/runtime/backtest.py
+     -> app/runtime/backtest_strict.py for strict quality / value family
   -> finance/loaders/*
   -> finance/engine.py / finance/transform.py
   -> finance/strategy.py
@@ -80,9 +81,10 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
 | `app/services/backtest_realism_audit.py` | Practical Validation / Final Review가 읽는 read-only backtest realism audit. 기존 runtime metadata와 compact validation evidence에서 비용, turnover, liquidity, net policy, rebalance, tax/account, execution boundary gap을 해석한다 |
-| `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환하는 public compatibility facade. ETF / strict runtime family runner wrappers와 shared freshness / preflight helpers를 아직 소유하고, split module helper를 re-export한다 |
+| `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환하는 public compatibility facade. Price-only ETF runtime wrappers를 소유하고, split module runner / helper를 re-export한다 |
 | `app/runtime/backtest_risk_on_momentum.py` | Risk-On Momentum 5D DB runtime implementation. `app.runtime.backtest`가 기존 public import path를 위해 runner를 re-export한다 |
 | `app/runtime/backtest_real_money.py` | Real-money / guardrail / benchmark / deployment readiness helper implementation. `app.runtime.backtest`가 기존 public import path를 위해 constants and helper functions를 re-export한다 |
+| `app/runtime/backtest_strict.py` | Strict quality / value / quality-value annual and quarterly runtime implementation. `app.runtime.backtest`가 기존 public import path를 위해 runner and strict helper functions를 re-export한다 |
 | `app/runtime/backtest_result_bundle.py` | runtime 결과를 UI-facing result bundle / summary / chart / metadata contract로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/engine.py` | price-based strategy orchestration wrapper |
@@ -95,6 +97,7 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 `app/runtime/backtest.py`의 `run_*_backtest_from_db(...)` public export는 제품 실행 경로의 중심이다.
 8A부터 Risk-On Momentum 5D 구현은 `app/runtime/backtest_risk_on_momentum.py`로 이동했고,
 8B부터 real-money / guardrail / benchmark / deployment readiness helper 구현은 `app/runtime/backtest_real_money.py`로 이동했다.
+8C부터 strict quality / value / quality-value annual and quarterly wrapper 구현은 `app/runtime/backtest_strict.py`로 이동했다.
 기존 caller compatibility를 위해 `app.runtime.backtest`에서도 같은 runner / constants / helper functions를 계속 export한다.
 `build_backtest_result_bundle(...)` 구현은 `app/runtime/backtest_result_bundle.py`가 담당하지만,
 기존 caller 호환성을 위해 `app.runtime.backtest`와 `app.runtime`에서도 같은 이름으로 계속 export한다.
@@ -107,16 +110,16 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 - `run_risk_parity_trend_backtest_from_db(...)`
 - `run_dual_momentum_backtest_from_db(...)`
 - `run_risk_on_momentum_5d_backtest_from_db(...)` via `app/runtime/backtest_risk_on_momentum.py`
-- `run_quality_snapshot_strict_annual_backtest_from_db(...)`
-- `run_value_snapshot_strict_annual_backtest_from_db(...)`
-- `run_quality_value_snapshot_strict_annual_backtest_from_db(...)`
-- quarterly prototype strict family runtime 함수들
+- `run_quality_snapshot_strict_annual_backtest_from_db(...)` via `app/runtime/backtest_strict.py`
+- `run_value_snapshot_strict_annual_backtest_from_db(...)` via `app/runtime/backtest_strict.py`
+- `run_quality_value_snapshot_strict_annual_backtest_from_db(...)` via `app/runtime/backtest_strict.py`
+- quarterly prototype strict family runtime 함수들 via `app/runtime/backtest_strict.py`
 
 ## Boundary Summary
 
 - `app/web/*`는 form, session state, history display, user feedback을 소유한다.
 - `app/services/*`는 Streamlit-free dispatch, error normalization, read model, evidence interpretation을 소유한다.
-- `app/runtime/backtest.py`는 public compatibility facade와 아직 분리되지 않은 shared runtime helper를 유지한다. Strategy family나 helper family가 커지면 전용 `app/runtime/backtest_*` module로 구현을 옮기고 기존 export를 유지한다.
+- `app/runtime/backtest.py`는 public compatibility facade와 price-only ETF wrapper를 유지한다. Strategy family나 helper family가 커지면 전용 `app/runtime/backtest_*` module로 구현을 옮기고 기존 export를 유지한다.
 - `finance/loaders/*`는 DB read path와 point-in-time snapshot을 소유하며 external fetch나 registry write를 하지 않는다.
 - `finance/*` strategy modules는 계산과 분석을 소유하며 UI session state나 live approval을 만들지 않는다.
 - result bundle / metadata / warnings는 사용자가 data trust와 runtime assumption을 읽기 위한 계약이며, broker order나 auto rebalance 지시가 아니다.

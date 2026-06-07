@@ -3920,6 +3920,52 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIs(backtest._build_deployment_readiness_contract, _build_deployment_readiness_contract)
         self.assertEqual(backtest.ETF_REAL_MONEY_DEFAULT_BENCHMARK, ETF_REAL_MONEY_DEFAULT_BENCHMARK)
 
+    def test_backtest_runtime_facade_delegates_strict_family_to_dedicated_module(self) -> None:
+        import ast
+
+        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.runtime.backtest_strict", imported_modules)
+        self.assertNotIn("inspect_strict_annual_price_freshness", function_names)
+        self.assertNotIn("run_quality_snapshot_strict_annual_backtest_from_db", function_names)
+        self.assertNotIn("run_value_snapshot_strict_annual_backtest_from_db", function_names)
+        self.assertNotIn("run_quality_value_snapshot_strict_annual_backtest_from_db", function_names)
+        self.assertNotIn("_run_statement_quality_bundle", function_names)
+
+    def test_strict_runtime_module_owns_facade_runner_contracts(self) -> None:
+        from app.runtime import backtest
+        from app.runtime.backtest_strict import (
+            inspect_strict_annual_price_freshness,
+            run_quality_snapshot_strict_annual_backtest_from_db,
+            run_quality_value_snapshot_strict_annual_backtest_from_db,
+            run_value_snapshot_strict_annual_backtest_from_db,
+        )
+
+        self.assertIs(backtest.inspect_strict_annual_price_freshness, inspect_strict_annual_price_freshness)
+        self.assertIs(
+            backtest.run_quality_snapshot_strict_annual_backtest_from_db,
+            run_quality_snapshot_strict_annual_backtest_from_db,
+        )
+        self.assertIs(
+            backtest.run_value_snapshot_strict_annual_backtest_from_db,
+            run_value_snapshot_strict_annual_backtest_from_db,
+        )
+        self.assertIs(
+            backtest.run_quality_value_snapshot_strict_annual_backtest_from_db,
+            run_quality_value_snapshot_strict_annual_backtest_from_db,
+        )
+
 
 class FinanceWorkspacePathContractTests(unittest.TestCase):
     def test_runtime_and_job_paths_use_canonical_aiworkspace_note_root(self) -> None:

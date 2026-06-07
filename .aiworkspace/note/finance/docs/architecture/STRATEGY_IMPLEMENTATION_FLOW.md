@@ -16,7 +16,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 | preprocessing | `finance/transform.py` | MA, return, date alignment, snapshot shaping |
 | orchestration | `finance/engine.py` | price strategy chaining |
 | DB-backed sample/runtime helper | `finance/sample.py` | 수동 smoke와 reusable helper |
-| runtime adapter | `app/runtime/backtest.py`, family / helper modules such as `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest_real_money.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
+| runtime adapter | `app/runtime/backtest.py`, family / helper modules such as `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest_real_money.py`, `app/runtime/backtest_strict.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
 | web UI | `app/web/pages/backtest.py` | form, compare, history, saved replay |
 
 ## 새 전략 추가 순서
@@ -89,6 +89,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 - strict annual family는 `Quality`, `Value`, `Quality + Value`를 중심으로 운영된다.
 - strict annual은 broad factor path보다 statement shadow / annual PIT snapshot path를 더 중요하게 본다.
 - strict quarterly family는 Phase 23 이후 UI / payload / history / saved replay 계약이 보강됐지만, annual strict와 완전히 같은 real-money / guardrail parity를 가진 것은 아니다.
+- 8C 이후 strict quality / value / quality-value annual and quarterly wrapper implementation owner는 `app/runtime/backtest_strict.py`이고, `app/runtime/backtest.py`는 compatibility export를 유지한다.
 - factor strategy는 단순 수익률 table만이 아니라 selection history, interpretation summary, contract metadata를 함께 보존해야 한다.
 
 ### Short-term stock swing 전략

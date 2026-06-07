@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 8차 work is Real-Money runtime helper split in [runtime-backtest-real-money-split-20260607](./tasks/active/runtime-backtest-real-money-split-20260607/DESIGN.md).
+  - Latest completed 8차 work is Strict quality / value runtime family split in [runtime-backtest-strict-family-split-20260607](./tasks/active/runtime-backtest-strict-family-split-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Runtime Backtest Strict Family split 8차
+- Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-strict-family-split-20260607/` as the 8차 runtime large-file split 8C record.
+- Moved strict quality / value / quality-value annual and quarterly runtime wrapper implementation from `app/runtime/backtest.py` into `app/runtime/backtest_strict.py`.
+- Kept `app.runtime.backtest` strict runners and helper functions as public compatibility imports used by UI / services / replay tests.
+- 7A Ingestion Console split is complete, while 7B Ingestion diagnostic facade remains a separate follow-up candidate.
 
 ### 2026-06-07 - Runtime Backtest Real-Money split 8차
 - Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-real-money-split-20260607/` as the 8차 runtime large-file split 8B record.
