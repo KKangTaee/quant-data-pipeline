@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `operations-portfolio-first-summary-20260607`
+- `operations-evidence-health-strip-20260607`
 
 Latest completed docs cleanup task:
 
@@ -36,6 +36,7 @@ Recent structure audit records:
 
 Recent Operations records:
 
+- `operations-evidence-health-strip-20260607`: Operations Overview V2 3차 / Evidence Health mini strip
 - `operations-portfolio-first-summary-20260607`: Operations Overview V2 2차 / Portfolio Monitoring Status summary first-pass
 - `operations-cockpit-cleanup-20260607`: Operations Overview V2 1차 cleanup / archive and development-history user-facing artifact removal
 
@@ -55,7 +56,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-07:
 
-- `tasks/active`: 184 task folders
+- `tasks/active`: 185 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.
@@ -72,7 +73,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 | Overview / market context | Overview Market Intelligence, Sentiment, Futures, Why It Moved, Events, automation | `overview-market-sentiment-v1`, `overview-market-movers-second-pass`, `futures-market-monitoring-mvp-v1`, `futures-macro-thermometer-validation-v1`, `overview-scheduled-refresh-automation` |
 | Backtest Analysis / strategy research | Candidate source generation, portfolio mix builder, Risk-On Momentum research lane | `backtest-portfolio-mix-builder-flow-v1`, `backtest-portfolio-mix-builder-ux-v1`, `risk-on-momentum-5d-v1`, `risk-on-momentum-5d-v2` |
 | Practical Validation / Final Review | Validation modules, selected-route gate, evidence read model, Final Review UX | `practical-validation-module-gate-v1`, `practical-validation-selected-route-preflight-v1`, `final-review-selection-readiness-gate-v1`, `final-review-commercial-ux-v1` |
-| Operations / Portfolio Monitoring | Operations Console and selected portfolio monitoring work | `operations-portfolio-first-summary-20260607`, `operations-cockpit-cleanup-20260607`, `operations-console-restructure-v2-v5`, `selected-dashboard-monitoring-first-ux-v1`, `selected-dashboard-manual-scenario-run-v1`, `allocation-drift-evidence-boundary-v1` |
+| Operations / Portfolio Monitoring | Operations Console and selected portfolio monitoring work | `operations-evidence-health-strip-20260607`, `operations-portfolio-first-summary-20260607`, `operations-cockpit-cleanup-20260607`, `operations-console-restructure-v2-v5`, `selected-dashboard-monitoring-first-ux-v1`, `selected-dashboard-manual-scenario-run-v1`, `allocation-drift-evidence-boundary-v1` |
 | Data / provider / lifecycle evidence | Provider snapshots, macro, data coverage, lifecycle, survivorship | `data-provenance-coverage-v1`, `historical-universe-survivorship-v1`, `sec-form25-delisting-backfill-v1`, `symbol-directory-snapshot-ingestion-v1` |
 | Phase closeout tasks | Phase 8~13 board open / integrated QA / closeout records | `phase10-board-open`, `phase13-integrated-qa-final-closeout`, `phase13-docs-runbook-alignment-v1` |
 | Workspace / tooling | AI workspace migration, plugin / skill system, service boundary, docs rebuild | `ai-workspace-migration`, `doc-system-rebuild`, `product-research-plugin-split`, `service-contract-tests` |

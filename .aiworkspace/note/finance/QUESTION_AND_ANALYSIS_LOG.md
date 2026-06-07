@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Operations evidence health should stay lightweight
+- User request:
+  - Operations Overview V2 3차 작업 진행을 요청함.
+- Interpreted goal:
+  - Portfolio-first summary 다음에 운영 근거의 건강 상태를 빠르게 확인하는 mini strip을 붙인다.
+- Analysis result:
+  - Provider / holdings / exposure 세부 evidence는 DB-backed provider context read가 필요하므로 Operations Overview 입구에서 매번 조회하지 않는다. 3차는 이미 로드된 selected dashboard / monitoring portfolio setup / run history payload로 scenario freshness, selected evidence readiness, open review, system run health만 요약한다.
+- Follow-up:
+  - 4차는 이 strip과 action queue를 연결해 review queue를 더 운영자 행동 중심으로 재정렬하는 작업이 자연스럽다.
+
 ### 2026-06-07 - Operations Overview should start from portfolio status
 - User request:
   - Operations Overview V2 2차 작업 진행을 요청함.

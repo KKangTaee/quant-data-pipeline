@@ -11486,6 +11486,94 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(summary["next_review_date"], "2026-06-30")
         self.assertFalse(summary["execution_boundary"]["auto_rebalance"])
 
+    def test_operations_overview_model_adds_evidence_health_strip(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        selected_policy = {
+            "schema_version": "final_review_selection_gate_policy_v1",
+            "select_allowed": True,
+            "outcome": "SELECT_ALLOWED",
+            "review_required": [],
+            "blockers": [],
+        }
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 2,
+                    "dashboard_row_count": 2,
+                    "status_counts": {"normal": 1, "watch": 1, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 2,
+                        "missing_reference_count": 0,
+                        "incomplete_strategy_slot_count": 0,
+                    },
+                    "portfolios": [
+                        {
+                            "portfolio_id": "p1",
+                            "strategy_rows": [
+                                {
+                                    "decision_id": "decision-1",
+                                    "scenario_status": "stale",
+                                    "latest_scenario_date": "2026-05-28",
+                                    "open_review_items": [{"Group": "provider"}],
+                                    "raw_decision": {
+                                        "investability_evidence_packet": {
+                                            "selection_gate_policy_snapshot": selected_policy,
+                                        }
+                                    },
+                                },
+                                {
+                                    "decision_id": "decision-2",
+                                    "scenario_status": "current",
+                                    "latest_scenario_date": "2026-06-02",
+                                    "raw_decision": {
+                                        "selection_gate_policy_snapshot": selected_policy,
+                                    },
+                                },
+                            ],
+                        }
+                    ],
+                },
+            },
+            run_history=[{"job_name": "daily_market_update", "status": "partial_success"}],
+            candidate_records=[],
+        )
+
+        evidence = model["evidence_health"]
+        self.assertEqual(evidence["schema_version"], "operations_evidence_health_v1")
+        self.assertEqual(evidence["overall_status"], "Review Needed")
+        self.assertEqual(evidence["overall_tone"], "warning")
+        item_by_key = {item["key"]: item for item in evidence["items"]}
+        self.assertEqual(
+            list(item_by_key),
+            ["scenario_freshness", "selected_evidence", "open_review", "system_run_health"],
+        )
+        self.assertEqual(item_by_key["scenario_freshness"]["status"], "REVIEW")
+        self.assertEqual(item_by_key["scenario_freshness"]["value"], "1 stale / 0 pending")
+        self.assertEqual(item_by_key["selected_evidence"]["status"], "PASS")
+        self.assertEqual(item_by_key["selected_evidence"]["value"], "2/2 ready")
+        self.assertEqual(item_by_key["open_review"]["status"], "REVIEW")
+        self.assertEqual(item_by_key["open_review"]["value"], "1 open")
+        self.assertEqual(item_by_key["system_run_health"]["status"], "REVIEW")
+        self.assertEqual(item_by_key["system_run_health"]["value"], "partial_success")
+        self.assertFalse(evidence["execution_boundary"]["registry_write"])
+        self.assertFalse(evidence["execution_boundary"]["auto_rebalance"])
+
+    def test_operations_overview_source_renders_evidence_health_before_queue(self) -> None:
+        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
+
+        self.assertIn("    _render_portfolio_summary(model)", source)
+        self.assertIn("    _render_evidence_health_strip(model)", source)
+        self.assertIn("    _render_action_queue(model", source)
+        self.assertLess(source.index("    _render_portfolio_summary(model)"), source.index("    _render_evidence_health_strip(model)"))
+        self.assertLess(source.index("    _render_evidence_health_strip(model)"), source.index("    _render_action_queue(model"))
+        self.assertIn("Evidence Health", source)
+        self.assertIn("Selected Evidence", source)
+        self.assertIn("System Run Health", source)
+
     def test_operations_overview_source_renders_portfolio_summary_before_queue(self) -> None:
         source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
 

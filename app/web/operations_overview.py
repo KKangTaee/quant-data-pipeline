@@ -14,6 +14,7 @@ from app.web.backtest_ui_components import render_badge_strip, render_status_car
 OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v2"
 OPERATIONS_CONSOLE_VERSION = "operations_console_v2"
 OPERATIONS_PORTFOLIO_SUMMARY_SCHEMA_VERSION = "operations_portfolio_summary_v1"
+OPERATIONS_EVIDENCE_HEALTH_SCHEMA_VERSION = "operations_evidence_health_v1"
 
 
 def _safe_int(value: Any) -> int:
@@ -178,6 +179,67 @@ def _open_review_item_count(strategy_rows: list[dict[str, Any]]) -> int:
     return total
 
 
+def _selected_policy_snapshot(row: dict[str, Any]) -> dict[str, Any]:
+    raw_decision = dict(row.get("raw_decision") or {})
+    packet = dict(raw_decision.get("investability_evidence_packet") or row.get("investability_evidence_packet") or {})
+    return dict(
+        raw_decision.get("selection_gate_policy_snapshot")
+        or raw_decision.get("gate_policy_snapshot")
+        or packet.get("selection_gate_policy_snapshot")
+        or packet.get("gate_policy_snapshot")
+        or {}
+    )
+
+
+def _policy_status(policy: dict[str, Any]) -> str:
+    if not policy:
+        return "NEEDS_INPUT"
+    outcome = str(policy.get("outcome") or policy.get("route") or "").strip().upper()
+    if policy.get("select_allowed") is False or "BLOCK" in outcome or policy.get("blockers"):
+        return "BLOCKED"
+    if any(token in outcome for token in ("NEEDS_INPUT", "NEEDS_DATA", "MISSING", "NOT_RUN")):
+        return "NEEDS_INPUT"
+    if policy.get("review_required"):
+        return "REVIEW"
+    if policy.get("select_allowed") is True or any(token in outcome for token in ("ALLOW", "READY", "PASS", "CLEAR")):
+        return "PASS"
+    return "REVIEW"
+
+
+def _health_tone(status: str) -> str:
+    mapping = {
+        "PASS": "positive",
+        "REVIEW": "warning",
+        "NEEDS_INPUT": "warning",
+        "BLOCKED": "danger",
+    }
+    return mapping.get(status, "neutral")
+
+
+def _system_run_status(latest_status: str, run_history_count: int) -> str:
+    normalized = str(latest_status or "").strip().lower()
+    if run_history_count <= 0 or normalized == "no runs":
+        return "NEEDS_INPUT"
+    if normalized == "success":
+        return "PASS"
+    if normalized in {"partial_success", "warning", "review_required"}:
+        return "REVIEW"
+    if normalized in {"failed", "failure", "error"} or "fail" in normalized:
+        return "BLOCKED"
+    return "REVIEW"
+
+
+def _overall_evidence_health_status(items: list[dict[str, Any]]) -> tuple[str, str]:
+    statuses = {str(item.get("status") or "") for item in items}
+    if "BLOCKED" in statuses:
+        return "Blocked", "danger"
+    if "NEEDS_INPUT" in statuses:
+        return "Needs Input", "warning"
+    if "REVIEW" in statuses:
+        return "Review Needed", "warning"
+    return "Ready", "positive"
+
+
 def _build_portfolio_summary(
     *,
     dashboard_rows: int,
@@ -249,6 +311,95 @@ def _build_portfolio_summary(
         "latest_scenario_date": _latest_date_text([value for row in strategy_rows for value in _scenario_dates(row)]),
         "target_snapshot_date": _latest_date_text(snapshot_dates),
         "next_review_date": _earliest_date_text(next_review_dates),
+        "execution_boundary": _disabled_action_boundary(),
+    }
+
+
+def _build_evidence_health(
+    *,
+    portfolio_summary: dict[str, Any],
+    portfolio_state: dict[str, Any],
+    latest_status: str,
+    run_history_count: int,
+) -> dict[str, Any]:
+    strategy_rows = _portfolio_strategy_rows(portfolio_state)
+    stale_scenario_count = _safe_int(portfolio_summary.get("stale_scenario_count"))
+    pending_scenario_count = _safe_int(portfolio_summary.get("pending_scenario_count"))
+    scenario_status = "REVIEW" if stale_scenario_count or pending_scenario_count else "PASS"
+    if not strategy_rows and _safe_int(portfolio_summary.get("dashboard_row_count")) > 0:
+        scenario_status = "NEEDS_INPUT"
+
+    policy_statuses = [_policy_status(_selected_policy_snapshot(row)) for row in strategy_rows]
+    ready_count = sum(1 for status in policy_statuses if status == "PASS")
+    if not policy_statuses:
+        selected_evidence_status = "NEEDS_INPUT"
+    elif "BLOCKED" in policy_statuses:
+        selected_evidence_status = "BLOCKED"
+    elif "NEEDS_INPUT" in policy_statuses:
+        selected_evidence_status = "NEEDS_INPUT"
+    elif "REVIEW" in policy_statuses:
+        selected_evidence_status = "REVIEW"
+    else:
+        selected_evidence_status = "PASS"
+
+    open_review_count = _safe_int(portfolio_summary.get("open_review_item_count"))
+    blocking_setup_count = (
+        _safe_int(portfolio_summary.get("blocked_count"))
+        + _safe_int(portfolio_summary.get("missing_reference_count"))
+        + _safe_int(portfolio_summary.get("incomplete_strategy_slot_count"))
+    )
+    if blocking_setup_count:
+        open_review_status = "BLOCKED"
+    elif open_review_count:
+        open_review_status = "REVIEW"
+    else:
+        open_review_status = "PASS"
+
+    system_status = _system_run_status(latest_status, run_history_count)
+    items = [
+        {
+            "key": "scenario_freshness",
+            "label": "Scenario Freshness",
+            "status": scenario_status,
+            "tone": _health_tone(scenario_status),
+            "value": f"{stale_scenario_count} stale / {pending_scenario_count} pending",
+            "detail": f"latest={portfolio_summary.get('latest_scenario_date') or '-'}",
+            "target_surface": "Operations > Portfolio Monitoring",
+        },
+        {
+            "key": "selected_evidence",
+            "label": "Selected Evidence",
+            "status": selected_evidence_status,
+            "tone": _health_tone(selected_evidence_status),
+            "value": f"{ready_count}/{len(policy_statuses)} ready",
+            "detail": "Final Review selected-route evidence snapshot",
+            "target_surface": "Backtest > Final Review / Operations > Portfolio Monitoring",
+        },
+        {
+            "key": "open_review",
+            "label": "Open Review",
+            "status": open_review_status,
+            "tone": _health_tone(open_review_status),
+            "value": f"{open_review_count} open",
+            "detail": f"blocking setup={blocking_setup_count}",
+            "target_surface": "Operations > Portfolio Monitoring",
+        },
+        {
+            "key": "system_run_health",
+            "label": "System Run Health",
+            "status": system_status,
+            "tone": _health_tone(system_status),
+            "value": str(latest_status or "No runs"),
+            "detail": f"run history={run_history_count}",
+            "target_surface": "Operations > System / Data Health",
+        },
+    ]
+    overall_status, overall_tone = _overall_evidence_health_status(items)
+    return {
+        "schema_version": OPERATIONS_EVIDENCE_HEALTH_SCHEMA_VERSION,
+        "overall_status": overall_status,
+        "overall_tone": overall_tone,
+        "items": items,
         "execution_boundary": _disabled_action_boundary(),
     }
 
@@ -381,6 +532,12 @@ def build_operations_overview_model(
     latest_run = dict(run_history[0] if run_history else {})
     latest_status = str(latest_run.get("status") or "No runs")
     system_status = "Healthy" if latest_status.lower() == "success" else ("No Runs" if not run_history else "Attention Needed")
+    evidence_health = _build_evidence_health(
+        portfolio_summary=portfolio_summary,
+        portfolio_state=portfolio_state,
+        latest_status=latest_status,
+        run_history_count=len(run_history),
+    )
 
     lanes = [
         {
@@ -428,6 +585,7 @@ def build_operations_overview_model(
         "console_version": OPERATIONS_CONSOLE_VERSION,
         "operations_model": "Portfolio Monitoring + System/Data Health",
         "portfolio_summary": portfolio_summary,
+        "evidence_health": evidence_health,
         "lanes": lanes,
         "action_queue": _build_action_queue(
             dashboard_rows=dashboard_rows,
@@ -553,6 +711,32 @@ def _render_portfolio_summary(model: dict[str, Any]) -> None:
         bottom_columns[3].metric("Next Review", _format_metric_value(summary.get("next_review_date")))
 
 
+def _render_evidence_health_strip(model: dict[str, Any]) -> None:
+    evidence = dict(model.get("evidence_health") or {})
+    items = [dict(item or {}) for item in list(evidence.get("items") or [])]
+    st.markdown("### Evidence Health")
+    st.caption("운영 판단에 쓰는 근거가 바로 읽을 수 있는 상태인지 요약합니다. provider DB 세부 조회나 새 수집은 여기서 실행하지 않습니다.")
+    render_badge_strip(
+        [
+            {"label": "Overall", "value": _status_label(evidence.get("overall_status")), "tone": evidence.get("overall_tone")},
+            {"label": "Write Boundary", "value": "No registry / no order", "tone": "neutral"},
+        ]
+    )
+    if not items:
+        st.caption("표시할 evidence health 항목이 없습니다.")
+        return
+    columns = st.columns(len(items), gap="small")
+    for column, item in zip(columns, items):
+        with column.container(border=True):
+            render_badge_strip(
+                [
+                    {"label": "Status", "value": item.get("status"), "tone": item.get("tone")},
+                ]
+            )
+            st.metric(str(item.get("label") or "-"), _format_metric_value(item.get("value")))
+            st.caption(str(item.get("detail") or item.get("target_surface") or ""))
+
+
 def _render_lane(lane: dict[str, Any], *, page_targets: dict[str, Any]) -> None:
     with st.container(border=True):
         render_badge_strip(
@@ -615,6 +799,7 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
     st.title("Operations Console")
     st.caption("선정 후 portfolio monitoring 상태와 system/data health를 확인하는 운영 화면입니다.")
     _render_portfolio_summary(model)
+    _render_evidence_health_strip(model)
     _render_action_queue(model, page_targets=page_targets)
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(

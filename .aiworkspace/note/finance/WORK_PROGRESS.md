@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Operations Evidence Health Strip 3차
+- Opened `.aiworkspace/note/finance/tasks/active/operations-evidence-health-strip-20260607/` for Operations Overview V2 3차.
+- Added an Evidence Health mini strip between Portfolio Monitoring Status and Today's Operations Queue.
+- The strip summarizes scenario freshness, selected evidence readiness, open review, and system run health from already-loaded selected dashboard / portfolio setup / run history payloads.
+- Boundary remains read-only: no provider DB detail fetch, registry / saved JSONL rewrite, scenario execution change, archive data deletion, broker order, account sync, or auto rebalance.
+
 ### 2026-06-07 - Operations Portfolio First Summary 2차
 - Opened `.aiworkspace/note/finance/tasks/active/operations-portfolio-first-summary-20260607/` for Operations Overview V2 2차.
 - Added a Portfolio Monitoring Status summary before the daily queue in `Operations > Operations Overview`.
