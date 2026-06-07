@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 6차 work is collection / read action boundary cleanup in [overview-ingestion-action-boundary-20260607](./tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md).
+  - Latest completed 7차 work is Ingestion Console split in [streamlit-ingestion-console-split-20260607](./tasks/active/streamlit-ingestion-console-split-20260607/DESIGN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Ingestion Console split should be physical first, service extraction second
+- User request:
+  - 7차로 대형 Streamlit 파일 분해 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - `streamlit_app.py`의 대형 Ingestion render/state/job UI 책임을 분리하되, collector / DB / job behavior는 바꾸지 않는다.
+- Analysis result:
+  - 첫 단계는 `Workspace > Ingestion` 전체 UI boundary를 `app/web/ingestion_console.py`로 이동하는 것이 안전하다. 이 작업으로 top-level shell이 얇아지고, 후속 diagnostic facade extraction을 더 작은 범위에서 진행할 수 있다.
+- Follow-up:
+  - 7B는 Ingestion read-only diagnostics / live source inspection을 Streamlit-free service/job facade로 옮길지 결정하는 작업이 자연스럽다.
 
 ### 2026-06-07 - Overview refresh is allowed only through an action facade
 - User request:

@@ -3833,6 +3833,30 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertEqual(violations[0]["kind"], "app_web_import")
         self.assertEqual(violations[0]["path"], "app/runtime/bad_runtime.py")
 
+    def test_streamlit_shell_delegates_ingestion_console_to_dedicated_module(self) -> None:
+        import ast
+
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.web.ingestion_console", imported_modules)
+        self.assertNotIn("_render_ingestion_console", function_names)
+
+    def test_ingestion_console_module_owns_render_entrypoint(self) -> None:
+        from app.web.ingestion_console import render_ingestion_page
+
+        self.assertTrue(callable(render_ingestion_page))
+
 
 class FinanceWorkspacePathContractTests(unittest.TestCase):
     def test_runtime_and_job_paths_use_canonical_aiworkspace_note_root(self) -> None:

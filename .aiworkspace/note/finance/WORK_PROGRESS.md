@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 6차 work is collection / read action boundary cleanup in [overview-ingestion-action-boundary-20260607](./tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md).
+  - Latest completed 7차 work is Ingestion Console split in [streamlit-ingestion-console-split-20260607](./tasks/active/streamlit-ingestion-console-split-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Streamlit Ingestion Console split 7차
+- Opened `.aiworkspace/note/finance/tasks/active/streamlit-ingestion-console-split-20260607/` as the 7차 large Streamlit file split record.
+- Moved `Workspace > Ingestion` render / session state / job scheduling / diagnostics UI from `app/web/streamlit_app.py` into `app/web/ingestion_console.py`.
+- `app/web/streamlit_app.py` is now the Finance Console shell for runtime marker, navigation, page wrappers, and glossary.
+- Follow-up remains Ingestion diagnostic facade extraction and then the next large Streamlit surface split.
 
 ### 2026-06-07 - Overview / Ingestion action boundary 6차
 - Opened `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/` as the 6차 collection / read boundary task.

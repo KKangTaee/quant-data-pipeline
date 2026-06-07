@@ -19,11 +19,11 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 6차 수집 / 조회 경계 정리는 완료 상태다.
+현재 7차 대형 Streamlit 파일 분해의 7A Ingestion Console split은 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/`
-- 목적: Overview의 bounded refresh를 공식 action facade 경계로 정리하고, 조회 UI가 세부 collector / automation / run-history helper를 직접 import하지 않게 한다.
-- 이번 차수에서 하지 않은 일: Ingestion Console split, DB schema / collector 동작 변경, scheduler / launchd 설정, registry / saved JSONL rewrite, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/streamlit-ingestion-console-split-20260607/`
+- 목적: `app/web/streamlit_app.py`를 Finance Console shell로 낮추고, `Workspace > Ingestion` render / session state / job scheduling / diagnostics UI를 `app/web/ingestion_console.py`로 이동한다.
+- 이번 차수에서 하지 않은 일: Ingestion diagnostic service facade extraction, DB schema / collector 동작 변경, scheduler / launchd 설정, registry / saved JSONL rewrite, push / PR 생성.
 
 ## Product Tracks
 
@@ -84,6 +84,7 @@ Recent completed docs cleanup tasks:
 
 Recent completed structure audit tasks:
 
+- `streamlit-ingestion-console-split-20260607`
 - `overview-ingestion-action-boundary-20260607`
 - `code-boundary-refactor-audit-20260607`
 
@@ -95,6 +96,7 @@ State manifest pointers:
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 - post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
+- Streamlit Ingestion Console split: `.aiworkspace/note/finance/tasks/active/streamlit-ingestion-console-split-20260607/DESIGN.md`
 - Overview / Ingestion action boundary: `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md`
 - code refactor audit: `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md`
 
@@ -104,7 +106,8 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
-| Ingestion diagnostic facade | 5차 audit found that some Ingestion read-only diagnostics and live source inspections are orchestrated directly from the top-level Streamlit app | Moving diagnostic orchestration into `app/services` or `app/jobs` while preserving manual, bounded, non-persistent behavior |
+| Ingestion diagnostic facade | 7A split moved Ingestion render/state/job UI out of `streamlit_app.py`, but read-only diagnostics still live inside the Streamlit Ingestion module | Moving diagnostic orchestration into `app/services` or `app/jobs` while preserving manual, bounded, non-persistent behavior |
+| Backtest Compare Streamlit split | `app/web/backtest_compare.py` remains a large mixed render / orchestration file after the Ingestion split | Moving repeated Compare render/result sections into focused modules while preserving service/runtime boundaries |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |

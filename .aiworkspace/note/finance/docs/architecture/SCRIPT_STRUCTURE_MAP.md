@@ -25,6 +25,7 @@
 |---|---|
 | `app/workspace_paths.py` | active worktree root 탐색과 canonical `.aiworkspace/note/finance`의 registries / saved / run_history / docs / artifact path 상수 |
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
+| `app/web/ingestion_console.py` | `Workspace > Ingestion` render / session-state boundary. Korean purpose-first job guide, symbol preset/source controls, explicit ingestion job scheduling, runtime metadata handoff, result/history/log/failure artifact display, and price / statement / PIT diagnostic panels |
 | `app/web/operations_overview.py` | `Operations > Operations Overview` / `Operations Console` render와 Streamlit-free Operations read model. Today action queue, 1차~5차 restructure roadmap, surface audit decisions, Portfolio Monitoring / System Data Health primary lane, Archive / Recovery secondary tools, no-live approval / order / auto rebalance boundary를 표시 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
