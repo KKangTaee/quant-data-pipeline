@@ -89,7 +89,8 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/runtime/backtest.py` | UI payload를 DB-backed backtest 실행으로 변환하는 public runtime wrapper, Real-Money / guardrail / benchmark 계약 처리. Result bundle 생성은 helper로 위임 |
+| `app/runtime/backtest.py` | UI payload를 DB-backed backtest 실행으로 변환하는 public runtime compatibility facade, ETF / strict family runtime wrappers, Real-Money / guardrail / benchmark 계약 처리. Result bundle 생성은 helper로 위임 |
+| `app/runtime/backtest_risk_on_momentum.py` | Risk-On Momentum 5D runtime slice. managed universe resolution, DB price / statement / futures macro load, swing execution, comparison / sensitivity / stability wiring, generated swing artifact writer를 담당하며 `app.runtime.backtest`가 compatibility export한다 |
 | `app/runtime/backtest_result_bundle.py` | Backtest runtime result bundle contract helper. `result_df`를 정렬하고 summary / chart / metadata bundle을 생성하며 `app.runtime.backtest` public export와 호환된다 |
 | `app/runtime/candidate_library.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/runtime/candidate_registry.py` | current candidate, candidate review note, pre-live registry JSONL path / load / append helper |

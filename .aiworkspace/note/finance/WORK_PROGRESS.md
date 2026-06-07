@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 7차 work is Ingestion Console split in [streamlit-ingestion-console-split-20260607](./tasks/active/streamlit-ingestion-console-split-20260607/DESIGN.md).
+  - Latest completed 8차 work is Risk-On Momentum runtime split in [runtime-backtest-risk-on-momentum-split-20260607](./tasks/active/runtime-backtest-risk-on-momentum-split-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Runtime Backtest Risk-On Momentum split 8차
+- Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-risk-on-momentum-split-20260607/` as the 8차 runtime large-file split record.
+- Moved Risk-On Momentum 5D DB runtime orchestration from `app/runtime/backtest.py` into `app/runtime/backtest_risk_on_momentum.py`.
+- Kept `app.runtime.backtest.run_risk_on_momentum_5d_backtest_from_db` as the public compatibility import used by UI / services.
+- Follow-up remains real-money / guardrail contract split and strict quality / value family split.
 
 ### 2026-06-07 - Streamlit Ingestion Console split 7차
 - Opened `.aiworkspace/note/finance/tasks/active/streamlit-ingestion-console-split-20260607/` as the 7차 large Streamlit file split record.

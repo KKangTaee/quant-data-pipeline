@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 7차 work is Ingestion Console split in [streamlit-ingestion-console-split-20260607](./tasks/active/streamlit-ingestion-console-split-20260607/DESIGN.md).
+  - Latest completed 8차 work is Risk-On Momentum runtime split in [runtime-backtest-risk-on-momentum-split-20260607](./tasks/active/runtime-backtest-risk-on-momentum-split-20260607/DESIGN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Runtime split should keep `app.runtime.backtest` as compatibility facade
+- User request:
+  - 8차로 runtime 대형 파일 분해 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - `app/runtime/backtest.py`를 한 번에 재작성하지 않고, strategy family별 구현을 전용 module로 옮기되 기존 UI / service public import path는 유지한다.
+- Analysis result:
+  - 첫 slice는 Risk-On Momentum 5D가 가장 안전하다. core logic이 `finance/swing.py`, `finance/swing_analysis.py`로 이미 분리되어 있고, runtime orchestration도 universe / macro / artifact wiring으로 응집되어 있다.
+- Follow-up:
+  - 다음 runtime split은 real-money / guardrail / deployment readiness contract helpers 또는 strict quality / value family wrappers가 자연스럽다.
 
 ### 2026-06-07 - Ingestion Console split should be physical first, service extraction second
 - User request:

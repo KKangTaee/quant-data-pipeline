@@ -16,7 +16,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 | preprocessing | `finance/transform.py` | MA, return, date alignment, snapshot shaping |
 | orchestration | `finance/engine.py` | price strategy chaining |
 | DB-backed sample/runtime helper | `finance/sample.py` | 수동 smoke와 reusable helper |
-| runtime adapter | `app/runtime/backtest.py` | UI payload를 실행 가능한 runtime으로 변환 |
+| runtime adapter | `app/runtime/backtest.py`, family modules such as `app/runtime/backtest_risk_on_momentum.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
 | web UI | `app/web/pages/backtest.py` | form, compare, history, saved replay |
 
 ## 새 전략 추가 순서
@@ -26,7 +26,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 3. core strategy를 `finance/strategy.py` 또는 적절한 strategy module에 추가한다.
 4. 필요한 transform helper가 있으면 `finance/transform.py`에 재사용 가능한 함수로 둔다.
 5. DB-backed runtime helper를 `finance/sample.py` 또는 runtime adapter에서 재사용 가능하게 만든다.
-6. `app/runtime/backtest.py`에 `run_*_backtest_from_db(...)` wrapper를 추가한다.
+6. `app/runtime/backtest.py` 또는 family-specific `app/runtime/backtest_*` module에 `run_*_backtest_from_db(...)` wrapper를 추가하고, 기존 UI / service caller가 필요하면 `app/runtime/backtest.py`에서 compatibility export한다.
 7. `app/web/pages/backtest.py`의 single strategy catalog와 form에 연결한다.
 8. compare strategy catalog와 strategy-specific override를 연결한다.
 9. history payload, `Load Into Form`, `Run Again` 복원을 확인한다.
@@ -110,7 +110,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 현재 주요 구현 메모:
 
 - `Risk-On Momentum 5D`는 `finance/swing.py`에 strategy-specific scanner / trade loop를 두고, reusable daily swing features는 `finance/transform.py`의 `add_daily_swing_features`에서 만든다.
-- DB-backed wrapper는 `app/runtime/backtest.py`의 `run_risk_on_momentum_5d_backtest_from_db`이며, UI는 `Backtest Analysis > Single Strategy`에 연결한다.
+- DB-backed wrapper implementation은 `app/runtime/backtest_risk_on_momentum.py`의 `run_risk_on_momentum_5d_backtest_from_db`다. 기존 UI / service compatibility를 위해 `app/runtime/backtest.py`도 같은 runner를 re-export하며, UI는 `Backtest Analysis > Single Strategy`에 연결한다.
 - full trade / scanner detail은 workflow registry가 아니라 generated `.aiworkspace/note/finance/backtest_artifacts/` JSON artifact에 둔다.
 - V2는 `close_based` D close 판단 / D+1 open 체결 가정은 유지하면서 `fixed_pct`와 `atr_based` exit, macro `hard_filter` / `ranking_penalty` / `off`, one-variable comparison, bounded sensitivity, stability, trade-cause, quality-warning rows를 Backtest Analysis 연구 surface로 제공한다.
 - ATR math lives in `finance/indicators.py`, macro mode logic in `finance/swing_macro.py`, and repeated analysis suites in `finance/swing_analysis.py`.

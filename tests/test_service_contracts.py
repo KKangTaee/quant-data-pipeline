@@ -296,7 +296,7 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertEqual(payload["min_avg_dollar_volume_20d"], 20_000_000.0)
 
     def test_risk_on_momentum_sp500_universe_resolves_market_universe(self) -> None:
-        from app.runtime import backtest as runtime
+        from app.runtime import backtest_risk_on_momentum as runtime
 
         with (
             patch.object(
@@ -322,13 +322,14 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertEqual(source, "market_cap_universe_members:SP500")
 
     def test_risk_on_momentum_sp500_universe_requires_membership_rows(self) -> None:
-        from app.runtime import backtest as runtime
+        from app.runtime import backtest as facade_runtime
+        from app.runtime import backtest_risk_on_momentum as runtime
 
         with (
             patch.object(runtime, "load_market_cap_universe_members", return_value=[]),
             patch.object(runtime, "load_top_symbols_from_asset_profile") as fallback_universe,
         ):
-            with self.assertRaises(runtime.BacktestDataError):
+            with self.assertRaises(facade_runtime.BacktestDataError):
                 runtime._resolve_risk_on_momentum_universe(
                     tickers=[],
                     universe_mode="sp500",
@@ -3856,6 +3857,32 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         from app.web.ingestion_console import render_ingestion_page
 
         self.assertTrue(callable(render_ingestion_page))
+
+    def test_backtest_runtime_facade_delegates_risk_on_momentum_to_dedicated_module(self) -> None:
+        import ast
+
+        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.runtime.backtest_risk_on_momentum", imported_modules)
+        self.assertNotIn("run_risk_on_momentum_5d_backtest_from_db", function_names)
+        self.assertNotIn("_resolve_risk_on_momentum_universe", function_names)
+
+    def test_risk_on_momentum_runtime_module_owns_public_entrypoint(self) -> None:
+        from app.runtime import backtest
+        from app.runtime.backtest_risk_on_momentum import run_risk_on_momentum_5d_backtest_from_db
+
+        self.assertIs(backtest.run_risk_on_momentum_5d_backtest_from_db, run_risk_on_momentum_5d_backtest_from_db)
 
 
 class FinanceWorkspacePathContractTests(unittest.TestCase):
