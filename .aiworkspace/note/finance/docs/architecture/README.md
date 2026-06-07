@@ -33,7 +33,7 @@ Layer ownership과 storage / surface boundary를 먼저 판정해야 하면 [SYS
 ## Architecture Rules
 
 - UI에서 provider / FRED를 직접 fetch하지 않는다.
-- 수집은 `finance/data/*`와 `app/jobs/ingestion_jobs.py`를 통해 수행한다.
+- 수집은 `finance/data/*`와 `app/jobs/ingestion_jobs.py`를 통해 수행한다. `Workspace > Overview`의 bounded refresh는 `app/jobs/overview_actions.py` facade를 통해서만 이 경계를 넘는다.
 - Practical Validation은 loader를 통해 provider context를 읽는다.
 - Overview Sentiment / Futures / Why It Moved도 context surface로 유지하고, validation gate나 trading signal로 승격하지 않는다.
 - JSONL registry에는 full raw provider response를 저장하지 않는다.

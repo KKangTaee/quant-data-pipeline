@@ -4108,6 +4108,46 @@ class OverviewAutomationContractTests(unittest.TestCase):
             {"profile": "intraday", "job_id": "top2000_intraday"},
         )
 
+    def test_overview_dashboard_routes_collection_through_action_facade(self) -> None:
+        import ast
+
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+
+        self.assertIn("app.jobs.overview_actions", imported_modules)
+        self.assertNotIn("app.jobs.ingestion_jobs", imported_modules)
+        self.assertNotIn("app.jobs.overview_automation", imported_modules)
+        self.assertNotIn("app.jobs.run_history", imported_modules)
+
+    def test_overview_action_facade_wraps_intraday_refresh_defaults(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_collect_market_intraday_snapshot",
+            return_value={"job_name": "collect_top1000_intraday_snapshot", "status": "success"},
+        ) as collect:
+            result = overview_actions.run_overview_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+            )
+
+        self.assertEqual(result["job_name"], "collect_top1000_intraday_snapshot")
+        collect.assert_called_once_with(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            interval="5m",
+            chunk_size=100,
+            quote_batch_size=200,
+            method="quote_fast",
+            fallback_to_yfinance=False,
+        )
+
     def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
         from app.web.overview_dashboard import (
             GROUP_TREND_HEATMAP_ROW_HEIGHT,

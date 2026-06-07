@@ -4,7 +4,6 @@ import calendar
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from html import escape
-from inspect import signature
 from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
@@ -12,17 +11,18 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from app.jobs.run_history import append_run_history
-from app.jobs.overview_automation import run_overview_automation
-from app.jobs.ingestion_jobs import (
-    run_diagnose_market_quote_gaps,
-    run_collect_earnings_calendar,
-    run_collect_fomc_calendar,
-    run_collect_futures_ohlcv,
-    run_collect_macro_calendar,
-    run_collect_market_sentiment,
-    run_collect_market_intraday_snapshot,
-    run_collect_sp500_universe,
+from app.jobs.overview_actions import (
+    record_overview_action_result,
+    run_overview_browser_auto_refresh,
+    run_overview_earnings_calendar,
+    run_overview_fomc_calendar,
+    run_overview_futures_daily_ohlcv,
+    run_overview_futures_ohlcv,
+    run_overview_macro_calendar,
+    run_overview_market_intraday_snapshot,
+    run_overview_market_sentiment,
+    run_overview_quote_gap_diagnostics,
+    run_overview_sp500_universe,
 )
 from app.services.futures_macro_thermometer import (
     clear_overview_futures_macro_snapshot_cache,
@@ -77,7 +77,6 @@ from app.web.overview_ui_components import (
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
 )
-from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
@@ -1621,7 +1620,7 @@ def _render_missing_diagnostics(snapshot: dict[str, Any], *, universe_code: str,
                 with st.spinner(f"Diagnosing {len(symbols)} missing quote row(s)..."):
                     _store_overview_job_result(
                         result_key,
-                        run_diagnose_market_quote_gaps(
+                        run_overview_quote_gap_diagnostics(
                             symbols=symbols,
                             universe_code=universe_code,
                             interval_code=str(coverage.get("intraday_interval") or "5m"),
@@ -1726,7 +1725,7 @@ def _render_market_job_result(result_key: str) -> None:
 def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
     st.session_state[result_key] = result
     try:
-        append_run_history(result)
+        record_overview_action_result(result)
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
 
@@ -1963,41 +1962,12 @@ def _run_browser_auto_refresh_check(*, universe_code: str = "SP500") -> dict[str
     config = _browser_auto_refresh_job_config(universe_code)
     profile = config["profile"]
     job_id = config["job_id"]
-    try:
-        summary = run_overview_automation(
-            profile=profile,
-            job_ids=[job_id],
-            execution_mode="browser_auto",
-        )
-    except RuntimeError as exc:
-        summary = {
-            "job_name": "overview_automation",
-            "status": "locked",
-            "profile": profile,
-            "execution_mode": "browser_auto",
-            "started_at": checked_at,
-            "finished_at": checked_at,
-            "jobs_due": 1,
-            "jobs_run": 0,
-            "plan": [],
-            "results": [],
-            "message": str(exc),
-        }
-    except Exception as exc:  # pragma: no cover - UI resilience only
-        summary = {
-            "job_name": "overview_automation",
-            "status": "failed",
-            "profile": profile,
-            "execution_mode": "browser_auto",
-            "started_at": checked_at,
-            "finished_at": checked_at,
-            "jobs_due": None,
-            "jobs_run": 0,
-            "plan": [],
-            "results": [],
-            "message": str(exc),
-        }
-    summary["selected_universe_code"] = str(universe_code or "SP500").strip().upper()
+    summary = run_overview_browser_auto_refresh(
+        profile=profile,
+        job_id=job_id,
+        universe_code=universe_code,
+        checked_at=checked_at,
+    )
     _store_browser_auto_refresh_state(universe_code, summary, checked_at)
     return summary
 
@@ -2014,23 +1984,15 @@ def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> 
     return int(stale_minutes) >= MARKET_INTRADAY_REFRESH_MINUTES
 
 
-def _run_collect_market_intraday_snapshot_compat(
+def _run_market_intraday_snapshot_action(
     *,
     universe_code: str,
     universe_limit: int,
 ) -> dict[str, Any]:
-    refresh_kwargs: dict[str, Any] = {
-        "universe_code": universe_code,
-        "universe_limit": universe_limit,
-        "interval": "5m",
-        "chunk_size": 100,
-        "quote_batch_size": 200,
-        "method": "quote_fast",
-        "fallback_to_yfinance": universe_code == "SP500",
-    }
-    supported_params = signature(run_collect_market_intraday_snapshot).parameters
-    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
-    return run_collect_market_intraday_snapshot(**supported_kwargs)
+    return run_overview_market_intraday_snapshot(
+        universe_code=universe_code,
+        universe_limit=universe_limit,
+    )
 
 
 def _load_market_movers_snapshot(
@@ -2216,38 +2178,16 @@ def _render_group_leadership_controls() -> GroupLeadershipControls:
     )
 
 
-def _run_collect_futures_ohlcv_compat(
+def _run_futures_ohlcv_action(
     *,
     symbols: list[str],
     cadence_mode: str,
 ) -> dict[str, Any]:
-    refresh_kwargs: dict[str, Any] = {
-        "symbols": symbols,
-        "period": "1d",
-        "interval": "1m",
-        "cadence_mode": cadence_mode,
-        "max_symbols": max(1, min(24, len(symbols))),
-        "batch_size": 6,
-        "sleep_sec": 0.1,
-    }
-    supported_params = signature(run_collect_futures_ohlcv).parameters
-    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
-    return run_collect_futures_ohlcv(**supported_kwargs)
+    return run_overview_futures_ohlcv(symbols=symbols, cadence_mode=cadence_mode)
 
 
-def _run_collect_futures_daily_ohlcv_compat() -> dict[str, Any]:
-    refresh_kwargs: dict[str, Any] = {
-        "symbols": list(DEFAULT_CORE_FUTURES_SYMBOLS),
-        "period": "5y",
-        "interval": "1d",
-        "cadence_mode": "manual_macro_daily",
-        "max_symbols": len(DEFAULT_CORE_FUTURES_SYMBOLS),
-        "batch_size": 6,
-        "sleep_sec": 0.1,
-    }
-    supported_params = signature(run_collect_futures_ohlcv).parameters
-    supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
-    return run_collect_futures_ohlcv(**supported_kwargs)
+def _run_futures_daily_ohlcv_action() -> dict[str, Any]:
+    return run_overview_futures_daily_ohlcv()
 
 
 def _futures_state_tone(value: str) -> str:
@@ -2885,7 +2825,7 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
                 with st.spinner("Collecting futures 5y daily OHLCV from yfinance..."):
                     _store_overview_job_result(
                         "overview_futures_daily_ohlcv_result",
-                        _run_collect_futures_daily_ohlcv_compat(),
+                        _run_futures_daily_ohlcv_action(),
                     )
                     clear_overview_futures_macro_snapshot_cache()
                     st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3036,7 +2976,7 @@ def _render_futures_live_workspace(
             with st.spinner("Checking futures auto refresh..."):
                 _store_overview_job_result(
                     "overview_futures_ohlcv_result",
-                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="browser_auto"),
+                    _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="browser_auto"),
                 )
             refreshed_snapshot = _load_live_snapshot()
             _render_futures_live_panel(refreshed_snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
@@ -3163,7 +3103,7 @@ def _render_futures_monitor_tab() -> None:
             with st.spinner("Collecting futures 1m OHLCV from yfinance..."):
                 _store_overview_job_result(
                     "overview_futures_ohlcv_result",
-                    _run_collect_futures_ohlcv_compat(symbols=selected_symbols, cadence_mode="manual"),
+                    _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="manual"),
                 )
             snapshot = load_overview_futures_monitor_snapshot(
                 group=group,
@@ -3255,7 +3195,7 @@ def _render_event_refresh_toolbar() -> str:
             with st.spinner("Collecting FOMC calendar from the official Fed page..."):
                 _store_overview_job_result(
                     "overview_fomc_calendar_result",
-                    run_collect_fomc_calendar(years=(current_year, current_year + 1)),
+                    run_overview_fomc_calendar(years=(current_year, current_year + 1)),
                 )
             st.rerun()
         if st.button(
@@ -3267,14 +3207,7 @@ def _render_event_refresh_toolbar() -> str:
             with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
                 _store_overview_job_result(
                     "overview_earnings_calendar_result",
-                    run_collect_earnings_calendar(
-                        symbol_source="latest_movers",
-                        universe_code="SP500",
-                        top_movers_limit=20,
-                        lookahead_days=120,
-                        max_symbols=50,
-                        validate_with_nasdaq=True,
-                    ),
+                    run_overview_earnings_calendar(),
                 )
             st.rerun()
         if st.button(
@@ -3287,7 +3220,7 @@ def _render_event_refresh_toolbar() -> str:
             with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
                 _store_overview_job_result(
                     "overview_macro_calendar_result",
-                    run_collect_macro_calendar(years=(current_year, current_year + 1)),
+                    run_overview_macro_calendar(years=(current_year, current_year + 1)),
                 )
             st.rerun()
     return event_filter
@@ -3395,7 +3328,7 @@ def _render_market_movers_refresh_bar(
         with st.spinner(f"Updating {universe_label} quote snapshot..."):
             _store_overview_job_result(
                 intraday_result_key,
-                _run_collect_market_intraday_snapshot_compat(
+                _run_market_intraday_snapshot_action(
                     universe_code=universe_code,
                     universe_limit=universe_limit,
                 ),
@@ -3407,7 +3340,7 @@ def _render_market_movers_refresh_bar(
         use_container_width=True,
     ):
         with st.spinner("Refreshing S&P 500 universe..."):
-            _store_overview_job_result("overview_sp500_universe_result", run_collect_sp500_universe())
+            _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
         st.rerun()
     if universe_code != "SP500":
         control_cols[2].caption("Top universe는 market-cap ranked asset profile 기준입니다.")
@@ -4460,7 +4393,7 @@ def _render_market_sentiment_tab() -> None:
         type="primary",
     ):
         with st.spinner("Refreshing CNN Fear & Greed / AAII sentiment..."):
-            _store_overview_job_result("overview_market_sentiment_result", run_collect_market_sentiment())
+            _store_overview_job_result("overview_market_sentiment_result", run_overview_market_sentiment())
             load_overview_market_sentiment_snapshot.clear()
         st.rerun()
     if control_cols[1].button(

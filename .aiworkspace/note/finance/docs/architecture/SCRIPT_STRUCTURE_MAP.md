@@ -28,7 +28,7 @@
 | `app/web/operations_overview.py` | `Operations > Operations Overview` / `Operations Console` render와 Streamlit-free Operations read model. Today action queue, 1차~5차 restructure roadmap, surface audit decisions, Portfolio Monitoring / System Data Health primary lane, Archive / Recovery secondary tools, no-live approval / order / auto rebalance boundary를 표시 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Why It Moved, Sector / Industry, Sentiment, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Market Movers manual investigation panel, Sector / Industry ranking/trend, Sentiment context, Events view routing을 조정 |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Why It Moved, Sector / Industry, Sentiment, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Market Movers manual investigation panel, Sector / Industry ranking/trend, Sentiment context, Events view routing을 조정. 수집 action은 `app/jobs/overview_actions.py` facade를 호출한다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, cached market intelligence service wrapper |
 | `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
@@ -104,7 +104,8 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion` 또는 Overview 수동 refresh에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion`과 승인된 action facade에서 사용하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 market intraday snapshot, futures OHLCV, events, sentiment, quote-gap diagnostics, browser-session auto refresh, run-history append 호출을 모은다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리 |
 
 ## Finance Core

@@ -21,6 +21,7 @@ Legacy `.note/` was removed after user approval and is not part of the current l
 | 3차 | Active task / phase state manifest alignment | `tasks/active/post-merge-active-state-cleanup-20260607/`, `tasks/active/STATUS_MANIFEST.md`, `phases/active/STATUS_MANIFEST.md` |
 | 4차 | Verification and handoff | `tasks/active/post-merge-verification-handoff-20260607/` |
 | 5차 | Code boundary / refactor baseline audit | `tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md` |
+| 6차 | Overview / Ingestion action boundary cleanup | `tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md` |
 
 ## Read Order For Next Work
 
@@ -32,6 +33,7 @@ Legacy `.note/` was removed after user approval and is not part of the current l
 6. `phases/active/STATUS_MANIFEST.md`
 7. This `HANDOFF.md`
 8. `tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md`
+9. `tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md`
 
 ## Current Product Interpretation
 
@@ -50,6 +52,7 @@ Workspace > Ingestion
 Important boundaries:
 
 - Overview Sentiment, Futures, Macro Thermometer, and Why It Moved are context / investigation surfaces.
+- Overview bounded refresh is allowed only through `app/jobs/overview_actions.py`; Overview UI should not import concrete ingestion / automation / run-history helpers directly.
 - Risk-On Momentum 5D is implemented as a Backtest Analysis research lane; validation / monitoring governance is deferred.
 - Practical Validation and Final Review own gate / evidence / selected-route decisions.
 - Operations > Portfolio Monitoring is read-only monitoring plus explicit scenario update; no live approval, broker order, account sync, or auto rebalance.
@@ -63,7 +66,7 @@ Important boundaries:
 | Overview Why It Moved V2 | Durable metadata, filing/body handling, AI summary, or catalyst classifier require a storage/source policy first. |
 | Risk-On Momentum 5D governance | Strategy exists as a research lane but is not connected to Practical Validation / Final Review / Portfolio Monitoring signal policy. |
 | Overview scheduler hardening | Browser-session refresh exists; unattended OS scheduler operation is a separate approval. |
-| Overview / Ingestion action boundary | Follow-on 5차 audit found that Overview is a mixed context / bounded refresh surface; decide whether to formalize this as an exception, introduce an action facade, or move triggers back to Ingestion / automation. |
+| Ingestion diagnostic facade | 6차 resolved Overview bounded refresh through an action facade. The next boundary cleanup is moving Ingestion read-only diagnostic orchestration behind a narrower service / job facade. |
 | Second-cycle investability hardening | Phase 13 carry-forward can seed a new phase only after a user-approved scope. |
 
 ## Do Not Do By Default

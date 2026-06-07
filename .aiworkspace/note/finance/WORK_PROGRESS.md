@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 5차 work is code boundary / refactor baseline audit in [code-boundary-refactor-audit-20260607](./tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md).
+  - Latest completed 6차 work is collection / read action boundary cleanup in [overview-ingestion-action-boundary-20260607](./tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Overview / Ingestion action boundary 6차
+- Opened `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/` as the 6차 collection / read boundary task.
+- Added `app/jobs/overview_actions.py` as the bounded Overview refresh facade and routed Overview market snapshot, futures, events, sentiment, quote-gap diagnostics, browser auto refresh, and run-history append through it.
+- `app/web/overview_dashboard.py` no longer imports `app.jobs.ingestion_jobs`, `app.jobs.overview_automation`, or `app.jobs.run_history` directly.
+- Durable docs now define Ingestion as the primary collector console and Overview as a context surface with approved bounded refresh through the action facade.
 
 ### 2026-06-07 - Code boundary / refactor baseline audit 5차
 - Opened `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/` as the 5차 structure audit record.

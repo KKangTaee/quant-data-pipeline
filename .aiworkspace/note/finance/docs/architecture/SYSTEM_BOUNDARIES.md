@@ -57,7 +57,7 @@ New code should not recreate legacy `.note/finance` paths directly.
 
 ### Workspace > Ingestion
 
-Ingestion is the only product surface that should trigger collectors from the UI.
+Ingestion is the primary product surface for collector execution, data repair, and source diagnostics.
 It calls `app/jobs/ingestion_jobs.py`, which calls `finance/data/*` and writes MySQL rows.
 
 It does not produce PASS / BLOCKER validation decisions by itself.
@@ -65,7 +65,7 @@ Partial lifecycle, provider, macro, futures, or sentiment evidence must remain v
 
 ### Workspace > Overview
 
-Overview is a market context and data health surface.
+Overview is a market context and data health surface with approved bounded refresh actions.
 
 It reads DB-backed service models for:
 
@@ -73,6 +73,10 @@ It reads DB-backed service models for:
 - Futures Monitor and Macro Thermometer
 - CNN Fear & Greed / AAII Sentiment
 - Why It Moved investigation metadata
+
+Overview refresh buttons must route through `app/jobs/overview_actions.py`.
+The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
+The action facade is allowed to call ingestion job wrappers, browser-session automation, and run-history append helpers for approved Overview market-context targets only.
 
 Overview context does not create trade signals, Practical Validation PASS / BLOCKER, Final Review selected-route decisions, monitoring signals, registry rows, saved setup rows, broker orders, or auto rebalance actions.
 

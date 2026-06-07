@@ -82,6 +82,7 @@ Last Verified: 2026-06-07
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
+| Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
@@ -181,9 +182,9 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 
 | Situation | Start Here |
 |---|---|
-| Overview market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
-| S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
-| Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
+| Overview market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
+| S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py` |
+| Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
 | Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |

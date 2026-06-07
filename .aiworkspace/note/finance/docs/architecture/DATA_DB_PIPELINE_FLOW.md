@@ -73,7 +73,8 @@ external source
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
-| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
+| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
+| `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 승인된 market intelligence / futures / events / sentiment / quote-gap diagnostics job 호출과 run-history 기록을 맡는다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
 | `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. Korean purpose-first job guide, result next-action guidance, routine / manual 작업 구분, ETF operability, ETF holdings / exposure, macro context, market sentiment, SEC Form 25 delisting evidence, Nasdaq Symbol Directory current snapshot, SEC CIK / ticker cross-check, computed snapshot lifecycle, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼을 제공한다 |
 

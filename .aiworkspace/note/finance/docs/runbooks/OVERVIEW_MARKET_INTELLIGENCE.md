@@ -132,7 +132,7 @@ http://localhost:8501
    - `Raw` 탭에서 DB row-level detail을 확인한다.
    - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
    - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
-   - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
+   - Overview의 refresh buttons는 `app/jobs/overview_actions.py` facade를 통해 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
 10. `Workspace > Overview > Data Health`
    - Market Intelligence 운영 대상 9개를 한 화면에서 확인한다.
@@ -267,7 +267,7 @@ PY
 - Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then `시장 심리 읽기 - 6단계` covering current conclusion, why it reads that way, strong signals, weak signals, combined interpretation, and next checks.
 - Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, CNN component learning notes, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
 - Overview Data Health displays 9 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
-- Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
+- Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
 ## Failure Handling
@@ -293,7 +293,7 @@ PY
 ## Verification Commands
 
 ```bash
-uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
+uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
 uv run python -m unittest tests.test_service_contracts
 uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 git diff --check

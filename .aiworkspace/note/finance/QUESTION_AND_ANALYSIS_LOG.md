@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 5차 work is code boundary / refactor baseline audit in [code-boundary-refactor-audit-20260607](./tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md).
+  - Latest completed 6차 work is collection / read action boundary cleanup in [overview-ingestion-action-boundary-20260607](./tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Overview refresh is allowed only through an action facade
+- User request:
+  - 6차로 수집 / 조회 경계 정리 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - Overview와 Ingestion의 수집 / 조회 경계를 코드와 durable docs에서 일치시킨다.
+- Analysis result:
+  - Overview는 market context 조회 표면이지만, 제품상 bounded refresh가 이미 필요하다. 따라서 금지 대신 `app/jobs/overview_actions.py`를 공식 action facade로 두고, UI는 세부 ingestion job / automation / run-history helper를 직접 import하지 않는 구조가 맞다.
+- Follow-up:
+  - 다음 구조정리는 Ingestion diagnostic facade와 Ingestion Console render split로 이어가는 것이 안전하다.
 
 ### 2026-06-07 - Refactor should start with action boundary, not file splitting
 - User request:

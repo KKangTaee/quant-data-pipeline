@@ -19,18 +19,18 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 5차 코드 구조 감사 / 리팩토링 기준선 정리는 완료 상태다.
+현재 6차 수집 / 조회 경계 정리는 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/`
-- 목적: 1차~4차 문서 / handoff 정리 이후 실제 코드 경계, 대형 파일, refactor 우선순위를 점검한다.
-- 이번 차수에서 하지 않은 일: 코드 동작 변경, UI layout 변경, DB / ingestion / backtest runtime 실행, registry / saved JSONL rewrite, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/`
+- 목적: Overview의 bounded refresh를 공식 action facade 경계로 정리하고, 조회 UI가 세부 collector / automation / run-history helper를 직접 import하지 않게 한다.
+- 이번 차수에서 하지 않은 일: Ingestion Console split, DB schema / collector 동작 변경, scheduler / launchd 설정, registry / saved JSONL rewrite, push / PR 생성.
 
 ## Product Tracks
 
 | Track | Current State | Main Surfaces | Boundary |
 |---|---|---|---|
-| Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다 |
-| Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; no trade signal, approval, order, registry rewrite |
+| Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
+| Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
 | Backtest Analysis | Candidate creation plus Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console and daily-monitoring-first Portfolio Monitoring complete | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health`, archive lanes | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
@@ -84,6 +84,7 @@ Recent completed docs cleanup tasks:
 
 Recent completed structure audit tasks:
 
+- `overview-ingestion-action-boundary-20260607`
 - `code-boundary-refactor-audit-20260607`
 
 Retained completed boards in `phases/active/` should not be treated as newly open phase work.
@@ -94,6 +95,7 @@ State manifest pointers:
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 - post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
+- Overview / Ingestion action boundary: `.aiworkspace/note/finance/tasks/active/overview-ingestion-action-boundary-20260607/DESIGN.md`
 - code refactor audit: `.aiworkspace/note/finance/tasks/active/code-boundary-refactor-audit-20260607/AUDIT.md`
 
 Legacy `.note/` was removed after user approval and is no longer part of the current local state.
@@ -102,7 +104,6 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
-| Overview / Ingestion action boundary | 5차 audit found that Overview is a mixed context / bounded refresh surface even though the durable boundary says Ingestion is the only collector trigger surface | Deciding whether Overview refresh is an approved exception, moving refresh calls behind an action facade, or moving collection triggers back to Ingestion / automation |
 | Ingestion diagnostic facade | 5차 audit found that some Ingestion read-only diagnostics and live source inspections are orchestrated directly from the top-level Streamlit app | Moving diagnostic orchestration into `app/services` or `app/jobs` while preserving manual, bounded, non-persistent behavior |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |

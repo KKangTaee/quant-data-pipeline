@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-ingestion-action-boundary-20260607` | Completed record | 6차 수집 / 조회 경계 정리. Overview bounded refresh를 `app/jobs/overview_actions.py` action facade로 모으고, Overview UI의 직접 ingestion / automation / run-history import를 제거한 기록이다. |
 | `code-boundary-refactor-audit-20260607` | Completed record | 5차 코드 구조 감사 / 리팩토링 기준선. UI / service / runtime / jobs / finance layer 경계, 대형 파일, 다음 refactor 우선순위를 정리한 기록이다. |
 | `post-merge-verification-handoff-20260607` | Completed record | 4차 검증 및 handoff. 1차~3차 결과 검증과 다음 작업자 read order / remaining decisions를 정리한 기록이다. |
 | `post-merge-active-state-cleanup-20260607` | Completed record | 3차 active task / phase 상태 정리. 대량 이동 없이 manifest / README / roadmap 기준으로 current state를 정리한 기록이다. |
