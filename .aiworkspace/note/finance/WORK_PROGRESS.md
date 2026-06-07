@@ -23,13 +23,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Selected Dashboard Monitoring First UX V1 is implementation complete. The dashboard now opens with Active Portfolio Monitoring Scenario first; portfolio cards, strategy board, and `포트폴리오 시나리오 업데이트` sit below it; detailed evidence remains lower and no approval / order / account sync / auto rebalance behavior was added.
+  - Recent merged work has two independent completed surfaces: Overview Market Sentiment V1 and Selected Dashboard Monitoring First UX V1.
+  - Overview Sentiment now collects CNN Fear & Greed / AAII sentiment and presents a guided market-context reading flow. Selected Dashboard now opens with Active Portfolio Monitoring Scenario first; portfolio setup stays below it and no approval / order / account sync / auto rebalance behavior was added.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Overview Market Sentiment V1 3차
+- Implemented 3차 in `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/`.
+- CNN Fear & Greed / AAII market sentiment context overlay now appears in `Backtest > Final Review` and `Operations > Portfolio Monitoring` as a read-only market backdrop, sharing the same DB-backed read model used by Practical Validation.
+- Boundary remains context-only: no selected-route gate change, monitoring signal, registry rewrite, saved setup mutation, live approval, broker order, account sync, or auto rebalance.
+- Verification closeout details are in the task `RUNS.md`.
 
 ### 2026-06-07 - Market Movers Why It Moved Google News KR RSS
 - Updated `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/` so `Why It Moved > 한국어 뉴스` uses keyless Google News KR RSS metadata/snippet instead of Naver credentialed API lookup.
@@ -72,6 +79,15 @@ Detailed historical logs were archived on `2026-04-13`.
 - Root cause was yfinance returning empty `1d / 1m` data for active futures symbols while `2d / 1m` returned usable candles.
 - Collector now retries empty 1d / 1m symbols once with 2d / 1m, records `fallback_retries`, and keeps stale / missing warnings visible.
 - Refreshed current Pre-open Core data and restarted 8501; Browser QA confirmed Live Futures Charts at `6/6 symbols` with Provider Run `success`.
+
+### 2026-06-05 - Overview Market Sentiment V1
+- Completed `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/` 1차 scope.
+- CNN Fear & Greed and AAII Sentiment Survey now collect into `finance_meta.macro_series_observation`; actual smoke wrote 348 rows: CNN 260, AAII 88.
+- `Workspace > Overview` now has a Sentiment tab after Futures Monitor, plus Ingestion manual refresh and Data Health Market Sentiment target.
+- User-review follow-up improved Sentiment from raw prototype cards into a guided context workflow: mixed-neutral headline, data confidence, 6-step analysis check, CNN driver split, AAII pessimism context, and next checks.
+- Follow-up learning polish now keeps the 6 analysis items visible as `지금 결론 / 왜 이렇게 보나 / 강한 신호 / 약한 신호 / 그래서 어떻게 보나 / 다음 확인`, and adds CNN component learning notes for all 7 components.
+- Verification passed: focused service contracts, py_compile/chart smoke, actual collector smoke, Browser QA on `http://127.0.0.1:8502`, and screenshot `overview-market-sentiment-v1-qa.png`.
+- Remaining roadmap: 2차 Practical Validation context overlay, 3차 scheduled ops hardening if needed.
 
 ### 2026-06-02 - Selected Dashboard Monitoring First UX V1
 - Completed `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-first-ux-v1/`.
@@ -4661,6 +4677,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`에서 yfinance `1d / 1m` futures 응답이 빈 frame이거나 지나치게 희소할 때 해당 symbol만 `2d / 1m`으로 한 번 보강 수집하도록 수정했다.
   - `ZN=F`, `CL=F`, `GC=F`처럼 몇 개 candle만 그려지는 문제는 provider가 sparse 1d intraday rows를 반환한 것이 원인이었고, fallback 성공 시 초기 sparse rows를 대체한다.
   - 8501 Browser QA에서 `Live Futures Charts` 6/6 symbol, Provider Run `success`, dense 3x2 chart grid를 확인했다.
+- Operations Overview IA V1:
+  - `.aiworkspace/note/finance/tasks/active/operations-overview-ia-v1/`에서 Operations landing page와 navigation label 정리를 구현했다.
+  - `Operations > Operations Overview`는 Portfolio Monitoring / System Data Health / Archive Recovery / Reference Reports lane을 표시한다.
+  - 기존 Selected Dashboard route는 `Portfolio Monitoring`으로 유지하고, Backtest Run History / Candidate Library는 Archive recovery 도구로 낮췄다.
+  - live approval / order / account sync / auto rebalance / registry rewrite는 추가하지 않았다.
+- Operations Console Restructure V2-V5:
+  - `.aiworkspace/note/finance/tasks/active/operations-console-restructure-v2-v5/`에서 2차~5차 scope를 하나의 완료 흐름으로 묶었다.
+  - `Operations > Operations Overview`는 `Operations Console`로서 today action queue, 1차~5차 roadmap, surface audit, primary/secondary lane을 표시한다.
+  - Portfolio Monitoring의 리밸런싱 표는 `Target Snapshot Date`, `Next Review Date`, `Current Target Snapshot`으로 바꿔 주문/자동 리밸런싱이 아님을 명시했다.
+  - Backtest Run History와 Candidate Library는 삭제하지 않고 Archive / Recovery 도구로 보존했다.
 - Risk-On Momentum 5D V1:
   - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`에서 Top1000 기본 short-term stock swing strategy를 구현했다.
   - Core는 `finance/swing.py`, daily swing features는 `finance/transform.py`, futures daily loader는 `finance/loaders/futures.py`, DB wrapper / artifact writer는 `app/runtime/backtest.py`가 맡는다.
@@ -4687,3 +4713,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 사용자 검토 후 V1.7 selected-filing preview와 V1.8 `공시 Digest`를 table 아래 추가물로 보고 rollback했다.
   - 현재 `Why It Moved > SEC 공시`는 compact metadata table(`양식 / 공시일 / 제목 / 열기`)과 official SEC clickable link만 유지한다.
   - 후속 재무제표 표 preview는 8-K digest가 아니라 별도 10-Q / 10-K 또는 SEC XBRL/companyfacts feature로 설계해야 한다.
+- Overview Market Sentiment V1 2차:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/`에서 Practical Validation sentiment context overlay를 완료했다.
+  - `Backtest > Practical Validation`은 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여주며, `context_only`, `gate_effect=none`, `registry_write=false` 경계를 표시한다.
+  - 기존 Practical Validation Gate / selected-route preflight / registry / saved setup / live approval / order / auto rebalance 경계는 변경하지 않았다.
+  - 검증: service contracts 255 tests, py_compile, `git diff --check`, Browser QA screenshot 완료.

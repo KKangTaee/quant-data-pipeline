@@ -23,6 +23,7 @@ from finance.data.futures_market import (
     normalize_futures_symbols,
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.sentiment import collect_and_store_market_sentiment
 from finance.data.market_intelligence import (
     collect_and_store_bls_macro_calendar_ics,
     collect_and_store_earnings_calendar,
@@ -2430,6 +2431,7 @@ def run_collect_macro_market_context(
             details={"start": start, "end": end, "source_mode": source_mode},
         )
 
+
     if progress_callback is not None:
         progress_callback({"event": "stage_start", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
 
@@ -2503,6 +2505,80 @@ def run_collect_macro_market_context(
                 "source_mode": source_mode,
                 "target_table": "finance_meta.macro_series_observation",
             },
+        )
+
+
+def run_collect_market_sentiment(
+    *,
+    include_cnn: bool = True,
+    include_aaii: bool = True,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Run CNN Fear & Greed and AAII sentiment collection for Overview market context."""
+    job_name = "collect_market_sentiment"
+    started_at = _now_str()
+    t0 = perf_counter()
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "market_sentiment", "stage_index": 1, "total_stages": 1})
+
+    try:
+        summary = collect_and_store_market_sentiment(include_cnn=include_cnn, include_aaii=include_aaii)
+        if progress_callback is not None:
+            progress_callback({"event": "stage_complete", "stage": "market_sentiment", "stage_index": 1, "total_stages": 1})
+
+        rows_written = int(summary.get("stored") or 0)
+        failed_sources = _failed_item_ids(summary.get("failed") or [], id_keys=("source", "series_id", "symbol"))
+        missing_sources = [str(item) for item in summary.get("missing") or []]
+        all_failed = failed_sources + [source for source in missing_sources if source not in failed_sources]
+        status = _status_from_provider_summary(
+            rows_written=rows_written,
+            failed_items=failed_sources,
+            missing_items=missing_sources,
+        )
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("requested") or 0),
+            symbols_processed=max(int(summary.get("requested") or 0) - len(set(missing_sources + failed_sources)), 0)
+            if rows_written > 0
+            else 0,
+            failed_symbols=all_failed[:50],
+            message=(
+                "Market sentiment collection completed."
+                if status == "success"
+                else "Market sentiment collection completed with coverage gaps."
+                if status == "partial_success"
+                else "Market sentiment collection wrote no rows."
+            ),
+            details={
+                "sources": summary.get("sources") or [],
+                "source_row_counts": summary.get("source_row_counts") or {},
+                "coverage": summary.get("coverage") or {},
+                "failed": summary.get("failed") or [],
+                "missing": missing_sources,
+                "target_tables": ["finance_meta.macro_series_observation"],
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=2,
+            symbols_processed=0,
+            failed_symbols=["market_sentiment"],
+            message=f"Market sentiment collection failed: {exc}",
+            details={"include_cnn": bool(include_cnn), "include_aaii": bool(include_aaii)},
         )
 
 

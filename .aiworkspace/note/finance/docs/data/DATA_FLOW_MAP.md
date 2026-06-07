@@ -274,14 +274,24 @@ FRED API or FRED official CSV download
   -> finance.loaders.macro.load_macro_snapshot()
   -> app.services.backtest_practical_validation_provider_context.build_provider_context()
   -> Practical Validation market-context provider context
+
+CNN Fear & Greed JSON / AAII official historical HTML
+  -> finance.data.sentiment.collect_and_store_market_sentiment()
+  -> finance_meta.macro_series_observation
+  -> finance.loaders.sentiment.load_market_sentiment_snapshot()
+  -> finance.loaders.sentiment.load_market_sentiment_history()
+  -> app.services.overview_market_intelligence.build_market_sentiment_snapshot()
+  -> Workspace > Overview > Sentiment / Data Health
 ```
 
 의미:
 
 - P2-4 초기 series는 `VIXCLS`, `T10Y3M`, `BAA10Y`다.
 - API key가 있으면 FRED API를 쓰고, 없으면 official `fredgraph.csv` download를 사용한다.
-- sentiment는 별도 composite index crawling이 아니라 VIX / credit spread / yield curve 기반 market-context proxy로 시작한다.
+- Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 같은 long-form table에 저장한다.
+- AAII official page는 backend default HTTP client가 interstitial을 받을 수 있어 browser-like document request / TLS impersonation path를 사용한다. 실패하면 값을 꾸미지 않고 job result와 Overview status에 failed / missing state를 남긴다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
+- `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, 이 context는 trade signal, live approval, order, auto rebalance가 아니다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.

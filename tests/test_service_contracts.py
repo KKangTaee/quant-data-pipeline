@@ -399,6 +399,153 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
 
 
 class PracticalValidationServiceContractTests(unittest.TestCase):
+    def test_market_sentiment_overlay_is_context_only_for_practical_validation(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed Index",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 62.4,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 28.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bull-Bear Spread",
+                    "category": "sentiment_survey",
+                    "units": "percentage_point",
+                    "value": 12.5,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+
+        overlay = service.build_market_sentiment_context_overlay(
+            snapshot_rows=snapshot_rows,
+            history_rows=pd.DataFrame(),
+            today=date(2026, 6, 5),
+        )
+
+        self.assertEqual(overlay["status"], "OK")
+        self.assertEqual(overlay["risk_context"]["state"], "risk-on")
+        self.assertEqual(overlay["risk_context"]["source_phase"], "GREED_LEANING")
+        self.assertEqual(overlay["metrics"]["cnn_fear_greed"], 62.4)
+        self.assertEqual(overlay["metrics"]["aaii_bull_bear_spread"], 12.5)
+        self.assertIn("탐욕", overlay["headline"])
+        self.assertTrue(overlay["boundary"]["context_only"])
+        self.assertEqual(overlay["boundary"]["gate_effect"], "none")
+        self.assertFalse(overlay["boundary"]["affects_pass_blocker"])
+        self.assertFalse(overlay["boundary"]["trade_signal"])
+        self.assertFalse(overlay["boundary"]["live_approval"])
+        self.assertFalse(overlay["boundary"]["broker_order"])
+        self.assertFalse(overlay["boundary"]["auto_rebalance"])
+        self.assertFalse(overlay["boundary"]["registry_write"])
+        self.assertEqual(
+            {row["Metric"] for row in overlay["evidence_rows"]},
+            {"CNN Fear & Greed", "AAII Bearish", "AAII Bull-Bear Spread"},
+        )
+
+    def test_market_sentiment_overlay_remains_context_only_on_downstream_surfaces(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed Index",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 26.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 48.5,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+
+        overlays = [
+            service.build_market_sentiment_context_overlay(
+                snapshot_rows=snapshot_rows,
+                history_rows=pd.DataFrame(),
+                today=date(2026, 6, 5),
+                surface=surface,
+            )
+            for surface in ("Final Review", "Operations > Portfolio Monitoring")
+        ]
+
+        self.assertEqual([overlay["surface"] for overlay in overlays], ["Final Review", "Operations > Portfolio Monitoring"])
+        self.assertEqual({overlay["risk_context"]["state"] for overlay in overlays}, {"risk-off"})
+        for overlay in overlays:
+            boundary = overlay["boundary"]
+            self.assertTrue(boundary["context_only"])
+            self.assertEqual(boundary["gate_effect"], "none")
+            self.assertFalse(boundary["affects_pass_blocker"])
+            self.assertFalse(boundary["trade_signal"])
+            self.assertFalse(boundary["live_approval"])
+            self.assertFalse(boundary["broker_order"])
+            self.assertFalse(boundary["auto_rebalance"])
+            self.assertFalse(boundary["registry_write"])
+            self.assertFalse(boundary["saved_setup_write"])
+            self.assertFalse(boundary["monitoring_signal"])
+            self.assertIn(overlay["surface"], boundary["message"])
+
     def test_source_handoff_without_persistence_is_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation as service
 
@@ -6143,6 +6290,281 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(macro_row["Status"], "Due")
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
 
+    def test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context(self) -> None:
+        from app.services.overview_market_intelligence import build_market_sentiment_snapshot
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed Index",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 54.7,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "neutral", "previous_close": 54.0}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 37.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html",
+                    "series_name": "AAII Bull-Bear Spread",
+                    "category": "sentiment_survey",
+                    "units": "percentage_point",
+                    "value": -0.7,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 2,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_MARKET_MOMENTUM_SP500",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Market Momentum",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 93.8,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "extreme greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_STOCK_PRICE_BREADTH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Stock Price Breadth",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 31.4,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_STOCK_PRICE_STRENGTH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Stock Price Strength",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 33.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_PUT_CALL_OPTIONS",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Put / Call Options",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 96.6,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "extreme greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_MARKET_VOLATILITY_VIX",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Market Volatility",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 50.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "neutral"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_JUNK_BOND_DEMAND",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Junk Bond Demand",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 6.6,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "extreme fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_SAFE_HAVEN_DEMAND",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Safe Haven Demand",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 71.8,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+        history_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "cnn_fear_greed",
+                    "value": 54.0,
+                    "category": "sentiment_index",
+                },
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "value": 54.7,
+                    "category": "sentiment_index",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-03"),
+                    "source": "aaii_sentiment_survey",
+                    "value": 37.0,
+                    "category": "sentiment_survey",
+                },
+            ]
+        )
+
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=snapshot_rows,
+            history_rows=history_rows,
+            today=date(2026, 6, 5),
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["cnn_score"], 54.7)
+        self.assertEqual(snapshot["coverage"]["cnn_rating"], "neutral")
+        self.assertEqual(snapshot["coverage"]["aaii_bearish"], 37.0)
+        self.assertEqual(snapshot["coverage"]["aaii_bull_bear_spread"], -0.7)
+        self.assertEqual(snapshot["rows"].iloc[0]["Series"], "CNN Fear & Greed")
+        self.assertIn("Stock Price Breadth", set(snapshot["component_rows"]["Series"]))
+        self.assertFalse(snapshot["history_rows"].empty)
+        analysis = snapshot["analysis"]
+        self.assertEqual(analysis["phase"], "MIXED_NEUTRAL")
+        self.assertEqual(analysis["phase_label"], "혼합 중립")
+        self.assertIn("내부는 엇갈린", analysis["headline"])
+        self.assertEqual(analysis["data_confidence"]["status"], "High")
+        self.assertEqual(analysis["driver_summary"]["greed_count"], 3)
+        self.assertEqual(analysis["driver_summary"]["fear_count"], 3)
+        self.assertEqual(analysis["driver_summary"]["neutral_count"], 1)
+        self.assertEqual(
+            [step["title"] for step in analysis["analysis_steps"]],
+            ["지금 결론", "왜 이렇게 보나", "강한 신호", "약한 신호", "그래서 어떻게 보나", "다음 확인"],
+        )
+        self.assertIn("중립", analysis["analysis_steps"][0]["status"])
+        self.assertIn("지수는 버티지만", analysis["analysis_steps"][4]["detail"])
+        explanations = analysis["component_explanations"]
+        self.assertEqual(len(explanations), 7)
+        momentum = next(item for item in explanations if item["series"] == "Market Momentum")
+        self.assertIn("S&P 500", momentum["what_it_checks"])
+        self.assertIn("지수 추세", momentum["current_reading"])
+        breadth = next(item for item in explanations if item["series"] == "Stock Price Breadth")
+        self.assertIn("시장 폭", breadth["current_reading"])
+        self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
+
+    def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return []
+            if "FROM futures_ohlcv" in sql:
+                return []
+            if "FROM market_universe_member" in sql:
+                return []
+            if "FROM market_event_calendar" in sql:
+                return []
+            if "FROM macro_series_observation" in sql:
+                return [
+                    {
+                        "latest_observation_date": "2026-06-04",
+                        "latest_collected_at": "2026-06-04 23:10:00",
+                        "series_count": 2,
+                    }
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(
+            today=date(2026, 6, 5),
+            query_fn=query_fn,
+            history_rows=[
+                {
+                    "job_name": "collect_market_sentiment",
+                    "status": "success",
+                    "finished_at": "2026-06-04 23:11:00",
+                    "rows_written": 260,
+                    "symbols_processed": 2,
+                    "failed_symbols": [],
+                    "duration_sec": 1.5,
+                    "message": "Market sentiment collection completed.",
+                }
+            ],
+        )
+
+        sentiment_row = snapshot["rows"][snapshot["rows"]["Area"] == "Market Sentiment"].iloc[0]
+        self.assertEqual(sentiment_row["Status"], "OK")
+        self.assertEqual(sentiment_row["Rows"], 260)
+        self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
+
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
     def test_futures_monitor_snapshot_scores_moves_and_stale_state(self) -> None:
@@ -6825,6 +7247,117 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
+    def test_cnn_fear_greed_parser_builds_overall_history_and_component_rows(self) -> None:
+        from finance.data import sentiment
+
+        ts_current = int(pd.Timestamp("2026-06-04 23:10:00", tz=timezone.utc).timestamp() * 1000)
+        ts_previous = int(pd.Timestamp("2026-06-03 00:00:00", tz=timezone.utc).timestamp() * 1000)
+        payload = {
+            "fear_and_greed": {
+                "score": 54.7,
+                "rating": "neutral",
+                "timestamp": "2026-06-04T23:10:00+00:00",
+                "previous_close": 54.0,
+                "previous_1_week": 60.1,
+            },
+            "fear_and_greed_historical": {
+                "data": [
+                    {"x": ts_previous, "y": 54.0, "rating": "neutral"},
+                    {"x": ts_current, "y": 54.7, "rating": "neutral"},
+                ]
+            },
+            "stock_price_breadth": {
+                "score": 31.4,
+                "rating": "fear",
+                "timestamp": ts_current,
+            },
+        }
+
+        rows = sentiment.parse_cnn_fear_greed_graphdata(payload, collected_at="2026-06-04 23:11:00")
+        by_key = {(row["series_id"], row["observation_date"]): row for row in rows}
+
+        self.assertIn(("CNN_FEAR_GREED", "2026-06-04"), by_key)
+        self.assertEqual(by_key[("CNN_FEAR_GREED", "2026-06-04")]["value"], 54.7)
+        self.assertEqual(json.loads(by_key[("CNN_FEAR_GREED", "2026-06-04")]["missing_fields_json"])["rating"], "neutral")
+        component = by_key[("CNN_FNG_STOCK_PRICE_BREADTH", "2026-06-04")]
+        self.assertEqual(component["category"], "sentiment_component")
+        self.assertEqual(component["value"], 31.4)
+        self.assertEqual(json.loads(component["missing_fields_json"])["rating"], "fear")
+
+    def test_aaii_sentiment_parser_builds_bearish_and_spread_rows(self) -> None:
+        from finance.data import sentiment
+
+        html = """
+        <table>
+          <tr><th>Reported Date</th><th>Bullish</th><th>Neutral</th><th>Bearish</th></tr>
+          <tr><td>Jun 3</td><td>36.3%</td><td>26.7%</td><td>37.0%</td></tr>
+          <tr><td>May 27</td><td>35.6%</td><td>22.6%</td><td>41.9%</td></tr>
+        </table>
+        """
+
+        rows = sentiment.parse_aaii_sentiment_rows_from_html(
+            html,
+            collected_at="2026-06-04 14:50:00",
+            today=date(2026, 6, 5),
+        )
+        by_key = {(row["series_id"], row["observation_date"]): row for row in rows}
+
+        self.assertEqual(by_key[("AAII_BEARISH", "2026-06-03")]["value"], 37.0)
+        self.assertEqual(by_key[("AAII_BULLISH", "2026-06-03")]["value"], 36.3)
+        self.assertEqual(by_key[("AAII_NEUTRAL", "2026-06-03")]["value"], 26.7)
+        self.assertAlmostEqual(by_key[("AAII_BULL_BEAR_SPREAD", "2026-06-03")]["value"], -0.7)
+        self.assertEqual(by_key[("AAII_BEARISH", "2026-06-03")]["source"], "aaii_sentiment_survey")
+
+    def test_aaii_fetcher_uses_browser_document_headers(self) -> None:
+        from finance.data import sentiment
+
+        captured_headers: dict[str, str] = {}
+
+        def fake_fetcher(request, timeout: int) -> bytes:
+            del timeout
+            captured_headers.update({key.lower(): value for key, value in request.header_items()})
+            return b"""
+            <table>
+              <tr><th>Reported Date</th><th>Bullish</th><th>Neutral</th><th>Bearish</th></tr>
+              <tr><td>Jun 3</td><td>36.3%</td><td>26.7%</td><td>37.0%</td></tr>
+            </table>
+            """
+
+        rows = sentiment.fetch_aaii_sentiment_rows(
+            retries=1,
+            today=date(2026, 6, 5),
+            fetcher=fake_fetcher,
+        )
+
+        by_series = {row["series_id"]: row for row in rows}
+        self.assertEqual(by_series["AAII_BEARISH"]["value"], 37.0)
+        self.assertIn("chrome/", captured_headers["user-agent"].lower())
+        self.assertEqual(captured_headers["referer"], "https://www.aaii.com/sentimentsurvey")
+        self.assertEqual(captured_headers["sec-fetch-mode"], "navigate")
+
+    def test_ingestion_job_wraps_market_sentiment_collection_summary(self) -> None:
+        from app.jobs import ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_market_sentiment",
+            return_value={
+                "requested": 2,
+                "stored": 260,
+                "coverage": {"actual": 260},
+                "sources": ["cnn_fear_greed", "aaii_sentiment_survey"],
+                "missing": [],
+                "failed": [],
+            },
+        ):
+            result = jobs.run_collect_market_sentiment()
+
+        self.assertEqual(result["job_name"], "collect_market_sentiment")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 260)
+        self.assertEqual(result["symbols_processed"], 2)
+        self.assertEqual(result["details"]["target_tables"], ["finance_meta.macro_series_observation"])
+
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -10473,6 +11006,188 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(portfolio["incomplete_strategy_slot_count"], 0)
         self.assertEqual(portfolio["virtual_capital_total"], 30000.0)
         self.assertTrue(portfolio["strategy_rows"][0]["slot_input_complete"])
+
+    def test_operations_overview_model_groups_primary_and_archive_lanes(self) -> None:
+        spec = importlib.util.find_spec("app.web.operations_overview")
+        self.assertIsNotNone(spec, "Operations Overview read model module should exist")
+
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "final_decision_count": 4,
+                    "selected_decision_count": 2,
+                    "dashboard_row_count": 2,
+                    "status_counts": {"normal": 1, "watch": 1, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 2,
+                        "missing_reference_count": 0,
+                    }
+                },
+            },
+            run_history=[
+                {
+                    "job_name": "daily_market_update",
+                    "status": "failed",
+                    "started_at": "2026-06-03T09:00:00",
+                }
+            ],
+            candidate_records=[{"registry_id": "cand-1"}, {"registry_id": "cand-2"}],
+        )
+
+        self.assertEqual(model["schema_version"], "operations_overview_v1")
+        self.assertEqual(
+            [lane["key"] for lane in model["lanes"]],
+            ["portfolio_monitoring", "system_data_health", "archive_recovery", "reference_reports"],
+        )
+        lane_by_key = {lane["key"]: lane for lane in model["lanes"]}
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["priority"], "primary")
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["status"], "Review Needed")
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["selected_decision_count"], 2)
+        self.assertEqual(lane_by_key["portfolio_monitoring"]["metrics"]["watch_or_review_count"], 1)
+        self.assertEqual(lane_by_key["system_data_health"]["status"], "Attention Needed")
+        self.assertEqual(lane_by_key["archive_recovery"]["priority"], "secondary")
+        self.assertEqual(lane_by_key["archive_recovery"]["metrics"]["candidate_count"], 2)
+        self.assertEqual(lane_by_key["archive_recovery"]["metrics"]["backtest_run_count"], 1)
+
+    def test_operations_overview_model_keeps_execution_boundary_disabled(self) -> None:
+        spec = importlib.util.find_spec("app.web.operations_overview")
+        self.assertIsNotNone(spec, "Operations Overview read model module should exist")
+
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={"summary": {}, "portfolio_state": {"metrics": {}}},
+            run_history=[],
+            candidate_records=[],
+        )
+
+        self.assertFalse(model["execution_boundary"]["live_approval"])
+        self.assertFalse(model["execution_boundary"]["broker_order"])
+        self.assertFalse(model["execution_boundary"]["account_sync"])
+        self.assertFalse(model["execution_boundary"]["auto_rebalance"])
+        self.assertFalse(model["execution_boundary"]["registry_write"])
+        self.assertEqual(model["lanes"][0]["target_surface"], "Operations > Portfolio Monitoring")
+
+    def test_operations_console_model_exposes_v2_v5_audit_and_action_queue(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 3,
+                    "dashboard_row_count": 3,
+                    "status_counts": {"normal": 1, "watch": 1, "rebalance_needed": 1, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 3,
+                        "missing_reference_count": 0,
+                    }
+                },
+            },
+            run_history=[{"job_name": "daily_market_update", "status": "failed"}],
+            candidate_records=[{"registry_id": "cand-1"}],
+        )
+
+        self.assertEqual(model["console_version"], "operations_console_v2_v5")
+        self.assertEqual([stage["stage"] for stage in model["stage_roadmap"]], ["1차", "2차", "3차", "4차", "5차"])
+        self.assertTrue(all(stage["status"] == "completed" for stage in model["stage_roadmap"]))
+
+        audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
+        self.assertEqual(audit_by_surface["portfolio_monitoring"]["decision"], "keep_primary_improve")
+        self.assertEqual(audit_by_surface["system_data_health"]["decision"], "keep_primary_improve")
+        self.assertEqual(audit_by_surface["backtest_run_history"]["decision"], "keep_as_archive_recovery")
+        self.assertFalse(audit_by_surface["backtest_run_history"]["primary_operations"])
+        self.assertEqual(audit_by_surface["candidate_library"]["decision"], "keep_as_archive_recovery")
+        self.assertFalse(audit_by_surface["candidate_library"]["primary_operations"])
+
+        action_keys = {item["key"] for item in model["action_queue"]}
+        self.assertIn("review_portfolio_monitoring", action_keys)
+        self.assertIn("inspect_system_data_health", action_keys)
+        self.assertNotIn("place_order", action_keys)
+        for item in model["action_queue"]:
+            self.assertFalse(item["execution_boundary"]["order_instruction"])
+            self.assertFalse(item["execution_boundary"]["auto_rebalance"])
+
+    def test_operations_console_model_uses_korean_user_facing_copy(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 2,
+                    "dashboard_row_count": 2,
+                    "status_counts": {"normal": 2, "watch": 0, "rebalance_needed": 0, "blocked": 0},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 1,
+                        "assigned_strategy_reference_count": 2,
+                        "missing_reference_count": 0,
+                    }
+                },
+            },
+            run_history=[],
+            candidate_records=[],
+        )
+
+        self.assertIn("일상 점검", model["action_queue"][0]["title"])
+        self.assertIn("모니터링 후보", model["action_queue"][0]["reason"])
+        self.assertIn("수동", model["stage_roadmap"][2]["output"])
+        self.assertIn("주문 지시", model["stage_roadmap"][2]["output"])
+        audit_by_surface = {row["surface_key"]: row for row in model["surface_audit"]}
+        self.assertIn("선정 포트폴리오", audit_by_surface["portfolio_monitoring"]["role"])
+        self.assertIn("삭제하지 않음", audit_by_surface["candidate_library"]["change"])
+        self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
+        self.assertIn("복구", model["lanes"][2]["detail"])
+
+    def test_portfolio_monitoring_rebalance_table_uses_target_snapshot_language(self) -> None:
+        from app.web.final_selected_portfolio_dashboard import _build_rebalance_table
+
+        table = _build_rebalance_table(
+            [
+                {
+                    "source_title": "GRS Liquid Macro Top2",
+                    "raw_decision": {
+                        "selected_components": [
+                            {
+                                "title": "GRS Liquid Macro Top2",
+                                "selection_history": [
+                                    {
+                                        "date": "2026-05-29",
+                                        "selected_tickers": ["QQQ", "SPY"],
+                                        "target_weights": [0.503, 0.503],
+                                        "cash_share": 0.0,
+                                    }
+                                ],
+                                "replay_contract": {"settings_snapshot": {"rebalance_interval": 1}},
+                            }
+                        ]
+                    },
+                }
+            ]
+        )
+
+        self.assertIn("Target Snapshot Date", table.columns)
+        self.assertIn("Next Review Date", table.columns)
+        self.assertIn("Current Target Snapshot", table.columns)
+        self.assertIn("Target Meaning", table.columns)
+        self.assertIn("Execution Boundary", table.columns)
+        self.assertNotIn("Last Rebalance", table.columns)
+        self.assertNotIn("Next Rebalance", table.columns)
+
+        row = table.iloc[0].to_dict()
+        self.assertEqual(row["Target Snapshot Date"], "2026-05-29")
+        self.assertEqual(row["Next Review Date"], "2026-06-30")
+        self.assertIn("QQQ 50.3%", row["Current Target Snapshot"])
+        self.assertIn("manual review", row["Target Meaning"])
+        self.assertIn("No order", row["Execution Boundary"])
 
     def _ready_provider_evidence(self) -> dict:
         return {

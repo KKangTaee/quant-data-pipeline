@@ -17,11 +17,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Selected Dashboard Monitoring First UX V1 is implementation complete. Dashboard entry is daily-monitoring-first: Active Portfolio Monitoring Scenario appears before setup, while portfolio shelf / strategy board / scenario update remain below and evidence detail stays lazy.
+  - Recent merged work preserves both Overview Market Sentiment V1 and Selected Dashboard Monitoring First UX V1 decisions.
+  - Overview Sentiment is market context, not validation approval. Selected Dashboard is daily-monitoring-first: Active Portfolio Monitoring Scenario appears before setup, while portfolio shelf / strategy board / scenario update remain below and evidence detail stays lazy.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Sentiment context can follow the selection flow without becoming a gate
+- User request:
+  - 사용자가 Overview Market Sentiment V1의 3단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 2차 Practical Validation overlay를 넘어 Final Review와 Portfolio Monitoring에서도 CNN Fear & Greed / AAII sentiment를 현재 시장 배경으로 보여주되, 판단 / 저장 / 운영 경계는 바꾸지 않는다.
+- Analysis result:
+  - Final Review의 Decision Desk 아래와 Portfolio Monitoring 진입부가 가장 자연스럽다. 두 위치 모두 이미 gate / monitoring owner가 분리되어 있어 sentiment를 별도 read-only overlay로 넣으면 selected-route gate, Monitoring Scenario, saved setup, registry write와 분리할 수 있다.
+- Follow-up:
+  - `build_market_sentiment_context_overlay(surface=...)` contract에 `saved_setup_write=false`, `monitoring_signal=false`를 추가하고 두 화면에 context-only UI를 연결한다. 이 context는 PASS/BLOCKER, live approval, order, broker/account sync, auto rebalance가 아니다.
 
 ### 2026-06-07 - Korean news can start keyless through Google News KR RSS
 - User request:
@@ -92,6 +103,26 @@ Detailed historical analysis was archived on `2026-04-13`.
   - yfinance는 `NQ=F`, `6E=F`, `6J=F`에 대해 `period=1d`, `interval=1m`에서 빈 응답을 냈지만, 같은 symbol의 `period=2d`, `interval=1m`은 최신 candles를 반환했다. 따라서 source fetch 단계에서 empty-symbol만 보강 수집하는 것이 root fix다.
 - Follow-up:
   - collector가 empty 1d / 1m symbol만 2d / 1m으로 한 번 retry하고 `fallback_retries` diagnostics를 남긴다. stale provider age는 여전히 REVIEW warning으로 표시하며 exchange-grade realtime으로 해석하지 않는다.
+
+### 2026-06-05 - Sentiment tab should explain context before showing raw evidence
+- User request:
+  - 사용자가 CNN Fear & Greed / AAII 비관론 노출이 prototype card처럼 보이므로, 지금이 공포인지 탐욕인지, 비관론 수준이 어떤지, 그래서 시장 상황을 어떻게 읽어야 하는지 단계별 context로 설명해 달라고 요청함.
+- Interpreted goal:
+  - 기존 수집 / 저장 / freshness 노출은 유지하되, Overview Sentiment의 첫 화면을 raw metric card가 아니라 해석 workflow로 바꾼다.
+- Analysis result:
+  - CNN headline score만으로 결론 내리면 과신 위험이 있으므로 `데이터 상태 -> 공포·탐욕 판정 -> CNN 내부 드라이버 -> AAII 비관론 -> 종합 문맥 -> 다음 확인` 순서가 적절하다. AAII bearish는 historical average 대비 상태와 bull-bear spread를 함께 읽는다.
+- Follow-up:
+  - Sentiment read model에 `analysis`를 추가하고, UI는 혼합 중립 headline, data confidence, 6단계 학습형 읽기 경로, CNN component learning notes, driver split, next checks를 먼저 보여준다. 이 해석은 market context이며 Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
+
+### 2026-06-05 - CNN / AAII sentiment belongs in Overview as context, not validation approval
+- User request:
+  - CNN Fear & Greed와 AAII 비관론지수를 수집해 브라우저 화면에 노출하고, 프로젝트에서 가장 합리적인 위치를 분석한 뒤 구현해 달라고 요청함.
+- Interpreted goal:
+  - 공포탐욕지수와 AAII Bearish Sentiment를 market context로 저장하고 Overview에서 freshness / missing state와 함께 읽게 한다.
+- Analysis result:
+  - 별도 table보다 기존 `finance_meta.macro_series_observation`의 long-form observation 구조가 적합하다. 화면 위치는 `Workspace > Overview`의 `Futures Monitor` 다음 `Sentiment` 탭이 가장 자연스럽다.
+- Follow-up:
+  - `finance.data.sentiment`, `finance.loaders.sentiment`, `collect_market_sentiment`, Overview Sentiment tab, Ingestion manual refresh, Data Health target을 추가했다. 이 context는 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance가 아니다.
 
 ### 2026-06-02 - Selected Dashboard should be daily-monitoring-first
 - User request:
@@ -7245,15 +7276,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Macro Context와 Live Futures Charts를 별도 Streamlit fragment로 분리했다. Macro 버튼은 fragment rerun만 호출하고, live auto refresh는 Live 영역만 실행한다. Live monitor latest run은 `interval_code='1m'`으로 필터링한다
 
-### 2026-06-02 - Risk-On Momentum 5D V1 구현을 시작한다
+### 2026-06-03 - Operations 탭을 단계별로 개편한다
 - User request:
-  - 사용자가 사전 계획된 `Risk-On Momentum 5D V1`을 구현해 달라고 요청함
+  - 사용자가 Operations 탭의 recommended restructuring을 단계별로 진행해 달라고 요청함
 - Interpreted goal:
-  - 기존 Backtest Analysis / Single Strategy 경로 안에 Top1000 기본 short-term stock swing strategy를 추가하되, UI가 provider를 직접 fetch하지 않고 DB price / annual statement shadow / futures macro Mean-Z loader를 통해 실행해야 함
+  - Selected Portfolio Dashboard는 post-selection monitoring으로 Operations에 유지하되, Operations 안에서 primary monitoring / system health와 legacy archive 도구를 구분해야 함
 - Analysis result:
-  - V1 범위는 `close_based + fixed_pct + Equal Slot`로 제한하고, full trade / scanner detail은 registry가 아니라 generated backtest artifact에 둔다. Macro filter는 futures thermometer의 continuous Mean-Z를 hard filter로 사용한다
+  - `Operations Overview` landing page를 추가하고, Selected Dashboard는 `Portfolio Monitoring`, Ops Review는 `System / Data Health`, Run History와 Candidate Library는 Archive recovery label로 낮추는 additive IA가 가장 안전함
 - Follow-up:
-  - Core strategy, DB runtime, Single Strategy form, result `Swing Detail`, History replay fields, Compare default runner, focused tests를 구현했다. Browser QA에서 Manual universe input과 `Swing Detail` 결과 탭을 확인했고, full service contract 237 tests도 통과했다. 상세 검증과 남은 risk는 `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`를 확인한다
+  - `app/web/operations_overview.py`와 navigation label 정리를 구현했고, registry / saved schema / live order / auto rebalance는 변경하지 않았다. 상세 실행 기록은 `.aiworkspace/note/finance/tasks/active/operations-overview-ia-v1/`에 남겼다
+
+### 2026-06-03 - Operations 2차~5차를 끝까지 진행한다
+- User request:
+  - 사용자가 2차부터 5차까지 단계별로 작업하고, 중간 의사결정이 필요하면 질문해 달라고 요청함
+- Interpreted goal:
+  - 1차 보강으로 끝내지 않고 Operations 기능 감사, 리밸런싱 의미 정정, archive 격하, 최종 Operations Console까지 이어서 완성해야 함
+- Analysis result:
+  - 삭제 여부는 아직 되돌리기 어려운 판단이므로 Backtest Run History / Candidate Library는 제거하지 않고 archive / recovery로 보존하는 것이 맞다. 리밸런싱 표는 주문처럼 보이는 컬럼명을 target snapshot / next review 언어로 바꿔야 한다
+- Follow-up:
+  - `Operations Console` action queue, 1차~5차 roadmap, surface audit decisions, target snapshot table semantics를 구현했다. live approval / order / account sync / auto rebalance / registry rewrite / report export는 추가하지 않았다
+
 ### 2026-06-03 - Risk-On Momentum 5D V2는 Backtest Analysis 연구 lane으로 구현한다
 
 - User request: V1 이후 Risk-On Momentum 5D V2 고도화 계획을 구현하되 Practical Validation / Final Review / Selected Dashboard governance는 바로 연결하지 말라고 요청함.
@@ -7295,3 +7337,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: V1.7 / V1.8 selected-filing preview 기능을 현재 제품 surface에서 제거하고, SEC lane을 compact metadata table + official SEC link 상태로 되돌려야 함.
 - Analysis result: 이전 Digest는 8-K / 10-Q / 10-K의 의미를 다시 정리하기 전 product UX로는 너무 앞서 나간 형태다. 재무제표 표 preview는 별도 10-Q / 10-K 또는 SEC XBRL/companyfacts feature로 재설계하는 것이 맞다.
 - Follow-up: 서비스 / UI preview fetch·parse·digest helper와 contract tests를 제거하고 table-only rollback contract로 대체했다. 상세 실행과 검증은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`를 본다.
+
+### 2026-06-02 - Risk-On Momentum 5D V1 구현을 시작한다
+- User request:
+  - 사용자가 사전 계획된 `Risk-On Momentum 5D V1`을 구현해 달라고 요청함
+- Interpreted goal:
+  - 기존 Backtest Analysis / Single Strategy 경로 안에 Top1000 기본 short-term stock swing strategy를 추가하되, UI가 provider를 직접 fetch하지 않고 DB price / annual statement shadow / futures macro Mean-Z loader를 통해 실행해야 함
+- Analysis result:
+  - V1 범위는 `close_based + fixed_pct + Equal Slot`로 제한하고, full trade / scanner detail은 registry가 아니라 generated backtest artifact에 둔다. Macro filter는 futures thermometer의 continuous Mean-Z를 hard filter로 사용한다
+- Follow-up:
+  - Core strategy, DB runtime, Single Strategy form, result `Swing Detail`, History replay fields, Compare default runner, focused tests를 구현했다. Browser QA에서 Manual universe input과 `Swing Detail` 결과 탭을 확인했고, full service contract 237 tests도 통과했다. 상세 검증과 남은 risk는 `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`를 확인한다
+
+### 2026-06-06 - Overview Market Sentiment V1 2차를 Practical Validation에 연결한다
+- User request:
+  - CNN Fear & Greed / AAII sentiment를 Practical Validation 화면에 시장 심리 context overlay로 연결하되, trade signal / PASS-BLOCKER / live approval / order / auto rebalance로 쓰지 말라고 요청함
+- Interpreted goal:
+  - 후보 검증자가 현재 시장 심리가 risk-on / neutral / risk-off 중 어디에 가까운지 참고하되, 기존 validation gate와 저장 경계는 유지해야 함
+- Analysis result:
+  - Overlay는 저장된 `macro_series_observation`을 Overview sentiment snapshot으로 읽고 Practical Validation 전용 read model로 변환하는 것이 가장 안전하다. 결과 JSONL에 섞지 않고 `context_only`, `gate_effect=none`, `registry_write=false`를 명시한다
+- Follow-up:
+  - `Backtest > Practical Validation`에 context overlay band를 추가했다. Final Review Gate, selected-route preflight, registry, saved setup, live trading boundary는 변경하지 않았다

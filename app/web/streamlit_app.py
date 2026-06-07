@@ -21,6 +21,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
     run_collect_macro_calendar,
+    run_collect_market_sentiment,
     run_collect_sec_company_ticker_crosscheck,
     run_import_bls_macro_calendar_ics,
     run_collect_etf_holdings_exposure,
@@ -61,6 +62,7 @@ from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_previ
 from app.web.backtest_candidate_library import render_candidate_library_page
 from app.web.backtest_history import render_backtest_run_history_page
 from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
+from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
@@ -166,6 +168,17 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
             "provider 실패 / stale 상태는 Overview에서 그대로 표시합니다.",
         ],
         "next_action": "부분 성공이면 failed symbols를 줄여 다시 실행하거나 provider 상태를 확인하세요.",
+    },
+    "collect_market_sentiment": {
+        "title": "시장 심리 수집",
+        "purpose": "CNN Fear & Greed와 AAII Sentiment Survey를 수집해 Overview Sentiment에서 읽을 시장 심리 context를 저장합니다.",
+        "targets": ["finance_meta.macro_series_observation"],
+        "used_by": ["Workspace > Overview > Sentiment", "Workspace > Overview > Data Health"],
+        "caveats": [
+            "시장 심리는 trade signal이나 live approval이 아닙니다.",
+            "CNN / AAII source 차단 또는 stale 상태는 Overview에서 그대로 표시합니다.",
+        ],
+        "next_action": "partial_success이면 failed source를 확인하고 다시 실행하세요.",
     },
     "discover_etf_provider_source_map": {
         "title": "ETF 공식 소스 매핑 발견",
@@ -317,7 +330,7 @@ EVENT_CALENDAR_JOBS = {
     "import_bls_macro_calendar_ics",
     "collect_earnings_calendar",
 }
-MACRO_CONTEXT_JOBS = {"collect_macro_market_context"}
+MACRO_CONTEXT_JOBS = {"collect_macro_market_context", "collect_market_sentiment"}
 
 
 def _read_git_short_sha() -> str | None:
@@ -1353,6 +1366,9 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "collect_macro_market_context":
         params["progress_callback"] = progress_callback
         return run_collect_macro_market_context(**params)
+    if action == "collect_market_sentiment":
+        params["progress_callback"] = progress_callback
+        return run_collect_market_sentiment(**params)
     if action == "collect_sec_form25_delistings":
         return run_collect_sec_form25_delistings(**params)
     if action == "collect_symbol_directory_snapshots":
@@ -2980,6 +2996,66 @@ def _render_ingestion_console() -> None:
                         }
                     )
                 _render_inline_last_completed_result("collect_futures_ohlcv")
+
+            with st.expander("시장 심리 수집", expanded=False):
+                _render_job_brief("collect_market_sentiment")
+                st.caption("저장 테이블: `finance_meta.macro_series_observation`")
+                sentiment_cols = st.columns(2)
+                include_cnn = sentiment_cols[0].checkbox(
+                    "CNN Fear & Greed",
+                    value=True,
+                    key="market_sentiment_include_cnn",
+                )
+                include_aaii = sentiment_cols[1].checkbox(
+                    "AAII Sentiment Survey",
+                    value=True,
+                    key="market_sentiment_include_aaii",
+                )
+                _render_collection_contract(
+                    "실행 전 확인",
+                    [
+                        ("CNN", "enabled" if include_cnn else "disabled"),
+                        ("AAII", "enabled" if include_aaii else "disabled"),
+                        ("저장 위치", "finance_meta.macro_series_observation"),
+                    ],
+                    note=(
+                        "이 수집은 Overview 시장 심리 context용입니다. source 차단이나 partial result는 "
+                        "Overview Sentiment / Data Health에 그대로 남깁니다."
+                    ),
+                )
+                if st.button(
+                    "시장 심리 수집 실행",
+                    use_container_width=True,
+                    disabled=_has_running_job() or not (include_cnn or include_aaii),
+                ):
+                    _schedule_job(
+                        {
+                            "action": "collect_market_sentiment",
+                            "job_name": "collect_market_sentiment",
+                            "spinner_text": "Running market sentiment collection...",
+                            "params": {
+                                "include_cnn": bool(include_cnn),
+                                "include_aaii": bool(include_aaii),
+                            },
+                            "run_metadata": _job_metadata(
+                                pipeline_type="overview_market_sentiment",
+                                execution_mode="manual",
+                                symbol_source="CNN Fear & Greed / AAII Sentiment Survey",
+                                symbol_count=int(bool(include_cnn)) + int(bool(include_aaii)),
+                                execution_context="Manual market sentiment refresh for Overview Sentiment.",
+                                input_params={
+                                    "include_cnn": bool(include_cnn),
+                                    "include_aaii": bool(include_aaii),
+                                },
+                            ),
+                        }
+                    )
+                if _is_running_action("collect_market_sentiment"):
+                    current_progress_callback = _build_progress_callback(
+                        st.session_state.running_job,
+                        label="Market Sentiment",
+                    )
+                _render_inline_last_completed_result("collect_market_sentiment")
 
             with st.expander("주간 펀더멘털 / 팩터 업데이트", expanded=False):
                 _render_job_brief("weekly_fundamental_refresh")
@@ -4712,31 +4788,45 @@ def main() -> None:
     overview_page = st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview")
     ingestion_page = st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion")
     backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
-    ops_review_page = st.Page(_render_ops_review_page, title="Ops Review", icon="🧾", url_path="ops-review")
+    ops_review_page = st.Page(_render_ops_review_page, title="System / Data Health", icon="🧾", url_path="ops-review")
 
     def open_backtest_page() -> None:
         st.switch_page(backtest_page)
 
     backtest_history_page = st.Page(
         lambda: _render_backtest_run_history_page(open_backtest_page),
-        title="Backtest Run History",
+        title="Archive: Backtest Runs",
         icon="🗂️",
         url_path="backtest-run-history",
     )
     candidate_library_page = st.Page(
         _render_candidate_library_page,
-        title="Candidate Library",
+        title="Archive: Candidates",
         icon="📌",
         url_path="candidate-library",
     )
     selected_portfolio_dashboard_page = st.Page(
         _render_selected_portfolio_dashboard_page,
-        title="Selected Portfolio Dashboard",
+        title="Portfolio Monitoring",
         icon="📊",
         url_path="selected-portfolio-dashboard",
     )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
+    operations_overview_page = st.Page(
+        lambda: render_operations_overview_page(
+            page_targets={
+                "portfolio_monitoring": selected_portfolio_dashboard_page,
+                "system_data_health": ops_review_page,
+                "archive_backtest_runs": backtest_history_page,
+                "archive_candidates": candidate_library_page,
+                "reference_guides": guides_page,
+            }
+        ),
+        title="Operations Overview",
+        icon="🧭",
+        url_path="operations",
+    )
 
     navigation = st.navigation(
         {
@@ -4746,8 +4836,9 @@ def main() -> None:
                 backtest_page,
             ],
             "Operations": [
-                ops_review_page,
+                operations_overview_page,
                 selected_portfolio_dashboard_page,
+                ops_review_page,
                 backtest_history_page,
                 candidate_library_page,
             ],

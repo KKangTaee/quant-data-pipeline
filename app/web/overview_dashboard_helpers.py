@@ -20,6 +20,7 @@ from app.services.overview_market_intelligence import (
     build_market_events_snapshot,
     build_group_leadership_snapshot,
     build_market_movers_snapshot,
+    build_market_sentiment_snapshot,
     load_market_mover_sector_options,
 )
 
@@ -426,6 +427,13 @@ def load_overview_market_events_snapshot(
         horizon_days=horizon_days,
         limit=limit,
     )
+
+
+# Load the DB-backed CNN / AAII sentiment snapshot for the Overview Sentiment tab.
+@st.cache_data(ttl=120, show_spinner=False)
+def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentiment-learning-v3") -> dict[str, Any]:
+    del cache_schema_version
+    return build_market_sentiment_snapshot()
 
 
 # Load the DB freshness and persisted job history snapshot for Overview Data Health.

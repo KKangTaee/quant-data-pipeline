@@ -30,9 +30,9 @@ from app.runtime.backtest import BacktestDataError, BacktestInputError
 
 # Render the Operations-owned saved candidate inspector and replay surface.
 def render_candidate_library_page() -> None:
-    st.title("Candidate Library")
+    st.title("Archive: Candidates")
     st.caption(
-        "저장된 Current Candidate / Pre-Live 후보를 다시 열어 보고, 필요하면 저장된 contract로 결과 곡선을 재생성합니다."
+        "Archive / Recovery: 저장된 Current Candidate / Pre-Live 후보를 다시 열어 보고, 필요하면 저장된 contract로 결과 곡선을 재생성합니다."
     )
 
     records = load_candidate_library_records()
@@ -43,7 +43,8 @@ def render_candidate_library_page() -> None:
 
     st.info(
         "Candidate Library는 새 workflow 단계가 아니라 보관함입니다. "
-        "후보를 다시 검토하거나 그래프를 확인할 때 쓰고, 후보 등록 / 운영 기록 / 제안 판단은 기존 Backtest 흐름에서 처리합니다."
+        "후보를 다시 검토하거나 그래프를 확인할 때 쓰고, 후보 등록 / 운영 기록 / 제안 판단은 기존 Backtest 흐름에서 처리합니다. "
+        "Operations Console에서는 이 화면을 primary monitoring이 아니라 archive / recovery 도구로 취급합니다."
     )
     st.caption(f"Current Candidate path: {CURRENT_CANDIDATE_REGISTRY_FILE}")
     st.caption(f"Pre-Live path: {PRE_LIVE_CANDIDATE_REGISTRY_FILE}")

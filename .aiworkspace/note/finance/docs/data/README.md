@@ -47,7 +47,7 @@ Last Verified: 2026-06-01
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot |
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
-| `macro_series_observation` | FRED VIX / yield curve / credit spread observation |
+| `macro_series_observation` | FRED VIX / yield curve / credit spread observation plus Overview CNN Fear & Greed / AAII sentiment context series |
 | `practical_validation_stress_windows_v1.json` | Practical Validation static stress window reference data. JSON reference file이며 DB table은 아님 |
 
 ## JSONL Boundaries

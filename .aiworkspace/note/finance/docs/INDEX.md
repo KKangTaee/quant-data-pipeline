@@ -23,7 +23,7 @@ Last Verified: 2026-06-02
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current implementation focus: Selected Dashboard Monitoring First UX V1 is implementation complete. `Operations > Selected Portfolio Dashboard` now opens with Active Portfolio Monitoring Scenario before the portfolio shelf, showing the active portfolio, monitoring status, capital / value / P&L / total return / CAGR / MDD, daily badges, value curve, strategy performance, and rebalance summary when scenario results exist. Portfolio card selection, portfolio name / description edit, strategy board, and `포트폴리오 시나리오 업데이트` now sit below the hero; detailed readiness / provider / freshness / open issue evidence remains lower detail. Saved setup remains `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; Final Review rows remain read-only; no live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added.
+- Current implementation focus: Overview Market Sentiment V1 3차 is implementation complete. CNN Fear & Greed / AAII market sentiment now appears as context-only overlay in `Backtest > Practical Validation`, `Backtest > Final Review`, and `Operations > Portfolio Monitoring`. It is not a Practical Validation PASS/BLOCKER, selected-route gate input, monitoring signal, live approval, broker order, account sync, registry rewrite, saved setup change, or auto rebalance.
 
 ## By Purpose
 
