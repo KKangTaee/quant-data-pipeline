@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed 8차 work is Strict quality / value runtime family split in [runtime-backtest-strict-family-split-20260607](./tasks/active/runtime-backtest-strict-family-split-20260607/DESIGN.md).
+  - Latest completed structure work is Ingestion Diagnostic Facade 7B in [ingestion-diagnostic-facade-20260607](./tasks/active/ingestion-diagnostic-facade-20260607/DESIGN.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
@@ -25,15 +25,25 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Ingestion diagnostics should be a service facade
+- User request:
+  - 7단계를 다 마무리하고 진행하자며 7B 진행을 요청함.
+- Interpreted goal:
+  - 7A 이후 `app/web/ingestion_console.py`에 남아 있던 read-only diagnostics orchestration을 UI 밖으로 옮겨 7차를 닫는다.
+- Analysis result:
+  - Price Stale / Statement Coverage / Statement PIT inspection은 모두 수집 write가 아니라 진단 read path다. 따라서 `app/services/ingestion_diagnostics.py`가 loader / job helper / source inspection 호출을 소유하고, Streamlit module은 입력과 렌더만 소유하는 구조가 가장 안전하다.
+- Follow-up:
+  - Ingestion diagnostic facade는 완료됐으므로 roadmap next decision에서 제거한다. 다음 구조 후보는 Backtest Compare Streamlit split이다.
+
 ### 2026-06-07 - Strict runtime family can move without finishing Ingestion 7B
 - User request:
   - 다음 단계를 진행하되 7단계를 다 마무리 못한 것 같은데 괜찮은지 확인함.
 - Interpreted goal:
   - 7차 잔여 범위를 명확히 한 뒤, 독립적인 8차 runtime split을 계속 진행한다.
 - Analysis result:
-  - 7A Ingestion Console physical split은 완료됐고, 7B Ingestion diagnostic facade extraction은 후속 후보로 남아 있다. 8C strict runtime family split은 `app/runtime/backtest*.py` 경계 작업이므로 Ingestion diagnostic facade와 충돌하지 않는다.
+  - 당시 7A Ingestion Console physical split은 완료됐고, 7B Ingestion diagnostic facade extraction은 후속 후보로 남아 있었다. 8C strict runtime family split은 `app/runtime/backtest*.py` 경계 작업이므로 Ingestion diagnostic facade와 충돌하지 않았다.
 - Follow-up:
-  - `app/runtime/backtest_strict.py`를 strict family implementation owner로 두고, 다음 구조정리 선택지는 7B Ingestion diagnostic facade 또는 Backtest Compare Streamlit split로 남긴다.
+  - `app/runtime/backtest_strict.py`를 strict family implementation owner로 둔다. 7B는 이후 `ingestion-diagnostic-facade-20260607`에서 완료됐고, 다음 구조정리 선택지는 Backtest Compare Streamlit split로 남는다.
 
 ### 2026-06-07 - Runtime real-money helpers should be a helper-family module
 - User request:

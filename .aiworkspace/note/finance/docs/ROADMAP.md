@@ -19,11 +19,12 @@ Workspace > Ingestion
   -> Operations > Portfolio Monitoring
 ```
 
-현재 8차 runtime 대형 파일 분해의 8A Risk-On Momentum runtime split, 8B real-money / readiness helper split, 8C strict quality / value family split은 완료 상태다.
+현재 7차 large Streamlit split은 7A Ingestion Console physical split과 7B Ingestion diagnostic facade까지 완료됐고,
+8차 runtime 대형 파일 분해의 8A Risk-On Momentum runtime split, 8B real-money / readiness helper split, 8C strict quality / value family split도 완료 상태다.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/runtime-backtest-strict-family-split-20260607/`
-- 목적: `app/runtime/backtest.py`를 public compatibility facade로 유지하면서 strict quality / value / quality-value annual and quarterly runtime wrapper family를 `app/runtime/backtest_strict.py`로 이동한다.
-- 이번 차수에서 하지 않은 일: 7B Ingestion diagnostic facade, strategy math 변경, result metadata schema 변경, generated backtest artifact 생성/커밋, registry / saved JSONL rewrite, push / PR 생성.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/ingestion-diagnostic-facade-20260607/`
+- 목적: `app/web/ingestion_console.py`에 남아 있던 read-only diagnostic orchestration을 `app/services/ingestion_diagnostics.py`로 이동해 UI / service / data 경계를 분리한다.
+- 이번 차수에서 하지 않은 일: Ingestion job execution dispatch split, DB schema / collector behavior 변경, Backtest Compare Streamlit split, generated artifact 생성/커밋, registry / saved JSONL rewrite, push / PR 생성.
 
 ## Product Tracks
 
@@ -84,6 +85,7 @@ Recent completed docs cleanup tasks:
 
 Recent completed structure audit tasks:
 
+- `ingestion-diagnostic-facade-20260607`
 - `runtime-backtest-strict-family-split-20260607`
 - `runtime-backtest-real-money-split-20260607`
 - `runtime-backtest-risk-on-momentum-split-20260607`
@@ -99,6 +101,7 @@ State manifest pointers:
 - task state manifest: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 - phase state manifest: `.aiworkspace/note/finance/phases/active/STATUS_MANIFEST.md`
 - post-merge handoff: `.aiworkspace/note/finance/tasks/active/post-merge-verification-handoff-20260607/HANDOFF.md`
+- Ingestion Diagnostic Facade: `.aiworkspace/note/finance/tasks/active/ingestion-diagnostic-facade-20260607/DESIGN.md`
 - Runtime Backtest Strict Family split: `.aiworkspace/note/finance/tasks/active/runtime-backtest-strict-family-split-20260607/DESIGN.md`
 - Runtime Backtest Real-Money split: `.aiworkspace/note/finance/tasks/active/runtime-backtest-real-money-split-20260607/DESIGN.md`
 - Runtime Backtest Risk-On Momentum split: `.aiworkspace/note/finance/tasks/active/runtime-backtest-risk-on-momentum-split-20260607/DESIGN.md`
@@ -112,7 +115,6 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
-| Ingestion diagnostic facade | 7A split moved Ingestion render/state/job UI out of `streamlit_app.py`, but read-only diagnostics still live inside the Streamlit Ingestion module | Moving diagnostic orchestration into `app/services` or `app/jobs` while preserving manual, bounded, non-persistent behavior |
 | Backtest Compare Streamlit split | `app/web/backtest_compare.py` remains a large mixed render / orchestration file after the Ingestion split | Moving repeated Compare render/result sections into focused modules while preserving service/runtime boundaries |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |

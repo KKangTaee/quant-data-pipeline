@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `runtime-backtest-strict-family-split-20260607`
+- `ingestion-diagnostic-facade-20260607`
 
 Latest completed docs cleanup task:
 
@@ -24,6 +24,7 @@ Recent post-merge cleanup records:
 
 Recent structure audit records:
 
+- `ingestion-diagnostic-facade-20260607`: 7차 large Streamlit file split 7B / Ingestion read-only diagnostic facade extraction
 - `runtime-backtest-strict-family-split-20260607`: 8차 runtime large file split 8C / strict quality-value runtime wrapper extraction
 - `runtime-backtest-real-money-split-20260607`: 8차 runtime large file split 8B / real-money readiness helper extraction
 - `runtime-backtest-risk-on-momentum-split-20260607`: 8차 runtime large file split 8A / Risk-On Momentum runtime slice extraction
@@ -47,7 +48,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-07:
 
-- `tasks/active`: 178 task folders
+- `tasks/active`: 179 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.
@@ -58,7 +59,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 |---|---|---|
 | Post-merge docs cleanup | Current 1차~4차 cleanup records | `post-merge-docs-alignment-20260607`, `post-merge-boundary-docs-alignment-20260607`, `post-merge-active-state-cleanup-20260607`, `post-merge-verification-handoff-20260607` |
 | Collection / read boundary cleanup | 6차 Overview / Ingestion action boundary record | `overview-ingestion-action-boundary-20260607` |
-| Large Streamlit file split | 7차 Ingestion Console split record | `streamlit-ingestion-console-split-20260607` |
+| Large Streamlit file split | 7차 Ingestion Console split records | `ingestion-diagnostic-facade-20260607`, `streamlit-ingestion-console-split-20260607` |
 | Runtime large file split | 8차 Backtest runtime split records | `runtime-backtest-strict-family-split-20260607`, `runtime-backtest-real-money-split-20260607`, `runtime-backtest-risk-on-momentum-split-20260607` |
 | Code structure audit | 5차 refactor baseline record | `code-boundary-refactor-audit-20260607` |
 | Overview / market context | Overview Market Intelligence, Sentiment, Futures, Why It Moved, Events, automation | `overview-market-sentiment-v1`, `overview-market-movers-second-pass`, `futures-market-monitoring-mvp-v1`, `futures-macro-thermometer-validation-v1`, `overview-scheduled-refresh-automation` |

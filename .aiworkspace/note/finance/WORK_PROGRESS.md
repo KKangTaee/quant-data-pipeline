@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed 8차 work is Strict quality / value runtime family split in [runtime-backtest-strict-family-split-20260607](./tasks/active/runtime-backtest-strict-family-split-20260607/DESIGN.md).
+  - Latest completed structure work is Ingestion Diagnostic Facade 7B in [ingestion-diagnostic-facade-20260607](./tasks/active/ingestion-diagnostic-facade-20260607/DESIGN.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -33,11 +33,17 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Ingestion Diagnostic Facade 7B
+- Opened `.aiworkspace/note/finance/tasks/active/ingestion-diagnostic-facade-20260607/` as the 7차 large Streamlit split 7B record.
+- Added `app/services/ingestion_diagnostics.py` as the Streamlit-free facade for price window preflight, Price Stale Diagnosis, Statement Coverage Diagnosis, and Statement PIT Inspection.
+- `app/web/ingestion_console.py` now renders diagnostic panels and stores session-state results without directly importing diagnostic jobs, financial statement source inspection, or loader modules.
+- 7차 is now closed as 7A Ingestion Console split plus 7B diagnostic facade; next structure candidate remains Backtest Compare Streamlit split.
+
 ### 2026-06-07 - Runtime Backtest Strict Family split 8차
 - Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-strict-family-split-20260607/` as the 8차 runtime large-file split 8C record.
 - Moved strict quality / value / quality-value annual and quarterly runtime wrapper implementation from `app/runtime/backtest.py` into `app/runtime/backtest_strict.py`.
 - Kept `app.runtime.backtest` strict runners and helper functions as public compatibility imports used by UI / services / replay tests.
-- 7A Ingestion Console split is complete, while 7B Ingestion diagnostic facade remains a separate follow-up candidate.
+- At the time of this 8C split, 7B Ingestion diagnostic facade was still a follow-up; it was completed later in `ingestion-diagnostic-facade-20260607`.
 
 ### 2026-06-07 - Runtime Backtest Real-Money split 8차
 - Opened `.aiworkspace/note/finance/tasks/active/runtime-backtest-real-money-split-20260607/` as the 8차 runtime large-file split 8B record.

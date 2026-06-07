@@ -3858,6 +3858,42 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
         self.assertTrue(callable(render_ingestion_page))
 
+    def test_ingestion_console_delegates_read_only_diagnostics_to_service_facade(self) -> None:
+        import ast
+
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.services.ingestion_diagnostics", imported_modules)
+        self.assertNotIn("app.jobs.diagnostics", imported_modules)
+        self.assertNotIn("finance.data.financial_statements", imported_modules)
+        self.assertNotIn("finance.loaders", imported_modules)
+        self.assertNotIn("finance.loaders.price", imported_modules)
+        self.assertNotIn("_load_price_window_summary_cached", function_names)
+
+    def test_ingestion_diagnostics_service_owns_public_entrypoints(self) -> None:
+        from app.services.ingestion_diagnostics import (
+            load_price_window_preflight_summary,
+            run_price_stale_diagnosis,
+            run_statement_coverage_diagnosis,
+            run_statement_pit_inspection,
+        )
+
+        self.assertTrue(callable(load_price_window_preflight_summary))
+        self.assertTrue(callable(run_price_stale_diagnosis))
+        self.assertTrue(callable(run_statement_coverage_diagnosis))
+        self.assertTrue(callable(run_statement_pit_inspection))
+
     def test_backtest_runtime_facade_delegates_risk_on_momentum_to_dedicated_module(self) -> None:
         import ast
 

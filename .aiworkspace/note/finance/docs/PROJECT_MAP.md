@@ -51,6 +51,7 @@ Last Verified: 2026-06-07
 |---|---|
 | Finance Console shell / navigation | `app/web/streamlit_app.py` |
 | Workspace > Ingestion console | `app/web/ingestion_console.py` |
+| Workspace > Ingestion read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
 | Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/pages/backtest.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
@@ -196,7 +197,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |
 | DB schema 변경 | `finance/data/db/schema.py` |
-| Ingestion page / job UI 변경 | `app/web/ingestion_console.py`, `app/jobs/ingestion_jobs.py`, `finance/data/*` |
+| Ingestion page / job UI 변경 | `app/web/ingestion_console.py`, `app/services/ingestion_diagnostics.py`, `app/jobs/ingestion_jobs.py`, `finance/data/*` |
 | Strategy runtime 변경 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` |
 | 제품 방향 / 벤치마킹 리서치 | `.aiworkspace/note/finance/researches/README.md`, `.aiworkspace/note/finance/researches/active/<research-id>/` |
 | Backtest report 작성 / 정리 | `.aiworkspace/note/finance/reports/backtests/INDEX.md` |

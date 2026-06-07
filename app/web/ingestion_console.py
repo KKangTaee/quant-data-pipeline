@@ -38,7 +38,6 @@ from app.jobs.ingestion_jobs import (
     run_weekly_fundamental_refresh,
 )
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
-from app.jobs.diagnostics import inspect_price_stale_symbols, inspect_statement_coverage_symbols
 from app.jobs.result_artifacts import write_run_artifacts
 from app.jobs.preflight_checks import (
     check_asset_profile_prerequisites,
@@ -53,10 +52,13 @@ from app.jobs.run_history import (
 )
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
+from app.services.ingestion_diagnostics import (
+    load_price_window_preflight_summary,
+    run_price_stale_diagnosis,
+    run_statement_coverage_diagnosis,
+    run_statement_pit_inspection,
+)
 from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
-from finance.data.financial_statements import inspect_financial_statement_source
-from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
-from finance.loaders.price import load_price_window_summary
 from app.workspace_paths import PROJECT_ROOT
 
 
@@ -948,14 +950,14 @@ def _format_contract_window(*, period: str | None, start: str | None, end: str |
 
 
 @st.cache_data(ttl=60, show_spinner=False)
-def _load_price_window_summary_cached(
+def _load_price_window_preflight_summary_cached(
     symbols: tuple[str, ...],
     start: str | None,
     end: str | None,
     timeframe: str,
 ) -> pd.DataFrame:
-    return load_price_window_summary(
-        symbols=list(symbols),
+    return load_price_window_preflight_summary(
+        symbols,
         start=start,
         end=end,
         timeframe=timeframe,
@@ -986,7 +988,7 @@ def _render_price_window_preflight(
         return
 
     try:
-        coverage = _load_price_window_summary_cached(tuple(symbols), start, end, timeframe)
+        coverage = _load_price_window_preflight_summary_cached(tuple(symbols), start, end, timeframe)
     except Exception as exc:
         st.warning(f"DB coverage quick check를 실행하지 못했습니다: {exc}")
         return
@@ -2246,7 +2248,7 @@ def _render_price_stale_diagnosis_card() -> None:
             disabled=_has_running_job() or _is_blocking(diag_symbol_check),
         ):
             with st.spinner("Running price stale diagnosis..."):
-                result = inspect_price_stale_symbols(
+                result = run_price_stale_diagnosis(
                     diag_symbols_input,
                     end=diag_end_input.isoformat(),
                     timeframe="1d",
@@ -2315,7 +2317,7 @@ def _render_statement_coverage_diagnosis_card() -> None:
             disabled=_has_running_job() or _is_blocking(diag_symbol_check),
         ):
             with st.spinner("Running statement coverage diagnosis..."):
-                result = inspect_statement_coverage_symbols(
+                result = run_statement_coverage_diagnosis(
                     diag_symbols_input,
                     freq=diag_freq_input,
                     sample_size=diag_sample_size,
@@ -2415,31 +2417,17 @@ def _render_statement_pit_inspection_card() -> None:
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(inspect_symbol_check),
         ):
-            audit_scope = inspect_symbols_input[:audit_symbol_limit]
             with st.spinner("Running statement PIT inspection..."):
-                coverage_df = load_statement_coverage_summary(
+                result = run_statement_pit_inspection(
                     symbols=inspect_symbols_input,
-                    freq=inspect_freq,
-                )
-                audit_df = load_statement_timing_audit(
-                    symbols=audit_scope,
-                    freq=inspect_freq,
-                    limit_per_symbol=audit_limit_per_symbol,
-                )
-                source_payload = (
-                    inspect_financial_statement_source(source_symbol, sample_size=source_sample_size)
-                    if source_symbol
-                    else None
+                    inspect_freq=inspect_freq,
+                    audit_symbol_limit=audit_symbol_limit,
+                    audit_limit_per_symbol=audit_limit_per_symbol,
+                    source_symbol=source_symbol,
+                    source_sample_size=source_sample_size,
                 )
 
-            st.session_state.statement_pit_inspection_result = {
-                "inspect_freq": inspect_freq,
-                "coverage_df": coverage_df,
-                "audit_df": audit_df,
-                "audit_scope": audit_scope,
-                "source_symbol": source_symbol,
-                "source_payload": source_payload,
-            }
+            st.session_state.statement_pit_inspection_result = result
 
         result = st.session_state.get("statement_pit_inspection_result")
         if result:
