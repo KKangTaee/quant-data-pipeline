@@ -1,11 +1,13 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-06-03
+Last Verified: 2026-06-07
 
 ## Purpose
 
-이 문서는 Backtest에서 후보를 만들고, Practical Validation에서 검증 근거를 만들고, Final Review에서 Selected Dashboard 모니터링 후보 여부를 판단한 뒤 Selected Portfolio Dashboard에서 사후 확인하는 현재 사용자 흐름을 설명한다.
+이 문서는 Backtest에서 후보를 만들고, Practical Validation에서 검증 근거를 만들고, Final Review에서 Portfolio Monitoring 후보 여부를 판단한 뒤 Operations > Portfolio Monitoring에서 사후 확인하는 현재 사용자 흐름을 설명한다.
+
+파일 / helper 이름은 여전히 `Selected Portfolio Dashboard`를 포함할 수 있지만, 현재 사용자-facing route는 `Operations > Portfolio Monitoring`이다.
 
 예전의 긴 workflow redesign 문서는 구현 전 분석과 migration 계획이 섞여 있었다. 이 문서는 현재 제품에서 사용자가 실제로 따라야 하는 흐름만 남긴다.
 

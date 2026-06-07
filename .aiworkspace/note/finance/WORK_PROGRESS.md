@@ -23,14 +23,21 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Recent merged work has two independent completed surfaces: Overview Market Sentiment V1 and Selected Dashboard Monitoring First UX V1.
-  - Overview Sentiment now collects CNN Fear & Greed / AAII sentiment and presents a guided market-context reading flow. Selected Dashboard now opens with Active Portfolio Monitoring Scenario first; portfolio setup stays below it and no approval / order / account sync / auto rebalance behavior was added.
+  - Current 1차 work is post-merge documentation alignment in [post-merge-docs-alignment-20260607](./tasks/active/post-merge-docs-alignment-20260607/PLAN.md).
+  - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
+  - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-07 - Post-merge docs alignment 1차
+- Opened `.aiworkspace/note/finance/tasks/active/post-merge-docs-alignment-20260607/` after reviewing the master merge state.
+- Reframed durable docs around the current product flow: Ingestion / Overview context -> Backtest Analysis -> Practical Validation -> Final Review -> Operations Console -> Portfolio Monitoring.
+- `ROADMAP.md` now separates current state, recently merged work, completed foundations, retained active-folder records, and next decisions.
+- No code, registry / saved JSONL, `.note/` cleanup, or active task / phase folder migration was included in this 1차 pass.
 
 ### 2026-06-07 - Overview Market Sentiment V1 3차
 - Implemented 3차 in `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/`.

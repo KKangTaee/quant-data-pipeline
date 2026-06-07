@@ -17,12 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Recent merged work preserves both Overview Market Sentiment V1 and Selected Dashboard Monitoring First UX V1 decisions.
-  - Overview Sentiment is market context, not validation approval. Selected Dashboard is daily-monitoring-first: Active Portfolio Monitoring Scenario appears before setup, while portfolio shelf / strategy board / scenario update remain below and evidence detail stays lazy.
+  - Current 1차 work is post-merge documentation alignment in [post-merge-docs-alignment-20260607](./tasks/active/post-merge-docs-alignment-20260607/PLAN.md).
+  - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
+  - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-07 - Post-merge docs need state-model cleanup, not code changes
+- User request:
+  - master에서 여러 worktree task를 모아 병합했으니, 현재 개발 흐름 / 추가 개발 내용 / 구조와 문서를 크게 파악하고 정리해 달라고 요청함.
+- Interpreted goal:
+  - 코드 동작을 바꾸기보다 durable docs가 현재 merged product state를 빠르게 설명하게 만든다.
+- Analysis result:
+  - drift의 핵심은 active 폴더와 roadmap이 완료 이력 / 현재 작업 / 다음 결정을 함께 담아 current state를 흐리게 만든 것이다. 현재 제품은 Ingestion / Overview context -> Backtest Analysis -> Practical Validation -> Final Review -> Operations Console -> Portfolio Monitoring 흐름으로 읽는 것이 맞다.
+- Follow-up:
+  - 1차 문서 alignment는 진행하고, `.note/` 삭제나 active task / phase 대량 archive 이동은 별도 승인 scope로 남긴다.
 
 ### 2026-06-07 - Sentiment context can follow the selection flow without becoming a gate
 - User request:

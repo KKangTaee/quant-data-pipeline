@@ -1,212 +1,110 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-05
+Last Verified: 2026-06-07
 
-## Current Work
+## Current State After Master Merge
 
-| Track | Status | Notes |
+현재 active phase는 없다.
+
+2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
+
+```text
+Workspace > Ingestion
+  -> Workspace > Overview market context
+  -> Backtest > Backtest Analysis
+  -> Backtest > Practical Validation
+  -> Backtest > Final Review
+  -> Operations > Operations Console
+  -> Operations > Portfolio Monitoring
+```
+
+현재 진행 중인 1차 작업은 병합 후 문서 정리다.
+
+- Active task: `.aiworkspace/note/finance/tasks/active/post-merge-docs-alignment-20260607/`
+- 목적: 최근 merged work의 코드 / 문서 흐름을 현재 제품 지도, roadmap, architecture / flow docs에 맞춰 정리한다.
+- 이번 차수에서 하지 않는 일: 코드 변경, registry / saved JSONL rewrite, `.note/` 삭제, active task / phase 대량 이동.
+
+## Product Tracks
+
+| Track | Current State | Main Surfaces | Boundary |
+|---|---|---|---|
+| Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다 |
+| Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; no trade signal, approval, order, registry rewrite |
+| Backtest Analysis | Candidate creation plus Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
+| Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
+| Operations / Portfolio Monitoring | Operations Console and daily-monitoring-first Portfolio Monitoring complete | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health`, archive lanes | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
+| UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
+
+## Recently Merged Work
+
+| Workstream | Status | Durable Notes |
 |---|---|---|
-| Overview Market Sentiment V1 | 3차 implementation complete | `.aiworkspace/note/finance/tasks/active/overview-market-sentiment-v1/`; CNN Fear & Greed and AAII Sentiment Survey collect into `finance_meta.macro_series_observation`, and `Workspace > Overview > Sentiment` now shows freshness, data confidence, mixed-neutral context, 6-step analysis check, CNN component driver split, AAII pessimism context, and next checks. 2차 adds a `Backtest > Practical Validation` market sentiment context overlay; 3차 extends the same context-only overlay to `Backtest > Final Review` and `Operations > Portfolio Monitoring` as market backdrop only. No Practical Validation PASS/BLOCKER, selected-route gate change, monitoring signal, trade signal, live approval, broker order, account sync, registry rewrite, saved setup change, or auto rebalance was added |
-| Operations Console Restructure V2-V5 | Implementation complete | `.aiworkspace/note/finance/tasks/active/operations-console-restructure-v2-v5/`; `Operations > Operations Overview` now renders as `Operations Console` with a today action queue, completed 1차~5차 roadmap, surface audit decisions, primary Portfolio Monitoring / System Data Health lanes, secondary Archive / Recovery tools, and explicit disabled approval / order / auto rebalance boundary. Portfolio Monitoring rebalance rows now use target snapshot / next review language instead of order-like rebalance instructions. Backtest Run History and Candidate Library were preserved as archive/recovery tools; no live approval, broker order, account sync, auto rebalance, registry rewrite, saved setup schema change, or report export was added |
-| Operations Overview IA V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/operations-overview-ia-v1/`; `Operations > Operations Overview` now separates Portfolio Monitoring, System / Data Health, Archive / Recovery, and Reference / Reports lanes. Existing Selected Portfolio Dashboard remains as `Operations > Portfolio Monitoring`; Backtest Run History and Candidate Library remain available but are labeled as Archive recovery tools. No live approval, broker order, account sync, auto rebalance, registry rewrite, or saved setup schema change was added |
-| Risk-On Momentum 5D V2 | Implementation complete / QA in progress | `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v2/`; V2 stays inside `Backtest Analysis` as a Daily Swing research lane. Added simple rolling ATR indicator module, ATR-based close signal / D+1 open exit, macro `ranking_penalty`, V2 comparison / sensitivity / stability / trade-cause / quality-warning analysis, History replay metadata, Compare-safe defaults, and expanded `Swing Detail` tabs. Practical Validation / Final Review / Selected Dashboard daily signal governance remains deferred and requires user confirmation before implementation |
-| Risk-On Momentum 5D V1 | Implementation complete / QA in progress | `.aiworkspace/note/finance/tasks/active/risk-on-momentum-5d-v1/`; `Backtest Analysis > Single Strategy`에 Top1000 기본 short-term stock swing strategy를 추가했다. Core는 `finance/swing.py`, daily features는 `finance/transform.py`, futures macro loader는 `finance/loaders/futures.py`가 맡고, runtime은 DB price / annual statement shadow / futures Mean-Z rows를 결합한다. 결과는 Summary / Equity Curve와 별도 `Swing Detail` 탭, generated backtest artifact, History replay settings로 확인한다. V1은 `close_based + fixed_pct + Equal Slot`만 지원하며 live approval / broker order / auto rebalance는 추가하지 않았다 |
-| Selected Dashboard Monitoring First UX V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-first-ux-v1/`; `Operations > Selected Portfolio Dashboard` now opens daily-monitoring-first with Active Portfolio Monitoring Scenario above the portfolio shelf. Empty / no-strategy / configured-not-run / executed states are distinct, daily badges summarize status / next rebalance / open issues / provider freshness pointer / scenario timestamp / current target, and the scenario hero shows value curve, strategy performance, and rebalance summary when results exist. Portfolio cards, portfolio name / description edit, strategy board, and `포트폴리오 시나리오 업데이트` moved below the hero; detailed readiness / provider / freshness / open issue evidence stays lower. No live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
-| Futures Market Monitoring MVP V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/futures-market-monitoring-mvp-v1/`; `Overview > Futures Monitor` now reads DB-backed `yfinance` 1m futures OHLCV, defaults to cross-asset `Pre-open Core` (`NQ=F`, `ZN=F`, `CL=F`, `6E=F`, `GC=F`, `6J=F`), shows watch group / symbol controls, shock board, mini candlestick grid, provider run evidence, stale / missing warnings, and bounded browser-open refresh modes. The collector retries empty or sparse 1d / 1m symbols once with 2d / 1m and records fallback diagnostics. `Workspace > Ingestion` has a manual futures collection control; no exchange-grade realtime feed, broker action, or server scheduler was added |
-| Futures Macro Thermometer V1 / Historical Validation | Implementation complete / QA in progress | `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-v1/`, `.aiworkspace/note/finance/tasks/active/futures-macro-thermometer-validation-v1/`; Macro Thermometer now uses 5y / 1d futures backfill where available, keeps the six standardized scores and cautious scenario interpretation, and adds point-in-time historical validation, current scenario sample / hit-rate evidence, score threshold sensitivity, score-forward-return relationships, separated evidence groups, and Interpretation Confidence. It remains market context only: no prediction guarantee, live approval, order, alert, broker/account sync, or auto rebalance |
-| Ingestion Console UX / Data Quality V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/ingestion-console-ux-data-quality-v1/`; `Workspace > Ingestion` now keeps user-controlled symbol / period / source inputs while adding workflow overview, execution contract cards, bounded DB coverage quick check for date-window price runs, domain-aware result interpretation, and visible lifecycle partial-evidence warnings |
-| Selected Dashboard Manual Scenario Run V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-manual-scenario-run-v1/`; `Operations > Selected Portfolio Dashboard` no longer performs lower individual scenario detail work after strategy add / slot edit. Scenario session results are keyed by portfolio / slot / selected decision and current start / end / balance signature, stale results are hidden from aggregation, `포트폴리오 시나리오 업데이트` runs pending / stale strategies by default, and individual strategy evidence is opened for one selected strategy instead of eager-rendered tabs. No live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
-| Selected Dashboard Product Polish V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-product-polish-v1/`; `Operations > Selected Portfolio Dashboard` sections 1~3 added fixed-height portfolio shelf cards, collapsed portfolio management for delete, selected portfolio command band, compact strategy board cards with collapsed edit/delete controls, and portfolio-wide monitoring scenario cockpit styling with `포트폴리오 시나리오 실행`. Section 4 evidence / Monitoring Signals was intentionally left unchanged; no live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
-| Selected Dashboard Portfolio Flow Redesign V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-portfolio-flow-redesign-v1/`; `Operations > Selected Portfolio Dashboard` now opens with a portfolio card shelf and `+ 새 포트폴리오`, stores per-portfolio strategy slots with selected decision / start / latest-end mode / balance / memo, separates `전략 적용` from `모니터 시나리오 실행`, shows portfolio-level value / P&L / return / CAGR / MDD / benchmark summary and rebalance target table before lower evidence details. Final Review rows remain read-only; saved state stays in `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; no live approval, broker order, account sync, monitoring auto-write, or auto rebalance was added |
-| Selected Dashboard Monitoring Portfolio V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-monitoring-portfolio-v1/`; `Operations > Selected Portfolio Dashboard` now starts with user-created monitoring portfolios, lets the user add Final Review selected candidates one by one without same-portfolio duplicates, runs per-strategy virtual monitoring scenarios, shows Monitoring Signals / open issues / optional preflight, and compares alternatives inside the same portfolio. Saved state is `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`; no live approval, order, account sync, broker integration, monitoring auto-write, or auto rebalance was added |
-| Selected Dashboard Live Readiness Follow-up V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-dashboard-live-readiness-followup-v1/`; `Operations > Selected Portfolio Dashboard` now surfaces Final Review `open_review_items` and review triggers, adds a read-only Deployment Readiness preflight, and keeps live approval / order / account / auto rebalance disabled. Fresh 2026-06-01 registry recheck found no selected-route pass, so no Final Decision row was appended |
-| Final Review Selection Readiness Gate V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-selection-readiness-gate-v1/`; Final Review now separates `selection_gate_policy_snapshot` for Selected Dashboard candidate selection from `deployment_readiness_policy_snapshot` for future live-readiness audit. Default `REVIEW` findings become `open_review_items`; hard blockers, critical `NEEDS_INPUT` / `NOT_RUN`, benchmark parity, gross/net-cost evidence gaps, and weighted mix role / weight rationale gaps still block `SELECT_FOR_PRACTICAL_PORTFOLIO` saves |
-| Practical Validation Source Context V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-source-context-v1/`; Step 1 now shows source strategy / construction context, component strategy rows, and compact monthly selection / holdings history for new handoffs. Legacy sources keep registry rows unchanged and use runtime replay selection history as the fallback when available |
-| Final Review Commercial UX V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-commercial-ux-v1/`; Final Review now opens as a user-facing Decision Desk with command center, flow rail, Candidate Board lane cards, visual Decision Cockpit, Final Decision Action panel, Evidence Appendix, and Decision History / Dashboard Handoff. The follow-up selection-only save policy limits new official Final Decision writes to `SELECT_FOR_PRACTICAL_PORTFOLIO` after selection gate pass; hold / reject / re-review are status guidance and legacy read paths |
-| Final Review Candidate Search Closeout | Complete / handoff ready | `.aiworkspace/note/finance/tasks/active/selected-portfolio-candidate-search-20260531/`, `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`; fresh GTAA and non-GTAA searches produced Practical Validation / Final Review evidence-ready candidates but no current-gate current selected row. The legacy non-GTAA Quality selected row can seed the dashboard only through an explicit legacy migration, not as a fresh selected-route pass |
-| Final Review Selected Dashboard Handoff V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-selected-dashboard-handoff-v1/`; Final Review saved decision review and `Operations > Selected Portfolio Dashboard` now share a read-only handoff review that shows selected rows, dashboard row build, monitorable / blocked counts, checklist, and no approval / order / auto-rebalance boundary |
-| Final Review Saved Decision Review V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-saved-decision-review-v1/`; Final Review saved final decision records now render as a read-only ledger with summary counts, route filter, focused detail tabs, and dossier reuse without adding validation, report auto-write, approval, order, or registry schema changes |
-| Final Review Decision Record V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-decision-record-v1/`; Final Review final decision input shows a decision record checklist, selected-route guide, and explicit no-live-approval boundary. The later selection-only save follow-up keeps non-select routes as status / compatibility guidance instead of new official save actions |
-| Final Review Candidate Board V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-candidate-board-v1/`; Final Review Candidate Board now ranks Gate-passed candidates by review usefulness, shows select-ready / hold / blocked counts, a first-review candidate, review queue, primary reason, and next action without changing validation or persistence |
-| Final Review Evidence Appendix V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-evidence-appendix-v1/`; Final Review now reads as Candidate Board -> Decision Cockpit -> Final Decision Record, with detailed Practical Validation / Robustness / Paper Observation / Investability Packet evidence lowered into a read-only Evidence Appendix |
-| Final Review Decision Cockpit V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/final-review-decision-cockpit-v1/`; Final Review now shows a Candidate Board for Gate-passed Practical Validation results and a Decision Cockpit that surfaces selection-readiness state, blockers, open review items, suggested decision, and monitoring seed before the final decision record |
-| Practical Validation Commercial UX V1 | Complete / user-accepted closeout | `.aiworkspace/note/finance/tasks/active/practical-validation-commercial-ux-v1/`; Practical Validation을 전용 workbench shell / Control Center / Fix Queue / summary-first Evidence Workspace / Provider Action Center 구조로 다듬고 raw evidence는 상세 펼침으로 낮춤. 선택 후보 backtest snapshot, 7-step boundary, replay state reset, 저장-only audit trail, Final Review Gate 통과 후보만 source picker 노출까지 반영 |
-| Practical Validation Board Map V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-board-map-v1/`; 화면 board와 validation module을 분리하고 Applied Validation Map / board badge로 적용 / 비적용 근거를 표시 |
-| Backtest Analysis Stage 1 Closeout | Complete | `.aiworkspace/note/finance/docs/flows/BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md`; Backtest 1단계는 단일 전략 / Portfolio Mix 후보를 만들고 1차 readiness 통과 시 Practical Validation source로 보내는 단계로 정리 완료 |
-| Practical Validation Required Module Polish V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-required-module-polish-v1/`; required module labels / reasons now distinguish source qualification, evidence coverage, comparator parity, minimum robustness, and gate effect / gate reason |
-| Practical Validation Module Gate V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-module-gate-v1/`; Practical Validation result now includes source traits, validation modules, and a Final Review gate. Required module `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN` blocks save-and-move while detailed diagnostics remain visible |
-| Backtest Portfolio Mix Builder UX V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-ux-v1/`; component 실행 결과를 summary-first card / 4-tab 구조로 재정리하고 raw table / criteria / meta를 접힘 상세로 낮춰 Portfolio Mix 후보 생성 흐름을 더 명확하게 표시 |
-| Backtest Portfolio Mix Builder Flow V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-portfolio-mix-builder-flow-v1/`; `Compare & Portfolio Builder` visible flow is now `Portfolio Mix Builder`, current mix handoff is gated by mix result / weight discipline / component data trust / component first-stage readiness, and individual strategy handoff is no longer the main action in the mix builder |
-| Backtest Practical Validation Handoff Gate V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-practical-validation-handoff-gate-v1/`; Backtest handoff button now enables only after first-stage candidate readiness has no Promotion / execution source / validation source blocker, and shows a state card with blocker reasons |
-| Backtest Real-Money Readiness Efficacy V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-readiness-efficacy-v1/`; Execution Preview now scores only source checks, Candidate Readiness uses Promotion / execution source / validation source criteria, turnover / cost shows estimation status, and Backtest split-period wording no longer implies formal OOS validation |
-| Backtest Real-Money Stage Boundary V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-real-money-stage-boundary-v1/`; Backtest Real-Money now treats probation / monitoring / deployment as later-stage concerns and shows `Next Validation Focus` / `Execution Preview` without storage / calculation / persistence expansion |
-| Real-Money Promotion Route Absorption V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/real-money-promotion-route-absorption-v1/`; `Shortlist` is no longer shown as a peer validation item and is now displayed as `Promotion Suggested Route` without storage / calculation changes |
-| Backtest Analysis UX Checkpoint V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`; Runtime payload collapse, checkpoint-based Latest Backtest Run, Data Trust visual summary, Next Action handoff, and legacy 4/5-step wording cleanup |
-| Phase 13 First-Cycle Hardening Closeout | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase13-hardening-cycle-closeout.md`; first hardening cycle closed as an investability evidence workflow, not broker-grade trading readiness |
-| Phase 13 Integrated QA / Final Closeout | Complete | `.aiworkspace/note/finance/tasks/active/phase13-integrated-qa-final-closeout/`; final QA passed and Phase 13 completion recorded |
-| Phase 13 Residual Risk / Carry-Forward V1 | Complete | `.aiworkspace/note/finance/tasks/active/phase13-residual-risk-carry-forward-v1/`; current limitations, second-cycle candidates, explicit out-of-scope items, and safe / unsafe final closeout wording triaged |
-| Phase 13 Docs / Runbook Alignment V1 | Complete | `.aiworkspace/note/finance/tasks/active/phase13-docs-runbook-alignment-v1/`; durable data / flow / glossary docs aligned with Final Decision and storage boundary, Phase Closeout QA runbook added |
-| Phase 13 Storage / Data Boundary Audit V1 | Complete | `.aiworkspace/note/finance/tasks/active/phase13-storage-data-boundary-audit-v1/`; DB-backed data / workflow JSONL compact evidence / saved setup / generated artifact / selected monitoring read-only boundary audit complete, no immediate code defect found |
-| Phase 13 Gate Validation QA Matrix V1 | Complete | `.aiworkspace/note/finance/tasks/active/phase13-gate-validation-qa-matrix-v1/`; Practical Validation / Final Review / Selected Dashboard gate severity matrix complete, no immediate code defect found, service contracts passed 126 tests |
-| Phase 13 Cycle Inventory V1 | Complete | `.aiworkspace/note/finance/tasks/active/phase13-cycle-inventory-v1/`; Phase 8~12 weakness / mitigation / evidence surface / service contract / residual risk inventory 정리 |
-| Phase 13 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase13-board-open/`; Phase 13 official board, task split, immediate next task, storage / trading automation boundary 정리 |
-| Phase 12 Selected Monitoring / Recheck Operations | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase12-selected-monitoring-recheck-operations.md`; selected monitoring / recheck operations now expose read-only readiness, freshness, provider, comparison, signal, allocation boundary, and source consistency evidence |
-| Phase 12 Integrated QA Closeout | Complete | `.aiworkspace/note/finance/tasks/active/phase12-integrated-qa-closeout/`; compile, full service contracts, boundary, hygiene, diff, docs, and storage boundary checks passed |
-| Decision Dossier Continuity Operations V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/decision-dossier-continuity-operations-v1/`; Decision Dossier, Continuity, Timeline, and Review Signals now expose the same Final Decision source contract and keep session evidence read-only |
-| Allocation Drift Evidence Boundary V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/allocation-drift-evidence-boundary-v1/`; Actual Allocation now has a read-only evidence boundary and explicitly disables input / alert persistence, monitoring log auto-write, account / broker integration, orders, and auto rebalance |
-| Recheck Comparison Review Signal Policy V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/recheck-comparison-review-signal-policy-v1/`; Review Signals now derives performance threshold rows from Recheck Comparison and includes preflight / provider routes in the read-only signal board |
-| Selected Provider Evidence Staleness Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-provider-evidence-staleness-contract-v1/`; Selected Dashboard provider evidence now downgrades stale / partial / missing provider evidence under a read-only selected monitoring contract |
-| Recheck Readiness / Freshness Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/recheck-readiness-freshness-contract-v1/`; Selected Dashboard now combines selected replay contract readiness and DB symbol freshness into read-only recheck operations preflight |
-| Selected Monitoring Source Map V1 | Complete | `.aiworkspace/note/finance/tasks/active/selected-monitoring-source-map-v1/`; Selected Dashboard source map confirmed existing read-only evidence and identified replay contract / readiness-freshness / review signal policy gaps |
-| Phase 12 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase12-board-open/`; Phase 12 official board, task split, immediate next task, storage boundary 정리 |
-| Phase 11 Portfolio Construction Risk Controls | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase11-portfolio-construction-risk-controls.md`; construction risk / risk contribution / component role and weight evidence now feeds selected-route gate policy |
-| Phase 11 Integrated QA Closeout | Complete | `.aiworkspace/note/finance/tasks/active/phase11-integrated-qa-closeout/`; compile, full service contracts, boundary, hygiene, diff, docs, and storage boundary checks passed |
-| Construction Risk Gate Policy V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/construction-risk-gate-policy-v1/`; Construction Risk / Risk Contribution / Component Role / Weight audit routes and non-PASS row criteria now feed Final Review selected-route gate policy |
-| Component Role / Weight Discipline V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/component-role-weight-discipline-v1/`; read-only Component Role / Weight Audit V1 now covers explicit role source coverage, profile-aware weight discipline, role concentration, profile intent fit, weight rationale coverage, and storage boundary |
-| Correlation / Risk Contribution Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/correlation-risk-contribution-contract-v1/`; read-only Risk Contribution Audit V1 now covers component return matrix coverage, pairwise correlation, max risk contribution proxy, drop-one dependency, and storage boundary |
-| Concentration / Overlap / Exposure Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/concentration-overlap-exposure-contract-v1/`; read-only Construction Risk Audit V1 now covers component concentration, provider look-through coverage, top holding, holdings overlap, dominant asset, and unknown exposure |
-| Construction Risk Source Map V1 | Complete | `.aiworkspace/note/finance/tasks/active/construction-risk-source-map-v1/`; current Practical Validation / provider look-through / Robustness Lab / Final Review gate source map completed and handed off to 11-2 |
-| Phase 11 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase11-board-open/`; Phase 11 official board, task split, immediate next task, storage boundary 정리 |
-| Phase 10 Walk-forward / OOS / Regime Validation | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase10-walkforward-oos-regime-validation.md`; walk-forward / OOS / regime evidence now feeds Validation Efficacy and selected-route gate policy |
-| Phase 10 Integrated QA Closeout | Complete | `.aiworkspace/note/finance/tasks/active/phase10-integrated-qa-closeout/`; compile, full service contracts, boundary, hygiene, diff, docs, storage boundary checks passed |
-| Validation Efficacy Gate Policy Refinement V2 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-refinement-v2/`; walk-forward / OOS / regime row-level gaps now surface in Final Review selected-route gate evidence |
-| Regime Split Validation V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/regime-split-validation-v1/`; DB-backed FRED macro history regime buckets and Validation Efficacy Audit row added |
-| OOS Holdout Validation Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/oos-holdout-validation-contract-v1/`; benchmark-aligned in-sample / out-sample holdout evidence and Validation Efficacy Audit row added |
-| Walk-forward Split Contract V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/walkforward-split-contract-v1/`; benchmark-aligned walk-forward temporal validation helper and Validation Efficacy Audit row added |
-| Walk-forward / OOS Source Map V1 | Complete | `.aiworkspace/note/finance/tasks/active/walkforward-oos-source-map-v1/`; Practical Validation curve / runtime OOS / Robustness Lab / Final Review gate source map and gap audit completed |
-| Phase 10 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase10-board-open/`; Phase 10 official board, task split, immediate next task, storage boundary 정리 |
-| Phase 9 Cost / Slippage / Liquidity Realism | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase9-cost-slippage-liquidity-realism.md`; cost / slippage / turnover / liquidity / capacity evidence를 Backtest Realism과 selected-route 판단에 연결 |
-| Backtest Realism Gate Policy Refinement V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-refinement-v1/`; Backtest Realism row-level gaps를 Final Review selected-route gate evidence에 연결 |
-| Cost Slippage Sensitivity Audit V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/cost-slippage-sensitivity-audit-v1/`; Backtest Realism Audit `cost_slippage_sensitivity_contract_v1`과 별도 sensitivity row 연결 |
-| Liquidity Capacity Evidence V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/liquidity-capacity-evidence-v1/`; provider operability context의 compact capacity metrics와 Backtest Realism Audit `liquidity_capacity_contract_v1` 연결 |
-| Net Cost Curve Application V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/net-cost-curve-application-v1/`; gross / net / estimated cost curve proof를 runtime metadata, source snapshot, Backtest Realism Audit row로 연결 |
-| Turnover Rebalance Evidence V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/turnover-rebalance-evidence-v1/`; holdings-derived turnover estimate와 cadence-only evidence를 Backtest Realism Audit에서 분리 |
-| Cost Model Source Contract Review V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/cost-model-source-contract-review-v1/`; runtime cost application proof를 compact metadata / source snapshot / Backtest Realism Audit contract로 연결 |
-| Phase 9 Board Open | Implementation complete | `.aiworkspace/note/finance/tasks/active/phase9-board-open/`; Phase 9 official board, task split, immediate next task 정리 |
-| Phase 8 Investability Data Evidence Expansion | Complete | Closeout summary: `.aiworkspace/note/finance/phases/done/phase8-investability-data-evidence-expansion.md`; lifecycle / survivorship / historical membership evidence를 DB-backed로 강화 |
-| Lifecycle Audit Scoring V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/lifecycle-audit-scoring-v1/`; Data Coverage Audit lifecycle evidence를 current snapshot / SEC identity / computed partial / actual coverage / delisting actual로 분리해 metrics와 row evidence에 표시 |
-| Computed Snapshot Lifecycle V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/computed-snapshot-lifecycle-v1/`; existing current snapshot lifecycle rows를 repeated observation window로 요약하되 partial evidence로 저장하고, Data Coverage Audit은 actual coverage row만 survivorship PASS 후보로 보도록 보수화 |
-| SEC CIK Exchange Crosscheck V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-cik-exchange-crosscheck-v1/`; SEC `company_tickers_exchange.json` current CIK / ticker / exchange association을 lifecycle `listing_observed` partial evidence로 적재하는 DB collector / job wrapper 추가 |
-| Symbol Directory Snapshot Ingestion V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/symbol-directory-snapshot-ingestion-v1/`; Nasdaq public Symbol Directory current files를 `nyse_symbol_lifecycle` `listing_observed` partial evidence로 적재하는 DB collector / job wrapper 추가 |
-| Historical Membership Source Review V1 | Complete | `.aiworkspace/note/finance/tasks/active/historical-membership-source-review-v1/`; Nasdaq Daily List는 강하지만 구독 / 승인형이라 parking lot으로 두고, 다음 구현은 Nasdaq public Symbol Directory current snapshot ingestion으로 결정 |
-| Symbol Lifecycle Event Fields V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/symbol-lifecycle-event-fields-v1/`; `nyse_symbol_lifecycle`에 event semantics를 추가하고 current listing row는 `listing_observed`, SEC Form 25 row는 `delisting` event로 저장 |
-| SEC Form 25 Ingestion UI V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-form25-ingestion-ui-v1/`; `Workspace > Ingestion`에서 SEC Form 25 delisting evidence collector를 수동 실행하는 UI 연결 추가 |
-| SEC Form 25 Delisting Backfill V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-form25-delisting-backfill-v1/`; SEC EDGAR Form 25 filing metadata를 `nyse_symbol_lifecycle` delisting_feed evidence로 적재하는 collector / ingestion job wrapper 추가 |
-| Historical Universe Survivorship V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/historical-universe-survivorship-v1/`; `nyse_symbol_lifecycle` schema / loader / Data Coverage Audit 연결을 추가해 historical lifecycle row가 requested period를 덮을 때만 survivorship PASS 처리 |
-| Integrated Investability Gate QA V1 | Complete | `.aiworkspace/note/finance/tasks/active/integrated-investability-gate-qa-v1/`; 세 audit과 기존 provider / robustness / paper / final evidence gate의 ready / review / blocker 조합을 service contract로 고정 |
-| Data Coverage Gate Policy Link V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-coverage-gate-policy-link-v1/`; Data Coverage Audit route를 profile-aware gate policy에 연결했다. 최신 Final Review selection policy에서는 핵심 `NEEDS_INPUT` / `BLOCKED`가 selected-route blocker이고, 기본 `REVIEW`는 open review item으로 이어진다 |
-| Data Coverage Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-coverage-hardening-v1/`; DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 read-only Data Coverage Audit으로 표시 |
-| Backtest Realism Gate Policy Link V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-link-v1/`; Backtest Realism Audit route를 profile-aware gate policy에 연결했다. 최신 Final Review selection policy에서는 핵심 `NEEDS_INPUT` / `BLOCKED`와 명시적 gross/net-cost gap이 selected-route blocker이고, 기본 `REVIEW`는 open review item으로 이어진다 |
-| Backtest Realism Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-hardening-v1/`; Practical Validation / Final Review가 기존 result metadata와 compact evidence를 읽어 비용, turnover, liquidity, net performance policy, rebalance timing, tax/account scope, execution boundary를 read-only audit으로 표시 |
-| Validation Efficacy Gate Policy Link V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-link-v1/`; Validation Efficacy Audit route를 profile-aware gate policy에 연결했다. 최신 Final Review selection policy에서는 핵심 `NEEDS_INPUT` / `BLOCKED`가 selected-route blocker이고, 기본 `REVIEW`는 open review item으로 이어진다 |
-| Validation Efficacy Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-efficacy-hardening-v1/`; Practical Validation / Final Review가 기존 compact evidence를 읽어 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, storage boundary gap을 read-only audit으로 표시 |
-| Practical Validation V2 P3 Closeout QA | Complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-closeout-qa/`; selected monitoring read models 통합 QA와 저장 경계 확인 완료 |
-| Practical Validation V2 P3 Selected Provider Evidence | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-selected-provider-evidence/`; Selected Dashboard가 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN` / stale / partial coverage를 표시 |
-| Practical Validation V2 P3 Symbol Freshness | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-symbol-freshness/`; Selected Dashboard Performance Recheck 전 ticker / benchmark별 DB price latest date와 stale / missing 상태를 read-only로 표시 |
-| Practical Validation V2 P3 Recheck Readiness | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-readiness/`; Selected Dashboard Performance Recheck 실행 전 DB latest market date / replay contract / 기간 기본값을 read-only로 확인 |
-| Practical Validation V2 P3 Recheck Comparison | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-comparison/`; 최신 Performance Recheck 결과를 Final Review baseline과 read-only로 비교하고, 미실행 / 오류 / 약화 신호를 pass로 숨기지 않음 |
-| Structured Waiver Policy V1 | Complete | `.aiworkspace/note/finance/tasks/active/structured-waiver-policy-v1/`, `.aiworkspace/note/finance/docs/flows/STRUCTURED_WAIVER_POLICY.md`; `BLOCK`은 waiver 불가, future waiver는 일부 `REVIEW_REQUIRED` gap에만 구조화 조건으로 제한 |
-| Practical Validation V2 P3 Continuity Check | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-continuity-check/`; Final Review selected row가 Selected Dashboard monitoring에 필요한 evidence / component / trigger / timeline 경계를 갖췄는지 read-only로 표시 |
-| Investability Decision Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`, closeout summary `.aiworkspace/note/finance/phases/done/investability-decision-foundation.md`; validation gate, storage governance, provenance, look-through, robustness, selected monitoring, decision dossier 완료 |
-| Investability Foundation Closeout | Complete | `.aiworkspace/note/finance/tasks/active/investability-decision-foundation-closeout/`; 계획된 구현 track 완료 처리, carry-forward decision을 structured waiver / Practical Validation V2 P2 closeout로 분리 |
-| Decision Dossier Report V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/decision-dossier-report-v1/`; Final Review와 Selected Dashboard에서 저장된 최종 판단을 read-only markdown dossier로 표시 / 다운로드 |
-| Selected Monitoring Timeline V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-monitoring-timeline-v1/`; Selected Dashboard에 read-only Timeline tab을 추가해 selection / evidence gate / recheck / drift / trigger preview를 자동 저장 없이 시간순으로 표시 |
-| Robustness Lab V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/robustness-lab-v1/`; stress / rolling / sensitivity / overfit evidence를 compact board로 묶어 Practical Validation과 Final Review에 표시 |
-| Look-through Exposure Board V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/look-through-exposure-board-v1/`; holdings / exposure snapshot을 compact board로 요약해 Practical Validation과 Final Review에 표시 |
-| Data Provenance Coverage V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-provenance-coverage-v1/`; provider / macro context에 compact provenance / freshness read model과 stale REVIEW policy 추가 |
-| Storage Governance Audit V1 | Complete | `.aiworkspace/note/finance/tasks/active/storage-governance-audit-v1/`; JSONL write 지점 전수 감사와 `docs/data/STORAGE_GOVERNANCE.md` 기준선 추가 |
-| Validation Gate Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`; Final Review profile-aware gate policy matrix / compact gate snapshot / selected-route policy gate 구현 |
-| UI Engine Boundary Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료 |
-| UI Engine Boundary Cleanup | Complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`; Task 6~9 완료, `app.services/app.runtime -> app.web` import hard fail 적용 |
-| Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
-| AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
-| Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
-| Product Research Skill Stage 1 | Complete | `.aiworkspace/note/finance/tasks/active/product-research-skill-stage1/`; project audit / benchmark research / feature opportunity 스킬 초안과 global mirror 검증 완료 |
-| Product Research Output Contract | Complete | `.aiworkspace/note/finance/tasks/active/product-research-output-contract/`; 실제 리서치 산출물 위치를 `.aiworkspace/note/finance/researches/active/`로 확정 |
-| Product Research Plugin Stage 5 | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-stage5/`; product research orchestration skill과 bundle bootstrap/check helper를 1차로 plugin workflow에 고정 |
-| Product Research Plugin Split | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-split/`; product research skill과 helper를 별도 `quant-finance-product-research` plugin으로 분리 완료 |
-| Investability Evidence Packet V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`; Final Review evidence packet / selected-route gate 1차 구현. 후속 gate policy는 `investability-decision-foundation`에서 관리 |
-| Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
-| Practical Validation V2 | P3 closeout complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`; P2 provider / macro / look-through / robustness evidence closeout 완료, P3 selected monitoring slice와 closeout QA 완료 |
-| Overview Market Intelligence Productionization | Production baseline complete | `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`; 2차 refresh/diagnostics, 3차 earnings lifecycle, 4차 visuals/calendar UX 완료 |
-| Overview Market Intelligence Ops Hardening | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-ops-hardening/`; Data Health 탭, Overview refresh run history 기록, DB freshness / local run history ops status 완료 |
-| Overview Market Intelligence Macro Calendar | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-macro-calendar/`; BLS/BEA official macro release calendar collector, Events Macro filter, Data Health target 완료 |
-| Overview Market Intelligence BLS ICS Import | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-bls-ics-import/`; BLS backend 403 시 공식 `.ics` 파일 업로드/import fallback으로 CPI / PPI / Jobs calendar row 저장 |
-| Overview Market Intelligence Earnings Quality | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-earnings-quality-hardening/`; earnings missing/failure symbol diagnostics, reason counts, Events Quality Action 표시 완료 |
-| Overview Market Intelligence Events UX | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`; Events Focus view, Importance filter, event type stacked calendar, Days Until / Importance / Focus read model 완료 |
-| Overview Events UX Redesign | Complete | `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`; Events 탭을 source lane, summary strip, Agenda / Calendar / Quality / Raw 구조로 개편 완료 |
-| Overview Market Session Banner | Complete | `.aiworkspace/note/finance/tasks/active/overview-market-session-banner/`; Overview 상단에서 NYSE 거래일 Open / Close ET / KST, 휴장 사유, 다음 세션 시간을 표시 |
-| Overview Market Intelligence Market Movers Ops | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`; daily snapshot coverage %, SP500/TOP1000/TOP2000 DB status auto-check, refresh guidance / snapshot diagnostics 완료 |
-| Overview Market Intelligence Sector / Industry Trend | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-sector-leadership-trend/`; S&P 500 / Top1000 / Top2000 coverage, Daily / Weekly / Monthly latest ranking + trend chart 완료 |
-| Overview Scheduled Refresh Automation | Complete | `.aiworkspace/note/finance/tasks/active/overview-scheduled-refresh-automation/`; 브라우저 없는 run-once orchestrator, Data Health auto/manual/failure-streak 표시, quote gap issue persistence 완료 |
-| Overview Browser Auto Refresh | Complete | `.aiworkspace/note/finance/tasks/active/overview-browser-auto-refresh/`; Overview를 열어둔 동안만 `browser_safe` S&P 500 Daily snapshot check를 5분 cadence 조건으로 실행하는 Market Movers `데이터 갱신` UI / heartbeat 작업 완료 |
-| Overview Market Movers Second Pass | Active | `.aiworkspace/note/finance/tasks/active/overview-market-movers-second-pass/`; 선택 coverage 기반 browser auto refresh, volume rank, sector-colored bars, previous-period momentum context, Why It Moved manual investigation board 구현. Why It Moved는 Return / Volume rank ticker를 선택해 한글화된 movement summary header, metadata status strip, button-triggered compact news / Korean news / SEC metadata, `조사 단서`의 뉴스 / 한국어 뉴스 / SEC / collapsed 외부 검색을 session-only로 렌더링한다. 한국어 뉴스는 keyless Google News KR RSS metadata/snippet을 `제목 / 출처 / 게시 시각 / 단서 / 열기`로 표시하며 Naver API key나 article scraping이 필요하지 않다. SEC 공시 lane은 V1.7 / V1.8 selected-filing preview / `공시 Digest`를 user review 후 rollback했고, 현재는 compact SEC metadata table(`양식 / 공시일 / 제목 / 열기`)과 clickable official SEC link만 유지한다. AI 요약 / 기사·filing 본문 저장 / 자동 catalyst 판정 / DB schema / registry·saved JSONL 저장은 하지 않음. 후속 후보는 10-Q / 10-K 또는 SEC XBRL/companyfacts 기반 financial-statement preview와 DB-backed V2 retention / freshness / replay decision이다 |
-| Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
+| Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
+| Operations Overview IA / Operations Console V2-V5 | Complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health primary lanes, archive / recovery labels for Backtest Runs and Candidate Library, and disabled live trading boundary copy. |
+| Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
+| Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
+| Overview Market Movers Second Pass / Why It Moved | Current V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |
+| Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 
-## Practical Validation V2 Roadmap
+## Completed Foundations
 
-| Step | Goal | Status |
+| Foundation | Status | Closeout |
 |---|---|---|
-| P0 | 최신 runtime 재검증 보강 | Completed before this doc rebuild |
-| P1 | Practical Validation V2 기본 진단 구조 | Completed before this doc rebuild |
-| P2 | proxy / NOT_RUN 중심 진단을 provider / macro / stress evidence로 정상화 | Completed |
-| P3 | Final Review handoff QA, selected monitoring 연결 정리 | Completed; continuity check / recheck comparison / recheck readiness / symbol freshness / selected provider evidence / closeout QA complete |
+| UI Engine Boundary Foundation / Cleanup | Complete | Service/runtime boundary and `app.services/app.runtime -> app.web` import hard-fail lint baseline are in place. |
+| Investability Decision Foundation | Complete | Validation gate, storage governance, data provenance, look-through, robustness, selected monitoring, decision dossier baseline complete. |
+| Phase 8 Data Evidence Expansion | Complete | Provider / macro / provenance / lifecycle evidence added for investability workflow. |
+| Phase 9 Cost / Slippage / Liquidity Realism | Complete | Cost model, turnover, net-cost curve, liquidity / capacity, cost / slippage sensitivity evidence added. |
+| Phase 10 Walk-forward / OOS / Regime Validation | Complete | Temporal validation, holdout, macro regime evidence added and connected to selection evidence. |
+| Phase 11 Portfolio Construction Risk Controls | Complete | Concentration / overlap / exposure, risk contribution, component role / weight evidence added. |
+| Phase 12 Selected Monitoring / Recheck Operations | Complete | Recheck readiness, provider evidence staleness, review signals, allocation boundary, decision dossier continuity complete. |
+| Phase 13 First-Cycle Hardening Closeout | Complete | Integrated QA, gate matrix, storage audit, docs/runbook alignment, residual risk carry-forward complete. |
+| Practical Validation V2 P2 / P3 | Closeout complete | Provider / macro / look-through / robustness normalization and selected monitoring handoff QA complete. |
+| Documentation / AI Workspace Rebuild | Practical closeout | `.aiworkspace/note/finance` and repo-local skill/plugin source are canonical. |
 
-## P2 Scope Reminder
+## Current Documentation State
 
-P2의 핵심은 provider connector 자체가 아니라,
-12개 Practical Validation 진단 중 미완성 진단을 정상 검증 가능한 상태로 만드는 것이다.
+`tasks/active/` and `phases/active/` still contain retained completed boards from prior worktrees.
+For now, read them as detailed work records unless the current roadmap or root handoff explicitly names them as active.
 
-P2에서 정상화하는 주요 진단:
+Current active phase:
 
-| No | Diagnostic |
-|---:|---|
-| 2 | Asset Allocation Fit |
-| 3 | Concentration / Overlap / Exposure |
-| 5 | Regime / Macro Suitability |
-| 6 | Sentiment / Risk-On-Off Overlay |
-| 7 | Stress / Scenario Diagnostics |
-| 9 | Leveraged / Inverse ETF Suitability |
-| 10 | Operability / Cost / Liquidity |
-| 11 | Robustness / Sensitivity / Overfit |
+- none
 
-## Phase / Task Model
+Current active task:
 
-앞으로 큰 작업은 두 층으로 관리한다.
+- `post-merge-docs-alignment-20260607`
 
-| Layer | Location | Meaning |
-|---|---|---|
-| Phase | `.aiworkspace/note/finance/phases/active/<phase>/` | 여러 task를 묶는 상위 방향, 설계, 통합 단위 |
-| Task | `.aiworkspace/note/finance/tasks/active/<task>/` | 실제 구현, 문서 정리, 조사, QA를 수행하는 실행 단위 |
+Retained completed boards in `phases/active/` should not be treated as newly open phase work.
+Their closeout summaries live under `.aiworkspace/note/finance/phases/done/` when available.
 
-현재 Practical Validation V2는 phase가 아니라 별도 active task로 관리한다.
-
-## Product Research Model
-
-제품 방향 리서치는 실행 task와 분리해 관리한다.
-
-| Layer | Location | Meaning |
-|---|---|---|
-| Research | `.aiworkspace/note/finance/researches/active/<research-id>/` | 현재 제품 분석, 외부 벤치마킹, 기능 후보, 추천안 산출물 |
-| Task | `.aiworkspace/note/finance/tasks/active/<task>/` | 리서치 workflow / skill 자체를 만들거나 수정하는 실행 작업 |
-| Docs | `.aiworkspace/note/finance/docs/` | 사용자 승인 후 장기 방향으로 승격된 지식 |
-
-반복 product research run은 `quant-finance-product-research` plugin의 `finance-product-research-workflow`가 전체 순서를 조정한다.
-새 research bundle은 `.aiworkspace/plugins/quant-finance-product-research/scripts/bootstrap_product_research_bundle.py`로 만들 수 있고, 산출물 구조는 `check_product_research_bundle.py`로 검증한다.
+Untracked legacy `.note/` exists locally after merge review. It is not the current canonical workspace path and should not be staged by default.
 
 ## Next Decisions
 
-- UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 9 is complete. `cost-model-source-contract-review-v1`, `turnover-rebalance-evidence-v1`, `net-cost-curve-application-v1`, `liquidity-capacity-evidence-v1`, `cost-slippage-sensitivity-audit-v1`, `backtest-realism-gate-policy-refinement-v1`, `phase9-integrated-qa-closeout`을 완료했다.
-- Phase 10 is complete. `walkforward-split-contract-v1`, `oos-holdout-validation-contract-v1`, `regime-split-validation-v1`, `validation-efficacy-gate-policy-refinement-v2`, and `phase10-integrated-qa-closeout` added benchmark-aligned temporal / holdout / macro regime evidence, connected non-PASS row-level gaps to Final Review selected-route gate evidence, and passed integrated QA.
-- Phase 11 is complete. `phase11-board-open`, `construction-risk-source-map-v1`, `concentration-overlap-exposure-contract-v1`, `correlation-risk-contribution-contract-v1`, `component-role-weight-discipline-v1`, `construction-risk-gate-policy-v1`, and `phase11-integrated-qa-closeout` added construction risk, risk contribution, and component role / weight evidence and connected non-PASS rows to Final Review selected-route gate policy.
-- Phase 12 is complete. `phase12-board-open` created the selected monitoring / recheck operations board, `selected-monitoring-source-map-v1` confirmed existing read-only dashboard evidence can seed implementation, `recheck-readiness-freshness-contract-v1` added read-only recheck operations preflight, `selected-provider-evidence-staleness-contract-v1` added stricter provider freshness / coverage policy, `recheck-comparison-review-signal-policy-v1` made Recheck Comparison the Review Signals performance threshold owner, `allocation-drift-evidence-boundary-v1` fixed Actual Allocation as manual / session-only evidence, `decision-dossier-continuity-operations-v1` added a shared selected decision source contract across Dossier / Continuity / Timeline / Review Signals, and `phase12-integrated-qa-closeout` passed compile / service contract / boundary / hygiene / diff / storage checks.
-- Phase 13 is complete. `phase13-board-open` created the first-cycle hardening closeout board, `phase13-cycle-inventory-v1` organized Phase 8~12 weaknesses, mitigations, evidence surfaces, service contracts, verification basis, and residual risks, `phase13-gate-validation-qa-matrix-v1` found no immediate gate / route / severity code defect with 126 service contracts passing, `phase13-storage-data-boundary-audit-v1` confirmed no immediate storage boundary drift or task-created registry / saved / generated artifact contamination, `phase13-docs-runbook-alignment-v1` aligned durable docs / runbooks with Final Decision and storage boundary, `phase13-residual-risk-carry-forward-v1` separated limitations / second-cycle candidates / explicit out-of-scope items, and `phase13-integrated-qa-final-closeout` closed the first hardening cycle.
-- Portfolio Validation closeout is complete. Practical Validation / Final Review source eligibility / replay display / step boundary docs are aligned; no active Practical Validation follow-up is open unless the user requests another pass.
-- Practical Validation Source Context V1 is complete. Step 1 now preserves and renders compact strategy / construction / monthly selection context for new handoffs, while older source rows remain immutable and rely on replay fallback if detailed selection history is needed.
-- No second-cycle phase is currently active. Use `phase13-residual-risk-carry-forward-v1/CARRY_FORWARD_MATRIX.md` and current product research notes as inputs only after the user approves a concrete next scope.
-- Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.
-- Overview Market Intelligence는 production baseline, ops hardening, macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics, Events UX redesign, Market Movers refresh/action UI, Sector / Industry trend 개편, scheduled refresh CLI, quote gap issue persistence, browser-session gated S&P 500 Daily auto refresh, NYSE market session banner까지 완료했다. 현재 후속 polish는 Market Movers second pass이며, 다음 후보는 official earnings IR source 확대와 OS scheduler 연결 여부 결정이다.
-- Practical Validation current의 과거 `Active / P2 QA` note는 현재 P3 closeout 완료 상태로 흡수됐다.
+| Candidate | Why It Matters | Requires Approval Before |
+|---|---|---|
+| Active task / phase archive cleanup | `tasks/active` and `phases/active` are too large to read as literal active state | Moving folders, deleting retained boards, or changing archive layout |
+| Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
+| Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |
+| Overview scheduler hardening | Browser-session refresh exists; OS scheduler / launchd production operation is a separate decision | Enabling unattended scheduled collection |
+| UI platform split | Streamlit is workable but complex UX may eventually benefit from API + React/Next.js | Any large frontend migration or service API expansion |
+| Second-cycle investability hardening | Phase 13 carry-forward material can seed another phase | Opening a new phase from carry-forward matrix |
+
+## Work Model
+
+| Layer | Location | Meaning |
+|---|---|---|
+| Phase | `.aiworkspace/note/finance/phases/active/<phase>/` | User-approved multi-task direction, design, integration owner |
+| Task | `.aiworkspace/note/finance/tasks/active/<task>/` | Actual implementation, docs, QA, investigation unit |
+| Research | `.aiworkspace/note/finance/researches/active/<research-id>/` | Product direction / benchmark / feature opportunity body |
+| Durable Docs | `.aiworkspace/note/finance/docs/` | Stable project knowledge after implementation or approved direction |
+| Root Handoff Logs | `.aiworkspace/note/finance/WORK_PROGRESS.md`, `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md` | 3~5 line milestone / decision pointers only |
+
+## Update Rules
+
+- Add detailed implementation history to task docs, not this roadmap.
+- Keep this roadmap focused on active state, completed foundations, and next decisions.
+- Update `PRODUCT_DIRECTION.md` when the product purpose or user-facing workflow changes.
+- Update `PROJECT_MAP.md` when ownership boundaries or entry points change.
+- Update architecture / flow / data docs when runtime, storage, or user workflow boundaries change.

@@ -1,11 +1,18 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-05
+Last Verified: 2026-06-07
 
 ## Project Summary
 
-`finance`는 MySQL-backed data ingestion, strategy backtest runtime, Streamlit finance console, Practical Validation workflow를 함께 가진 quant research workspace다.
+`finance`는 MySQL-backed data ingestion, market context dashboard, strategy backtest runtime, Practical Validation / Final Review evidence workflow, Operations Portfolio Monitoring을 함께 가진 quant research workspace다.
+
+현재 merged product map은 네 경계를 특히 중요하게 본다.
+
+- Data / macro / sentiment / futures는 `finance/data/* -> MySQL -> finance/loaders/*` 흐름을 유지한다.
+- Backtest strategy engine과 daily swing research lane은 `finance/*`, `app/runtime/*`, `app/services/*`가 소유하고, Streamlit UI는 payload / render / session state에 집중한다.
+- Practical Validation / Final Review / Portfolio Monitoring은 compact evidence와 read-only service model을 공유하되, approval / broker / auto rebalance 경계는 넘지 않는다.
+- Overview의 Sentiment, Futures Monitor, Why It Moved는 context / investigation surface이며 validation gate나 monitoring signal을 만들지 않는다.
 
 ## Top-Level Structure
 

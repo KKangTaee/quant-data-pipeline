@@ -1,11 +1,11 @@
 # Web Backtest UI Flow
 
 Status: Active
-Last Verified: 2026-06-03
+Last Verified: 2026-06-07
 
 ## 목적
 
-이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, candidate review, Pre-Live 운영 기록, portfolio proposal, final review, Operations-owned backtest history, Candidate Library, saved weighted portfolio 흐름을 설명한다.
+이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, Practical Validation, Final Review, Operations Console, Portfolio Monitoring, Operations-owned archive / recovery 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
 ## 핵심 파일
@@ -67,7 +67,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_final_review.py` | Final Review 화면 render. Decision Desk command center / flow rail, CNN / AAII market sentiment context overlay, Practical Validation Gate 통과 후보 Candidate Board priority / review queue, 선택 후보 Decision Cockpit, 모니터링 후보 선정 저장 checklist / route guide, 보류 / 거절 / 재검토 상태 안내, Evidence Appendix의 Validation / Robustness / Paper Observation / Investability Evidence Packet read-only 확인, saved final selection review ledger, Selected Dashboard handoff summary, Decision Dossier download |
 | `app/web/backtest_final_review_components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, investability packet 연결, final evidence / save readiness / decision row helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review selected 후보 pool과 사용자-created monitoring portfolio setup을 읽고, CNN / AAII market sentiment context overlay와 Active Portfolio Monitoring Scenario hero를 먼저 보여준다. Hero는 no portfolio / no strategy / configured-not-run / executed 상태를 구분하고 portfolio-wide value / P&L / return / CAGR / MDD / value curve / strategy performance / rebalance target을 표시한다. 그 아래 fixed-height portfolio card shelf / 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, compact selected strategy slot board / 설정 적용 / 제거, pending-stale scenario update, 선택한 1개 strategy의 lazy Monitoring Scenario / Monitoring Signals / evidence detail, 전환 비교, optional preflight, Actual Allocation / allocation evidence boundary, Decision Dossier / Audit을 보여준다 |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Portfolio Monitoring` 화면 render. Legacy file name은 Selected Portfolio Dashboard를 유지한다. Final Review selected 후보 pool과 사용자-created monitoring portfolio setup을 읽고, CNN / AAII market sentiment context overlay와 Active Portfolio Monitoring Scenario hero를 먼저 보여준다. Hero는 no portfolio / no strategy / configured-not-run / executed 상태를 구분하고 portfolio-wide value / P&L / return / CAGR / MDD / value curve / strategy performance / rebalance target을 표시한다. 그 아래 fixed-height portfolio card shelf / 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, compact selected strategy slot board / 설정 적용 / 제거, pending-stale scenario update, 선택한 1개 strategy의 lazy Monitoring Scenario / Monitoring Signals / evidence detail, 전환 비교, optional preflight, Actual Allocation / allocation evidence boundary, Decision Dossier / Audit을 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 dashboard portfolio / selected strategy pool / strategy slot / strategy comparison table, handoff table, component / continuity / source contract / recheck preflight / recheck readiness / symbol freshness / provider evidence / open issue follow-up / deployment readiness / recheck comparison / value / holding input / drift / alert preview / allocation boundary / filter helper. Evidence table은 service read model을 표시한다 |
 | `app/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환. Risk-On Momentum 5D는 DB price / statement / futures macro rows를 모아 `finance/swing.py`를 실행하고 generated backtest artifact를 만든다 |
 | `app/runtime/backtest_result_bundle.py` | Backtest runtime 결과를 UI가 읽는 summary / chart / metadata bundle로 변환 |
@@ -188,7 +188,7 @@ Ingestion / Data Trust
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. 현재 주 흐름에서는 Practical Validation의 Robustness Lab board가 stress / rolling / sensitivity / overfit 근거를 compact하게 요약하고 Final Review가 같은 board를 읽는다. Strategy-specific parameter perturbation이 아직 없는 항목은 follow-up으로 남기며 PASS로 간주하지 않는다.
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
-- Phase 36에서 모니터링 후보 선정 후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 selected strategy pool로 read-only로 읽고, 사용자가 만든 dashboard portfolio setup에 selected decision strategy slot을 저장한다. 사용자는 fixed-height portfolio card shelf에서 portfolio를 생성 / 선택하고, soft delete는 collapsed management 영역에서 처리한다. 같은 portfolio 안에서 같은 selected decision은 중복 추가하지 않는다. 각 selected 전략 slot은 사용자가 지정한 시작일 / 종료일 latest mode / 가상 투자금 / memo를 보존하고, scenario update와 분리된다. Monitoring scenario는 사용자가 `포트폴리오 시나리오 업데이트` 또는 strategy별 `모니터 시나리오 실행`을 누를 때 selected component contract를 다시 replay하며 종료일 latest mode에서는 DB 최신 시장일을 기준으로 한다. Portfolio-wide update는 pending / stale strategy만 기본 실행하고 `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. 화면은 선택된 portfolio command band와 compact strategy board 이후 portfolio-wide cockpit으로 현재 가치 / 손익 / 수익률 / CAGR / MDD / benchmark spread / value curve / 전략별 성과 / 리밸런싱 target을 먼저 보여준다. `Recheck Operations Preflight`는 Final Review embedded replay contract, Current Candidate Registry fallback, DB latest market date, replay period, symbol freshness를 하나의 route로 묶지만 사용자가 선택한 1개 strategy 상세의 하단 점검으로 배치한다. `Recheck Readiness`, `Symbol Freshness`, `Provider Evidence`도 scenario 해석 근거로 낮춘다. `Provider Evidence`는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 읽고 `NOT_RUN`, stale freshness, partial / bridge / proxy coverage, missing operability / holdings / exposure를 pass로 숨기지 않는다. `Continuity` check는 selected route, source contract, investability packet, component target, review trigger, monitoring timeline, Performance Recheck input, execution / storage boundary를 읽는다. `Timeline`은 Final Review selection, evidence gate, Monitoring Scenario, Actual Allocation drift, Review trigger preview를 시간순으로 보여주며 monitoring log를 자동 저장하지 않는다. `Review Signals`는 Recheck Comparison을 performance threshold policy owner로 삼아 CAGR / MDD / benchmark spread / component coverage / period coverage rows를 읽고, preflight / provider / drift 상태를 계속 관찰 / 보강 필요 / 대체 검토 성격으로 번역한다. `Decision Dossier`는 Final Decision row와 optional session timeline의 source contract consistency를 markdown에 표시한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. `Allocation evidence boundary`는 입력 / alert 저장, monitoring log auto-write, account / broker 연결, 주문, 자동 리밸런싱이 모두 꺼져 있음을 표시한다. Live / Deployment Readiness는 마지막 optional preflight로만 남긴다.
+- Phase 36에서 모니터링 후보 선정 후 운영 확인은 `Backtest` 주 workflow가 아니라 현재 `Operations > Portfolio Monitoring`으로 분리했다. 이 화면은 Final Review selected row를 selected strategy pool로 read-only로 읽고, 사용자가 만든 dashboard portfolio setup에 selected decision strategy slot을 저장한다. 사용자는 fixed-height portfolio card shelf에서 portfolio를 생성 / 선택하고, soft delete는 collapsed management 영역에서 처리한다. 같은 portfolio 안에서 같은 selected decision은 중복 추가하지 않는다. 각 selected 전략 slot은 사용자가 지정한 시작일 / 종료일 latest mode / 가상 투자금 / memo를 보존하고, scenario update와 분리된다. Monitoring scenario는 사용자가 `포트폴리오 시나리오 업데이트` 또는 strategy별 `모니터 시나리오 실행`을 누를 때 selected component contract를 다시 replay하며 종료일 latest mode에서는 DB 최신 시장일을 기준으로 한다. Portfolio-wide update는 pending / stale strategy만 기본 실행하고 `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. 화면은 선택된 portfolio command band와 compact strategy board 이후 portfolio-wide cockpit으로 현재 가치 / 손익 / 수익률 / CAGR / MDD / benchmark spread / value curve / 전략별 성과 / 리밸런싱 target을 먼저 보여준다. `Recheck Operations Preflight`는 Final Review embedded replay contract, Current Candidate Registry fallback, DB latest market date, replay period, symbol freshness를 하나의 route로 묶지만 사용자가 선택한 1개 strategy 상세의 하단 점검으로 배치한다. `Recheck Readiness`, `Symbol Freshness`, `Provider Evidence`도 scenario 해석 근거로 낮춘다. `Provider Evidence`는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 읽고 `NOT_RUN`, stale freshness, partial / bridge / proxy coverage, missing operability / holdings / exposure를 pass로 숨기지 않는다. `Continuity` check는 selected route, source contract, investability packet, component target, review trigger, monitoring timeline, Performance Recheck input, execution / storage boundary를 읽는다. `Timeline`은 Final Review selection, evidence gate, Monitoring Scenario, Actual Allocation drift, Review trigger preview를 시간순으로 보여주며 monitoring log를 자동 저장하지 않는다. `Review Signals`는 Recheck Comparison을 performance threshold policy owner로 삼아 CAGR / MDD / benchmark spread / component coverage / period coverage rows를 읽고, preflight / provider / drift 상태를 계속 관찰 / 보강 필요 / 대체 검토 성격으로 번역한다. `Decision Dossier`는 Final Decision row와 optional session timeline의 source contract consistency를 markdown에 표시한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. `Allocation evidence boundary`는 입력 / alert 저장, monitoring log auto-write, account / broker 연결, 주문, 자동 리밸런싱이 모두 꺼져 있음을 표시한다. Live / Deployment Readiness는 마지막 optional preflight로만 남긴다.
 - Practical Validation P2 provider data는 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 먼저 수집할 수 있다. `Provider Source Map` tab은 `nyse_etf` / `nyse_asset_profile` 기반으로 ETF별 공식 endpoint와 parser mapping을 검증해 저장한다. `Delisting Evidence` tab은 SEC Form 25 / 25-NSE filing metadata를 `nyse_symbol_lifecycle` delisting evidence로 저장해 Data Coverage Audit의 survivorship / delisting control 근거를 보강한다. 이후 Practical Validation 화면은 loader / provider context / lifecycle summary를 읽어 12개 진단과 audit의 actual / proxy / `NOT_RUN` 상태와 Look-through Exposure Board를 표시한다. 화면 안의 Provider Data Gaps에서도 현재 source에 부족한 provider snapshot을 ETF별로 확인하고, source map discovery와 수집 가능한 항목은 일괄 보강할 수 있다.
 
 현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
@@ -220,16 +220,18 @@ Ingestion / Data Trust
 | `저장된 Mix 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 replay / mix 검증 후 Practical Validation source로 연결한다 |
 | `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
 
-## Phase 36 Selected Portfolio Dashboard
+## Portfolio Monitoring / Selected Portfolio Dashboard
 
-Phase36은 Final Review 이후 새 판단 저장 단계를 추가하지 않는다.
+기존 구현 파일과 일부 legacy 문서는 `Selected Portfolio Dashboard` 이름을 사용한다.
+현재 사용자-facing navigation은 `Operations > Portfolio Monitoring`으로 읽는다.
+이 화면은 Final Review 이후 새 판단 저장 단계를 추가하지 않는다.
 Backtest workflow는 Final Review에서 끝나고,
 모니터링 후보 선정 후 확인은 Operations 화면에서 한다.
 
 ```text
 Backtest > Final Review
   -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl
-  -> Operations > Selected Portfolio Dashboard
+  -> Operations > Portfolio Monitoring
 ```
 
 구현 책임:
@@ -287,7 +289,7 @@ first-pass status:
 
 경계:
 
-- `Operations > Selected Portfolio Dashboard`는 live approval, broker order, auto rebalance가 아니다.
+- `Operations > Portfolio Monitoring`은 live approval, broker order, auto rebalance가 아니다.
 - Recheck Operations Preflight는 현재 decision row, Current Candidate Registry fallback, DB latest market date, price freshness metadata를 읽는 사전 점검이며 데이터 수집이나 저장을 실행하지 않는다.
 - Recheck Readiness는 현재 decision row, embedded replay contract, Current Candidate Registry fallback, DB latest market date를 읽는 사전 점검이며 데이터 수집이나 저장을 실행하지 않는다.
 - Symbol Freshness는 price DB metadata를 읽는 사전 점검이며 OHLCV 수집이나 저장을 실행하지 않는다.
@@ -403,7 +405,7 @@ Stage:
 - `Backtest Analysis`: 후보 생성
 - `Practical Validation`: Final Review로 넘길 검증 근거 생성
 - `Final Review`: Selected Dashboard 모니터링 후보 선정 저장 / 미통과 상태 안내
-- `Operations > Selected Portfolio Dashboard`: 모니터링 이후 재확인
+- `Operations > Portfolio Monitoring`: 모니터링 이후 재확인
 
 검증 체크포인트:
 

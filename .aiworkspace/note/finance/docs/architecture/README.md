@@ -1,7 +1,7 @@
 # Architecture Notes
 
 Status: Active
-Last Verified: 2026-05-13
+Last Verified: 2026-06-07
 
 ## Current Architecture
 
@@ -10,8 +10,9 @@ External Sources
   -> finance/data/*
   -> finance/data/db/*
   -> finance/loaders/*
-  -> finance/engine.py / strategy.py / transform.py
+  -> finance/engine.py / strategy.py / transform.py / swing.py
   -> app/runtime/*
+  -> app/services/*
   -> app/web Streamlit UI
 ```
 
@@ -24,13 +25,15 @@ External Sources
 | Loader | DB 데이터를 runtime / validation이 읽을 수 있는 형태로 변환 |
 | Strategy Runtime | 전략 계산, 리밸런싱, 성과 curve 생성 |
 | App Runtime | UI payload와 strategy runtime / registry / saved setup 연결 |
-| Streamlit UI | 사용자가 후보 생성, 검증, 최종 판단, 운영 대시보드를 사용하는 화면 |
+| App Services | Streamlit-free execution dispatch, read model, error normalization, evidence interpretation |
+| Streamlit UI | 사용자가 시장 context 확인, 후보 생성, 검증, 최종 판단, 운영 대시보드를 사용하는 화면 |
 
 ## Architecture Rules
 
 - UI에서 provider / FRED를 직접 fetch하지 않는다.
 - 수집은 `finance/data/*`와 `app/jobs/ingestion_jobs.py`를 통해 수행한다.
 - Practical Validation은 loader를 통해 provider context를 읽는다.
+- Overview Sentiment / Futures / Why It Moved도 context surface로 유지하고, validation gate나 trading signal로 승격하지 않는다.
 - JSONL registry에는 full raw provider response를 저장하지 않는다.
 - full holdings, macro series, raw-ish provider row는 DB에 둔다.
 - live approval, broker order, auto rebalance는 현재 architecture 범위 밖이다.

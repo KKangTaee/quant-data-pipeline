@@ -1,9 +1,10 @@
 # Active Finance Phases
 
 Status: Active
-Last Verified: 2026-06-01
+Last Verified: 2026-06-07
 
-이 폴더는 Main phase worktree가 관리하는 active phase 기록을 둔다.
+이 폴더는 Main phase worktree가 관리하는 phase 기록을 둔다.
+현재는 완료된 phase board도 handoff / trace 용도로 남아 있으므로, 이 폴더의 하위 폴더가 모두 현재 active phase라는 뜻은 아니다.
 
 권장 구조:
 
@@ -25,9 +26,16 @@ active 폴더에 남아 있는 완료 phase board는 과거 task 추적과 hando
 | Phase | Status | Notes |
 |---|---|---|
 | `none` | No active phase | 새 phase는 사용자가 구체적인 scope를 승인한 뒤 연다. |
-| `ui-engine-boundary-foundation` | Implementation complete | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입한 phase. audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료. |
+
+## Implementation-Complete Boards Retained In Active Folder
+
+| Phase | Status | Notes |
+|---|---|---|
+| `ui-engine-boundary-foundation` | Implementation complete | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입한 phase. |
 | `ui-engine-boundary-cleanup` | Complete | Task 6~9 cleanup 완료. boundary lint는 `app.services/app.runtime -> app.web` import hard fail 기준으로 유지. |
-| `investability-decision-foundation` | Implementation complete | Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 검토 가능한 decision workflow로 강화하기 위한 저장 / gate / 데이터 수집 / task 순서 기준선. 후속은 structured waiver policy 또는 Practical Validation V2 P2 closeout. |
+| `investability-decision-foundation` | Implementation complete | Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 검토 가능한 decision workflow로 강화한 기준선. |
+| `overview-market-intelligence` | Implementation complete / retained board | Overview Market Intelligence 초기 production baseline 이력 board. |
+| `overview-market-intelligence-productionization` | Production baseline complete / retained board | Overview refresh, diagnostics, earnings lifecycle, visuals/calendar UX productionization 이력 board. |
 
 ## Recently Closed Boards Retained In Active Folder
 

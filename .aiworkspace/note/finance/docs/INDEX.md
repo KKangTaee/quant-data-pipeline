@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-07
 
 ## Purpose
 
@@ -23,7 +23,8 @@ Last Verified: 2026-06-02
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current implementation focus: Overview Market Sentiment V1 3차 is implementation complete. CNN Fear & Greed / AAII market sentiment now appears as context-only overlay in `Backtest > Practical Validation`, `Backtest > Final Review`, and `Operations > Portfolio Monitoring`. It is not a Practical Validation PASS/BLOCKER, selected-route gate input, monitoring signal, live approval, broker order, account sync, registry rewrite, saved setup change, or auto rebalance.
+- Current active task: [Post-Merge Docs Alignment 2026-06-07](../tasks/active/post-merge-docs-alignment-20260607/PLAN.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
 
@@ -44,9 +45,9 @@ Last Verified: 2026-06-02
 
 | 위치 | 역할 |
 |---|---|
-| `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리하는 phase 단위 계획과 통합 기록 |
+| `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리하는 phase 단위 계획과 통합 기록. 현재 완료 board도 handoff 용도로 남아 있으므로 README와 roadmap의 active 표시를 함께 확인 |
 | `.aiworkspace/note/finance/phases/done/` | 완료된 phase의 closeout summary |
-| `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과 |
+| `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과. 과거 완료 task도 retained work record로 남아 있을 수 있으므로 현재 작업은 README와 roadmap에서 확인 |
 | `.aiworkspace/note/finance/researches/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `.aiworkspace/note/finance/agent/` | Codex 반복 실수, 교훈, 운영 팁 |
 | `.aiworkspace/note/finance/reports/backtests/` | 전략 탐색, 후보 근거, validation report |

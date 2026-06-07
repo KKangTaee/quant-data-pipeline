@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-06-01
+Last Verified: 2026-06-07
 
 ## Purpose
 
@@ -23,8 +23,8 @@ Last Verified: 2026-06-01
 
 | DB | Role |
 |---|---|
-| `finance_meta` | universe, asset profile, ETF provider snapshot, macro context |
-| `finance_price` | OHLCV / dividend / split price history |
+| `finance_meta` | universe, asset profile, ETF provider snapshot, macro / sentiment context, event calendar, market data issue |
+| `finance_price` | OHLCV / dividend / split price history, intraday snapshot, futures OHLCV |
 | `finance_fundamental` | fundamentals, financial statements, derived factors |
 
 ## Key Tables
@@ -69,6 +69,7 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 - provider field는 안정적이거나 완전하다고 가정하지 않는다.
 - official row가 partial이면 DB bridge와 병합하되 source origin을 숨기지 않는다.
 - Practical Validation JSONL에는 compact evidence와 reason만 저장하고, full provider raw data는 DB에 둔다.
+- CNN / AAII sentiment, futures macro thermometer, Why It Moved metadata는 market context / investigation evidence이며 자동 trade signal, validation approval, monitoring signal로 저장하지 않는다.
 - 새 JSONL registry는 기본적으로 만들지 않고, stage handoff나 명시적 reusable setup이 아닌 저장은 피한다.
 - static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
 - Selected Portfolio Dashboard read model은 monitoring log 자동 저장, live approval, broker order, account sync, auto rebalance를 수행하지 않는다. 사용자 dashboard portfolio setup은 saved state로만 관리한다.
