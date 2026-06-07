@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Operations Portfolio First Summary 2차
+- Opened `.aiworkspace/note/finance/tasks/active/operations-portfolio-first-summary-20260607/` for Operations Overview V2 2차.
+- Added a Portfolio Monitoring Status summary before the daily queue in `Operations > Operations Overview`.
+- Summary reads selected dashboard / monitoring portfolio setup for active portfolio, assigned strategy, stale / pending scenario metadata, blockers, missing references, open review, target snapshot, and next review.
+- Boundary remains read-only: no registry / saved JSONL rewrite, Portfolio Monitoring scenario execution change, archive data deletion, broker order, account sync, or auto rebalance.
+
 ### 2026-06-07 - Operations Cockpit Cleanup 1차
 - Opened `.aiworkspace/note/finance/tasks/active/operations-cockpit-cleanup-20260607/` for Operations Overview V2 1차 cleanup.
 - Removed user-facing archive / development-history artifacts from `Operations > Operations Overview`; Portfolio Monitoring and System / Data Health remain the only primary Operations lanes.

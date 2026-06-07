@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-07 - Operations Overview should start from portfolio status
+- User request:
+  - Operations Overview V2 2차 작업 진행을 요청함.
+- Interpreted goal:
+  - 운영 화면 첫 판단을 archive/history나 queue가 아니라 현재 monitoring portfolio 상태로 바꾼다.
+- Analysis result:
+  - Operations Overview는 Portfolio Monitoring의 session-only scenario 결과를 직접 소유하지 않는다. 따라서 2차 summary는 selected dashboard / monitoring portfolio setup에서 안정적으로 읽히는 active portfolio, assigned strategy, stale 또는 pending scenario metadata, blocked / missing / incomplete slot, open review, target snapshot, next review를 read-only로 요약한다.
+- Follow-up:
+  - 3차는 provider / scenario / data freshness evidence health mini strip으로 이어가는 것이 자연스럽다.
+
 ### 2026-06-07 - Operations Overview should read as cockpit, not cleanup history
 - User request:
   - Operations Overview V2 중 1차 작업 진행을 요청함.

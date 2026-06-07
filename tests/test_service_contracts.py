@@ -11383,6 +11383,120 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertIn("모니터링 후보", model["lanes"][0]["detail"])
         self.assertEqual(len(model["lanes"]), 2)
 
+    def test_operations_overview_model_adds_portfolio_first_summary(self) -> None:
+        from app.web.operations_overview import build_operations_overview_model
+
+        model = build_operations_overview_model(
+            selected_dashboard={
+                "summary": {
+                    "selected_decision_count": 3,
+                    "dashboard_row_count": 3,
+                    "status_counts": {"normal": 1, "watch": 1, "blocked": 1},
+                },
+                "portfolio_state": {
+                    "metrics": {
+                        "portfolio_count": 2,
+                        "assigned_strategy_reference_count": 3,
+                        "missing_reference_count": 1,
+                        "incomplete_strategy_slot_count": 1,
+                    },
+                    "portfolios": [
+                        {
+                            "portfolio_id": "p1",
+                            "name": "Core Monitor",
+                            "dashboard_status": "Needs Review",
+                            "strategy_rows": [
+                                {
+                                    "decision_id": "decision-1",
+                                    "scenario_status": "stale",
+                                    "latest_scenario_date": "2026-05-28",
+                                    "open_review_items": [{"Group": "provider"}],
+                                    "slot_input_complete": True,
+                                    "raw_decision": {
+                                        "selected_components": [
+                                            {
+                                                "title": "Risk-On Momentum",
+                                                "period_end": "2026-05-29",
+                                                "selection_history": [
+                                                    {
+                                                        "date": "2026-05-29",
+                                                        "selected_tickers": ["QQQ", "SPY"],
+                                                        "target_weights": [0.55, 0.45],
+                                                    }
+                                                ],
+                                                "replay_contract": {
+                                                    "settings_snapshot": {"rebalance_interval": 1}
+                                                },
+                                            }
+                                        ],
+                                    },
+                                },
+                                {
+                                    "decision_id": "decision-2",
+                                    "scenario_status": "current",
+                                    "latest_scenario_date": "2026-06-02",
+                                    "slot_input_complete": True,
+                                    "raw_decision": {
+                                        "open_review_items": [{"Group": "risk"}],
+                                        "selected_components": [
+                                            {
+                                                "title": "Quality Value",
+                                                "period_end": "2026-06-02",
+                                                "replay_contract": {
+                                                    "settings_snapshot": {"rebalance_interval": 1}
+                                                },
+                                            }
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            "portfolio_id": "p2",
+                            "name": "Satellite Monitor",
+                            "dashboard_status": "Needs Review",
+                            "strategy_rows": [
+                                {
+                                    "decision_id": "decision-3",
+                                    "slot_input_complete": False,
+                                    "slot_blockers": ["start date required"],
+                                }
+                            ],
+                        },
+                    ],
+                },
+            },
+            run_history=[],
+            candidate_records=[],
+        )
+
+        summary = model["portfolio_summary"]
+        self.assertEqual(summary["schema_version"], "operations_portfolio_summary_v1")
+        self.assertEqual(summary["status"], "Blocked")
+        self.assertEqual(summary["tone"], "danger")
+        self.assertEqual(summary["active_portfolio_count"], 2)
+        self.assertEqual(summary["assigned_strategy_count"], 3)
+        self.assertEqual(summary["stale_scenario_count"], 1)
+        self.assertEqual(summary["blocked_count"], 1)
+        self.assertEqual(summary["missing_reference_count"], 1)
+        self.assertEqual(summary["incomplete_strategy_slot_count"], 1)
+        self.assertEqual(summary["open_review_item_count"], 2)
+        self.assertEqual(summary["latest_scenario_date"], "2026-06-02")
+        self.assertEqual(summary["target_snapshot_date"], "2026-06-02")
+        self.assertEqual(summary["next_review_date"], "2026-06-30")
+        self.assertFalse(summary["execution_boundary"]["auto_rebalance"])
+
+    def test_operations_overview_source_renders_portfolio_summary_before_queue(self) -> None:
+        source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
+
+        self.assertIn("    _render_portfolio_summary(model)", source)
+        self.assertIn("    _render_action_queue(model", source)
+        self.assertLess(source.index("    _render_portfolio_summary(model)"), source.index("    _render_action_queue(model"))
+        self.assertIn("Portfolio Monitoring Status", source)
+        self.assertIn("Stale Scenarios", source)
+        self.assertIn("Open Review", source)
+        self.assertIn("Next Review", source)
+
     def test_operations_overview_source_hides_development_history_titles(self) -> None:
         source = Path("app/web/operations_overview.py").read_text(encoding="utf-8")
 

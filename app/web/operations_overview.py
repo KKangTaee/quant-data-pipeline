@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from calendar import monthrange
+from datetime import date, datetime
 from typing import Any
 
 import streamlit as st
@@ -11,6 +13,7 @@ from app.web.backtest_ui_components import render_badge_strip, render_status_car
 
 OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v2"
 OPERATIONS_CONSOLE_VERSION = "operations_console_v2"
+OPERATIONS_PORTFOLIO_SUMMARY_SCHEMA_VERSION = "operations_portfolio_summary_v1"
 
 
 def _safe_int(value: Any) -> int:
@@ -39,6 +42,215 @@ def _portfolio_monitoring_status(*, dashboard_rows: int, watch_count: int, block
     if watch_count:
         return "Review Needed"
     return "Ready"
+
+
+def _parse_date_value(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    text = str(value or "").strip()
+    if not text or text in {"-", "NaT", "nan", "None"}:
+        return None
+    candidates = [text]
+    if len(text) >= 10:
+        candidates.append(text[:10])
+    for candidate in candidates:
+        normalized = candidate.replace("/", "-")
+        try:
+            return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
+        except ValueError:
+            pass
+        for fmt in ("%Y-%m-%d", "%Y%m%d"):
+            try:
+                return datetime.strptime(normalized, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
+def _format_date_value(value: Any) -> str:
+    parsed = _parse_date_value(value)
+    return parsed.isoformat() if parsed else "-"
+
+
+def _latest_date_text(values: list[Any]) -> str:
+    parsed_values = [parsed for parsed in (_parse_date_value(value) for value in values) if parsed is not None]
+    return max(parsed_values).isoformat() if parsed_values else "-"
+
+
+def _earliest_date_text(values: list[Any]) -> str:
+    parsed_values = [parsed for parsed in (_parse_date_value(value) for value in values) if parsed is not None]
+    return min(parsed_values).isoformat() if parsed_values else "-"
+
+
+def _next_month_end(value: Any, interval: int = 1) -> str:
+    parsed = _parse_date_value(value)
+    if parsed is None:
+        return "-"
+    month_offset = max(_safe_int(interval), 1)
+    month_index = parsed.month + month_offset
+    year = parsed.year + ((month_index - 1) // 12)
+    month = ((month_index - 1) % 12) + 1
+    return date(year, month, monthrange(year, month)[1]).isoformat()
+
+
+def _portfolio_strategy_rows(portfolio_state: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for portfolio in list(portfolio_state.get("portfolios") or []):
+        for row in list(dict(portfolio or {}).get("strategy_rows") or []):
+            if isinstance(row, dict):
+                rows.append(dict(row))
+    return rows
+
+
+def _nested_dict(row: dict[str, Any], *keys: str) -> dict[str, Any]:
+    for key in keys:
+        value = row.get(key)
+        if isinstance(value, dict):
+            return dict(value)
+    return {}
+
+
+def _scenario_status(row: dict[str, Any]) -> str:
+    for key in ("scenario_status", "monitoring_scenario_status", "scenario_freshness", "latest_scenario_status"):
+        text = str(row.get(key) or "").strip().lower()
+        if text:
+            return text
+    for nested_key in ("latest_scenario", "scenario", "latest_recheck_result"):
+        nested = _nested_dict(row, nested_key)
+        if bool(nested.get("stale")):
+            return "stale"
+        text = str(nested.get("status") or nested.get("freshness") or "").strip().lower()
+        if text:
+            return text
+    if bool(row.get("scenario_stale")):
+        return "stale"
+    return ""
+
+
+def _scenario_dates(row: dict[str, Any]) -> list[Any]:
+    values: list[Any] = [
+        row.get("latest_scenario_date"),
+        row.get("scenario_updated_at"),
+        row.get("scenario_as_of"),
+        row.get("dashboard_updated_at"),
+    ]
+    for nested_key in ("latest_scenario", "scenario", "latest_recheck_result"):
+        nested = _nested_dict(row, nested_key)
+        values.extend(
+            [
+                nested.get("date"),
+                nested.get("as_of"),
+                nested.get("updated_at"),
+                nested.get("dashboard_updated_at"),
+            ]
+        )
+    return values
+
+
+def _selected_components(row: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_decision = dict(row.get("raw_decision") or {})
+    components = raw_decision.get("selected_components")
+    if components is None:
+        components = row.get("selected_components")
+    return [dict(component or {}) for component in list(components or []) if isinstance(component, dict)]
+
+
+def _component_snapshot_date(component: dict[str, Any]) -> str:
+    history = [dict(item or {}) for item in list(component.get("selection_history") or []) if isinstance(item, dict)]
+    latest = history[-1] if history else {}
+    return _format_date_value(latest.get("date") or component.get("period_end"))
+
+
+def _component_review_interval(component: dict[str, Any]) -> int:
+    replay_contract = dict(component.get("replay_contract") or {})
+    settings = dict(replay_contract.get("settings_snapshot") or {})
+    return max(_safe_int(settings.get("rebalance_interval") or settings.get("interval") or 1), 1)
+
+
+def _open_review_item_count(strategy_rows: list[dict[str, Any]]) -> int:
+    total = 0
+    for row in strategy_rows:
+        raw_decision = dict(row.get("raw_decision") or {})
+        total += len([item for item in list(row.get("open_review_items") or raw_decision.get("open_review_items") or []) if item])
+        total += len([item for item in list(row.get("blockers") or raw_decision.get("blockers") or []) if item])
+    return total
+
+
+def _build_portfolio_summary(
+    *,
+    dashboard_rows: int,
+    selected_count: int,
+    assigned_count: int,
+    blocked_count: int,
+    missing_count: int,
+    portfolio_state: dict[str, Any],
+    portfolio_metrics: dict[str, Any],
+) -> dict[str, Any]:
+    strategy_rows = _portfolio_strategy_rows(portfolio_state)
+    scenario_statuses = [_scenario_status(row) for row in strategy_rows]
+    stale_scenario_count = sum(1 for status in scenario_statuses if status in {"stale", "outdated", "expired"})
+    current_scenario_count = sum(1 for status in scenario_statuses if status in {"current", "fresh", "good", "ready"})
+    pending_scenario_count = sum(
+        1
+        for row, status in zip(strategy_rows, scenario_statuses)
+        if bool(row.get("slot_input_complete", True)) and not status and _latest_date_text(_scenario_dates(row)) == "-"
+    )
+    incomplete_strategy_slot_count = _safe_int(portfolio_metrics.get("incomplete_strategy_slot_count"))
+    open_review_item_count = _open_review_item_count(strategy_rows)
+
+    snapshot_dates: list[Any] = []
+    next_review_dates: list[Any] = []
+    for row in strategy_rows:
+        for component in _selected_components(row):
+            snapshot_date = _component_snapshot_date(component)
+            snapshot_dates.append(snapshot_date)
+            next_review_dates.append(_next_month_end(snapshot_date, interval=_component_review_interval(component)))
+
+    if dashboard_rows <= 0:
+        status = "No Selected Rows"
+        tone = "neutral"
+        detail = "Final Review에서 선정된 monitoring row가 아직 없습니다."
+    elif _safe_int(portfolio_metrics.get("portfolio_count")) <= 0:
+        status = "Setup Needed"
+        tone = "warning"
+        detail = "선정 row는 있지만 monitoring portfolio setup이 아직 없습니다."
+    elif blocked_count or missing_count or incomplete_strategy_slot_count:
+        status = "Blocked"
+        tone = "danger"
+        detail = "차단 / 누락 reference / 설정 보강 항목을 먼저 확인해야 합니다."
+    elif stale_scenario_count or pending_scenario_count or open_review_item_count:
+        status = "Review Needed"
+        tone = "warning"
+        detail = "scenario freshness나 open review 항목 확인이 필요합니다."
+    else:
+        status = "Ready"
+        tone = "positive"
+        detail = "일상 portfolio monitoring 점검을 바로 진행할 수 있습니다."
+
+    return {
+        "schema_version": OPERATIONS_PORTFOLIO_SUMMARY_SCHEMA_VERSION,
+        "status": status,
+        "tone": tone,
+        "detail": detail,
+        "selected_decision_count": selected_count,
+        "dashboard_row_count": dashboard_rows,
+        "active_portfolio_count": _safe_int(portfolio_metrics.get("portfolio_count")),
+        "assigned_strategy_count": assigned_count,
+        "complete_strategy_slot_count": _safe_int(portfolio_metrics.get("complete_strategy_slot_count")),
+        "incomplete_strategy_slot_count": incomplete_strategy_slot_count,
+        "stale_scenario_count": stale_scenario_count,
+        "current_scenario_count": current_scenario_count,
+        "pending_scenario_count": pending_scenario_count,
+        "blocked_count": blocked_count,
+        "missing_reference_count": missing_count,
+        "open_review_item_count": open_review_item_count,
+        "latest_scenario_date": _latest_date_text([value for row in strategy_rows for value in _scenario_dates(row)]),
+        "target_snapshot_date": _latest_date_text(snapshot_dates),
+        "next_review_date": _earliest_date_text(next_review_dates),
+        "execution_boundary": _disabled_action_boundary(),
+    }
 
 
 def _disabled_action_boundary() -> dict[str, bool]:
@@ -156,6 +368,15 @@ def build_operations_overview_model(
         + _safe_int(status_counts.get("re_review_needed"))
     )
     blocked_count = _safe_int(status_counts.get("blocked"))
+    portfolio_summary = _build_portfolio_summary(
+        dashboard_rows=dashboard_rows,
+        selected_count=selected_count,
+        assigned_count=assigned_count,
+        blocked_count=blocked_count,
+        missing_count=missing_count,
+        portfolio_state=portfolio_state,
+        portfolio_metrics=portfolio_metrics,
+    )
 
     latest_run = dict(run_history[0] if run_history else {})
     latest_status = str(latest_run.get("status") or "No runs")
@@ -206,6 +427,7 @@ def build_operations_overview_model(
         "schema_version": OPERATIONS_OVERVIEW_SCHEMA_VERSION,
         "console_version": OPERATIONS_CONSOLE_VERSION,
         "operations_model": "Portfolio Monitoring + System/Data Health",
+        "portfolio_summary": portfolio_summary,
         "lanes": lanes,
         "action_queue": _build_action_queue(
             dashboard_rows=dashboard_rows,
@@ -254,6 +476,7 @@ def _status_label(value: Any) -> str:
         "Healthy": "정상",
         "No Runs": "실행 기록 없음",
         "Attention Needed": "확인 필요",
+        "Setup Needed": "설정 필요",
         "Available": "사용 가능",
         "Empty": "비어 있음",
         "Guide Ready": "가이드 준비됨",
@@ -298,6 +521,36 @@ def _lane_cards(model: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return cards
+
+
+def _render_portfolio_summary(model: dict[str, Any]) -> None:
+    summary = dict(model.get("portfolio_summary") or {})
+    st.markdown("### Portfolio Monitoring Status")
+    st.caption("현재 monitoring portfolio setup과 selected strategy 상태를 먼저 요약합니다. 주문, 계좌 연동, 자동 리밸런싱은 만들지 않습니다.")
+    with st.container(border=True):
+        render_badge_strip(
+            [
+                {"label": "Status", "value": _status_label(summary.get("status")), "tone": summary.get("tone")},
+                {
+                    "label": "Scenario Freshness",
+                    "value": f"{_format_metric_value(summary.get('stale_scenario_count'))} stale / {_format_metric_value(summary.get('pending_scenario_count'))} pending",
+                    "tone": "warning" if _safe_int(summary.get("stale_scenario_count")) or _safe_int(summary.get("pending_scenario_count")) else "positive",
+                },
+                {"label": "Execution", "value": "Read-only", "tone": "neutral"},
+            ]
+        )
+        st.caption(str(summary.get("detail") or ""))
+        top_columns = st.columns(4, gap="small")
+        top_columns[0].metric("Active Portfolios", _format_metric_value(summary.get("active_portfolio_count")))
+        top_columns[1].metric("Assigned Strategies", _format_metric_value(summary.get("assigned_strategy_count")))
+        top_columns[2].metric("Blocked / Missing", f"{_format_metric_value(summary.get('blocked_count'))} / {_format_metric_value(summary.get('missing_reference_count'))}")
+        top_columns[3].metric("Incomplete Slots", _format_metric_value(summary.get("incomplete_strategy_slot_count")))
+
+        bottom_columns = st.columns(4, gap="small")
+        bottom_columns[0].metric("Stale Scenarios", _format_metric_value(summary.get("stale_scenario_count")))
+        bottom_columns[1].metric("Open Review", _format_metric_value(summary.get("open_review_item_count")))
+        bottom_columns[2].metric("Target Snapshot", _format_metric_value(summary.get("target_snapshot_date")))
+        bottom_columns[3].metric("Next Review", _format_metric_value(summary.get("next_review_date")))
 
 
 def _render_lane(lane: dict[str, Any], *, page_targets: dict[str, Any]) -> None:
@@ -361,6 +614,7 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
 
     st.title("Operations Console")
     st.caption("선정 후 portfolio monitoring 상태와 system/data health를 확인하는 운영 화면입니다.")
+    _render_portfolio_summary(model)
     _render_action_queue(model, page_targets=page_targets)
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(

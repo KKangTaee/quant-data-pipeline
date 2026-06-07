@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `operations-portfolio-first-summary-20260607` | Completed record | Operations Overview V2 2차. Operations Console 상단에 Portfolio Monitoring Status summary를 추가해 active portfolio / assigned strategy / stale scenario / blocked / missing / open review / next review를 먼저 읽게 한 기록이다. |
 | `operations-cockpit-cleanup-20260607` | Completed record | Operations Overview V2 1차 cleanup. 사용자-facing Operations Overview에서 archive / development-history decision table과 roadmap 흔적을 제거하고 Portfolio Monitoring / System Data Health 중심 cockpit copy로 정리한 기록이다. |
 | `refactor-round-closeout-20260607` | Completed record | 10차 구조정리 라운드 closeout. 5차~9차 리팩토링 기준선을 감사하고, 남은 Backtest Compare / Overview / Operations split 후보를 후속 작업으로 분리한 기록이다. |
 | `backtest-compare-components-split-20260607` | Completed record | 9차 Backtest Compare Streamlit split first pass. Portfolio Mix Builder visual shell을 `app/web/backtest_compare_components.py`로 이동하고 `app/web/backtest_compare.py`를 실행 / 상태 orchestration 중심으로 낮춘 기록이다. |
@@ -52,4 +53,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-07 기준 181개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-07 기준 184개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
