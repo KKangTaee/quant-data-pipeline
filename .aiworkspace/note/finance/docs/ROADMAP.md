@@ -28,7 +28,10 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/risk-on-momentum-governance-20260608/`
+- 목적: Backtest 3차 3C로 Risk-On Momentum 5D governance readiness를 read-only로 정리해 Daily Swing research evidence와 deferred Practical Validation / Final Review / Portfolio Monitoring module을 Backtest Analysis에서 확인한다.
+- 이번 차수에서 하지 않은 일: Risk-On Momentum runtime behavior 변경, Practical Validation module 실행 구현, Final Review selected-route 연결, Portfolio Monitoring daily signal / 자동 signal write 구현, registry / saved JSONL / run history rewrite, DB schema 변경, provider / FRED direct fetch, live trading / broker order / auto rebalance.
+- Recent previous Backtest 3차 task: `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/`
 - 목적: Backtest 3차 3B로 Strict Annual 3종 + GTAA / Equal Weight bridge를 read-only로 정리해 component role / validation evidence / recommended workflow를 Backtest Analysis에서 확인한다.
 - 이번 차수에서 하지 않은 일: registry / saved JSONL / run history rewrite, strategy runtime behavior 변경, DB schema 변경, provider / FRED direct fetch, Risk-On Momentum governance 구현, quarterly maturation, ETF current-candidate rerun, live trading / broker order / auto rebalance.
 - Recent previous Backtest 3차 task: `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/`
@@ -46,7 +49,7 @@ Workspace > Ingestion
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, and Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; strategy maturity / bridge panel은 read-only 해석 layer이며 final decision / monitoring governance는 후속 단계 |
+| Backtest Analysis | Candidate creation plus Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, and Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; strategy maturity / bridge / Risk-On governance panel은 read-only 해석 layer이며 validation module 실행, final decision, monitoring signal governance는 후속 단계 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -55,6 +58,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Risk-On Momentum 5D Governance 3C | Complete | Backtest Analysis now shows a read-only governance readiness panel that separates available Daily Swing research evidence from deferred Daily Swing Practical Validation, Final Review selected-route, Portfolio Monitoring daily policy, artifact boundary, and universe / survivorship review modules. |
 | Strict Annual + GTAA / Equal Weight Bridge 3B | Complete | Backtest Analysis now shows a read-only bridge/handoff view for the first evidence-mature group, showing component role, target use, Practical Validation evidence, and recommended workflow. |
 | Strategy Evidence Inventory / Direction Panel 3A | Complete | Backtest Analysis now shows a read-only strategy maturity / evidence / next-action panel for every catalog strategy. Strict annual 3종 + GTAA / Equal Weight are the first evidence-mature group, Risk-On Momentum 5D remains governance deferred, and strict quarterly variants remain prototype / contract-smoke. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
@@ -139,7 +143,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 | Large-surface second refactor round | 10차 closeout confirmed large files remain in Backtest Compare, Overview, Operations / Portfolio Monitoring runtime, and Overview services | Opening a new focused refactor round that changes module ownership or public call paths |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
-| Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |
+| Risk-On Momentum Daily Swing module implementation | 3C now exposes governance readiness, but the actual Daily Swing Practical Validation module, Final Review route, and Portfolio Monitoring daily policy are still deferred | Any Practical Validation module execution, Final Review selected-route rule, Portfolio Monitoring signal integration, artifact registry policy |
 | Overview scheduler hardening | Browser-session refresh exists; OS scheduler / launchd production operation is a separate decision | Enabling unattended scheduled collection |
 | UI platform split | Streamlit is workable but complex UX may eventually benefit from API + React/Next.js | Any large frontend migration or service API expansion |
 | Second-cycle investability hardening | Phase 13 carry-forward material can seed another phase | Opening a new phase from carry-forward matrix |

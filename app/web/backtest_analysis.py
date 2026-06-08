@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_risk_on_governance import build_risk_on_momentum_governance
 from app.services.backtest_strategy_bridge import build_strict_annual_etf_bridge
 from app.services.backtest_strategy_evidence_inventory import (
     build_strategy_evidence_inventory,
@@ -29,6 +30,34 @@ def _bridge_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
                 "Required Validation Evidence": "; ".join(row.get("required_practical_validation_evidence") or []),
                 "Known Weakness": row.get("known_weakness") or "-",
                 "Recommended Workflow": row.get("recommended_next_workflow") or "-",
+            }
+            for row in rows
+        ]
+    )
+
+
+def _governance_evidence_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Evidence": row.get("evidence") or "-",
+                "Status": row.get("status") or "-",
+                "Interpretation": row.get("interpretation") or "-",
+            }
+            for row in rows
+        ]
+    )
+
+
+def _governance_modules_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Module": row.get("module") or "-",
+                "Owner Surface": row.get("owner_surface") or "-",
+                "Readiness": row.get("readiness") or "-",
+                "Blocker": row.get("blocker") or "-",
+                "Next Action": row.get("next_action") or "-",
             }
             for row in rows
         ]
@@ -138,6 +167,60 @@ def _render_strict_annual_etf_bridge_panel() -> None:
         st.caption(bridge["route_boundary"])
 
 
+def _render_risk_on_governance_panel() -> None:
+    governance = build_risk_on_momentum_governance()
+
+    with st.expander(governance["title"], expanded=True):
+        st.caption(governance["summary"])
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Governance", str(governance["status"]).replace("Governance ", "").title())
+        metric_cols[1].metric(
+            "Practical Validation",
+            "Disabled" if not governance["promoted_to_practical_validation"] else "Enabled",
+        )
+        metric_cols[2].metric(
+            "Final Review",
+            "Disabled" if not governance["promoted_to_final_review"] else "Enabled",
+        )
+        metric_cols[3].metric(
+            "Monitoring Signal",
+            "Disabled" if not governance["monitoring_signal_enabled"] else "Enabled",
+        )
+
+        st.markdown("**Research evidence available now**")
+        st.dataframe(
+            _governance_evidence_table(governance["research_evidence"]),
+            hide_index=True,
+            width="stretch",
+        )
+
+        st.markdown("**Governance modules required before promotion**")
+        st.dataframe(
+            _governance_modules_table(governance["required_modules"]),
+            hide_index=True,
+            width="stretch",
+        )
+
+        rules_col, workflow_col = st.columns(2)
+        with rules_col:
+            st.markdown("**Governance rules**")
+            st.dataframe(
+                _simple_rows(governance["governance_rules"], "Rule"),
+                hide_index=True,
+                width="stretch",
+            )
+        with workflow_col:
+            st.markdown("**Next workflow**")
+            st.dataframe(
+                _simple_rows(governance["next_workflow_steps"], "Step"),
+                hide_index=True,
+                width="stretch",
+            )
+
+        st.caption(governance["storage_boundary"])
+        st.caption(governance["route_boundary"])
+
+
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
@@ -147,6 +230,7 @@ def render_backtest_analysis_workspace() -> None:
     render_reference_contextual_help("backtest_analysis")
     _render_strategy_evidence_direction_panel()
     _render_strict_annual_etf_bridge_panel()
+    _render_risk_on_governance_panel()
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE

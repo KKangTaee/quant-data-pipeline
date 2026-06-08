@@ -4883,3 +4883,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`에서 contextual help drift report와 표시 polish를 추가했다.
   - guard는 Glossary term, Reference link target, duplicate surface key, raw guide focus marker를 Streamlit-free로 점검한다.
   - Reference 검색 deep-linking, Ingestion / Overview 전체 surface 확장, DB / registry / saved JSONL rewrite는 하지 않았다.
+- Backtest 3차 3A-3C:
+  - `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/`에서 모든 catalog strategy의 maturity / evidence / next action panel을 추가했다.
+  - `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/`에서 Strict Annual 3종 + GTAA / Equal Weight bridge panel을 추가했다.
+  - `.aiworkspace/note/finance/tasks/active/risk-on-momentum-governance-20260608/`에서 Risk-On Momentum 5D governance readiness panel을 추가했다.
+  - 3D ETF evidence expansion이 다음 3차 scope로 남아 있으며, Risk-On 실제 Daily Swing validation / review / monitoring module 구현은 별도 승인 scope다.

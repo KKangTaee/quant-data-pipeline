@@ -24,7 +24,7 @@ Last Verified: 2026-06-08
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Strict Annual + GTAA / Equal Weight Bridge 2026-06-08](../tasks/active/strict-annual-etf-bridge-20260608/STATUS.md).
+- Latest completed task: [Risk-On Momentum Governance 2026-06-08](../tasks/active/risk-on-momentum-governance-20260608/STATUS.md).
 - Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
