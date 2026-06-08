@@ -1,7 +1,7 @@
 # Feature Candidates
 
 Status: Draft
-Last Updated: 2026-05-28
+Last Updated: 2026-06-08
 
 Scoring: 1 low, 5 high. Priority is judgmental, using `impact + fit + confidence - effort - risk` as a starting point.
 
@@ -214,3 +214,140 @@ Scoring: 1 low, 5 high. Priority is judgmental, using `impact + fit + confidence
 - "Add more strategy families first": rejected for now because the bottleneck is validation efficacy, not idea count.
 - "Make Final Review a live approval screen": rejected because it violates current no-live-trading boundary.
 - "Store full holdings and macro series in JSONL for convenience": rejected because current architecture correctly keeps full rows in DB and compact evidence in JSONL.
+
+## 2026-06-08 Candidate Refresh
+
+### Why A Refresh Is Needed
+
+The May candidate matrix is historically useful, but several "Now" items have since become foundations in the current product: Practical Validation / Final Review evidence gates, selected-route policy, Operations Console, monitoring-first Portfolio Monitoring, Reference Center, and contextual help drift guards.
+
+The next candidate list should therefore focus on what remains after those foundations, not repeat completed phase work.
+
+### Updated Candidate Matrix
+
+| Candidate | Bucket | Impact | Effort | Risk | Confidence | Strategic Fit | Owner Area |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Product Direction Baseline / Session Operating Model | Now | 5 | 1 | 1 | 5 | 5 | Product research workflow |
+| Monitoring Snapshot / Review Loop V2 | Now | 5 | 3 | 3 | 5 | 5 | Backtest web workflow / runtime registry |
+| Strategy Promotion Contract For Backtest-Dev Handoff | Now | 5 | 3 | 3 | 4 | 5 | Strategy implementation + backtest workflow |
+| Robustness Experiment Registry | Next | 5 | 4 | 4 | 4 | 5 | Strategy implementation / app services |
+| Data Provenance / PIT Evidence Contract | Next | 5 | 4 | 4 | 4 | 5 | DB pipeline / loaders / validation services |
+| Decision Dossier / Report Artifact V2 | Next | 4 | 3 | 3 | 4 | 4 | Backtest web workflow / reports |
+| Legacy Archive Demotion Matrix | Now / Next | 4 | 2 | 2 | 5 | 4 | Backtest web workflow / docs |
+| Large Surface Refactor Round 2 | Next | 4 | 4 | 3 | 5 | 4 | Backtest web workflow / integration |
+| UI Platform Split Feasibility Refresh | Later | 3 | 5 | 5 | 3 | 3 | Product research / platform phase |
+
+### Now Candidates
+
+#### Product Direction Baseline / Session Operating Model
+
+- Problem: This main-dev session needs a clear role separate from strategy-development sessions.
+- User workflow change: future broad requests start with a 1차 / 2차 / 3차 roadmap and research-bundle update before opening development sessions.
+- Evidence: Current user request; local docs show no active phase and product direction research workspace is canonical.
+- Required areas: current research bundle and final handoff summary.
+- Dependencies: none.
+- Risk: low.
+- Owner skill: `finance-product-research-workflow`.
+
+#### Monitoring Snapshot / Review Loop V2
+
+- Problem: `Operations > Portfolio Monitoring` is read-only and monitoring-first, but durable review history is still optional / thin.
+- User workflow change: after scenario update, user can record a review snapshot with benchmark delta, drift, provider freshness, review signal, open issue, operator note, and next review date.
+- Evidence:
+  - Local audit: scenario results are session-state unless explicitly saved.
+  - Benchmark: Koyfin model portfolios emphasize drift monitoring, benchmark comparison, rolling returns, risk metrics, holdings matrix, and reports.
+- Required areas:
+  - `app/runtime/final_selected_portfolios.py`
+  - `app/web/final_selected_portfolio_dashboard.py`
+  - `app/runtime/portfolio_selection_v2.py`
+  - `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`
+- Dependencies: define snapshot schema and no-live copy.
+- Risk: can drift toward broker/account management if not bounded.
+- Owner skill: `finance-backtest-web-workflow`.
+
+#### Strategy Promotion Contract For Backtest-Dev Handoff
+
+- Problem: `backtest-dev` can add or improve strategies, but main product needs an explicit promotion gate before a strategy is treated as governable product workflow input.
+- User workflow change: a strategy handoff packet is required before connecting strategy output to Practical Validation / Final Review / Portfolio Monitoring.
+- Evidence:
+  - Local audit: Risk-On Momentum 5D governance connection remains deferred.
+  - Benchmark: QuantConnect lifecycle and Portfolio123 ranking / simulation assumption patterns.
+- Required areas:
+  - strategy report template under `.aiworkspace/note/finance/reports/backtests/`
+  - `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, strategy-specific runtime owners when implemented later
+  - Practical Validation handoff docs / read model when approved
+- Dependencies: coordinate with `backtest-dev` outputs.
+- Risk: high enough to keep as product design before implementation.
+- Owner skill: `finance-strategy-implementation` for future implementation; `finance-product-research-workflow` for current direction.
+
+#### Legacy Archive Demotion Matrix
+
+- Problem: legacy compatibility surfaces are useful but still create conceptual noise.
+- User workflow change: every legacy surface gets one of `keep primary`, `archive / recovery`, `hide from primary nav`, `delete only after migration proof`.
+- Evidence: current Operations docs already demoted Run History / Candidate Library; route helper still maps legacy panels.
+- Required areas:
+  - `app/web/backtest_workflow_routes.py`
+  - `app/web/operations_overview.py`
+  - Reference Center docs / copy
+- Dependencies: no data deletion until source-of-truth proof is clear.
+- Risk: low if no files are deleted in first pass.
+- Owner skill: `finance-backtest-web-workflow`.
+
+### Next Candidates
+
+#### Robustness Experiment Registry
+
+- Problem: robustness evidence exists, but there is no unified run-set registry for parameter sweeps, walk-forward, OOS, regime, cost/slippage, and Monte Carlo/bootstrap experiments.
+- User workflow change: Practical Validation can cite a `robustness_run_set_id` instead of many disconnected audit rows.
+- Evidence: QuantConnect report / walk-forward patterns; local Validation Efficacy and Backtest Realism audit rows.
+- Required areas:
+  - strategy runtime wrappers
+  - `app/services/backtest_practical_validation_stress_sensitivity.py`
+  - new or existing compact registry helper
+- Dependencies: strategy family contracts and compute budget.
+- Risk: broad; should be sliced by one strategy family first.
+
+#### Data Provenance / PIT Evidence Contract
+
+- Problem: current snapshot, provider staleness, PIT assumptions, and source availability labels are known, but not fully normalized across evidence rows.
+- User workflow change: every Final Review packet and monitoring snapshot shows `source_date`, `collected_at`, `available_at_assumption`, `snapshot_kind`, `coverage_status`, and `decision_effect`.
+- Evidence: local data docs, Portfolio123 simulation assumptions, Bloomberg data validation pattern.
+- Required areas:
+  - `finance/data/db/schema.py`
+  - `finance/loaders/*`
+  - Practical Validation provider / data coverage services
+- Dependencies: schema migration / additive storage decision.
+- Risk: broad data-model impact.
+
+#### Decision Dossier / Report Artifact V2
+
+- Problem: Decision Dossier download exists, but productized report artifact / report index integration is not the primary workflow.
+- User workflow change: Final Review and Monitoring Snapshot can produce a human-readable report that references durable evidence ids.
+- Evidence: Bloomberg / Koyfin / IBKR reporting patterns; existing backtest report workspace.
+- Required areas:
+  - `app/services/backtest_evidence_read_model.py`
+  - `app/web/backtest_final_review.py`
+  - `.aiworkspace/note/finance/reports/backtests/`
+- Dependencies: stable decision packet / monitoring snapshot schema.
+- Risk: moderate; report can become stale if it duplicates evidence instead of citing it.
+
+#### Large Surface Refactor Round 2
+
+- Problem: core files remain large after first refactor round.
+- User workflow change: none directly; implementation risk decreases for approved feature work.
+- Evidence: `wc -l` audit shows `backtest_compare.py`, Portfolio Monitoring UI/runtime, and evidence read model remain large.
+- Required areas:
+  - `app/web/backtest_compare.py`
+  - `app/web/final_selected_portfolio_dashboard.py`
+  - `app/runtime/final_selected_portfolios.py`
+- Dependencies: choose a feature boundary first.
+- Risk: medium; should run in `sub-dev` or a separate implementation session after approval.
+
+### Later / Parking Lot
+
+- Broker account connection.
+- Auto rebalance / broker order generation.
+- Composer-style automated deployment.
+- Full account aggregation.
+- Full institutional risk model clone.
+- React / API platform migration before product contracts stabilize.

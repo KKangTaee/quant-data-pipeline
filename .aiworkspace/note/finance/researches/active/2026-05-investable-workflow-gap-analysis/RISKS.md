@@ -1,7 +1,7 @@
 # Risks
 
 Status: Draft
-Last Updated: 2026-05-28
+Last Updated: 2026-06-08
 
 ## Product Risks
 
@@ -49,3 +49,35 @@ Last Updated: 2026-05-28
 - If user wants actual capital deployment readiness, product boundary must change and legal / compliance / broker risk increases sharply.
 - If user wants only internal research discipline, the first phase can stay entirely inside Streamlit / services and avoid product UI migration.
 - If user wants external sharing / advisor-like reporting, disclosure and report artifact quality become more important than new strategy runtime features.
+
+## 2026-06-08 Refresh Risks
+
+### Product Direction Risks
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| This baseline is mistaken for approved roadmap | High | Keep recommendations in `researches/active`; do not create new phase / task until user approves a build scope. |
+| main-dev starts doing strategy research that belongs to backtest-dev | Medium / High | Treat strategy quality questions as handoff criteria; keep actual strategy improvement in `backtest-dev`. |
+| Monitoring Snapshot V2 drifts into account tracking / broker integration | High | Keep manual / virtual / session-driven inputs; no account sync, order, live approval, or auto rebalance. |
+| Strategy Promotion Contract becomes too bureaucratic | Medium | Start with a compact checklist and one strategy family; avoid blocking exploratory research. |
+| Legacy deletion happens before archive semantics are proven | High | Use demotion matrix first; delete only after source-of-truth and recovery proof. |
+
+### Technical Risks
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Portfolio Monitoring files are large and easy to regress | High | If Monitoring Snapshot V2 is approved, split around snapshot schema / read model / render panels before adding broad UI. |
+| Robustness experiment registry can become compute-heavy | Medium / High | Start with one source and small default suite; store compact run-set summaries, not full artifacts. |
+| Data provenance contract touches DB, loader, registry, and UI layers | High | Treat as separate data phase; first define fields and decision effects before schema changes. |
+| Strategy handoff contracts conflict with backtest-dev output format | Medium | Agree on a minimal report / metadata contract before integrating a specific strategy. |
+| Research bundle grows into a planning dump | Medium | Keep this research as evidence and recommendation; future implementation history belongs in task / phase docs. |
+
+### Remaining Evidence Gaps
+
+| Gap | Why it matters | Follow-up |
+| --- | --- | --- |
+| No live Streamlit walkthrough in this refresh | Static docs/code can miss actual screen friction | Run Browser QA only when an approved UI build starts, or if the user asks for visual UX audit. |
+| No current benchmark screenshots captured | Public product pages can omit UI details | Use official docs now; capture screenshots only if a dedicated benchmark/UI research pass is approved. |
+| No exact monitoring snapshot schema approved | Implementation needs durable row shape | Decide snapshot fields before coding. |
+| No exact strategy promotion checklist approved | Backtest-dev handoff could vary by strategy family | Define one compact contract, then test on Risk-On Momentum 5D or the next improved strategy. |
+| No removal list approved | Legacy pages may still be useful for recovery | Produce demotion matrix before any delete / hide work. |

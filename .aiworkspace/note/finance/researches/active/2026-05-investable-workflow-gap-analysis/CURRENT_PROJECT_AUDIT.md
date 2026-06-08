@@ -1,7 +1,7 @@
 # Current Project Audit
 
 Status: Draft
-Last Updated: 2026-05-28
+Last Updated: 2026-06-08
 
 ## Snapshot
 
@@ -123,3 +123,81 @@ Last Updated: 2026-05-28
 3. `Data Governance Layer`: DB snapshot, JSONL registry, generated artifact, source provenance, schema version, retention policy를 분리한다.
 4. `Robustness Lab`: walk-forward / out-of-sample / parameter sensitivity / Monte Carlo / stress scenario를 Backtest Analysis의 선택 옵션이 아니라 Practical Validation의 검증 근거로 연결한다.
 5. `Post-Selection Monitoring Log`: selected portfolio recheck, drift, benchmark underperformance, provider data deterioration, review triggers를 append-only monitoring evidence로 축적한다.
+
+## 2026-06-08 Main-Dev Session Refresh
+
+### Session Role
+
+이 `main-dev` 세션은 전략 자체를 새로 발굴하거나 심층 성과 개선을 담당하지 않는다. 그 작업은 `backtest-dev` / `codex/backtest-dev`에서 진행한다.
+
+이 세션의 목적은 현재 제품의 `Backtest Analysis -> Practical Validation -> Final Review -> Operations > Portfolio Monitoring` 흐름을 제품 관점에서 감사하고, 상용 quant / portfolio analytics 제품 패턴과 비교해 다음 개발 방향을 선정할 수 있는 근거를 만드는 것이다.
+
+이번 refresh는 새 지침이나 확정 roadmap이 아니다. 향후 개발 세션을 열기 전의 제품 방향 baseline이다.
+
+### Current Implemented Flow
+
+2026-06-08 문서와 코드 기준 현재 주 흐름은 아래처럼 읽는다.
+
+```text
+Workspace > Ingestion
+  -> Workspace > Overview
+  -> Backtest > Backtest Analysis
+  -> Backtest > Practical Validation
+  -> Backtest > Final Review
+  -> Operations > Operations Console
+  -> Operations > Portfolio Monitoring
+```
+
+Backtest 주 흐름은 `app/web/backtest_workflow_routes.py`에서 3개 visible stage로 정리돼 있다.
+
+- `Backtest Analysis`: 단일 전략, Portfolio Mix Builder, saved mix replay로 후보 source를 만든다.
+- `Practical Validation`: source traits, module gate, provider / macro / robustness / construction / data coverage / realism evidence를 만든다.
+- `Final Review`: Gate 통과 후보만 모니터링 후보로 선정하고, selected-route decision row를 저장한다.
+- `Operations > Portfolio Monitoring`: Final Review selected row를 사용자 monitoring portfolio에 담고 명시적 scenario update 후 read-only로 관찰한다.
+
+### Current Strengths
+
+| Strength | Why it matters |
+| --- | --- |
+| Stage ownership is clear | 후보 생성, 검증, 최종 선정, 사후 모니터링의 책임이 분리돼 있다. |
+| Evidence-first direction is strong | 수익률만 보고 선택하지 않고 data trust, provider, look-through, robustness, realism, open review items를 함께 본다. |
+| No-live boundary is explicit | live approval, broker order, account sync, auto rebalance를 반복적으로 차단한다. |
+| DB-backed data boundary is mostly sound | provider / macro / sentiment / futures / lifecycle evidence는 ingestion -> DB -> loader -> UI 흐름을 따른다. |
+| Operations IA was corrected | Portfolio Monitoring과 System / Data Health를 primary lane으로, Run History와 Candidate Library를 archive / recovery로 낮췄다. |
+| Reference Center now explains the product flow | 주요 workflow 화면에서 contextual help와 Glossary concept drift guard가 붙었다. |
+
+### Current Weaknesses
+
+| Weakness | Current signal | Product implication |
+| --- | --- | --- |
+| Evidence is rich but still heavy | Final Review / Practical Validation에 근거가 많고 상세 표가 많다. | 사용자는 "그래서 오늘 무엇을 해야 하는가"를 빠르게 파악하기 어렵다. |
+| Monitoring history is not durable enough | Portfolio Monitoring scenario result는 session state 중심이고 monitoring log는 explicit optional 기록이다. | 선정 이후 drift / underperformance / stale evidence / review trigger가 운영 이력으로 충분히 쌓이지 않는다. |
+| Robustness is present but not yet an experiment lifecycle | walk-forward / OOS / regime / stress evidence가 audit row로 연결됐지만, 실험 registry / run set / parameter family 관리는 약하다. | backtest-dev 전략 개선 결과를 제품 workflow로 승격할 때 검증 이력과 selection-bias control이 부족할 수 있다. |
+| Data provenance is still uneven | PIT / current snapshot / provider staleness 경계는 문서화됐지만 모든 evidence row가 같은 provenance contract를 갖지는 않는다. | 나중에 "그때 알 수 있었던 정보인가"를 재현하기 어렵다. |
+| Large product surfaces remain | `app/web/backtest_compare.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/runtime/final_selected_portfolios.py`는 여전히 큰 파일이다. | 기능 추가 전후로 회귀 위험과 UX 판단 비용이 커진다. |
+| Legacy compatibility is still visible | Candidate Review / Portfolio Proposal / Candidate Library / legacy panel routes가 compatibility로 남아 있다. | 삭제 대상은 아니지만, 주 흐름과 archive / recovery 경계가 계속 흐려질 수 있다. |
+| Risk-On Momentum 5D governance is deferred | Backtest Analysis 연구 lane으로 구현됐지만 Practical Validation / Final Review / Portfolio Monitoring daily signal policy에 연결되지 않았다. | `backtest-dev` 연구 결과를 main product workflow로 받아들이는 기준이 필요하다. |
+
+### Legacy / Removal Read
+
+지금 삭제보다 먼저 할 일은 "primary workflow에서 더 낮추고, archive / recovery 의미를 고정"하는 것이다.
+
+| Surface / concept | Current read | Direction |
+| --- | --- | --- |
+| Candidate Review | legacy compatibility / old candidate packaging | 신규 주 흐름에서는 숨김 또는 archive로 유지. 즉시 삭제는 보류. |
+| Portfolio Proposal | legacy proposal draft and paper path | Backtest Analysis Portfolio Mix / Final Review selected-route로 대체되는 부분은 demote. |
+| Backtest Run History | archive / recovery | 보존. 후보 생성 주 단계로 올리지 않는다. |
+| Candidate Library | archive / recovery | 보존. Selection V2 source-of-truth는 아니다. |
+| `Selected Portfolio Dashboard` file name | legacy implementation name | 사용자-facing 명칭은 `Operations > Portfolio Monitoring`으로 유지. 파일명 rename은 별도 refactor scope. |
+| Generated run history / artifacts | local runtime artifact | 명시 승인 없이는 커밋 / roadmap evidence로 승격하지 않는다. |
+
+### Product Direction Implication
+
+다음 개발 방향은 새 화면을 늘리는 것보다, 이미 만들어진 evidence 흐름을 "운영 가능한 판단 체계"로 만드는 쪽이 맞다.
+
+1. `Portfolio Monitoring Snapshot / Review Loop`: 선정 후 monthly / rebalance / manual review snapshot을 append-only로 남긴다.
+2. `Research-to-Product Strategy Governance`: backtest-dev에서 개선한 전략을 Practical Validation / Final Review / Monitoring policy로 승격하는 계약을 만든다.
+3. `Robustness Experiment Registry`: parameter sweep, walk-forward, OOS, regime, cost/slippage, Monte Carlo/bootstrap run set을 재현 가능한 단위로 묶는다.
+4. `Data Provenance / PIT Upgrade`: evidence row마다 snapshot id, source date, available-at assumption, current-vs-historical label을 통일한다.
+5. `Legacy Demotion / Archive Cleanup`: 삭제가 아니라 source-of-truth breadcrumb와 navigation demotion으로 혼란을 줄인다.
+6. `Large Surface Refactor Round`: 개발 방향이 정해진 뒤 `backtest_compare`, Portfolio Monitoring runtime/UI를 기능별로 더 나눈다.

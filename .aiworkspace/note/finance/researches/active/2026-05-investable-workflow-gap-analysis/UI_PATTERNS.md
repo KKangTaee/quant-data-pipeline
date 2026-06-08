@@ -1,7 +1,7 @@
 # UI And Workflow Patterns
 
 Status: Draft
-Last Updated: 2026-05-28
+Last Updated: 2026-06-08
 
 ## Summary
 
@@ -105,3 +105,80 @@ Last Updated: 2026-05-28
 - Which look-through fields are mandatory for ETF portfolios: holdings coverage, expense ratio, AUM, ADV, spread, leverage objective?
 - Should Robustness Lab start as a default small suite or as user-configurable advanced validation?
 - What exact monitoring snapshot should be appended after a portfolio is selected?
+
+## 2026-06-08 Pattern Refresh
+
+### 1. Main-Dev As Product Direction Console
+
+- User problem: strategy research and product workflow decisions can become mixed if this session tries to evaluate both alpha quality and product structure.
+- Interaction shape: `main-dev` should read as a product direction console. It audits local workflow, compares benchmarks, writes research bundles, and prepares future task / phase handoffs. It does not decide that a backtest-dev strategy is production-ready by itself.
+- Output pattern: every broad direction request should produce a small roadmap: `1차 현재 제품 감사 -> 2차 외부 패턴 비교 -> 3차 개발 후보 우선순위 -> 4차 별도 개발 세션 handoff`.
+- Fit: very high.
+
+### 2. Strategy Promotion Contract
+
+- Seen in: QuantConnect lifecycle, Portfolio123 ranking / simulation assumptions.
+- User problem: backtest-dev can improve or add strategies, but main product needs a clear rule for when a strategy is eligible for Practical Validation / Final Review / Monitoring governance.
+- Interaction shape: before a strategy enters product governance, show a promotion checklist:
+  - strategy family / owner
+  - universe and survivorship model
+  - parameter set and optimization history
+  - in-sample / out-of-sample / walk-forward evidence
+  - cost / slippage / liquidity assumptions
+  - benchmark / comparator policy
+  - generated artifacts and replay contract
+  - known failures and `NOT_RUN` evidence
+- Data required: strategy config, run-set id, artifact ids, validation result ids, report path.
+- Fit: high. It connects `backtest-dev` output to `main-dev` product governance without making this session a strategy-research worktree.
+
+### 3. Monitoring Snapshot And Review Loop
+
+- Seen in: Koyfin drift analysis, IBKR / Bloomberg reporting workflows.
+- User problem: Portfolio Monitoring can show scenario results, but it does not yet create a durable review history by default.
+- Interaction shape: add explicit `Save Monitoring Snapshot` / `Record Review` action after scenario update. Snapshot rows should capture selected decision id, portfolio id, strategy slot signature, benchmark delta, drift, provider freshness, review signals, open issues, operator note, and next review date.
+- Data required: existing session scenario result, selected decision source chain, optional allocation input, provider freshness read model.
+- Fit: very high. This is the most natural next user-facing improvement after the current monitoring-first UX.
+
+### 4. Evidence Summary Before Evidence Detail
+
+- Seen in: Bloomberg / Koyfin summary snapshots, current Operations Console pattern.
+- User problem: Practical Validation and Final Review have many audit rows; users need a "what matters now" view first.
+- Interaction shape: each stage starts with a compact action-oriented summary:
+  - `Ready`: what can proceed now
+  - `Must Fix`: blockers
+  - `Open Review`: non-blocking but tracked risks
+  - `Missing / Stale`: data gaps
+  - `Next Owner`: Backtest, Ingestion, Validation, Final Review, Portfolio Monitoring, Archive
+- Fit: high. Keep detailed evidence under expandable sections.
+
+### 5. Archive / Recovery Demotion Instead Of Immediate Deletion
+
+- Seen in: institutional separation between production workflow, reports, and archive.
+- User problem: legacy tools still have audit value but can confuse the primary path.
+- Interaction shape: Run History and Candidate Library stay available under `Operations > Archive / Recovery`, with copy that says "recover or audit old work; not a required selection stage."
+- Fit: high. Deleting now could break handoff and evidence recovery.
+
+### 6. Large-Surface Refactor After Direction Approval
+
+- Seen locally: file-size audit, current roadmap carry-forward.
+- User problem: product-facing changes in very large Streamlit/runtime files are riskier and harder to QA.
+- Interaction shape: once a feature direction is approved, open a separate implementation session that splits one surface around a concrete feature boundary:
+  - Portfolio Monitoring scenario / snapshot / detail panels
+  - Portfolio Mix saved replay / weighted result / strategy form body
+  - Robustness experiment read model / UI
+- Fit: medium-high. It is not a product feature by itself, but it should accompany broad UX additions.
+
+### 7. Product Copy Should Say Monitoring Candidate, Not Live-Ready Portfolio
+
+- Seen in: Composer backtest disclosure and current project no-live boundary.
+- User problem: "투자 가능 후보" can sound like approval to deploy real capital.
+- Interaction shape: prefer labels like `모니터링 후보`, `관찰 후보`, `실전 검토 후보`, `선정 후 모니터링 대상`; reserve `live`, `deployment`, `order`, `rebalance` for explicit future scope only.
+- Fit: very high.
+
+### Updated Candidate Questions
+
+- What exact conditions let a backtest-dev strategy enter main product governance?
+- Which monitoring snapshot fields are mandatory for every selected strategy?
+- Should monitoring snapshots be saved per strategy slot, per dashboard portfolio, or both?
+- Which legacy surfaces can be hidden from primary navigation after archive semantics are stable?
+- Which large surface should be split first if Monitoring Snapshot V2 is approved?

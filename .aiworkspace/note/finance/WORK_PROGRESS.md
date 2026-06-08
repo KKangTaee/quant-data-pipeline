@@ -4824,3 +4824,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`에서 contextual help drift report와 표시 polish를 추가했다.
   - guard는 Glossary term, Reference link target, duplicate surface key, raw guide focus marker를 Streamlit-free로 점검한다.
   - Reference 검색 deep-linking, Ingestion / Overview 전체 surface 확장, DB / registry / saved JSONL rewrite는 하지 않았다.
+- Investable workflow product-direction baseline refresh:
+  - `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/`를 2026-06-08 기준으로 갱신했다.
+  - 이번 main-dev 세션은 전략 개발이 아니라 Backtest -> Validation -> Final Review -> Portfolio Monitoring 제품 흐름 감사, 벤치마크, 개발 후보 선별 세션으로 정리했다.
+  - 다음 우선 후보는 `Monitoring Snapshot / Review Loop V2`, `Strategy Promotion Contract For Backtest-Dev Handoff`, `Robustness Experiment Registry`, `Data Provenance / PIT Evidence Contract`다.
+  - 아직 새 phase / task나 구현 scope는 승인하지 않았다.

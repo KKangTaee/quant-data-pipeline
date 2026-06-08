@@ -7536,3 +7536,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 4차 contextual links가 붙은 뒤 Glossary term / Reference route boundary와 어긋나지 않도록 자동 점검하고, 화면 guide path 표시를 정리해야 함.
 - Analysis result: guard는 `app/services/reference_contextual_help.py`에 Streamlit-free report로 두고, renderer는 catalog text 표시만 담당하는 것이 UI-engine boundary에 맞다.
 - Follow-up: `build_reference_contextual_help_drift_report()`를 추가하고 raw `>` guide focus copy를 slash path로 정리했다. Reference query deep-linking과 신규 surface 확장은 후속 선택 사항으로 남긴다.
+
+### 2026-06-08 - main-dev 세션을 제품 방향 리서치 baseline으로 정리한다
+
+- User request: 현재 세션을 backtest-dev 전략 개발과 분리해, Backtest -> Validation -> Final Review -> Portfolio Monitoring 흐름 감사와 상용 벤치마킹 기반 개발 방향성 정리에 활용하고 싶다고 설명함.
+- Interpreted goal: AGENTS 지침 변경이 아니라, 현 세션의 활용 방식과 향후 개발 후보를 연구 산출물로 정리해야 함.
+- Analysis result: 현재 제품 구조는 유지 가치가 크며, 다음 우선 개발 후보는 Monitoring Snapshot / Review Loop V2와 backtest-dev 결과를 받아들이는 Strategy Promotion Contract다.
+- Follow-up: 상세 근거와 후보는 `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/` refresh 섹션을 본다. 새 phase / task는 사용자 승인 전까지 열지 않는다.

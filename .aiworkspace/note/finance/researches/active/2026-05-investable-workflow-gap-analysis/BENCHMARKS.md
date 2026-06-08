@@ -1,7 +1,7 @@
 # Benchmarks
 
 Status: Draft
-Last Updated: 2026-05-28
+Last Updated: 2026-06-08
 
 Evidence labels:
 
@@ -186,3 +186,131 @@ Evidence labels:
 - Should `SELECT_FOR_PRACTICAL_PORTFOLIO` require zero critical `NOT_RUN`, or allow an explicit human waiver?
 - What minimum paper observation duration is required before a candidate can be "selected"?
 - Should current snapshot ETF data be acceptable for all ETF validation, or should validation require snapshot as-of records persisted per decision?
+
+## 2026-06-08 Benchmark Refresh
+
+Access date: 2026-06-08.
+
+This refresh adds current official-source evidence for the `main-dev` product-direction session. It keeps the same benchmark question, but shifts the interpretation because the local product has already implemented much of the May `Investability Evidence Packet` / gate-hardening foundation.
+
+### Updated Benchmark Set
+
+| Product / service | Why included now | Useful pattern | Boundary note |
+| --- | --- | --- | --- |
+| QuantConnect / LEAN | Strategy research, backtesting, reports, walk-forward optimization | Treat research, backtest, optimization, report, and deployment as distinct lifecycle states | Use the research / robustness / report pattern, not live deployment |
+| Portfolio123 | Factor ranking and simulation platform | Ranking-system contract, simulation assumptions, liquidity/slippage disclosure, universe exit handling | Good pattern for factor strategy governance and assumption disclosure |
+| Composer | Retail no-code strategy builder with backtest and automated execution | Very explicit backtest-vs-live assumptions, cost/slippage settings, API separation of backtest/deploy/portfolio | Execution features conflict with this product boundary; use disclosure pattern only |
+| Bloomberg PORT | Institutional portfolio risk / performance analytics | Unified positions, data validation, risk, attribution, scenario analysis, reporting | Use as direction for data validation and reporting, not as a full risk-model clone |
+| Morningstar X-Ray | Portfolio look-through and exposure analysis | Holdings breakdown, benchmark-relative exposure, fees, sector/style/region interpretation | Use look-through pattern with local provider coverage limits |
+| Koyfin Model Portfolios | Advisor-style model monitoring and reports | Drift analysis, benchmark comparison, sleeves, exposures, risk metrics, holdings matrix, reports | Strong fit for `Operations > Portfolio Monitoring` without broker execution |
+| Interactive Brokers PortfolioAnalyst | Broker-adjacent monitoring / reporting | Consolidated performance, allocation/risk measures, benchmarks, reports | Use monitoring/report pattern; account linking remains out of scope |
+
+### New Source Notes
+
+#### QuantConnect / LEAN
+
+- Official docs describe backtesting as simulating an algorithm on historical data and then measuring historical performance.
+- QuantConnect reports include key statistics, returns, asset allocation, drawdown, rolling statistics, exposure, crisis events, and parameters.
+- Walk-forward optimization is documented as periodically adjusting strategy parameters over a trailing window; the docs explicitly call out an optimization-frequency tradeoff between responsiveness and overfitting risk.
+
+Applicability:
+
+- This supports a future `Robustness Experiment Registry` and `Strategy Promotion Contract`.
+- Every promoted strategy should carry parameters, data snapshot, benchmark, cost/slippage, rebalance policy, report period, crisis-window outcome, and run-set id.
+
+Sources:
+
+- https://www.quantconnect.com/docs/v2/cloud-platform/backtesting
+- https://www.quantconnect.com/docs/v2/cloud-platform/backtesting/report
+- https://www.quantconnect.com/docs/v2/writing-algorithms/optimization/walk-forward-optimization
+
+#### Portfolio123
+
+- Ranking systems explicitly define factors, formulas, weights, lower-is-better / higher-is-better direction, and rank-within-universe behavior.
+- Simulation assumptions disclose that performance is model-based and historical, not predictive; they also define assumed trade timing, liquidity-based slippage, split / dividend handling, universe exits, and cash return assumptions.
+
+Applicability:
+
+- This is a strong pattern for `backtest-dev -> main product` handoff: a strategy is not just a name and CAGR, but a ranking/selection contract with explicit assumptions.
+- It also supports making local strategy reports show transaction timing, liquidity/slippage, universe exit, and cash assumptions beside results.
+
+Sources:
+
+- https://portfolio123.customerly.help/en/articles/13611-ranking-system
+- https://portfolio123.customerly.help/en/articles/13753-simulation-assumptions
+
+#### Composer
+
+- Composer's help center is unusually clear that backtests are hypothetical, benefit from hindsight, are not recommendations, and may differ from live trading because live decisions use real-time quotes.
+- It exposes cost assumptions such as regulatory fees, default slippage, and optional subscription cost modeling.
+- Its API separates account/portfolio data, symphonies, backtests, deploy actions, dry runs, and direct trading.
+
+Applicability:
+
+- Strong pattern for local assumption disclosure and "backtest output is not execution authority."
+- Weak fit for implementation because Composer's automated deployment, rebalancing, direct trading, and account features conflict with the current no-live-trading boundary.
+
+Sources:
+
+- https://help.composer.trade/article/67-backtest-basics
+- https://api.composer.trade/docs/index.html
+
+#### Bloomberg PORT
+
+- Public Bloomberg PORT material emphasizes unifying positions, risk, performance, data validation, attribution, scenario analysis, optimization, and reporting.
+- It also mentions factor-based, full-valuation, macroeconomic, and climate scenario-analysis families.
+
+Applicability:
+
+- Supports a product direction where data validation and scenario families sit above individual evidence rows.
+- Useful benchmark for a durable `Decision Dossier` / reporting artifact generated from existing evidence.
+
+Source:
+
+- https://professional.bloomberg.com/products/bloomberg-terminal/portfolio-analytics/
+
+#### Morningstar X-Ray
+
+- X-Ray explains a portfolio by underlying holdings and benchmark-relative breakdowns: asset class, world region, sector, fees, stock stats, style boxes, and stock intersection.
+
+Applicability:
+
+- Supports treating provider look-through as a core Practical Validation / Final Review requirement.
+- Local limitation remains provider coverage and current-snapshot semantics, so missing / stale / partial holdings must stay decision-relevant.
+
+Source:
+
+- https://www.morningstar.com/help-center/portfolio/xray
+
+#### Koyfin Model Portfolios
+
+- Koyfin model portfolios emphasize key stats, holdings visualization, target-drift monitoring, benchmark comparison, rolling returns, sleeves, long/short and leveraged positions, exposure breakdowns, historical returns, risk metrics, holdings matrix, and custom reports.
+- Their help page also describes benchmark settings, rebalancing frequency, custom allocation dates, and handling securities that start trading after the portfolio start date.
+
+Applicability:
+
+- Strongest benchmark for `Operations > Portfolio Monitoring`.
+- Supports a future monitoring snapshot and drift/review loop without account linking.
+
+Sources:
+
+- https://www.koyfin.com/features/model-portfolios/
+- https://www.koyfin.com/help/model-portfolios/
+
+### 2026-06-08 Cross-Product Patterns
+
+1. `Strategy contract before performance`: QuantConnect, Portfolio123, and Composer all make assumptions / parameters / data source boundaries part of the backtest story.
+2. `Robustness is lifecycle evidence`: reports, walk-forward optimization, crisis events, rolling returns, and scenario testing are separate from a single headline CAGR.
+3. `Look-through and exposure explain the portfolio`: Morningstar and Koyfin show that ticker weights are insufficient for ETF / fund portfolios.
+4. `Monitoring needs drift and report artifacts`: Koyfin, Bloomberg, and IBKR patterns point to repeated snapshot/report workflows rather than session-only dashboards.
+5. `Execution must stay separate`: Composer and IBKR show how quickly monitoring can become trading; this project should keep broker/order/account sync out of scope unless explicitly approved later.
+
+### Updated Benchmark-Informed Gaps
+
+| Gap after 2026-06-08 audit | Benchmark pattern | Local implication |
+| --- | --- | --- |
+| Strategy research handoff is informal | QuantConnect lifecycle, Portfolio123 ranking contract | Create a strategy promotion checklist for backtest-dev outputs before they enter Practical Validation / Final Review governance. |
+| Monitoring scenario is session-first | Koyfin drift monitoring, IBKR / Bloomberg reporting | Add explicit monitoring snapshot records with benchmark, drift, provider freshness, review trigger, operator note. |
+| Robustness has evidence rows but no run-set registry | QuantConnect walk-forward / report parameters, Portfolio123 assumptions | Introduce robustness run-set ids and assumption metadata before expanding Robustness Lab. |
+| Look-through is useful but provider-limited | Morningstar / Koyfin holdings and exposure views | Keep local provider coverage strict: partial / stale / missing remains blocker or review item, not a silent pass. |
+| Legacy archive tools still visually compete | Institutional workflows separate production, archive, and report artifacts | Keep Run History / Candidate Library as archive / recovery; do not present them as primary selection stages. |

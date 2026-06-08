@@ -1,8 +1,14 @@
 # Investable Workflow Gap Analysis Research Plan
 
+Last Updated: 2026-06-08
+
 ## Why This Work Exists
 
 현재 Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 기준으로 실전 투자 가능성 판단에 부족한 약점과 상용 제품 대비 개선 방향을 정리한다.
+
+2026-06-08 refresh는 기존 Phase 0 연구를 새로 승인된 roadmap으로 바꾸기 위한 작업이 아니다.
+현재 `main-dev` 세션이 제품 방향 리서치 세션으로 어떻게 활용될지 정리하고,
+`backtest-dev`의 전략 심층 분석 / 개선 작업과 분리된 제품 흐름 감사, 벤치마크, 개발 후보 선별 기준을 갱신하기 위한 baseline이다.
 
 ## Research Questions
 
