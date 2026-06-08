@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_etf_current_anchor import build_etf_current_anchor_workbench
 from app.services.backtest_etf_evidence_expansion import build_etf_evidence_expansion
 from app.services.backtest_risk_on_governance import build_risk_on_momentum_governance
 from app.services.backtest_strategy_bridge import build_strict_annual_etf_bridge
@@ -52,6 +53,31 @@ def _etf_expansion_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
             for row in rows
         ]
     )
+
+
+def _etf_current_anchor_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    table_rows: list[dict[str, object]] = []
+    for row in rows:
+        latest_run = dict(row.get("latest_run") or {})
+        latest_source = dict(row.get("latest_source") or {})
+        run_label = "-"
+        if latest_run:
+            run_label = (
+                f"{latest_run.get('recorded_at') or '-'} / "
+                f"end {latest_run.get('actual_result_end') or '-'} / "
+                f"rows {latest_run.get('result_rows') or '-'}"
+            )
+        table_rows.append(
+            {
+                "Strategy": row.get("display_name") or "-",
+                "Anchor Status": row.get("anchor_status") or "-",
+                "Latest Run": run_label,
+                "Selection Source": latest_source.get("selection_source_id") or "-",
+                "Missing Evidence": "; ".join(row.get("missing_evidence") or []) or "-",
+                "Next Action": row.get("recommended_next_action") or "-",
+            }
+        )
+    return pd.DataFrame(table_rows)
 
 
 def _governance_evidence_table(rows: list[dict[str, object]]) -> pd.DataFrame:
@@ -294,6 +320,80 @@ def _render_etf_evidence_expansion_panel() -> None:
         st.caption(expansion["route_boundary"])
 
 
+def _render_etf_current_anchor_workbench_panel() -> None:
+    workbench = build_etf_current_anchor_workbench()
+    rows = workbench["rows"]
+
+    with st.expander(workbench["title"], expanded=True):
+        st.caption(workbench["summary"])
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Latest Runs", workbench["latest_run_count"])
+        metric_cols[1].metric("Selection Sources", workbench["source_count"])
+        metric_cols[2].metric("Ready For Review", workbench["ready_count"])
+        metric_cols[3].metric("Evidence Gaps", workbench["gap_count"])
+
+        st.markdown("**Current-anchor readiness**")
+        st.dataframe(
+            _etf_current_anchor_rows_table(rows),
+            hide_index=True,
+            width="stretch",
+        )
+
+        st.markdown("**Strategy anchor detail**")
+        for row in rows:
+            display_name = row.get("display_name") or row.get("strategy_key") or "Strategy"
+            with st.expander(f"{display_name} - {row.get('anchor_status') or 'Anchor status'}", expanded=False):
+                latest_run = dict(row.get("latest_run") or {})
+                latest_source = dict(row.get("latest_source") or {})
+                run_col, source_col = st.columns(2)
+                with run_col:
+                    st.markdown("**Latest run evidence**")
+                    if latest_run:
+                        st.dataframe(
+                            pd.DataFrame(
+                                [
+                                    {"Field": key.replace("_", " ").title(), "Value": value}
+                                    for key, value in latest_run.items()
+                                    if value not in (None, "", [], {})
+                                ]
+                            ),
+                            hide_index=True,
+                            width="stretch",
+                        )
+                    else:
+                        st.info("No latest local run history row found for this ETF strategy.")
+                with source_col:
+                    st.markdown("**Selection source evidence**")
+                    if latest_source:
+                        st.dataframe(
+                            pd.DataFrame(
+                                [
+                                    {"Field": key.replace("_", " ").title(), "Value": value}
+                                    for key, value in latest_source.items()
+                                    if value not in (None, "", [], {})
+                                ]
+                            ),
+                            hide_index=True,
+                            width="stretch",
+                        )
+                    else:
+                        st.info("No Backtest Analysis selection source row found for this ETF strategy.")
+
+                st.markdown("**Missing evidence**")
+                missing = list(row.get("missing_evidence") or [])
+                if missing:
+                    for item in missing:
+                        st.markdown(f"- {item}")
+                else:
+                    st.success("No current-anchor evidence gaps detected in the loaded artifact rows.")
+
+                st.markdown("**Recommended next action**")
+                st.write(row.get("recommended_next_action") or "-")
+
+        st.caption(workbench["storage_boundary"])
+        st.caption(workbench["route_boundary"])
+
+
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
@@ -305,6 +405,7 @@ def render_backtest_analysis_workspace() -> None:
     _render_strict_annual_etf_bridge_panel()
     _render_risk_on_governance_panel()
     _render_etf_evidence_expansion_panel()
+    _render_etf_current_anchor_workbench_panel()
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE

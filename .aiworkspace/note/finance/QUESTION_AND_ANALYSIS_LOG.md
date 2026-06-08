@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - ETF current-anchor should start from artifact-backed readiness, not promotion writes
+- User request:
+  - 3차 3D 이후 4차 작업 진행을 요청함.
+- Interpreted goal:
+  - ETF Evidence Expansion 다음 단계로 GRS / Risk Parity / Dual Momentum의 current-anchor readiness를 실제 workflow artifact 기준으로 확인하게 한다.
+- Analysis result:
+  - 4A는 바로 rerun matrix 실행이나 current candidate registry write로 가면 경계가 크다. 먼저 existing run history와 Practical Validation source handoff row를 읽어 latest run / source evidence, missing provider-cost-benchmark evidence, next action을 표시하는 read-only workbench를 구현하는 것이 안전하다.
+- Follow-up:
+  - 4B는 사용자 승인 후 ETF DB-backed rerun matrix / strategy hub update로 열고, current candidate promotion이나 Practical Validation result creation은 별도 승인 경계로 남긴다.
+
 ### 2026-06-08 - Bridge scope should be role / evidence handoff, not automatic candidate creation
 - User request:
   - 3A가 가이드처럼 보인다는 점을 확인한 뒤 3B 작업 진행을 요청함.

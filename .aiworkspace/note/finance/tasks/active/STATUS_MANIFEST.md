@@ -9,7 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `etf-evidence-expansion-20260608`
+- `etf-current-anchor-workbench-20260608`
+
+Recent 4차 Backtest work:
+
+- `etf-current-anchor-workbench-20260608`: 4A ETF Current Anchor Workbench. Read-only latest run / selection source / missing evidence / next-action surface for GRS / Risk Parity / Dual Momentum.
 
 Recent 3차 Backtest work:
 
@@ -74,7 +78,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-08:
 
-- `tasks/active`: 198 task folders
+- `tasks/active`: 199 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.

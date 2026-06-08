@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Backtest ETF Current Anchor Workbench 4A
+- Opened and completed `.aiworkspace/note/finance/tasks/active/etf-current-anchor-workbench-20260608/` for Backtest 4차 4A.
+- Added a Streamlit-free ETF current-anchor read model and Backtest Analysis workbench panel for GRS / Risk Parity / Dual Momentum.
+- The workbench reads existing run history and Practical Validation source handoff rows to show latest run evidence, source evidence, missing evidence, and next action without reruns or registry writes.
+- Verification, Browser QA screenshot, and remaining 4B handoff are in the task `RUNS.md` / `STATUS.md`.
+
 ### 2026-06-08 - Backtest Strict Annual / ETF Bridge 3B
 - Opened and completed `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/` for Backtest 3차 3B.
 - Added a Streamlit-free strict annual + GTAA / Equal Weight bridge read model and Backtest Analysis bridge panel.
