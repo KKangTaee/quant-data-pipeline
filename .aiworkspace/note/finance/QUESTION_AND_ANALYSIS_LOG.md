@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Strategy promotion needs a contract before product workflow handoff
+- User request:
+  - 제품 방향 리서치 2순위인 `Strategy Promotion Contract For Backtest-Dev Handoff`를 1차 / 2차 / 3차로 진행해 달라고 요청함.
+- Interpreted goal:
+  - `backtest-dev` 전략 성과 개선과 `main-dev` 제품 workflow 승격 판단을 분리하고, 좋은 수익률만으로 Practical Validation / Final Review / Portfolio Monitoring에 진입하지 않게 한다.
+- Analysis result:
+  - 현재 Backtest Analysis, Practical Validation, Final Review, Portfolio Monitoring 흐름은 유지한다. 새 contract는 source 생성 전 precondition으로 두고, universe / survivorship / PIT / optimization / OOS / walk-forward / cost / liquidity / replay / generated artifact / `NOT_RUN` / blocker / monitoring trigger를 먼저 확인한다.
+- Follow-up:
+  - Risk-On Momentum 5D 같은 research lane은 먼저 promotion contract를 채운 뒤, 별도 승인된 Practical Validation module / Final Review gate / Portfolio Monitoring signal integration task로 연결한다.
+
 ### 2026-06-08 - Reference should appear inside the workflow screens
 - User request:
   - Reference 탭 개편의 4차 작업 진행을 요청함.

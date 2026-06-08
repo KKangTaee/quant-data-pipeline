@@ -13,6 +13,8 @@ Last Verified: 2026-06-07
 
 ## Current Flow
 
+`backtest-dev`에서 온 새 전략 또는 의미 있는 전략 개선을 이 흐름에 올리려면, 먼저 [Strategy Promotion Contract](../../reports/backtests/STRATEGY_PROMOTION_CONTRACT.md)를 채워 universe, survivorship, PIT, optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, `NOT_RUN` evidence, monitoring trigger를 확인한다. 이 contract는 source 생성 전 precondition이며, 기존 Practical Validation / Final Review gate를 대체하지 않는다.
+
 ```text
 Backtest > Backtest Analysis
   -> Backtest > Practical Validation
@@ -45,6 +47,7 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 
 | Checkpoint | Primary Surface | Meaning |
 |---|---|---|
+| Strategy Promotion Handoff | Backtest Reports > Strategy Promotion Contract | `backtest-dev` result가 product workflow source로 올라가기 전 universe, PIT / survivorship, optimization, OOS, cost / liquidity, replay, artifact, blocker, monitoring trigger를 갖췄는지 확인 |
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
 | Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
@@ -55,6 +58,18 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 ## Source Contract
 
 Portfolio Selection current의 기준 id는 `selection_source_id`다.
+
+`backtest-dev` 전략 promotion의 경우 source chain 앞에 사람이 읽는 contract precondition이 붙는다.
+
+```text
+Strategy Promotion Contract
+  -> PORTFOLIO_SELECTION_SOURCES
+    -> PRACTICAL_VALIDATION_RESULTS
+      -> FINAL_PORTFOLIO_SELECTION_DECISIONS
+        -> Operations > Portfolio Monitoring read-only monitoring
+```
+
+일반 current source chain은 아래와 같다.
 
 ```text
 PORTFOLIO_SELECTION_SOURCES
@@ -135,6 +150,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 | Area | Files |
 |---|---|
 | Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/pages/backtest.py` |
+| Strategy promotion handoff | `.aiworkspace/note/finance/reports/backtests/STRATEGY_PROMOTION_CONTRACT.md`, `.aiworkspace/note/finance/reports/backtests/templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md` |
 | Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
 | Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
 | Final Review | `app/web/backtest_final_review*.py`, `app/services/backtest_evidence_read_model.py` |

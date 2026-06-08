@@ -38,5 +38,7 @@ Last Verified: 2026-05-12
 
 - 전략을 다시 이해할 때는 hub 문서부터 읽는다.
 - 의미 있는 새 backtest는 해당 `*_BACKTEST_LOG.md`에 append한다.
+- `backtest-dev`에서 제품 workflow 승격을 요청한 전략은 먼저 `../STRATEGY_PROMOTION_CONTRACT.md` 기준으로 promotion contract를 채운다.
+- strategy hub에는 반복 참조할 가치가 있는 promotion state, blocker, monitoring trigger만 요약하고, 계약 본문은 `../runs/YYYY/`의 전략별 promotion contract를 링크한다.
 - 한 번 받은 원본성 report는 먼저 `../runs/YYYY/`에 두고, 반복 참조할 핵심만 log로 요약한다.
 - 후보 판단 자체의 source-of-truth는 `.aiworkspace/note/finance/registries/`이며, 이 폴더는 사람이 읽는 근거 정리 공간이다.

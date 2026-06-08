@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-08
 
 ## Project Summary
 
@@ -43,7 +43,7 @@ Last Verified: 2026-06-07
 | `.aiworkspace/note/finance/phases/active/` | phase 단위 계획과 retained board 기록. current active phase 판정은 `STATUS_MANIFEST.md` / README / roadmap을 먼저 본다 |
 | `.aiworkspace/note/finance/registries/` | workflow JSONL registry |
 | `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup |
-| `.aiworkspace/plugins/quant-finance-workflow/` | repo-local finance Codex skill / helper script source |
+| `.aiworkspace/plugins/quant-finance-workflow/` | repo-local finance Codex skill / helper script source, including strategy promotion contract completeness checks |
 
 ## Main Entry Points
 
@@ -111,6 +111,9 @@ Last Verified: 2026-06-07
 | Backtest strict quality / value runtime wrappers | `app/runtime/backtest_strict.py`; compatibility exports remain in `app/runtime/backtest.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
 | Service contract tests | `tests/test_service_contracts.py` |
+| Strategy Promotion Contract guide | `.aiworkspace/note/finance/reports/backtests/STRATEGY_PROMOTION_CONTRACT.md` |
+| Strategy Promotion Contract template | `.aiworkspace/note/finance/reports/backtests/templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md` |
+| Strategy Promotion Contract helper | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py` |
 
 ## Practical Validation Core Files
 
@@ -177,7 +180,7 @@ Backtest Analysis
 |---|---|---|
 | Current / candidate / final decision registries | `.aiworkspace/note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지. 저장 경계는 `docs/data/STORAGE_GOVERNANCE.md` 기준 |
 | Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 Operations > Portfolio Monitoring의 사용자 monitoring portfolio setup이며 legacy dashboard file name을 유지한다 |
-| Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
+| Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서와 strategy promotion handoff contract. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
 | Backtest generated artifacts | `.aiworkspace/note/finance/backtest_artifacts/` | full scanner / trade detail 같은 generated artifact, 보통 커밋 금지 |
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
@@ -194,6 +197,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare_components.py` |
 | Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |
+| `backtest-dev` 전략 결과를 제품 workflow로 승격 검토 | `.aiworkspace/note/finance/reports/backtests/STRATEGY_PROMOTION_CONTRACT.md`, `.aiworkspace/note/finance/reports/backtests/templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md`, `.aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py`, `docs/architecture/STRATEGY_IMPLEMENTATION_FLOW.md`, `docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
 | Backtest real-money / guardrail / deployment readiness helper 수정 | `app/runtime/backtest_real_money.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/web/backtest_history_helpers.py`, related `app/services/backtest_*` replay / execution callers |
 | Strict quality / value / quality-value runtime wrapper 수정 | `app/runtime/backtest_strict.py`, `app/runtime/backtest.py` compatibility facade, `finance/loaders/factors.py`, `finance/loaders/financial_statements.py`, `app/services/backtest_execution.py`, `app/services/backtest_compare_catalog.py`, `app/web/backtest_single_forms.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |

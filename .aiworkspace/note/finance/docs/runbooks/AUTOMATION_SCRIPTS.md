@@ -11,6 +11,7 @@
 |---|---|
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 phase 문서 bundle 생성 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | phase / docs / logs / generated artifact hygiene 점검 |
+| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py` | Strategy Promotion Contract markdown의 필수 section과 decision state token 누락 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` / `app/runtime` Streamlit-free boundary, `app.web` import 금지, staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
@@ -97,6 +98,27 @@ Hard fail:
 
 - `app/web`은 Streamlit 화면, form, session state, user feedback을 맡는다.
 - `app/services`와 `app/runtime`은 Streamlit-free layer이므로 UI helper를 역참조하지 않는다.
+
+## Strategy promotion contract helper
+
+사용 시점:
+
+- `backtest-dev`에서 새 전략 또는 의미 있는 전략 개선 결과를 `main-dev` 제품 workflow로 넘기기 전
+- Strategy Promotion Contract template이 필수 section을 모두 유지하는지 확인할 때
+- promotion contract가 `PROMOTE_READY`, `REVIEW_REQUIRED`, `BLOCKED`, `NOT_RUN` state vocabulary를 명시하는지 확인할 때
+
+대표 명령:
+
+```bash
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py .aiworkspace/note/finance/reports/backtests/templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py path/to/promotion_contract.md --json
+```
+
+기준:
+
+- 이 helper는 required section과 decision state token presence만 확인한다.
+- `PASS`는 contract 구조가 갖춰졌다는 뜻이지, 전략 성과나 제품 승인을 뜻하지 않는다.
+- registry / saved JSONL을 읽거나 쓰지 않는다.
 
 ## Current candidate registry helper
 

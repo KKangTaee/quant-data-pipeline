@@ -21,6 +21,7 @@ Last Verified: 2026-05-12
 | `strategies/` | 전략 family별 hub, backtest log, 현재 후보 one-pager |
 | `runs/YYYY/` | 새 분석 세션에서 받은 원본성 backtest report |
 | `validation/` | runtime smoke, UI replay, validation 결과 보고 |
+| `templates/` | strategy promotion contract처럼 반복 작성하는 handoff template |
 
 ## What Does Not Go Here
 
@@ -36,6 +37,7 @@ Last Verified: 2026-05-12
 
 - 새 분석 세션에서 받은 결과 report는 먼저 `runs/YYYY/`에 둔다.
 - 전략 family 단위로 반복 확인할 가치가 있으면 `strategies/*_BACKTEST_LOG.md`에 요약 entry를 추가한다.
+- `backtest-dev` 전략 결과를 제품 workflow로 올리려면 [STRATEGY_PROMOTION_CONTRACT.md](./STRATEGY_PROMOTION_CONTRACT.md)를 먼저 확인하고, [templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md](./templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md)를 채운다.
 - 최종 후보 판단에 쓰이는 핵심 근거는 registry / Final Review source-of-truth와 연결하고, 사람이 읽는 해석은 `strategies/` log나 `validation/` report에 흡수한다.
 - runtime/UI 검증 문서는 `validation/`으로 분리한다.
 - 기존 phase별 raw archive는 2026-05-12 migration에서 `runs/`, `strategies/`, `validation/`으로 흡수했다.

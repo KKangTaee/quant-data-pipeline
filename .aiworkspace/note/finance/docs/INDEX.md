@@ -24,8 +24,8 @@ Last Verified: 2026-06-08
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Monitoring Snapshot / Review Loop V2 2026-06-08](../tasks/active/monitoring-snapshot-review-loop-v2-20260608/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring with explicit snapshot/review loop, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
+- Latest completed task: [Strategy Promotion Contract Handoff 2026-06-08](../tasks/active/strategy-promotion-contract-handoff-20260608/STATUS.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis with strategy promotion handoff contract, Practical Validation / Final Review, Operations / Portfolio Monitoring with explicit snapshot/review loop, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
 
@@ -41,6 +41,7 @@ Last Verified: 2026-06-08
 | 실행 / 검증 / 운영 절차 확인 | [Runbooks](./runbooks/README.md) |
 | 제품 방향 / 벤치마킹 리서치 확인 | [Research](../researches/README.md) |
 | backtest 결과 report 확인 | [Backtest Reports](../reports/backtests/INDEX.md) |
+| backtest-dev 전략 승격 handoff 확인 | [Strategy Promotion Contract](../reports/backtests/STRATEGY_PROMOTION_CONTRACT.md) / [Strategy Implementation Flow](./architecture/STRATEGY_IMPLEMENTATION_FLOW.md) |
 
 ## Work Records
 

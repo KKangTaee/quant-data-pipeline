@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Strategy Promotion Contract Handoff
+- Completed `.aiworkspace/note/finance/tasks/active/strategy-promotion-contract-handoff-20260608/` as the 2nd product-direction priority after Monitoring Snapshot / Review Loop V2.
+- Added `reports/backtests/STRATEGY_PROMOTION_CONTRACT.md`, a reusable template, and a structural checker for `backtest-dev -> main-dev` strategy handoff completeness.
+- Contract now requires universe, survivorship, PIT, parameters / optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, blocker, `NOT_RUN`, Practical Validation, Final Review, and Portfolio Monitoring trigger evidence before product workflow promotion review.
+- No strategy development, strategy approval, registry / saved JSONL rewrite, broker/account/order/live approval, auto rebalance, or legacy surface deletion was included.
+
 ### 2026-06-07 - Refactor Round Closeout 10차
 - Opened `.aiworkspace/note/finance/tasks/active/refactor-round-closeout-20260607/` as the 10차 structure / refactor baseline closeout record.
 - Audited 5차~9차 outputs, large-file residuals, `.note/finance` path risk, and UI / engine boundary posture.

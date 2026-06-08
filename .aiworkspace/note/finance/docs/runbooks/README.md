@@ -1,7 +1,7 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-08
 
 ## Feature Runbooks
 
@@ -70,6 +70,19 @@ UI / engine boundary 변경:
 - `Hard violations: none`
 - `Result: PASS`
 - `app.services / app.runtime -> app.web` import가 있으면 hard violation으로 실패한다.
+
+Strategy Promotion Contract 구조 확인:
+
+```bash
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py .aiworkspace/note/finance/reports/backtests/templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md
+```
+
+기대 결과:
+
+- `Missing required sections: none`
+- `Missing decision state tokens: none`
+- `Result: PASS`
+- 이 helper는 문서 구조만 확인하며 전략 승인, 성과 검증, registry rewrite를 하지 않는다.
 
 문서 구조 확인:
 

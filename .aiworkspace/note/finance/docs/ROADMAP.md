@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/monitoring-snapshot-review-loop-v2-20260608/`
-- 목적: Portfolio Monitoring scenario update 결과를 사용자가 명시적으로 `Save Monitoring Snapshot` 또는 `Record Review`로 append-only compact review evidence로 남기고, latest / previous / current scenario 변화를 비교할 수 있게 한다.
-- 이번 차수에서 하지 않은 일: live approval, broker order, account sync, auto rebalance, automatic monitoring log save, raw holdings / macro / provider response JSONL 저장, Candidate Review / Portfolio Proposal / Candidate Library / Run History 삭제.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/strategy-promotion-contract-handoff-20260608/`
+- 목적: `backtest-dev` 전략 결과를 main 제품 workflow에 올리기 전 universe, survivorship, PIT, parameter / optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, `NOT_RUN` evidence, monitoring trigger를 확인하는 Strategy Promotion Contract를 만든다.
+- 이번 차수에서 하지 않은 일: 새 전략 개발, 전략 성과 개선, 특정 전략 승인, Practical Validation / Final Review / Portfolio Monitoring UI redesign, live approval, broker order, account sync, auto rebalance, registry / saved JSONL 재작성, Candidate Review / Portfolio Proposal / Candidate Library / Run History 삭제.
 
 ## Product Tracks
 
@@ -38,7 +38,7 @@ Workspace > Ingestion
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
+| Backtest Analysis | Candidate creation plus Risk-On Momentum 5D research lane and Strategy Promotion Contract handoff baseline complete | `Backtest > Backtest Analysis`, `reports/backtests/` | 후보 source 생성 단계; `backtest-dev` result promotion은 contract를 먼저 채우며, final decision / monitoring governance는 기존 gate와 후속 승인 scope가 소유 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console, daily-monitoring-first Portfolio Monitoring, and explicit Monitoring Snapshot / Review loop complete | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health`, archive lanes | Read-only monitoring, explicit scenario update, explicit append-only snapshot/review save; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -52,6 +52,7 @@ Workspace > Ingestion
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
 | Monitoring Snapshot / Review Loop V2 | Complete | Portfolio Monitoring can compare latest / previous saved snapshot with the current scenario and append compact monitoring evidence only when the user presses `Save Monitoring Snapshot` or `Record Review`. |
+| Strategy Promotion Contract Handoff | Complete | Backtest report workspace now has a Strategy Promotion Contract guide, reusable template, and structural checker so `backtest-dev` strategy results must disclose universe, PIT / survivorship, optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, blockers, and monitoring triggers before product workflow promotion review. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |
 | Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 
@@ -104,6 +105,7 @@ Recent completed structure audit tasks:
 
 Recent completed product workflow tasks:
 
+- `strategy-promotion-contract-handoff-20260608`
 - `monitoring-snapshot-review-loop-v2-20260608`
 
 Retained completed boards in `phases/active/` should not be treated as newly open phase work.
@@ -134,7 +136,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 | Large-surface second refactor round | 10차 closeout confirmed large files remain in Backtest Compare, Overview, Operations / Portfolio Monitoring runtime, and Overview services | Opening a new focused refactor round that changes module ownership or public call paths |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
-| Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |
+| Risk-On Momentum 5D governance | Strategy is implemented as research lane and now has a promotion contract checklist, but it is still not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration after a filled promotion contract is reviewed |
 | Overview scheduler hardening | Browser-session refresh exists; OS scheduler / launchd production operation is a separate decision | Enabling unattended scheduled collection |
 | UI platform split | Streamlit is workable but complex UX may eventually benefit from API + React/Next.js | Any large frontend migration or service API expansion |
 | Second-cycle investability hardening | Phase 13 carry-forward material can seed another phase | Opening a new phase from carry-forward matrix |
