@@ -4859,3 +4859,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`에서 contextual help drift report와 표시 polish를 추가했다.
   - guard는 Glossary term, Reference link target, duplicate surface key, raw guide focus marker를 Streamlit-free로 점검한다.
   - Reference 검색 deep-linking, Ingestion / Overview 전체 surface 확장, DB / registry / saved JSONL rewrite는 하지 않았다.
+- Sub-dev Overview / Macro Base Research:
+  - `.aiworkspace/note/finance/researches/active/2026-06-sub-dev-overview-macro-base/`에서 sub-dev worktree의 Overview / Ingestion / Operations 분석·시각화 개발 베이스를 정리했다.
+  - 결론은 `Overview Macro Context Cockpit V1`을 1차 후보로 두고, `Data Health -> Ingestion Action Queue`, macro source catalog, breadth / heatmap, Events quality view를 후속 후보로 둔다.
+  - 이번 작업은 research guide이며 AGENTS.md / ROADMAP / code 변경이나 실제 구현은 하지 않았다.

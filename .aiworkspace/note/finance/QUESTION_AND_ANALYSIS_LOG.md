@@ -7597,3 +7597,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 4차 contextual links가 붙은 뒤 Glossary term / Reference route boundary와 어긋나지 않도록 자동 점검하고, 화면 guide path 표시를 정리해야 함.
 - Analysis result: guard는 `app/services/reference_contextual_help.py`에 Streamlit-free report로 두고, renderer는 catalog text 표시만 담당하는 것이 UI-engine boundary에 맞다.
 - Follow-up: `build_reference_contextual_help_drift_report()`를 추가하고 raw `>` guide focus copy를 slash path로 정리했다. Reference query deep-linking과 신규 surface 확장은 후속 선택 사항으로 남긴다.
+
+### 2026-06-08 - sub-dev는 Overview / Ingestion / Operations 분석·시각화 베이스로 활용한다
+
+- User request: 사용자가 이 세션 / worktree를 핵심 백테스트·검증과 별개로 Overview, Ingestion, Operations 및 macro / 시장 자료 분석·시각화 개발 방향을 잡는 베이스로 쓰고 싶다고 설명하고, 현재 Overview 정보의 장점 / 약점 / 개선 후보를 정리해 달라고 요청함.
+- Interpreted goal: AGENTS.md를 지금 변경하지 않고, product direction research bundle로 sub-dev 역할과 다음 개발 후보를 정리한다.
+- Analysis result: 현재 Overview는 DB-backed market context coverage가 넓지만 futures / sentiment / events / movers / data health가 분산되어 있어 summary-first macro cockpit이 먼저 필요하다. 두 번째 후보는 Data Health와 Ingestion 실행 콘솔의 action handoff 강화다.
+- Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/2026-06-sub-dev-overview-macro-base/`를 본다. 구현은 사용자 승인 후 별도 세션에서 시작한다.
