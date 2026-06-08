@@ -3800,6 +3800,144 @@ class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
         self.assertTrue(any(row["Status"] == "NOT_RUN" for row in board["follow_up_rows"]))
 
 
+class RobustnessExperimentRunSetContractTests(unittest.TestCase):
+    def test_run_set_summary_groups_existing_compact_evidence_without_persistence(self) -> None:
+        from app.services.backtest_robustness_run_set import build_robustness_run_set_summary
+
+        validation = {
+            "validation_id": "validation_source_ready_1234",
+            "selection_source_id": "source-ready",
+            "selection_source_snapshot": {
+                "source_id": "source-ready",
+                "source_title": "GTAA promotion candidate",
+                "source_kind": "single_strategy",
+                "promotion_contract_reference": "reports/backtests/runs/2026/gtaa_promotion_contract.md",
+                "source_snapshot": {
+                    "settings_snapshot": {
+                        "strategy_key": "gtaa",
+                        "strategy_family": "ETF Allocation",
+                        "rebalance_freq": "monthly",
+                        "ma_window": 200,
+                    }
+                },
+                "components": [
+                    {
+                        "strategy_key": "gtaa",
+                        "strategy_name": "GTAA",
+                        "target_weight": 100.0,
+                        "replay_contract": {
+                            "settings_snapshot": {"strategy_key": "gtaa", "rebalance_freq": "monthly"}
+                        },
+                    }
+                ],
+                "generated_artifacts": [
+                    {"type": "report", "path": ".aiworkspace/note/finance/backtest_artifacts/gtaa_report.json"}
+                ],
+            },
+            "robustness_validation": {
+                "robustness_route": "READY_FOR_STRESS_SWEEP",
+                "robustness_lab_board": {
+                    "status": "REVIEW",
+                    "summary": "Stress 2/3, sensitivity 4, runtime follow-up 1.",
+                    "metrics": {
+                        "computed_stress_windows": 2,
+                        "covered_stress_windows": 3,
+                        "computed_sensitivity_checks": 4,
+                        "runtime_followup_count": 1,
+                        "rolling_window_count": 8,
+                    },
+                    "follow_up_rows": [{"Check": "Parameter perturbation", "Status": "REVIEW"}],
+                },
+                "sensitivity_rows": [
+                    {
+                        "Scenario": "GTAA parameter perturbation",
+                        "Scope": "MA window",
+                        "Result Status": "REVIEW",
+                    }
+                ],
+            },
+            "temporal_validation": {
+                "status": "PASS",
+                "summary": "36M walk-forward 8 windows.",
+                "metrics": {"window_count": 8, "worst_rolling_excess_return": 0.01},
+            },
+            "oos_holdout_validation": {
+                "status": "PASS",
+                "summary": "OOS holdout: out excess 2.00%.",
+                "metrics": {"in_sample_months": 36, "out_sample_months": 24},
+            },
+            "regime_split_validation": {
+                "status": "REVIEW",
+                "summary": "Regime split 3 buckets; worst drawdown gap review.",
+                "metrics": {"regime_bucket_count": 3, "common_months": 60},
+            },
+            "backtest_realism_audit": {
+                "rows": [
+                    {
+                        "Criteria": "Cost / slippage sensitivity evidence",
+                        "Status": "REVIEW",
+                        "Evidence": "explicit 5/10 bps sensitivity attached",
+                    }
+                ]
+            },
+        }
+
+        run_set = build_robustness_run_set_summary(validation)
+
+        self.assertEqual(run_set["schema_version"], "robustness_run_set_v1")
+        self.assertEqual(run_set["robustness_run_set_id"], "robustness_run_set_validation_source_ready_1234")
+        self.assertEqual(run_set["strategy_key"], "gtaa")
+        self.assertEqual(run_set["source_id"], "source-ready")
+        self.assertIn("stress", run_set["experiment_types"])
+        self.assertIn("walk_forward", run_set["experiment_types"])
+        self.assertIn("cost_slippage_sensitivity", run_set["experiment_types"])
+        self.assertEqual(run_set["walk_forward_summary"]["status"], "PASS")
+        self.assertEqual(run_set["regime_split_summary"]["status"], "REVIEW")
+        self.assertEqual(run_set["parameter_perturbation_summary"]["status"], "REVIEW")
+        self.assertEqual(run_set["generated_artifact_references"][0]["path"], ".aiworkspace/note/finance/backtest_artifacts/gtaa_report.json")
+        self.assertFalse(run_set["storage_boundary"]["full_artifact_persistence"])
+        self.assertEqual(run_set["decision_effect"]["practical_validation"], "REVIEW")
+
+    def test_not_run_evidence_keeps_run_set_non_pass(self) -> None:
+        from app.services.backtest_robustness_run_set import build_robustness_run_set_summary
+
+        run_set = build_robustness_run_set_summary(
+            {
+                "validation_id": "validation_gap",
+                "selection_source_id": "source-gap",
+                "selection_source_snapshot": {
+                    "source_id": "source-gap",
+                    "source_snapshot": {"settings_snapshot": {"strategy_key": "dual_momentum"}},
+                },
+                "robustness_validation": {
+                    "robustness_lab_board": {
+                        "status": "PASS",
+                        "summary": "Existing board passed computed stress.",
+                        "follow_up_rows": [
+                            {
+                                "Check": "Runtime parameter perturbation",
+                                "Status": "NOT_RUN",
+                                "Evidence": "strategy-specific perturbation not executed",
+                            }
+                        ],
+                    },
+                    "sensitivity_rows": [
+                        {
+                            "Scenario": "Dual Momentum lookback perturbation",
+                            "Result Status": "NOT_RUN",
+                        }
+                    ],
+                },
+                "temporal_validation": {"status": "NOT_RUN", "summary": "walk-forward not executed"},
+            }
+        )
+
+        self.assertEqual(run_set["overall_status"], "NEEDS_INPUT")
+        self.assertEqual(run_set["decision_effect"]["final_review"], "NEEDS_INPUT")
+        self.assertTrue(run_set["not_run_review_blocked_evidence"])
+        self.assertFalse(run_set["decision_effect"]["treat_as_pass"])
+
+
 class BoundaryContractHardeningTests(unittest.TestCase):
     def _load_boundary_checker(self):
         script_path = (
@@ -9494,6 +9632,84 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("paper tracking", guide["route_templates"]["reason"])
         self.assertFalse(guide["record_boundary"]["non_select_persistence"])
         self.assertFalse(guide["record_boundary"]["waiver_persistence"])
+
+    def test_investability_packet_carries_robustness_run_set_snapshot(self) -> None:
+        from app.services.backtest_evidence_read_model import build_investability_evidence_packet
+
+        validation = {
+            "validation_id": "validation-run-set-packet",
+            "selection_source_id": "source-run-set",
+            "selection_source_snapshot": {
+                "source_id": "source-run-set",
+                "source_snapshot": {"settings_snapshot": {"strategy_key": "gtaa"}},
+            },
+            "checks": [
+                {"Criteria": "Selection source", "Ready": True, "Current": "source-run-set"},
+                {"Criteria": "Active components", "Ready": True, "Current": "1"},
+                {"Criteria": "Target weight total", "Ready": True, "Current": "100.00%"},
+                {"Criteria": "Data Trust", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+            ],
+            "robustness_run_set": {
+                "schema_version": "robustness_run_set_v1",
+                "robustness_run_set_id": "robustness_run_set_validation_run_set_packet",
+                "overall_status": "REVIEW",
+                "strategy_key": "gtaa",
+                "decision_effect": {"final_review": "REVIEW", "treat_as_pass": False},
+                "not_run_review_blocked_evidence": [
+                    {"Area": "Parameter Perturbation", "Criteria": "MA window", "Status": "REVIEW"}
+                ],
+            },
+            "robustness_validation": {
+                "robustness_route": "READY_FOR_STRESS_SWEEP",
+                "robustness_lab_board": {"status": "PASS", "summary": "board ready"},
+            },
+            "validation_efficacy_audit": self._gate_audit(
+                route="VALIDATION_EFFICACY_READY",
+                label="Ready",
+                criteria="Validation efficacy",
+                status="PASS",
+                ready=True,
+                current="ready",
+                meaning="validation efficacy attached",
+            ),
+            "data_coverage_audit": self._gate_audit(
+                route="DATA_COVERAGE_READY",
+                label="Ready",
+                criteria="Data coverage",
+                status="PASS",
+                ready=True,
+                current="ready",
+                meaning="data coverage attached",
+            ),
+            "backtest_realism_audit": self._gate_audit(
+                route="BACKTEST_REALISM_READY",
+                label="Ready",
+                criteria="Backtest realism",
+                status="PASS",
+                ready=True,
+                current="ready",
+                meaning="realism attached",
+            ),
+            **self._construction_gate_ready_audits(),
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_id": "source-run-set"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        self.assertEqual(
+            packet["robustness_run_set"]["robustness_run_set_id"],
+            "robustness_run_set_validation_run_set_packet",
+        )
+        self.assertEqual(packet["summary"]["robustness_run_set_status"], "REVIEW")
+        self.assertEqual(packet["summary"]["robustness_run_set_id"], "robustness_run_set_validation_run_set_packet")
 
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_decision_evidence_rows

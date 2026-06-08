@@ -6,6 +6,7 @@ from app.services.backtest_component_role_weight_audit import build_component_ro
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
+from app.services.backtest_robustness_run_set import build_robustness_run_set_summary
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 
@@ -1020,6 +1021,11 @@ def build_investability_evidence_packet(
     runtime_check = _find_check(validation_checks, "Runtime recheck")
     status_counts = _status_counts(validation)
     robustness = dict(validation.get("robustness_validation") or {})
+    robustness_run_set = dict(
+        validation.get("robustness_run_set")
+        or robustness.get("robustness_run_set")
+        or build_robustness_run_set_summary(validation)
+    )
     critical_gaps = _critical_gap_rows(validation, paper_observation, decision_evidence)
     blocking_gaps = [gap for gap in critical_gaps if str(gap.get("Severity") or "") == "BLOCK"]
     assumptions = _assumption_rows(validation)
@@ -1249,6 +1255,7 @@ def build_investability_evidence_packet(
         "open_review_items": open_review_items,
         "assumptions_and_limits": assumptions,
         "validation_efficacy_audit": validation_efficacy_audit,
+        "robustness_run_set": robustness_run_set,
         "data_coverage_audit": data_coverage_audit,
         "construction_risk_audit": construction_risk_audit,
         "risk_contribution_audit": risk_contribution_audit,
@@ -1262,6 +1269,8 @@ def build_investability_evidence_packet(
             "provider_status": _provider_status_summary(validation),
             "decision_evidence_route": decision_evidence.get("route"),
             "robustness_route": robustness.get("robustness_route"),
+            "robustness_run_set_id": robustness_run_set.get("robustness_run_set_id"),
+            "robustness_run_set_status": robustness_run_set.get("overall_status"),
             "gate_policy_outcome": selection_gate_policy.get("outcome"),
             "selection_gate_policy_outcome": selection_gate_policy.get("outcome"),
             "deployment_readiness_policy_outcome": deployment_gate_policy.get("outcome"),
@@ -1886,6 +1895,12 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
         provider_context = dict(risk_snapshot.get("provider_coverage") or {})
         look_through = dict(provider_context.get("look_through_board") or {})
     robustness_lab = dict(robustness.get("robustness_lab_board") or risk_snapshot.get("robustness_lab_board") or {})
+    robustness_run_set = dict(
+        risk_snapshot.get("robustness_run_set")
+        or robustness.get("robustness_run_set")
+        or packet.get("robustness_run_set")
+        or {}
+    )
     validation_efficacy = dict(
         risk_snapshot.get("validation_efficacy_audit") or packet.get("validation_efficacy_audit") or {}
     )
@@ -1910,6 +1925,11 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     _append_check_rows(display_rows, area="Risk Contribution", checks=list(risk_contribution.get("rows") or []))
     _append_check_rows(display_rows, area="Component Role / Weight", checks=list(component_role_weight.get("rows") or []))
     _append_check_rows(display_rows, area="Backtest Realism", checks=list(backtest_realism.get("rows") or []))
+    _append_check_rows(
+        display_rows,
+        area="Robustness Run-Set",
+        checks=list(robustness_run_set.get("not_run_review_blocked_evidence") or []),
+    )
     _append_check_rows(display_rows, area="Look-through Exposure", checks=list(look_through.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness Lab", checks=list(robustness_lab.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))

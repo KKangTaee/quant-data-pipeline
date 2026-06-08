@@ -1386,6 +1386,34 @@ def _robustness_lab_board(validation_result: dict[str, Any]) -> dict[str, Any]:
     return board
 
 
+def _robustness_run_set(validation_result: dict[str, Any]) -> dict[str, Any]:
+    robustness = dict(validation_result.get("robustness_validation") or {})
+    return dict(validation_result.get("robustness_run_set") or robustness.get("robustness_run_set") or {})
+
+
+def _render_robustness_run_set_summary(run_set: dict[str, Any]) -> None:
+    if not run_set:
+        return
+    decision_effect = dict(run_set.get("decision_effect") or {})
+    render_badge_strip(
+        [
+            {"label": "Run-set", "value": run_set.get("robustness_run_set_id") or "-", "tone": "neutral"},
+            {"label": "Status", "value": run_set.get("overall_status") or "-", "tone": _status_tone(run_set.get("overall_status"))},
+            {"label": "Strategy", "value": run_set.get("strategy_key") or "-", "tone": "neutral"},
+            {"label": "Experiments", "value": len(run_set.get("experiment_types") or []), "tone": "neutral"},
+            {
+                "label": "Decision Effect",
+                "value": decision_effect.get("practical_validation") or "-",
+                "tone": _status_tone(decision_effect.get("practical_validation")),
+            },
+        ]
+    )
+    evidence_rows = list(run_set.get("not_run_review_blocked_evidence") or [])
+    if evidence_rows:
+        with st.expander("Robustness run-set non-pass evidence", expanded=False):
+            st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
+
+
 def _render_robustness_lab_board(
     board: dict[str, Any],
     validation_result: dict[str, Any] | None = None,
@@ -1397,6 +1425,8 @@ def _render_robustness_lab_board(
     st.caption(
         "Stress, rolling, sensitivity, overfit 근거를 Final Review에서 바로 읽을 수 있는 compact board로 요약합니다."
     )
+    if validation_result is not None:
+        _render_robustness_run_set_summary(_robustness_run_set(validation_result))
     render_badge_strip(
         [
             {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},

@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/strategy-promotion-contract-handoff-20260608/`
-- 목적: `backtest-dev` 전략 결과를 main 제품 workflow에 올리기 전 universe, survivorship, PIT, parameter / optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, `NOT_RUN` evidence, monitoring trigger를 확인하는 Strategy Promotion Contract를 만든다.
-- 이번 차수에서 하지 않은 일: 새 전략 개발, 전략 성과 개선, 특정 전략 승인, Practical Validation / Final Review / Portfolio Monitoring UI redesign, live approval, broker order, account sync, auto rebalance, registry / saved JSONL 재작성, Candidate Review / Portfolio Proposal / Candidate Library / Run History 삭제.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/robustness-experiment-registry-20260608/`
+- 목적: 기존 Robustness Lab / Validation Efficacy / Temporal Validation / Backtest Realism evidence를 `robustness_run_set_id`가 있는 compact run-set read model로 묶어 Practical Validation과 Final Review가 같은 실험 묶음을 인용할 수 있게 한다.
+- 이번 차수에서 하지 않은 일: 새 전략 개발, 전략 성과 개선, 대규모 Monte Carlo / batch runner, full artifact / trade log / holdings / macro / raw provider JSONL 저장, live approval, broker order, account sync, auto rebalance, registry / saved JSONL 재작성, 기존 Robustness Lab 삭제.
 
 ## Product Tracks
 
@@ -53,6 +53,7 @@ Workspace > Ingestion
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
 | Monitoring Snapshot / Review Loop V2 | Complete | Portfolio Monitoring can compare latest / previous saved snapshot with the current scenario and append compact monitoring evidence only when the user presses `Save Monitoring Snapshot` or `Record Review`. |
 | Strategy Promotion Contract Handoff | Complete | Backtest report workspace now has a Strategy Promotion Contract guide, reusable template, and structural checker so `backtest-dev` strategy results must disclose universe, PIT / survivorship, optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, blockers, and monitoring triggers before product workflow promotion review. |
+| Robustness Experiment Registry | Complete | Practical Validation now attaches a compact `robustness_run_set_id` summary over existing Robustness Lab / temporal / realism evidence, and Final Review investability packets / saved decision evidence can cite the same run-set without replacing the Robustness Lab board or storing full artifacts. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |
 | Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 
@@ -105,6 +106,7 @@ Recent completed structure audit tasks:
 
 Recent completed product workflow tasks:
 
+- `robustness-experiment-registry-20260608`
 - `strategy-promotion-contract-handoff-20260608`
 - `monitoring-snapshot-review-loop-v2-20260608`
 

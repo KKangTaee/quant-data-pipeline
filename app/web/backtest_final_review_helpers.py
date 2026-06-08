@@ -504,6 +504,7 @@ def _build_final_review_decision_row(
             "component_role_weight_display_rows": list(validation.get("component_role_weight_display_rows") or []),
             "backtest_realism_audit": dict(validation.get("backtest_realism_audit") or {}),
             "backtest_realism_display_rows": list(validation.get("backtest_realism_display_rows") or []),
+            "robustness_run_set": dict(validation.get("robustness_run_set") or {}),
             "profile_score_rows": list(validation.get("profile_score_rows") or []),
             "curve_evidence": dict(validation.get("curve_evidence") or {}),
             "rolling_validation": dict(validation.get("rolling_validation") or {}),

@@ -33,6 +33,7 @@ from app.services.backtest_selected_route_preflight import (
 )
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_realism_audit import build_backtest_realism_audit
+from app.services.backtest_robustness_run_set import build_robustness_run_set_summary
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
@@ -1672,6 +1673,13 @@ def build_practical_validation_result(
     backtest_realism_audit = build_backtest_realism_audit(result)
     result["backtest_realism_audit"] = backtest_realism_audit
     result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])
+    robustness_run_set = build_robustness_run_set_summary(result)
+    result["robustness_run_set"] = robustness_run_set
+    result["robustness_validation"] = {
+        **dict(result.get("robustness_validation") or {}),
+        "robustness_run_set_id": robustness_run_set.get("robustness_run_set_id"),
+        "robustness_run_set": robustness_run_set,
+    }
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])

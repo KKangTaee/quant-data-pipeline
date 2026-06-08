@@ -7560,3 +7560,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Final Review에서 선정된 monitoring 후보를 전략 개발이 아니라 운영 관찰 대상으로 다루며, scenario update 결과를 자동 저장하지 않고 사용자가 명시적으로 snapshot/review를 append하도록 만들어야 함.
 - Analysis result: 기존 selected dashboard는 scenario 결과와 review signal을 session state로만 보여줬다. V2는 `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`을 explicit append-only compact evidence registry로 사용하되, reusable setup인 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 source-of-truth로 바꾸지 않는 것이 경계에 맞다.
 - Follow-up: runtime snapshot builder / append helper / comparison read model과 Portfolio Monitoring save/review UI를 구현했다. live approval, broker order, account sync, auto rebalance, automatic monitoring save, raw provider response 저장은 추가하지 않았다.
+
+### 2026-06-08 - Robustness Experiment Registry를 구현한다
+
+- User request: 제품 방향 리서치 3순위인 `Robustness Experiment Registry`를 1차 / 2차 / 3차로 진행해, robustness evidence를 흩어진 row가 아니라 `robustness_run_set_id`가 있는 실험 묶음으로 추적하게 해 달라고 요청함.
+- Interpreted goal: 새 전략 개발이나 성과 개선이 아니라, 기존 Robustness Lab / temporal / validation efficacy / backtest realism evidence를 compact run-set provenance로 묶어 Practical Validation과 Final Review가 같은 근거 묶음을 인용해야 함.
+- Analysis result: Robustness Lab은 display/evidence board로 유지하고, run-set은 source id / promotion contract reference / frozen parameter set / OOS / walk-forward / regime / cost / parameter perturbation / generated artifact reference / non-PASS evidence를 묶는 read-only grouping layer로 두는 것이 경계에 맞다.
+- Follow-up: `app/services/backtest_robustness_run_set.py`와 PV / Final Review 연결을 구현했다. `NOT_RUN`은 pass가 아니며, full artifacts와 raw evidence는 reference만 남긴다.

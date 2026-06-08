@@ -695,6 +695,7 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
     summary = dict(packet.get("summary") or {})
     source_chain = dict(packet.get("source_chain") or {})
     gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    robustness_run_set = dict(packet.get("robustness_run_set") or {})
     policy_blocker_count = len(gate_policy.get("blockers") or []) + len(gate_policy.get("review_required") or [])
     route = str(packet.get("route") or "-")
     render_readiness_route_panel(
@@ -719,6 +720,30 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
         ]
     )
     st.caption("이 packet은 새 저장소가 아니라 Final Review에서 기존 validation evidence를 읽는 compact 판단 근거입니다.")
+    if robustness_run_set:
+        st.markdown("###### Robustness Experiment Run-Set")
+        run_set_effect = dict(robustness_run_set.get("decision_effect") or {})
+        render_badge_strip(
+            [
+                {"label": "Run-set", "value": robustness_run_set.get("robustness_run_set_id") or "-", "tone": "neutral"},
+                {"label": "Status", "value": robustness_run_set.get("overall_status") or "-", "tone": _status_tone(robustness_run_set.get("overall_status"))},
+                {"label": "Strategy", "value": robustness_run_set.get("strategy_key") or "-", "tone": "neutral"},
+                {"label": "Experiments", "value": len(robustness_run_set.get("experiment_types") or []), "tone": "neutral"},
+                {
+                    "label": "Final Review",
+                    "value": run_set_effect.get("final_review") or "-",
+                    "tone": _status_tone(run_set_effect.get("final_review")),
+                },
+            ]
+        )
+        st.caption(
+            "Run-set은 Robustness Lab을 대체하지 않는 provenance/grouping layer입니다. "
+            "`NOT_RUN` / `REVIEW` / `BLOCKED` evidence는 pass로 승격하지 않습니다."
+        )
+        run_set_rows = list(robustness_run_set.get("not_run_review_blocked_evidence") or [])
+        if run_set_rows:
+            with st.expander("Run-set non-pass evidence", expanded=False):
+                st.dataframe(pd.DataFrame(run_set_rows), width="stretch", hide_index=True)
     st.dataframe(pd.DataFrame(packet.get("checks") or []), width="stretch", hide_index=True)
     policy_rows = list(gate_policy.get("policy_rows") or [])
     if policy_rows:

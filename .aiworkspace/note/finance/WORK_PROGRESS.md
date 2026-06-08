@@ -4840,3 +4840,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Operations > Portfolio Monitoring`은 scenario update 후 latest / previous saved snapshot과 current scenario를 비교하고, 사용자가 `Save Monitoring Snapshot` 또는 `Record Review`를 누를 때만 compact evidence를 append한다.
   - live approval / broker order / account sync / auto rebalance / automatic monitoring log save / raw provider response 저장은 추가하지 않았다.
   - 다음에 볼 위치는 task `STATUS.md`, `RUNS.md`, 그리고 flow docs의 Portfolio Monitoring storage boundary다.
+- Robustness Experiment Registry:
+  - `.aiworkspace/note/finance/tasks/active/robustness-experiment-registry-20260608/`에서 제품 방향 리서치 3순위 후보를 구현했다.
+  - 기존 Robustness Lab / temporal / realism compact evidence를 `robustness_run_set_id`가 있는 run-set read model로 묶고, Practical Validation / Final Review가 같은 run-set id와 non-PASS evidence를 읽게 했다.
+  - 새 전략 개발, 성과 개선, 대규모 batch runner, full artifact / raw provider JSONL 저장, live approval / order / auto rebalance는 추가하지 않았다.
+  - 다음에 볼 위치는 task `STATUS.md`, `DESIGN.md`, `RUNS.md`와 `app/services/backtest_robustness_run_set.py`다.

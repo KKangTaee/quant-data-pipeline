@@ -81,6 +81,7 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
 | `app/services/backtest_realism_audit.py` | Practical Validation / Final Review가 읽는 read-only backtest realism audit. 기존 runtime metadata와 compact validation evidence에서 비용, turnover, liquidity, net policy, rebalance, tax/account, execution boundary gap을 해석한다 |
+| `app/services/backtest_robustness_run_set.py` | Practical Validation / Final Review가 읽는 read-only Robustness Experiment run-set read model. 기존 Robustness Lab, temporal validation, Backtest Realism compact evidence를 하나의 `robustness_run_set_id` 아래에서 묶고, full artifact나 raw rows는 reference만 남긴다 |
 | `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환하는 public compatibility facade. Price-only ETF runtime wrappers를 소유하고, split module runner / helper를 re-export한다 |
 | `app/runtime/backtest_risk_on_momentum.py` | Risk-On Momentum 5D DB runtime implementation. `app.runtime.backtest`가 기존 public import path를 위해 runner를 re-export한다 |
 | `app/runtime/backtest_real_money.py` | Real-money / guardrail / benchmark / deployment readiness helper implementation. `app.runtime.backtest`가 기존 public import path를 위해 constants and helper functions를 re-export한다 |

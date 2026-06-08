@@ -50,6 +50,8 @@ Backtest Analysis
 
 `PROMOTE_READY`는 live-ready가 아니다. Practical Validation과 Final Review가 읽을 수 있는 source payload를 만들 준비가 됐다는 뜻이다.
 
+Main product workflow에 들어온 뒤에는 Practical Validation이 existing compact robustness evidence를 Robustness Experiment run-set으로 묶을 수 있다. 이 run-set은 Strategy Promotion Contract를 대체하지 않는다. 대신 source id 또는 promotion contract reference, frozen parameter set, OOS / walk-forward / regime / stress / cost / parameter perturbation evidence, generated artifact reference, `NOT_RUN` / `REVIEW` / `BLOCKED` rows를 `robustness_run_set_id` 아래에서 추적하게 한다.
+
 ## Minimum Required Fields
 
 | Group | Required Fields | Product Effect If Missing |
@@ -98,6 +100,8 @@ A promoted strategy must identify how its output becomes a Practical Validation 
 - excluded ticker / malformed row / missing provider warnings
 - generated artifact path for details that should not be stored in workflow JSONL
 - source payload fields that are unavailable and why
+
+When Practical Validation builds a Robustness Experiment run-set, it should cite this source payload or promotion contract reference rather than copying full report artifacts. `NOT_RUN` evidence stays missing evidence and cannot be inferred as pass merely because another robustness board row passed.
 
 If the strategy cannot provide a replayable payload or selection / holdings history where the downstream audit needs it, the contract must mark the missing part as `BLOCKED` or critical `NOT_RUN`.
 
