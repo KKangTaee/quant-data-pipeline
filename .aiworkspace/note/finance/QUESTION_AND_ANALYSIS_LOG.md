@@ -7604,3 +7604,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: AGENTS.md를 지금 변경하지 않고, product direction research bundle로 sub-dev 역할과 다음 개발 후보를 정리한다.
 - Analysis result: 현재 Overview는 DB-backed market context coverage가 넓지만 futures / sentiment / events / movers / data health가 분산되어 있어 summary-first macro cockpit이 먼저 필요하다. 두 번째 후보는 Data Health와 Ingestion 실행 콘솔의 action handoff 강화다.
 - Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/2026-06-sub-dev-overview-macro-base/`를 본다. 구현은 사용자 승인 후 별도 세션에서 시작한다.
+
+### 2026-06-08 - Overview Macro Context Cockpit V1을 1차로 구현한다
+
+- User request: 사용자가 sub-dev worktree에서 승인된 1차 범위로 `Overview Macro Context Cockpit V1` 설계/구현, Browser QA, 문서 정리, commit까지 요청함.
+- Interpreted goal: 새 수집 / 스키마 / 저장 없이 기존 DB-backed Overview read model을 합성해 첫 화면에서 market movement, breadth, futures, sentiment, events, data freshness, next deep tab을 읽게 한다.
+- Analysis result: Cockpit 합성은 `app/services/overview_market_intelligence.py`에 두고, helper cache와 `overview_ui_components.py` 렌더러를 통해 `render_overview_dashboard` 탭 위에 표시하는 구조가 UI-engine boundary에 맞다.
+- Follow-up: 2차는 Data Health -> Ingestion handoff, 3차는 breadth / heatmap and macro week view다. Candidate Ops IA 변경은 별도 승인 후보로 남긴다.

@@ -40,6 +40,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_collection_ops_snapshot,
     load_overview_dashboard_snapshot,
     load_overview_group_leadership_snapshot,
+    load_overview_macro_context_cockpit,
     load_overview_market_events_snapshot,
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
@@ -70,6 +71,7 @@ from app.web.overview_ui_components import (
     render_event_source_lane,
     render_event_warning_strip,
     render_events_summary_strip,
+    render_macro_context_cockpit,
     render_market_session_banner,
     render_market_auto_message,
     render_market_auto_waiting_panel,
@@ -5526,9 +5528,10 @@ def render_overview_dashboard(
     snapshot = load_overview_dashboard_snapshot()
     recent_results = recent_results or []
 
-    st.title("Finance Console")
-    st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
+    st.title("Market Context Overview")
+    st.caption("DB-backed market context, sentiment, event, and data-health snapshots for investigation only.")
     render_market_session_banner(_market_session_banner_model())
+    render_macro_context_cockpit(load_overview_macro_context_cockpit())
 
     market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
         ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]

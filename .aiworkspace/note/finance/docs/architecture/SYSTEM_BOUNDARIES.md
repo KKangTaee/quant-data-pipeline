@@ -74,6 +74,9 @@ It reads DB-backed service models for:
 - CNN Fear & Greed / AAII Sentiment
 - Why It Moved investigation metadata
 
+`Overview Macro Context Cockpit` is a summary-first read-only band over the existing deep tabs.
+It synthesizes the same DB-backed movers, breadth, futures, sentiment, event, and data-health snapshots, keeps source / freshness visible, and does not add new collection, storage, validation, monitoring, or trading semantics.
+
 Overview refresh buttons must route through `app/jobs/overview_actions.py`.
 The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
 The action facade is allowed to call ingestion job wrappers, browser-session automation, and run-history append helpers for approved Overview market-context targets only.

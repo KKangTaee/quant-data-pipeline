@@ -63,6 +63,7 @@ _CSS_TOKENS = {
     "color-danger": OVERVIEW_COLOR_DANGER,
     "color-neutral": OVERVIEW_COLOR_NEUTRAL,
     "color-text": OVERVIEW_COLOR_TEXT,
+    "color-text-subtle": OVERVIEW_COLOR_TEXT_SUBTLE,
     "color-text-inverse": OVERVIEW_COLOR_TEXT_INVERSE,
     "color-surface": OVERVIEW_COLOR_SURFACE,
     "color-surface-subtle": OVERVIEW_COLOR_SURFACE_SUBTLE,
@@ -191,6 +192,207 @@ def overview_ui_css() -> str:
   line-height: 1.22;
   margin-top: 0.12rem;
   overflow-wrap: anywhere;
+}
+.ov-macro-cockpit {
+  margin: 0.5rem 0 0.95rem 0;
+  padding: 0.78rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 4px solid var(--ov-cockpit-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    var(--ov-mi-color-surface);
+}
+.ov-macro-cockpit-head {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.64rem;
+}
+.ov-macro-cockpit-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.ov-macro-cockpit-title {
+  margin-top: 0.2rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1.02rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-detail {
+  margin-top: 0.18rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.46rem;
+  padding: 0.18rem 0.52rem;
+  border: 1px solid color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 36%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-cockpit-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-macro-cockpit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-md);
+}
+.ov-macro-cockpit-card {
+  min-width: 0;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-top: 3px solid var(--ov-card-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.92);
+  padding: 0.6rem 0.66rem;
+}
+.ov-macro-cockpit-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: flex-start;
+}
+.ov-macro-cockpit-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+}
+.ov-macro-cockpit-card-status {
+  flex: 0 0 auto;
+  max-width: 8rem;
+  color: var(--ov-card-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-value {
+  margin-top: 0.3rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.98rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-question,
+.ov-macro-cockpit-card-detail,
+.ov-macro-cockpit-source {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-question {
+  margin-top: 0.18rem;
+  color: var(--ov-mi-color-text-muted);
+}
+.ov-macro-cockpit-card-detail {
+  margin-top: 0.32rem;
+}
+.ov-macro-cockpit-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.42rem;
+}
+.ov-macro-cockpit-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 1.3rem;
+  padding: 0.14rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--ov-badge-tone, var(--ov-mi-color-neutral)) 26%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-badge-tone, var(--ov-mi-color-neutral)) 8%, transparent);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-source {
+  display: flex;
+  gap: var(--ov-mi-gap-xs);
+  flex-wrap: wrap;
+  margin-top: 0.46rem;
+  padding-top: 0.44rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-macro-cockpit-next {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.7fr) minmax(0, 1fr);
+  gap: var(--ov-mi-gap-md);
+  margin-top: 0.68rem;
+  padding-top: 0.62rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-macro-cockpit-next-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-macro-cockpit-next-note,
+.ov-macro-cockpit-boundary {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-macro-cockpit-check {
+  min-width: 0;
+  padding: 0.44rem 0.5rem;
+  border-left: 3px solid var(--ov-check-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.82);
+}
+.ov-macro-cockpit-check-tab {
+  color: var(--ov-check-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-check-title {
+  margin-top: 0.14rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-check-detail {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-boundary {
+  margin-top: 0.56rem;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.76);
 }
 .ov-mm-refresh-label {
   margin: 0.85rem 0 0.42rem 0;
@@ -867,6 +1069,14 @@ def overview_ui_css() -> str:
     border-left: 0;
     border-top: 1px solid var(--ov-mi-border-faint);
   }
+  .ov-macro-cockpit-head,
+  .ov-macro-cockpit-next {
+    grid-template-columns: 1fr;
+  }
+  .ov-macro-cockpit-grid,
+  .ov-macro-cockpit-checks {
+    grid-template-columns: 1fr;
+  }
   .ov-mm-meta-item:nth-child(odd) {
     border-left: 0;
     padding-left: 0;
@@ -1012,6 +1222,93 @@ def render_market_session_banner(model: dict[str, Any]) -> None:
   </div>
   {"".join(item_html)}
 </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _macro_cockpit_badges_html(badges: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for badge in badges[:4]:
+        tone = escape(_overview_tone_color(badge.get("tone")))
+        label = _display_value(badge.get("label"))
+        value = _display_value(badge.get("value"))
+        html.append(
+            f'<span class="ov-macro-cockpit-badge" style="--ov-badge-tone:{tone};">'
+            f"{escape(label)}: {escape(value)}"
+            "</span>"
+        )
+    return "".join(html)
+
+
+def _macro_cockpit_cards_html(cards: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for card in cards:
+        tone_color = escape(_overview_tone_color(card.get("tone")))
+        badges = _macro_cockpit_badges_html(list(card.get("badges") or []))
+        source = _display_value(card.get("source"))
+        freshness = _display_value(card.get("freshness"))
+        html.append(
+            f'<article class="ov-macro-cockpit-card" style="--ov-card-tone:{tone_color};">'
+            '<div class="ov-macro-cockpit-card-head">'
+            f'<div class="ov-macro-cockpit-label">{escape(_display_value(card.get("title")))}</div>'
+            f'<div class="ov-macro-cockpit-card-status">{escape(_display_value(card.get("status")))}</div>'
+            "</div>"
+            f'<div class="ov-macro-cockpit-value">{escape(_display_value(card.get("value")))}</div>'
+            f'<div class="ov-macro-cockpit-question">{escape(_display_value(card.get("question")))}</div>'
+            f'<div class="ov-macro-cockpit-card-detail">{escape(_display_value(card.get("detail")))}</div>'
+            f'<div class="ov-macro-cockpit-badges">{badges}</div>'
+            '<div class="ov-macro-cockpit-source">'
+            f"<span>Source: {escape(source)}</span>"
+            f"<span>Freshness: {escape(freshness)}</span>"
+            "</div>"
+            "</article>"
+        )
+    return "".join(html)
+
+
+def _macro_cockpit_next_checks_html(next_checks: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for check in next_checks[:4]:
+        tone_color = escape(_overview_tone_color(check.get("tone")))
+        reason = _display_value(check.get("reason"))
+        action = _display_value(check.get("action"))
+        html.append(
+            f'<div class="ov-macro-cockpit-check" style="--ov-check-tone:{tone_color};">'
+            f'<div class="ov-macro-cockpit-check-tab">{escape(_display_value(check.get("target_tab")))}</div>'
+            f'<div class="ov-macro-cockpit-check-title">{escape(_display_value(check.get("title")))}</div>'
+            f'<div class="ov-macro-cockpit-check-detail">{escape(reason)} · {escape(action)}</div>'
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_macro_context_cockpit(model: dict[str, Any]) -> None:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
+    cards_html = _macro_cockpit_cards_html(list(model.get("cards") or []))
+    next_checks_html = _macro_cockpit_next_checks_html(list(model.get("next_checks") or []))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">
+  <div class="ov-macro-cockpit-head">
+    <div>
+      <div class="ov-macro-cockpit-kicker">Overview Macro Context</div>
+      <div class="ov-macro-cockpit-title">{escape(_display_value(summary.get("headline")))}</div>
+      <div class="ov-macro-cockpit-detail">{escape(_display_value(summary.get("detail")))}</div>
+    </div>
+    <span class="ov-macro-cockpit-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-macro-cockpit-grid">{cards_html}</div>
+  <div class="ov-macro-cockpit-next">
+    <div>
+      <div class="ov-macro-cockpit-next-title">Next Deep Tabs</div>
+      <div class="ov-macro-cockpit-next-note">Suggested reading order from the same DB-backed context.</div>
+    </div>
+    <div class="ov-macro-cockpit-checks">{next_checks_html}</div>
+  </div>
+  <div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
         unsafe_allow_html=True,
     )
 

@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-drift-guard-qa-polish-v5-20260608`
+- `overview-macro-context-cockpit-v1-20260608`
 
 Latest completed docs cleanup task:
 
@@ -50,6 +50,10 @@ Recent Operations records:
 - `operations-portfolio-first-summary-20260607`: Operations Overview V2 2차 / Portfolio Monitoring Status summary first-pass
 - `operations-cockpit-cleanup-20260607`: Operations Overview V2 1차 cleanup / archive and development-history user-facing artifact removal
 
+Recent Overview / Market Context records:
+
+- `overview-macro-context-cockpit-v1-20260608`: Overview Macro Context Cockpit V1 / summary-first DB-backed market context band
+
 ## What `tasks/active/` Means Right Now
 
 This folder currently contains retained work records from prior active worktrees.
@@ -66,7 +70,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-08:
 
-- `tasks/active`: 193 task folders
+- `tasks/active`: 194 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.

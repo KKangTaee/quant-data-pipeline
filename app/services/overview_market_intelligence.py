@@ -3089,6 +3089,425 @@ def build_collection_ops_snapshot(
     }
 
 
+def _cockpit_error_snapshot(label: str, exc: Exception) -> dict[str, Any]:
+    return {
+        "status": "ERROR",
+        "message": f"{label} snapshot failed: {exc}",
+        "coverage": {},
+        "rows": pd.DataFrame(),
+    }
+
+
+def _cockpit_frame(snapshot: dict[str, Any], key: str = "rows") -> pd.DataFrame:
+    rows = snapshot.get(key)
+    if isinstance(rows, pd.DataFrame):
+        return rows
+    if isinstance(rows, list):
+        return pd.DataFrame(rows)
+    return pd.DataFrame()
+
+
+def _cockpit_first_row(snapshot: dict[str, Any], key: str = "rows") -> dict[str, Any]:
+    frame = _cockpit_frame(snapshot, key=key)
+    if frame.empty:
+        return {}
+    return dict(frame.iloc[0].dropna().to_dict())
+
+
+def _cockpit_int(value: Any) -> int:
+    try:
+        if value in (None, ""):
+            return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _cockpit_status_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return str(value.get("label") or value.get("status") or "").strip()
+    return str(value or "").strip()
+
+
+def _cockpit_status_tone(status: Any) -> str:
+    if isinstance(status, dict) and status.get("tone"):
+        return str(status.get("tone"))
+    normalized = _cockpit_status_text(status).lower()
+    if normalized in {"ok", "success", "actual", "high", "fresh"}:
+        return "positive"
+    if normalized in {"failed", "error", "missing", "no_universe", "insufficient_data"}:
+        return "danger"
+    if normalized in {"review", "due", "stale", "partial", "not_run", "no_data"}:
+        return "warning"
+    return "neutral"
+
+
+def _cockpit_card_status(*values: Any) -> str:
+    for value in values:
+        normalized = _cockpit_status_text(value)
+        if normalized and normalized.upper() not in {"OK", "SUCCESS", "ACTUAL"}:
+            return normalized
+    return "OK"
+
+
+def _cockpit_percent(value: Any, *, digits: int = 1) -> str:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return "-"
+    return f"{numeric:+.{digits}f}%"
+
+
+def _cockpit_count_label(value: int, noun: str) -> str:
+    return f"{value} {noun}" if value != 1 else f"1 {noun.rstrip('s')}"
+
+
+def _cockpit_score_badges(scores: pd.DataFrame, *, limit: int = 3) -> list[dict[str, Any]]:
+    badges: list[dict[str, Any]] = []
+    if scores.empty:
+        return badges
+    for _, row in scores.head(limit).iterrows():
+        score_name = str(row.get("Score") or row.get("score") or "-").replace(" Score", "")
+        score_value = row.get("Value") if "Value" in row else row.get("value")
+        tone = row.get("Tone") if "Tone" in row else row.get("tone")
+        badges.append(
+            {
+                "label": score_name,
+                "value": "-" if score_value in (None, "") else str(score_value),
+                "tone": tone or _cockpit_status_tone(score_value),
+            }
+        )
+    return badges
+
+
+def _build_cockpit_movement_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    top_row = _cockpit_first_row(snapshot)
+    symbol = str(top_row.get("Symbol") or "-")
+    move = _cockpit_percent(top_row.get("Return %"))
+    name = top_row.get("Name") or symbol
+    sector = top_row.get("Sector") or "Unknown sector"
+    period = snapshot.get("period_label") or snapshot.get("period") or "Market"
+    universe = snapshot.get("universe_label") or snapshot.get("universe_code") or "selected universe"
+    refresh_state = coverage.get("refresh_state")
+    refresh_detail = refresh_state.get("detail") if isinstance(refresh_state, dict) else None
+    status = _cockpit_card_status(refresh_state, snapshot.get("status"))
+    if not top_row:
+        value = str(snapshot.get("status") or "No data")
+        detail = str(snapshot.get("message") or "No stored mover rows are available.")
+    else:
+        value = f"{symbol} {move}"
+        detail = f"{name} · {sector} · {period} · {universe}"
+    return {
+        "id": "movement",
+        "title": "Market Movement",
+        "question": "What is moving now?",
+        "value": value,
+        "detail": detail,
+        "status": status,
+        "tone": _cockpit_status_tone(status),
+        "source": "Market Movers",
+        "freshness": coverage.get("effective_end_date") or refresh_detail or coverage.get("snapshot_time_utc") or "-",
+        "target_tab": "Market Movers",
+        "badges": [
+            {"label": "coverage", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
+            {"label": "state", "value": status, "tone": _cockpit_status_tone(status)},
+        ],
+    }
+
+
+def _build_cockpit_breadth_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    top_row = _cockpit_first_row(snapshot)
+    status = _cockpit_card_status(snapshot.get("status"))
+    if not top_row:
+        value = str(snapshot.get("status") or "No data")
+        detail = str(snapshot.get("message") or "No stored sector / industry leadership rows are available.")
+        share_value = "-"
+    else:
+        group = str(top_row.get("Group") or "-")
+        weighted = _cockpit_percent(top_row.get("Market Cap Weighted Return %"))
+        positive_share = _safe_float(top_row.get("Positive Symbol Share %"))
+        share_value = "-" if positive_share is None else f"{positive_share:.0f}% positive"
+        breadth_label = "broad" if positive_share is not None and positive_share >= 65 else "concentrated"
+        value = group
+        detail = f"{group} leads: {weighted} cap-weighted · {share_value} · {breadth_label}"
+    return {
+        "id": "breadth",
+        "title": "Breadth / Concentration",
+        "question": "Broad or concentrated?",
+        "value": value,
+        "detail": detail,
+        "status": status,
+        "tone": _cockpit_status_tone(status),
+        "source": "Sector / Industry",
+        "freshness": coverage.get("effective_end_date") or "-",
+        "target_tab": "Sector / Industry",
+        "badges": [
+            {"label": "coverage", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
+            {"label": "participation", "value": share_value, "tone": "positive" if share_value != "-" else "neutral"},
+        ],
+    }
+
+
+def _build_cockpit_futures_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    summary = dict(snapshot.get("summary") or {})
+    scores = _cockpit_frame(snapshot, key="scores")
+    status = _cockpit_card_status(snapshot.get("status"))
+    scenario = str(summary.get("scenario") or snapshot.get("status") or "Futures context pending")
+    detail = str(summary.get("summary") or "Stored futures daily OHLCV provides context only.")
+    return {
+        "id": "futures",
+        "title": "Futures Background",
+        "question": "Risk-on, rate pressure, or safe haven?",
+        "value": scenario,
+        "detail": detail,
+        "status": status,
+        "tone": _cockpit_status_tone(status),
+        "source": "Futures Macro Thermometer",
+        "freshness": coverage.get("latest_date") or "-",
+        "target_tab": "Futures Monitor",
+        "badges": _cockpit_score_badges(scores) or [
+            {"label": "coverage", "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}", "tone": "neutral"}
+        ],
+    }
+
+
+def _build_cockpit_sentiment_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    analysis = dict(snapshot.get("analysis") or {})
+    confidence = dict(analysis.get("data_confidence") or {})
+    confidence_status = confidence.get("status") or snapshot.get("status")
+    status = _cockpit_card_status(snapshot.get("status"))
+    cnn_score = coverage.get("cnn_score")
+    cnn_rating = coverage.get("cnn_rating") or "-"
+    spread = coverage.get("aaii_bull_bear_spread")
+    return {
+        "id": "sentiment",
+        "title": "Sentiment Backdrop",
+        "question": "What is the mood backdrop?",
+        "value": analysis.get("phase_label") or cnn_rating or status,
+        "detail": analysis.get("headline") or "CNN Fear & Greed / AAII context is unavailable.",
+        "status": status,
+        "tone": _cockpit_status_tone(confidence_status),
+        "source": "CNN Fear & Greed / AAII",
+        "freshness": confidence.get("detail") or "-",
+        "target_tab": "Sentiment",
+        "badges": [
+            {"label": "CNN", "value": "-" if cnn_score in (None, "") else f"{float(cnn_score):.1f} {cnn_rating}", "tone": "neutral"},
+            {"label": "AAII spread", "value": "-" if spread in (None, "") else f"{float(spread):+.1f}pp", "tone": "neutral"},
+            {"label": "confidence", "value": confidence_status or "-", "tone": _cockpit_status_tone(confidence_status)},
+        ],
+    }
+
+
+def _build_cockpit_events_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    row = _cockpit_first_row(snapshot)
+    status = _cockpit_card_status(snapshot.get("status"))
+    next_date = coverage.get("next_event_date") or row.get("Date") or row.get("event_date")
+    title = row.get("Title") or row.get("title") or row.get("Type Label") or "Upcoming events"
+    days = row.get("Days Until") or row.get("days_until")
+    event_count = _cockpit_int(coverage.get("event_count"))
+    review_count = _cockpit_int(coverage.get("needs_review_count"))
+    days_text = f"in {days} days" if days not in (None, "") else "date pending"
+    return {
+        "id": "events",
+        "title": "Near Events",
+        "question": "What events are close?",
+        "value": str(next_date or "No upcoming event"),
+        "detail": f"{title} · {days_text} · {event_count} events",
+        "status": "Review" if review_count else status,
+        "tone": "warning" if review_count else _cockpit_status_tone(status),
+        "source": "Market Event Calendar",
+        "freshness": coverage.get("latest_collected_at") or "-",
+        "target_tab": "Events",
+        "badges": [
+            {"label": "events", "value": str(event_count), "tone": "neutral"},
+            {"label": "review", "value": str(review_count), "tone": "warning" if review_count else "positive"},
+        ],
+    }
+
+
+def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    coverage = dict(snapshot.get("coverage") or {})
+    review_count = sum(
+        _cockpit_int(coverage.get(key))
+        for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
+    )
+    status = "REVIEW" if review_count else _cockpit_card_status(snapshot.get("status"))
+    value = _cockpit_count_label(review_count, "need review") if review_count else "All fresh"
+    return (
+        {
+            "id": "data",
+            "title": "Data Confidence",
+            "question": "Can this context be trusted?",
+            "value": value,
+            "detail": (
+                f"OK {coverage.get('ok_count') or 0} · Due {coverage.get('due_count') or 0} · "
+                f"Stale {coverage.get('stale_count') or 0} · Partial {coverage.get('partial_count') or 0} · "
+                f"Missing {coverage.get('missing_count') or 0} · Failed {coverage.get('failed_count') or 0}"
+            ),
+            "status": status,
+            "tone": _cockpit_status_tone(status),
+            "source": "Data Health",
+            "freshness": coverage.get("latest_success_at") or coverage.get("latest_auto_at") or "-",
+            "target_tab": "Data Health",
+            "badges": [
+                {"label": "OK", "value": str(coverage.get("ok_count") or 0), "tone": "positive"},
+                {"label": "Review", "value": str(review_count), "tone": "warning" if review_count else "positive"},
+            ],
+        },
+        review_count,
+    )
+
+
+def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    rows = _cockpit_frame(snapshot)
+    if rows.empty or "Status" not in rows:
+        return None
+    review_rows = rows[~rows["Status"].astype(str).str.upper().isin(["OK", "SUCCESS"])]
+    if review_rows.empty:
+        return None
+    row = dict(review_rows.iloc[0].dropna().to_dict())
+    return {
+        "target_tab": "Data Health",
+        "title": str(row.get("Area") or "Data Health"),
+        "reason": f"{row.get('Status') or 'Review'} · {row.get('Data Freshness') or '-'}",
+        "action": str(row.get("Next Action") or "Open Data Health and review source freshness."),
+        "tone": _cockpit_status_tone(row.get("Status")),
+    }
+
+
+def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    coverage = dict(snapshot.get("coverage") or {})
+    needs_review = _cockpit_int(coverage.get("needs_review_count"))
+    row = _cockpit_first_row(snapshot)
+    days = _cockpit_int(row.get("Days Until") if row else None)
+    if not row and not needs_review:
+        return None
+    if needs_review or 0 <= days <= 7:
+        return {
+            "target_tab": "Events",
+            "title": str(row.get("Title") or row.get("Type Label") or "Upcoming event"),
+            "reason": f"{days} days away" if row else f"{needs_review} event rows need review",
+            "action": "Open Events before interpreting the market context.",
+            "tone": "warning" if needs_review else "primary",
+        }
+    return None
+
+
+def build_overview_macro_context_cockpit(
+    *,
+    market_movers_snapshot: dict[str, Any] | None = None,
+    group_leadership_snapshot: dict[str, Any] | None = None,
+    futures_macro_snapshot: dict[str, Any] | None = None,
+    sentiment_snapshot: dict[str, Any] | None = None,
+    events_snapshot: dict[str, Any] | None = None,
+    collection_ops_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a summary-first Overview cockpit from existing read-only market context snapshots."""
+    if market_movers_snapshot is None:
+        try:
+            market_movers_snapshot = build_market_movers_snapshot(
+                universe_code="SP500",
+                period="daily",
+                top_n=10,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            market_movers_snapshot = _cockpit_error_snapshot("Market movers", exc)
+    if group_leadership_snapshot is None:
+        try:
+            group_leadership_snapshot = build_group_leadership_snapshot(
+                universe_code="SP500",
+                group_by="sector",
+                period="daily",
+                top_n=10,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            group_leadership_snapshot = _cockpit_error_snapshot("Sector leadership", exc)
+    if futures_macro_snapshot is None:
+        try:
+            from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
+
+            futures_macro_snapshot = load_overview_futures_macro_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            futures_macro_snapshot = _cockpit_error_snapshot("Futures macro", exc)
+    if sentiment_snapshot is None:
+        try:
+            sentiment_snapshot = build_market_sentiment_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            sentiment_snapshot = _cockpit_error_snapshot("Market sentiment", exc)
+    if events_snapshot is None:
+        try:
+            events_snapshot = build_market_events_snapshot(event_type=None, horizon_days=60, limit=100)
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            events_snapshot = _cockpit_error_snapshot("Market events", exc)
+    if collection_ops_snapshot is None:
+        try:
+            collection_ops_snapshot = build_collection_ops_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            collection_ops_snapshot = _cockpit_error_snapshot("Data Health", exc)
+
+    cards = [
+        _build_cockpit_movement_card(market_movers_snapshot),
+        _build_cockpit_breadth_card(group_leadership_snapshot),
+        _build_cockpit_futures_card(futures_macro_snapshot),
+        _build_cockpit_sentiment_card(sentiment_snapshot),
+        _build_cockpit_events_card(events_snapshot),
+    ]
+    data_card, data_review_count = _build_cockpit_data_card(collection_ops_snapshot)
+    cards.append(data_card)
+
+    review_cards = [
+        card for card in cards
+        if _cockpit_status_tone(card.get("status")) in {"warning", "danger"}
+    ]
+    status = "REVIEW" if review_cards else "OK"
+    next_checks = [
+        item
+        for item in [
+            _cockpit_ops_next_check(collection_ops_snapshot),
+            _cockpit_event_next_check(events_snapshot),
+            {
+                "target_tab": "Futures Monitor",
+                "title": "Futures macro backdrop",
+                "reason": str(cards[2].get("value") or "-"),
+                "action": "Open Futures Monitor for risk-on / rate pressure / safe-haven evidence.",
+                "tone": cards[2].get("tone") or "neutral",
+            },
+            {
+                "target_tab": "Market Movers",
+                "title": "Top mover context",
+                "reason": str(cards[0].get("value") or "-"),
+                "action": "Open Market Movers for return, volume, and Why It Moved investigation.",
+                "tone": cards[0].get("tone") or "neutral",
+            },
+        ]
+        if item is not None
+    ][:4]
+
+    return {
+        "schema_version": "overview_macro_context_cockpit_v1",
+        "status": status,
+        "summary": {
+            "headline": "Market context needs review" if status == "REVIEW" else "Market context ready",
+            "detail": (
+                f"{data_review_count} data-health items need review before relying on the snapshot."
+                if data_review_count
+                else "Existing DB-backed market context snapshots are available for scan-first analysis."
+            ),
+            "tone": _cockpit_status_tone(status),
+        },
+        "cards": cards,
+        "next_checks": next_checks,
+        "boundary_note": (
+            "Context-only market backdrop: this cockpit does not create trade signals, validation PASS/BLOCKER, "
+            "Final Review decisions, monitoring signals, registry writes, saved setup writes, broker orders, or auto rebalance."
+        ),
+    }
+
+
 def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:
     ranked = sorted(rows, key=lambda row: (-float(row["return_pct"]), row["symbol"]))[:top_n]
     out = [

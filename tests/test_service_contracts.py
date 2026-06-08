@@ -4333,6 +4333,33 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("app.jobs.overview_automation", imported_modules)
         self.assertNotIn("app.jobs.run_history", imported_modules)
 
+    def test_overview_dashboard_renders_macro_context_cockpit_before_tabs(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+        render_index = render_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
+        tabs_index = render_body.index("st.tabs(")
+
+        self.assertLess(render_index, tabs_index)
+        self.assertIn("load_overview_macro_context_cockpit", render_body)
+        self.assertIn("render_macro_context_cockpit", render_body)
+
+    def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn("--ov-mi-color-text-subtle:", css)
+        self.assertIn(".ov-macro-cockpit-card-detail", css)
+
+    def test_overview_cockpit_shell_uses_surface_background_for_dark_theme_readability(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        cockpit_block = css[css.index(".ov-macro-cockpit {"):css.index(".ov-macro-cockpit-head {")]
+
+        self.assertIn("var(--ov-mi-color-surface)", cockpit_block)
+        self.assertNotIn("transparent), rgba(255,255,255,0.97)", cockpit_block)
+
     def test_overview_action_facade_wraps_intraday_refresh_defaults(self) -> None:
         from app.jobs import overview_actions
 
@@ -6813,6 +6840,155 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sentiment_row["Status"], "OK")
         self.assertEqual(sentiment_row["Rows"], 260)
         self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
+
+    def test_overview_macro_context_cockpit_summarizes_existing_context_snapshots(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {
+                    "returnable_count": 470,
+                    "universe_count": 503,
+                    "effective_end_date": "2026-06-05",
+                    "refresh_state": "Due",
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Symbol": "NVDA",
+                            "Name": "NVIDIA Corp",
+                            "Return %": 4.2,
+                            "Sector": "Technology",
+                        }
+                    ]
+                ),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "coverage": {"returnable_count": 470, "universe_count": 503},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Group": "Technology",
+                            "Positive Symbol Share %": 82.0,
+                            "Market Cap Weighted Return %": 1.8,
+                        },
+                        {
+                            "Rank": 2,
+                            "Group": "Energy",
+                            "Positive Symbol Share %": 41.0,
+                            "Market Cap Weighted Return %": -0.4,
+                        },
+                    ]
+                ),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "summary": {"scenario": "Risk-on with rate pressure", "summary": "Equity futures are firm while rates are pressuring duration."},
+                "scores": pd.DataFrame(
+                    [
+                        {"Score": "Risk-On Score", "Value": 33, "Direction": "risk-on", "Tone": "positive"},
+                        {"Score": "Rate Pressure Score", "Value": 27, "Direction": "rate pressure", "Tone": "warning"},
+                    ]
+                ),
+                "coverage": {"standardized_count": 14, "symbol_count": 16, "latest_date": "2026-06-05"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {
+                    "phase_label": "혼합 중립",
+                    "headline": "Fear & Greed is neutral while internals are mixed.",
+                    "data_confidence": {"status": "High", "detail": "latest CNN / AAII rows"},
+                },
+                "coverage": {"cnn_score": 54.7, "cnn_rating": "neutral", "aaii_bull_bear_spread": -0.7},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 3, "next_event_date": "2026-06-10", "needs_review_count": 1},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Date": "2026-06-10",
+                            "Type Label": "CPI",
+                            "Title": "CPI Release",
+                            "Days Until": 2,
+                            "Importance": "High",
+                            "Validation": "Official",
+                        }
+                    ]
+                ),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 4, "due_count": 2, "stale_count": 1, "partial_count": 1, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Due", "Data Freshness": "8m old", "Next Action": "Refresh before using futures context."},
+                        {"Area": "Earnings Calendar", "Status": "Partial", "Data Freshness": "covered 1/2", "Next Action": "Inspect failed symbols."},
+                    ]
+                ),
+            },
+        )
+
+        self.assertEqual(cockpit["schema_version"], "overview_macro_context_cockpit_v1")
+        self.assertEqual(cockpit["status"], "REVIEW")
+        self.assertEqual(cockpit["summary"]["headline"], "Market context needs review")
+        self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
+        self.assertEqual(cockpit["cards"][0]["value"], "NVDA +4.2%")
+        self.assertIn("Technology leads", cockpit["cards"][1]["detail"])
+        self.assertIn("Rate Pressure", cockpit["cards"][2]["badges"][1]["label"])
+        self.assertEqual(cockpit["cards"][3]["value"], "혼합 중립")
+        self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
+        self.assertEqual(cockpit["cards"][5]["value"], "4 need review")
+        self.assertEqual(cockpit["next_checks"][0]["target_tab"], "Data Health")
+        self.assertIn("context-only", cockpit["boundary_note"].lower())
+
+    def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "effective_end_date": "2026-06-05",
+                    "refresh_state": {
+                        "status": "stale",
+                        "label": "Stale",
+                        "detail": "2962m old",
+                        "tone": "warning",
+                        "recommended_action": "Run Update Daily Snapshot.",
+                    },
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Symbol": "AAPL",
+                            "Name": "Apple Inc",
+                            "Return %": -1.2,
+                            "Sector": "Technology",
+                        }
+                    ]
+                ),
+            },
+            group_leadership_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+            futures_macro_snapshot={"status": "OK", "coverage": {}, "summary": {}, "scores": pd.DataFrame()},
+            sentiment_snapshot={"status": "OK", "coverage": {}, "analysis": {}},
+            events_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+            collection_ops_snapshot={"status": "OK", "coverage": {"ok_count": 6}, "rows": pd.DataFrame()},
+        )
+
+        movement = cockpit["cards"][0]
+        self.assertEqual(movement["status"], "Stale")
+        self.assertEqual(movement["badges"][1]["value"], "Stale")
+        self.assertNotIn("{", movement["badges"][1]["value"])
 
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
