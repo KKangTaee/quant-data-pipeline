@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-drift-guard-qa-polish-v5-20260608`
+- `monitoring-snapshot-review-loop-v2-20260608`
 
 Latest completed docs cleanup task:
 

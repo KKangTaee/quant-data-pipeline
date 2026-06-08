@@ -31,7 +31,7 @@ Last Verified: 2026-06-07
 | `.aiworkspace/note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Backtest Analysis가 만든 validation candidate source | Keep. Main workflow source-of-truth. |
 | `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation result and compact evidence | Keep. Gate-passed rows are Final Review input; blocked / needs input / not run rows are audit trail only. |
 | `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | Final Review decision and compact packet / gate snapshot | Keep. Operations > Portfolio Monitoring input. |
-| `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring check record | Explicit user action only. No automatic log sprawl. |
+| `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring snapshot / review record | Explicit user action only after Portfolio Monitoring Scenario review. Stores compact benchmark delta, return / drawdown, drift, provider freshness, review signal, open issue, operator note, and next review date evidence. No automatic log sprawl and no raw/full provider, holdings, macro, or price artifacts. |
 | `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | User-created Operations > Portfolio Monitoring portfolio setup. File name keeps the legacy dashboard term | Keep as dashboard setup, not evidence or approval. Stores portfolio names, selected decision strategy slots, start / latest-end mode, balance, memo, and soft delete state. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Reusable portfolio mix setup | Keep as setup, not evidence. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl` | Legacy reusable weighted portfolio setup | Preserve as compatibility; do not expand without migration. |
@@ -57,7 +57,7 @@ The current rule is:
 - Workflow JSONL stores only compact stage handoff, validation result, and final decision evidence.
 - runtime registry paths are runtime-defined and may not exist locally until the first workflow write. Absence of a runtime-defined file is not drift.
 - `SAVED_PORTFOLIOS.jsonl`, `SAVED_PORTFOLIO_MIXES.jsonl`, and `SELECTED_DASHBOARD_PORTFOLIOS.jsonl` are reusable / Portfolio Monitoring setup, not validation / approval / monitoring evidence.
-- Operations > Portfolio Monitoring read models do not auto-append monitoring logs, write registry rows, approve trades, create orders, or rebalance.
+- Operations > Portfolio Monitoring read models do not auto-append monitoring logs, approve trades, create orders, or rebalance. The only monitoring registry write is the explicit `Save Monitoring Snapshot` / `Record Review` action, which appends compact evidence to `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`.
 - `run_history/*.jsonl`, `run_artifacts/`, `.playwright-mcp/`, and `.DS_Store` are generated / local artifacts and should stay unstaged unless explicitly requested.
 
 ## Legacy Registry Boundary

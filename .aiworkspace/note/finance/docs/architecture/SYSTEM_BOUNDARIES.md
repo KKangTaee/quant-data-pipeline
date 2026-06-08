@@ -121,9 +121,10 @@ It can summarize today action queue and no-live boundary, but it does not create
 Portfolio Monitoring is the current user-facing route for the legacy Selected Portfolio Dashboard implementation files.
 
 It owns user-created monitoring portfolio setup, explicit scenario update, portfolio-level performance recheck, target snapshot display, selected strategy detail, continuity, timeline, review signals, provider evidence, open issues, optional allocation check, and Decision Dossier read-only display.
+After a scenario update, it also owns the explicit user action to save a compact Monitoring Snapshot or Review Record and compare latest / previous saved snapshot evidence with the current session scenario.
 
 It stores reusable setup in `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl`.
-Scenario results are session state unless a user explicitly saves a monitoring check record.
+Scenario results are session state unless a user explicitly saves a compact monitoring snapshot / review record to `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`.
 
 It does not auto-write monitoring logs, mutate Final Review decisions, approve live deployment, connect a broker account, create orders, or auto rebalance.
 Sentiment context and target snapshot are context and monitoring evidence, not instructions.

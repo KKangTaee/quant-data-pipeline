@@ -4829,3 +4829,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 이번 main-dev 세션은 전략 개발이 아니라 Backtest -> Validation -> Final Review -> Portfolio Monitoring 제품 흐름 감사, 벤치마크, 개발 후보 선별 세션으로 정리했다.
   - 다음 우선 후보는 `Monitoring Snapshot / Review Loop V2`, `Strategy Promotion Contract For Backtest-Dev Handoff`, `Robustness Experiment Registry`, `Data Provenance / PIT Evidence Contract`다.
   - 아직 새 phase / task나 구현 scope는 승인하지 않았다.
+- Monitoring Snapshot / Review Loop V2:
+  - `.aiworkspace/note/finance/tasks/active/monitoring-snapshot-review-loop-v2-20260608/`에서 제품 방향 리서치 1순위 후보를 구현했다.
+  - `Operations > Portfolio Monitoring`은 scenario update 후 latest / previous saved snapshot과 current scenario를 비교하고, 사용자가 `Save Monitoring Snapshot` 또는 `Record Review`를 누를 때만 compact evidence를 append한다.
+  - live approval / broker order / account sync / auto rebalance / automatic monitoring log save / raw provider response 저장은 추가하지 않았다.
+  - 다음에 볼 위치는 task `STATUS.md`, `RUNS.md`, 그리고 flow docs의 Portfolio Monitoring storage boundary다.

@@ -51,6 +51,7 @@ from app.runtime import (
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
     add_selected_dashboard_portfolio_strategy,
+    append_selected_portfolio_monitoring_snapshot,
     build_selected_dashboard_handoff_review,
     build_selected_dashboard_portfolio_state,
     build_selected_portfolio_allocation_drift_boundary,
@@ -59,6 +60,7 @@ from app.runtime import (
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
     build_selected_portfolio_deployment_readiness_preflight,
+    build_selected_portfolio_monitoring_snapshot_record,
     build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_open_issue_followup,
     build_selected_portfolio_performance_recheck,
@@ -69,6 +71,7 @@ from app.runtime import (
     build_selected_portfolio_review_signal_policy,
     delete_selected_dashboard_portfolio,
     load_final_selected_portfolio_dashboard,
+    load_selected_portfolio_monitoring_snapshot_review,
     load_latest_selected_portfolio_prices,
     remove_selected_dashboard_portfolio_strategy,
     save_selected_dashboard_portfolio,
@@ -203,6 +206,16 @@ def _format_pct(value: Any, *, default: str = "-") -> str:
     if pd.isna(numeric):
         return default
     return f"{numeric:.2%}"
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(numeric):
+        return None
+    return numeric
 
 
 def _format_sentiment_score(value: Any) -> str:
@@ -1498,6 +1511,261 @@ def _portfolio_summary_from_results(strategy_rows: list[dict[str, Any]]) -> dict
     }
 
 
+def _snapshot_decision_id(row: dict[str, Any]) -> str:
+    return str(row.get("decision_id") or dict(row.get("raw_decision") or {}).get("decision_id") or "").strip()
+
+
+def _current_recheck_results_by_decision_id(strategy_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    results: dict[str, dict[str, Any]] = {}
+    for row in strategy_rows:
+        decision_id = _snapshot_decision_id(row)
+        result = _latest_recheck_result(row)
+        if decision_id and result:
+            results[decision_id] = result
+    return results
+
+
+def _current_drift_checks_by_decision_id(strategy_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    checks: dict[str, dict[str, Any]] = {}
+    for row in strategy_rows:
+        decision_id = _snapshot_decision_id(row)
+        drift = _latest_drift_check(row)
+        if decision_id and drift:
+            checks[decision_id] = drift
+    return checks
+
+
+def _current_open_issue_followup_by_decision_id(strategy_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {
+        decision_id: build_selected_portfolio_open_issue_followup(row)
+        for row in strategy_rows
+        if (decision_id := _snapshot_decision_id(row))
+    }
+
+
+def _provider_evidence_for_snapshot(row: dict[str, Any]) -> dict[str, Any]:
+    defaults = _recheck_defaults(row)
+    return build_selected_portfolio_provider_evidence(
+        row,
+        as_of_date=defaults.get("latest_market_date") or date.today().isoformat(),
+    )
+
+
+def _preflight_for_snapshot(row: dict[str, Any]) -> dict[str, Any]:
+    defaults = _recheck_defaults(row)
+    return build_selected_portfolio_recheck_operations_preflight(
+        row,
+        latest_market_result={
+            "status": defaults.get("latest_market_date_status"),
+            "latest_market_date": defaults.get("latest_market_date"),
+            "error": defaults.get("latest_market_date_error"),
+        },
+    )
+
+
+def _snapshot_review_signals_by_decision_id(
+    strategy_rows: list[dict[str, Any]],
+    *,
+    recheck_results_by_decision_id: dict[str, dict[str, Any]],
+    drift_checks_by_decision_id: dict[str, dict[str, Any]],
+    provider_evidence_by_decision_id: dict[str, dict[str, Any]] | None = None,
+    preflight_by_decision_id: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    policies: dict[str, dict[str, Any]] = {}
+    providers = dict(provider_evidence_by_decision_id or {})
+    preflights = dict(preflight_by_decision_id or {})
+    for row in strategy_rows:
+        decision_id = _snapshot_decision_id(row)
+        if not decision_id:
+            continue
+        policies[decision_id] = build_selected_portfolio_review_signal_policy(
+            row,
+            recheck_result=dict(recheck_results_by_decision_id.get(decision_id) or {}),
+            recheck_preflight=dict(preflights.get(decision_id) or {}),
+            provider_evidence=dict(providers.get(decision_id) or {}),
+            drift_check=dict(drift_checks_by_decision_id.get(decision_id) or {}),
+        )
+    return policies
+
+
+def _build_current_monitoring_snapshot(
+    portfolio: dict[str, Any],
+    strategy_rows: list[dict[str, Any]],
+    *,
+    operator_note: str | None = None,
+    next_review_date: str | None = None,
+    record_type: str = "MONITORING_SNAPSHOT",
+    include_provider_evidence: bool = False,
+    persistable: bool = False,
+) -> dict[str, Any] | None:
+    recheck_results = _current_recheck_results_by_decision_id(strategy_rows)
+    if not recheck_results:
+        return None
+    drift_checks = _current_drift_checks_by_decision_id(strategy_rows)
+    provider_evidence: dict[str, dict[str, Any]] = {}
+    preflights: dict[str, dict[str, Any]] = {}
+    if include_provider_evidence:
+        for row in strategy_rows:
+            decision_id = _snapshot_decision_id(row)
+            if not decision_id:
+                continue
+            provider_evidence[decision_id] = _provider_evidence_for_snapshot(row)
+            preflights[decision_id] = _preflight_for_snapshot(row)
+    review_signals = _snapshot_review_signals_by_decision_id(
+        strategy_rows,
+        recheck_results_by_decision_id=recheck_results,
+        drift_checks_by_decision_id=drift_checks,
+        provider_evidence_by_decision_id=provider_evidence,
+        preflight_by_decision_id=preflights,
+    )
+    return build_selected_portfolio_monitoring_snapshot_record(
+        portfolio=portfolio,
+        strategy_rows=strategy_rows,
+        recheck_results_by_decision_id=recheck_results,
+        drift_checks_by_decision_id=drift_checks,
+        provider_evidence_by_decision_id=provider_evidence,
+        review_signal_policy_by_decision_id=review_signals,
+        open_issue_followup_by_decision_id=_current_open_issue_followup_by_decision_id(strategy_rows),
+        operator_note=operator_note,
+        next_review_date=next_review_date,
+        recorded_at=_session_timestamp(),
+        record_type=record_type,
+        persistable=persistable,
+    )
+
+
+def _format_snapshot_metric(metric: str, value: Any) -> str:
+    if value is None:
+        return "-"
+    if metric in {"Return", "CAGR", "Drawdown", "Benchmark Delta"}:
+        return _format_pct(value)
+    if metric == "Max Drift":
+        numeric = _optional_float(value)
+        return f"{numeric:.2f}" if numeric is not None else "-"
+    numeric = _optional_float(value)
+    return f"{numeric:.4f}" if numeric is not None else str(value)
+
+
+def _snapshot_comparison_table(review: dict[str, Any]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for row in list(review.get("comparison_rows") or []):
+        metric = str(row.get("Metric") or "")
+        rows.append(
+            {
+                "Metric": metric,
+                "Latest Snapshot": _format_snapshot_metric(metric, row.get("Latest Snapshot")),
+                "Previous Snapshot": _format_snapshot_metric(metric, row.get("Previous Snapshot")),
+                "Current Scenario": _format_snapshot_metric(metric, row.get("Current Scenario")),
+                "Delta Latest vs Previous": _format_snapshot_metric(metric, row.get("Delta Latest vs Previous")),
+                "Delta Current vs Latest": _format_snapshot_metric(metric, row.get("Delta Current vs Latest")),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _snapshot_date_default(summary: dict[str, Any]) -> date:
+    as_of = pd.to_datetime(summary.get("as_of"), errors="coerce")
+    if pd.isna(as_of):
+        as_of = pd.Timestamp(date.today())
+    return (as_of + pd.Timedelta(days=30)).date()
+
+
+def _render_monitoring_snapshot_review(
+    portfolio: dict[str, Any],
+    strategy_rows: list[dict[str, Any]],
+    summary: dict[str, Any],
+) -> None:
+    st.markdown("##### Monitoring Snapshot / Review")
+    current_snapshot = _build_current_monitoring_snapshot(
+        portfolio,
+        strategy_rows,
+        persistable=False,
+    )
+    selected_decision_ids = [
+        decision_id
+        for row in strategy_rows
+        if (decision_id := _snapshot_decision_id(row))
+    ]
+    review = load_selected_portfolio_monitoring_snapshot_review(
+        dashboard_portfolio_id=str(portfolio.get("portfolio_id") or ""),
+        selected_decision_ids=selected_decision_ids,
+        current_snapshot=current_snapshot,
+    )
+    metrics = dict(review.get("metrics") or {})
+    latest = dict(review.get("latest_snapshot") or {})
+    previous = dict(review.get("previous_snapshot") or {})
+    render_badge_strip(
+        [
+            {"label": "Saved Snapshots", "value": metrics.get("history_count", 0), "tone": "positive" if latest else "neutral"},
+            {"label": "Latest Snapshot", "value": latest.get("recorded_at") or "-", "tone": "neutral"},
+            {"label": "Previous Snapshot", "value": previous.get("recorded_at") or "-", "tone": "neutral"},
+            {"label": "Current Scenario", "value": "Ready" if current_snapshot else "Run scenario", "tone": "positive" if current_snapshot else "warning"},
+            {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            {"label": "Trading", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    if not current_snapshot:
+        st.info("Portfolio Monitoring Scenario 실행 결과가 있어야 snapshot / review를 저장할 수 있습니다.")
+    if latest:
+        latest_scenario = dict(latest.get("scenario_snapshot") or {})
+        st.caption(
+            f"Latest saved snapshot `{latest.get('monitoring_snapshot_id')}`: "
+            f"return {_format_pct(latest_scenario.get('return'))}, "
+            f"benchmark delta {_format_pct(latest_scenario.get('benchmark_delta'))}, "
+            f"review signal {dict(latest.get('review_signal_snapshot') or {}).get('route_label') or '-'}"
+        )
+    else:
+        st.caption("저장된 monitoring snapshot이 아직 없습니다. 저장은 아래 명시 action으로만 append됩니다.")
+
+    comparison_df = _snapshot_comparison_table(review)
+    if not comparison_df.empty:
+        st.dataframe(comparison_df, width="stretch", hide_index=True)
+
+    st.caption(
+        "Snapshot 저장은 compact monitoring evidence append입니다. live approval, broker order, account sync, auto rebalance를 만들지 않습니다."
+    )
+    with st.form(key=f"selected_dashboard_monitoring_snapshot_form_{portfolio.get('portfolio_id')}"):
+        record_type = st.radio(
+            "Review action",
+            options=["MONITORING_SNAPSHOT", "REVIEW_RECORD"],
+            horizontal=True,
+            format_func=lambda value: "Save Monitoring Snapshot" if value == "MONITORING_SNAPSHOT" else "Record Review",
+        )
+        note = st.text_area(
+            "Operator note",
+            value="",
+            placeholder="이번 점검에서 확인한 변화, 남은 이슈, 다음 확인 조건을 남깁니다.",
+            height=84,
+        )
+        next_review = st.date_input(
+            "Next review date",
+            value=_snapshot_date_default(summary),
+        )
+        submitted = st.form_submit_button(
+            "Save Monitoring Snapshot" if record_type == "MONITORING_SNAPSHOT" else "Record Review",
+            disabled=current_snapshot is None,
+            type="primary",
+            width="stretch",
+        )
+    if submitted and current_snapshot is not None:
+        record = _build_current_monitoring_snapshot(
+            portfolio,
+            strategy_rows,
+            operator_note=note,
+            next_review_date=next_review.isoformat() if hasattr(next_review, "isoformat") else str(next_review),
+            record_type=record_type,
+            include_provider_evidence=True,
+            persistable=True,
+        )
+        if record is not None:
+            append_selected_portfolio_monitoring_snapshot(record)
+            st.session_state[f"selected_dashboard_last_monitoring_snapshot_{portfolio.get('portfolio_id')}"] = record.get(
+                "monitoring_snapshot_id"
+            )
+            st.success(f"Monitoring snapshot saved: {record.get('monitoring_snapshot_id')}")
+            st.rerun()
+
+
 def _scenario_value(value: Any, *, completed: bool, formatter: str = "money") -> str:
     if not completed:
         return "-"
@@ -1733,7 +2001,7 @@ def _render_monitoring_daily_badges(summary: dict[str, Any], strategy_rows: list
     )
 
 
-def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -> None:
+def _render_portfolio_monitoring_overview(portfolio: dict[str, Any], strategy_rows: list[dict[str, Any]]) -> None:
     summary = _portfolio_summary_from_results(strategy_rows)
     completed = len(summary["results"])
     runnable_rows = [row for row in strategy_rows if not _slot_blockers_for_row(row)]
@@ -1761,6 +2029,7 @@ def _render_portfolio_monitoring_overview(strategy_rows: list[dict[str, Any]]) -
             st.info("표시할 target snapshot / review schedule 정보가 없습니다.")
         else:
             st.dataframe(rebalance_df, width="stretch", hide_index=True)
+    _render_monitoring_snapshot_review(portfolio, strategy_rows, summary)
 
 
 def _portfolio_update_blockers(strategy_rows: list[dict[str, Any]]) -> list[str]:
@@ -1848,7 +2117,7 @@ def _render_active_monitoring_scenario(
 
     if not any(_latest_recheck_result(row) for row in strategy_rows):
         st.info("전략 구성이 완료되었습니다. 아래의 포트폴리오 시나리오 업데이트를 눌러 모니터링 결과를 계산하세요.")
-    _render_portfolio_monitoring_overview(strategy_rows)
+    _render_portfolio_monitoring_overview(portfolio, strategy_rows)
 
 
 def _render_portfolio_strategy_comparison(strategy_rows: list[dict[str, Any]]) -> None:

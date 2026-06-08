@@ -7543,3 +7543,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: AGENTS 지침 변경이 아니라, 현 세션의 활용 방식과 향후 개발 후보를 연구 산출물로 정리해야 함.
 - Analysis result: 현재 제품 구조는 유지 가치가 크며, 다음 우선 개발 후보는 Monitoring Snapshot / Review Loop V2와 backtest-dev 결과를 받아들이는 Strategy Promotion Contract다.
 - Follow-up: 상세 근거와 후보는 `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/` refresh 섹션을 본다. 새 phase / task는 사용자 승인 전까지 열지 않는다.
+
+### 2026-06-08 - Monitoring Snapshot / Review Loop V2를 구현한다
+
+- User request: 제품 방향 리서치 1순위인 `Monitoring Snapshot / Review Loop V2`를 main-dev의 Portfolio Monitoring에 구현하고, 1차 schema/runtime, 2차 UI, 3차 docs/QA/commit 흐름으로 진행해 달라고 요청함.
+- Interpreted goal: Final Review에서 선정된 monitoring 후보를 전략 개발이 아니라 운영 관찰 대상으로 다루며, scenario update 결과를 자동 저장하지 않고 사용자가 명시적으로 snapshot/review를 append하도록 만들어야 함.
+- Analysis result: 기존 selected dashboard는 scenario 결과와 review signal을 session state로만 보여줬다. V2는 `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`을 explicit append-only compact evidence registry로 사용하되, reusable setup인 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 source-of-truth로 바꾸지 않는 것이 경계에 맞다.
+- Follow-up: runtime snapshot builder / append helper / comparison read model과 Portfolio Monitoring save/review UI를 구현했다. live approval, broker order, account sync, auto rebalance, automatic monitoring save, raw provider response 저장은 추가하지 않았다.

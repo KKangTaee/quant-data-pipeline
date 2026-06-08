@@ -16,7 +16,10 @@ from finance.performance import portfolio_performance_summary
 from .candidate_registry import load_current_candidate_registry_latest
 from .portfolio_selection_v2 import (
     FINAL_SELECTION_DECISION_FILE,
+    SELECTED_PORTFOLIO_MONITORING_LOG_FILE,
+    append_selected_portfolio_monitoring_log,
     load_current_final_selection_decisions,
+    load_selected_portfolio_monitoring_logs,
 )
 
 
@@ -70,6 +73,8 @@ SELECTED_DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_
 SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION = "selected_dashboard_handoff_v1"
 SELECTED_OPEN_ISSUE_FOLLOWUP_SCHEMA_VERSION = "selected_open_issue_followup_v1"
 SELECTED_DEPLOYMENT_READINESS_PREFLIGHT_SCHEMA_VERSION = "selected_deployment_readiness_preflight_v1"
+SELECTED_MONITORING_SNAPSHOT_SCHEMA_VERSION = "selected_portfolio_monitoring_snapshot_v2"
+SELECTED_MONITORING_SNAPSHOT_REVIEW_SCHEMA_VERSION = "selected_portfolio_monitoring_snapshot_review_v2"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -2923,6 +2928,532 @@ def build_selected_portfolio_review_signal_policy(
             "notes": "Review signal policy reads existing selected decision, preflight, provider, comparison, and optional session drift evidence; it does not save monitoring records.",
         },
     }
+
+
+def _snapshot_record_id(snapshot_id: str | None = None) -> str:
+    return str(snapshot_id or f"monitoring-snapshot-{uuid4().hex[:12]}")
+
+
+def _selected_decision_id(row: dict[str, Any]) -> str:
+    return str(row.get("decision_id") or dict(row.get("raw_decision") or {}).get("decision_id") or "").strip()
+
+
+def _compact_metric_average(values: list[Any]) -> float | None:
+    numeric = [_optional_float(value) for value in values]
+    cleaned = [value for value in numeric if value is not None]
+    if not cleaned:
+        return None
+    return round(sum(cleaned) / len(cleaned), 6)
+
+
+def _compact_metric_sum(values: list[Any]) -> float | None:
+    numeric = [_optional_float(value) for value in values]
+    cleaned = [value for value in numeric if value is not None]
+    if not cleaned:
+        return None
+    return round(sum(cleaned), 6)
+
+
+def _compact_metric_min(values: list[Any]) -> float | None:
+    numeric = [_optional_float(value) for value in values]
+    cleaned = [value for value in numeric if value is not None]
+    if not cleaned:
+        return None
+    return round(min(cleaned), 6)
+
+
+def _compact_metric_max(values: list[Any]) -> float | None:
+    numeric = [_optional_float(value) for value in values]
+    cleaned = [value for value in numeric if value is not None]
+    if not cleaned:
+        return None
+    return round(max(cleaned), 6)
+
+
+def _clean_decision_ids(strategy_rows: list[dict[str, Any]]) -> list[str]:
+    decision_ids: list[str] = []
+    seen: set[str] = set()
+    for row in strategy_rows:
+        decision_id = _selected_decision_id(dict(row or {}))
+        if not decision_id or decision_id in seen:
+            continue
+        decision_ids.append(decision_id)
+        seen.add(decision_id)
+    return decision_ids
+
+
+def _result_for_decision(
+    decision_id: str,
+    mapping: dict[str, dict[str, Any]] | None,
+) -> dict[str, Any]:
+    if not decision_id:
+        return {}
+    return dict(dict(mapping or {}).get(decision_id) or {})
+
+
+def _scenario_signature_from_results(
+    *,
+    portfolio_id: str,
+    selected_decision_ids: list[str],
+    recheck_results_by_decision_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    result_keys: list[dict[str, Any]] = []
+    for decision_id in selected_decision_ids:
+        result = _result_for_decision(decision_id, recheck_results_by_decision_id)
+        period = dict(result.get("period") or {})
+        result_keys.append(
+            {
+                "decision_id": decision_id,
+                "period_start": period.get("start"),
+                "period_end": period.get("end"),
+                "initial_capital": _optional_float(result.get("initial_capital")),
+                "status": result.get("status"),
+            }
+        )
+    return {
+        "dashboard_portfolio_id": portfolio_id,
+        "selected_decision_ids": selected_decision_ids,
+        "result_keys": result_keys,
+    }
+
+
+def _build_monitoring_scenario_snapshot(
+    *,
+    strategy_rows: list[dict[str, Any]],
+    selected_decision_ids: list[str],
+    recheck_results_by_decision_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    results = [
+        _result_for_decision(decision_id, recheck_results_by_decision_id)
+        for decision_id in selected_decision_ids
+    ]
+    completed = [result for result in results if str(result.get("status") or "") in {"ok", "partial"}]
+    invested = _compact_metric_sum([result.get("initial_capital") for result in completed])
+    current_value = _compact_metric_sum(
+        [dict(result.get("portfolio_summary") or {}).get("end_balance") for result in completed]
+    )
+    total_return = None
+    if invested and current_value is not None:
+        total_return = round((current_value - invested) / invested, 6)
+    result_returns = [
+        dict(result.get("portfolio_summary") or {}).get("total_return")
+        for result in completed
+    ]
+    if total_return is None:
+        total_return = _compact_metric_average(result_returns)
+    periods = [dict(result.get("period") or {}) for result in completed]
+    period_ends = [str(period.get("end") or "") for period in periods if str(period.get("end") or "")]
+    updated_values = [
+        str(result.get("dashboard_updated_at") or result.get("updated_at") or "")
+        for result in completed
+        if str(result.get("dashboard_updated_at") or result.get("updated_at") or "")
+    ]
+    change_summaries = [dict(result.get("change_summary") or {}) for result in completed]
+    portfolio_summaries = [dict(result.get("portfolio_summary") or {}) for result in completed]
+    return {
+        "strategy_count": len(strategy_rows),
+        "result_count": len(completed),
+        "configured_decision_count": len(selected_decision_ids),
+        "invested": invested,
+        "current_value": current_value,
+        "profit": round(current_value - invested, 6) if invested is not None and current_value is not None else None,
+        "return": total_return,
+        "cagr": _compact_metric_average([summary.get("cagr") for summary in portfolio_summaries]),
+        "drawdown": _compact_metric_min([summary.get("mdd") for summary in portfolio_summaries]),
+        "benchmark_delta": _compact_metric_average([summary.get("net_cagr_spread") for summary in change_summaries]),
+        "benchmark_cagr": _compact_metric_average([summary.get("benchmark_cagr") for summary in change_summaries]),
+        "as_of": max(period_ends) if period_ends else None,
+        "updated_at": max(updated_values) if updated_values else None,
+        "status_counts": {
+            "ok": sum(1 for result in results if str(result.get("status") or "") == "ok"),
+            "partial": sum(1 for result in results if str(result.get("status") or "") == "partial"),
+            "error": sum(1 for result in results if str(result.get("status") or "") == "error"),
+            "not_run": sum(1 for result in results if not result),
+        },
+        "strategy_summaries": [
+            {
+                "decision_id": decision_id,
+                "status": result.get("status") if result else "not_run",
+                "return": dict(result.get("portfolio_summary") or {}).get("total_return") if result else None,
+                "cagr": dict(result.get("portfolio_summary") or {}).get("cagr") if result else None,
+                "drawdown": dict(result.get("portfolio_summary") or {}).get("mdd") if result else None,
+                "benchmark_delta": dict(result.get("change_summary") or {}).get("net_cagr_spread") if result else None,
+            }
+            for decision_id, result in (
+                (decision_id, _result_for_decision(decision_id, recheck_results_by_decision_id))
+                for decision_id in selected_decision_ids
+            )
+        ],
+    }
+
+
+def _route_rank(route: str, ranking: dict[str, int]) -> int:
+    return ranking.get(str(route or ""), -1)
+
+
+def _worst_route(rows: list[dict[str, Any]], *, key: str, ranking: dict[str, int], default: str) -> str:
+    routes = [str(row.get(key) or "") for row in rows if str(row.get(key) or "")]
+    if not routes:
+        return default
+    return max(routes, key=lambda route: _route_rank(route, ranking))
+
+
+def _build_monitoring_drift_snapshot(
+    selected_decision_ids: list[str],
+    drift_checks_by_decision_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    rows = [_result_for_decision(decision_id, drift_checks_by_decision_id) for decision_id in selected_decision_ids]
+    rows = [row for row in rows if row]
+    ranking = {
+        "DRIFT_ALIGNED": 0,
+        "DRIFT_WATCH": 1,
+        "DRIFT_INPUT_INCOMPLETE": 2,
+        "REBALANCE_NEEDED": 3,
+    }
+    route = _worst_route(rows, key="route", ranking=ranking, default="DRIFT_NOT_CHECKED")
+    metrics_rows = [dict(row.get("metrics") or {}) for row in rows]
+    return {
+        "route": route,
+        "route_label": next((row.get("route_label") for row in rows if row.get("route") == route), route),
+        "check_count": len(rows),
+        "max_abs_drift": _compact_metric_max([metrics.get("max_abs_drift") for metrics in metrics_rows]),
+        "current_weight_total": _compact_metric_average([metrics.get("current_weight_total") for metrics in metrics_rows]),
+        "verdicts": [_clean_text(row.get("verdict"), "") for row in rows if _clean_text(row.get("verdict"), "")],
+        "next_actions": [_clean_text(row.get("next_action"), "") for row in rows if _clean_text(row.get("next_action"), "")],
+    }
+
+
+def _build_monitoring_provider_freshness_snapshot(
+    selected_decision_ids: list[str],
+    provider_evidence_by_decision_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    rows = [_result_for_decision(decision_id, provider_evidence_by_decision_id) for decision_id in selected_decision_ids]
+    rows = [row for row in rows if row]
+    ranking = {
+        "SELECTED_PROVIDER_READY": 0,
+        "SELECTED_PROVIDER_REVIEW": 1,
+        "SELECTED_PROVIDER_NEEDS_DATA": 2,
+        "SELECTED_PROVIDER_BLOCKED": 3,
+    }
+    route = _worst_route(rows, key="route", ranking=ranking, default="SELECTED_PROVIDER_NOT_EVALUATED")
+    metrics_rows = [dict(row.get("metrics") or {}) for row in rows]
+    return {
+        "route": route,
+        "route_label": next((row.get("route_label") for row in rows if row.get("route") == route), route),
+        "evidence_count": len(rows),
+        "stale_count": sum(int(metrics.get("stale_count") or 0) for metrics in metrics_rows),
+        "partial_coverage_count": sum(int(metrics.get("partial_coverage_count") or 0) for metrics in metrics_rows),
+        "needs_input_count": sum(int(metrics.get("needs_input_count") or 0) for metrics in metrics_rows),
+        "missing_coverage_count": sum(int(metrics.get("missing_coverage_count") or 0) for metrics in metrics_rows),
+    }
+
+
+def _build_monitoring_review_signal_snapshot(
+    selected_decision_ids: list[str],
+    review_signal_policy_by_decision_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    rows = [_result_for_decision(decision_id, review_signal_policy_by_decision_id) for decision_id in selected_decision_ids]
+    rows = [row for row in rows if row]
+    ranking = {
+        "REVIEW_SIGNAL_CLEAR": 0,
+        "REVIEW_SIGNAL_WATCH": 1,
+        "REVIEW_SIGNAL_NEEDS_INPUT": 2,
+        "REVIEW_SIGNAL_BREACHED": 3,
+    }
+    route = _worst_route(rows, key="route", ranking=ranking, default="REVIEW_SIGNAL_NOT_EVALUATED")
+    metrics_rows = [dict(row.get("metrics") or {}) for row in rows]
+    return {
+        "route": route,
+        "route_label": next((row.get("route_label") for row in rows if row.get("route") == route), route),
+        "overall_status": next((row.get("overall_status") for row in rows if row.get("route") == route), None),
+        "signal_count": len(rows),
+        "breached_count": sum(int(metrics.get("breached_count") or 0) for metrics in metrics_rows),
+        "watch_count": sum(int(metrics.get("watch_count") or 0) for metrics in metrics_rows),
+        "needs_input_count": sum(int(metrics.get("needs_input_count") or 0) for metrics in metrics_rows),
+        "conclusions": [_clean_text(row.get("conclusion"), "") for row in rows if _clean_text(row.get("conclusion"), "")],
+    }
+
+
+def _build_monitoring_open_issue_snapshot(
+    selected_decision_ids: list[str],
+    open_issue_followup_by_decision_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    rows = [_result_for_decision(decision_id, open_issue_followup_by_decision_id) for decision_id in selected_decision_ids]
+    rows = [row for row in rows if row]
+    ranking = {
+        "OPEN_ISSUES_CLEAR": 0,
+        "OPEN_ISSUES_PRESENT": 1,
+        "OPEN_ISSUES_NEEDS_INPUT": 2,
+    }
+    route = _worst_route(rows, key="route", ranking=ranking, default="OPEN_ISSUES_NOT_EVALUATED")
+    metrics_rows = [dict(row.get("metrics") or {}) for row in rows]
+    top_rows: list[dict[str, Any]] = []
+    for followup in rows:
+        for item in list(followup.get("rows") or [])[:3]:
+            if isinstance(item, dict):
+                top_rows.append(
+                    {
+                        "area": item.get("Area") or item.get("Check"),
+                        "status": item.get("Status"),
+                        "next_action": item.get("Next Action"),
+                    }
+                )
+    return {
+        "route": route,
+        "route_label": next((row.get("route_label") for row in rows if row.get("route") == route), route),
+        "open_issue_count": sum(int(metrics.get("open_review_item_count") or 0) for metrics in metrics_rows),
+        "review_trigger_count": sum(int(metrics.get("review_trigger_count") or 0) for metrics in metrics_rows),
+        "needs_input_count": sum(int(metrics.get("needs_input_count") or 0) for metrics in metrics_rows),
+        "top_issues": top_rows[:5],
+        "conclusions": [_clean_text(row.get("conclusion"), "") for row in rows if _clean_text(row.get("conclusion"), "")],
+    }
+
+
+def _monitoring_no_live_boundary() -> dict[str, Any]:
+    return {
+        "live_approval": False,
+        "broker_order": False,
+        "account_sync": False,
+        "order_instruction": False,
+        "auto_rebalance": False,
+        "raw_holdings_persistence": False,
+        "raw_macro_persistence": False,
+        "raw_provider_response_persistence": False,
+        "notes": "Monitoring snapshots are explicit compact review evidence only; they are not approval, order, account sync, or auto rebalance instructions.",
+    }
+
+
+def build_selected_portfolio_monitoring_snapshot_record(
+    *,
+    portfolio: dict[str, Any],
+    strategy_rows: list[dict[str, Any]],
+    recheck_results_by_decision_id: dict[str, dict[str, Any]] | None = None,
+    drift_checks_by_decision_id: dict[str, dict[str, Any]] | None = None,
+    provider_evidence_by_decision_id: dict[str, dict[str, Any]] | None = None,
+    review_signal_policy_by_decision_id: dict[str, dict[str, Any]] | None = None,
+    open_issue_followup_by_decision_id: dict[str, dict[str, Any]] | None = None,
+    operator_note: str | None = None,
+    next_review_date: str | None = None,
+    recorded_at: str | None = None,
+    snapshot_id: str | None = None,
+    record_type: str = "MONITORING_SNAPSHOT",
+    persistable: bool = True,
+) -> dict[str, Any]:
+    """Build compact explicit monitoring review evidence without embedding raw scenario artifacts."""
+
+    portfolio_row = dict(portfolio or {})
+    rows = [dict(row or {}) for row in list(strategy_rows or [])]
+    selected_decision_ids = _clean_decision_ids(rows)
+    portfolio_id = _clean_text(portfolio_row.get("portfolio_id"), "")
+    recorded_value = _selected_dashboard_portfolio_timestamp(recorded_at)
+    recheck_results = dict(recheck_results_by_decision_id or {})
+    drift_checks = dict(drift_checks_by_decision_id or {})
+    provider_evidence = dict(provider_evidence_by_decision_id or {})
+    review_signals = dict(review_signal_policy_by_decision_id or {})
+    open_issues = dict(open_issue_followup_by_decision_id or {})
+
+    return {
+        "schema_version": SELECTED_MONITORING_SNAPSHOT_SCHEMA_VERSION,
+        "monitoring_snapshot_id": _snapshot_record_id(snapshot_id),
+        "record_type": str(record_type or "MONITORING_SNAPSHOT"),
+        "created_at": recorded_value,
+        "updated_at": recorded_value,
+        "recorded_at": recorded_value,
+        "persistable": bool(persistable),
+        "dashboard_portfolio_id": portfolio_id,
+        "dashboard_portfolio_name": portfolio_row.get("name") or portfolio_row.get("portfolio_name") or "-",
+        "selected_decision_ids": selected_decision_ids,
+        "scenario_signature": _scenario_signature_from_results(
+            portfolio_id=portfolio_id,
+            selected_decision_ids=selected_decision_ids,
+            recheck_results_by_decision_id=recheck_results,
+        ),
+        "scenario_snapshot": _build_monitoring_scenario_snapshot(
+            strategy_rows=rows,
+            selected_decision_ids=selected_decision_ids,
+            recheck_results_by_decision_id=recheck_results,
+        ),
+        "drift_snapshot": _build_monitoring_drift_snapshot(selected_decision_ids, drift_checks),
+        "provider_freshness_snapshot": _build_monitoring_provider_freshness_snapshot(
+            selected_decision_ids,
+            provider_evidence,
+        ),
+        "review_signal_snapshot": _build_monitoring_review_signal_snapshot(selected_decision_ids, review_signals),
+        "open_issue_snapshot": _build_monitoring_open_issue_snapshot(selected_decision_ids, open_issues),
+        "operator_note": str(operator_note or "").strip(),
+        "next_review_date": str(next_review_date or "").strip() or None,
+        "storage_boundary": {
+            "source": str(SELECTED_PORTFOLIO_MONITORING_LOG_FILE),
+            "append_only": True,
+            "explicit_user_action_required": True,
+            "saved_setup_write": False,
+            "final_decision_registry_write": False,
+            "auto_write": False,
+        },
+        "no_live_boundary": _monitoring_no_live_boundary(),
+    }
+
+
+def append_selected_portfolio_monitoring_snapshot(
+    record: dict[str, Any],
+    *,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Append a user-confirmed monitoring snapshot and return the same compact row."""
+
+    append_selected_portfolio_monitoring_log(record, path=path)
+    return record
+
+
+def _snapshot_sort_key(row: dict[str, Any]) -> str:
+    return str(row.get("recorded_at") or row.get("updated_at") or row.get("created_at") or "")
+
+
+def _snapshot_matches_scope(
+    row: dict[str, Any],
+    *,
+    dashboard_portfolio_id: str | None,
+    selected_decision_ids: list[str] | None,
+) -> bool:
+    if dashboard_portfolio_id and str(row.get("dashboard_portfolio_id") or "") != str(dashboard_portfolio_id):
+        return False
+    if selected_decision_ids:
+        wanted = set(selected_decision_ids)
+        row_ids = {str(value) for value in list(row.get("selected_decision_ids") or []) if str(value)}
+        if not wanted.intersection(row_ids):
+            return False
+    return True
+
+
+def _snapshot_metric(row: dict[str, Any] | None, metric: str) -> float | None:
+    if not row:
+        return None
+    scenario = dict(row.get("scenario_snapshot") or {})
+    drift = dict(row.get("drift_snapshot") or {})
+    if metric == "return":
+        return _optional_float(scenario.get("return"))
+    if metric == "cagr":
+        return _optional_float(scenario.get("cagr"))
+    if metric == "drawdown":
+        return _optional_float(scenario.get("drawdown"))
+    if metric == "benchmark_delta":
+        return _optional_float(scenario.get("benchmark_delta"))
+    if metric == "max_abs_drift":
+        return _optional_float(drift.get("max_abs_drift"))
+    return None
+
+
+def _rounded_delta(left: float | None, right: float | None) -> float | None:
+    if left is None or right is None:
+        return None
+    return round(left - right, 6)
+
+
+def _snapshot_comparison_row(
+    *,
+    metric: str,
+    label: str,
+    latest: dict[str, Any] | None,
+    previous: dict[str, Any] | None,
+    current: dict[str, Any] | None,
+) -> dict[str, Any]:
+    latest_value = _snapshot_metric(latest, metric)
+    previous_value = _snapshot_metric(previous, metric)
+    current_value = _snapshot_metric(current, metric)
+    return {
+        "Metric": label,
+        "Latest Snapshot": latest_value,
+        "Previous Snapshot": previous_value,
+        "Current Scenario": current_value,
+        "Delta Latest vs Previous": _rounded_delta(latest_value, previous_value),
+        "Delta Current vs Latest": _rounded_delta(current_value, latest_value),
+    }
+
+
+def build_selected_portfolio_monitoring_snapshot_review(
+    *,
+    history_rows: list[dict[str, Any]],
+    dashboard_portfolio_id: str | None = None,
+    selected_decision_ids: list[str] | None = None,
+    current_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compare saved monitoring snapshots with the current unsaved scenario snapshot."""
+
+    scoped = [
+        dict(row or {})
+        for row in list(history_rows or [])
+        if _snapshot_matches_scope(
+            dict(row or {}),
+            dashboard_portfolio_id=dashboard_portfolio_id,
+            selected_decision_ids=selected_decision_ids,
+        )
+    ]
+    scoped = sorted(scoped, key=_snapshot_sort_key, reverse=True)
+    latest = scoped[0] if scoped else None
+    previous = scoped[1] if len(scoped) > 1 else None
+    current = dict(current_snapshot or {}) or None
+    comparison_rows = [
+        _snapshot_comparison_row(metric="return", label="Return", latest=latest, previous=previous, current=current),
+        _snapshot_comparison_row(metric="cagr", label="CAGR", latest=latest, previous=previous, current=current),
+        _snapshot_comparison_row(metric="drawdown", label="Drawdown", latest=latest, previous=previous, current=current),
+        _snapshot_comparison_row(
+            metric="benchmark_delta",
+            label="Benchmark Delta",
+            latest=latest,
+            previous=previous,
+            current=current,
+        ),
+        _snapshot_comparison_row(
+            metric="max_abs_drift",
+            label="Max Drift",
+            latest=latest,
+            previous=previous,
+            current=current,
+        ),
+    ]
+    return {
+        "schema_version": SELECTED_MONITORING_SNAPSHOT_REVIEW_SCHEMA_VERSION,
+        "dashboard_portfolio_id": dashboard_portfolio_id,
+        "selected_decision_ids": selected_decision_ids or [],
+        "latest_snapshot": latest,
+        "previous_snapshot": previous,
+        "current_scenario": current,
+        "comparison_rows": comparison_rows,
+        "metrics": {
+            "history_count": len(scoped),
+            "has_latest_snapshot": latest is not None,
+            "has_previous_snapshot": previous is not None,
+            "current_scenario_present": current is not None,
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_monitoring_snapshot_review",
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "broker_order": False,
+            "order_instruction": False,
+            "account_sync": False,
+            "auto_rebalance": False,
+            "notes": "Snapshot review compares explicit saved monitoring records and current session evidence only.",
+        },
+    }
+
+
+def load_selected_portfolio_monitoring_snapshot_review(
+    *,
+    dashboard_portfolio_id: str | None = None,
+    selected_decision_ids: list[str] | None = None,
+    current_snapshot: dict[str, Any] | None = None,
+    limit: int | None = 100,
+    path: Path | None = None,
+) -> dict[str, Any]:
+    rows = load_selected_portfolio_monitoring_logs(limit=limit, path=path)
+    return build_selected_portfolio_monitoring_snapshot_review(
+        history_rows=rows,
+        dashboard_portfolio_id=dashboard_portfolio_id,
+        selected_decision_ids=selected_decision_ids,
+        current_snapshot=current_snapshot,
+    )
 
 
 def _readiness_check_row(

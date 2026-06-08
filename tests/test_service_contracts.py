@@ -11634,6 +11634,196 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             "blockers": [],
         }
 
+    def test_selected_monitoring_log_append_and_load_is_path_injectable_and_append_only(self) -> None:
+        from app.runtime.portfolio_selection_v2 import (
+            append_selected_portfolio_monitoring_log,
+            load_selected_portfolio_monitoring_logs,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl"
+            append_selected_portfolio_monitoring_log(
+                {
+                    "monitoring_snapshot_id": "snapshot-old",
+                    "recorded_at": "2026-06-01T10:00:00",
+                    "dashboard_portfolio_id": "portfolio-core",
+                    "scenario_snapshot": {"return": 0.10},
+                },
+                path=path,
+            )
+            append_selected_portfolio_monitoring_log(
+                {
+                    "monitoring_snapshot_id": "snapshot-new",
+                    "recorded_at": "2026-06-08T10:00:00",
+                    "dashboard_portfolio_id": "portfolio-core",
+                    "scenario_snapshot": {"return": 0.12},
+                },
+                path=path,
+            )
+
+            loaded = load_selected_portfolio_monitoring_logs(path=path)
+            newline_count = path.read_text(encoding="utf-8").count("\n")
+
+        self.assertEqual([row["monitoring_snapshot_id"] for row in loaded], ["snapshot-new", "snapshot-old"])
+        self.assertEqual(newline_count, 2)
+
+    def test_monitoring_snapshot_record_compacts_current_scenario_review_evidence(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            build_selected_portfolio_monitoring_snapshot_record,
+            build_selected_portfolio_open_issue_followup,
+            build_selected_portfolio_review_signal_policy,
+        )
+
+        recheck_result = self._ready_recheck_result()
+        recheck_result["initial_capital"] = 10_000.0
+        recheck_result["portfolio_summary"] = {
+            "end_balance": 12_000.0,
+            "total_return": 0.20,
+            "cagr": 0.12,
+            "mdd": -0.12,
+        }
+        recheck_result["portfolio_result_df"] = pd.DataFrame(
+            [
+                {"Date": "2026-05-27", "Total Balance": 11_800.0},
+                {"Date": "2026-05-28", "Total Balance": 12_000.0},
+            ]
+        )
+        drift_check = {
+            "route": "DRIFT_WATCH",
+            "route_label": "비중 관찰 필요",
+            "metrics": {"max_abs_drift": 2.5, "current_weight_total": 100.0},
+            "verdict": "일부 drift가 watch 기준을 넘었습니다.",
+            "next_action": "다음 점검일에 drift 확대 여부를 확인합니다.",
+        }
+        open_issue = build_selected_portfolio_open_issue_followup(self._selected_row_with_open_issue())
+
+        record = build_selected_portfolio_monitoring_snapshot_record(
+            portfolio={"portfolio_id": "portfolio-core", "name": "Core Monitor"},
+            strategy_rows=[self._selected_row()],
+            recheck_results_by_decision_id={"decision-selected": recheck_result},
+            drift_checks_by_decision_id={"decision-selected": drift_check},
+            provider_evidence_by_decision_id={"decision-selected": self._ready_provider_evidence()},
+            review_signal_policy_by_decision_id={
+                "decision-selected": build_selected_portfolio_review_signal_policy(
+                    self._selected_row(),
+                    recheck_result=recheck_result,
+                    recheck_preflight=self._ready_recheck_preflight(),
+                    provider_evidence=self._ready_provider_evidence(),
+                    drift_check=drift_check,
+                )
+            },
+            open_issue_followup_by_decision_id={"decision-selected": open_issue},
+            operator_note="Monthly review after scenario update.",
+            next_review_date="2026-06-30",
+            recorded_at="2026-06-08T10:30:00",
+            snapshot_id="snapshot-20260608",
+        )
+
+        self.assertEqual(record["schema_version"], "selected_portfolio_monitoring_snapshot_v2")
+        self.assertEqual(record["record_type"], "MONITORING_SNAPSHOT")
+        self.assertEqual(record["monitoring_snapshot_id"], "snapshot-20260608")
+        self.assertEqual(record["dashboard_portfolio_id"], "portfolio-core")
+        self.assertEqual(record["selected_decision_ids"], ["decision-selected"])
+        self.assertEqual(record["scenario_snapshot"]["result_count"], 1)
+        self.assertEqual(record["scenario_snapshot"]["return"], 0.20)
+        self.assertEqual(record["scenario_snapshot"]["drawdown"], -0.12)
+        self.assertEqual(record["scenario_snapshot"]["benchmark_delta"], 0.04)
+        self.assertNotIn("portfolio_result_df", record["scenario_snapshot"])
+        self.assertEqual(record["drift_snapshot"]["route"], "DRIFT_WATCH")
+        self.assertEqual(record["provider_freshness_snapshot"]["route"], "SELECTED_PROVIDER_READY")
+        self.assertEqual(record["review_signal_snapshot"]["route"], "REVIEW_SIGNAL_WATCH")
+        self.assertEqual(record["open_issue_snapshot"]["open_issue_count"], 1)
+        self.assertEqual(record["operator_note"], "Monthly review after scenario update.")
+        self.assertEqual(record["next_review_date"], "2026-06-30")
+        self.assertFalse(record["no_live_boundary"]["live_approval"])
+        self.assertFalse(record["no_live_boundary"]["order_instruction"])
+        self.assertFalse(record["no_live_boundary"]["auto_rebalance"])
+
+    def test_monitoring_snapshot_review_model_compares_previous_latest_and_current_scenario(self) -> None:
+        from app.runtime.final_selected_portfolios import (
+            build_selected_portfolio_monitoring_snapshot_record,
+            build_selected_portfolio_monitoring_snapshot_review,
+        )
+
+        previous = build_selected_portfolio_monitoring_snapshot_record(
+            portfolio={"portfolio_id": "portfolio-core", "name": "Core Monitor"},
+            strategy_rows=[self._selected_row()],
+            recheck_results_by_decision_id={
+                "decision-selected": {
+                    **self._ready_recheck_result(),
+                    "initial_capital": 10_000.0,
+                    "portfolio_summary": {"end_balance": 11_000.0, "total_return": 0.10, "cagr": 0.10, "mdd": -0.14},
+                    "change_summary": {
+                        "cagr_delta_vs_baseline": 0.0,
+                        "mdd_delta_vs_baseline": 0.0,
+                        "benchmark_cagr": 0.07,
+                        "net_cagr_spread": 0.03,
+                    },
+                }
+            },
+            recorded_at="2026-06-01T10:00:00",
+            snapshot_id="snapshot-previous",
+        )
+        latest = build_selected_portfolio_monitoring_snapshot_record(
+            portfolio={"portfolio_id": "portfolio-core", "name": "Core Monitor"},
+            strategy_rows=[self._selected_row()],
+            recheck_results_by_decision_id={
+                "decision-selected": {
+                    **self._ready_recheck_result(),
+                    "initial_capital": 10_000.0,
+                    "portfolio_summary": {"end_balance": 12_000.0, "total_return": 0.20, "cagr": 0.12, "mdd": -0.12},
+                    "change_summary": {
+                        "cagr_delta_vs_baseline": 0.02,
+                        "mdd_delta_vs_baseline": 0.02,
+                        "benchmark_cagr": 0.08,
+                        "net_cagr_spread": 0.04,
+                    },
+                }
+            },
+            recorded_at="2026-06-08T10:00:00",
+            snapshot_id="snapshot-latest",
+        )
+        current = build_selected_portfolio_monitoring_snapshot_record(
+            portfolio={"portfolio_id": "portfolio-core", "name": "Core Monitor"},
+            strategy_rows=[self._selected_row()],
+            recheck_results_by_decision_id={
+                "decision-selected": {
+                    **self._ready_recheck_result(),
+                    "initial_capital": 10_000.0,
+                    "portfolio_summary": {"end_balance": 12_300.0, "total_return": 0.23, "cagr": 0.13, "mdd": -0.11},
+                    "change_summary": {
+                        "cagr_delta_vs_baseline": 0.03,
+                        "mdd_delta_vs_baseline": 0.03,
+                        "benchmark_cagr": 0.08,
+                        "net_cagr_spread": 0.05,
+                    },
+                }
+            },
+            recorded_at="2026-06-08T11:00:00",
+            snapshot_id="snapshot-current-session",
+            persistable=False,
+        )
+
+        review = build_selected_portfolio_monitoring_snapshot_review(
+            history_rows=[previous, latest],
+            dashboard_portfolio_id="portfolio-core",
+            current_snapshot=current,
+        )
+
+        self.assertEqual(review["schema_version"], "selected_portfolio_monitoring_snapshot_review_v2")
+        self.assertEqual(review["latest_snapshot"]["monitoring_snapshot_id"], "snapshot-latest")
+        self.assertEqual(review["previous_snapshot"]["monitoring_snapshot_id"], "snapshot-previous")
+        self.assertEqual(review["current_scenario"]["monitoring_snapshot_id"], "snapshot-current-session")
+        self.assertEqual(review["metrics"]["history_count"], 2)
+        rows = {row["Metric"]: row for row in review["comparison_rows"]}
+        self.assertEqual(rows["Return"]["Delta Latest vs Previous"], 0.10)
+        self.assertEqual(rows["Return"]["Delta Current vs Latest"], 0.03)
+        self.assertEqual(rows["Benchmark Delta"]["Delta Latest vs Previous"], 0.01)
+        self.assertEqual(rows["Benchmark Delta"]["Delta Current vs Latest"], 0.01)
+        self.assertFalse(review["execution_boundary"]["live_approval"])
+        self.assertFalse(review["execution_boundary"]["order_instruction"])
+        self.assertFalse(review["execution_boundary"]["auto_rebalance"])
+
     def test_monitoring_timeline_is_read_only_and_requires_recheck_input(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 

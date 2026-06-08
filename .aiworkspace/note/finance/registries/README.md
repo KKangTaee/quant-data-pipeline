@@ -1,7 +1,7 @@
 # Finance Registries
 
 Status: Active
-Last Verified: 2026-06-01
+Last Verified: 2026-06-08
 
 이 폴더는 앱과 운영 helper가 다시 읽어야 하는 append-only JSONL 저장소를 둔다.
 
@@ -17,7 +17,7 @@ Registry 파일은 단순 실행 로그가 아니라 다음 UI 단계가 읽는 
 | `PORTFOLIO_SELECTION_SOURCES.jsonl` | Backtest Analysis | Practical Validation | 단일 전략, compare, saved mix replay를 검증 후보 source로 저장 |
 | `PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation | Final Review | 12개 practical diagnostics, provider coverage, blocker / review 근거 저장 |
 | `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | Final Review | Selected Portfolio Dashboard | select / hold / reject / re-review 최종 판단 저장 |
-| `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Selected Portfolio Dashboard | Selected Portfolio Dashboard | 사용자가 명시적으로 남기는 monitoring 보조 기록 |
+| `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Operations > Portfolio Monitoring | Operations > Portfolio Monitoring | 사용자가 명시적으로 남기는 compact monitoring snapshot / review 기록. scenario update 후 benchmark delta, return / drawdown, drift, provider freshness, review signal, open issue, operator note, next review date를 append-only로 보존 |
 
 이 4개를 제외한 registry는 현재 main flow의 source chain이 아니다.
 새 registry 추가 전에는 `docs/data/STORAGE_GOVERNANCE.md`의 checklist를 먼저 확인한다.

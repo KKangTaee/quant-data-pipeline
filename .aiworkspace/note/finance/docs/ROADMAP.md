@@ -28,9 +28,9 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`
-- 목적: Reference contextual help가 shared Glossary concept dictionary와 Reference route boundary에서 drift되지 않도록 Streamlit-free guard를 추가하고, guide path copy 표시를 정리한다.
-- 이번 차수에서 하지 않은 일: `GLOSSARY.md` 전체 rewrite, Reference 검색 URL query deep-linking, Ingestion / Overview 전체 surface 연결, DB / registry / saved JSONL rewrite, provider fetch, live approval / broker order / auto rebalance.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/monitoring-snapshot-review-loop-v2-20260608/`
+- 목적: Portfolio Monitoring scenario update 결과를 사용자가 명시적으로 `Save Monitoring Snapshot` 또는 `Record Review`로 append-only compact review evidence로 남기고, latest / previous / current scenario 변화를 비교할 수 있게 한다.
+- 이번 차수에서 하지 않은 일: live approval, broker order, account sync, auto rebalance, automatic monitoring log save, raw holdings / macro / provider response JSONL 저장, Candidate Review / Portfolio Proposal / Candidate Library / Run History 삭제.
 
 ## Product Tracks
 
@@ -40,7 +40,7 @@ Workspace > Ingestion
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
 | Backtest Analysis | Candidate creation plus Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
-| Operations / Portfolio Monitoring | Operations Console and daily-monitoring-first Portfolio Monitoring complete | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health`, archive lanes | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
+| Operations / Portfolio Monitoring | Operations Console, daily-monitoring-first Portfolio Monitoring, and explicit Monitoring Snapshot / Review loop complete | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health`, archive lanes | Read-only monitoring, explicit scenario update, explicit append-only snapshot/review save; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
 
 ## Recently Merged Work
@@ -51,6 +51,7 @@ Workspace > Ingestion
 | Operations Overview IA / Operations Console V2-V5 | Complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health primary lanes, archive / recovery labels for Backtest Runs and Candidate Library, and disabled live trading boundary copy. |
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
+| Monitoring Snapshot / Review Loop V2 | Complete | Portfolio Monitoring can compare latest / previous saved snapshot with the current scenario and append compact monitoring evidence only when the user presses `Save Monitoring Snapshot` or `Record Review`. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |
 | Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 
@@ -100,6 +101,10 @@ Recent completed structure audit tasks:
 - `streamlit-ingestion-console-split-20260607`
 - `overview-ingestion-action-boundary-20260607`
 - `code-boundary-refactor-audit-20260607`
+
+Recent completed product workflow tasks:
+
+- `monitoring-snapshot-review-loop-v2-20260608`
 
 Retained completed boards in `phases/active/` should not be treated as newly open phase work.
 Their closeout summaries live under `.aiworkspace/note/finance/phases/done/` when available.

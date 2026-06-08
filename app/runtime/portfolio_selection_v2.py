@@ -140,13 +140,21 @@ def load_final_selection_decisions_v2(limit: int | None = 100) -> list[dict[str,
     return load_current_final_selection_decisions(limit=limit)
 
 
-def append_selected_portfolio_monitoring_log(row: dict[str, Any]) -> None:
+def append_selected_portfolio_monitoring_log(row: dict[str, Any], *, path: Path | None = None) -> None:
     """Persist an explicit selected-portfolio monitoring snapshot."""
-    _append_jsonl_row(SELECTED_PORTFOLIO_MONITORING_LOG_FILE, row)
+    _append_jsonl_row(path or SELECTED_PORTFOLIO_MONITORING_LOG_FILE, row)
 
 
-def load_selected_portfolio_monitoring_logs(limit: int | None = 100) -> list[dict[str, Any]]:
-    return _load_recent(SELECTED_PORTFOLIO_MONITORING_LOG_FILE, limit=limit, timestamp_keys=("updated_at", "created_at"))
+def load_selected_portfolio_monitoring_logs(
+    limit: int | None = 100,
+    *,
+    path: Path | None = None,
+) -> list[dict[str, Any]]:
+    return _load_recent(
+        path or SELECTED_PORTFOLIO_MONITORING_LOG_FILE,
+        limit=limit,
+        timestamp_keys=("recorded_at", "updated_at", "created_at"),
+    )
 
 
 def append_saved_portfolio_mix(row: dict[str, Any]) -> None:
