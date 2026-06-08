@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-data-health-ingestion-handoff-v1-20260608` | Completed record | `Workspace > Overview > Data Health` 상단에 priority-ranked read-only handoff lane을 추가해 stale / missing / failed / partial / due target을 owning collection surface로 연결한 기록이다. |
 | `overview-macro-context-cockpit-v1-20260608` | Completed record | `Workspace > Overview` 상단에 기존 DB-backed market context / sentiment / events / data-health snapshot을 합성한 summary-first cockpit을 추가한 기록이다. |
 | `reference-drift-guard-qa-polish-v5-20260608` | Completed record | contextual Reference help가 Glossary term / Reference link boundary에서 drift되지 않도록 guard와 표시 polish를 추가한 5차 기록이다. |
 | `reference-contextual-links-v4-20260608` | Completed record | 주요 Backtest / Operations 화면에 read-only Reference help expander를 연결한 4차 기록이다. |

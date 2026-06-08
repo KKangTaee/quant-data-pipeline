@@ -3142,6 +3142,230 @@ def _cockpit_status_tone(status: Any) -> str:
     return "neutral"
 
 
+DATA_HEALTH_HANDOFF_TARGETS: dict[str, dict[str, str]] = {
+    "S&P 500 Universe": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > 유니버스 갱신",
+        "collection_action": "Run S&P 500 universe refresh through the existing Overview action facade.",
+    },
+    "S&P 500 Daily Snapshot": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > 일중 스냅샷 갱신",
+        "collection_action": "Run the S&P 500 intraday snapshot refresh from Market Movers.",
+    },
+    "Top1000 Daily Snapshot": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > Top1000 > 일중 스냅샷 갱신",
+        "collection_action": "Run the Top1000 intraday snapshot refresh from Market Movers.",
+    },
+    "Top2000 Daily Snapshot": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > Top2000 > 일중 스냅샷 갱신",
+        "collection_action": "Run the Top2000 intraday snapshot refresh from Market Movers.",
+    },
+    "Futures Monitor 1m OHLCV": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집",
+        "alternate_surface": "Workspace > Overview > Futures Monitor",
+        "collection_action": "Run futures OHLCV collection; Overview bounded refresh is also available for the Futures Monitor.",
+    },
+    "Market Sentiment": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 심리 수집",
+        "alternate_surface": "Workspace > Overview > Sentiment",
+        "collection_action": "Run Market Sentiment collection for CNN Fear & Greed / AAII rows.",
+    },
+    "FOMC Calendar": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정",
+        "alternate_surface": "Workspace > Overview > Events",
+        "collection_action": "Run FOMC calendar collection from the existing market events collector.",
+    },
+    "Macro Calendar": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 매크로 발표",
+        "alternate_surface": "Workspace > Overview > Events",
+        "collection_action": "Run official macro calendar collection or import the BLS .ics file.",
+    },
+    "Earnings Calendar": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 실적 발표",
+        "alternate_surface": "Workspace > Overview > Events",
+        "collection_action": "Run earnings calendar collection with a bounded symbol source.",
+    },
+}
+DATA_HEALTH_HANDOFF_STATUS_ORDER = {
+    "FAILED": 0,
+    "MISSING": 1,
+    "STALE": 2,
+    "PARTIAL": 3,
+    "DUE": 4,
+    "REVIEW": 5,
+}
+DATA_HEALTH_HANDOFF_SEVERITY = {
+    "FAILED": "critical",
+    "MISSING": "critical",
+    "STALE": "high",
+    "PARTIAL": "high",
+    "DUE": "medium",
+    "REVIEW": "medium",
+}
+
+
+def _handoff_status(value: Any) -> str:
+    status = str(value or "").strip()
+    return status or "Unknown"
+
+
+def _handoff_status_rank(status: Any) -> int:
+    return DATA_HEALTH_HANDOFF_STATUS_ORDER.get(_handoff_status(status).upper(), 99)
+
+
+def _handoff_counts(rows: pd.DataFrame) -> dict[str, int]:
+    if rows.empty or "Status" not in rows:
+        return {}
+    counts = rows["Status"].fillna("Unknown").astype(str).value_counts().to_dict()
+    return {str(key): int(value) for key, value in counts.items()}
+
+
+def _handoff_reason(row: dict[str, Any]) -> str:
+    parts = [
+        _handoff_status(row.get("Status")),
+        str(row.get("Data Freshness") or "-"),
+    ]
+    failure_streak = _cockpit_int(row.get("Failure Streak"))
+    failed_count = _cockpit_int(row.get("Failed"))
+    last_issue = row.get("Last Issue")
+    if failure_streak:
+        parts.append(f"Failure streak {failure_streak}")
+    if failed_count:
+        parts.append(f"{failed_count} failed")
+    if last_issue not in (None, "", "-"):
+        parts.append(f"Last issue {last_issue}")
+    return " · ".join(parts)
+
+
+def _handoff_target(area: str) -> dict[str, str]:
+    target = dict(DATA_HEALTH_HANDOFF_TARGETS.get(area) or {})
+    if target:
+        return target
+    return {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터",
+        "collection_action": "Open the matching Ingestion collector and rerun a bounded collection.",
+    }
+
+
+def build_overview_data_health_ingestion_handoff(
+    collection_ops_snapshot: dict[str, Any] | None = None,
+    *,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Turn Overview Data Health rows into read-only handoff guidance for the owning collection surfaces."""
+    snapshot = collection_ops_snapshot or {}
+    rows = _cockpit_frame(snapshot)
+    counts = _handoff_counts(rows)
+    if rows.empty:
+        return {
+            "schema_version": "overview_data_health_ingestion_handoff_v1",
+            "status": "NO_DATA",
+            "summary": {
+                "headline": "No Data Health handoff available",
+                "detail": str(snapshot.get("message") or "No collection ops rows are available yet."),
+                "review_count": 0,
+                "top_priority": None,
+                "next_target_surface": None,
+            },
+            "counts": counts,
+            "priority_items": [],
+            "boundary_note": (
+                "Read-only handoff: Overview Data Health does not execute collection jobs, write registries, "
+                "write saved setup, change DB schema, or fetch providers during render."
+            ),
+        }
+
+    review_rows = rows[
+        ~rows.get("Status", pd.Series(dtype=str)).fillna("").astype(str).str.upper().isin({"OK", "SUCCESS"})
+    ].copy()
+    if review_rows.empty:
+        return {
+            "schema_version": "overview_data_health_ingestion_handoff_v1",
+            "status": "OK",
+            "summary": {
+                "headline": "Data Health handoff clear",
+                "detail": "All tracked Overview collection targets are currently OK.",
+                "review_count": 0,
+                "top_priority": None,
+                "next_target_surface": None,
+            },
+            "counts": counts,
+            "priority_items": [],
+            "boundary_note": (
+                "Read-only handoff: Overview Data Health does not execute collection jobs, write registries, "
+                "write saved setup, change DB schema, or fetch providers during render."
+            ),
+        }
+
+    review_rows["_status_rank"] = review_rows["Status"].map(_handoff_status_rank)
+    if "Failure Streak" not in review_rows:
+        review_rows["Failure Streak"] = 0
+    review_rows["_failure_streak"] = review_rows["Failure Streak"].map(_cockpit_int)
+    review_rows = review_rows.sort_values(
+        by=["_status_rank", "_failure_streak", "Area"],
+        ascending=[True, False, True],
+        kind="mergesort",
+    )
+
+    priority_items: list[dict[str, Any]] = []
+    for rank, (_, item_row) in enumerate(review_rows.head(max(1, int(limit or 5))).iterrows(), start=1):
+        row = dict(item_row.drop(labels=["_status_rank", "_failure_streak"], errors="ignore").to_dict())
+        area = str(row.get("Area") or "Unknown")
+        status = _handoff_status(row.get("Status"))
+        target = _handoff_target(area)
+        priority_items.append(
+            {
+                "rank": rank,
+                "area": area,
+                "status": status,
+                "severity": DATA_HEALTH_HANDOFF_SEVERITY.get(status.upper(), "low"),
+                "tone": _cockpit_status_tone(status),
+                "freshness": str(row.get("Data Freshness") or "-"),
+                "reason": _handoff_reason(row),
+                "next_action": str(row.get("Next Action") or target.get("collection_action") or "-"),
+                "collection_action": target.get("collection_action") or str(row.get("Next Action") or "-"),
+                "owner_surface": target.get("owner_surface") or "Workspace > Ingestion",
+                "target_surface": target.get("target_surface") or "Workspace > Ingestion",
+                "alternate_surface": target.get("alternate_surface"),
+                "last_success": row.get("Last Success") or "-",
+                "last_issue": row.get("Last Issue") or "-",
+            }
+        )
+
+    review_count = int(len(review_rows))
+    top_item = priority_items[0] if priority_items else {}
+    return {
+        "schema_version": "overview_data_health_ingestion_handoff_v1",
+        "status": "REVIEW" if review_count else "OK",
+        "summary": {
+            "headline": f"{review_count} Data Health targets need handoff" if review_count else "Data Health handoff clear",
+            "detail": (
+                "Open the owning collection surface for the highest-priority stale, missing, partial, due, or failed target."
+                if review_count
+                else "All tracked Overview collection targets are currently OK."
+            ),
+            "review_count": review_count,
+            "top_priority": top_item.get("area"),
+            "next_target_surface": top_item.get("target_surface"),
+        },
+        "counts": counts,
+        "priority_items": priority_items,
+        "boundary_note": (
+            "Read-only handoff: Overview Data Health does not execute collection jobs, write registries, "
+            "write saved setup, change DB schema, or fetch providers during render."
+        ),
+    }
+
+
 def _cockpit_card_status(*values: Any) -> str:
     for value in values:
         normalized = _cockpit_status_text(value)

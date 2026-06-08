@@ -22,6 +22,7 @@ from app.services.overview_market_intelligence import (
     build_group_leadership_snapshot,
     build_market_movers_snapshot,
     build_market_sentiment_snapshot,
+    build_overview_data_health_ingestion_handoff,
     load_market_mover_sector_options,
 )
 from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
@@ -441,6 +442,13 @@ def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentime
 # Load the DB freshness and persisted job history snapshot for Overview Data Health.
 def load_overview_collection_ops_snapshot() -> dict[str, Any]:
     return build_collection_ops_snapshot(history_rows=load_run_history(limit=200))
+
+
+# Build the read-only Data Health -> owning collection surface handoff model.
+def load_overview_data_health_ingestion_handoff(collection_ops_snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
+    return build_overview_data_health_ingestion_handoff(
+        collection_ops_snapshot or load_overview_collection_ops_snapshot()
+    )
 
 
 # Load the summary-first market context cockpit from existing Overview read models only.

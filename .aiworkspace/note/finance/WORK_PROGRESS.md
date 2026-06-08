@@ -4868,3 +4868,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Workspace > Overview` 상단에 기존 DB-backed movers / breadth / futures / sentiment / events / data-health snapshot을 합성한 summary-first cockpit을 추가했다.
   - 새 provider / DB schema / registry 또는 saved JSONL write / provider fetch / validation gate / monitoring signal / trading action은 추가하지 않았다.
   - 다음 흐름은 2차 `Data Health -> Ingestion Handoff`, 3차 breadth / heatmap and macro week view다.
+- Overview Data Health Ingestion Handoff V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-data-health-ingestion-handoff-v1-20260608/`에서 2차 구현을 완료했다.
+  - `Workspace > Overview > Data Health` 상단에 stale / missing / failed / partial / due target을 우선순위화한 read-only handoff lane을 추가했다.
+  - Handoff는 owning collection surface와 alternate Overview bounded refresh surface를 안내하지만 job 실행 / action queue persistence / provider fetch / registry or saved JSONL write는 하지 않는다.
+  - 다음 흐름은 3차 breadth / heatmap and macro week view, 4차 source/provider hardening 후보, 5차 Overview IA closeout 후보다.

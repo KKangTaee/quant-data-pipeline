@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `overview-macro-context-cockpit-v1-20260608`
+- `overview-data-health-ingestion-handoff-v1-20260608`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-data-health-ingestion-handoff-v1-20260608`: Overview Data Health Ingestion Handoff V1 / priority-ranked read-only Data Health -> collection surface handoff
 - `overview-macro-context-cockpit-v1-20260608`: Overview Macro Context Cockpit V1 / summary-first DB-backed market context band
 
 ## What `tasks/active/` Means Right Now

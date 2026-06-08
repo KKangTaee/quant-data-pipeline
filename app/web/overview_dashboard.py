@@ -39,6 +39,7 @@ from app.web.backtest_ui_components import render_badge_strip, render_status_car
 from app.web.overview_dashboard_helpers import (
     load_overview_collection_ops_snapshot,
     load_overview_dashboard_snapshot,
+    load_overview_data_health_ingestion_handoff,
     load_overview_group_leadership_snapshot,
     load_overview_macro_context_cockpit,
     load_overview_market_events_snapshot,
@@ -67,6 +68,7 @@ from app.web.overview_ui_components import (
     OVERVIEW_SERIES_COLORS,
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
+    render_data_health_ingestion_handoff,
     render_event_agenda_sections,
     render_event_source_lane,
     render_event_warning_strip,
@@ -5353,6 +5355,9 @@ def _render_collection_ops_tab() -> None:
         st.warning(str(warning))
 
     snapshot = load_overview_collection_ops_snapshot()
+    render_data_health_ingestion_handoff(
+        load_overview_data_health_ingestion_handoff(snapshot)
+    )
     coverage = dict(snapshot.get("coverage") or {})
     review_count = sum(
         int(coverage.get(key) or 0)

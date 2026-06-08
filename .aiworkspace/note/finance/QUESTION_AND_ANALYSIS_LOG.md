@@ -7611,3 +7611,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 수집 / 스키마 / 저장 없이 기존 DB-backed Overview read model을 합성해 첫 화면에서 market movement, breadth, futures, sentiment, events, data freshness, next deep tab을 읽게 한다.
 - Analysis result: Cockpit 합성은 `app/services/overview_market_intelligence.py`에 두고, helper cache와 `overview_ui_components.py` 렌더러를 통해 `render_overview_dashboard` 탭 위에 표시하는 구조가 UI-engine boundary에 맞다.
 - Follow-up: 2차는 Data Health -> Ingestion handoff, 3차는 breadth / heatmap and macro week view다. Candidate Ops IA 변경은 별도 승인 후보로 남긴다.
+
+### 2026-06-08 - Overview Data Health -> Ingestion Handoff를 2차로 구현한다
+
+- User request: 사용자가 1차 Cockpit 다음 2차 작업 진행을 요청함.
+- Interpreted goal: Data Health가 보여주는 stale / missing / failed / partial / due 상태를 사용자가 실제로 확인할 collection surface로 넘기되, Overview가 Ingestion 실행 큐나 job owner가 되면 안 됨.
+- Analysis result: 기존 `build_collection_ops_snapshot` row를 재사용해 Streamlit-free handoff model을 만들고, Data Health 탭 상단에 우선순위 / owner / target / freshness / read-only boundary를 표시하는 것이 가장 작은 변경이다.
+- Follow-up: 3차 후보는 breadth / heatmap and macro week view이며, persistent Ingestion Action Queue나 Candidate Ops IA 변경은 별도 승인 후 진행한다.

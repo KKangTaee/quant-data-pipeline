@@ -394,6 +394,141 @@ def overview_ui_css() -> str:
   border-radius: var(--ov-mi-radius-card);
   background: rgba(248,250,252,0.76);
 }
+.ov-data-handoff {
+  margin: 0.48rem 0 0.88rem 0;
+  padding: 0.68rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 4px solid var(--ov-handoff-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ov-handoff-tone, var(--ov-mi-color-neutral)) 6%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    var(--ov-mi-color-surface);
+}
+.ov-data-handoff-head {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.56rem;
+}
+.ov-data-handoff-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.ov-data-handoff-title {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-data-handoff-detail {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.ov-data-handoff-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.42rem;
+  padding: 0.17rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ov-handoff-tone, var(--ov-mi-color-neutral)) 36%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-handoff-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-handoff-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-data-handoff-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-bottom: 0.5rem;
+}
+.ov-data-handoff-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.28rem;
+  padding: 0.13rem 0.38rem;
+  border: 1px solid color-mix(in srgb, var(--ov-count-tone, var(--ov-mi-color-neutral)) 26%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-count-tone, var(--ov-mi-color-neutral)) 7%, transparent);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.08;
+}
+.ov-data-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-md);
+}
+.ov-data-handoff-card {
+  min-width: 0;
+  padding: 0.56rem 0.62rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-item-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.92);
+}
+.ov-data-handoff-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: flex-start;
+}
+.ov-data-handoff-area {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-data-handoff-rank {
+  flex: 0 0 auto;
+  color: var(--ov-item-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  text-align: right;
+}
+.ov-data-handoff-meta,
+.ov-data-handoff-action,
+.ov-data-handoff-target,
+.ov-data-handoff-boundary,
+.ov-data-handoff-empty {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.ov-data-handoff-meta {
+  margin-top: 0.26rem;
+}
+.ov-data-handoff-action {
+  margin-top: 0.34rem;
+  color: var(--ov-mi-color-text);
+}
+.ov-data-handoff-target {
+  margin-top: 0.28rem;
+  padding-top: 0.32rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-data-handoff-boundary,
+.ov-data-handoff-empty {
+  margin-top: 0.52rem;
+  padding: 0.4rem 0.48rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.78);
+}
 .ov-mm-refresh-label {
   margin: 0.85rem 0 0.42rem 0;
   color: inherit;
@@ -1070,11 +1205,13 @@ def overview_ui_css() -> str:
     border-top: 1px solid var(--ov-mi-border-faint);
   }
   .ov-macro-cockpit-head,
-  .ov-macro-cockpit-next {
+  .ov-macro-cockpit-next,
+  .ov-data-handoff-head {
     grid-template-columns: 1fr;
   }
   .ov-macro-cockpit-grid,
-  .ov-macro-cockpit-checks {
+  .ov-macro-cockpit-checks,
+  .ov-data-handoff-grid {
     grid-template-columns: 1fr;
   }
   .ov-mm-meta-item:nth-child(odd) {
@@ -1308,6 +1445,88 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     <div class="ov-macro-cockpit-checks">{next_checks_html}</div>
   </div>
   <div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _data_handoff_count_tone(label: str) -> str:
+    normalized = str(label or "").upper()
+    if normalized in {"OK", "SUCCESS"}:
+        return "positive"
+    if normalized in {"FAILED", "MISSING", "STALE"}:
+        return "danger"
+    if normalized in {"PARTIAL", "DUE", "REVIEW"}:
+        return "warning"
+    return "neutral"
+
+
+def _data_handoff_counts_html(counts: dict[str, Any]) -> str:
+    if not counts:
+        return ""
+    ordered_labels = ["Failed", "Missing", "Stale", "Partial", "Due", "OK"]
+    labels = [label for label in ordered_labels if label in counts]
+    labels.extend(sorted(str(label) for label in counts if str(label) not in labels))
+    html: list[str] = []
+    for label in labels:
+        value = counts.get(label)
+        tone = escape(_overview_tone_color(_data_handoff_count_tone(label)))
+        html.append(
+            f'<span class="ov-data-handoff-count" style="--ov-count-tone:{tone};">'
+            f"{escape(str(label))}: {escape(_display_value(value))}"
+            "</span>"
+        )
+    return "".join(html)
+
+
+def _data_handoff_items_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        alternate = item.get("alternate_surface")
+        alternate_text = f" · Alternative: {alternate}" if alternate not in (None, "", "-") else ""
+        html.append(
+            f'<article class="ov-data-handoff-card" style="--ov-item-tone:{tone_color};">'
+            '<div class="ov-data-handoff-card-head">'
+            f'<div class="ov-data-handoff-area">{escape(_display_value(item.get("area")))}</div>'
+            f'<div class="ov-data-handoff-rank">#{escape(_display_value(item.get("rank")))} · {escape(_display_value(item.get("status")))}</div>'
+            "</div>"
+            f'<div class="ov-data-handoff-meta">{escape(_display_value(item.get("reason")))}</div>'
+            f'<div class="ov-data-handoff-action"><strong>Next:</strong> {escape(_display_value(item.get("next_action")))}</div>'
+            f'<div class="ov-data-handoff-target"><strong>Go to:</strong> {escape(_display_value(item.get("target_surface")))}'
+            f'<br><strong>Owner:</strong> {escape(_display_value(item.get("owner_surface")))}{escape(alternate_text)}</div>'
+            "</article>"
+        )
+    return "".join(html)
+
+
+def render_data_health_ingestion_handoff(model: dict[str, Any]) -> None:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(model.get("status")))
+    counts_html = _data_handoff_counts_html(dict(model.get("counts") or {}))
+    items = list(model.get("priority_items") or [])
+    items_html = _data_handoff_items_html(items)
+    empty_html = (
+        ""
+        if items
+        else f'<div class="ov-data-handoff-empty">{escape(_display_value(summary.get("detail")))}</div>'
+    )
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-data-handoff" style="--ov-handoff-tone:{tone_color};">
+  <div class="ov-data-handoff-head">
+    <div>
+      <div class="ov-data-handoff-kicker">Data Health Handoff</div>
+      <div class="ov-data-handoff-title">{escape(_display_value(summary.get("headline")))}</div>
+      <div class="ov-data-handoff-detail">{escape(_display_value(summary.get("detail")))}</div>
+    </div>
+    <span class="ov-data-handoff-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-data-handoff-counts">{counts_html}</div>
+  <div class="ov-data-handoff-grid">{items_html}</div>
+  {empty_html}
+  <div class="ov-data-handoff-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,
     )

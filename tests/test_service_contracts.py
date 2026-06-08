@@ -4343,6 +4343,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("load_overview_macro_context_cockpit", render_body)
         self.assertIn("render_macro_context_cockpit", render_body)
 
+    def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        tab_body = source[source.index("def _render_collection_ops_tab"):]
+        handoff_index = tab_body.index("render_data_health_ingestion_handoff(")
+        status_cards_index = tab_body.index("render_status_card_grid(")
+        dataframe_index = tab_body.index("st.dataframe(rows")
+
+        self.assertLess(handoff_index, status_cards_index)
+        self.assertLess(handoff_index, dataframe_index)
+        self.assertIn("load_overview_data_health_ingestion_handoff", tab_body)
+        self.assertIn("load_overview_collection_ops_snapshot", tab_body)
+
     def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
@@ -6840,6 +6852,89 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sentiment_row["Status"], "OK")
         self.assertEqual(sentiment_row["Rows"], 260)
         self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
+
+    def test_overview_data_health_handoff_ranks_problem_rows_and_points_to_collection_surfaces(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_data_health_ingestion_handoff
+
+        handoff = build_overview_data_health_ingestion_handoff(
+            {
+                "status": "REVIEW",
+                "coverage": {
+                    "ok_count": 1,
+                    "due_count": 1,
+                    "stale_count": 1,
+                    "partial_count": 1,
+                    "missing_count": 1,
+                    "failed_count": 1,
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Area": "S&P 500 Daily Snapshot",
+                            "Status": "Due",
+                            "Data Freshness": "8m old",
+                            "Failure Streak": 0,
+                            "Next Action": "Refresh S&P 500 daily snapshot before using daily movers.",
+                        },
+                        {
+                            "Area": "FOMC Calendar",
+                            "Status": "Failed",
+                            "Data Freshness": "45d old; next 2026-06-17",
+                            "Failure Streak": 2,
+                            "Last Issue": "2026-06-08 09:30",
+                            "Next Action": "Open run history details and rerun after checking the failure message.",
+                        },
+                        {
+                            "Area": "Macro Calendar",
+                            "Status": "Missing",
+                            "Data Freshness": "No future MACRO rows",
+                            "Failure Streak": 0,
+                            "Next Action": "Run Refresh Macro Calendar or import the BLS .ics file.",
+                        },
+                        {
+                            "Area": "Futures Monitor 1m OHLCV",
+                            "Status": "Stale",
+                            "Data Freshness": "64m old; 16 symbols",
+                            "Failure Streak": 0,
+                            "Next Action": "Refresh before using futures context.",
+                        },
+                        {
+                            "Area": "Earnings Calendar",
+                            "Status": "Partial",
+                            "Data Freshness": "0d old; covered 1/2",
+                            "Failed": 7,
+                            "Failure Streak": 1,
+                            "Next Action": "Inspect failed symbols, then rerun a bounded collection.",
+                        },
+                        {
+                            "Area": "Market Sentiment",
+                            "Status": "OK",
+                            "Data Freshness": "1d old; latest 2026-06-04; 2/5 series",
+                            "Next Action": "No action needed.",
+                        },
+                    ]
+                ),
+            },
+            limit=4,
+        )
+
+        self.assertEqual(handoff["schema_version"], "overview_data_health_ingestion_handoff_v1")
+        self.assertEqual(handoff["status"], "REVIEW")
+        self.assertEqual(handoff["summary"]["review_count"], 5)
+        self.assertEqual(handoff["summary"]["top_priority"], "FOMC Calendar")
+        self.assertEqual(handoff["summary"]["next_target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정")
+        self.assertEqual([item["area"] for item in handoff["priority_items"]], ["FOMC Calendar", "Macro Calendar", "Futures Monitor 1m OHLCV", "Earnings Calendar"])
+        self.assertEqual(handoff["priority_items"][0]["status"], "Failed")
+        self.assertEqual(handoff["priority_items"][0]["severity"], "critical")
+        self.assertIn("Failure streak 2", handoff["priority_items"][0]["reason"])
+        self.assertEqual(handoff["priority_items"][1]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 매크로 발표")
+        self.assertEqual(handoff["priority_items"][2]["owner_surface"], "Workspace > Ingestion")
+        self.assertEqual(handoff["priority_items"][2]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집")
+        self.assertEqual(handoff["priority_items"][2]["alternate_surface"], "Workspace > Overview > Futures Monitor")
+        self.assertEqual(handoff["counts"]["OK"], 1)
+        self.assertEqual(handoff["counts"]["Failed"], 1)
+        self.assertIn("read-only", handoff["boundary_note"].lower())
+        self.assertIn("does not execute", handoff["boundary_note"].lower())
 
     def test_overview_macro_context_cockpit_summarizes_existing_context_snapshots(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
