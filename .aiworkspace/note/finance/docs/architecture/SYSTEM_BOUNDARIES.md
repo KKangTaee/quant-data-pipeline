@@ -85,6 +85,10 @@ It does not execute collection jobs, persist an action queue, change schema, fet
 It reuses the already loaded cockpit snapshots to expose source, owner, freshness, caveat, and next-check context for prices, breadth, futures, sentiment, events, and data health.
 It does not add providers, replace provider policy, persist provider scores, fetch providers during render, or write registry / saved setup rows.
 
+`Overview IA Closeout` is a static guide between the cockpit and deep tabs.
+It groups the existing tabs into market context, data repair, and transitional Candidate Ops ownership so the user can drill down without treating Overview as a backtest or trading decision surface.
+It does not move Candidate Ops, change Backtest workflows, fetch providers, persist rows, or write registry / saved setup rows.
+
 Overview refresh buttons must route through `app/jobs/overview_actions.py`.
 The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
 The action facade is allowed to call ingestion job wrappers, browser-session automation, and run-history append helpers for approved Overview market-context targets only.

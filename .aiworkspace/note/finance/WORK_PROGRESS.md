@@ -4883,3 +4883,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Workspace > Overview` cockpit 하단에 prices / breadth / futures / sentiment / events / data-health source confidence lane을 추가했다.
   - 같은 cockpit snapshots만 재사용하며 source owner, freshness, caveat, next check를 보여주고 provider fetch / schema / persistence / validation / monitoring / trading semantics는 추가하지 않았다.
   - 다음 흐름은 5차 Overview IA closeout 후보다.
+- Overview IA Closeout V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-ia-closeout-v1-20260608/`에서 5차 구현을 완료했다.
+  - `Workspace > Overview` cockpit 아래에 `Overview Map / Deep Tab Reading Order`를 추가해 Market Context / Data Repair / transitional Candidate Ops 경계를 표시했다.
+  - Candidate Ops는 삭제 / 이동하지 않았고, 새 provider / schema / persistence / validation / monitoring / trading semantics도 추가하지 않았다.
+  - Overview Macro Context Cockpit 1차~5차 라운드는 구현 closeout됐으며 후속은 Candidate Ops relocation, Reference companion, provider hardening 같은 별도 승인 후보로 남긴다.

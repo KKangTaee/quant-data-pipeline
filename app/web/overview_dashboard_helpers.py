@@ -463,6 +463,50 @@ def load_overview_data_health_ingestion_handoff(collection_ops_snapshot: dict[st
     )
 
 
+def load_overview_ia_closeout_model() -> dict[str, Any]:
+    return {
+        "schema_version": "overview_ia_closeout_v1",
+        "title": "Deep Tab Reading Order",
+        "detail": "Read the cockpit first, then drill into the owning deep tab without changing workflow ownership.",
+        "sections": [
+            {
+                "id": "market_context",
+                "title": "Market Context",
+                "status": "PRIMARY",
+                "tone": "primary",
+                "owner": "Workspace > Overview",
+                "tabs": ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events"],
+                "detail": "Use these tabs to inspect movement, participation, futures backdrop, sentiment, and nearby macro / earnings context.",
+                "next_step": "Start where the cockpit next-check cards point.",
+            },
+            {
+                "id": "data_repair",
+                "title": "Data Repair",
+                "status": "HANDOFF",
+                "tone": "warning",
+                "owner": "Workspace > Overview Data Health + Workspace > Ingestion",
+                "tabs": ["Data Health"],
+                "detail": "Use Data Health when freshness, partial, missing, or failed states need an owning collection surface.",
+                "next_step": "Open Ingestion only from the read-only handoff guidance.",
+            },
+            {
+                "id": "candidate_ops",
+                "title": "Candidate Ops",
+                "status": "TRANSITIONAL",
+                "tone": "neutral",
+                "owner": "Backtest workflow; retained in Overview for compatibility",
+                "tabs": ["Candidate Ops"],
+                "detail": "Candidate Ops is not a market-context tab; it remains a transitional view into Backtest-owned candidate workflow.",
+                "next_step": "Use Backtest screens for candidate creation, validation, and final review decisions.",
+            },
+        ],
+        "boundary_note": (
+            "Overview Map is context-only guidance. It does not create trade signals, Practical Validation PASS/BLOCKER, "
+            "Final Review decisions, monitoring signals, registry rows, saved setup rows, broker orders, or auto rebalance."
+        ),
+    }
+
+
 # Load the summary-first market context cockpit from existing Overview read models only.
 @st.cache_data(ttl=120, show_spinner=False)
 def load_overview_macro_context_cockpit(cache_schema_version: str = "overview-cockpit-v1-refresh-state") -> dict[str, Any]:

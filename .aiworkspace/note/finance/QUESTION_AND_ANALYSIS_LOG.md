@@ -7632,3 +7632,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 1~3차 Overview context가 어떤 source / provider / collector 상태에 기대는지 cockpit 안에서 숨기지 않고 보여줘야 함.
 - Analysis result: 새 provider hardening이 아니라 기존 cockpit snapshots를 재사용해 source, owner, freshness, caveat, next check를 표시하는 read-only catalog가 가장 안전한 4차다.
 - Follow-up: 5차는 Overview IA closeout 후보이며, Reference companion이나 provider 교체 / paid source decision은 별도 승인 후보로 남긴다.
+
+### 2026-06-08 - Overview IA closeout을 5차로 구현한다
+
+- User request: 사용자가 다음 단계 진행을 요청함.
+- Interpreted goal: 1~4차로 만든 Overview cockpit 흐름을 deep tab IA와 연결하고 Candidate Ops 경계를 닫되, Backtest workflow나 navigation removal까지 확장하면 안 됨.
+- Analysis result: cockpit 아래 static `Overview Map / Deep Tab Reading Order`를 두고 Market Context / Data Repair / transitional Candidate Ops를 나누는 것이 가장 작은 closeout 변경이다.
+- Follow-up: 실제 Candidate Ops relocation / removal, Reference companion, provider hardening은 별도 승인 후보로 남긴다.

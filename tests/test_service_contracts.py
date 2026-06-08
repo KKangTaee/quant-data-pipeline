@@ -4343,6 +4343,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("load_overview_macro_context_cockpit", render_body)
         self.assertIn("render_macro_context_cockpit", render_body)
 
+    def test_overview_dashboard_renders_ia_closeout_guide_between_cockpit_and_tabs(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+        cockpit_index = render_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
+        guide_index = render_body.index("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())")
+        tabs_index = render_body.index("st.tabs(")
+
+        self.assertLess(cockpit_index, guide_index)
+        self.assertLess(guide_index, tabs_index)
+        self.assertIn("load_overview_ia_closeout_model", render_body)
+        self.assertIn("render_overview_ia_closeout_guide", render_body)
+
     def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def _render_collection_ops_tab"):]
@@ -4390,6 +4402,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn(".ov-source-confidence", css)
         self.assertIn(".ov-source-confidence-card", css)
+
+    def test_overview_ui_css_defines_ia_closeout_guide(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-ia-closeout", css)
+        self.assertIn(".ov-ia-closeout-card", css)
+
+    def test_overview_ia_closeout_model_marks_candidate_ops_transitional(self) -> None:
+        from app.web.overview_dashboard_helpers import load_overview_ia_closeout_model
+
+        model = load_overview_ia_closeout_model()
+
+        self.assertEqual(model["schema_version"], "overview_ia_closeout_v1")
+        self.assertEqual([section["id"] for section in model["sections"]], ["market_context", "data_repair", "candidate_ops"])
+        candidate_section = model["sections"][2]
+        self.assertEqual(candidate_section["title"], "Candidate Ops")
+        self.assertEqual(candidate_section["status"], "TRANSITIONAL")
+        self.assertIn("Backtest", candidate_section["owner"])
+        self.assertIn("not a market-context tab", candidate_section["detail"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+        self.assertIn("does not create", model["boundary_note"].lower())
 
     def test_overview_cockpit_shell_uses_surface_background_for_dark_theme_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css

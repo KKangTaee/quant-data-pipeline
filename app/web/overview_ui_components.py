@@ -495,6 +495,117 @@ def overview_ui_css() -> str:
   border-radius: var(--ov-mi-radius-card);
   background: rgba(248,250,252,0.76);
 }
+.ov-ia-closeout {
+  margin: 0.1rem 0 0.95rem 0;
+  padding: 0.62rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(180deg, rgba(248,250,252,0.92), rgba(255,255,255,0.96)),
+    var(--ov-mi-color-surface);
+}
+.ov-ia-closeout-head {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.5rem;
+}
+.ov-ia-closeout-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.ov-ia-closeout-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  margin-top: 0.15rem;
+  overflow-wrap: anywhere;
+}
+.ov-ia-closeout-detail,
+.ov-ia-closeout-boundary {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.27;
+  overflow-wrap: anywhere;
+}
+.ov-ia-closeout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-ia-closeout-card {
+  min-width: 0;
+  padding: 0.52rem 0.58rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-ia-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.9);
+}
+.ov-ia-closeout-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: flex-start;
+}
+.ov-ia-closeout-card-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-ia-closeout-card-status {
+  flex: 0 0 auto;
+  color: var(--ov-ia-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  text-align: right;
+}
+.ov-ia-closeout-card-detail,
+.ov-ia-closeout-owner,
+.ov-ia-closeout-next {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+.ov-ia-closeout-card-detail {
+  margin-top: 0.22rem;
+}
+.ov-ia-closeout-owner {
+  margin-top: 0.24rem;
+  padding-top: 0.22rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-ia-closeout-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.3rem;
+}
+.ov-ia-closeout-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.28rem;
+  padding: 0.13rem 0.38rem;
+  border: 1px solid color-mix(in srgb, var(--ov-ia-tone, var(--ov-mi-color-neutral)) 26%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-ia-tone, var(--ov-mi-color-neutral)) 7%, transparent);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.08;
+}
+.ov-ia-closeout-next {
+  margin-top: 0.22rem;
+}
+.ov-ia-closeout-boundary {
+  margin-top: 0.44rem;
+}
 .ov-data-handoff {
   margin: 0.48rem 0 0.88rem 0;
   padding: 0.68rem;
@@ -1468,6 +1579,7 @@ def overview_ui_css() -> str:
   }
   .ov-macro-cockpit-head,
   .ov-macro-cockpit-next,
+  .ov-ia-closeout-head,
   .ov-data-handoff-head,
   .ov-breadth-head,
   .ov-macro-week-head {
@@ -1476,6 +1588,7 @@ def overview_ui_css() -> str:
   .ov-macro-cockpit-grid,
   .ov-macro-cockpit-checks,
   .ov-source-confidence-grid,
+  .ov-ia-closeout-grid,
   .ov-data-handoff-grid,
   .ov-breadth-card-grid,
   .ov-breadth-row-grid,
@@ -1751,6 +1864,46 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
   </div>
   {source_confidence_html}
   <div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_overview_ia_closeout_guide(model: dict[str, Any]) -> None:
+    if not model:
+        return
+    cards: list[str] = []
+    for section in list(model.get("sections") or []):
+        tone_color = escape(_overview_tone_color(section.get("tone") or section.get("status")))
+        chips = "".join(
+            f'<span class="ov-ia-closeout-chip">{escape(_display_value(tab))}</span>'
+            for tab in list(section.get("tabs") or [])
+        )
+        cards.append(
+            f'<article class="ov-ia-closeout-card" style="--ov-ia-tone:{tone_color};">'
+            '<div class="ov-ia-closeout-card-head">'
+            f'<div class="ov-ia-closeout-card-title">{escape(_display_value(section.get("title")))}</div>'
+            f'<div class="ov-ia-closeout-card-status">{escape(_display_value(section.get("status")))}</div>'
+            "</div>"
+            f'<div class="ov-ia-closeout-card-detail">{escape(_display_value(section.get("detail")))}</div>'
+            f'<div class="ov-ia-closeout-tabs">{chips}</div>'
+            f'<div class="ov-ia-closeout-owner">Owner: {escape(_display_value(section.get("owner")))}</div>'
+            f'<div class="ov-ia-closeout-next">{escape(_display_value(section.get("next_step")))}</div>'
+            "</article>"
+        )
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-ia-closeout">
+  <div class="ov-ia-closeout-head">
+    <div>
+      <div class="ov-ia-closeout-kicker">Overview Map</div>
+      <div class="ov-ia-closeout-title">{escape(_display_value(model.get("title")))}</div>
+      <div class="ov-ia-closeout-detail">{escape(_display_value(model.get("detail")))}</div>
+    </div>
+  </div>
+  <div class="ov-ia-closeout-grid">{"".join(cards)}</div>
+  <div class="ov-ia-closeout-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,
     )

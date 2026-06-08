@@ -42,6 +42,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_dashboard_snapshot,
     load_overview_data_health_ingestion_handoff,
     load_overview_group_leadership_snapshot,
+    load_overview_ia_closeout_model,
     load_overview_macro_context_cockpit,
     load_overview_macro_week_lane,
     load_overview_market_events_snapshot,
@@ -82,6 +83,7 @@ from app.web.overview_ui_components import (
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_overview_toolbar_label,
+    render_overview_ia_closeout_guide,
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
 )
@@ -5545,6 +5547,7 @@ def render_overview_dashboard(
     st.caption("DB-backed market context, sentiment, event, and data-health snapshots for investigation only.")
     render_market_session_banner(_market_session_banner_model())
     render_macro_context_cockpit(load_overview_macro_context_cockpit())
+    render_overview_ia_closeout_guide(load_overview_ia_closeout_model())
 
     market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
         ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
