@@ -15,6 +15,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/streamlit_app.py` | top navigation과 page entry |
 | `app/web/operations_overview.py` | `Operations > Operations Overview` / `Operations Console` landing page. Portfolio Monitoring Status summary, Evidence Health mini strip, priority / evidence ordered review queue, Portfolio Monitoring / System Data Health primary lane, and no-live approval / order / auto rebalance boundary를 표시한다 |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
+| `app/web/reference_contextual_help.py` | 주요 workflow 화면의 read-only Reference help expander |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Market Movers, Why It Moved, Sector / Industry, Sentiment, Events, Data Health, Candidate Ops dashboard render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Market Movers manual investigation panel, Sector / Industry ranking/trend, Sentiment context, Events agenda/calendar/quality/raw views를 조정한다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, candidate priority scoring, cached market intelligence service wrapper |
@@ -152,70 +153,72 @@ Operations 화면:
 
 ## 현재 Reference Guide 제품 흐름
 
-`Reference > Guides`의 사용자-facing 흐름은 아래 순서로 읽는다.
+`Reference > Guides`는 2026-06-08 Reference Center V5 이후 제품 전체 운영 guide로 읽는다.
+첫 화면은 portfolio-selection 전용 hero가 아니라 task-first `Reference Center`다.
+이 화면은 read-only 안내 surface이며 ingestion job, provider fetch, registry write, saved setup write,
+broker order, live approval, auto rebalance를 직접 실행하지 않는다.
+Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring은 접힌 `Reference help` expander로
+`Guides` / `Glossary` entry point와 현재 화면의 먼저 확인할 항목을 보여준다.
+이 contextual help도 read-only이며 validation gate, selected decision, saved setup, provider fetch를 바꾸지 않는다.
+5차부터 contextual help catalog는 shared Glossary concept dictionary term, Reference link target, surface key duplicate, raw guide focus marker drift를
+Streamlit-free report로 점검한다.
 
 ```text
-Ingestion / Data Trust
-  -> Single Strategy Backtest
-  -> Promotion Policy Signal
-  -> Hold / Blocker Resolution
-  -> Portfolio Mix Builder
-  -> Candidate Packaging
-     -> Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live 운영 기록 / Portfolio Proposal 이동 판단
-  -> Portfolio Mix Builder 재검토 또는 Portfolio Proposal
-  -> Portfolio Proposal
-     -> 후보 선택 / 목적 / 역할 / 비중 설계 / Proposal 저장 / Final Review 입력 준비
-  -> Final Review
-     -> Decision Desk command center
-     -> Candidate Board / Decision Cockpit
-     -> Decision Record Checklist와 모니터링 후보 저장 가능 여부 확인
-     -> Evidence Appendix에서 이전 검증 결과 확인
-     -> Saved Decision Review ledger에서 저장된 판단 재확인
-     -> 최종 판단 완료
+Reference > Guides
+  -> Reference Center
+     -> 먼저 고를 작업
+     -> 현재 제품 흐름
+        -> Journey 상세 보기
+        -> 확인 순서
+        -> 자주 막히는 상태
+     -> 자주 막히는 상태 / 용어
+        -> shared concept dictionary
+        -> Glossary와 같은 operational concept search
+     -> 기록 / 저장 경계
+     -> 문제 해결 Playbook
+        -> 확인 순서
+        -> Evidence 위치
+  -> Portfolio Selection Journey
+     -> 현재 진행 상황 선택
+     -> 전체 1~4 단계 timeline
+     -> 선택한 경로 요약
+     -> Portfolio Flow
+     -> 경로별 핵심 체크포인트
+     -> Decision Gates
+     -> Reference Drawer
 ```
 
-구분:
-
-- `Candidate Packaging`은 Draft 확인, Review Note 저장, Registry 저장, Pre-Live 운영 기록, Portfolio Proposal 이동 판단을 하나로 묶은 사용자-facing 6단계다.
-- `Candidate Draft`는 latest run 또는 `Operations > Backtest Run History`에서 보낸 history run을 후보처럼 읽는 저장 전 초안이며, Candidate Packaging 안에서 쓰인다.
-- `Registry 저장`은 저장된 판단 기록을 Current Candidate / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과한 row만 Current Candidate Registry에 append하는 Candidate Packaging 내부 작업이다.
-- `Pre-Live 운영 기록`은 저장된 후보를 실제 돈 없이 paper / watchlist / hold / re-review 중 어떻게 관찰할지 기록하는 Candidate Packaging 내부 작업이다.
-- `Portfolio Proposal 이동 판단`은 Pre-Live 운영 record를 저장하기 전에 저장 가능 여부와 저장 후 Proposal 이동 가능 여부를 같이 보여주는 Candidate Packaging의 최종 route 확인이다.
-- `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 별도 proposal 저장 없이 Final Review 입력 후보로 읽고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다. 내부 route label에 `Live Readiness`라는 legacy 표현이 남아 있어도 현재 사용자-facing 해석은 Final Review 입력 준비다.
-- `Final Review`는 Proposal 탭 밖에서 검증과 최종 판단을 담당한다. 별도 Paper Ledger 저장 버튼을 주요 흐름으로 노출하지 않고, paper observation 기준을 최종 검토 기록 안에 포함하며 현재 사용자-facing workflow의 마지막 active panel이다.
-- `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
-- `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. 현재 주 흐름에서는 Practical Validation의 Robustness Lab board가 stress / rolling / sensitivity / overfit 근거를 compact하게 요약하고 Final Review가 같은 board를 읽는다. Strategy-specific parameter perturbation이 아직 없는 항목은 follow-up으로 남기며 PASS로 간주하지 않는다.
-- `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
-- Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
-- Phase 36에서 모니터링 후보 선정 후 운영 확인은 `Backtest` 주 workflow가 아니라 현재 `Operations > Portfolio Monitoring`으로 분리했다. 이 화면은 Final Review selected row를 selected strategy pool로 read-only로 읽고, 사용자가 만든 dashboard portfolio setup에 selected decision strategy slot을 저장한다. 사용자는 fixed-height portfolio card shelf에서 portfolio를 생성 / 선택하고, soft delete는 collapsed management 영역에서 처리한다. 같은 portfolio 안에서 같은 selected decision은 중복 추가하지 않는다. 각 selected 전략 slot은 사용자가 지정한 시작일 / 종료일 latest mode / 가상 투자금 / memo를 보존하고, scenario update와 분리된다. Monitoring scenario는 사용자가 `포트폴리오 시나리오 업데이트` 또는 strategy별 `모니터 시나리오 실행`을 누를 때 selected component contract를 다시 replay하며 종료일 latest mode에서는 DB 최신 시장일을 기준으로 한다. Portfolio-wide update는 pending / stale strategy만 기본 실행하고 `전체 재실행`을 켠 경우에만 기존 최신 결과까지 다시 replay한다. 화면은 선택된 portfolio command band와 compact strategy board 이후 portfolio-wide cockpit으로 현재 가치 / 손익 / 수익률 / CAGR / MDD / benchmark spread / value curve / 전략별 성과 / 리밸런싱 target을 먼저 보여준다. `Recheck Operations Preflight`는 Final Review embedded replay contract, Current Candidate Registry fallback, DB latest market date, replay period, symbol freshness를 하나의 route로 묶지만 사용자가 선택한 1개 strategy 상세의 하단 점검으로 배치한다. `Recheck Readiness`, `Symbol Freshness`, `Provider Evidence`도 scenario 해석 근거로 낮춘다. `Provider Evidence`는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 읽고 `NOT_RUN`, stale freshness, partial / bridge / proxy coverage, missing operability / holdings / exposure를 pass로 숨기지 않는다. `Continuity` check는 selected route, source contract, investability packet, component target, review trigger, monitoring timeline, Performance Recheck input, execution / storage boundary를 읽는다. `Timeline`은 Final Review selection, evidence gate, Monitoring Scenario, Actual Allocation drift, Review trigger preview를 시간순으로 보여주며 monitoring log를 자동 저장하지 않는다. `Review Signals`는 Recheck Comparison을 performance threshold policy owner로 삼아 CAGR / MDD / benchmark spread / component coverage / period coverage rows를 읽고, preflight / provider / drift 상태를 계속 관찰 / 보강 필요 / 대체 검토 성격으로 번역한다. `Decision Dossier`는 Final Decision row와 optional session timeline의 source contract consistency를 markdown에 표시한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. `Allocation evidence boundary`는 입력 / alert 저장, monitoring log auto-write, account / broker 연결, 주문, 자동 리밸런싱이 모두 꺼져 있음을 표시한다. Live / Deployment Readiness는 마지막 optional preflight로만 남긴다.
-- Practical Validation P2 provider data는 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 먼저 수집할 수 있다. `Provider Source Map` tab은 `nyse_etf` / `nyse_asset_profile` 기반으로 ETF별 공식 endpoint와 parser mapping을 검증해 저장한다. `Delisting Evidence` tab은 SEC Form 25 / 25-NSE filing metadata를 `nyse_symbol_lifecycle` delisting evidence로 저장해 Data Coverage Audit의 survivorship / delisting control 근거를 보강한다. 이후 Practical Validation 화면은 loader / provider context / lifecycle summary를 읽어 12개 진단과 audit의 actual / proxy / `NOT_RUN` 상태와 Look-through Exposure Board를 표시한다. 화면 안의 Provider Data Gaps에서도 현재 source에 부족한 provider snapshot을 ETF별로 확인하고, source map discovery와 수집 가능한 항목은 일괄 보강할 수 있다.
-
-현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
+Reference Center의 주요 묶음은 아래와 같다.
 
 | 묶음 | 내용 |
 |---|---|
-| `Portfolio Selection Guide` hero | 제품 안내 첫 화면으로, 현재 workflow와 runtime / git 상태를 compact badge로 보여준다. 개발용 `Runtime / Build`는 하단 접힘 `System status`로 낮춘다 |
-| `현재 진행 상황 선택` | 단일 후보, 여러 후보 묶음, 저장된 Mix, 보류 / 재검토 중 사용자의 현재 상황을 먼저 고른다 |
-| `전체 1~10 단계에서 현재 위치` | 선택 버튼 바로 아래에 제품형 compact timeline을 둔다. 선택 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 붙여 현재 위치와 생략되는 단계를 먼저 해석하게 한다 |
-| `선택한 경로 요약` | `선택한 목표`, `진행 순서`, `건너뛰거나 조심할 단계`, `생성 / 참조 기록`으로 선택 경로의 화면 순서와 기록 경계를 짧게 보여준다 |
-| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다. chart node는 큰 흐름을 맡고, 긴 설명은 아래 checkpoint 패널로 넘긴다 |
-| `선택한 경로의 핵심 체크포인트` | 선택 경로에서 실제로 놓치면 안 되는 checkpoint를 카드로 보여준다. 단일 후보, 여러 후보 묶음, 저장된 Mix, 보류 / 재검토마다 같은 workflow를 다르게 해석한다 |
-| `Decision Gates` | 단계 번호 대신 `Portfolio Mix Builder로 조합해도 되는가`, `Candidate로 남겨도 되는가`, `Proposal로 묶어도 되는가`, `Final Review를 기록해도 되는가` 같은 사용자 질문 기준으로 Go / Review / Stop을 보여준다 |
-| `Reference Drawer` | 핵심 개념, 상세 단계, 기록 저장소, 운영 경계를 탭으로 낮춰 필요할 때만 확인하게 한다 |
+| `먼저 고를 작업` | 시장 / 데이터 상태, 데이터 갱신 / 복구, 후보 만들기, 검증 / 최종 판단, 선정 후 모니터링, 문제 해결을 task card로 고른다 |
+| `현재 제품 흐름` | Overview, Ingestion / Data Health, Backtest Analysis, Practical Validation / Final Review, Portfolio Monitoring, Archive / Recovery journey를 owner screen / record / boundary로 보여주고, 선택한 journey의 확인 순서 / failure state / downstream owner를 함께 보여준다 |
+| `자주 막히는 상태 / 용어` | `NOT_RUN`, `REVIEW`, `BLOCKED`, `Data Trust`, `Provider Coverage`, `Portfolio Monitoring Scenario`를 shared concept dictionary로 검색 / 필터한다. `Reference > Glossary`도 같은 curated concept rows를 먼저 보여준 뒤 durable `GLOSSARY.md` section을 함께 검색한다 |
+| `기록 / 저장 경계` | DB / workflow registry / saved setup / run history / generated artifact를 어떤 화면이 만들고 읽는지 보여준다 |
+| `문제 해결 Playbook` | stale Overview / Futures, ingestion 성공 후 UI stale, provider snapshot missing, Practical Validation `NOT_RUN`, Final Review 후보 미노출, Portfolio Monitoring stale scenario, archive recovery를 증상별로 확인한다. 각 playbook은 check steps와 evidence location을 표시한다 |
 
-사용자는 먼저 현재 진행 상황을 고르고,
-1~10 단계 timeline에서 전체 workflow상 위치를 본 뒤,
-선택한 경로 요약과 flowchart로 실제 화면 순서와 기록 경계를 확인한다.
-그 다음 경로별 checkpoint에서 놓치면 안 되는 판단을 보고
-실제로 지나가는 화면, 반복되는 단계, 생략되는 단계, 생성되거나 읽는 기록을 본다.
-그 다음 Decision Gates와 Reference Drawer를 이어서 읽는다.
+4차 contextual help가 붙고 5차 drift guard 대상이 된 1차 화면은 아래와 같다.
+
+| 화면 | helper key | 주요 연결 |
+|---|---|---|
+| `Backtest > Backtest Analysis` | `backtest_analysis` | Promotion Policy Signal, Data Trust, Saved Portfolio |
+| `Backtest > Practical Validation` | `practical_validation` | NOT_RUN, REVIEW, BLOCKED, Provider Coverage |
+| `Backtest > Final Review` | `final_review` | Selected-route Gate, Provider Coverage, Data Trust |
+| `Operations > Operations Console` | `operations_console` | Saved Portfolio, Portfolio Monitoring Scenario |
+| `Operations > Portfolio Monitoring` | `portfolio_monitoring` | Portfolio Monitoring Scenario, Saved Portfolio, Selected-route Gate |
+
+Portfolio Selection Journey는 기존 guide를 보존하되 Reference Center 안의 별도 view로 낮춘다.
+사용자는 `Reference 보기`에서 `Portfolio Selection Journey`를 선택한 뒤
+단일 후보, 여러 후보 묶음, 저장된 Mix, 보류 / 재검토 중 현재 진행 상황을 고른다.
+그다음 전체 1~4 단계 timeline, 경로 요약, flowchart, checkpoint, Decision Gates, Reference Drawer를 본다.
 
 경로별 핵심 차이는 아래와 같다.
 
 | 경로 | 핵심 차이 |
 |---|---|
-| `단일 후보 경로` | Candidate Review와 Pre-Live 기록 후 Portfolio Proposal에서 단일 후보 직행 평가를 사용하며, proposal draft 저장을 반복하지 않는다 |
-| `여러 후보 묶음 경로` | 후보별 실행 / 비교와 Candidate Review 저장이 선행이고, Portfolio Proposal은 이미 저장된 후보들을 역할 / 비중 / 목적이 있는 proposal draft로 묶은 뒤 Final Review에서 읽는다 |
+| `단일 후보 경로` | Backtest Analysis에서 current selection source를 만들고 Practical Validation / Final Review로 직접 이어진다 |
+| `여러 후보 묶음 경로` | Backtest Analysis Portfolio Mix Builder에서 component 역할과 target weight를 정한 뒤 mix source로 검증한다 |
 | `저장된 Mix 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 replay / mix 검증 후 Practical Validation source로 연결한다 |
 | `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
 

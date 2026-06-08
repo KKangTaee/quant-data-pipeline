@@ -28,9 +28,11 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`
+- 목적: Reference contextual help가 shared Glossary concept dictionary와 Reference route boundary에서 drift되지 않도록 Streamlit-free guard를 추가하고, guide path copy 표시를 정리한다.
+- 이번 차수에서 하지 않은 일: `GLOSSARY.md` 전체 rewrite, Reference 검색 URL query deep-linking, Ingestion / Overview 전체 surface 연결, DB / registry / saved JSONL rewrite, provider fetch, live approval / broker order / auto rebalance.
+- Recent previous sub-dev task: `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/`
 - 목적: Operations Overview V2 5차로 1차~4차 개편을 최종 QA / runbook / durable docs 기준으로 닫고, 정상 top-navigation QA path와 direct `/operations` local routing diagnostic을 분리한다.
-- 이번 차수에서 하지 않은 일: provider / holdings / exposure DB evidence 상세 조회, Portfolio Monitoring scenario execution UX 변경, registry / saved JSONL rewrite, archive data/helper 삭제, broker sync / order / auto rebalance.
 
 ## Product Tracks
 

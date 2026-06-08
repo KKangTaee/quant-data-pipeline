@@ -4832,3 +4832,30 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Backtest > Practical Validation`은 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여주며, `context_only`, `gate_effect=none`, `registry_write=false` 경계를 표시한다.
   - 기존 Practical Validation Gate / selected-route preflight / registry / saved setup / live approval / order / auto rebalance 경계는 변경하지 않았다.
   - 검증: service contracts 255 tests, py_compile, `git diff --check`, Browser QA screenshot 완료.
+- Futures Monitor stale refresh fix:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-stale-refresh-fix-20260607/`에서 Overview Futures Monitor의 간헐적 미갱신 원인을 추적하고 수정했다.
+  - 원인은 service candle query가 현재 UTC 기준 lookback만 읽어, yfinance 지연 / 휴장 / 주말 상태의 latest stored candle을 `Missing`처럼 숨긴 것이었다.
+  - 이제 차트 window는 각 symbol의 latest stored candle 기준으로 읽고, freshness는 실제 현재 시각 대비 `Stale`로 표시한다.
+  - 검증: failing regression -> fix -> focused futures tests 15개, full service contracts 288개, py_compile, `git diff --check`, UI-engine boundary, Browser QA 통과.
+- Reference Guides Center V1:
+  - `.aiworkspace/note/finance/tasks/active/reference-guides-center-v1-20260607/`에서 `Reference > Guides`를 task-first Reference Center로 개편했다.
+  - Streamlit-free `app/services/reference_guides_catalog.py`에 task cards, journeys, status concepts, records map, troubleshooting playbooks를 분리했고, 기존 portfolio-selection guide는 `Portfolio Selection Journey`로 보존했다.
+  - Reference는 read-only 안내 surface이며 provider fetch / registry write / broker order / auto rebalance를 추가하지 않았다.
+- Reference Guides Journey / Playbooks V2:
+  - `.aiworkspace/note/finance/tasks/active/reference-guides-journey-playbooks-v2-20260607/`에서 Reference Center의 journey detail과 troubleshooting playbook을 확장했다.
+  - 제품 흐름 tab은 journey별 확인 순서 / failure state / downstream owner를 보여주고, 문제 해결 tab은 playbook별 check steps와 evidence locations를 보여준다.
+  - 3차는 Glossary / searchable concept dictionary 통합, 4차는 주요 화면 contextual links 연결로 남긴다.
+- Reference Glossary / Concept Dictionary V3:
+  - `.aiworkspace/note/finance/tasks/active/reference-glossary-concept-dictionary-v3-20260607/`에서 Guides status lookup과 Glossary page를 shared concept dictionary로 통합했다.
+  - `app/services/reference_glossary_catalog.py`가 curated operational concepts, markdown glossary parser, search helper를 소유하고, `Guides`와 `Glossary`가 이를 함께 사용한다.
+  - 검증: RED/GREEN catalog tests, 296 focused/service tests, py_compile, UI-engine boundary, `git diff --check`, Browser QA render screenshot 통과.
+  - 남은 흐름은 4차 contextual links, 5차 Reference drift guard / QA polish다.
+- Reference Contextual Links V4:
+  - `.aiworkspace/note/finance/tasks/active/reference-contextual-links-v4-20260608/`에서 주요 workflow 화면의 `Reference help` expander를 추가했다.
+  - `app/services/reference_contextual_help.py`가 Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring별 guide focus / glossary terms / next checks / boundary를 소유한다.
+  - 화면 helper는 read-only entry point이며 Guides / Glossary 링크만 제공하고 validation gate, selected decision, saved setup, provider fetch, broker order, auto rebalance를 바꾸지 않는다.
+  - 5차는 Reference drift guard / QA polish다.
+- Reference Drift Guard / QA Polish V5:
+  - `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`에서 contextual help drift report와 표시 polish를 추가했다.
+  - guard는 Glossary term, Reference link target, duplicate surface key, raw guide focus marker를 Streamlit-free로 점검한다.
+  - Reference 검색 deep-linking, Ingestion / Overview 전체 surface 확장, DB / registry / saved JSONL rewrite는 하지 않았다.

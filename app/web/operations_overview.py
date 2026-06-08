@@ -9,6 +9,7 @@ import streamlit as st
 from app.jobs.run_history import load_run_history
 from app.runtime.final_selected_portfolios import load_final_selected_portfolio_dashboard
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
+from app.web.reference_contextual_help import render_reference_contextual_help
 
 
 OPERATIONS_OVERVIEW_SCHEMA_VERSION = "operations_overview_v2"
@@ -879,6 +880,7 @@ def render_operations_overview_page(*, page_targets: dict[str, Any] | None = Non
     st.caption("선정 후 portfolio monitoring 상태와 system/data health를 확인하는 운영 화면입니다.")
     _render_portfolio_summary(model)
     _render_evidence_health_strip(model)
+    render_reference_contextual_help("operations_console")
     _render_action_queue(model, page_targets=page_targets)
     render_status_card_grid(_lane_cards(model))
     render_badge_strip(

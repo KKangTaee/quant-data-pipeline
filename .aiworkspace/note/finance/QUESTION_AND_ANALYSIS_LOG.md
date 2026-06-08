@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Reference should appear inside the workflow screens
+- User request:
+  - Reference 탭 개편의 4차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차~3차에서 만든 Reference Center / Glossary를 실제 업무 화면에서 발견 가능하게 만든다.
+- Analysis result:
+  - 첫 연결 범위는 Backtest Analysis, Practical Validation, Final Review, Operations Console, Portfolio Monitoring이 적절하다. 각 화면은 현재 workflow의 owner screen이고, 사용자가 `NOT_RUN`, selected-route gate, monitoring scenario stale 같은 용어에서 막힐 가능성이 높다. 공용 service catalog와 얇은 Streamlit renderer를 분리하면 UI 화면은 한 줄 호출만 갖고, 도움말 문구 drift는 줄일 수 있다.
+- Follow-up:
+  - 5차는 Reference drift guard / QA polish다. `GLOSSARY.md` deep-link query, Ingestion / Overview까지의 확대, visual polish는 별도 후속으로 둔다.
+
 ### 2026-06-08 - Operations V2 closeout should separate normal navigation from direct-route noise
 - User request:
   - Operations Overview V2 5차 작업 진행을 요청함.
@@ -74,6 +84,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `surface_audit`, `stage_roadmap`, archive decision table은 운영자가 매일 보는 화면의 정보가 아니므로 user-facing read model / renderer에서 제거했다. Archive data/helper 삭제, portfolio-first counters, evidence strip은 후속 차수로 남겼다.
 - Follow-up:
   - 2차는 active portfolio / assigned strategy / stale / blocked / open review / next review date summary를 Overview 상단에 추가하는 작업이 자연스럽다.
+
+### 2026-06-07 - Reference Glossary should share operational concepts with Guides
+- User request:
+  - Reference 탭 개편의 3차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차 Reference Center와 2차 journey / playbook 확장 이후, `Guides` 상태 lookup과 `Glossary` page가 서로 다른 용어 소스를 갖지 않게 통합한다.
+- Analysis result:
+  - Durable `GLOSSARY.md`는 긴 문서 용어 사전으로 유지하고, UI-critical operational status / concept rows는 `app/services/reference_glossary_catalog.py`의 Streamlit-free shared dictionary가 소유하는 구조가 맞다. `Guides`와 `Glossary`는 같은 concept row를 표시하고, Glossary는 추가로 markdown section parser를 통해 기존 문서 용어를 함께 보여준다.
+- Follow-up:
+  - 4차는 Backtest / Operations 주요 화면에서 Reference contextual link 또는 help drawer를 연결한다. 5차는 Reference drift guard와 QA polish를 다룬다.
 
 ### 2026-06-07 - Refactor round should close before opening another broad split
 - User request:
@@ -7549,3 +7569,31 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Overlay는 저장된 `macro_series_observation`을 Overview sentiment snapshot으로 읽고 Practical Validation 전용 read model로 변환하는 것이 가장 안전하다. 결과 JSONL에 섞지 않고 `context_only`, `gate_effect=none`, `registry_write=false`를 명시한다
 - Follow-up:
   - `Backtest > Practical Validation`에 context overlay band를 추가했다. Final Review Gate, selected-route preflight, registry, saved setup, live trading boundary는 변경하지 않았다
+
+### 2026-06-07 - Futures Monitor가 갱신 후에도 그래프 / 데이터가 비어 보이는 원인을 고친다
+
+- User request: `Workspace > Overview > Futures Monitor`에서 업데이트를 실행해도 선물 그래프와 데이터가 간헐적으로 갱신되지 않는 문제의 원인 파악과 해결을 요청함.
+- Interpreted goal: provider가 늦거나 선물장이 닫힌 상황에서도 저장된 최신 futures OHLCV를 화면에서 확인할 수 있어야 하며, stale 데이터는 fresh처럼 보이면 안 됨.
+- Analysis result: 수집기는 empty/sparse `1d / 1m` 응답 fallback을 이미 갖고 있었지만, Overview service read path가 `UTC_TIMESTAMP() - lookback`으로만 조회해 최신 저장 candle이 현재 시각 기준 window 밖이면 DB row가 있어도 `MISSING`처럼 보였다.
+- Follow-up: `app/services/futures_market_monitoring.py`가 각 symbol의 latest stored candle 기준으로 chart window를 읽도록 수정했다. 상태 계산은 현재 시각 대비 `Stale`로 유지한다.
+
+### 2026-06-07 - Reference 탭을 현재 제품 흐름에 맞게 1차 개편한다
+
+- User request: 오래전에 중단된 `Reference` 탭을 현재 프로그램 방향과 구조에 맞게 전체적으로 개선하고, 벤치마킹 기반으로 단계별 가이드를 잡은 뒤 진행해 달라고 요청함.
+- Interpreted goal: `Reference > Guides`를 포트폴리오 후보 선정 전용 guide에서 Overview / Ingestion / Backtest / Validation / Operations까지 안내하는 task-first Reference Center로 바꿔야 함.
+- Analysis result: 기존 Guide의 route selector / timeline / Go-Review-Stop 구조는 유지 가치가 있지만 첫 화면이 product-wide help center 역할을 못한다. Reference는 read-only guide여야 하며 job 실행, provider fetch, registry write, live approval / order / auto rebalance를 추가하면 안 된다.
+- Follow-up: 1차로 catalog service와 Reference Center shell을 구현하고, 기존 guide는 `Portfolio Selection Journey`로 보존했다. 후속 차수는 Glossary 통합, contextual links, Browser QA 기반 polish다.
+
+### 2026-06-07 - Reference 2차로 journey / playbook 상세를 확장한다
+
+- User request: 사용자가 Reference 개편 2차 작업 진행을 요청함.
+- Interpreted goal: 1차 Reference Center의 task card / 요약 표만으로는 부족하므로, 사용자가 실제로 막힌 상황에서 확인 순서, failure state, evidence location을 따라갈 수 있어야 함.
+- Analysis result: 상세 내용은 Streamlit-free catalog에 두고 UI는 선택한 journey / playbook을 렌더링만 하는 구조가 drift와 boundary risk를 줄인다.
+- Follow-up: journey steps / failure states, provider snapshot / ingestion success UI stale / archive recovery playbooks, check steps / evidence locations를 추가했다. Reference는 read-only guide이며 job 실행 / provider fetch / registry write / live trading action은 추가하지 않았다.
+
+### 2026-06-08 - Reference 5차로 drift guard와 QA polish를 추가한다
+
+- User request: 사용자가 Reference 개편 5차 작업 진행을 요청함.
+- Interpreted goal: 4차 contextual links가 붙은 뒤 Glossary term / Reference route boundary와 어긋나지 않도록 자동 점검하고, 화면 guide path 표시를 정리해야 함.
+- Analysis result: guard는 `app/services/reference_contextual_help.py`에 Streamlit-free report로 두고, renderer는 catalog text 표시만 담당하는 것이 UI-engine boundary에 맞다.
+- Follow-up: `build_reference_contextual_help_drift_report()`를 추가하고 raw `>` guide focus copy를 slash path로 정리했다. Reference query deep-linking과 신규 surface 확장은 후속 선택 사항으로 남긴다.

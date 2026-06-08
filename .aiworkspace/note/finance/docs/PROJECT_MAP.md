@@ -60,6 +60,8 @@ Last Verified: 2026-06-08
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
+| Reference contextual help service | `app/services/reference_contextual_help.py` |
+| Reference contextual help renderer | `app/web/reference_contextual_help.py` |
 | Backtest Compare visual components | `app/web/backtest_compare_components.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and surface-aware read-only CNN / AAII market sentiment context overlay |
 | Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |
@@ -85,13 +87,13 @@ Last Verified: 2026-06-08
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py` |
-| Practical Validation | `app/web/backtest_practical_validation.py` |
+| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help entry point |
+| Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
-| Final Review | `app/web/backtest_final_review.py` |
+| Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |
 | Final Review UI components | `app/web/backtest_final_review_components.py` |
-| Operations Overview | `app/web/operations_overview.py` |
-| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard.py` legacy implementation route |
+| Operations Overview | `app/web/operations_overview.py`; includes contextual Reference help entry point |
+| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard.py` legacy implementation route; includes contextual Reference help entry point |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | Overview scheduled refresh automation | `app/jobs/overview_automation.py` |
 | DB schema | `finance/data/db/schema.py` |

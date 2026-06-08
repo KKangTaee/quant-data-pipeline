@@ -10,6 +10,7 @@ import streamlit as st
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
+from app.web.reference_contextual_help import render_reference_contextual_help
 from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_dashboard_handoff_checklist_table,
     build_selected_dashboard_handoff_table,
@@ -3404,6 +3405,7 @@ def render_final_selected_portfolio_dashboard_page() -> None:
         "Selected Portfolio Dashboard: Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
         "가상 시나리오와 review signal로 모니터링 이후 상태를 확인합니다."
     )
+    render_reference_contextual_help("portfolio_monitoring")
     _render_market_sentiment_context_overlay()
 
     dashboard = load_final_selected_portfolio_dashboard()

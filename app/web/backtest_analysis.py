@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from app.web.reference_contextual_help import render_reference_contextual_help
 from app.web.backtest_compare import render_compare_portfolio_workspace
 from app.web.backtest_single_strategy import render_single_strategy_workspace
 from app.web.backtest_workflow_routes import (
@@ -18,6 +19,7 @@ def render_backtest_analysis_workspace() -> None:
         "Single Strategy 또는 Portfolio Mix Builder로 1차 후보를 만들고, "
         "통과한 후보만 Practical Validation source로 보냅니다."
     )
+    render_reference_contextual_help("backtest_analysis")
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE

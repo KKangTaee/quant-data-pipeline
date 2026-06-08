@@ -104,18 +104,26 @@ def _load_candle_rows(
     if not symbols:
         return []
     placeholders = ", ".join(["%s"] * len(symbols))
-    params: list[Any] = [interval, *symbols, max(1, int(lookback_minutes))]
+    params: list[Any] = [interval, *symbols, interval, *symbols, max(1, int(lookback_minutes))]
     try:
         return query_fn(
             "finance_price",
             f"""
-            SELECT provider_symbol, interval_code, candle_time_utc,
-                   open, high, low, close, volume, source, provider_status
-            FROM futures_ohlcv
-            WHERE interval_code = %s
-              AND provider_symbol IN ({placeholders})
-              AND candle_time_utc >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL %s MINUTE)
-            ORDER BY provider_symbol, candle_time_utc
+            SELECT f.provider_symbol, f.interval_code, f.candle_time_utc,
+                   f.open, f.high, f.low, f.close, f.volume, f.source, f.provider_status
+            FROM futures_ohlcv AS f
+            JOIN (
+                SELECT provider_symbol, MAX(candle_time_utc) AS latest_candle_time_utc
+                FROM futures_ohlcv
+                WHERE interval_code = %s
+                  AND provider_symbol IN ({placeholders})
+                GROUP BY provider_symbol
+            ) AS latest
+              ON latest.provider_symbol = f.provider_symbol
+            WHERE f.interval_code = %s
+              AND f.provider_symbol IN ({placeholders})
+              AND f.candle_time_utc >= DATE_SUB(latest.latest_candle_time_utc, INTERVAL %s MINUTE)
+            ORDER BY f.provider_symbol, f.candle_time_utc
             """,
             params,
         )
