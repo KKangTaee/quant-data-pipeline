@@ -7644,3 +7644,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Risk-On Momentum 5D를 바로 Final Review 후보나 Portfolio Monitoring signal로 승격하지 않고, Daily Swing governance에 필요한 validation / review / monitoring module과 blocker를 제품 화면에서 확인하게 해야 함.
 - Analysis result: Risk-On은 기존 monthly / annual candidate gate와 다르므로, 3C는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다. Practical Validation module 실행, Final Review route, Portfolio Monitoring daily signal policy는 후속 승인 scope다.
 - Follow-up: `app/services/backtest_risk_on_governance.py`, `app/web/backtest_analysis.py`, focused tests와 docs를 갱신했다. 3D ETF evidence expansion이 다음 3차 scope로 남는다.
+
+### 2026-06-08 - Backtest 3차 3D는 ETF evidence expansion으로 닫는다
+
+- User request: 사용자가 3C 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal: GRS / Risk Parity / Dual Momentum을 바로 current candidate로 만들지 않고, GTAA / Equal Weight 대비 부족한 current anchor / evidence gap / next workflow를 제품 화면에서 확인하게 해야 함.
+- Analysis result: 세 ETF 전략은 실행 가능하지만 report depth와 provider / cost / benchmark evidence가 부족하므로, 3D는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다.
+- Follow-up: `app/services/backtest_etf_evidence_expansion.py`, `app/web/backtest_analysis.py`, focused tests와 docs를 갱신했다. 실제 rerun matrix, strategy hub / report, current candidate promotion은 후속 승인 scope다.

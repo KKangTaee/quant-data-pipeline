@@ -9,10 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `risk-on-momentum-governance-20260608`
+- `etf-evidence-expansion-20260608`
 
 Recent 3차 Backtest work:
 
+- `etf-evidence-expansion-20260608`: 3D ETF Evidence Expansion. Read-only current anchor / near miss / not-ready reason / required evidence / next workflow panel for GRS / Risk Parity / Dual Momentum.
 - `risk-on-momentum-governance-20260608`: 3C Risk-On Momentum 5D governance. Read-only governance readiness panel for Daily Swing research evidence and deferred validation / review / monitoring modules.
 - `strict-annual-etf-bridge-20260608`: 3B Strict Annual + GTAA / Equal Weight bridge. Read-only bridge/handoff structure for evidence-mature candidate group.
 - `strategy-evidence-inventory-direction-panel-20260608`: 3A Strategy Evidence Inventory / Direction Panel. Read-only strategy maturity / evidence / next-action surface for Backtest Analysis.
@@ -73,7 +74,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-08:
 
-- `tasks/active`: 197 task folders
+- `tasks/active`: 198 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.

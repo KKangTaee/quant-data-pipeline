@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `etf-evidence-expansion-20260608` | Completed record | Backtest 3차 3D. GRS / Risk Parity / Dual Momentum의 current anchor / near miss / not-ready reason / required evidence / next workflow를 read-only로 보여준다. |
 | `risk-on-momentum-governance-20260608` | Completed record | Backtest 3차 3C. Risk-On Momentum 5D의 Daily Swing research evidence와 deferred validation / review / monitoring governance module을 read-only로 보여준다. |
 | `strict-annual-etf-bridge-20260608` | Completed record | Backtest 3차 3B. Strict Annual 3종 + GTAA / Equal Weight bridge를 read-only로 정리해 component role / validation gap / recommended workflow를 보여준다. |
 | `strategy-evidence-inventory-direction-panel-20260608` | Completed record | Backtest 3차 3A. Strategy Evidence Inventory / Direction Panel을 read-only로 구현해 catalog strategy별 maturity / evidence / next action을 보여준다. |
@@ -66,4 +67,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-08 기준 197개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-08 기준 198개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.

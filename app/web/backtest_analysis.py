@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_etf_evidence_expansion import build_etf_evidence_expansion
 from app.services.backtest_risk_on_governance import build_risk_on_momentum_governance
 from app.services.backtest_strategy_bridge import build_strict_annual_etf_bridge
 from app.services.backtest_strategy_evidence_inventory import (
@@ -30,6 +31,23 @@ def _bridge_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
                 "Required Validation Evidence": "; ".join(row.get("required_practical_validation_evidence") or []),
                 "Known Weakness": row.get("known_weakness") or "-",
                 "Recommended Workflow": row.get("recommended_next_workflow") or "-",
+            }
+            for row in rows
+        ]
+    )
+
+
+def _etf_expansion_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Strategy": row.get("display_name") or "-",
+                "Priority": row.get("priority") or "-",
+                "Current Anchor": row.get("current_anchor") or "-",
+                "Near Miss": row.get("near_miss") or "-",
+                "Not Ready Reason": row.get("not_ready_reason") or "-",
+                "Required Evidence": "; ".join(row.get("required_evidence") or []),
+                "Next Workflow": row.get("next_workflow") or "-",
             }
             for row in rows
         ]
@@ -221,6 +239,61 @@ def _render_risk_on_governance_panel() -> None:
         st.caption(governance["route_boundary"])
 
 
+def _render_etf_evidence_expansion_panel() -> None:
+    expansion = build_etf_evidence_expansion()
+    rows = expansion["rows"]
+
+    with st.expander(expansion["title"], expanded=True):
+        st.caption(expansion["summary"])
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Target Strategies", len(rows))
+        metric_cols[1].metric("Baseline References", len(expansion["baseline_reference_keys"]))
+        metric_cols[2].metric(
+            "Candidate Writes",
+            "Disabled" if not expansion["creates_current_candidate"] else "Enabled",
+        )
+        metric_cols[3].metric(
+            "Backtest Reruns",
+            "Disabled" if not expansion["runs_backtests"] else "Enabled",
+        )
+
+        st.markdown("**ETF evidence targets**")
+        st.dataframe(
+            _etf_expansion_rows_table(rows),
+            hide_index=True,
+            width="stretch",
+        )
+
+        st.markdown("**Strategy detail**")
+        for row in rows:
+            display_name = row.get("display_name") or row.get("strategy_key") or "Strategy"
+            with st.expander(f"{display_name} - {row.get('priority') or 'Evidence target'}", expanded=False):
+                detail_cols = st.columns(2)
+                detail_cols[0].markdown("**Current anchor**")
+                detail_cols[0].write(row.get("current_anchor") or "-")
+                detail_cols[0].markdown("**Near miss**")
+                detail_cols[0].write(row.get("near_miss") or "-")
+                detail_cols[1].markdown("**Not-ready reason**")
+                detail_cols[1].write(row.get("not_ready_reason") or "-")
+                detail_cols[1].markdown("**Evidence gap**")
+                detail_cols[1].write(row.get("evidence_gap") or "-")
+                st.markdown("**Required evidence**")
+                for evidence in row.get("required_evidence") or []:
+                    st.markdown(f"- {evidence}")
+                st.markdown("**Next workflow**")
+                st.write(row.get("next_workflow") or "-")
+
+        st.markdown("**Next workflow**")
+        st.dataframe(
+            _simple_rows(expansion["next_workflow_steps"], "Step"),
+            hide_index=True,
+            width="stretch",
+        )
+
+        st.caption(expansion["storage_boundary"])
+        st.caption(expansion["route_boundary"])
+
+
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
@@ -231,6 +304,7 @@ def render_backtest_analysis_workspace() -> None:
     _render_strategy_evidence_direction_panel()
     _render_strict_annual_etf_bridge_panel()
     _render_risk_on_governance_panel()
+    _render_etf_evidence_expansion_panel()
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE

@@ -62,6 +62,7 @@ Last Verified: 2026-06-08
 | Backtest strategy evidence inventory service | `app/services/backtest_strategy_evidence_inventory.py` |
 | Backtest strict annual / ETF bridge service | `app/services/backtest_strategy_bridge.py` |
 | Backtest Risk-On Momentum governance service | `app/services/backtest_risk_on_governance.py` |
+| Backtest ETF evidence expansion service | `app/services/backtest_etf_evidence_expansion.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
@@ -92,7 +93,7 @@ Last Verified: 2026-06-08
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help, Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, and Risk-On Momentum 5D Governance entry points |
+| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help, Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, and ETF Evidence Expansion entry points |
 | Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |
