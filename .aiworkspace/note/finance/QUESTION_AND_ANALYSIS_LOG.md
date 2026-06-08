@@ -7661,3 +7661,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: GRS / Risk Parity / Dual Momentum을 바로 current candidate로 만들지 않고, GTAA / Equal Weight 대비 부족한 current anchor / evidence gap / next workflow를 제품 화면에서 확인하게 해야 함.
 - Analysis result: 세 ETF 전략은 실행 가능하지만 report depth와 provider / cost / benchmark evidence가 부족하므로, 3D는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다.
 - Follow-up: `app/services/backtest_etf_evidence_expansion.py`, `app/web/backtest_analysis.py`, focused tests와 docs를 갱신했다. 실제 rerun matrix, strategy hub / report, current candidate promotion은 후속 승인 scope다.
+
+### 2026-06-08 - Backtest 4차 4B는 ETF rerun matrix workbench로 닫는다
+
+- User request: 사용자가 4차 다음 단계 진행을 요청함.
+- Interpreted goal: GRS / Risk Parity / Dual Momentum의 current-anchor 판단을 read-only anchor 확인에서 한 단계 진행해, Backtest Analysis 안에서 rerun scenario matrix를 실행 / 비교할 수 있어야 함.
+- Analysis result: 4B는 Streamlit-free service와 session-only UI 실행으로 좁혀야 한다. 결과를 run history나 current candidate registry에 쓰면 promotion workflow가 섞이므로 후속 승인 scope로 둔다.
+- Follow-up: `app/services/backtest_etf_rerun_matrix.py`, `app/web/backtest_analysis.py`, focused tests와 Browser QA를 추가했다. provider snapshot collection, Practical Validation result creation, durable strategy hub / report, current candidate promotion은 후속 작업이다.

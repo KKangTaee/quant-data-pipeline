@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Backtest ETF Rerun Matrix Workbench 4B
+- Opened and completed `.aiworkspace/note/finance/tasks/active/etf-rerun-matrix-workbench-20260608/` for Backtest 4차 4B.
+- Added a Streamlit-free ETF rerun matrix service and Backtest Analysis workbench panel for GRS / Risk Parity / Dual Momentum.
+- The matrix shows 9 session-only scenarios and runs only the selected ETF strategy into session state; it does not write run history, registries, saved setups, validation results, final decisions, monitoring logs, or provider snapshots.
+- Verification and Browser QA screenshot are in the task `RUNS.md` / `STATUS.md`.
+
 ### 2026-06-08 - Backtest ETF Current Anchor Workbench 4A
 - Opened and completed `.aiworkspace/note/finance/tasks/active/etf-current-anchor-workbench-20260608/` for Backtest 4차 4A.
 - Added a Streamlit-free ETF current-anchor read model and Backtest Analysis workbench panel for GRS / Risk Parity / Dual Momentum.

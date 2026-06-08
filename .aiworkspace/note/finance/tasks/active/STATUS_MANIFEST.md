@@ -9,10 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `etf-current-anchor-workbench-20260608`
+- `etf-rerun-matrix-workbench-20260608`
 
 Recent 4차 Backtest work:
 
+- `etf-rerun-matrix-workbench-20260608`: 4B ETF Rerun Matrix Workbench. Session-only rerun scenario plan and selected-strategy DB-backed matrix execution surface for GRS / Risk Parity / Dual Momentum.
 - `etf-current-anchor-workbench-20260608`: 4A ETF Current Anchor Workbench. Read-only latest run / selection source / missing evidence / next-action surface for GRS / Risk Parity / Dual Momentum.
 
 Recent 3차 Backtest work:

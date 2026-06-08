@@ -5,6 +5,10 @@ import streamlit as st
 
 from app.services.backtest_etf_current_anchor import build_etf_current_anchor_workbench
 from app.services.backtest_etf_evidence_expansion import build_etf_evidence_expansion
+from app.services.backtest_etf_rerun_matrix import (
+    build_etf_rerun_matrix_plan,
+    run_etf_rerun_matrix,
+)
 from app.services.backtest_risk_on_governance import build_risk_on_momentum_governance
 from app.services.backtest_strategy_bridge import build_strict_annual_etf_bridge
 from app.services.backtest_strategy_evidence_inventory import (
@@ -78,6 +82,49 @@ def _etf_current_anchor_rows_table(rows: list[dict[str, object]]) -> pd.DataFram
             }
         )
     return pd.DataFrame(table_rows)
+
+
+def _format_params(params: dict[str, object]) -> str:
+    if not params:
+        return "-"
+    return ", ".join(f"{key}={value}" for key, value in params.items() if value not in (None, "", [], {})) or "-"
+
+
+def _etf_rerun_plan_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    table_rows: list[dict[str, object]] = []
+    for row in rows:
+        for scenario in row.get("scenarios") or []:
+            scenario_row = dict(scenario)
+            table_rows.append(
+                {
+                    "Strategy": row.get("display_name") or "-",
+                    "Scenario": scenario_row.get("scenario_name") or scenario_row.get("scenario_id") or "-",
+                    "Evidence Focus": scenario_row.get("evidence_focus") or "-",
+                    "Params": _format_params(dict(scenario_row.get("params") or {})),
+                }
+            )
+    return pd.DataFrame(table_rows)
+
+
+def _etf_rerun_result_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Scenario": row.get("scenario_name") or row.get("scenario_id") or "-",
+                "Status": row.get("status") or "-",
+                "Actual End": row.get("actual_result_end") or "-",
+                "Rows": row.get("result_rows") or "-",
+                "CAGR": row.get("cagr") if row.get("cagr") is not None else "-",
+                "MDD": row.get("maximum_drawdown") if row.get("maximum_drawdown") is not None else "-",
+                "Sharpe": row.get("sharpe_ratio") if row.get("sharpe_ratio") is not None else "-",
+                "Freshness": row.get("price_freshness_status") or "-",
+                "Promotion": row.get("promotion_decision") or "-",
+                "Warnings": row.get("warning_count") if row.get("warning_count") is not None else "-",
+                "Error": row.get("error") or "-",
+            }
+            for row in rows
+        ]
+    )
 
 
 def _governance_evidence_table(rows: list[dict[str, object]]) -> pd.DataFrame:
@@ -394,6 +441,68 @@ def _render_etf_current_anchor_workbench_panel() -> None:
         st.caption(workbench["route_boundary"])
 
 
+def _render_etf_rerun_matrix_workbench_panel() -> None:
+    plan = build_etf_rerun_matrix_plan()
+    rows = plan["rows"]
+    display_names = {row["strategy_key"]: row["display_name"] for row in rows}
+
+    with st.expander(plan["title"], expanded=True):
+        st.caption(plan["summary"])
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Strategies", plan["strategy_count"])
+        metric_cols[1].metric("Scenarios", plan["scenario_count"])
+        metric_cols[2].metric(
+            "Run On Render",
+            "Disabled" if not plan["runs_backtests_on_render"] else "Enabled",
+        )
+        metric_cols[3].metric(
+            "Artifact Writes",
+            "Disabled" if not plan["writes_run_history"] else "Enabled",
+        )
+
+        st.markdown("**Session-only rerun scenarios**")
+        st.dataframe(
+            _etf_rerun_plan_rows_table(rows),
+            hide_index=True,
+            width="stretch",
+        )
+
+        selected_strategy_key = st.selectbox(
+            "ETF rerun matrix target",
+            options=list(plan["target_strategy_keys"]),
+            format_func=lambda key: display_names.get(key, key),
+            key="backtest_etf_rerun_matrix_target",
+        )
+        if st.button(
+            "Run session-only ETF rerun matrix",
+            key="backtest_etf_rerun_matrix_run_button",
+            type="secondary",
+        ):
+            with st.spinner("Running selected ETF rerun matrix in this session only..."):
+                st.session_state["backtest_etf_rerun_matrix_result"] = run_etf_rerun_matrix(
+                    selected_strategy_key
+                )
+
+        result = st.session_state.get("backtest_etf_rerun_matrix_result")
+        if result and result.get("strategy_key") == selected_strategy_key:
+            st.markdown("**Latest session result**")
+            result_metric_cols = st.columns(4)
+            result_metric_cols[0].metric("Status", result["status"])
+            result_metric_cols[1].metric("Passed", result["pass_count"])
+            result_metric_cols[2].metric("Errors", result["error_count"])
+            result_metric_cols[3].metric("Scenarios", result["scenario_count"])
+            st.dataframe(
+                _etf_rerun_result_rows_table(result["rows"]),
+                hide_index=True,
+                width="stretch",
+            )
+        else:
+            st.info("No ETF rerun matrix has been executed in this session for the selected strategy.")
+
+        st.caption(plan["storage_boundary"])
+        st.caption(plan["route_boundary"])
+
+
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
@@ -406,6 +515,7 @@ def render_backtest_analysis_workspace() -> None:
     _render_risk_on_governance_panel()
     _render_etf_evidence_expansion_panel()
     _render_etf_current_anchor_workbench_panel()
+    _render_etf_rerun_matrix_workbench_panel()
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE
