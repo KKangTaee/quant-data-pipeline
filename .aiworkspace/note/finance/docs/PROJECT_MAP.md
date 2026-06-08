@@ -82,6 +82,7 @@ Last Verified: 2026-06-08
 | Overview market intelligence service | `app/services/overview_market_intelligence.py` |
 | Overview Macro Context Cockpit read model | `app/services/overview_market_intelligence.py` via `build_overview_macro_context_cockpit`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py` |
 | Overview Data Health Ingestion Handoff read model | `app/services/overview_market_intelligence.py` via `build_overview_data_health_ingestion_handoff`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py` for `Workspace > Overview > Data Health` |
+| Overview Source Confidence Catalog read model | `app/services/overview_market_intelligence.py` via `build_overview_source_confidence_catalog`; embedded in the macro cockpit model and rendered by `app/web/overview_ui_components.py` |
 | Overview futures monitor service | `app/services/futures_market_monitoring.py` |
 | Overview futures macro thermometer service | `app/services/futures_macro_thermometer.py` |
 | Overview futures macro historical validation service | `app/services/futures_macro_validation.py` |

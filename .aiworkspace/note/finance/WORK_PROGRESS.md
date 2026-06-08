@@ -4878,3 +4878,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Sector / Industry` 탭 상단에 breadth / concentration summary와 latest heatmap을 추가했고, `Events` 탭 상단에 14일 macro week lane을 추가했다.
   - 새 provider / schema / registry write / saved JSONL write / UI provider fetch 없이 기존 DB-backed group leadership / event snapshot만 재사용했다.
   - 다음 흐름은 4차 source/provider hardening 후보, 5차 Overview IA closeout 후보다.
+- Overview Source Confidence Catalog V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-source-confidence-catalog-v1-20260608/`에서 4차 구현을 완료했다.
+  - `Workspace > Overview` cockpit 하단에 prices / breadth / futures / sentiment / events / data-health source confidence lane을 추가했다.
+  - 같은 cockpit snapshots만 재사용하며 source owner, freshness, caveat, next check를 보여주고 provider fetch / schema / persistence / validation / monitoring / trading semantics는 추가하지 않았다.
+  - 다음 흐름은 5차 Overview IA closeout 후보다.

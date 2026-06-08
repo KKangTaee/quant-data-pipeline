@@ -7625,3 +7625,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 첫 화면과 deep tab 진입 전에 움직임이 broad한지 집중됐는지, 가까운 FOMC / CPI / PPI / Employment / GDP / earnings 이벤트가 무엇인지 기존 DB-backed snapshot으로 보여줘야 함.
 - Analysis result: group leadership snapshot은 participation / concentration summary와 existing latest heatmap으로 접고, event calendar snapshot은 14일 macro week lane과 cluster로 접는 것이 가장 작은 변경이다.
 - Follow-up: full breadth heatmap, events quality workflow, source/provider hardening, Overview IA closeout은 후속 4~5차 후보로 남긴다.
+
+### 2026-06-08 - Overview source confidence catalog를 4차로 구현한다
+
+- User request: 사용자가 3차 다음 4차 작업 진행을 요청함.
+- Interpreted goal: 1~3차 Overview context가 어떤 source / provider / collector 상태에 기대는지 cockpit 안에서 숨기지 않고 보여줘야 함.
+- Analysis result: 새 provider hardening이 아니라 기존 cockpit snapshots를 재사용해 source, owner, freshness, caveat, next check를 표시하는 read-only catalog가 가장 안전한 4차다.
+- Follow-up: 5차는 Overview IA closeout 후보이며, Reference companion이나 provider 교체 / paid source decision은 별도 승인 후보로 남긴다.

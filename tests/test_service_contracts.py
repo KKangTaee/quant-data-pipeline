@@ -4383,6 +4383,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("--ov-mi-color-text-subtle:", css)
         self.assertIn(".ov-macro-cockpit-card-detail", css)
 
+    def test_overview_ui_css_defines_source_confidence_lane(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-source-confidence", css)
+        self.assertIn(".ov-source-confidence-card", css)
+
     def test_overview_cockpit_shell_uses_surface_background_for_dark_theme_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
@@ -6377,6 +6385,73 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("PASS", model["boundary_note"])
         self.assertIn("not a trading", model["boundary_note"])
 
+    def test_overview_source_confidence_catalog_surfaces_provider_caveats_and_review_items(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+
+        model = build_overview_source_confidence_catalog(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "snapshot_time_utc": "2026-06-08 14:00",
+                    "refresh_state": {"label": "Stale", "detail": "2962m old", "recommended_action": "Run Update Daily Snapshot."},
+                },
+                "rows": pd.DataFrame([{"Symbol": "NVDA"}]),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-08"},
+                "rows": pd.DataFrame([{"Group": "Technology"}]),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "coverage": {"standardized_count": 14, "symbol_count": 16, "latest_date": "2026-06-07"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {"data_confidence": {"status": "Review", "detail": "1 stale sentiment source"}},
+                "coverage": {"cnn_score": 54.7, "aaii_bull_bear_spread": -0.7},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "event_count": 12,
+                    "official_count": 5,
+                    "estimate_count": 7,
+                    "needs_review_count": 2,
+                    "stale_estimate_count": 1,
+                    "latest_collected_at": "2026-06-08 01:30",
+                },
+                "rows": pd.DataFrame([{"Type": "EARNINGS", "Freshness": "Stale estimate"}]),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 3, "due_count": 1, "stale_count": 1, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "S&P 500 Daily Snapshot", "Status": "Due", "Data Freshness": "8m old", "Next Action": "Refresh S&P 500 daily snapshot."},
+                        {"Area": "Market Sentiment", "Status": "OK", "Data Freshness": "1d old", "Next Action": "No action needed."},
+                    ]
+                ),
+            },
+        )
+
+        self.assertEqual(model["schema_version"], "overview_source_confidence_catalog_v1")
+        self.assertEqual(model["status"], "REVIEW")
+        self.assertEqual(model["summary"]["review_count"], 4)
+        self.assertEqual(model["items"][0]["id"], "prices")
+        self.assertEqual(model["items"][0]["status"], "REVIEW")
+        self.assertIn("Run Update Daily Snapshot", model["items"][0]["next_check"])
+        self.assertEqual(model["items"][2]["id"], "futures")
+        self.assertIn("free futures provider", model["items"][2]["caveat"])
+        self.assertEqual(model["items"][3]["id"], "sentiment")
+        self.assertEqual(model["items"][3]["status"], "REVIEW")
+        self.assertEqual(model["items"][4]["id"], "events")
+        self.assertIn("2 review", model["items"][4]["detail"])
+        self.assertEqual(model["next_checks"][0]["surface"], "Market Movers")
+        self.assertIn("not a signal", model["boundary_note"])
+
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
 
@@ -7179,6 +7254,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
         self.assertEqual(cockpit["cards"][5]["value"], "4 need review")
         self.assertEqual(cockpit["next_checks"][0]["target_tab"], "Data Health")
+        self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
+        self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
+        self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
         self.assertIn("context-only", cockpit["boundary_note"].lower())
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:

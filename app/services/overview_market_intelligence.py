@@ -3736,6 +3736,245 @@ def build_overview_macro_week_lane(
     }
 
 
+def _source_confidence_status(
+    snapshot: dict[str, Any],
+    *,
+    review_hint: bool = False,
+    no_data_if_empty: bool = False,
+    row_key: str = "rows",
+) -> str:
+    rows = _cockpit_frame(snapshot, key=row_key)
+    if no_data_if_empty and rows.empty:
+        return "NO_DATA"
+    status = _cockpit_card_status(snapshot.get("status"))
+    normalized = status.strip().upper()
+    if review_hint or normalized in {"REVIEW", "DUE", "STALE", "PARTIAL", "MISSING", "FAILED", "ERROR", "NO_DATA"}:
+        return "REVIEW" if normalized != "NO_DATA" else "NO_DATA"
+    return "OK"
+
+
+def _source_confidence_item(
+    *,
+    item_id: str,
+    title: str,
+    surface: str,
+    source: str,
+    owner: str,
+    status: str,
+    freshness: Any,
+    detail: str,
+    caveat: str,
+    next_check: str,
+) -> dict[str, Any]:
+    return {
+        "id": item_id,
+        "title": title,
+        "surface": surface,
+        "source": source,
+        "owner": owner,
+        "status": status,
+        "tone": _cockpit_status_tone(status),
+        "freshness": str(freshness or "-"),
+        "detail": detail,
+        "caveat": caveat,
+        "next_check": next_check,
+    }
+
+
+def _source_confidence_data_review_count(collection_ops_snapshot: dict[str, Any]) -> int:
+    coverage = dict(collection_ops_snapshot.get("coverage") or {})
+    return sum(
+        _cockpit_int(coverage.get(key))
+        for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
+    )
+
+
+def build_overview_source_confidence_catalog(
+    *,
+    market_movers_snapshot: dict[str, Any] | None = None,
+    group_leadership_snapshot: dict[str, Any] | None = None,
+    futures_macro_snapshot: dict[str, Any] | None = None,
+    sentiment_snapshot: dict[str, Any] | None = None,
+    events_snapshot: dict[str, Any] | None = None,
+    collection_ops_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a read-only source/provider confidence catalog from already loaded Overview snapshots."""
+    movers = market_movers_snapshot or {}
+    movers_coverage = dict(movers.get("coverage") or {})
+    refresh_state = movers_coverage.get("refresh_state")
+    refresh_label = _cockpit_status_text(refresh_state)
+    refresh_detail = refresh_state.get("detail") if isinstance(refresh_state, dict) else None
+    refresh_action = (
+        refresh_state.get("recommended_action")
+        if isinstance(refresh_state, dict)
+        else "Open Market Movers and refresh the selected snapshot if stale."
+    )
+    prices_review = bool(refresh_label and refresh_label.upper() not in {"OK", "SUCCESS", "FRESH"})
+    prices_status = _source_confidence_status(movers, review_hint=prices_review, no_data_if_empty=True)
+    prices_returnable = _cockpit_int(movers_coverage.get("returnable_count"))
+    prices_universe = _cockpit_int(movers_coverage.get("universe_count"))
+
+    groups = group_leadership_snapshot or {}
+    group_coverage = dict(groups.get("coverage") or {})
+    breadth_status = _source_confidence_status(groups, no_data_if_empty=True)
+
+    futures = futures_macro_snapshot or {}
+    futures_coverage = dict(futures.get("coverage") or {})
+    futures_status = _source_confidence_status(futures)
+    standardized_count = _cockpit_int(futures_coverage.get("standardized_count"))
+    futures_symbol_count = _cockpit_int(futures_coverage.get("symbol_count"))
+
+    sentiment = sentiment_snapshot or {}
+    sentiment_analysis = dict(sentiment.get("analysis") or {})
+    sentiment_confidence = dict(sentiment_analysis.get("data_confidence") or {})
+    sentiment_status_text = str(sentiment_confidence.get("status") or sentiment.get("status") or "NO_DATA")
+    sentiment_status_normalized = sentiment_status_text.strip().lower()
+    if sentiment_status_normalized in {"high", "ok", "fresh"}:
+        sentiment_status = "OK"
+    elif sentiment_status_normalized == "no_data":
+        sentiment_status = "NO_DATA"
+    else:
+        sentiment_status = _source_confidence_status(sentiment, review_hint=True)
+    sentiment_coverage = dict(sentiment.get("coverage") or {})
+
+    events = events_snapshot or {}
+    events_coverage = dict(events.get("coverage") or {})
+    event_review_count = max(
+        _cockpit_int(events_coverage.get("needs_review_count")),
+        _cockpit_int(events_coverage.get("action_required_count")),
+        _cockpit_int(events_coverage.get("stale_estimate_count")),
+    )
+    events_status = _source_confidence_status(
+        events,
+        review_hint=event_review_count > 0,
+        no_data_if_empty=True,
+    )
+
+    data_health = collection_ops_snapshot or {}
+    data_coverage = dict(data_health.get("coverage") or {})
+    data_review_count = _source_confidence_data_review_count(data_health)
+    data_status = _source_confidence_status(data_health, review_hint=data_review_count > 0, no_data_if_empty=True)
+
+    items = [
+        _source_confidence_item(
+            item_id="prices",
+            title="Prices / Movers",
+            surface="Market Movers",
+            source="Stored price rows and intraday snapshot tables",
+            owner="Workspace > Ingestion plus approved Overview bounded refresh",
+            status=prices_status,
+            freshness=movers_coverage.get("snapshot_time_utc")
+            or refresh_detail
+            or movers_coverage.get("effective_end_date"),
+            detail=f"{prices_returnable}/{prices_universe} symbols returnable · refresh {refresh_label or prices_status}",
+            caveat="Price context can be stale or partial; it is market context, not execution data.",
+            next_check=str(refresh_action or "Open Market Movers and inspect freshness."),
+        ),
+        _source_confidence_item(
+            item_id="breadth",
+            title="Breadth / Groups",
+            surface="Sector / Industry",
+            source="Stored price rows plus profile sector / industry metadata",
+            owner="Overview group leadership read model",
+            status=breadth_status,
+            freshness=group_coverage.get("snapshot_time_utc") or group_coverage.get("effective_end_date"),
+            detail=f"{_cockpit_int(group_coverage.get('returnable_count'))}/{_cockpit_int(group_coverage.get('universe_count'))} symbols grouped",
+            caveat="Breadth summarizes participation and concentration; it is not a selection rule.",
+            next_check="Open Sector / Industry when group rows are stale, missing, or sparse.",
+        ),
+        _source_confidence_item(
+            item_id="futures",
+            title="Futures Context",
+            surface="Futures Monitor",
+            source="Stored futures OHLCV read by Macro Thermometer",
+            owner="Workspace > Ingestion futures collector / Overview bounded refresh",
+            status=futures_status,
+            freshness=futures_coverage.get("latest_date") or futures_coverage.get("latest_candle_time"),
+            detail=f"{standardized_count}/{futures_symbol_count} futures symbols standardized",
+            caveat="Pilot context from a free futures provider; stale/free-provider gaps stay visible and are not reliability guarantees.",
+            next_check="Open Futures Monitor before relying on risk-on, rate-pressure, or safe-haven context.",
+        ),
+        _source_confidence_item(
+            item_id="sentiment",
+            title="Sentiment",
+            surface="Sentiment",
+            source="CNN Fear & Greed and AAII sentiment observations",
+            owner="Market sentiment ingestion and loader",
+            status=sentiment_status,
+            freshness=sentiment_confidence.get("detail") or sentiment_coverage.get("latest_observation_date"),
+            detail=(
+                f"CNN {_overview_round(sentiment_coverage.get('cnn_score'))} · "
+                f"AAII spread {_overview_round(sentiment_coverage.get('aaii_bull_bear_spread'))}"
+            ),
+            caveat="Sentiment is backdrop only and cannot change validation, Final Review, or monitoring gates.",
+            next_check="Open Sentiment if source count, stale count, or confidence is degraded.",
+        ),
+        _source_confidence_item(
+            item_id="events",
+            title="Events",
+            surface="Events",
+            source="Official macro calendars plus provider-estimated earnings rows",
+            owner="Market event calendar collectors",
+            status=events_status,
+            freshness=events_coverage.get("latest_collected_at"),
+            detail=(
+                f"{_cockpit_int(events_coverage.get('event_count'))} events · "
+                f"{_cockpit_int(events_coverage.get('official_count'))} official · "
+                f"{_cockpit_int(events_coverage.get('estimate_count'))} estimates · "
+                f"{event_review_count} review"
+            ),
+            caveat="Official macro dates and provider-estimated earnings must stay visually distinct.",
+            next_check="Open Events quality when estimates are stale, unconfirmed, or need source review.",
+        ),
+        _source_confidence_item(
+            item_id="data_health",
+            title="Data Health",
+            surface="Data Health",
+            source="DB freshness summaries and local run history",
+            owner="Data Health read model and owning collection surfaces",
+            status=data_status,
+            freshness=data_coverage.get("latest_success_at") or data_coverage.get("latest_auto_at"),
+            detail=(
+                f"OK {_cockpit_int(data_coverage.get('ok_count'))} · "
+                f"review {data_review_count}"
+            ),
+            caveat="Data Health points to collection owners; it does not execute jobs or persist an action queue.",
+            next_check="Open Data Health handoff for due, stale, partial, missing, or failed targets.",
+        ),
+    ]
+
+    review_items = [item for item in items if item["status"] != "OK"]
+    status = "REVIEW" if review_items else "OK"
+    return {
+        "schema_version": "overview_source_confidence_catalog_v1",
+        "status": status,
+        "summary": {
+            "headline": (
+                f"{len(review_items)} source areas need review"
+                if review_items
+                else "Source confidence catalog clear"
+            ),
+            "detail": "Source, freshness, owner, caveat, and next check for the same DB-backed Overview context.",
+            "review_count": len(review_items),
+        },
+        "items": items,
+        "next_checks": [
+            {
+                "surface": item["surface"],
+                "title": item["title"],
+                "reason": item["detail"],
+                "action": item["next_check"],
+                "tone": item["tone"],
+            }
+            for item in review_items[:4]
+        ],
+        "boundary_note": (
+            "Source confidence is context only: not a signal, not validation PASS/BLOCKER, "
+            "not a Final Review decision, not a monitoring signal, and not a provider fetch or write action."
+        ),
+    }
+
+
 def _cockpit_count_label(value: int, noun: str) -> str:
     return f"{value} {noun}" if value != 1 else f"1 {noun.rstrip('s')}"
 
@@ -4043,6 +4282,14 @@ def build_overview_macro_context_cockpit(
         if _cockpit_status_tone(card.get("status")) in {"warning", "danger"}
     ]
     status = "REVIEW" if review_cards else "OK"
+    source_confidence = build_overview_source_confidence_catalog(
+        market_movers_snapshot=market_movers_snapshot,
+        group_leadership_snapshot=group_leadership_snapshot,
+        futures_macro_snapshot=futures_macro_snapshot,
+        sentiment_snapshot=sentiment_snapshot,
+        events_snapshot=events_snapshot,
+        collection_ops_snapshot=collection_ops_snapshot,
+    )
     next_checks = [
         item
         for item in [
@@ -4080,6 +4327,7 @@ def build_overview_macro_context_cockpit(
         },
         "cards": cards,
         "next_checks": next_checks,
+        "source_confidence": source_confidence,
         "boundary_note": (
             "Context-only market backdrop: this cockpit does not create trade signals, validation PASS/BLOCKER, "
             "Final Review decisions, monitoring signals, registry writes, saved setup writes, broker orders, or auto rebalance."

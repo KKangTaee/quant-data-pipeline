@@ -388,6 +388,106 @@ def overview_ui_css() -> str:
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
+.ov-source-confidence {
+  margin-top: 0.68rem;
+  padding-top: 0.62rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-source-confidence-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin-bottom: 0.44rem;
+}
+.ov-source-confidence-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-source-confidence-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+.ov-source-confidence-status {
+  flex: 0 0 auto;
+  color: var(--ov-source-status-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-source-confidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-source-confidence-card {
+  min-width: 0;
+  padding: 0.48rem 0.54rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-source-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.86);
+}
+.ov-source-confidence-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: flex-start;
+}
+.ov-source-confidence-surface {
+  color: var(--ov-source-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.ov-source-confidence-card-status {
+  flex: 0 0 auto;
+  color: var(--ov-source-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  text-align: right;
+}
+.ov-source-confidence-card-title {
+  margin-top: 0.18rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-source-confidence-card-detail,
+.ov-source-confidence-card-meta,
+.ov-source-confidence-card-caveat {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.23;
+  overflow-wrap: anywhere;
+}
+.ov-source-confidence-card-detail {
+  margin-top: 0.14rem;
+}
+.ov-source-confidence-card-meta {
+  margin-top: 0.22rem;
+  padding-top: 0.22rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-source-confidence-card-caveat {
+  margin-top: 0.16rem;
+}
+.ov-source-confidence-boundary {
+  margin-top: 0.44rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 .ov-macro-cockpit-boundary {
   margin-top: 0.56rem;
   padding: 0.42rem 0.5rem;
@@ -1375,6 +1475,7 @@ def overview_ui_css() -> str:
   }
   .ov-macro-cockpit-grid,
   .ov-macro-cockpit-checks,
+  .ov-source-confidence-grid,
   .ov-data-handoff-grid,
   .ov-breadth-card-grid,
   .ov-breadth-row-grid,
@@ -1586,11 +1687,48 @@ def _macro_cockpit_next_checks_html(next_checks: list[dict[str, Any]]) -> str:
     return "".join(html)
 
 
+def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
+    if not model:
+        return ""
+    summary = dict(model.get("summary") or {})
+    status_tone = escape(_overview_tone_color(model.get("status")))
+    cards: list[str] = []
+    for item in list(model.get("items") or [])[:6]:
+        tone_color = escape(_overview_tone_color(item.get("tone") or item.get("status")))
+        cards.append(
+            f'<article class="ov-source-confidence-card" style="--ov-source-tone:{tone_color};">'
+            '<div class="ov-source-confidence-card-head">'
+            f'<div class="ov-source-confidence-surface">{escape(_display_value(item.get("surface")))}</div>'
+            f'<div class="ov-source-confidence-card-status">{escape(_display_value(item.get("status")))}</div>'
+            "</div>"
+            f'<div class="ov-source-confidence-card-title">{escape(_display_value(item.get("title")))}</div>'
+            f'<div class="ov-source-confidence-card-detail">{escape(_display_value(item.get("detail")))}</div>'
+            f'<div class="ov-source-confidence-card-meta">Freshness: {escape(_display_value(item.get("freshness")))}'
+            f'<br>Owner: {escape(_display_value(item.get("owner")))}</div>'
+            f'<div class="ov-source-confidence-card-caveat">{escape(_display_value(item.get("caveat")))}</div>'
+            "</article>"
+        )
+    return (
+        f'<div class="ov-source-confidence" style="--ov-source-status-tone:{status_tone};">'
+        '<div class="ov-source-confidence-head">'
+        '<div>'
+        '<div class="ov-source-confidence-title">Source Confidence</div>'
+        f'<div class="ov-source-confidence-detail">{escape(_display_value(summary.get("detail")))}</div>'
+        '</div>'
+        f'<div class="ov-source-confidence-status">{escape(_display_value(model.get("status")))}</div>'
+        '</div>'
+        f'<div class="ov-source-confidence-grid">{"".join(cards)}</div>'
+        f'<div class="ov-source-confidence-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
+        '</div>'
+    )
+
+
 def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
     cards_html = _macro_cockpit_cards_html(list(model.get("cards") or []))
     next_checks_html = _macro_cockpit_next_checks_html(list(model.get("next_checks") or []))
+    source_confidence_html = _macro_cockpit_source_confidence_html(dict(model.get("source_confidence") or {}))
     st.markdown(
         overview_ui_css()
         + f"""
@@ -1611,6 +1749,7 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     </div>
     <div class="ov-macro-cockpit-checks">{next_checks_html}</div>
   </div>
+  {source_confidence_html}
   <div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,

@@ -81,6 +81,10 @@ It synthesizes the same DB-backed movers, breadth, futures, sentiment, event, an
 It priority-ranks existing DB/run-history freshness rows and points the user to the owning Ingestion or approved Overview bounded refresh surface.
 It does not execute collection jobs, persist an action queue, change schema, fetch providers during render, or write registry / saved setup rows.
 
+`Overview Source Confidence Catalog` is a read-only lane inside the Macro Context Cockpit.
+It reuses the already loaded cockpit snapshots to expose source, owner, freshness, caveat, and next-check context for prices, breadth, futures, sentiment, events, and data health.
+It does not add providers, replace provider policy, persist provider scores, fetch providers during render, or write registry / saved setup rows.
+
 Overview refresh buttons must route through `app/jobs/overview_actions.py`.
 The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
 The action facade is allowed to call ingestion job wrappers, browser-session automation, and run-history append helpers for approved Overview market-context targets only.
