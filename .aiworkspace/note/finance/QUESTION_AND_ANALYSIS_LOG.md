@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Backtest strategy direction should separate analysis, documentation, and implementation sessions
+- User request:
+  - 현재 backtest-dev worktree를 전략 분석과 방향성 결정 세션으로 쓰고, 3차부터 새 세션에서 개발할지 확인한 뒤 2차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차 전략 파악 결과를 durable research bundle로 고정하고, 다음 구현 세션이 바로 읽을 수 있는 handoff를 만든다.
+- Analysis result:
+  - 현재 실행 전략은 넓지만 evidence maturity는 uneven하다. strict annual 3종과 GTAA / Equal Weight가 가장 성숙하고, Risk-On Momentum 5D는 research lane으로 강하지만 validation / monitoring governance가 deferred이며, quarterly prototypes는 runtime contract smoke 수준이다.
+- Follow-up:
+  - 3차 새 세션은 `2026-06-backtest-strategy-direction/NEXT_SESSION_HANDOFF.md`를 읽고 read-only Strategy Evidence Inventory / Direction Panel부터 여는 것이 가장 안전하다.
+
 ### 2026-06-08 - Reference internal links should use page targets
 - User request:
   - sub-dev / main-dev master merge review에서 확인된 3개 문제 수정을 요청함.

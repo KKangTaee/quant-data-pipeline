@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Backtest Strategy Direction 2차 Research
+- Opened `.aiworkspace/note/finance/researches/active/2026-06-backtest-strategy-direction/` as the 2차 analysis / direction bundle for Backtest strategy work.
+- Documented strategy inventory, weakness matrix, internal benchmark baseline, feature candidates, recommendation, risks, and next-session handoff.
+- Recommended 3차 work start with read-only Strategy Evidence Inventory / Direction Panel, then strict annual + GTAA / Equal Weight bridge.
+- Deferred implementation, registry / saved JSONL writes, roadmap commitment, Risk-On Momentum governance, quarterly maturation, and live trading boundaries to approved future scopes.
+
 ### 2026-06-08 - Merge Review Fixes
 - Opened `.aiworkspace/note/finance/tasks/active/merge-review-fixes-20260608/` after sub-dev / main-dev master merge review.
 - Fixed Reference contextual help internal links to use configured Streamlit page targets instead of direct markdown `/guides` / `/glossary` links.
