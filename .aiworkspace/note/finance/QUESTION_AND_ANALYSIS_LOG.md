@@ -7618,3 +7618,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Data Health가 보여주는 stale / missing / failed / partial / due 상태를 사용자가 실제로 확인할 collection surface로 넘기되, Overview가 Ingestion 실행 큐나 job owner가 되면 안 됨.
 - Analysis result: 기존 `build_collection_ops_snapshot` row를 재사용해 Streamlit-free handoff model을 만들고, Data Health 탭 상단에 우선순위 / owner / target / freshness / read-only boundary를 표시하는 것이 가장 작은 변경이다.
 - Follow-up: 3차 후보는 breadth / heatmap and macro week view이며, persistent Ingestion Action Queue나 Candidate Ops IA 변경은 별도 승인 후 진행한다.
+
+### 2026-06-08 - Overview breadth / macro week first pass를 3차로 구현한다
+
+- User request: 사용자가 2차 다음 3차 작업 진행을 요청함.
+- Interpreted goal: 첫 화면과 deep tab 진입 전에 움직임이 broad한지 집중됐는지, 가까운 FOMC / CPI / PPI / Employment / GDP / earnings 이벤트가 무엇인지 기존 DB-backed snapshot으로 보여줘야 함.
+- Analysis result: group leadership snapshot은 participation / concentration summary와 existing latest heatmap으로 접고, event calendar snapshot은 14일 macro week lane과 cluster로 접는 것이 가장 작은 변경이다.
+- Follow-up: full breadth heatmap, events quality workflow, source/provider hardening, Overview IA closeout은 후속 4~5차 후보로 남긴다.

@@ -3381,6 +3381,361 @@ def _cockpit_percent(value: Any, *, digits: int = 1) -> str:
     return f"{numeric:+.{digits}f}%"
 
 
+def _overview_round(value: Any, *, digits: int = 1) -> float | None:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return None
+    return round(numeric, digits)
+
+
+def _overview_percent_label(value: Any, *, digits: int = 0, signed: bool = False) -> str:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return "-"
+    sign = "+" if signed else ""
+    return f"{numeric:{sign}.{digits}f}%"
+
+
+def _overview_breadth_participation_label(positive_share: float | None) -> str:
+    if positive_share is None:
+        return "unknown"
+    if positive_share >= 65.0:
+        return "broad"
+    if positive_share <= 45.0:
+        return "narrow"
+    return "mixed"
+
+
+def _overview_breadth_concentration_label(top_share: float | None, cap_equal_gap: float | None) -> str:
+    if top_share is None and cap_equal_gap is None:
+        return "unknown"
+    if (top_share is not None and top_share >= 65.0) or (cap_equal_gap is not None and abs(cap_equal_gap) >= 2.0):
+        return "concentrated"
+    return "balanced"
+
+
+def _overview_breadth_row_tone(row: dict[str, Any]) -> str:
+    weighted = _safe_float(row.get("Market Cap Weighted Return %"))
+    positive_share = _safe_float(row.get("Positive Symbol Share %"))
+    if weighted is not None and weighted < 0:
+        return "danger"
+    if positive_share is not None and positive_share < 45.0:
+        return "warning"
+    if weighted is not None and weighted > 0:
+        return "positive"
+    return "neutral"
+
+
+def build_overview_breadth_heatmap_summary(
+    group_leadership_snapshot: dict[str, Any] | None = None,
+    *,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Compress an existing group leadership snapshot into a context-only breadth heatmap summary."""
+    snapshot = group_leadership_snapshot or {}
+    rows = _cockpit_frame(snapshot)
+    coverage = dict(snapshot.get("coverage") or {})
+    date_window = dict(snapshot.get("date_window") or {})
+    if rows.empty:
+        return {
+            "schema_version": "overview_breadth_heatmap_summary_v1",
+            "status": "NO_DATA",
+            "summary": {
+                "headline": "Breadth context unavailable",
+                "detail": str(snapshot.get("message") or "No stored group leadership rows are available."),
+                "participation_label": "unknown",
+                "concentration_label": "unknown",
+                "leader": None,
+            },
+            "coverage": {
+                "group_count": 0,
+                "returnable_count": coverage.get("returnable_count"),
+                "universe_count": coverage.get("universe_count"),
+                "price_mode": coverage.get("price_mode"),
+                "freshness": coverage.get("snapshot_time_utc") or coverage.get("effective_end_date"),
+            },
+            "cards": [],
+            "heatmap_rows": [],
+            "boundary_note": (
+                "Context-only breadth summary: not a trade signal, not validation, not Final Review, "
+                "and not monitoring guidance."
+            ),
+        }
+
+    numeric_positive = rows.get("Positive Symbol Share %", pd.Series(dtype=float)).map(_safe_float).dropna()
+    numeric_weighted = rows.get("Market Cap Weighted Return %", pd.Series(dtype=float)).map(_safe_float).dropna()
+    negative_count = int((numeric_weighted < 0).sum()) if not numeric_weighted.empty else 0
+    positive_group_count = int((numeric_weighted > 0).sum()) if not numeric_weighted.empty else 0
+    average_positive_share = round(float(numeric_positive.mean()), 1) if not numeric_positive.empty else None
+    average_weighted_return = round(float(numeric_weighted.mean()), 2) if not numeric_weighted.empty else None
+    top_row = dict(rows.iloc[0].dropna().to_dict())
+    leader = str(top_row.get("Group") or "-")
+    leader_return = _safe_float(top_row.get("Market Cap Weighted Return %"))
+    top_share = _safe_float(top_row.get("Top 3 Positive Share %"))
+    cap_equal_gap = _safe_float(top_row.get("Cap vs Equal Gap pp"))
+    participation_label = _overview_breadth_participation_label(average_positive_share)
+    concentration_label = _overview_breadth_concentration_label(top_share, cap_equal_gap)
+
+    heatmap_rows: list[dict[str, Any]] = []
+    for fallback_rank, (_, row_value) in enumerate(rows.head(max(1, int(limit or 10))).iterrows(), start=1):
+        row = dict(row_value.dropna().to_dict())
+        heatmap_rows.append(
+            {
+                "rank": _cockpit_int(row.get("Rank")) or fallback_rank,
+                "group": str(row.get("Group") or "-"),
+                "symbols": _cockpit_int(row.get("Symbols")),
+                "positive_symbols": _cockpit_int(row.get("Positive Symbols")),
+                "positive_symbol_share_pct": _overview_round(row.get("Positive Symbol Share %")),
+                "market_cap_weighted_return_pct": _overview_round(row.get("Market Cap Weighted Return %")),
+                "equal_weight_return_pct": _overview_round(row.get("Equal Weight Return %")),
+                "top_3_positive_share_pct": _overview_round(row.get("Top 3 Positive Share %")),
+                "top_symbol": str(row.get("Top Symbol") or "-"),
+                "top_symbol_return_pct": _overview_round(row.get("Top Symbol Return %")),
+                "tone": _overview_breadth_row_tone(row),
+            }
+        )
+
+    group_label = "groups" if len(rows) != 1 else "group"
+    cards = [
+        {
+            "title": "Participation",
+            "value": _overview_percent_label(average_positive_share),
+            "detail": f"{participation_label} average positive share across {len(rows)} {group_label}",
+            "tone": "positive" if participation_label == "broad" else "warning" if participation_label == "narrow" else "neutral",
+        },
+        {
+            "title": "Leadership",
+            "value": leader,
+            "detail": f"{_overview_percent_label(leader_return, digits=1, signed=True)} cap-weighted return",
+            "tone": _overview_breadth_row_tone(top_row),
+        },
+        {
+            "title": "Concentration",
+            "value": concentration_label,
+            "detail": f"Top 3 positive share {_overview_percent_label(top_share)} · cap/equal gap {_overview_percent_label(cap_equal_gap, digits=1, signed=True)}",
+            "tone": "warning" if concentration_label == "concentrated" else "positive" if concentration_label == "balanced" else "neutral",
+        },
+        {
+            "title": "Negative Groups",
+            "value": str(negative_count),
+            "detail": f"{positive_group_count} positive groups · avg cap-weighted {_overview_percent_label(average_weighted_return, digits=2, signed=True)}",
+            "tone": "warning" if negative_count else "positive",
+        },
+    ]
+
+    return {
+        "schema_version": "overview_breadth_heatmap_summary_v1",
+        "status": snapshot.get("status") or "OK",
+        "summary": {
+            "headline": f"{participation_label.title()} participation, {concentration_label} leadership",
+            "detail": (
+                f"{leader} leads the selected universe; use the heatmap to see whether movement is broad or group-specific."
+            ),
+            "participation_label": participation_label,
+            "concentration_label": concentration_label,
+            "leader": leader,
+        },
+        "coverage": {
+            "group_count": int(len(rows)),
+            "returnable_count": coverage.get("returnable_count"),
+            "universe_count": coverage.get("universe_count"),
+            "price_mode": coverage.get("price_mode") or "EOD DB",
+            "freshness": coverage.get("snapshot_time_utc")
+            or coverage.get("effective_end_date")
+            or date_window.get("effective_end_date")
+            or date_window.get("end_date"),
+        },
+        "cards": cards,
+        "heatmap_rows": heatmap_rows,
+        "boundary_note": (
+            "Context-only breadth summary: not a trade signal, not validation, not Final Review, "
+            "and not monitoring guidance."
+        ),
+    }
+
+
+def _macro_week_cluster_label(event_type: Any) -> str:
+    normalized = str(event_type or "").strip().upper()
+    if normalized == "FOMC_MEETING":
+        return "FOMC"
+    if normalized == "MACRO_CPI":
+        return "CPI"
+    if normalized == "MACRO_PPI":
+        return "PPI"
+    if normalized == "MACRO_EMPLOYMENT":
+        return "Employment"
+    if normalized == "MACRO_GDP":
+        return "GDP"
+    if normalized == "EARNINGS":
+        return "Earnings"
+    if normalized.startswith("MACRO_"):
+        return normalized.replace("MACRO_", "").replace("_", " ").title()
+    return "Other"
+
+
+def _macro_week_event_needs_review(row: dict[str, Any]) -> bool:
+    action = str(row.get("Quality Action") or "").strip().lower()
+    freshness = str(row.get("Freshness") or "").strip().lower()
+    validation = str(row.get("Validation") or "").strip().lower()
+    if action and action != "no action":
+        return True
+    return any(token in freshness for token in ("stale", "unknown")) or any(
+        token in validation for token in ("not confirmed", "estimate only")
+    )
+
+
+def _macro_week_item_tone(row: dict[str, Any]) -> str:
+    if _macro_week_event_needs_review(row):
+        return "warning"
+    cluster = _macro_week_cluster_label(row.get("Type"))
+    if cluster == "Earnings":
+        return "earnings"
+    if cluster in {"FOMC", "CPI", "PPI", "Employment", "GDP"}:
+        return "macro"
+    return "neutral"
+
+
+def build_overview_macro_week_lane(
+    events_snapshot: dict[str, Any] | None = None,
+    *,
+    horizon_days: int = 14,
+    limit: int = 8,
+) -> dict[str, Any]:
+    """Summarize existing event-calendar rows into a near-term macro week context lane."""
+    snapshot = events_snapshot or {}
+    rows = _cockpit_frame(snapshot)
+    coverage = dict(snapshot.get("coverage") or {})
+    boundary_note = (
+        "Context-only event calendar: not a trading signal, not Practical Validation, "
+        "not Final Review decision, and not monitoring signal."
+    )
+    if rows.empty or "Days Until" not in rows:
+        return {
+            "schema_version": "overview_macro_week_lane_v1",
+            "status": "NO_DATA",
+            "summary": {
+                "headline": "Macro week context unavailable",
+                "detail": str(snapshot.get("message") or "No stored event rows are available."),
+                "near_event_count": 0,
+                "next_event_label": "No event in view",
+            },
+            "coverage": {
+                "event_count": coverage.get("event_count"),
+                "near_event_count": 0,
+                "official_count": coverage.get("official_count"),
+                "estimate_count": coverage.get("estimate_count"),
+                "latest_collected_at": coverage.get("latest_collected_at"),
+            },
+            "clusters": {},
+            "items": [],
+            "boundary_note": boundary_note,
+        }
+
+    working = rows.copy()
+    working["_days_until"] = working["Days Until"].map(_safe_float)
+    near_rows = working[
+        working["_days_until"].notna()
+        & (working["_days_until"] >= 0)
+        & (working["_days_until"] <= max(0, int(horizon_days or 14)))
+    ].copy()
+    if near_rows.empty:
+        return {
+            "schema_version": "overview_macro_week_lane_v1",
+            "status": snapshot.get("status") or "OK",
+            "summary": {
+                "headline": f"No stored major events in the next {int(horizon_days or 14)} days",
+                "detail": "Open Events for the full calendar and source quality view.",
+                "near_event_count": 0,
+                "next_event_label": "No event in view",
+            },
+            "coverage": {
+                "event_count": coverage.get("event_count"),
+                "near_event_count": 0,
+                "official_count": coverage.get("official_count"),
+                "estimate_count": coverage.get("estimate_count"),
+                "latest_collected_at": coverage.get("latest_collected_at"),
+            },
+            "clusters": {},
+            "items": [],
+            "boundary_note": boundary_note,
+        }
+
+    near_rows = near_rows.sort_values(by=["_days_until", "Date", "Type"], kind="mergesort")
+    items: list[dict[str, Any]] = []
+    cluster_order = ["FOMC", "CPI", "PPI", "Employment", "GDP", "Earnings", "Other"]
+    clusters: dict[str, dict[str, Any]] = {
+        label: {"label": label, "count": 0, "review_count": 0, "next_date": None, "tone": "neutral"}
+        for label in cluster_order
+    }
+
+    for _, row_value in near_rows.iterrows():
+        row = dict(row_value.drop(labels=["_days_until"], errors="ignore").dropna().to_dict())
+        days_until = _cockpit_int(row_value.get("_days_until"))
+        cluster = _macro_week_cluster_label(row.get("Type"))
+        if cluster not in clusters:
+            clusters[cluster] = {"label": cluster, "count": 0, "review_count": 0, "next_date": None, "tone": "neutral"}
+        needs_review = _macro_week_event_needs_review(row)
+        tone = _macro_week_item_tone(row)
+        clusters[cluster]["count"] += 1
+        clusters[cluster]["review_count"] += 1 if needs_review else 0
+        clusters[cluster]["next_date"] = clusters[cluster]["next_date"] or str(row.get("Date") or "-")
+        clusters[cluster]["tone"] = "warning" if clusters[cluster]["review_count"] else tone
+        if len(items) < max(1, int(limit or 8)):
+            items.append(
+                {
+                    "date": str(row.get("Date") or "-"),
+                    "days_until": days_until,
+                    "type": str(row.get("Type") or "-"),
+                    "cluster": cluster,
+                    "title": str(row.get("Title") or "-"),
+                    "symbol": str(row.get("Symbol") or "-"),
+                    "source_type": str(row.get("Source Type") or "-"),
+                    "validation": str(row.get("Validation") or "-"),
+                    "freshness": str(row.get("Freshness") or "-"),
+                    "quality_action": str(row.get("Quality Action") or "-"),
+                    "importance": str(row.get("Importance") or "-"),
+                    "tone": tone,
+                }
+            )
+
+    clusters = {label: value for label, value in clusters.items() if int(value.get("count") or 0) > 0}
+    review_count = sum(1 for _, row_value in near_rows.iterrows() if _macro_week_event_needs_review(dict(row_value.to_dict())))
+    next_item = items[0] if items else {}
+    next_event_label = (
+        f"{next_item.get('type')} in {next_item.get('days_until')}d"
+        if next_item
+        else "No event in view"
+    )
+    official_near_count = int(
+        near_rows.get("Source Type", pd.Series(dtype=str)).fillna("").astype(str).str.lower().eq("official").sum()
+    )
+    earnings_near_count = int(
+        near_rows.get("Type", pd.Series(dtype=str)).fillna("").astype(str).str.upper().eq("EARNINGS").sum()
+    )
+
+    return {
+        "schema_version": "overview_macro_week_lane_v1",
+        "status": "REVIEW" if review_count else (snapshot.get("status") or "OK"),
+        "summary": {
+            "headline": f"{len(near_rows)} near events in the next {int(horizon_days or 14)} days",
+            "detail": f"{official_near_count} official macro rows · {earnings_near_count} earnings rows · {review_count} need source review",
+            "near_event_count": int(len(near_rows)),
+            "next_event_label": next_event_label,
+        },
+        "coverage": {
+            "event_count": coverage.get("event_count"),
+            "near_event_count": int(len(near_rows)),
+            "official_count": coverage.get("official_count"),
+            "estimate_count": coverage.get("estimate_count"),
+            "latest_collected_at": coverage.get("latest_collected_at"),
+            "review_count": review_count,
+        },
+        "clusters": clusters,
+        "items": items,
+        "boundary_note": boundary_note,
+    }
+
+
 def _cockpit_count_label(value: int, noun: str) -> str:
     return f"{value} {noun}" if value != 1 else f"1 {noun.rstrip('s')}"
 

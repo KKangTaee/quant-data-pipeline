@@ -4873,3 +4873,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Workspace > Overview > Data Health` 상단에 stale / missing / failed / partial / due target을 우선순위화한 read-only handoff lane을 추가했다.
   - Handoff는 owning collection surface와 alternate Overview bounded refresh surface를 안내하지만 job 실행 / action queue persistence / provider fetch / registry or saved JSONL write는 하지 않는다.
   - 다음 흐름은 3차 breadth / heatmap and macro week view, 4차 source/provider hardening 후보, 5차 Overview IA closeout 후보다.
+- Overview Breadth / Macro Week V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-breadth-macro-week-v1-20260608/`에서 3차 구현을 완료했다.
+  - `Sector / Industry` 탭 상단에 breadth / concentration summary와 latest heatmap을 추가했고, `Events` 탭 상단에 14일 macro week lane을 추가했다.
+  - 새 provider / schema / registry write / saved JSONL write / UI provider fetch 없이 기존 DB-backed group leadership / event snapshot만 재사용했다.
+  - 다음 흐름은 4차 source/provider hardening 후보, 5차 Overview IA closeout 후보다.

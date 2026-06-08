@@ -4355,6 +4355,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("load_overview_data_health_ingestion_handoff", tab_body)
         self.assertIn("load_overview_collection_ops_snapshot", tab_body)
 
+    def test_overview_sector_industry_tab_renders_breadth_summary_before_trend_tabs(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        tab_body = source[source.index("def _render_sector_industry_tab"):]
+        summary_index = tab_body.index("render_breadth_heatmap_summary(")
+        tabs_index = tab_body.index("st.tabs([\"Trend\", \"Table\"])")
+        heatmap_index = tab_body.index("_build_group_leadership_heatmap(rows)")
+
+        self.assertLess(summary_index, tabs_index)
+        self.assertLess(summary_index, heatmap_index)
+        self.assertIn("load_overview_breadth_heatmap_summary(snapshot)", tab_body)
+
+    def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        tab_body = source[source.index("def _render_events_tab"):]
+        lane_index = tab_body.index("render_macro_week_lane(")
+        filter_index = tab_body.index("_filter_event_rows_for_calendar(calendar_rows)")
+
+        self.assertLess(lane_index, filter_index)
+        self.assertIn("load_overview_macro_week_lane(snapshot)", tab_body)
+
     def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
@@ -6239,6 +6259,123 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(snapshot["rows"].empty)
         self.assertFalse(snapshot["trend_rows"].empty)
         self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
+
+    def test_overview_breadth_heatmap_summary_scores_participation_and_concentration(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+
+        snapshot = {
+            "status": "OK",
+            "period": "daily",
+            "universe_code": "SP500",
+            "coverage": {
+                "returnable_count": 503,
+                "price_mode": "Intraday Snapshot",
+                "snapshot_time_utc": "2026-06-08 14:00",
+            },
+            "date_window": {"start_date": "Previous Close", "effective_end_date": "2026-06-08"},
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Group": "Technology",
+                        "Symbols": 80,
+                        "Positive Symbols": 56,
+                        "Positive Symbol Share %": 70.0,
+                        "Market Cap Weighted Return %": 1.8,
+                        "Equal Weight Return %": 0.8,
+                        "Top 3 Positive Share %": 72.0,
+                        "Top Symbol": "NVDA",
+                        "Top Symbol Return %": 5.3,
+                    },
+                    {
+                        "Group": "Utilities",
+                        "Symbols": 30,
+                        "Positive Symbols": 15,
+                        "Positive Symbol Share %": 50.0,
+                        "Market Cap Weighted Return %": -0.4,
+                        "Equal Weight Return %": -0.2,
+                        "Top 3 Positive Share %": 40.0,
+                        "Top Symbol": "NEE",
+                        "Top Symbol Return %": 1.1,
+                    },
+                ]
+            ),
+        }
+
+        model = build_overview_breadth_heatmap_summary(snapshot)
+
+        self.assertEqual(model["schema_version"], "overview_breadth_heatmap_summary_v1")
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["coverage"]["group_count"], 2)
+        self.assertEqual(model["summary"]["participation_label"], "mixed")
+        self.assertEqual(model["summary"]["concentration_label"], "concentrated")
+        self.assertEqual(model["summary"]["leader"], "Technology")
+        self.assertEqual(model["cards"][0]["title"], "Participation")
+        self.assertEqual(model["heatmap_rows"][0]["group"], "Technology")
+        self.assertEqual(model["heatmap_rows"][0]["tone"], "positive")
+        self.assertIn("not a trade signal", model["boundary_note"])
+
+    def test_overview_macro_week_lane_clusters_near_events_without_signal_language(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "event_count": 4,
+                "official_count": 2,
+                "estimate_count": 1,
+                "latest_collected_at": "2026-06-08 01:30",
+            },
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Date": "2026-06-10",
+                        "Days Until": 2,
+                        "Type": "MACRO_CPI",
+                        "Title": "CPI: Consumer Price Index",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-12",
+                        "Days Until": 4,
+                        "Type": "EARNINGS",
+                        "Symbol": "AAPL",
+                        "Title": "AAPL Earnings Release",
+                        "Source Type": "Estimate",
+                        "Validation": "Estimate",
+                        "Freshness": "Stale estimate",
+                        "Quality Action": "Refresh Earnings Calendar",
+                        "Importance": "Medium",
+                    },
+                    {
+                        "Date": "2026-06-24",
+                        "Days Until": 16,
+                        "Type": "MACRO_GDP",
+                        "Title": "GDP release",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                ]
+            ),
+        }
+
+        model = build_overview_macro_week_lane(snapshot, horizon_days=14)
+
+        self.assertEqual(model["schema_version"], "overview_macro_week_lane_v1")
+        self.assertEqual(model["status"], "REVIEW")
+        self.assertEqual(model["summary"]["near_event_count"], 2)
+        self.assertEqual(model["summary"]["next_event_label"], "MACRO_CPI in 2d")
+        self.assertEqual(model["clusters"]["CPI"]["count"], 1)
+        self.assertEqual(model["clusters"]["Earnings"]["count"], 1)
+        self.assertEqual(model["items"][0]["type"], "MACRO_CPI")
+        self.assertNotIn("PASS", model["boundary_note"])
+        self.assertIn("not a trading", model["boundary_note"])
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot

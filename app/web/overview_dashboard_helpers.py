@@ -16,13 +16,15 @@ from app.runtime import (
     load_saved_portfolios,
 )
 from app.services.overview_market_intelligence import (
-    build_overview_macro_context_cockpit,
     build_collection_ops_snapshot,
     build_market_events_snapshot,
     build_group_leadership_snapshot,
     build_market_movers_snapshot,
     build_market_sentiment_snapshot,
+    build_overview_breadth_heatmap_summary,
     build_overview_data_health_ingestion_handoff,
+    build_overview_macro_context_cockpit,
+    build_overview_macro_week_lane,
     load_market_mover_sector_options,
 )
 from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
@@ -418,6 +420,11 @@ def load_overview_group_leadership_snapshot(
     )
 
 
+# Build a scan-first breadth summary from the already loaded group leadership snapshot.
+def load_overview_breadth_heatmap_summary(group_leadership_snapshot: dict[str, Any]) -> dict[str, Any]:
+    return build_overview_breadth_heatmap_summary(group_leadership_snapshot)
+
+
 # Load the DB-backed market event calendar snapshot for the Overview Events tab.
 def load_overview_market_events_snapshot(
     *,
@@ -430,6 +437,11 @@ def load_overview_market_events_snapshot(
         horizon_days=horizon_days,
         limit=limit,
     )
+
+
+# Build a near-term macro week lane from the already loaded market events snapshot.
+def load_overview_macro_week_lane(events_snapshot: dict[str, Any]) -> dict[str, Any]:
+    return build_overview_macro_week_lane(events_snapshot)
 
 
 # Load the DB-backed CNN / AAII sentiment snapshot for the Overview Sentiment tab.

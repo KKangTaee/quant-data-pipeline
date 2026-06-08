@@ -76,6 +76,7 @@ _CSS_TOKENS = {
     "fill-subtle": "rgba(148, 163, 184, 0.08)",
     "track-fill": "rgba(100, 116, 139, 0.18)",
     "radius-panel": "8px",
+    "radius-card": "6px",
     "radius-pill": "999px",
     "font-xs": "0.74rem",
     "font-caption": "0.75rem",
@@ -525,6 +526,167 @@ def overview_ui_css() -> str:
 .ov-data-handoff-empty {
   margin-top: 0.52rem;
   padding: 0.4rem 0.48rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.78);
+}
+.ov-breadth-summary,
+.ov-macro-week-lane {
+  margin: 0.48rem 0 0.82rem 0;
+  padding: 0.66rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 4px solid var(--ov-band-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 6%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    var(--ov-mi-color-surface);
+}
+.ov-breadth-head,
+.ov-macro-week-head {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.54rem;
+}
+.ov-breadth-kicker,
+.ov-macro-week-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.ov-breadth-title,
+.ov-macro-week-title {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-breadth-detail,
+.ov-macro-week-detail,
+.ov-breadth-boundary,
+.ov-macro-week-boundary {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.ov-breadth-detail,
+.ov-macro-week-detail {
+  margin-top: 0.16rem;
+}
+.ov-breadth-status,
+.ov-macro-week-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.42rem;
+  padding: 0.17rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 36%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 9%, transparent);
+  color: var(--ov-band-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-breadth-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-breadth-card {
+  min-width: 0;
+  padding: 0.5rem 0.56rem;
+  border: 1px solid color-mix(in srgb, var(--ov-card-tone, var(--ov-mi-color-neutral)) 25%, transparent);
+  border-top: 3px solid var(--ov-card-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.9);
+}
+.ov-breadth-card-label,
+.ov-breadth-row-label,
+.ov-macro-week-cluster-label,
+.ov-macro-week-item-meta {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+.ov-breadth-card-value,
+.ov-breadth-row-value,
+.ov-macro-week-cluster-value,
+.ov-macro-week-item-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  margin-top: 0.16rem;
+  overflow-wrap: anywhere;
+}
+.ov-breadth-card-detail,
+.ov-breadth-row-detail,
+.ov-macro-week-item-detail {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.24;
+  margin-top: 0.14rem;
+  overflow-wrap: anywhere;
+}
+.ov-breadth-row-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.5rem;
+}
+.ov-breadth-row {
+  min-width: 0;
+  padding: 0.43rem 0.48rem;
+  border-left: 3px solid var(--ov-row-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.82);
+}
+.ov-macro-week-clusters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-bottom: 0.48rem;
+}
+.ov-macro-week-cluster {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.24rem;
+  min-height: 1.42rem;
+  padding: 0.18rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--ov-cluster-tone, var(--ov-mi-color-neutral)) 28%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-cluster-tone, var(--ov-mi-color-neutral)) 8%, transparent);
+}
+.ov-macro-week-cluster-value {
+  color: var(--ov-cluster-tone, var(--ov-mi-color-neutral));
+  margin-top: 0;
+}
+.ov-macro-week-items {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-macro-week-item {
+  min-width: 0;
+  padding: 0.5rem 0.56rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-item-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.9);
+}
+.ov-breadth-boundary,
+.ov-macro-week-boundary {
+  margin-top: 0.52rem;
+  padding: 0.38rem 0.46rem;
   border: 1px solid var(--ov-mi-border-faint);
   border-radius: var(--ov-mi-radius-card);
   background: rgba(248,250,252,0.78);
@@ -1206,12 +1368,17 @@ def overview_ui_css() -> str:
   }
   .ov-macro-cockpit-head,
   .ov-macro-cockpit-next,
-  .ov-data-handoff-head {
+  .ov-data-handoff-head,
+  .ov-breadth-head,
+  .ov-macro-week-head {
     grid-template-columns: 1fr;
   }
   .ov-macro-cockpit-grid,
   .ov-macro-cockpit-checks,
-  .ov-data-handoff-grid {
+  .ov-data-handoff-grid,
+  .ov-breadth-card-grid,
+  .ov-breadth-row-grid,
+  .ov-macro-week-items {
     grid-template-columns: 1fr;
   }
   .ov-mm-meta-item:nth-child(odd) {
@@ -1527,6 +1694,135 @@ def render_data_health_ingestion_handoff(model: dict[str, Any]) -> None:
   <div class="ov-data-handoff-grid">{items_html}</div>
   {empty_html}
   <div class="ov-data-handoff-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _breadth_summary_cards_html(cards: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for card in cards[:4]:
+        tone_color = escape(_overview_tone_color(card.get("tone")))
+        html.append(
+            f'<article class="ov-breadth-card" style="--ov-card-tone:{tone_color};">'
+            f'<div class="ov-breadth-card-label">{escape(_display_value(card.get("title")))}</div>'
+            f'<div class="ov-breadth-card-value">{escape(_display_value(card.get("value")))}</div>'
+            f'<div class="ov-breadth-card-detail">{escape(_display_value(card.get("detail")))}</div>'
+            "</article>"
+        )
+    return "".join(html)
+
+
+def _breadth_rows_html(rows: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for row in rows[:5]:
+        tone_color = escape(_overview_tone_color(row.get("tone")))
+        group = _display_value(row.get("group"))
+        weighted = _display_value(row.get("market_cap_weighted_return_pct"))
+        positive = _display_value(row.get("positive_symbol_share_pct"))
+        top_symbol = _display_value(row.get("top_symbol"))
+        top_return = _display_value(row.get("top_symbol_return_pct"))
+        html.append(
+            f'<div class="ov-breadth-row" style="--ov-row-tone:{tone_color};">'
+            f'<div class="ov-breadth-row-label">#{escape(_display_value(row.get("rank")))} · {escape(group)}</div>'
+            f'<div class="ov-breadth-row-value">{escape(weighted)}%</div>'
+            f'<div class="ov-breadth-row-detail">{escape(positive)}% positive · {escape(top_symbol)} {escape(top_return)}%</div>'
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_breadth_heatmap_summary(model: dict[str, Any]) -> None:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(model.get("status")))
+    cards_html = _breadth_summary_cards_html(list(model.get("cards") or []))
+    rows_html = _breadth_rows_html(list(model.get("heatmap_rows") or []))
+    coverage = dict(model.get("coverage") or {})
+    freshness = _display_value(coverage.get("freshness"))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-breadth-summary" style="--ov-band-tone:{tone_color};">
+  <div class="ov-breadth-head">
+    <div>
+      <div class="ov-breadth-kicker">Breadth / Concentration</div>
+      <div class="ov-breadth-title">{escape(_display_value(summary.get("headline")))}</div>
+      <div class="ov-breadth-detail">{escape(_display_value(summary.get("detail")))} · Freshness: {escape(freshness)}</div>
+    </div>
+    <span class="ov-breadth-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-breadth-card-grid">{cards_html}</div>
+  <div class="ov-breadth-row-grid">{rows_html}</div>
+  <div class="ov-breadth-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _macro_week_clusters_html(clusters: dict[str, Any]) -> str:
+    html: list[str] = []
+    for label, cluster in clusters.items():
+        if not isinstance(cluster, dict):
+            continue
+        tone_color = escape(_overview_tone_color(cluster.get("tone")))
+        count = _display_value(cluster.get("count"))
+        review = cluster.get("review_count")
+        review_text = f" · {review} review" if review not in (None, "", 0) else ""
+        html.append(
+            f'<span class="ov-macro-week-cluster" style="--ov-cluster-tone:{tone_color};">'
+            f'<span class="ov-macro-week-cluster-label">{escape(str(label))}</span>'
+            f'<span class="ov-macro-week-cluster-value">{escape(count)}{escape(review_text)}</span>'
+            "</span>"
+        )
+    return "".join(html)
+
+
+def _macro_week_items_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items[:4]:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        meta = (
+            f"{_display_value(item.get('date'))} · in {_display_value(item.get('days_until'))}d · "
+            f"{_display_value(item.get('cluster'))}"
+        )
+        detail = (
+            f"{_display_value(item.get('source_type'))} · {_display_value(item.get('freshness'))} · "
+            f"{_display_value(item.get('quality_action'))}"
+        )
+        html.append(
+            f'<article class="ov-macro-week-item" style="--ov-item-tone:{tone_color};">'
+            f'<div class="ov-macro-week-item-meta">{escape(meta)}</div>'
+            f'<div class="ov-macro-week-item-title">{escape(_display_value(item.get("title")))}</div>'
+            f'<div class="ov-macro-week-item-detail">{escape(detail)}</div>'
+            "</article>"
+        )
+    return "".join(html)
+
+
+def render_macro_week_lane(model: dict[str, Any]) -> None:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(model.get("status")))
+    clusters_html = _macro_week_clusters_html(dict(model.get("clusters") or {}))
+    items_html = _macro_week_items_html(list(model.get("items") or []))
+    coverage = dict(model.get("coverage") or {})
+    latest = _display_value(coverage.get("latest_collected_at"))
+    empty_html = "" if items_html else '<div class="ov-events-empty">No near-term stored event rows in this lane.</div>'
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-macro-week-lane" style="--ov-band-tone:{tone_color};">
+  <div class="ov-macro-week-head">
+    <div>
+      <div class="ov-macro-week-kicker">Macro Week Lane</div>
+      <div class="ov-macro-week-title">{escape(_display_value(summary.get("headline")))}</div>
+      <div class="ov-macro-week-detail">{escape(_display_value(summary.get("detail")))} · Latest collection: {escape(latest)}</div>
+    </div>
+    <span class="ov-macro-week-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-macro-week-clusters">{clusters_html}</div>
+  <div class="ov-macro-week-items">{items_html}</div>
+  {empty_html}
+  <div class="ov-macro-week-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,
     )

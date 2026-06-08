@@ -37,11 +37,13 @@ from app.services.overview_market_intelligence import (
 )
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
+    load_overview_breadth_heatmap_summary,
     load_overview_collection_ops_snapshot,
     load_overview_dashboard_snapshot,
     load_overview_data_health_ingestion_handoff,
     load_overview_group_leadership_snapshot,
     load_overview_macro_context_cockpit,
+    load_overview_macro_week_lane,
     load_overview_market_events_snapshot,
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
@@ -69,11 +71,13 @@ from app.web.overview_ui_components import (
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
     render_data_health_ingestion_handoff,
+    render_breadth_heatmap_summary,
     render_event_agenda_sections,
     render_event_source_lane,
     render_event_warning_strip,
     render_events_summary_strip,
     render_macro_context_cockpit,
+    render_macro_week_lane,
     render_market_session_banner,
     render_market_auto_message,
     render_market_auto_waiting_panel,
@@ -3916,6 +3920,7 @@ def _render_sector_industry_tab() -> None:
     start_value = date_window.get("start_date") or "-"
     end_value = coverage.get("snapshot_time_utc") or date_window.get("effective_end_date") or date_window.get("end_date") or "-"
     st.caption(f"Return Window: {start_value} -> {end_value} · Price Mode: {price_mode}")
+    render_breadth_heatmap_summary(load_overview_breadth_heatmap_summary(snapshot))
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:
@@ -3925,6 +3930,8 @@ def _render_sector_industry_tab() -> None:
     ticker_leader_rows = snapshot.get("ticker_leader_rows")
     chart_tab, table_tab = st.tabs(["Trend", "Table"])
     with chart_tab:
+        st.markdown("#### Latest Breadth Heatmap")
+        st.altair_chart(_build_group_leadership_heatmap(rows), width="stretch")
         st.markdown("#### Latest Ranking")
         insight_cards = _group_leadership_insight_cards(
             rows,
@@ -5304,6 +5311,7 @@ def _render_events_tab() -> None:
     render_events_summary_strip(_event_summary_items(calendar_rows, coverage, event_type=snapshot.get("event_type")))
     render_event_source_lane(_event_source_items(calendar_rows, event_filter=event_filter))
     render_event_warning_strip(list(snapshot.get("warnings") or []))
+    render_macro_week_lane(load_overview_macro_week_lane(snapshot))
 
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("Stored market event rows are not available for the selected filter. Run the matching refresh here or from Ingestion.")
