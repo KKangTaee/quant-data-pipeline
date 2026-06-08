@@ -9,7 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `merge-review-fixes-20260608`
+- `strategy-evidence-inventory-direction-panel-20260608`
+
+Recent 3차 Backtest work:
+
+- `strategy-evidence-inventory-direction-panel-20260608`: 3A Strategy Evidence Inventory / Direction Panel. Read-only strategy maturity / evidence / next-action surface for Backtest Analysis.
 
 Latest completed docs cleanup task:
 

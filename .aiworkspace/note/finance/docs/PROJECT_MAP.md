@@ -54,14 +54,17 @@ Last Verified: 2026-06-08
 | Workspace > Ingestion read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
 | Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/pages/backtest.py` |
+| Strategy catalog service | `app/services/backtest_strategy_catalog.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
+| Backtest strategy evidence inventory service | `app/services/backtest_strategy_evidence_inventory.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
 | Reference contextual help renderer | `app/web/reference_contextual_help.py` |
+| Strategy catalog web compatibility wrapper | `app/web/backtest_strategy_catalog.py` |
 | Backtest Compare visual components | `app/web/backtest_compare_components.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and surface-aware read-only CNN / AAII market sentiment context overlay |
 | Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |
@@ -87,7 +90,7 @@ Last Verified: 2026-06-08
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help entry point |
+| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help and Strategy Evidence Inventory / Direction Panel entry points |
 | Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |

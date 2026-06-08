@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Strategy maturity should be visible before more governance work
+- User request:
+  - 2차 strategy direction research bundle을 읽고 Backtest 3차 3A `Strategy Evidence Inventory / Direction Panel` 구현 task를 진행해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis에서 모든 catalog strategy의 maturity / evidence / next action을 read-only로 보여주되 runtime, registry, saved setup, DB, provider fetch, governance 구현은 바꾸지 않는다.
+- Analysis result:
+  - Strategy catalog는 Streamlit-free service owner가 필요했다. 처음 inventory service가 `app.web.backtest_strategy_catalog`를 import하면서 UI / engine boundary checker가 실패했으므로, canonical catalog를 `app/services/backtest_strategy_catalog.py`로 승격하고 web file은 compatibility wrapper로 남겼다.
+- Follow-up:
+  - 3B는 strict annual 3종 + GTAA / Equal Weight bridge, 3C는 Risk-On Momentum governance, 3D는 ETF evidence expansion으로 분리한다.
+
 ### 2026-06-08 - Backtest strategy direction should separate analysis, documentation, and implementation sessions
 - User request:
   - 현재 backtest-dev worktree를 전략 분석과 방향성 결정 세션으로 쓰고, 3차부터 새 세션에서 개발할지 확인한 뒤 2차 작업 진행을 요청함.

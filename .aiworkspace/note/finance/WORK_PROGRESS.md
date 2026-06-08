@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Backtest Strategy Evidence Inventory 3A
+- Opened and completed `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/` for Backtest 3차 3A.
+- Added Streamlit-free strategy catalog / evidence inventory read models and a read-only Backtest Analysis Direction Panel for all catalog strategies.
+- Risk-On Momentum 5D remains governance deferred; strict quarterly variants remain prototype / contract-smoke; strict annual 3종 + GTAA / Equal Weight are the first evidence-mature group.
+- Verification, boundary check, Browser QA screenshot, and remaining 3B / 3C / 3D handoff are in the task `RUNS.md` / `STATUS.md`.
+
 ### 2026-06-08 - Backtest Strategy Direction 2차 Research
 - Opened `.aiworkspace/note/finance/researches/active/2026-06-backtest-strategy-direction/` as the 2차 analysis / direction bundle for Backtest strategy work.
 - Documented strategy inventory, weakness matrix, internal benchmark baseline, feature candidates, recommendation, risks, and next-session handoff.
