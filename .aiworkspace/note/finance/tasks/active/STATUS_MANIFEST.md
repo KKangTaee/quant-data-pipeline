@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `reference-drift-guard-qa-polish-v5-20260608`
+- `merge-review-fixes-20260608`
 
 Latest completed docs cleanup task:
 
@@ -36,6 +36,7 @@ Recent structure audit records:
 
 Recent Reference records:
 
+- `merge-review-fixes-20260608`: post-merge review fix / Reference page-link, V4 status, and catalog test assertion cleanup
 - `reference-drift-guard-qa-polish-v5-20260608`: Reference contextual help 5차 / drift guard and QA polish
 - `reference-contextual-links-v4-20260608`: Reference contextual help 4차 / workflow screen expander links
 - `reference-glossary-concept-dictionary-v3-20260607`: Reference Glossary 3차 / shared concept dictionary
@@ -66,7 +67,7 @@ The current active task source of truth is:
 
 Reviewed on 2026-06-08:
 
-- `tasks/active`: 193 task folders
+- `tasks/active`: 194 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.
@@ -84,7 +85,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 | Backtest Analysis / strategy research | Candidate source generation, portfolio mix builder, Risk-On Momentum research lane | `backtest-portfolio-mix-builder-flow-v1`, `backtest-portfolio-mix-builder-ux-v1`, `risk-on-momentum-5d-v1`, `risk-on-momentum-5d-v2` |
 | Practical Validation / Final Review | Validation modules, selected-route gate, evidence read model, Final Review UX | `practical-validation-module-gate-v1`, `practical-validation-selected-route-preflight-v1`, `final-review-selection-readiness-gate-v1`, `final-review-commercial-ux-v1` |
 | Operations / Portfolio Monitoring | Operations Console and selected portfolio monitoring work | `operations-v2-closeout-20260608`, `operations-review-queue-refinement-20260608`, `operations-evidence-health-strip-20260607`, `operations-portfolio-first-summary-20260607`, `operations-cockpit-cleanup-20260607`, `operations-console-restructure-v2-v5`, `selected-dashboard-monitoring-first-ux-v1`, `selected-dashboard-manual-scenario-run-v1`, `allocation-drift-evidence-boundary-v1` |
-| Reference / product guidance | Reference Center, Glossary, contextual workflow help | `reference-drift-guard-qa-polish-v5-20260608`, `reference-contextual-links-v4-20260608`, `reference-glossary-concept-dictionary-v3-20260607`, `reference-guides-journey-playbooks-v2-20260607`, `reference-guides-center-v1-20260607` |
+| Reference / product guidance | Reference Center, Glossary, contextual workflow help | `merge-review-fixes-20260608`, `reference-drift-guard-qa-polish-v5-20260608`, `reference-contextual-links-v4-20260608`, `reference-glossary-concept-dictionary-v3-20260607`, `reference-guides-journey-playbooks-v2-20260607`, `reference-guides-center-v1-20260607` |
 | Data / provider / lifecycle evidence | Provider snapshots, macro, data coverage, lifecycle, survivorship | `data-provenance-coverage-v1`, `historical-universe-survivorship-v1`, `sec-form25-delisting-backfill-v1`, `symbol-directory-snapshot-ingestion-v1` |
 | Phase closeout tasks | Phase 8~13 board open / integrated QA / closeout records | `phase10-board-open`, `phase13-integrated-qa-final-closeout`, `phase13-docs-runbook-alignment-v1` |
 | Workspace / tooling | AI workspace migration, plugin / skill system, service boundary, docs rebuild | `ai-workspace-migration`, `doc-system-rebuild`, `product-research-plugin-split`, `service-contract-tests` |

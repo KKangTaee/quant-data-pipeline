@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Reference internal links should use page targets
+- User request:
+  - sub-dev / main-dev master merge review에서 확인된 3개 문제 수정을 요청함.
+- Interpreted goal:
+  - Reference contextual help link behavior, Reference V4 task status, and Reference Guides catalog test coverage를 병합 후 기준에 맞게 정리한다.
+- Analysis result:
+  - Streamlit direct `/guides` URL은 `_stcore` relative path 문제로 깨질 수 있으므로 contextual help renderer는 configured `st.Page` target을 받아 `st.page_link`로 이동해야 한다. Service catalog는 여전히 Streamlit-free target identifiers만 소유한다.
+- Follow-up:
+  - Reference query deep-linking은 별도 UX / routing task로 남긴다.
+
 ### 2026-06-08 - Reference should appear inside the workflow screens
 - User request:
   - Reference 탭 개편의 4차 작업 진행을 요청함.

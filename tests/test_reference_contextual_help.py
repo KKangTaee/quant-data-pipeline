@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from pathlib import Path
 
 
 class ReferenceContextualHelpContractTests(unittest.TestCase):
@@ -67,6 +68,14 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
         self.assertEqual(report["raw_guide_focus_markers"], [])
         self.assertGreaterEqual(report["metrics"]["surface_count"], 5)
         self.assertGreaterEqual(report["metrics"]["glossary_term_count"], 5)
+
+    def test_contextual_help_renderer_maps_internal_links_to_page_target_keys(self) -> None:
+        source = Path("app/web/reference_contextual_help.py").read_text(encoding="utf-8")
+
+        self.assertIn('"/guides": "guides"', source)
+        self.assertIn('"/glossary": "glossary"', source)
+        self.assertIn("st.page_link", source)
+        self.assertNotIn("]({target})", source)
 
 
 if __name__ == "__main__":

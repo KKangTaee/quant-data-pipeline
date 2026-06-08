@@ -4,9 +4,41 @@ import streamlit as st
 
 from app.services.reference_contextual_help import get_reference_contextual_help
 
+REFERENCE_PAGE_TARGET_KEYS = {
+    "/guides": "guides",
+    "/glossary": "glossary",
+}
+_REFERENCE_PAGE_TARGETS: dict[str, object] = {}
+
 
 def _markdown_list(items: list[object]) -> str:
     return "\n".join(f"- {str(item)}" for item in items if str(item or "").strip())
+
+
+def _reference_page_target_key(target: object) -> str | None:
+    return REFERENCE_PAGE_TARGET_KEYS.get(str(target or "").strip())
+
+
+def configure_reference_contextual_help_page_targets(page_targets: dict[str, object]) -> None:
+    _REFERENCE_PAGE_TARGETS.clear()
+    _REFERENCE_PAGE_TARGETS.update(
+        {
+            key: value
+            for key, value in dict(page_targets or {}).items()
+            if key in set(REFERENCE_PAGE_TARGET_KEYS.values()) and value is not None
+        }
+    )
+
+
+def _render_reference_link(label: str, target: str, page_targets: dict[str, object]) -> None:
+    target_key = _reference_page_target_key(target)
+    page_target = page_targets.get(target_key or "")
+    if page_target is not None:
+        st.page_link(page_target, label=label)
+        return
+
+    fallback_label = target_key.title() if target_key else "Reference"
+    st.caption(f"{label}: Reference > {fallback_label}")
 
 
 def render_reference_contextual_help(surface_key: str, *, expanded: bool = False) -> None:
@@ -14,6 +46,7 @@ def render_reference_contextual_help(surface_key: str, *, expanded: bool = False
     if not item:
         return
 
+    page_targets = dict(_REFERENCE_PAGE_TARGETS)
     with st.expander(f"Reference help - {item.get('surface')}", expanded=expanded):
         st.caption(str(item.get("summary") or ""))
         cols = st.columns([0.34, 0.33, 0.33], gap="small")
@@ -32,7 +65,7 @@ def render_reference_contextual_help(surface_key: str, *, expanded: bool = False
             for link in links:
                 label = str(link.get("label") or "Reference")
                 target = str(link.get("target") or "/guides")
-                st.markdown(f"- [{label}]({target})")
+                _render_reference_link(label, target, page_targets)
 
         next_checks = _markdown_list(list(item.get("next_checks") or []))
         if next_checks:

@@ -24,6 +24,7 @@ from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
+from app.web.reference_contextual_help import configure_reference_contextual_help_page_targets
 from app.web.reference_guides import render_reference_guides_page
 from app.services.reference_glossary_catalog import (
     get_reference_concept_dictionary,
@@ -293,6 +294,12 @@ def main() -> None:
     )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
+    configure_reference_contextual_help_page_targets(
+        {
+            "guides": guides_page,
+            "glossary": glossary_page,
+        }
+    )
     operations_overview_page = st.Page(
         lambda: render_operations_overview_page(
             page_targets={
