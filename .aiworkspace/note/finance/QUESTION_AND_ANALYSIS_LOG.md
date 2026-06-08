@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Bridge scope should be role / evidence handoff, not automatic candidate creation
+- User request:
+  - 3A가 가이드처럼 보인다는 점을 확인한 뒤 3B 작업 진행을 요청함.
+- Interpreted goal:
+  - Strict Annual 3종 + GTAA / Equal Weight를 first evidence-mature group으로 유지하면서, 실제 검증으로 이어질 role / target use / required Practical Validation evidence / recommended workflow를 Backtest Analysis에 추가한다.
+- Analysis result:
+  - 3B는 실행 기능이나 자동 후보 저장이 아니라 read-only bridge/handoff layer가 맞다. Practical Validation은 evidence result owner, Final Review는 selected-route decision owner, Portfolio Monitoring은 read-only monitoring owner로 유지한다.
+- Follow-up:
+  - 3C Risk-On Momentum governance와 3D ETF evidence expansion은 별도 scope로 남긴다. 실제 bridge candidate source creation / validation handoff automation이 필요하면 별도 승인 task로 열어야 한다.
+
 ### 2026-06-08 - Strategy maturity should be visible before more governance work
 - User request:
   - 2차 strategy direction research bundle을 읽고 Backtest 3차 3A `Strategy Evidence Inventory / Direction Panel` 구현 task를 진행해 달라고 요청함.

@@ -24,7 +24,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_common.py` | Backtest 공용 preset, session state, 3단계 stage routing compatibility, universe / real-money / guardrail input, status label helper |
 | `app/web/backtest_workflow_routes.py` | `Backtest Analysis`, `Practical Validation`, `Final Review` visible stage와 legacy panel route mapping |
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free strategy catalog owner. display name / strategy key / family variant mapping을 제공 |
-| `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Strategy Evidence Inventory / Direction Panel을 read-only로 보여주고 Single Strategy와 Portfolio Mix Builder를 submode로 렌더링 |
+| `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Strategy Evidence Inventory / Direction Panel과 Strict Annual + GTAA / Equal Weight Bridge를 read-only로 보여주고 Single Strategy와 Portfolio Mix Builder를 submode로 렌더링 |
 | `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. strategy 선택, prefill notice, form dispatch, latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Risk-On Momentum 5D, Quality / Value 계열 |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
@@ -33,6 +33,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. 전략별 default / universe resolution / runtime dispatch 담당 |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. data trust row와 weighted component contribution view 담당 |
 | `app/services/backtest_strategy_evidence_inventory.py` | Streamlit-free strategy evidence inventory read model. 모든 catalog strategy의 maturity / evidence / next action을 읽기 전용으로 해석 |
+| `app/services/backtest_strategy_bridge.py` | Streamlit-free Strict Annual + GTAA / Equal Weight bridge read model. evidence-mature group의 component role / validation evidence / next workflow를 읽기 전용으로 해석 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. component 실행 결과 bundle을 weighted portfolio result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun / weighted bundle / replay context 조립 담당 |
 | `app/web/backtest_compare.py` | `Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff |

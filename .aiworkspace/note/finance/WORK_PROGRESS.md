@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-08 - Backtest Strict Annual / ETF Bridge 3B
+- Opened and completed `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/` for Backtest 3차 3B.
+- Added a Streamlit-free strict annual + GTAA / Equal Weight bridge read model and Backtest Analysis bridge panel.
+- The bridge shows role, target use, Practical Validation evidence, recommended workflow, deferred exclusions, and storage / route boundaries without writing registry / saved / run history / validation / final decision rows.
+- Verification, Browser QA screenshot, and remaining 3C / 3D handoff are in the task `RUNS.md` / `STATUS.md`.
+
 ### 2026-06-08 - Backtest Strategy Evidence Inventory 3A
 - Opened and completed `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/` for Backtest 3차 3A.
 - Added Streamlit-free strategy catalog / evidence inventory read models and a read-only Backtest Analysis Direction Panel for all catalog strategies.

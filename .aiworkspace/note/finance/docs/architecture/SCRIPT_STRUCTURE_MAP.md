@@ -39,7 +39,7 @@
 | `app/web/backtest_strategy_catalog.py` | Strategy catalog compatibility wrapper. canonical Streamlit-free catalog는 `app/services/backtest_strategy_catalog.py`가 소유한다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
-| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Strategy Evidence Inventory / Direction Panel을 표시하고 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
+| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Strategy Evidence Inventory / Direction Panel과 Strict Annual + GTAA / Equal Weight Bridge를 표시하고 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
@@ -74,6 +74,7 @@
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free strategy display name, strategy key, family variant 선택 매핑의 canonical owner |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. strategy data trust row와 weighted component contribution view를 담당 |
 | `app/services/backtest_strategy_evidence_inventory.py` | Streamlit-free strategy evidence inventory read model. catalog strategy별 maturity / evidence anchor / weakness / next action을 read-only로 제공하며 registry / saved setup / runtime / DB를 변경하지 않는다 |
+| `app/services/backtest_strategy_bridge.py` | Streamlit-free Strict Annual + GTAA / Equal Weight bridge read model. evidence-mature group의 role / target use / Practical Validation evidence / next workflow를 read-only로 제공한다 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. compared strategy result bundle을 월별 weighted result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun, weighted bundle 생성, replay source / history context 조립을 담당 |
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. result 생성 wrapper, selection source / validation result append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration, Practical Validation / Final Review / Portfolio Monitoring의 surface-aware CNN / AAII market sentiment context overlay를 담당 |

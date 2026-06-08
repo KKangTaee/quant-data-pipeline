@@ -60,6 +60,7 @@ Last Verified: 2026-06-08
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Backtest strategy evidence inventory service | `app/services/backtest_strategy_evidence_inventory.py` |
+| Backtest strict annual / ETF bridge service | `app/services/backtest_strategy_bridge.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
@@ -90,7 +91,7 @@ Last Verified: 2026-06-08
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help and Strategy Evidence Inventory / Direction Panel entry points |
+| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help, Strategy Evidence Inventory / Direction Panel, and Strict Annual + GTAA / Equal Weight Bridge entry points |
 | Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |

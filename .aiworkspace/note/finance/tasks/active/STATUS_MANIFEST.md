@@ -9,10 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `strategy-evidence-inventory-direction-panel-20260608`
+- `strict-annual-etf-bridge-20260608`
 
 Recent 3차 Backtest work:
 
+- `strict-annual-etf-bridge-20260608`: 3B Strict Annual + GTAA / Equal Weight bridge. Read-only bridge/handoff structure for evidence-mature candidate group.
 - `strategy-evidence-inventory-direction-panel-20260608`: 3A Strategy Evidence Inventory / Direction Panel. Read-only strategy maturity / evidence / next-action surface for Backtest Analysis.
 
 Latest completed docs cleanup task:

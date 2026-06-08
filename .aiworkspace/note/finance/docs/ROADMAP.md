@@ -28,9 +28,11 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/`
-- 목적: Backtest 3차 3A로 Strategy Evidence Inventory / Direction Panel을 read-only로 구현해 catalog strategy별 maturity / evidence / next action을 Backtest Analysis에서 확인한다.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/`
+- 목적: Backtest 3차 3B로 Strict Annual 3종 + GTAA / Equal Weight bridge를 read-only로 정리해 component role / validation evidence / recommended workflow를 Backtest Analysis에서 확인한다.
 - 이번 차수에서 하지 않은 일: registry / saved JSONL / run history rewrite, strategy runtime behavior 변경, DB schema 변경, provider / FRED direct fetch, Risk-On Momentum governance 구현, quarterly maturation, ETF current-candidate rerun, live trading / broker order / auto rebalance.
+- Recent previous Backtest 3차 task: `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/`
+- 목적: Backtest 3차 3A로 Strategy Evidence Inventory / Direction Panel을 read-only로 구현해 catalog strategy별 maturity / evidence / next action을 Backtest Analysis에서 확인한다.
 - Recent previous main-dev task: `.aiworkspace/note/finance/tasks/active/merge-review-fixes-20260608/`
 - 목적: sub-dev / main-dev master merge review에서 확인된 Reference contextual help internal link, Reference V4 task status, Reference Guides catalog test assertion 문제를 바로잡는다.
 - Recent previous main-dev task: `.aiworkspace/note/finance/tasks/active/reference-drift-guard-qa-polish-v5-20260608/`
@@ -44,7 +46,7 @@ Workspace > Ingestion
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus Strategy Evidence Inventory / Direction Panel and Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; strategy maturity panel은 read-only 해석 layer이며 final decision / monitoring governance는 후속 단계 |
+| Backtest Analysis | Candidate creation plus Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, and Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; strategy maturity / bridge panel은 read-only 해석 layer이며 final decision / monitoring governance는 후속 단계 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -53,6 +55,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Strict Annual + GTAA / Equal Weight Bridge 3B | Complete | Backtest Analysis now shows a read-only bridge/handoff view for the first evidence-mature group, showing component role, target use, Practical Validation evidence, and recommended workflow. |
 | Strategy Evidence Inventory / Direction Panel 3A | Complete | Backtest Analysis now shows a read-only strategy maturity / evidence / next-action panel for every catalog strategy. Strict annual 3종 + GTAA / Equal Weight are the first evidence-mature group, Risk-On Momentum 5D remains governance deferred, and strict quarterly variants remain prototype / contract-smoke. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
 | Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |

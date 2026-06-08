@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_strategy_bridge import build_strict_annual_etf_bridge
 from app.services.backtest_strategy_evidence_inventory import (
     build_strategy_evidence_inventory,
     build_strategy_evidence_inventory_summary,
@@ -16,6 +17,26 @@ from app.web.backtest_workflow_routes import (
     BACKTEST_ANALYSIS_MODE_SINGLE,
     BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE,
 )
+
+
+def _bridge_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Strategy": row.get("display_name") or "-",
+                "Bridge Role": row.get("bridge_role") or "-",
+                "Target Use": row.get("target_use") or "-",
+                "Required Validation Evidence": "; ".join(row.get("required_practical_validation_evidence") or []),
+                "Known Weakness": row.get("known_weakness") or "-",
+                "Recommended Workflow": row.get("recommended_next_workflow") or "-",
+            }
+            for row in rows
+        ]
+    )
+
+
+def _simple_rows(items: list[str], column_name: str) -> pd.DataFrame:
+    return pd.DataFrame([{column_name: item} for item in items])
 
 
 def _strategy_inventory_table(rows: list[dict[str, object]], *, compact: bool = False) -> pd.DataFrame:
@@ -79,6 +100,44 @@ def _render_strategy_evidence_direction_panel() -> None:
         st.write(" / ".join(summary["next_scope_options"]))
 
 
+def _render_strict_annual_etf_bridge_panel() -> None:
+    bridge = build_strict_annual_etf_bridge()
+    rows = bridge["rows"]
+
+    with st.expander(bridge["title"], expanded=True):
+        st.caption(bridge["candidate_intent"])
+        metric_cols = st.columns(3)
+        metric_cols[0].metric("Bridge strategies", len(rows))
+        metric_cols[1].metric("Validation checks", len(bridge["validation_checklist"]))
+        metric_cols[2].metric("Deferred strategies", len(bridge["deferred_exclusions"]))
+
+        st.markdown("**Bridge role / validation handoff**")
+        st.dataframe(
+            _bridge_rows_table(rows),
+            hide_index=True,
+            width="stretch",
+        )
+
+        checklist_col, workflow_col = st.columns(2)
+        with checklist_col:
+            st.markdown("**Practical Validation checklist**")
+            st.dataframe(
+                _simple_rows(bridge["validation_checklist"], "Check"),
+                hide_index=True,
+                width="stretch",
+            )
+        with workflow_col:
+            st.markdown("**Next workflow**")
+            st.dataframe(
+                _simple_rows(bridge["next_workflow_steps"], "Step"),
+                hide_index=True,
+                width="stretch",
+            )
+
+        st.caption(bridge["storage_boundary"])
+        st.caption(bridge["route_boundary"])
+
+
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
@@ -87,6 +146,7 @@ def render_backtest_analysis_workspace() -> None:
     )
     render_reference_contextual_help("backtest_analysis")
     _render_strategy_evidence_direction_panel()
+    _render_strict_annual_etf_bridge_panel()
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE
