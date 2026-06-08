@@ -7668,3 +7668,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: GRS / Risk Parity / Dual Momentum의 current-anchor 판단을 read-only anchor 확인에서 한 단계 진행해, Backtest Analysis 안에서 rerun scenario matrix를 실행 / 비교할 수 있어야 함.
 - Analysis result: 4B는 Streamlit-free service와 session-only UI 실행으로 좁혀야 한다. 결과를 run history나 current candidate registry에 쓰면 promotion workflow가 섞이므로 후속 승인 scope로 둔다.
 - Follow-up: `app/services/backtest_etf_rerun_matrix.py`, `app/web/backtest_analysis.py`, focused tests와 Browser QA를 추가했다. provider snapshot collection, Practical Validation result creation, durable strategy hub / report, current candidate promotion은 후속 작업이다.
+
+### 2026-06-09 - Backtest 4차 4C는 방향을 evidence panel 추가에서 실행 중심 UX 복구로 되돌린다
+
+- User request: 사용자가 4C 진행 전 3A~4B 방향이 evidence/log/workbench 패널 누적으로 흘렀다고 지적하고, 브랜치 목적을 전략 자체 고도화 / prototype 성숙화 / 신규 전략 개발로 재정렬해 달라고 요청함.
+- Interpreted goal: Backtest Analysis 기본 화면은 실제 전략 실행 / 비교 / 후보 생성 중심이어야 하며, Reference help와 3A~4B evidence / governance / ETF workbench 패널은 기본 화면에서 내려야 함.
+- Analysis result: 기존 패널은 삭제보다 `전략 개발 참고` advanced control 뒤에 숨기는 편이 안전하다. 이렇게 하면 3A~4B 산출물은 보존하되 일반 백테스트 실행 흐름을 방해하지 않는다.
+- Follow-up: `app/services/backtest_analysis_research_board.py`와 `app/web/backtest_analysis.py`를 갱신해 기본 화면을 execution-first로 바꾸고, 참고 패널은 명시적으로 열 때만 보이게 했다. 다음 개발 방향은 evidence panel 추가보다 전략 로직 / 데이터 계약 / 검증 가능성 / prototype 성숙화 우선이다.

@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - Backtest Analysis Direction Reset 4C
+- Opened and completed `.aiworkspace/note/finance/tasks/active/backtest-analysis-direction-reset-20260609/` for Backtest 4차 4C.
+- Reordered Backtest Analysis so strategy execution / comparison / candidate creation appears before Reference / evidence / governance panels.
+- Added a Streamlit-free research board placement model and hid Reference help plus 3A~4B evidence / governance / ETF workbench panels behind `전략 개발 참고`.
+- Strategy runtime, DB schema, registry / saved JSONL, run history, generated artifacts, provider fetch, Practical Validation, Final Review, and Monitoring behavior were not changed.
+
 ### 2026-06-08 - Backtest ETF Rerun Matrix Workbench 4B
 - Opened and completed `.aiworkspace/note/finance/tasks/active/etf-rerun-matrix-workbench-20260608/` for Backtest 4차 4B.
 - Added a Streamlit-free ETF rerun matrix service and Backtest Analysis workbench panel for GRS / Risk Parity / Dual Momentum.

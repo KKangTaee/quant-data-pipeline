@@ -9,10 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `etf-rerun-matrix-workbench-20260608`
+- `backtest-analysis-direction-reset-20260609`
 
 Recent 4차 Backtest work:
 
+- `backtest-analysis-direction-reset-20260609`: 4C Backtest Analysis Direction Reset. Execution-first Backtest Analysis UX recovery; Reference / evidence / governance / ETF workbench panels are hidden behind `전략 개발 참고`.
 - `etf-rerun-matrix-workbench-20260608`: 4B ETF Rerun Matrix Workbench. Session-only rerun scenario plan and selected-strategy DB-backed matrix execution surface for GRS / Risk Parity / Dual Momentum.
 - `etf-current-anchor-workbench-20260608`: 4A ETF Current Anchor Workbench. Read-only latest run / selection source / missing evidence / next-action surface for GRS / Risk Parity / Dual Momentum.
 

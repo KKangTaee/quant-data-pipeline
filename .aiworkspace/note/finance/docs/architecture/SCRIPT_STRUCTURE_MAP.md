@@ -39,7 +39,7 @@
 | `app/web/backtest_strategy_catalog.py` | Strategy catalog compatibility wrapper. canonical Streamlit-free catalog는 `app/services/backtest_strategy_catalog.py`가 소유한다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
-| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, ETF Evidence Expansion, ETF Current Anchor Workbench, ETF Rerun Matrix Workbench를 표시하고 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
+| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Portfolio Mix Builder를 먼저 렌더링하고, Reference help와 Strategy Evidence / Bridge / Governance / ETF evidence / current-anchor / rerun matrix 패널은 `전략 개발 참고` advanced control 뒤에 숨기는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
@@ -73,6 +73,7 @@
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. strategy별 default parameter, preset/manual universe resolution, runtime dispatch, runner signature filtering을 담당 |
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free strategy display name, strategy key, family variant 선택 매핑의 canonical owner |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. strategy data trust row와 weighted component contribution view를 담당 |
+| `app/services/backtest_analysis_research_board.py` | Streamlit-free Backtest Analysis research/reference board placement service. Reference help와 3A~4B evidence / governance / workbench 항목을 분류하고 기본 숨김 정책을 제공한다 |
 | `app/services/backtest_strategy_evidence_inventory.py` | Streamlit-free strategy evidence inventory read model. catalog strategy별 maturity / evidence anchor / weakness / next action을 read-only로 제공하며 registry / saved setup / runtime / DB를 변경하지 않는다 |
 | `app/services/backtest_strategy_bridge.py` | Streamlit-free Strict Annual + GTAA / Equal Weight bridge read model. evidence-mature group의 role / target use / Practical Validation evidence / next workflow를 read-only로 제공한다 |
 | `app/services/backtest_risk_on_governance.py` | Streamlit-free Risk-On Momentum 5D governance read model. Daily Swing research evidence, deferred Practical Validation / Final Review / Portfolio Monitoring modules, artifact boundary, and next workflow를 read-only로 제공한다 |

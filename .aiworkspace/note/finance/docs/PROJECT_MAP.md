@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 ## Project Summary
 
@@ -59,6 +59,7 @@ Last Verified: 2026-06-08
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
+| Backtest Analysis research board service | `app/services/backtest_analysis_research_board.py` |
 | Backtest strategy evidence inventory service | `app/services/backtest_strategy_evidence_inventory.py` |
 | Backtest strict annual / ETF bridge service | `app/services/backtest_strategy_bridge.py` |
 | Backtest Risk-On Momentum governance service | `app/services/backtest_risk_on_governance.py` |
@@ -95,7 +96,7 @@ Last Verified: 2026-06-08
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help, Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, ETF Evidence Expansion, ETF Current Anchor Workbench, and ETF Rerun Matrix Workbench entry points |
+| Backtest Analysis | `app/web/backtest_analysis.py`; execution-first strategy run / compare / candidate creation wrapper. Contextual Reference help and 3A~4B evidence / governance / ETF workbench panels are available only behind the `전략 개발 참고` advanced reference control |
 | Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |

@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 ## Current State After Master Merge
 
@@ -28,7 +28,10 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/etf-rerun-matrix-workbench-20260608/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/backtest-analysis-direction-reset-20260609/`
+- 목적: Backtest 4차 4C로 3A~4B evidence / governance / workbench 패널을 기본 화면에서 내리고, Backtest Analysis를 전략 실행 / 비교 / 후보 생성 중심으로 되돌린다.
+- 이번 차수에서 하지 않은 일: 전략 runtime behavior 변경, DB schema 변경, registry / saved JSONL / run history rewrite, generated artifact commit, provider / FRED direct fetch, current-candidate promotion, Practical Validation / Final Review / Monitoring behavior 변경.
+- Recent previous Backtest 4차 task: `.aiworkspace/note/finance/tasks/active/etf-rerun-matrix-workbench-20260608/`
 - 목적: Backtest 4차 4B로 Global Relative Strength / Risk Parity Trend / Dual Momentum의 ETF rerun scenario matrix를 Backtest Analysis에서 session-only로 실행 / 비교할 수 있게 한다.
 - 이번 차수에서 하지 않은 일: ETF strategy runtime behavior 변경, Current candidate registry append / rewrite, saved JSONL / run history rewrite, Practical Validation result 저장, provider / FRED direct fetch, provider snapshot collection, 새 ETF strategy 추가, live trading / broker order / auto rebalance.
 - Recent previous Backtest 4차 task: `.aiworkspace/note/finance/tasks/active/etf-current-anchor-workbench-20260608/`
@@ -58,7 +61,7 @@ Workspace > Ingestion
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus Strategy Evidence Inventory / Direction Panel, Strict Annual + GTAA / Equal Weight Bridge, Risk-On Momentum 5D Governance, ETF Evidence Expansion, ETF Current Anchor Workbench, ETF Rerun Matrix Workbench, and Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; strategy maturity / bridge / Risk-On governance / ETF expansion / current-anchor workbench panel은 read-only 해석 layer이고 ETF rerun matrix는 session-only 실행 layer다. validation module 실행, current candidate creation, final decision, monitoring signal governance는 후속 단계 |
+| Backtest Analysis | Execution-first candidate creation with Single Strategy / Portfolio Mix Builder visible by default; Strategy Evidence / Bridge / Governance / ETF evidence / current-anchor / rerun matrix panels are advanced references | `Backtest > Backtest Analysis` | 후보 source 생성 단계; 기본 화면은 전략 실행 / 비교 / 후보 생성이고, evidence / governance / workbench panel은 `전략 개발 참고` advanced control 뒤에 숨긴다. validation module 실행, current candidate creation, final decision, monitoring signal governance는 후속 단계 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -67,6 +70,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Backtest Analysis Direction Reset 4C | Complete | Backtest Analysis now shows strategy execution / comparison / candidate creation first. Reference help and 3A~4B evidence / governance / ETF workbench panels are hidden behind the `전략 개발 참고` advanced control and use Korean-first wrapper copy. |
 | ETF Rerun Matrix Workbench 4B | Complete | Backtest Analysis now shows GRS / Risk Parity / Dual Momentum session-only rerun scenario plans and lets the user run one selected ETF strategy matrix into session state without run-history, registry, saved setup, validation, final, monitoring, or provider-snapshot writes. |
 | ETF Current Anchor Workbench 4A | Complete | Backtest Analysis now reads existing run history and Practical Validation source handoff rows to show GRS / Risk Parity / Dual Momentum latest run evidence, selection source evidence, missing evidence, and next action without reruns or registry writes. |
 | ETF Evidence Expansion 3D | Complete | Backtest Analysis now shows a read-only ETF evidence expansion panel for GRS / Risk Parity / Dual Momentum, separating current anchor, near miss, not-ready reason, required evidence, and next workflow without reruns or registry writes. |
@@ -156,6 +160,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum Daily Swing module implementation | 3C now exposes governance readiness, but the actual Daily Swing Practical Validation module, Final Review route, and Portfolio Monitoring daily policy are still deferred | Any Practical Validation module execution, Final Review selected-route rule, Portfolio Monitoring signal integration, artifact registry policy |
+| Strategy logic / prototype maturation | User reset 4C direction: this branch should now prioritize backtest strategy logic, data contracts, validation feasibility, prototype maturation, and new strategy development over more evidence panels | Changing core strategy runtime behavior, maturing strict quarterly prototypes, or adding a new strategy implementation |
 | ETF promotion / provider evidence implementation | 4B now exposes session-only ETF rerun matrix execution, but durable strategy hub / report update, provider evidence collection, Practical Validation handoff, and current candidate promotion are still deferred | Any ETF current-candidate registry write, provider snapshot collection, durable report artifact, Practical Validation result creation, or promotion workflow write |
 | Overview scheduler hardening | Browser-session refresh exists; OS scheduler / launchd production operation is a separate decision | Enabling unattended scheduled collection |
 | UI platform split | Streamlit is workable but complex UX may eventually benefit from API + React/Next.js | Any large frontend migration or service API expansion |
