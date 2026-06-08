@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - Provenance contract should be a compact read model before DB migration
+- User request:
+  - 제품 방향 리서치 4순위인 `Data Provenance / PIT Evidence Contract`를 1차 / 2차 / 3차로 진행해 달라고 요청함.
+- Interpreted goal:
+  - Practical Validation / Final Review / Portfolio Monitoring evidence가 current snapshot, stale, proxy, PIT / look-ahead / survivorship risk를 pass처럼 숨기지 않게 한다.
+- Analysis result:
+  - provider / macro / lifecycle / price loaders already carry enough source / date / coverage metadata for a first slice. A new DB schema is not required yet; the safer first implementation is a compact `data_provenance_summary` read model attached to existing validation / final-review evidence.
+- Follow-up:
+  - Future follow-up can extend the same contract into selected monitoring snapshot rows or table-level DB schema if a later task needs stronger as-of guarantees.
+
 ### 2026-06-08 - Strategy promotion needs a contract before product workflow handoff
 - User request:
   - 제품 방향 리서치 2순위인 `Strategy Promotion Contract For Backtest-Dev Handoff`를 1차 / 2차 / 3차로 진행해 달라고 요청함.

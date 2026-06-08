@@ -1,7 +1,7 @@
 # Finance Storage Governance
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-09
 
 ## Purpose
 
@@ -15,6 +15,7 @@ Last Verified: 2026-06-07
 - 새 JSONL registry는 기본적으로 만들지 않는다.
 - 사용자 메모를 반복 저장하는 기능은 기본적으로 만들지 않는다.
 - Practical Validation과 Final Review JSONL에는 compact evidence만 둔다.
+- `data_provenance_summary`는 existing validation / final decision compact evidence 안에 들어가는 read model snapshot이다. 새 registry가 아니며, full holdings / full macro series / raw provider response를 포함하지 않는다.
 - Practical Validation 저장-only row는 audit trail일 수 있다. Final Review 후보 노출은 저장 여부가 아니라 `final_review_gate.can_save_and_move=True` 같은 Gate 통과 여부가 기준이다.
 - Workflow JSONL append 경계는 DB / pandas scalar를 JSON primitive로 정규화해야 한다. 예: `Decimal`은 int / float, `date` / `datetime`은 ISO string, non-finite float은 null.
 - full holdings, full macro series, full provider response, raw crawler output은 DB / ingestion 경계에 둔다.

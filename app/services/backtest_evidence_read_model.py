@@ -5,6 +5,7 @@ from typing import Any
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
+from app.services.backtest_data_provenance import build_evidence_provenance_summary
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_robustness_run_set import build_robustness_run_set_summary
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
@@ -136,6 +137,7 @@ GATE_POLICY_SECTION_GROUPS = {
     "critical gaps": "final_review_evidence",
     "validation efficacy audit": "validation_efficacy",
     "data coverage audit": "data_coverage",
+    "data provenance / pit contract": "data_coverage",
     "construction risk audit": "construction_risk",
     "risk contribution audit": "risk_contribution",
     "component role / weight audit": "component_role_weight",
@@ -1031,6 +1033,11 @@ def build_investability_evidence_packet(
     assumptions = _assumption_rows(validation)
     data_coverage_audit = dict(validation.get("data_coverage_audit") or build_data_coverage_audit(validation))
     data_coverage_route = str(data_coverage_audit.get("route") or "")
+    data_provenance_summary = dict(
+        validation.get("data_provenance_summary") or build_evidence_provenance_summary(validation)
+    )
+    data_provenance_route = str(data_provenance_summary.get("route") or "")
+    data_provenance_rows = list(data_provenance_summary.get("rows") or [])
     validation_for_efficacy = dict(validation)
     validation_for_efficacy.setdefault("data_coverage_audit", data_coverage_audit)
     validation_efficacy_audit = dict(
@@ -1176,8 +1183,19 @@ def build_investability_evidence_packet(
             "Meaning": "이 packet은 투자 판단 보조 근거이며 주문이나 자동매매가 아닙니다.",
         },
     ]
+    if data_provenance_rows:
+        checks.insert(
+            10,
+            {
+                "Section": "Data Provenance / PIT Contract",
+                "Ready": data_provenance_route == "DATA_PROVENANCE_READY",
+                "Current": data_provenance_route or data_provenance_summary.get("route_label") or "-",
+                "Meaning": "source date, collected-at, current snapshot, stale, proxy, PIT / look-ahead / survivorship risk를 같은 compact contract로 봅니다.",
+            },
+        )
     validation_for_gate_policy = dict(validation)
     validation_for_gate_policy.setdefault("validation_efficacy_audit", validation_efficacy_audit)
+    validation_for_gate_policy.setdefault("data_provenance_summary", data_provenance_summary)
     validation_for_gate_policy.setdefault("construction_risk_audit", construction_risk_audit)
     validation_for_gate_policy.setdefault("risk_contribution_audit", risk_contribution_audit)
     validation_for_gate_policy.setdefault("component_role_weight_audit", component_role_weight_audit)
@@ -1255,6 +1273,7 @@ def build_investability_evidence_packet(
         "open_review_items": open_review_items,
         "assumptions_and_limits": assumptions,
         "validation_efficacy_audit": validation_efficacy_audit,
+        "data_provenance_summary": data_provenance_summary,
         "robustness_run_set": robustness_run_set,
         "data_coverage_audit": data_coverage_audit,
         "construction_risk_audit": construction_risk_audit,
@@ -1276,6 +1295,7 @@ def build_investability_evidence_packet(
             "deployment_readiness_policy_outcome": deployment_gate_policy.get("outcome"),
             "open_review_items": len(open_review_items),
             "validation_efficacy_route": validation_efficacy_audit.get("route"),
+            "data_provenance_route": data_provenance_summary.get("route"),
             "data_coverage_route": data_coverage_audit.get("route"),
             "construction_risk_route": construction_risk_audit.get("route"),
             "risk_contribution_route": risk_contribution_audit.get("route"),

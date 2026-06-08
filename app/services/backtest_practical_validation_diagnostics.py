@@ -15,6 +15,7 @@ from app.services.backtest_data_coverage_audit import (
     build_data_coverage_audit,
     build_db_data_coverage_context,
 )
+from app.services.backtest_data_provenance import build_evidence_provenance_summary
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_practical_validation_curve_context import (
     _combine_component_curves,
@@ -1683,6 +1684,9 @@ def build_practical_validation_result(
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    data_provenance_summary = build_evidence_provenance_summary(result)
+    result["data_provenance_summary"] = data_provenance_summary
+    result["data_provenance_display_rows"] = list(data_provenance_summary.get("rows") or [])
     selected_route_preflight = build_practical_validation_selected_route_preflight(result)
     result["selected_route_preflight"] = selected_route_preflight
     module_plan = build_validation_module_plan(

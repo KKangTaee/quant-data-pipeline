@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 ## Project Summary
 
@@ -78,6 +78,7 @@ Last Verified: 2026-06-08
 | Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
 | Practical Validation efficacy audit service | `app/services/backtest_validation_efficacy.py` |
 | Data coverage audit service | `app/services/backtest_data_coverage_audit.py` |
+| Data provenance / PIT evidence contract read model | `app/services/backtest_data_provenance.py` |
 | Backtest realism audit service | `app/services/backtest_realism_audit.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Overview market intelligence service | `app/services/overview_market_intelligence.py` |
@@ -137,6 +138,7 @@ Last Verified: 2026-06-08
 | `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Existing proposal role, target weight, validation profile, role concentration, profile intent, weight reason, and storage boundary evidence를 읽어 role / weight discipline risk를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_validation_efficacy.py` | Streamlit-free validation efficacy audit read model. Existing compact evidence를 읽어 runtime replay, period coverage, benchmark parity, walk-forward temporal validation, OOS holdout validation, regime split validation, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/services/backtest_data_coverage_audit.py` | Streamlit-free data coverage audit read model. DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 compact `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_data_provenance.py` | Streamlit-free Data Provenance / PIT Evidence Contract read model. Existing provider / macro / price window / lifecycle / robustness compact evidence를 `source_name`, `source_type`, `source_date`, `collected_at`, `snapshot_kind`, `freshness_status`, PIT / look-ahead / survivorship risk, `proxy_status`, `decision_effect` row로 접어 Practical Validation result와 Final Review investability packet이 같은 provenance contract를 읽게 한다. 새 DB write, 새 JSONL registry, full holdings / macro / raw provider persistence를 만들지 않는다 |
 | `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, Step 1 source strategy / construction / selection history display, profile input, latest replay button, current-session replay display policy, 7-step boundary, Control Center, CNN / AAII market sentiment context overlay, Fix Queue, summary-first evidence workspace, look-through board, Robustness Lab board with run-set provenance badge, Provider Action Center, save-only audit copy, provider gap / replay service result session state handoff |
 | `app/web/backtest_practical_validation_components.py` | Practical Validation 전용 product shell / CSS helper. Command Center, section header, card grid, step rail, alert panel을 담당하며 검증 로직이나 저장 계약은 포함하지 않는다 |

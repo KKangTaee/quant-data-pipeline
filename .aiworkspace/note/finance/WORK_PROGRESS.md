@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - Data Provenance / PIT Evidence Contract
+- Completed `.aiworkspace/note/finance/tasks/active/data-provenance-pit-evidence-contract-20260609/` as the 4th product-direction priority after Robustness Experiment Registry.
+- Added `app/services/backtest_data_provenance.py` as a compact read model over provider / macro / price window / lifecycle / robustness evidence.
+- Practical Validation now attaches `data_provenance_summary`; Final Review investability packets render the same provenance contract and keep current / stale / proxy / non-PIT-safe rows visible.
+- No DB migration, new JSONL registry, registry / saved rewrite, raw provider / full holdings / full macro persistence, provider UI fetch, live approval, order, account sync, or auto rebalance was added.
+
 ### 2026-06-08 - Strategy Promotion Contract Handoff
 - Completed `.aiworkspace/note/finance/tasks/active/strategy-promotion-contract-handoff-20260608/` as the 2nd product-direction priority after Monitoring Snapshot / Review Loop V2.
 - Added `reports/backtests/STRATEGY_PROMOTION_CONTRACT.md`, a reusable template, and a structural checker for `backtest-dev -> main-dev` strategy handoff completeness.

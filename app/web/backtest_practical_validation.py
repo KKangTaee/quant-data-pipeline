@@ -1990,6 +1990,8 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
     with data_tab:
         with st.expander("Data Coverage Audit 상세", expanded=False):
             _render_data_coverage_audit(validation_result)
+        with st.expander("Data Provenance / PIT Contract 상세", expanded=False):
+            _render_data_provenance_summary(validation_result)
         provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
         if provider_rows:
             st.markdown("##### Provider Coverage")
@@ -2103,6 +2105,82 @@ def _render_backtest_realism_audit(validation_result: dict[str, Any]) -> None:
     st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
+
+
+def _provenance_display_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for raw_row in list(dict(summary or {}).get("rows") or []):
+        row = dict(raw_row or {})
+        effect = dict(row.get("decision_effect") or {})
+        rows.append(
+            {
+                "Area": row.get("evidence_area"),
+                "Source": row.get("source_name"),
+                "Source Type": row.get("source_type"),
+                "Source Date": row.get("source_date"),
+                "Collected": row.get("collected_at"),
+                "Snapshot Kind": row.get("snapshot_kind"),
+                "Coverage": row.get("coverage_status"),
+                "Freshness": row.get("freshness_status"),
+                "Staleness Days": row.get("staleness_days"),
+                "PIT Safe": row.get("is_point_in_time_safe"),
+                "Proxy": row.get("proxy_status"),
+                "Decision": effect.get("status"),
+                "Treat As Pass": effect.get("treat_as_pass"),
+                "PIT Risk": row.get("pit_risk"),
+                "Look-ahead Risk": row.get("lookahead_risk"),
+                "Survivorship Risk": row.get("survivorship_risk"),
+                "Storage": row.get("storage_location"),
+            }
+        )
+    return rows
+
+
+def _render_data_provenance_summary(validation_result: dict[str, Any]) -> None:
+    summary = dict(validation_result.get("data_provenance_summary") or {})
+    rows = _provenance_display_rows(summary)
+    if not rows:
+        return
+    metrics = dict(summary.get("metrics") or {})
+    boundary = dict(summary.get("execution_boundary") or {})
+    st.markdown("##### Data Provenance / PIT Contract")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": summary.get("route_label") or summary.get("route") or "-",
+                "tone": _status_tone(summary.get("overall_status")),
+            },
+            {
+                "label": "Current Snapshot",
+                "value": metrics.get("current_snapshot_rows", 0),
+                "tone": "warning" if metrics.get("current_snapshot_rows") else "neutral",
+            },
+            {
+                "label": "Proxy / Partial",
+                "value": metrics.get("proxy_rows", 0),
+                "tone": "warning" if metrics.get("proxy_rows") else "neutral",
+            },
+            {
+                "label": "Stale / Unknown",
+                "value": metrics.get("stale_or_unknown_rows", 0),
+                "tone": "warning" if metrics.get("stale_or_unknown_rows") else "neutral",
+            },
+            {
+                "label": "PIT Safe",
+                "value": metrics.get("pit_safe_rows", 0),
+                "tone": "positive" if metrics.get("pit_safe_rows") else "neutral",
+            },
+            {
+                "label": "Writes",
+                "value": "Disabled" if not boundary.get("db_write") and not boundary.get("registry_write") else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if summary.get("conclusion"):
+        st.caption(str(summary.get("conclusion")))
 
 
 def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:

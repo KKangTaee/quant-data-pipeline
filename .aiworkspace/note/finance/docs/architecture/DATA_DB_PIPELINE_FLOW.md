@@ -117,6 +117,9 @@ external source
   VIX / yield curve / credit spread 월별 regime bucket evidence를 read-only로 계산한다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,
   stale ETF provider snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
+  `data-provenance-pit-contract-v1`부터 `app/services/backtest_data_provenance.py`가 provider / macro / DB price window / lifecycle / robustness compact evidence를 하나의 `data_provenance_summary` read model로 접는다.
+  이 summary는 `source_name`, `source_type`, `source_date`, `collected_at`, `snapshot_kind`, `coverage_status`, `freshness_status`, `staleness_days`, PIT / look-ahead / survivorship risk, `proxy_status`, `decision_effect`를 가진 row를 Practical Validation result와 Final Review investability packet에 붙인다.
+  새 DB table이나 새 JSONL registry를 만들지 않고, current snapshot / stale / proxy / non-PIT-safe evidence는 `decision_effect.treat_as_pass=false`로 남긴다.
   `liquidity-capacity-evidence-v1`부터 provider operability context는 min net assets, min average daily dollar volume, max bid-ask spread, max expense, max premium/discount, review symbols 같은 compact capacity metrics도 제공한다.
   Bridge / proxy liquidity evidence는 coverage가 높아도 official actual provider evidence처럼 PASS 처리하지 않고 REVIEW로 남긴다.
   `look-through-exposure-board-v1`부터 같은 provider context가 holdings / exposure snapshot을 compact board로 접어 asset bucket, top holding, overlap, ETF별 coverage를 보여준다.

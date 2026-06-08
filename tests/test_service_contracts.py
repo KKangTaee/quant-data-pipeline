@@ -2694,6 +2694,194 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Tax / account scope"]["Status"], "REVIEW")
 
 
+class DataProvenanceContractTests(unittest.TestCase):
+    def _validation_with_mixed_provenance(self) -> dict[str, Any]:
+        return {
+            "selection_source_id": "source-provenance-1",
+            "validation_id": "validation-provenance-1",
+            "checks": [
+                {"Criteria": "Data Trust", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+            ],
+            "provider_coverage": {
+                "as_of_date": "2026-06-09",
+                "coverage": {
+                    "operability": {
+                        "status": "actual",
+                        "diagnostic_status": "PASS",
+                        "coverage_weight": 100.0,
+                        "summary": "official ETF operability rows exist but are stale",
+                        "provenance": {
+                            "freshness_status": "stale",
+                            "source_mix": "official 100.0%",
+                            "source_type_weights": {"official": 100.0},
+                            "coverage_status_weights": {"actual": 100.0},
+                            "as_of_range": "2026-04-01",
+                            "collected_range": "2026-04-02",
+                            "stale_weight": 100.0,
+                            "max_staleness_days": 45,
+                            "symbol_rows": [
+                                {
+                                    "Symbol": "SPY",
+                                    "Coverage": "actual",
+                                    "Source Type": "official",
+                                    "Sources": "issuer_official",
+                                    "As Of": "2026-04-01",
+                                    "Collected": "2026-04-02",
+                                    "Staleness Days": 69,
+                                    "Freshness": "stale",
+                                }
+                            ],
+                        },
+                    },
+                    "macro": {
+                        "status": "actual",
+                        "diagnostic_status": "PASS",
+                        "summary": "FRED rows exist",
+                        "provenance": {
+                            "freshness_status": "fresh",
+                            "source_mix": "fred/csv_download",
+                            "series_count": 3,
+                            "stale_count": 0,
+                            "observation_range": "2026-06-07..2026-06-08",
+                            "collected_range": "2026-06-09",
+                            "series_rows": [
+                                {
+                                    "Series": "VIXCLS",
+                                    "Coverage": "actual",
+                                    "Source": "fred",
+                                    "Source Type": "official",
+                                    "Source Mode": "csv_download",
+                                    "Observation Date": "2026-06-08",
+                                    "Collected": "2026-06-09",
+                                    "Staleness Days": 1,
+                                    "Freshness": "fresh",
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+            "provider_coverage_display_rows": [
+                {
+                    "Area": "ETF Operability",
+                    "Coverage": "actual",
+                    "Diagnostic Status": "PASS",
+                    "Freshness": "stale",
+                    "As Of Range": "2026-04-01",
+                }
+            ],
+            "data_coverage_context": {
+                "symbols": ["SPY"],
+                "symbol_weights": {"SPY": 100.0},
+                "requested_start": "2020-01-01",
+                "requested_end": "2020-12-31",
+                "price_window_rows": [
+                    {
+                        "symbol": "SPY",
+                        "first_window_date": "2020-01-01",
+                        "latest_window_date": "2020-12-31",
+                        "window_row_count": 252,
+                    }
+                ],
+                "asset_profile_rows": [{"symbol": "SPY", "status": "active"}],
+                "symbol_lifecycle_rows": [
+                    {
+                        "symbol": "SPY",
+                        "listing_status": "active",
+                        "source": "nasdaq_symdir_nasdaqlisted",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "first_seen_date": "2026-05-28",
+                        "last_seen_date": "2026-05-28",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-05-28",
+                    }
+                ],
+            },
+            "curve_evidence": {
+                "portfolio_curve_source": "actual_runtime_replay",
+                "curve_provenance": {
+                    "runtime_recheck_status": "PASS",
+                    "period_coverage_status": "PASS",
+                    "runtime_recheck_mode": "latest_market_replay",
+                    "requested_period": {"start": "2020-01-01", "end": "2020-12-31"},
+                    "actual_period": {"start": "2020-01-01", "end": "2020-12-31"},
+                },
+                "period_coverage": {"status": "PASS"},
+            },
+            "robustness_run_set": {
+                "schema_version": "robustness_run_set_v1",
+                "robustness_run_set_id": "robustness_run_set_validation_provenance_1",
+                "overall_status": "REVIEW",
+                "decision_effect": {
+                    "practical_validation": "REVIEW",
+                    "final_review": "REVIEW",
+                    "treat_as_pass": False,
+                },
+            },
+        }
+
+    def test_stale_current_only_and_proxy_provenance_are_not_passed(self) -> None:
+        from app.services.backtest_data_provenance import (
+            DATA_PROVENANCE_REVIEW,
+            DATA_PROVENANCE_SCHEMA_VERSION,
+            build_evidence_provenance_summary,
+        )
+
+        summary = build_evidence_provenance_summary(self._validation_with_mixed_provenance())
+        rows_by_area = {row["evidence_area"]: row for row in summary["rows"]}
+
+        self.assertEqual(summary["schema_version"], DATA_PROVENANCE_SCHEMA_VERSION)
+        self.assertEqual(summary["route"], DATA_PROVENANCE_REVIEW)
+
+        provider = rows_by_area["ETF Operability"]
+        self.assertEqual(provider["freshness_status"], "stale")
+        self.assertEqual(provider["snapshot_kind"], "current_provider_snapshot")
+        self.assertFalse(provider["is_point_in_time_safe"])
+        self.assertEqual(provider["decision_effect"]["status"], "REVIEW")
+        self.assertFalse(provider["decision_effect"]["treat_as_pass"])
+        self.assertIn("current", provider["pit_risk"].lower())
+
+        lifecycle = rows_by_area["Universe / lifecycle"]
+        self.assertEqual(lifecycle["source_type"], "current_listing_snapshot")
+        self.assertEqual(lifecycle["snapshot_kind"], "current_listing_snapshot")
+        self.assertFalse(lifecycle["is_point_in_time_safe"])
+        self.assertEqual(lifecycle["decision_effect"]["status"], "REVIEW")
+        self.assertFalse(lifecycle["decision_effect"]["treat_as_pass"])
+        self.assertIn("survivorship", lifecycle["survivorship_risk"].lower())
+
+        price = rows_by_area["Price window / runtime replay"]
+        self.assertTrue(price["is_point_in_time_safe"])
+        self.assertEqual(price["decision_effect"]["status"], "PASS")
+
+    def test_final_review_packet_carries_provenance_summary(self) -> None:
+        from app.services.backtest_evidence_read_model import build_investability_evidence_packet
+
+        validation = self._validation_with_mixed_provenance()
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "source-provenance-1"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY"},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+        )
+
+        provenance = dict(packet.get("data_provenance_summary") or {})
+        self.assertEqual(provenance.get("route"), "DATA_PROVENANCE_REVIEW")
+        self.assertEqual(packet["summary"]["data_provenance_route"], "DATA_PROVENANCE_REVIEW")
+        self.assertTrue(
+            any(
+                row.get("Section") == "Data Provenance / PIT Contract"
+                and row.get("Ready") is False
+                and row.get("Current") == "DATA_PROVENANCE_REVIEW"
+                for row in packet["checks"]
+            )
+        )
+
+
 class DataCoverageAuditContractTests(unittest.TestCase):
     def test_ready_audit_uses_db_price_provider_and_survivorship_evidence_without_writes(self) -> None:
         from app.services.backtest_data_coverage_audit import (

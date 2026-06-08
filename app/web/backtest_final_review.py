@@ -691,11 +691,40 @@ def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None
             st.info(str(trigger))
 
 
+def _provenance_display_rows(summary: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for raw_row in list(dict(summary or {}).get("rows") or []):
+        row = dict(raw_row or {})
+        effect = dict(row.get("decision_effect") or {})
+        rows.append(
+            {
+                "Area": row.get("evidence_area"),
+                "Source": row.get("source_name"),
+                "Source Type": row.get("source_type"),
+                "Source Date": row.get("source_date"),
+                "Collected": row.get("collected_at"),
+                "Snapshot Kind": row.get("snapshot_kind"),
+                "Coverage": row.get("coverage_status"),
+                "Freshness": row.get("freshness_status"),
+                "Staleness Days": row.get("staleness_days"),
+                "PIT Safe": row.get("is_point_in_time_safe"),
+                "Proxy": row.get("proxy_status"),
+                "Decision": effect.get("status"),
+                "Treat As Pass": effect.get("treat_as_pass"),
+                "PIT Risk": row.get("pit_risk"),
+                "Look-ahead Risk": row.get("lookahead_risk"),
+                "Survivorship Risk": row.get("survivorship_risk"),
+            }
+        )
+    return rows
+
+
 def _render_investability_packet(packet: dict[str, Any]) -> None:
     summary = dict(packet.get("summary") or {})
     source_chain = dict(packet.get("source_chain") or {})
     gate_policy = dict(packet.get("gate_policy_snapshot") or {})
     robustness_run_set = dict(packet.get("robustness_run_set") or {})
+    data_provenance = dict(packet.get("data_provenance_summary") or {})
     policy_blocker_count = len(gate_policy.get("blockers") or []) + len(gate_policy.get("review_required") or [])
     route = str(packet.get("route") or "-")
     render_readiness_route_panel(
@@ -744,6 +773,44 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
         if run_set_rows:
             with st.expander("Run-set non-pass evidence", expanded=False):
                 st.dataframe(pd.DataFrame(run_set_rows), width="stretch", hide_index=True)
+    provenance_rows = _provenance_display_rows(data_provenance)
+    if provenance_rows:
+        st.markdown("###### Data Provenance / PIT Contract")
+        provenance_metrics = dict(data_provenance.get("metrics") or {})
+        render_badge_strip(
+            [
+                {
+                    "label": "Route",
+                    "value": data_provenance.get("route_label") or data_provenance.get("route") or "-",
+                    "tone": _status_tone(data_provenance.get("overall_status")),
+                },
+                {
+                    "label": "Current",
+                    "value": provenance_metrics.get("current_snapshot_rows", 0),
+                    "tone": "warning" if provenance_metrics.get("current_snapshot_rows") else "neutral",
+                },
+                {
+                    "label": "Proxy",
+                    "value": provenance_metrics.get("proxy_rows", 0),
+                    "tone": "warning" if provenance_metrics.get("proxy_rows") else "neutral",
+                },
+                {
+                    "label": "Stale",
+                    "value": provenance_metrics.get("stale_or_unknown_rows", 0),
+                    "tone": "warning" if provenance_metrics.get("stale_or_unknown_rows") else "neutral",
+                },
+                {
+                    "label": "PIT Safe",
+                    "value": provenance_metrics.get("pit_safe_rows", 0),
+                    "tone": "positive" if provenance_metrics.get("pit_safe_rows") else "neutral",
+                },
+            ]
+        )
+        st.caption(
+            "current snapshot / stale / proxy / non-PIT-safe evidence는 `Treat As Pass=False`로 남겨 최종 판단에서 숨기지 않습니다."
+        )
+        with st.expander("Provenance row detail", expanded=False):
+            st.dataframe(pd.DataFrame(provenance_rows), width="stretch", hide_index=True)
     st.dataframe(pd.DataFrame(packet.get("checks") or []), width="stretch", hide_index=True)
     policy_rows = list(gate_policy.get("policy_rows") or [])
     if policy_rows:
