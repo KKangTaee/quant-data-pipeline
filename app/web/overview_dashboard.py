@@ -142,6 +142,8 @@ FUTURES_LOOKBACK_OPTIONS = {
     "1D": 1440,
 }
 FUTURES_CHART_INTERVAL_OPTIONS = ("1m", "5m", "15m", "60m")
+FUTURES_COMPACT_CHART_LIMIT = 6
+FUTURES_CHART_SCOPE_OPTIONS = ("compact_6", "all_with_data")
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 CHART_VALUE_LABEL_STYLE = {
@@ -2218,15 +2220,46 @@ def _futures_metric_for_symbol(rows: Any, symbol: str) -> dict[str, Any]:
     return dict(matches.iloc[0]) if not matches.empty else {}
 
 
-def _futures_chart_symbols(snapshot: dict[str, Any]) -> list[str]:
+def _futures_selected_symbols(snapshot: dict[str, Any]) -> list[str]:
     symbols = [str(symbol) for symbol in snapshot.get("symbols") or [] if str(symbol).strip()]
     ordered: list[str] = []
     for symbol in symbols:
         if symbol and symbol not in ordered:
             ordered.append(symbol)
-        if len(ordered) >= 6:
-            break
     return ordered
+
+
+def _futures_symbols_with_candles(snapshot: dict[str, Any], selected_symbols: list[str] | None = None) -> list[str]:
+    selected = selected_symbols if selected_symbols is not None else _futures_selected_symbols(snapshot)
+    all_candles = snapshot.get("all_candles")
+    if not isinstance(all_candles, pd.DataFrame) or all_candles.empty or "Symbol" not in all_candles:
+        return []
+    chartable = {str(symbol) for symbol in all_candles["Symbol"].dropna().unique()}
+    return [symbol for symbol in selected if symbol in chartable]
+
+
+def _futures_chart_symbols(snapshot: dict[str, Any], *, chart_scope: str = "compact_6") -> list[str]:
+    selected = _futures_selected_symbols(snapshot)
+    chartable = _futures_symbols_with_candles(snapshot, selected)
+    if chart_scope == "all_with_data":
+        return chartable
+    candidates = chartable or selected
+    return candidates[:FUTURES_COMPACT_CHART_LIMIT]
+
+
+def _futures_chart_scope_label(scope: str) -> str:
+    if scope == "all_with_data":
+        return "All with data"
+    return "Compact 6"
+
+
+def _futures_chart_scope_detail(snapshot: dict[str, Any], *, chart_scope: str) -> str:
+    selected_count = len(_futures_selected_symbols(snapshot))
+    chartable_count = len(_futures_symbols_with_candles(snapshot))
+    shown_count = len(_futures_chart_symbols(snapshot, chart_scope=chart_scope))
+    if chart_scope == "all_with_data":
+        return f"showing {shown_count} data-backed charts from {selected_count} selected"
+    return f"showing {shown_count} of {chartable_count or selected_count} chartable symbols"
 
 
 def _format_futures_percent(value: Any) -> str:
@@ -2878,12 +2911,17 @@ def _render_futures_macro_tab() -> None:
     _render_futures_macro_fragment(detail_expanded=True)
 
 
-def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str) -> None:
+def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval: str, chart_scope: str) -> None:
     all_candles = snapshot.get("all_candles")
     rows = snapshot.get("rows")
-    symbols = _futures_chart_symbols(snapshot)
+    symbols = _futures_chart_symbols(snapshot, chart_scope=chart_scope)
     if not symbols:
-        st.info("No futures symbols are selected.")
+        message = (
+            "No selected futures have stored candles."
+            if chart_scope == "all_with_data" and _futures_selected_symbols(snapshot)
+            else "No futures symbols are selected."
+        )
+        st.info(message)
         return
 
     grid_cols = st.columns(3, gap="small")
@@ -2912,13 +2950,22 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
                     )
 
 
-def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str, lookback_label: str) -> None:
+def _render_futures_live_panel(
+    snapshot: dict[str, Any],
+    *,
+    chart_interval: str,
+    lookback_label: str,
+    chart_scope: str,
+) -> None:
     rows = snapshot.get("rows")
     state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
     selected_count = len([symbol for symbol in snapshot.get("symbols") or [] if str(symbol).strip()])
     _render_futures_section_header(
         "Live Futures Charts",
-        f"{selected_count} selected futures · {chart_interval} candles · {lookback_label} window",
+        (
+            f"{selected_count} selected futures · {chart_interval} candles · {lookback_label} window · "
+            f"{_futures_chart_scope_detail(snapshot, chart_scope=chart_scope)}"
+        ),
     )
     _render_futures_signal_strip(_futures_live_signal_cards(snapshot), class_prefix="ov-futures-live")
     warnings = list(snapshot.get("warnings") or [])
@@ -2931,7 +2978,7 @@ def _render_futures_live_panel(snapshot: dict[str, Any], *, chart_interval: str,
         )
         st.markdown(f'<div class="ov-futures-chart-metrics">{state_html}</div>', unsafe_allow_html=True)
 
-    _render_futures_mini_chart_grid(snapshot, chart_interval=chart_interval)
+    _render_futures_mini_chart_grid(snapshot, chart_interval=chart_interval, chart_scope=chart_scope)
 
 
 def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
@@ -2968,6 +3015,7 @@ def _render_futures_live_workspace(
     selected_symbol: str,
     lookback_label: str,
     chart_interval: str,
+    chart_scope: str,
     refresh_mode: str,
 ) -> None:
     def _load_live_snapshot() -> dict[str, Any]:
@@ -2989,13 +3037,23 @@ def _render_futures_live_workspace(
                     _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="browser_auto"),
                 )
             refreshed_snapshot = _load_live_snapshot()
-            _render_futures_live_panel(refreshed_snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
+            _render_futures_live_panel(
+                refreshed_snapshot,
+                chart_interval=chart_interval,
+                lookback_label=lookback_label,
+                chart_scope=chart_scope,
+            )
             _render_futures_diagnostics(refreshed_snapshot)
 
         _futures_live_auto_panel()
         return
 
-    _render_futures_live_panel(snapshot, chart_interval=chart_interval, lookback_label=lookback_label)
+    _render_futures_live_panel(
+        snapshot,
+        chart_interval=chart_interval,
+        lookback_label=lookback_label,
+        chart_scope=chart_scope,
+    )
     _render_futures_diagnostics(snapshot)
 
 
@@ -3003,7 +3061,7 @@ def _render_futures_monitor_tab() -> None:
     st.markdown("### Futures Monitor")
     st.caption("미국장 / 한국장 전 주요 선물 OHLCV와 급변 상태를 read-only로 확인합니다.")
 
-    control_cols = st.columns([0.95, 2.45, 0.75, 0.75, 0.8], gap="small", vertical_alignment="bottom")
+    control_cols = st.columns([0.9, 2.25, 0.7, 0.7, 0.9, 0.8], gap="small", vertical_alignment="bottom")
     group = str(
         control_cols[0].selectbox(
             "Watch Group",
@@ -3029,6 +3087,18 @@ def _render_futures_monitor_tab() -> None:
             FUTURES_CHART_INTERVAL_OPTIONS,
             index=1,
             key=chart_key,
+        )
+    )
+    chart_scope_key = "overview_futures_chart_scope"
+    if st.session_state.get(chart_scope_key) not in FUTURES_CHART_SCOPE_OPTIONS:
+        st.session_state[chart_scope_key] = "compact_6"
+    chart_scope = str(
+        control_cols[4].selectbox(
+            "Charts",
+            FUTURES_CHART_SCOPE_OPTIONS,
+            key=chart_scope_key,
+            format_func=_futures_chart_scope_label,
+            help="Compact는 데이터가 있는 선물 중 첫 6개만, All with data는 저장 candle이 있는 선택 심볼 전체를 표시합니다.",
         )
     )
 
@@ -3081,7 +3151,7 @@ def _render_futures_monitor_tab() -> None:
     if st.session_state.get(mode_key) not in mode_options:
         st.session_state[mode_key] = "manual"
     refresh_mode = str(st.session_state.get(mode_key) or "manual")
-    with control_cols[4].popover("Data Actions", use_container_width=True):
+    with control_cols[5].popover("Data Actions", use_container_width=True):
         segmented_control = getattr(st, "segmented_control", None)
         if callable(segmented_control):
             refresh_mode = str(
@@ -3146,6 +3216,7 @@ def _render_futures_monitor_tab() -> None:
         selected_symbol=selected_symbol,
         lookback_label=lookback_label,
         chart_interval=chart_interval,
+        chart_scope=chart_scope,
         refresh_mode=refresh_mode,
     )
 

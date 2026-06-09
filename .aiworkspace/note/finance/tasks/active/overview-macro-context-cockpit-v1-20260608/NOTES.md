@@ -15,3 +15,10 @@
 - Keep UI rendering in `overview_ui_components.py` and call it from the top of `render_overview_dashboard`.
 - Do not change existing deep tabs.
 - Keep "Next Deep Tabs" as guidance only; it does not switch tabs, run jobs, write registries, or make validation/monitoring decisions.
+
+## 2026-06-09 Follow-Up Findings
+
+- Futures Monitor service already returns all selected symbols and all selected candles; the 6-chart behavior was a UI helper cap, not a DB-backed read model limit.
+- `All` watch group can have 23 selected symbols while only 16 have stored OHLCV rows in the current local DB state.
+- The UI should not pretend missing OHLCV symbols are chartable; `All with data` now filters to symbols present in `all_candles`.
+- `Compact 6` remains the default to keep Streamlit / Altair render cost bounded, but the header now explains the exact displayed count.

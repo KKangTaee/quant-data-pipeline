@@ -7639,3 +7639,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 1~4차로 만든 Overview cockpit 흐름을 deep tab IA와 연결하고 Candidate Ops 경계를 닫되, Backtest workflow나 navigation removal까지 확장하면 안 됨.
 - Analysis result: cockpit 아래 static `Overview Map / Deep Tab Reading Order`를 두고 Market Context / Data Repair / transitional Candidate Ops를 나누는 것이 가장 작은 closeout 변경이다.
 - Follow-up: 실제 Candidate Ops relocation / removal, Reference companion, provider hardening은 별도 승인 후보로 남긴다.
+
+### 2026-06-09 - Futures Monitor 전체 선택 시 chart가 6개만 보이는 원인을 고친다
+
+- User request: 사용자가 `Futures Monitor`에서 symbol을 전체로 해도 선물 그래프가 6개만 나오는 것 같다고 확인과 진행 방향을 요청함.
+- Interpreted goal: 전체 선택 상태에서 숨은 6개 cap 때문에 chart coverage가 오해되지 않도록 하되, 기본 렌더 성능은 유지해야 함.
+- Analysis result: DB read model은 23개 선택과 16개 OHLCV row coverage를 이미 전달했고, UI helper `_futures_chart_symbols()`가 chart grid를 첫 6개로 제한하고 있었다.
+- Follow-up: `Charts` control을 추가해 기본 `Compact 6`과 `All with data`를 분리했다. Provider / DB schema / persistence / validation / monitoring / trading boundary는 변경하지 않았다.

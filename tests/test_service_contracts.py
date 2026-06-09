@@ -4387,6 +4387,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(lane_index, filter_index)
         self.assertIn("load_overview_macro_week_lane(snapshot)", tab_body)
 
+    def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
+        from app.web.overview_dashboard import _futures_chart_symbols
+
+        symbols = [f"S{index}=F" for index in range(1, 10)]
+        chartable_symbols = [symbol for symbol in symbols if symbol != "S4=F"]
+        snapshot = {
+            "symbols": symbols,
+            "all_candles": pd.DataFrame(
+                {"Symbol": symbol, "Datetime": "2026-06-09 09:30:00", "Close": 100.0}
+                for symbol in chartable_symbols
+            ),
+        }
+
+        self.assertEqual(_futures_chart_symbols(snapshot), chartable_symbols[:6])
+        self.assertEqual(_futures_chart_symbols(snapshot, chart_scope="all_with_data"), chartable_symbols)
+
     def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 

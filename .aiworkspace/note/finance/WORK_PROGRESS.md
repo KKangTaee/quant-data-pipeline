@@ -4888,3 +4888,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Workspace > Overview` cockpit 아래에 `Overview Map / Deep Tab Reading Order`를 추가해 Market Context / Data Repair / transitional Candidate Ops 경계를 표시했다.
   - Candidate Ops는 삭제 / 이동하지 않았고, 새 provider / schema / persistence / validation / monitoring / trading semantics도 추가하지 않았다.
   - Overview Macro Context Cockpit 1차~5차 라운드는 구현 closeout됐으며 후속은 Candidate Ops relocation, Reference companion, provider hardening 같은 별도 승인 후보로 남긴다.
+- Futures Monitor chart scope follow-up:
+  - `.aiworkspace/note/finance/tasks/active/overview-macro-context-cockpit-v1-20260608/`에 follow-up 기록을 추가했다.
+  - `Workspace > Overview > Futures Monitor`에 `Charts` control을 추가해 기본 `Compact 6`과 `All with data` 렌더 범위를 명시적으로 선택하게 했다.
+  - `All · 23 selected` / `16 / 23 symbols` 상태에서 `All with data`는 DB에 stored candle이 있는 16개 chart를 렌더한다.

@@ -28,3 +28,10 @@ Created: 2026-06-08
 
 - 2차 candidate: Data Health -> Ingestion Handoff / Action Queue.
 - 3차 candidate: breadth / heatmap and macro week view.
+
+## 2026-06-09 Follow-Up: Futures Monitor Chart Scope
+
+- User reported that `Workspace > Overview > Futures Monitor` still showed only 6 charts when Watch Group / Symbols were effectively set to all.
+- Confirmed root cause: `_futures_chart_symbols()` capped chart render symbols at 6 without a visible scope control.
+- Added a `Charts` control with `Compact 6` default and `All with data` option, plus explicit "showing N of M" / "data-backed charts" copy.
+- Scope stayed UI-only: no provider, DB schema, registry, saved JSONL, validation gate, monitoring signal, or trading action changes.
