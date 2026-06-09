@@ -19,6 +19,7 @@ from app.jobs.overview_actions import (
     run_overview_futures_daily_ohlcv,
     run_overview_futures_ohlcv,
     run_overview_macro_calendar,
+    run_overview_market_context_refresh_all,
     run_overview_market_intraday_snapshot,
     run_overview_market_sentiment,
     run_overview_quote_gap_diagnostics,
@@ -1742,6 +1743,18 @@ def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
         st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
 
 
+def _clear_overview_market_context_caches() -> None:
+    for loader in (
+        load_overview_group_leadership_snapshot,
+        load_overview_market_sentiment_snapshot,
+        load_overview_macro_context_cockpit,
+    ):
+        clear = getattr(loader, "clear", None)
+        if callable(clear):
+            clear()
+    clear_overview_futures_macro_snapshot_cache()
+
+
 def _status_tone(status: Any) -> str:
     normalized = str(status or "").lower()
     if normalized in {"success", "dry_run"}:
@@ -1751,6 +1764,57 @@ def _status_tone(status: Any) -> str:
     if normalized in {"failed", "error"}:
         return "danger"
     return "neutral"
+
+
+def _render_overview_market_context_refresh_result(result_key: str) -> None:
+    result = st.session_state.get(result_key)
+    if not isinstance(result, dict):
+        return
+    status = str(result.get("status") or "-")
+    message = str(result.get("message") or "")
+    if status == "success":
+        st.success(message)
+    elif status == "partial_success":
+        st.warning(message)
+    else:
+        st.error(message)
+    rows = []
+    for item in result.get("results") or []:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "작업": item.get("label") or item.get("job_name") or "-",
+                "상태": item.get("status") or "-",
+                "저장 rows": item.get("rows_written") or 0,
+                "메시지": item.get("message") or "",
+            }
+        )
+    if rows:
+        with st.expander("일괄 갱신 결과", expanded=False):
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+
+def _render_overview_market_context_refresh_bar() -> None:
+    result_key = "overview_market_context_refresh_all_result"
+    cols = st.columns([1.5, 0.72], gap="small", vertical_alignment="center")
+    with cols[0]:
+        st.caption(
+            "표시는 DB-backed snapshot을 읽습니다. 데이터 자체가 stale/due이면 일괄 갱신으로 기존 수집 job을 순서대로 실행합니다."
+        )
+    if cols[1].button(
+        "Market Context 일괄 갱신",
+        key="overview_market_context_refresh_all",
+        use_container_width=True,
+        type="primary",
+        help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 기존 Overview action boundary로 갱신합니다.",
+    ):
+        current_year = datetime.now().year
+        with st.spinner("Overview market context 데이터를 일괄 갱신하는 중입니다..."):
+            result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
+            _store_overview_job_result(result_key, result)
+            _clear_overview_market_context_caches()
+    _render_overview_market_context_refresh_result(result_key)
 
 
 def _summarize_auto_refresh_plan(summary: dict[str, Any]) -> str:
@@ -5617,6 +5681,7 @@ def render_overview_dashboard(
     st.title("Market Context Overview")
     st.caption("DB-backed market context, sentiment, event, and data-health snapshots for investigation only.")
     render_market_session_banner(_market_session_banner_model())
+    _render_overview_market_context_refresh_bar()
     render_macro_context_cockpit(load_overview_macro_context_cockpit())
     render_overview_ia_closeout_guide(load_overview_ia_closeout_model())
 

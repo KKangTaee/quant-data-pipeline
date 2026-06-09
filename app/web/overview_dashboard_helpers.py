@@ -466,8 +466,8 @@ def load_overview_data_health_ingestion_handoff(collection_ops_snapshot: dict[st
 def load_overview_ia_closeout_model() -> dict[str, Any]:
     return {
         "schema_version": "overview_ia_closeout_v1",
-        "title": "Deep Tab Reading Order",
-        "detail": "Read the cockpit first, then drill into the owning deep tab without changing workflow ownership.",
+        "title": "Deep Tab 읽는 순서",
+        "detail": "먼저 cockpit에서 요약을 보고, 필요한 owning deep tab으로 들어가 세부 근거를 확인합니다.",
         "sections": [
             {
                 "id": "market_context",
@@ -476,8 +476,8 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
                 "tone": "primary",
                 "owner": "Workspace > Overview",
                 "tabs": ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events"],
-                "detail": "Use these tabs to inspect movement, participation, futures backdrop, sentiment, and nearby macro / earnings context.",
-                "next_step": "Start where the cockpit next-check cards point.",
+                "detail": "움직임, 참여도, futures backdrop, sentiment, 가까운 macro / earnings context를 확인하는 구역입니다.",
+                "next_step": "cockpit의 다음 확인 카드가 가리키는 탭부터 봅니다.",
             },
             {
                 "id": "data_repair",
@@ -486,8 +486,8 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
                 "tone": "warning",
                 "owner": "Workspace > Overview Data Health + Workspace > Ingestion",
                 "tabs": ["Data Health"],
-                "detail": "Use Data Health when freshness, partial, missing, or failed states need an owning collection surface.",
-                "next_step": "Open Ingestion only from the read-only handoff guidance.",
+                "detail": "freshness, partial, missing, failed 상태가 어떤 collection surface로 이어지는지 확인하는 구역입니다.",
+                "next_step": "read-only handoff 안내를 보고 필요한 경우에만 Ingestion으로 이동합니다.",
             },
             {
                 "id": "candidate_ops",
@@ -496,13 +496,13 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
                 "tone": "neutral",
                 "owner": "Backtest workflow; retained in Overview for compatibility",
                 "tabs": ["Candidate Ops"],
-                "detail": "Candidate Ops is not a market-context tab; it remains a transitional view into Backtest-owned candidate workflow.",
-                "next_step": "Use Backtest screens for candidate creation, validation, and final review decisions.",
+                "detail": "Candidate Ops는 market context 탭이 아닙니다. Backtest 소유 candidate workflow를 임시로 보여주는 transitional view입니다.",
+                "next_step": "candidate 생성, validation, final review decision은 Backtest 화면에서 진행합니다.",
             },
         ],
         "boundary_note": (
-            "Overview Map is context-only guidance. It does not create trade signals, Practical Validation PASS/BLOCKER, "
-            "Final Review decisions, monitoring signals, registry rows, saved setup rows, broker orders, or auto rebalance."
+            "Overview Map은 context-only 안내입니다. trade signal, Practical Validation PASS/BLOCKER, "
+            "Final Review decision, monitoring signal, registry row, saved setup row, broker order, auto rebalance를 생성하지 않습니다."
         ),
     }
 

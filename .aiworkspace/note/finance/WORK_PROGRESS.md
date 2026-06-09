@@ -4892,3 +4892,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-macro-context-cockpit-v1-20260608/`에 follow-up 기록을 추가했다.
   - `Workspace > Overview > Futures Monitor`에 `Charts` control을 추가해 기본 `Compact 6`과 `All with data` 렌더 범위를 명시적으로 선택하게 했다.
   - `All · 23 selected` / `16 / 23 symbols` 상태에서 `All with data`는 DB에 stored candle이 있는 16개 chart를 렌더한다.
+- Overview context refresh / Korean copy V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-context-refresh-ko-v1-20260610/`에서 1차 구현을 진행했다.
+  - `Workspace > Overview` 상단에 `Market Context 일괄 갱신` 버튼을 추가하고, cockpit / Overview Map 주요 설명을 한국어 중심으로 정리했다.
+  - 일괄 갱신은 기존 `app/jobs/overview_actions.py` boundary 안에서 SP500 movers, futures, sentiment, FOMC / earnings / macro calendar refresh를 순차 실행한다.

@@ -1825,7 +1825,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         f'<div class="ov-source-confidence" style="--ov-source-status-tone:{status_tone};">'
         '<div class="ov-source-confidence-head">'
         '<div>'
-        '<div class="ov-source-confidence-title">Source Confidence</div>'
+        '<div class="ov-source-confidence-title">Source Confidence / 출처 신뢰도</div>'
         f'<div class="ov-source-confidence-detail">{escape(_display_value(summary.get("detail")))}</div>'
         '</div>'
         f'<div class="ov-source-confidence-status">{escape(_display_value(model.get("status")))}</div>'
@@ -1857,8 +1857,8 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
   <div class="ov-macro-cockpit-grid">{cards_html}</div>
   <div class="ov-macro-cockpit-next">
     <div>
-      <div class="ov-macro-cockpit-next-title">Next Deep Tabs</div>
-      <div class="ov-macro-cockpit-next-note">Suggested reading order from the same DB-backed context.</div>
+      <div class="ov-macro-cockpit-next-title">다음에 볼 Deep Tab</div>
+      <div class="ov-macro-cockpit-next-note">같은 DB-backed context에서 이어서 확인할 순서입니다.</div>
     </div>
     <div class="ov-macro-cockpit-checks">{next_checks_html}</div>
   </div>
@@ -1897,7 +1897,7 @@ def render_overview_ia_closeout_guide(model: dict[str, Any]) -> None:
 <section class="ov-ia-closeout">
   <div class="ov-ia-closeout-head">
     <div>
-      <div class="ov-ia-closeout-kicker">Overview Map</div>
+      <div class="ov-ia-closeout-kicker">Overview Map / 화면 지도</div>
       <div class="ov-ia-closeout-title">{escape(_display_value(model.get("title")))}</div>
       <div class="ov-ia-closeout-detail">{escape(_display_value(model.get("detail")))}</div>
     </div>

@@ -4433,14 +4433,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         model = load_overview_ia_closeout_model()
 
         self.assertEqual(model["schema_version"], "overview_ia_closeout_v1")
+        self.assertEqual(model["title"], "Deep Tab 읽는 순서")
+        self.assertIn("cockpit", model["detail"])
+        self.assertIn("먼저", model["detail"])
         self.assertEqual([section["id"] for section in model["sections"]], ["market_context", "data_repair", "candidate_ops"])
         candidate_section = model["sections"][2]
         self.assertEqual(candidate_section["title"], "Candidate Ops")
         self.assertEqual(candidate_section["status"], "TRANSITIONAL")
         self.assertIn("Backtest", candidate_section["owner"])
-        self.assertIn("not a market-context tab", candidate_section["detail"])
-        self.assertIn("context-only", model["boundary_note"].lower())
-        self.assertIn("does not create", model["boundary_note"].lower())
+        self.assertIn("market context 탭이 아닙니다", candidate_section["detail"])
+        self.assertIn("context-only", model["boundary_note"])
+        self.assertIn("생성하지 않습니다", model["boundary_note"])
 
     def test_overview_cockpit_shell_uses_surface_background_for_dark_theme_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -4474,6 +4477,81 @@ class OverviewAutomationContractTests(unittest.TestCase):
             method="quote_fast",
             fallback_to_yfinance=False,
         )
+
+    def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str, status: str = "success") -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": status, "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_market_intraday_snapshot",
+                side_effect=lambda **_: _result("market_intraday"),
+            ) as market_snapshot,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_ohlcv",
+                side_effect=lambda **_: _result("futures_1m"),
+            ) as futures_1m,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_daily_ohlcv",
+                side_effect=lambda: _result("futures_daily"),
+            ) as futures_daily,
+            patch.object(
+                overview_actions,
+                "run_overview_market_sentiment",
+                side_effect=lambda: _result("market_sentiment"),
+            ) as sentiment,
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar", status="partial_success"),
+            ) as earnings,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+        ):
+            summary = overview_actions.run_overview_market_context_refresh_all(
+                years=(2026, 2027),
+                futures_symbols=("ES=F", "NQ=F"),
+            )
+
+        self.assertEqual(summary["job_name"], "overview_market_context_refresh_all")
+        self.assertEqual(summary["status"], "partial_success")
+        self.assertEqual(summary["jobs_run"], 7)
+        self.assertEqual(summary["jobs_failed"], 0)
+        self.assertEqual(
+            calls,
+            [
+                "market_intraday",
+                "futures_1m",
+                "futures_daily",
+                "market_sentiment",
+                "fomc_calendar",
+                "earnings_calendar",
+                "macro_calendar",
+            ],
+        )
+        market_snapshot.assert_called_once_with(universe_code="SP500", universe_limit=500)
+        futures_1m.assert_called_once_with(symbols=["ES=F", "NQ=F"], cadence_mode="manual_bundle")
+        futures_daily.assert_called_once_with()
+        sentiment.assert_called_once_with()
+        fomc.assert_called_once_with(years=(2026, 2027))
+        earnings.assert_called_once_with()
+        macro.assert_called_once_with(years=(2026, 2027))
 
     def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
         from app.web.overview_dashboard import (
@@ -7296,19 +7374,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(cockpit["schema_version"], "overview_macro_context_cockpit_v1")
         self.assertEqual(cockpit["status"], "REVIEW")
-        self.assertEqual(cockpit["summary"]["headline"], "Market context needs review")
+        self.assertEqual(cockpit["summary"]["headline"], "시장 context 확인이 필요합니다")
+        self.assertIn("데이터 상태", cockpit["summary"]["detail"])
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
         self.assertEqual(cockpit["cards"][0]["value"], "NVDA +4.2%")
         self.assertIn("Technology leads", cockpit["cards"][1]["detail"])
         self.assertIn("Rate Pressure", cockpit["cards"][2]["badges"][1]["label"])
         self.assertEqual(cockpit["cards"][3]["value"], "혼합 중립")
         self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
-        self.assertEqual(cockpit["cards"][5]["value"], "4 need review")
+        self.assertEqual(cockpit["cards"][5]["value"], "4개 확인 필요")
         self.assertEqual(cockpit["next_checks"][0]["target_tab"], "Data Health")
         self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
         self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
         self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
-        self.assertIn("context-only", cockpit["boundary_note"].lower())
+        self.assertIn("context 전용", cockpit["boundary_note"])
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit

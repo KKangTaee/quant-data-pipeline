@@ -7646,3 +7646,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 전체 선택 상태에서 숨은 6개 cap 때문에 chart coverage가 오해되지 않도록 하되, 기본 렌더 성능은 유지해야 함.
 - Analysis result: DB read model은 23개 선택과 16개 OHLCV row coverage를 이미 전달했고, UI helper `_futures_chart_symbols()`가 chart grid를 첫 6개로 제한하고 있었다.
 - Follow-up: `Charts` control을 추가해 기본 `Compact 6`과 `All with data`를 분리했다. Provider / DB schema / persistence / validation / monitoring / trading boundary는 변경하지 않았다.
+
+### 2026-06-10 - Overview market context 안내를 한글화하고 일괄 갱신入口를 추가한다
+
+- User request: 사용자가 `Market context needs review`, `Overview Map` 등 영어-first 문구를 이해하기 쉽게 한글화하고, Overview 상단에서 보이는 데이터를 일괄 업데이트하는 기능을 먼저 요청함.
+- Interpreted goal: product term은 유지하되 설명 copy를 한국어 중심으로 바꾸고, 기존 개별 refresh job들을 한 버튼에서 실행하는 수동 bundle을 추가해야 함.
+- Analysis result: 새 provider / schema가 아니라 `app/jobs/overview_actions.py` facade 안에서 SP500 movers, futures 1m/daily, sentiment, FOMC, earnings, macro calendar 기존 action을 순차 실행하는 것이 경계에 맞다.
+- Follow-up: `Workspace > Overview` 상단에 `Market Context 일괄 갱신` 버튼을 추가했다. Scheduler hardening, source별 retry UX, action queue persistence는 후속 차수로 남겼다.

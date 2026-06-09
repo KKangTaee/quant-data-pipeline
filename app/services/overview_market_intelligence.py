@@ -4018,7 +4018,7 @@ def _build_cockpit_movement_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": "movement",
         "title": "Market Movement",
-        "question": "What is moving now?",
+        "question": "지금 무엇이 움직이나요?",
         "value": value,
         "detail": detail,
         "status": status,
@@ -4052,7 +4052,7 @@ def _build_cockpit_breadth_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": "breadth",
         "title": "Breadth / Concentration",
-        "question": "Broad or concentrated?",
+        "question": "움직임이 넓게 퍼졌나요, 일부에 집중됐나요?",
         "value": value,
         "detail": detail,
         "status": status,
@@ -4077,7 +4077,7 @@ def _build_cockpit_futures_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": "futures",
         "title": "Futures Background",
-        "question": "Risk-on, rate pressure, or safe haven?",
+        "question": "risk-on, rate pressure, safe-haven 중 어떤 배경인가요?",
         "value": scenario,
         "detail": detail,
         "status": status,
@@ -4103,7 +4103,7 @@ def _build_cockpit_sentiment_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": "sentiment",
         "title": "Sentiment Backdrop",
-        "question": "What is the mood backdrop?",
+        "question": "시장 심리 배경은 어떤가요?",
         "value": analysis.get("phase_label") or cnn_rating or status,
         "detail": analysis.get("headline") or "CNN Fear & Greed / AAII context is unavailable.",
         "status": status,
@@ -4132,7 +4132,7 @@ def _build_cockpit_events_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": "events",
         "title": "Near Events",
-        "question": "What events are close?",
+        "question": "가까운 주요 이벤트가 있나요?",
         "value": str(next_date or "No upcoming event"),
         "detail": f"{title} · {days_text} · {event_count} events",
         "status": "Review" if review_count else status,
@@ -4154,12 +4154,12 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
         for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
     )
     status = "REVIEW" if review_count else _cockpit_card_status(snapshot.get("status"))
-    value = _cockpit_count_label(review_count, "need review") if review_count else "All fresh"
+    value = f"{review_count}개 확인 필요" if review_count else "모두 fresh"
     return (
         {
             "id": "data",
             "title": "Data Confidence",
-            "question": "Can this context be trusted?",
+            "question": "이 context를 그대로 참고해도 되나요?",
             "value": value,
             "detail": (
                 f"OK {coverage.get('ok_count') or 0} · Due {coverage.get('due_count') or 0} · "
@@ -4192,7 +4192,7 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
         "target_tab": "Data Health",
         "title": str(row.get("Area") or "Data Health"),
         "reason": f"{row.get('Status') or 'Review'} · {row.get('Data Freshness') or '-'}",
-        "action": str(row.get("Next Action") or "Open Data Health and review source freshness."),
+        "action": str(row.get("Next Action") or "Data Health에서 source freshness를 확인하세요."),
         "tone": _cockpit_status_tone(row.get("Status")),
     }
 
@@ -4208,8 +4208,8 @@ def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None
         return {
             "target_tab": "Events",
             "title": str(row.get("Title") or row.get("Type Label") or "Upcoming event"),
-            "reason": f"{days} days away" if row else f"{needs_review} event rows need review",
-            "action": "Open Events before interpreting the market context.",
+            "reason": f"{days}일 후" if row else f"{needs_review}개 event row 확인 필요",
+            "action": "시장 context를 해석하기 전에 Events를 확인하세요.",
             "tone": "warning" if needs_review else "primary",
         }
     return None
@@ -4299,14 +4299,14 @@ def build_overview_macro_context_cockpit(
                 "target_tab": "Futures Monitor",
                 "title": "Futures macro backdrop",
                 "reason": str(cards[2].get("value") or "-"),
-                "action": "Open Futures Monitor for risk-on / rate pressure / safe-haven evidence.",
+                "action": "risk-on / rate pressure / safe-haven 근거는 Futures Monitor에서 확인하세요.",
                 "tone": cards[2].get("tone") or "neutral",
             },
             {
                 "target_tab": "Market Movers",
                 "title": "Top mover context",
                 "reason": str(cards[0].get("value") or "-"),
-                "action": "Open Market Movers for return, volume, and Why It Moved investigation.",
+                "action": "수익률, 거래량, Why It Moved 단서는 Market Movers에서 확인하세요.",
                 "tone": cards[0].get("tone") or "neutral",
             },
         ]
@@ -4317,11 +4317,11 @@ def build_overview_macro_context_cockpit(
         "schema_version": "overview_macro_context_cockpit_v1",
         "status": status,
         "summary": {
-            "headline": "Market context needs review" if status == "REVIEW" else "Market context ready",
+            "headline": "시장 context 확인이 필요합니다" if status == "REVIEW" else "시장 context 준비됨",
             "detail": (
-                f"{data_review_count} data-health items need review before relying on the snapshot."
+                f"이 snapshot을 그대로 참고하기 전에 데이터 상태 {data_review_count}개를 확인하세요."
                 if data_review_count
-                else "Existing DB-backed market context snapshots are available for scan-first analysis."
+                else "저장된 DB-backed market context snapshot을 scan-first 분석에 사용할 수 있습니다."
             ),
             "tone": _cockpit_status_tone(status),
         },
@@ -4329,8 +4329,8 @@ def build_overview_macro_context_cockpit(
         "next_checks": next_checks,
         "source_confidence": source_confidence,
         "boundary_note": (
-            "Context-only market backdrop: this cockpit does not create trade signals, validation PASS/BLOCKER, "
-            "Final Review decisions, monitoring signals, registry writes, saved setup writes, broker orders, or auto rebalance."
+            "context 전용 market backdrop입니다. 이 cockpit은 trade signal, validation PASS/BLOCKER, "
+            "Final Review decision, monitoring signal, registry write, saved setup write, broker order, auto rebalance를 만들지 않습니다."
         ),
     }
 
