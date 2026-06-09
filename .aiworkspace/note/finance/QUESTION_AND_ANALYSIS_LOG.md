@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - Prototype legacy flows should not remain primary product routes
+- User request:
+  - 제품 방향 리서치 5순위 `Prototype Legacy Cleanup / Removal`을 진행해 Candidate Review / Portfolio Proposal / Pre-Live / old candidate packaging을 정리해 달라고 요청함.
+- Interpreted goal:
+  - 현재 정식 workflow를 `Backtest Analysis -> Practical Validation -> Final Review -> Operations > Portfolio Monitoring`으로 고정하고, legacy registry / saved records는 삭제하지 않고 archive / recovery로 낮춘다.
+- Analysis result:
+  - Candidate Review와 Portfolio Proposal은 primary route target과 page-shell dispatch에서 제거하는 것이 맞다. Run History와 Candidate records는 historical recovery 가치가 있으므로 Operations archive로 유지하고, Run History handoff는 current Practical Validation source로 보내는 것이 현재 source chain과 일관된다.
+- Follow-up:
+  - Physical deletion of old Candidate Review / Portfolio Proposal modules, unused Overview candidate helper removal, and legacy file rename should be separate cleanup tasks after import / registry consumer audit.
+
 ### 2026-06-09 - Provenance contract should be a compact read model before DB migration
 - User request:
   - 제품 방향 리서치 4순위인 `Data Provenance / PIT Evidence Contract`를 1차 / 2차 / 3차로 진행해 달라고 요청함.

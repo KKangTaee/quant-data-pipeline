@@ -28,7 +28,7 @@ def render_single_strategy_workspace() -> None:
         )
         prefill_action_cols = st.columns([0.22, 0.78], gap="small")
         with prefill_action_cols[0]:
-            st.caption("History는 `Operations > Backtest Run History`에서 다시 열 수 있습니다.")
+            st.caption("History는 `Operations > Archive: Backtest Runs`에서 다시 열 수 있습니다.")
         st.session_state.backtest_prefill_notice = None
     pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")
     pending_strategy_variant = st.session_state.get("backtest_prefill_strategy_variant")

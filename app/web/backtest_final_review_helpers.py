@@ -36,7 +36,7 @@ from app.runtime import FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
-    SELECT_FOR_PRACTICAL_PORTFOLIO: "Selected Dashboard 모니터링 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 선정 판단이 완료됩니다.",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "Portfolio Monitoring 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 선정 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 모니터링 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",

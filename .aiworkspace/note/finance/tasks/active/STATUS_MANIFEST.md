@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 ## Current State
 
@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `robustness-experiment-registry-20260608`
+- `prototype-legacy-cleanup-20260609`
 
 Latest completed docs cleanup task:
 

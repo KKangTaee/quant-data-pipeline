@@ -2471,7 +2471,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
     continuity_route = str(continuity.get("route") or "")
     continuity_source_contract = dict(continuity.get("source_contract") or {})
     with st.container(border=True):
-        st.markdown("##### Final Review -> Selected Dashboard Continuity")
+        st.markdown("##### Final Review -> Portfolio Monitoring Continuity")
         render_badge_strip(
             [
                 {
@@ -2824,7 +2824,7 @@ def _render_operator_context(row: dict[str, Any], *, operations_evidence: dict[s
 def _render_decision_dossier(row: dict[str, Any]) -> None:
     st.markdown("#### Decision Dossier")
     st.caption(
-        "Final Review 판단 근거와 현재 Selected Dashboard timeline을 markdown dossier로 읽습니다. "
+        "Final Review 판단 근거와 현재 Portfolio Monitoring timeline을 markdown dossier로 읽습니다. "
         "자동 report 저장, monitoring log 저장, 주문 지시는 만들지 않습니다."
     )
     dossier = build_decision_dossier(row, monitoring_timeline=_latest_monitoring_timeline(row))
@@ -3671,7 +3671,7 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
 def render_final_selected_portfolio_dashboard_page() -> None:
     st.title("Portfolio Monitoring")
     st.caption(
-        "Selected Portfolio Dashboard: Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
+        "Portfolio Monitoring: Final Review에서 모니터링 후보로 선별된 대상을 나의 모니터링 포트폴리오에 담고, "
         "가상 시나리오와 review signal로 모니터링 이후 상태를 확인합니다."
     )
     render_reference_contextual_help("portfolio_monitoring")

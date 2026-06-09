@@ -138,6 +138,8 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertFalse(closed.empty)
         self.assertTrue((pd.to_datetime(closed["entry_date"]) > pd.to_datetime(closed["entry_signal_date"])).all())
         self.assertLessEqual(int(closed["holding_days"].max()), 5)
+
+
         self.assertFalse(result.scanner_df.empty)
         self.assertIn("QUEUED_BUY", set(result.scanner_df["status"]))
 
@@ -11951,13 +11953,13 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
 
         self.assertEqual(handoff["schema_version"], SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION)
         self.assertEqual(handoff["route"], "HANDOFF_READY")
-        self.assertEqual(handoff["destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["destination"], "Operations > Portfolio Monitoring")
         self.assertEqual(handoff["summary"]["final_decision_count"], 1)
         self.assertEqual(handoff["summary"]["selected_decision_count"], 1)
         self.assertEqual(handoff["summary"]["dashboard_row_count"], 1)
         self.assertEqual(handoff["summary"]["monitorable_count"], 1)
         self.assertEqual(handoff["rows"][0]["Decision ID"], "decision-selected")
-        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Portfolio Monitoring")
         self.assertEqual(handoff["rows"][0]["Live Approval"], "Disabled")
         checks = {row["Check"]: row for row in handoff["checklist"]}
         self.assertEqual(checks["Selected route record"]["Status"], "PASS")
@@ -13311,7 +13313,7 @@ class DecisionDossierContractTests(unittest.TestCase):
             "operator_decision": {
                 "reason": "검증 근거가 충분합니다.",
                 "constraints": "실제 투자 전 금액과 중단 기준 확인",
-                "next_action": "Selected Dashboard에서 사후 점검",
+                "next_action": "Portfolio Monitoring에서 사후 점검",
             },
         }
 
@@ -13386,6 +13388,74 @@ class DecisionDossierContractTests(unittest.TestCase):
         self.assertFalse(dossier["source_contract"]["timeline_contract_consistent"])
         self.assertFalse(dossier["metrics"]["source_contract_consistent"])
         self.assertIn("Timeline Contract Consistent: `False`", dossier["markdown"])
+
+
+class PrototypeLegacyCleanupTests(unittest.TestCase):
+    def test_backtest_route_targets_hide_candidate_review_and_proposal_panels(self) -> None:
+        from app.web.backtest_workflow_routes import (
+            BACKTEST_ANALYSIS_MODE_PORTFOLIO_MIX,
+            BACKTEST_ANALYSIS_MODE_SINGLE,
+            BACKTEST_STAGE_ANALYSIS,
+            BACKTEST_STAGE_OPTIONS,
+            _route_target_to_stage_and_mode,
+            _valid_backtest_route_targets,
+        )
+
+        valid_targets = _valid_backtest_route_targets()
+
+        self.assertTrue(set(BACKTEST_STAGE_OPTIONS).issubset(valid_targets))
+        self.assertIn("Single Strategy", valid_targets)
+        self.assertIn("Portfolio Mix Builder", valid_targets)
+        self.assertNotIn("Candidate Review", valid_targets)
+        self.assertNotIn("Portfolio Proposal", valid_targets)
+
+        self.assertEqual(
+            _route_target_to_stage_and_mode("Single Strategy"),
+            {
+                "stage": BACKTEST_STAGE_ANALYSIS,
+                "analysis_mode": BACKTEST_ANALYSIS_MODE_SINGLE,
+                "practical_mode": None,
+            },
+        )
+        self.assertEqual(
+            _route_target_to_stage_and_mode("Portfolio Mix Builder"),
+            {
+                "stage": BACKTEST_STAGE_ANALYSIS,
+                "analysis_mode": BACKTEST_ANALYSIS_MODE_PORTFOLIO_MIX,
+                "practical_mode": None,
+            },
+        )
+        self.assertEqual(
+            _route_target_to_stage_and_mode("Candidate Review"),
+            {
+                "stage": BACKTEST_STAGE_ANALYSIS,
+                "analysis_mode": BACKTEST_ANALYSIS_MODE_SINGLE,
+                "practical_mode": None,
+            },
+        )
+        self.assertEqual(
+            _route_target_to_stage_and_mode("Portfolio Proposal"),
+            {
+                "stage": BACKTEST_STAGE_ANALYSIS,
+                "analysis_mode": BACKTEST_ANALYSIS_MODE_SINGLE,
+                "practical_mode": None,
+            },
+        )
+
+    def test_overview_primary_tabs_do_not_include_legacy_candidate_ops(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Candidate Ops", source)
+        self.assertNotIn("_render_candidate_ops_tab(", source)
+        self.assertNotIn("load_overview_dashboard_snapshot()", source)
+
+    def test_run_history_practical_validation_action_uses_current_handoff(self) -> None:
+        source = Path("app/web/backtest_history.py").read_text(encoding="utf-8")
+
+        self.assertIn("prepare_practical_validation_source_handoff", source)
+        self.assertIn("build_selection_source_from_candidate_draft", source)
+        self.assertNotIn("_queue_candidate_review_draft", source)
+        self.assertNotIn("backtest_candidate_review_draft", source)
 
 
 if __name__ == "__main__":

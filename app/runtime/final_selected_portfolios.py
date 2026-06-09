@@ -355,7 +355,7 @@ def load_selected_dashboard_portfolios(
     include_deleted: bool = False,
     path: Path | None = None,
 ) -> list[dict[str, Any]]:
-    """Load user-created Selected Dashboard monitoring portfolios from saved state."""
+    """Load user-created Portfolio Monitoring portfolios from saved state."""
     rows = []
     for row in _read_selected_dashboard_portfolio_rows(path):
         normalized_row = dict(row)
@@ -798,7 +798,7 @@ def _selected_decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Selected Dashboard read models share the Final Decision row and optional session-state evidence only.",
+            "notes": "Portfolio Monitoring read models share the Final Decision row and optional session-state evidence only.",
         },
     }
 
@@ -940,7 +940,7 @@ def _derive_operation_status(
     blockers: list[str],
 ) -> tuple[str, str]:
     if not _is_selected_practical_portfolio(row):
-        return "blocked", "Final Review에서 Selected Dashboard 모니터링 후보로 선정된 row가 아닙니다."
+        return "blocked", "Final Review에서 Portfolio Monitoring 후보로 선정된 row가 아닙니다."
     if not active_components:
         return "blocked", "선정된 component가 없어 운영 대상으로 볼 수 없습니다."
     if abs(target_weight_total - 100.0) > 0.01:
@@ -1053,8 +1053,8 @@ def _selected_dashboard_handoff_action(row: dict[str, Any]) -> str:
     if status == "blocked":
         return "Final Review source row의 selected component / target weight / blocker를 보강합니다."
     if status in {"watch", "rebalance_needed", "re_review_needed"}:
-        return "Selected Dashboard에서 recheck, provider evidence, timeline을 먼저 확인합니다."
-    return "Operations > Selected Portfolio Dashboard에서 사후 점검을 이어갑니다."
+        return "Portfolio Monitoring에서 recheck, provider evidence, timeline을 먼저 확인합니다."
+    return "Operations > Portfolio Monitoring에서 사후 점검을 이어갑니다."
 
 
 def _selected_dashboard_handoff_rows(dashboard_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1078,7 +1078,7 @@ def _selected_dashboard_handoff_rows(dashboard_rows: list[dict[str, Any]]) -> li
                 "Evidence Route": row.get("evidence_route"),
                 "Review Cadence": row.get("review_cadence"),
                 "Review Triggers": ", ".join(review_triggers) if review_triggers else "-",
-                "Handoff Destination": "Operations > Selected Portfolio Dashboard",
+                "Handoff Destination": "Operations > Portfolio Monitoring",
                 "Handoff Action": _selected_dashboard_handoff_action(row),
                 "Live Approval": "Disabled",
                 "Order": "Disabled",
@@ -1090,7 +1090,7 @@ def _selected_dashboard_handoff_rows(dashboard_rows: list[dict[str, Any]]) -> li
 
 
 def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Summarize which Final Review decisions can flow into Selected Dashboard."""
+    """Summarize which Final Review decisions can flow into Portfolio Monitoring."""
     final_rows = [_final_decision_source_row(dict(row or {})) for row in list(final_decision_rows or [])]
     selected_rows = [row for row in final_rows if _is_selected_practical_portfolio(row)]
     dashboard_rows = [build_final_selected_portfolio_dashboard_row(row) for row in selected_rows]
@@ -1114,7 +1114,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
     if not final_rows:
         route = "HANDOFF_NO_FINAL_DECISION"
         next_action = "Final Review에서 모니터링 후보 선정 저장을 먼저 진행합니다."
-        verdict = "Selected Dashboard로 넘길 모니터링 후보 row가 아직 없습니다."
+        verdict = "Portfolio Monitoring으로 넘길 모니터링 후보 row가 아직 없습니다."
     elif not selected_rows:
         route = "HANDOFF_NO_SELECTED_DECISION"
         next_action = "Final Review에서 SELECT_FOR_PRACTICAL_PORTFOLIO 모니터링 후보 row를 저장해야 합니다."
@@ -1125,8 +1125,8 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
         verdict = "모니터링 후보 row가 모두 dashboard 운영 대상으로 보기 전에 막혀 있습니다."
     else:
         route = "HANDOFF_READY"
-        next_action = "Operations > Selected Portfolio Dashboard에서 recheck / readiness / provider / timeline을 이어서 확인합니다."
-        verdict = "모니터링 후보 row가 Selected Dashboard read-only 점검 대상으로 연결됩니다."
+        next_action = "Operations > Portfolio Monitoring에서 recheck / readiness / provider / timeline을 이어서 확인합니다."
+        verdict = "모니터링 후보 row가 Portfolio Monitoring read-only 점검 대상으로 연결됩니다."
 
     checklist = [
         _handoff_check_row(
@@ -1155,7 +1155,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
             ready=bool(dashboard_rows),
             current=dashboard_row_count,
             evidence="Selected rows were converted to dashboard read models" if dashboard_rows else "No dashboard rows can be built yet",
-            next_action="Show rows in Selected Dashboard." if dashboard_rows else "Resolve selected route availability first.",
+            next_action="Show rows in Portfolio Monitoring." if dashboard_rows else "Resolve selected route availability first.",
         ),
         _handoff_check_row(
             check="Monitorable row",
@@ -1164,7 +1164,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
             current=f"{monitorable_count} monitorable / {blocked_count} blocked",
             evidence="At least one selected row is not blocked" if monitorable_count else "No selected dashboard row is monitorable yet",
             next_action=(
-                "Continue in Operations > Selected Portfolio Dashboard."
+                "Continue in Operations > Portfolio Monitoring."
                 if monitorable_count
                 else "Fix selected component, target weight, or blocker evidence before treating the row as monitorable."
             ),
@@ -1185,7 +1185,7 @@ def build_selected_dashboard_handoff_review(final_decision_rows: list[dict[str, 
         "route_label": SELECTED_DASHBOARD_HANDOFF_ROUTE_LABELS.get(route, route),
         "verdict": verdict,
         "next_action": next_action,
-        "destination": "Operations > Selected Portfolio Dashboard",
+        "destination": "Operations > Portfolio Monitoring",
         "summary": {
             "registry_path": str(FINAL_SELECTION_DECISION_FILE),
             "final_decision_count": len(final_rows),
@@ -2142,7 +2142,7 @@ def build_selected_portfolio_continuity_check(
             current=decision_route or "-",
             evidence="Final Review selected route attached" if selected_flag else "Selected route is missing",
             next_action=(
-                "Selected Dashboard can read this row."
+                "Portfolio Monitoring can read this row."
                 if selected_flag
                 else "Record a SELECT_FOR_PRACTICAL_PORTFOLIO decision in Final Review first."
             ),
@@ -2225,7 +2225,7 @@ def build_selected_portfolio_continuity_check(
             status="PASS" if recheck_present else "NEEDS_INPUT",
             ready=recheck_present,
             current="present" if recheck_present else "not run",
-            evidence="Latest recheck is in session state" if recheck_present else "Selected Dashboard needs a Performance Recheck run",
+            evidence="Latest recheck is in session state" if recheck_present else "Portfolio Monitoring needs a Performance Recheck run",
             next_action=(
                 "Use Review Signals to compare recheck result with the selected baseline."
                 if recheck_present
@@ -2270,7 +2270,7 @@ def build_selected_portfolio_continuity_check(
         next_action = "Review missing or legacy evidence before continuing monitoring."
     else:
         route = "CONTINUITY_READY"
-        next_action = "Selected Dashboard can continue monitoring from this Final Review row."
+        next_action = "Portfolio Monitoring can continue monitoring from this Final Review row."
     return {
         "schema_version": SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION,
         "route": route,
@@ -3679,7 +3679,7 @@ def build_selected_portfolio_recheck_readiness(
     latest_market_result: dict[str, Any] | None = None,
     candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Build a read-only preflight view for Selected Dashboard Performance Recheck inputs."""
+    """Build a read-only preflight view for Portfolio Monitoring Performance Recheck inputs."""
 
     selected = dict(row or {})
     raw_decision = dict(selected.get("raw_decision") or selected)
@@ -4447,7 +4447,7 @@ def _selected_open_issue_row(
 
 
 def build_selected_portfolio_open_issue_followup(row: dict[str, Any]) -> dict[str, Any]:
-    """Expose Final Review open review items on the Selected Dashboard without creating new state."""
+    """Expose Final Review open review items on Portfolio Monitoring without creating new state."""
 
     raw_decision = _selected_raw_decision(row)
     open_items = _selected_open_review_items(row)
@@ -4695,7 +4695,7 @@ def build_selected_portfolio_deployment_readiness_preflight(
                     area=area,
                     status="NEEDS_INPUT" if area in {"Recheck Operations Preflight", "Provider Evidence"} else "REVIEW",
                     current="not evaluated",
-                    evidence="Selected Dashboard에서 아직 해당 read-only evidence를 만들지 않았습니다.",
+                    evidence="Portfolio Monitoring에서 아직 해당 read-only evidence를 만들지 않았습니다.",
                     next_action=next_action,
                     source="selected_dashboard_session",
                 )

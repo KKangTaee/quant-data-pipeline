@@ -168,7 +168,7 @@ def _render_ingestion_page() -> None:
 
 def _render_backtest_page() -> None:
     st.title("Backtest")
-    st.caption("백테스트 실행부터 비교, 후보 검토, Pre-Live 운영 기록, Portfolio Proposal까지 이어지는 후보 검토 작업 공간입니다.")
+    st.caption("Backtest Analysis, Practical Validation, Final Review로 이어지는 현재 후보 선정 작업 공간입니다.")
     render_backtest_tab()
 
 

@@ -517,12 +517,12 @@ def _render_route_guidance() -> None:
         },
         {
             "Need": "백테스트 run 재현 / form 복원",
-            "Go To": "Operations > Backtest Run History",
+            "Go To": "Operations > Archive: Backtest Runs",
             "Boundary": "Backtest replay action은 Backtest Run History가 담당합니다.",
         },
         {
             "Need": "저장 후보 재검토 / result curve rebuild",
-            "Go To": "Operations > Candidate Library",
+            "Go To": "Operations > Archive: Candidates",
             "Boundary": "후보 replay는 Candidate Library가 담당합니다.",
         },
         {

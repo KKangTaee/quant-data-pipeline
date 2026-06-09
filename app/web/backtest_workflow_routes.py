@@ -17,8 +17,6 @@ BACKTEST_LEGACY_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
     "Portfolio Mix Builder",
-    "Candidate Review",
-    "Portfolio Proposal",
     "Final Review",
 ]
 
@@ -57,12 +55,6 @@ def _route_target_to_stage_and_mode(target: str | None) -> dict[str, Any]:
             "stage": BACKTEST_STAGE_ANALYSIS,
             "analysis_mode": BACKTEST_ANALYSIS_MODE_COMPARE,
             "practical_mode": None,
-        }
-    if normalized in {"Candidate Review", "Portfolio Proposal"}:
-        return {
-            "stage": BACKTEST_STAGE_PRACTICAL_VALIDATION,
-            "analysis_mode": None,
-            "practical_mode": PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE,
         }
     if normalized == "Final Review":
         return {"stage": BACKTEST_STAGE_FINAL_REVIEW, "analysis_mode": None, "practical_mode": None}

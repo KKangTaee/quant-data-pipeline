@@ -8,12 +8,11 @@ import pandas as pd
 import streamlit as st
 
 from app.runtime import BACKTEST_HISTORY_FILE, load_backtest_run_history
+from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
+from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
 from app.web.backtest_common import _set_single_strategy_target_from_strategy_key
 from app.web.backtest_single_runner import _handle_backtest_run
-from app.web.backtest_candidate_review_helpers import (
-    _candidate_review_draft_from_history_record,
-    _queue_candidate_review_draft,
-)
+from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_history_record
 from app.web.backtest_history_helpers import (
     _build_backtest_history_rows,
     _build_history_payload,
@@ -145,6 +144,20 @@ def _load_history_into_form(record: dict[str, Any]) -> bool:
     st.session_state.backtest_prefill_strategy_variant = strategy_variant
     st.session_state.backtest_requested_panel = "Single Strategy"
     return True
+
+
+def _send_history_record_to_practical_validation(record: dict[str, Any]) -> None:
+    draft = _candidate_review_draft_from_history_record(record)
+    source = build_selection_source_from_candidate_draft(draft)
+    source["notes"] = (
+        "Created from Operations > Archive: Backtest Runs. "
+        "This is a current selection source for Practical Validation, not a legacy candidate packaging record."
+    )
+    handoff = prepare_practical_validation_source_handoff(source, persist=True)
+    st.session_state.backtest_practical_validation_source = handoff.source_payload
+    st.session_state.backtest_practical_validation_notice = handoff.notice
+    st.session_state.backtest_practical_validation_mode = handoff.mode
+    st.session_state.backtest_requested_panel = handoff.requested_panel
 
 
 # Render the persisted Backtest history inspector and replay actions.
@@ -562,8 +575,8 @@ def _render_persistent_backtest_history(*, open_backtest_page=None) -> None:
                     open_backtest_page()
                 st.rerun()
     with action_cols[2]:
-        if st.button("Practical Validation으로 보내기", key="backtest_history_candidate_review_draft", width="stretch"):
-            _queue_candidate_review_draft(_candidate_review_draft_from_history_record(selected_record))
+        if st.button("Practical Validation으로 보내기", key="backtest_history_send_practical_validation", width="stretch"):
+            _send_history_record_to_practical_validation(selected_record)
             if open_backtest_page is not None:
                 open_backtest_page()
             st.rerun()

@@ -417,7 +417,7 @@ REFERENCE_JOURNEY_DETAILS: dict[str, dict[str, Any]] = {
                 "owner_screen": "Operations > Archive: Candidates",
                 "check": "current / Pre-Live candidate compact snapshot과 replay contract를 확인합니다.",
                 "safe_next": "source 재생성이 가능하면 현재 Backtest flow로 다시 넘깁니다.",
-                "downstream": "Candidate Creation",
+                "downstream": "Backtest Analysis / Practical Validation",
                 "stop_condition": "legacy registry를 새 current source로 덮어쓰지 않습니다.",
             },
             {

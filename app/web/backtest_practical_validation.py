@@ -1771,7 +1771,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
                     "kicker": "Reference",
                     "title": "후속 참고",
                     "status": _audit_status_summary(reference_rows),
-                    "detail": "Final Review 또는 Selected Dashboard에서 이어서 읽는 참고 근거입니다.",
+                    "detail": "Final Review 또는 Portfolio Monitoring에서 이어서 읽는 참고 근거입니다.",
                     "tone": "neutral",
                 },
             ],
@@ -2491,7 +2491,7 @@ def render_practical_validation_workspace() -> None:
             detail=(
                 "검증 결과 저장은 감사용 기록을 남기는 기능입니다. Final Review 이동과 후보 노출은 필수 검증 모듈의 "
                 "BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
-                "Final Review의 정식 저장은 selected-route gate까지 통과한 Selected Dashboard 모니터링 후보 선정만 허용합니다."
+                "Final Review의 정식 저장은 selected-route gate까지 통과한 Portfolio Monitoring 후보 선정만 허용합니다."
             ),
             tone="positive" if can_save_and_move else "danger",
         )

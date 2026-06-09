@@ -32,18 +32,18 @@ from app.runtime.backtest import BacktestDataError, BacktestInputError
 def render_candidate_library_page() -> None:
     st.title("Archive: Candidates")
     st.caption(
-        "Archive / Recovery: 저장된 Current Candidate / Pre-Live 후보를 다시 열어 보고, 필요하면 저장된 contract로 결과 곡선을 재생성합니다."
+        "Archive / Recovery: 저장된 legacy candidate / Pre-Live 기록을 다시 열어 보고, 필요하면 저장된 contract로 결과 곡선을 재생성합니다."
     )
 
     records = load_candidate_library_records()
     if not records:
-        st.info("저장된 current candidate가 아직 없습니다. Backtest > Candidate Review에서 후보를 registry에 저장하면 여기에 표시됩니다.")
+        st.info("보존된 legacy candidate registry 기록이 없습니다. 새 후보 생성은 Backtest Analysis에서 시작합니다.")
         st.caption(f"Current Candidate path: {CURRENT_CANDIDATE_REGISTRY_FILE}")
         return
 
     st.info(
         "Candidate Library는 새 workflow 단계가 아니라 보관함입니다. "
-        "후보를 다시 검토하거나 그래프를 확인할 때 쓰고, 후보 등록 / 운영 기록 / 제안 판단은 기존 Backtest 흐름에서 처리합니다. "
+        "과거 후보를 다시 검토하거나 그래프를 확인할 때 쓰고, 현재 후보 생성 / 검증 / 최종 판단은 Backtest Analysis, Practical Validation, Final Review에서 처리합니다. "
         "Operations Console에서는 이 화면을 primary monitoring이 아니라 archive / recovery 도구로 취급합니다."
     )
     st.caption(f"Current Candidate path: {CURRENT_CANDIDATE_REGISTRY_FILE}")

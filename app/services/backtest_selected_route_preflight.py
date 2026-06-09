@@ -36,7 +36,7 @@ def build_practical_validation_selected_route_preflight(
             "route": "READY_FOR_FINAL_DECISION",
             "blockers": [],
             "verdict": "Practical Validation selected-route preflight checks selection-critical evidence before Final Review.",
-            "next_action": "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다.",
+            "next_action": "Final Review에서 Portfolio Monitoring 후보 선정 저장을 진행합니다.",
         }
     packet = build_investability_evidence_packet(
         source=source_row,

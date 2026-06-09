@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - Prototype Legacy Cleanup / Removal
+- Completed `.aiworkspace/note/finance/tasks/active/prototype-legacy-cleanup-20260609/` as the legacy-flow cleanup pass.
+- Backtest primary route / page shell now shows only `Backtest Analysis -> Practical Validation -> Final Review`; Candidate Review / Portfolio Proposal route requests fall back to Backtest Analysis and old modules are retained only as deferred compatibility.
+- Overview no longer renders the primary `Candidate Ops` tab; Archive: Backtest Runs now sends records to current Practical Validation source handoff.
+- Durable docs now describe Candidate Review / Portfolio Proposal / Pre-Live as legacy archive / recovery records, while Portfolio Monitoring is the user-facing post-Final Review surface.
+
 ### 2026-06-09 - Data Provenance / PIT Evidence Contract
 - Completed `.aiworkspace/note/finance/tasks/active/data-provenance-pit-evidence-contract-20260609/` as the 4th product-direction priority after Robustness Experiment Registry.
 - Added `app/services/backtest_data_provenance.py` as a compact read model over provider / macro / price window / lifecycle / robustness evidence.

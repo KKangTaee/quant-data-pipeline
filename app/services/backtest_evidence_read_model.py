@@ -28,7 +28,7 @@ FINAL_REVIEW_DECISION_LABELS = {
 FINAL_REVIEW_STATUS_DISPLAY = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
         "route": "FINAL_REVIEW_DECISION_COMPLETE",
-        "verdict": "최종 판단 완료: Selected Dashboard 모니터링 후보로 선정됨",
+        "verdict": "최종 판단 완료: Portfolio Monitoring 후보로 선정됨",
         "next_action": "이 기록은 모니터링 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
     },
     "HOLD_FOR_MORE_PAPER_TRACKING": {
@@ -39,7 +39,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
     "REJECT_FOR_PRACTICAL_USE": {
         "route": "FINAL_REVIEW_REJECTED",
         "verdict": "최종 판단 완료: 모니터링 후보에서 제외됨",
-        "next_action": "필요하면 후보 탐색, Compare, Portfolio Proposal 단계로 되돌아갑니다.",
+        "next_action": "필요하면 Backtest Analysis에서 후보 source를 다시 만들고 Practical Validation으로 재검증합니다.",
     },
     "RE_REVIEW_REQUIRED": {
         "route": "FINAL_REVIEW_REVIEW_REQUIRED",
@@ -49,9 +49,9 @@ FINAL_REVIEW_STATUS_DISPLAY = {
 }
 FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
-        "reason": "Decision Cockpit과 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Selected Dashboard 추적 후보로 기록한다.",
+        "reason": "Decision Cockpit과 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Portfolio Monitoring 추적 후보로 기록한다.",
         "constraints": "실제 투자 전 투입 금액, 리밸런싱 규칙, 중단 / 재검토 기준, 세금 / 계좌 조건은 별도로 확인한다.",
-        "next_action": "Selected Portfolio Dashboard에서 read-only monitoring / recheck 기준을 확인한다.",
+        "next_action": "Portfolio Monitoring에서 read-only monitoring / recheck 기준을 확인한다.",
     },
     "HOLD_FOR_MORE_PAPER_TRACKING": {
         "reason": "critical blocker는 아니지만 review-required evidence나 관찰 공백이 남아 있어 선정 전 추가 paper tracking이 필요하다.",
@@ -815,7 +815,7 @@ def build_investability_gate_policy(
     else:
         outcome = "select_ready"
         suggested_decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
-        next_action = "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
+        next_action = "Final Review에서 Portfolio Monitoring 후보 선정 저장을 진행합니다."
     return {
         "schema_version": (
             SELECTION_GATE_POLICY_SCHEMA_VERSION
@@ -1251,8 +1251,8 @@ def build_investability_evidence_packet(
         next_action = "부족한 evidence를 보강한 뒤 selected-route gate를 다시 확인합니다."
     elif decision_evidence.get("route") == "READY_FOR_FINAL_DECISION":
         route = "INVESTABILITY_PACKET_READY"
-        verdict = "Selected Dashboard에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
-        next_action = "Final Review에서 모니터링 후보 선정 저장을 진행하고 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
+        verdict = "Portfolio Monitoring에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
+        next_action = "Final Review에서 모니터링 후보 선정 저장을 진행하고 open review item은 Portfolio Monitoring / Live Readiness에서 이어서 확인합니다."
     else:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "hard blocker는 없지만 Final Review evidence가 아직 완전하지 않습니다."
@@ -1458,7 +1458,7 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
         return (
             "SELECT_READY",
             "모니터링 후보 가능",
-            "현재 gate policy상 Selected Dashboard 모니터링 후보로 저장할 수 있습니다.",
+            "현재 gate policy상 Portfolio Monitoring 후보로 저장할 수 있습니다.",
         )
     if outcome == "blocked" or route == "INVESTABILITY_PACKET_BLOCKED":
         return (
@@ -1496,7 +1496,7 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
     if state == "SELECT_READY":
         return (
             "모니터링 후보 선정",
-            "모니터링 후보로 저장 가능한 상태입니다. Decision Cockpit을 확인한 뒤 Selected Dashboard 추적 후보로 저장합니다.",
+            "모니터링 후보로 저장 가능한 상태입니다. Decision Cockpit을 확인한 뒤 Portfolio Monitoring 후보로 저장합니다.",
             "모니터링 후보 가능",
         )
     if state == "SELECT_BLOCKED":
@@ -2031,7 +2031,7 @@ def _decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Decision Dossier reads the saved Final Decision row and optional Selected Dashboard session timeline only.",
+            "notes": "Decision Dossier reads the saved Final Decision row and optional Portfolio Monitoring session timeline only.",
         },
     }
 
@@ -2136,7 +2136,7 @@ def _decision_dossier_markdown(dossier: dict[str, Any]) -> str:
             )
         )
     else:
-        lines.append("- 현재 dossier에는 Selected Dashboard session timeline이 포함되지 않았습니다.")
+        lines.append("- 현재 dossier에는 Portfolio Monitoring session timeline이 포함되지 않았습니다.")
     lines.extend(
         [
             "",

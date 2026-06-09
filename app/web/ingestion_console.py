@@ -96,7 +96,7 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "title": "일별 가격 업데이트",
         "purpose": "선택한 운용 universe의 OHLCV, 배당, 분할 가격 이력을 갱신합니다.",
         "targets": ["finance_price.nyse_price_history"],
-        "used_by": ["Backtest Analysis", "Data Coverage Audit", "Selected Dashboard symbol freshness"],
+        "used_by": ["Backtest Analysis", "Data Coverage Audit", "Portfolio Monitoring symbol freshness"],
         "caveats": [
             "무료 provider no-data와 rate limit이 발생할 수 있습니다.",
             "요청 기간 대비 실제 DB coverage와 최신 거래일을 결과에서 확인해야 합니다.",

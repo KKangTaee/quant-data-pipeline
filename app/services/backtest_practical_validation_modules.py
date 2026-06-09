@@ -634,9 +634,9 @@ def build_validation_module_plan(
             requirement="REFERENCE",
             stage_owner="selected_dashboard",
             reason="선정 이후 recheck / monitoring seed를 구성합니다.",
-            next_action="Final Review 이후 Selected Dashboard에서 운영 확인 근거로 사용합니다.",
+            next_action="Final Review 이후 Portfolio Monitoring에서 운영 확인 근거로 사용합니다.",
             profile_effect="downstream",
-            resolution_surface="Selected Portfolio Dashboard",
+            resolution_surface="Portfolio Monitoring",
             resolution_action="Final Review 이후 recheck / monitoring baseline으로 확인합니다.",
         ),
         _module(

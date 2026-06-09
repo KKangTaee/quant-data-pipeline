@@ -334,7 +334,7 @@ def _concept_rows() -> list[dict[str, str]]:
         {
             "개념": "Legacy Candidate / Proposal",
             "제품 안에서의 의미": "기존 JSONL과 화면을 읽기 위한 호환 경로. 새 main flow의 필수 단계는 아닙니다.",
-            "사용자가 볼 곳": "Backtest legacy compatibility surfaces",
+            "사용자가 볼 곳": "Operations > Archive: Candidates",
         },
     ]
 
@@ -364,7 +364,7 @@ def _storage_rows() -> list[dict[str, str]]:
         {
             "기록": "Legacy Candidate / Proposal Registries",
             "담는 내용": "기존 Candidate Review, Pre-Live, Portfolio Proposal, Paper Ledger, Final Decision V1 기록",
-            "생성 화면": "Legacy compatibility",
+            "생성 화면": "Retained archive / recovery records",
         },
     ]
 
@@ -470,7 +470,7 @@ def _runtime_artifact_rows() -> list[dict[str, str]]:
             "파일": "BACKTEST_RUN_HISTORY.jsonl",
             "폴더": ".aiworkspace/note/finance/run_history/",
             "담는 데이터": "Backtest 실행 payload, 결과 요약, replay에 필요한 실행 기록",
-            "화면 위치": "Operations > Backtest Run History",
+            "화면 위치": "Operations > Archive: Backtest Runs",
         },
         {
             "파일": "WEB_APP_RUN_HISTORY.jsonl",
@@ -1226,7 +1226,7 @@ def _render_reference_drawer() -> None:
             - `Practical Validation`은 source를 profile-aware practical diagnostics 결과로 구조화하는 2단계입니다.
             - `Final Review`는 현재 workflow의 마지막 판단 기록입니다.
             - `Portfolio Monitoring`은 Final Review selected row를 Operations에서 다시 읽는 화면입니다.
-            - `Candidate Review / Portfolio Proposal`은 기존 기록을 읽기 위한 legacy compatibility 경로입니다.
+            - `Candidate Review / Portfolio Proposal`은 기존 기록을 읽기 위한 archive / recovery compatibility 경로입니다.
             - `Live Approval / Order`는 현재 제품 범위 밖입니다.
             """
         )
