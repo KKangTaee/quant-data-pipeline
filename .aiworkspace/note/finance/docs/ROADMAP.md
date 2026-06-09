@@ -28,10 +28,7 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-refresh-result-ux-v3-20260610/`
-- 목적: `Workspace > Overview > Market Context`의 수동 일괄 갱신 결과에서 issue rows와 전체 rows를 분리해 partial / failed / skipped 상태를 바로 확인하게 했다.
-- 이번 차수에서 하지 않은 일: 새 provider, DB schema, scheduler, action queue, registry / saved JSONL write, validation / monitoring / trading signal.
-- Recent previous completed task: `.aiworkspace/note/finance/tasks/active/overview-ia-closeout-v1-20260608/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-ia-closeout-v1-20260608/`
 - 목적: `Workspace > Overview` cockpit 아래에 `Overview Map / Deep Tab Reading Order`를 추가해 market context, data repair, transitional Candidate Ops 경계를 명확히 닫았다.
 - 이번 차수에서 하지 않은 일: Candidate Ops 제거 / 이동, Backtest workflow 변경, 새 provider, DB schema, registry / saved JSONL write, Overview render 중 external fetch, validation / monitoring / trading signal.
 - Recent previous completed task: `.aiworkspace/note/finance/tasks/active/overview-source-confidence-catalog-v1-20260608/`
@@ -75,7 +72,6 @@ Workspace > Ingestion
 | Overview Breadth / Macro Week V1 | Complete | Sector / Industry now opens with breadth / concentration summary plus the existing latest heatmap, and Events opens with a 14-day macro week lane for FOMC / macro / earnings context. It reuses existing DB-backed snapshots only and remains context-only, with no provider, schema, registry, saved setup, validation gate, monitoring signal, or trading action. |
 | Overview Source Confidence Catalog V1 | Complete | The Overview cockpit now includes a compact Source Confidence lane for prices, breadth, futures, sentiment, events, and data health source state. It reuses the same snapshots already loaded by the cockpit, exposes owner / freshness / caveat / next check, and does not add provider fetch, schema, persistence, validation, monitoring, or trading semantics. |
 | Overview IA Closeout V1 | Complete | Overview now places a compact `Overview Map / Deep Tab Reading Order` between the cockpit and deep tabs. It keeps Market Context, Data Repair, and transitional Candidate Ops boundaries visible without moving Candidate Ops, adding providers, changing storage, or creating validation / monitoring / trading semantics. |
-| Overview Refresh Result UX V3 | Complete | Market Context manual refresh now separates issue rows from full results, translates status labels, shows compact run metrics, and keeps partial provider outcomes visible without adding scheduler, provider, schema, persistence, validation, monitoring, or trading semantics. |
 | Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 
 ## Completed Foundations

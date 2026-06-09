@@ -1766,160 +1766,33 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
-def _overview_refresh_safe_int(value: Any) -> int:
-    if value in (None, ""):
-        return 0
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _overview_refresh_status_bucket(status: Any) -> str:
-    normalized = str(status or "").strip().lower()
-    if normalized in {"success", "ok", "dry_run"}:
-        return "success"
-    if normalized in {"partial_success", "partial", "skipped", "locked"}:
-        return "partial"
-    if normalized in {"failed", "error"}:
-        return "failed"
-    return "unknown"
-
-
-def _overview_refresh_status_label(status: Any) -> str:
-    normalized = str(status or "").strip().lower()
-    mapping = {
-        "success": "완료",
-        "ok": "완료",
-        "dry_run": "Dry run",
-        "partial_success": "부분 완료",
-        "partial": "부분 완료",
-        "skipped": "건너뜀",
-        "locked": "실행 대기",
-        "failed": "실패",
-        "error": "오류",
-    }
-    return mapping.get(normalized, str(status or "-"))
-
-
-def _overview_refresh_next_action(status: Any) -> str:
-    bucket = _overview_refresh_status_bucket(status)
-    normalized = str(status or "").strip().lower()
-    if bucket == "success":
-        return "deep tab 확인"
-    if bucket == "failed":
-        return "수집 화면 확인"
-    if normalized in {"skipped", "locked"}:
-        return "조건 확인 후 재실행"
-    if bucket == "partial":
-        return "rows / 메시지 확인"
-    return "결과 메시지를 확인하세요."
-
-
-def _overview_market_context_refresh_result_model(result: dict[str, Any]) -> dict[str, Any]:
-    """Build a Streamlit-friendly summary for the manual Market Context refresh bundle."""
-    raw_results = result.get("results") or []
-    rows: list[dict[str, Any]] = []
-    issue_rows: list[dict[str, Any]] = []
-    failed_count = 0
-    rows_written_total = 0
-    for item in raw_results:
-        if not isinstance(item, dict):
-            continue
-        status = item.get("status") or "-"
-        bucket = _overview_refresh_status_bucket(status)
-        rows_written = _overview_refresh_safe_int(item.get("rows_written"))
-        row = {
-            "작업": item.get("label") or item.get("job_name") or "-",
-            "상태": _overview_refresh_status_label(status),
-            "저장 rows": rows_written,
-            "메시지": item.get("message") or "",
-            "다음 확인": _overview_refresh_next_action(status),
-        }
-        rows.append(row)
-        rows_written_total += rows_written
-        if bucket == "failed":
-            failed_count += 1
-        if bucket != "success":
-            issue_rows.append(row)
-
-    status = result.get("status") or "-"
-    status_bucket = _overview_refresh_status_bucket(status)
-    jobs_run = _overview_refresh_safe_int(result.get("jobs_run")) or len(rows)
-    jobs_failed = max(_overview_refresh_safe_int(result.get("jobs_failed")), failed_count)
-    issue_count = len(issue_rows)
-    message = str(result.get("message") or "")
-    detail = message
-    if issue_count:
-        detail = f"{message} 확인 필요 {issue_count}건." if message else f"확인 필요 {issue_count}건."
-    if status_bucket == "failed" or (jobs_run > 0 and jobs_failed >= jobs_run):
-        headline = "일괄 갱신 실패"
-        tone = "danger"
-        next_action = "실패한 job의 owning collection surface에서 원인을 먼저 확인하세요."
-    elif status_bucket == "partial" or issue_count:
-        headline = "일괄 갱신 일부 확인 필요"
-        tone = "warning"
-        next_action = "확인 필요한 갱신 결과를 먼저 보고, 해당 deep tab의 freshness / coverage를 다시 확인하세요."
-    elif status_bucket == "success":
-        headline = "일괄 갱신 완료"
-        tone = "positive"
-        next_action = "Market Context와 필요한 deep tab에서 갱신된 snapshot을 확인하세요."
-    else:
-        headline = "일괄 갱신 결과 확인"
-        tone = "neutral"
-        next_action = "결과 메시지를 확인하세요."
-
-    return {
-        "headline": headline,
-        "tone": tone,
-        "detail": detail,
-        "next_action": next_action,
-        "metrics": [
-            {"title": "실행 Jobs", "value": jobs_run, "detail": "이번 버튼으로 실행된 job 수", "tone": "neutral"},
-            {"title": "확인 필요", "value": issue_count, "detail": "부분 완료 / 실패 / 스킵", "tone": "warning" if issue_count else "positive"},
-            {"title": "실패 Jobs", "value": jobs_failed, "detail": "failed / error", "tone": "danger" if jobs_failed else "positive"},
-            {"title": "저장 Rows", "value": rows_written_total, "detail": "각 job rows_written 합계", "tone": "neutral"},
-        ],
-        "issue_rows": issue_rows,
-        "rows": rows,
-    }
-
-
-def _render_overview_market_context_refresh_metrics(metrics: list[dict[str, Any]]) -> None:
-    if not metrics:
-        return
-    cols = st.columns(len(metrics))
-    for col, metric in zip(cols, metrics):
-        col.metric(
-            str(metric.get("title") or "-"),
-            str(metric.get("value") if metric.get("value") is not None else "-"),
-            help=str(metric.get("detail") or ""),
-        )
-
-
 def _render_overview_market_context_refresh_result(result_key: str) -> None:
     result = st.session_state.get(result_key)
     if not isinstance(result, dict):
         return
-    model = _overview_market_context_refresh_result_model(result)
-    alert_message = f"{model['headline']}: {model['detail']}" if model["detail"] else model["headline"]
-    if model["tone"] == "positive":
-        st.success(alert_message)
-    elif model["tone"] == "warning":
-        st.warning(alert_message)
-    elif model["tone"] == "danger":
-        st.error(alert_message)
+    status = str(result.get("status") or "-")
+    message = str(result.get("message") or "")
+    if status == "success":
+        st.success(message)
+    elif status == "partial_success":
+        st.warning(message)
     else:
-        st.info(alert_message)
-    st.caption(f"다음 확인: {model['next_action']}")
-    _render_overview_market_context_refresh_metrics(model["metrics"])
-    if model["issue_rows"]:
-        with st.expander("확인 필요한 갱신 결과", expanded=True):
-            st.caption("부분 완료, 실패, 스킵, 실행 대기 상태만 모았습니다.")
-            st.dataframe(pd.DataFrame(model["issue_rows"]), width="stretch", hide_index=True)
-    if model["rows"]:
-        with st.expander("전체 일괄 갱신 결과", expanded=False):
-            st.dataframe(pd.DataFrame(model["rows"]), width="stretch", hide_index=True)
+        st.error(message)
+    rows = []
+    for item in result.get("results") or []:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "작업": item.get("label") or item.get("job_name") or "-",
+                "상태": item.get("status") or "-",
+                "저장 rows": item.get("rows_written") or 0,
+                "메시지": item.get("message") or "",
+            }
+        )
+    if rows:
+        with st.expander("일괄 갱신 결과", expanded=False):
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 
 def _render_overview_market_context_refresh_bar() -> None:

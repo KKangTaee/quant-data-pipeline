@@ -4301,58 +4301,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "다른 Overview 갱신 작업이 이미 실행 중입니다.",
         )
 
-    def test_market_context_refresh_result_model_separates_issue_rows(self) -> None:
-        from app.web.overview_dashboard import _overview_market_context_refresh_result_model
-
-        model = _overview_market_context_refresh_result_model(
-            {
-                "status": "partial_success",
-                "message": "Overview market context 일괄 갱신: 6/7 jobs completed.",
-                "jobs_run": 7,
-                "jobs_failed": 1,
-                "results": [
-                    {
-                        "label": "S&P 500 Market Movers",
-                        "status": "success",
-                        "rows_written": 503,
-                        "message": "ok",
-                    },
-                    {
-                        "label": "Futures Monitor 1m OHLCV",
-                        "status": "partial_success",
-                        "rows_written": 12,
-                        "message": "some symbols were empty",
-                    },
-                    {
-                        "label": "Earnings Calendar",
-                        "status": "failed",
-                        "rows_written": 0,
-                        "message": "provider unavailable",
-                    },
-                ],
-            }
-        )
-
-        self.assertEqual(model["headline"], "일괄 갱신 일부 확인 필요")
-        self.assertEqual(model["tone"], "warning")
-        self.assertEqual([row["작업"] for row in model["issue_rows"]], ["Futures Monitor 1m OHLCV", "Earnings Calendar"])
-        self.assertEqual([row["상태"] for row in model["issue_rows"]], ["부분 완료", "실패"])
-        self.assertEqual(model["rows"][0]["상태"], "완료")
-        self.assertIn("수집 화면", model["issue_rows"][1]["다음 확인"])
-        self.assertEqual(
-            [(card["title"], card["value"]) for card in model["metrics"]],
-            [("실행 Jobs", 7), ("확인 필요", 2), ("실패 Jobs", 1), ("저장 Rows", 515)],
-        )
-
-    def test_market_context_refresh_result_renderer_surfaces_issue_expander(self) -> None:
-        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
-        body = source[source.index("def _render_overview_market_context_refresh_result") :]
-        body = body[: body.index("def _render_overview_market_context_refresh_bar")]
-
-        self.assertIn("_overview_market_context_refresh_result_model", body)
-        self.assertIn("확인 필요한 갱신 결과", body)
-        self.assertIn("전체 일괄 갱신 결과", body)
-
     def test_browser_auto_refresh_job_config_tracks_selected_coverage(self) -> None:
         from app.web.overview_dashboard import _browser_auto_refresh_job_config
 
