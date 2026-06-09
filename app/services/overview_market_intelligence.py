@@ -4312,18 +4312,55 @@ def build_overview_macro_context_cockpit(
         ]
         if item is not None
     ][:4]
+    context_review_count = max(data_review_count, len(review_cards))
+    next_path = " -> ".join(
+        str(item.get("target_tab") or "-")
+        for item in next_checks
+        if str(item.get("target_tab") or "").strip()
+    ) or "필요한 deep tab 없음"
+    source_status = str(source_confidence.get("status") or status)
+    summary_headline = (
+        "Market Context 일부 source 확인 필요"
+        if status == "REVIEW"
+        else "Market Context 준비됨"
+    )
+    summary_detail = (
+        f"Data Health {data_review_count}개와 source 상태를 확인한 뒤 context를 참고하세요."
+        if context_review_count
+        else "저장된 DB-backed market context snapshot을 scan-first 분석에 사용할 수 있습니다."
+    )
+    rail = [
+        {
+            "label": "상태",
+            "value": "확인 필요" if status == "REVIEW" else "준비됨",
+            "detail": f"{context_review_count}개 review" if context_review_count else "fresh context",
+            "tone": _cockpit_status_tone(status),
+        },
+        {
+            "label": "다음 확인",
+            "value": next_path,
+            "detail": "우선순위 Deep Tab 순서",
+            "tone": "warning" if context_review_count else "positive",
+        },
+        {
+            "label": "자료 기준",
+            "value": f"Source {source_status} · Data Health {data_review_count}개",
+            "detail": "DB-backed snapshot",
+            "tone": _cockpit_status_tone(source_status),
+        },
+    ]
 
     return {
         "schema_version": "overview_macro_context_cockpit_v1",
         "status": status,
         "summary": {
-            "headline": "시장 context 확인이 필요합니다" if status == "REVIEW" else "시장 context 준비됨",
-            "detail": (
-                f"이 snapshot을 그대로 참고하기 전에 데이터 상태 {data_review_count}개를 확인하세요."
-                if data_review_count
-                else "저장된 DB-backed market context snapshot을 scan-first 분석에 사용할 수 있습니다."
-            ),
+            "headline": summary_headline,
+            "detail": summary_detail,
             "tone": _cockpit_status_tone(status),
+            "review_count": context_review_count,
+            "data_review_count": data_review_count,
+            "next_path": next_path,
+            "rail": rail,
         },
         "cards": cards,
         "next_checks": next_checks,

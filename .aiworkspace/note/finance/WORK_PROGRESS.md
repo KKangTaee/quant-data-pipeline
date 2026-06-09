@@ -4900,3 +4900,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-context-tab-v1-20260610/`에서 `Market Context`를 Overview 첫 deep tab으로 추가했다.
   - refresh / cockpit / Deep Tab guide / Overview Map을 같은 tab 안으로 이동해 Overview 진입 직후 종합 context를 먼저 보게 했다.
   - 새 provider / schema / registry / saved write / validation or trading semantics는 추가하지 않았다.
+- Overview Market Context Readability V2:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-readability-v2-20260610/`에서 Market Context 첫 화면을 summary-first layout으로 정리했다.
+  - REVIEW headline을 source/data 상태 중심 copy로 바꾸고, 상태 / 다음 확인 / 자료 기준 rail을 카드 위에 추가했다.
+  - 기존 DB-backed read model과 UI renderer만 변경했으며 provider / schema / persistence / validation / trading semantics는 추가하지 않았다.

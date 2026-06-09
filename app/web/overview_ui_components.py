@@ -247,10 +247,50 @@ def overview_ui_css() -> str:
   line-height: 1.1;
   white-space: nowrap;
 }
+.ov-macro-cockpit-rail {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.58fr) minmax(18rem, 1.35fr) minmax(12rem, 0.8fr);
+  gap: 0;
+  margin: 0.12rem 0 0.68rem 0;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 7%, transparent), rgba(255,255,255,0.74)),
+    var(--ov-mi-color-surface-subtle);
+}
+.ov-macro-cockpit-rail-item {
+  min-width: 0;
+  padding: 0.58rem 0.72rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-macro-cockpit-rail-item:first-child {
+  border-left: 0;
+}
+.ov-macro-cockpit-rail-label {
+  color: var(--ov-rail-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-macro-cockpit-rail-value {
+  color: var(--ov-mi-color-text);
+  font-size: 0.94rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  margin-top: 0.16rem;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-rail-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.22;
+  margin-top: 0.12rem;
+  overflow-wrap: anywhere;
+}
 .ov-macro-cockpit-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--ov-mi-gap-md);
+  gap: var(--ov-mi-gap-sm);
 }
 .ov-macro-cockpit-card {
   min-width: 0;
@@ -259,6 +299,18 @@ def overview_ui_css() -> str:
   border-radius: var(--ov-mi-radius-card);
   background: rgba(255,255,255,0.92);
   padding: 0.6rem 0.66rem;
+}
+.ov-macro-cockpit-card-primary {
+  padding: 0.64rem 0.72rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98), color-mix(in srgb, var(--ov-card-tone, var(--ov-mi-color-neutral)) 4%, rgba(248,250,252,0.92))),
+    var(--ov-mi-color-surface);
+}
+.ov-macro-cockpit-card-secondary {
+  border-top-width: 0;
+  border-left: 3px solid var(--ov-card-tone, var(--ov-mi-color-neutral));
+  background: rgba(248,250,252,0.74);
+  padding: 0.5rem 0.58rem;
 }
 .ov-macro-cockpit-card-head {
   display: flex;
@@ -289,6 +341,17 @@ def overview_ui_css() -> str:
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
   overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-card-secondary .ov-macro-cockpit-value {
+  font-size: 0.9rem;
+  margin-top: 0.22rem;
+}
+.ov-macro-cockpit-card-secondary .ov-macro-cockpit-question {
+  display: none;
+}
+.ov-macro-cockpit-card-secondary .ov-macro-cockpit-card-detail {
+  margin-top: 0.22rem;
+  font-size: var(--ov-mi-font-xs);
 }
 .ov-macro-cockpit-question,
 .ov-macro-cockpit-card-detail,
@@ -1585,6 +1648,17 @@ def overview_ui_css() -> str:
   .ov-macro-week-head {
     grid-template-columns: 1fr;
   }
+  .ov-macro-cockpit-rail {
+    grid-template-columns: 1fr;
+  }
+  .ov-macro-cockpit-rail-item,
+  .ov-macro-cockpit-rail-item:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-macro-cockpit-rail-item:first-child {
+    border-top: 0;
+  }
   .ov-macro-cockpit-grid,
   .ov-macro-cockpit-checks,
   .ov-source-confidence-grid,
@@ -1758,15 +1832,32 @@ def _macro_cockpit_badges_html(badges: list[dict[str, Any]]) -> str:
     return "".join(html)
 
 
+def _macro_cockpit_rail_html(items: list[dict[str, Any]]) -> str:
+    if not items:
+        return ""
+    html: list[str] = []
+    for item in items[:3]:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        html.append(
+            f'<div class="ov-macro-cockpit-rail-item" style="--ov-rail-tone:{tone_color};">'
+            f'<div class="ov-macro-cockpit-rail-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-macro-cockpit-rail-value">{escape(_display_value(item.get("value")))}</div>'
+            f'<div class="ov-macro-cockpit-rail-detail">{escape(_display_value(item.get("detail")))}</div>'
+            "</div>"
+        )
+    return f'<div class="ov-macro-cockpit-rail">{"".join(html)}</div>'
+
+
 def _macro_cockpit_cards_html(cards: list[dict[str, Any]]) -> str:
     html: list[str] = []
-    for card in cards:
+    for index, card in enumerate(cards):
         tone_color = escape(_overview_tone_color(card.get("tone")))
         badges = _macro_cockpit_badges_html(list(card.get("badges") or []))
         source = _display_value(card.get("source"))
         freshness = _display_value(card.get("freshness"))
+        prominence_class = "ov-macro-cockpit-card-primary" if index < 3 else "ov-macro-cockpit-card-secondary"
         html.append(
-            f'<article class="ov-macro-cockpit-card" style="--ov-card-tone:{tone_color};">'
+            f'<article class="ov-macro-cockpit-card {prominence_class}" style="--ov-card-tone:{tone_color};">'
             '<div class="ov-macro-cockpit-card-head">'
             f'<div class="ov-macro-cockpit-label">{escape(_display_value(card.get("title")))}</div>'
             f'<div class="ov-macro-cockpit-card-status">{escape(_display_value(card.get("status")))}</div>'
@@ -1839,6 +1930,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
 def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
+    rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
     cards_html = _macro_cockpit_cards_html(list(model.get("cards") or []))
     next_checks_html = _macro_cockpit_next_checks_html(list(model.get("next_checks") or []))
     source_confidence_html = _macro_cockpit_source_confidence_html(dict(model.get("source_confidence") or {}))
@@ -1854,6 +1946,7 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     </div>
     <span class="ov-macro-cockpit-status">{escape(_display_value(model.get("status")))}</span>
   </div>
+  {rail_html}
   <div class="ov-macro-cockpit-grid">{cards_html}</div>
   <div class="ov-macro-cockpit-next">
     <div>

@@ -7660,3 +7660,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Overview 진입 시 종합 context를 먼저 보게 하고, deep tab 안내 / Overview Map을 해당 summary surface 안에 묶어야 함.
 - Analysis result: `Market Context`를 첫 deep tab으로 두고 refresh / cockpit / Deep Tab guide / Overview Map을 함께 렌더링하는 것이 IA상 가장 명확하다.
 - Follow-up: `Workspace > Overview > Market Context` 첫 탭을 추가했다. 자동 갱신 정책과 refresh result UX 세분화는 후속 차수로 남겼다.
+
+### 2026-06-10 - Market Context cockpit을 card-first에서 summary-first로 개선한다
+
+- User request: 사용자가 card-heavy UX가 최선인지, `시장 context 확인이 필요합니다` copy가 오해를 줄 수 있는지 물은 뒤 전체 개선을 요청함.
+- Interpreted goal: 시장 상태 경고처럼 읽히는 headline을 source/data review 의미로 정정하고, 첫 화면에서 결론과 다음 확인 순서가 먼저 보이게 해야 함.
+- Analysis result: 기존 카드 분리는 source/freshness 노출에는 좋지만 읽는 순서가 약하므로, summary rail을 카드 위에 두고 analytical cards와 supporting cards의 밀도를 나누는 것이 적절하다.
+- Follow-up: `Market Context 일부 source 확인 필요` headline, 상태 / 다음 확인 / 자료 기준 rail, primary/secondary card styling을 추가했다. Source Confidence / Overview Map 접힘 UX는 후속 후보로 남긴다.
