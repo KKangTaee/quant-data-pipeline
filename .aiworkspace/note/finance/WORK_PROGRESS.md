@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-10 - Risk Parity / Dual Momentum 5B
+- Opened and completed `.aiworkspace/note/finance/tasks/active/risk-parity-dual-momentum-5b-20260610/` for Backtest 5B.
+- Improved Risk Parity Trend row/meta contracts for volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight interpretation.
+- Improved Dual Momentum row/meta contracts for top-N selection, trend rejection, cash proxy retention, concentration, and selection-change / whipsaw interpretation.
+- Reused existing Selection History; no new Backtest Analysis panel, registry / saved JSONL / run history write, provider fetch, Practical Validation, Final Review, or Monitoring behavior change.
+
 ### 2026-06-09 - Global Relative Strength 5A
 - Opened and completed `.aiworkspace/note/finance/tasks/active/global-relative-strength-5a-20260609/` for Backtest 5A.
 - Improved GRS runtime / strategy / result bundle contracts: strategy owns rebalance cadence, score windows / weights are preserved, cash proxy and benchmark contract metadata are retained, and risky ETF gaps can flow to exclusion metadata.

@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-10 - ETF 5B should harden Risk Parity / Dual Momentum contracts, not panels
+- User request:
+  - 5A 이후 새 Backtest Analysis 패널이 아니라 Risk Parity Trend와 Dual Momentum의 실제 strategy runtime / result bundle 계약 고도화를 요청함.
+- Interpreted goal:
+  - Risk Parity는 inverse-vol weight와 cash-only / guardrail effect를, Dual Momentum은 top-N rejection / cash retention / whipsaw를 result row/meta와 기존 Selection History에서 설명 가능하게 만든다.
+- Analysis result:
+  - 5B는 strategy row diagnostics와 compact runtime meta summary를 추가하는 것이 맞다. Dual Momentum의 기존 survivor reweighting은 trend-rejected top-N slot을 숨기므로, 5B에서 GRS처럼 rejected slot을 cash proxy로 유지하는 계약으로 정리했다.
+- Follow-up:
+  - Practical Validation / Final Review / Monitoring gate behavior는 바꾸지 않았으며, downstream 정책 변경은 별도 승인 task가 필요하다.
+
 ### 2026-06-09 - GRS 5A should harden strategy logic instead of adding panels
 - User request:
   - Backtest Analysis에 패널을 더 추가하지 말고 Global Relative Strength 전략 자체를 고도화하라고 요청함.

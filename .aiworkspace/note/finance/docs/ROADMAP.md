@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-06-10
 
 ## Current State After Master Merge
 
@@ -28,7 +28,10 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/global-relative-strength-5a-20260609/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/risk-parity-dual-momentum-5b-20260610/`
+- 목적: Backtest 5B로 Risk Parity Trend와 Dual Momentum의 strategy runtime / result bundle 계약을 고도화한다. Risk Parity는 volatility window / eligible universe / inverse-vol weight / cash-only state / guardrail effect / low-vol overweight를, Dual Momentum은 top-N concentration / trend rejected ticker / selected count / cash proxy retention / turnover-whipsaw 해석을 result row/meta와 기존 Selection History에서 확인할 수 있게 됐다.
+- 이번 차수에서 하지 않은 일: 새 Backtest Analysis evidence / log / workbench panel 추가, registry / saved JSONL / run history / generated artifact write, provider / FRED direct fetch, Practical Validation / Final Review / Monitoring behavior 변경, live trading / broker order / auto rebalance.
+- Previous completed task: `.aiworkspace/note/finance/tasks/active/global-relative-strength-5a-20260609/`
 - 목적: Backtest 5A로 Global Relative Strength의 strategy runtime / result bundle 계약을 고도화한다. GRS는 strategy가 rebalance interval을 직접 소유하고, cash proxy / benchmark contract / excluded ticker / stale price / top-N concentration / momentum score window 정보를 result bundle meta와 기존 Selection History에서 해석할 수 있게 됐다.
 - 이번 차수에서 하지 않은 일: 새 Backtest Analysis evidence / log / workbench panel 추가, registry / saved JSONL / run history / generated artifact write, provider / FRED direct fetch, Practical Validation / Final Review / Monitoring behavior 변경, live trading / broker order / auto rebalance.
 - Recent previous task: `.aiworkspace/note/finance/tasks/active/backtest-analysis-direction-reset-20260609/`
@@ -73,6 +76,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Risk Parity / Dual Momentum 5B | Complete | Risk Parity Trend now exposes volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight diagnostics. Dual Momentum now retains trend-rejected top-N slots as cash proxy and exposes selected / rejected / unfilled counts, cash proxy return, concentration, and selection-change / whipsaw diagnostics. Both reuse existing Selection History and result bundle meta without adding a new panel. |
 | Global Relative Strength 5A | Complete | GRS runtime now avoids pre-strategy interval thinning, preserves momentum score / cash proxy / benchmark contract metadata, exposes cash and top-N concentration row diagnostics, and connects to the existing Selection History without adding a new evidence / log / workbench panel. |
 | Backtest Analysis Direction Reset 4C | Complete | Backtest Analysis now shows strategy execution / comparison / candidate creation first. Reference help and 3A~4B evidence / governance / ETF workbench panels are hidden behind the `전략 개발 참고` advanced control and use Korean-first wrapper copy. |
 | ETF Rerun Matrix Workbench 4B | Complete | Backtest Analysis now shows GRS / Risk Parity / Dual Momentum session-only rerun scenario plans and lets the user run one selected ETF strategy matrix into session state without run-history, registry, saved setup, validation, final, monitoring, or provider-snapshot writes. |

@@ -318,6 +318,142 @@ def _build_grs_strategy_contract(
     }
 
 
+def _numeric_result_series(result_df: pd.DataFrame, column: str) -> pd.Series:
+    if result_df is None or result_df.empty or column not in result_df.columns:
+        return pd.Series(dtype="float64")
+    return pd.to_numeric(result_df[column], errors="coerce")
+
+
+def _bool_result_series(result_df: pd.DataFrame, column: str) -> pd.Series:
+    if result_df is None or result_df.empty or column not in result_df.columns:
+        return pd.Series(dtype=bool)
+    return result_df[column].fillna(False).astype(bool)
+
+
+def _unique_text_values(result_df: pd.DataFrame, column: str) -> list[str]:
+    if result_df is None or result_df.empty or column not in result_df.columns:
+        return []
+    values: list[str] = []
+    for value in result_df[column].dropna().tolist():
+        if isinstance(value, (list, tuple, set)):
+            values.extend(str(item).strip() for item in value if str(item).strip())
+        else:
+            text = str(value).strip()
+            if text:
+                values.append(text)
+    return sorted(dict.fromkeys(values))
+
+
+def _build_risk_parity_trend_contract(
+    *,
+    vol_window: int,
+    rebalance_interval: int,
+    min_price_filter: float | None,
+    benchmark_ticker: str | None,
+    underperformance_guardrail_enabled: bool,
+    drawdown_guardrail_enabled: bool,
+) -> dict[str, Any]:
+    return {
+        "contract_version": "risk_parity_trend_contract_v1",
+        "volatility_window_months": int(vol_window),
+        "rebalance_interval_months": int(rebalance_interval),
+        "trend_filter_window": 200,
+        "weighting_mode": "inverse_vol",
+        "eligible_universe": "trend_and_min_price_filtered",
+        "cash_handling": "cash_only_when_no_positive_inverse_vol_or_guardrail",
+        "min_price_filter": min_price_filter,
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+    }
+
+
+def _build_risk_parity_inverse_vol_summary(result_df: pd.DataFrame) -> dict[str, Any]:
+    if result_df is None or result_df.empty:
+        return {
+            "contract_version": "risk_parity_inverse_vol_summary_v1",
+            "observation_count": 0,
+        }
+
+    selected = _numeric_result_series(result_df, "Selected Count")
+    eligible = _numeric_result_series(result_df, "Eligible Count")
+    cash_share = _numeric_result_series(result_df, "Cash Share")
+    max_weight = _numeric_result_series(result_df, "Max Position Weight")
+    cash_only = _bool_result_series(result_df, "Cash Only State")
+    guardrail_cash_only = _bool_result_series(result_df, "Guardrail Cash Only State")
+
+    return {
+        "contract_version": "risk_parity_inverse_vol_summary_v1",
+        "observation_count": int(len(result_df)),
+        "max_selected_count": int(selected.max()) if not selected.dropna().empty else None,
+        "max_eligible_count": int(eligible.max()) if not eligible.dropna().empty else None,
+        "cash_only_rebalances": int(cash_only.sum()) if not cash_only.empty else 0,
+        "guardrail_cash_only_rebalances": int(guardrail_cash_only.sum()) if not guardrail_cash_only.empty else 0,
+        "max_cash_share": float(cash_share.max()) if not cash_share.dropna().empty else None,
+        "max_position_weight": float(max_weight.max()) if not max_weight.dropna().empty else None,
+        "low_vol_overweight_tickers": _unique_text_values(result_df, "Low Vol Overweight Ticker"),
+        "cash_only_reasons": _unique_text_values(result_df, "Cash Only Reason"),
+    }
+
+
+def _build_dual_momentum_contract(
+    *,
+    top: int,
+    rebalance_interval: int,
+    min_price_filter: float | None,
+    benchmark_ticker: str | None,
+    underperformance_guardrail_enabled: bool,
+    drawdown_guardrail_enabled: bool,
+    cash_proxy_ticker: str = "BIL",
+) -> dict[str, Any]:
+    return {
+        "contract_version": "dual_momentum_contract_v1",
+        "top_n": int(top),
+        "rebalance_interval_months": int(rebalance_interval),
+        "lookback_column": "12MReturn",
+        "trend_filter_window": 200,
+        "weighting_mode": "equal_slot_with_cash_retention",
+        "cash_proxy_ticker": cash_proxy_ticker,
+        "cash_handling": "trend_rejected_top_n_slots_retained_in_cash_proxy",
+        "min_price_filter": min_price_filter,
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+    }
+
+
+def _build_dual_momentum_concentration_turnover_summary(result_df: pd.DataFrame) -> dict[str, Any]:
+    if result_df is None or result_df.empty:
+        return {
+            "contract_version": "dual_momentum_concentration_turnover_v1",
+            "observation_count": 0,
+        }
+
+    selected = _numeric_result_series(result_df, "Selected Count")
+    target_slots = _numeric_result_series(result_df, "Target Slot Count")
+    trend_rejected = _numeric_result_series(result_df, "Trend Rejected Count")
+    unfilled = _numeric_result_series(result_df, "Unfilled Slot Count")
+    cash_share = _numeric_result_series(result_df, "Cash Share")
+    max_weight = _numeric_result_series(result_df, "Max Position Weight")
+    selection_changed = _bool_result_series(result_df, "Selection Changed")
+    statuses = _unique_text_values(result_df, "Concentration Status")
+    whipsaw_statuses = _unique_text_values(result_df, "Whipsaw Status")
+
+    return {
+        "contract_version": "dual_momentum_concentration_turnover_v1",
+        "observation_count": int(len(result_df)),
+        "max_selected_count": int(selected.max()) if not selected.dropna().empty else None,
+        "max_target_slot_count": int(target_slots.max()) if not target_slots.dropna().empty else None,
+        "max_trend_rejected_count": int(trend_rejected.max()) if not trend_rejected.dropna().empty else None,
+        "max_unfilled_slot_count": int(unfilled.max()) if not unfilled.dropna().empty else None,
+        "max_cash_share": float(cash_share.max()) if not cash_share.dropna().empty else None,
+        "max_position_weight": float(max_weight.max()) if not max_weight.dropna().empty else None,
+        "selection_change_events": int(selection_changed.sum()) if not selection_changed.empty else 0,
+        "concentration_status_values": statuses,
+        "whipsaw_status_values": whipsaw_statuses,
+    }
+
+
 
 
 def _summary_frequency(option: str, timeframe: str) -> str:
@@ -1021,6 +1157,15 @@ def run_risk_parity_trend_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
+    bundle["meta"]["risk_parity_trend_contract"] = _build_risk_parity_trend_contract(
+        vol_window=vol_window,
+        rebalance_interval=rebalance_interval,
+        min_price_filter=min_price_filter,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+    )
+    bundle["meta"]["risk_parity_inverse_vol_summary"] = _build_risk_parity_inverse_vol_summary(result_df)
     bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
@@ -1156,6 +1301,15 @@ def run_dual_momentum_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
+    bundle["meta"]["dual_momentum_contract"] = _build_dual_momentum_contract(
+        top=top,
+        rebalance_interval=rebalance_interval,
+        min_price_filter=min_price_filter,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+    )
+    bundle["meta"]["dual_momentum_concentration_turnover"] = _build_dual_momentum_concentration_turnover_summary(result_df)
     bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),

@@ -205,6 +205,8 @@ STRICT_REJECTION_HANDLING_MODE_EXPLANATIONS = {
 }
 SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
     "global_relative_strength",
+    "risk_parity_trend",
+    "dual_momentum",
     "quality_snapshot",
     "quality_snapshot_strict_annual",
     "quality_snapshot_strict_quarterly_prototype",
@@ -2485,6 +2487,8 @@ def _strict_risk_off_mode_value_to_label(value: str | None) -> str:
 
 
 def _strict_weighting_mode_value_to_label(value: str | None) -> str:
+    if str(value or "").strip().lower() == "inverse_vol":
+        return "Inverse Volatility"
     for label, mode_value in STRICT_WEIGHTING_MODE_LABELS.items():
         if mode_value == value:
             return label
