@@ -4896,3 +4896,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-context-refresh-ko-v1-20260610/`에서 1차 구현을 진행했다.
   - `Workspace > Overview` 상단에 `Market Context 일괄 갱신` 버튼을 추가하고, cockpit / Overview Map 주요 설명을 한국어 중심으로 정리했다.
   - 일괄 갱신은 기존 `app/jobs/overview_actions.py` boundary 안에서 SP500 movers, futures, sentiment, FOMC / earnings / macro calendar refresh를 순차 실행한다.
+- Overview Market Context Tab V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-tab-v1-20260610/`에서 `Market Context`를 Overview 첫 deep tab으로 추가했다.
+  - refresh / cockpit / Deep Tab guide / Overview Map을 같은 tab 안으로 이동해 Overview 진입 직후 종합 context를 먼저 보게 했다.
+  - 새 provider / schema / registry / saved write / validation or trading semantics는 추가하지 않았다.

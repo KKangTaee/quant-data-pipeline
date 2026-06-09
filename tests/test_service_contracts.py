@@ -4333,27 +4333,51 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("app.jobs.overview_automation", imported_modules)
         self.assertNotIn("app.jobs.run_history", imported_modules)
 
-    def test_overview_dashboard_renders_macro_context_cockpit_before_tabs(self) -> None:
+    def test_overview_dashboard_renders_market_context_as_first_deep_tab(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
-        render_index = render_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
+        if "with context_tab:" not in render_body:
+            self.fail("Overview should render a dedicated first Market Context tab.")
         tabs_index = render_body.index("st.tabs(")
+        context_tab_index = render_body.index("with context_tab:")
+        market_tab_index = render_body.index("with market_tab:")
+        context_label_index = render_body.index('"Market Context"')
+        market_label_index = render_body.index('"Market Movers"')
+        futures_label_index = render_body.index('"Futures Monitor"')
 
-        self.assertLess(render_index, tabs_index)
-        self.assertIn("load_overview_macro_context_cockpit", render_body)
-        self.assertIn("render_macro_context_cockpit", render_body)
+        self.assertIn("context_tab, market_tab, futures_tab", render_body)
+        self.assertLess(context_label_index, market_label_index)
+        self.assertLess(market_label_index, futures_label_index)
+        self.assertLess(tabs_index, context_tab_index)
+        self.assertLess(context_tab_index, market_tab_index)
 
-    def test_overview_dashboard_renders_ia_closeout_guide_between_cockpit_and_tabs(self) -> None:
+    def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
-        render_body = source[source.index("def render_overview_dashboard"):]
-        cockpit_index = render_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
-        guide_index = render_body.index("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())")
-        tabs_index = render_body.index("st.tabs(")
+        if "def _render_overview_market_context_tab" not in source:
+            self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
+        helper_body = source[source.index("def _render_overview_market_context_tab"):]
+        helper_end = helper_body.index("def _summarize_auto_refresh_plan")
+        helper_body = helper_body[:helper_end]
+
+        self.assertIn("_render_overview_market_context_refresh_bar()", helper_body)
+        self.assertIn("render_macro_context_cockpit(load_overview_macro_context_cockpit())", helper_body)
+        self.assertIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
+        self.assertIn("load_overview_macro_context_cockpit", helper_body)
+        self.assertIn("render_macro_context_cockpit", helper_body)
+
+    def test_overview_dashboard_renders_ia_closeout_guide_inside_market_context_tab_after_cockpit(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        if "def _render_overview_market_context_tab" not in source:
+            self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
+        helper_body = source[source.index("def _render_overview_market_context_tab"):]
+        helper_end = helper_body.index("def _summarize_auto_refresh_plan")
+        helper_body = helper_body[:helper_end]
+        cockpit_index = helper_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
+        guide_index = helper_body.index("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())")
 
         self.assertLess(cockpit_index, guide_index)
-        self.assertLess(guide_index, tabs_index)
-        self.assertIn("load_overview_ia_closeout_model", render_body)
-        self.assertIn("render_overview_ia_closeout_guide", render_body)
+        self.assertIn("load_overview_ia_closeout_model", helper_body)
+        self.assertIn("render_overview_ia_closeout_guide", helper_body)
 
     def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")

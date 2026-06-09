@@ -1817,6 +1817,16 @@ def _render_overview_market_context_refresh_bar() -> None:
     _render_overview_market_context_refresh_result(result_key)
 
 
+def _render_overview_market_context_tab() -> None:
+    st.markdown("### Market Context")
+    st.caption(
+        "Overview 진입 후 먼저 보는 summary cockpit입니다. 세부 근거는 아래 Deep Tab 안내를 따라 확인합니다."
+    )
+    _render_overview_market_context_refresh_bar()
+    render_macro_context_cockpit(load_overview_macro_context_cockpit())
+    render_overview_ia_closeout_guide(load_overview_ia_closeout_model())
+
+
 def _summarize_auto_refresh_plan(summary: dict[str, Any]) -> str:
     plan = summary.get("plan")
     if not isinstance(plan, list) or not plan:
@@ -5681,13 +5691,21 @@ def render_overview_dashboard(
     st.title("Market Context Overview")
     st.caption("DB-backed market context, sentiment, event, and data-health snapshots for investigation only.")
     render_market_session_banner(_market_session_banner_model())
-    _render_overview_market_context_refresh_bar()
-    render_macro_context_cockpit(load_overview_macro_context_cockpit())
-    render_overview_ia_closeout_guide(load_overview_ia_closeout_model())
 
-    market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
-        ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
+    context_tab, market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
+        [
+            "Market Context",
+            "Market Movers",
+            "Futures Monitor",
+            "Sentiment",
+            "Sector / Industry",
+            "Events",
+            "Data Health",
+            "Candidate Ops",
+        ]
     )
+    with context_tab:
+        _render_overview_market_context_tab()
     with market_tab:
         _render_market_movers_tab()
     with futures_tab:

@@ -7653,3 +7653,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: product term은 유지하되 설명 copy를 한국어 중심으로 바꾸고, 기존 개별 refresh job들을 한 버튼에서 실행하는 수동 bundle을 추가해야 함.
 - Analysis result: 새 provider / schema가 아니라 `app/jobs/overview_actions.py` facade 안에서 SP500 movers, futures 1m/daily, sentiment, FOMC, earnings, macro calendar 기존 action을 순차 실행하는 것이 경계에 맞다.
 - Follow-up: `Workspace > Overview` 상단에 `Market Context 일괄 갱신` 버튼을 추가했다. Scheduler hardening, source별 retry UX, action queue persistence는 후속 차수로 남겼다.
+
+### 2026-06-10 - Overview Macro Context를 별도 첫 탭으로 분리한다
+
+- User request: 사용자가 Overview Macro Context를 Market Movers 앞의 별도 탭으로 만들고, Deep Tab 안내도 cockpit과 같이 움직이는 것이 맞는지 질문 후 진행을 승인함.
+- Interpreted goal: Overview 진입 시 종합 context를 먼저 보게 하고, deep tab 안내 / Overview Map을 해당 summary surface 안에 묶어야 함.
+- Analysis result: `Market Context`를 첫 deep tab으로 두고 refresh / cockpit / Deep Tab guide / Overview Map을 함께 렌더링하는 것이 IA상 가장 명확하다.
+- Follow-up: `Workspace > Overview > Market Context` 첫 탭을 추가했다. 자동 갱신 정책과 refresh result UX 세분화는 후속 차수로 남겼다.
