@@ -4904,3 +4904,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-context-readability-v2-20260610/`에서 Market Context 첫 화면을 summary-first layout으로 정리했다.
   - REVIEW headline을 source/data 상태 중심 copy로 바꾸고, 상태 / 다음 확인 / 자료 기준 rail을 카드 위에 추가했다.
   - 기존 DB-backed read model과 UI renderer만 변경했으며 provider / schema / persistence / validation / trading semantics는 추가하지 않았다.
+- Overview Context Supporting Sections V2:
+  - `.aiworkspace/note/finance/tasks/active/overview-context-supporting-sections-v2-20260610/`에서 `Source Confidence`와 `Overview Map`을 기본 접힘 disclosure로 낮췄다.
+  - Market Context 첫 화면은 summary rail / 핵심 cards / 다음 확인을 먼저 보여주고, source/map 세부는 펼쳐서 확인한다.
+  - UI renderer만 변경했으며 provider / schema / persistence / validation / trading semantics는 추가하지 않았다.

@@ -7667,3 +7667,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 시장 상태 경고처럼 읽히는 headline을 source/data review 의미로 정정하고, 첫 화면에서 결론과 다음 확인 순서가 먼저 보이게 해야 함.
 - Analysis result: 기존 카드 분리는 source/freshness 노출에는 좋지만 읽는 순서가 약하므로, summary rail을 카드 위에 두고 analytical cards와 supporting cards의 밀도를 나누는 것이 적절하다.
 - Follow-up: `Market Context 일부 source 확인 필요` headline, 상태 / 다음 확인 / 자료 기준 rail, primary/secondary card styling을 추가했다. Source Confidence / Overview Map 접힘 UX는 후속 후보로 남긴다.
+
+### 2026-06-10 - Market Context 보조 섹션을 접힘 형태로 낮춘다
+
+- User request: 사용자가 2차 진행을 요청함.
+- Interpreted goal: Source Confidence와 Overview Map은 중요하지만 첫 화면의 분석 결론보다 보조 근거이므로 기본 노출 밀도를 낮춰야 함.
+- Analysis result: 두 섹션을 별도 탭으로 빼기보다 같은 Market Context 안에서 native disclosure로 접어 두는 것이 경계와 흐름을 보존한다.
+- Follow-up: `Source Confidence / 출처 신뢰도`와 `Overview Map / 화면 지도`를 기본 접힘 섹션으로 렌더링했다. refresh result UX 세분화는 3차로 남긴다.

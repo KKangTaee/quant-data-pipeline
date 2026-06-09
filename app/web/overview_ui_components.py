@@ -456,6 +456,40 @@ def overview_ui_css() -> str:
   padding-top: 0.62rem;
   border-top: 1px solid var(--ov-mi-border-faint);
 }
+.ov-context-disclosure {
+  min-width: 0;
+}
+.ov-context-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.ov-context-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.ov-context-disclosure > summary::after {
+  content: "+";
+  float: right;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 1px solid var(--ov-mi-border-control);
+  border-radius: var(--ov-mi-radius-pill);
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18rem;
+  text-align: center;
+}
+.ov-context-disclosure[open] > summary::after {
+  content: "-";
+}
+.ov-context-disclosure-body {
+  margin-top: 0.5rem;
+}
+.ov-source-confidence-summary,
+.ov-ia-closeout-summary {
+  display: block;
+  min-width: 0;
+}
 .ov-source-confidence-head {
   display: flex;
   align-items: baseline;
@@ -487,6 +521,9 @@ def overview_ui_css() -> str:
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
+}
+.ov-source-confidence-body {
+  padding-top: 0.12rem;
 }
 .ov-source-confidence-card {
   min-width: 0;
@@ -600,6 +637,9 @@ def overview_ui_css() -> str:
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
+}
+.ov-ia-closeout-body {
+  padding-top: 0.04rem;
 }
 .ov-ia-closeout-card {
   min-width: 0;
@@ -1913,7 +1953,8 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
             "</article>"
         )
     return (
-        f'<div class="ov-source-confidence" style="--ov-source-status-tone:{status_tone};">'
+        f'<details class="ov-source-confidence ov-context-disclosure" style="--ov-source-status-tone:{status_tone};">'
+        '<summary class="ov-source-confidence-summary">'
         '<div class="ov-source-confidence-head">'
         '<div>'
         '<div class="ov-source-confidence-title">Source Confidence / 출처 신뢰도</div>'
@@ -1921,9 +1962,12 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         '</div>'
         f'<div class="ov-source-confidence-status">{escape(_display_value(model.get("status")))}</div>'
         '</div>'
+        '</summary>'
+        '<div class="ov-source-confidence-body ov-context-disclosure-body">'
         f'<div class="ov-source-confidence-grid">{"".join(cards)}</div>'
         f'<div class="ov-source-confidence-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
         '</div>'
+        '</details>'
     )
 
 
@@ -1987,17 +2031,21 @@ def render_overview_ia_closeout_guide(model: dict[str, Any]) -> None:
     st.markdown(
         overview_ui_css()
         + f"""
-<section class="ov-ia-closeout">
-  <div class="ov-ia-closeout-head">
+<details class="ov-ia-closeout ov-context-disclosure">
+  <summary class="ov-ia-closeout-summary">
+    <div class="ov-ia-closeout-head">
     <div>
       <div class="ov-ia-closeout-kicker">Overview Map / 화면 지도</div>
       <div class="ov-ia-closeout-title">{escape(_display_value(model.get("title")))}</div>
       <div class="ov-ia-closeout-detail">{escape(_display_value(model.get("detail")))}</div>
     </div>
+    </div>
+  </summary>
+  <div class="ov-ia-closeout-body ov-context-disclosure-body">
+    <div class="ov-ia-closeout-grid">{"".join(cards)}</div>
+    <div class="ov-ia-closeout-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
   </div>
-  <div class="ov-ia-closeout-grid">{"".join(cards)}</div>
-  <div class="ov-ia-closeout-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
-</section>""",
+</details>""",
         unsafe_allow_html=True,
     )
 

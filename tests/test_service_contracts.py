@@ -4443,6 +4443,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-source-confidence", css)
         self.assertIn(".ov-source-confidence-card", css)
 
+    def test_overview_ui_renders_supporting_sections_as_collapsible_disclosures(self) -> None:
+        import inspect
+
+        from app.web import overview_ui_components
+
+        css = overview_ui_components.overview_ui_css()
+        source = inspect.getsource(overview_ui_components)
+
+        self.assertIn(".ov-context-disclosure", css)
+        self.assertIn(".ov-context-disclosure > summary", css)
+        self.assertIn('<details class="ov-source-confidence ov-context-disclosure"', source)
+        self.assertIn('<summary class="ov-source-confidence-summary"', source)
+        self.assertIn('<details class="ov-ia-closeout ov-context-disclosure"', source)
+        self.assertIn('<summary class="ov-ia-closeout-summary"', source)
+        self.assertNotIn('<section class="ov-ia-closeout">', source)
+
     def test_overview_ui_css_defines_market_context_summary_rail(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
