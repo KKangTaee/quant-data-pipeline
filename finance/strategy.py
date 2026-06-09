@@ -858,6 +858,19 @@ def global_relative_strength_allocation(
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     rows: list[dict] = []
 
+    def _concentration_status(
+        *,
+        selected_count: int,
+        target_slot_count: int,
+        cash_share: float,
+        max_position_weight: float,
+    ) -> str:
+        if selected_count <= 0 and cash_share >= 0.999:
+            return "cash_only"
+        if target_slot_count <= 1 or max_position_weight >= 0.50:
+            return "concentrated_top_n"
+        return "balanced_top_n"
+
     for i, date in enumerate(dates):
         close_now: dict[str, float] = {}
         score_now: dict[str, float] = {}
@@ -874,6 +887,7 @@ def global_relative_strength_allocation(
             end_balances: list[float] = []
             total_balance = float(start_balance)
             total_return = np.nan
+            cash_proxy_return = np.nan
         else:
             end_balances = []
             for ticker, balance in zip(held, next_balances):
@@ -885,8 +899,10 @@ def global_relative_strength_allocation(
                 )
                 end_balances.append(float(balance) * (1.0 + asset_return))
 
+            cash_proxy_return = np.nan
             if cash > 0 and cash_ticker is not None and prev_close[cash_ticker] not in (None, 0):
                 cash_return = (close_now[cash_ticker] / prev_close[cash_ticker]) - 1
+                cash_proxy_return = float(cash_return)
                 cash = float(cash) * (1.0 + cash_return)
 
             total_balance = float(sum(end_balances) + cash)
@@ -896,6 +912,7 @@ def global_relative_strength_allocation(
         raw_selected_tickers: list[str] = []
         raw_selected_scores: list[float] = []
         trend_rejected_tickers: list[str] = []
+        cash_reasons: list[str] = []
 
         if rebalancing:
             ranked_candidates = [
@@ -920,17 +937,63 @@ def global_relative_strength_allocation(
             held = selected
             next_balances = [slot_balance] * len(held)
             cash = slot_balance * max(top - len(held), 0)
+            if trend_rejected_tickers:
+                cash_reasons.append("trend_rejected_slot_retained_as_cash")
+            if len(held) <= 0:
+                cash_reasons.append("no_trend_qualified_assets")
+            elif len(held) < top:
+                cash_reasons.append("unfilled_top_n_slots")
+
+        selected_count = len(held)
+        target_slot_count = int(top)
+        unfilled_slot_count = max(target_slot_count - selected_count, 0)
+        cash_share = float(cash / total_balance) if total_balance > 0 else np.nan
+        active_balances = list(next_balances) if rebalancing else list(end_balances)
+        max_position_weight = (
+            float(max(active_balances) / total_balance)
+            if active_balances and total_balance > 0
+            else 0.0
+        )
+        concentration_status = _concentration_status(
+            selected_count=selected_count,
+            target_slot_count=target_slot_count,
+            cash_share=cash_share if pd.notna(cash_share) else 0.0,
+            max_position_weight=max_position_weight,
+        )
+        if not rebalancing and cash > 0:
+            cash_reasons.append("cash_proxy_balance_carried")
 
         row = {
             "Date": date,
             "End Ticker": list(held),
             "Next Ticker": list(held),
             "Raw Selected Ticker": raw_selected_tickers,
+            "Raw Selected Count": len(raw_selected_tickers),
             "Raw Selected Score": raw_selected_scores,
             "Trend Rejected Ticker": trend_rejected_tickers,
             "Trend Rejected Count": len(trend_rejected_tickers),
+            "Overlay Rejected Ticker": trend_rejected_tickers,
+            "Overlay Rejected Count": len(trend_rejected_tickers),
+            "Selected Count": selected_count,
+            "Target Slot Count": target_slot_count,
+            "Unfilled Slot Count": unfilled_slot_count,
+            "Cash Share": cash_share,
+            "Max Position Weight": max_position_weight,
+            "Concentration Status": concentration_status,
+            "Trend Filter Enabled": True,
             "Trend Filter Column": filter_ma,
+            "Weighting Mode": "equal_weight",
+            "Risk-Off Mode": "cash_only",
+            "Risk-Off Reason": [],
+            "Partial Cash Retention Enabled": True,
+            "Partial Cash Retention Active": bool(cash > 0 and unfilled_slot_count > 0),
+            "Rejected Slot Fill Enabled": False,
+            "Rejected Slot Fill Active": False,
+            "Rejected Slot Fill Count": 0,
             "Cash Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "Cash Proxy Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "Cash Proxy Return": cash_proxy_return,
+            "Cash Reason": cash_reasons,
             "End Balance": end_balances,
             "Next Balance": list(next_balances),
             "Cash": float(cash),

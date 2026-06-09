@@ -393,7 +393,7 @@ def _render_latest_run_orientation(
     if not has_selection_history:
         st.caption(
             "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
-            "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
+            "GTAA 같은 일부 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
         )
 
 def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
@@ -3105,7 +3105,7 @@ def _render_snapshot_selection_history(
     )
 
     st.caption(
-        "이 화면은 strict annual 전략 검증에서 가장 실무적인 질문인 "
+        "이 화면은 리밸런싱 전략 검토에서 가장 실무적인 질문인 "
         "‘각 리밸런싱 날짜에 실제로 어떤 종목이 선택되었는가?’를 읽기 쉽게 보여주기 위한 뷰입니다."
     )
     left, center, right = st.columns(3, gap="large")
@@ -3178,7 +3178,7 @@ def _render_snapshot_selection_history(
     st.dataframe(meta_df, use_container_width=True, hide_index=True)
     if overlay_active:
         st.caption(
-            "Raw Selected는 팩터 랭킹으로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 반영한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못한 원래 후보이고, Filled Tickers가 있으면 그 자리를 다음 순위의 추세 통과 종목으로 보충했다는 뜻입니다."
+            "Raw Selected는 전략 점수로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 반영한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못한 원래 후보이고, Filled Tickers가 있으면 그 자리를 다음 순위의 추세 통과 종목으로 보충했다는 뜻입니다."
         )
     if regime_active:
         st.caption(

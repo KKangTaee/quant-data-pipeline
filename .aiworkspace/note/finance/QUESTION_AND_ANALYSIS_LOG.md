@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - GRS 5A should harden strategy logic instead of adding panels
+- User request:
+  - Backtest Analysis에 패널을 더 추가하지 말고 Global Relative Strength 전략 자체를 고도화하라고 요청함.
+- Interpreted goal:
+  - GRS runtime / transform / result bundle 흐름에서 cash proxy, benchmark, 제외 ticker, stale price, top-N concentration, rebalance interval, momentum window의 실제 전략 로직 개선점을 반영한다.
+- Analysis result:
+  - GRS의 가장 큰 runtime 문제는 period row를 `.interval(...)`로 줄인 뒤 strategy에서도 `rebalance_interval`을 적용하는 cadence 중복 가능성이었다. 5A는 strategy가 cadence를 단독 소유하게 하고, score window / cash proxy / benchmark / concentration metadata를 result bundle 계약으로 남겼다.
+- Follow-up:
+  - Risk Parity Trend / Dual Momentum도 같은 ETF 전략 계약 hardening 후보지만, 5A 범위에서는 GRS만 다뤘다.
+
 ### 2026-06-08 - ETF current-anchor should start from artifact-backed readiness, not promotion writes
 - User request:
   - 3차 3D 이후 4차 작업 진행을 요청함.

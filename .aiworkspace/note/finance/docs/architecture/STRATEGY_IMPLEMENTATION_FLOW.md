@@ -62,7 +62,9 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 - `Equal Weight`는 단순 baseline 성격이 강하다.
 - `GTAA`, `Risk Parity Trend`, `Dual Momentum`은 기존 ETF allocation family다.
 - `Global Relative Strength`는 Phase 24에서 추가된 price-only ETF allocation family다.
-- `Global Relative Strength`는 trailing return score로 상위 ETF를 고르고, trend filter를 통과하지 못한 슬롯은 cash proxy로 둔다.
+- `Global Relative Strength`는 trailing return score로 상위 ETF를 고르고, trend filter를 통과하지 못한 슬롯은 cash proxy로 둔다. 5A 이후 `rebalance_interval`은 strategy가 직접 소유하며, DB runtime은 period row를 사전에 interval thinning하지 않는다.
+- GRS result row는 selected count, target slot count, unfilled slot count, cash proxy return, cash share, max position weight, concentration status를 노출한다. 이 값은 기존 Selection History / result table / real-money turnover helper가 같은 row contract를 읽기 위한 것이다.
+- GRS runtime meta는 score lookback months, score return columns, score weights, cash proxy, benchmark contract, excluded ticker, freshness, top-N concentration summary를 보존한다. 위험자산 ETF 데이터 부족은 exclusion metadata로 보낼 수 있지만 cash proxy와 ticker benchmark의 필수 데이터는 blocking preflight로 남긴다.
 - ETF family는 데이터 이력 부족이나 결측 ticker를 조용히 무시하지 않고 `excluded_tickers`, `malformed_price_rows`, warning metadata로 남겨야 한다.
 - ETF family의 real-money / guardrail surface는 live approval이 아니라 실행 부담과 후보 검토 상태를 읽기 위한 진단 계층이다. 8B 이후 helper implementation owner는 `app/runtime/backtest_real_money.py`이고, `app/runtime/backtest.py`는 compatibility export를 유지한다.
 

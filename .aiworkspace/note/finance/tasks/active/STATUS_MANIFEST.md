@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 ## Current State
 
@@ -9,7 +9,11 @@ Current active task: none.
 
 Latest completed task:
 
-- `backtest-analysis-direction-reset-20260609`
+- `global-relative-strength-5a-20260609`
+
+Recent 5A Backtest work:
+
+- `global-relative-strength-5a-20260609`: Global Relative Strength strategy runtime / transform / result bundle hardening. Scope excluded new Backtest Analysis evidence/log/workbench panels and excluded registry / saved JSONL / run history / generated artifact writes.
 
 Recent 4차 Backtest work:
 

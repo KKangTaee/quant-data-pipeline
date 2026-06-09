@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-09 - Global Relative Strength 5A
+- Opened and completed `.aiworkspace/note/finance/tasks/active/global-relative-strength-5a-20260609/` for Backtest 5A.
+- Improved GRS runtime / strategy / result bundle contracts: strategy owns rebalance cadence, score windows / weights are preserved, cash proxy and benchmark contract metadata are retained, and risky ETF gaps can flow to exclusion metadata.
+- Added GRS cash / top-N concentration row diagnostics and connected them to the existing Selection History surface without adding a new evidence / log / workbench panel.
+- Registry / saved JSONL / run history / generated artifacts were kept out of scope.
+
 ### 2026-06-09 - Backtest Analysis Direction Reset 4C
 - Opened and completed `.aiworkspace/note/finance/tasks/active/backtest-analysis-direction-reset-20260609/` for Backtest 4차 4C.
 - Reordered Backtest Analysis so strategy execution / comparison / candidate creation appears before Reference / evidence / governance panels.

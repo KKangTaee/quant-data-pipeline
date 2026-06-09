@@ -204,6 +204,7 @@ STRICT_REJECTION_HANDLING_MODE_EXPLANATIONS = {
     STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH: "먼저 다음 순위의 추세 통과 종목으로 빈 슬롯을 채우고, 그래도 남은 슬롯은 현금으로 남깁니다.",
 }
 SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
+    "global_relative_strength",
     "quality_snapshot",
     "quality_snapshot_strict_annual",
     "quality_snapshot_strict_quarterly_prototype",

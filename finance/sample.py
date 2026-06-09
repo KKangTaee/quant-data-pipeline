@@ -765,7 +765,6 @@ def get_global_relative_strength_from_db(
         .slice(start=start, end=end)
         .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
         .drop_columns(["High", "Low", "Open", "Volume", *effective_score_return_columns])
-        .interval(interval)
     )
 
     strategy = GlobalRelativeStrengthStrategy(

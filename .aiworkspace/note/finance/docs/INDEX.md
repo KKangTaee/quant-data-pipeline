@@ -24,7 +24,7 @@ Last Verified: 2026-06-09
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Backtest Analysis Direction Reset 2026-06-09](../tasks/active/backtest-analysis-direction-reset-20260609/STATUS.md).
+- Latest completed task: [Global Relative Strength 5A 2026-06-09](../tasks/active/global-relative-strength-5a-20260609/STATUS.md).
 - Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose

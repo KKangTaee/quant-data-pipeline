@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | 현재 새 active task는 없다. 최신 완료 task는 아래 retained record를 확인한다. |
+| none | - | Current active task는 없다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `global-relative-strength-5a-20260609` | Completed record | Backtest 5A. Global Relative Strength 전략 runtime / transform / result bundle 고도화. 새 evidence/log/workbench 패널과 registry / saved JSONL / run_history / generated artifact write는 제외했다. |
 | `backtest-analysis-direction-reset-20260609` | Completed record | Backtest 4차 4C. Backtest Analysis를 전략 실행 / 비교 / 후보 생성 중심으로 되돌리고, Reference / evidence / governance / ETF workbench 패널은 `전략 개발 참고` advanced control 뒤에 숨긴다. |
 | `etf-rerun-matrix-workbench-20260608` | Completed record | Backtest 4차 4B. GRS / Risk Parity / Dual Momentum의 rerun scenario matrix를 보여주고, 선택한 ETF 전략만 session-only로 실행해 compact result evidence를 표시한다. |
 | `etf-current-anchor-workbench-20260608` | Completed record | Backtest 4차 4A. 기존 run history / Practical Validation source handoff row를 읽어 GRS / Risk Parity / Dual Momentum의 current-anchor readiness와 missing evidence를 read-only로 보여준다. |
