@@ -7674,3 +7674,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Source Confidence와 Overview Map은 중요하지만 첫 화면의 분석 결론보다 보조 근거이므로 기본 노출 밀도를 낮춰야 함.
 - Analysis result: 두 섹션을 별도 탭으로 빼기보다 같은 Market Context 안에서 native disclosure로 접어 두는 것이 경계와 흐름을 보존한다.
 - Follow-up: `Source Confidence / 출처 신뢰도`와 `Overview Map / 화면 지도`를 기본 접힘 섹션으로 렌더링했다. refresh result UX 세분화는 3차로 남긴다.
+
+### 2026-06-10 - Market Context 일괄 갱신 결과를 issue-first로 정리한다
+
+- User request: 사용자가 3차 진행을 요청함.
+- Interpreted goal: 일괄 갱신 후 success / partial / failed / skipped 결과와 다음 확인 위치를 한 화면에서 읽기 쉽게 해야 함.
+- Analysis result: 기존 bundle result payload를 UI read model로 변환해 issue rows와 full rows를 분리하는 것이 provider / schema / scheduler 경계를 넘지 않는 가장 작은 변경이다.
+- Follow-up: `확인 필요한 갱신 결과`와 `전체 일괄 갱신 결과` expander를 추가했다. 자동 갱신 정책과 action queue는 4차/후속 범위로 남긴다.

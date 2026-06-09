@@ -4908,3 +4908,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-context-supporting-sections-v2-20260610/`에서 `Source Confidence`와 `Overview Map`을 기본 접힘 disclosure로 낮췄다.
   - Market Context 첫 화면은 summary rail / 핵심 cards / 다음 확인을 먼저 보여주고, source/map 세부는 펼쳐서 확인한다.
   - UI renderer만 변경했으며 provider / schema / persistence / validation / trading semantics는 추가하지 않았다.
+- Overview Refresh Result UX V3:
+  - `.aiworkspace/note/finance/tasks/active/overview-refresh-result-ux-v3-20260610/`에서 Market Context 일괄 갱신 결과 UX를 개선했다.
+  - Partial / failed / skipped 결과를 `확인 필요한 갱신 결과`로 먼저 분리하고, 전체 결과는 별도 expander로 낮췄다.
+  - 기존 Overview action boundary만 사용했으며 provider / schema / scheduler / registry / saved / validation / trading semantics는 추가하지 않았다.
