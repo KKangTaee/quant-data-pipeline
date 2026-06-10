@@ -4,7 +4,6 @@ from app.services.backtest_compare_catalog import ComparePresetCatalog, run_comp
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
 from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
-from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.services.backtest_practical_validation_curve_context import (
@@ -18,6 +17,10 @@ from app.services.backtest_practical_validation_source import (
 from app.workspace_paths import REGISTRIES_DIR
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
+)
+from app.web.backtest_practical_validation_handoff import (
+    apply_practical_validation_source_handoff,
+    queue_practical_validation_handoff_from_result_bundle,
 )
 from app.web.backtest_compare_components import (
     html_text as _html_text,
@@ -40,14 +43,6 @@ def _compare_preset_catalog() -> ComparePresetCatalog:
         strict_annual_compare_default_preset=STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
         strict_quarterly_prototype_default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
     )
-
-
-def _apply_practical_validation_source_handoff(source: dict) -> None:
-    handoff = prepare_practical_validation_source_handoff(source, persist=True)
-    st.session_state.backtest_practical_validation_source = handoff.source_payload
-    st.session_state.backtest_practical_validation_notice = handoff.notice
-    st.session_state.backtest_practical_validation_mode = handoff.mode
-    st.session_state.backtest_requested_panel = handoff.requested_panel
 
 
 def _run_compare_strategy(
@@ -1115,7 +1110,7 @@ def _saved_mix_component_role(strategy_name: str, weight: float, max_weight: flo
 
 # Build the cross-panel payload that turns a replayed saved mix into a current workflow
 # validation source rather than a single-strategy handoff.
-def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[str, Any]:
+def _build_saved_mix_validation_prefill_payload(record: dict[str, Any]) -> dict[str, Any]:
     weighted_bundle = dict(st.session_state.get("backtest_weighted_bundle") or {})
     bundles = list(st.session_state.get("backtest_compare_bundles") or [])
     compare_context = dict(record.get("compare_context") or {})
@@ -1335,15 +1330,15 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
             )
             if st.button(
                 "Practical Validation으로 보내기",
-                key=f"use_saved_mix_in_portfolio_proposal_{record.get('portfolio_id')}",
+                key=f"use_saved_mix_in_practical_validation_{record.get('portfolio_id')}",
                 disabled=not bool(evaluation.get("can_send_to_practical_validation")),
                 use_container_width=True,
             ):
-                prefill = _build_saved_mix_proposal_prefill_payload(record)
+                prefill = _build_saved_mix_validation_prefill_payload(record)
                 source = build_selection_source_from_saved_mix_prefill(prefill)
-                _apply_practical_validation_source_handoff(source)
-                st.session_state.portfolio_proposal_saved_mix_prefill = prefill
-                st.session_state.portfolio_proposal_saved_mix_notice = (
+                apply_practical_validation_source_handoff(source)
+                st.session_state.backtest_practical_validation_saved_mix_prefill = prefill
+                st.session_state.backtest_practical_validation_saved_mix_notice = (
                     f"Saved Mix `{record.get('name')}`를 Practical Validation source로 저장했습니다. "
                     "이 경로는 legacy Candidate / Proposal 저장을 필수로 요구하지 않습니다."
                 )
@@ -1452,15 +1447,18 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             ):
                 selected_bundle = evaluation.get("selected_bundle")
                 if selected_bundle is not None:
-                    draft = _candidate_review_draft_from_bundle(selected_bundle)
-                    draft["source_kind"] = "compare_focused_strategy"
-                    draft["compare_readiness_evaluation"] = {
-                        "score": evaluation["score"],
-                        "verdict": evaluation["verdict"],
-                        "criteria_rows": evaluation["criteria_rows"],
-                        "rank_rows": evaluation["rank_rows"],
-                    }
-                    _queue_candidate_review_draft(draft)
+                    queue_practical_validation_handoff_from_result_bundle(
+                        selected_bundle,
+                        source_kind="compare_focused_strategy",
+                        extra_fields={
+                            "compare_readiness_evaluation": {
+                                "score": evaluation["score"],
+                                "verdict": evaluation["verdict"],
+                                "criteria_rows": evaluation["criteria_rows"],
+                                "rank_rows": evaluation["rank_rows"],
+                            }
+                        },
+                    )
                     st.rerun()
         with action_cols[1]:
             st.caption(
@@ -2419,76 +2417,6 @@ def _render_weighted_portfolio_builder() -> None:
     st.session_state.backtest_weighted_portfolio_notice = "Mix 포트폴리오를 생성했습니다."
     st.rerun()
 
-def _render_current_candidate_bundle_workspace() -> None:
-    rows = _load_current_candidate_registry_latest()
-    if not rows:
-        return
-
-    display_df = _build_current_candidate_registry_rows_for_display(rows)
-    anchor_rows = [row for row in rows if str(row.get("record_type") or "") == "current_candidate"]
-    near_miss_rows = [row for row in rows if str(row.get("record_type") or "") == "near_miss"]
-    label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
-
-    st.caption(
-        "문서에 정리된 대표 후보를 compare form에 다시 채워 넣는 보조 도구입니다. "
-        "바로 compare를 실행하는 버튼은 아니고, 아래 form의 전략/기간/override를 먼저 채웁니다."
-    )
-    with st.expander("What This Does", expanded=False):
-        st.markdown(
-            "- `Load Recommended Candidates`: 각 family에서 지금 기준점으로 쓰는 대표 후보를 compare form에 채웁니다.\n"
-            "- `Load Lower-MDD Alternatives`: 수익 단계는 조금 약하지만 낙폭은 더 낮았던 대안 후보를 compare form에 채웁니다.\n"
-            "- `Pick Specific Candidates Manually`: 현재 registry에 기록된 후보를 직접 보고 골라 compare form에 채웁니다.\n"
-            "- 이 목록은 모든 백테스트 결과가 자동으로 쌓이는 공간이 아닙니다.\n"
-            "- 현재는 `.aiworkspace/note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 대표 후보와 대안 후보만 보여줍니다.\n"
-            "- 같은 family 후보는 한 번에 하나만 compare form으로 불러올 수 있습니다."
-        )
-    quick_tab, manual_tab = st.tabs(["Quick Bundles", "Pick Manually"])
-    with quick_tab:
-        st.caption("대표 후보 묶음이나 더 방어적인 대안 묶음을 한 번에 불러옵니다.")
-        quick_action_cols = st.columns(2, gap="small")
-        with quick_action_cols[0]:
-            if st.button("Load Recommended Candidates", key="load_current_candidate_anchors", use_container_width=True):
-                try:
-                    _queue_current_candidate_compare_prefill(anchor_rows)
-                    st.rerun()
-                except Exception as exc:
-                    st.error(str(exc))
-            st.caption(
-                f"현재 기준점으로 쓰는 대표 후보 `{len(anchor_rows)}`개를 한 번에 불러옵니다. "
-                "예: Value / Quality / Quality + Value의 현재 main candidate."
-            )
-        with quick_action_cols[1]:
-            if st.button("Load Lower-MDD Alternatives", key="load_current_candidate_near_misses", use_container_width=True):
-                try:
-                    _queue_current_candidate_compare_prefill(near_miss_rows)
-                    st.rerun()
-                except Exception as exc:
-                    st.error(str(exc))
-            st.caption(
-                f"낙폭은 더 낮았지만 승격 단계는 조금 약했던 대안 후보 `{len(near_miss_rows)}`개를 불러옵니다."
-            )
-    with manual_tab:
-        st.caption("특정 후보만 골라 비교하고 싶다면 여기서 직접 선택합니다.")
-        st.info(
-            "이 목록은 새 백테스트를 돌리거나 Markdown 문서를 만든다고 자동으로 생기지 않습니다. "
-            "현재는 `.aiworkspace/note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 후보만 여기 보입니다."
-        )
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-        selected_labels = st.multiselect(
-            "Choose Specific Candidates To Load Into Portfolio Mix Builder",
-            options=list(label_to_row.keys()),
-            max_selections=4,
-            help="최소 2개 후보를 고르면 Portfolio Mix Builder form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
-            key="current_candidate_bundle_selection",
-        )
-        if st.button("Load Selected Candidates Into Portfolio Mix Builder", key="load_selected_candidate_bundle", use_container_width=True):
-            try:
-                selected_rows = [label_to_row[label] for label in selected_labels]
-                _queue_current_candidate_compare_prefill(selected_rows)
-                st.rerun()
-            except Exception as exc:
-                st.error(str(exc))
-
 def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame:
     strategy_overrides = dict(payload.get("strategy_overrides") or {})
     rows: list[dict[str, Any]] = []
@@ -2704,7 +2632,7 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
                 try:
                     prefill = _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle)
                     source = build_selection_source_from_weighted_mix_prefill(prefill)
-                    _apply_practical_validation_source_handoff(source)
+                    apply_practical_validation_source_handoff(source)
                     st.rerun()
                 except Exception as exc:
                     st.error(f"Practical Validation handoff failed: {exc}")
@@ -3404,279 +3332,6 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     }
     st.session_state.backtest_requested_panel = "Portfolio Mix Builder"
 
-def _current_candidate_registry_default_compare_override(row: dict[str, Any]) -> dict[str, Any] | None:
-    registry_id = str(row.get("registry_id") or "").strip()
-    strategy_name = str(row.get("strategy_name") or "").strip()
-    if not registry_id or not strategy_name:
-        return None
-
-    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
-        STRICT_DEFAULT_REJECTION_HANDLING_MODE
-    )
-    common_override: dict[str, Any] = {
-        "preset_name": STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
-        "tickers": list(QUALITY_STRICT_PRESETS[STRICT_ANNUAL_COMPARE_DEFAULT_PRESET]),
-        "universe_mode": "preset",
-        "universe_contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
-        "rebalance_interval": 1,
-        "trend_filter_window": STRICT_TREND_FILTER_DEFAULT_WINDOW,
-        "market_regime_enabled": False,
-        "market_regime_window": STRICT_MARKET_REGIME_DEFAULT_WINDOW,
-        "market_regime_benchmark": STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
-        "rejected_slot_handling_mode": STRICT_DEFAULT_REJECTION_HANDLING_MODE,
-        "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
-        "partial_cash_retention_enabled": partial_cash_retention_enabled,
-        "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
-        "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
-        "defensive_tickers": list(STRICT_DEFAULT_DEFENSIVE_TICKERS),
-        "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
-        "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
-        "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
-        "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
-        "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
-        "promotion_min_net_cagr_spread": STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
-        "promotion_min_liquidity_clean_coverage": STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
-        "promotion_max_underperformance_share": STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
-        "promotion_min_worst_rolling_excess_return": STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
-        "promotion_max_strategy_drawdown": STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
-        "promotion_max_drawdown_gap_vs_benchmark": STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
-        "underperformance_guardrail_enabled": True,
-        "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
-        "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
-        "drawdown_guardrail_enabled": True,
-        "drawdown_guardrail_window_months": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
-        "drawdown_guardrail_strategy_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
-        "drawdown_guardrail_gap_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
-    }
-
-    if registry_id == "value_current_anchor_top14_psr":
-        return {
-            **common_override,
-            "top_n": 14,
-            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
-            "benchmark_ticker": "SPY",
-            "trend_filter_enabled": False,
-            "value_factors": VALUE_STRICT_DEFAULT_FACTORS + ["psr"],
-        }
-    if registry_id == "value_lower_mdd_near_miss_pfcr":
-        return {
-            **common_override,
-            "top_n": 14,
-            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
-            "benchmark_ticker": "SPY",
-            "trend_filter_enabled": False,
-            "value_factors": VALUE_STRICT_DEFAULT_FACTORS + ["psr", "pfcr"],
-        }
-    if registry_id == "quality_current_anchor_top12_lqd":
-        return {
-            **common_override,
-            "top_n": 12,
-            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
-            "benchmark_ticker": "LQD",
-            "trend_filter_enabled": True,
-            "quality_factors": ["roe", "roa", "cash_ratio", "debt_to_assets"],
-        }
-    if registry_id == "quality_cleaner_alternative_top12_spy":
-        return {
-            **common_override,
-            "top_n": 12,
-            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
-            "benchmark_ticker": "SPY",
-            "trend_filter_enabled": True,
-            "quality_factors": ["roe", "roa", "cash_ratio", "debt_to_assets"],
-        }
-    if registry_id == "quality_value_current_anchor_top10_por":
-        return {
-            **common_override,
-            "top_n": 10,
-            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
-            "benchmark_ticker": "SPY",
-            "trend_filter_enabled": False,
-            "quality_factors": ["roe", "roa", "operating_margin", "asset_turnover", "current_ratio"],
-            "value_factors": ["book_to_market", "earnings_yield", "sales_yield", "pcr", "por", "per"],
-        }
-    if registry_id == "quality_value_lower_mdd_near_miss_top9":
-        return {
-            **common_override,
-            "top_n": 9,
-            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
-            "benchmark_ticker": "SPY",
-            "trend_filter_enabled": False,
-            "quality_factors": ["roe", "roa", "operating_margin", "asset_turnover", "current_ratio"],
-            "value_factors": ["book_to_market", "earnings_yield", "sales_yield", "pcr", "por", "per"],
-        }
-    return None
-
-def _normalize_gtaa_registry_risk_off_mode(value: str | None) -> str:
-    normalized = str(value or "").strip().lower()
-    if normalized in set(GTAA_RISK_OFF_MODE_LABELS.values()):
-        return normalized
-    if "defensive" in normalized:
-        return "defensive_bond_preference"
-    return GTAA_DEFAULT_RISK_OFF_MODE
-
-def _current_candidate_registry_contract_compare_override(row: dict[str, Any]) -> dict[str, Any] | None:
-    strategy_name = str(row.get("strategy_name") or "").strip()
-    contract = dict(row.get("contract") or {})
-    if not strategy_name or not contract:
-        return None
-
-    if strategy_name == "GTAA":
-        tickers = list(contract.get("tickers") or [])
-        if not tickers:
-            return None
-        score_lookback_months = [
-            int(months)
-            for months in list(contract.get("score_lookback_months") or [])
-            if months is not None
-        ]
-        if not score_lookback_months:
-            score_lookback_months = [
-                months
-                for months in [
-                    _gtaa_months_from_return_col(col)
-                    for col in list(contract.get("score_return_columns") or GTAA_SCORE_RETURN_COLUMNS)
-                ]
-                if months is not None
-            ]
-
-        override: dict[str, Any] = {
-            "tickers": tickers,
-            "universe_mode": "manual_tickers",
-            "top": int(contract.get("top") or 3),
-            "interval": int(contract.get("interval") or contract.get("rebalance_interval") or GTAA_DEFAULT_SIGNAL_INTERVAL),
-            "score_lookback_months": score_lookback_months,
-            "score_return_columns": [
-                _gtaa_return_col_from_months(int(months)) for months in score_lookback_months
-            ],
-            "score_weights": _build_equal_gtaa_score_weights(score_lookback_months),
-            "trend_filter_window": int(contract.get("trend_filter_window") or GTAA_DEFAULT_TREND_FILTER_WINDOW),
-            "risk_off_mode": _normalize_gtaa_registry_risk_off_mode(contract.get("risk_off_mode")),
-            "defensive_tickers": list(contract.get("defensive_tickers") or GTAA_DEFAULT_DEFENSIVE_TICKERS),
-            "market_regime_enabled": bool(contract.get("market_regime_enabled", False)),
-            "market_regime_window": int(contract.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW),
-            "market_regime_benchmark": contract.get("market_regime_benchmark")
-            or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
-            "crash_guardrail_enabled": bool(contract.get("crash_guardrail_enabled", GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED)),
-            "crash_guardrail_drawdown_threshold": float(
-                contract.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD
-            ),
-            "crash_guardrail_lookback_months": int(
-                contract.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS
-            ),
-            "min_price_filter": float(contract.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
-            "transaction_cost_bps": float(contract.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
-            "benchmark_ticker": str(contract.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper(),
-            "promotion_min_etf_aum_b": float(contract.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
-            "promotion_max_bid_ask_spread_pct": float(
-                contract.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
-            ),
-            "underperformance_guardrail_enabled": bool(
-                contract.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
-            ),
-            "underperformance_guardrail_window_months": int(
-                contract.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
-            ),
-            "underperformance_guardrail_threshold": float(
-                contract.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD
-            ),
-            "drawdown_guardrail_enabled": bool(
-                contract.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED)
-            ),
-            "drawdown_guardrail_window_months": int(
-                contract.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
-            ),
-            "drawdown_guardrail_strategy_threshold": float(
-                contract.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD
-            ),
-            "drawdown_guardrail_gap_threshold": float(
-                contract.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD
-            ),
-        }
-        if contract.get("preset_name"):
-            override["preset_name"] = contract.get("preset_name")
-            override["universe_mode"] = contract.get("universe_mode") or "preset"
-        return override
-
-    return None
-
-def _current_candidate_registry_row_to_compare_prefill(row: dict[str, Any]) -> dict[str, Any] | None:
-    compare_prefill = dict(row.get("compare_prefill") or {})
-    strategy_name = str(compare_prefill.get("strategy_name") or row.get("strategy_name") or "").strip()
-    if not strategy_name:
-        return None
-
-    execution_context = dict(row.get("execution_context") or {})
-    strategy_override = dict(compare_prefill.get("strategy_override") or {})
-    if not strategy_override:
-        strategy_override = _current_candidate_registry_default_compare_override(row) or {}
-    if not strategy_override:
-        strategy_override = _current_candidate_registry_contract_compare_override(row) or {}
-    if not strategy_override:
-        return None
-    if not strategy_override.get("guardrail_reference_ticker"):
-        strategy_override["guardrail_reference_ticker"] = _resolve_guardrail_reference_ticker_value(
-            strategy_override
-        ) or ETF_REAL_MONEY_DEFAULT_BENCHMARK
-
-    return {
-        "strategy_name": strategy_name,
-        "start": execution_context.get("start") or CURRENT_CANDIDATE_COMPARE_DEFAULT_START.isoformat(),
-        "end": execution_context.get("end") or CURRENT_CANDIDATE_COMPARE_DEFAULT_END.isoformat(),
-        "timeframe": execution_context.get("timeframe") or "1d",
-        "option": execution_context.get("option") or "month_end",
-        "strategy_override": strategy_override,
-    }
-
-def _queue_current_candidate_compare_prefill(rows: list[dict[str, Any]]) -> None:
-    compare_ready_items: list[dict[str, Any]] = []
-    seen_categories: set[str] = set()
-    for row in rows:
-        item = _current_candidate_registry_row_to_compare_prefill(row)
-        if not item:
-            raise ValueError(f"후보 `{row.get('title')}`는 아직 compare prefill contract가 준비되지 않았습니다.")
-        strategy_choice, _ = display_name_to_selection(item["strategy_name"])
-        normalized_choice = strategy_choice or item["strategy_name"]
-        if normalized_choice in seen_categories:
-            raise ValueError("같은 strategy family 후보는 한 번에 하나만 compare로 보낼 수 있습니다.")
-        seen_categories.add(normalized_choice)
-        compare_ready_items.append(item)
-
-    if len(compare_ready_items) < 2:
-        raise ValueError("Portfolio Mix Builder로 보내려면 최소 2개의 후보를 선택해야 합니다.")
-    if len(compare_ready_items) > 4:
-        raise ValueError("Portfolio Mix Builder bundle은 최대 4개 후보까지만 지원합니다.")
-
-    starts = {str(item["start"]) for item in compare_ready_items}
-    ends = {str(item["end"]) for item in compare_ready_items}
-    timeframes = {str(item["timeframe"]) for item in compare_ready_items}
-    options = {str(item["option"]) for item in compare_ready_items}
-
-    payload = {
-        "selected_strategies": [item["strategy_name"] for item in compare_ready_items],
-        "start": min(starts) if starts else CURRENT_CANDIDATE_COMPARE_DEFAULT_START.isoformat(),
-        "end": max(ends) if ends else CURRENT_CANDIDATE_COMPARE_DEFAULT_END.isoformat(),
-        "timeframe": next(iter(timeframes), "1d"),
-        "option": next(iter(options), "month_end"),
-        "strategy_overrides": {
-            item["strategy_name"]: item["strategy_override"] for item in compare_ready_items
-        },
-    }
-    titles = ", ".join(str(row.get("title") or row.get("registry_id") or "") for row in rows)
-    st.session_state.backtest_compare_prefill_payload = payload
-    st.session_state.backtest_compare_prefill_pending = True
-    st.session_state.backtest_compare_prefill_notice = (
-        f"current candidate bundle `{titles}`를 `Portfolio Mix Builder`로 불러왔습니다."
-    )
-    st.session_state.backtest_compare_source_context = {
-        "source_kind": "current_candidate_bundle",
-        "source_label": titles,
-        "registry_ids": [str(row.get("registry_id") or "") for row in rows],
-        "candidate_titles": [str(row.get("title") or "") for row in rows],
-        "selected_strategies": payload["selected_strategies"],
-    }
-    st.session_state.backtest_requested_panel = "Portfolio Mix Builder"
-
 def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]) -> None:
     if strategy_name == "Equal Weight":
         preset_name = override.get("preset_name")
@@ -4099,7 +3754,6 @@ def _apply_weighted_portfolio_prefill(strategy_names: list[str]) -> None:
 
 def _compare_source_kind_label(source_kind: str | None) -> str:
     mapping = {
-        "current_candidate_bundle": "Current Candidate Bundle",
         "saved_portfolio": "Saved Portfolio Re-entry",
         "manual_compare_selection": "Manual Mix Component Selection",
     }
@@ -4107,7 +3761,6 @@ def _compare_source_kind_label(source_kind: str | None) -> str:
 
 def _compare_source_kind_plain_text(source_kind: str | None) -> str:
     mapping = {
-        "current_candidate_bundle": "Current candidate 후보 묶음에서 불러옴",
         "saved_portfolio": "저장된 포트폴리오에서 다시 불러옴",
         "manual_compare_selection": "직접 선택한 mix component 설정",
     }
@@ -4329,10 +3982,6 @@ def _render_strategy_compare_workspace() -> None:
         key="compare_selected_strategies",
     )
     st.caption("Strategy selection updates the strategy-specific sections immediately.")
-    if _load_current_candidate_registry_latest():
-        st.caption("문서에 정리된 대표 후보를 바로 가져오려면 아래 `Quick Re-entry From Current Candidates`를 펼치면 됩니다.")
-        with st.expander("Quick Re-entry From Current Candidates", expanded=False):
-            _render_current_candidate_bundle_workspace()
     quality_compare_strategy_name: str | None = None
     value_compare_strategy_name: str | None = None
     quality_value_compare_strategy_name: str | None = None

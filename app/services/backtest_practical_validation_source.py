@@ -492,6 +492,242 @@ def _metric_snapshot_from_result(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_COST_MODEL_SNAPSHOT_KEYS = (
+    "cost_model_contract_version",
+    "cost_model_source",
+    "cost_model_formula",
+    "cost_application_status",
+    "cost_application_target",
+    "cost_turnover_source",
+    "real_money_hardening",
+    "transaction_cost_bps",
+    "avg_turnover",
+    "max_turnover",
+    "estimated_cost_total",
+    "gross_start_balance",
+    "gross_end_balance",
+    "net_end_balance",
+    "net_cagr_spread",
+    "promotion_min_net_cagr_spread",
+    "liquidity_clean_coverage",
+    "promotion_min_liquidity_clean_coverage",
+)
+
+_TURNOVER_EVIDENCE_SNAPSHOT_KEYS = (
+    "turnover_model_contract_version",
+    "turnover_estimation_status",
+    "turnover_source",
+    "turnover_input_missing_columns",
+    "turnover_observation_count",
+    "turnover_rebalance_rows",
+    "turnover_nonzero_count",
+    "avg_turnover",
+    "max_turnover",
+    "avg_rebalance_turnover",
+    "rebalance_interval",
+    "rebalance_freq",
+    "factor_freq",
+)
+
+_NET_COST_CURVE_SNAPSHOT_KEYS = (
+    "net_cost_curve_contract_version",
+    "net_cost_curve_status",
+    "net_cost_curve_application_target",
+    "total_balance_is_net_of_cost",
+    "net_cost_curve_rows",
+    "estimated_cost_total",
+    "estimated_cost_positive_rows",
+    "gross_start_balance",
+    "gross_end_balance",
+    "net_end_balance",
+    "gross_net_end_balance_delta",
+    "transaction_cost_bps",
+    "turnover_estimation_status",
+)
+
+_PROMOTION_POLICY_SETTING_KEYS = (
+    "promotion_min_benchmark_coverage",
+    "promotion_min_net_cagr_spread",
+    "promotion_min_liquidity_clean_coverage",
+    "promotion_max_underperformance_share",
+    "promotion_min_worst_rolling_excess_return",
+    "promotion_max_strategy_drawdown",
+    "promotion_max_drawdown_gap_vs_benchmark",
+)
+
+
+def _snapshot_from_mapping(data: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
+    return {key: data.get(key) for key in keys if data.get(key) is not None}
+
+
+def _summary_from_result_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
+    summary_df = bundle.get("summary_df")
+    if isinstance(summary_df, pd.DataFrame) and not summary_df.empty:
+        row = summary_df.iloc[0]
+        return {
+            "strategy_name": row.get("Name"),
+            "start_date": str(row.get("Start Date")),
+            "end_date": str(row.get("End Date")),
+            "end_balance": row.get("End Balance"),
+            "cagr": row.get("CAGR"),
+            "sharpe_ratio": row.get("Sharpe Ratio"),
+            "maximum_drawdown": row.get("Maximum Drawdown"),
+        }
+    return {}
+
+
+def _selection_source_draft_from_result_bundle(
+    bundle: dict[str, Any],
+    *,
+    source_kind: str,
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    from app.services.backtest_practical_validation_curve_context import (
+        compact_benchmark_curve_snapshot_from_bundle,
+        compact_curve_snapshot_from_bundle,
+    )
+
+    meta = dict(bundle.get("meta") or {})
+    summary = _summary_from_result_bundle(bundle)
+    price_freshness = dict(meta.get("price_freshness") or {})
+    draft = {
+        "source_kind": source_kind,
+        "created_at": _now_text(),
+        "strategy_key": meta.get("strategy_key"),
+        "strategy_name": bundle.get("strategy_name") or summary.get("strategy_name"),
+        "result_snapshot": {
+            "start_date": summary.get("start_date") or meta.get("actual_result_start") or meta.get("start"),
+            "end_date": summary.get("end_date") or meta.get("actual_result_end") or meta.get("end"),
+            "end_balance": summary.get("end_balance"),
+            "cagr": summary.get("cagr"),
+            "sharpe_ratio": summary.get("sharpe_ratio"),
+            "maximum_drawdown": summary.get("maximum_drawdown"),
+        },
+        "result_curve_snapshot": compact_curve_snapshot_from_bundle(bundle),
+        "benchmark_curve_snapshot": compact_benchmark_curve_snapshot_from_bundle(bundle),
+        "selection_history_snapshot": compact_selection_history_from_bundle(bundle),
+        "real_money_signal": {
+            "promotion": meta.get("promotion_decision"),
+            "shortlist": meta.get("shortlist_status"),
+            "deployment": meta.get("deployment_readiness_status"),
+            "validation_status": meta.get("validation_status"),
+            "monitoring_status": meta.get("monitoring_status"),
+        },
+        "data_trust_snapshot": {
+            "requested_end": meta.get("end"),
+            "actual_result_start": meta.get("actual_result_start"),
+            "actual_result_end": meta.get("actual_result_end"),
+            "result_rows": meta.get("result_rows"),
+            "price_freshness_status": price_freshness.get("status"),
+            "excluded_tickers": meta.get("excluded_tickers") or [],
+            "malformed_price_row_count": len(list(meta.get("malformed_price_rows") or [])),
+            "warning_count": len(list(meta.get("warnings") or [])),
+        },
+        "cost_model_snapshot": _snapshot_from_mapping(meta, _COST_MODEL_SNAPSHOT_KEYS),
+        "turnover_evidence_snapshot": _snapshot_from_mapping(meta, _TURNOVER_EVIDENCE_SNAPSHOT_KEYS),
+        "net_cost_curve_snapshot": _snapshot_from_mapping(meta, _NET_COST_CURVE_SNAPSHOT_KEYS),
+        "settings_snapshot": {
+            "tickers": meta.get("tickers") or [],
+            "universe_mode": meta.get("universe_mode"),
+            "preset_name": meta.get("preset_name"),
+            "universe_contract": meta.get("universe_contract"),
+            "factor_freq": meta.get("factor_freq"),
+            "rebalance_interval": meta.get("rebalance_interval"),
+            "rebalance_freq": meta.get("rebalance_freq"),
+            "top": meta.get("top"),
+            "transaction_cost_bps": meta.get("transaction_cost_bps"),
+            "benchmark_contract": meta.get("benchmark_contract"),
+            "benchmark_ticker": meta.get("benchmark_ticker"),
+            **{key: meta.get(key) for key in _PROMOTION_POLICY_SETTING_KEYS},
+        },
+        "notes": "Created from Backtest Analysis for current Practical Validation handoff.",
+    }
+    if extra_fields:
+        draft.update(extra_fields)
+    return draft
+
+
+def build_selection_source_from_result_bundle(
+    bundle: dict[str, Any],
+    *,
+    source_kind: str = "latest_backtest_run",
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the current Practical Validation source directly from a result bundle."""
+    draft = _selection_source_draft_from_result_bundle(
+        bundle,
+        source_kind=source_kind,
+        extra_fields=extra_fields,
+    )
+    return build_selection_source_from_candidate_draft(draft)
+
+
+def build_selection_source_from_history_record(record: dict[str, Any]) -> dict[str, Any]:
+    """Build the current Practical Validation source directly from a saved run history row."""
+    summary = dict(record.get("summary") or {})
+    gate_snapshot = dict(record.get("gate_snapshot") or {})
+    context = dict(record.get("context") or {})
+    price_freshness = dict(record.get("price_freshness") or {})
+    draft = {
+        "source_kind": "history_record",
+        "created_at": _now_text(),
+        "recorded_at": record.get("recorded_at"),
+        "run_kind": record.get("run_kind"),
+        "strategy_key": record.get("strategy_key"),
+        "strategy_name": summary.get("strategy_name") or record.get("strategy_name") or record.get("strategy_key"),
+        "result_snapshot": {
+            "start_date": summary.get("start_date") or record.get("actual_result_start") or record.get("input_start"),
+            "end_date": summary.get("end_date") or record.get("actual_result_end") or record.get("input_end"),
+            "end_balance": summary.get("end_balance"),
+            "cagr": summary.get("cagr"),
+            "sharpe_ratio": summary.get("sharpe_ratio"),
+            "maximum_drawdown": summary.get("maximum_drawdown"),
+        },
+        "real_money_signal": {
+            "promotion": record.get("promotion_decision") or gate_snapshot.get("promotion_decision"),
+            "shortlist": record.get("shortlist_status") or gate_snapshot.get("shortlist_status"),
+            "deployment": record.get("deployment_readiness_status") or gate_snapshot.get("deployment_readiness_status"),
+            "validation_status": gate_snapshot.get("validation_status"),
+            "monitoring_status": gate_snapshot.get("monitoring_status"),
+        },
+        "data_trust_snapshot": {
+            "requested_end": record.get("input_end"),
+            "actual_result_start": record.get("actual_result_start"),
+            "actual_result_end": record.get("actual_result_end"),
+            "result_rows": record.get("result_rows"),
+            "price_freshness_status": price_freshness.get("status") or gate_snapshot.get("price_freshness_status"),
+            "excluded_tickers": record.get("excluded_tickers") or [],
+            "malformed_price_row_count": len(list(record.get("malformed_price_rows") or [])),
+            "warning_count": len(list(record.get("warnings") or [])),
+        },
+        "cost_model_snapshot": _snapshot_from_mapping(record, _COST_MODEL_SNAPSHOT_KEYS),
+        "turnover_evidence_snapshot": _snapshot_from_mapping(record, _TURNOVER_EVIDENCE_SNAPSHOT_KEYS),
+        "net_cost_curve_snapshot": _snapshot_from_mapping(record, _NET_COST_CURVE_SNAPSHOT_KEYS),
+        "settings_snapshot": {
+            "tickers": record.get("tickers") or [],
+            "universe_mode": record.get("universe_mode"),
+            "preset_name": record.get("preset_name"),
+            "universe_contract": record.get("universe_contract"),
+            "factor_freq": record.get("factor_freq"),
+            "rebalance_interval": record.get("rebalance_interval"),
+            "rebalance_freq": record.get("rebalance_freq"),
+            "top": record.get("top"),
+            "transaction_cost_bps": record.get("transaction_cost_bps"),
+            "benchmark_contract": record.get("benchmark_contract"),
+            "benchmark_ticker": record.get("benchmark_ticker"),
+            **{key: record.get(key) for key in _PROMOTION_POLICY_SETTING_KEYS},
+            "context_keys": sorted(context.keys()),
+        },
+        "notes": (
+            "Created from Operations > Archive: Backtest Runs. "
+            "This is a current selection source for Practical Validation."
+        ),
+    }
+    source = build_selection_source_from_candidate_draft(draft)
+    source["notes"] = draft["notes"]
+    return source
+
+
 def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[str, Any]:
     """Convert a single run / compare draft into the current workflow selection-source contract."""
     created_at = _now_text()

@@ -25,9 +25,11 @@ from app.web.backtest_final_review_helpers import (
     _build_final_review_decision_rows_for_display,
     _build_final_review_paper_observation_snapshot,
     _build_final_review_save_evaluation,
+    _build_final_review_selected_component_rows,
     _build_final_review_source_options,
     _build_final_review_status_display,
     _build_final_review_validation,
+    _final_review_slug,
     _is_final_review_eligible_validation_result,
 )
 from app.web.backtest_final_review_components import (
@@ -36,10 +38,6 @@ from app.web.backtest_final_review_components import (
     render_fr_flow,
     render_fr_lane_grid,
     render_fr_section_header,
-)
-from app.web.backtest_portfolio_proposal_helpers import (
-    _build_final_selection_decision_component_rows,
-    _paper_ledger_slug,
 )
 from app.web.backtest_ui_components import (
     render_badge_strip,
@@ -56,10 +54,7 @@ from app.runtime import (
     FINAL_SELECTION_DECISION_FILE,
     append_current_final_selection_decision,
     build_selected_dashboard_handoff_review,
-    load_current_candidate_registry_latest,
     load_current_final_selection_decisions,
-    load_portfolio_proposals,
-    load_pre_live_candidate_registry_latest,
     load_practical_validation_results,
 )
 
@@ -1290,7 +1285,7 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
             width="stretch",
             hide_index=True,
         )
-        component_df = _build_final_selection_decision_component_rows(selected_row)
+        component_df = _build_final_review_selected_component_rows(selected_row)
         if component_df.empty:
             st.info("이 기록에는 selected component가 없습니다.")
         else:
@@ -1319,9 +1314,6 @@ def render_final_review_workspace() -> None:
     )
     render_reference_contextual_help("final_review")
 
-    current_rows = load_current_candidate_registry_latest()
-    proposal_rows = load_portfolio_proposals()
-    pre_live_rows = load_pre_live_candidate_registry_latest()
     practical_validation_rows = load_practical_validation_results()
     eligible_practical_validation_rows = [
         row
@@ -1339,8 +1331,8 @@ def render_final_review_workspace() -> None:
         st.success(str(final_notice))
 
     source_options = _build_final_review_source_options(
-        current_rows,
-        proposal_rows,
+        [],
+        [],
         practical_validation_rows=eligible_practical_validation_rows,
         session_practical_source=session_practical_source if isinstance(session_practical_source, dict) else None,
         include_legacy_sources=False,
@@ -1348,8 +1340,8 @@ def render_final_review_workspace() -> None:
     candidate_contexts = (
         _build_candidate_contexts(
             source_options,
-            current_rows=current_rows,
-            pre_live_rows=pre_live_rows,
+            current_rows=[],
+            pre_live_rows=[],
         )
         if source_options
         else []
@@ -1515,7 +1507,7 @@ def render_final_review_workspace() -> None:
             for row in final_decision_rows
             if str(row.get("decision_id") or "").strip()
         }
-        source_slug = _paper_ledger_slug(source.get("source_id"))
+        source_slug = _final_review_slug(source.get("source_id"))
         source_display_key = f"final_review_source_display_v1_{source_slug}"
         decision_id_key = f"final_review_decision_id_v1_{source_slug}"
         if st.session_state.pop("final_review_reset_decision_id_after_save", False):

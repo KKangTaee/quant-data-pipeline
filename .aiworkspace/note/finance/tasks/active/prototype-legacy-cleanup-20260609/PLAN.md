@@ -34,6 +34,17 @@ Backtest Analysis
 | 2차 | Code / route / UI cleanup | `app/web/backtest_workflow_routes.py`, `app/web/pages/backtest.py`, `app/web/backtest_common.py`, Overview primary tabs/copy, related tests | Candidate Review / Portfolio Proposal / Pre-Live / old candidate packaging이 primary route나 Overview primary tab에서 보이지 않음 | 3차 docs sync / QA |
 | 3차 | Docs / tests / QA / commit | durable docs, task/root logs, focused tests, Browser QA if needed | docs가 current workflow를 설명하고 focused checks가 통과하며 coherent commit 생성 | 다음 cleanup/refactor 후보는 deferred risk로 남김 |
 
+## 5C 추가 차수
+
+5B에서 route와 primary tab을 숨긴 뒤 남은 legacy module을 물리적으로 정리한다.
+
+| 차수 | 목적 | 바뀔 화면 / 파일 범위 | 완료 조건 | 다음 차수 연결 |
+|---|---|---|---|---|
+| 1차 | Import graph / consumer audit | legacy Candidate / Proposal UI/helper, current Backtest result/history/compare/final-review consumers, runtime registry helpers | 대상 파일을 `DELETE_NOW`, `EXTRACT_CURRENT_HELPER`, `ARCHIVE_RECOVERY`, `KEEP_CURRENT`, `DEFER_DELETE`로 재분류 | 2차 current handoff extraction |
+| 2차 | Current handoff helper extraction | `app/services/backtest_practical_validation_source.py`, `app/web/backtest_practical_validation_handoff.py`, current Backtest result/history/compare modules | current workflow가 legacy Candidate Review helper 없이 Practical Validation source handoff를 만든다 | 3차 physical cleanup |
+| 3차 | Legacy UI/helper physical deletion | `app/web/backtest_candidate_review*.py`, `app/web/backtest_portfolio_proposal*.py`, `app/web/overview_dashboard_helpers.py` | 삭제 가능한 prototype UI/helper가 실제 삭제되고 Overview legacy snapshot helper가 제거된다 | 4차 docs/tests/commit |
+| 4차 | Docs / tests / QA / commit | durable docs, task/root logs, focused tests, Browser QA | docs가 old workflow를 current처럼 설명하지 않고 coherent commit이 생성된다 | 남은 legacy runtime은 archive / recovery compatibility로만 유지 |
+
 ## 분류 기준
 
 | Label | 기준 |

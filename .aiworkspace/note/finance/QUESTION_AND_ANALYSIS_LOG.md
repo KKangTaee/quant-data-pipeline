@@ -31,9 +31,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - 현재 정식 workflow를 `Backtest Analysis -> Practical Validation -> Final Review -> Operations > Portfolio Monitoring`으로 고정하고, legacy registry / saved records는 삭제하지 않고 archive / recovery로 낮춘다.
 - Analysis result:
-  - Candidate Review와 Portfolio Proposal은 primary route target과 page-shell dispatch에서 제거하는 것이 맞다. Run History와 Candidate records는 historical recovery 가치가 있으므로 Operations archive로 유지하고, Run History handoff는 current Practical Validation source로 보내는 것이 현재 source chain과 일관된다.
+  - Candidate Review와 Portfolio Proposal은 primary route target과 page-shell dispatch에서 제거하는 것이 맞다. 5C import graph audit 후 current Practical Validation handoff를 분리했으므로 old Candidate Review / Portfolio Proposal UI/helper module은 삭제해도 current workflow를 깨지 않는다. Run History와 Candidate records는 historical recovery 가치가 있으므로 Operations archive로 유지하고, Run History handoff는 current Practical Validation source로 보내는 것이 현재 source chain과 일관된다.
 - Follow-up:
-  - Physical deletion of old Candidate Review / Portfolio Proposal modules, unused Overview candidate helper removal, and legacy file rename should be separate cleanup tasks after import / registry consumer audit.
+  - 남은 legacy는 registry JSONL과 runtime archive / recovery compatibility다. Future follow-up은 `final_selected_portfolio_dashboard.py` rename이나 runtime registry helper deletion처럼 별도 compatibility audit이 필요한 작업으로 분리한다.
 
 ### 2026-06-09 - Provenance contract should be a compact read model before DB migration
 - User request:

@@ -3,7 +3,7 @@
 ## Decisions
 
 - Treat Candidate Review / Portfolio Proposal / Pre-Live / old candidate packaging as prototype legacy, not current workflow.
-- Preserve registry / saved JSONL and old helper modules unless they are proven unused and safe to delete.
+- Preserve registry / saved JSONL; delete old helper modules only after current handoff behavior is extracted and import graph is clean.
 - Preserve Backtest Run History and Candidate Library as Operations archive / recovery.
 - Remove or hide Overview primary legacy Candidate Ops because it nudges the product back to Candidate Review / Portfolio Proposal.
 - Keep compatible analysis submode route requests such as `Single Strategy`, `Compare & Portfolio Builder`, and `Portfolio Mix Builder`; only legacy candidate/proposal panels are removed from primary route targets.
@@ -18,9 +18,11 @@
 | Operations > Portfolio Monitoring | `KEEP_PRIMARY`; legacy implementation file name retained |
 | Operations > Archive: Backtest Runs | `ARCHIVE_RECOVERY`; now sends selected record to Practical Validation source handoff |
 | Operations > Archive: Candidates | `ARCHIVE_RECOVERY`; legacy current/pre-live records only |
-| Candidate Review / Portfolio Proposal panels | `HIDE_FROM_PRIMARY`, `DEFER_DELETE` for physical module deletion |
+| Candidate Review / Portfolio Proposal UI modules | `DELETE_NOW`; deleted after current helper extraction and import graph audit |
+| Candidate Review / Portfolio Proposal helper modules | `DELETE_NOW` after `EXTRACT_CURRENT_HELPER`; deleted after current handoff / Final Review helpers moved to current owners |
 | Pre-Live / proposal / paper registries | `ARCHIVE_RECOVERY` / `DEFER_DELETE`; preserved and not rewritten |
-| Overview Candidate Ops | `HIDE_FROM_PRIMARY`; tab removed from default Overview |
+| Overview Candidate Ops | `DELETE_NOW` for primary tab and unused snapshot helpers; current market/context helper retained |
+| Current result/history/compare handoff | `KEEP_CURRENT`; now goes through Practical Validation source/handoff helpers without legacy draft state |
 
 ## Dirty Tree Baseline
 

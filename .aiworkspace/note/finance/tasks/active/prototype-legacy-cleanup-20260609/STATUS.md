@@ -1,7 +1,7 @@
 # Prototype Legacy Cleanup / Removal Status
 
 Status: Complete
-Last Updated: 2026-06-09
+Last Updated: 2026-06-10
 
 ## Progress
 
@@ -14,12 +14,17 @@ Last Updated: 2026-06-09
 - Removed Overview primary `Candidate Ops` tab and stopped default Overview render from loading the old candidate/proposal snapshot.
 - Changed Archive: Backtest Runs handoff from legacy candidate draft queue to current Practical Validation source handoff.
 - Updated Portfolio Monitoring copy in Final Review / selected portfolio read models and durable flow / architecture / glossary docs.
+- 5C import graph audit classified the remaining Candidate Review / Portfolio Proposal UI/helper modules as deletable after extracting current handoff behavior.
+- Added current Practical Validation handoff helpers in `app/services/backtest_practical_validation_source.py` and `app/web/backtest_practical_validation_handoff.py`.
+- Removed current Backtest result/history/compare/final-review dependencies on legacy Candidate Review / Portfolio Proposal helpers.
+- Deleted legacy Candidate Review / Portfolio Proposal UI/helper modules and removed unused Overview candidate/proposal snapshot helpers.
+- Preserved registry / saved JSONL and runtime archive compatibility helpers without rewrite.
 
 ## Current Step
 
-3차 docs sync / verification / Browser QA completed.
+5C 4차 docs sync / verification / Browser QA completed; commit pending.
 
 ## Next Action
 
-- Commit the coherent cleanup unit.
+- Commit the coherent 5C cleanup unit.
 - Leave generated screenshot, run history, saved JSONL, and `.DS_Store` unstaged.

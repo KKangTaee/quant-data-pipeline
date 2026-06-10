@@ -27,11 +27,11 @@ Legacy compatibility surfaces can remain only when they do not look like primary
 | `Operations > System / Data Health` | Operations primary lane | `KEEP_PRIMARY` | Keep |
 | Backtest Run History | Operations page label is `Archive: Backtest Runs`; supports inspect / run again / load into form | `ARCHIVE_RECOVERY` | Keep under Operations archive / recovery |
 | Candidate Library | Operations page label is `Archive: Candidates`; reads old candidate registries | `ARCHIVE_RECOVERY` | Keep under Operations archive / recovery, read-only/replay meaning only |
-| Candidate Review route/panel | imported and direct-dispatched from `app/web/pages/backtest.py`; route helper accepts legacy target | `HIDE_FROM_PRIMARY` first, `DEFER_DELETE` for file removal | Remove from valid primary route targets and direct dispatch; keep module files until migration proof |
-| Portfolio Proposal route/panel | imported and direct-dispatched from `app/web/pages/backtest.py`; route helper accepts legacy target | `HIDE_FROM_PRIMARY` first, `DEFER_DELETE` for file removal | Remove from valid primary route targets and direct dispatch; keep module files until migration proof |
-| Pre-Live registry helpers | old current/pre-live/proposal chain still used by Candidate Library / Overview helper | `DEFER_DELETE` | Keep registry helpers, stop primary UI nudges toward Pre-Live |
-| Overview Candidate Ops tab | primary Overview tab loads old current/pre-live/proposal registries and links to Candidate Review / Portfolio Proposal | `HIDE_FROM_PRIMARY` | Remove from Overview primary tabs and stop snapshot load from old candidate ops |
-| Candidate Review / Proposal implementation files | large old workflow modules | `DEFER_DELETE` | Do not delete in this task unless imports become fully unreferenced and tests prove safe |
+| Candidate Review route/panel | formerly imported and direct-dispatched from `app/web/pages/backtest.py`; route helper accepted legacy target | `DELETE_NOW` after 5C audit | Removed from valid primary route targets and direct dispatch; UI/helper modules deleted after current handoff extraction |
+| Portfolio Proposal route/panel | formerly imported and direct-dispatched from `app/web/pages/backtest.py`; route helper accepted legacy target | `DELETE_NOW` after 5C audit | Removed from valid primary route targets and direct dispatch; UI/helper modules deleted after Final Review current helper extraction |
+| Pre-Live registry helpers | old current/pre-live/proposal chain still used by Candidate Library and Portfolio Monitoring fallback compatibility | `ARCHIVE_RECOVERY` / `DEFER_DELETE` | Keep runtime registry helpers, stop primary UI nudges toward Pre-Live |
+| Overview Candidate Ops tab | primary Overview tab formerly loaded old current/pre-live/proposal registries and linked to Candidate Review / Portfolio Proposal | `DELETE_NOW` for primary tab and unused snapshot helpers | Removed from Overview primary tabs and default snapshot helper |
+| Candidate Review / Proposal implementation files | large old workflow modules | `DELETE_NOW` | Delete after import graph proves current workflow no longer imports them |
 | `CURRENT_CANDIDATE_REGISTRY`, `PRE_LIVE_CANDIDATE_REGISTRY`, `PORTFOLIO_PROPOSAL_REGISTRY`, paper ledger | workflow registry files / helpers | `ARCHIVE_RECOVERY` / `DEFER_DELETE` | Preserve, do not rewrite; no longer source-of-truth for current workflow |
 
 ## Implementation Direction
@@ -51,6 +51,25 @@ Legacy compatibility surfaces can remain only when they do not look like primary
 - Overview primary tabs no longer include `Candidate Ops`.
 - Archive: Backtest Runs sends selected records to Practical Validation source handoff instead of legacy Candidate Review draft state.
 - Durable docs describe Candidate Review / Portfolio Proposal / Pre-Live records as legacy archive / recovery compatibility, not primary workflow.
+
+## 5C Classification Outcome
+
+| File / Helper | Classification | Result |
+|---|---|---|
+| `app/web/backtest_candidate_review.py` | `DELETE_NOW` | Deleted; no current route or current import remains |
+| `app/web/backtest_candidate_review_helpers.py` | `DELETE_NOW` after `EXTRACT_CURRENT_HELPER` | Deleted after Practical Validation source handoff builder moved to current service/UI helper |
+| `app/web/backtest_portfolio_proposal.py` | `DELETE_NOW` | Deleted; primary Portfolio Proposal panel is not part of current workflow |
+| `app/web/backtest_portfolio_proposal_helpers.py` | `DELETE_NOW` after `EXTRACT_CURRENT_HELPER` | Deleted after Final Review current selection/paper snapshot helpers moved local to Final Review helper |
+| `app/web/overview_dashboard_helpers.py` legacy candidate/proposal snapshot functions | `DELETE_NOW` | Removed; Overview helper now keeps current market/context snapshot helpers only |
+| `app/web/backtest_common.py` | `KEEP_CURRENT` | Removed legacy session-state/import setup; remains shared current Backtest UI helper |
+| `app/web/backtest_result_display.py` | `KEEP_CURRENT` | Uses current Practical Validation handoff helper |
+| `app/web/backtest_compare.py` | `KEEP_CURRENT` | Uses current Practical Validation handoff helper and preserves only read-only saved mix/archive references |
+| `app/web/backtest_history.py` | `KEEP_CURRENT` / `ARCHIVE_RECOVERY` | Archive run rows can hand off to Practical Validation without legacy candidate draft state |
+| `app/web/backtest_final_review.py` | `KEEP_CURRENT` | Reads Practical Validation results only as current source options |
+| `app/web/backtest_final_review_helpers.py` | `KEEP_CURRENT` | Final Review helper owns current selection/paper snapshot helper logic without proposal helper import |
+| `app/runtime/candidate_registry.py` | `ARCHIVE_RECOVERY` | Preserved for Candidate Library and Portfolio Monitoring fallback compatibility; JSONL not rewritten |
+| `app/runtime/portfolio_proposal.py` | `ARCHIVE_RECOVERY` / `DEFER_DELETE` | Preserved as historical registry compatibility only |
+| `app/runtime/paper_portfolio_ledger.py` | `ARCHIVE_RECOVERY` / `DEFER_DELETE` | Preserved as historical paper ledger compatibility only |
 
 ## Testing Direction
 

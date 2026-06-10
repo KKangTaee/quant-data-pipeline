@@ -10,6 +10,7 @@ Current active task: none.
 Latest completed task:
 
 - `prototype-legacy-cleanup-20260609`
+  - 5C physical cleanup extracted current Practical Validation handoff helpers, deleted legacy Candidate Review / Portfolio Proposal UI/helper modules, and preserved registry / saved JSONL compatibility records.
 
 Latest completed docs cleanup task:
 

@@ -13,6 +13,7 @@ from app.services.backtest_result_read_model import (
     data_trust_status_label,
 )
 from app.web.backtest_common import *  # noqa: F401,F403
+from app.web.backtest_practical_validation_handoff import queue_practical_validation_handoff_from_result_bundle
 from app.web.backtest_ui_components import (
     render_badge_strip,
     render_checkpoint_strip,
@@ -631,12 +632,12 @@ def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
         with handoff_cols[0]:
             if st.button(
                 "실전성 검증으로 보내기",
-                key="latest_run_candidate_review_draft",
+                key="latest_run_practical_validation_handoff",
                 use_container_width=True,
                 disabled=not bool(state["can_submit"]),
                 type="primary" if bool(state["can_submit"]) else "secondary",
             ):
-                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+                queue_practical_validation_handoff_from_result_bundle(bundle)
                 st.rerun()
         with handoff_cols[1]:
             if bool(state["can_submit"]):

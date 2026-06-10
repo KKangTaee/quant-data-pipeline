@@ -8,11 +8,8 @@ import pandas as pd
 import streamlit as st
 
 from app.runtime import BACKTEST_HISTORY_FILE, load_backtest_run_history
-from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
-from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
 from app.web.backtest_common import _set_single_strategy_target_from_strategy_key
 from app.web.backtest_single_runner import _handle_backtest_run
-from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_history_record
 from app.web.backtest_history_helpers import (
     _build_backtest_history_rows,
     _build_history_payload,
@@ -23,6 +20,7 @@ from app.web.backtest_history_helpers import (
     _normalize_recorded_date_range,
     _strategy_key_to_display_name,
 )
+from app.web.backtest_practical_validation_handoff import queue_practical_validation_handoff_from_history_record
 from app.web.backtest_strategy_catalog import strategy_key_to_selection
 
 
@@ -147,17 +145,7 @@ def _load_history_into_form(record: dict[str, Any]) -> bool:
 
 
 def _send_history_record_to_practical_validation(record: dict[str, Any]) -> None:
-    draft = _candidate_review_draft_from_history_record(record)
-    source = build_selection_source_from_candidate_draft(draft)
-    source["notes"] = (
-        "Created from Operations > Archive: Backtest Runs. "
-        "This is a current selection source for Practical Validation, not a legacy candidate packaging record."
-    )
-    handoff = prepare_practical_validation_source_handoff(source, persist=True)
-    st.session_state.backtest_practical_validation_source = handoff.source_payload
-    st.session_state.backtest_practical_validation_notice = handoff.notice
-    st.session_state.backtest_practical_validation_mode = handoff.mode
-    st.session_state.backtest_requested_panel = handoff.requested_panel
+    queue_practical_validation_handoff_from_history_record(record)
 
 
 # Render the persisted Backtest history inspector and replay actions.

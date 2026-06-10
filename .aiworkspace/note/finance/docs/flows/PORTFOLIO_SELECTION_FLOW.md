@@ -78,7 +78,7 @@ PORTFOLIO_SELECTION_SOURCES
       -> Operations > Portfolio Monitoring read-only monitoring
 ```
 
-기존 `registry_id`, Review Note, Pre-Live registry, Portfolio Proposal registry는 legacy compatibility로 남을 수 있지만, 현재 주 흐름의 필수 저장 단계는 아니다.
+기존 `registry_id`, Review Note, Pre-Live registry, Portfolio Proposal registry는 legacy compatibility로 남을 수 있지만, 현재 주 흐름의 필수 저장 단계는 아니다. 5C physical cleanup 이후 legacy Candidate Review / Portfolio Proposal UI와 helper module은 삭제됐고, 남은 legacy는 JSONL registry와 runtime archive / recovery compatibility로만 유지한다.
 Portfolio Monitoring의 Timeline / Continuity / Review Signals / Decision Dossier는 `FINAL_PORTFOLIO_SELECTION_DECISIONS` row를 같은 durable source로 표시하고, session-state recheck / drift / alert evidence는 저장된 monitoring history가 아니라 read-only context로 표시한다.
 Portfolio Monitoring handoff review도 같은 Final Decision row를 읽으며, selected route / dashboard row build / monitorable 여부를 표시한다. 사용자가 만든 dashboard portfolio setup은 별도 saved state인 `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`에만 저장되며 Final Decision row를 수정하지 않는다.
 Final Decision row는 backward compatibility용 `gate_policy_snapshot`을 selection policy로 유지하고, `selection_gate_policy_snapshot`, `deployment_readiness_policy_snapshot`, `open_review_items`를 함께 저장해 선정 판단과 live 투입 감사 후보 항목을 분리한다.

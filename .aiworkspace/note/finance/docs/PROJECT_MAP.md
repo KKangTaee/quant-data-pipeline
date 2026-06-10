@@ -91,6 +91,7 @@ Last Verified: 2026-06-09
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help entry point |
 | Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
+| Practical Validation handoff UI helper | `app/web/backtest_practical_validation_handoff.py` |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |
 | Final Review UI components | `app/web/backtest_final_review_components.py` |
@@ -141,6 +142,7 @@ Last Verified: 2026-06-09
 | `app/services/backtest_data_provenance.py` | Streamlit-free Data Provenance / PIT Evidence Contract read model. Existing provider / macro / price window / lifecycle / robustness compact evidence를 `source_name`, `source_type`, `source_date`, `collected_at`, `snapshot_kind`, `freshness_status`, PIT / look-ahead / survivorship risk, `proxy_status`, `decision_effect` row로 접어 Practical Validation result와 Final Review investability packet이 같은 provenance contract를 읽게 한다. 새 DB write, 새 JSONL registry, full holdings / macro / raw provider persistence를 만들지 않는다 |
 | `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, net cost curve, turnover, cost / slippage sensitivity, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, Step 1 source strategy / construction / selection history display, profile input, latest replay button, current-session replay display policy, 7-step boundary, Control Center, CNN / AAII market sentiment context overlay, Fix Queue, summary-first evidence workspace, look-through board, Robustness Lab board with run-set provenance badge, Provider Action Center, save-only audit copy, provider gap / replay service result session state handoff |
+| `app/web/backtest_practical_validation_handoff.py` | Streamlit session-state handoff helper. Backtest result bundles, run-history rows, saved mix, and weighted mix sources are queued to Practical Validation without creating legacy Candidate Review draft state |
 | `app/web/backtest_practical_validation_components.py` | Practical Validation 전용 product shell / CSS helper. Command Center, section header, card grid, step rail, alert panel을 담당하며 검증 로직이나 저장 계약은 포함하지 않는다 |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |

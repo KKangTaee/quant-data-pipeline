@@ -16,25 +16,15 @@ from app.services.backtest_evidence_read_model import (
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
 )
-from app.web.backtest_portfolio_proposal_helpers import (
-    FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
-    _build_final_selection_decision_phase35_handoff,
-    _build_portfolio_risk_validation_input_for_proposal,
-    _build_portfolio_risk_validation_input_for_single_candidate,
-    _build_portfolio_risk_validation_result,
-    _paper_ledger_baseline_snapshot,
-    _paper_ledger_slug,
-    _paper_ledger_target_components,
-    _portfolio_proposal_candidate_data_trust_status,
-    _portfolio_proposal_current_candidate_by_registry_id,
-    _portfolio_proposal_optional_float,
-    _portfolio_proposal_pre_live_record_by_registry_id,
-    _portfolio_proposal_pre_live_status_by_registry_id,
-)
 from app.runtime import FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION
 
 
-FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
+FINAL_REVIEW_ROUTE_OPTIONS = [
+    SELECT_FOR_PRACTICAL_PORTFOLIO,
+    "HOLD_FOR_MORE_PAPER_TRACKING",
+    "REJECT_FOR_PRACTICAL_USE",
+    "RE_REVIEW_REQUIRED",
+]
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "Portfolio Monitoring 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 선정 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
@@ -43,22 +33,157 @@ FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
 }
 
 
+def _final_review_slug(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    cleaned = "".join(char if char.isalnum() else "_" for char in raw)
+    return "_".join(part for part in cleaned.split("_") if part) or "source"
+
+
+def _final_review_optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(numeric):
+        return None
+    return numeric
+
+
+def _final_review_target_components(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    components: list[dict[str, Any]] = []
+    for row in list(validation.get("component_rows") or []):
+        row = dict(row or {})
+        components.append(
+            {
+                "registry_id": row.get("Registry ID") or row.get("registry_id") or row.get("component_id"),
+                "title": row.get("Title") or row.get("title") or row.get("strategy_name"),
+                "proposal_role": row.get("Role") or row.get("proposal_role") or row.get("role"),
+                "target_weight": _final_review_optional_float(row.get("Weight") or row.get("target_weight")) or 0.0,
+                "strategy_family": row.get("Family") or row.get("strategy_family"),
+                "benchmark": row.get("Benchmark") or row.get("benchmark"),
+                "universe": row.get("Universe") or row.get("universe"),
+                "factors": row.get("Factors") or row.get("factors"),
+                "pre_live_status": row.get("Pre-Live") or row.get("pre_live_status"),
+                "data_trust_status": row.get("Data Trust") or row.get("data_trust_status"),
+                "promotion": row.get("Promotion") or row.get("promotion"),
+                "deployment": row.get("Deployment") or row.get("deployment"),
+                "baseline_cagr": row.get("CAGR") or row.get("baseline_cagr"),
+                "baseline_mdd": row.get("MDD") or row.get("baseline_mdd"),
+            }
+        )
+    return components
+
+
+def _final_review_baseline_snapshot(validation: dict[str, Any]) -> dict[str, Any]:
+    components = _final_review_target_components(validation)
+    active_components = [
+        component
+        for component in components
+        if (_final_review_optional_float(component.get("target_weight")) or 0.0) > 0.0
+    ]
+    weighted_cagr = 0.0
+    weighted_mdd = 0.0
+    total_weight = 0.0
+    cagr_complete = True
+    mdd_complete = True
+    for component in active_components:
+        weight = _final_review_optional_float(component.get("target_weight")) or 0.0
+        cagr = _final_review_optional_float(component.get("baseline_cagr"))
+        mdd = _final_review_optional_float(component.get("baseline_mdd"))
+        if cagr is None:
+            cagr_complete = False
+        else:
+            weighted_cagr += cagr * weight
+        if mdd is None:
+            mdd_complete = False
+        else:
+            weighted_mdd += mdd * weight
+        total_weight += weight
+    return {
+        "component_count": len(components),
+        "active_component_count": len(active_components),
+        "target_weight_total": round(total_weight, 4),
+        "weighted_cagr": round(weighted_cagr / total_weight, 6) if total_weight > 0 and cagr_complete else None,
+        "weighted_mdd": round(weighted_mdd / total_weight, 6) if total_weight > 0 and mdd_complete else None,
+    }
+
+
+def _build_final_review_phase35_handoff(row: dict[str, Any]) -> dict[str, Any]:
+    """Summarize Final Review completion while preserving the persisted handoff field name."""
+
+    decision_route = str(row.get("decision_route") or "")
+    evidence = dict(row.get("decision_evidence_snapshot") or {})
+    if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO:
+        handoff_route = "FINAL_REVIEW_DECISION_COMPLETE"
+        verdict = "최종 판단 완료: Portfolio Monitoring 후보로 선정됨"
+        next_action = "Operations > Portfolio Monitoring에서 read-only 사후 점검을 이어갑니다."
+    elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
+        handoff_route = "WAIT_FOR_MORE_PAPER_TRACKING"
+        verdict = "최종 판단 보류: 관찰 근거를 더 쌓아야 함"
+        next_action = "추가 관찰 기간 또는 trigger 충족 후 Final Review에서 다시 판단합니다."
+    elif decision_route == "REJECT_FOR_PRACTICAL_USE":
+        handoff_route = "FINAL_REVIEW_REJECTED"
+        verdict = "최종 판단 완료: 모니터링 후보에서 제외됨"
+        next_action = "필요하면 Backtest Analysis 또는 Practical Validation으로 되돌아갑니다."
+    else:
+        handoff_route = "FINAL_REVIEW_REVIEW_REQUIRED"
+        verdict = "최종 판단 재검토 필요: 구성 / 비중 / 근거를 다시 확인"
+        next_action = "Practical Validation evidence를 보강한 뒤 Final Review 판단을 다시 봅니다."
+    return {
+        "handoff_route": handoff_route,
+        "verdict": verdict,
+        "next_action": next_action,
+        "requirements": [
+            {
+                "Requirement": "Final decision route",
+                "Status": "READY" if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO else "NOT_READY",
+                "Current": decision_route or "-",
+                "Why It Matters": "Final Review에서 Portfolio Monitoring 후보 선정 여부를 명확히 남긴다.",
+            },
+            {
+                "Requirement": "Evidence pack",
+                "Status": "READY" if evidence.get("route") == "READY_FOR_FINAL_DECISION" else "REVIEW",
+                "Current": evidence.get("route") or "-",
+                "Why It Matters": "선정 근거가 Practical Validation evidence와 연결되어야 한다.",
+            },
+            {
+                "Requirement": "Execution boundary",
+                "Status": "READY",
+                "Current": "live approval disabled / order instruction disabled",
+                "Why It Matters": "선정 기록은 주문 실행이 아니라 최종 검토 판단이다.",
+            },
+        ],
+    }
+
+
+def _build_final_review_selected_component_rows(row: dict[str, Any]) -> pd.DataFrame:
+    """Flatten final decision selected components for operator review."""
+
+    display_rows: list[dict[str, Any]] = []
+    for component in list(row.get("selected_components") or []):
+        component = dict(component or {})
+        display_rows.append(
+            {
+                "Registry ID": component.get("registry_id"),
+                "Title": component.get("title"),
+                "Role": component.get("proposal_role"),
+                "Weight": component.get("target_weight"),
+                "Family": component.get("strategy_family"),
+                "Benchmark": component.get("benchmark"),
+                "Data Trust": component.get("data_trust_status"),
+                "Promotion": component.get("promotion"),
+                "Deployment": component.get("deployment"),
+                "Baseline CAGR": component.get("baseline_cagr"),
+                "Baseline MDD": component.get("baseline_mdd"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def _build_final_review_status_display(row: dict[str, Any]) -> dict[str, str]:
     return build_final_review_status_display(row)
-
-
-def _final_review_current_label(row: dict[str, Any]) -> str:
-    registry_id = str(row.get("registry_id") or "").strip()
-    title = str(row.get("title") or registry_id or "-")
-    family = str(row.get("strategy_family") or "-")
-    return f"단일 후보 | {family} | {title} | id={registry_id}"
-
-
-def _final_review_proposal_label(row: dict[str, Any]) -> str:
-    proposal_id = str(row.get("proposal_id") or "").strip()
-    objective = dict(row.get("objective") or {})
-    primary_goal = str(objective.get("primary_goal") or "-")
-    return f"포트폴리오 초안 | {primary_goal} | id={proposal_id}"
 
 
 def _final_review_practical_validation_label(row: dict[str, Any]) -> str:
@@ -103,7 +228,8 @@ def _build_final_review_source_options(
     session_practical_source: dict[str, Any] | None = None,
     include_legacy_sources: bool = True,
 ) -> list[dict[str, Any]]:
-    """Build selectable final-review sources from current validation, current candidates, and saved proposals."""
+    """Build selectable Final Review sources from current Practical Validation results."""
+    del current_rows, proposal_rows, include_legacy_sources
     options: list[dict[str, Any]] = []
     session_practical_source = dict(session_practical_source or {})
     session_validation = dict(session_practical_source.get("validation_result") or {})
@@ -138,33 +264,6 @@ def _build_final_review_source_options(
                 "row": dict(row),
             }
         )
-    if include_legacy_sources:
-        for row in current_rows:
-            registry_id = str(row.get("registry_id") or "").strip()
-            if not registry_id:
-                continue
-            options.append(
-                {
-                    "label": _final_review_current_label(row),
-                    "source_type": "single_candidate",
-                    "source_id": registry_id,
-                    "source_title": row.get("title") or registry_id,
-                    "row": dict(row),
-                }
-            )
-        for row in proposal_rows:
-            proposal_id = str(row.get("proposal_id") or "").strip()
-            if not proposal_id:
-                continue
-            options.append(
-                {
-                    "label": _final_review_proposal_label(row),
-                    "source_type": "portfolio_proposal",
-                    "source_id": proposal_id,
-                    "source_title": proposal_id,
-                    "row": dict(row),
-                }
-            )
     return options
 
 
@@ -174,7 +273,8 @@ def _build_final_review_validation(
     current_rows: list[dict[str, Any]],
     pre_live_rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Read a selected current candidate or proposal through the shared validation contract."""
+    """Read a selected Practical Validation result through the Final Review contract."""
+    del current_rows, pre_live_rows
     source_type = str(source.get("source_type") or "")
     source_row = dict(source.get("row") or {})
     if source_type == "practical_validation_result":
@@ -187,23 +287,18 @@ def _build_final_review_validation(
         validation.setdefault("review_gaps", list(source_row.get("review_gaps") or []))
         validation.setdefault("component_rows", list(source_row.get("component_rows") or []))
         return validation
-    pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
-    if source_type == "single_candidate":
-        registry_id = str(source_row.get("registry_id") or "").strip()
-        pre_live_statuses = _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows)
-        validation_input = _build_portfolio_risk_validation_input_for_single_candidate(
-            selected_row=source_row,
-            pre_live_record=pre_live_by_registry_id.get(registry_id),
-            pre_live_status=pre_live_statuses.get(registry_id, "not_started"),
-            data_trust_status=_portfolio_proposal_candidate_data_trust_status(source_row),
-        )
-    else:
-        validation_input = _build_portfolio_risk_validation_input_for_proposal(
-            proposal_row=source_row,
-            current_by_registry_id=_portfolio_proposal_current_candidate_by_registry_id(current_rows),
-            pre_live_by_registry_id=pre_live_by_registry_id,
-        )
-    return _build_portfolio_risk_validation_result(validation_input)
+    return {
+        "source_type": source_type or "unsupported_source",
+        "source_id": source.get("source_id"),
+        "source_label": source.get("label") or source.get("source_id"),
+        "validation_route": "BLOCKED",
+        "validation_score": 0.0,
+        "hard_blockers": ["Final Review accepts Practical Validation results only."],
+        "paper_tracking_gaps": [],
+        "review_gaps": [],
+        "checks": [],
+        "component_rows": [],
+    }
 
 
 def _build_final_review_paper_observation_snapshot(validation: dict[str, Any]) -> dict[str, Any]:
@@ -215,12 +310,12 @@ def _build_final_review_paper_observation_snapshot(validation: dict[str, Any]) -
         existing.setdefault("checks", [])
         existing.setdefault("blockers", [])
         return existing
-    baseline = _paper_ledger_baseline_snapshot(validation)
-    components = _paper_ledger_target_components(validation)
+    baseline = _final_review_baseline_snapshot(validation)
+    components = _final_review_target_components(validation)
     active_components = [
         component
         for component in components
-        if (_portfolio_proposal_optional_float(component.get("target_weight")) or 0.0) > 0.0
+        if (_final_review_optional_float(component.get("target_weight")) or 0.0) > 0.0
     ]
     benchmarks = sorted(
         {
@@ -469,7 +564,7 @@ def _build_final_review_decision_row(
         "decision_route": str(decision_route or "").strip(),
         "selected_practical_portfolio": decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO",
         "source_paper_ledger_id": None,
-        "source_observation_id": f"paper_observation_{_paper_ledger_slug(source_id)}",
+        "source_observation_id": f"paper_observation_{_final_review_slug(source_id)}",
         "source_type": source.get("source_type"),
         "source_id": source_id,
         "source_title": source.get("source_title") or source_id,
@@ -527,7 +622,7 @@ def _build_final_review_decision_row(
             "It is not live approval, deployment approval, or an order instruction."
         ),
     }
-    row["phase35_handoff"] = _build_final_selection_decision_phase35_handoff(row)
+    row["phase35_handoff"] = _build_final_review_phase35_handoff(row)
     return row
 
 

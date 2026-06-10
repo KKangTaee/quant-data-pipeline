@@ -29,8 +29,8 @@ Workspace > Ingestion
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
 - Latest completed task: `.aiworkspace/note/finance/tasks/active/prototype-legacy-cleanup-20260609/`
-- 목적: Candidate Review / Portfolio Proposal / Pre-Live / old candidate packaging을 primary product route와 Overview primary tab에서 제거하고, current workflow를 `Backtest Analysis -> Practical Validation -> Final Review -> Operations > Portfolio Monitoring`으로 고정한다.
-- 이번 차수에서 하지 않은 일: legacy registry / saved JSONL rewrite, historical run/candidate record 삭제, Candidate Review / Portfolio Proposal module physical deletion, `final_selected_portfolio_dashboard.py` file rename, live approval, broker order, account sync, auto rebalance.
+- 목적: Candidate Review / Portfolio Proposal / Pre-Live / old candidate packaging을 current workflow에서 분리하고, current workflow를 `Backtest Analysis -> Practical Validation -> Final Review -> Operations > Portfolio Monitoring`으로 고정한다.
+- 이번 차수에서 하지 않은 일: legacy registry / saved JSONL rewrite, historical run/candidate record 삭제, `final_selected_portfolio_dashboard.py` file rename, live approval, broker order, account sync, auto rebalance.
 
 ## Product Tracks
 
@@ -55,7 +55,7 @@ Workspace > Ingestion
 | Strategy Promotion Contract Handoff | Complete | Backtest report workspace now has a Strategy Promotion Contract guide, reusable template, and structural checker so `backtest-dev` strategy results must disclose universe, PIT / survivorship, optimization, OOS / walk-forward, cost / liquidity, replay, generated artifact, blockers, and monitoring triggers before product workflow promotion review. |
 | Robustness Experiment Registry | Complete | Practical Validation now attaches a compact `robustness_run_set_id` summary over existing Robustness Lab / temporal / realism evidence, and Final Review investability packets / saved decision evidence can cite the same run-set without replacing the Robustness Lab board or storing full artifacts. |
 | Data Provenance / PIT Evidence Contract | Complete | Practical Validation now attaches `data_provenance_summary` over provider / macro / price window / lifecycle / robustness compact evidence, and Final Review investability packets show current snapshot / stale / proxy / non-PIT-safe rows without treating them as pass. |
-| Prototype Legacy Cleanup / Removal | Complete | Candidate Review / Portfolio Proposal are no longer primary Backtest route targets or page-shell dispatch branches. Overview no longer has a Candidate Ops primary tab. Run History and Candidate records remain Operations archive / recovery, while current source handoff goes to Practical Validation. |
+| Prototype Legacy Cleanup / Removal | Complete | Candidate Review / Portfolio Proposal are no longer primary Backtest route targets or page-shell dispatch branches, and their legacy UI/helper modules were physically removed after import graph audit. Current handoff now builds Practical Validation sources directly. Overview no longer has a Candidate Ops primary tab or legacy snapshot helper. Run History and Candidate records remain Operations archive / recovery, while registry / saved JSONL data is preserved. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |
 | Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 

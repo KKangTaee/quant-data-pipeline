@@ -20,18 +20,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.runtime import (
-    CANDIDATE_REVIEW_NOTES_FILE,
-    CURRENT_CANDIDATE_REGISTRY_FILE,
     SAVED_PORTFOLIO_FILE,
-    append_candidate_review_note as _append_candidate_review_note,
     append_backtest_run_history,
-    append_current_candidate_registry_row as _append_current_candidate_registry_row,
     build_backtest_result_bundle,
     delete_saved_portfolio,
     inspect_strict_annual_price_freshness,
-    load_candidate_review_notes as _load_candidate_review_notes,
-    load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
-    load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
     load_saved_portfolios,
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
@@ -84,14 +77,6 @@ from app.web.backtest_workflow_routes import (
     PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE,
     _route_target_to_stage_and_mode,
     _valid_backtest_route_targets,
-)
-from app.web.backtest_candidate_review_helpers import (
-    CANDIDATE_REVIEW_DECISION_OPTIONS,
-    CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
-    _build_current_candidate_registry_rows_for_display,
-    _candidate_review_draft_from_bundle,
-    _current_candidate_registry_selection_label,
-    _queue_candidate_review_draft,
 )
 from finance.sample import (
     GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
@@ -304,8 +289,6 @@ STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
-CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
-CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
 BACKTEST_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS) + [
     panel for panel in BACKTEST_LEGACY_PANEL_OPTIONS if panel not in set(BACKTEST_STAGE_OPTIONS)
 ]
@@ -658,12 +641,6 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_weighted_portfolio_prefill = None
     if "backtest_saved_portfolio_notice" not in st.session_state:
         st.session_state.backtest_saved_portfolio_notice = None
-    if "backtest_candidate_review_draft" not in st.session_state:
-        st.session_state.backtest_candidate_review_draft = None
-    if "backtest_candidate_review_draft_notice" not in st.session_state:
-        st.session_state.backtest_candidate_review_draft_notice = None
-    if "backtest_candidate_review_note_notice" not in st.session_state:
-        st.session_state.backtest_candidate_review_note_notice = None
     if "backtest_analysis_mode" not in st.session_state:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
     if "backtest_practical_validation_mode" not in st.session_state:

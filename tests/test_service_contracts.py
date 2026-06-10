@@ -13391,6 +13391,74 @@ class DecisionDossierContractTests(unittest.TestCase):
 
 
 class PrototypeLegacyCleanupTests(unittest.TestCase):
+    def test_current_workflow_modules_do_not_import_legacy_candidate_or_proposal_helpers(self) -> None:
+        current_modules = [
+            Path("app/web/backtest_common.py"),
+            Path("app/web/backtest_result_display.py"),
+            Path("app/web/backtest_compare.py"),
+            Path("app/web/backtest_history.py"),
+            Path("app/web/backtest_final_review.py"),
+            Path("app/web/backtest_final_review_helpers.py"),
+        ]
+        legacy_imports = [
+            "app.web.backtest_candidate_review_helpers",
+            "app.web.backtest_portfolio_proposal_helpers",
+        ]
+
+        for module_path in current_modules:
+            with self.subTest(module=str(module_path)):
+                source = module_path.read_text(encoding="utf-8")
+                for legacy_import in legacy_imports:
+                    self.assertNotIn(legacy_import, source)
+
+    def test_legacy_candidate_and_proposal_ui_modules_are_physically_removed(self) -> None:
+        removed_modules = [
+            Path("app/web/backtest_candidate_review.py"),
+            Path("app/web/backtest_portfolio_proposal.py"),
+        ]
+
+        for module_path in removed_modules:
+            with self.subTest(module=str(module_path)):
+                self.assertFalse(module_path.exists())
+
+    def test_current_handoff_builder_creates_practical_validation_source_without_legacy_draft(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_result_bundle
+
+        bundle = {
+            "strategy_name": "Equal Weight",
+            "summary_df": pd.DataFrame(
+                [
+                    {
+                        "Name": "Equal Weight",
+                        "Start Date": "2020-01-01",
+                        "End Date": "2024-12-31",
+                        "End Balance": 14000.0,
+                        "CAGR": 0.08,
+                        "Sharpe Ratio": 0.7,
+                        "Maximum Drawdown": -0.18,
+                    }
+                ]
+            ),
+            "meta": {
+                "strategy_key": "equal_weight",
+                "tickers": ["SPY", "TLT"],
+                "benchmark_ticker": "SPY",
+                "actual_result_start": "2020-01-01",
+                "actual_result_end": "2024-12-31",
+                "result_rows": 1200,
+                "price_freshness": {"status": "ok"},
+            },
+        }
+
+        source = build_selection_source_from_result_bundle(bundle, source_kind="latest_backtest_run")
+
+        self.assertEqual(source["source_kind"], "latest_backtest_run")
+        self.assertEqual(source["source_title"], "Equal Weight")
+        self.assertEqual(source["components"][0]["strategy_key"], "equal_weight")
+        self.assertEqual(source["components"][0]["target_weight"], 100.0)
+        self.assertEqual(source["data_trust"]["status"], "ok")
+        self.assertNotIn("candidate_review_status", source["source_snapshot"])
+
     def test_backtest_route_targets_hide_candidate_review_and_proposal_panels(self) -> None:
         from app.web.backtest_workflow_routes import (
             BACKTEST_ANALYSIS_MODE_PORTFOLIO_MIX,
@@ -13452,8 +13520,9 @@ class PrototypeLegacyCleanupTests(unittest.TestCase):
     def test_run_history_practical_validation_action_uses_current_handoff(self) -> None:
         source = Path("app/web/backtest_history.py").read_text(encoding="utf-8")
 
-        self.assertIn("prepare_practical_validation_source_handoff", source)
-        self.assertIn("build_selection_source_from_candidate_draft", source)
+        self.assertIn("queue_practical_validation_handoff_from_history_record", source)
+        self.assertNotIn("prepare_practical_validation_source_handoff", source)
+        self.assertNotIn("build_selection_source_from_candidate_draft", source)
         self.assertNotIn("_queue_candidate_review_draft", source)
         self.assertNotIn("backtest_candidate_review_draft", source)
 
