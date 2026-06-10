@@ -4359,9 +4359,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
 
-        self.assertIn("_render_overview_market_context_refresh_bar()", helper_body)
         self.assertIn("render_macro_context_cockpit(load_overview_macro_context_cockpit())", helper_body)
         self.assertIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
+        self.assertIn("_render_overview_market_context_refresh_bar()", helper_body)
+        cockpit_index = helper_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
+        guide_index = helper_body.index("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())")
+        refresh_index = helper_body.index("_render_overview_market_context_refresh_bar()")
+        self.assertLess(cockpit_index, refresh_index)
+        self.assertLess(guide_index, refresh_index)
         self.assertIn("load_overview_macro_context_cockpit", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
 
@@ -4466,8 +4471,49 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn(".ov-macro-cockpit-rail", css)
         self.assertIn(".ov-macro-cockpit-rail-item", css)
+        self.assertIn(".ov-macro-cockpit-group-title", css)
+        self.assertIn(".ov-macro-cockpit-refresh-assist", css)
         self.assertIn(".ov-macro-cockpit-card-primary", css)
         self.assertIn(".ov-macro-cockpit-card-secondary", css)
+
+    def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        title_block = css[css.index(".ov-market-session-title {"):css.index(".ov-market-session-detail {")]
+        value_block = css[css.index(".ov-market-session-value {"):css.index(".ov-market-session-item-detail {")]
+
+        self.assertIn("color: var(--ov-mi-color-text);", title_block)
+        self.assertIn("color: var(--ov-mi-color-text);", value_block)
+        self.assertNotIn("color: inherit;", title_block)
+        self.assertNotIn("color: inherit;", value_block)
+
+    def test_overview_market_context_copy_uses_korean_summary_first_language(self) -> None:
+        import inspect
+
+        from app.web import overview_dashboard, overview_ui_components
+
+        dashboard_source = inspect.getsource(overview_dashboard)
+        component_source = "\n".join(
+            [
+                inspect.getsource(overview_ui_components.render_macro_context_cockpit),
+                inspect.getsource(overview_ui_components._macro_cockpit_cards_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_source_confidence_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_next_checks_html),
+            ]
+        )
+
+        self.assertIn("시장 맥락 요약", dashboard_source)
+        self.assertIn("자료 상태를 먼저 확인", dashboard_source)
+        self.assertIn("보조 갱신", dashboard_source)
+        self.assertIn("시장 맥락 요약", component_source)
+        self.assertIn("핵심 요약", component_source)
+        self.assertIn("해석 전 확인", component_source)
+        self.assertIn("다음 확인 순서", component_source)
+        self.assertNotIn("Overview Macro Context", component_source)
+        self.assertNotIn("다음에 볼 Deep Tab", component_source)
+        self.assertNotIn("Source Confidence / 출처 신뢰도", component_source)
+        self.assertNotIn("Freshness: ", component_source)
 
     def test_overview_ui_css_defines_ia_closeout_guide(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -6621,15 +6667,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["summary"]["review_count"], 4)
         self.assertEqual(model["items"][0]["id"], "prices")
         self.assertEqual(model["items"][0]["status"], "REVIEW")
-        self.assertIn("Run Update Daily Snapshot", model["items"][0]["next_check"])
+        self.assertIn("Market Movers에서 수익률 기준일", model["items"][0]["next_check"])
         self.assertEqual(model["items"][2]["id"], "futures")
-        self.assertIn("free futures provider", model["items"][2]["caveat"])
+        self.assertIn("무료 선물 provider", model["items"][2]["caveat"])
         self.assertEqual(model["items"][3]["id"], "sentiment")
         self.assertEqual(model["items"][3]["status"], "REVIEW")
         self.assertEqual(model["items"][4]["id"], "events")
-        self.assertIn("2 review", model["items"][4]["detail"])
+        self.assertIn("확인 필요 2", model["items"][4]["detail"])
         self.assertEqual(model["next_checks"][0]["surface"], "Market Movers")
-        self.assertIn("not a signal", model["boundary_note"])
+        self.assertIn("context 전용", model["boundary_note"])
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
@@ -7424,20 +7470,23 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(cockpit["schema_version"], "overview_macro_context_cockpit_v1")
         self.assertEqual(cockpit["status"], "REVIEW")
-        self.assertEqual(cockpit["summary"]["headline"], "Market Context 일부 source 확인 필요")
-        self.assertIn("Data Health 4개", cockpit["summary"]["detail"])
+        self.assertIn("현재 맥락:", cockpit["summary"]["headline"])
+        self.assertIn("시장 위험 경고가 아니라 자료 상태 안내", cockpit["summary"]["detail"])
         self.assertEqual(cockpit["summary"]["review_count"], 4)
         self.assertEqual(cockpit["summary"]["data_review_count"], 4)
-        self.assertEqual(cockpit["summary"]["next_path"], "Data Health -> Events -> Futures Monitor -> Market Movers")
-        self.assertEqual(cockpit["summary"]["rail"][0]["label"], "상태")
-        self.assertEqual(cockpit["summary"]["rail"][1]["label"], "다음 확인")
+        self.assertEqual(cockpit["summary"]["next_path"], "Data Health → Events → Futures Monitor → Market Movers")
+        self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
+        self.assertEqual(cockpit["summary"]["rail"][0]["value"], "일부 자료 확인 필요")
+        self.assertEqual(cockpit["summary"]["rail"][1]["label"], "다음 확인 순서")
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
+        self.assertEqual([card["group"] for card in cockpit["cards"][:3]], ["core", "core", "core"])
+        self.assertEqual([card["group"] for card in cockpit["cards"][3:]], ["supporting", "supporting", "supporting"])
         self.assertEqual(cockpit["cards"][0]["value"], "NVDA +4.2%")
-        self.assertIn("Technology leads", cockpit["cards"][1]["detail"])
-        self.assertIn("Rate Pressure", cockpit["cards"][2]["badges"][1]["label"])
+        self.assertIn("Technology 리더십", cockpit["cards"][1]["detail"])
+        self.assertIn("금리 압력", cockpit["cards"][2]["badges"][1]["label"])
         self.assertEqual(cockpit["cards"][3]["value"], "혼합 중립")
         self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
-        self.assertEqual(cockpit["cards"][5]["value"], "4개 확인 필요")
+        self.assertEqual(cockpit["cards"][5]["value"], "일부 자료 확인 필요")
         self.assertEqual(cockpit["next_checks"][0]["target_tab"], "Data Health")
         self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
         self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
@@ -7482,7 +7531,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         movement = cockpit["cards"][0]
         self.assertEqual(movement["status"], "Stale")
-        self.assertEqual(movement["badges"][1]["value"], "Stale")
+        self.assertEqual(movement["badges"][1]["value"], "자료 오래됨")
         self.assertNotIn("{", movement["badges"][1]["value"])
 
 

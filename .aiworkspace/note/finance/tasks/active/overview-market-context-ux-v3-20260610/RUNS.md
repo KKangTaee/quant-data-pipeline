@@ -1,0 +1,15 @@
+# Overview Market Context UX V3 Runs
+
+## Commands
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab tests.test_service_contracts.OverviewAutomationContractTests.test_overview_ui_css_defines_market_context_summary_rail tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_copy_uses_korean_summary_first_language` -> failed because refresh rendered before cockpit, group/refresh CSS did not exist, and old cockpit copy remained.
+- GREEN focused: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab tests.test_service_contracts.OverviewAutomationContractTests.test_overview_ui_css_defines_market_context_summary_rail tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_copy_uses_korean_summary_first_language tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_overview_macro_context_cockpit_summarizes_existing_context_snapshots` -> `Ran 4 tests ... OK`.
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_session_banner_uses_surface_text_color` -> failed because market session title/value used `color: inherit` and could become low contrast on the light banner.
+- GREEN focused: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_session_banner_uses_surface_text_color` -> `Ran 1 test ... OK`.
+- Regression: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> `Ran 77 tests ... OK`.
+- Compile: `uv run python -m py_compile app/services/overview_market_intelligence.py app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/overview_dashboard_helpers.py tests/test_service_contracts.py` -> OK.
+- Boundary: `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` -> PASS, hard violations none, advisories none.
+- Whitespace: `git diff --check` -> OK.
+- Browser QA: `uv run streamlit run app/web/streamlit_app.py --server.port 8525 --server.headless true`, then `http://localhost:8525/` -> Overview / Market Context rendered `시장 맥락 요약`, `자료 상태`, `다음 확인 순서`, `핵심 요약`, `해석 전 확인`, and `보조 갱신`; old `Overview Macro Context`, `다음에 볼 Deep Tab`, and `Market Context 일괄 갱신` did not appear; Page not found dialog did not appear.
+- Browser route diagnostic: `http://localhost:8525/overview` -> final URL falls back to `/` and Overview renders, but Streamlit still displays visible `Page not found` dialog. Minimal source experiment removing `default=True` did not resolve it and was reverted.
+- QA screenshot: `overview-market-context-ux-v3-qa.png` generated for final handoff; do not stage.

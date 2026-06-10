@@ -110,6 +110,28 @@ def _display_value(value: Any) -> str:
     return str(value)
 
 
+def _display_status_label(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"ok", "success", "actual", "fresh", "high"}:
+        return "자료 정상"
+    if normalized in {"review", "due", "partial"}:
+        return "자료 확인 필요"
+    if normalized == "stale":
+        return "자료 오래됨"
+    if normalized in {"missing", "no_data", "not_run", "insufficient_data", "no_universe"}:
+        return "자료 부족"
+    if normalized in {"failed", "error"}:
+        return "확인 실패"
+    return str(value or "상태 미확인")
+
+
+def _display_freshness_label(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return "기준일 없음"
+    return text
+
+
 def overview_ui_css() -> str:
     return (
         "<style>\n"
@@ -155,7 +177,7 @@ def overview_ui_css() -> str:
   line-height: 1.1;
 }
 .ov-market-session-title {
-  color: inherit;
+  color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-title);
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.22;
@@ -180,7 +202,7 @@ def overview_ui_css() -> str:
   font-weight: var(--ov-mi-weight-label);
 }
 .ov-market-session-value {
-  color: inherit;
+  color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-value);
   font-weight: var(--ov-mi-weight-value);
   line-height: 1.2;
@@ -291,6 +313,36 @@ def overview_ui_css() -> str:
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
+}
+.ov-macro-cockpit-group {
+  min-width: 0;
+  margin-top: 0.62rem;
+}
+.ov-macro-cockpit-group:first-of-type {
+  margin-top: 0;
+}
+.ov-macro-cockpit-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  margin: 0 0 0.34rem 0;
+}
+.ov-macro-cockpit-group-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-macro-cockpit-group-note {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.ov-macro-cockpit-grid-supporting {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .ov-macro-cockpit-card {
   min-width: 0;
@@ -594,6 +646,12 @@ def overview_ui_css() -> str:
   border: 1px solid var(--ov-mi-border-faint);
   border-radius: var(--ov-mi-radius-card);
   background: rgba(248,250,252,0.76);
+}
+.ov-macro-cockpit-refresh-assist {
+  margin-top: 0.5rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
 }
 .ov-ia-closeout {
   margin: 0.1rem 0 0.95rem 0;
@@ -1888,31 +1946,78 @@ def _macro_cockpit_rail_html(items: list[dict[str, Any]]) -> str:
     return f'<div class="ov-macro-cockpit-rail">{"".join(html)}</div>'
 
 
+def _macro_cockpit_card_html(card: dict[str, Any], *, primary: bool) -> str:
+    tone_color = escape(_overview_tone_color(card.get("tone")))
+    badges = _macro_cockpit_badges_html(list(card.get("badges") or []))
+    source = _display_value(card.get("target_tab") or card.get("source"))
+    freshness = _display_value(card.get("freshness_label") or _display_freshness_label(card.get("freshness")))
+    status = _display_value(card.get("status_label") or _display_status_label(card.get("status")))
+    prominence_class = "ov-macro-cockpit-card-primary" if primary else "ov-macro-cockpit-card-secondary"
+    return (
+        f'<article class="ov-macro-cockpit-card {prominence_class}" style="--ov-card-tone:{tone_color};">'
+        '<div class="ov-macro-cockpit-card-head">'
+        f'<div class="ov-macro-cockpit-label">{escape(_display_value(card.get("title")))}</div>'
+        f'<div class="ov-macro-cockpit-card-status">{escape(status)}</div>'
+        "</div>"
+        f'<div class="ov-macro-cockpit-value">{escape(_display_value(card.get("value")))}</div>'
+        f'<div class="ov-macro-cockpit-question">{escape(_display_value(card.get("question")))}</div>'
+        f'<div class="ov-macro-cockpit-card-detail">{escape(_display_value(card.get("detail")))}</div>'
+        f'<div class="ov-macro-cockpit-badges">{badges}</div>'
+        '<div class="ov-macro-cockpit-source">'
+        f"<span>확인 위치: {escape(source)}</span>"
+        f"<span>자료 기준: {escape(freshness)}</span>"
+        "</div>"
+        "</article>"
+    )
+
+
+def _macro_cockpit_card_group_html(
+    *,
+    title: str,
+    note: str,
+    cards: list[dict[str, Any]],
+    primary: bool,
+) -> str:
+    if not cards:
+        return ""
+    grid_class = "ov-macro-cockpit-grid" if primary else "ov-macro-cockpit-grid ov-macro-cockpit-grid-supporting"
+    cards_html = "".join(_macro_cockpit_card_html(card, primary=primary) for card in cards)
+    return (
+        '<div class="ov-macro-cockpit-group">'
+        '<div class="ov-macro-cockpit-group-head">'
+        f'<div class="ov-macro-cockpit-group-title">{escape(title)}</div>'
+        f'<div class="ov-macro-cockpit-group-note">{escape(note)}</div>'
+        "</div>"
+        f'<div class="{grid_class}">{cards_html}</div>'
+        "</div>"
+    )
+
+
 def _macro_cockpit_cards_html(cards: list[dict[str, Any]]) -> str:
-    html: list[str] = []
-    for index, card in enumerate(cards):
-        tone_color = escape(_overview_tone_color(card.get("tone")))
-        badges = _macro_cockpit_badges_html(list(card.get("badges") or []))
-        source = _display_value(card.get("source"))
-        freshness = _display_value(card.get("freshness"))
-        prominence_class = "ov-macro-cockpit-card-primary" if index < 3 else "ov-macro-cockpit-card-secondary"
-        html.append(
-            f'<article class="ov-macro-cockpit-card {prominence_class}" style="--ov-card-tone:{tone_color};">'
-            '<div class="ov-macro-cockpit-card-head">'
-            f'<div class="ov-macro-cockpit-label">{escape(_display_value(card.get("title")))}</div>'
-            f'<div class="ov-macro-cockpit-card-status">{escape(_display_value(card.get("status")))}</div>'
-            "</div>"
-            f'<div class="ov-macro-cockpit-value">{escape(_display_value(card.get("value")))}</div>'
-            f'<div class="ov-macro-cockpit-question">{escape(_display_value(card.get("question")))}</div>'
-            f'<div class="ov-macro-cockpit-card-detail">{escape(_display_value(card.get("detail")))}</div>'
-            f'<div class="ov-macro-cockpit-badges">{badges}</div>'
-            '<div class="ov-macro-cockpit-source">'
-            f"<span>Source: {escape(source)}</span>"
-            f"<span>Freshness: {escape(freshness)}</span>"
-            "</div>"
-            "</article>"
+    core_cards = [
+        card
+        for index, card in enumerate(cards)
+        if card.get("group") == "core" or (not card.get("group") and index < 3)
+    ]
+    supporting_cards = [
+        card
+        for index, card in enumerate(cards)
+        if card.get("group") == "supporting" or (not card.get("group") and index >= 3)
+    ]
+    return (
+        _macro_cockpit_card_group_html(
+            title="핵심 요약",
+            note="시장 움직임, 참여 폭, 선물 배경을 먼저 봅니다.",
+            cards=core_cards,
+            primary=True,
         )
-    return "".join(html)
+        + _macro_cockpit_card_group_html(
+            title="해석 전 확인",
+            note="심리, 가까운 일정, 자료 상태를 보조 근거로 확인합니다.",
+            cards=supporting_cards,
+            primary=False,
+        )
+    )
 
 
 def _macro_cockpit_next_checks_html(next_checks: list[dict[str, Any]]) -> str:
@@ -1925,7 +2030,7 @@ def _macro_cockpit_next_checks_html(next_checks: list[dict[str, Any]]) -> str:
             f'<div class="ov-macro-cockpit-check" style="--ov-check-tone:{tone_color};">'
             f'<div class="ov-macro-cockpit-check-tab">{escape(_display_value(check.get("target_tab")))}</div>'
             f'<div class="ov-macro-cockpit-check-title">{escape(_display_value(check.get("title")))}</div>'
-            f'<div class="ov-macro-cockpit-check-detail">{escape(reason)} · {escape(action)}</div>'
+            f'<div class="ov-macro-cockpit-check-detail">확인 이유: {escape(reason)}<br>다음 행동: {escape(action)}</div>'
             "</div>"
         )
     return "".join(html)
@@ -1936,19 +2041,22 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         return ""
     summary = dict(model.get("summary") or {})
     status_tone = escape(_overview_tone_color(model.get("status")))
+    status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
     cards: list[str] = []
     for item in list(model.get("items") or [])[:6]:
         tone_color = escape(_overview_tone_color(item.get("tone") or item.get("status")))
+        item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
+        freshness = _display_value(item.get("freshness_label") or _display_freshness_label(item.get("freshness")))
         cards.append(
             f'<article class="ov-source-confidence-card" style="--ov-source-tone:{tone_color};">'
             '<div class="ov-source-confidence-card-head">'
             f'<div class="ov-source-confidence-surface">{escape(_display_value(item.get("surface")))}</div>'
-            f'<div class="ov-source-confidence-card-status">{escape(_display_value(item.get("status")))}</div>'
+            f'<div class="ov-source-confidence-card-status">{escape(item_status)}</div>'
             "</div>"
             f'<div class="ov-source-confidence-card-title">{escape(_display_value(item.get("title")))}</div>'
             f'<div class="ov-source-confidence-card-detail">{escape(_display_value(item.get("detail")))}</div>'
-            f'<div class="ov-source-confidence-card-meta">Freshness: {escape(_display_value(item.get("freshness")))}'
-            f'<br>Owner: {escape(_display_value(item.get("owner")))}</div>'
+            f'<div class="ov-source-confidence-card-meta">자료 기준: {escape(freshness)}'
+            f'<br>관리 위치: {escape(_display_value(item.get("owner")))}</div>'
             f'<div class="ov-source-confidence-card-caveat">{escape(_display_value(item.get("caveat")))}</div>'
             "</article>"
         )
@@ -1957,10 +2065,10 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         '<summary class="ov-source-confidence-summary">'
         '<div class="ov-source-confidence-head">'
         '<div>'
-        '<div class="ov-source-confidence-title">Source Confidence / 출처 신뢰도</div>'
+        '<div class="ov-source-confidence-title">자료 기준 / 출처 상태</div>'
         f'<div class="ov-source-confidence-detail">{escape(_display_value(summary.get("detail")))}</div>'
         '</div>'
-        f'<div class="ov-source-confidence-status">{escape(_display_value(model.get("status")))}</div>'
+        f'<div class="ov-source-confidence-status">{escape(status_label)}</div>'
         '</div>'
         '</summary>'
         '<div class="ov-source-confidence-body ov-context-disclosure-body">'
@@ -1982,20 +2090,20 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
         overview_ui_css()
         + f"""
 <section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">
-  <div class="ov-macro-cockpit-head">
+      <div class="ov-macro-cockpit-head">
     <div>
-      <div class="ov-macro-cockpit-kicker">Overview Macro Context</div>
+      <div class="ov-macro-cockpit-kicker">시장 맥락 요약</div>
       <div class="ov-macro-cockpit-title">{escape(_display_value(summary.get("headline")))}</div>
       <div class="ov-macro-cockpit-detail">{escape(_display_value(summary.get("detail")))}</div>
     </div>
-    <span class="ov-macro-cockpit-status">{escape(_display_value(model.get("status")))}</span>
+    <span class="ov-macro-cockpit-status">{escape(_display_value(summary.get("status_label") or _display_status_label(model.get("status"))))}</span>
   </div>
   {rail_html}
-  <div class="ov-macro-cockpit-grid">{cards_html}</div>
+  {cards_html}
   <div class="ov-macro-cockpit-next">
     <div>
-      <div class="ov-macro-cockpit-next-title">다음에 볼 Deep Tab</div>
-      <div class="ov-macro-cockpit-next-note">같은 DB-backed context에서 이어서 확인할 순서입니다.</div>
+      <div class="ov-macro-cockpit-next-title">다음 확인 순서</div>
+      <div class="ov-macro-cockpit-next-note">자료 상태와 시장 맥락에 따라 이어서 볼 세부 탭입니다.</div>
     </div>
     <div class="ov-macro-cockpit-checks">{next_checks_html}</div>
   </div>

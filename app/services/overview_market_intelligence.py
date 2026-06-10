@@ -3773,8 +3773,10 @@ def _source_confidence_item(
         "source": source,
         "owner": owner,
         "status": status,
+        "status_label": _cockpit_status_label(status),
         "tone": _cockpit_status_tone(status),
         "freshness": str(freshness or "-"),
+        "freshness_label": _cockpit_freshness_label(freshness),
         "detail": detail,
         "caveat": caveat,
         "next_check": next_check,
@@ -3804,11 +3806,6 @@ def build_overview_source_confidence_catalog(
     refresh_state = movers_coverage.get("refresh_state")
     refresh_label = _cockpit_status_text(refresh_state)
     refresh_detail = refresh_state.get("detail") if isinstance(refresh_state, dict) else None
-    refresh_action = (
-        refresh_state.get("recommended_action")
-        if isinstance(refresh_state, dict)
-        else "Open Market Movers and refresh the selected snapshot if stale."
-    )
     prices_review = bool(refresh_label and refresh_label.upper() not in {"OK", "SUCCESS", "FRESH"})
     prices_status = _source_confidence_status(movers, review_hint=prices_review, no_data_if_empty=True)
     prices_returnable = _cockpit_int(movers_coverage.get("returnable_count"))
@@ -3866,9 +3863,9 @@ def build_overview_source_confidence_catalog(
             freshness=movers_coverage.get("snapshot_time_utc")
             or refresh_detail
             or movers_coverage.get("effective_end_date"),
-            detail=f"{prices_returnable}/{prices_universe} symbols returnable · refresh {refresh_label or prices_status}",
-            caveat="Price context can be stale or partial; it is market context, not execution data.",
-            next_check=str(refresh_action or "Open Market Movers and inspect freshness."),
+            detail=f"{prices_returnable}/{prices_universe} symbols returnable · 갱신 상태 {refresh_label or _cockpit_status_label(prices_status)}",
+            caveat="가격 맥락은 오래됐거나 부분적일 수 있으며, 주문 실행용 가격이 아닙니다.",
+            next_check="Market Movers에서 수익률 기준일과 누락 여부를 확인합니다.",
         ),
         _source_confidence_item(
             item_id="breadth",
@@ -3879,8 +3876,8 @@ def build_overview_source_confidence_catalog(
             status=breadth_status,
             freshness=group_coverage.get("snapshot_time_utc") or group_coverage.get("effective_end_date"),
             detail=f"{_cockpit_int(group_coverage.get('returnable_count'))}/{_cockpit_int(group_coverage.get('universe_count'))} symbols grouped",
-            caveat="Breadth summarizes participation and concentration; it is not a selection rule.",
-            next_check="Open Sector / Industry when group rows are stale, missing, or sparse.",
+            caveat="시장 폭은 참여도와 집중도를 요약할 뿐 종목 선택 규칙이 아닙니다.",
+            next_check="Sector / Industry에서 그룹 자료가 오래됐거나 부족한지 확인합니다.",
         ),
         _source_confidence_item(
             item_id="futures",
@@ -3891,8 +3888,8 @@ def build_overview_source_confidence_catalog(
             status=futures_status,
             freshness=futures_coverage.get("latest_date") or futures_coverage.get("latest_candle_time"),
             detail=f"{standardized_count}/{futures_symbol_count} futures symbols standardized",
-            caveat="Pilot context from a free futures provider; stale/free-provider gaps stay visible and are not reliability guarantees.",
-            next_check="Open Futures Monitor before relying on risk-on, rate-pressure, or safe-haven context.",
+            caveat="무료 선물 provider 기반의 배경 자료입니다. 오래됨과 공백은 그대로 보이며 신뢰 보장이 아닙니다.",
+            next_check="Futures Monitor에서 risk-on, 금리 압력, 안전자산 배경 근거를 확인합니다.",
         ),
         _source_confidence_item(
             item_id="sentiment",
@@ -3906,8 +3903,8 @@ def build_overview_source_confidence_catalog(
                 f"CNN {_overview_round(sentiment_coverage.get('cnn_score'))} · "
                 f"AAII spread {_overview_round(sentiment_coverage.get('aaii_bull_bear_spread'))}"
             ),
-            caveat="Sentiment is backdrop only and cannot change validation, Final Review, or monitoring gates.",
-            next_check="Open Sentiment if source count, stale count, or confidence is degraded.",
+            caveat="심리는 배경 자료일 뿐 validation, Final Review, monitoring gate를 바꾸지 않습니다.",
+            next_check="Sentiment에서 출처 수, 오래된 자료, 신뢰도 저하 여부를 확인합니다.",
         ),
         _source_confidence_item(
             item_id="events",
@@ -3921,10 +3918,10 @@ def build_overview_source_confidence_catalog(
                 f"{_cockpit_int(events_coverage.get('event_count'))} events · "
                 f"{_cockpit_int(events_coverage.get('official_count'))} official · "
                 f"{_cockpit_int(events_coverage.get('estimate_count'))} estimates · "
-                f"{event_review_count} review"
+                f"확인 필요 {event_review_count}"
             ),
-            caveat="Official macro dates and provider-estimated earnings must stay visually distinct.",
-            next_check="Open Events quality when estimates are stale, unconfirmed, or need source review.",
+            caveat="공식 macro 일정과 provider 추정 실적 일정은 구분해서 읽어야 합니다.",
+            next_check="Events에서 추정 일정이 오래됐거나 확인이 필요한지 봅니다.",
         ),
         _source_confidence_item(
             item_id="data_health",
@@ -3936,10 +3933,10 @@ def build_overview_source_confidence_catalog(
             freshness=data_coverage.get("latest_success_at") or data_coverage.get("latest_auto_at"),
             detail=(
                 f"OK {_cockpit_int(data_coverage.get('ok_count'))} · "
-                f"review {data_review_count}"
+                f"확인 필요 {data_review_count}"
             ),
-            caveat="Data Health points to collection owners; it does not execute jobs or persist an action queue.",
-            next_check="Open Data Health handoff for due, stale, partial, missing, or failed targets.",
+            caveat="Data Health는 확인 위치를 안내할 뿐 여기서 job queue를 만들거나 저장하지 않습니다.",
+            next_check="Data Health에서 예정, 오래됨, 부분, 누락, 실패 자료의 확인 위치를 봅니다.",
         ),
     ]
 
@@ -3950,11 +3947,11 @@ def build_overview_source_confidence_catalog(
         "status": status,
         "summary": {
             "headline": (
-                f"{len(review_items)} source areas need review"
+                f"확인할 자료 영역 {len(review_items)}개"
                 if review_items
-                else "Source confidence catalog clear"
+                else "자료 기준 정상"
             ),
-            "detail": "Source, freshness, owner, caveat, and next check for the same DB-backed Overview context.",
+            "detail": "같은 저장 자료의 출처, 기준일, 관리 위치, 다음 확인 위치입니다.",
             "review_count": len(review_items),
         },
         "items": items,
@@ -3969,14 +3966,54 @@ def build_overview_source_confidence_catalog(
             for item in review_items[:4]
         ],
         "boundary_note": (
-            "Source confidence is context only: not a signal, not validation PASS/BLOCKER, "
-            "not a Final Review decision, not a monitoring signal, and not a provider fetch or write action."
+            "자료 기준은 context 전용입니다. trade signal, validation PASS/BLOCKER, Final Review decision, "
+            "monitoring signal, provider fetch, write action을 만들지 않습니다."
         ),
     }
 
 
 def _cockpit_count_label(value: int, noun: str) -> str:
     return f"{value} {noun}" if value != 1 else f"1 {noun.rstrip('s')}"
+
+
+def _cockpit_status_label(status: Any) -> str:
+    normalized = _cockpit_status_text(status).strip().lower()
+    if normalized in {"ok", "success", "actual", "fresh", "high"}:
+        return "자료 정상"
+    if normalized in {"review", "due", "partial"}:
+        return "자료 확인 필요"
+    if normalized == "stale":
+        return "자료 오래됨"
+    if normalized in {"missing", "no_data", "not_run", "insufficient_data", "no_universe"}:
+        return "자료 부족"
+    if normalized in {"failed", "error"}:
+        return "확인 실패"
+    return _cockpit_status_text(status) or "상태 미확인"
+
+
+def _cockpit_badge_label(label: Any) -> str:
+    text = str(label or "").strip()
+    mapping = {
+        "coverage": "자료 범위",
+        "state": "자료 상태",
+        "participation": "참여 비율",
+        "confidence": "자료 신뢰도",
+        "AAII spread": "AAII 온도차",
+        "events": "일정",
+        "review": "확인 필요",
+        "OK": "정상",
+        "Risk-On": "위험선호",
+        "Rate Pressure": "금리 압력",
+        "Safe Haven": "안전자산",
+    }
+    return mapping.get(text, text)
+
+
+def _cockpit_freshness_label(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return "기준일 없음"
+    return text
 
 
 def _cockpit_score_badges(scores: pd.DataFrame, *, limit: int = 3) -> list[dict[str, Any]]:
@@ -3989,7 +4026,7 @@ def _cockpit_score_badges(scores: pd.DataFrame, *, limit: int = 3) -> list[dict[
         tone = row.get("Tone") if "Tone" in row else row.get("tone")
         badges.append(
             {
-                "label": score_name,
+                "label": _cockpit_badge_label(score_name),
                 "value": "-" if score_value in (None, "") else str(score_value),
                 "tone": tone or _cockpit_status_tone(score_value),
             }
@@ -4022,13 +4059,17 @@ def _build_cockpit_movement_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         "value": value,
         "detail": detail,
         "status": status,
+        "status_label": _cockpit_status_label(status),
         "tone": _cockpit_status_tone(status),
         "source": "Market Movers",
         "freshness": coverage.get("effective_end_date") or refresh_detail or coverage.get("snapshot_time_utc") or "-",
+        "freshness_label": _cockpit_freshness_label(
+            coverage.get("effective_end_date") or refresh_detail or coverage.get("snapshot_time_utc")
+        ),
         "target_tab": "Market Movers",
         "badges": [
-            {"label": "coverage", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
-            {"label": "state", "value": status, "tone": _cockpit_status_tone(status)},
+            {"label": "자료 범위", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
+            {"label": "자료 상태", "value": _cockpit_status_label(status), "tone": _cockpit_status_tone(status)},
         ],
     }
 
@@ -4045,10 +4086,10 @@ def _build_cockpit_breadth_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         group = str(top_row.get("Group") or "-")
         weighted = _cockpit_percent(top_row.get("Market Cap Weighted Return %"))
         positive_share = _safe_float(top_row.get("Positive Symbol Share %"))
-        share_value = "-" if positive_share is None else f"{positive_share:.0f}% positive"
-        breadth_label = "broad" if positive_share is not None and positive_share >= 65 else "concentrated"
+        share_value = "-" if positive_share is None else f"{positive_share:.0f}%"
+        breadth_label = "넓게 확산" if positive_share is not None and positive_share >= 65 else "일부 그룹 집중"
         value = group
-        detail = f"{group} leads: {weighted} cap-weighted · {share_value} · {breadth_label}"
+        detail = f"{group} 리더십: 시총가중 {weighted} · 상승 종목 {share_value} · {breadth_label}"
     return {
         "id": "breadth",
         "title": "Breadth / Concentration",
@@ -4056,13 +4097,15 @@ def _build_cockpit_breadth_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         "value": value,
         "detail": detail,
         "status": status,
+        "status_label": _cockpit_status_label(status),
         "tone": _cockpit_status_tone(status),
         "source": "Sector / Industry",
         "freshness": coverage.get("effective_end_date") or "-",
+        "freshness_label": _cockpit_freshness_label(coverage.get("effective_end_date")),
         "target_tab": "Sector / Industry",
         "badges": [
-            {"label": "coverage", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
-            {"label": "participation", "value": share_value, "tone": "positive" if share_value != "-" else "neutral"},
+            {"label": "자료 범위", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
+            {"label": "참여 비율", "value": share_value, "tone": "positive" if share_value != "-" else "neutral"},
         ],
     }
 
@@ -4081,12 +4124,14 @@ def _build_cockpit_futures_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         "value": scenario,
         "detail": detail,
         "status": status,
+        "status_label": _cockpit_status_label(status),
         "tone": _cockpit_status_tone(status),
         "source": "Futures Macro Thermometer",
         "freshness": coverage.get("latest_date") or "-",
+        "freshness_label": _cockpit_freshness_label(coverage.get("latest_date")),
         "target_tab": "Futures Monitor",
         "badges": _cockpit_score_badges(scores) or [
-            {"label": "coverage", "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}", "tone": "neutral"}
+            {"label": "자료 범위", "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}", "tone": "neutral"}
         ],
     }
 
@@ -4107,14 +4152,16 @@ def _build_cockpit_sentiment_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         "value": analysis.get("phase_label") or cnn_rating or status,
         "detail": analysis.get("headline") or "CNN Fear & Greed / AAII context is unavailable.",
         "status": status,
+        "status_label": _cockpit_status_label(status),
         "tone": _cockpit_status_tone(confidence_status),
         "source": "CNN Fear & Greed / AAII",
         "freshness": confidence.get("detail") or "-",
+        "freshness_label": _cockpit_freshness_label(confidence.get("detail")),
         "target_tab": "Sentiment",
         "badges": [
             {"label": "CNN", "value": "-" if cnn_score in (None, "") else f"{float(cnn_score):.1f} {cnn_rating}", "tone": "neutral"},
-            {"label": "AAII spread", "value": "-" if spread in (None, "") else f"{float(spread):+.1f}pp", "tone": "neutral"},
-            {"label": "confidence", "value": confidence_status or "-", "tone": _cockpit_status_tone(confidence_status)},
+            {"label": "AAII 온도차", "value": "-" if spread in (None, "") else f"{float(spread):+.1f}pp", "tone": "neutral"},
+            {"label": "자료 신뢰도", "value": _cockpit_status_label(confidence_status), "tone": _cockpit_status_tone(confidence_status)},
         ],
     }
 
@@ -4128,21 +4175,23 @@ def _build_cockpit_events_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     days = row.get("Days Until") or row.get("days_until")
     event_count = _cockpit_int(coverage.get("event_count"))
     review_count = _cockpit_int(coverage.get("needs_review_count"))
-    days_text = f"in {days} days" if days not in (None, "") else "date pending"
+    days_text = f"{days}일 후" if days not in (None, "") else "일정일 확인 필요"
     return {
         "id": "events",
         "title": "Near Events",
         "question": "가까운 주요 이벤트가 있나요?",
         "value": str(next_date or "No upcoming event"),
-        "detail": f"{title} · {days_text} · {event_count} events",
+        "detail": f"{title} · {days_text} · 주요 일정 {event_count}개",
         "status": "Review" if review_count else status,
+        "status_label": _cockpit_status_label("Review" if review_count else status),
         "tone": "warning" if review_count else _cockpit_status_tone(status),
         "source": "Market Event Calendar",
         "freshness": coverage.get("latest_collected_at") or "-",
+        "freshness_label": _cockpit_freshness_label(coverage.get("latest_collected_at")),
         "target_tab": "Events",
         "badges": [
-            {"label": "events", "value": str(event_count), "tone": "neutral"},
-            {"label": "review", "value": str(review_count), "tone": "warning" if review_count else "positive"},
+            {"label": "일정", "value": str(event_count), "tone": "neutral"},
+            {"label": "확인 필요", "value": str(review_count), "tone": "warning" if review_count else "positive"},
         ],
     }
 
@@ -4154,26 +4203,29 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
         for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
     )
     status = "REVIEW" if review_count else _cockpit_card_status(snapshot.get("status"))
-    value = f"{review_count}개 확인 필요" if review_count else "모두 fresh"
+    value = "일부 자료 확인 필요" if review_count else "자료 정상"
+    detail = (
+        f"해석 전에 Data Health에서 확인할 자료 {review_count}개를 먼저 봅니다."
+        if review_count
+        else "현재 추적 중인 Overview 자료는 바로 참고할 수 있습니다."
+    )
     return (
         {
             "id": "data",
             "title": "Data Confidence",
             "question": "이 context를 그대로 참고해도 되나요?",
             "value": value,
-            "detail": (
-                f"OK {coverage.get('ok_count') or 0} · Due {coverage.get('due_count') or 0} · "
-                f"Stale {coverage.get('stale_count') or 0} · Partial {coverage.get('partial_count') or 0} · "
-                f"Missing {coverage.get('missing_count') or 0} · Failed {coverage.get('failed_count') or 0}"
-            ),
+            "detail": detail,
             "status": status,
+            "status_label": _cockpit_status_label(status),
             "tone": _cockpit_status_tone(status),
             "source": "Data Health",
             "freshness": coverage.get("latest_success_at") or coverage.get("latest_auto_at") or "-",
+            "freshness_label": _cockpit_freshness_label(coverage.get("latest_success_at") or coverage.get("latest_auto_at")),
             "target_tab": "Data Health",
             "badges": [
-                {"label": "OK", "value": str(coverage.get("ok_count") or 0), "tone": "positive"},
-                {"label": "Review", "value": str(review_count), "tone": "warning" if review_count else "positive"},
+                {"label": "정상", "value": str(coverage.get("ok_count") or 0), "tone": "positive"},
+                {"label": "확인 필요", "value": str(review_count), "tone": "warning" if review_count else "positive"},
             ],
         },
         review_count,
@@ -4191,8 +4243,8 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
     return {
         "target_tab": "Data Health",
         "title": str(row.get("Area") or "Data Health"),
-        "reason": f"{row.get('Status') or 'Review'} · {row.get('Data Freshness') or '-'}",
-        "action": str(row.get("Next Action") or "Data Health에서 source freshness를 확인하세요."),
+        "reason": f"{_cockpit_status_label(row.get('Status') or 'Review')} · 자료 기준 {_cockpit_freshness_label(row.get('Data Freshness'))}",
+        "action": "Data Health에서 확인 위치와 필요한 갱신 경로를 먼저 봅니다.",
         "tone": _cockpit_status_tone(row.get("Status")),
     }
 
@@ -4208,7 +4260,7 @@ def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None
         return {
             "target_tab": "Events",
             "title": str(row.get("Title") or row.get("Type Label") or "Upcoming event"),
-            "reason": f"{days}일 후" if row else f"{needs_review}개 event row 확인 필요",
+            "reason": f"{days}일 후" if row else f"확인할 일정 {needs_review}개",
             "action": "시장 context를 해석하기 전에 Events를 확인하세요.",
             "tone": "warning" if needs_review else "primary",
         }
@@ -4297,14 +4349,14 @@ def build_overview_macro_context_cockpit(
             _cockpit_event_next_check(events_snapshot),
             {
                 "target_tab": "Futures Monitor",
-                "title": "Futures macro backdrop",
+                "title": "Futures 배경 확인",
                 "reason": str(cards[2].get("value") or "-"),
-                "action": "risk-on / rate pressure / safe-haven 근거는 Futures Monitor에서 확인하세요.",
+                "action": "위험선호 / 금리 압력 / 안전자산 근거는 Futures Monitor에서 확인하세요.",
                 "tone": cards[2].get("tone") or "neutral",
             },
             {
                 "target_tab": "Market Movers",
-                "title": "Top mover context",
+                "title": "시장 움직임 확인",
                 "reason": str(cards[0].get("value") or "-"),
                 "action": "수익률, 거래량, Why It Moved 단서는 Market Movers에서 확인하세요.",
                 "tone": cards[0].get("tone") or "neutral",
@@ -4313,42 +4365,41 @@ def build_overview_macro_context_cockpit(
         if item is not None
     ][:4]
     context_review_count = max(data_review_count, len(review_cards))
-    next_path = " -> ".join(
+    next_path = " → ".join(
         str(item.get("target_tab") or "-")
         for item in next_checks
         if str(item.get("target_tab") or "").strip()
     ) or "필요한 deep tab 없음"
     source_status = str(source_confidence.get("status") or status)
-    summary_headline = (
-        "Market Context 일부 source 확인 필요"
-        if status == "REVIEW"
-        else "Market Context 준비됨"
-    )
+    summary_headline = f"현재 맥락: {cards[0].get('value')} 움직임, {cards[1].get('value')} 리더십, 선물 배경은 {cards[2].get('value')}."
     summary_detail = (
-        f"Data Health {data_review_count}개와 source 상태를 확인한 뒤 context를 참고하세요."
+        f"시장 위험 경고가 아니라 자료 상태 안내입니다. 확인할 자료 {context_review_count}개를 먼저 본 뒤 맥락을 읽으세요."
         if context_review_count
-        else "저장된 DB-backed market context snapshot을 scan-first 분석에 사용할 수 있습니다."
+        else "저장된 DB 자료 기준으로 시장 움직임과 배경을 빠르게 읽을 수 있습니다."
     )
     rail = [
         {
-            "label": "상태",
-            "value": "확인 필요" if status == "REVIEW" else "준비됨",
-            "detail": f"{context_review_count}개 review" if context_review_count else "fresh context",
+            "label": "자료 상태",
+            "value": "일부 자료 확인 필요" if status == "REVIEW" else "자료 정상",
+            "detail": f"확인할 자료 {context_review_count}개" if context_review_count else "바로 참고 가능",
             "tone": _cockpit_status_tone(status),
         },
         {
-            "label": "다음 확인",
+            "label": "다음 확인 순서",
             "value": next_path,
-            "detail": "우선순위 Deep Tab 순서",
+            "detail": "필요한 세부 탭으로 이동",
             "tone": "warning" if context_review_count else "positive",
         },
         {
             "label": "자료 기준",
-            "value": f"Source {source_status} · Data Health {data_review_count}개",
-            "detail": "DB-backed snapshot",
+            "value": f"{_cockpit_status_label(source_status)} · Data Health 확인 {data_review_count}개",
+            "detail": "저장된 DB snapshot",
             "tone": _cockpit_status_tone(source_status),
         },
     ]
+    for index, card in enumerate(cards):
+        card["group"] = "core" if index < 3 else "supporting"
+        card["priority_label"] = "핵심 요약" if index < 3 else "해석 전 확인"
 
     return {
         "schema_version": "overview_macro_context_cockpit_v1",

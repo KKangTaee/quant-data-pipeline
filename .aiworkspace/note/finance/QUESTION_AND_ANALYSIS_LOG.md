@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-10 - Market Context should read as a cockpit, not a refresh console
+- User request:
+  - `Overview > Market Context` 탭의 1차~4차 UX/UI 개선 진행을 승인함.
+- Interpreted goal:
+  - 첫 화면에서 일괄 갱신 / 진단값보다 시장 맥락 요약, 자료 상태, 다음 확인 순서가 먼저 보이게 한다.
+- Analysis result:
+  - Market Context의 headline은 자료 경고가 아니라 현재 시장 맥락 한 줄이어야 한다. stale/partial/missing 같은 데이터 상태는 `자료 상태`와 `Data Health` handoff로 분리하고, core 3개 카드와 supporting 3개 카드를 나눠 읽는 순서를 만든다.
+- Follow-up:
+  - Direct `/overview` first-load Page not found modal은 normal root navigation과 분리된 Streamlit routing risk로 남긴다.
+
 ### 2026-06-08 - Reference should appear inside the workflow screens
 - User request:
   - Reference 탭 개편의 4차 작업 진행을 요청함.

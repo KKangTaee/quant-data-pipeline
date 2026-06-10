@@ -1797,34 +1797,42 @@ def _render_overview_market_context_refresh_result(result_key: str) -> None:
 
 def _render_overview_market_context_refresh_bar() -> None:
     result_key = "overview_market_context_refresh_all_result"
-    cols = st.columns([1.5, 0.72], gap="small", vertical_alignment="center")
-    with cols[0]:
-        st.caption(
-            "표시는 DB-backed snapshot을 읽습니다. 데이터 자체가 stale/due이면 일괄 갱신으로 기존 수집 job을 순서대로 실행합니다."
+    with st.expander("보조 갱신", expanded=False):
+        st.markdown(
+            '<div class="ov-macro-cockpit-refresh-assist">자료가 오래됐거나 부족할 때만 사용하는 보조 행동입니다.</div>',
+            unsafe_allow_html=True,
         )
-    if cols[1].button(
-        "Market Context 일괄 갱신",
-        key="overview_market_context_refresh_all",
-        use_container_width=True,
-        type="primary",
-        help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 기존 Overview action boundary로 갱신합니다.",
-    ):
-        current_year = datetime.now().year
-        with st.spinner("Overview market context 데이터를 일괄 갱신하는 중입니다..."):
-            result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
-            _store_overview_job_result(result_key, result)
-            _clear_overview_market_context_caches()
-    _render_overview_market_context_refresh_result(result_key)
+        st.caption(
+            "자료 상태를 먼저 확인한 뒤, 오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 순서대로 실행합니다."
+        )
+        cols = st.columns([1.5, 0.72], gap="small", vertical_alignment="center")
+        with cols[0]:
+            st.caption(
+                "화면은 저장된 DB snapshot을 읽습니다. 이 버튼도 기존 Overview action boundary를 통해서만 갱신합니다."
+            )
+        if cols[1].button(
+            "필요할 때 자료 갱신",
+            key="overview_market_context_refresh_all",
+            use_container_width=True,
+            type="secondary",
+            help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 기존 Overview action boundary로 갱신합니다.",
+        ):
+            current_year = datetime.now().year
+            with st.spinner("Market Context 자료를 갱신하는 중입니다..."):
+                result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
+                _store_overview_job_result(result_key, result)
+                _clear_overview_market_context_caches()
+        _render_overview_market_context_refresh_result(result_key)
 
 
 def _render_overview_market_context_tab() -> None:
-    st.markdown("### Market Context")
+    st.markdown("### 시장 맥락 요약")
     st.caption(
-        "Overview 진입 후 먼저 보는 summary cockpit입니다. 세부 근거는 아래 Deep Tab 안내를 따라 확인합니다."
+        "오늘 시장을 어떻게 읽을지 먼저 보고, 자료 상태와 다음 확인 순서에 따라 필요한 세부 탭으로 이동합니다."
     )
-    _render_overview_market_context_refresh_bar()
     render_macro_context_cockpit(load_overview_macro_context_cockpit())
     render_overview_ia_closeout_guide(load_overview_ia_closeout_model())
+    _render_overview_market_context_refresh_bar()
 
 
 def _summarize_auto_refresh_plan(summary: dict[str, Any]) -> str:
@@ -5688,8 +5696,8 @@ def render_overview_dashboard(
     snapshot = load_overview_dashboard_snapshot()
     recent_results = recent_results or []
 
-    st.title("Market Context Overview")
-    st.caption("DB-backed market context, sentiment, event, and data-health snapshots for investigation only.")
+    st.title("Overview")
+    st.caption("저장된 시장 맥락, 심리, 일정, 자료 상태를 먼저 읽고 필요한 세부 탭으로 이동합니다.")
     render_market_session_banner(_market_session_banner_model())
 
     context_tab, market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(

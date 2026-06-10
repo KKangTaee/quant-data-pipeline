@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-10 - Overview Market Context UX V3 1차~4차
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-ux-v3-20260610/` for `Overview > Market Context` first-screen UX polish.
+- Reworked the first tab to show market context summary, data-state separation, next check order, core/supporting card hierarchy, and secondary refresh placement.
+- Kept the boundary read-only / DB-backed: no provider fetch, schema change, registry / saved JSONL write, validation / monitoring / trading semantics.
+- Browser QA confirmed root `/` renders the new cockpit; direct `/overview` still shows Streamlit's Page not found modal and is recorded in task risks.
+
 ### 2026-06-08 - Operations V2 Closeout 5차
 - Opened `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/` for Operations Overview V2 5차 closeout.
 - Confirmed normal browser QA path is root `/` -> top navigation -> `Operations Overview`; this path reaches `/operations` without the Page not found dialog.
