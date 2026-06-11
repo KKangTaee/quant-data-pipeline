@@ -7684,3 +7684,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Source Confidence와 Overview Map은 중요하지만 첫 화면의 분석 결론보다 보조 근거이므로 기본 노출 밀도를 낮춰야 함.
 - Analysis result: 두 섹션을 별도 탭으로 빼기보다 같은 Market Context 안에서 native disclosure로 접어 두는 것이 경계와 흐름을 보존한다.
 - Follow-up: `Source Confidence / 출처 신뢰도`와 `Overview Map / 화면 지도`를 기본 접힘 섹션으로 렌더링했다. refresh result UX 세분화는 3차로 남긴다.
+
+### 2026-06-12 - Market Context를 가이드 UI에서 시장 브리프 UI로 바꾼다
+
+- User request: 사용자가 `Overview > Market Context` 후속 개선 1차를 승인하면서, Events/Data Health 보강이나 과거 유사국면 기능은 구현하지 말고 후속 리스크로만 정리하라고 요청함.
+- Interpreted goal: 기존 `현재 맥락:` 핵심요약은 유지하되, 별도 `다음 확인 순서`, Deep Tab guide, `해석 전 확인` 카드 묶음이 시장 브리프 흐름을 끊지 않게 재배치해야 함.
+- Analysis result: cockpit read model에 `brief_rows`와 `interpretation_cues`를 추가하고, renderer는 시장 움직임 / 확산 / futures-macro 배경 / 이벤트·심리·자료 주의점을 row 흐름으로 보여주는 것이 가장 작은 변경이다.
+- Follow-up: 2차는 갱신 후 상단 context 반영과 Data Health 노출 범위 재검토, 별도 데이터 작업은 CPI/Event coverage 보강, 별도 제품 검토는 과거 유사국면 기능이다.

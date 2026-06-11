@@ -4360,29 +4360,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = helper_body[:helper_end]
 
         self.assertIn("render_macro_context_cockpit(load_overview_macro_context_cockpit())", helper_body)
-        self.assertIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
         self.assertIn("_render_overview_market_context_refresh_bar()", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
-        guide_index = helper_body.index("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())")
         refresh_index = helper_body.index("_render_overview_market_context_refresh_bar()")
         self.assertLess(cockpit_index, refresh_index)
-        self.assertLess(guide_index, refresh_index)
         self.assertIn("load_overview_macro_context_cockpit", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
+        self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
 
-    def test_overview_dashboard_renders_ia_closeout_guide_inside_market_context_tab_after_cockpit(self) -> None:
+    def test_overview_dashboard_keeps_deep_tab_guide_out_of_market_context_brief(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         if "def _render_overview_market_context_tab" not in source:
             self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
         helper_body = source[source.index("def _render_overview_market_context_tab"):]
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
-        cockpit_index = helper_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
-        guide_index = helper_body.index("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())")
 
-        self.assertLess(cockpit_index, guide_index)
-        self.assertIn("load_overview_ia_closeout_model", helper_body)
-        self.assertIn("render_overview_ia_closeout_guide", helper_body)
+        self.assertIn("render_macro_context_cockpit(load_overview_macro_context_cockpit())", helper_body)
+        self.assertNotIn("load_overview_ia_closeout_model", helper_body)
+        self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
+        self.assertNotIn("Deep Tab", helper_body)
 
     def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
@@ -4438,7 +4435,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         css = overview_ui_css()
 
         self.assertIn("--ov-mi-color-text-subtle:", css)
-        self.assertIn(".ov-macro-cockpit-card-detail", css)
+        self.assertIn(".ov-macro-brief-detail", css)
 
     def test_overview_ui_css_defines_source_confidence_lane(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -4471,10 +4468,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn(".ov-macro-cockpit-rail", css)
         self.assertIn(".ov-macro-cockpit-rail-item", css)
-        self.assertIn(".ov-macro-cockpit-group-title", css)
+        self.assertIn(".ov-macro-section-title", css)
         self.assertIn(".ov-macro-cockpit-refresh-assist", css)
-        self.assertIn(".ov-macro-cockpit-card-primary", css)
-        self.assertIn(".ov-macro-cockpit-card-secondary", css)
+        self.assertIn(".ov-macro-brief-row", css)
+        self.assertIn(".ov-macro-cue-row", css)
 
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -4497,9 +4494,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         component_source = "\n".join(
             [
                 inspect.getsource(overview_ui_components.render_macro_context_cockpit),
-                inspect.getsource(overview_ui_components._macro_cockpit_cards_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_brief_rows_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_interpretation_cues_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_row_meta_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_source_confidence_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_next_checks_html),
             ]
         )
 
@@ -4507,9 +4505,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("자료 상태를 먼저 확인", dashboard_source)
         self.assertIn("보조 갱신", dashboard_source)
         self.assertIn("시장 맥락 요약", component_source)
-        self.assertIn("핵심 요약", component_source)
-        self.assertIn("해석 전 확인", component_source)
-        self.assertIn("다음 확인 순서", component_source)
+        self.assertIn("시장 브리프", component_source)
+        self.assertIn("해석할 때 같이 볼 변수", component_source)
+        self.assertIn("확인 위치", component_source)
+        self.assertNotIn("핵심 요약", component_source)
+        self.assertNotIn("해석 전 확인", component_source)
+        self.assertNotIn("다음 확인 순서", component_source)
         self.assertNotIn("Overview Macro Context", component_source)
         self.assertNotIn("다음에 볼 Deep Tab", component_source)
         self.assertNotIn("Source Confidence / 출처 신뢰도", component_source)
@@ -7477,7 +7478,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["summary"]["next_path"], "Data Health → Events → Futures Monitor → Market Movers")
         self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
         self.assertEqual(cockpit["summary"]["rail"][0]["value"], "일부 자료 확인 필요")
-        self.assertEqual(cockpit["summary"]["rail"][1]["label"], "다음 확인 순서")
+        self.assertEqual(cockpit["summary"]["rail"][1]["label"], "같이 볼 변수")
+        self.assertEqual([row["label"] for row in cockpit["brief_rows"]], ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경"])
+        self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["가까운 주요 이벤트", "심리 배경", "자료 상태 주의점"])
+        self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
+        self.assertEqual(cockpit["interpretation_cues"][0]["target_tab"], "Events")
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
         self.assertEqual([card["group"] for card in cockpit["cards"][:3]], ["core", "core", "core"])
         self.assertEqual([card["group"] for card in cockpit["cards"][3:]], ["supporting", "supporting", "supporting"])

@@ -43,7 +43,6 @@ from app.web.overview_dashboard_helpers import (
     load_overview_dashboard_snapshot,
     load_overview_data_health_ingestion_handoff,
     load_overview_group_leadership_snapshot,
-    load_overview_ia_closeout_model,
     load_overview_macro_context_cockpit,
     load_overview_macro_week_lane,
     load_overview_market_events_snapshot,
@@ -84,7 +83,6 @@ from app.web.overview_ui_components import (
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_overview_toolbar_label,
-    render_overview_ia_closeout_guide,
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
 )
@@ -1828,10 +1826,9 @@ def _render_overview_market_context_refresh_bar() -> None:
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락 요약")
     st.caption(
-        "오늘 시장을 어떻게 읽을지 먼저 보고, 자료 상태와 다음 확인 순서에 따라 필요한 세부 탭으로 이동합니다."
+        "저장된 시장 자료를 브리프처럼 읽고, 해석 전에 같이 볼 변수만 작게 확인합니다."
     )
     render_macro_context_cockpit(load_overview_macro_context_cockpit())
-    render_overview_ia_closeout_guide(load_overview_ia_closeout_model())
     _render_overview_market_context_refresh_bar()
 
 
@@ -5697,7 +5694,7 @@ def render_overview_dashboard(
     recent_results = recent_results or []
 
     st.title("Overview")
-    st.caption("저장된 시장 맥락, 심리, 일정, 자료 상태를 먼저 읽고 필요한 세부 탭으로 이동합니다.")
+    st.caption("저장된 시장 자료를 브리프처럼 읽고, 필요한 세부 근거는 각 탭에서 이어서 확인합니다.")
     render_market_session_banner(_market_session_banner_model())
 
     context_tab, market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(

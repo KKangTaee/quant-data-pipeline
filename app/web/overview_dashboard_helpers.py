@@ -509,7 +509,7 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 
 # Load the summary-first market context cockpit from existing Overview read models only.
 @st.cache_data(ttl=120, show_spinner=False)
-def load_overview_macro_context_cockpit(cache_schema_version: str = "overview-cockpit-v1-refresh-state") -> dict[str, Any]:
+def load_overview_macro_context_cockpit(cache_schema_version: str = "overview-cockpit-v1-brief-flow") -> dict[str, Any]:
     del cache_schema_version
     return build_overview_macro_context_cockpit(
         market_movers_snapshot=load_overview_market_movers_snapshot(

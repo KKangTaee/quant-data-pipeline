@@ -3951,7 +3951,7 @@ def build_overview_source_confidence_catalog(
                 if review_items
                 else "자료 기준 정상"
             ),
-            "detail": "같은 저장 자료의 출처, 기준일, 관리 위치, 다음 확인 위치입니다.",
+            "detail": "같은 저장 자료의 출처, 기준일, 관리 위치, 참고 위치입니다.",
             "review_count": len(review_items),
         },
         "items": items,
@@ -4267,6 +4267,23 @@ def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None
     return None
 
 
+def _cockpit_brief_row(card: dict[str, Any], *, label: str) -> dict[str, Any]:
+    """Project an existing cockpit card into a sentence-first brief row."""
+    return {
+        "id": card.get("id"),
+        "label": label,
+        "value": card.get("value"),
+        "detail": card.get("detail"),
+        "status": card.get("status"),
+        "status_label": card.get("status_label"),
+        "tone": card.get("tone"),
+        "target_tab": card.get("target_tab"),
+        "source": card.get("source"),
+        "freshness_label": card.get("freshness_label"),
+        "badges": card.get("badges"),
+    }
+
+
 def build_overview_macro_context_cockpit(
     *,
     market_movers_snapshot: dict[str, Any] | None = None,
@@ -4385,9 +4402,9 @@ def build_overview_macro_context_cockpit(
             "tone": _cockpit_status_tone(status),
         },
         {
-            "label": "다음 확인 순서",
-            "value": next_path,
-            "detail": "필요한 세부 탭으로 이동",
+            "label": "같이 볼 변수",
+            "value": "Events / Sentiment / Data Health",
+            "detail": "본문 아래에서 작게 확인",
             "tone": "warning" if context_review_count else "positive",
         },
         {
@@ -4399,7 +4416,18 @@ def build_overview_macro_context_cockpit(
     ]
     for index, card in enumerate(cards):
         card["group"] = "core" if index < 3 else "supporting"
-        card["priority_label"] = "핵심 요약" if index < 3 else "해석 전 확인"
+        card["priority_label"] = "시장 브리프" if index < 3 else "해석 변수"
+
+    brief_rows = [
+        _cockpit_brief_row(cards[0], label="무엇이 움직였나"),
+        _cockpit_brief_row(cards[1], label="확산/집중인가"),
+        _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
+    ]
+    interpretation_cues = [
+        _cockpit_brief_row(cards[4], label="가까운 주요 이벤트"),
+        _cockpit_brief_row(cards[3], label="심리 배경"),
+        _cockpit_brief_row(cards[5], label="자료 상태 주의점"),
+    ]
 
     return {
         "schema_version": "overview_macro_context_cockpit_v1",
@@ -4413,6 +4441,8 @@ def build_overview_macro_context_cockpit(
             "next_path": next_path,
             "rail": rail,
         },
+        "brief_rows": brief_rows,
+        "interpretation_cues": interpretation_cues,
         "cards": cards,
         "next_checks": next_checks,
         "source_confidence": source_confidence,

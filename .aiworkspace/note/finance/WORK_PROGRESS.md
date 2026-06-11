@@ -4914,3 +4914,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-context-supporting-sections-v2-20260610/`에서 `Source Confidence`와 `Overview Map`을 기본 접힘 disclosure로 낮췄다.
   - Market Context 첫 화면은 summary rail / 핵심 cards / 다음 확인을 먼저 보여주고, source/map 세부는 펼쳐서 확인한다.
   - UI renderer만 변경했으며 provider / schema / persistence / validation / trading semantics는 추가하지 않았다.
+- Overview Market Context Brief Flow V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-flow-v1-20260612/`에서 Market Context 후속 개선 1차를 완료했다.
+  - 기존 `현재 맥락:` headline은 유지하고, standalone `다음 확인 순서` / Deep Tab guide / `해석 전 확인` 카드 흐름을 `시장 브리프` rows와 `해석할 때 같이 볼 변수` rows로 재배치했다.
+  - Data Health는 작은 자료 주의점과 접힌 출처 상태로 낮췄고, `보조 갱신`은 하단 secondary maintenance action으로 유지했다.
+  - 다음 작업은 갱신 후 상단 context 반영, CPI/Event coverage, Data Health 노출 범위, 과거 유사국면 기능 검토다.
