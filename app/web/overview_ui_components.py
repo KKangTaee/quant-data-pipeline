@@ -621,6 +621,29 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-caption);
   line-height: 1.25;
 }
+.ov-macro-cockpit-refresh-reflection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem 0.48rem;
+  align-items: baseline;
+  margin: 0.35rem 0 0.46rem 0;
+  padding: 0.34rem 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--ov-refresh-reflection-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  border-left: 3px solid var(--ov-refresh-reflection-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: color-mix(in srgb, var(--ov-refresh-reflection-tone, var(--ov-mi-color-neutral)) 6%, var(--ov-mi-color-surface));
+}
+.ov-macro-cockpit-refresh-reflection-label {
+  color: var(--ov-refresh-reflection-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.16;
+}
+.ov-macro-cockpit-refresh-reflection-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+}
 .ov-ia-closeout {
   margin: 0.1rem 0 0.95rem 0;
   padding: 0.62rem;

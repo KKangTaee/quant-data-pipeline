@@ -7691,3 +7691,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 `현재 맥락:` 핵심요약은 유지하되, 별도 `다음 확인 순서`, Deep Tab guide, `해석 전 확인` 카드 묶음이 시장 브리프 흐름을 끊지 않게 재배치해야 함.
 - Analysis result: cockpit read model에 `brief_rows`와 `interpretation_cues`를 추가하고, renderer는 시장 움직임 / 확산 / futures-macro 배경 / 이벤트·심리·자료 주의점을 row 흐름으로 보여주는 것이 가장 작은 변경이다.
 - Follow-up: 2차는 갱신 후 상단 context 반영과 Data Health 노출 범위 재검토, 별도 데이터 작업은 CPI/Event coverage 보강, 별도 제품 검토는 과거 유사국면 기능이다.
+
+### 2026-06-12 - Market Context 갱신 후 상단 브리프가 새 snapshot을 다시 읽게 한다
+
+- User request: 사용자가 후속 개선 2차로 `보조 갱신` 실행 후 상단 Market Context가 실제 새 snapshot을 반영하는지 고치라고 요청함.
+- Interpreted goal: job result table을 키우지 않고, cache/rerun 문제를 해결해 사용자가 상단 브리프의 반영 여부를 작게 확인할 수 있어야 함.
+- Analysis result: cockpit이 refresh button보다 먼저 렌더되므로 cache clear만으로는 같은 Streamlit pass의 상단 brief를 갱신할 수 없다. result 저장 -> reflection state 저장 -> cache clear -> `st.rerun()` 순서가 필요하다.
+- Follow-up: CPI/Event coverage 보강, Macro Calendar 수집/ICS fallback 검증, Data Health 노출 범위 재검토는 3차 이후 별도 작업으로 남긴다.

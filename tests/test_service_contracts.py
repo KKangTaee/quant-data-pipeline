@@ -4381,6 +4381,56 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
         self.assertNotIn("Deep Tab", helper_body)
 
+    def test_overview_market_context_refresh_reflection_copy_distinguishes_outcomes(self) -> None:
+        from app.web import overview_dashboard
+
+        reflection_state = getattr(overview_dashboard, "_overview_market_context_refresh_reflection_state", None)
+        self.assertTrue(callable(reflection_state), "Market Context refresh should expose reflection state copy.")
+
+        reflected_at = datetime(2026, 6, 12, 14, 32)
+
+        success = reflection_state(
+            {"status": "success", "finished_at": "2026-06-12 14:31:59"},
+            reflected_at=reflected_at,
+        )
+        partial = reflection_state(
+            {"status": "partial_success", "finished_at": "2026-06-12 14:31:59"},
+            reflected_at=reflected_at,
+        )
+        failed = reflection_state(
+            {"status": "failed", "finished_at": "2026-06-12 14:31:59"},
+            reflected_at=reflected_at,
+        )
+
+        self.assertTrue(success["reflected"])
+        self.assertIn("방금 갱신을 반영했습니다", success["label"])
+        self.assertIn("2026-06-12 14:32", success["detail"])
+        self.assertTrue(partial["reflected"])
+        self.assertIn("일부 자료만 반영했습니다", partial["label"])
+        self.assertIn("오래된 항목", partial["detail"])
+        self.assertFalse(failed["reflected"])
+        self.assertIn("갱신 실패", failed["label"])
+        self.assertIn("기존 자료", failed["detail"])
+
+    def test_overview_market_context_refresh_clears_cache_before_rerun(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        if "def _render_overview_market_context_refresh_bar" not in source:
+            self.fail("Overview should keep the Market Context refresh bar helper.")
+        helper_body = source[source.index("def _render_overview_market_context_refresh_bar"):]
+        helper_end = helper_body.index("def _render_overview_market_context_tab")
+        helper_body = helper_body[:helper_end]
+
+        self.assertIn("_overview_market_context_refresh_reflection_state", helper_body)
+        self.assertIn("overview_market_context_refresh_reflection", helper_body)
+        self.assertIn("st.rerun()", helper_body)
+
+        store_index = helper_body.index("_store_overview_job_result(result_key, result)")
+        clear_index = helper_body.index("_clear_overview_market_context_caches()")
+        rerun_index = helper_body.index("st.rerun()")
+
+        self.assertLess(store_index, clear_index)
+        self.assertLess(clear_index, rerun_index)
+
     def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def _render_collection_ops_tab"):]

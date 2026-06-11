@@ -4919,3 +4919,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 기존 `현재 맥락:` headline은 유지하고, standalone `다음 확인 순서` / Deep Tab guide / `해석 전 확인` 카드 흐름을 `시장 브리프` rows와 `해석할 때 같이 볼 변수` rows로 재배치했다.
   - Data Health는 작은 자료 주의점과 접힌 출처 상태로 낮췄고, `보조 갱신`은 하단 secondary maintenance action으로 유지했다.
   - 다음 작업은 갱신 후 상단 context 반영, CPI/Event coverage, Data Health 노출 범위, 과거 유사국면 기능 검토다.
+- Overview Market Context Refresh Reflect V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-refresh-reflect-v1-20260612/`에서 Market Context 후속 개선 2차를 완료했다.
+  - 하단 `보조 갱신` 완료 후 refresh result를 session state에 남기고, 관련 cache를 clear한 뒤 `st.rerun()`으로 상단 cockpit이 새 snapshot을 다시 읽게 했다.
+  - 상단에는 success / partial / failure를 구분하는 작은 반영 안내만 추가하고, job result table은 기존 collapsed expander 보조 정보로 유지했다.
+  - 후속은 CPI/Event coverage, Macro Calendar 수집/ICS fallback 검증, Data Health 노출 범위 재검토다.

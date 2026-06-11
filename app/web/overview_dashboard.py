@@ -157,6 +157,8 @@ EVENT_TYPE_LABELS = {
     "EARNINGS": "Earnings",
     "MACRO": "Macro",
 }
+MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
+MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
 US_EASTERN_TZ = ZoneInfo("America/New_York")
 KOREA_TZ = ZoneInfo("Asia/Seoul")
 US_MARKET_OPEN_TIME = time(9, 30)
@@ -1764,6 +1766,72 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _overview_market_context_refresh_reflection_state(
+    result: dict[str, Any],
+    *,
+    reflected_at: datetime | None = None,
+) -> dict[str, Any]:
+    status = str(result.get("status") or "unknown").lower()
+    reflected_at_text = (reflected_at or datetime.now()).strftime("%Y-%m-%d %H:%M")
+    jobs_failed = int(result.get("jobs_failed") or 0)
+    jobs_run = int(result.get("jobs_run") or 0)
+    reflected = status in {"success", "partial_success"}
+
+    if status == "success":
+        label = "방금 갱신을 반영했습니다"
+        detail = f"상단 브리프는 새 snapshot을 다시 읽었습니다 · {reflected_at_text}"
+    elif status == "partial_success":
+        label = "일부 자료만 반영했습니다"
+        detail = (
+            f"성공한 자료는 다시 읽었고, 오래된 항목은 자료 상태를 참고하세요 · "
+            f"{reflected_at_text}"
+        )
+    elif status in {"failed", "error"}:
+        label = "갱신 실패 - 기존 자료를 계속 표시합니다"
+        detail = f"상단 브리프는 기존 자료 기준이며 새로 반영된 자료처럼 표시하지 않습니다 · {reflected_at_text}"
+    elif status in {"skipped", "locked"}:
+        label = "갱신이 실행되지 않았습니다"
+        detail = f"기존 자료를 계속 표시합니다 · {reflected_at_text}"
+    else:
+        label = "갱신 상태를 확인하세요"
+        detail = f"기존 자료를 기준으로 표시 중입니다 · {reflected_at_text}"
+
+    if status == "partial_success" and jobs_failed:
+        detail = f"{detail} · 실패 {jobs_failed}개"
+    elif status == "success" and jobs_run:
+        detail = f"{detail} · 완료 {jobs_run}개"
+
+    return {
+        "status": status,
+        "tone": _status_tone(status),
+        "label": label,
+        "detail": detail,
+        "reflected": reflected,
+        "reflected_at": reflected_at_text,
+    }
+
+
+def _render_overview_market_context_refresh_reflection() -> None:
+    payload = st.session_state.get(MARKET_CONTEXT_REFRESH_REFLECTION_KEY)
+    if not isinstance(payload, dict):
+        return
+    tone = str(payload.get("tone") or "neutral")
+    tone_color = {
+        "positive": OVERVIEW_COLOR_POSITIVE,
+        "warning": OVERVIEW_COLOR_WARNING,
+        "danger": OVERVIEW_COLOR_DANGER,
+    }.get(tone, OVERVIEW_COLOR_NEUTRAL)
+    st.markdown(
+        (
+            f'<div class="ov-macro-cockpit-refresh-reflection" style="--ov-refresh-reflection-tone:{tone_color};">'
+            f'<span class="ov-macro-cockpit-refresh-reflection-label">{escape(str(payload.get("label") or ""))}</span>'
+            f'<span class="ov-macro-cockpit-refresh-reflection-detail">{escape(str(payload.get("detail") or ""))}</span>'
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
 def _render_overview_market_context_refresh_result(result_key: str) -> None:
     result = st.session_state.get(result_key)
     if not isinstance(result, dict):
@@ -1794,7 +1862,7 @@ def _render_overview_market_context_refresh_result(result_key: str) -> None:
 
 
 def _render_overview_market_context_refresh_bar() -> None:
-    result_key = "overview_market_context_refresh_all_result"
+    result_key = MARKET_CONTEXT_REFRESH_RESULT_KEY
     with st.expander("보조 갱신", expanded=False):
         st.markdown(
             '<div class="ov-macro-cockpit-refresh-assist">자료가 오래됐거나 부족할 때만 사용하는 보조 행동입니다.</div>',
@@ -1819,7 +1887,11 @@ def _render_overview_market_context_refresh_bar() -> None:
             with st.spinner("Market Context 자료를 갱신하는 중입니다..."):
                 result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
                 _store_overview_job_result(result_key, result)
+                st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = (
+                    _overview_market_context_refresh_reflection_state(result)
+                )
                 _clear_overview_market_context_caches()
+            st.rerun()
         _render_overview_market_context_refresh_result(result_key)
 
 
@@ -1828,6 +1900,7 @@ def _render_overview_market_context_tab() -> None:
     st.caption(
         "저장된 시장 자료를 브리프처럼 읽고, 해석 전에 같이 볼 변수만 작게 확인합니다."
     )
+    _render_overview_market_context_refresh_reflection()
     render_macro_context_cockpit(load_overview_macro_context_cockpit())
     _render_overview_market_context_refresh_bar()
 
