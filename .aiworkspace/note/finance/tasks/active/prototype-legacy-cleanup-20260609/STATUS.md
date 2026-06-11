@@ -1,7 +1,7 @@
 # Prototype Legacy Cleanup / Removal Status
 
 Status: Complete
-Last Updated: 2026-06-10
+Last Updated: 2026-06-12
 
 ## Progress
 
@@ -22,9 +22,10 @@ Last Updated: 2026-06-10
 
 ## Current Step
 
-5C 4차 docs sync / verification / Browser QA completed; commit pending.
+5C 4차 docs sync / verification / Browser QA completed and committed as `7e3c9c3a`.
 
 ## Next Action
 
-- Commit the coherent 5C cleanup unit.
+- No immediate 5C action remains.
 - Leave generated screenshot, run history, saved JSONL, and `.DS_Store` unstaged.
+- Future cleanup such as `final_selected_portfolio_dashboard.py` rename or runtime registry helper deletion needs a separate archive / recovery compatibility audit.
