@@ -7698,3 +7698,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: job result table을 키우지 않고, cache/rerun 문제를 해결해 사용자가 상단 브리프의 반영 여부를 작게 확인할 수 있어야 함.
 - Analysis result: cockpit이 refresh button보다 먼저 렌더되므로 cache clear만으로는 같은 Streamlit pass의 상단 brief를 갱신할 수 없다. result 저장 -> reflection state 저장 -> cache clear -> `st.rerun()` 순서가 필요하다.
 - Follow-up: CPI/Event coverage 보강, Macro Calendar 수집/ICS fallback 검증, Data Health 노출 범위 재검토는 3차 이후 별도 작업으로 남긴다.
+
+### 2026-06-12 - Market Context 3차로 주요 macro event coverage와 Data Health 노출을 보강한다
+
+- User request: 사용자가 CPI/Event coverage 보강, BLS HTML/ICS fallback 검증, recent + upcoming Events read model, Market Context Data Health 노출 범위 재검토를 3차로 승인함.
+- Interpreted goal: CPI/FOMC 같은 context-only macro event가 earnings에 묻히거나 방금 지난 일정이라는 이유로 빠지지 않게 하되, Market Context를 job/result 진단 패널로 키우면 안 됨.
+- Analysis result: 로컬 DB는 FOMC/GDP/earnings row는 보유하지만 `2026-06-10` 및 `2026-07-14` CPI row가 없다. 기존 read model은 start date가 today라 just-past event를 놓쳤고, Macro Week Lane도 upcoming만 보았다.
+- Follow-up: read model은 recent 7D + upcoming horizon, major macro priority, recent/upcoming lane split으로 보강했다. CPI row 자체는 Macro Calendar collection 또는 BLS `.ics` import로 채워야 하며, 과거 유사국면/예측과 섹터 ETF 장기 coverage는 4차 후보로 남긴다.

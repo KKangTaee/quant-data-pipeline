@@ -4920,17 +4920,34 @@ def _event_agenda_sections(rows: pd.DataFrame) -> list[dict[str, Any]]:
         return []
     focus_rows = rows.copy()
     focus_rows["Days Until"] = pd.to_numeric(focus_rows.get("Days Until"), errors="coerce")
+    recent_major_rows = focus_rows[
+        (focus_rows["Days Until"] < 0)
+        & (focus_rows["Days Until"] >= -7)
+        & (focus_rows.get("Importance") == "High")
+    ].sort_values(
+        ["Date Parsed", "Type Label", "Symbol"],
+        ascending=[False, True, True],
+    )
     future_rows = focus_rows[focus_rows["Days Until"].isna() | (focus_rows["Days Until"] >= 0)].sort_values(
         ["Date Parsed", "Importance", "Type Label", "Symbol"],
         ascending=[True, True, True, True],
     )
+    sections: list[dict[str, Any]] = []
+    if not recent_major_rows.empty:
+        recent_rows = recent_major_rows.head(8)
+        sections.append(
+            {
+                "title": "Recent Major",
+                "meta": f"{len(recent_rows)} shown",
+                "rows": [_event_agenda_item(row) for _, row in recent_rows.iterrows()],
+            }
+        )
     section_specs = [
         ("Today", future_rows["Days Until"] == 0, 8),
         ("This Week", (future_rows["Days Until"] > 0) & (future_rows["Days Until"] <= 7), 10),
         ("Next 30D", (future_rows["Days Until"] > 7) & (future_rows["Days Until"] <= 30), 12),
         ("Later", future_rows["Days Until"] > 30, 12),
     ]
-    sections: list[dict[str, Any]] = []
     for title, mask, limit in section_specs:
         section_rows = future_rows[mask].head(limit)
         if section_rows.empty:

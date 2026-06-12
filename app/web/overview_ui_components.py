@@ -1033,6 +1033,27 @@ def overview_ui_css() -> str:
   color: var(--ov-cluster-tone, var(--ov-mi-color-neutral));
   margin-top: 0;
 }
+.ov-macro-week-section {
+  margin-top: 0.42rem;
+}
+.ov-macro-week-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  margin-bottom: 0.28rem;
+}
+.ov-macro-week-section-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-macro-week-section-note {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+  text-align: right;
+}
 .ov-macro-week-items {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1748,6 +1769,13 @@ def overview_ui_css() -> str:
   .ov-macro-cockpit-rail-item:first-child {
     border-top: 0;
   }
+  .ov-macro-week-section-head {
+    display: block;
+  }
+  .ov-macro-week-section-note {
+    margin-top: 0.12rem;
+    text-align: left;
+  }
   .ov-macro-cues-grid,
   .ov-source-confidence-grid,
   .ov-ia-closeout-grid,
@@ -2285,12 +2313,27 @@ def _macro_week_clusters_html(clusters: dict[str, Any]) -> str:
     return "".join(html)
 
 
-def _macro_week_items_html(items: list[dict[str, Any]]) -> str:
+def _macro_week_days_label(value: Any) -> str:
+    if value in (None, ""):
+        return "date pending"
+    try:
+        day_number = int(value)
+    except (TypeError, ValueError):
+        return _display_value(value)
+    if day_number < 0:
+        return f"{abs(day_number)}d ago"
+    if day_number == 0:
+        return "today"
+    return f"in {day_number}d"
+
+
+def _macro_week_items_html(items: list[dict[str, Any]], *, limit: int = 4) -> str:
     html: list[str] = []
-    for item in items[:4]:
+    for item in items[:limit]:
         tone_color = escape(_overview_tone_color(item.get("tone")))
         meta = (
-            f"{_display_value(item.get('date'))} · in {_display_value(item.get('days_until'))}d · "
+            f"{_display_value(item.get('date'))} · {_display_value(item.get('window'))} · "
+            f"{_macro_week_days_label(item.get('days_until'))} · "
             f"{_display_value(item.get('cluster'))}"
         )
         detail = (
@@ -2307,14 +2350,39 @@ def _macro_week_items_html(items: list[dict[str, Any]]) -> str:
     return "".join(html)
 
 
+def _macro_week_section_html(title: str, note: str, items: list[dict[str, Any]]) -> str:
+    items_html = _macro_week_items_html(items)
+    if not items_html:
+        return ""
+    return (
+        '<section class="ov-macro-week-section">'
+        '<div class="ov-macro-week-section-head">'
+        f'<div class="ov-macro-week-section-title">{escape(title)}</div>'
+        f'<div class="ov-macro-week-section-note">{escape(note)}</div>'
+        '</div>'
+        f'<div class="ov-macro-week-items">{items_html}</div>'
+        '</section>'
+    )
+
+
 def render_macro_week_lane(model: dict[str, Any]) -> None:
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(model.get("status")))
     clusters_html = _macro_week_clusters_html(dict(model.get("clusters") or {}))
-    items_html = _macro_week_items_html(list(model.get("items") or []))
+    recent_html = _macro_week_section_html(
+        "방금 지난 주요 이벤트",
+        "최근 macro 발표가 시장 해석에 남기는 변수입니다.",
+        list(model.get("recent_items") or []),
+    )
+    upcoming_html = _macro_week_section_html(
+        "다가오는 주요 이벤트",
+        "앞으로 확인할 macro / earnings 일정입니다.",
+        list(model.get("upcoming_items") or []),
+    )
+    fallback_items_html = _macro_week_items_html(list(model.get("items") or [])) if not (recent_html or upcoming_html) else ""
     coverage = dict(model.get("coverage") or {})
     latest = _display_value(coverage.get("latest_collected_at"))
-    empty_html = "" if items_html else '<div class="ov-events-empty">No near-term stored event rows in this lane.</div>'
+    empty_html = "" if (recent_html or upcoming_html or fallback_items_html) else '<div class="ov-events-empty">No near-term stored event rows in this lane.</div>'
     st.markdown(
         overview_ui_css()
         + f"""
@@ -2328,7 +2396,9 @@ def render_macro_week_lane(model: dict[str, Any]) -> None:
     <span class="ov-macro-week-status">{escape(_display_value(model.get("status")))}</span>
   </div>
   <div class="ov-macro-week-clusters">{clusters_html}</div>
-  <div class="ov-macro-week-items">{items_html}</div>
+  {recent_html}
+  {upcoming_html}
+  <div class="ov-macro-week-items">{fallback_items_html}</div>
   {empty_html}
   <div class="ov-macro-week-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",

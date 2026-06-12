@@ -4924,3 +4924,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 하단 `보조 갱신` 완료 후 refresh result를 session state에 남기고, 관련 cache를 clear한 뒤 `st.rerun()`으로 상단 cockpit이 새 snapshot을 다시 읽게 했다.
   - 상단에는 success / partial / failure를 구분하는 작은 반영 안내만 추가하고, job result table은 기존 collapsed expander 보조 정보로 유지했다.
   - 후속은 CPI/Event coverage, Macro Calendar 수집/ICS fallback 검증, Data Health 노출 범위 재검토다.
+- Overview Market Context Events Data Trust V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-events-data-trust-v1-20260612/`에서 Market Context 후속 개선 3차를 완료했다.
+  - Events read model은 recent 7D + upcoming horizon을 함께 읽고 FOMC / CPI / PPI / Employment / GDP를 earnings보다 우선하는 context ordering을 적용했다.
+  - Macro Week Lane은 recent major / upcoming event section으로 나뉘며, Market Context는 compact event cue와 Data Health 자료 주의점만 보여준다.
+  - Local DB에는 `2026-06-10`, `2026-07-14` CPI row가 아직 없어 Macro Calendar collection 또는 BLS `.ics` import가 다음 data coverage follow-up이다.

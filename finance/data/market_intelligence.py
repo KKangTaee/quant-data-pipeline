@@ -59,16 +59,19 @@ BLS_MACRO_RELEASE_TYPES = [
         "event_type": "MACRO_CPI",
         "label": "CPI",
         "match": "consumer price index",
+        "aliases": ["cpi"],
     },
     {
         "event_type": "MACRO_PPI",
         "label": "PPI",
         "match": "producer price index",
+        "aliases": ["ppi"],
     },
     {
         "event_type": "MACRO_EMPLOYMENT",
         "label": "Employment Situation",
         "match": "employment situation",
+        "aliases": ["the employment situation"],
     },
 ]
 MONTH_NAME_TO_NUMBER = {
@@ -883,6 +886,10 @@ def _record_value_by_hint(record: dict[str, Any], hints: Sequence[str], *, fallb
 def _bls_macro_release_type(release_title: Any) -> dict[str, str] | None:
     normalized = _clean_text(release_title).lower()
     for item in BLS_MACRO_RELEASE_TYPES:
+        terms = [str(item["match"])] + [str(alias) for alias in item.get("aliases", [])]
+        for term in terms:
+            if re.search(rf"\b{re.escape(term.lower())}\b", normalized):
+                return item
         if str(item["match"]) in normalized:
             return item
     return None

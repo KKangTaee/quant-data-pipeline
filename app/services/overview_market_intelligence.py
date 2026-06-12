@@ -34,6 +34,14 @@ GROUP_TREND_PERIODS = {
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 MARKET_INTRADAY_STALE_MINUTES = 15
 EVENT_ESTIMATE_STALE_DAYS = 14
+EVENT_RECENT_WINDOW_DAYS = 7
+MAJOR_MACRO_EVENT_TYPES = {
+    "FOMC_MEETING",
+    "MACRO_CPI",
+    "MACRO_PPI",
+    "MACRO_EMPLOYMENT",
+    "MACRO_GDP",
+}
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000 by market cap",
@@ -179,6 +187,7 @@ GROUP_TICKER_LEADER_COLUMNS = [
 EVENT_COLUMNS = [
     "Date",
     "Days Until",
+    "Window",
     "Type",
     "Symbol",
     "Title",
@@ -573,13 +582,24 @@ def _empty_events_snapshot(
         "coverage": {
             "event_count": 0,
             "next_event_date": None,
+            "latest_recent_event_date": None,
             "latest_collected_at": None,
             "source_count": 0,
             "official_count": 0,
             "estimate_count": 0,
+            "estimate_only_count": 0,
             "cross_checked_count": 0,
             "not_confirmed_count": 0,
             "stale_estimate_count": 0,
+            "action_required_count": 0,
+            "high_importance_count": 0,
+            "needs_review_count": 0,
+            "this_week_count": 0,
+            "next_30d_count": 0,
+            "recent_event_count": 0,
+            "upcoming_event_count": 0,
+            "recent_high_importance_count": 0,
+            "upcoming_high_importance_count": 0,
             "superseded_count": 0,
         },
         "warnings": [message] if message else [],
@@ -2314,6 +2334,40 @@ def _event_days_until(row: dict[str, Any], *, today: date) -> int | None:
     return int((event_value - today_value).days)
 
 
+def _is_major_macro_event_type(value: Any) -> bool:
+    normalized = _normalize_event_type_value(value)
+    return bool(normalized in MAJOR_MACRO_EVENT_TYPES)
+
+
+def _event_window_label(row: dict[str, Any], *, today: date, recent_days: int = EVENT_RECENT_WINDOW_DAYS) -> str:
+    days_until = _event_days_until(row, today=today)
+    if days_until is None:
+        return "Unknown"
+    if days_until < 0:
+        return "Recent" if abs(days_until) <= max(0, int(recent_days or 0)) else "Past"
+    return "Upcoming"
+
+
+def _event_sort_key(row: dict[str, Any], *, today: date, recent_days: int) -> tuple[int, int, int, str, str]:
+    days_until = _event_days_until(row, today=today)
+    major_rank = 0 if _is_major_macro_event_type(row.get("event_type")) else 1
+    if days_until is None:
+        return (5, major_rank, 9999, str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if _is_major_macro_event_type(row.get("event_type")) and days_until < 0 and abs(days_until) <= recent_days:
+        return (0, major_rank, abs(days_until), str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if _is_major_macro_event_type(row.get("event_type")) and days_until >= 0:
+        return (1, major_rank, days_until, str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if days_until >= 0:
+        return (2, major_rank, days_until, str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if abs(days_until) <= recent_days:
+        return (3, major_rank, abs(days_until), str(row.get("event_type") or ""), str(row.get("title") or ""))
+    return (4, major_rank, abs(days_until), str(row.get("event_type") or ""), str(row.get("title") or ""))
+
+
+def _prioritize_event_rows(rows: list[dict[str, Any]], *, today: date, recent_days: int) -> list[dict[str, Any]]:
+    return sorted(rows, key=lambda row: _event_sort_key(row, today=today, recent_days=recent_days))
+
+
 def _event_importance_label(row: dict[str, Any]) -> str:
     event_type = _normalize_event_type_value(row.get("event_type"))
     if event_type == "FOMC_MEETING" or event_type == "MACRO" or str(event_type or "").startswith("MACRO_"):
@@ -2340,7 +2394,7 @@ def _event_focus_label(row: dict[str, Any], *, today: date) -> str:
     return "Later"
 
 
-def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
+def _event_coverage(rows: list[dict[str, Any]], *, today: date, recent_days: int = EVENT_RECENT_WINDOW_DAYS) -> dict[str, Any]:
     source_types = [_event_source_type(row) for row in rows]
     freshness = [_event_freshness(row, today=today) for row in rows]
     validation = [_event_validation_label(row) for row in rows]
@@ -2348,13 +2402,33 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
     importance = [_event_importance_label(row) for row in rows]
     focus = [_event_focus_label(row, today=today) for row in rows]
     days_until = [_event_days_until(row, today=today) for row in rows]
+    upcoming_pairs = [(row, days) for row, days in zip(rows, days_until) if days is not None and days >= 0]
+    recent_pairs = [
+        (row, days)
+        for row, days in zip(rows, days_until)
+        if days is not None and days < 0 and abs(days) <= max(0, int(recent_days or 0))
+    ]
+    recent_major_pairs = [
+        (row, days) for row, days in recent_pairs if _is_major_macro_event_type(row.get("event_type"))
+    ]
+    upcoming_major_pairs = [
+        (row, days) for row, days in upcoming_pairs if _is_major_macro_event_type(row.get("event_type"))
+    ]
+    next_row = min(upcoming_pairs, key=lambda item: (item[1], str(item[0].get("event_type") or "")))[0] if upcoming_pairs else None
+    latest_recent_source = recent_major_pairs or recent_pairs
+    latest_recent_row = (
+        max(latest_recent_source, key=lambda item: (_iso_date(item[0].get("event_date")) or "", str(item[0].get("event_type") or "")))[0]
+        if latest_recent_source
+        else None
+    )
     latest_collected_at = max(
         (_display_datetime(row.get("collected_at")) or "" for row in rows),
         default="",
     ) or None
     return {
         "event_count": len(rows),
-        "next_event_date": _iso_date(rows[0].get("event_date")) if rows else None,
+        "next_event_date": _iso_date(next_row.get("event_date")) if next_row else None,
+        "latest_recent_event_date": _iso_date(latest_recent_row.get("event_date")) if latest_recent_row else None,
         "latest_collected_at": latest_collected_at,
         "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
         "official_count": source_types.count("Official"),
@@ -2372,6 +2446,10 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
         "needs_review_count": focus.count("Needs Review"),
         "this_week_count": sum(1 for value in focus if value in {"Today", "This Week"}),
         "next_30d_count": sum(1 for value in days_until if value is not None and 0 <= value <= 30),
+        "recent_event_count": len(recent_pairs),
+        "upcoming_event_count": len(upcoming_pairs),
+        "recent_high_importance_count": len(recent_major_pairs),
+        "upcoming_high_importance_count": len(upcoming_major_pairs),
         "superseded_count": statuses.count("Superseded"),
     }
 
@@ -2392,11 +2470,17 @@ def _event_warnings(coverage: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFrame:
+def _event_rows_frame(
+    rows: list[dict[str, Any]],
+    *,
+    today: date,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
+) -> pd.DataFrame:
     out = [
         {
             "Date": _iso_date(row.get("event_date")) or "-",
             "Days Until": _event_days_until(row, today=today),
+            "Window": _event_window_label(row, today=today, recent_days=recent_days),
             "Type": row.get("event_type") or "-",
             "Symbol": row.get("symbol") or "-",
             "Title": row.get("title") or "-",
@@ -2428,12 +2512,14 @@ def build_market_events_snapshot(
     end_date: str | None = None,
     event_type: str | None = "FOMC_MEETING",
     horizon_days: int = 365,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
     limit: int = 200,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
     today_value = today or date.today()
-    normalized_start = _iso_date(start_date) or today_value.isoformat()
+    bounded_recent_days = max(0, int(recent_days or 0))
+    normalized_start = _iso_date(start_date) or (today_value - timedelta(days=bounded_recent_days)).isoformat()
     normalized_end = _iso_date(end_date) or (today_value + timedelta(days=int(horizon_days or 365))).isoformat()
     normalized_type = _normalize_event_type_value(event_type)
     query = query_fn or _default_query
@@ -2453,11 +2539,12 @@ def build_market_events_snapshot(
                 event_type=normalized_type,
                 message="No stored market events match the selected window. Run a matching event calendar collector first.",
             )
-        coverage = _event_coverage(rows, today=today_value)
+        rows = _prioritize_event_rows(rows, today=today_value, recent_days=bounded_recent_days)
+        coverage = _event_coverage(rows, today=today_value, recent_days=bounded_recent_days)
         return {
             "status": "OK",
             "event_type": normalized_type or "All",
-            "rows": _event_rows_frame(rows, today=today_value),
+            "rows": _event_rows_frame(rows, today=today_value, recent_days=bounded_recent_days),
             "date_window": {"start_date": normalized_start, "end_date": normalized_end},
             "coverage": coverage,
             "warnings": _event_warnings(coverage),
@@ -3595,73 +3682,123 @@ def _macro_week_item_tone(row: dict[str, Any]) -> str:
     return "neutral"
 
 
+def _macro_week_is_major_macro(row: dict[str, Any]) -> bool:
+    return _macro_week_cluster_label(row.get("Type")) in {"FOMC", "CPI", "PPI", "Employment", "GDP"}
+
+
+def _macro_week_item_from_row(row: dict[str, Any], *, days_until: int | None, window: str) -> dict[str, Any]:
+    return {
+        "date": str(row.get("Date") or "-"),
+        "days_until": days_until,
+        "window": window,
+        "type": str(row.get("Type") or "-"),
+        "cluster": _macro_week_cluster_label(row.get("Type")),
+        "title": str(row.get("Title") or "-"),
+        "symbol": str(row.get("Symbol") or "-"),
+        "source_type": str(row.get("Source Type") or "-"),
+        "validation": str(row.get("Validation") or "-"),
+        "freshness": str(row.get("Freshness") or "-"),
+        "quality_action": str(row.get("Quality Action") or "-"),
+        "importance": str(row.get("Importance") or "-"),
+        "tone": _macro_week_item_tone(row),
+    }
+
+
 def build_overview_macro_week_lane(
     events_snapshot: dict[str, Any] | None = None,
     *,
     horizon_days: int = 14,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
     limit: int = 8,
 ) -> dict[str, Any]:
-    """Summarize existing event-calendar rows into a near-term macro week context lane."""
+    """Summarize existing event-calendar rows into a recent + upcoming macro context lane."""
     snapshot = events_snapshot or {}
     rows = _cockpit_frame(snapshot)
     coverage = dict(snapshot.get("coverage") or {})
+    bounded_horizon_days = max(0, int(horizon_days or 14))
+    bounded_recent_days = max(0, int(recent_days or 0))
     boundary_note = (
         "Context-only event calendar: not a trading signal, not Practical Validation, "
         "not Final Review decision, and not monitoring signal."
     )
     if rows.empty or "Days Until" not in rows:
         return {
-            "schema_version": "overview_macro_week_lane_v1",
+            "schema_version": "overview_macro_week_lane_v2",
             "status": "NO_DATA",
             "summary": {
                 "headline": "Macro week context unavailable",
                 "detail": str(snapshot.get("message") or "No stored event rows are available."),
                 "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
                 "next_event_label": "No event in view",
             },
             "coverage": {
                 "event_count": coverage.get("event_count"),
                 "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
                 "official_count": coverage.get("official_count"),
                 "estimate_count": coverage.get("estimate_count"),
                 "latest_collected_at": coverage.get("latest_collected_at"),
             },
             "clusters": {},
+            "recent_items": [],
+            "upcoming_items": [],
             "items": [],
             "boundary_note": boundary_note,
         }
 
     working = rows.copy()
     working["_days_until"] = working["Days Until"].map(_safe_float)
-    near_rows = working[
+    recent_rows = working[
+        working["_days_until"].notna()
+        & (working["_days_until"] < 0)
+        & (working["_days_until"] >= -bounded_recent_days)
+    ].copy()
+    if not recent_rows.empty:
+        recent_rows = recent_rows[
+            recent_rows.apply(lambda row_value: _macro_week_is_major_macro(dict(row_value.dropna().to_dict())), axis=1)
+        ].copy()
+    upcoming_rows = working[
         working["_days_until"].notna()
         & (working["_days_until"] >= 0)
-        & (working["_days_until"] <= max(0, int(horizon_days or 14)))
+        & (working["_days_until"] <= bounded_horizon_days)
     ].copy()
+    near_rows = pd.concat([recent_rows, upcoming_rows], ignore_index=True)
     if near_rows.empty:
         return {
-            "schema_version": "overview_macro_week_lane_v1",
+            "schema_version": "overview_macro_week_lane_v2",
             "status": snapshot.get("status") or "OK",
             "summary": {
-                "headline": f"No stored major events in the next {int(horizon_days or 14)} days",
+                "headline": f"No stored major events from the last {bounded_recent_days} days through the next {bounded_horizon_days} days",
                 "detail": "Open Events for the full calendar and source quality view.",
                 "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
                 "next_event_label": "No event in view",
             },
             "coverage": {
                 "event_count": coverage.get("event_count"),
                 "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
                 "official_count": coverage.get("official_count"),
                 "estimate_count": coverage.get("estimate_count"),
                 "latest_collected_at": coverage.get("latest_collected_at"),
             },
             "clusters": {},
+            "recent_items": [],
+            "upcoming_items": [],
             "items": [],
             "boundary_note": boundary_note,
         }
 
-    near_rows = near_rows.sort_values(by=["_days_until", "Date", "Type"], kind="mergesort")
-    items: list[dict[str, Any]] = []
+    recent_rows = recent_rows.sort_values(by=["_days_until", "Date", "Type"], ascending=[False, False, True], kind="mergesort")
+    upcoming_rows = upcoming_rows.sort_values(by=["_days_until", "Date", "Type"], kind="mergesort")
+    near_rows = pd.concat([recent_rows, upcoming_rows], ignore_index=True)
+    recent_items: list[dict[str, Any]] = []
+    upcoming_items: list[dict[str, Any]] = []
     cluster_order = ["FOMC", "CPI", "PPI", "Employment", "GDP", "Earnings", "Other"]
     clusters: dict[str, dict[str, Any]] = {
         label: {"label": label, "count": 0, "review_count": 0, "next_date": None, "tone": "neutral"}
@@ -3680,27 +3817,22 @@ def build_overview_macro_week_lane(
         clusters[cluster]["review_count"] += 1 if needs_review else 0
         clusters[cluster]["next_date"] = clusters[cluster]["next_date"] or str(row.get("Date") or "-")
         clusters[cluster]["tone"] = "warning" if clusters[cluster]["review_count"] else tone
-        if len(items) < max(1, int(limit or 8)):
-            items.append(
-                {
-                    "date": str(row.get("Date") or "-"),
-                    "days_until": days_until,
-                    "type": str(row.get("Type") or "-"),
-                    "cluster": cluster,
-                    "title": str(row.get("Title") or "-"),
-                    "symbol": str(row.get("Symbol") or "-"),
-                    "source_type": str(row.get("Source Type") or "-"),
-                    "validation": str(row.get("Validation") or "-"),
-                    "freshness": str(row.get("Freshness") or "-"),
-                    "quality_action": str(row.get("Quality Action") or "-"),
-                    "importance": str(row.get("Importance") or "-"),
-                    "tone": tone,
-                }
-            )
+        item = _macro_week_item_from_row(
+            row,
+            days_until=days_until,
+            window="recent" if days_until is not None and days_until < 0 else "upcoming",
+        )
+        if item["window"] == "recent":
+            recent_items.append(item)
+        else:
+            upcoming_items.append(item)
 
     clusters = {label: value for label, value in clusters.items() if int(value.get("count") or 0) > 0}
     review_count = sum(1 for _, row_value in near_rows.iterrows() if _macro_week_event_needs_review(dict(row_value.to_dict())))
-    next_item = items[0] if items else {}
+    items = (recent_items + upcoming_items)[: max(1, int(limit or 8))]
+    recent_items = recent_items[: max(1, int(limit or 8))]
+    upcoming_items = upcoming_items[: max(1, int(limit or 8))]
+    next_item = upcoming_items[0] if upcoming_items else {}
     next_event_label = (
         f"{next_item.get('type')} in {next_item.get('days_until')}d"
         if next_item
@@ -3714,23 +3846,33 @@ def build_overview_macro_week_lane(
     )
 
     return {
-        "schema_version": "overview_macro_week_lane_v1",
+        "schema_version": "overview_macro_week_lane_v2",
         "status": "REVIEW" if review_count else (snapshot.get("status") or "OK"),
         "summary": {
-            "headline": f"{len(near_rows)} near events in the next {int(horizon_days or 14)} days",
+            "headline": (
+                f"{len(recent_items)} recent major event(s) and {len(upcoming_rows)} upcoming event(s) in view"
+                if recent_items
+                else f"{len(upcoming_rows)} upcoming event(s) in the next {bounded_horizon_days} days"
+            ),
             "detail": f"{official_near_count} official macro rows · {earnings_near_count} earnings rows · {review_count} need source review",
             "near_event_count": int(len(near_rows)),
+            "recent_event_count": int(len(recent_rows)),
+            "upcoming_event_count": int(len(upcoming_rows)),
             "next_event_label": next_event_label,
         },
         "coverage": {
             "event_count": coverage.get("event_count"),
             "near_event_count": int(len(near_rows)),
+            "recent_event_count": int(len(recent_rows)),
+            "upcoming_event_count": int(len(upcoming_rows)),
             "official_count": coverage.get("official_count"),
             "estimate_count": coverage.get("estimate_count"),
             "latest_collected_at": coverage.get("latest_collected_at"),
             "review_count": review_count,
         },
         "clusters": clusters,
+        "recent_items": recent_items,
+        "upcoming_items": upcoming_items,
         "items": items,
         "boundary_note": boundary_note,
     }
@@ -4166,22 +4308,87 @@ def _build_cockpit_sentiment_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _cockpit_event_label(row: dict[str, Any]) -> str:
+    type_label = str(row.get("Type Label") or "").strip()
+    if type_label and type_label != "-":
+        return type_label
+    return _macro_week_cluster_label(row.get("Type"))
+
+
+def _cockpit_event_days_value(row: dict[str, Any]) -> int | None:
+    value = row.get("Days Until") if row else None
+    if value in (None, ""):
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except TypeError:
+        pass
+    safe_value = _safe_float(value)
+    return int(safe_value) if safe_value is not None else None
+
+
+def _cockpit_event_days_korean(days: int | None) -> str:
+    if days is None:
+        return "일정일 확인 필요"
+    if days < 0:
+        return f"{abs(days)}일 전"
+    if days == 0:
+        return "오늘"
+    return f"{days}일 후"
+
+
+def _cockpit_major_event_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    if rows.empty or "Type" not in rows:
+        return pd.DataFrame()
+    return rows[rows["Type"].map(_is_major_macro_event_type)].copy()
+
+
 def _build_cockpit_events_card(snapshot: dict[str, Any]) -> dict[str, Any]:
     coverage = dict(snapshot.get("coverage") or {})
-    row = _cockpit_first_row(snapshot)
+    rows = _cockpit_frame(snapshot)
+    major_rows = _cockpit_major_event_rows(rows)
+    if not major_rows.empty and "Days Until" in major_rows:
+        major_rows["Days Until"] = pd.to_numeric(major_rows["Days Until"], errors="coerce")
+    recent_major = pd.DataFrame()
+    upcoming_major = pd.DataFrame()
+    if not major_rows.empty and "Days Until" in major_rows:
+        recent_major = major_rows[(major_rows["Days Until"] < 0) & (major_rows["Days Until"] >= -EVENT_RECENT_WINDOW_DAYS)].sort_values(
+            ["Days Until", "Date", "Type"],
+            ascending=[False, False, True],
+            kind="mergesort",
+        )
+        upcoming_major = major_rows[major_rows["Days Until"] >= 0].sort_values(
+            ["Days Until", "Date", "Type"],
+            kind="mergesort",
+        )
+    row = dict(recent_major.iloc[0].dropna().to_dict()) if not recent_major.empty else _cockpit_first_row(snapshot)
+    next_major = dict(upcoming_major.iloc[0].dropna().to_dict()) if not upcoming_major.empty else {}
     status = _cockpit_card_status(snapshot.get("status"))
-    next_date = coverage.get("next_event_date") or row.get("Date") or row.get("event_date")
+    next_date = coverage.get("next_event_date") or next_major.get("Date") or row.get("Date") or row.get("event_date")
     title = row.get("Title") or row.get("title") or row.get("Type Label") or "Upcoming events"
-    days = row.get("Days Until") or row.get("days_until")
+    days = _cockpit_event_days_value(row)
     event_count = _cockpit_int(coverage.get("event_count"))
     review_count = _cockpit_int(coverage.get("needs_review_count"))
-    days_text = f"{days}일 후" if days not in (None, "") else "일정일 확인 필요"
+    event_label = _cockpit_event_label(row)
+    if row and days is not None and days < 0 and _is_major_macro_event_type(row.get("Type")):
+        value = f"최근 {event_label} 발표 확인 필요"
+    elif next_major:
+        next_days = _cockpit_event_days_value(next_major)
+        value = f"다음 {_cockpit_event_label(next_major)} {_cockpit_event_days_korean(next_days)}"
+    else:
+        value = str(next_date or "No upcoming event")
+    detail_parts = [str(title), _cockpit_event_days_korean(days)]
+    if next_major and row and next_major.get("Type") != row.get("Type"):
+        next_days = _cockpit_event_days_value(next_major)
+        detail_parts.append(f"다음 {_cockpit_event_label(next_major)} {_cockpit_event_days_korean(next_days)}")
+    detail_parts.append(f"주요 일정 {event_count}개")
     return {
         "id": "events",
         "title": "Near Events",
         "question": "가까운 주요 이벤트가 있나요?",
-        "value": str(next_date or "No upcoming event"),
-        "detail": f"{title} · {days_text} · 주요 일정 {event_count}개",
+        "value": value,
+        "detail": " · ".join(part for part in detail_parts if part and part != "-"),
         "status": "Review" if review_count else status,
         "status_label": _cockpit_status_label("Review" if review_count else status),
         "tone": "warning" if review_count else _cockpit_status_tone(status),
@@ -4252,15 +4459,32 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
 def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
     coverage = dict(snapshot.get("coverage") or {})
     needs_review = _cockpit_int(coverage.get("needs_review_count"))
-    row = _cockpit_first_row(snapshot)
-    days = _cockpit_int(row.get("Days Until") if row else None)
+    rows = _cockpit_frame(snapshot)
+    major_rows = _cockpit_major_event_rows(rows)
+    row: dict[str, Any] = {}
+    if not major_rows.empty and "Days Until" in major_rows:
+        major_rows = major_rows.copy()
+        major_rows["Days Until"] = pd.to_numeric(major_rows["Days Until"], errors="coerce")
+        recent = major_rows[(major_rows["Days Until"] < 0) & (major_rows["Days Until"] >= -EVENT_RECENT_WINDOW_DAYS)].sort_values(
+            ["Days Until", "Date", "Type"],
+            ascending=[False, False, True],
+            kind="mergesort",
+        )
+        upcoming = major_rows[major_rows["Days Until"] >= 0].sort_values(["Days Until", "Date", "Type"], kind="mergesort")
+        if not recent.empty:
+            row = dict(recent.iloc[0].dropna().to_dict())
+        elif not upcoming.empty:
+            row = dict(upcoming.iloc[0].dropna().to_dict())
+    if not row:
+        row = _cockpit_first_row(snapshot)
+    days = _cockpit_event_days_value(row)
     if not row and not needs_review:
         return None
-    if needs_review or 0 <= days <= 7:
+    if needs_review or (days is not None and -EVENT_RECENT_WINDOW_DAYS <= days <= 7):
         return {
             "target_tab": "Events",
             "title": str(row.get("Title") or row.get("Type Label") or "Upcoming event"),
-            "reason": f"{days}일 후" if row else f"확인할 일정 {needs_review}개",
+            "reason": _cockpit_event_days_korean(days) if row else f"확인할 일정 {needs_review}개",
             "action": "시장 context를 해석하기 전에 Events를 확인하세요.",
             "tone": "warning" if needs_review else "primary",
         }

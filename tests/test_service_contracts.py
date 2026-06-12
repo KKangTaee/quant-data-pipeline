@@ -6651,7 +6651,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         model = build_overview_macro_week_lane(snapshot, horizon_days=14)
 
-        self.assertEqual(model["schema_version"], "overview_macro_week_lane_v1")
+        self.assertEqual(model["schema_version"], "overview_macro_week_lane_v2")
         self.assertEqual(model["status"], "REVIEW")
         self.assertEqual(model["summary"]["near_event_count"], 2)
         self.assertEqual(model["summary"]["next_event_label"], "MACRO_CPI in 2d")
@@ -6660,6 +6660,177 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["items"][0]["type"], "MACRO_CPI")
         self.assertNotIn("PASS", model["boundary_note"])
         self.assertIn("not a trading", model["boundary_note"])
+
+    def test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "event_count": 5,
+                "official_count": 3,
+                "estimate_count": 2,
+                "latest_collected_at": "2026-06-12 01:30",
+            },
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Date": "2026-06-10",
+                        "Days Until": -2,
+                        "Type": "MACRO_CPI",
+                        "Title": "CPI: Consumer Price Index for May 2026",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-11",
+                        "Days Until": -1,
+                        "Type": "EARNINGS",
+                        "Symbol": "ORCL",
+                        "Title": "ORCL Earnings Release",
+                        "Source Type": "Provider Estimate",
+                        "Validation": "Not confirmed",
+                        "Freshness": "Current estimate",
+                        "Quality Action": "Treat as unconfirmed; retry later or inspect source",
+                        "Importance": "Medium",
+                    },
+                    {
+                        "Date": "2026-06-17",
+                        "Days Until": 5,
+                        "Type": "FOMC_MEETING",
+                        "Title": "FOMC Meeting: June 16-17*, 2026",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-23",
+                        "Days Until": 11,
+                        "Type": "EARNINGS",
+                        "Symbol": "CCL",
+                        "Title": "CCL Earnings Release",
+                        "Source Type": "Provider Estimate",
+                        "Validation": "Cross-checked",
+                        "Freshness": "Current estimate",
+                        "Quality Action": "No action",
+                        "Importance": "Medium",
+                    },
+                    {
+                        "Date": "2026-06-25",
+                        "Days Until": 13,
+                        "Type": "MACRO_GDP",
+                        "Title": "GDP: Third Estimate",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                ]
+            ),
+        }
+
+        model = build_overview_macro_week_lane(snapshot, horizon_days=14)
+
+        self.assertEqual(model["schema_version"], "overview_macro_week_lane_v2")
+        self.assertEqual(model["summary"]["recent_event_count"], 1)
+        self.assertEqual(model["summary"]["upcoming_event_count"], 3)
+        self.assertIn("recent major event", model["summary"]["headline"])
+        self.assertEqual(model["recent_items"][0]["type"], "MACRO_CPI")
+        self.assertEqual(model["recent_items"][0]["window"], "recent")
+        self.assertEqual(model["upcoming_items"][0]["type"], "FOMC_MEETING")
+        self.assertEqual(model["upcoming_items"][0]["window"], "upcoming")
+        self.assertEqual(model["items"][0]["type"], "MACRO_CPI")
+        self.assertEqual(model["items"][1]["type"], "FOMC_MEETING")
+
+    def test_market_events_snapshot_defaults_to_recent_plus_upcoming_and_prioritizes_major_macro(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        captured: dict[str, object] = {}
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql
+            captured["params"] = list(params or [])
+            return [
+                {
+                    "event_date": "2026-06-10",
+                    "event_type": "MACRO_CPI",
+                    "symbol": None,
+                    "title": "CPI: Consumer Price Index for May 2026",
+                    "source": "bureau_labor_statistics_release_schedule",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.bls.gov/schedule/2026/",
+                    "confidence": 0.95,
+                    "collected_at": "2026-06-11 23:45:00",
+                },
+                {
+                    "event_date": "2026-06-11",
+                    "event_type": "EARNINGS",
+                    "symbol": "ORCL",
+                    "title": "ORCL Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_type": "provider_estimate",
+                    "validation_status": "not_confirmed",
+                    "event_status": "active",
+                    "source_url": "https://finance.yahoo.com/quote/ORCL/analysis",
+                    "confidence": 0.6,
+                    "collected_at": "2026-06-11 23:44:00",
+                },
+                {
+                    "event_date": "2026-06-17",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: June 16-17*, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-06-11 23:44:00",
+                },
+                {
+                    "event_date": "2026-06-23",
+                    "event_type": "EARNINGS",
+                    "symbol": "CCL",
+                    "title": "CCL Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_type": "provider_estimate",
+                    "validation_status": "cross_checked",
+                    "event_status": "active",
+                    "source_url": "https://finance.yahoo.com/quote/CCL/analysis",
+                    "confidence": 0.75,
+                    "collected_at": "2026-06-11 23:44:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 6, 12),
+            horizon_days=14,
+            limit=100,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["date_window"]["start_date"], "2026-06-05")
+        self.assertEqual(snapshot["date_window"]["end_date"], "2026-06-26")
+        self.assertIn("2026-06-05", captured["params"])
+        self.assertEqual(snapshot["coverage"]["recent_event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["upcoming_event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["recent_high_importance_count"], 1)
+        self.assertEqual(snapshot["coverage"]["upcoming_high_importance_count"], 1)
+        self.assertEqual(snapshot["coverage"]["next_event_date"], "2026-06-17")
+        self.assertEqual(snapshot["coverage"]["latest_recent_event_date"], "2026-06-10")
+        self.assertEqual(list(snapshot["rows"]["Type"][:2]), ["MACRO_CPI", "FOMC_MEETING"])
+        self.assertEqual(snapshot["rows"].iloc[0]["Window"], "Recent")
+        self.assertEqual(snapshot["rows"].iloc[1]["Window"], "Upcoming")
 
     def test_overview_source_confidence_catalog_surfaces_provider_caveats_and_review_items(self) -> None:
         from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
@@ -7547,6 +7718,111 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
         self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
         self.assertIn("context 전용", cockpit["boundary_note"])
+
+    def test_overview_macro_context_cockpit_uses_recent_cpi_as_compact_event_cue(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-12"},
+                "rows": pd.DataFrame([{"Symbol": "SNDK", "Return %": 14.5, "Name": "Sandisk", "Sector": "Technology"}]),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-12"},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Group": "Technology",
+                            "Market Cap Weighted Return %": 0.9,
+                            "Positive Symbol Share %": 52.0,
+                        }
+                    ]
+                ),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "summary": {"scenario": "금리 압력", "summary": "Rates and USD are firm."},
+                "scores": pd.DataFrame([{"Score": "Rate Pressure Score", "Value": 64, "Tone": "warning"}]),
+                "coverage": {"standardized_count": 14, "symbol_count": 16, "latest_date": "2026-06-12"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {
+                    "phase_label": "중립",
+                    "headline": "Sentiment is neutral.",
+                    "data_confidence": {"status": "High", "detail": "latest sentiment rows"},
+                },
+                "coverage": {"cnn_score": 55, "cnn_rating": "neutral", "aaii_bull_bear_spread": -1.0},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "event_count": 4,
+                    "next_event_date": "2026-06-17",
+                    "latest_recent_event_date": "2026-06-10",
+                    "needs_review_count": 0,
+                    "official_count": 2,
+                    "estimate_count": 1,
+                    "latest_collected_at": "2026-06-12 01:30",
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Date": "2026-06-10",
+                            "Days Until": -2,
+                            "Window": "Recent",
+                            "Type": "MACRO_CPI",
+                            "Type Label": "CPI",
+                            "Title": "CPI: Consumer Price Index for May 2026",
+                            "Source Type": "Official",
+                            "Validation": "Official",
+                            "Freshness": "Official",
+                            "Quality Action": "No action",
+                            "Importance": "High",
+                        },
+                        {
+                            "Date": "2026-06-17",
+                            "Days Until": 5,
+                            "Window": "Upcoming",
+                            "Type": "FOMC_MEETING",
+                            "Type Label": "FOMC",
+                            "Title": "FOMC Meeting: June 16-17*, 2026",
+                            "Source Type": "Official",
+                            "Validation": "Official",
+                            "Freshness": "Official",
+                            "Quality Action": "No action",
+                            "Importance": "High",
+                        },
+                    ]
+                ),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 4, "due_count": 0, "stale_count": 1, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Area": "Macro Calendar",
+                            "Status": "Stale",
+                            "Data Freshness": "covered 2/4",
+                            "Next Action": "Refresh Macro Calendar or import the BLS .ics file.",
+                        }
+                    ]
+                ),
+            },
+        )
+
+        event_card = cockpit["cards"][4]
+        data_cue = cockpit["interpretation_cues"][2]
+        self.assertEqual(event_card["value"], "최근 CPI 발표 확인 필요")
+        self.assertIn("2일 전", event_card["detail"])
+        self.assertIn("다음 FOMC 5일 후", event_card["detail"])
+        self.assertEqual(cockpit["interpretation_cues"][0]["value"], "최근 CPI 발표 확인 필요")
+        self.assertEqual(data_cue["label"], "자료 상태 주의점")
+        self.assertNotIn("job", str(data_cue["detail"]).lower())
+        self.assertNotIn("rows", str(data_cue["detail"]).lower())
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
@@ -8888,6 +9164,55 @@ END:VCALENDAR
         self.assertEqual(rows[0]["raw_payload"]["import_method"], "official_ics_file")
         self.assertEqual(rows[0]["raw_payload"]["source_file_name"], "bls.ics")
         self.assertEqual(rows[2]["raw_payload"]["reference_period"], "May 2026")
+
+    def test_bls_macro_calendar_parsers_accept_abbreviated_cpi_ppi_titles(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Date Time</th><th>Release</th></tr></thead>
+          <tbody>
+            <tr><td>Wednesday, June 10, 2026 08:30 AM</td><td>CPI for May 2026</td></tr>
+            <tr><td>Thursday, June 11, 2026 08:30 AM</td><td>PPI for May 2026</td></tr>
+            <tr><td>Friday, June 5, 2026 08:30 AM</td><td>The Employment Situation for May 2026</td></tr>
+          </tbody>
+        </table>
+        """
+        html_rows = mi.parse_bls_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bls.gov/schedule/2026/",
+            year=2026,
+        )
+
+        ics_text = """
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:cpi-short-20260610@bls.gov
+DTSTART:20260610T123000Z
+SUMMARY:CPI for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:ppi-short-20260611@bls.gov
+DTSTART:20260611T123000Z
+SUMMARY:PPI for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:jobs-20260605@bls.gov
+DTSTART:20260605T123000Z
+SUMMARY:The Employment Situation for May 2026
+END:VEVENT
+END:VCALENDAR
+        """
+        ics_rows = mi.parse_bls_macro_calendar_events_from_ics(
+            ics_text,
+            years=[2026],
+            source_name="bls.ics",
+        )
+
+        self.assertEqual([row["event_type"] for row in html_rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual([row["event_type"] for row in ics_rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual(html_rows[0]["raw_payload"]["reference_period"], "May 2026")
+        self.assertEqual(ics_rows[1]["raw_payload"]["reference_period"], "May 2026")
 
     def test_collect_bls_macro_calendar_ics_writes_events(self) -> None:
         from finance.data import market_intelligence as mi
