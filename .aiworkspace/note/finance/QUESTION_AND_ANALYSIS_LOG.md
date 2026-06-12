@@ -7701,4 +7701,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: 기존 3A~5B 흐름을 그대로 이어가지 말고 Backtest Analysis / strategy runtime / validation handoff / history replay / saved replay의 올바른 제품 흐름을 다시 정의해 달라고 요청함.
 - Interpreted goal: 구현 없이 새 product direction research bundle을 만들고, 현재 branch drift, 외부 benchmark, 전략군별 maturity, 1차~n차 잠정 roadmap을 정리해야 함.
 - Analysis result: Backtest Analysis는 실행 / 비교 / 후보 source / replay 중심으로 유지하고, evidence / governance / diagnostics는 compact handoff와 Practical Validation / Final Review / Operations로 분리하는 방향이 맞다. 4C와 5A/5B는 유지 후보, strict quarterly 5C와 Risk-On downstream promotion은 보류 후보로 정리했다.
-- Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`를 본다. 다음 세션 결정점은 1차 `Backtest Result Handoff Contract` 승인 여부다.
+- Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`를 본다. 각 새 세션 요청문과 차수별 개발 guideline은 `DEVELOPMENT_SESSION_GUIDE.md`에 남겼고, 다음 세션 결정점은 1차 `Backtest Result Handoff Contract` 승인 여부다.

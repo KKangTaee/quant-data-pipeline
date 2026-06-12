@@ -67,5 +67,6 @@ Exclude:
 | `UI_PATTERNS.md` | Product flow and UI/workflow patterns to reuse or avoid. |
 | `FEATURE_CANDIDATES.md` | Now / Next / Later / Parking Lot candidates with impact / effort / risk scoring. |
 | `RECOMMENDATION.md` | Tentative 1차~n차 roadmap and decision checkpoint. |
+| `DEVELOPMENT_SESSION_GUIDE.md` | New-session development guide with per-stage prompts, boundaries, completion criteria, and verification guidance. |
 | `SOURCES.md` | Local and web sources with access dates and evidence labels. |
 | `RISKS.md` | Evidence gaps, boundary risks, and approval risks. |

@@ -4923,3 +4923,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`에서 Backtest Analysis / strategy runtime / validation handoff / history replay / saved replay 제품 방향을 다시 audit했다.
   - 결론은 Backtest Analysis를 실행 / 비교 / 후보 source / replay 중심으로 유지하고, evidence / governance / diagnostics는 compact handoff 또는 downstream validation/review/monitoring으로 분리하는 것이다.
   - 4C execution-first reset과 5A/5B runtime/result contract hardening은 유지 후보, 5C strict quarterly formalization과 Risk-On downstream promotion은 별도 승인 전까지 보류 후보로 정리했다.
+  - 새 세션별 개발 요청에 사용할 단계별 guide는 `DEVELOPMENT_SESSION_GUIDE.md`에 추가했다. 1차~5차별 session prompt, scope, non-scope, completion criteria, verification handoff를 담는다.
