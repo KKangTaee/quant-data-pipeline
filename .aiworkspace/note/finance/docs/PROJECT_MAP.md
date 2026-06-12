@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-06-12
 
 ## Project Summary
 
@@ -63,6 +63,7 @@ Last Verified: 2026-06-09
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
 | Reference contextual help renderer | `app/web/reference_contextual_help.py` |
 | Backtest Compare visual components | `app/web/backtest_compare_components.py` |
+| Backtest Compare saved replay UI | `app/web/backtest_compare_saved_replay.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and surface-aware read-only CNN / AAII market sentiment context overlay |
 | Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |
 | Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
@@ -201,7 +202,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Overview market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
-| Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare_components.py` |
+| Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare_components.py`, saved Mix replay UI는 `app/web/backtest_compare_saved_replay.py` |
 | Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |
 | `backtest-dev` 전략 결과를 제품 workflow로 승격 검토 | `.aiworkspace/note/finance/reports/backtests/STRATEGY_PROMOTION_CONTRACT.md`, `.aiworkspace/note/finance/reports/backtests/templates/STRATEGY_PROMOTION_CONTRACT_TEMPLATE.md`, `.aiworkspace/plugins/quant-finance-workflow/scripts/check_strategy_promotion_contract.py`, `docs/architecture/STRATEGY_IMPLEMENTATION_FLOW.md`, `docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
 | Backtest real-money / guardrail / deployment readiness helper 수정 | `app/runtime/backtest_real_money.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/web/backtest_history_helpers.py`, related `app/services/backtest_*` replay / execution callers |

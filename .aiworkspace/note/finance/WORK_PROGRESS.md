@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
+  - Latest completed structure work is 6A Backtest Compare Saved Replay Split in [backtest-compare-saved-replay-split-20260612](./tasks/active/backtest-compare-saved-replay-split-20260612/STATUS.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 - historical full archive:
@@ -32,6 +32,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-12 - 6A Backtest Compare Saved Replay Split
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-compare-saved-replay-split-20260612/` as Large Surface Refactor Round 2 6A.
+- Added `app/web/backtest_compare_saved_replay.py` for saved Mix table, replay parity snapshot, saved replay service action, replay result card, mix validation board, and saved Mix Practical Validation handoff UI.
+- `app/web/backtest_compare.py` keeps `render_compare_portfolio_workspace`, new Mix orchestration, weighted result / save / handoff panels, and strategy-specific forms; registry / saved / run-history JSONL source-of-truth was not rewritten.
+- Verification passed for py_compile, focused boundary tests, `git diff --check`, and Browser QA; full service contract suite still has an unrelated macro thermometer expectation mismatch recorded in the task `RISKS.md`.
+- Next structure step: 6B weighted result / Practical Validation handoff panel split.
 
 ### 2026-06-09 - Prototype Legacy Cleanup / Removal
 - Completed `.aiworkspace/note/finance/tasks/active/prototype-legacy-cleanup-20260609/` as the legacy-flow cleanup pass.

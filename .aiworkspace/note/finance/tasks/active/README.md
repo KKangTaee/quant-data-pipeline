@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-12
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `backtest-compare-saved-replay-split-20260612` | Completed record | Large Surface Refactor Round 2 6A. Backtest Compare saved Mix replay UI/helpers moved to `app/web/backtest_compare_saved_replay.py` while preserving public entrypoint, session-state keys, service boundary, and JSONL source-of-truth. |
 | `robustness-experiment-registry-20260608` | Completed record | 기존 Robustness Lab / temporal / realism evidence를 `robustness_run_set_id`가 있는 compact run-set read model로 묶고 Practical Validation / Final Review에 provenance badge와 packet snapshot을 연결한 기록이다. |
 | `reference-drift-guard-qa-polish-v5-20260608` | Completed record | contextual Reference help가 Glossary term / Reference link boundary에서 drift되지 않도록 guard와 표시 polish를 추가한 5차 기록이다. |
 | `reference-contextual-links-v4-20260608` | Completed record | 주요 Backtest / Operations 화면에 read-only Reference help expander를 연결한 4차 기록이다. |
@@ -58,4 +59,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-08 기준 191개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-12 기준 194개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.

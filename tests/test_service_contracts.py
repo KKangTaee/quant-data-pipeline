@@ -4262,6 +4262,45 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertEqual(html_text("<unsafe>"), "&lt;unsafe&gt;")
         self.assertEqual(status_chip_tone("Ready For Next Review"), "pass")
 
+    def test_backtest_compare_delegates_saved_replay_to_dedicated_module(self) -> None:
+        import ast
+
+        source = Path("app/web/backtest_compare.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        function_names = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("app.web.backtest_compare_saved_replay", imported_modules)
+        self.assertNotIn("_render_saved_portfolio_workspace", function_names)
+        self.assertNotIn("_run_saved_portfolio_record", function_names)
+        self.assertNotIn("_render_saved_portfolio_replay_parity_snapshot", function_names)
+        self.assertNotIn("_render_saved_mix_validation_board", function_names)
+        self.assertNotIn("_build_saved_mix_validation_prefill_payload", function_names)
+        self.assertNotIn("_saved_portfolio_replay_matches_selected_record", function_names)
+        self.assertNotIn("_render_saved_mix_replay_result_card", function_names)
+
+    def test_backtest_compare_saved_replay_module_owns_render_entrypoint(self) -> None:
+        spec = importlib.util.find_spec("app.web.backtest_compare_saved_replay")
+        self.assertIsNotNone(spec)
+
+        from app.web.backtest_compare_saved_replay import (
+            SavedReplayRenderContext,
+            is_saved_mix_replay_context,
+            render_saved_portfolio_workspace,
+        )
+
+        self.assertTrue(callable(render_saved_portfolio_workspace))
+        self.assertTrue(callable(is_saved_mix_replay_context))
+        self.assertTrue(hasattr(SavedReplayRenderContext, "__dataclass_fields__"))
+
     def test_backtest_runtime_facade_delegates_risk_on_momentum_to_dedicated_module(self) -> None:
         import ast
 

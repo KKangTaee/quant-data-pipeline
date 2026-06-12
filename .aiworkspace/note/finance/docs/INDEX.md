@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-06-12
 
 ## Purpose
 
@@ -24,8 +24,8 @@ Last Verified: 2026-06-09
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Prototype Legacy Cleanup / Removal 2026-06-09](../tasks/active/prototype-legacy-cleanup-20260609/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis with strategy promotion handoff contract, Practical Validation / Final Review, Operations / Portfolio Monitoring with explicit snapshot/review loop, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
+- Latest completed task: [Backtest Compare Saved Replay Split 6A 2026-06-12](../tasks/active/backtest-compare-saved-replay-split-20260612/STATUS.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis with strategy promotion handoff contract and Backtest Compare saved replay UI split, Practical Validation / Final Review, Operations / Portfolio Monitoring with explicit snapshot/review loop, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
 

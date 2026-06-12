@@ -17,13 +17,23 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
+  - Latest completed structure work is 6A Backtest Compare Saved Replay Split in [backtest-compare-saved-replay-split-20260612](./tasks/active/backtest-compare-saved-replay-split-20260612/STATUS.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-06-12 - Saved Mix replay UI belongs in a focused Backtest Compare module
+- User request:
+  - Large Surface Refactor Round 2를 6A만 진행해 `Backtest Compare saved replay UI split`을 완료해 달라고 요청함.
+- Interpreted goal:
+  - `app/web/backtest_compare.py`의 public Portfolio Mix Builder entrypoint와 existing session-state / saved replay behavior는 유지하고, saved Mix replay render/helper 책임만 focused module로 분리한다.
+- Analysis result:
+  - Saved Mix table, replay parity, replay service action, replay result card, mix validation board, saved Mix Practical Validation handoff는 응집된 UI slice다. `app/web/backtest_compare_saved_replay.py`가 이를 소유하고, `app/web/backtest_compare.py`는 callback context로 orchestration boundary를 유지하는 구조가 맞다.
+- Follow-up:
+  - 6B는 weighted result / Practical Validation handoff panel split, 6C는 strategy-specific form body split이다. Full service contract suite의 macro thermometer mismatch는 별도 baseline issue로 추적한다.
 
 ### 2026-06-09 - Prototype legacy flows should not remain primary product routes
 - User request:

@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-06-12
 
 ## Current State
 
@@ -9,8 +9,8 @@ Current active task: none.
 
 Latest completed task:
 
-- `prototype-legacy-cleanup-20260609`
-  - 5C physical cleanup extracted current Practical Validation handoff helpers, deleted legacy Candidate Review / Portfolio Proposal UI/helper modules, and preserved registry / saved JSONL compatibility records.
+- `backtest-compare-saved-replay-split-20260612`
+  - 6A split moved Backtest Compare saved Mix replay UI/helpers into `app/web/backtest_compare_saved_replay.py`, preserved `render_compare_portfolio_workspace`, session-state keys, saved replay service boundary, and registry / saved / run-history JSONL source-of-truth.
 
 Latest completed docs cleanup task:
 
@@ -25,6 +25,7 @@ Recent post-merge cleanup records:
 
 Recent structure audit records:
 
+- `backtest-compare-saved-replay-split-20260612`: Large Surface Refactor Round 2 6A / Backtest Compare saved Mix replay UI split
 - `refactor-round-closeout-20260607`: 10차 structure / refactor baseline closeout, residual split decision, and handoff audit
 - `backtest-compare-components-split-20260607`: 9차 Backtest Compare Streamlit split first pass / Portfolio Mix Builder visual component extraction
 - `ingestion-diagnostic-facade-20260607`: 7차 large Streamlit file split 7B / Ingestion read-only diagnostic facade extraction
@@ -49,9 +50,9 @@ The current active task source of truth is:
 
 ## Review Count
 
-Reviewed on 2026-06-08:
+Reviewed on 2026-06-12:
 
-- `tasks/active`: 191 task folders
+- `tasks/active`: 194 task folders
 - `tasks/done`: README only
 
 Because `tasks/done` has not been used as a full task folder archive, this cleanup does not move all retained task folders.
