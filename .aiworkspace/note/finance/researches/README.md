@@ -1,7 +1,7 @@
 # Finance Research Workspace
 
 Status: Active
-Last Verified: 2026-06-02
+Last Verified: 2026-06-12
 
 ## Purpose
 
@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/backtest-direction-reset-research-20260612/` | Backtest Analysis와 strategy maturity 흐름을 panel 확장 중심이 아니라 실행, replay, validation handoff 중심으로 재정의하는 제품 방향 reset research |
 | `active/2026-06-backtest-strategy-direction/` | Backtest 전략군의 성숙도, 장단점, 약점 matrix, 3차 구현 세션 handoff를 정리하는 내부 방향성 research |
 | `active/2026-06-reference-guides-revamp/` | Reference > Guides를 현재 finance console 흐름에 맞는 task-first Reference Center로 개편하기 위한 제품 audit, benchmark, UX/UI pattern, 단계별 개발 가이드 |
 | `active/2026-06-why-it-moved-benchmark/` | Overview > Market Movers > Why It Moved를 prototype-level link / metadata panel에서 manual investigation board로 개선하기 위한 벤치마킹과 V1.6 UX 가이드 |

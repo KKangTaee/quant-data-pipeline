@@ -7695,3 +7695,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Backtest Analysis 기본 화면은 실제 전략 실행 / 비교 / 후보 생성 중심이어야 하며, Reference help와 3A~4B evidence / governance / ETF workbench 패널은 기본 화면에서 내려야 함.
 - Analysis result: 기존 패널은 삭제보다 `전략 개발 참고` advanced control 뒤에 숨기는 편이 안전하다. 이렇게 하면 3A~4B 산출물은 보존하되 일반 백테스트 실행 흐름을 방해하지 않는다.
 - Follow-up: `app/services/backtest_analysis_research_board.py`와 `app/web/backtest_analysis.py`를 갱신해 기본 화면을 execution-first로 바꾸고, 참고 패널은 명시적으로 열 때만 보이게 했다. 다음 개발 방향은 evidence panel 추가보다 전략 로직 / 데이터 계약 / 검증 가능성 / prototype 성숙화 우선이다.
+
+### 2026-06-12 - Backtest 제품 방향 리서치부터 다시 시작한다
+
+- User request: 기존 3A~5B 흐름을 그대로 이어가지 말고 Backtest Analysis / strategy runtime / validation handoff / history replay / saved replay의 올바른 제품 흐름을 다시 정의해 달라고 요청함.
+- Interpreted goal: 구현 없이 새 product direction research bundle을 만들고, 현재 branch drift, 외부 benchmark, 전략군별 maturity, 1차~n차 잠정 roadmap을 정리해야 함.
+- Analysis result: Backtest Analysis는 실행 / 비교 / 후보 source / replay 중심으로 유지하고, evidence / governance / diagnostics는 compact handoff와 Practical Validation / Final Review / Operations로 분리하는 방향이 맞다. 4C와 5A/5B는 유지 후보, strict quarterly 5C와 Risk-On downstream promotion은 보류 후보로 정리했다.
+- Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`를 본다. 다음 세션 결정점은 1차 `Backtest Result Handoff Contract` 승인 여부다.
