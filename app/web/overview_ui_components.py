@@ -218,12 +218,13 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cockpit {
   margin: 0.5rem 0 0.95rem 0;
-  padding: 0.78rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 4px solid var(--ov-cockpit-tone, var(--ov-mi-color-neutral));
-  border-radius: var(--ov-mi-radius-panel);
+  padding: 0.78rem 0 0.82rem 0.78rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-cockpit-tone, var(--ov-mi-color-neutral));
+  border-radius: 0;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
     var(--ov-mi-color-surface);
 }
 .ov-macro-cockpit-head {
@@ -271,42 +272,42 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cockpit-rail {
   display: grid;
-  grid-template-columns: minmax(10rem, 0.58fr) minmax(18rem, 1.35fr) minmax(12rem, 0.8fr);
+  grid-template-columns: 1fr;
   gap: 0;
   margin: 0.12rem 0 0.68rem 0;
   border-top: 1px solid var(--ov-mi-border-subtle);
   border-bottom: 1px solid var(--ov-mi-border-subtle);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 7%, transparent), rgba(255,255,255,0.74)),
-    var(--ov-mi-color-surface-subtle);
+  background: color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface));
 }
-.ov-macro-cockpit-rail-item {
+.ov-macro-status-item {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.52fr) minmax(10rem, 0.86fr) minmax(0, 1.35fr);
+  gap: var(--ov-mi-gap-md);
+  align-items: baseline;
   min-width: 0;
-  padding: 0.58rem 0.72rem;
-  border-left: 1px solid var(--ov-mi-border-faint);
+  padding: 0.48rem 0.3rem 0.48rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
 }
-.ov-macro-cockpit-rail-item:first-child {
-  border-left: 0;
+.ov-macro-status-item:first-child {
+  border-top: 0;
 }
-.ov-macro-cockpit-rail-label {
+.ov-macro-status-label {
   color: var(--ov-rail-tone, var(--ov-mi-color-neutral));
   font-size: var(--ov-mi-font-xs);
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.1;
 }
-.ov-macro-cockpit-rail-value {
+.ov-macro-status-value {
   color: var(--ov-mi-color-text);
   font-size: 0.94rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
-  margin-top: 0.16rem;
   overflow-wrap: anywhere;
 }
-.ov-macro-cockpit-rail-detail {
+.ov-macro-status-detail {
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-caption);
   line-height: 1.22;
-  margin-top: 0.12rem;
   overflow-wrap: anywhere;
 }
 .ov-macro-brief,
@@ -346,11 +347,12 @@ def overview_ui_css() -> str:
   grid-template-columns: 2.1rem minmax(0, 1fr);
   gap: var(--ov-mi-gap-sm);
   min-width: 0;
-  padding: 0.58rem 0.66rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 3px solid var(--ov-row-tone, var(--ov-mi-color-neutral));
-  border-radius: var(--ov-mi-radius-card);
-  background: rgba(255,255,255,0.9);
+  padding: 0.54rem 0.18rem 0.54rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
+}
+.ov-macro-brief-row:first-child {
+  border-top: 0;
 }
 .ov-macro-brief-step {
   display: inline-flex;
@@ -395,37 +397,43 @@ def overview_ui_css() -> str:
 .ov-macro-brief-detail {
   margin-top: 0.22rem;
 }
-.ov-macro-cues-grid {
+.ov-macro-cues-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--ov-mi-gap-sm);
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  list-style: none;
 }
 .ov-macro-cue-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.15fr) minmax(8rem, 0.85fr);
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
   min-width: 0;
-  padding: 0.5rem 0.58rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 3px solid var(--ov-cue-tone, var(--ov-mi-color-neutral));
-  border-radius: var(--ov-mi-radius-card);
-  background: rgba(248,250,252,0.72);
+  padding: 0.5rem 0.18rem 0.5rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
+}
+.ov-macro-cue-row:first-child {
+  border-top: 0;
 }
 .ov-macro-cue-head {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   gap: var(--ov-mi-gap-sm);
   align-items: flex-start;
 }
 .ov-macro-cue-status {
-  flex: 0 0 auto;
-  max-width: 8rem;
   color: var(--ov-cue-tone, var(--ov-mi-color-neutral));
   font-size: var(--ov-mi-font-xs);
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.14;
-  text-align: right;
   overflow-wrap: anywhere;
 }
 .ov-macro-cue-value {
-  margin-top: 0.22rem;
   color: var(--ov-mi-color-text);
   font-size: 0.9rem;
   font-weight: var(--ov-mi-weight-heading);
@@ -433,16 +441,13 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-macro-cue-detail {
-  margin-top: 0.2rem;
   font-size: var(--ov-mi-font-xs);
 }
 .ov-macro-cockpit-row-meta {
   display: flex;
   gap: var(--ov-mi-gap-xs);
   flex-wrap: wrap;
-  margin-top: 0.42rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--ov-mi-border-faint);
+  margin-top: 0.26rem;
   font-size: var(--ov-mi-font-xs);
 }
 .ov-macro-cockpit-badges {
@@ -537,18 +542,17 @@ def overview_ui_css() -> str:
   line-height: 1.1;
   white-space: nowrap;
 }
-.ov-source-confidence-grid {
+.ov-source-confidence-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--ov-mi-gap-sm);
+  gap: 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
 }
-.ov-historical-analog {
+.ov-historical-analog-row {
   margin-top: 0.66rem;
-  padding: 0.6rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 3px solid var(--ov-analog-tone, var(--ov-mi-color-neutral));
-  border-radius: var(--ov-mi-radius-panel);
-  background: rgba(255,255,255,0.9);
+  padding: 0.58rem 0 0.08rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
 .ov-historical-analog-head {
   display: flex;
@@ -565,7 +569,7 @@ def overview_ui_css() -> str:
 .ov-historical-analog-detail,
 .ov-historical-analog-meta,
 .ov-historical-analog-limitations,
-.ov-historical-analog-empty {
+.ov-historical-analog-note {
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-caption);
   line-height: 1.25;
@@ -603,12 +607,10 @@ def overview_ui_css() -> str:
 .ov-historical-analog-table td:first-child {
   text-align: left;
 }
-.ov-historical-analog-empty {
+.ov-historical-analog-note {
   margin-top: 0.44rem;
-  padding: 0.42rem 0.48rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-radius: var(--ov-mi-radius-card);
-  background: rgba(248,250,252,0.74);
+  padding-top: 0.34rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
 }
 .ov-historical-analog-limitations {
   margin-top: 0.4rem;
@@ -616,19 +618,18 @@ def overview_ui_css() -> str:
 .ov-source-confidence-body {
   padding-top: 0.12rem;
 }
-.ov-source-confidence-card {
+.ov-source-confidence-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.25fr) minmax(8rem, 0.85fr);
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
   min-width: 0;
-  padding: 0.48rem 0.54rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 3px solid var(--ov-source-tone, var(--ov-mi-color-neutral));
-  border-radius: var(--ov-mi-radius-card);
-  background: rgba(255,255,255,0.86);
+  padding: 0.48rem 0.18rem 0.48rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
-.ov-source-confidence-card-head {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--ov-mi-gap-sm);
-  align-items: flex-start;
+.ov-source-confidence-row:first-child {
+  border-top: 0;
 }
 .ov-source-confidence-surface {
   color: var(--ov-source-tone, var(--ov-mi-color-neutral));
@@ -637,40 +638,34 @@ def overview_ui_css() -> str:
   line-height: 1.12;
   overflow-wrap: anywhere;
 }
-.ov-source-confidence-card-status {
-  flex: 0 0 auto;
+.ov-source-confidence-row-status {
   color: var(--ov-source-tone, var(--ov-mi-color-neutral));
   font-size: var(--ov-mi-font-xs);
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.12;
-  text-align: right;
-}
-.ov-source-confidence-card-title {
   margin-top: 0.18rem;
+}
+.ov-source-confidence-row-title {
   color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-body);
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
   overflow-wrap: anywhere;
 }
-.ov-source-confidence-card-detail,
-.ov-source-confidence-card-meta,
-.ov-source-confidence-card-caveat {
+.ov-source-confidence-row-detail,
+.ov-source-confidence-row-meta,
+.ov-source-confidence-row-caveat {
   color: var(--ov-mi-color-text-subtle);
   font-size: var(--ov-mi-font-xs);
   line-height: 1.23;
   overflow-wrap: anywhere;
 }
-.ov-source-confidence-card-detail {
+.ov-source-confidence-row-detail {
   margin-top: 0.14rem;
 }
-.ov-source-confidence-card-meta {
-  margin-top: 0.22rem;
-  padding-top: 0.22rem;
-  border-top: 1px solid var(--ov-mi-border-faint);
-}
-.ov-source-confidence-card-caveat {
-  margin-top: 0.16rem;
+.ov-source-confidence-row-meta,
+.ov-source-confidence-row-caveat {
+  margin-top: 0;
 }
 .ov-source-confidence-boundary {
   margin-top: 0.44rem;
@@ -681,10 +676,9 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cockpit-boundary {
   margin-top: 0.56rem;
-  padding: 0.42rem 0.5rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-radius: var(--ov-mi-radius-card);
-  background: rgba(248,250,252,0.76);
+  padding-top: 0.42rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
 .ov-macro-cockpit-refresh-assist {
   margin-top: 0.5rem;
@@ -1832,13 +1826,11 @@ def overview_ui_css() -> str:
   .ov-macro-cockpit-rail {
     grid-template-columns: 1fr;
   }
-  .ov-macro-cockpit-rail-item,
-  .ov-macro-cockpit-rail-item:first-child {
-    border-left: 0;
-    border-top: 1px solid var(--ov-mi-border-faint);
-  }
-  .ov-macro-cockpit-rail-item:first-child {
-    border-top: 0;
+  .ov-macro-status-item,
+  .ov-macro-cue-row,
+  .ov-source-confidence-row {
+    grid-template-columns: 1fr;
+    gap: var(--ov-mi-gap-xs);
   }
   .ov-macro-week-section-head {
     display: block;
@@ -1847,8 +1839,6 @@ def overview_ui_css() -> str:
     margin-top: 0.12rem;
     text-align: left;
   }
-  .ov-macro-cues-grid,
-  .ov-source-confidence-grid,
   .ov-ia-closeout-grid,
   .ov-data-handoff-grid,
   .ov-breadth-card-grid,
@@ -2026,10 +2016,10 @@ def _macro_cockpit_rail_html(items: list[dict[str, Any]]) -> str:
     for item in items[:3]:
         tone_color = escape(_overview_tone_color(item.get("tone")))
         html.append(
-            f'<div class="ov-macro-cockpit-rail-item" style="--ov-rail-tone:{tone_color};">'
-            f'<div class="ov-macro-cockpit-rail-label">{escape(_display_value(item.get("label")))}</div>'
-            f'<div class="ov-macro-cockpit-rail-value">{escape(_display_value(item.get("value")))}</div>'
-            f'<div class="ov-macro-cockpit-rail-detail">{escape(_display_value(item.get("detail")))}</div>'
+            f'<div class="ov-macro-status-item" style="--ov-rail-tone:{tone_color};">'
+            f'<div class="ov-macro-status-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-macro-status-value">{escape(_display_value(item.get("value")))}</div>'
+            f'<div class="ov-macro-status-detail">{escape(_display_value(item.get("detail")))}</div>'
             "</div>"
         )
     return f'<div class="ov-macro-cockpit-rail">{"".join(html)}</div>'
@@ -2086,16 +2076,20 @@ def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
         tone_color = escape(_overview_tone_color(cue.get("tone")))
         badges = _macro_cockpit_badges_html(list(cue.get("badges") or []))
         html.append(
-            f'<article class="ov-macro-cue-row" style="--ov-cue-tone:{tone_color};">'
+            f'<li class="ov-macro-cue-row" style="--ov-cue-tone:{tone_color};">'
             '<div class="ov-macro-cue-head">'
             f'<div class="ov-macro-cue-label">{escape(_display_value(cue.get("label")))}</div>'
             f'<div class="ov-macro-cue-status">{escape(_display_value(cue.get("status_label") or _display_status_label(cue.get("status"))))}</div>'
             "</div>"
+            "<div>"
             f'<div class="ov-macro-cue-value">{escape(_display_value(cue.get("value")))}</div>'
             f'<div class="ov-macro-cue-detail">{escape(_display_value(cue.get("detail")))}</div>'
+            "</div>"
+            "<div>"
             f'<div class="ov-macro-cockpit-badges">{badges}</div>'
             f'{_macro_cockpit_row_meta_html(cue)}'
-            "</article>"
+            "</div>"
+            "</li>"
         )
     return (
         '<section class="ov-macro-cues">'
@@ -2103,7 +2097,7 @@ def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
         '<div class="ov-macro-section-title">해석할 때 같이 볼 변수</div>'
         '<div class="ov-macro-section-note">시장 판단을 바꾸는 변수만 작게 붙입니다.</div>'
         "</div>"
-        f'<div class="ov-macro-cues-grid">{"".join(html)}</div>'
+        f'<ul class="ov-macro-cues-list">{"".join(html)}</ul>'
         "</section>"
     )
 
@@ -2143,7 +2137,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         )
     else:
         body_html = (
-            '<div class="ov-historical-analog-empty">'
+            '<div class="ov-historical-analog-note">'
             "자료가 충분한 sector ETF history가 쌓이면 5D / 20D / 60D 요약을 표시합니다."
             "</div>"
         )
@@ -2157,7 +2151,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
     condition = _display_value(model.get("condition_summary") or model.get("detail"))
     return (
-        f'<section class="ov-historical-analog" style="--ov-analog-tone:{tone_color};">'
+        f'<section class="ov-historical-analog-row" style="--ov-analog-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
         "<div>"
         '<div class="ov-historical-analog-title">과거 유사 맥락 참고</div>'
@@ -2179,23 +2173,27 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     summary = dict(model.get("summary") or {})
     status_tone = escape(_overview_tone_color(model.get("status")))
     status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
-    cards: list[str] = []
+    rows: list[str] = []
     for item in list(model.get("items") or [])[:6]:
         tone_color = escape(_overview_tone_color(item.get("tone") or item.get("status")))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
         freshness = _display_value(item.get("freshness_label") or _display_freshness_label(item.get("freshness")))
-        cards.append(
-            f'<article class="ov-source-confidence-card" style="--ov-source-tone:{tone_color};">'
-            '<div class="ov-source-confidence-card-head">'
+        rows.append(
+            f'<div class="ov-source-confidence-row" style="--ov-source-tone:{tone_color};">'
+            '<div>'
             f'<div class="ov-source-confidence-surface">{escape(_display_value(item.get("surface")))}</div>'
-            f'<div class="ov-source-confidence-card-status">{escape(item_status)}</div>'
+            f'<div class="ov-source-confidence-row-status">{escape(item_status)}</div>'
             "</div>"
-            f'<div class="ov-source-confidence-card-title">{escape(_display_value(item.get("title")))}</div>'
-            f'<div class="ov-source-confidence-card-detail">{escape(_display_value(item.get("detail")))}</div>'
-            f'<div class="ov-source-confidence-card-meta">자료 기준: {escape(freshness)}'
+            "<div>"
+            f'<div class="ov-source-confidence-row-title">{escape(_display_value(item.get("title")))}</div>'
+            f'<div class="ov-source-confidence-row-detail">{escape(_display_value(item.get("detail")))}</div>'
+            "</div>"
+            "<div>"
+            f'<div class="ov-source-confidence-row-meta">자료 기준: {escape(freshness)}'
             f'<br>관리 위치: {escape(_display_value(item.get("owner")))}</div>'
-            f'<div class="ov-source-confidence-card-caveat">{escape(_display_value(item.get("caveat")))}</div>'
-            "</article>"
+            f'<div class="ov-source-confidence-row-caveat">{escape(_display_value(item.get("caveat")))}</div>'
+            "</div>"
+            "</div>"
         )
     return (
         f'<details class="ov-source-confidence ov-context-disclosure" style="--ov-source-status-tone:{status_tone};">'
@@ -2209,7 +2207,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         '</div>'
         '</summary>'
         '<div class="ov-source-confidence-body ov-context-disclosure-body">'
-        f'<div class="ov-source-confidence-grid">{"".join(cards)}</div>'
+        f'<div class="ov-source-confidence-list">{"".join(rows)}</div>'
         f'<div class="ov-source-confidence-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
         '</div>'
         '</details>'

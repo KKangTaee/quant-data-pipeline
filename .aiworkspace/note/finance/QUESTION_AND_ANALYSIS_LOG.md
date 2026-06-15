@@ -7715,3 +7715,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: CPI/FOMC 같은 context-only macro event가 earnings에 묻히거나 방금 지난 일정이라는 이유로 빠지지 않게 하되, Market Context를 job/result 진단 패널로 키우면 안 됨.
 - Analysis result: 로컬 DB는 FOMC/GDP/earnings row는 보유하지만 `2026-06-10` 및 `2026-07-14` CPI row가 없다. 기존 read model은 start date가 today라 just-past event를 놓쳤고, Macro Week Lane도 upcoming만 보았다.
 - Follow-up: read model은 recent 7D + upcoming horizon, major macro priority, recent/upcoming lane split으로 보강했다. CPI row 자체는 Macro Calendar collection 또는 BLS `.ics` import로 채워야 하며, 과거 유사국면/예측과 섹터 ETF 장기 coverage는 4차 후보로 남긴다.
+
+### 2026-06-15 - Market Context 카드 중심 UX를 브리프형 layout으로 정리한다
+
+- User request: 사용자가 Market Context UI가 지침 때문인지 Streamlit 기능 미숙 때문인지 물으며, 카드 안 카드 구조가 한눈에 보기 어렵고 정리되지 않은 느낌이라고 지적한 뒤 진행을 승인함.
+- Interpreted goal: 새 진단 패널이나 데이터 계산이 아니라, 기존 Market Context를 실제 읽기 쉬운 summary-first 브리프 형태로 바꿔야 함.
+- Analysis result: 문제는 Streamlit 제약이 아니라 누적 기능을 같은 visual weight의 card로 붙인 product/UI 구조였다. 내부 card grid를 row/list/disclosure로 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: desktop Browser QA는 통과했다. mobile density와 Market Context 전체 정보량은 별도 polish 후보로 남긴다.

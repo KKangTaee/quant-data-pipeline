@@ -4935,3 +4935,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Events read model은 recent 7D + upcoming horizon을 함께 읽고 FOMC / CPI / PPI / Employment / GDP를 earnings보다 우선하는 context ordering을 적용했다.
   - Macro Week Lane은 recent major / upcoming event section으로 나뉘며, Market Context는 compact event cue와 Data Health 자료 주의점만 보여준다.
   - Local DB에는 `2026-06-10`, `2026-07-14` CPI row가 아직 없어 Macro Calendar collection 또는 BLS `.ics` import가 다음 data coverage follow-up이다.
+- Overview Market Context Cardless Brief Layout V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-cardless-brief-layout-v1-20260615/`에서 사용자 지적에 따라 Market Context의 카드/그리드 중첩 느낌을 걷어냈다.
+  - Summary rail, 시장 브리프, 해석 변수, 과거 유사 맥락, 출처 상태는 row/list/disclosure 중심으로 렌더링하고 data/model semantics는 바꾸지 않았다.
+  - 검증은 focused unittest 41개, py_compile, diff check, Browser QA screenshot으로 완료했다.
+  - 남은 UX 후보는 mobile density polish와 Market Context 전체 정보량 재조정이다.

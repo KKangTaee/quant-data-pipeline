@@ -4493,7 +4493,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         css = overview_ui_css()
 
         self.assertIn(".ov-source-confidence", css)
-        self.assertIn(".ov-source-confidence-card", css)
+        self.assertIn(".ov-source-confidence-list", css)
+        self.assertIn(".ov-source-confidence-row", css)
 
     def test_overview_ui_renders_supporting_sections_as_collapsible_disclosures(self) -> None:
         import inspect
@@ -4517,11 +4518,67 @@ class OverviewAutomationContractTests(unittest.TestCase):
         css = overview_ui_css()
 
         self.assertIn(".ov-macro-cockpit-rail", css)
-        self.assertIn(".ov-macro-cockpit-rail-item", css)
+        self.assertIn(".ov-macro-status-item", css)
         self.assertIn(".ov-macro-section-title", css)
         self.assertIn(".ov-macro-cockpit-refresh-assist", css)
         self.assertIn(".ov-macro-brief-row", css)
         self.assertIn(".ov-macro-cue-row", css)
+
+    def test_overview_market_context_uses_cardless_brief_layout_contract(self) -> None:
+        from app.web import overview_ui_components
+
+        css = overview_ui_components.overview_ui_css()
+        cue_html = overview_ui_components._macro_cockpit_interpretation_cues_html(
+            [
+                {
+                    "label": "가까운 주요 이벤트",
+                    "value": "다음 FOMC 2일 후",
+                    "detail": "FOMC Meeting",
+                    "status": "REVIEW",
+                    "target_tab": "Events",
+                    "freshness": "2026-06-15",
+                }
+            ]
+        )
+        analog_html = overview_ui_components._macro_cockpit_historical_analog_html(
+            {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "Industrials(XLI) coverage 부족",
+                "leadership_sector": "Industrials",
+                "proxy_etf": "XLI",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "REVIEW",
+                "summary": {"detail": "저장 자료 기준"},
+                "items": [
+                    {
+                        "surface": "Prices",
+                        "status": "REVIEW",
+                        "title": "가격 자료",
+                        "detail": "stale",
+                        "freshness": "2026-06-15",
+                        "owner": "Ingestion",
+                        "caveat": "context only",
+                    }
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn(".ov-macro-cues-list", css)
+        self.assertIn("ov-macro-cues-list", cue_html)
+        self.assertIn("ov-historical-analog-row", analog_html)
+        self.assertIn("ov-source-confidence-list", source_html)
+        self.assertNotIn("ov-macro-cues-grid", cue_html)
+        self.assertNotIn("ov-source-confidence-card", source_html)
+        self.assertNotIn("ov-historical-analog-empty", analog_html)
 
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
