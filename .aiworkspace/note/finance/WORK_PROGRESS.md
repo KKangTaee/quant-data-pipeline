@@ -4952,3 +4952,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Summary rail, 시장 브리프, 해석 변수, 과거 유사 맥락, 출처 상태는 row/list/disclosure 중심으로 렌더링하고 data/model semantics는 바꾸지 않았다.
   - 검증은 focused unittest 41개, py_compile, diff check, Browser QA screenshot으로 완료했다.
   - 남은 UX 후보는 mobile density polish와 Market Context 전체 정보량 재조정이다.
+- Overview Market Context Copy Density V2:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-copy-density-v2-20260615/`에서 2차 polish를 완료했다.
+  - `오늘의 시장 맥락`은 `현재 맥락:` 한 줄 대신 top mover / breadth / futures / next reading order를 2~3문장으로 표시한다.
+  - Reading-flow 단락은 typography / color density를 조정해 `시장 브리프`, `해석 변수`, `과거 유사 맥락`, `자료 기준`이 흐름대로 읽히게 했다.
+  - 검증은 focused unittest 87개, py_compile, diff check, Browser desktop/mobile DOM QA와 screenshot으로 완료했다.

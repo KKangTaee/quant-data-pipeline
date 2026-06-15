@@ -7736,3 +7736,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 상단 `시장 맥락` 요약은 유지하되, 사용자가 흐름에 맞춰 읽을 수 있도록 brief / variables / reference를 명확한 sibling section으로 분리해야 함.
 - Analysis result: `.ov-macro-cockpit`에는 headline, tape, sector pressure, event timeline만 남기고, 나머지는 `.ov-macro-reading-flow` 아래 4개 section으로 빼는 것이 가장 작은 안전한 변경이다.
 - Follow-up: 1차 section-flow split과 Browser QA는 완료했다. 2차는 실제 사용 후 typography/color density polish, 3차는 필요 시 낮은 우선순위 reference section 접힘 정책이다.
+
+### 2026-06-15 - Market Context 요약을 2~3문장형으로 풀고 2차 polish를 진행한다
+
+- User request: 사용자가 `오늘의 시장 맥락` 아래 `현재 맥락: ...` 한 줄 표기를 2~3문장으로 간략하게 풀고, 미뤘던 2차 typography / density 작업을 진행해 달라고 요청함.
+- Interpreted goal: 새 데이터나 진단 패널이 아니라, 같은 DB-backed context를 사용자가 첫 문장부터 자연스럽게 읽고 아래 단락을 흐름대로 따라가게 해야 함.
+- Analysis result: service copy는 headline + detail 문장 계약으로 바꾸고, renderer는 narrative wrapper와 reading-flow typography / color density 조정만 하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 2차는 완료했다. 남은 3차 후보는 실제 사용 후 reference section 접힘 정책이나 가벼운 drill-in interaction이 필요할 때만 별도 승인 대상으로 본다.

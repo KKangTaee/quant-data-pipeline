@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -4687,8 +4688,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         model = {
             "status": "REVIEW",
             "summary": {
-                "headline": "현재 맥락: SNDK 급등, Industrials 리더십, risk-on",
-                "detail": "context-only",
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Industrials 리더십이 확인되고, 선물/매크로 배경은 risk-on입니다. 확인할 자료 7개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요.",
                 "tone": "warning",
                 "rail": [
                     {"label": "자료 상태", "value": "확인 필요", "detail": "7 checks", "tone": "warning"},
@@ -4735,8 +4736,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         model = {
             "status": "REVIEW",
             "summary": {
-                "headline": "현재 맥락: SNDK 급등, Industrials 리더십, risk-on",
-                "detail": "context-only",
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Industrials 리더십이 확인되고, 선물/매크로 배경은 risk-on입니다. 확인할 자료 7개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요.",
                 "tone": "warning",
                 "rail": [
                     {"label": "자료 상태", "value": "확인 필요", "detail": "7 checks", "tone": "warning"},
@@ -4783,6 +4784,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         reading_html = html.split('<section class="ov-macro-reading-flow"', 1)[1]
 
         self.assertIn('<section class="ov-macro-cockpit"', cockpit_html)
+        self.assertIn("ov-macro-cockpit-narrative", cockpit_html)
+        self.assertIn("오늘 가장 큰 움직임은 SNDK +14.5%입니다.", cockpit_html)
+        self.assertNotIn("현재 맥락:", cockpit_html)
         self.assertIn("ov-macro-hybrid-tape", cockpit_html)
         self.assertIn("ov-macro-visual-board", cockpit_html)
         self.assertNotIn("시장 브리프", cockpit_html)
@@ -4803,6 +4807,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-reading-section .ov-macro-section-title", css)
         self.assertIn(".ov-macro-reading-section .ov-macro-brief-value", css)
         self.assertIn(".ov-macro-reading-section .ov-macro-brief-detail", css)
+        self.assertIn(".ov-macro-cockpit-narrative", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-cue-value", css)
+        self.assertIn(".ov-macro-reading-section .ov-source-confidence-title", css)
 
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -7975,8 +7982,19 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(cockpit["schema_version"], "overview_macro_context_cockpit_v1")
         self.assertEqual(cockpit["status"], "REVIEW")
-        self.assertIn("현재 맥락:", cockpit["summary"]["headline"])
-        self.assertIn("시장 위험 경고가 아니라 자료 상태 안내", cockpit["summary"]["detail"])
+        summary_copy = f"{cockpit['summary']['headline']} {cockpit['summary']['detail']}"
+        summary_sentences = [
+            sentence.strip()
+            for sentence in re.split(r"(?<!\d)[.!?。]+", summary_copy)
+            if sentence.strip()
+        ]
+        self.assertEqual(cockpit["summary"]["headline"], "오늘 가장 큰 움직임은 NVDA +4.2%입니다.")
+        self.assertNotIn("현재 맥락:", summary_copy)
+        self.assertGreaterEqual(len(summary_sentences), 2)
+        self.assertLessEqual(len(summary_sentences), 3)
+        self.assertIn("Technology", cockpit["summary"]["detail"])
+        self.assertIn("Risk-on with rate pressure", cockpit["summary"]["detail"])
+        self.assertIn("확인할 자료 4개", cockpit["summary"]["detail"])
         self.assertEqual(cockpit["summary"]["review_count"], 4)
         self.assertEqual(cockpit["summary"]["data_review_count"], 4)
         self.assertEqual(cockpit["summary"]["next_path"], "Data Health → Events → Futures Monitor → Market Movers")

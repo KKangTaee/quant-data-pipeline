@@ -4163,6 +4163,45 @@ def _cockpit_freshness_label(value: Any) -> str:
     return text
 
 
+def _cockpit_copy_value(value: Any, fallback: str) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return fallback
+    return text
+
+
+def _build_cockpit_summary_copy(
+    cards: Sequence[dict[str, Any]],
+    *,
+    context_review_count: int,
+) -> tuple[str, str]:
+    movement_card = cards[0] if len(cards) > 0 else {}
+    breadth_card = cards[1] if len(cards) > 1 else {}
+    futures_card = cards[2] if len(cards) > 2 else {}
+    movement_value = _cockpit_copy_value(movement_card.get("value"), "")
+    breadth_value = _cockpit_copy_value(breadth_card.get("value"), "섹터 리더십 미확인")
+    futures_value = _cockpit_copy_value(futures_card.get("value"), "혼재된 매크로 흐름")
+
+    headline = (
+        f"오늘 가장 큰 움직임은 {movement_value}입니다."
+        if movement_value
+        else "오늘은 아직 뚜렷한 상위 변동 종목이 없습니다."
+    )
+    breadth_clause = (
+        "섹터 리더십은 아직 뚜렷하지 않고"
+        if breadth_value == "섹터 리더십 미확인"
+        else f"{breadth_value} 리더십이 확인되고"
+    )
+    if context_review_count:
+        next_sentence = (
+            f"확인할 자료 {context_review_count}개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요."
+        )
+    else:
+        next_sentence = "저장된 DB 자료 기준으로 Market Movers, Sector, Futures 흐름을 바로 이어서 읽을 수 있습니다."
+    detail = f"{breadth_clause}, 선물/매크로 배경은 {futures_value}입니다. {next_sentence}"
+    return headline, detail
+
+
 def _cockpit_score_badges(scores: pd.DataFrame, *, limit: int = 3) -> list[dict[str, Any]]:
     badges: list[dict[str, Any]] = []
     if scores.empty:
@@ -4620,11 +4659,9 @@ def build_overview_macro_context_cockpit(
     source_status = str(source_confidence.get("status") or status)
     sector_pressure = build_overview_breadth_heatmap_summary(group_leadership_snapshot, limit=8)
     event_timeline = build_overview_macro_week_lane(events_snapshot, horizon_days=14, limit=6)
-    summary_headline = f"현재 맥락: {cards[0].get('value')} 움직임, {cards[1].get('value')} 리더십, 선물 배경은 {cards[2].get('value')}."
-    summary_detail = (
-        f"시장 위험 경고가 아니라 자료 상태 안내입니다. 확인할 자료 {context_review_count}개를 먼저 본 뒤 맥락을 읽으세요."
-        if context_review_count
-        else "저장된 DB 자료 기준으로 시장 움직임과 배경을 빠르게 읽을 수 있습니다."
+    summary_headline, summary_detail = _build_cockpit_summary_copy(
+        cards,
+        context_review_count=context_review_count,
     )
     rail = [
         {

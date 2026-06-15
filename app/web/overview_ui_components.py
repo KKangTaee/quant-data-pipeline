@@ -241,19 +241,23 @@ def overview_ui_css() -> str:
   line-height: 1.15;
   text-transform: uppercase;
 }
+.ov-macro-cockpit-narrative {
+  max-width: 62rem;
+}
 .ov-macro-cockpit-title {
-  margin-top: 0.2rem;
+  margin-top: 0.22rem;
   color: var(--ov-mi-color-text);
-  font-size: 1.02rem;
+  font-size: 1.08rem;
   font-weight: var(--ov-mi-weight-heading);
-  line-height: 1.18;
+  line-height: 1.22;
   overflow-wrap: anywhere;
 }
 .ov-macro-cockpit-detail {
-  margin-top: 0.18rem;
+  max-width: 58rem;
+  margin-top: 0.28rem;
   color: var(--ov-mi-color-text-subtle);
-  font-size: var(--ov-mi-font-caption);
-  line-height: 1.3;
+  font-size: 0.84rem;
+  line-height: 1.42;
   overflow-wrap: anywhere;
 }
 .ov-macro-cockpit-status {
@@ -473,53 +477,73 @@ def overview_ui_css() -> str:
 }
 .ov-macro-reading-flow {
   display: grid;
-  gap: 0.86rem;
-  margin: 0.82rem 0 1rem 0;
+  gap: 0.72rem;
+  margin: 0.86rem 0 1.04rem 0;
 }
 .ov-macro-reading-section {
   min-width: 0;
-  padding: 0.82rem 0 0.86rem 0.78rem;
+  padding: 0.9rem 0 0.94rem 0.86rem;
   border-top: 1px solid var(--ov-mi-border-faint);
   border-bottom: 1px solid var(--ov-mi-border-faint);
   border-left: 3px solid var(--ov-reading-tone, var(--ov-mi-color-neutral));
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--ov-reading-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-reading-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
     var(--ov-mi-color-surface);
 }
 .ov-macro-reading-section .ov-macro-section-head {
   align-items: flex-start;
-  margin-bottom: 0.56rem;
+  margin-bottom: 0.5rem;
 }
 .ov-macro-reading-section .ov-macro-section-title {
-  font-size: 1.04rem;
-  line-height: 1.18;
+  font-size: 1rem;
+  line-height: 1.2;
 }
 .ov-macro-reading-section .ov-macro-section-note {
-  max-width: 34rem;
-  font-size: var(--ov-mi-font-body);
-  line-height: 1.3;
+  max-width: 36rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
   text-align: left;
 }
 .ov-macro-reading-section .ov-macro-brief-row {
   grid-template-columns: 2.45rem minmax(0, 1fr);
-  padding: 0.68rem 0.18rem 0.68rem 0;
+  padding: 0.58rem 0.18rem 0.6rem 0;
 }
 .ov-macro-reading-section .ov-macro-brief-step {
-  width: 1.82rem;
-  height: 1.82rem;
-  font-size: 0.82rem;
+  width: 1.74rem;
+  height: 1.74rem;
+  font-size: 0.8rem;
 }
 .ov-macro-reading-section .ov-macro-brief-label {
   font-size: var(--ov-mi-font-label);
 }
 .ov-macro-reading-section .ov-macro-brief-value {
-  margin-top: 0.18rem;
-  font-size: 1.08rem;
+  margin-top: 0.16rem;
+  font-size: 1.04rem;
 }
 .ov-macro-reading-section .ov-macro-brief-detail {
   max-width: 58rem;
-  font-size: 0.86rem;
-  line-height: 1.34;
+  font-size: 0.84rem;
+  line-height: 1.36;
+}
+.ov-macro-reading-section .ov-macro-cue-row {
+  padding: 0.52rem 0.18rem 0.54rem 0;
+}
+.ov-macro-reading-section .ov-macro-cue-value {
+  font-size: 0.96rem;
+  line-height: 1.22;
+}
+.ov-macro-reading-section .ov-macro-cue-detail {
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+.ov-macro-reading-section .ov-source-confidence-title,
+.ov-macro-reading-section .ov-historical-analog-title {
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+.ov-macro-reading-section .ov-source-confidence-detail,
+.ov-macro-reading-section .ov-historical-analog-detail {
+  line-height: 1.32;
 }
 .ov-macro-brief-list {
   display: grid;
@@ -2583,7 +2607,7 @@ def _macro_context_cockpit_html(model: dict[str, Any]) -> str:
     return (
         f'<section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">'
         '<div class="ov-macro-cockpit-head">'
-        "<div>"
+        '<div class="ov-macro-cockpit-narrative">'
         '<div class="ov-macro-cockpit-kicker">오늘의 시장 맥락</div>'
         f'<div class="ov-macro-cockpit-title">{escape(_display_value(summary.get("headline")))}</div>'
         f'<div class="ov-macro-cockpit-detail">{escape(_display_value(summary.get("detail")))}</div>'
