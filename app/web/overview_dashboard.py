@@ -1877,10 +1877,10 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
     label = str(repair_action.get("label") or "부족 ETF 가격 이력 보강")
     symbol_text = ", ".join(symbols)
 
-    st.markdown("#### 과거 유사 맥락 자료 보강")
+    st.markdown("#### 과거 유사 맥락 자료 수집")
     st.caption(
         f"`{symbol_text}` 가격 이력이 부족해 과거 유사 맥락 표를 계산하지 못하고 있습니다. "
-        f"기존 OHLCV 수집 경로로 `{target_table}`에 {period} {interval} 이력을 보강합니다."
+        f"아래 버튼을 누르면 기존 OHLCV 수집 경로로 `{target_table}`에 {period} {interval} 이력을 저장합니다."
     )
     cols = st.columns([1.45, 0.82], gap="small", vertical_alignment="center")
     with cols[0]:
@@ -1921,7 +1921,6 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
         st.caption(
             "자료 상태를 먼저 확인한 뒤, 오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 순서대로 실행합니다."
         )
-        _render_overview_historical_analog_repair_action(cockpit_model)
         cols = st.columns([1.5, 0.72], gap="small", vertical_alignment="center")
         with cols[0]:
             st.caption(
@@ -1954,6 +1953,7 @@ def _render_overview_market_context_tab() -> None:
     _render_overview_market_context_refresh_reflection()
     cockpit_model = load_overview_macro_context_cockpit()
     render_macro_context_cockpit(cockpit_model)
+    _render_overview_historical_analog_repair_action(cockpit_model)
     _render_overview_market_context_refresh_bar(cockpit_model)
 
 

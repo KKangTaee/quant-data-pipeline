@@ -23,3 +23,23 @@
   - In-app Browser DOM verified `ov-analog-gap-panel=1`, `ov-source-confidence-strip=1`, no Traceback, and current repair target `XLC`.
   - Playwright fallback captured final QA screenshot because in-app Browser screenshot capture timed out after DOM verification.
   - Screenshot: `overview-market-context-analog-repair-v4-qa.png`.
+
+## 2026-06-16 Follow-up
+
+- RED:
+  - `PYTHONWARNINGS=ignore .venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_cue_cards_keep_left_rule_away_from_text tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_shows_historical_analog_repair_action_before_support_expander`
+  - Result: expected failures for zero-left-padding cue override and repair action staying inside the support expander.
+- GREEN focused:
+  - `PYTHONWARNINGS=ignore .venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_cue_cards_keep_left_rule_away_from_text tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_shows_historical_analog_repair_action_before_support_expander tests.test_service_contracts.OverviewMarketContextAnalogServiceContractTests.test_historical_analog_html_turns_insufficient_data_into_actionable_gap_panel`
+  - Result: `Ran 3 tests in 0.074s OK`.
+- Regression:
+  - `PYTHONWARNINGS=ignore .venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests tests.test_service_contracts.OverviewMarketContextAnalogServiceContractTests`
+  - Result: `Ran 100 tests in 1.404s OK`.
+- Static checks:
+  - `.venv/bin/python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py tests/test_service_contracts.py`
+  - `git diff --check`
+  - Result: both passed.
+- Browser QA:
+  - In-app Browser DOM verified cue padding-left `14.08px`, no Traceback, visible `과거 유사 맥락 자료 수집` heading, and hidden support expander no longer contains the historical analog repair action.
+  - Playwright screenshot verified the cue-card line no longer crowds the leading text. In the final live QA state historical analog data had become sufficient, so the section rendered the analog table rather than the gap button.
+  - Screenshot: `overview-market-context-cue-spacing-fix-qa.png`.

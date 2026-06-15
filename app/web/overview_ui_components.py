@@ -526,7 +526,8 @@ def overview_ui_css() -> str:
   line-height: 1.36;
 }
 .ov-macro-reading-section .ov-macro-cue-row {
-  padding: 0.52rem 0.18rem 0.54rem 0;
+  padding: 0.56rem 0.58rem 0.58rem;
+  padding-left: 0.88rem;
 }
 .ov-macro-reading-section .ov-macro-cue-value {
   font-size: 0.96rem;
@@ -2610,7 +2611,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
             )
         action_symbols = ", ".join(str(symbol) for symbol in repair_action.get("symbols") or [])
         action_detail = (
-            f"보조 갱신에서 {escape(action_symbols)} "
+            f"아래 자료 수집 버튼으로 {escape(action_symbols)} "
             f"{escape(_display_value(repair_action.get('period')))} "
             f"{escape(_display_value(repair_action.get('interval')))} 가격 이력을 보강합니다."
         )

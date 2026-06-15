@@ -11,3 +11,9 @@
   - `근거: 자료 기준 / 출처 상태` now shows normal / review / missing counts and key source pills in the collapsed summary.
 - Browser QA confirmed live data was not fixed to Technology / XLK. Current live leadership was Communication Services, so the repair target was `XLC`.
 - Completed code, contract tests, static checks, Browser QA screenshot, and doc sync.
+
+## 2026-06-16 Follow-up
+
+- Fixed the `다음 맥락 체크` cue card spacing bug where the left accent rule visually crowded the leading label text.
+- Moved the historical analog OHLCV repair action out of the collapsed `보조 갱신` expander so the data collection button appears in the main Market Context flow when historical analog inputs are missing.
+- Updated the gap panel copy from hidden-expander guidance to direct `아래 자료 수집 버튼` guidance.

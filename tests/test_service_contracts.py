@@ -4530,6 +4530,35 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-brief-row", css)
         self.assertIn(".ov-macro-cue-row", css)
 
+    def test_overview_market_context_cue_cards_keep_left_rule_away_from_text(self) -> None:
+        import re
+
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        scoped_match = re.search(r"\.ov-macro-reading-section \.ov-macro-cue-row \{(?P<body>.*?)\n\}", css, re.S)
+        self.assertIsNotNone(scoped_match, "Market Context cue row should have a scoped spacing rule.")
+        scoped_body = scoped_match.group("body") if scoped_match else ""
+
+        self.assertIn("padding-left: 0.88rem", scoped_body)
+        self.assertNotIn("padding: 0.52rem 0.18rem 0.54rem 0;", scoped_body)
+
+    def test_overview_market_context_shows_historical_analog_repair_action_before_support_expander(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        if "def _render_overview_market_context_tab" not in source:
+            self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
+        helper_body = source[source.index("def _render_overview_market_context_tab"):]
+        helper_end = helper_body.index("def _summarize_auto_refresh_plan")
+        helper_body = helper_body[:helper_end]
+
+        self.assertIn("_render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
+        render_index = helper_body.index("render_macro_context_cockpit(cockpit_model)")
+        analog_action_index = helper_body.index("_render_overview_historical_analog_repair_action(cockpit_model)")
+        refresh_bar_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
+
+        self.assertLess(render_index, analog_action_index)
+        self.assertLess(analog_action_index, refresh_bar_index)
+
     def test_overview_market_context_uses_cardless_brief_layout_contract(self) -> None:
         from app.web import overview_ui_components
 
@@ -8567,7 +8596,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("63 / 756", html)
         self.assertIn("TLT", html)
         self.assertIn("140 / 756", html)
-        self.assertIn("보조 갱신", html)
+        self.assertIn("아래 자료 수집 버튼", html)
         self.assertNotIn("자료가 충분한 sector ETF history가 쌓이면", html)
 
 
