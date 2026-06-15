@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-15 - Overview Market Context Hybrid Visual V1 1차
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-hybrid-visual-v1-20260615/` after the user approved mixing benchmark option 1 and 3.
+- Reworked `Workspace > Overview > Market Context` into a card-light hybrid cockpit: 5-cell tape, sector pressure map, event timeline, existing evidence rows, historical analog disclosure, and source confidence disclosure.
+- Browser QA confirmed desktop render plus 390px mobile no-horizontal-overflow behavior; screenshot artifact is `overview-market-context-hybrid-visual-v1-qa.png`.
+- Boundary stayed Overview-only: no provider fetch, schema/persistence change, registry / saved JSONL write, validation / monitoring / trading semantics, or dashboard-editor interactivity.
+
 ### 2026-06-15 - Overview Market Context Historical Analog V1 4차
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-historical-analog-v1-20260615/` for the 4차 Market Context follow-up.
 - Added a context-only `과거 유사 맥락 참고` MVP: current sector leadership resolves through a generic sector ETF proxy map, checks DB price coverage, and only computes 5D / 20D / 60D historical forward-return summaries when coverage is sufficient.

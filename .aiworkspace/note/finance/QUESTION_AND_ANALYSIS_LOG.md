@@ -7722,3 +7722,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 진단 패널이나 데이터 계산이 아니라, 기존 Market Context를 실제 읽기 쉬운 summary-first 브리프 형태로 바꿔야 함.
 - Analysis result: 문제는 Streamlit 제약이 아니라 누적 기능을 같은 visual weight의 card로 붙인 product/UI 구조였다. 내부 card grid를 row/list/disclosure로 바꾸는 것이 가장 작은 안전한 변경이다.
 - Follow-up: desktop Browser QA는 통과했다. mobile density와 Market Context 전체 정보량은 별도 polish 후보로 남긴다.
+
+### 2026-06-15 - Market Context 벤치마크 후 option 1+3 hybrid를 구현한다
+
+- User request: 사용자가 카드형 시각화 고집 이유를 물은 뒤, 웹 벤치마킹 선택지 중 1번과 3번을 섞은 시안을 승인하고 "이렇게 만들어줄 수 있니?"라고 요청함.
+- Interpreted goal: `Market Brief Tape`의 빠른 스캔성과 `Heatmap + Timeline Board`의 시각적 압력/이벤트 읽기를 합치되, 새 provider나 진단 패널을 만들지 않아야 함.
+- Analysis result: 기존 `build_overview_breadth_heatmap_summary()`와 `build_overview_macro_week_lane()`을 cockpit model에 재사용하면 DB-backed boundary를 유지하면서 5칸 tape, sector pressure map, event timeline을 만들 수 있다.
+- Follow-up: 1차 hybrid visual 구현과 Browser QA는 완료했다. 2차는 색/밀도/mobile polish, 3차는 static board가 부족할 때만 drill-in interactivity 후보로 남긴다.

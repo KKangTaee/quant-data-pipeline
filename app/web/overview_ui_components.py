@@ -279,6 +279,40 @@ def overview_ui_css() -> str:
   border-bottom: 1px solid var(--ov-mi-border-subtle);
   background: color-mix(in srgb, var(--ov-cockpit-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface));
 }
+.ov-macro-hybrid-tape {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 0.74rem;
+}
+.ov-macro-tape-cell {
+  min-width: 0;
+  padding: 0.52rem 0.62rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-macro-tape-cell:first-child {
+  border-left: 0;
+}
+.ov-macro-tape-label {
+  color: var(--ov-tape-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.ov-macro-tape-value {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.94rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.17;
+  overflow-wrap: anywhere;
+}
+.ov-macro-tape-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
 .ov-macro-status-item {
   display: grid;
   grid-template-columns: minmax(7rem, 0.52fr) minmax(10rem, 0.86fr) minmax(0, 1.35fr);
@@ -311,9 +345,109 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-macro-brief,
-.ov-macro-cues {
+.ov-macro-cues,
+.ov-macro-visual-board {
   min-width: 0;
   margin-top: 0.7rem;
+}
+.ov-macro-visual-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.8fr);
+  gap: var(--ov-mi-gap-lg);
+  padding: 0.64rem 0 0.68rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-sector-pressure,
+.ov-event-timeline-panel {
+  min-width: 0;
+}
+.ov-sector-pressure-map {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: minmax(3.8rem, auto);
+  gap: 0.28rem;
+}
+.ov-sector-pressure-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 3.8rem;
+  padding: 0.48rem 0.52rem;
+  border: 1px solid color-mix(in srgb, var(--ov-pressure-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--ov-pressure-tone, var(--ov-mi-color-neutral)) 17%, var(--ov-mi-color-surface)), color-mix(in srgb, var(--ov-pressure-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)));
+}
+.ov-sector-pressure-tile:first-child {
+  grid-row: span 2;
+}
+.ov-sector-pressure-name {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+.ov-sector-pressure-value {
+  margin-top: 0.14rem;
+  color: var(--ov-pressure-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.14;
+}
+.ov-sector-pressure-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-event-timeline {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-event-timeline-row {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr) auto;
+  gap: var(--ov-mi-gap-sm);
+  align-items: baseline;
+  min-width: 0;
+  padding: 0.48rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-event-timeline-row:first-child {
+  border-top: 0;
+}
+.ov-event-timeline-day {
+  color: var(--ov-event-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.15;
+}
+.ov-event-timeline-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+.ov-event-timeline-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-event-timeline-status {
+  color: var(--ov-event-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  text-align: right;
+  white-space: nowrap;
 }
 .ov-macro-section-head {
   display: flex;
@@ -1826,11 +1960,31 @@ def overview_ui_css() -> str:
   .ov-macro-cockpit-rail {
     grid-template-columns: 1fr;
   }
+  .ov-macro-hybrid-tape,
+  .ov-macro-visual-board,
+  .ov-sector-pressure-map {
+    grid-template-columns: 1fr;
+  }
+  .ov-macro-tape-cell,
+  .ov-macro-tape-cell:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-macro-tape-cell:first-child {
+    border-top: 0;
+  }
   .ov-macro-status-item,
   .ov-macro-cue-row,
-  .ov-source-confidence-row {
+  .ov-source-confidence-row,
+  .ov-event-timeline-row {
     grid-template-columns: 1fr;
     gap: var(--ov-mi-gap-xs);
+  }
+  .ov-sector-pressure-tile:first-child {
+    grid-row: span 1;
+  }
+  .ov-event-timeline-status {
+    text-align: left;
   }
   .ov-macro-week-section-head {
     display: block;
@@ -2025,6 +2179,22 @@ def _macro_cockpit_rail_html(items: list[dict[str, Any]]) -> str:
     return f'<div class="ov-macro-cockpit-rail">{"".join(html)}</div>'
 
 
+def _macro_hybrid_tape_html(items: list[dict[str, Any]]) -> str:
+    if not items:
+        return ""
+    html: list[str] = []
+    for item in items[:5]:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        html.append(
+            f'<div class="ov-macro-tape-cell" style="--ov-tape-tone:{tone_color};">'
+            f'<div class="ov-macro-tape-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-macro-tape-value">{escape(_display_value(item.get("value")))}</div>'
+            f'<div class="ov-macro-tape-detail">{escape(_display_value(item.get("detail")))}</div>'
+            "</div>"
+        )
+    return f'<div class="ov-macro-cockpit-rail ov-macro-hybrid-tape">{"".join(html)}</div>'
+
+
 def _macro_cockpit_row_meta_html(row: dict[str, Any]) -> str:
     target = _display_value(row.get("target_tab") or row.get("source"))
     freshness = _display_value(row.get("freshness_label") or _display_freshness_label(row.get("freshness")))
@@ -2036,6 +2206,114 @@ def _macro_cockpit_row_meta_html(row: dict[str, Any]) -> str:
         f"<span>{escape(status)}</span>"
         "</div>"
     )
+
+
+def _signed_pct(value: Any, *, digits: int = 1) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    return f"{numeric:+.{digits}f}%"
+
+
+def _sector_pressure_map_html(model: dict[str, Any]) -> str:
+    rows = list(model.get("heatmap_rows") or [])
+    if not rows:
+        return ""
+    tiles: list[str] = []
+    for row in rows[:8]:
+        tone_color = escape(_overview_tone_color(row.get("tone")))
+        group = _display_value(row.get("group"))
+        weighted = _signed_pct(row.get("market_cap_weighted_return_pct"))
+        positive = row.get("positive_symbol_share_pct")
+        try:
+            positive_label = "-" if positive in (None, "") else f"{float(positive):.0f}% positive"
+        except (TypeError, ValueError):
+            positive_label = _display_value(positive)
+        symbols = _display_value(row.get("symbols"))
+        detail = f"{positive_label} · {symbols} symbols"
+        tiles.append(
+            f'<div class="ov-sector-pressure-tile" style="--ov-pressure-tone:{tone_color};">'
+            f'<div class="ov-sector-pressure-name">{escape(group)}</div>'
+            f'<div class="ov-sector-pressure-value">{escape(weighted)}</div>'
+            f'<div class="ov-sector-pressure-detail">{escape(detail)}</div>'
+            "</div>"
+        )
+    summary = dict(model.get("summary") or {})
+    coverage = dict(model.get("coverage") or {})
+    freshness = _display_value(coverage.get("freshness") or "-")
+    return (
+        '<section class="ov-sector-pressure">'
+        '<div class="ov-macro-section-head">'
+        '<div>'
+        '<div class="ov-macro-section-title">섹터 압력 지도</div>'
+        f'<div class="ov-macro-section-note">{escape(_display_value(summary.get("headline")))} · 자료 기준 {escape(freshness)}</div>'
+        "</div>"
+        "</div>"
+        f'<div class="ov-sector-pressure-map">{"".join(tiles)}</div>'
+        "</section>"
+    )
+
+
+def _event_timeline_day_label(value: Any) -> str:
+    try:
+        days = int(float(value))
+    except (TypeError, ValueError):
+        return "D?"
+    if days < 0:
+        return f"D{days}"
+    if days == 0:
+        return "D0"
+    return f"D+{days}"
+
+
+def _event_timeline_html(model: dict[str, Any]) -> str:
+    items = list(model.get("items") or [])
+    if not items:
+        return ""
+    rows: list[str] = []
+    for item in items[:5]:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        cluster = _display_value(item.get("cluster") or item.get("type"))
+        day_label = _event_timeline_day_label(item.get("days_until"))
+        detail_parts = [
+            cluster,
+            _display_value(item.get("freshness")),
+            _display_value(item.get("quality_action")),
+        ]
+        detail = " · ".join(part for part in detail_parts if part and part != "-")
+        rows.append(
+            f'<div class="ov-event-timeline-row" style="--ov-event-tone:{tone_color};">'
+            f'<div class="ov-event-timeline-day">{escape(day_label)}</div>'
+            "<div>"
+            f'<div class="ov-event-timeline-title">{escape(_display_value(item.get("title")))}</div>'
+            f'<div class="ov-event-timeline-detail">{escape(detail)}</div>'
+            "</div>"
+            f'<div class="ov-event-timeline-status">{escape(cluster)}</div>'
+            "</div>"
+        )
+    coverage = dict(model.get("coverage") or {})
+    review_count = _display_value(coverage.get("review_count") or 0)
+    latest = _display_value(coverage.get("latest_collected_at") or "-")
+    return (
+        '<section class="ov-event-timeline-panel">'
+        '<div class="ov-macro-section-head">'
+        '<div>'
+        '<div class="ov-macro-section-title">이벤트 타임라인</div>'
+        f'<div class="ov-macro-section-note">확인 필요 {escape(review_count)}개 · 자료 기준 {escape(latest)}</div>'
+        "</div>"
+        "</div>"
+        f'<div class="ov-event-timeline">{"".join(rows)}</div>'
+        "</section>"
+    )
+
+
+def _macro_cockpit_visual_board_html(model: dict[str, Any]) -> str:
+    sector_html = _sector_pressure_map_html(dict(model.get("sector_pressure") or {}))
+    timeline_html = _event_timeline_html(dict(model.get("event_timeline") or {}))
+    if not (sector_html or timeline_html):
+        return ""
+    return f'<section class="ov-macro-visual-board">{sector_html}{timeline_html}</section>'
 
 
 def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
@@ -2214,14 +2492,31 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     )
 
 
-def render_macro_context_cockpit(model: dict[str, Any]) -> None:
+def _macro_cockpit_body_html(model: dict[str, Any]) -> str:
     summary = dict(model.get("summary") or {})
-    tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
-    rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
+    rail_html = _macro_hybrid_tape_html(list(summary.get("rail") or []))
+    if not rail_html:
+        rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
+    visual_board_html = _macro_cockpit_visual_board_html(model)
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
     interpretation_cues_html = _macro_cockpit_interpretation_cues_html(list(model.get("interpretation_cues") or []))
     historical_analog_html = _macro_cockpit_historical_analog_html(dict(model.get("historical_analog") or {}))
     source_confidence_html = _macro_cockpit_source_confidence_html(dict(model.get("source_confidence") or {}))
+    return (
+        f"{rail_html}"
+        f"{visual_board_html}"
+        f"{brief_rows_html}"
+        f"{interpretation_cues_html}"
+        f"{historical_analog_html}"
+        f"{source_confidence_html}"
+        f'<div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
+    )
+
+
+def render_macro_context_cockpit(model: dict[str, Any]) -> None:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
+    body_html = _macro_cockpit_body_html(model)
     st.markdown(
         overview_ui_css()
         + f"""
@@ -2234,12 +2529,7 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     </div>
     <span class="ov-macro-cockpit-status">{escape(_display_value(summary.get("status_label") or _display_status_label(model.get("status"))))}</span>
   </div>
-  {rail_html}
-  {brief_rows_html}
-  {interpretation_cues_html}
-  {historical_analog_html}
-  {source_confidence_html}
-  <div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+  {body_html}
 </section>""",
         unsafe_allow_html=True,
     )

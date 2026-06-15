@@ -3643,17 +3643,17 @@ def build_overview_breadth_heatmap_summary(
 
 def _macro_week_cluster_label(event_type: Any) -> str:
     normalized = str(event_type or "").strip().upper()
-    if normalized == "FOMC_MEETING":
+    if normalized in {"FOMC_MEETING", "FOMC"}:
         return "FOMC"
-    if normalized == "MACRO_CPI":
+    if normalized in {"MACRO_CPI", "CPI"}:
         return "CPI"
-    if normalized == "MACRO_PPI":
+    if normalized in {"MACRO_PPI", "PPI"}:
         return "PPI"
-    if normalized == "MACRO_EMPLOYMENT":
+    if normalized in {"MACRO_EMPLOYMENT", "EMPLOYMENT", "JOBS"}:
         return "Employment"
-    if normalized == "MACRO_GDP":
+    if normalized in {"MACRO_GDP", "GDP"}:
         return "GDP"
-    if normalized == "EARNINGS":
+    if normalized in {"EARNINGS", "EARNINGS CALENDAR"}:
         return "Earnings"
     if normalized.startswith("MACRO_"):
         return normalized.replace("MACRO_", "").replace("_", " ").title()
@@ -3750,6 +3750,11 @@ def build_overview_macro_week_lane(
         }
 
     working = rows.copy()
+    if "Type" not in working.columns:
+        working["Type"] = working["Type Label"] if "Type Label" in working.columns else "Other"
+    elif "Type Label" in working.columns:
+        type_values = working["Type"].astype(str).str.strip()
+        working["Type"] = working["Type"].where(type_values.ne("") & type_values.ne("nan"), working["Type Label"])
     working["_days_until"] = working["Days Until"].map(_safe_float)
     recent_rows = working[
         working["_days_until"].notna()
@@ -4613,6 +4618,8 @@ def build_overview_macro_context_cockpit(
         if str(item.get("target_tab") or "").strip()
     ) or "필요한 deep tab 없음"
     source_status = str(source_confidence.get("status") or status)
+    sector_pressure = build_overview_breadth_heatmap_summary(group_leadership_snapshot, limit=8)
+    event_timeline = build_overview_macro_week_lane(events_snapshot, horizon_days=14, limit=6)
     summary_headline = f"현재 맥락: {cards[0].get('value')} 움직임, {cards[1].get('value')} 리더십, 선물 배경은 {cards[2].get('value')}."
     summary_detail = (
         f"시장 위험 경고가 아니라 자료 상태 안내입니다. 확인할 자료 {context_review_count}개를 먼저 본 뒤 맥락을 읽으세요."
@@ -4627,16 +4634,28 @@ def build_overview_macro_context_cockpit(
             "tone": _cockpit_status_tone(status),
         },
         {
-            "label": "같이 볼 변수",
-            "value": "Events / Sentiment / Data Health",
-            "detail": "본문 아래에서 작게 확인",
-            "tone": "warning" if context_review_count else "positive",
+            "label": "Top Mover",
+            "value": str(cards[0].get("value") or "-"),
+            "detail": str(cards[0].get("freshness_label") or cards[0].get("target_tab") or "Market Movers"),
+            "tone": cards[0].get("tone") or "neutral",
         },
         {
-            "label": "자료 기준",
-            "value": f"{_cockpit_status_label(source_status)} · Data Health 확인 {data_review_count}개",
-            "detail": "저장된 DB snapshot",
-            "tone": _cockpit_status_tone(source_status),
+            "label": "Breadth",
+            "value": str(cards[1].get("value") or "-"),
+            "detail": str(cards[1].get("freshness_label") or cards[1].get("target_tab") or "Group Leadership"),
+            "tone": cards[1].get("tone") or "neutral",
+        },
+        {
+            "label": "Macro",
+            "value": str(cards[2].get("value") or "-"),
+            "detail": str(cards[2].get("freshness_label") or cards[2].get("target_tab") or "Futures Monitor"),
+            "tone": cards[2].get("tone") or "neutral",
+        },
+        {
+            "label": "Next Event",
+            "value": str(cards[4].get("value") or "-"),
+            "detail": str(cards[4].get("freshness_label") or cards[4].get("target_tab") or "Events"),
+            "tone": cards[4].get("tone") or "neutral",
         },
     ]
     for index, card in enumerate(cards):
@@ -4668,6 +4687,8 @@ def build_overview_macro_context_cockpit(
         },
         "brief_rows": brief_rows,
         "interpretation_cues": interpretation_cues,
+        "sector_pressure": sector_pressure,
+        "event_timeline": event_timeline,
         "historical_analog": historical_analog_snapshot or {},
         "cards": cards,
         "next_checks": next_checks,

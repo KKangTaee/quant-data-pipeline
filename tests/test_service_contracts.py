@@ -4580,6 +4580,155 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
 
+    def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        model = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 2, "universe_count": 2, "effective_end_date": "2026-06-15"},
+                "rows": [
+                    {
+                        "Symbol": "SNDK",
+                        "Name": "Sandisk",
+                        "Sector": "Technology",
+                        "Return %": 14.5,
+                        "Volume Ratio": 2.0,
+                    }
+                ],
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 20, "universe_count": 20, "effective_end_date": "2026-06-15"},
+                "rows": [
+                    {
+                        "Rank": 1,
+                        "Group": "Industrials",
+                        "Symbols": 10,
+                        "Positive Symbols": 9,
+                        "Positive Symbol Share %": 90.0,
+                        "Market Cap Weighted Return %": 3.3,
+                        "Equal Weight Return %": 2.1,
+                        "Top 3 Positive Share %": 35.0,
+                        "Top Symbol": "CAT",
+                        "Top Symbol Return %": 4.2,
+                    },
+                    {
+                        "Rank": 2,
+                        "Group": "Technology",
+                        "Symbols": 10,
+                        "Positive Symbols": 6,
+                        "Positive Symbol Share %": 60.0,
+                        "Market Cap Weighted Return %": 1.2,
+                        "Equal Weight Return %": 1.0,
+                        "Top 3 Positive Share %": 45.0,
+                        "Top Symbol": "SNDK",
+                        "Top Symbol Return %": 14.5,
+                    },
+                ],
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "coverage": {"latest_date": "2026-06-15"},
+                "summary": {"scenario": "좋은 risk-on", "summary": "금리 부담 제한"},
+                "scores": [{"Metric": "Risk Appetite", "Score": 54}],
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "coverage": {"cnn_score": 29.7, "cnn_rating": "fear", "aaii_bull_bear_spread": -17.3},
+                "analysis": {"phase_label": "공포 우위", "headline": "공포 심리가 우위", "data_confidence": {"status": "OK", "detail": "fresh"}},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 2, "needs_review_count": 1, "latest_collected_at": "2026-06-15"},
+                "rows": [
+                    {
+                        "Date": "2026-06-17",
+                        "Type": "FOMC_MEETING",
+                        "Type Label": "FOMC",
+                        "Title": "FOMC Meeting",
+                        "Days Until": 2,
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-22",
+                        "Type": "MACRO_CPI",
+                        "Type Label": "CPI",
+                        "Title": "CPI",
+                        "Days Until": 7,
+                        "Source Type": "Unknown",
+                        "Validation": "Unknown",
+                        "Freshness": "Stale source",
+                        "Quality Action": "Inspect source freshness",
+                        "Importance": "High",
+                    },
+                ],
+            },
+            collection_ops_snapshot={
+                "status": "OK",
+                "coverage": {"ok_count": 2, "due_count": 1, "stale_count": 0, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": [],
+            },
+        )
+
+        self.assertIn("sector_pressure", model)
+        self.assertIn("event_timeline", model)
+        self.assertGreaterEqual(len(model["sector_pressure"]["heatmap_rows"]), 2)
+        self.assertGreaterEqual(len(model["event_timeline"]["items"]), 2)
+
+    def test_overview_market_context_renders_tape_heatmap_and_timeline_contract(self) -> None:
+        from app.web import overview_ui_components
+
+        css = overview_ui_components.overview_ui_css()
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "현재 맥락: SNDK 급등, Industrials 리더십, risk-on",
+                "detail": "context-only",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "7 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                    {"label": "Breadth", "value": "Industrials", "detail": "91%", "tone": "positive"},
+                    {"label": "Macro", "value": "Risk-on", "detail": "rates muted", "tone": "positive"},
+                    {"label": "Next Event", "value": "FOMC D-2", "detail": "review", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {
+                "summary": {"headline": "Broad participation"},
+                "heatmap_rows": [
+                    {"group": "Industrials", "market_cap_weighted_return_pct": 3.3, "positive_symbol_share_pct": 91, "symbols": 70, "tone": "positive"},
+                    {"group": "Technology", "market_cap_weighted_return_pct": 1.2, "positive_symbol_share_pct": 61, "symbols": 80, "tone": "primary"},
+                ],
+                "coverage": {"freshness": "2026-06-15"},
+            },
+            "event_timeline": {
+                "items": [
+                    {"cluster": "FOMC", "title": "FOMC Meeting", "days_until": 2, "freshness": "Official", "tone": "warning"},
+                    {"cluster": "CPI", "title": "CPI", "days_until": 7, "freshness": "Stale source", "tone": "warning"},
+                ],
+                "coverage": {"review_count": 1, "latest_collected_at": "2026-06-15"},
+            },
+            "brief_rows": [],
+            "interpretation_cues": [],
+            "boundary_note": "context only",
+        }
+
+        html = overview_ui_components._macro_cockpit_body_html(model)
+
+        self.assertIn(".ov-macro-hybrid-tape", css)
+        self.assertIn(".ov-sector-pressure-map", css)
+        self.assertIn(".ov-event-timeline", css)
+        self.assertIn("ov-macro-hybrid-tape", html)
+        self.assertIn("ov-sector-pressure-map", html)
+        self.assertIn("ov-event-timeline", html)
+        self.assertIn("ov-sector-pressure-tile", html)
+        self.assertIn("ov-event-timeline-row", html)
+
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
@@ -7756,7 +7905,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["summary"]["next_path"], "Data Health → Events → Futures Monitor → Market Movers")
         self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
         self.assertEqual(cockpit["summary"]["rail"][0]["value"], "일부 자료 확인 필요")
-        self.assertEqual(cockpit["summary"]["rail"][1]["label"], "같이 볼 변수")
+        self.assertEqual(
+            [item["label"] for item in cockpit["summary"]["rail"]],
+            ["자료 상태", "Top Mover", "Breadth", "Macro", "Next Event"],
+        )
         self.assertEqual([row["label"] for row in cockpit["brief_rows"]], ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경"])
         self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["가까운 주요 이벤트", "심리 배경", "자료 상태 주의점"])
         self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
