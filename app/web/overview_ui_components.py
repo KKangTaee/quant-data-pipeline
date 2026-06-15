@@ -626,32 +626,31 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cues-list {
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--ov-mi-border-faint);
-  border-bottom: 1px solid var(--ov-mi-border-faint);
   list-style: none;
 }
 .ov-macro-cue-row {
-  display: grid;
-  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.15fr) minmax(8rem, 0.85fr);
-  gap: var(--ov-mi-gap-md);
-  align-items: start;
-  min-width: 0;
-  padding: 0.5rem 0.18rem 0.5rem 0;
-  border-top: 1px solid var(--ov-mi-border-faint);
-  background: transparent;
-}
-.ov-macro-cue-row:first-child {
-  border-top: 0;
-}
-.ov-macro-cue-head {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: var(--ov-mi-gap-sm);
-  align-items: flex-start;
+  min-width: 0;
+  min-height: 8.2rem;
+  padding: 0.62rem 0.66rem;
+  border: 1px solid color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  border-left: 3px solid var(--ov-cue-tone, var(--ov-mi-color-neutral));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
+    var(--ov-mi-color-surface);
+}
+.ov-macro-cue-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: baseline;
 }
 .ov-macro-cue-status {
   color: var(--ov-cue-tone, var(--ov-mi-color-neutral));
@@ -662,7 +661,7 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cue-value {
   color: var(--ov-mi-color-text);
-  font-size: 0.9rem;
+  font-size: 0.96rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
   overflow-wrap: anywhere;
@@ -761,6 +760,33 @@ def overview_ui_css() -> str:
   line-height: 1.24;
   overflow-wrap: anywhere;
 }
+.ov-source-confidence-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  margin-top: 0.36rem;
+  min-width: 0;
+}
+.ov-source-confidence-pill,
+.ov-source-confidence-source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.16rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ov-source-strip-tone, var(--ov-mi-color-neutral)) 22%, var(--ov-mi-border-faint));
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-source-strip-tone, var(--ov-mi-color-neutral)) 6%, rgba(255,255,255,0.94));
+  color: color-mix(in srgb, var(--ov-source-strip-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  white-space: nowrap;
+}
+.ov-source-confidence-source {
+  background: rgba(255,255,255,0.72);
+  color: var(--ov-mi-color-text-subtle);
+  font-weight: var(--ov-mi-weight-body);
+}
 .ov-source-confidence-status {
   flex: 0 0 auto;
   color: var(--ov-source-status-tone, var(--ov-mi-color-neutral));
@@ -838,6 +864,60 @@ def overview_ui_css() -> str:
   margin-top: 0.44rem;
   padding-top: 0.34rem;
   border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-gap-panel {
+  display: grid;
+  gap: var(--ov-mi-gap-sm);
+  margin-top: 0.56rem;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--ov-analog-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  border-left: 3px solid var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-analog-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
+    var(--ov-mi-color-surface);
+}
+.ov-analog-gap-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-analog-gap-detail,
+.ov-analog-gap-action {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+}
+.ov-analog-gap-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.04rem;
+}
+.ov-analog-gap-item {
+  min-width: 0;
+  padding: 0.44rem 0.5rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  background: rgba(255,255,255,0.58);
+}
+.ov-analog-gap-symbol {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+}
+.ov-analog-gap-rows {
+  margin-top: 0.1rem;
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-analog-gap-meta {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 .ov-historical-analog-limitations {
   margin-top: 0.4rem;
@@ -2487,6 +2567,8 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     tone_color = escape(_overview_tone_color(model.get("status")))
     status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
     rows = list(model.get("rows") or [])
+    coverage_gaps = list(model.get("coverage_gaps") or [])
+    repair_action = dict(model.get("repair_action") or {})
     table_rows: list[str] = []
     for row in rows[:15]:
         table_rows.append(
@@ -2505,6 +2587,40 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
             "<thead><tr><th>자산 · 기간</th><th>중간값</th><th>상승 비율</th><th>최선</th><th>최악</th><th>표본</th></tr></thead>"
             f"<tbody>{''.join(table_rows)}</tbody>"
             "</table>"
+        )
+    elif coverage_gaps and repair_action:
+        gap_rows: list[str] = []
+        for gap in coverage_gaps[:6]:
+            row_count = _display_value(gap.get("row_count"))
+            min_rows = _display_value(gap.get("min_rows"))
+            window = " ~ ".join(
+                item
+                for item in (
+                    _display_value(gap.get("start_date")),
+                    _display_value(gap.get("end_date")),
+                )
+                if item != "-"
+            )
+            gap_rows.append(
+                '<div class="ov-analog-gap-item">'
+                f'<div class="ov-analog-gap-symbol">{escape(_display_value(gap.get("symbol")))}</div>'
+                f'<div class="ov-analog-gap-rows">{escape(row_count)} / {escape(min_rows)} rows</div>'
+                f'<div class="ov-analog-gap-meta">{escape(window or _display_value(gap.get("detail")))}</div>'
+                "</div>"
+            )
+        action_symbols = ", ".join(str(symbol) for symbol in repair_action.get("symbols") or [])
+        action_detail = (
+            f"보조 갱신에서 {escape(action_symbols)} "
+            f"{escape(_display_value(repair_action.get('period')))} "
+            f"{escape(_display_value(repair_action.get('interval')))} 가격 이력을 보강합니다."
+        )
+        body_html = (
+            '<div class="ov-analog-gap-panel">'
+            f'<div class="ov-analog-gap-title">{escape(_display_value(repair_action.get("label") or "부족 ETF 가격 이력 보강"))}</div>'
+            '<div class="ov-analog-gap-detail">과거 유사 맥락을 계산하려면 아래 가격 이력이 먼저 필요합니다.</div>'
+            f'<div class="ov-analog-gap-list">{"".join(gap_rows)}</div>'
+            f'<div class="ov-analog-gap-action">{action_detail}</div>'
+            "</div>"
         )
     else:
         body_html = (
@@ -2541,14 +2657,55 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     )
 
 
+def _source_confidence_status_bucket(status: Any) -> str:
+    normalized = str(status or "").strip().upper()
+    if normalized in {"OK", "PASS", "READY", "SUCCESS"}:
+        return "ok"
+    if normalized in {"MISSING", "INSUFFICIENT_DATA", "BLOCKED", "FAILED", "ERROR"}:
+        return "missing"
+    return "review"
+
+
+def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[dict[str, Any]]) -> str:
+    bucket_counts = {"ok": 0, "review": 0, "missing": 0}
+    for item in items:
+        bucket_counts[_source_confidence_status_bucket(item.get("status"))] += 1
+    ok_count = summary.get("ok_count", bucket_counts["ok"])
+    review_count = summary.get("review_count", bucket_counts["review"])
+    missing_count = summary.get("missing_count", bucket_counts["missing"])
+    metric_items = [
+        ("정상", ok_count, "OK"),
+        ("확인", review_count, "REVIEW"),
+        ("부족", missing_count, "INSUFFICIENT_DATA"),
+    ]
+    chips: list[str] = []
+    for label, count, tone in metric_items:
+        chips.append(
+            f'<span class="ov-source-confidence-pill" style="--ov-source-strip-tone:{escape(_overview_tone_color(tone))};">'
+            f"{escape(label)} {escape(_display_value(count))}"
+            "</span>"
+        )
+    for item in items[:3]:
+        surface = _display_value(item.get("surface"))
+        item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
+        chips.append(
+            f'<span class="ov-source-confidence-source" style="--ov-source-strip-tone:{escape(_overview_tone_color(item.get("tone") or item.get("status")))};">'
+            f"{escape(surface)} · {escape(item_status)}"
+            "</span>"
+        )
+    return f'<div class="ov-source-confidence-strip">{"".join(chips)}</div>'
+
+
 def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     if not model:
         return ""
     summary = dict(model.get("summary") or {})
     status_tone = escape(_overview_tone_color(model.get("status")))
     status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
+    source_items = list(model.get("items") or [])
+    summary_strip_html = _source_confidence_summary_strip_html(summary, source_items)
     rows: list[str] = []
-    for item in list(model.get("items") or [])[:6]:
+    for item in source_items[:6]:
         tone_color = escape(_overview_tone_color(item.get("tone") or item.get("status")))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
         freshness = _display_value(item.get("freshness_label") or _display_freshness_label(item.get("freshness")))
@@ -2576,6 +2733,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         '<div>'
         '<div class="ov-source-confidence-title">근거: 자료 기준 / 출처 상태</div>'
         f'<div class="ov-source-confidence-detail">{escape(_display_value(summary.get("detail")))}</div>'
+        f"{summary_strip_html}"
         '</div>'
         f'<div class="ov-source-confidence-status">{escape(status_label)}</div>'
         '</div>'

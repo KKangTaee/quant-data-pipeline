@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-15 - Overview Market Context Analog Repair V4
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-repair-v4-20260615/` after the user approved making historical analog `자료 부족` actionable and visibly different.
+- Added generalized historical analog coverage gaps plus a bounded Overview OHLCV repair action; live QA targeted `Communication Services -> XLC`, confirming the flow is not hard-coded to Technology / XLK.
+- Source confidence now shows normal / review / missing counts and key source pills before the disclosure is opened.
+- Boundary stayed Overview-only: no new provider, schema, loader, CSV upload, registry / saved JSONL write, validation / monitoring / trading semantics, or automatic render-time fetch.
+
 ### 2026-06-15 - Overview Market Context Section Flow V1 1차
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-section-flow-v1-20260615/` after the user approved splitting the hybrid Market Context surface into clearer reading sections.
 - Kept the top cockpit focused on headline, 5-cell tape, sector pressure map, and event timeline; moved `시장 브리프`, `해석할 때 같이 볼 변수`, `과거 유사 맥락 참고`, and source confidence into sibling reading-flow sections.

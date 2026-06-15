@@ -13,6 +13,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_macro_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
+    run_collect_ohlcv,
     run_collect_sp500_universe,
     run_diagnose_market_quote_gaps,
 )
@@ -143,6 +144,54 @@ def run_overview_sp500_universe() -> JobResult:
 
 def run_overview_market_sentiment() -> JobResult:
     return run_collect_market_sentiment()
+
+
+def _normalize_action_symbols(symbols: Iterable[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for symbol in symbols:
+        value = str(symbol or "").strip().upper()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        normalized.append(value)
+    return normalized
+
+
+def run_overview_historical_analog_ohlcv(
+    *,
+    symbols: Iterable[str],
+    period: str = "10y",
+    interval: str = "1d",
+) -> JobResult:
+    """Collect missing sector-proxy price history through the existing OHLCV pipeline."""
+    selected_symbols = _normalize_action_symbols(symbols)
+    result = dict(
+        run_collect_ohlcv(
+            selected_symbols,
+            period=period,
+            interval=interval,
+            execution_profile="managed_safe",
+        )
+    )
+    result["job_name"] = "overview_historical_analog_ohlcv"
+    details = dict(result.get("details") or {})
+    details.update(
+        {
+            "symbols": selected_symbols,
+            "period": period,
+            "interval": interval,
+            "target_tables": ["finance_price.nyse_price_history"],
+            "source": "yfinance OHLCV",
+            "purpose": "Overview Market Context historical analog coverage repair",
+        }
+    )
+    result["details"] = details
+    if result.get("message"):
+        result["message"] = f"과거 유사 맥락 가격 이력 보강: {result['message']}"
+    else:
+        result["message"] = "과거 유사 맥락 가격 이력 보강을 실행했습니다."
+    return result
 
 
 def _overview_bundle_result(label: str, result: JobResult) -> JobResult:

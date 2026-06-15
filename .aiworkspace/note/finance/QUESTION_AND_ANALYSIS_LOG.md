@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-15 - Historical analog gaps should become explicit repair actions
+- User request:
+  - `Overview > Market Context`에서 `참고: 과거 유사 맥락`이 `자료 부족`으로 멈추는 문제와, `자료 기준 / 출처 상태`가 잘 보이지 않는 문제를 함께 개선하길 요청함.
+- Interpreted goal:
+  - Historical analog은 계속 context-only 참고로 두되, 부족한 sector ETF / 비교 자산 가격 이력을 사용자가 어디서 어떻게 보강할지 바로 알 수 있게 만든다.
+- Analysis result:
+  - Gap detection은 current leadership sector proxy와 comparison assets의 실제 DB coverage에서 일반화한다. 따라서 live target은 Technology / XLK로 고정되지 않고, QA 시점에는 Communication Services / XLC가 repair target이었다. 보강 실행은 UI 직접 수집이 아니라 기존 `app/jobs/overview_actions.py` facade와 기존 OHLCV collection path를 통한다.
+- Follow-up:
+  - CSV upload/import, broader sector ETF coverage expansion, macro/futures/event-conditioned analog, stronger PIT / survivorship / sample-quality handling은 별도 승인 후속이다.
+
 ### 2026-06-15 - Historical analog should remain an Overview context reference
 - User request:
   - `Overview > Market Context` 후속 개선 4차로 과거 유사국면 참고 MVP 개발을 승인함.

@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `overview-market-context-historical-analog-v1-20260615`
+- `overview-market-context-analog-repair-v4-20260615`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-analog-repair-v4-20260615`: Overview Market Context Analog Repair V4 / Historical analog coverage gap panel, bounded OHLCV repair action, source confidence summary strip
 - `overview-market-context-historical-analog-v1-20260615`: Overview Market Context Historical Analog V1 / Sector Leadership -> Sector ETF Proxy -> context-only historical analog MVP
 - `overview-market-context-events-data-trust-v1-20260612`: Overview Market Context Events Data Trust V1 / recent + upcoming major macro event trust
 - `overview-data-health-ingestion-handoff-v1-20260608`: Overview Data Health Ingestion Handoff V1 / priority-ranked read-only Data Health -> collection surface handoff

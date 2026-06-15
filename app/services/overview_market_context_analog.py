@@ -115,6 +115,8 @@ def _base_model(
     leadership_sector: str | None = None,
     proxy_etf: str | None = None,
     coverage: list[dict[str, Any]] | None = None,
+    coverage_gaps: list[dict[str, Any]] | None = None,
+    repair_action: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": "overview_market_context_historical_analog_v1",
@@ -127,6 +129,8 @@ def _base_model(
         "condition_summary": "",
         "data_window": "",
         "coverage": coverage or [],
+        "coverage_gaps": coverage_gaps or [],
+        "repair_action": repair_action or {},
         "rows": [],
         "anchor_dates": [],
         "limitations": _default_limitations(),
@@ -270,6 +274,43 @@ def summarize_price_coverage(
     return rows
 
 
+def _coverage_gap_rows(coverage: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    gaps: list[dict[str, Any]] = []
+    for row in coverage:
+        if str(row.get("status") or "") == "OK":
+            continue
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        gaps.append(
+            {
+                "symbol": symbol,
+                "row_count": int(row.get("row_count") or 0),
+                "min_rows": int(row.get("min_rows") or DEFAULT_MIN_HISTORY_ROWS),
+                "start_date": row.get("start_date"),
+                "end_date": row.get("end_date"),
+                "detail": row.get("detail") or "",
+            }
+        )
+    return gaps
+
+
+def _coverage_repair_action(coverage_gaps: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    symbols = list(dict.fromkeys(str(row.get("symbol") or "").strip().upper() for row in coverage_gaps))
+    symbols = [symbol for symbol in symbols if symbol]
+    if not symbols:
+        return {}
+    return {
+        "label": "부족 ETF 가격 이력 보강",
+        "symbols": symbols,
+        "period": "10y",
+        "interval": "1d",
+        "target_table": "finance_price.nyse_price_history",
+        "source": "yfinance OHLCV",
+        "action": "overview_historical_analog_ohlcv",
+    }
+
+
 def _price_matrix(price_history: pd.DataFrame | None, symbols: Sequence[str]) -> pd.DataFrame:
     frame = _normalize_price_history(price_history)
     if frame.empty:
@@ -369,6 +410,8 @@ def build_historical_analog_snapshot(
             )
 
     coverage = summarize_price_coverage(price_history, symbols=symbols, min_rows=min_history_rows)
+    coverage_gaps = _coverage_gap_rows(coverage)
+    repair_action = _coverage_repair_action(coverage_gaps)
     coverage_by_symbol = {row["symbol"]: row for row in coverage}
     proxy_coverage = coverage_by_symbol.get(str(proxy_etf))
     spy_coverage = coverage_by_symbol.get("SPY")
@@ -387,6 +430,8 @@ def build_historical_analog_snapshot(
             leadership_sector=str(leadership_sector or ""),
             proxy_etf=str(proxy_etf),
             coverage=coverage,
+            coverage_gaps=coverage_gaps,
+            repair_action=repair_action,
         )
 
     matrix = _price_matrix(price_history, symbols)
@@ -398,6 +443,8 @@ def build_historical_analog_snapshot(
             leadership_sector=str(leadership_sector or ""),
             proxy_etf=str(proxy_etf),
             coverage=coverage,
+            coverage_gaps=coverage_gaps,
+            repair_action=repair_action,
         )
 
     analysis_matrix = matrix.dropna(subset=[str(proxy_etf), "SPY"])
@@ -410,6 +457,8 @@ def build_historical_analog_snapshot(
             leadership_sector=str(leadership_sector or ""),
             proxy_etf=str(proxy_etf),
             coverage=coverage,
+            coverage_gaps=coverage_gaps,
+            repair_action=repair_action,
         )
 
     latest_index = len(analysis_matrix) - 1
@@ -425,6 +474,8 @@ def build_historical_analog_snapshot(
             leadership_sector=str(leadership_sector or ""),
             proxy_etf=str(proxy_etf),
             coverage=coverage,
+            coverage_gaps=coverage_gaps,
+            repair_action=repair_action,
         )
 
     current_rel_5d = current_proxy_5d - current_spy_5d
@@ -485,6 +536,8 @@ def build_historical_analog_snapshot(
         "condition_summary": condition_summary,
         "data_window": f"{first_date} - {last_date}" if first_date and last_date else "",
         "coverage": coverage,
+        "coverage_gaps": coverage_gaps,
+        "repair_action": repair_action,
         "rows": rows,
         "anchor_dates": [_format_date(analysis_matrix.index[index]) for index in anchor_indices],
         "current_as_of": last_date,

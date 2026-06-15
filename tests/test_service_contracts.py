@@ -4360,10 +4360,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
 
-        self.assertIn("render_macro_context_cockpit(load_overview_macro_context_cockpit())", helper_body)
-        self.assertIn("_render_overview_market_context_refresh_bar()", helper_body)
-        cockpit_index = helper_body.index("render_macro_context_cockpit(load_overview_macro_context_cockpit())")
-        refresh_index = helper_body.index("_render_overview_market_context_refresh_bar()")
+        self.assertIn("cockpit_model = load_overview_macro_context_cockpit()", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model)", helper_body)
+        self.assertIn("_render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
+        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model)")
+        refresh_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_index)
         self.assertIn("load_overview_macro_context_cockpit", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
@@ -4377,7 +4378,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
 
-        self.assertIn("render_macro_context_cockpit(load_overview_macro_context_cockpit())", helper_body)
+        self.assertIn("cockpit_model = load_overview_macro_context_cockpit()", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model)", helper_body)
         self.assertNotIn("load_overview_ia_closeout_model", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
         self.assertNotIn("Deep Tab", helper_body)
@@ -4583,6 +4585,50 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("ov-macro-cues-grid", cue_html)
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
+
+    def test_overview_source_confidence_summary_exposes_scan_metrics_before_opening(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "REVIEW",
+                "status_label": "자료 확인 필요",
+                "summary": {
+                    "detail": "일부 저장 자료 확인 필요",
+                    "ok_count": 3,
+                    "review_count": 2,
+                    "missing_count": 1,
+                },
+                "items": [
+                    {
+                        "surface": "Prices",
+                        "status": "REVIEW",
+                        "title": "가격 자료",
+                        "detail": "기준일 오래됨",
+                        "freshness": "Update due",
+                        "owner": "Data Health",
+                        "caveat": "context only",
+                    },
+                    {
+                        "surface": "Events",
+                        "status": "OK",
+                        "title": "이벤트 자료",
+                        "detail": "공식/추정 혼합",
+                        "freshness": "Fresh",
+                        "owner": "Events",
+                        "caveat": "estimate caveat",
+                    },
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn("ov-source-confidence-strip", source_html)
+        self.assertIn("정상 3", source_html)
+        self.assertIn("확인 2", source_html)
+        self.assertIn("부족 1", source_html)
+        self.assertIn("Prices", source_html)
+        self.assertIn("Events", source_html)
 
     def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
@@ -5046,6 +5092,34 @@ class OverviewAutomationContractTests(unittest.TestCase):
         fomc.assert_called_once_with(years=(2026, 2027))
         earnings.assert_called_once_with()
         macro.assert_called_once_with(years=(2026, 2027))
+
+    def test_overview_action_facade_collects_historical_analog_price_gaps_with_existing_ohlcv_job(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_collect_ohlcv",
+            return_value={
+                "job_name": "collect_ohlcv",
+                "status": "success",
+                "rows_written": 2520,
+                "message": "OHLCV collection completed.",
+            },
+        ) as collect:
+            result = overview_actions.run_overview_historical_analog_ohlcv(
+                symbols=["XLK", "SPY", "XLK"],
+            )
+
+        self.assertEqual(result["job_name"], "overview_historical_analog_ohlcv")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["target_tables"], ["finance_price.nyse_price_history"])
+        self.assertEqual(result["details"]["symbols"], ["XLK", "SPY"])
+        collect.assert_called_once_with(
+            ["XLK", "SPY"],
+            period="10y",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
 
     def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
         from app.web.overview_dashboard import (
@@ -8334,6 +8408,38 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertEqual(model["sample_count"], 0)
         self.assertFalse(model["rows"])
 
+    def test_historical_analog_exposes_generalized_repair_action_for_insufficient_proxy_or_comparison_symbols(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        short_dates = pd.bdate_range("2026-03-02", periods=63)
+        medium_dates = pd.bdate_range("2025-01-02", periods=140)
+        long_dates = pd.bdate_range("2022-01-03", periods=820)
+        price_rows = pd.concat(
+            [
+                pd.DataFrame({"symbol": "XLF", "date": short_dates, "adj_close": 100.0, "close": 100.0}),
+                pd.DataFrame({"symbol": "SPY", "date": long_dates, "adj_close": 100.0, "close": 100.0}),
+                pd.DataFrame({"symbol": "TLT", "date": medium_dates, "adj_close": 100.0, "close": 100.0}),
+            ],
+            ignore_index=True,
+        )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Financial Services", "Market Cap Weighted Return %": 2.4}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "TLT"),
+            min_history_rows=252,
+        )
+
+        self.assertEqual(model["proxy_etf"], "XLF")
+        self.assertEqual([item["symbol"] for item in model["coverage_gaps"]], ["XLF", "TLT"])
+        self.assertEqual(model["repair_action"]["symbols"], ["XLF", "TLT"])
+        self.assertEqual(model["repair_action"]["period"], "10y")
+        self.assertEqual(model["repair_action"]["interval"], "1d")
+        self.assertIn("finance_price.nyse_price_history", model["repair_action"]["target_table"])
+
     def test_historical_analog_uses_anchor_after_returns_without_current_row_lookahead(self) -> None:
         from app.services.overview_market_context_analog import build_historical_analog_snapshot
 
@@ -8426,6 +8532,43 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("QQQ", html)
         for forbidden in ["추천", "매수", "매도", "신호", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_turns_insufficient_data_into_actionable_gap_panel(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "Financials(XLF) 기준 가격 coverage가 부족합니다.",
+                "leadership_sector": "Financial Services",
+                "proxy_etf": "XLF",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "coverage_gaps": [
+                    {"symbol": "XLF", "row_count": 63, "min_rows": 756, "detail": "63 rows from 2026-03-02"},
+                    {"symbol": "TLT", "row_count": 140, "min_rows": 756, "detail": "140 rows from 2025-01-02"},
+                ],
+                "repair_action": {
+                    "label": "부족 ETF 가격 이력 보강",
+                    "symbols": ["XLF", "TLT"],
+                    "period": "10y",
+                    "interval": "1d",
+                    "target_table": "finance_price.nyse_price_history",
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("ov-analog-gap-panel", html)
+        self.assertIn("부족 ETF 가격 이력 보강", html)
+        self.assertIn("XLF", html)
+        self.assertIn("63 / 756", html)
+        self.assertIn("TLT", html)
+        self.assertIn("140 / 756", html)
+        self.assertIn("보조 갱신", html)
+        self.assertNotIn("자료가 충분한 sector ETF history가 쌓이면", html)
 
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
