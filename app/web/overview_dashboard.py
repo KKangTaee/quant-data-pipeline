@@ -43,6 +43,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_dashboard_snapshot,
     load_overview_data_health_ingestion_handoff,
     load_overview_group_leadership_snapshot,
+    load_overview_market_context_historical_analog,
     load_overview_macro_context_cockpit,
     load_overview_macro_week_lane,
     load_overview_market_events_snapshot,
@@ -1746,6 +1747,7 @@ def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
 def _clear_overview_market_context_caches() -> None:
     for loader in (
         load_overview_group_leadership_snapshot,
+        load_overview_market_context_historical_analog,
         load_overview_market_sentiment_snapshot,
         load_overview_macro_context_cockpit,
     ):

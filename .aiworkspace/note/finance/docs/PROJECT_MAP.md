@@ -80,6 +80,7 @@ Last Verified: 2026-06-10
 | Backtest realism audit service | `app/services/backtest_realism_audit.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Overview market intelligence service | `app/services/overview_market_intelligence.py` |
+| Overview historical analog service | `app/services/overview_market_context_analog.py` |
 | Overview Macro Context Cockpit read model | `app/services/overview_market_intelligence.py` via `build_overview_macro_context_cockpit`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py` |
 | Overview Events / Macro Week read model | `app/services/overview_market_intelligence.py` via `build_market_events_snapshot` and `build_overview_macro_week_lane`; rendered by `app/web/overview_dashboard.py` and `app/web/overview_ui_components.py`. Event context reads recent 7D plus upcoming rows and prioritizes FOMC / CPI / PPI / Employment / GDP over earnings for scan surfaces |
 | Overview Data Health Ingestion Handoff read model | `app/services/overview_market_intelligence.py` via `build_overview_data_health_ingestion_handoff`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py` for `Workspace > Overview > Data Health` |
@@ -194,7 +195,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 
 | Situation | Start Here |
 |---|---|
-| Overview macro context cockpit / market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
+| Overview macro context cockpit / historical analog / market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py`, `app/services/overview_market_context_analog.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
 | S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare_components.py` |

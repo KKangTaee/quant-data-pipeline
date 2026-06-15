@@ -7866,6 +7866,206 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("{", movement["badges"][1]["value"])
 
 
+class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
+    def _analog_price_rows(self, symbols: list[str], dates: pd.DatetimeIndex) -> pd.DataFrame:
+        rows: list[dict[str, object]] = []
+        anchors = [20, 35]
+        current_index = len(dates) - 1
+        for symbol in symbols:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in anchors + [current_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 5] = 105.0
+                    prices[anchor + 20] = 120.0
+                    prices[anchor + 60] = 160.0
+            for idx, day in enumerate(dates):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    def test_sector_etf_proxy_map_resolves_gics_and_provider_aliases(self) -> None:
+        from app.services.overview_market_context_analog import (
+            sector_etf_proxy_map,
+            resolve_sector_etf_proxy,
+        )
+
+        proxies = sector_etf_proxy_map()
+
+        self.assertEqual(proxies["Technology"]["symbol"], "XLK")
+        self.assertEqual(resolve_sector_etf_proxy("Consumer Defensive")["symbol"], "XLP")
+        self.assertEqual(resolve_sector_etf_proxy("Consumer Cyclical")["symbol"], "XLY")
+        self.assertEqual(resolve_sector_etf_proxy("Basic Materials")["symbol"], "XLB")
+        self.assertEqual(resolve_sector_etf_proxy("Health Care")["symbol"], "XLV")
+
+    def test_price_coverage_helper_marks_short_sector_etf_history_insufficient(self) -> None:
+        from app.services.overview_market_context_analog import summarize_price_coverage
+
+        short_dates = pd.bdate_range("2026-03-02", periods=63)
+        long_dates = pd.bdate_range("2024-01-02", periods=260)
+        price_rows = pd.concat(
+            [
+                pd.DataFrame(
+                    {
+                        "symbol": "XLI",
+                        "date": short_dates,
+                        "adj_close": [100.0] * len(short_dates),
+                        "close": [100.0] * len(short_dates),
+                    }
+                ),
+                pd.DataFrame(
+                    {
+                        "symbol": "SPY",
+                        "date": long_dates,
+                        "adj_close": [100.0] * len(long_dates),
+                        "close": [100.0] * len(long_dates),
+                    }
+                ),
+            ],
+            ignore_index=True,
+        )
+
+        coverage = summarize_price_coverage(price_rows, symbols=["XLI", "SPY"], min_rows=252)
+        by_symbol = {row["symbol"]: row for row in coverage}
+
+        self.assertEqual(by_symbol["XLI"]["status"], "INSUFFICIENT_DATA")
+        self.assertEqual(by_symbol["XLI"]["row_count"], 63)
+        self.assertEqual(by_symbol["XLI"]["start_date"], "2026-03-02")
+        self.assertEqual(by_symbol["SPY"]["status"], "OK")
+
+    def test_historical_analog_reports_current_leadership_proxy_but_does_not_force_short_history(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2026-03-02", periods=63)
+        price_rows = pd.concat(
+            [
+                pd.DataFrame({"symbol": "XLI", "date": dates, "adj_close": 100.0, "close": 100.0}),
+                pd.DataFrame({"symbol": "SPY", "date": pd.bdate_range("2024-01-02", periods=260), "adj_close": 100.0, "close": 100.0}),
+            ],
+            ignore_index=True,
+        )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Industrials", "Market Cap Weighted Return %": 3.34}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY",),
+            min_history_rows=252,
+        )
+
+        self.assertEqual(model["status"], "INSUFFICIENT_DATA")
+        self.assertEqual(model["leadership_sector"], "Industrials")
+        self.assertEqual(model["proxy_etf"], "XLI")
+        self.assertIn("자료 부족", model["headline"])
+        self.assertEqual(model["sample_count"], 0)
+        self.assertFalse(model["rows"])
+
+    def test_historical_analog_uses_anchor_after_returns_without_current_row_lookahead(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=100)
+        price_rows = self._analog_price_rows(["XLV", "SPY", "QQQ", "TLT", "GLD"], dates)
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "QQQ", "TLT", "GLD"),
+            min_history_rows=80,
+            min_sample_count=2,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["leadership_sector"], "Healthcare")
+        self.assertEqual(model["proxy_etf"], "XLV")
+        self.assertEqual(model["sample_count"], 2)
+        self.assertNotIn(str(dates[-1].date()), model["anchor_dates"])
+        self.assertIn("5D", model["condition_summary"])
+        qqq_5d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "5D")
+        qqq_60d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "60D")
+        self.assertAlmostEqual(qqq_5d["median_return_pct"], 5.0, places=2)
+        self.assertAlmostEqual(qqq_60d["median_return_pct"], 60.0, places=2)
+        self.assertTrue(any("미래 움직임 보장이 아님" in item for item in model["limitations"]))
+
+    def test_macro_context_cockpit_embeds_analog_read_model_when_supplied(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame([{"Symbol": "MRNA", "Return %": 7.2, "Name": "Moderna", "Sector": "Healthcare"}])},
+            group_leadership_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame([{"Group": "Healthcare", "Market Cap Weighted Return %": 2.1, "Positive Symbol Share %": 64.0}])},
+            futures_macro_snapshot={"status": "OK", "coverage": {}, "summary": {}, "scores": pd.DataFrame()},
+            sentiment_snapshot={"status": "OK", "coverage": {}, "analysis": {}},
+            events_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+            collection_ops_snapshot={"status": "OK", "coverage": {"ok_count": 6}, "rows": pd.DataFrame()},
+            historical_analog_snapshot={
+                "schema_version": "overview_market_context_historical_analog_v1",
+                "status": "OK",
+                "headline": "과거 유사 맥락 2회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 2,
+                "condition_summary": "5D relative strength 기준",
+                "data_window": "2024-01-02 - 2024-05-20",
+                "coverage": [],
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            },
+        )
+
+        self.assertEqual(cockpit["historical_analog"]["proxy_etf"], "XLV")
+        self.assertIn("과거 유사 맥락", cockpit["historical_analog"]["headline"])
+        self.assertIn("context 전용", cockpit["boundary_note"])
+
+    def test_historical_analog_html_keeps_context_only_language(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 2회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 2,
+                "condition_summary": "5D relative strength 기준",
+                "data_window": "2024-01-02 - 2024-05-20",
+                "rows": [
+                    {
+                        "asset": "QQQ",
+                        "horizon": "5D",
+                        "median_return_pct": 5.0,
+                        "positive_rate_pct": 100.0,
+                        "best_return_pct": 5.0,
+                        "worst_return_pct": 5.0,
+                        "sample_count": 2,
+                    }
+                ],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("과거 유사 맥락 참고", html)
+        self.assertIn("QQQ", html)
+        for forbidden in ["추천", "매수", "매도", "신호", "PASS", "BLOCKER"]:
+            self.assertNotIn(forbidden, html)
+
+
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
     def test_futures_monitor_snapshot_scores_moves_and_stale_state(self) -> None:
         from app.services.futures_market_monitoring import build_futures_monitor_snapshot

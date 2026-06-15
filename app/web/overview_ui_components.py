@@ -542,6 +542,77 @@ def overview_ui_css() -> str:
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
 }
+.ov-historical-analog {
+  margin-top: 0.66rem;
+  padding: 0.6rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background: rgba(255,255,255,0.9);
+}
+.ov-historical-analog-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  align-items: flex-start;
+}
+.ov-historical-analog-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-historical-analog-detail,
+.ov-historical-analog-meta,
+.ov-historical-analog-limitations,
+.ov-historical-analog-empty {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ov-historical-analog-status {
+  flex: 0 0 auto;
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  white-space: nowrap;
+}
+.ov-historical-analog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem 0.58rem;
+  margin-top: 0.34rem;
+}
+.ov-historical-analog-table {
+  width: 100%;
+  margin-top: 0.48rem;
+  border-collapse: collapse;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+}
+.ov-historical-analog-table th,
+.ov-historical-analog-table td {
+  padding: 0.24rem 0.32rem;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  text-align: right;
+  vertical-align: top;
+}
+.ov-historical-analog-table th:first-child,
+.ov-historical-analog-table td:first-child {
+  text-align: left;
+}
+.ov-historical-analog-empty {
+  margin-top: 0.44rem;
+  padding: 0.42rem 0.48rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.74);
+}
+.ov-historical-analog-limitations {
+  margin-top: 0.4rem;
+}
 .ov-source-confidence-body {
   padding-top: 0.12rem;
 }
@@ -2037,6 +2108,71 @@ def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
     )
 
 
+def _analog_pct(value: Any) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    return f"{numeric:+.1f}%"
+
+
+def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
+    if not model:
+        return ""
+    tone_color = escape(_overview_tone_color(model.get("status")))
+    status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
+    rows = list(model.get("rows") or [])
+    table_rows: list[str] = []
+    for row in rows[:15]:
+        table_rows.append(
+            "<tr>"
+            f"<td>{escape(_display_value(row.get('asset')))} · {escape(_display_value(row.get('horizon')))}</td>"
+            f"<td>{escape(_analog_pct(row.get('median_return_pct')))}</td>"
+            f"<td>{escape(_analog_pct(row.get('positive_rate_pct')))}</td>"
+            f"<td>{escape(_analog_pct(row.get('best_return_pct')))}</td>"
+            f"<td>{escape(_analog_pct(row.get('worst_return_pct')))}</td>"
+            f"<td>{escape(_display_value(row.get('sample_count')))}</td>"
+            "</tr>"
+        )
+    if table_rows:
+        body_html = (
+            '<table class="ov-historical-analog-table">'
+            "<thead><tr><th>자산 · 기간</th><th>중간값</th><th>상승 비율</th><th>최선</th><th>최악</th><th>표본</th></tr></thead>"
+            f"<tbody>{''.join(table_rows)}</tbody>"
+            "</table>"
+        )
+    else:
+        body_html = (
+            '<div class="ov-historical-analog-empty">'
+            "자료가 충분한 sector ETF history가 쌓이면 5D / 20D / 60D 요약을 표시합니다."
+            "</div>"
+        )
+    limitations = " · ".join(str(item) for item in list(model.get("limitations") or [])[:4])
+    meta_items = [
+        f"기준 sector: {_display_value(model.get('leadership_sector'))}",
+        f"ETF proxy: {_display_value(model.get('proxy_etf'))}",
+        f"sample: {_display_value(model.get('sample_count'))}",
+        f"window: {_display_value(model.get('data_window'))}",
+    ]
+    meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
+    condition = _display_value(model.get("condition_summary") or model.get("detail"))
+    return (
+        f'<section class="ov-historical-analog" style="--ov-analog-tone:{tone_color};">'
+        '<div class="ov-historical-analog-head">'
+        "<div>"
+        '<div class="ov-historical-analog-title">과거 유사 맥락 참고</div>'
+        f'<div class="ov-historical-analog-detail">{escape(_display_value(model.get("headline")))}</div>'
+        "</div>"
+        f'<div class="ov-historical-analog-status">{escape(status_label)}</div>'
+        "</div>"
+        f'<div class="ov-historical-analog-meta">{meta_html}</div>'
+        f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
+        f"{body_html}"
+        f'<div class="ov-historical-analog-limitations">{escape(limitations)}</div>'
+        "</section>"
+    )
+
+
 def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     if not model:
         return ""
@@ -2086,6 +2222,7 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
     rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
     interpretation_cues_html = _macro_cockpit_interpretation_cues_html(list(model.get("interpretation_cues") or []))
+    historical_analog_html = _macro_cockpit_historical_analog_html(dict(model.get("historical_analog") or {}))
     source_confidence_html = _macro_cockpit_source_confidence_html(dict(model.get("source_confidence") or {}))
     st.markdown(
         overview_ui_css()
@@ -2102,6 +2239,7 @@ def render_macro_context_cockpit(model: dict[str, Any]) -> None:
   {rail_html}
   {brief_rows_html}
   {interpretation_cues_html}
+  {historical_analog_html}
   {source_confidence_html}
   <div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",

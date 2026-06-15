@@ -4516,6 +4516,7 @@ def build_overview_macro_context_cockpit(
     sentiment_snapshot: dict[str, Any] | None = None,
     events_snapshot: dict[str, Any] | None = None,
     collection_ops_snapshot: dict[str, Any] | None = None,
+    historical_analog_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a summary-first Overview cockpit from existing read-only market context snapshots."""
     if market_movers_snapshot is None:
@@ -4667,6 +4668,7 @@ def build_overview_macro_context_cockpit(
         },
         "brief_rows": brief_rows,
         "interpretation_cues": interpretation_cues,
+        "historical_analog": historical_analog_snapshot or {},
         "cards": cards,
         "next_checks": next_checks,
         "source_confidence": source_confidence,

@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-15 - Historical analog should remain an Overview context reference
+- User request:
+  - `Overview > Market Context` 후속 개선 4차로 과거 유사국면 참고 MVP 개발을 승인함.
+- Interpreted goal:
+  - 현재 sector leadership을 ETF proxy에 연결하고, coverage가 충분할 때만 이후 5D / 20D / 60D 자산 흐름을 과거 참고 정보로 보여준다.
+- Analysis result:
+  - MVP는 current constituent sector membership을 과거로 되감지 않고 sector ETF proxy 가격 흐름으로 시작한다. Local DB 기준 current leadership은 `Industrials -> XLI`지만 `XLI` price coverage가 63 rows라 live UI는 `자료 부족`을 표시한다. 이 결론은 기능 실패가 아니라 과장 방지를 위한 의도된 coverage gate다.
+- Follow-up:
+  - Sector ETF coverage expansion, macro/futures regime condition, CPI/FOMC event-window analog, sample quality / PIT / survivorship 보강은 후속 작업이다.
+
 ### 2026-06-10 - Market Context should read as a cockpit, not a refresh console
 - User request:
   - `Overview > Market Context` 탭의 1차~4차 UX/UI 개선 진행을 승인함.

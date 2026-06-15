@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-15 - Overview Market Context Historical Analog V1 4차
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-historical-analog-v1-20260615/` for the 4차 Market Context follow-up.
+- Added a context-only `과거 유사 맥락 참고` MVP: current sector leadership resolves through a generic sector ETF proxy map, checks DB price coverage, and only computes 5D / 20D / 60D historical forward-return summaries when coverage is sufficient.
+- Local DB currently maps `Industrials -> XLI`, but `XLI` has only 63 daily rows, so the live UI shows `자료 부족` with the coverage reason rather than forcing an analog result.
+- Boundary stayed Overview-only: no prediction model, recommendation / trade signal, Backtest / Validation / Final Review / Operations connection, schema/provider change, registry write, or saved JSONL write.
+
 ### 2026-06-10 - Overview Market Context UX V3 1차~4차
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-ux-v3-20260610/` for `Overview > Market Context` first-screen UX polish.
 - Reworked the first tab to show market context summary, data-state separation, next check order, core/supporting card hierarchy, and secondary refresh placement.

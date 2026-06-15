@@ -27,6 +27,7 @@ from app.services.overview_market_intelligence import (
     build_overview_macro_week_lane,
     load_market_mover_sector_options,
 )
+from app.services.overview_market_context_analog import build_historical_analog_snapshot
 from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
 
 
@@ -451,6 +452,20 @@ def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentime
     return build_market_sentiment_snapshot()
 
 
+@st.cache_data(ttl=120, show_spinner=False)
+def load_overview_market_context_historical_analog(
+    cache_schema_version: str = "overview-historical-analog-v1",
+) -> dict[str, Any]:
+    del cache_schema_version
+    group_snapshot = load_overview_group_leadership_snapshot(
+        universe_code="SP500",
+        group_by="sector",
+        period="daily",
+        top_n=10,
+    )
+    return build_historical_analog_snapshot(group_leadership_snapshot=group_snapshot)
+
+
 # Load the DB freshness and persisted job history snapshot for Overview Data Health.
 def load_overview_collection_ops_snapshot() -> dict[str, Any]:
     return build_collection_ops_snapshot(history_rows=load_run_history(limit=200))
@@ -509,7 +524,9 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 
 # Load the summary-first market context cockpit from existing Overview read models only.
 @st.cache_data(ttl=120, show_spinner=False)
-def load_overview_macro_context_cockpit(cache_schema_version: str = "overview-cockpit-v1-brief-flow") -> dict[str, Any]:
+def load_overview_macro_context_cockpit(
+    cache_schema_version: str = "overview-cockpit-v1-historical-analog",
+) -> dict[str, Any]:
     del cache_schema_version
     return build_overview_macro_context_cockpit(
         market_movers_snapshot=load_overview_market_movers_snapshot(
@@ -531,4 +548,5 @@ def load_overview_macro_context_cockpit(cache_schema_version: str = "overview-co
             limit=100,
         ),
         collection_ops_snapshot=load_overview_collection_ops_snapshot(),
+        historical_analog_snapshot=load_overview_market_context_historical_analog(),
     )
