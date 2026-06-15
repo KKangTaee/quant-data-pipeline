@@ -4957,3 +4957,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `오늘의 시장 맥락`은 `현재 맥락:` 한 줄 대신 top mover / breadth / futures / next reading order를 2~3문장으로 표시한다.
   - Reading-flow 단락은 typography / color density를 조정해 `시장 브리프`, `해석 변수`, `과거 유사 맥락`, `자료 기준`이 흐름대로 읽히게 했다.
   - 검증은 focused unittest 87개, py_compile, diff check, Browser desktop/mobile DOM QA와 screenshot으로 완료했다.
+- Overview Market Context Supporting Flow V3:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-supporting-flow-v3-20260615/`에서 3차 하단 보조 흐름 개선을 완료했다.
+  - `해석할 때 같이 볼 변수`는 `다음 맥락 체크`로 바꾸고, cue rows는 이벤트 / 심리 / 매크로 관찰 지점만 남겼다.
+  - `과거 유사 맥락`은 참고, `자료 기준 / 출처 상태`는 근거 footer로 낮췄으며 Data Health는 main cue row에서 제거했다.
+  - 검증은 focused/regression unittest, py_compile, diff check, Browser QA screenshot으로 완료했다.

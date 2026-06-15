@@ -545,6 +545,23 @@ def overview_ui_css() -> str:
 .ov-macro-reading-section .ov-historical-analog-detail {
   line-height: 1.32;
 }
+.ov-historical-analog-row.is-muted-reference {
+  border-left-color: color-mix(in srgb, var(--ov-mi-color-neutral) 72%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-mi-color-neutral) 3%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
+    var(--ov-mi-color-surface);
+}
+.ov-historical-analog-row.is-muted-reference .ov-historical-analog-title,
+.ov-historical-analog-row.is-muted-reference .ov-historical-analog-detail,
+.ov-historical-analog-row.is-muted-reference .ov-historical-analog-note,
+.ov-historical-analog-row.is-muted-reference .ov-historical-analog-limitations {
+  color: var(--ov-mi-color-text-muted);
+}
+.ov-source-confidence.is-evidence-footer {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-source-status-tone, var(--ov-mi-color-neutral)) 3%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
+    var(--ov-mi-color-surface);
+}
 .ov-macro-brief-list {
   display: grid;
   gap: var(--ov-mi-gap-sm);
@@ -2448,8 +2465,8 @@ def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
     return (
         '<section class="ov-macro-reading-section ov-macro-cues" style="--ov-reading-tone:var(--ov-mi-color-warning);">'
         '<div class="ov-macro-section-head">'
-        '<div class="ov-macro-section-title">해석할 때 같이 볼 변수</div>'
-        '<div class="ov-macro-section-note">시장 판단을 바꾸는 변수만 작게 붙입니다.</div>'
+        '<div class="ov-macro-section-title">다음 맥락 체크</div>'
+        '<div class="ov-macro-section-note">오늘 흐름을 바로 예측하지 않고, 해석을 바꿀 수 있는 다음 관찰 지점만 표시합니다.</div>'
         "</div>"
         f'<ul class="ov-macro-cues-list">{"".join(html)}</ul>'
         "</section>"
@@ -2496,6 +2513,9 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
             "</div>"
         )
     limitations = " · ".join(str(item) for item in list(model.get("limitations") or [])[:4])
+    section_class = "ov-macro-reading-section ov-historical-analog-row"
+    if not table_rows:
+        section_class += " is-muted-reference"
     meta_items = [
         f"기준 sector: {_display_value(model.get('leadership_sector'))}",
         f"ETF proxy: {_display_value(model.get('proxy_etf'))}",
@@ -2505,10 +2525,10 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
     condition = _display_value(model.get("condition_summary") or model.get("detail"))
     return (
-        f'<section class="ov-macro-reading-section ov-historical-analog-row" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
+        f'<section class="{section_class}" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
         "<div>"
-        '<div class="ov-historical-analog-title">과거 유사 맥락 참고</div>'
+        '<div class="ov-historical-analog-title">참고: 과거 유사 맥락</div>'
         f'<div class="ov-historical-analog-detail">{escape(_display_value(model.get("headline")))}</div>'
         "</div>"
         f'<div class="ov-historical-analog-status">{escape(status_label)}</div>'
@@ -2550,11 +2570,11 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
             "</div>"
         )
     return (
-        f'<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure" style="--ov-source-status-tone:{status_tone};--ov-reading-tone:{status_tone};">'
+        f'<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure is-evidence-footer" style="--ov-source-status-tone:{status_tone};--ov-reading-tone:{status_tone};">'
         '<summary class="ov-source-confidence-summary">'
         '<div class="ov-source-confidence-head">'
         '<div>'
-        '<div class="ov-source-confidence-title">자료 기준 / 출처 상태</div>'
+        '<div class="ov-source-confidence-title">근거: 자료 기준 / 출처 상태</div>'
         f'<div class="ov-source-confidence-detail">{escape(_display_value(summary.get("detail")))}</div>'
         '</div>'
         f'<div class="ov-source-confidence-status">{escape(status_label)}</div>'

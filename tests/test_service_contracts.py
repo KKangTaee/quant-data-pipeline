@@ -4507,7 +4507,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn(".ov-context-disclosure", css)
         self.assertIn(".ov-context-disclosure > summary", css)
-        self.assertIn('<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure"', source)
+        self.assertIn(
+            '<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure is-evidence-footer"',
+            source,
+        )
         self.assertIn('<summary class="ov-source-confidence-summary"', source)
         self.assertIn('<details class="ov-ia-closeout ov-context-disclosure"', source)
         self.assertIn('<summary class="ov-ia-closeout-summary"', source)
@@ -4797,6 +4800,57 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-macro-reading-section ov-historical-analog-row", reading_html)
         self.assertIn("ov-macro-reading-section ov-source-confidence", reading_html)
 
+    def test_overview_market_context_relabels_supporting_flow_as_next_context_reference_and_evidence(self) -> None:
+        from app.web import overview_ui_components
+
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Technology 리더십이 확인되고, 선물/매크로 배경은 금리 압력입니다. 확인할 자료 3개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요.",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "3 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                    {"label": "Breadth", "value": "Technology", "detail": "91%", "tone": "positive"},
+                    {"label": "Macro", "value": "금리 압력", "detail": "rates firm", "tone": "warning"},
+                    {"label": "Next Event", "value": "FOMC D-2", "detail": "review", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {},
+            "event_timeline": {},
+            "brief_rows": [
+                {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
+            ],
+            "interpretation_cues": [
+                {"label": "이벤트 압력", "value": "FOMC D-2", "detail": "금리/기술주 해석 전 확인", "tone": "warning"},
+                {"label": "심리 확인", "value": "중립", "detail": "상승 흐름과 심리 배경의 충돌 여부", "tone": "neutral"},
+                {"label": "매크로 확인", "value": "금리 압력", "detail": "혼재 흐름이 한쪽으로 기우는지 확인", "tone": "warning"},
+            ],
+            "historical_analog": {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "XLK coverage 부족",
+                "leadership_sector": "Technology",
+                "proxy_etf": "XLK",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            },
+            "source_confidence": {"status": "REVIEW", "summary": {"detail": "저장 자료 기준"}, "items": []},
+            "boundary_note": "context only",
+        }
+
+        html = overview_ui_components._macro_context_cockpit_html(model)
+
+        self.assertIn("다음 맥락 체크", html)
+        self.assertIn("오늘 흐름을 바로 예측하지 않고", html)
+        self.assertIn("참고: 과거 유사 맥락", html)
+        self.assertIn("근거: 자료 기준 / 출처 상태", html)
+        self.assertNotIn("해석할 때 같이 볼 변수", html)
+        self.assertNotIn("자료 상태 주의점", html)
+
     def test_overview_ui_css_defines_market_context_reading_sections(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
@@ -4810,6 +4864,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-cockpit-narrative", css)
         self.assertIn(".ov-macro-reading-section .ov-macro-cue-value", css)
         self.assertIn(".ov-macro-reading-section .ov-source-confidence-title", css)
+        self.assertIn(".ov-historical-analog-row.is-muted-reference", css)
+        self.assertIn(".ov-source-confidence.is-evidence-footer", css)
 
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -4846,10 +4902,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
         self.assertIn("시장 브리프", component_source)
-        self.assertIn("해석할 때 같이 볼 변수", component_source)
+        self.assertIn("다음 맥락 체크", component_source)
         self.assertIn("확인 위치", component_source)
         self.assertNotIn("핵심 요약", component_source)
         self.assertNotIn("해석 전 확인", component_source)
+        self.assertNotIn("해석할 때 같이 볼 변수", component_source)
         self.assertNotIn("다음 확인 순서", component_source)
         self.assertNotIn("Overview Macro Context", component_source)
         self.assertNotIn("다음에 볼 Deep Tab", component_source)
@@ -8005,9 +8062,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ["자료 상태", "Top Mover", "Breadth", "Macro", "Next Event"],
         )
         self.assertEqual([row["label"] for row in cockpit["brief_rows"]], ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경"])
-        self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["가까운 주요 이벤트", "심리 배경", "자료 상태 주의점"])
+        self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인", "매크로 확인"])
+        self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
         self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
         self.assertEqual(cockpit["interpretation_cues"][0]["target_tab"], "Events")
+        self.assertEqual(cockpit["interpretation_cues"][2]["target_tab"], "Futures Monitor")
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
         self.assertEqual([card["group"] for card in cockpit["cards"][:3]], ["core", "core", "core"])
         self.assertEqual([card["group"] for card in cockpit["cards"][3:]], ["supporting", "supporting", "supporting"])
@@ -8119,14 +8178,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
         event_card = cockpit["cards"][4]
-        data_cue = cockpit["interpretation_cues"][2]
         self.assertEqual(event_card["value"], "최근 CPI 발표 확인 필요")
         self.assertIn("2일 전", event_card["detail"])
         self.assertIn("다음 FOMC 5일 후", event_card["detail"])
         self.assertEqual(cockpit["interpretation_cues"][0]["value"], "최근 CPI 발표 확인 필요")
-        self.assertEqual(data_cue["label"], "자료 상태 주의점")
-        self.assertNotIn("job", str(data_cue["detail"]).lower())
-        self.assertNotIn("rows", str(data_cue["detail"]).lower())
+        self.assertEqual(cockpit["interpretation_cues"][0]["label"], "이벤트 압력")
+        self.assertEqual(cockpit["interpretation_cues"][2]["label"], "매크로 확인")
+        self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
@@ -8364,7 +8422,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("과거 유사 맥락 참고", html)
+        self.assertIn("참고: 과거 유사 맥락", html)
         self.assertIn("QQQ", html)
         for forbidden in ["추천", "매수", "매도", "신호", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)

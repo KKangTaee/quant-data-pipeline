@@ -4697,7 +4697,7 @@ def build_overview_macro_context_cockpit(
     ]
     for index, card in enumerate(cards):
         card["group"] = "core" if index < 3 else "supporting"
-        card["priority_label"] = "시장 브리프" if index < 3 else "해석 변수"
+        card["priority_label"] = "시장 브리프" if index < 3 else ("근거" if card.get("id") == "data" else "다음 맥락")
 
     brief_rows = [
         _cockpit_brief_row(cards[0], label="무엇이 움직였나"),
@@ -4705,9 +4705,9 @@ def build_overview_macro_context_cockpit(
         _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
     ]
     interpretation_cues = [
-        _cockpit_brief_row(cards[4], label="가까운 주요 이벤트"),
-        _cockpit_brief_row(cards[3], label="심리 배경"),
-        _cockpit_brief_row(cards[5], label="자료 상태 주의점"),
+        _cockpit_brief_row(cards[4], label="이벤트 압력"),
+        _cockpit_brief_row(cards[3], label="심리 확인"),
+        _cockpit_brief_row(cards[2], label="매크로 확인"),
     ]
 
     return {

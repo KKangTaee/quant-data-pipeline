@@ -7743,3 +7743,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 데이터나 진단 패널이 아니라, 같은 DB-backed context를 사용자가 첫 문장부터 자연스럽게 읽고 아래 단락을 흐름대로 따라가게 해야 함.
 - Analysis result: service copy는 headline + detail 문장 계약으로 바꾸고, renderer는 narrative wrapper와 reading-flow typography / color density 조정만 하는 것이 가장 작은 안전한 변경이다.
 - Follow-up: 2차는 완료했다. 남은 3차 후보는 실제 사용 후 reference section 접힘 정책이나 가벼운 drill-in interaction이 필요할 때만 별도 승인 대상으로 본다.
+
+### 2026-06-15 - Market Context 하단 보조 흐름을 다음 맥락 / 참고 / 근거로 재정의한다
+
+- User request: 사용자가 3차 작업 전 `해석할 때 같이 볼 변수`, `과거 유사맥락 참고`, `자료기준 / 출처상태`까지 종합적으로 개선할 작업 가이드를 요청하고 이후 진행을 승인함.
+- Interpreted goal: 오늘의 시장 맥락과 시장 브리프는 이미 핵심 흐름을 설명하므로, 하단 영역은 중복 브리프가 아니라 다음 관찰 지점, 과거 참고, 자료 근거로 역할을 분리해야 함.
+- Analysis result: Data Health는 시장 변수라기보다 evidence/source 상태이므로 main cue row에서 제거하고, Events / Sentiment / Macro만 `다음 맥락 체크`로 남기는 것이 가장 명확하다.
+- Follow-up: 3차는 완료했다. Deep drill-in interaction, prediction, provider/schema expansion, validation/monitoring/trading signal은 별도 승인 대상이다.
