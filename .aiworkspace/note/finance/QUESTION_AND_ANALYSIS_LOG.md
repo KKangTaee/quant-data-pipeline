@@ -7729,3 +7729,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `Market Brief Tape`의 빠른 스캔성과 `Heatmap + Timeline Board`의 시각적 압력/이벤트 읽기를 합치되, 새 provider나 진단 패널을 만들지 않아야 함.
 - Analysis result: 기존 `build_overview_breadth_heatmap_summary()`와 `build_overview_macro_week_lane()`을 cockpit model에 재사용하면 DB-backed boundary를 유지하면서 5칸 tape, sector pressure map, event timeline을 만들 수 있다.
 - Follow-up: 1차 hybrid visual 구현과 Browser QA는 완료했다. 2차는 색/밀도/mobile polish, 3차는 static board가 부족할 때만 drill-in interactivity 후보로 남긴다.
+
+### 2026-06-15 - Market Context 큰 단락을 cockpit 밖으로 분리한다
+
+- User request: 사용자가 hybrid 화면은 좋아졌지만 `시장 브리프`, `해석할 때 같이 볼 변수`, `과거 유사 맥락 참고`가 한 큰 surface 안에 묻혀 집중이 어렵다고 지적하고 단락 분리를 승인함.
+- Interpreted goal: 상단 `시장 맥락` 요약은 유지하되, 사용자가 흐름에 맞춰 읽을 수 있도록 brief / variables / reference를 명확한 sibling section으로 분리해야 함.
+- Analysis result: `.ov-macro-cockpit`에는 headline, tape, sector pressure, event timeline만 남기고, 나머지는 `.ov-macro-reading-flow` 아래 4개 section으로 빼는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 1차 section-flow split과 Browser QA는 완료했다. 2차는 실제 사용 후 typography/color density polish, 3차는 필요 시 낮은 우선순위 reference section 접힘 정책이다.

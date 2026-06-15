@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-15 - Overview Market Context Section Flow V1 1차
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-section-flow-v1-20260615/` after the user approved splitting the hybrid Market Context surface into clearer reading sections.
+- Kept the top cockpit focused on headline, 5-cell tape, sector pressure map, and event timeline; moved `시장 브리프`, `해석할 때 같이 볼 변수`, `과거 유사 맥락 참고`, and source confidence into sibling reading-flow sections.
+- Browser QA confirmed 1 cockpit, 1 reading flow, 4 reading sections, no brief/cue text inside the top cockpit, and 390px mobile no-horizontal-overflow behavior.
+- Boundary stayed Overview-only: no provider fetch, schema/persistence change, registry / saved JSONL write, validation / monitoring / trading semantics, or dashboard-editor interactivity.
+
 ### 2026-06-15 - Overview Market Context Hybrid Visual V1 1차
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-hybrid-visual-v1-20260615/` after the user approved mixing benchmark option 1 and 3.
 - Reworked `Workspace > Overview > Market Context` into a card-light hybrid cockpit: 5-cell tape, sector pressure map, event timeline, existing evidence rows, historical analog disclosure, and source confidence disclosure.

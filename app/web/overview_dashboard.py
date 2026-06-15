@@ -1898,9 +1898,9 @@ def _render_overview_market_context_refresh_bar() -> None:
 
 
 def _render_overview_market_context_tab() -> None:
-    st.markdown("### 시장 맥락 요약")
+    st.markdown("### 시장 맥락")
     st.caption(
-        "저장된 시장 자료를 브리프처럼 읽고, 해석 전에 같이 볼 변수만 작게 확인합니다."
+        "상단에서 현재 시장을 먼저 훑고, 아래 단락에서 브리프와 해석 변수를 순서대로 확인합니다."
     )
     _render_overview_market_context_refresh_reflection()
     render_macro_context_cockpit(load_overview_macro_context_cockpit())

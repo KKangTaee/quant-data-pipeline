@@ -344,11 +344,13 @@ def overview_ui_css() -> str:
   line-height: 1.22;
   overflow-wrap: anywhere;
 }
-.ov-macro-brief,
-.ov-macro-cues,
 .ov-macro-visual-board {
   min-width: 0;
   margin-top: 0.7rem;
+}
+.ov-macro-brief,
+.ov-macro-cues {
+  min-width: 0;
 }
 .ov-macro-visual-board {
   display: grid;
@@ -468,6 +470,56 @@ def overview_ui_css() -> str:
   line-height: 1.2;
   text-align: right;
   overflow-wrap: anywhere;
+}
+.ov-macro-reading-flow {
+  display: grid;
+  gap: 0.86rem;
+  margin: 0.82rem 0 1rem 0;
+}
+.ov-macro-reading-section {
+  min-width: 0;
+  padding: 0.82rem 0 0.86rem 0.78rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-reading-tone, var(--ov-mi-color-neutral));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-reading-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    var(--ov-mi-color-surface);
+}
+.ov-macro-reading-section .ov-macro-section-head {
+  align-items: flex-start;
+  margin-bottom: 0.56rem;
+}
+.ov-macro-reading-section .ov-macro-section-title {
+  font-size: 1.04rem;
+  line-height: 1.18;
+}
+.ov-macro-reading-section .ov-macro-section-note {
+  max-width: 34rem;
+  font-size: var(--ov-mi-font-body);
+  line-height: 1.3;
+  text-align: left;
+}
+.ov-macro-reading-section .ov-macro-brief-row {
+  grid-template-columns: 2.45rem minmax(0, 1fr);
+  padding: 0.68rem 0.18rem 0.68rem 0;
+}
+.ov-macro-reading-section .ov-macro-brief-step {
+  width: 1.82rem;
+  height: 1.82rem;
+  font-size: 0.82rem;
+}
+.ov-macro-reading-section .ov-macro-brief-label {
+  font-size: var(--ov-mi-font-label);
+}
+.ov-macro-reading-section .ov-macro-brief-value {
+  margin-top: 0.18rem;
+  font-size: 1.08rem;
+}
+.ov-macro-reading-section .ov-macro-brief-detail {
+  max-width: 58rem;
+  font-size: 0.86rem;
+  line-height: 1.34;
 }
 .ov-macro-brief-list {
   display: grid;
@@ -611,9 +663,9 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-source-confidence {
-  margin-top: 0.68rem;
-  padding-top: 0.62rem;
-  border-top: 1px solid var(--ov-mi-border-faint);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 .ov-context-disclosure {
   min-width: 0;
@@ -683,9 +735,9 @@ def overview_ui_css() -> str:
   border-bottom: 1px solid var(--ov-mi-border-faint);
 }
 .ov-historical-analog-row {
-  margin-top: 0.66rem;
-  padding: 0.58rem 0 0.08rem 0;
-  border-top: 1px solid var(--ov-mi-border-faint);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
   background: transparent;
 }
 .ov-historical-analog-head {
@@ -2336,7 +2388,7 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
             "</li>"
         )
     return (
-        '<section class="ov-macro-brief">'
+        '<section class="ov-macro-reading-section ov-macro-brief" style="--ov-reading-tone:var(--ov-mi-color-primary);">'
         '<div class="ov-macro-section-head">'
         '<div class="ov-macro-section-title">시장 브리프</div>'
         '<div class="ov-macro-section-note">위에서 아래로 읽으면 시장 움직임, 확산, macro 배경이 이어집니다.</div>'
@@ -2370,7 +2422,7 @@ def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
             "</li>"
         )
     return (
-        '<section class="ov-macro-cues">'
+        '<section class="ov-macro-reading-section ov-macro-cues" style="--ov-reading-tone:var(--ov-mi-color-warning);">'
         '<div class="ov-macro-section-head">'
         '<div class="ov-macro-section-title">해석할 때 같이 볼 변수</div>'
         '<div class="ov-macro-section-note">시장 판단을 바꾸는 변수만 작게 붙입니다.</div>'
@@ -2429,7 +2481,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
     condition = _display_value(model.get("condition_summary") or model.get("detail"))
     return (
-        f'<section class="ov-historical-analog-row" style="--ov-analog-tone:{tone_color};">'
+        f'<section class="ov-macro-reading-section ov-historical-analog-row" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
         "<div>"
         '<div class="ov-historical-analog-title">과거 유사 맥락 참고</div>'
@@ -2474,7 +2526,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
             "</div>"
         )
     return (
-        f'<details class="ov-source-confidence ov-context-disclosure" style="--ov-source-status-tone:{status_tone};">'
+        f'<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure" style="--ov-source-status-tone:{status_tone};--ov-reading-tone:{status_tone};">'
         '<summary class="ov-source-confidence-summary">'
         '<div class="ov-source-confidence-head">'
         '<div>'
@@ -2498,39 +2550,56 @@ def _macro_cockpit_body_html(model: dict[str, Any]) -> str:
     if not rail_html:
         rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
     visual_board_html = _macro_cockpit_visual_board_html(model)
+    return f"{rail_html}{visual_board_html}"
+
+
+def _macro_context_reading_flow_html(model: dict[str, Any]) -> str:
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
     interpretation_cues_html = _macro_cockpit_interpretation_cues_html(list(model.get("interpretation_cues") or []))
     historical_analog_html = _macro_cockpit_historical_analog_html(dict(model.get("historical_analog") or {}))
     source_confidence_html = _macro_cockpit_source_confidence_html(dict(model.get("source_confidence") or {}))
-    return (
-        f"{rail_html}"
-        f"{visual_board_html}"
+    boundary_html = (
+        f'<div class="ov-macro-reading-boundary ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
+        if _display_value(model.get("boundary_note")) != "-"
+        else ""
+    )
+    flow_html = (
         f"{brief_rows_html}"
         f"{interpretation_cues_html}"
         f"{historical_analog_html}"
         f"{source_confidence_html}"
-        f'<div class="ov-macro-cockpit-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
+        f"{boundary_html}"
+    )
+    if not flow_html:
+        return ""
+    return f'<section class="ov-macro-reading-flow">{flow_html}</section>'
+
+
+def _macro_context_cockpit_html(model: dict[str, Any]) -> str:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
+    body_html = _macro_cockpit_body_html(model)
+    reading_flow_html = _macro_context_reading_flow_html(model)
+    return (
+        f'<section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">'
+        '<div class="ov-macro-cockpit-head">'
+        "<div>"
+        '<div class="ov-macro-cockpit-kicker">오늘의 시장 맥락</div>'
+        f'<div class="ov-macro-cockpit-title">{escape(_display_value(summary.get("headline")))}</div>'
+        f'<div class="ov-macro-cockpit-detail">{escape(_display_value(summary.get("detail")))}</div>'
+        "</div>"
+        f'<span class="ov-macro-cockpit-status">{escape(_display_value(summary.get("status_label") or _display_status_label(model.get("status"))))}</span>'
+        "</div>"
+        f"{body_html}"
+        "</section>"
+        f"{reading_flow_html}"
     )
 
 
 def render_macro_context_cockpit(model: dict[str, Any]) -> None:
-    summary = dict(model.get("summary") or {})
-    tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
-    body_html = _macro_cockpit_body_html(model)
     st.markdown(
         overview_ui_css()
-        + f"""
-<section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">
-      <div class="ov-macro-cockpit-head">
-    <div>
-      <div class="ov-macro-cockpit-kicker">시장 맥락 요약</div>
-      <div class="ov-macro-cockpit-title">{escape(_display_value(summary.get("headline")))}</div>
-      <div class="ov-macro-cockpit-detail">{escape(_display_value(summary.get("detail")))}</div>
-    </div>
-    <span class="ov-macro-cockpit-status">{escape(_display_value(summary.get("status_label") or _display_status_label(model.get("status"))))}</span>
-  </div>
-  {body_html}
-</section>""",
+        + _macro_context_cockpit_html(model),
         unsafe_allow_html=True,
     )
 

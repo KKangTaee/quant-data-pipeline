@@ -4506,7 +4506,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn(".ov-context-disclosure", css)
         self.assertIn(".ov-context-disclosure > summary", css)
-        self.assertIn('<details class="ov-source-confidence ov-context-disclosure"', source)
+        self.assertIn('<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure"', source)
         self.assertIn('<summary class="ov-source-confidence-summary"', source)
         self.assertIn('<details class="ov-ia-closeout ov-context-disclosure"', source)
         self.assertIn('<summary class="ov-ia-closeout-summary"', source)
@@ -4729,6 +4729,81 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-sector-pressure-tile", html)
         self.assertIn("ov-event-timeline-row", html)
 
+    def test_overview_market_context_splits_dashboard_from_reading_flow_contract(self) -> None:
+        from app.web import overview_ui_components
+
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "현재 맥락: SNDK 급등, Industrials 리더십, risk-on",
+                "detail": "context-only",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "7 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                    {"label": "Breadth", "value": "Industrials", "detail": "91%", "tone": "positive"},
+                    {"label": "Macro", "value": "Risk-on", "detail": "rates muted", "tone": "positive"},
+                    {"label": "Next Event", "value": "FOMC D-2", "detail": "review", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {
+                "summary": {"headline": "Broad participation"},
+                "heatmap_rows": [
+                    {"group": "Industrials", "market_cap_weighted_return_pct": 3.3, "positive_symbol_share_pct": 91, "symbols": 70, "tone": "positive"},
+                ],
+                "coverage": {"freshness": "2026-06-15"},
+            },
+            "event_timeline": {
+                "items": [{"cluster": "FOMC", "title": "FOMC Meeting", "days_until": 2, "freshness": "Official", "tone": "warning"}],
+                "coverage": {"review_count": 1, "latest_collected_at": "2026-06-15"},
+            },
+            "brief_rows": [
+                {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
+            ],
+            "interpretation_cues": [
+                {"label": "가까운 주요 이벤트", "value": "FOMC D+2", "detail": "Official", "tone": "warning"},
+            ],
+            "historical_analog": {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "XLI coverage 부족",
+                "leadership_sector": "Industrials",
+                "proxy_etf": "XLI",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            },
+            "source_confidence": {"status": "OK", "summary": {"detail": "저장 자료 기준"}, "items": []},
+            "boundary_note": "context only",
+        }
+
+        html = overview_ui_components._macro_context_cockpit_html(model)
+        cockpit_html = html.split('<section class="ov-macro-reading-flow"', 1)[0]
+        reading_html = html.split('<section class="ov-macro-reading-flow"', 1)[1]
+
+        self.assertIn('<section class="ov-macro-cockpit"', cockpit_html)
+        self.assertIn("ov-macro-hybrid-tape", cockpit_html)
+        self.assertIn("ov-macro-visual-board", cockpit_html)
+        self.assertNotIn("시장 브리프", cockpit_html)
+        self.assertNotIn("해석할 때 같이 볼 변수", cockpit_html)
+        self.assertNotIn("과거 유사 맥락 참고", cockpit_html)
+        self.assertIn("ov-macro-reading-section ov-macro-brief", reading_html)
+        self.assertIn("ov-macro-reading-section ov-macro-cues", reading_html)
+        self.assertIn("ov-macro-reading-section ov-historical-analog-row", reading_html)
+        self.assertIn("ov-macro-reading-section ov-source-confidence", reading_html)
+
+    def test_overview_ui_css_defines_market_context_reading_sections(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-macro-reading-flow", css)
+        self.assertIn(".ov-macro-reading-section", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-section-title", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-brief-value", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-brief-detail", css)
+
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 
@@ -4750,6 +4825,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         component_source = "\n".join(
             [
                 inspect.getsource(overview_ui_components.render_macro_context_cockpit),
+                inspect.getsource(overview_ui_components._macro_context_cockpit_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_brief_rows_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_interpretation_cues_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_row_meta_html),
@@ -4757,10 +4833,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ]
         )
 
-        self.assertIn("시장 맥락 요약", dashboard_source)
+        self.assertIn("시장 맥락", dashboard_source)
+        self.assertIn("상단에서 현재 시장을 먼저 훑고", dashboard_source)
         self.assertIn("자료 상태를 먼저 확인", dashboard_source)
         self.assertIn("보조 갱신", dashboard_source)
-        self.assertIn("시장 맥락 요약", component_source)
+        self.assertIn("오늘의 시장 맥락", component_source)
         self.assertIn("시장 브리프", component_source)
         self.assertIn("해석할 때 같이 볼 변수", component_source)
         self.assertIn("확인 위치", component_source)
