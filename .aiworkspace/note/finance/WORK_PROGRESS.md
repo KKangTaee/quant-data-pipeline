@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-16 - Overview Market Context Analog Readability V5
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-readability-v5-20260616/` after the user approved 1차~3차 for `참고: 과거 유사 맥락` readability.
+- Reworked the historical analog OK state so the user reads the similarity definition, summary strip, and `먼저 읽을 결론` before the detailed statistics table.
+- Split detailed rows into `핵심 자산 요약` and `보조 자산 참고` while keeping the existing sector ETF relative-strength calculation.
+- Boundary stayed Overview-only and context-only: no calculation change, macro/futures/event conditioning, provider/schema/storage change, validation / monitoring / trading semantics, or render-time fetch.
+
 ### 2026-06-15 - Overview Market Context Analog Repair V4
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-repair-v4-20260615/` after the user approved making historical analog `자료 부족` actionable and visibly different.
 - Added generalized historical analog coverage gaps plus a bounded Overview OHLCV repair action; live QA targeted `Communication Services -> XLC`, confirming the flow is not hard-coded to Technology / XLK.

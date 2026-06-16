@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-16 - Historical analog table should explain the comparison before the statistics
+- User request:
+  - `참고: 과거 유사 맥락`이 무엇을 말하는지 이해하기 어렵고 표만으로는 해석이 어렵다며, 1차~3차 개선을 한꺼번에 진행하길 요청함.
+- Interpreted goal:
+  - Historical analog은 계속 context-only 참고로 두되, 사용자가 표를 보기 전에 similarity 기준, 먼저 읽을 요약, 핵심 / 보조 자산 구분을 파악하게 만든다.
+- Analysis result:
+  - 현재 similarity는 full market regime match가 아니라 current leadership sector의 ETF proxy가 SPY 대비 5D 기준 강했던 과거 구간이다. UI는 이 정의를 먼저 설명하고, sample / proxy median / positive-rate / worst-path summary와 `먼저 읽을 결론`을 표 앞에 둔다.
+- Follow-up:
+  - Macro / futures / event / sentiment conditioned analog, anchor date drill-down, PIT / survivorship / sample-quality 보강은 별도 승인 후속이다.
+
 ### 2026-06-15 - Historical analog gaps should become explicit repair actions
 - User request:
   - `Overview > Market Context`에서 `참고: 과거 유사 맥락`이 `자료 부족`으로 멈추는 문제와, `자료 기준 / 출처 상태`가 잘 보이지 않는 문제를 함께 개선하길 요청함.

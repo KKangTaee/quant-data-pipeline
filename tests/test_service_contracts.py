@@ -4940,7 +4940,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-reading-section .ov-macro-cue-value", css)
         self.assertIn(".ov-macro-reading-section .ov-source-confidence-title", css)
         self.assertIn(".ov-historical-analog-row.is-muted-reference", css)
+        self.assertIn(".ov-analog-explain", css)
+        self.assertIn(".ov-analog-summary-strip", css)
+        self.assertIn(".ov-analog-interpretation", css)
+        self.assertIn(".ov-historical-analog-table-block", css)
         self.assertIn(".ov-source-confidence.is-evidence-footer", css)
+
+        analog_section_block = css[css.index(".ov-historical-analog-row {") : css.index(".ov-historical-analog-head {")]
+        self.assertNotIn("background: transparent", analog_section_block)
 
     def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
@@ -8562,6 +8569,69 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         for forbidden in ["추천", "매수", "매도", "신호", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 
+    def test_historical_analog_html_explains_similarity_before_statistics(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        rows = []
+        for asset, median, positive, best, worst in [
+            ("XLK", 3.3, 65.5, 14.8, -11.8),
+            ("SPY", 2.5, 75.9, 9.2, -8.1),
+            ("QQQ", 4.0, 65.5, 13.0, -10.9),
+            ("TLT", -0.1, 48.3, 8.5, -8.4),
+        ]:
+            rows.append(
+                {
+                    "asset": asset,
+                    "horizon": "20D",
+                    "median_return_pct": median,
+                    "positive_rate_pct": positive,
+                    "best_return_pct": best,
+                    "worst_return_pct": worst,
+                    "sample_count": 29,
+                }
+            )
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 29회 발견",
+                "detail": "Technology(XLK)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Technology",
+                "proxy_etf": "XLK",
+                "sample_count": 29,
+                "condition_summary": "XLK 5D-SPY 5D 상대강도 >= +2.6% 기준",
+                "data_window": "2016-06-16 - 2026-05-29",
+                "rows": rows,
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("현재 리더십 섹터를 ETF proxy로 보고", html)
+        self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
+        self.assertIn("먼저 읽을 결론", html)
+        self.assertIn("ov-analog-summary-strip", html)
+        self.assertIn("유사 사례", html)
+        self.assertIn("XLK 20D 중간값", html)
+        self.assertIn("+3.3%", html)
+        self.assertIn("상승 비율", html)
+        self.assertIn("최악", html)
+        self.assertIn("미래 움직임 보장이 아닙니다", html)
+        self.assertIn("핵심 자산 요약", html)
+        self.assertIn("보조 자산 참고", html)
+
+        explanation_index = html.index("현재 리더십 섹터를 ETF proxy로 보고")
+        summary_index = html.index("ov-analog-summary-strip")
+        table_index = html.index("ov-historical-analog-table-block")
+        self.assertLess(explanation_index, summary_index)
+        self.assertLess(summary_index, table_index)
+
+        primary_block = html[html.index("핵심 자산 요약") : html.index("보조 자산 참고")]
+        support_block = html[html.index("보조 자산 참고") :]
+        self.assertIn("XLK · 20D", primary_block)
+        self.assertIn("SPY · 20D", primary_block)
+        self.assertIn("QQQ · 20D", primary_block)
+        self.assertIn("TLT · 20D", support_block)
+
     def test_historical_analog_html_turns_insufficient_data_into_actionable_gap_panel(self) -> None:
         from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
 
@@ -9008,7 +9078,7 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
 
 class FuturesMacroThermometerContractTests(unittest.TestCase):
     def _daily_rows(self, final_moves: dict[str, float], *, days: int = 260) -> list[dict[str, object]]:
-        base = pd.Timestamp("2026-06-02 00:00:00", tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
         rows: list[dict[str, object]] = []
         for symbol_index, (symbol, final_move) in enumerate(final_moves.items()):
             price = 100.0 + symbol_index * 7.0

@@ -806,7 +806,6 @@ def overview_ui_css() -> str:
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-  background: transparent;
 }
 .ov-historical-analog-head {
   display: flex;
@@ -845,7 +844,6 @@ def overview_ui_css() -> str:
 }
 .ov-historical-analog-table {
   width: 100%;
-  margin-top: 0.48rem;
   border-collapse: collapse;
   color: var(--ov-mi-color-text-subtle);
   font-size: var(--ov-mi-font-caption);
@@ -865,6 +863,100 @@ def overview_ui_css() -> str:
   margin-top: 0.44rem;
   padding-top: 0.34rem;
   border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-explain {
+  max-width: 58rem;
+  margin-top: 0.48rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.82rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+.ov-analog-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 0.58rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  background: color-mix(in srgb, var(--ov-analog-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface));
+}
+.ov-analog-summary-item {
+  min-width: 0;
+  padding: 0.52rem 0.64rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-summary-item:first-child {
+  border-left: 0;
+}
+.ov-analog-summary-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.ov-analog-summary-value {
+  margin-top: 0.14rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.98rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-analog-summary-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-analog-interpretation {
+  margin-top: 0.5rem;
+  padding-top: 0.38rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.82rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+.ov-analog-condition {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem 0.48rem;
+  align-items: baseline;
+  margin-top: 0.34rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+.ov-analog-condition span {
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-historical-analog-table-block {
+  margin-top: 0.58rem;
+  min-width: 0;
+  overflow-x: auto;
+}
+.ov-historical-analog-table-block.is-secondary {
+  margin-top: 0.48rem;
+}
+.ov-historical-analog-table-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-historical-analog-table-note {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-historical-analog-table-block .ov-historical-analog-table {
+  margin-top: 0.34rem;
 }
 .ov-analog-gap-panel {
   display: grid;
@@ -2154,6 +2246,12 @@ def overview_ui_css() -> str:
     grid-template-columns: 1fr;
     gap: var(--ov-mi-gap-xs);
   }
+  .ov-analog-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-analog-summary-item:nth-child(odd) {
+    border-left: 0;
+  }
   .ov-sector-pressure-tile:first-child {
     grid-row: span 1;
   }
@@ -2562,6 +2660,130 @@ def _analog_pct(value: Any) -> str:
     return f"{numeric:+.1f}%"
 
 
+def _analog_row_asset(row: dict[str, Any]) -> str:
+    return str(row.get("asset") or "").strip().upper()
+
+
+def _analog_row_horizon(row: dict[str, Any]) -> str:
+    return str(row.get("horizon") or "").strip().upper()
+
+
+def _analog_table_row_html(row: dict[str, Any]) -> str:
+    return (
+        "<tr>"
+        f"<td>{escape(_display_value(row.get('asset')))} · {escape(_display_value(row.get('horizon')))}</td>"
+        f"<td>{escape(_analog_pct(row.get('median_return_pct')))}</td>"
+        f"<td>{escape(_analog_pct(row.get('positive_rate_pct')))}</td>"
+        f"<td>{escape(_analog_pct(row.get('best_return_pct')))}</td>"
+        f"<td>{escape(_analog_pct(row.get('worst_return_pct')))}</td>"
+        f"<td>{escape(_display_value(row.get('sample_count')))}</td>"
+        "</tr>"
+    )
+
+
+def _analog_table_block_html(
+    rows: list[dict[str, Any]],
+    *,
+    title: str,
+    note: str,
+    secondary: bool = False,
+) -> str:
+    if not rows:
+        return ""
+    row_html = "".join(_analog_table_row_html(row) for row in rows)
+    block_class = "ov-historical-analog-table-block"
+    if secondary:
+        block_class += " is-secondary"
+    return (
+        f'<div class="{block_class}">'
+        f'<div class="ov-historical-analog-table-title">{escape(title)}</div>'
+        f'<div class="ov-historical-analog-table-note">{escape(note)}</div>'
+        '<table class="ov-historical-analog-table">'
+        "<thead><tr><th>자산 · 기간</th><th>중간값</th><th>상승 비율</th><th>최선</th><th>최악</th><th>표본</th></tr></thead>"
+        f"<tbody>{row_html}</tbody>"
+        "</table>"
+        "</div>"
+    )
+
+
+def _analog_find_reference_row(rows: list[dict[str, Any]], proxy_etf: str) -> dict[str, Any]:
+    proxy = proxy_etf.strip().upper()
+    for horizon in ("20D", "5D", "60D"):
+        for row in rows:
+            if _analog_row_asset(row) == proxy and _analog_row_horizon(row) == horizon:
+                return row
+    return rows[0] if rows else {}
+
+
+def _analog_summary_strip_html(model: dict[str, Any], rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    proxy_etf = _display_value(model.get("proxy_etf"))
+    reference = _analog_find_reference_row(rows, str(model.get("proxy_etf") or ""))
+    reference_horizon = _display_value(reference.get("horizon") or "20D")
+    sample_count = _display_value(model.get("sample_count") or reference.get("sample_count"))
+    metrics = [
+        ("유사 사례", f"{sample_count}회", "현재 sector ETF의 SPY 대비 5D 상대강도 기준"),
+        (
+            f"{proxy_etf} {reference_horizon} 중간값",
+            _analog_pct(reference.get("median_return_pct")),
+            "유사 구간 이후 해당 기간 median",
+        ),
+        (
+            "상승 비율",
+            _analog_pct(reference.get("positive_rate_pct")),
+            "같은 표본에서 양수였던 비율",
+        ),
+        ("최악", _analog_pct(reference.get("worst_return_pct")), "같은 표본 안의 가장 나쁜 경로"),
+    ]
+    metric_html = "".join(
+        '<div class="ov-analog-summary-item">'
+        f'<div class="ov-analog-summary-label">{escape(label)}</div>'
+        f'<div class="ov-analog-summary-value">{escape(value)}</div>'
+        f'<div class="ov-analog-summary-detail">{escape(detail)}</div>'
+        "</div>"
+        for label, value, detail in metrics
+    )
+    return f'<div class="ov-analog-summary-strip">{metric_html}</div>'
+
+
+def _analog_interpretation_html(model: dict[str, Any], rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    proxy_etf = _display_value(model.get("proxy_etf"))
+    reference = _analog_find_reference_row(rows, str(model.get("proxy_etf") or ""))
+    horizon = _display_value(reference.get("horizon") or "20D")
+    median = reference.get("median_return_pct")
+    positive_rate = reference.get("positive_rate_pct")
+    worst = reference.get("worst_return_pct")
+    try:
+        median_value = float(median)
+    except (TypeError, ValueError):
+        median_value = 0.0
+    try:
+        positive_value = float(positive_rate)
+    except (TypeError, ValueError):
+        positive_value = 0.0
+    if median_value > 0 and positive_value >= 50:
+        main = f"먼저 읽을 결론: 비슷한 상대강도 이후에는 {proxy_etf}가 {horizon} 기준 플러스였던 표본이 더 많았습니다."
+    elif median_value < 0 or positive_value < 50:
+        main = f"먼저 읽을 결론: 비슷한 상대강도 이후에도 {proxy_etf}의 {horizon} 흐름은 뚜렷하게 우호적이지 않았습니다."
+    else:
+        main = f"먼저 읽을 결론: 비슷한 상대강도 이후 {proxy_etf}의 {horizon} 분포는 한쪽으로 강하게 기울지 않았습니다."
+    caution = f"다만 표본 안의 최악은 {_analog_pct(worst)}라서, 이 통계는 미래 움직임 보장이 아닙니다."
+    return f'<div class="ov-analog-interpretation">{escape(main)} {escape(caution)}</div>'
+
+
+def _analog_rows_by_priority(rows: list[dict[str, Any]], proxy_etf: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    display_rows = rows[:15]
+    primary_assets = {asset for asset in (proxy_etf.strip().upper(), "SPY", "QQQ") if asset}
+    primary_rows = [row for row in display_rows if _analog_row_asset(row) in primary_assets]
+    support_rows = [row for row in display_rows if _analog_row_asset(row) not in primary_assets]
+    if not primary_rows:
+        return display_rows[:9], display_rows[9:]
+    return primary_rows, support_rows
+
+
 def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     if not model:
         return ""
@@ -2570,24 +2792,21 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     rows = list(model.get("rows") or [])
     coverage_gaps = list(model.get("coverage_gaps") or [])
     repair_action = dict(model.get("repair_action") or {})
-    table_rows: list[str] = []
-    for row in rows[:15]:
-        table_rows.append(
-            "<tr>"
-            f"<td>{escape(_display_value(row.get('asset')))} · {escape(_display_value(row.get('horizon')))}</td>"
-            f"<td>{escape(_analog_pct(row.get('median_return_pct')))}</td>"
-            f"<td>{escape(_analog_pct(row.get('positive_rate_pct')))}</td>"
-            f"<td>{escape(_analog_pct(row.get('best_return_pct')))}</td>"
-            f"<td>{escape(_analog_pct(row.get('worst_return_pct')))}</td>"
-            f"<td>{escape(_display_value(row.get('sample_count')))}</td>"
-            "</tr>"
+    condition = _display_value(model.get("condition_summary") or model.get("detail"))
+    proxy_etf = _display_value(model.get("proxy_etf"))
+    if rows:
+        primary_rows, support_rows = _analog_rows_by_priority(rows, proxy_etf)
+        explanation = (
+            f"현재 리더십 섹터를 ETF proxy로 보고, {proxy_etf}가 SPY 대비 5D 기준 강했던 과거 구간을 찾습니다. "
+            "그 날짜 이후 5D / 20D / 60D 동안 주요 자산이 어떻게 움직였는지 요약한 참고 통계입니다."
         )
-    if table_rows:
         body_html = (
-            '<table class="ov-historical-analog-table">'
-            "<thead><tr><th>자산 · 기간</th><th>중간값</th><th>상승 비율</th><th>최선</th><th>최악</th><th>표본</th></tr></thead>"
-            f"<tbody>{''.join(table_rows)}</tbody>"
-            "</table>"
+            f'<div class="ov-analog-explain">{escape(explanation)}</div>'
+            f"{_analog_summary_strip_html(model, rows)}"
+            f"{_analog_interpretation_html(model, rows)}"
+            f'<div class="ov-analog-condition"><span>현재 찾은 조건</span><strong>{escape(condition)}</strong></div>'
+            f"{_analog_table_block_html(primary_rows, title='핵심 자산 요약', note='리더십 ETF, 시장 기준 SPY, 성장주 proxy QQQ를 먼저 봅니다.')}"
+            f"{_analog_table_block_html(support_rows, title='보조 자산 참고', note='채권, 금, 중소형주, 크레딧 등 배경 자산은 참고로 낮춰 봅니다.', secondary=True)}"
         )
     elif coverage_gaps and repair_action:
         gap_rows: list[str] = []
@@ -2631,7 +2850,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         )
     limitations = " · ".join(str(item) for item in list(model.get("limitations") or [])[:4])
     section_class = "ov-macro-reading-section ov-historical-analog-row"
-    if not table_rows:
+    if not rows:
         section_class += " is-muted-reference"
     meta_items = [
         f"기준 sector: {_display_value(model.get('leadership_sector'))}",
@@ -2640,7 +2859,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         f"window: {_display_value(model.get('data_window'))}",
     ]
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
-    condition = _display_value(model.get("condition_summary") or model.get("detail"))
+    condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
     return (
         f'<section class="{section_class}" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
@@ -2651,7 +2870,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         f'<div class="ov-historical-analog-status">{escape(status_label)}</div>'
         "</div>"
         f'<div class="ov-historical-analog-meta">{meta_html}</div>'
-        f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
+        f"{condition_html}"
         f"{body_html}"
         f'<div class="ov-historical-analog-limitations">{escape(limitations)}</div>'
         "</section>"
