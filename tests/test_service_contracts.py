@@ -5054,6 +5054,104 @@ class OverviewAutomationContractTests(unittest.TestCase):
             fallback_to_yfinance=False,
         )
 
+    def test_overview_market_movers_refresh_action_collects_eod_history_through_ohlcv_job(self) -> None:
+        from app.jobs import overview_actions
+
+        action = getattr(overview_actions, "run_overview_market_movers_eod_history", None)
+        if not callable(action):
+            self.fail("Overview action facade should expose run_overview_market_movers_eod_history.")
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_market_universe_members",
+                return_value=[{"symbol": "AAA"}, {"symbol": "BBB"}, {"symbol": "AAA"}],
+            ) as load_universe,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 1512,
+                    "message": "OHLCV collection completed.",
+                },
+            ) as collect,
+        ):
+            result = action(
+                universe_code="SP500",
+                universe_limit=500,
+                period="yearly",
+            )
+
+        self.assertEqual(result["job_name"], "overview_market_movers_eod_history")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["target_tables"], ["finance_price.nyse_price_history"])
+        self.assertEqual(result["details"]["market_mover_period"], "yearly")
+        self.assertEqual(result["details"]["collection_period"], "3y")
+        self.assertEqual(result["details"]["symbols_requested"], 2)
+        load_universe.assert_called_once_with("SP500")
+        collect.assert_called_once_with(
+            ["AAA", "BBB"],
+            period="3y",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+
+    def test_overview_market_movers_refresh_action_uses_large_universe_loader_for_top1000(self) -> None:
+        from app.jobs import overview_actions
+
+        action = getattr(overview_actions, "run_overview_market_movers_eod_history", None)
+        if not callable(action):
+            self.fail("Overview action facade should expose run_overview_market_movers_eod_history.")
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_market_cap_universe_members",
+                return_value=[{"symbol": "AAA"}, {"symbol": "CCC"}],
+            ) as load_universe,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={"job_name": "collect_ohlcv", "status": "success", "rows_written": 504},
+            ) as collect,
+        ):
+            result = action(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                period="monthly",
+            )
+
+        self.assertEqual(result["details"]["collection_period"], "1y")
+        self.assertEqual(result["details"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        load_universe.assert_called_once_with("TOP1000", universe_limit=1000)
+        collect.assert_called_once_with(
+            ["AAA", "CCC"],
+            period="1y",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+
+    def test_overview_market_movers_refresh_bar_renders_eod_action_for_non_daily_without_auto_mode(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertIn("run_overview_market_movers_eod_history", source)
+        self.assertIn("def _render_market_movers_daily_refresh_bar", source)
+        self.assertIn("def _render_market_movers_eod_refresh_bar", source)
+
+        dispatch_body = source[source.index("def _render_market_movers_refresh_bar") :]
+        dispatch_body = dispatch_body[: dispatch_body.index("def _rank_token")]
+        self.assertIn("_render_market_movers_daily_refresh_bar", dispatch_body)
+        self.assertIn("_render_market_movers_eod_refresh_bar", dispatch_body)
+
+        eod_body = source[source.index("def _render_market_movers_eod_refresh_bar") :]
+        eod_body = eod_body[: eod_body.index("def _render_market_movers_refresh_bar")]
+        self.assertIn("가격 이력 갱신", eod_body)
+        self.assertIn("_run_market_movers_eod_history_action", eod_body)
+        self.assertNotIn("_select_market_refresh_mode", eod_body)
+        self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
+
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
 

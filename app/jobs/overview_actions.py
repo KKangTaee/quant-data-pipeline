@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Callable, Iterable
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
+from finance.data.market_intelligence import load_market_cap_universe_members, load_market_universe_members
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -19,6 +20,12 @@ from app.jobs.ingestion_jobs import (
 )
 from app.jobs.overview_automation import run_overview_automation
 from app.jobs.run_history import append_run_history
+
+MARKET_MOVERS_EOD_COLLECTION_PERIODS = {
+    "weekly": "3mo",
+    "monthly": "1y",
+    "yearly": "3y",
+}
 
 
 def record_overview_action_result(result: JobResult) -> None:
@@ -146,6 +153,14 @@ def run_overview_market_sentiment() -> JobResult:
     return run_collect_market_sentiment()
 
 
+def market_movers_eod_collection_period(period: str) -> str:
+    normalized_period = str(period or "").strip().lower()
+    try:
+        return MARKET_MOVERS_EOD_COLLECTION_PERIODS[normalized_period]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported Market Movers EOD refresh period: {period!r}") from exc
+
+
 def _normalize_action_symbols(symbols: Iterable[str]) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
@@ -156,6 +171,88 @@ def _normalize_action_symbols(symbols: Iterable[str]) -> list[str]:
         seen.add(value)
         normalized.append(value)
     return normalized
+
+
+def _load_market_movers_eod_universe_symbols(*, universe_code: str, universe_limit: int) -> tuple[list[str], str]:
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    if normalized_universe == "SP500":
+        rows = load_market_universe_members("SP500")
+        coverage_basis = "Current S&P 500 constituents"
+    else:
+        rows = load_market_cap_universe_members(normalized_universe, universe_limit=universe_limit)
+        coverage_basis = "Latest asset_profile.market_cap snapshot"
+    return _normalize_action_symbols(row.get("symbol") for row in rows), coverage_basis
+
+
+def run_overview_market_movers_eod_history(
+    *,
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+) -> JobResult:
+    """Refresh EOD price history for non-daily Market Movers through the existing OHLCV job."""
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    normalized_period = str(period or "").strip().lower()
+    collection_period = market_movers_eod_collection_period(normalized_period)
+    symbols, coverage_basis = _load_market_movers_eod_universe_symbols(
+        universe_code=normalized_universe,
+        universe_limit=universe_limit,
+    )
+    if not symbols:
+        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_market_movers_eod_history",
+            "status": "failed",
+            "started_at": now_text,
+            "finished_at": now_text,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "failed_symbols": [],
+            "message": "Market Movers 가격 이력 갱신 대상 universe symbol이 없습니다.",
+            "details": {
+                "universe_code": normalized_universe,
+                "universe_limit": universe_limit,
+                "coverage_basis": coverage_basis,
+                "market_mover_period": normalized_period,
+                "collection_period": collection_period,
+                "interval": "1d",
+                "target_tables": ["finance_price.nyse_price_history"],
+                "source": "yfinance OHLCV",
+                "purpose": "Overview Market Movers non-daily EOD price history refresh",
+            },
+        }
+
+    result = dict(
+        run_collect_ohlcv(
+            symbols,
+            period=collection_period,
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+    )
+    result["job_name"] = "overview_market_movers_eod_history"
+    details = dict(result.get("details") or {})
+    details.update(
+        {
+            "universe_code": normalized_universe,
+            "universe_limit": universe_limit,
+            "coverage_basis": coverage_basis,
+            "market_mover_period": normalized_period,
+            "collection_period": collection_period,
+            "interval": "1d",
+            "symbols_requested": len(symbols),
+            "symbols_sample": symbols[:10],
+            "target_tables": ["finance_price.nyse_price_history"],
+            "source": "yfinance OHLCV",
+            "purpose": "Overview Market Movers non-daily EOD price history refresh",
+        }
+    )
+    result["details"] = details
+    base_message = str(result.get("message") or "").strip()
+    prefix = f"{normalized_period.title()} Market Movers 가격 이력 갱신"
+    result["message"] = f"{prefix}: {base_message}" if base_message else f"{prefix}을 실행했습니다."
+    return result
 
 
 def run_overview_historical_analog_ohlcv(

@@ -20,6 +20,7 @@ from app.jobs.overview_actions import (
     run_overview_futures_ohlcv,
     run_overview_historical_analog_ohlcv,
     run_overview_macro_calendar,
+    run_overview_market_movers_eod_history,
     run_overview_market_context_refresh_all,
     run_overview_market_intraday_snapshot,
     run_overview_market_sentiment,
@@ -2211,6 +2212,19 @@ def _run_market_intraday_snapshot_action(
     )
 
 
+def _run_market_movers_eod_history_action(
+    *,
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+) -> dict[str, Any]:
+    return run_overview_market_movers_eod_history(
+        universe_code=universe_code,
+        universe_limit=universe_limit,
+        period=period,
+    )
+
+
 def _load_market_movers_snapshot(
     *,
     universe_code: str,
@@ -3568,16 +3582,13 @@ def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
     render_market_auto_waiting_panel(MARKET_COVERAGE_LABELS.get(universe_code, universe_code))
 
 
-def _render_market_movers_refresh_bar(
+def _render_market_movers_daily_refresh_bar(
     snapshot: dict[str, Any],
     *,
     universe_code: str,
     universe_limit: int,
     period: str,
 ) -> None:
-    if period != "daily":
-        return
-
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
     intraday_result_key = f"overview_{universe_code.lower()}_intraday_result"
     coverage = dict(snapshot.get("coverage") or {})
@@ -3645,6 +3656,112 @@ def _render_market_movers_refresh_bar(
     if universe_code == "SP500":
         _render_market_job_result("overview_sp500_universe_result")
     _render_market_job_result(intraday_result_key)
+
+
+def _market_movers_eod_refresh_state(snapshot: dict[str, Any], *, period: str) -> dict[str, str | bool]:
+    status = str(snapshot.get("status") or "").upper()
+    period_label = _market_mover_period_label(period)
+    if status == "OK":
+        return {
+            "dot_color": OVERVIEW_COLOR_POSITIVE,
+            "label": "EOD DB",
+            "detail": f"{period_label} 가격 이력",
+            "refresh_due": False,
+        }
+    return {
+        "dot_color": OVERVIEW_COLOR_WARNING,
+        "label": "갱신 필요",
+        "detail": f"{period_label} 가격 이력 확인",
+        "refresh_due": True,
+    }
+
+
+def _render_market_movers_eod_refresh_bar(
+    snapshot: dict[str, Any],
+    *,
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+) -> None:
+    period_label = _market_mover_period_label(period)
+    universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    eod_result_key = f"overview_{universe_code.lower()}_{period}_eod_history_result"
+    coverage = dict(snapshot.get("coverage") or {})
+    returnable = coverage.get("returnable_count") or 0
+    universe_count = coverage.get("universe_count") or 0
+    returnable_pct = coverage.get("returnable_pct")
+
+    render_market_refresh_status_bar(
+        universe_label=universe_label,
+        price_mode=coverage.get("price_mode") or "EOD DB",
+        returnable=returnable,
+        universe_count=universe_count,
+        returnable_pct=returnable_pct,
+        next_check_text="수동",
+        state=_market_movers_eod_refresh_state(snapshot, period=period),
+    )
+    st.caption(
+        f"{period_label}는 저장된 EOD 가격 이력을 기준으로 계산합니다. "
+        "최신 기간을 보려면 가격 이력을 수동 갱신하세요."
+    )
+    if universe_code != "SP500":
+        st.warning(
+            f"{universe_label} 가격 이력 갱신은 market-cap ranked asset profile 기준의 큰 universe를 수집하므로 "
+            "provider 호출과 실행 시간이 커질 수 있습니다.",
+        )
+
+    control_cols = st.columns([1.05, 0.95, 2.3], gap="small", vertical_alignment="bottom")
+    if control_cols[0].button(
+        "가격 이력 갱신",
+        key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
+        use_container_width=True,
+        type="primary",
+        help="기존 OHLCV 수집 pipeline으로 finance_price.nyse_price_history의 EOD 1d 가격 이력을 갱신합니다.",
+    ):
+        with st.spinner(f"{universe_label} {period_label} EOD 가격 이력을 수집하는 중입니다..."):
+            _store_overview_job_result(
+                eod_result_key,
+                _run_market_movers_eod_history_action(
+                    universe_code=universe_code,
+                    universe_limit=universe_limit,
+                    period=period,
+                ),
+            )
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+    if control_cols[1].button(
+        "화면 새로고침",
+        key=f"overview_{universe_code.lower()}_{period}_market_movers_reload",
+        use_container_width=True,
+    ):
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+    control_cols[2].caption("자동 분당 갱신은 Daily 일중 스냅샷에만 적용됩니다.")
+
+    _render_market_job_result(eod_result_key)
+
+
+def _render_market_movers_refresh_bar(
+    snapshot: dict[str, Any],
+    *,
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+) -> None:
+    if period == "daily":
+        _render_market_movers_daily_refresh_bar(
+            snapshot,
+            universe_code=universe_code,
+            universe_limit=universe_limit,
+            period=period,
+        )
+        return
+    _render_market_movers_eod_refresh_bar(
+        snapshot,
+        universe_code=universe_code,
+        universe_limit=universe_limit,
+        period=period,
+    )
 
 
 def _rank_token(value: Any, fallback: int) -> str:

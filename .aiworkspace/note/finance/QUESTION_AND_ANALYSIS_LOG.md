@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-16 - Market Movers non-daily periods need a manual EOD refresh path
+- User request:
+  - `Overview > Market Movers`에서 Daily 외 Weekly / Monthly / Yearly period에도 가격 이력 갱신 버튼을 추가하되, Daily 자동 갱신을 복사하지 말고 Market Movers 범위만 수정하길 요청함.
+- Interpreted goal:
+  - 사용자가 period를 바꿨을 때 해당 period의 데이터 기준과 갱신 행동을 같은 화면에서 이해하고 실행할 수 있어야 한다.
+- Analysis result:
+  - Daily는 `market_intraday_snapshot`, non-daily는 `finance_price.nyse_price_history` EOD row를 읽는다. 따라서 non-daily refresh는 기존 `run_collect_ohlcv` ingestion boundary를 Overview action facade에서 호출하는 수동 action으로 두는 것이 맞다.
+- Follow-up:
+  - Provider 실행 비용과 rate-limit는 Top1000 / Top2000에서 남는 운영 리스크다. 별도 queue / scheduler / chunk UI는 후속 승인 범위다.
+
 ### 2026-06-16 - Historical analog table should explain the comparison before the statistics
 - User request:
   - `참고: 과거 유사 맥락`이 무엇을 말하는지 이해하기 어렵고 표만으로는 해석이 어렵다며, 1차~3차 개선을 한꺼번에 진행하길 요청함.

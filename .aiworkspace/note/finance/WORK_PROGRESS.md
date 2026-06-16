@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-16 - Overview Market Movers Period Refresh V1
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-movers-period-refresh-v1-20260616/` for the approved Market Movers period refresh UX fix.
+- Kept Daily refresh behavior intact: intraday snapshot refresh, auto refresh option, universe refresh, and screen reload remain Daily-only.
+- Added Weekly / Monthly / Yearly EOD price-history manual refresh through the existing Overview action facade and OHLCV ingestion job boundary.
+- Boundary stayed Market Movers-only: no Market Context / Futures / Events / Backtest / Operations / historical analog changes, no provider/schema/registry/saved change, and no non-daily auto refresh.
+
 ### 2026-06-16 - Overview Market Context Analog Readability V5
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-readability-v5-20260616/` after the user approved 1차~3차 for `참고: 과거 유사 맥락` readability.
 - Reworked the historical analog OK state so the user reads the similarity definition, summary strip, and `먼저 읽을 결론` before the detailed statistics table.
