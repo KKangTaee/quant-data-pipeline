@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import importlib
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from html import escape
@@ -11,6 +12,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from app.jobs import overview_actions as overview_actions_module
 from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_browser_auto_refresh,
@@ -20,7 +22,6 @@ from app.jobs.overview_actions import (
     run_overview_futures_ohlcv,
     run_overview_historical_analog_ohlcv,
     run_overview_macro_calendar,
-    run_overview_market_movers_eod_history,
     run_overview_market_context_refresh_all,
     run_overview_market_intraday_snapshot,
     run_overview_market_sentiment,
@@ -2218,7 +2219,10 @@ def _run_market_movers_eod_history_action(
     universe_limit: int,
     period: str,
 ) -> dict[str, Any]:
-    return run_overview_market_movers_eod_history(
+    action = getattr(overview_actions_module, "run_overview_market_movers_eod_history", None)
+    if not callable(action):
+        action = getattr(importlib.reload(overview_actions_module), "run_overview_market_movers_eod_history")
+    return action(
         universe_code=universe_code,
         universe_limit=universe_limit,
         period=period,

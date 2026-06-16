@@ -9,3 +9,4 @@
 - Completed implementation: Daily keeps intraday snapshot / auto refresh controls; Weekly / Monthly / Yearly now show an EOD price-history manual refresh bar.
 - Browser QA confirmed Daily, Weekly, Monthly, and Yearly period-specific refresh UI. Screenshot artifact: `overview-market-movers-period-refresh-v1-qa.png`.
 - Provider OHLCV collection was not executed during Browser QA to avoid large live calls; action wiring was verified with unittest mocks.
+- Follow-up fix: removed import-time dependency on the newly added EOD action symbol from `overview_dashboard.py` to avoid Streamlit hot-reload `ImportError` when an older `overview_actions` module is already loaded.

@@ -5139,6 +5139,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("run_overview_market_movers_eod_history", source)
         self.assertIn("def _render_market_movers_daily_refresh_bar", source)
         self.assertIn("def _render_market_movers_eod_refresh_bar", source)
+        import_block = source[source.index("from app.jobs.overview_actions import (") :]
+        import_block = import_block[: import_block.index(")\nfrom app.services")]
+        self.assertNotIn("run_overview_market_movers_eod_history,", import_block)
+        self.assertIn("from app.jobs import overview_actions as overview_actions_module", source)
 
         dispatch_body = source[source.index("def _render_market_movers_refresh_bar") :]
         dispatch_body = dispatch_body[: dispatch_body.index("def _rank_token")]
