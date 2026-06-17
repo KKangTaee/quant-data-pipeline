@@ -7800,3 +7800,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 오늘의 시장 맥락과 시장 브리프는 이미 핵심 흐름을 설명하므로, 하단 영역은 중복 브리프가 아니라 다음 관찰 지점, 과거 참고, 자료 근거로 역할을 분리해야 함.
 - Analysis result: Data Health는 시장 변수라기보다 evidence/source 상태이므로 main cue row에서 제거하고, Events / Sentiment / Macro만 `다음 맥락 체크`로 남기는 것이 가장 명확하다.
 - Follow-up: 3차는 완료했다. Deep drill-in interaction, prediction, provider/schema expansion, validation/monitoring/trading signal은 별도 승인 대상이다.
+
+### 2026-06-08 - 현재 프로그램으로 SPY보다 나은 모니터링 포트폴리오를 찾는다
+
+- User request: 현재 있는 전략을 모두 활용해 SPY보다 CAGR이 높고 MDD가 낮으며 MDD 15% 미만인 포트폴리오를 찾아 Final Review와 Portfolio Monitoring 등록까지 완료해 달라고 요청함.
+- Interpreted goal: 숫자상 백테스트 후보가 아니라 Practical Validation replay, Final Review selected-route gate, Portfolio Monitoring saved setup까지 같은 source chain으로 통과한 후보가 필요함.
+- Analysis result: strict/factor 후보는 숫자상 강했지만 현재 Practical Validation replay에서 `NOT_RUN` 없이 닫기 어려워 최종 등록 후보에서 제외했다. all-ETF GTAA U5 20% / GTAA U3 75% / GRS Compact 5%가 SPY 대비 CAGR 우위, MDD 개선, MDD 15% 미만 조건을 충족했다.
+- Follow-up: Final Review decision `final_gtaa_u3_u5_grs_monitoring_20260608`와 Portfolio Monitoring setup `selected_dashboard_portfolio_gtaa_u3_u5_grs_20260608`를 저장했다. remaining watch items는 provider look-through, liquidity coverage, survivorship / robustness review다.
+
+### 2026-06-09 - 중복 strategy family 없이 SPY보다 나은 포트폴리오를 찾는다
+
+- User request: 이전 후보가 SPY 대비 CAGR / MDD 조건은 좋지만 GTAA가 2개라 아쉬우므로, 각 component가 서로 다른 전략을 쓰는 조건으로 다시 찾아 달라고 요청함.
+- Interpreted goal: 숫자상 후보가 아니라 Practical Validation replay, Final Review selected-route, Portfolio Monitoring setup까지 통과한 distinct-family portfolio가 필요함.
+- Analysis result: 3-family Equal Weight / GTAA / GRS 후보는 수치가 좋았지만 selected-route preflight가 막혀 제외했다. macro context를 ingestion CSV mode로 갱신한 뒤 GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5% 후보가 SPY 대비 CAGR 우위, MDD 개선, MDD 15% 미만 조건과 Final Review gate를 충족했다.
+- Follow-up: Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`와 Portfolio Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609`를 저장했다. 이 기록은 monitoring-only이며 live approval / broker order / auto rebalance가 아니다.

@@ -4992,3 +4992,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `해석할 때 같이 볼 변수`는 `다음 맥락 체크`로 바꾸고, cue rows는 이벤트 / 심리 / 매크로 관찰 지점만 남겼다.
   - `과거 유사 맥락`은 참고, `자료 기준 / 출처 상태`는 근거 footer로 낮췄으며 Data Health는 main cue row에서 제거했다.
   - 검증은 focused/regression unittest, py_compile, diff check, Browser QA screenshot으로 완료했다.
+- Portfolio Discovery / Final Review / Monitoring 2026-06-08:
+  - `.aiworkspace/note/finance/tasks/active/portfolio-discovery-final-review-monitoring-20260608/`에서 현재 Compare catalog 전략을 탐색하고 workflow-complete 후보를 선별했다.
+  - 최종 등록 후보는 GTAA U5 20% / GTAA U3 75% / GRS Compact 5%, Final Review decision `final_gtaa_u3_u5_grs_monitoring_20260608`.
+  - Portfolio Monitoring setup `selected_dashboard_portfolio_gtaa_u3_u5_grs_20260608` 저장과 performance recheck `SELECTION_THESIS_HOLDS`를 확인했다.
+- Distinct Strategy Portfolio Discovery 2026-06-09:
+  - `.aiworkspace/note/finance/tasks/active/distinct-strategy-portfolio-discovery-20260609/`에서 중복 strategy family 없이 SPY 대비 우위 후보를 재탐색했다.
+  - 최종 등록 후보는 GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5%, Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`.
+  - Portfolio Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609` 저장과 selected dashboard performance recheck `ok`를 확인했다.
