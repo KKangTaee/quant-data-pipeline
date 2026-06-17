@@ -1,6 +1,6 @@
 ---
 name: finance-integration-review
-description: Review and integrate quant-data-pipeline finance work across branches, worktrees, sub-results, or conflict resolutions. Use this for merge conflicts, master/rebase integration, preserving both sides of conflicting finance changes, reviewing sub-agent or parallel work outputs, checking staged diffs before commit, or defining final verification criteria after multi-file finance changes.
+description: Review and integrate quant-data-pipeline finance work across branches, worktrees, sub-results, or conflict resolutions. Use this for merge conflicts, master/rebase integration, preserving both sides of conflicting finance changes, resolving finance documentation map/root handoff conflicts, reviewing sub-agent or parallel work outputs, checking staged diffs before commit, or defining final verification criteria after multi-file finance changes.
 ---
 
 # Finance Integration Review
@@ -17,6 +17,7 @@ This skill owns merge/worktree review, conflict-resolution reasoning, sub-result
 - affected architecture / flow / data docs only when touched files imply those domains
 
 For detailed checks, read `references/integration-review-checklist.md`.
+For `.aiworkspace/note/finance` documentation conflicts, also read `references/doc-merge-conflict-checklist.md` before editing.
 
 ## Use When
 
@@ -31,10 +32,11 @@ For detailed checks, read `references/integration-review-checklist.md`.
 1. Inspect `git status --short` and identify unrelated local artifacts.
 2. Identify affected ownership areas from `PROJECT_MAP.md`.
 3. For conflicts, read both sides and preserve distinct behavior unless the user asks to discard one side.
-4. Check for stale paths, broken source boundaries, generated artifacts, and registry/run-history mistakes.
-5. Run focused validation for the affected domains.
-6. Record only durable integration decisions in task docs or root handoff logs.
-7. Commit only coherent integration units and leave unrelated local artifacts unstaged.
+4. For finance docs conflicts, merge by document role and reading flow rather than conflict hunk order.
+5. Check for stale paths, broken source boundaries, generated artifacts, and registry/run-history mistakes.
+6. Run focused validation for the affected domains.
+7. Record only durable integration decisions in task docs or root handoff logs.
+8. Commit only coherent integration units and leave unrelated local artifacts unstaged.
 
 ## Boundary
 

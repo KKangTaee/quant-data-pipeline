@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-17 - Repeated document merge conflicts need skill-level guardrails
+- User request:
+  - 여러 worktree 병합에서 문서 충돌이 반복될 예정이므로, 두 브랜치 내용이 유실되지 않고 자연스럽게 정리되도록 기존 병합 스킬을 강화하길 승인함.
+- Interpreted goal:
+  - 매번 ad hoc으로 판단하지 않고, finance 문서 역할별로 current pointer, retained task record, root handoff log, roadmap 흐름을 일관되게 병합하게 만든다.
+- Analysis result:
+  - 새 별도 skill보다 기존 `finance-integration-review`에 문서 충돌 전용 reference를 붙이는 편이 trigger 중복을 줄이고, merge/rebase 상황에서 바로 적용된다.
+- Follow-up:
+  - 반복 drift가 남으면 `Latest completed task` / active pointer consistency를 검사하는 helper script를 후속으로 추가할 수 있다.
+
 ### 2026-06-16 - Market Movers non-daily periods need a manual EOD refresh path
 - User request:
   - `Overview > Market Movers`에서 Daily 외 Weekly / Monthly / Yearly period에도 가격 이력 갱신 버튼을 추가하되, Daily 자동 갱신을 복사하지 말고 Market Movers 범위만 수정하길 요청함.

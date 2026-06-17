@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-17
 
 ## Current State After Master Merge
 
@@ -28,7 +28,10 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-period-refresh-v1-20260616/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/finance-integration-doc-merge-skill-20260617/`
+- 목적: 반복될 multi-worktree merge에서 `.aiworkspace/note/finance` 문서 충돌을 손실 없이, 문서 역할과 읽기 흐름 기준으로 정리하도록 `finance-integration-review` skill에 전용 checklist를 추가했다.
+- 이번 차수에서 하지 않은 일: 새 별도 skill 생성, 자동 충돌 해결기 구현, task folder archive migration, registry / saved JSONL rewrite, generated artifact 정리.
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-period-refresh-v1-20260616/`
 - 목적: `Workspace > Overview > Market Movers`에서 Weekly / Monthly / Yearly period도 EOD 가격 이력 기준과 `가격 이력 갱신` 수동 action을 같은 화면에서 확인하게 했다.
 - 이번 차수에서 하지 않은 일: Daily 자동 갱신 복제, Market Context / Futures / Events / Backtest / Operations / historical analog 변경, 새 provider, DB schema, registry / saved JSONL write, 대량 provider collection 실행.
 - Recent previous completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-readability-v5-20260616/`

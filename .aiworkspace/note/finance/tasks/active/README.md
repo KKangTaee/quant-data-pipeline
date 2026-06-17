@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-17
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `finance-integration-doc-merge-skill-20260617` | Completed record | `finance-integration-review`에 `.aiworkspace/note/finance` 문서 충돌 전용 checklist를 추가해, latest/current pointer와 root handoff log를 손실 없이 자연스럽게 병합하도록 강화한 기록이다. |
 | `overview-market-movers-period-refresh-v1-20260616` | Completed record | `Overview > Market Movers` period refresh UX. Daily keeps intraday snapshot / auto refresh controls; Weekly / Monthly / Yearly now expose an EOD price-history manual refresh action through the existing Overview action facade and OHLCV job boundary. |
 | `overview-market-context-analog-readability-v5-20260616` | Completed record | `Overview > Market Context` V5. Historical analog OK state now explains the similarity rule before statistics, shows a compact summary strip / first-read conclusion, and splits detailed rows into core vs supporting assets without changing the context-only calculation. |
 | `overview-market-context-analog-repair-v4-20260615` | Completed record | `Overview > Market Context` V4. Historical analog `자료 부족`을 부족 ETF / row evidence / `보조 갱신` OHLCV repair action으로 연결하고, `자료 기준 / 출처 상태` summary에 정상 / 확인 / 부족 count와 source pill을 표시한 기록이다. |

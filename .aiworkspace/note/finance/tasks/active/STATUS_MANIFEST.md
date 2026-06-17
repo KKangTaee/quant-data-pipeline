@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-17
 
 ## Current State
 
@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `overview-market-movers-period-refresh-v1-20260616`
+- `finance-integration-doc-merge-skill-20260617`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,10 @@ Recent Overview / Market Context records:
 - `overview-market-context-events-data-trust-v1-20260612`: Overview Market Context Events Data Trust V1 / recent + upcoming major macro event trust
 - `overview-data-health-ingestion-handoff-v1-20260608`: Overview Data Health Ingestion Handoff V1 / priority-ranked read-only Data Health -> collection surface handoff
 - `overview-macro-context-cockpit-v1-20260608`: Overview Macro Context Cockpit V1 / summary-first DB-backed market context band
+
+Recent Workspace / tooling records:
+
+- `finance-integration-doc-merge-skill-20260617`: Finance integration review skill hardening / document merge conflict checklist for `.aiworkspace/note/finance`
 
 ## What `tasks/active/` Means Right Now
 

@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-17 - Finance Integration Doc Merge Skill
+- Opened `.aiworkspace/note/finance/tasks/active/finance-integration-doc-merge-skill-20260617/` after the user approved strengthening the existing merge-review skill.
+- Added `references/doc-merge-conflict-checklist.md` to `finance-integration-review` for `.aiworkspace/note/finance` Markdown conflicts.
+- Mirrored the repo-local skill source to the installed runtime skill under `~/.codex/skills`.
+- Boundary stayed workflow-only: no automatic conflict resolver, registry / saved rewrite, task archive migration, or generated artifact cleanup.
+
 ### 2026-06-16 - Overview Market Movers Period Refresh V1
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-movers-period-refresh-v1-20260616/` for the approved Market Movers period refresh UX fix.
 - Kept Daily refresh behavior intact: intraday snapshot refresh, auto refresh option, universe refresh, and screen reload remain Daily-only.
