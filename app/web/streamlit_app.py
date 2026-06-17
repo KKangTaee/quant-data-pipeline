@@ -24,7 +24,7 @@ from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
-from app.web.reference_contextual_help import configure_reference_contextual_help_page_targets
+from app.web import reference_contextual_help as reference_contextual_help_module
 from app.web.reference_guides import render_reference_guides_page
 from app.services.reference_glossary_catalog import (
     get_reference_concept_dictionary,
@@ -143,6 +143,12 @@ def _render_runtime_build_indicator() -> None:
         col1.metric("Runtime Marker", APP_RUNTIME_MARKER)
         col2.metric("Loaded At", APP_RUNTIME_LOADED_AT.strftime("%Y-%m-%d %H:%M:%S"))
         col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
+
+
+def _configure_reference_contextual_help_page_targets(page_targets: dict[str, object]) -> None:
+    configure = getattr(reference_contextual_help_module, "configure_reference_contextual_help_page_targets", None)
+    if callable(configure):
+        configure(page_targets)
 
 
 def _render_overview_page() -> None:
@@ -294,7 +300,7 @@ def main() -> None:
     )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
-    configure_reference_contextual_help_page_targets(
+    _configure_reference_contextual_help_page_targets(
         {
             "guides": guides_page,
             "glossary": glossary_page,
