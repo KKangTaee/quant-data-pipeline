@@ -5000,3 +5000,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/distinct-strategy-portfolio-discovery-20260609/`에서 중복 strategy family 없이 SPY 대비 우위 후보를 재탐색했다.
   - 최종 등록 후보는 GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5%, Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`.
   - Portfolio Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609` 저장과 selected dashboard performance recheck `ok`를 확인했다.
+- Overview Market Movers Coverage Refresh V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-coverage-refresh-v1-20260617/`에서 1차 Nasdaq coverage, 2차 refresh / automation, 3차 diagnostics evidence 보강을 완료했다.
+  - Market Movers는 `Nasdaq-listed current snapshot` coverage를 제공하며, latest `nasdaq_symdir_nasdaqlisted` lifecycle row를 직접 읽고 empty state에서는 Symbol Directory refresh를 안내한다.
+  - `overview_automation`은 `nasdaq_symbol_directory`와 `nasdaq_intraday` dry-run plan을 노출하고, Coverage Diagnostics는 Likely Cause / Evidence Summary / Next Check / Listing Evidence / Profile Freshness / Market Data Issue를 보여준다.
+  - 새 schema / provider / registry or saved JSONL write / OS scheduler 등록 / trading or validation semantics는 추가하지 않았다.

@@ -7814,3 +7814,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 숫자상 후보가 아니라 Practical Validation replay, Final Review selected-route, Portfolio Monitoring setup까지 통과한 distinct-family portfolio가 필요함.
 - Analysis result: 3-family Equal Weight / GTAA / GRS 후보는 수치가 좋았지만 selected-route preflight가 막혀 제외했다. macro context를 ingestion CSV mode로 갱신한 뒤 GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5% 후보가 SPY 대비 CAGR 우위, MDD 개선, MDD 15% 미만 조건과 Final Review gate를 충족했다.
 - Follow-up: Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`와 Portfolio Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609`를 저장했다. 이 기록은 monitoring-only이며 live approval / broker order / auto rebalance가 아니다.
+
+### 2026-06-17 - Market Movers coverage를 Nasdaq-listed current snapshot으로 확장한다
+
+- User request: `Workspace > Overview > Market Movers` coverage universe를 최신화하고 Nasdaq coverage, 반복 갱신, Coverage Diagnostics 설명력을 보강해 달라고 요청함.
+- Interpreted goal: Nasdaq Composite / Nasdaq-100이나 투자 신호가 아니라, Nasdaq Symbol Directory current listing observation을 별도 coverage로 읽고 갱신/진단 경로를 명확히 해야 함.
+- Analysis result: 새 table 또는 `market_universe_member` 물질화 없이 latest `nasdaq_symdir_nasdaqlisted` lifecycle rows를 직접 읽는 것이 source caveat와 중복 저장 위험 측면에서 가장 작고 명확하다.
+- Follow-up: `nasdaq_symbol_directory` / `nasdaq_intraday` automation dry-run plan과 diagnostics evidence columns를 추가했다. 실제 Symbol Directory / provider 대량 수집과 OS scheduler 등록은 별도 운영 실행으로 남긴다.

@@ -38,7 +38,7 @@ Last Verified: 2026-06-07
 | `nyse_asset_profile` | stock / ETF profile and bridge metadata |
 | `nyse_price_history` | OHLCV price ledger |
 | `market_universe_member` | Overview market intelligence current universe membership |
-| `market_intraday_snapshot` | Overview daily market movers and Sector / Industry daily leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 |
+| `market_intraday_snapshot` | Overview daily market movers and Sector / Industry daily leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage |
 | `market_data_issue` | Overview quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
 | `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, and other market events. Macro rows use official BLS / BEA schedule sources, with BLS `.ics` import fallback when backend requests are blocked; earnings rows carry source validation and lifecycle status metadata, while missing ticker diagnostics remain in job results/artifacts. |
 | `futures_instrument` | Overview Futures Monitor watchlist preset / display metadata for yfinance pilot futures symbols |

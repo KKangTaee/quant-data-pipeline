@@ -750,6 +750,7 @@ MARKET_INTRADAY_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
     "TOP2000": "Top 2000",
+    "NASDAQ": "Nasdaq-listed",
 }
 
 

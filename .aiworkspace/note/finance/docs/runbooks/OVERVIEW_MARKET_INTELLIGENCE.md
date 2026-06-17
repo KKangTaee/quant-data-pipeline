@@ -36,14 +36,18 @@ http://localhost:8501
 
 1. `Workspace > Ingestion > Overview Market Snapshot`
    - `Collect S&P 500 Universe`를 먼저 실행해 current S&P 500 membership을 갱신한다.
+   - Nasdaq coverage가 필요하면 `Workspace > Ingestion > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Overview Market Movers의 `Nasdaq 목록 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
    - `Collect Market Intraday Snapshot`으로 `SP500`, 필요하면 `TOP1000`, `TOP2000` snapshot을 갱신한다.
+   - Nasdaq-listed daily movers가 필요하면 `NASDAQ` intraday snapshot을 갱신한다. 이 coverage는 Nasdaq Symbol Directory current listing observation 기준이며 Nasdaq Composite / Nasdaq-100 membership proof가 아니다.
    - daily movers는 `finance_price.market_intraday_snapshot`의 latest snapshot을 읽는다.
 
 2. `Workspace > Overview > Market Movers`
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
    - daily period의 `데이터 갱신` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
    - `수동 갱신`에서는 `일중 스냅샷 갱신`을 눌러 새 snapshot을 저장하고, `화면 새로고침`으로 stored DB state를 다시 읽는다.
+   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `Nasdaq 목록 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
    - `자동 갱신`은 현재 선택한 daily coverage 하나만 확인한다. S&P 500은 `browser_safe` / `sp500_intraday`, Top1000은 `intraday` / `top1000_intraday`, Top2000은 `intraday` / `top2000_intraday` job filter를 사용한다.
+   - CLI / scheduler dry-run에서는 Nasdaq-listed snapshot도 `standard` profile plan에 표시되며, 단일 job 확인은 `--profile intraday --job nasdaq_intraday --dry-run`으로 한다. 실제 자동 실행은 미국 장중 guard와 cadence를 따른다.
    - 자동 cadence는 S&P 500 5분, Top1000 15분, Top2000 30분 기준이며 Overview가 열려 있는 브라우저 세션에서만 heartbeat가 돈다.
    - `데이터 갱신` 상태 / 액션 바에서 현재 상태, 범위, 가격 모드, 커버리지 %, 다음 확인을 먼저 확인하고, 자동 실행 상세는 `자동 갱신 세부 정보`를 펼쳐 본다.
    - `Return Rank` 탭에서 symbol-level return ranking과 직전 동일 기간 return / momentum delta를 확인한다.
@@ -160,6 +164,12 @@ Overview scheduled refresh dry-run:
 uv run python -m app.jobs.overview_automation --profile standard --dry-run
 ```
 
+Nasdaq-listed intraday job dry-run:
+
+```bash
+uv run python -m app.jobs.overview_automation --profile intraday --job nasdaq_intraday --dry-run
+```
+
 브라우저 없이 due job만 실제 실행:
 
 ```bash
@@ -227,6 +237,8 @@ PY
 
 ## Expected Results
 
+- Market Movers Coverage includes `S&P 500`, `Top 1000`, `Top 2000`, and `Nasdaq-listed current snapshot`.
+- Nasdaq-listed coverage shows `coverage_basis=Nasdaq-listed current snapshot`, `universe_source=nasdaq_symdir_nasdaqlisted`, current snapshot caveat, and Symbol Directory refresh guidance when no lifecycle rows exist.
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
 - Market Movers daily `데이터 갱신` status / action bar shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.
@@ -251,6 +263,7 @@ PY
 - Sector / Industry Trend has `Heatmap`, `Line`, and `Latest Delta` chart tabs, and valid `Trend Groups` selections persist across controls inside the same group mode.
 - Sector / Industry Positive Group Detail ticker bars use sector colors for positive returns, danger red for negative returns, and high-contrast previous-period return markers.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
+- Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
 - Futures Macro Thermometer shows six standardized daily score cards, scenario summary, Interpretation Confidence, current scenario directional sample / hit rate or mixed-scenario occurrence count, strong / weak / conflicting evidence groups, score components, symbol-level 1D / 3D / 5D / 20D / 60D returns, 60D volatility standardized move, 252D position, historical validation summary, score threshold sensitivity, false-positive rates, score-forward-return relationships, and caution copy.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
@@ -281,6 +294,8 @@ PY
 | Earnings row is not confirmed | Nasdaq cross-check did not find the same symbol on that event date | Treat as provider estimate only; refresh later or inspect company IR manually |
 | Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |
+| Nasdaq coverage is empty | No latest `nasdaq_symdir_nasdaqlisted` lifecycle rows exist locally | Run `Nasdaq 목록 갱신` in Market Movers or the Ingestion Nasdaq Symbol Directory current snapshot collector |
+| Nasdaq coverage is confused with an index | Symbol Directory rows are listing observations, not index constituents | Treat the coverage as Nasdaq-listed current snapshot only; do not describe it as Nasdaq Composite or Nasdaq-100 |
 | Quote gap occurrence count keeps increasing | The same symbol repeatedly misses the quote endpoint or supporting evidence | Treat it as an operating issue; inspect `market_data_issue`, refresh profile / OHLCV, or keep the symbol under manual review |
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
 | Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Import the official BLS `.ics` file, retry BLS later, or treat current Macro view as GDP-only until BLS rows are available |

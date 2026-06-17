@@ -106,12 +106,14 @@ MARKET_COVERAGE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
     "TOP2000": "Top 2000",
+    "NASDAQ": "Nasdaq-listed current snapshot",
 }
 MARKET_COVERAGE_OPTIONS = tuple(MARKET_COVERAGE_LABELS.keys())
 MARKET_UNIVERSE_LIMITS = {
     "SP500": 500,
     "TOP1000": 1000,
     "TOP2000": 2000,
+    "NASDAQ": 5000,
 }
 MARKET_MOVER_PERIOD_LABELS = {
     "daily": "Daily",
@@ -2213,6 +2215,13 @@ def _run_market_intraday_snapshot_action(
     )
 
 
+def _run_nasdaq_symbol_directory_action() -> dict[str, Any]:
+    action = getattr(overview_actions_module, "run_overview_nasdaq_symbol_directory", None)
+    if not callable(action):
+        action = getattr(importlib.reload(overview_actions_module), "run_overview_nasdaq_symbol_directory")
+    return action()
+
+
 def _run_market_movers_eod_history_action(
     *,
     universe_code: str,
@@ -3642,7 +3651,19 @@ def _render_market_movers_daily_refresh_bar(
         with st.spinner("Refreshing S&P 500 universe..."):
             _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
         st.rerun()
-    if universe_code != "SP500":
+    if universe_code == "NASDAQ" and control_cols[2].button(
+        "Nasdaq 목록 갱신",
+        key="overview_nasdaq_symbol_directory_refresh",
+        use_container_width=True,
+        help="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
+    ):
+        with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
+            _store_overview_job_result(
+                "overview_nasdaq_symbol_directory_result",
+                _run_nasdaq_symbol_directory_action(),
+            )
+        st.rerun()
+    if universe_code not in {"SP500", "NASDAQ"}:
         control_cols[2].caption("Top universe는 market-cap ranked asset profile 기준입니다.")
     if control_cols[3].button(
         "화면 새로고침",
@@ -3659,6 +3680,12 @@ def _render_market_movers_daily_refresh_bar(
 
     if universe_code == "SP500":
         _render_market_job_result("overview_sp500_universe_result")
+    if universe_code == "NASDAQ":
+        st.caption(
+            "Nasdaq coverage는 Nasdaq Symbol Directory current listing snapshot 기준입니다. "
+            "Nasdaq Composite 또는 Nasdaq-100 historical membership proof가 아닙니다."
+        )
+        _render_market_job_result("overview_nasdaq_symbol_directory_result")
     _render_market_job_result(intraday_result_key)
 
 
@@ -3708,7 +3735,13 @@ def _render_market_movers_eod_refresh_bar(
         f"{period_label}는 저장된 EOD 가격 이력을 기준으로 계산합니다. "
         "최신 기간을 보려면 가격 이력을 수동 갱신하세요."
     )
-    if universe_code != "SP500":
+    if universe_code == "NASDAQ":
+        st.warning(
+            "Nasdaq-listed 가격 이력 갱신은 Nasdaq Symbol Directory current snapshot 기준의 큰 universe를 수집하므로 "
+            "provider 호출과 실행 시간이 커질 수 있습니다.",
+        )
+        st.caption("목록이 비어 있으면 Daily의 `Nasdaq 목록 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행하세요.")
+    elif universe_code != "SP500":
         st.warning(
             f"{universe_label} 가격 이력 갱신은 market-cap ranked asset profile 기준의 큰 universe를 수집하므로 "
             "provider 호출과 실행 시간이 커질 수 있습니다.",
@@ -4184,6 +4217,9 @@ def _render_market_movers_snapshot_panel(
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("DB-backed market mover rows are not available for the selected controls.")
+        st.markdown("#### Why It Moved")
+        st.info("Market mover rows are needed before Why It Moved can be shown.")
+        st.caption("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.")
         return
     volume_rows = snapshot.get("volume_rows")
     if not isinstance(volume_rows, pd.DataFrame) or volume_rows.empty:

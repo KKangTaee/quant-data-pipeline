@@ -4,7 +4,11 @@ from datetime import datetime
 from typing import Any, Callable, Iterable
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
-from finance.data.market_intelligence import load_market_cap_universe_members, load_market_universe_members
+from finance.data.market_intelligence import (
+    load_market_cap_universe_members,
+    load_market_universe_members,
+    load_nasdaq_symbol_directory_universe_members,
+)
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -16,6 +20,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_market_intraday_snapshot,
     run_collect_ohlcv,
     run_collect_sp500_universe,
+    run_collect_symbol_directory_snapshots,
     run_diagnose_market_quote_gaps,
 )
 from app.jobs.overview_automation import run_overview_automation
@@ -149,6 +154,10 @@ def run_overview_sp500_universe() -> JobResult:
     return run_collect_sp500_universe()
 
 
+def run_overview_nasdaq_symbol_directory() -> JobResult:
+    return run_collect_symbol_directory_snapshots(sources=("nasdaqlisted",))
+
+
 def run_overview_market_sentiment() -> JobResult:
     return run_collect_market_sentiment()
 
@@ -178,6 +187,9 @@ def _load_market_movers_eod_universe_symbols(*, universe_code: str, universe_lim
     if normalized_universe == "SP500":
         rows = load_market_universe_members("SP500")
         coverage_basis = "Current S&P 500 constituents"
+    elif normalized_universe == "NASDAQ":
+        rows = load_nasdaq_symbol_directory_universe_members()
+        coverage_basis = "Nasdaq-listed current snapshot"
     else:
         rows = load_market_cap_universe_members(normalized_universe, universe_limit=universe_limit)
         coverage_basis = "Latest asset_profile.market_cap snapshot"

@@ -5133,6 +5133,57 @@ class OverviewAutomationContractTests(unittest.TestCase):
             execution_profile="managed_safe",
         )
 
+    def test_overview_market_movers_refresh_action_uses_nasdaq_directory_loader(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_nasdaq_symbol_directory_universe_members",
+                return_value=[{"symbol": "AAPL"}, {"symbol": "MSFT"}, {"symbol": "AAPL"}],
+            ) as load_universe,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={"job_name": "collect_ohlcv", "status": "success", "rows_written": 756},
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="NASDAQ",
+                universe_limit=5000,
+                period="weekly",
+            )
+
+        self.assertEqual(result["details"]["coverage_basis"], "Nasdaq-listed current snapshot")
+        self.assertEqual(result["details"]["source"], "yfinance OHLCV")
+        load_universe.assert_called_once_with()
+        collect.assert_called_once_with(
+            ["AAPL", "MSFT"],
+            period="3mo",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+
+    def test_overview_automation_standard_plan_includes_symbol_directory_refresh(self) -> None:
+        from app.jobs.overview_automation import build_overview_automation_plan
+
+        plan = build_overview_automation_plan(
+            profile="standard",
+            history_rows=[],
+            now=datetime(2026, 6, 17, 15, 0, tzinfo=timezone.utc),
+            allow_outside_market_hours=True,
+        )
+        job_ids = [row["job_id"] for row in plan]
+
+        self.assertIn("nasdaq_symbol_directory", job_ids)
+        self.assertIn("nasdaq_intraday", job_ids)
+        directory_row = next(row for row in plan if row["job_id"] == "nasdaq_symbol_directory")
+        intraday_row = next(row for row in plan if row["job_id"] == "nasdaq_intraday")
+        self.assertFalse(directory_row["market_hours_only"])
+        self.assertEqual(directory_row["cadence_minutes"], 24 * 60)
+        self.assertEqual(intraday_row["cadence_minutes"], 30)
+        self.assertTrue(intraday_row["market_hours_only"])
+
     def test_overview_market_movers_refresh_bar_renders_eod_action_for_non_daily_without_auto_mode(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
 
@@ -5155,6 +5206,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("_run_market_movers_eod_history_action", eod_body)
         self.assertNotIn("_select_market_refresh_mode", eod_body)
         self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
+
+    def test_market_movers_empty_snapshot_replaces_stale_why_it_moved_panel(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertIn("Market mover rows are needed before Why It Moved can be shown.", source)
+        self.assertIn("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.", source)
 
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
@@ -6390,6 +6447,200 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_snapshot_uses_nasdaq_symbol_directory_current_snapshot(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_symbol_lifecycle" in sql:
+                return [
+                    {
+                        "symbol": "AAPL",
+                        "long_name": "Apple Inc.",
+                        "sector": "Technology",
+                        "industry": "Consumer Electronics",
+                        "market_cap": 3_000_000_000_000,
+                        "status": "active",
+                        "error_msg": None,
+                        "last_collected_at": "2026-06-16 10:00:00",
+                        "profile_exchange": "NMS",
+                        "listing_status": "active",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-06-17",
+                        "universe_collected_at": "2026-06-17 08:00:00",
+                        "universe_source": "nasdaq_symdir_nasdaqlisted",
+                        "universe_source_url": "https://www.nasdaqtrader.com/",
+                    },
+                    {
+                        "symbol": "MSFT",
+                        "long_name": "Microsoft Corp.",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 2_800_000_000_000,
+                        "status": "active",
+                        "error_msg": None,
+                        "last_collected_at": "2026-06-16 10:00:00",
+                        "profile_exchange": "NMS",
+                        "listing_status": "active",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-06-17",
+                        "universe_collected_at": "2026-06-17 08:00:00",
+                        "universe_source": "nasdaq_symdir_nasdaqlisted",
+                        "universe_source_url": "https://www.nasdaqtrader.com/",
+                    },
+                ]
+            if "MAX(`date`) AS latest_raw_date" in sql:
+                return [{"latest_raw_date": "2026-06-16"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-06-16", "usable_rows": 5000},
+                    {"date": "2026-06-15", "usable_rows": 5000},
+                    {"date": "2026-06-12", "usable_rows": 5000},
+                ]
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAPL", "date": "2026-06-15", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAPL", "date": "2026-06-16", "price": 106.0, "volume": 1500},
+                    {"symbol": "MSFT", "date": "2026-06-15", "price": 200.0, "volume": 900},
+                    {"symbol": "MSFT", "date": "2026-06-16", "price": 202.0, "volume": 1100},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="NASDAQ",
+            universe_limit=5000,
+            period="daily",
+            top_n=5,
+            today=date(2026, 6, 17),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "NASDAQ")
+        self.assertEqual(snapshot["universe_label"], "Nasdaq-listed current snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Nasdaq-listed current snapshot")
+        self.assertEqual(snapshot["coverage"]["universe_source"], "nasdaq_symdir_nasdaqlisted")
+        self.assertEqual(snapshot["coverage"]["universe_source_type"], "current_listing_snapshot")
+        self.assertEqual(snapshot["coverage"]["universe_coverage_status"], "partial")
+        self.assertEqual(snapshot["coverage"]["universe_event_date"], "2026-06-17")
+        self.assertIn("current listing observation only", snapshot["coverage"]["universe_caveat"])
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAPL")
+
+    def test_market_movers_snapshot_explains_missing_nasdaq_directory_refresh(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="NASDAQ",
+            universe_limit=5000,
+            period="daily",
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "NO_UNIVERSE")
+        self.assertEqual(snapshot["universe_code"], "NASDAQ")
+        self.assertIn("Nasdaq Symbol Directory refresh", snapshot["message"])
+
+    def test_market_movers_missing_rows_include_profile_lifecycle_and_issue_evidence(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_asset_profile" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "long_name": "AAA Corp",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 100,
+                        "status": "active",
+                        "error_msg": None,
+                        "last_collected_at": "2026-06-16 10:00:00",
+                        "profile_exchange": "NYS",
+                    },
+                    {
+                        "symbol": "STALE",
+                        "long_name": "Stale Corp",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 90,
+                        "status": "error",
+                        "error_msg": "provider profile unavailable",
+                        "last_collected_at": "2026-03-23 10:00:00",
+                        "profile_exchange": "NMS",
+                    },
+                ]
+            if "MAX(`date`) AS latest_raw_date" in sql:
+                return [{"latest_raw_date": "2026-06-16"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-06-16", "usable_rows": 5000},
+                    {"date": "2026-06-15", "usable_rows": 5000},
+                    {"date": "2026-06-12", "usable_rows": 5000},
+                ]
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-06-15", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-06-16", "price": 105.0, "volume": 1000},
+                    {"symbol": "STALE", "date": "2026-06-16", "price": 10.0, "volume": 100},
+                ]
+            if "MAX(`date`) AS latest_price_date" in sql:
+                return [{"symbol": "STALE", "latest_price_date": "2026-03-23"}]
+            if "FROM nyse_symbol_lifecycle" in sql:
+                return [
+                    {
+                        "symbol": "STALE",
+                        "listing_status": "active",
+                        "source": "nasdaq_symdir_nasdaqlisted",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-06-17",
+                        "collected_at": "2026-06-17 08:00:00",
+                    }
+                ]
+            if "FROM market_data_issue" in sql:
+                return [
+                    {
+                        "symbol": "STALE",
+                        "issue_type": "quote_gap",
+                        "diagnosis": "provider_quote_gap",
+                        "occurrence_count": 3,
+                        "last_seen_at": "2026-06-16 14:00:00",
+                        "latest_evidence": "quote endpoint missing while DB price exists",
+                    }
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            today=date(2026, 6, 17),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+        missing = snapshot["missing_rows"]
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(missing.iloc[0]["Symbol"], "STALE")
+        for column in ["Likely Cause", "Evidence Summary", "Next Check", "Listing Evidence", "Profile Freshness", "Market Data Issue"]:
+            self.assertIn(column, missing.columns)
+        self.assertIn("Profile status error", missing.iloc[0]["Evidence Summary"])
+        self.assertIn("current_listing_snapshot", missing.iloc[0]["Listing Evidence"])
+        self.assertIn("current listing observation only", missing.iloc[0]["Listing Evidence"])
+        self.assertIn("provider_quote_gap", missing.iloc[0]["Market Data Issue"])
+        self.assertIn("profile", missing.iloc[0]["Next Check"].lower())
 
     def test_market_movers_weekly_volume_rows_use_average_and_total_volume(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot

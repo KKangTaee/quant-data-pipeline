@@ -104,6 +104,12 @@ Wikipedia S&P 500 constituents
   -> finance.data.market_intelligence.collect_and_store_sp500_universe()
   -> finance_meta.market_universe_member
 
+Nasdaq public Symbol Directory nasdaqlisted.txt current file
+  -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
+  -> finance_meta.nyse_symbol_lifecycle (source=nasdaq_symdir_nasdaqlisted)
+  -> app.services.overview_market_intelligence.build_market_movers_snapshot(universe_code=NASDAQ)
+  -> Workspace > Overview > Market Movers
+
 yahoo quote batch via yfinance cookie / crumb session
   -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
@@ -129,9 +135,10 @@ missing quote rows
 의미:
 
 - `market_universe_member`의 S&P 500은 current constituents snapshot이며 historical PIT membership이 아니다.
+- Market Movers의 Nasdaq coverage는 `nyse_symbol_lifecycle`의 latest `nasdaq_symdir_nasdaqlisted` current snapshot을 직접 읽는다. 이는 Nasdaq-listed current observation이며 Nasdaq Composite / Nasdaq-100 또는 historical membership proof가 아니다.
 - `market_intraday_snapshot`은 daily movers에서 전일 종가 대비 최신 quote / intraday 가격을 빠르게 읽기 위한 coverage별 snapshot이다.
 - 기본 refresh path는 Yahoo quote batch이며, S&P 500은 quote path 실패 시 기존 yfinance 5m OHLCV download로 fallback할 수 있다.
-- Top1000 / Top2000 daily movers도 저장된 quote snapshot을 우선 읽는다. 해당 universe는 `nyse_asset_profile.market_cap` current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
+- Top1000 / Top2000 / Nasdaq-listed daily movers도 저장된 quote snapshot을 우선 읽는다. Top universe는 `nyse_asset_profile.market_cap` current snapshot 기준이고 Nasdaq-listed universe는 Symbol Directory current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
 - Missing quote diagnostics는 Yahoo single-symbol quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance `fast_info` evidence를 비교해 `provider_quote_gap` 같은 원인 후보를 job result로 표시한다.
 - 진단 결과는 `market_data_issue`에 `issue_type=quote_gap`으로 누적 저장한다. 이는 반복 발생 횟수와 최신 evidence를 추적하기 위한 운영 table이며, 상장폐지 / 거래정지 확정 판정은 아니다.
 - Sector / Industry daily leadership은 저장된 intraday snapshot이 있으면 `Previous Close -> latest quote` 기준을 사용한다. Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용하며, 최신 raw row가 sparse하면 prior eligible date로 fallback한다.

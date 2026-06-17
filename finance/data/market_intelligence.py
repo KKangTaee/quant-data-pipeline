@@ -49,10 +49,13 @@ DEFAULT_INTRADAY_INTERVAL = "5m"
 YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
 MARKET_CAP_UNIVERSE_LIMITS = {"TOP1000": 1000, "TOP2000": 2000}
+NASDAQ_SYMBOL_DIRECTORY_SOURCE = "nasdaq_symdir_nasdaqlisted"
+NASDAQ_SYMBOL_DIRECTORY_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 MARKET_UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
     "TOP2000": "Top 2000",
+    "NASDAQ": "Nasdaq-listed current snapshot",
 }
 BLS_MACRO_RELEASE_TYPES = [
     {
@@ -121,6 +124,8 @@ def _normalize_intraday_universe(
     normalized = str(universe_code or "").strip().upper()
     if normalized == "SP500":
         return "SP500", 500
+    if normalized == "NASDAQ":
+        return "NASDAQ", int(universe_limit or 5000)
     if normalized in MARKET_CAP_UNIVERSE_LIMITS:
         return normalized, MARKET_CAP_UNIVERSE_LIMITS[normalized]
     if universe_limit is not None:
@@ -2105,6 +2110,8 @@ def load_market_cap_universe_members(
     normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
     if normalized_code == "SP500":
         return load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
+    if normalized_code == "NASDAQ":
+        return load_nasdaq_symbol_directory_universe_members(host=host, user=user, password=password, port=port)
 
     db = _db(host, user, password, port)
     try:
@@ -2135,6 +2142,69 @@ def load_market_cap_universe_members(
             LIMIT %s
             """,
             [normalized_code, "stock", "United States", normalized_limit],
+        )
+    finally:
+        db.close()
+
+
+def load_nasdaq_symbol_directory_universe_members(
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    """Read latest Nasdaq-listed current snapshot rows from symbol lifecycle evidence."""
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        return db.query(
+            """
+            SELECT
+                'NASDAQ' AS universe_code,
+                l.symbol,
+                l.symbol AS source_symbol,
+                l.name,
+                p.sector,
+                p.industry,
+                l.source,
+                l.source_ref AS source_url,
+                l.event_date AS as_of_date,
+                1 AS active,
+                l.collected_at,
+                l.error_msg
+            FROM nyse_symbol_lifecycle l
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = l.symbol
+             AND p.kind = l.kind
+            WHERE l.source = %s
+              AND l.source_type = %s
+              AND l.event_type = %s
+              AND l.kind = %s
+              AND l.listing_status = %s
+              AND COALESCE(l.event_date, DATE(l.collected_at)) = (
+                    SELECT MAX(COALESCE(event_date, DATE(collected_at)))
+                    FROM nyse_symbol_lifecycle
+                    WHERE source = %s
+                      AND source_type = %s
+                      AND event_type = %s
+                      AND kind = %s
+                      AND listing_status = %s
+              )
+            ORDER BY COALESCE(p.market_cap, 0) DESC, l.symbol ASC
+            """,
+            [
+                NASDAQ_SYMBOL_DIRECTORY_SOURCE,
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+                NASDAQ_SYMBOL_DIRECTORY_SOURCE,
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+            ],
         )
     finally:
         db.close()
@@ -3042,6 +3112,13 @@ def collect_and_store_market_intraday_snapshot(
         loader = universe_loader
     elif normalized_universe == "SP500":
         loader = lambda: load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
+    elif normalized_universe == "NASDAQ":
+        loader = lambda: load_nasdaq_symbol_directory_universe_members(
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
     else:
         loader = lambda: load_market_cap_universe_members(
             normalized_universe,

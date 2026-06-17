@@ -46,6 +46,7 @@ UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000 by market cap",
     "TOP2000": "Top 2000 by market cap",
+    "NASDAQ": "Nasdaq-listed current snapshot",
 }
 MOVERS_COLUMNS = [
     "Rank",
@@ -127,6 +128,12 @@ MISSING_COLUMNS = [
     "Industry",
     "Reason",
     "Recommended Action",
+    "Likely Cause",
+    "Evidence Summary",
+    "Next Check",
+    "Listing Evidence",
+    "Profile Freshness",
+    "Market Data Issue",
     "Start Date",
     "End Date",
     "Start Price",
@@ -490,6 +497,8 @@ def _universe_limit_from_code(universe_code: str, fallback: int) -> int:
         return 2000
     if universe_code == "TOP1000":
         return 1000
+    if universe_code == "NASDAQ":
+        return max(5000, int(fallback or 0))
     return fallback
 
 
@@ -526,6 +535,7 @@ def _empty_movers_snapshot(
             "price_mode": "Unavailable",
         },
         "warnings": [message] if message else [],
+        "message": message,
     }
 
 
@@ -1359,6 +1369,7 @@ def _load_universe(
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 p.market_cap,
+                p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
                 p.last_collected_at,
@@ -1380,6 +1391,65 @@ def _load_universe(
         )
         return _filter_sector(rows, sector)
 
+    if universe_code == "NASDAQ":
+        rows = query_fn(
+            "finance_meta",
+            """
+            SELECT
+                l.symbol,
+                COALESCE(NULLIF(p.long_name, ''), NULLIF(l.name, ''), s.name) AS long_name,
+                p.sector,
+                p.industry,
+                p.market_cap,
+                p.exchange AS profile_exchange,
+                p.status,
+                p.error_msg,
+                p.last_collected_at,
+                l.event_date AS universe_event_date,
+                l.collected_at AS universe_collected_at,
+                l.source AS universe_source,
+                l.source_ref AS universe_source_url,
+                l.source_type AS universe_source_type,
+                l.coverage_status AS universe_coverage_status,
+                l.event_type AS universe_event_type,
+                l.listing_status AS universe_listing_status
+            FROM nyse_symbol_lifecycle l
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = l.symbol
+             AND p.kind = l.kind
+            LEFT JOIN nyse_stock s
+              ON s.symbol = l.symbol
+            WHERE l.source = %s
+              AND l.source_type = %s
+              AND l.event_type = %s
+              AND l.kind = %s
+              AND l.listing_status = %s
+              AND COALESCE(l.event_date, DATE(l.collected_at)) = (
+                    SELECT MAX(COALESCE(event_date, DATE(collected_at)))
+                    FROM nyse_symbol_lifecycle
+                    WHERE source = %s
+                      AND source_type = %s
+                      AND event_type = %s
+                      AND kind = %s
+                      AND listing_status = %s
+              )
+            ORDER BY COALESCE(p.market_cap, 0) DESC, l.symbol ASC
+            """,
+            [
+                "nasdaq_symdir_nasdaqlisted",
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+                "nasdaq_symdir_nasdaqlisted",
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+            ],
+        )
+        return _filter_sector(rows, sector)
+
     return _filter_sector(
         query_fn(
             "finance_meta",
@@ -1390,6 +1460,7 @@ def _load_universe(
                 p.sector,
                 p.industry,
                 p.market_cap,
+                p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
                 p.last_collected_at,
@@ -1570,6 +1641,106 @@ def _profile_collected_at(item: dict[str, Any]) -> str | None:
     return _display_datetime(item.get("last_collected_at"))
 
 
+def _profile_freshness_summary(row: dict[str, Any]) -> str:
+    parts: list[str] = []
+    status = str(row.get("Profile Status") or "").strip()
+    if status and status != "-":
+        parts.append(f"Profile status {status}")
+    exchange = str(row.get("Profile Exchange") or row.get("profile_exchange") or "").strip()
+    if exchange and exchange != "-":
+        parts.append(f"exchange {exchange}")
+    collected = str(row.get("Profile Collected At") or "").strip()
+    if collected and collected != "-":
+        parts.append(f"collected {collected}")
+    error = str(row.get("Profile Error") or "").strip()
+    if error and error != "-":
+        parts.append(f"error: {error}")
+    return "; ".join(parts) if parts else "No profile freshness evidence in current read model."
+
+
+def _format_listing_evidence(evidence: dict[str, Any] | None) -> str:
+    if not evidence:
+        return "No lifecycle evidence found in DB."
+    source = evidence.get("source") or "-"
+    source_type = evidence.get("source_type") or "-"
+    event_type = evidence.get("event_type") or "-"
+    event_date = _iso_date(evidence.get("event_date")) or "-"
+    coverage_status = evidence.get("coverage_status") or "-"
+    listing_status = evidence.get("listing_status") or "-"
+    if str(event_type).lower() == "delisting" or str(source_type).lower() == "delisting_feed":
+        return (
+            f"{source} {source_type} {event_type} event_date={event_date}; "
+            "delisting evidence exists from lifecycle source."
+        )
+    caveat = ""
+    if str(source_type).lower() == "current_listing_snapshot":
+        caveat = "; current listing observation only"
+    return (
+        f"{source} {source_type} {event_type} listing_status={listing_status} "
+        f"coverage={coverage_status} event_date={event_date}{caveat}"
+    )
+
+
+def _format_market_data_issue(issue: dict[str, Any] | None) -> str:
+    if not issue:
+        return "No repeated market data issue row found."
+    issue_type = issue.get("issue_type") or "-"
+    diagnosis = issue.get("diagnosis") or "-"
+    occurrences = issue.get("occurrence_count") or 0
+    last_seen = _display_datetime(issue.get("last_seen_at")) or "-"
+    evidence = str(issue.get("latest_evidence") or "").strip()
+    suffix = f"; {evidence}" if evidence else ""
+    return f"{issue_type}: {diagnosis}; occurrences={occurrences}; latest={last_seen}{suffix}"
+
+
+def _missing_likely_cause(row: dict[str, Any], issue: dict[str, Any] | None) -> str:
+    reason = str(row.get("Reason") or "").lower()
+    profile_status = str(row.get("Profile Status") or "").lower()
+    if issue:
+        return "Repeated market data issue evidence; confirm quote and price-history coverage."
+    if profile_status in {"error", "not_found", "delisted"}:
+        return "Profile metadata needs review alongside price-history coverage."
+    if "intraday" in reason or "latest quote" in reason:
+        return "Daily quote snapshot gap."
+    if "start" in reason or "end price" in reason:
+        return "EOD price-history coverage gap."
+    return "Price or listing evidence needs review."
+
+
+def _missing_next_check(row: dict[str, Any], issue: dict[str, Any] | None) -> str:
+    profile_status = str(row.get("Profile Status") or "").lower()
+    if profile_status in {"error", "not_found", "delisted"}:
+        return "Check profile refresh, listing evidence, then refresh daily OHLCV history."
+    if issue:
+        return "Open quote-gap diagnostics and inspect latest price/profile evidence before retrying refresh."
+    reason = str(row.get("Reason") or "").lower()
+    if "intraday" in reason or "latest quote" in reason:
+        return "Refresh daily snapshot; if repeated, run quote-gap diagnostics."
+    return "Refresh daily OHLCV history; if repeated, inspect lifecycle/profile evidence."
+
+
+def _missing_evidence_fields(
+    row: dict[str, Any],
+    *,
+    listing_evidence: dict[str, Any] | None = None,
+    market_data_issue: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    profile = _profile_freshness_summary(row)
+    listing = _format_listing_evidence(listing_evidence)
+    issue = _format_market_data_issue(market_data_issue)
+    latest_price = str(row.get("Latest Price Date") or "-")
+    reason = str(row.get("Reason") or "-")
+    evidence_summary = f"{reason}; latest price date {latest_price}; {profile}; {listing}; {issue}"
+    return {
+        "Likely Cause": _missing_likely_cause(row, market_data_issue),
+        "Evidence Summary": evidence_summary,
+        "Next Check": _missing_next_check(row, market_data_issue),
+        "Listing Evidence": listing,
+        "Profile Freshness": profile,
+        "Market Data Issue": issue,
+    }
+
+
 def _missing_row(
     *,
     item: dict[str, Any],
@@ -1580,7 +1751,7 @@ def _missing_row(
     end_price: float | None,
     latest_price_date: str | None,
 ) -> dict[str, Any]:
-    return {
+    row = {
         "Symbol": str(item.get("symbol") or "").strip().upper(),
         "Name": item.get("long_name") or "-",
         "Sector": item.get("sector") or "Unknown",
@@ -1595,7 +1766,111 @@ def _missing_row(
         "Profile Status": item.get("status") or "-",
         "Profile Error": item.get("error_msg") or "-",
         "Profile Collected At": _profile_collected_at(item) or "-",
+        "Profile Exchange": item.get("profile_exchange") or "-",
     }
+    row.update(_missing_evidence_fields(row))
+    return row
+
+
+def _load_symbol_lifecycle_evidence(
+    *,
+    symbols: list[str],
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    rows = query_fn(
+        "finance_meta",
+        f"""
+        SELECT
+            symbol,
+            listing_status,
+            source,
+            source_type,
+            coverage_status,
+            event_type,
+            event_date,
+            collected_at
+        FROM nyse_symbol_lifecycle
+        WHERE symbol IN ({placeholders})
+          AND kind = %s
+        ORDER BY
+            symbol ASC,
+            COALESCE(event_date, DATE(collected_at)) DESC,
+            collected_at DESC,
+            CASE WHEN event_type = 'delisting' THEN 0 ELSE 1 END
+        """,
+        list(symbols) + ["stock"],
+    )
+    evidence: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if symbol and symbol not in evidence:
+            evidence[symbol] = row
+    return evidence
+
+
+def _load_market_data_issue_evidence(
+    *,
+    symbols: list[str],
+    universe_code: str,
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    rows = query_fn(
+        "finance_meta",
+        f"""
+        SELECT
+            symbol,
+            issue_type,
+            diagnosis,
+            occurrence_count,
+            last_seen_at,
+            latest_evidence
+        FROM market_data_issue
+        WHERE symbol IN ({placeholders})
+          AND universe_code = %s
+          AND latest_status = %s
+        ORDER BY symbol ASC, occurrence_count DESC, last_seen_at DESC
+        """,
+        list(symbols) + [universe_code, "active"],
+    )
+    issues: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if symbol and symbol not in issues:
+            issues[symbol] = row
+    return issues
+
+
+def _enrich_missing_rows(
+    missing_rows: list[dict[str, Any]],
+    *,
+    universe_code: str,
+    query_fn: QueryFn,
+) -> list[dict[str, Any]]:
+    symbols = [str(row.get("Symbol") or "").strip().upper() for row in missing_rows if row.get("Symbol")]
+    if not symbols:
+        return missing_rows
+    lifecycle = _load_symbol_lifecycle_evidence(symbols=symbols, query_fn=query_fn)
+    issues = _load_market_data_issue_evidence(
+        symbols=symbols,
+        universe_code=universe_code,
+        query_fn=query_fn,
+    )
+    for row in missing_rows:
+        symbol = str(row.get("Symbol") or "").strip().upper()
+        row.update(
+            _missing_evidence_fields(
+                row,
+                listing_evidence=lifecycle.get(symbol),
+                market_data_issue=issues.get(symbol),
+            )
+        )
+    return missing_rows
 
 
 def _missing_recommended_action(reason: str) -> str:
@@ -1616,6 +1891,7 @@ def _missing_recommended_action(reason: str) -> str:
 def _build_return_rows(
     *,
     universe: list[dict[str, Any]],
+    universe_code: str,
     start_date: str,
     end_date: str,
     query_fn: QueryFn,
@@ -1699,7 +1975,11 @@ def _build_return_rows(
                     latest_price_date=latest_dates.get(str(row["symbol"])),
                 )
             )
-    return return_rows, missing_rows
+    return return_rows, _enrich_missing_rows(
+        missing_rows,
+        universe_code=universe_code,
+        query_fn=query_fn,
+    )
 
 
 def _build_return_rows_from_price_map(
@@ -2118,6 +2398,20 @@ def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) ->
             "universe_source": first.get("universe_source"),
             "universe_source_url": first.get("universe_source_url"),
             "coverage_basis": "Current S&P 500 constituents",
+        }
+    if universe_code == "NASDAQ":
+        first = universe[0]
+        return {
+            "universe_event_date": _iso_date(first.get("universe_event_date") or first.get("event_date")),
+            "universe_collected_at": _display_datetime(first.get("universe_collected_at")),
+            "universe_source": first.get("universe_source"),
+            "universe_source_url": first.get("universe_source_url"),
+            "universe_source_type": first.get("universe_source_type") or first.get("source_type"),
+            "universe_coverage_status": first.get("universe_coverage_status") or first.get("coverage_status"),
+            "universe_event_type": first.get("universe_event_type") or first.get("event_type"),
+            "universe_listing_status": first.get("universe_listing_status") or first.get("listing_status"),
+            "universe_caveat": "Nasdaq Symbol Directory is current listing observation only; not historical membership proof.",
+            "coverage_basis": "Nasdaq-listed current snapshot",
         }
     collected = [
         _display_datetime(row.get("last_collected_at"))
@@ -5911,6 +6205,11 @@ def _build_intraday_return_payload(
         period=period,
         coverage=coverage,
     )
+    missing_rows = _enrich_missing_rows(
+        missing_rows,
+        universe_code=universe_code,
+        query_fn=query_fn,
+    )
     return {
         "snapshot_time": snapshot_time,
         "return_rows": return_rows,
@@ -5999,6 +6298,11 @@ def build_market_movers_snapshot(
             query_fn=query,
         )
         if not universe:
+            empty_message = (
+                "Nasdaq Symbol Directory refresh is required before Nasdaq-listed current snapshot coverage can render."
+                if normalized_universe == "NASDAQ"
+                else "Selected universe has no symbols. For S&P 500, run the universe refresh first."
+            )
             return _empty_movers_snapshot(
                 status="NO_UNIVERSE",
                 period=normalized_period,
@@ -6006,7 +6310,7 @@ def build_market_movers_snapshot(
                 universe_limit=normalized_limit,
                 top_n=normalized_top_n,
                 sector=sector,
-                message="Selected universe has no symbols. For S&P 500, run the universe refresh first.",
+                message=empty_message,
             )
 
         if normalized_period == "daily" and prefer_intraday:
@@ -6062,6 +6366,7 @@ def build_market_movers_snapshot(
         )
         return_rows, missing_rows = _build_return_rows(
             universe=universe,
+            universe_code=normalized_universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
@@ -6321,6 +6626,7 @@ def build_group_leadership_snapshot(
         )
         return_rows, missing_rows = _build_return_rows(
             universe=universe,
+            universe_code=normalized_universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
