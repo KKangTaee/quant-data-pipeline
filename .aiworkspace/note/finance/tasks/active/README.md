@@ -33,12 +33,14 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-movers-period-refresh-v1-20260616` | Completed record | `Overview > Market Movers` period refresh UX. Daily keeps intraday snapshot / auto refresh controls; Weekly / Monthly / Yearly now expose an EOD price-history manual refresh action through the existing Overview action facade and OHLCV job boundary. |
 | `overview-market-context-analog-readability-v5-20260616` | Completed record | `Overview > Market Context` V5. Historical analog OK state now explains the similarity rule before statistics, shows a compact summary strip / first-read conclusion, and splits detailed rows into core vs supporting assets without changing the context-only calculation. |
 | `overview-market-context-analog-repair-v4-20260615` | Completed record | `Overview > Market Context` V4. Historical analog `자료 부족`을 부족 ETF / row evidence / `보조 갱신` OHLCV repair action으로 연결하고, `자료 기준 / 출처 상태` summary에 정상 / 확인 / 부족 count와 source pill을 표시한 기록이다. |
 | `overview-market-context-historical-analog-v1-20260615` | Completed record | `Overview > Market Context` historical analog MVP. Current sector leadership을 sector ETF proxy로 연결하고, coverage가 충분할 때만 5D / 20D / 60D historical analog summary를 보여주는 context-only 기록이다. Sector ETF coverage가 부족하면 V4 repair action으로 이어진다. |
 | `overview-market-context-events-data-trust-v1-20260612` | Completed record | `Overview > Market Context / Events` 3차. 주요 macro event read model을 recent 7D + upcoming 관점으로 보강하고, Macro Week Lane recent/upcoming split, compact Market Context event cue, BLS CPI/PPI abbreviation parser coverage를 추가한 기록이다. |
 | `overview-data-health-ingestion-handoff-v1-20260608` | Completed record | `Workspace > Overview > Data Health` 상단에 priority-ranked read-only handoff lane을 추가해 stale / missing / failed / partial / due target을 owning collection surface로 연결한 기록이다. |
 | `overview-macro-context-cockpit-v1-20260608` | Completed record | `Workspace > Overview` 상단에 기존 DB-backed market context / sentiment / events / data-health snapshot을 합성한 summary-first cockpit을 추가한 기록이다. |
+| `merge-review-fixes-20260608` | Completed record | sub-dev / main-dev master merge review 후 Reference internal link, Reference V4 status, catalog test assertion을 바로잡은 기록이다. |
 | `reference-drift-guard-qa-polish-v5-20260608` | Completed record | contextual Reference help가 Glossary term / Reference link boundary에서 drift되지 않도록 guard와 표시 polish를 추가한 5차 기록이다. |
 | `reference-contextual-links-v4-20260608` | Completed record | 주요 Backtest / Operations 화면에 read-only Reference help expander를 연결한 4차 기록이다. |
 | `reference-glossary-concept-dictionary-v3-20260607` | Completed record | `Reference > Guides`와 `Reference > Glossary`가 같은 Streamlit-free concept dictionary와 search helper를 쓰도록 통합한 3차 기록이다. |

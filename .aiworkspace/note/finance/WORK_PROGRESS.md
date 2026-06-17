@@ -75,6 +75,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - Kept the boundary read-only / DB-backed: no provider fetch, schema change, registry / saved JSONL write, validation / monitoring / trading semantics.
 - Browser QA confirmed root `/` renders the new cockpit; direct `/overview` still shows Streamlit's Page not found modal and is recorded in task risks.
 
+### 2026-06-08 - Merge Review Fixes
+- Opened `.aiworkspace/note/finance/tasks/active/merge-review-fixes-20260608/` after sub-dev / main-dev master merge review.
+- Fixed Reference contextual help internal links to use configured Streamlit page targets instead of direct markdown `/guides` / `/glossary` links.
+- Marked Reference Contextual Links V4 plan as completed and tightened the Reference Guides catalog required-key test assertion.
+- Verification and Browser QA confirm Backtest / Operations Reference help and normal Reference navigation.
+
 ### 2026-06-08 - Operations V2 Closeout 5차
 - Opened `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/` for Operations Overview V2 5차 closeout.
 - Confirmed normal browser QA path is root `/` -> top navigation -> `Operations Overview`; this path reaches `/operations` without the Page not found dialog.

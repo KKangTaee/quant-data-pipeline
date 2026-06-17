@@ -9,7 +9,7 @@ Current active task: none.
 
 Latest completed task:
 
-- `overview-market-context-analog-readability-v5-20260616`
+- `overview-market-movers-period-refresh-v1-20260616`
 
 Latest completed docs cleanup task:
 
@@ -36,6 +36,7 @@ Recent structure audit records:
 
 Recent Reference records:
 
+- `merge-review-fixes-20260608`: post-merge review fix / Reference page-link, V4 status, and catalog test assertion cleanup
 - `reference-drift-guard-qa-polish-v5-20260608`: Reference contextual help 5차 / drift guard and QA polish
 - `reference-contextual-links-v4-20260608`: Reference contextual help 4차 / workflow screen expander links
 - `reference-glossary-concept-dictionary-v3-20260607`: Reference Glossary 3차 / shared concept dictionary
@@ -52,6 +53,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-movers-period-refresh-v1-20260616`: Overview Market Movers Period Refresh V1 / non-daily Weekly, Monthly, and Yearly EOD price-history manual refresh action through the existing Overview action facade
 - `overview-market-context-analog-readability-v5-20260616`: Overview Market Context Analog Readability V5 / Historical analog explanation, summary strip, first-read conclusion, and core/supporting asset table split
 - `overview-market-context-analog-repair-v4-20260615`: Overview Market Context Analog Repair V4 / Historical analog coverage gap panel, bounded OHLCV repair action, source confidence summary strip
 - `overview-market-context-historical-analog-v1-20260615`: Overview Market Context Historical Analog V1 / Sector Leadership -> Sector ETF Proxy -> context-only historical analog MVP
@@ -93,7 +95,7 @@ Because `tasks/done` has not been used as a full task folder archive, this clean
 | Backtest Analysis / strategy research | Candidate source generation, portfolio mix builder, Risk-On Momentum research lane | `backtest-portfolio-mix-builder-flow-v1`, `backtest-portfolio-mix-builder-ux-v1`, `risk-on-momentum-5d-v1`, `risk-on-momentum-5d-v2` |
 | Practical Validation / Final Review | Validation modules, selected-route gate, evidence read model, Final Review UX | `practical-validation-module-gate-v1`, `practical-validation-selected-route-preflight-v1`, `final-review-selection-readiness-gate-v1`, `final-review-commercial-ux-v1` |
 | Operations / Portfolio Monitoring | Operations Console and selected portfolio monitoring work | `operations-v2-closeout-20260608`, `operations-review-queue-refinement-20260608`, `operations-evidence-health-strip-20260607`, `operations-portfolio-first-summary-20260607`, `operations-cockpit-cleanup-20260607`, `operations-console-restructure-v2-v5`, `selected-dashboard-monitoring-first-ux-v1`, `selected-dashboard-manual-scenario-run-v1`, `allocation-drift-evidence-boundary-v1` |
-| Reference / product guidance | Reference Center, Glossary, contextual workflow help | `reference-drift-guard-qa-polish-v5-20260608`, `reference-contextual-links-v4-20260608`, `reference-glossary-concept-dictionary-v3-20260607`, `reference-guides-journey-playbooks-v2-20260607`, `reference-guides-center-v1-20260607` |
+| Reference / product guidance | Reference Center, Glossary, contextual workflow help | `merge-review-fixes-20260608`, `reference-drift-guard-qa-polish-v5-20260608`, `reference-contextual-links-v4-20260608`, `reference-glossary-concept-dictionary-v3-20260607`, `reference-guides-journey-playbooks-v2-20260607`, `reference-guides-center-v1-20260607` |
 | Data / provider / lifecycle evidence | Provider snapshots, macro, data coverage, lifecycle, survivorship | `data-provenance-coverage-v1`, `historical-universe-survivorship-v1`, `sec-form25-delisting-backfill-v1`, `symbol-directory-snapshot-ingestion-v1` |
 | Phase closeout tasks | Phase 8~13 board open / integrated QA / closeout records | `phase10-board-open`, `phase13-integrated-qa-final-closeout`, `phase13-docs-runbook-alignment-v1` |
 | Workspace / tooling | AI workspace migration, plugin / skill system, service boundary, docs rebuild | `ai-workspace-migration`, `doc-system-rebuild`, `product-research-plugin-split`, `service-contract-tests` |
