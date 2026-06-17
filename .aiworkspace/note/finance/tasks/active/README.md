@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,14 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | 현재 새 active task는 없다. 최신 완료 task는 아래 retained record를 확인한다. |
+| - | - | 현재 새로 열린 active execution task는 없다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `distinct-strategy-portfolio-discovery-20260609` | Completed record | GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5% distinct-family 후보를 Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`와 Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609`까지 등록한 기록이다. |
+| `portfolio-discovery-final-review-monitoring-20260608` | Completed record | 현행 전략 전체를 탐색해 GTAA U5 20% / GTAA U3 75% / GRS Compact 5% all-ETF 후보를 Final Review / Portfolio Monitoring chain까지 등록한 기록이다. |
 | `merge-review-fixes-20260608` | Completed record | sub-dev / main-dev master merge review 후 Reference internal link, Reference V4 status, catalog test assertion을 바로잡은 기록이다. |
 | `reference-drift-guard-qa-polish-v5-20260608` | Completed record | contextual Reference help가 Glossary term / Reference link boundary에서 drift되지 않도록 guard와 표시 polish를 추가한 5차 기록이다. |
 | `reference-contextual-links-v4-20260608` | Completed record | 주요 Backtest / Operations 화면에 read-only Reference help expander를 연결한 4차 기록이다. |

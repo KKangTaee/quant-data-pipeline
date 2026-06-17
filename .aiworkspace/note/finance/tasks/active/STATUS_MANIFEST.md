@@ -1,15 +1,17 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-09
 
 ## Current State
 
-Current active task: none.
+Current active task:
+
+- None
 
 Latest completed task:
 
-- `merge-review-fixes-20260608`
+- `distinct-strategy-portfolio-discovery-20260609`
 
 Latest completed docs cleanup task:
 
@@ -42,6 +44,11 @@ Recent Reference records:
 - `reference-glossary-concept-dictionary-v3-20260607`: Reference Glossary 3차 / shared concept dictionary
 - `reference-guides-journey-playbooks-v2-20260607`: Reference Guides 2차 / journey playbooks and failure states
 - `reference-guides-center-v1-20260607`: Reference Guides 1차 / task-first Reference Center
+
+Recent portfolio selection records:
+
+- `distinct-strategy-portfolio-discovery-20260609`: unique strategy family constraint / SPY superior GTAA U3 85% + GRS Compact 10% + Risk Parity Trend 5% portfolio / Final Review and Monitoring registration
+- `portfolio-discovery-final-review-monitoring-20260608`: current strategy catalog exploration / all-ETF Final Review selected decision / Portfolio Monitoring registration
 
 Recent Operations records:
 
