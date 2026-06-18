@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-10
+Last Verified: 2026-06-18
 
 ## Project Summary
 
@@ -81,7 +81,7 @@ Last Verified: 2026-06-10
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Overview market intelligence service | `app/services/overview_market_intelligence.py` |
 | Overview historical analog service | `app/services/overview_market_context_analog.py` |
-| Overview Macro Context Cockpit read model | `app/services/overview_market_intelligence.py` via `build_overview_macro_context_cockpit`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py` |
+| Overview Macro Context Cockpit read model | `app/services/overview_market_intelligence.py` via `build_overview_macro_context_cockpit`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py`. `next_checks` is the user-facing source/action checklist for Market Context, while `interpretation_cues` remains compatibility payload |
 | Overview Events / Macro Week read model | `app/services/overview_market_intelligence.py` via `build_market_events_snapshot` and `build_overview_macro_week_lane`; rendered by `app/web/overview_dashboard.py` and `app/web/overview_ui_components.py`. Event context reads recent 7D plus upcoming rows and prioritizes FOMC / CPI / PPI / Employment / GDP over earnings for scan surfaces |
 | Overview Data Health Ingestion Handoff read model | `app/services/overview_market_intelligence.py` via `build_overview_data_health_ingestion_handoff`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py` for `Workspace > Overview > Data Health` |
 | Overview Source Confidence Catalog read model | `app/services/overview_market_intelligence.py` via `build_overview_source_confidence_catalog`; embedded in the macro cockpit model and rendered by `app/web/overview_ui_components.py` |

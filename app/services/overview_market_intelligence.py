@@ -4232,6 +4232,141 @@ def _source_confidence_data_review_count(collection_ops_snapshot: dict[str, Any]
     )
 
 
+def _event_review_action_summary(events_snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Summarize event source actions without merging official and estimate caveats."""
+    coverage = dict(events_snapshot.get("coverage") or {})
+    rows = _cockpit_frame(events_snapshot)
+    if rows.empty:
+        return {
+            "detail": "event rows unavailable",
+            "primary_title": "이벤트 자료 확인",
+            "primary_reason": "저장된 event row가 없어 Events 탭의 source 상태를 먼저 봅니다.",
+            "primary_action": "Events에서 event calendar 수집 상태와 공식/추정 source 구분을 확인하세요.",
+            "source_area": "Events",
+            "freshness": coverage.get("latest_collected_at") or "-",
+            "needs_action": False,
+        }
+
+    def series_value(column: str) -> pd.Series:
+        if column in rows:
+            return rows[column].fillna("").astype(str)
+        return pd.Series([""] * len(rows), index=rows.index, dtype=str)
+
+    quality_action = series_value("Quality Action")
+    freshness = series_value("Freshness")
+    source_type = series_value("Source Type")
+    validation = series_value("Validation")
+    event_type = series_value("Type")
+    type_label = series_value("Type Label")
+    quality_review = quality_action.str.strip().ne("") & (quality_action.str.lower() != "no action")
+    freshness_review = freshness.str.strip().ne("") & freshness.str.lower().str.contains("stale|unknown|age unknown", regex=True)
+    validation_review = validation.str.strip().ne("") & validation.str.lower().isin({"estimate only", "not confirmed", "conflict", "unknown"})
+    review_mask = (
+        quality_review
+        | freshness_review
+        | validation_review
+    )
+    estimate_mask = source_type.str.lower().str.contains("estimate", regex=False) | event_type.str.upper().eq("EARNINGS")
+    major_macro_mask = event_type.map(_is_major_macro_event_type)
+    official_macro_review_count = int(((major_macro_mask) & review_mask).sum())
+    estimate_review_count = int((estimate_mask & review_mask).sum())
+    stale_estimate_count = max(
+        _cockpit_int(coverage.get("stale_estimate_count")),
+        int((freshness.str.lower() == "stale estimate").sum()),
+    )
+    not_confirmed_count = max(
+        _cockpit_int(coverage.get("not_confirmed_count")),
+        int((validation.str.lower() == "not confirmed").sum()),
+    )
+    estimate_only_count = max(
+        _cockpit_int(coverage.get("estimate_only_count")),
+        int((validation.str.lower() == "estimate only").sum()),
+    )
+    review_count = max(
+        _cockpit_int(coverage.get("needs_review_count")),
+        _cockpit_int(coverage.get("action_required_count")),
+        int(review_mask.sum()),
+    )
+
+    parts: list[str] = []
+    if official_macro_review_count:
+        parts.append(f"공식 macro/source 확인 {official_macro_review_count}")
+    if estimate_review_count:
+        parts.append(f"추정 일정 확인 {estimate_review_count}")
+    if stale_estimate_count:
+        parts.append(f"stale estimate {stale_estimate_count}")
+    if not_confirmed_count:
+        parts.append(f"미확인 earnings {not_confirmed_count}")
+    if estimate_only_count:
+        parts.append(f"estimate-only {estimate_only_count}")
+    if not parts and review_count:
+        parts.append(f"확인 필요 {review_count}")
+    if not parts:
+        parts.append("공식/추정 source 구분 완료")
+
+    review_rows = rows[review_mask].copy()
+    focus_row: dict[str, Any] = {}
+    if not review_rows.empty:
+        focus_row = dict(review_rows.iloc[0].dropna().to_dict())
+    else:
+        major_rows = rows[major_macro_mask].copy()
+        if not major_rows.empty:
+            focus_row = dict(major_rows.iloc[0].dropna().to_dict())
+        else:
+            focus_row = dict(rows.iloc[0].dropna().to_dict())
+
+    focus_type = str(focus_row.get("Type Label") or focus_row.get("Type") or type_label.iloc[0] or "Event")
+    focus_title = str(focus_row.get("Title") or focus_type)
+    focus_action = _event_action_copy(focus_row.get("Quality Action"))
+
+    if estimate_review_count or stale_estimate_count or not_confirmed_count or estimate_only_count:
+        primary_title = "추정 일정 확인"
+        primary_reason = (
+            f"{_cockpit_int(coverage.get('estimate_count'))}개 추정 일정 중 "
+            f"{estimate_review_count or stale_estimate_count or not_confirmed_count or estimate_only_count}개는 검증/신선도 확인이 필요합니다."
+        )
+        primary_action = focus_action or "Events에서 earnings estimate의 cross-check, stale 여부, superseded 여부를 확인하세요."
+        source_area = "Events · Earnings estimates"
+    elif official_macro_review_count:
+        primary_title = "공식 macro 일정 확인"
+        primary_reason = f"{focus_type} row의 official source 또는 freshness를 확인해야 합니다."
+        primary_action = focus_action or "Events에서 FOMC/CPI/PPI/Employment/GDP row의 official source와 collected_at을 확인하세요."
+        source_area = "Events · Official macro"
+    else:
+        primary_title = "가까운 주요 이벤트 확인"
+        primary_reason = f"{focus_title}가 현재 시장 해석을 바꿀 수 있는 가까운 event입니다."
+        primary_action = "Events에서 recent/upcoming 주요 일정과 source type을 확인하세요."
+        source_area = "Events · Macro calendar"
+
+    return {
+        "detail": " · ".join(parts),
+        "primary_title": primary_title,
+        "primary_reason": primary_reason,
+        "primary_action": primary_action,
+        "source_area": source_area,
+        "freshness": coverage.get("latest_collected_at") or str(focus_row.get("Collected At") or "-"),
+        "focus_title": focus_title,
+        "needs_action": bool(review_count),
+        "review_count": review_count,
+        "official_macro_review_count": official_macro_review_count,
+        "estimate_review_count": estimate_review_count,
+        "stale_estimate_count": stale_estimate_count,
+    }
+
+
+def _event_action_copy(value: Any) -> str:
+    text = str(value or "").strip()
+    mapping = {
+        "Refresh earnings calendar": "Earnings Calendar를 다시 수집해 추정 일정 신선도를 확인하세요.",
+        "Treat as unconfirmed; retry later or inspect source": "미확인 추정 일정으로 보고 나중에 재수집하거나 source를 확인하세요.",
+        "Enable cross-check or refresh closer to date": "대체 일정 cross-check를 켜거나 발표일에 가까워졌을 때 다시 수집하세요.",
+        "Inspect provider source": "provider source와 수집 시각을 확인하세요.",
+        "Inspect source freshness": "공식/source freshness와 collected_at을 확인하세요.",
+        "No action": "",
+    }
+    return mapping.get(text, text)
+
+
 def build_overview_source_confidence_catalog(
     *,
     market_movers_snapshot: dict[str, Any] | None = None,
@@ -4277,10 +4412,12 @@ def build_overview_source_confidence_catalog(
 
     events = events_snapshot or {}
     events_coverage = dict(events.get("coverage") or {})
+    event_action_summary = _event_review_action_summary(events)
     event_review_count = max(
         _cockpit_int(events_coverage.get("needs_review_count")),
         _cockpit_int(events_coverage.get("action_required_count")),
         _cockpit_int(events_coverage.get("stale_estimate_count")),
+        _cockpit_int(event_action_summary.get("review_count")),
     )
     events_status = _source_confidence_status(
         events,
@@ -4359,10 +4496,10 @@ def build_overview_source_confidence_catalog(
                 f"{_cockpit_int(events_coverage.get('event_count'))} events · "
                 f"{_cockpit_int(events_coverage.get('official_count'))} official · "
                 f"{_cockpit_int(events_coverage.get('estimate_count'))} estimates · "
-                f"확인 필요 {event_review_count}"
+                f"{event_action_summary['detail']}"
             ),
             caveat="공식 macro 일정과 provider 추정 실적 일정은 구분해서 읽어야 합니다.",
-            next_check="Events에서 추정 일정이 오래됐거나 확인이 필요한지 봅니다.",
+            next_check=str(event_action_summary.get("primary_action") or "Events에서 추정/공식 source 상태를 확인합니다."),
         ),
         _source_confidence_item(
             item_id="data_health",
@@ -4383,6 +4520,10 @@ def build_overview_source_confidence_catalog(
 
     review_items = [item for item in items if item["status"] != "OK"]
     status = "REVIEW" if review_items else "OK"
+    prioritized_review_items = sorted(
+        review_items,
+        key=lambda item: (0 if item["id"] == "data_health" else 1 if item["id"] == "events" else 2, item["id"]),
+    )
     return {
         "schema_version": "overview_source_confidence_catalog_v1",
         "status": status,
@@ -4398,13 +4539,19 @@ def build_overview_source_confidence_catalog(
         "items": items,
         "next_checks": [
             {
+                "target_tab": item["surface"],
                 "surface": item["surface"],
                 "title": item["title"],
                 "reason": item["detail"],
                 "action": item["next_check"],
+                "source_area": item["title"],
+                "freshness": item["freshness"],
+                "priority": f"P{index}",
+                "status": item["status"],
+                "status_label": item["status_label"],
                 "tone": item["tone"],
             }
-            for item in review_items[:4]
+            for index, item in enumerate(prioritized_review_items[:4], start=1)
         ],
         "boundary_note": (
             "자료 기준은 context 전용입니다. trade signal, validation PASS/BLOCKER, Final Review decision, "
@@ -4477,9 +4624,9 @@ def _build_cockpit_summary_copy(
     futures_value = _cockpit_copy_value(futures_card.get("value"), "혼재된 매크로 흐름")
 
     headline = (
-        f"오늘 가장 큰 움직임은 {movement_value}입니다."
+        f"오늘은 {movement_value} 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다."
         if movement_value
-        else "오늘은 아직 뚜렷한 상위 변동 종목이 없습니다."
+        else "오늘은 아직 뚜렷한 상위 변동 종목보다 자료 상태와 확산 여부를 먼저 봅니다."
     )
     breadth_clause = (
         "섹터 리더십은 아직 뚜렷하지 않고"
@@ -4488,10 +4635,10 @@ def _build_cockpit_summary_copy(
     )
     if context_review_count:
         next_sentence = (
-            f"확인할 자료 {context_review_count}개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요."
+            f"확인할 자료 {context_review_count}개를 먼저 분리한 뒤 가격 움직임과 macro 배경을 함께 읽으세요."
         )
     else:
-        next_sentence = "저장된 DB 자료 기준으로 Market Movers, Sector, Futures 흐름을 바로 이어서 읽을 수 있습니다."
+        next_sentence = "저장된 DB 자료 기준으로 가격 움직임과 macro 배경을 바로 이어서 읽을 수 있습니다."
     detail = f"{breadth_clause}, 선물/매크로 배경은 {futures_value}입니다. {next_sentence}"
     return headline, detail
 
@@ -4777,7 +4924,51 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
     )
 
 
+def _data_health_collection_action_copy(area: Any, action: Any) -> str:
+    area_text = str(area or "").strip()
+    mapping = {
+        "Futures Monitor 1m OHLCV": "기존 Futures OHLCV 수집 또는 Overview bounded refresh로 선물 가격 이력을 갱신하세요.",
+        "Futures Monitor Daily OHLCV": "기존 Futures OHLCV 수집으로 daily 선물 가격 이력을 갱신하세요.",
+        "FOMC Calendar": "FOMC calendar 수집을 다시 실행해 공식 일정 row를 확인하세요.",
+        "Macro Calendar": "공식 macro calendar 수집 또는 BLS .ics import로 발표 일정을 보강하세요.",
+        "Earnings Calendar": "bounded symbol source로 Earnings Calendar를 다시 수집하고 추정 일정 검증 상태를 확인하세요.",
+        "S&P 500 Daily Snapshot": "Market Movers의 S&P 500 일중 스냅샷 갱신을 실행하세요.",
+        "S&P 500 Universe": "Overview 유니버스 갱신 경로로 S&P 500 constituent snapshot을 갱신하세요.",
+        "Market Sentiment": "Market Sentiment 수집으로 CNN / AAII 관측값을 갱신하세요.",
+    }
+    if area_text in mapping:
+        return mapping[area_text]
+    text = str(action or "").strip()
+    fallback = {
+        "Run futures OHLCV collection; Overview bounded refresh is also available for the Futures Monitor.": "기존 Futures OHLCV 수집 또는 Overview bounded refresh를 실행하세요.",
+        "Run FOMC calendar collection from the existing market events collector.": "기존 market events collector로 FOMC calendar 수집을 실행하세요.",
+        "Run official macro calendar collection or import the BLS .ics file.": "공식 macro calendar 수집 또는 BLS .ics import를 실행하세요.",
+        "Run earnings calendar collection with a bounded symbol source.": "bounded symbol source로 earnings calendar 수집을 실행하세요.",
+    }
+    return fallback.get(text, text or "Owning collection surface에서 필요한 bounded collection을 실행하세요.")
+
+
 def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    priority_items = snapshot.get("priority_items")
+    if isinstance(priority_items, list) and priority_items:
+        item = dict(priority_items[0] or {})
+        area = str(item.get("area") or "Data Health")
+        target_surface = str(item.get("target_surface") or "Workspace > Ingestion")
+        action = _data_health_collection_action_copy(area, item.get("collection_action") or item.get("next_action"))
+        return {
+            "id": "data_health",
+            "target_tab": "Data Health",
+            "title": f"{area} 확인",
+            "reason": str(item.get("reason") or f"{item.get('status') or 'Review'} · {item.get('freshness') or '-'}"),
+            "action": f"Data Health에서 {area}를 확인하고, 필요하면 {target_surface}에서 {action}",
+            "source_area": area,
+            "freshness": str(item.get("freshness") or "-"),
+            "priority": f"P{item.get('rank') or 1}",
+            "status": item.get("status") or "REVIEW",
+            "status_label": _cockpit_status_label(item.get("status") or "REVIEW"),
+            "tone": item.get("tone") or _cockpit_status_tone(item.get("status")),
+        }
+
     rows = _cockpit_frame(snapshot)
     if rows.empty or "Status" not in rows:
         return None
@@ -4790,12 +4981,18 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
         "title": str(row.get("Area") or "Data Health"),
         "reason": f"{_cockpit_status_label(row.get('Status') or 'Review')} · 자료 기준 {_cockpit_freshness_label(row.get('Data Freshness'))}",
         "action": "Data Health에서 확인 위치와 필요한 갱신 경로를 먼저 봅니다.",
+        "source_area": str(row.get("Area") or "Data Health"),
+        "freshness": str(row.get("Data Freshness") or "-"),
+        "priority": "P1",
+        "status": row.get("Status") or "REVIEW",
+        "status_label": _cockpit_status_label(row.get("Status") or "REVIEW"),
         "tone": _cockpit_status_tone(row.get("Status")),
     }
 
 
 def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
     coverage = dict(snapshot.get("coverage") or {})
+    event_action_summary = _event_review_action_summary(snapshot)
     needs_review = _cockpit_int(coverage.get("needs_review_count"))
     rows = _cockpit_frame(snapshot)
     major_rows = _cockpit_major_event_rows(rows)
@@ -4820,10 +5017,16 @@ def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None
         return None
     if needs_review or (days is not None and -EVENT_RECENT_WINDOW_DAYS <= days <= 7):
         return {
+            "id": "events",
             "target_tab": "Events",
-            "title": str(row.get("Title") or row.get("Type Label") or "Upcoming event"),
-            "reason": _cockpit_event_days_korean(days) if row else f"확인할 일정 {needs_review}개",
-            "action": "시장 context를 해석하기 전에 Events를 확인하세요.",
+            "title": str(event_action_summary.get("primary_title") or row.get("Title") or row.get("Type Label") or "Upcoming event"),
+            "reason": str(event_action_summary.get("primary_reason") or (_cockpit_event_days_korean(days) if row else f"확인할 일정 {needs_review}개")),
+            "action": str(event_action_summary.get("primary_action") or "시장 context를 해석하기 전에 Events를 확인하세요."),
+            "source_area": str(event_action_summary.get("source_area") or "Events"),
+            "freshness": str(event_action_summary.get("freshness") or coverage.get("latest_collected_at") or "-"),
+            "priority": "P2" if needs_review else "P3",
+            "status": "REVIEW" if needs_review else "OK",
+            "status_label": _cockpit_status_label("REVIEW" if needs_review else "OK"),
             "tone": "warning" if needs_review else "primary",
         }
     return None
@@ -4922,23 +5125,36 @@ def build_overview_macro_context_cockpit(
         events_snapshot=events_snapshot,
         collection_ops_snapshot=collection_ops_snapshot,
     )
+    data_health_handoff = build_overview_data_health_ingestion_handoff(collection_ops_snapshot, limit=3)
     next_checks = [
         item
         for item in [
-            _cockpit_ops_next_check(collection_ops_snapshot),
+            _cockpit_ops_next_check(data_health_handoff),
             _cockpit_event_next_check(events_snapshot),
             {
+                "id": "futures",
                 "target_tab": "Futures Monitor",
                 "title": "Futures 배경 확인",
-                "reason": str(cards[2].get("value") or "-"),
-                "action": "위험선호 / 금리 압력 / 안전자산 근거는 Futures Monitor에서 확인하세요.",
+                "reason": "가격 움직임과 금리/달러/원자재 압력이 같은 방향인지 확인합니다.",
+                "action": "Futures Monitor에서 risk-on, 금리 압력, 안전자산 근거를 확인하세요.",
+                "source_area": "Futures Macro Thermometer",
+                "freshness": str(cards[2].get("freshness_label") or "-"),
+                "priority": "P3",
+                "status": cards[2].get("status"),
+                "status_label": cards[2].get("status_label"),
                 "tone": cards[2].get("tone") or "neutral",
             },
             {
+                "id": "market_movers",
                 "target_tab": "Market Movers",
-                "title": "시장 움직임 확인",
-                "reason": str(cards[0].get("value") or "-"),
-                "action": "수익률, 거래량, Why It Moved 단서는 Market Movers에서 확인하세요.",
+                "title": "상위 움직임 근거 확인",
+                "reason": "상위 변동이 단일 종목인지, 거래량과 sector 확산이 붙었는지 확인합니다.",
+                "action": "Market Movers에서 수익률 기준일, 거래량, Why It Moved 단서를 확인하세요.",
+                "source_area": "Prices / Movers",
+                "freshness": str(cards[0].get("freshness_label") or "-"),
+                "priority": "P4",
+                "status": cards[0].get("status"),
+                "status_label": cards[0].get("status_label"),
                 "tone": cards[0].get("tone") or "neutral",
             },
         ]
@@ -5023,6 +5239,7 @@ def build_overview_macro_context_cockpit(
         "historical_analog": historical_analog_snapshot or {},
         "cards": cards,
         "next_checks": next_checks,
+        "data_health_handoff": data_health_handoff,
         "source_confidence": source_confidence,
         "boundary_note": (
             "context 전용 market backdrop입니다. 이 cockpit은 trade signal, validation PASS/BLOCKER, "

@@ -4434,6 +4434,24 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(store_index, clear_index)
         self.assertLess(clear_index, rerun_index)
 
+    def test_overview_market_context_refresh_assist_shows_source_action_before_job_result(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        if "def _render_overview_market_context_refresh_bar" not in source:
+            self.fail("Overview should keep the Market Context refresh bar helper.")
+        helper_body = source[source.index("def _render_overview_market_context_refresh_bar"):]
+        helper_end = helper_body.index("def _render_overview_market_context_tab")
+        helper_body = helper_body[:helper_end]
+
+        self.assertIn("_overview_market_context_refresh_expander_label(cockpit_model)", helper_body)
+        self.assertIn("_render_overview_market_context_refresh_action_hints(cockpit_model)", helper_body)
+        action_hint_index = helper_body.index("_render_overview_market_context_refresh_action_hints(cockpit_model)")
+        button_index = helper_body.index("cols[1].button(")
+        result_index = helper_body.index("_render_overview_market_context_refresh_result(result_key)")
+
+        self.assertLess(action_hint_index, button_index)
+        self.assertLess(button_index, result_index)
+        self.assertIn('with st.expander("일괄 갱신 결과", expanded=False):', source)
+
     def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def _render_collection_ops_tab"):]
@@ -4529,6 +4547,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-cockpit-refresh-assist", css)
         self.assertIn(".ov-macro-brief-row", css)
         self.assertIn(".ov-macro-cue-row", css)
+        self.assertIn(".ov-macro-cue-action", css)
 
     def test_overview_market_context_cue_cards_keep_left_rule_away_from_text(self) -> None:
         import re
@@ -4637,6 +4656,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                         "freshness": "Update due",
                         "owner": "Data Health",
                         "caveat": "context only",
+                        "next_check": "Market Movers에서 기준일을 확인합니다.",
                     },
                     {
                         "surface": "Events",
@@ -4646,6 +4666,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                         "freshness": "Fresh",
                         "owner": "Events",
                         "caveat": "estimate caveat",
+                        "next_check": "Events에서 source type을 확인합니다.",
                     },
                 ],
                 "boundary_note": "context only",
@@ -4657,7 +4678,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("확인 2", source_html)
         self.assertIn("부족 1", source_html)
         self.assertIn("Prices", source_html)
-        self.assertIn("Events", source_html)
+        self.assertIn("Market Movers에서 기준일", source_html)
 
     def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
@@ -4840,7 +4861,19 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
             ],
             "interpretation_cues": [
-                {"label": "가까운 주요 이벤트", "value": "FOMC D+2", "detail": "Official", "tone": "warning"},
+                {"label": "구형 해석 cue", "value": "렌더링 대상 아님", "detail": "legacy", "tone": "warning"},
+            ],
+            "next_checks": [
+                {
+                    "target_tab": "Events",
+                    "title": "가까운 주요 이벤트 확인",
+                    "reason": "FOMC 일정이 시장 해석을 바꿀 수 있습니다.",
+                    "action": "Events에서 official source를 확인하세요.",
+                    "source_area": "Events · Official macro",
+                    "freshness": "2026-06-15",
+                    "priority": "P1",
+                    "tone": "warning",
+                },
             ],
             "historical_analog": {
                 "status": "INSUFFICIENT_DATA",
@@ -4870,8 +4903,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("시장 브리프", cockpit_html)
         self.assertNotIn("해석할 때 같이 볼 변수", cockpit_html)
         self.assertNotIn("과거 유사 맥락 참고", cockpit_html)
+        self.assertNotIn("구형 해석 cue", reading_html)
         self.assertIn("ov-macro-reading-section ov-macro-brief", reading_html)
         self.assertIn("ov-macro-reading-section ov-macro-cues", reading_html)
+        self.assertIn("가까운 주요 이벤트 확인", reading_html)
+        self.assertIn("Events에서 official source를 확인하세요.", reading_html)
         self.assertIn("ov-macro-reading-section ov-historical-analog-row", reading_html)
         self.assertIn("ov-macro-reading-section ov-source-confidence", reading_html)
 
@@ -4898,9 +4934,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
             ],
             "interpretation_cues": [
-                {"label": "이벤트 압력", "value": "FOMC D-2", "detail": "금리/기술주 해석 전 확인", "tone": "warning"},
-                {"label": "심리 확인", "value": "중립", "detail": "상승 흐름과 심리 배경의 충돌 여부", "tone": "neutral"},
-                {"label": "매크로 확인", "value": "금리 압력", "detail": "혼재 흐름이 한쪽으로 기우는지 확인", "tone": "warning"},
+                {"label": "구형 해석 cue", "value": "렌더링 대상 아님", "detail": "legacy", "tone": "warning"},
+            ],
+            "next_checks": [
+                {
+                    "target_tab": "Events",
+                    "title": "추정 일정 확인",
+                    "reason": "추정 일정 중 검증/신선도 확인이 필요합니다.",
+                    "action": "Events에서 earnings estimate의 cross-check를 확인하세요.",
+                    "source_area": "Events · Earnings estimates",
+                    "freshness": "2026-06-15",
+                    "priority": "P1",
+                    "tone": "warning",
+                },
+                {
+                    "target_tab": "Futures Monitor",
+                    "title": "Futures 배경 확인",
+                    "reason": "가격 움직임과 금리 압력이 같은 방향인지 확인합니다.",
+                    "action": "Futures Monitor에서 risk-on, 금리 압력 근거를 확인하세요.",
+                    "source_area": "Futures Macro Thermometer",
+                    "freshness": "2026-06-15",
+                    "priority": "P2",
+                    "tone": "warning",
+                },
             ],
             "historical_analog": {
                 "status": "INSUFFICIENT_DATA",
@@ -4921,6 +4977,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("다음 맥락 체크", html)
         self.assertIn("오늘 흐름을 바로 예측하지 않고", html)
+        self.assertIn("추정 일정 확인", html)
+        self.assertIn("Events에서 earnings estimate", html)
+        self.assertNotIn("구형 해석 cue", html)
         self.assertIn("참고: 과거 유사 맥락", html)
         self.assertIn("근거: 자료 기준 / 출처 상태", html)
         self.assertNotIn("해석할 때 같이 볼 변수", html)
@@ -4972,6 +5031,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 inspect.getsource(overview_ui_components.render_macro_context_cockpit),
                 inspect.getsource(overview_ui_components._macro_context_cockpit_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_brief_rows_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_next_checks_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_interpretation_cues_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_row_meta_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_source_confidence_html),
@@ -4980,11 +5040,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("시장 맥락", dashboard_source)
         self.assertIn("상단에서 현재 시장을 먼저 훑고", dashboard_source)
-        self.assertIn("자료 상태를 먼저 확인", dashboard_source)
+        self.assertIn("자료 확인 checklist", dashboard_source)
         self.assertIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
         self.assertIn("시장 브리프", component_source)
         self.assertIn("다음 맥락 체크", component_source)
+        self.assertIn("자료 영역", component_source)
         self.assertIn("확인 위치", component_source)
         self.assertNotIn("핵심 요약", component_source)
         self.assertNotIn("해석 전 확인", component_source)
@@ -7705,8 +7766,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["items"][3]["id"], "sentiment")
         self.assertEqual(model["items"][3]["status"], "REVIEW")
         self.assertEqual(model["items"][4]["id"], "events")
-        self.assertIn("확인 필요 2", model["items"][4]["detail"])
-        self.assertEqual(model["next_checks"][0]["surface"], "Market Movers")
+        self.assertIn("추정 일정 확인", model["items"][4]["detail"])
+        self.assertIn("stale estimate", model["items"][4]["detail"])
+        self.assertEqual(model["next_checks"][0]["target_tab"], "Data Health")
+        self.assertEqual(model["next_checks"][1]["target_tab"], "Events")
+        self.assertIn("source_area", model["next_checks"][1])
+        self.assertIn("action", model["next_checks"][1])
         self.assertIn("context 전용", model["boundary_note"])
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
@@ -8508,7 +8573,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             for sentence in re.split(r"(?<!\d)[.!?。]+", summary_copy)
             if sentence.strip()
         ]
-        self.assertEqual(cockpit["summary"]["headline"], "오늘 가장 큰 움직임은 NVDA +4.2%입니다.")
+        self.assertEqual(cockpit["summary"]["headline"], "오늘은 NVDA +4.2% 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다.")
         self.assertNotIn("현재 맥락:", summary_copy)
         self.assertGreaterEqual(len(summary_sentences), 2)
         self.assertLessEqual(len(summary_sentences), 3)
@@ -8540,6 +8605,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
         self.assertEqual(cockpit["cards"][5]["value"], "일부 자료 확인 필요")
         self.assertEqual(cockpit["next_checks"][0]["target_tab"], "Data Health")
+        self.assertIn("source_area", cockpit["next_checks"][0])
+        self.assertIn("action", cockpit["next_checks"][0])
+        self.assertIn("freshness", cockpit["next_checks"][0])
+        self.assertIn("priority", cockpit["next_checks"][0])
+        self.assertEqual(cockpit["next_checks"][1]["target_tab"], "Events")
+        self.assertNotEqual(cockpit["next_checks"][2]["reason"], cockpit["brief_rows"][2]["value"])
+        self.assertEqual(cockpit["data_health_handoff"]["schema_version"], "overview_data_health_ingestion_handoff_v1")
         self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
         self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
         self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
@@ -8648,6 +8720,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["interpretation_cues"][0]["label"], "이벤트 압력")
         self.assertEqual(cockpit["interpretation_cues"][2]["label"], "매크로 확인")
         self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
+        self.assertEqual(cockpit["next_checks"][1]["target_tab"], "Events")
+        self.assertEqual(cockpit["next_checks"][1]["title"], "가까운 주요 이벤트 확인")
+        self.assertIn("Events", cockpit["next_checks"][1]["source_area"])
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
@@ -8796,6 +8871,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("자료 부족", model["headline"])
         self.assertEqual(model["sample_count"], 0)
         self.assertFalse(model["rows"])
+        self.assertEqual(model["current_as_of"], "2026-05-27")
+        self.assertIn("5D 상대강도", model["calculation_note"])
 
     def test_historical_analog_exposes_generalized_repair_action_for_insufficient_proxy_or_comparison_symbols(self) -> None:
         from app.services.overview_market_context_analog import build_historical_analog_snapshot
@@ -8853,6 +8930,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertEqual(model["sample_count"], 2)
         self.assertNotIn(str(dates[-1].date()), model["anchor_dates"])
         self.assertIn("5D", model["condition_summary"])
+        self.assertEqual(model["current_as_of"], str(dates[-1].date()))
+        self.assertIn("5D 상대강도", model["calculation_note"])
         qqq_5d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "5D")
         qqq_60d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "60D")
         self.assertAlmostEqual(qqq_5d["median_return_pct"], 5.0, places=2)
@@ -8954,6 +9033,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                 "sample_count": 29,
                 "condition_summary": "XLK 5D-SPY 5D 상대강도 >= +2.6% 기준",
                 "data_window": "2016-06-16 - 2026-05-29",
+                "current_as_of": "2026-05-29",
+                "calculation_note": "현재 sector ETF의 SPY 대비 5D 상대강도 기준",
                 "rows": rows,
                 "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
             }
@@ -8963,6 +9044,9 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
         self.assertIn("먼저 읽을 결론", html)
         self.assertIn("ov-analog-summary-strip", html)
+        self.assertIn("기준일: 2026-05-29", html)
+        self.assertIn("자료 기간: 2016-06-16 - 2026-05-29", html)
+        self.assertIn("계산식: 현재 sector ETF의 SPY 대비 5D 상대강도 기준", html)
         self.assertIn("유사 사례", html)
         self.assertIn("XLK 20D 중간값", html)
         self.assertIn("+3.3%", html)

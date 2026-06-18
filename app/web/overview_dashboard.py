@@ -1915,16 +1915,37 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
     _render_overview_market_context_refresh_result(MARKET_CONTEXT_ANALOG_REFRESH_RESULT_KEY)
 
 
+def _overview_market_context_refresh_expander_label(cockpit_model: dict[str, Any]) -> str:
+    checks = [dict(item or {}) for item in list(cockpit_model.get("next_checks") or []) if isinstance(item, dict)]
+    if not checks:
+        return "보조 갱신"
+    top = checks[0]
+    source = str(top.get("source_area") or top.get("title") or top.get("target_tab") or "자료 상태").strip()
+    return f"보조 갱신 · {source} 확인 후"
+
+
+def _render_overview_market_context_refresh_action_hints(cockpit_model: dict[str, Any]) -> None:
+    checks = [dict(item or {}) for item in list(cockpit_model.get("next_checks") or []) if isinstance(item, dict)]
+    if not checks:
+        st.caption("자료 상태를 먼저 확인한 뒤, 오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 실행합니다.")
+        return
+    st.caption("아래 갱신은 다음 source/action을 확인한 뒤 필요한 경우에만 실행합니다.")
+    for check in checks[:3]:
+        source = str(check.get("source_area") or check.get("title") or "-")
+        target = str(check.get("target_tab") or "-")
+        reason = str(check.get("reason") or "-")
+        action = str(check.get("action") or "-")
+        st.caption(f"{source} · {target}: {reason} → {action}")
+
+
 def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -> None:
     result_key = MARKET_CONTEXT_REFRESH_RESULT_KEY
-    with st.expander("보조 갱신", expanded=False):
+    with st.expander(_overview_market_context_refresh_expander_label(cockpit_model), expanded=False):
         st.markdown(
-            '<div class="ov-macro-cockpit-refresh-assist">자료가 오래됐거나 부족할 때만 사용하는 보조 행동입니다.</div>',
+            '<div class="ov-macro-cockpit-refresh-assist">자료 확인 checklist 뒤에 두는 보조 행동입니다.</div>',
             unsafe_allow_html=True,
         )
-        st.caption(
-            "자료 상태를 먼저 확인한 뒤, 오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 순서대로 실행합니다."
-        )
+        _render_overview_market_context_refresh_action_hints(cockpit_model)
         cols = st.columns([1.5, 0.72], gap="small", vertical_alignment="center")
         with cols[0]:
             st.caption(
@@ -1952,7 +1973,7 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락")
     st.caption(
-        "상단에서 현재 시장을 먼저 훑고, 아래 단락에서 브리프와 해석 변수를 순서대로 확인합니다."
+        "상단에서 현재 시장을 먼저 훑고, 아래 단락에서 브리프와 다음 맥락 체크를 순서대로 확인합니다."
     )
     _render_overview_market_context_refresh_reflection()
     cockpit_model = load_overview_macro_context_cockpit()

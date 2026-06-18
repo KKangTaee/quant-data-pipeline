@@ -118,6 +118,7 @@ def _base_model(
     coverage_gaps: list[dict[str, Any]] | None = None,
     repair_action: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    current_as_of = _coverage_current_as_of(coverage or [])
     return {
         "schema_version": "overview_market_context_historical_analog_v1",
         "status": status,
@@ -128,6 +129,8 @@ def _base_model(
         "sample_count": 0,
         "condition_summary": "",
         "data_window": "",
+        "current_as_of": current_as_of,
+        "calculation_note": "현재 sector ETF의 SPY 대비 5D 상대강도 기준",
         "coverage": coverage or [],
         "coverage_gaps": coverage_gaps or [],
         "repair_action": repair_action or {},
@@ -293,6 +296,17 @@ def _coverage_gap_rows(coverage: Sequence[dict[str, Any]]) -> list[dict[str, Any
             }
         )
     return gaps
+
+
+def _coverage_current_as_of(coverage: Sequence[dict[str, Any]]) -> str:
+    dates = [
+        parsed
+        for row in coverage
+        if isinstance(row, dict)
+        for parsed in [_format_date(row.get("end_date"))]
+        if parsed
+    ]
+    return max(dates) if dates else ""
 
 
 def _coverage_repair_action(coverage_gaps: Sequence[dict[str, Any]]) -> dict[str, Any]:
@@ -535,12 +549,13 @@ def build_historical_analog_snapshot(
         "sample_count": sample_count,
         "condition_summary": condition_summary,
         "data_window": f"{first_date} - {last_date}" if first_date and last_date else "",
+        "current_as_of": last_date,
+        "calculation_note": "현재 sector ETF의 SPY 대비 5D 상대강도 기준",
         "coverage": coverage,
         "coverage_gaps": coverage_gaps,
         "repair_action": repair_action,
         "rows": rows,
         "anchor_dates": [_format_date(analysis_matrix.index[index]) for index in anchor_indices],
-        "current_as_of": last_date,
         "limitations": _default_limitations(),
         "boundary_note": (
             "Overview context-only 참고 정보입니다. Backtest strategy, validation gate, "

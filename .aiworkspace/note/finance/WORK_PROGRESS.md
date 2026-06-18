@@ -5005,3 +5005,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Market Movers는 `Nasdaq-listed current snapshot` coverage를 제공하며, latest `nasdaq_symdir_nasdaqlisted` lifecycle row를 직접 읽고 empty state에서는 Symbol Directory refresh를 안내한다.
   - `overview_automation`은 `nasdaq_symbol_directory`와 `nasdaq_intraday` dry-run plan을 노출하고, Coverage Diagnostics는 Likely Cause / Evidence Summary / Next Check / Listing Evidence / Profile Freshness / Market Data Issue를 보여준다.
   - 새 schema / provider / registry or saved JSONL write / OS scheduler 등록 / trading or validation semantics는 추가하지 않았다.
+- Overview Market Context Source Action Flow V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-source-action-flow-v1-20260618/`에서 1차 Market Context 읽기 흐름 / 자료상태 명확화를 완료했다.
+  - `다음 맥락 체크`는 `next_checks` source/action checklist를 렌더링하고, source confidence footer와 보조 갱신 expander도 같은 action 흐름을 따른다.
+  - Historical analog는 current as-of / data window / 계산식 기준을 표시하며 context-only boundary를 유지한다.
+  - 2차 / 3차 후속 설계 메모는 task `DESIGN.md`에 남겼고, 새 provider / schema / replay storage / macro-conditioned analog 구현은 하지 않았다.

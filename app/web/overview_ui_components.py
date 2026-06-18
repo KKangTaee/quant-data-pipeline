@@ -537,6 +537,11 @@ def overview_ui_css() -> str:
   font-size: 0.8rem;
   line-height: 1.3;
 }
+.ov-macro-reading-section .ov-macro-cue-action {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
 .ov-macro-reading-section .ov-source-confidence-title,
 .ov-macro-reading-section .ov-historical-analog-title {
   font-size: 0.98rem;
@@ -616,6 +621,7 @@ def overview_ui_css() -> str:
 }
 .ov-macro-brief-detail,
 .ov-macro-cue-detail,
+.ov-macro-cue-action,
 .ov-macro-cockpit-row-meta {
   color: var(--ov-mi-color-text-subtle);
   font-size: var(--ov-mi-font-caption);
@@ -669,6 +675,10 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cue-detail {
   font-size: var(--ov-mi-font-xs);
+}
+.ov-macro-cue-action {
+  color: color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
+  font-weight: var(--ov-mi-weight-label);
 }
 .ov-macro-cockpit-row-meta {
   display: flex;
@@ -787,6 +797,8 @@ def overview_ui_css() -> str:
   background: rgba(255,255,255,0.72);
   color: var(--ov-mi-color-text-subtle);
   font-weight: var(--ov-mi-weight-body);
+  max-width: min(100%, 34rem);
+  white-space: normal;
 }
 .ov-source-confidence-status {
   flex: 0 0 auto;
@@ -2618,26 +2630,38 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
     )
 
 
-def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
-    if not cues:
+def _macro_cockpit_next_checks_html(checks: list[dict[str, Any]]) -> str:
+    if not checks:
         return ""
     html: list[str] = []
-    for cue in cues[:3]:
-        tone_color = escape(_overview_tone_color(cue.get("tone")))
-        badges = _macro_cockpit_badges_html(list(cue.get("badges") or []))
+    for check in checks[:4]:
+        tone_color = escape(_overview_tone_color(check.get("tone")))
+        status_label = _display_value(
+            check.get("priority")
+            or check.get("status_label")
+            or _display_status_label(check.get("status"))
+        )
+        source_area = _display_value(check.get("source_area"))
+        badges = list(check.get("badges") or [])
+        if source_area != "-":
+            badges = [{"label": "자료 영역", "value": source_area, "tone": check.get("tone") or "neutral"}, *badges]
+        badges_html = _macro_cockpit_badges_html(badges)
+        action = _display_value(check.get("action"))
+        action_html = "" if action == "-" else f'<div class="ov-macro-cue-action">{escape(action)}</div>'
         html.append(
             f'<li class="ov-macro-cue-row" style="--ov-cue-tone:{tone_color};">'
             '<div class="ov-macro-cue-head">'
-            f'<div class="ov-macro-cue-label">{escape(_display_value(cue.get("label")))}</div>'
-            f'<div class="ov-macro-cue-status">{escape(_display_value(cue.get("status_label") or _display_status_label(cue.get("status"))))}</div>'
+            f'<div class="ov-macro-cue-label">{escape(_display_value(check.get("target_tab") or check.get("label")))}</div>'
+            f'<div class="ov-macro-cue-status">{escape(status_label)}</div>'
             "</div>"
             "<div>"
-            f'<div class="ov-macro-cue-value">{escape(_display_value(cue.get("value")))}</div>'
-            f'<div class="ov-macro-cue-detail">{escape(_display_value(cue.get("detail")))}</div>'
+            f'<div class="ov-macro-cue-value">{escape(_display_value(check.get("title") or check.get("value")))}</div>'
+            f'<div class="ov-macro-cue-detail">{escape(_display_value(check.get("reason") or check.get("detail")))}</div>'
+            f"{action_html}"
             "</div>"
             "<div>"
-            f'<div class="ov-macro-cockpit-badges">{badges}</div>'
-            f'{_macro_cockpit_row_meta_html(cue)}'
+            f'<div class="ov-macro-cockpit-badges">{badges_html}</div>'
+            f'{_macro_cockpit_row_meta_html(check)}'
             "</div>"
             "</li>"
         )
@@ -2650,6 +2674,10 @@ def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
         f'<ul class="ov-macro-cues-list">{"".join(html)}</ul>'
         "</section>"
     )
+
+
+def _macro_cockpit_interpretation_cues_html(cues: list[dict[str, Any]]) -> str:
+    return _macro_cockpit_next_checks_html(cues)
 
 
 def _analog_pct(value: Any) -> str:
@@ -2852,11 +2880,16 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     section_class = "ov-macro-reading-section ov-historical-analog-row"
     if not rows:
         section_class += " is-muted-reference"
+    current_as_of = _display_value(model.get("current_as_of"))
+    data_window = _display_value(model.get("data_window"))
+    calculation_note = _display_value(model.get("calculation_note") or "현재 sector ETF의 SPY 대비 5D 상대강도 기준")
     meta_items = [
         f"기준 sector: {_display_value(model.get('leadership_sector'))}",
         f"ETF proxy: {_display_value(model.get('proxy_etf'))}",
+        f"기준일: {current_as_of}",
         f"sample: {_display_value(model.get('sample_count'))}",
-        f"window: {_display_value(model.get('data_window'))}",
+        f"자료 기간: {data_window}",
+        f"계산식: {calculation_note}",
     ]
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
@@ -2905,12 +2938,16 @@ def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[d
             f"{escape(label)} {escape(_display_value(count))}"
             "</span>"
         )
-    for item in items[:3]:
+    review_items = [item for item in items if _source_confidence_status_bucket(item.get("status")) != "ok"]
+    action_items = review_items[:3] or items[:2]
+    for item in action_items:
         surface = _display_value(item.get("surface"))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
+        next_check = _display_value(item.get("next_check"))
+        action_hint = "" if next_check == "-" else f" → {next_check}"
         chips.append(
             f'<span class="ov-source-confidence-source" style="--ov-source-strip-tone:{escape(_overview_tone_color(item.get("tone") or item.get("status")))};">'
-            f"{escape(surface)} · {escape(item_status)}"
+            f"{escape(surface)} · {escape(item_status)}{escape(action_hint)}"
             "</span>"
         )
     return f'<div class="ov-source-confidence-strip">{"".join(chips)}</div>'
@@ -2977,7 +3014,7 @@ def _macro_cockpit_body_html(model: dict[str, Any]) -> str:
 
 def _macro_context_reading_flow_html(model: dict[str, Any]) -> str:
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
-    interpretation_cues_html = _macro_cockpit_interpretation_cues_html(list(model.get("interpretation_cues") or []))
+    next_checks_html = _macro_cockpit_next_checks_html(list(model.get("next_checks") or []))
     historical_analog_html = _macro_cockpit_historical_analog_html(dict(model.get("historical_analog") or {}))
     source_confidence_html = _macro_cockpit_source_confidence_html(dict(model.get("source_confidence") or {}))
     boundary_html = (
@@ -2987,7 +3024,7 @@ def _macro_context_reading_flow_html(model: dict[str, Any]) -> str:
     )
     flow_html = (
         f"{brief_rows_html}"
-        f"{interpretation_cues_html}"
+        f"{next_checks_html}"
         f"{historical_analog_html}"
         f"{source_confidence_html}"
         f"{boundary_html}"

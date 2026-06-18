@@ -7821,3 +7821,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Nasdaq Composite / Nasdaq-100이나 투자 신호가 아니라, Nasdaq Symbol Directory current listing observation을 별도 coverage로 읽고 갱신/진단 경로를 명확히 해야 함.
 - Analysis result: 새 table 또는 `market_universe_member` 물질화 없이 latest `nasdaq_symdir_nasdaqlisted` lifecycle rows를 직접 읽는 것이 source caveat와 중복 저장 위험 측면에서 가장 작고 명확하다.
 - Follow-up: `nasdaq_symbol_directory` / `nasdaq_intraday` automation dry-run plan과 diagnostics evidence columns를 추가했다. 실제 Symbol Directory / provider 대량 수집과 OS scheduler 등록은 별도 운영 실행으로 남긴다.
+
+### 2026-06-18 - Market Context 자료상태를 source/action checklist로 읽게 한다
+
+- User request: Overview > Market Context 개선 1차를 구현하고, 2차 historical analog replay/window와 3차 macro-conditioned analog는 후속 설계 메모로 남기라고 승인함.
+- Interpreted goal: `일부 자료 확인 필요`를 raw job/status table로 키우는 것이 아니라, 어떤 source를 어느 tab에서 왜 확인하고 어떤 action으로 이어질지 먼저 보이게 해야 함.
+- Analysis result: 기존 `next_checks`는 모델에 있었지만 UI는 `interpretation_cues`를 렌더링해 반복감이 생겼다. Data Health handoff와 Events source review를 재사용해 `next_checks`를 실제 checklist 계약으로 승격하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 1차는 완료했다. 2차 / 3차는 `.aiworkspace/note/finance/tasks/active/overview-market-context-source-action-flow-v1-20260618/DESIGN.md`에서 승인 전 설계 후보로 남긴다.
