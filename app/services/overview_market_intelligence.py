@@ -3865,7 +3865,7 @@ def build_overview_breadth_heatmap_summary(
             "cards": [],
             "heatmap_rows": [],
             "boundary_note": (
-                "Context-only breadth summary: not a trade signal, not validation, not Final Review, "
+                "Context-only breadth summary: not a trading action, not validation, not Final Review, "
                 "and not monitoring guidance."
             ),
         }
@@ -3956,7 +3956,7 @@ def build_overview_breadth_heatmap_summary(
         "cards": cards,
         "heatmap_rows": heatmap_rows,
         "boundary_note": (
-            "Context-only breadth summary: not a trade signal, not validation, not Final Review, "
+            "Context-only breadth summary: not a trading action, not validation, not Final Review, "
             "and not monitoring guidance."
         ),
     }
@@ -4039,8 +4039,8 @@ def build_overview_macro_week_lane(
     bounded_horizon_days = max(0, int(horizon_days or 14))
     bounded_recent_days = max(0, int(recent_days or 0))
     boundary_note = (
-        "Context-only event calendar: not a trading signal, not Practical Validation, "
-        "not Final Review decision, and not monitoring signal."
+        "Context-only event calendar: not a trading action, not Practical Validation, "
+        "not Final Review decision, and not monitoring action."
     )
     if rows.empty or "Days Until" not in rows:
         return {
@@ -4581,8 +4581,8 @@ def build_overview_source_confidence_catalog(
             for index, item in enumerate(prioritized_review_items[:4], start=1)
         ],
         "boundary_note": (
-            "자료 기준은 context 전용입니다. trade signal, validation PASS/BLOCKER, Final Review decision, "
-            "monitoring signal, provider fetch, write action을 만들지 않습니다."
+            "자료 기준은 context 전용입니다. trading action, validation PASS/BLOCKER, Final Review decision, "
+            "monitoring action, provider fetch, write action을 만들지 않습니다."
         ),
     }
 
@@ -5269,8 +5269,8 @@ def build_overview_macro_context_cockpit(
         "data_health_handoff": data_health_handoff,
         "source_confidence": source_confidence,
         "boundary_note": (
-            "context 전용 market backdrop입니다. 이 cockpit은 trade signal, validation PASS/BLOCKER, "
-            "Final Review decision, monitoring signal, registry write, saved setup write, broker order, auto rebalance를 만들지 않습니다."
+            "context 전용 market backdrop입니다. 이 cockpit은 trading action, validation PASS/BLOCKER, "
+            "Final Review decision, monitoring action, registry write, saved setup write, broker order, auto rebalance를 만들지 않습니다."
         ),
     }
 

@@ -1027,6 +1027,109 @@ def overview_ui_css() -> str:
 .ov-historical-analog-limitations {
   margin-top: 0.4rem;
 }
+.ov-macro-conditioned-pilot {
+  margin-top: 0.9rem;
+  padding: 0.82rem 0.86rem;
+  border: 1px solid color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 22%, transparent);
+  border-left: 3px solid var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 6%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    var(--ov-mi-color-surface);
+}
+.ov-macro-conditioned-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+.ov-macro-conditioned-title {
+  font-size: 0.9rem;
+  font-weight: var(--ov-mi-weight-heading);
+  color: var(--ov-mi-color-text);
+}
+.ov-macro-conditioned-status {
+  color: var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  white-space: nowrap;
+}
+.ov-macro-conditioned-detail,
+.ov-macro-conditioned-reason,
+.ov-macro-conditioned-quality {
+  margin-top: 0.34rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.45;
+}
+.ov-macro-conditioned-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.72rem;
+}
+.ov-macro-conditioned-stat {
+  padding: 0.5rem 0.56rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.78);
+}
+.ov-macro-conditioned-stat-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+}
+.ov-macro-conditioned-stat-value {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.9rem;
+  font-weight: var(--ov-mi-weight-heading);
+}
+.ov-macro-conditioned-condition-group {
+  margin-top: 0.72rem;
+}
+.ov-macro-conditioned-condition-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+}
+.ov-macro-conditioned-condition-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.48rem;
+  margin-top: 0.42rem;
+}
+.ov-macro-conditioned-condition {
+  padding: 0.48rem 0.52rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.7);
+}
+.ov-macro-conditioned-condition strong {
+  display: block;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+}
+.ov-macro-conditioned-condition span {
+  display: inline-block;
+  margin-top: 0.2rem;
+  color: var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-macro-conditioned-condition p {
+  margin: 0.18rem 0 0;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.4;
+}
+.ov-macro-conditioned-empty {
+  margin-top: 0.7rem;
+  padding: 0.54rem 0.6rem;
+  border-radius: 7px;
+  background: rgba(241,245,249,0.82);
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+}
 .ov-source-confidence-body {
   padding-top: 0.12rem;
 }
@@ -2813,6 +2916,87 @@ def _analog_rows_by_priority(rows: list[dict[str, Any]], proxy_etf: str) -> tupl
     return primary_rows, support_rows
 
 
+def _macro_condition_list_html(title: str, items: list[dict[str, Any]]) -> str:
+    display_items = items or [
+        {
+            "label": "-",
+            "status_label": "없음",
+            "detail": "이번 기준에서는 표시할 조건이 없습니다.",
+        }
+    ]
+    item_html = "".join(
+        '<div class="ov-macro-conditioned-condition">'
+        f'<strong>{escape(_display_value(item.get("label")))}</strong>'
+        f'<span>{escape(_display_value(item.get("status_label") or _display_status_label(item.get("status"))))}</span>'
+        f'<p>{escape(_display_value(item.get("detail")))}</p>'
+        "</div>"
+        for item in display_items[:6]
+    )
+    return (
+        '<div class="ov-macro-conditioned-condition-group">'
+        f'<div class="ov-macro-conditioned-condition-title">{escape(title)}</div>'
+        f'<div class="ov-macro-conditioned-condition-list">{item_html}</div>'
+        "</div>"
+    )
+
+
+def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> str:
+    pilot = dict(model.get("macro_conditioned_analog") or {})
+    if not pilot:
+        return ""
+    tone_color = escape(_overview_tone_color(pilot.get("tone") or pilot.get("status")))
+    status_label = _display_value(pilot.get("status_label") or _display_status_label(pilot.get("status")))
+    sample_quality = dict(pilot.get("sample_quality") or {})
+    rows = list(pilot.get("rows") or [])
+    primary_rows, support_rows = _analog_rows_by_priority(rows, proxy_etf)
+    table_html = ""
+    if rows:
+        table_html = (
+            f"{_analog_table_block_html(primary_rows, title='Macro 조건 포함 핵심 자산', note='broad 조건에 GLD context를 더한 pilot 표본입니다.')}"
+            f"{_analog_table_block_html(support_rows, title='Macro 조건 포함 보조 자산', note='같은 pilot 표본의 배경 자산 분포입니다.', secondary=True)}"
+        )
+    else:
+        table_html = (
+            '<div class="ov-macro-conditioned-empty">'
+            "추가 macro 조건을 계산할 수 있으면 이 영역에 같은 median / 상승 비율 / 최선 / 최악 구조로 표시합니다. 지금은 broad 결과를 먼저 봅니다."
+            "</div>"
+        )
+    stats = [
+        ("Broad sample", f"{_display_value(pilot.get('broad_sample_count'))}회"),
+        ("Macro 조건 sample", f"{_display_value(pilot.get('sample_count'))}회"),
+        ("추가 조건", f"{_display_value(pilot.get('additional_condition_count'))}개"),
+    ]
+    stats_html = "".join(
+        '<div class="ov-macro-conditioned-stat">'
+        f'<div class="ov-macro-conditioned-stat-label">{escape(label)}</div>'
+        f'<div class="ov-macro-conditioned-stat-value">{escape(value)}</div>'
+        "</div>"
+        for label, value in stats
+    )
+    conditions_html = (
+        f"{_macro_condition_list_html('사용한 조건', list(pilot.get('used_conditions') or []))}"
+        f"{_macro_condition_list_html('조건 부족', list(pilot.get('insufficient_conditions') or []))}"
+        f"{_macro_condition_list_html('이번 차수 제외', list(pilot.get('excluded_conditions') or []))}"
+    )
+    return (
+        f'<div class="ov-macro-conditioned-pilot" style="--ov-macro-pilot-tone:{tone_color};">'
+        '<div class="ov-macro-conditioned-head">'
+        "<div>"
+        '<div class="ov-macro-conditioned-title">Macro 조건 포함 pilot</div>'
+        f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("headline")))}</div>'
+        "</div>"
+        f'<div class="ov-macro-conditioned-status">{escape(status_label)}</div>'
+        "</div>"
+        f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("detail")))}</div>'
+        f'<div class="ov-macro-conditioned-stats">{stats_html}</div>'
+        f'<div class="ov-macro-conditioned-quality"><strong>표본 품질</strong>: {escape(_display_value(sample_quality.get("label")))} · {escape(_display_value(sample_quality.get("detail")))}</div>'
+        f'<div class="ov-macro-conditioned-reason">{escape(_display_value(pilot.get("sample_reduction_reason")))}</div>'
+        f"{conditions_html}"
+        f"{table_html}"
+        "</div>"
+    )
+
+
 def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     if not model:
         return ""
@@ -2901,6 +3085,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         meta_items.append(f"replay: {replay_basis}")
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
+    macro_pilot_html = _macro_conditioned_pilot_html(model, proxy_etf=proxy_etf)
     return (
         f'<section class="{section_class}" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
@@ -2913,6 +3098,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         f'<div class="ov-historical-analog-meta">{meta_html}</div>'
         f"{condition_html}"
         f"{body_html}"
+        f"{macro_pilot_html}"
         f'<div class="ov-historical-analog-limitations">{escape(limitations)}</div>'
         "</section>"
     )

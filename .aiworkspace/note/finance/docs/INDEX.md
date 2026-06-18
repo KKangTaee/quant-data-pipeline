@@ -25,7 +25,7 @@ Last Verified: 2026-06-18
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
 - Latest completed task: [Finance Integration Doc Merge Skill 2026-06-17](../tasks/active/finance-integration-doc-merge-skill-20260617/STATUS.md).
-- Latest completed product task: [Overview Market Context Analog As-Of Window V2 2026-06-18](../tasks/active/overview-market-context-analog-asof-window-v2-20260618/STATUS.md).
+- Latest completed product task: [Overview Market Context Macro-Conditioned Analog Pilot V1 2026-06-18](../tasks/active/overview-market-context-macro-conditioned-analog-pilot-v1-20260618/STATUS.md).
 - Recent Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
 - Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. See [Roadmap](./ROADMAP.md).
 

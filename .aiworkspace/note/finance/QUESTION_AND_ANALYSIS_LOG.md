@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-18 - Macro-conditioned analog should start as a GLD-only pilot
+- User request:
+  - 3차-A 개발 진행을 승인하되, macro-conditioned historical analog 전체 구현이 아니라 pilot framework와 최소 조건 구현까지만 요청함.
+- Interpreted goal:
+  - 기존 broad analog를 유지하면서 `Macro 조건 포함` 영역을 별도로 보여주고, 계산 가능한 조건과 부족하거나 제외한 조건을 분리한다.
+- Analysis result:
+  - 기존 DB-backed price history에 이미 GLD가 comparison asset으로 들어오므로, 새 schema/provider/loader 없이 GLD price proxy context를 추가 조건으로 쓰는 것이 3차-A의 가장 좁은 구현이다. Stored futures daily OHLCV는 3차-B 후보로 남긴다.
+- Follow-up:
+  - 3차-B는 GLD pilot sample quality를 본 뒤 stored futures daily OHLCV 기반 rate pressure or safe-haven context를 붙일지 검토한다. FRED rates, events, sentiment conditioning은 별도 승인 전까지 열지 않는다.
+
 ### 2026-06-17 - Repeated document merge conflicts need skill-level guardrails
 - User request:
   - 여러 worktree 병합에서 문서 충돌이 반복될 예정이므로, 두 브랜치 내용이 유실되지 않고 자연스럽게 정리되도록 기존 병합 스킬을 강화하길 승인함.

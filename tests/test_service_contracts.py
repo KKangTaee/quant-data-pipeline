@@ -7494,7 +7494,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["cards"][0]["title"], "Participation")
         self.assertEqual(model["heatmap_rows"][0]["group"], "Technology")
         self.assertEqual(model["heatmap_rows"][0]["tone"], "positive")
-        self.assertIn("not a trade signal", model["boundary_note"])
+        self.assertIn("not a trading action", model["boundary_note"])
 
     def test_overview_macro_week_lane_clusters_near_events_without_signal_language(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_week_lane
@@ -9026,6 +9026,98 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(qqq_20d["median_return_pct"], 25.0, places=2)
         self.assertTrue(any("선택 기준일 이후 가격" in item for item in model["limitations"]))
 
+    def test_historical_analog_builds_separate_gld_conditioned_pilot_without_changing_broad_rows(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        current_index = len(dates) - 1
+        anchors = [30, 50, 70]
+        gld_matching_anchors = {30, 70}
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, current_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 120.0
+            if symbol == "GLD":
+                for anchor in anchors:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 102.0 if anchor in gld_matching_anchors else 98.0
+                    prices[anchor + 20] = 110.0
+                prices[current_index - 5] = 100.0
+                prices[current_index] = 102.0
+            for idx, day in enumerate(dates):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(20,),
+            min_history_rows=90,
+            min_sample_count=3,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["sample_count"], 3)
+        self.assertTrue(model["rows"])
+        pilot = model["macro_conditioned_analog"]
+        self.assertEqual(pilot["schema_version"], "overview_market_context_macro_conditioned_analog_pilot_v1")
+        self.assertEqual(pilot["additional_condition_count"], 1)
+        self.assertEqual(pilot["broad_sample_count"], 3)
+        self.assertEqual(pilot["sample_count"], 2)
+        self.assertEqual(pilot["sample_quality"]["status"], "REVIEW")
+        self.assertIn("GLD", pilot["condition_summary"])
+        self.assertIn("Broad 3회 중 Macro 조건 포함 2회", pilot["sample_reduction_reason"])
+        self.assertEqual([item["id"] for item in pilot["used_conditions"]], ["sector_relative_strength", "gld_safe_haven_context"])
+        self.assertEqual(pilot["insufficient_conditions"], [])
+        self.assertIn("futures_macro_thermometer", [item["id"] for item in pilot["excluded_conditions"]])
+        self.assertEqual(
+            [row["sample_count"] for row in pilot["rows"] if row["asset"] == "QQQ" and row["horizon"] == "20D"],
+            [2],
+        )
+
+    def test_historical_analog_marks_macro_pilot_insufficient_when_gld_context_is_missing(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        price_rows = self._analog_price_rows(["XLV", "SPY", "QQQ"], dates)
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            min_history_rows=90,
+            min_sample_count=2,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertTrue(model["rows"])
+        pilot = model["macro_conditioned_analog"]
+        self.assertEqual(pilot["status"], "INSUFFICIENT_CONTEXT")
+        self.assertFalse(pilot["rows"])
+        self.assertEqual([item["id"] for item in pilot["used_conditions"]], ["sector_relative_strength"])
+        self.assertEqual([item["id"] for item in pilot["insufficient_conditions"]], ["gld_safe_haven_context"])
+
     def test_group_leadership_date_resolver_respects_selected_as_of_date(self) -> None:
         from app.services.overview_market_intelligence import resolve_group_trend_market_dates
 
@@ -9222,6 +9314,83 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("140 / 756", html)
         self.assertIn("아래 자료 수집 버튼", html)
         self.assertNotIn("자료가 충분한 sector ETF history가 쌓이면", html)
+
+    def test_historical_analog_html_renders_macro_conditioned_pilot_as_separate_context(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 3회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 3,
+                "condition_summary": "XLV 5D-SPY 5D 상대강도 >= +2.0%",
+                "data_window": "2024-01-02 - 2024-06-17",
+                "rows": [
+                    {
+                        "asset": "XLV",
+                        "horizon": "20D",
+                        "median_return_pct": 4.0,
+                        "positive_rate_pct": 66.7,
+                        "best_return_pct": 8.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 3,
+                    }
+                ],
+                "macro_conditioned_analog": {
+                    "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+                    "status": "REVIEW",
+                    "status_label": "pilot 표본 좁음",
+                    "headline": "Macro 조건 포함 pilot 표본 2회",
+                    "detail": "Broad analog 3회 중 GLD context까지 맞는 2회만 표시합니다.",
+                    "condition_summary": "XLV relative strength + GLD 5D context",
+                    "broad_sample_count": 3,
+                    "sample_count": 2,
+                    "additional_condition_count": 1,
+                    "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 2회만 남았습니다.",
+                    "sample_quality": {
+                        "status": "REVIEW",
+                        "label": "pilot-limited",
+                        "detail": "표본이 좁아 broad 결과와 함께 읽어야 합니다.",
+                    },
+                    "used_conditions": [
+                        {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
+                        {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 상승 context"},
+                    ],
+                    "insufficient_conditions": [
+                        {"id": "futures_macro_thermometer", "label": "Stored futures daily OHLCV", "status_label": "조건 부족", "detail": "이번 pilot 표본에는 쓰지 않음"},
+                    ],
+                    "excluded_conditions": [
+                        {"id": "events_sentiment", "label": "Events / sentiment", "status_label": "이번 차수 제외", "detail": "3차-A 범위 밖"},
+                    ],
+                    "rows": [
+                        {
+                            "asset": "XLV",
+                            "horizon": "20D",
+                            "median_return_pct": 5.0,
+                            "positive_rate_pct": 100.0,
+                            "best_return_pct": 6.0,
+                            "worst_return_pct": 4.0,
+                            "sample_count": 2,
+                        }
+                    ],
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("참고: 과거 유사 맥락", html)
+        self.assertIn("Macro 조건 포함 pilot", html)
+        self.assertIn("사용한 조건", html)
+        self.assertIn("조건 부족", html)
+        self.assertIn("이번 차수 제외", html)
+        self.assertIn("표본 품질", html)
+        self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
+        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 pilot"))
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
+            self.assertNotIn(forbidden, html)
 
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):

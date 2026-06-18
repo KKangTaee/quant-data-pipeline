@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-18 - Overview Market Context Macro-Conditioned Analog Pilot V1
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-conditioned-analog-pilot-v1-20260618/` for the approved 3차-A `Macro 조건 포함` pilot.
+- Preserved the existing broad historical analog and added a separate pilot payload/UI block that filters broad anchors with one additional stored-data condition: GLD price proxy safe-haven / gold context.
+- The pilot now shows used conditions, insufficient conditions, excluded/deferred conditions, sample reduction reason, and sample quality.
+- Boundary stayed Overview-only and context-only: no new provider, loader, schema, FRED collection, events/sentiment conditioning, UI render fetch, validation gate, monitoring signal, or trading semantics.
+
 ### 2026-06-18 - Overview Market Context Analog As-Of Window V2
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-asof-window-v2-20260618/` for the approved 2차 `참고: 과거 유사 맥락` 기준 시점 / 패턴 기간 expansion.
 - Extended the historical analog read model and UI so users can compare `latest` or a selected 기준일 with `5D` / `20D` / `monthly` pattern windows while keeping the existing positive rate / median / best / worst / sample table.

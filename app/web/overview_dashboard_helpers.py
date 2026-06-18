@@ -460,7 +460,7 @@ def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentime
 def load_overview_market_context_historical_analog(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
-    cache_schema_version: str = "overview-historical-analog-v2",
+    cache_schema_version: str = "overview-historical-analog-v3-macro-conditioned-pilot",
 ) -> dict[str, Any]:
     del cache_schema_version
     normalized_pattern = str(pattern_window or "5D").strip().upper()
@@ -530,8 +530,8 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
             },
         ],
         "boundary_note": (
-            "Overview Map은 context-only 안내입니다. trade signal, Practical Validation PASS/BLOCKER, "
-            "Final Review decision, monitoring signal, registry row, saved setup row, broker order, auto rebalance를 생성하지 않습니다."
+            "Overview Map은 context-only 안내입니다. trading action, Practical Validation PASS/BLOCKER, "
+            "Final Review decision, monitoring action, registry row, saved setup row, broker order, auto rebalance를 생성하지 않습니다."
         ),
     }
 
@@ -541,7 +541,7 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 def load_overview_macro_context_cockpit(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
-    cache_schema_version: str = "overview-cockpit-v2-historical-analog-asof-window",
+    cache_schema_version: str = "overview-cockpit-v4-macro-conditioned-pilot-boundary-copy",
 ) -> dict[str, Any]:
     del cache_schema_version
     return build_overview_macro_context_cockpit(

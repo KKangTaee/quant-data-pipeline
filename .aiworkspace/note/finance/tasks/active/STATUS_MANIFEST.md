@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-macro-conditioned-analog-pilot-v1-20260618`: Overview Market Context Historical Analog 3차-A / 기존 broad analog와 별도인 Macro 조건 포함 pilot, GLD price proxy 조건, sample quality, deferred/disabled condition 표시
 - `overview-market-context-analog-asof-window-v2-20260618`: Overview Market Context Historical Analog 2차 / 기준 시점 replay, 5D / 20D / monthly pattern window, current universe metadata 기반 bounded replay 한계 문서화
 - `overview-market-context-source-action-flow-v1-20260618`: Overview Market Context Source Action Flow V1 / `next_checks` source-action checklist, source confidence action footer, historical analog basis metadata, refresh assist secondary flow
 - `overview-market-movers-period-refresh-v1-20260616`: Overview Market Movers Period Refresh V1 / non-daily Weekly, Monthly, and Yearly EOD price-history manual refresh action through the existing Overview action facade

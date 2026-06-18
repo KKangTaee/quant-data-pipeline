@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-macro-conditioned-analog-pilot-v1-20260618` | Completed record | `Overview > Market Context` 3차-A. Historical analog broad 결과는 유지하면서 `Macro 조건 포함 pilot` 별도 영역을 추가했고, 추가 조건은 stored GLD price proxy context 1개만 사용했다. Futures / FRED rates / events / sentiment는 deferred / disabled / insufficient condition으로 표시한다. |
 | `overview-market-context-analog-asof-window-v2-20260618` | Completed record | `Overview > Market Context` 2차. Historical analog에 latest / 과거 기준 시점 replay와 5D / 20D / monthly pattern window controls를 추가했고, existing DB 기준 bounded replay와 full PIT replay 한계를 분리한 기록이다. |
 | `overview-market-context-source-action-flow-v1-20260618` | Completed record | `Overview > Market Context` 1차. `next_checks`를 실제 source/action checklist로 렌더링하고, Data Health / Events 확인 이유와 action, source confidence footer action hint, historical analog 기준일 / 자료기간 / 계산식 표시를 보강한 기록이다. |
 | `finance-integration-doc-merge-skill-20260617` | Completed record | `finance-integration-review`에 `.aiworkspace/note/finance` 문서 충돌 전용 checklist를 추가해, latest/current pointer와 root handoff log를 손실 없이 자연스럽게 병합하도록 강화한 기록이다. |

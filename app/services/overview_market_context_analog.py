@@ -16,6 +16,7 @@ DEFAULT_MIN_ANCHOR_GAP = 20
 DEFAULT_RELATIVE_STRENGTH_FLOOR = 0.01
 DEFAULT_RELATIVE_STRENGTH_RATIO = 0.5
 DEFAULT_PATTERN_WINDOW = "5D"
+DEFAULT_GLD_CONTEXT_THRESHOLD = 0.01
 PATTERN_WINDOW_SPECS: dict[str, dict[str, Any]] = {
     "5D": {"days": 5, "label": "5D", "group_period": "weekly"},
     "20D": {"days": 20, "label": "20D", "group_period": "monthly"},
@@ -103,6 +104,116 @@ def _format_pct(value: float | None) -> str:
     return f"{value * 100:+.1f}%"
 
 
+def _condition_item(
+    *,
+    condition_id: str,
+    label: str,
+    status: str,
+    detail: str,
+    status_label: str,
+) -> dict[str, Any]:
+    return {
+        "id": condition_id,
+        "label": label,
+        "status": status,
+        "status_label": status_label,
+        "detail": detail,
+    }
+
+
+def _macro_pilot_excluded_conditions() -> list[dict[str, Any]]:
+    return [
+        _condition_item(
+            condition_id="futures_macro_thermometer",
+            label="Stored futures daily OHLCV rate / safe-haven context",
+            status="DEFERRED",
+            status_label="이번 차수 제외",
+            detail="3차-A는 GLD price proxy만 추가 조건으로 사용하고 futures 조건은 후속 차수에서 검토합니다.",
+        ),
+        _condition_item(
+            condition_id="fred_rates",
+            label="2Y / 10Y FRED rates context",
+            status="DISABLED",
+            status_label="사용 안 함",
+            detail="3차-A에서는 새 FRED series 수집, provider fetch, UI 직접 fetch를 하지 않습니다.",
+        ),
+        _condition_item(
+            condition_id="events_sentiment",
+            label="Events / sentiment historical conditioning",
+            status="DISABLED",
+            status_label="이번 차수 제외",
+            detail="events / sentiment 조건화는 이번 pilot 범위 밖입니다.",
+        ),
+    ]
+
+
+def _sample_quality(status: str, *, sample_count: int, broad_sample_count: int, min_sample_count: int) -> dict[str, Any]:
+    normalized = str(status or "").upper()
+    if normalized == "OK":
+        return {
+            "status": "OK",
+            "label": "pilot sample usable",
+            "detail": f"Broad {broad_sample_count}회 중 Macro 조건 포함 {sample_count}회가 남아 최소 표본 {min_sample_count}회를 충족합니다.",
+        }
+    if sample_count > 0:
+        return {
+            "status": "REVIEW",
+            "label": "pilot-limited",
+            "detail": f"Broad {broad_sample_count}회 중 Macro 조건 포함 {sample_count}회만 남아 broad 결과와 함께 읽어야 합니다.",
+        }
+    if normalized == "DISABLED":
+        return {
+            "status": "DISABLED",
+            "label": "disabled",
+            "detail": "필수 조건이 계산되지 않아 Macro 조건 포함 pilot을 계산하지 않았습니다.",
+        }
+    return {
+        "status": "INSUFFICIENT_CONTEXT",
+        "label": "insufficient context",
+        "detail": "추가 macro 조건을 계산할 수 없거나 조건을 통과한 anchor가 없습니다.",
+    }
+
+
+def _macro_conditioned_disabled_model(
+    *,
+    status: str,
+    headline: str,
+    detail: str,
+    used_conditions: list[dict[str, Any]] | None = None,
+    insufficient_conditions: list[dict[str, Any]] | None = None,
+    broad_sample_count: int = 0,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+        "status": status,
+        "status_label": "조건 부족" if status == "INSUFFICIENT_CONTEXT" else "비활성",
+        "headline": headline,
+        "detail": detail,
+        "condition_summary": detail,
+        "broad_sample_count": int(broad_sample_count),
+        "sample_count": 0,
+        "additional_condition_count": 0,
+        "sample_reduction_reason": detail,
+        "sample_quality": _sample_quality(status, sample_count=0, broad_sample_count=int(broad_sample_count), min_sample_count=1),
+        "used_conditions": used_conditions or [],
+        "insufficient_conditions": insufficient_conditions or [],
+        "excluded_conditions": _macro_pilot_excluded_conditions(),
+        "coverage_gaps": [],
+        "rows": [],
+        "anchor_dates": [],
+    }
+
+
+def _gld_context_bucket(value: float | None, *, threshold: float = DEFAULT_GLD_CONTEXT_THRESHOLD) -> dict[str, str] | None:
+    if value is None or pd.isna(value):
+        return None
+    if float(value) >= threshold:
+        return {"key": "gold_bid", "label": "GLD 상승 context"}
+    if float(value) <= -threshold:
+        return {"key": "gold_fading", "label": "GLD 하락 context"}
+    return {"key": "gold_mixed", "label": "GLD 중립권 context"}
+
+
 def _normalize_pattern_window(value: str | None) -> dict[str, Any]:
     normalized = str(value or DEFAULT_PATTERN_WINDOW).strip().upper().replace(" ", "")
     if normalized in {"1M", "MONTH", "MONTHLY"}:
@@ -166,6 +277,20 @@ def _base_model(
         "repair_action": repair_action or {},
         "rows": [],
         "anchor_dates": [],
+        "macro_conditioned_analog": _macro_conditioned_disabled_model(
+            status="INSUFFICIENT_CONTEXT",
+            headline="Macro 조건 포함 pilot 조건 부족",
+            detail="Broad historical analog의 sector ETF / SPY 조건이 먼저 계산되어야 합니다.",
+            insufficient_conditions=[
+                _condition_item(
+                    condition_id="sector_relative_strength",
+                    label="Sector ETF vs SPY relative strength",
+                    status="INSUFFICIENT_CONTEXT",
+                    status_label="조건 부족",
+                    detail="리더십 sector proxy 또는 가격 이력이 부족해 필수 broad 조건을 계산하지 못했습니다.",
+                )
+            ],
+        ),
         "limitations": _default_limitations(),
         "boundary_note": (
             "Overview context-only 참고 정보입니다. Backtest strategy, validation gate, "
@@ -427,6 +552,177 @@ def _summary_row(asset: str, horizon: int, values: list[float]) -> dict[str, Any
     }
 
 
+def _distribution_rows_for_anchors(
+    analysis_matrix: pd.DataFrame,
+    *,
+    symbols: Sequence[str],
+    horizons: Sequence[int],
+    anchor_indices: Sequence[int],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    assets = [symbol for symbol in symbols if symbol in analysis_matrix.columns]
+    for asset in assets:
+        series = analysis_matrix[asset]
+        for horizon in horizons:
+            values = [
+                value
+                for anchor in anchor_indices
+                if (value := _forward_return(series, anchor, int(horizon))) is not None
+            ]
+            row = _summary_row(asset, int(horizon), values)
+            if row is not None:
+                rows.append(row)
+    return rows
+
+
+def _macro_conditioned_pilot_model(
+    *,
+    analysis_matrix: pd.DataFrame,
+    symbols: Sequence[str],
+    horizons: Sequence[int],
+    anchor_indices: Sequence[int],
+    pattern_days: int,
+    pattern_label: str,
+    proxy_etf: str,
+    broad_condition_summary: str,
+    coverage_by_symbol: dict[str, dict[str, Any]],
+    min_sample_count: int,
+) -> dict[str, Any]:
+    broad_sample_count = len(anchor_indices)
+    sector_condition = _condition_item(
+        condition_id="sector_relative_strength",
+        label="Sector ETF vs SPY relative strength",
+        status="USED",
+        status_label="사용",
+        detail=broad_condition_summary,
+    )
+    gld_coverage = coverage_by_symbol.get("GLD")
+    if "GLD" not in analysis_matrix.columns or not gld_coverage or gld_coverage.get("status") != "OK":
+        detail = (
+            "GLD price proxy 가격 이력이 부족해 Macro 조건 포함 pilot은 계산하지 않고 "
+            "기존 broad 결과를 그대로 표시합니다."
+        )
+        gld_detail = "GLD price rows unavailable"
+        if gld_coverage:
+            gld_detail = (
+                f"GLD {gld_coverage.get('row_count') or 0} / {gld_coverage.get('min_rows') or DEFAULT_MIN_HISTORY_ROWS} rows "
+                f"({gld_coverage.get('start_date') or '-'} ~ {gld_coverage.get('end_date') or '-'})"
+            )
+        model = _macro_conditioned_disabled_model(
+            status="INSUFFICIENT_CONTEXT",
+            headline="Macro 조건 포함 pilot 조건 부족",
+            detail=detail,
+            used_conditions=[sector_condition],
+            insufficient_conditions=[
+                _condition_item(
+                    condition_id="gld_safe_haven_context",
+                    label="GLD price proxy safe-haven / gold context",
+                    status="INSUFFICIENT_CONTEXT",
+                    status_label="조건 부족",
+                    detail=gld_detail,
+                )
+            ],
+            broad_sample_count=broad_sample_count,
+        )
+        if gld_coverage and gld_coverage.get("status") != "OK":
+            model["coverage_gaps"] = [
+                {
+                    "symbol": "GLD",
+                    "row_count": int(gld_coverage.get("row_count") or 0),
+                    "min_rows": int(gld_coverage.get("min_rows") or DEFAULT_MIN_HISTORY_ROWS),
+                    "start_date": gld_coverage.get("start_date"),
+                    "end_date": gld_coverage.get("end_date"),
+                    "detail": gld_coverage.get("detail") or "",
+                }
+            ]
+        return model
+
+    latest_index = len(analysis_matrix) - 1
+    gld_series = analysis_matrix["GLD"]
+    current_gld_return = _period_return(gld_series, latest_index, pattern_days)
+    current_bucket = _gld_context_bucket(current_gld_return)
+    if current_bucket is None:
+        return _macro_conditioned_disabled_model(
+            status="INSUFFICIENT_CONTEXT",
+            headline="Macro 조건 포함 pilot 조건 부족",
+            detail=f"GLD {pattern_label} context 계산 구간이 부족합니다.",
+            used_conditions=[sector_condition],
+            insufficient_conditions=[
+                _condition_item(
+                    condition_id="gld_safe_haven_context",
+                    label="GLD price proxy safe-haven / gold context",
+                    status="INSUFFICIENT_CONTEXT",
+                    status_label="조건 부족",
+                    detail=f"GLD {pattern_label} return unavailable",
+                )
+            ],
+            broad_sample_count=broad_sample_count,
+        )
+
+    conditioned_anchor_indices: list[int] = []
+    for anchor in anchor_indices:
+        anchor_gld_return = _period_return(gld_series, int(anchor), pattern_days)
+        anchor_bucket = _gld_context_bucket(anchor_gld_return)
+        if anchor_bucket and anchor_bucket["key"] == current_bucket["key"]:
+            conditioned_anchor_indices.append(int(anchor))
+
+    rows = _distribution_rows_for_anchors(
+        analysis_matrix,
+        symbols=symbols,
+        horizons=horizons,
+        anchor_indices=conditioned_anchor_indices,
+    )
+    sample_count = len(conditioned_anchor_indices)
+    status = "OK" if sample_count >= min_sample_count else ("REVIEW" if sample_count > 0 else "INSUFFICIENT_CONTEXT")
+    status_label = "자료 정상" if status == "OK" else ("pilot 표본 좁음" if status == "REVIEW" else "조건 부족")
+    gld_detail = (
+        f"현재 GLD {pattern_label} return {_format_pct(current_gld_return)}; "
+        f"{current_bucket['label']}와 같은 anchor만 사용"
+    )
+    sample_reduction_reason = (
+        f"Broad {broad_sample_count}회 중 Macro 조건 포함 {sample_count}회만 남았습니다. "
+        f"추가 조건은 {gld_detail}입니다."
+    )
+    return {
+        "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+        "status": status,
+        "status_label": status_label,
+        "headline": f"Macro 조건 포함 pilot 표본 {sample_count}회",
+        "detail": f"기존 broad analog {broad_sample_count}회 중 GLD context까지 맞는 {sample_count}회만 별도로 봅니다.",
+        "condition_summary": f"{proxy_etf} relative strength + GLD {pattern_label} context {current_bucket['label']} ({_format_pct(current_gld_return)})",
+        "broad_sample_count": broad_sample_count,
+        "sample_count": sample_count,
+        "additional_condition_count": 1,
+        "sample_reduction_reason": sample_reduction_reason,
+        "sample_quality": _sample_quality(
+            status,
+            sample_count=sample_count,
+            broad_sample_count=broad_sample_count,
+            min_sample_count=min_sample_count,
+        ),
+        "used_conditions": [
+            sector_condition,
+            _condition_item(
+                condition_id="gld_safe_haven_context",
+                label="GLD price proxy safe-haven / gold context",
+                status="USED",
+                status_label="사용",
+                detail=gld_detail,
+            ),
+        ],
+        "insufficient_conditions": [],
+        "excluded_conditions": _macro_pilot_excluded_conditions(),
+        "coverage_gaps": [],
+        "rows": rows,
+        "anchor_dates": [
+            date_value
+            for index in conditioned_anchor_indices
+            for date_value in [_format_date(analysis_matrix.index[index])]
+            if date_value
+        ],
+    }
+
+
 def _load_default_price_history(symbols: Sequence[str]) -> pd.DataFrame:
     return load_price_history(symbols=symbols, timeframe="1d")
 
@@ -591,19 +887,12 @@ def build_historical_analog_snapshot(
             candidates.append(index)
 
     anchor_indices = _dedupe_anchor_indices(candidates, min_gap=min_anchor_gap)
-    rows: list[dict[str, Any]] = []
-    assets = [symbol for symbol in symbols if symbol in analysis_matrix.columns]
-    for asset in assets:
-        series = analysis_matrix[asset]
-        for horizon in horizons:
-            values = [
-                value
-                for anchor in anchor_indices
-                if (value := _forward_return(series, anchor, int(horizon))) is not None
-            ]
-            row = _summary_row(asset, int(horizon), values)
-            if row is not None:
-                rows.append(row)
+    rows = _distribution_rows_for_anchors(
+        analysis_matrix,
+        symbols=symbols,
+        horizons=horizons,
+        anchor_indices=anchor_indices,
+    )
 
     sample_count = len(anchor_indices)
     status = "OK" if sample_count >= min_sample_count else "REVIEW"
@@ -616,6 +905,18 @@ def build_historical_analog_snapshot(
         f"{proxy_etf} {pattern_label}-SPY {pattern_label} 상대강도 >= {_format_pct(threshold)} "
         f"(선택 기준 gap {_format_pct(current_rel_window)}, 5D gap {_format_pct(current_rel_5d)}, "
         f"20D gap {_format_pct(current_rel_20d)})"
+    )
+    macro_conditioned_analog = _macro_conditioned_pilot_model(
+        analysis_matrix=analysis_matrix,
+        symbols=symbols,
+        horizons=horizons,
+        anchor_indices=anchor_indices,
+        pattern_days=pattern_days,
+        pattern_label=pattern_label,
+        proxy_etf=str(proxy_etf),
+        broad_condition_summary=condition_summary,
+        coverage_by_symbol=coverage_by_symbol,
+        min_sample_count=min_sample_count,
     )
     first_date = _format_date(analysis_matrix.index.min()) or ""
     last_date = _format_date(analysis_matrix.index.max()) or ""
@@ -647,6 +948,7 @@ def build_historical_analog_snapshot(
             for date_value in [_format_date(analysis_matrix.index[index])]
             if date_value
         ],
+        "macro_conditioned_analog": macro_conditioned_analog,
         "limitations": [
             *_default_limitations(),
             "선택 기준일 이후 가격은 anchor 탐색과 forward 분포에 사용하지 않음",
