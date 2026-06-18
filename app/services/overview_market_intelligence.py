@@ -1163,15 +1163,20 @@ def build_market_sentiment_snapshot(
     }
 
 
-def _query_latest_raw_date(query_fn: QueryFn) -> str | None:
+def _query_latest_raw_date(query_fn: QueryFn, *, end_date: str | None = None) -> str | None:
+    conditions = ["timeframe = %s"]
+    params: list[Any] = ["1d"]
+    if end_date:
+        conditions.append("`date` <= %s")
+        params.append(end_date)
     rows = query_fn(
         "finance_price",
-        """
+        f"""
         SELECT MAX(`date`) AS latest_raw_date
         FROM nyse_price_history
-        WHERE timeframe = %s
+        WHERE {" AND ".join(conditions)}
         """,
-        ["1d"],
+        params,
     )
     if not rows:
         return None
@@ -1183,8 +1188,9 @@ def _eligible_market_dates(
     min_price_rows: int,
     limit: int,
     query_fn: QueryFn,
+    end_date: str | None = None,
 ) -> tuple[str | None, list[dict[str, Any]]]:
-    latest_raw_date = _query_latest_raw_date(query_fn)
+    latest_raw_date = _query_latest_raw_date(query_fn, end_date=end_date)
     bounded_since: str | None = None
     latest_raw_ts = pd.Timestamp(latest_raw_date) if latest_raw_date else pd.NaT
     if not pd.isna(latest_raw_ts):
@@ -1197,6 +1203,9 @@ def _eligible_market_dates(
         if since:
             conditions.append("`date` >= %s")
             params.append(since)
+        if end_date:
+            conditions.append("`date` <= %s")
+            params.append(end_date)
         params.extend([int(min_price_rows), int(limit)])
         return query_fn(
             "finance_price",
@@ -1232,6 +1241,7 @@ def resolve_effective_market_dates(
     *,
     period: str = "daily",
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
@@ -1242,23 +1252,30 @@ def resolve_effective_market_dates(
 
     query = query_fn or _default_query
     offset = VALID_PERIODS[normalized_period]
+    requested_as_of = _iso_date(as_of_date)
     latest_raw_date, eligible = _eligible_market_dates(
         min_price_rows=min_price_rows,
         limit=(offset * 2) + 1,
         query_fn=query,
+        end_date=requested_as_of,
     )
     if len(eligible) <= offset:
         return {
             "status": "INSUFFICIENT_DATA",
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
+            "requested_as_of": requested_as_of,
             "start_date": None,
             "end_date": eligible[0]["date"] if eligible else None,
             "latest_raw_date": latest_raw_date,
             "effective_end_date": eligible[0]["date"] if eligible else None,
             "eligible_dates": eligible,
             "stale_days": _stale_days(eligible[0]["date"] if eligible else None, today=today),
-            "message": "Not enough eligible daily price rows to resolve the requested period.",
+            "message": (
+                "Not enough eligible daily price rows to resolve the requested period at or before the selected as-of date."
+                if requested_as_of
+                else "Not enough eligible daily price rows to resolve the requested period."
+            ),
         }
 
     end_row = eligible[0]
@@ -1267,6 +1284,7 @@ def resolve_effective_market_dates(
         "status": "OK",
         "period": normalized_period,
         "period_label": PERIOD_LABELS[normalized_period],
+        "requested_as_of": requested_as_of,
         "start_date": start_row["date"],
         "end_date": end_row["date"],
         "latest_raw_date": latest_raw_date,
@@ -1281,6 +1299,7 @@ def resolve_group_trend_market_dates(
     *,
     period: str = "monthly",
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
@@ -1293,10 +1312,12 @@ def resolve_group_trend_market_dates(
     spec = GROUP_TREND_PERIODS[normalized_period]
     step = int(spec["step"])
     requested_windows = int(spec["windows"])
+    requested_as_of = _iso_date(as_of_date)
     latest_raw_date, eligible = _eligible_market_dates(
         min_price_rows=min_price_rows,
         limit=(step * requested_windows) + 1,
         query_fn=query,
+        end_date=requested_as_of,
     )
     available_windows = min(requested_windows, max(0, (len(eligible) - 1) // step))
     if available_windows <= 0:
@@ -1305,6 +1326,7 @@ def resolve_group_trend_market_dates(
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
             "trend_window_label": spec["window_label"],
+            "requested_as_of": requested_as_of,
             "start_date": None,
             "end_date": eligible[0]["date"] if eligible else None,
             "latest_raw_date": latest_raw_date,
@@ -1312,7 +1334,11 @@ def resolve_group_trend_market_dates(
             "eligible_dates": eligible,
             "windows": [],
             "stale_days": _stale_days(eligible[0]["date"] if eligible else None, today=today),
-            "message": "Not enough eligible daily price rows to resolve group trend windows.",
+            "message": (
+                "Not enough eligible daily price rows to resolve group trend windows at or before the selected as-of date."
+                if requested_as_of
+                else "Not enough eligible daily price rows to resolve group trend windows."
+            ),
         }
 
     windows: list[dict[str, Any]] = []
@@ -1334,6 +1360,7 @@ def resolve_group_trend_market_dates(
         "period": normalized_period,
         "period_label": PERIOD_LABELS[normalized_period],
         "trend_window_label": spec["window_label"],
+        "requested_as_of": requested_as_of,
         "start_date": latest_window["start_date"],
         "end_date": latest_window["end_date"],
         "latest_raw_date": latest_raw_date,
@@ -6490,6 +6517,7 @@ def build_market_movers_snapshot(
     top_n: int = 20,
     sector: str | None = None,
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     prefer_intraday: bool = True,
     intraday_interval: str = "5m",
@@ -6502,6 +6530,7 @@ def build_market_movers_snapshot(
         normalized_universe,
         _normalize_limit(universe_limit, default=1000, min_value=100, max_value=3000),
     )
+    requested_as_of = _iso_date(as_of_date)
     query = query_fn or _default_query
 
     if normalized_period not in VALID_PERIODS:
@@ -6530,7 +6559,7 @@ def build_market_movers_snapshot(
                 message=empty_message,
             )
 
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             intraday_snapshot = _build_intraday_movers_snapshot(
                 universe=universe,
                 universe_code=normalized_universe,
@@ -6550,6 +6579,7 @@ def build_market_movers_snapshot(
         date_window = resolve_effective_market_dates(
             period=normalized_period,
             min_price_rows=effective_min_rows,
+            as_of_date=requested_as_of,
             today=today,
             query_fn=query,
         )
@@ -6604,14 +6634,14 @@ def build_market_movers_snapshot(
             price_mode="EOD DB",
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             coverage["refresh_state"] = _intraday_refresh_state(
                 snapshot_status="OK",
                 period=normalized_period,
                 coverage=coverage,
             )
         warnings = _coverage_warnings(coverage, date_window=date_window)
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
         return {
             "status": "OK",
@@ -6761,6 +6791,7 @@ def build_group_leadership_snapshot(
     top_n: int = 10,
     min_group_size: int = 5,
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     prefer_intraday: bool = True,
     intraday_interval: str = "5m",
@@ -6780,6 +6811,7 @@ def build_group_leadership_snapshot(
         _normalize_limit(universe_limit, default=2000, min_value=100, max_value=3000),
     )
     normalized_top_n = _normalize_limit(top_n, default=10, min_value=5, max_value=100)
+    requested_as_of = _iso_date(as_of_date)
     query = query_fn or _default_query
 
     try:
@@ -6788,7 +6820,7 @@ def build_group_leadership_snapshot(
             universe_limit=normalized_limit,
             query_fn=query,
         )
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             intraday_snapshot = _build_intraday_group_leadership_snapshot(
                 universe=universe,
                 universe_code=normalized_universe,
@@ -6810,6 +6842,7 @@ def build_group_leadership_snapshot(
         date_window = resolve_group_trend_market_dates(
             period=normalized_period,
             min_price_rows=effective_min_rows,
+            as_of_date=requested_as_of,
             today=today,
             query_fn=query,
         )
@@ -6885,14 +6918,14 @@ def build_group_leadership_snapshot(
             date_window=date_window,
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             coverage["refresh_state"] = _intraday_refresh_state(
                 snapshot_status="OK",
                 period=normalized_period,
                 coverage=coverage,
             )
         warnings = _coverage_warnings(coverage, date_window=date_window)
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
         return {
             "status": "OK",

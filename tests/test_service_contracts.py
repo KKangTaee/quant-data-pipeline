@@ -4360,12 +4360,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
 
-        self.assertIn("cockpit_model = load_overview_macro_context_cockpit()", helper_body)
-        self.assertIn("render_macro_context_cockpit(cockpit_model)", helper_body)
+        self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_macro_context_reading_flow(cockpit_model)", helper_body)
         self.assertIn("_render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
-        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model)")
+        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
+        reading_index = helper_body.index("render_macro_context_reading_flow(cockpit_model)")
         refresh_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_index)
+        self.assertLess(reading_index, refresh_index)
         self.assertIn("load_overview_macro_context_cockpit", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
@@ -4378,8 +4381,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
 
-        self.assertIn("cockpit_model = load_overview_macro_context_cockpit()", helper_body)
-        self.assertIn("render_macro_context_cockpit(cockpit_model)", helper_body)
+        self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_macro_context_reading_flow(cockpit_model)", helper_body)
         self.assertNotIn("load_overview_ia_closeout_model", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
         self.assertNotIn("Deep Tab", helper_body)
@@ -4571,12 +4575,35 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = helper_body[:helper_end]
 
         self.assertIn("_render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
-        render_index = helper_body.index("render_macro_context_cockpit(cockpit_model)")
+        render_index = helper_body.index("render_macro_context_reading_flow(cockpit_model)")
         analog_action_index = helper_body.index("_render_overview_historical_analog_repair_action(cockpit_model)")
         refresh_bar_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
 
         self.assertLess(render_index, analog_action_index)
         self.assertLess(analog_action_index, refresh_bar_index)
+
+    def test_overview_market_context_passes_historical_analog_controls_to_cockpit_loader(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        self.assertIn("def _render_overview_historical_analog_controls", source)
+        self.assertIn('"기준 시점"', source)
+        self.assertIn('"패턴 기간"', source)
+        self.assertIn("선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포", source)
+        helper_body = source[source.index("def _render_overview_market_context_tab"):]
+        helper_body = helper_body[: helper_body.index("def _summarize_auto_refresh_plan")]
+
+        self.assertIn("analog_controls = _overview_historical_analog_control_state()", helper_body)
+        self.assertIn("as_of_date=analog_controls[\"as_of_date\"]", helper_body)
+        self.assertIn("pattern_window=str(analog_controls[\"pattern_window\"] or \"5D\")", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_macro_context_reading_flow(cockpit_model)", helper_body)
+        self.assertLess(
+            helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)"),
+            helper_body.index("_render_overview_historical_analog_controls()"),
+        )
+        self.assertLess(
+            helper_body.index("_render_overview_historical_analog_controls()"),
+            helper_body.index("render_macro_context_reading_flow(cockpit_model)"),
+        )
 
     def test_overview_market_context_uses_cardless_brief_layout_contract(self) -> None:
         from app.web import overview_ui_components
@@ -4976,7 +5003,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         html = overview_ui_components._macro_context_cockpit_html(model)
 
         self.assertIn("다음 맥락 체크", html)
-        self.assertIn("오늘 흐름을 바로 예측하지 않고", html)
+        self.assertIn("오늘 흐름을 단정하지 않고", html)
         self.assertIn("추정 일정 확인", html)
         self.assertIn("Events에서 earnings estimate", html)
         self.assertNotIn("구형 해석 cue", html)
@@ -8938,6 +8965,94 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(qqq_60d["median_return_pct"], 60.0, places=2)
         self.assertTrue(any("미래 움직임 보장이 아님" in item for item in model["limitations"]))
 
+    def test_historical_analog_replays_selected_as_of_and_pattern_window_without_future_rows(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=140)
+        as_of_index = 100
+        anchors = [40, 70]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, as_of_index]:
+                    prices[anchor - 20] = 100.0
+                    prices[anchor] = 105.0
+                prices[-1] = 175.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 5] = 106.0
+                    prices[anchor + 20] = 125.0
+                prices[-1] = 250.0
+            for idx, day in enumerate(dates):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+        price_rows = pd.DataFrame(rows)
+        as_of_date = str(dates[as_of_index].date())
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "QQQ"),
+            horizons=(5, 20),
+            as_of_date=as_of_date,
+            pattern_window="20D",
+            min_history_rows=80,
+            min_sample_count=2,
+            min_anchor_gap=20,
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["schema_version"], "overview_market_context_historical_analog_v2")
+        self.assertEqual(model["requested_as_of"], as_of_date)
+        self.assertEqual(model["current_as_of"], as_of_date)
+        self.assertTrue(str(model["data_window"]).endswith(as_of_date))
+        self.assertEqual(model["pattern_window"], "20D")
+        self.assertEqual(model["pattern_window_label"], "20D")
+        self.assertIn("20D-SPY 20D", model["condition_summary"])
+        self.assertNotIn(str(dates[-1].date()), model["data_window"])
+        self.assertNotIn(str(dates[-1].date()), model["anchor_dates"])
+        qqq_20d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "20D")
+        self.assertAlmostEqual(qqq_20d["median_return_pct"], 25.0, places=2)
+        self.assertTrue(any("선택 기준일 이후 가격" in item for item in model["limitations"]))
+
+    def test_group_leadership_date_resolver_respects_selected_as_of_date(self) -> None:
+        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+
+        captured: list[tuple[str, list[object]]] = []
+        eligible_dates = list(pd.bdate_range(end="2024-03-15", periods=6).strftime("%Y-%m-%d"))[::-1]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name
+            captured.append((sql, list(params or [])))
+            if "MAX(`date`)" in sql:
+                return [{"latest_raw_date": "2024-03-15"}]
+            return [{"date": day, "usable_rows": 500} for day in eligible_dates]
+
+        window = resolve_group_trend_market_dates(
+            period="weekly",
+            min_price_rows=100,
+            as_of_date="2024-03-15",
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(window["status"], "OK")
+        self.assertEqual(window["requested_as_of"], "2024-03-15")
+        self.assertEqual(window["end_date"], "2024-03-15")
+        self.assertLessEqual(window["start_date"], "2024-03-15")
+        self.assertTrue(any("`date` <= %s" in sql for sql, _ in captured))
+        self.assertTrue(any("2024-03-15" in params for _, params in captured))
+
     def test_macro_context_cockpit_embeds_analog_read_model_when_supplied(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
 
@@ -8949,7 +9064,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             events_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
             collection_ops_snapshot={"status": "OK", "coverage": {"ok_count": 6}, "rows": pd.DataFrame()},
             historical_analog_snapshot={
-                "schema_version": "overview_market_context_historical_analog_v1",
+                "schema_version": "overview_market_context_historical_analog_v2",
                 "status": "OK",
                 "headline": "과거 유사 맥락 2회 발견",
                 "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
@@ -9034,19 +9149,21 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                 "condition_summary": "XLK 5D-SPY 5D 상대강도 >= +2.6% 기준",
                 "data_window": "2016-06-16 - 2026-05-29",
                 "current_as_of": "2026-05-29",
-                "calculation_note": "현재 sector ETF의 SPY 대비 5D 상대강도 기준",
+                "calculation_note": "선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준",
                 "rows": rows,
                 "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
             }
         )
 
-        self.assertIn("현재 리더십 섹터를 ETF proxy로 보고", html)
+        self.assertIn("선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고", html)
         self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
         self.assertIn("먼저 읽을 결론", html)
         self.assertIn("ov-analog-summary-strip", html)
-        self.assertIn("기준일: 2026-05-29", html)
+        self.assertIn("기준 시점: latest", html)
+        self.assertIn("계산 기준일: 2026-05-29", html)
+        self.assertIn("패턴 기간: 5D", html)
         self.assertIn("자료 기간: 2016-06-16 - 2026-05-29", html)
-        self.assertIn("계산식: 현재 sector ETF의 SPY 대비 5D 상대강도 기준", html)
+        self.assertIn("계산식: 선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준", html)
         self.assertIn("유사 사례", html)
         self.assertIn("XLK 20D 중간값", html)
         self.assertIn("+3.3%", html)
@@ -9056,7 +9173,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("핵심 자산 요약", html)
         self.assertIn("보조 자산 참고", html)
 
-        explanation_index = html.index("현재 리더십 섹터를 ETF proxy로 보고")
+        explanation_index = html.index("선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고")
         summary_index = html.index("ov-analog-summary-strip")
         table_index = html.index("ov-historical-analog-table-block")
         self.assertLess(explanation_index, summary_index)

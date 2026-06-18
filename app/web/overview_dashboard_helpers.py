@@ -408,6 +408,8 @@ def load_overview_group_leadership_snapshot(
     period: str = "monthly",
     top_n: int = 10,
     min_group_size: int = 5,
+    as_of_date: str | None = None,
+    prefer_intraday: bool = True,
     trend_groups: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     return build_group_leadership_snapshot(
@@ -417,6 +419,8 @@ def load_overview_group_leadership_snapshot(
         period=period,
         top_n=top_n,
         min_group_size=min_group_size,
+        as_of_date=as_of_date,
+        prefer_intraday=prefer_intraday,
         trend_groups=trend_groups,
     )
 
@@ -454,16 +458,26 @@ def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentime
 
 @st.cache_data(ttl=120, show_spinner=False)
 def load_overview_market_context_historical_analog(
-    cache_schema_version: str = "overview-historical-analog-v1",
+    as_of_date: str | None = None,
+    pattern_window: str = "5D",
+    cache_schema_version: str = "overview-historical-analog-v2",
 ) -> dict[str, Any]:
     del cache_schema_version
+    normalized_pattern = str(pattern_window or "5D").strip().upper()
+    leadership_period = "monthly" if normalized_pattern in {"20D", "MONTHLY", "MONTH", "1M"} else "weekly"
     group_snapshot = load_overview_group_leadership_snapshot(
         universe_code="SP500",
         group_by="sector",
-        period="daily",
+        period=leadership_period,
         top_n=10,
+        as_of_date=as_of_date,
+        prefer_intraday=False,
     )
-    return build_historical_analog_snapshot(group_leadership_snapshot=group_snapshot)
+    return build_historical_analog_snapshot(
+        group_leadership_snapshot=group_snapshot,
+        as_of_date=as_of_date,
+        pattern_window=pattern_window,
+    )
 
 
 # Load the DB freshness and persisted job history snapshot for Overview Data Health.
@@ -525,7 +539,9 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 # Load the summary-first market context cockpit from existing Overview read models only.
 @st.cache_data(ttl=120, show_spinner=False)
 def load_overview_macro_context_cockpit(
-    cache_schema_version: str = "overview-cockpit-v1-historical-analog",
+    as_of_date: str | None = None,
+    pattern_window: str = "5D",
+    cache_schema_version: str = "overview-cockpit-v2-historical-analog-asof-window",
 ) -> dict[str, Any]:
     del cache_schema_version
     return build_overview_macro_context_cockpit(
@@ -548,5 +564,8 @@ def load_overview_macro_context_cockpit(
             limit=100,
         ),
         collection_ops_snapshot=load_overview_collection_ops_snapshot(),
-        historical_analog_snapshot=load_overview_market_context_historical_analog(),
+        historical_analog_snapshot=load_overview_market_context_historical_analog(
+            as_of_date=as_of_date,
+            pattern_window=pattern_window,
+        ),
     )

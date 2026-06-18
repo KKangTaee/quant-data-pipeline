@@ -15,6 +15,12 @@ DEFAULT_MIN_SAMPLE_COUNT = 8
 DEFAULT_MIN_ANCHOR_GAP = 20
 DEFAULT_RELATIVE_STRENGTH_FLOOR = 0.01
 DEFAULT_RELATIVE_STRENGTH_RATIO = 0.5
+DEFAULT_PATTERN_WINDOW = "5D"
+PATTERN_WINDOW_SPECS: dict[str, dict[str, Any]] = {
+    "5D": {"days": 5, "label": "5D", "group_period": "weekly"},
+    "20D": {"days": 20, "label": "20D", "group_period": "monthly"},
+    "MONTHLY": {"days": 21, "label": "Monthly", "group_period": "monthly"},
+}
 
 
 _SECTOR_PROXY_ROWS: tuple[dict[str, Any], ...] = (
@@ -97,6 +103,21 @@ def _format_pct(value: float | None) -> str:
     return f"{value * 100:+.1f}%"
 
 
+def _normalize_pattern_window(value: str | None) -> dict[str, Any]:
+    normalized = str(value or DEFAULT_PATTERN_WINDOW).strip().upper().replace(" ", "")
+    if normalized in {"1M", "MONTH", "MONTHLY"}:
+        normalized = "MONTHLY"
+    if normalized not in PATTERN_WINDOW_SPECS:
+        normalized = DEFAULT_PATTERN_WINDOW
+    spec = dict(PATTERN_WINDOW_SPECS[normalized])
+    spec["key"] = normalized
+    return spec
+
+
+def historical_analog_pattern_window_options() -> tuple[dict[str, Any], ...]:
+    return tuple({"key": key, **value} for key, value in PATTERN_WINDOW_SPECS.items())
+
+
 def _default_limitations() -> list[str]:
     return [
         "과거 통계는 미래 움직임 보장이 아님",
@@ -117,10 +138,13 @@ def _base_model(
     coverage: list[dict[str, Any]] | None = None,
     coverage_gaps: list[dict[str, Any]] | None = None,
     repair_action: dict[str, Any] | None = None,
+    as_of_date: str | None = None,
+    pattern_window: str | None = None,
 ) -> dict[str, Any]:
     current_as_of = _coverage_current_as_of(coverage or [])
+    pattern = _normalize_pattern_window(pattern_window)
     return {
-        "schema_version": "overview_market_context_historical_analog_v1",
+        "schema_version": "overview_market_context_historical_analog_v2",
         "status": status,
         "headline": headline,
         "detail": detail,
@@ -130,7 +154,13 @@ def _base_model(
         "condition_summary": "",
         "data_window": "",
         "current_as_of": current_as_of,
-        "calculation_note": "현재 sector ETF의 SPY 대비 5D 상대강도 기준",
+        "requested_as_of": as_of_date or "latest",
+        "as_of_mode": "selected" if as_of_date else "latest",
+        "pattern_window": pattern["key"],
+        "pattern_window_label": pattern["label"],
+        "pattern_window_days": pattern["days"],
+        "calculation_note": f"선택한 기준 시점의 sector ETF SPY 대비 {pattern['label']} 상대강도 기준",
+        "leadership_replay_basis": "current universe/sector metadata + DB prices through the selected as-of date",
         "coverage": coverage or [],
         "coverage_gaps": coverage_gaps or [],
         "repair_action": repair_action or {},
@@ -244,13 +274,23 @@ def _normalize_price_history(price_history: pd.DataFrame | None) -> pd.DataFrame
     return frame[["symbol", "date", "price"]].sort_values(["symbol", "date"])
 
 
+def _filter_price_history_as_of(frame: pd.DataFrame, end_date: str | None) -> pd.DataFrame:
+    if frame.empty or not end_date:
+        return frame
+    end_ts = pd.to_datetime(end_date, errors="coerce")
+    if pd.isna(end_ts):
+        return frame
+    return frame[frame["date"] <= end_ts.normalize()]
+
+
 def summarize_price_coverage(
     price_history: pd.DataFrame | None,
     *,
     symbols: Iterable[str],
     min_rows: int = DEFAULT_MIN_HISTORY_ROWS,
+    end_date: str | None = None,
 ) -> list[dict[str, Any]]:
-    frame = _normalize_price_history(price_history)
+    frame = _filter_price_history_as_of(_normalize_price_history(price_history), end_date)
     requested = [str(symbol).upper() for symbol in symbols if str(symbol or "").strip()]
     rows: list[dict[str, Any]] = []
     for symbol in dict.fromkeys(requested):
@@ -325,8 +365,13 @@ def _coverage_repair_action(coverage_gaps: Sequence[dict[str, Any]]) -> dict[str
     }
 
 
-def _price_matrix(price_history: pd.DataFrame | None, symbols: Sequence[str]) -> pd.DataFrame:
-    frame = _normalize_price_history(price_history)
+def _price_matrix(
+    price_history: pd.DataFrame | None,
+    symbols: Sequence[str],
+    *,
+    end_date: str | None = None,
+) -> pd.DataFrame:
+    frame = _filter_price_history_as_of(_normalize_price_history(price_history), end_date)
     if frame.empty:
         return pd.DataFrame()
     frame = frame[frame["symbol"].isin(set(symbols))]
@@ -386,18 +431,28 @@ def _load_default_price_history(symbols: Sequence[str]) -> pd.DataFrame:
     return load_price_history(symbols=symbols, timeframe="1d")
 
 
+def _load_default_price_history_as_of(symbols: Sequence[str], end_date: str | None) -> pd.DataFrame:
+    return load_price_history(symbols=symbols, timeframe="1d", end=end_date)
+
+
 def build_historical_analog_snapshot(
     *,
     group_leadership_snapshot: dict[str, Any] | None,
     price_history: pd.DataFrame | None = None,
     comparison_symbols: Sequence[str] = DEFAULT_COMPARISON_SYMBOLS,
     horizons: Sequence[int] = DEFAULT_HORIZONS,
+    as_of_date: str | None = None,
+    pattern_window: str | None = DEFAULT_PATTERN_WINDOW,
     min_history_rows: int = DEFAULT_MIN_HISTORY_ROWS,
     min_sample_count: int = DEFAULT_MIN_SAMPLE_COUNT,
     min_anchor_gap: int = DEFAULT_MIN_ANCHOR_GAP,
     relative_strength_floor: float = DEFAULT_RELATIVE_STRENGTH_FLOOR,
     relative_strength_ratio: float = DEFAULT_RELATIVE_STRENGTH_RATIO,
 ) -> dict[str, Any]:
+    pattern = _normalize_pattern_window(pattern_window)
+    pattern_days = int(pattern["days"])
+    pattern_label = str(pattern["label"])
+    normalized_as_of = _format_date(as_of_date)
     leadership = resolve_leadership_sector_proxy(group_leadership_snapshot)
     leadership_sector = leadership.get("leadership_sector")
     proxy_etf = leadership.get("proxy_etf")
@@ -408,12 +463,14 @@ def build_historical_analog_snapshot(
             detail=str(leadership.get("detail") or "Current sector leadership proxy is unavailable."),
             leadership_sector=leadership_sector,
             proxy_etf=None,
+            as_of_date=normalized_as_of,
+            pattern_window=str(pattern["key"]),
         )
 
     symbols = list(dict.fromkeys([str(proxy_etf), "SPY", *[str(item) for item in comparison_symbols]]))
     if price_history is None:
         try:
-            price_history = _load_default_price_history(symbols)
+            price_history = _load_default_price_history_as_of(symbols, normalized_as_of)
         except Exception as exc:  # pragma: no cover - UI resilience around local DB availability
             return _base_model(
                 status="INSUFFICIENT_DATA",
@@ -421,9 +478,16 @@ def build_historical_analog_snapshot(
                 detail=f"DB price history read failed: {exc}",
                 leadership_sector=str(leadership_sector or ""),
                 proxy_etf=str(proxy_etf),
+                as_of_date=normalized_as_of,
+                pattern_window=str(pattern["key"]),
             )
 
-    coverage = summarize_price_coverage(price_history, symbols=symbols, min_rows=min_history_rows)
+    coverage = summarize_price_coverage(
+        price_history,
+        symbols=symbols,
+        min_rows=min_history_rows,
+        end_date=normalized_as_of,
+    )
     coverage_gaps = _coverage_gap_rows(coverage)
     repair_action = _coverage_repair_action(coverage_gaps)
     coverage_by_symbol = {row["symbol"]: row for row in coverage}
@@ -446,9 +510,11 @@ def build_historical_analog_snapshot(
             coverage=coverage,
             coverage_gaps=coverage_gaps,
             repair_action=repair_action,
+            as_of_date=normalized_as_of,
+            pattern_window=str(pattern["key"]),
         )
 
-    matrix = _price_matrix(price_history, symbols)
+    matrix = _price_matrix(price_history, symbols, end_date=normalized_as_of)
     if matrix.empty or str(proxy_etf) not in matrix.columns or "SPY" not in matrix.columns:
         return _base_model(
             status="INSUFFICIENT_DATA",
@@ -459,11 +525,13 @@ def build_historical_analog_snapshot(
             coverage=coverage,
             coverage_gaps=coverage_gaps,
             repair_action=repair_action,
+            as_of_date=normalized_as_of,
+            pattern_window=str(pattern["key"]),
         )
 
     analysis_matrix = matrix.dropna(subset=[str(proxy_etf), "SPY"])
     max_horizon = max(int(horizon) for horizon in horizons)
-    if len(analysis_matrix) < max(min_history_rows, max_horizon + 6):
+    if len(analysis_matrix) < max(min_history_rows, max_horizon + pattern_days + 1):
         return _base_model(
             status="INSUFFICIENT_DATA",
             headline="과거 유사 맥락 자료 부족",
@@ -473,26 +541,37 @@ def build_historical_analog_snapshot(
             coverage=coverage,
             coverage_gaps=coverage_gaps,
             repair_action=repair_action,
+            as_of_date=normalized_as_of,
+            pattern_window=str(pattern["key"]),
         )
 
     latest_index = len(analysis_matrix) - 1
     proxy_series = analysis_matrix[str(proxy_etf)]
     spy_series = analysis_matrix["SPY"]
-    current_proxy_5d = _period_return(proxy_series, latest_index, 5)
-    current_spy_5d = _period_return(spy_series, latest_index, 5)
-    if current_proxy_5d is None or current_spy_5d is None:
+    current_proxy_window = _period_return(proxy_series, latest_index, pattern_days)
+    current_spy_window = _period_return(spy_series, latest_index, pattern_days)
+    if current_proxy_window is None or current_spy_window is None:
         return _base_model(
             status="INSUFFICIENT_DATA",
             headline="과거 유사 맥락 자료 부족",
-            detail=f"{leadership_sector}({proxy_etf})의 최근 5D 상대강도 계산 구간이 부족합니다.",
+            detail=f"{leadership_sector}({proxy_etf})의 {pattern_label} 상대강도 계산 구간이 부족합니다.",
             leadership_sector=str(leadership_sector or ""),
             proxy_etf=str(proxy_etf),
             coverage=coverage,
             coverage_gaps=coverage_gaps,
             repair_action=repair_action,
+            as_of_date=normalized_as_of,
+            pattern_window=str(pattern["key"]),
         )
 
-    current_rel_5d = current_proxy_5d - current_spy_5d
+    current_rel_window = current_proxy_window - current_spy_window
+    current_proxy_5d = _period_return(proxy_series, latest_index, 5)
+    current_spy_5d = _period_return(spy_series, latest_index, 5)
+    current_rel_5d = (
+        current_proxy_5d - current_spy_5d
+        if current_proxy_5d is not None and current_spy_5d is not None
+        else None
+    )
     current_proxy_20d = _period_return(proxy_series, latest_index, 20)
     current_spy_20d = _period_return(spy_series, latest_index, 20)
     current_rel_20d = (
@@ -500,12 +579,12 @@ def build_historical_analog_snapshot(
         if current_proxy_20d is not None and current_spy_20d is not None
         else None
     )
-    threshold = max(relative_strength_floor, current_rel_5d * relative_strength_ratio)
+    threshold = max(relative_strength_floor, current_rel_window * relative_strength_ratio)
     latest_forwardable_index = latest_index - max_horizon
     candidates: list[int] = []
-    for index in range(5, max(5, latest_forwardable_index + 1)):
-        proxy_return = _period_return(proxy_series, index, 5)
-        spy_return = _period_return(spy_series, index, 5)
+    for index in range(pattern_days, max(pattern_days, latest_forwardable_index + 1)):
+        proxy_return = _period_return(proxy_series, index, pattern_days)
+        spy_return = _period_return(spy_series, index, pattern_days)
         if proxy_return is None or spy_return is None:
             continue
         if proxy_return - spy_return >= threshold:
@@ -534,13 +613,14 @@ def build_historical_analog_snapshot(
         else f"과거 유사 맥락 표본 {sample_count}회"
     )
     condition_summary = (
-        f"{proxy_etf} 5D-SPY 5D 상대강도 >= {_format_pct(threshold)} "
-        f"(현재 5D gap {_format_pct(current_rel_5d)}, 20D gap {_format_pct(current_rel_20d)})"
+        f"{proxy_etf} {pattern_label}-SPY {pattern_label} 상대강도 >= {_format_pct(threshold)} "
+        f"(선택 기준 gap {_format_pct(current_rel_window)}, 5D gap {_format_pct(current_rel_5d)}, "
+        f"20D gap {_format_pct(current_rel_20d)})"
     )
     first_date = _format_date(analysis_matrix.index.min()) or ""
     last_date = _format_date(analysis_matrix.index.max()) or ""
     return {
-        "schema_version": "overview_market_context_historical_analog_v1",
+        "schema_version": "overview_market_context_historical_analog_v2",
         "status": status,
         "headline": headline,
         "detail": f"{leadership_sector}({proxy_etf})가 SPY 대비 강했던 과거 구간 기준",
@@ -550,13 +630,28 @@ def build_historical_analog_snapshot(
         "condition_summary": condition_summary,
         "data_window": f"{first_date} - {last_date}" if first_date and last_date else "",
         "current_as_of": last_date,
-        "calculation_note": "현재 sector ETF의 SPY 대비 5D 상대강도 기준",
+        "requested_as_of": normalized_as_of or "latest",
+        "as_of_mode": "selected" if normalized_as_of else "latest",
+        "pattern_window": pattern["key"],
+        "pattern_window_label": pattern_label,
+        "pattern_window_days": pattern_days,
+        "calculation_note": f"선택한 기준 시점의 sector ETF SPY 대비 {pattern_label} 상대강도 기준",
+        "leadership_replay_basis": "current universe/sector metadata + DB prices through the selected as-of date",
         "coverage": coverage,
         "coverage_gaps": coverage_gaps,
         "repair_action": repair_action,
         "rows": rows,
-        "anchor_dates": [_format_date(analysis_matrix.index[index]) for index in anchor_indices],
-        "limitations": _default_limitations(),
+        "anchor_dates": [
+            date_value
+            for index in anchor_indices
+            for date_value in [_format_date(analysis_matrix.index[index])]
+            if date_value
+        ],
+        "limitations": [
+            *_default_limitations(),
+            "선택 기준일 이후 가격은 anchor 탐색과 forward 분포에 사용하지 않음",
+            "as-of sector leadership은 현재 universe/sector metadata 기반 재계산",
+        ],
         "boundary_note": (
             "Overview context-only 참고 정보입니다. Backtest strategy, validation gate, "
             "Final Review decision, Operations monitoring으로 연결하지 않습니다."

@@ -89,6 +89,7 @@ from app.web.overview_ui_components import (
     render_overview_toolbar_label,
     render_market_refresh_status_bar,
     render_market_snapshot_meta_strip,
+    render_macro_context_reading_flow,
 )
 
 
@@ -166,6 +167,15 @@ EVENT_TYPE_LABELS = {
 MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
 MARKET_CONTEXT_ANALOG_REFRESH_RESULT_KEY = "overview_market_context_historical_analog_ohlcv_result"
 MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
+MARKET_CONTEXT_ANALOG_AS_OF_OPTIONS = {
+    "latest": "latest",
+    "selected": "과거 기준일",
+}
+MARKET_CONTEXT_ANALOG_PATTERN_OPTIONS = {
+    "5D": "5D",
+    "20D": "20D",
+    "MONTHLY": "monthly",
+}
 US_EASTERN_TZ = ZoneInfo("America/New_York")
 KOREA_TZ = ZoneInfo("Asia/Seoul")
 US_MARKET_OPEN_TIME = time(9, 30)
@@ -1970,14 +1980,68 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
         _render_overview_market_context_refresh_result(result_key)
 
 
+def _render_overview_historical_analog_controls() -> dict[str, str | None]:
+    st.markdown("#### 참고: 과거 유사 맥락 기준")
+    st.caption("선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포를 다시 계산합니다.")
+    cols = st.columns([0.9, 1.0, 0.9], gap="small", vertical_alignment="bottom")
+    basis = cols[0].selectbox(
+        "기준 시점",
+        options=list(MARKET_CONTEXT_ANALOG_AS_OF_OPTIONS.keys()),
+        format_func=lambda value: MARKET_CONTEXT_ANALOG_AS_OF_OPTIONS.get(value, value),
+        index=0,
+        key="overview_market_context_analog_as_of_mode",
+        help="latest는 저장된 DB 가격의 최신 usable 기준일을 사용합니다.",
+    )
+    stored_date = st.session_state.get("overview_market_context_analog_as_of_date")
+    default_date = stored_date if isinstance(stored_date, date) else date.today()
+    selected_date = cols[1].date_input(
+        "기준일",
+        value=default_date,
+        max_value=date.today(),
+        disabled=basis == "latest",
+        key="overview_market_context_analog_as_of_date",
+        help="과거 기준일을 선택하면 해당 날짜 이하의 DB 가격 이력만 사용합니다.",
+    )
+    pattern_window = cols[2].selectbox(
+        "패턴 기간",
+        options=list(MARKET_CONTEXT_ANALOG_PATTERN_OPTIONS.keys()),
+        format_func=lambda value: MARKET_CONTEXT_ANALOG_PATTERN_OPTIONS.get(value, value),
+        index=0,
+        key="overview_market_context_analog_pattern_window",
+        help="리더십 sector와 sector ETF 상대강도 조건을 읽는 기간입니다.",
+    )
+    as_of_date = selected_date.isoformat() if basis == "selected" and isinstance(selected_date, date) else None
+    return {
+        "as_of_date": as_of_date,
+        "pattern_window": str(pattern_window or "5D"),
+    }
+
+
+def _overview_historical_analog_control_state() -> dict[str, str | None]:
+    basis = str(st.session_state.get("overview_market_context_analog_as_of_mode") or "latest")
+    selected_date = st.session_state.get("overview_market_context_analog_as_of_date")
+    pattern_window = str(st.session_state.get("overview_market_context_analog_pattern_window") or "5D")
+    as_of_date = selected_date.isoformat() if basis == "selected" and isinstance(selected_date, date) else None
+    return {
+        "as_of_date": as_of_date,
+        "pattern_window": pattern_window,
+    }
+
+
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락")
     st.caption(
         "상단에서 현재 시장을 먼저 훑고, 아래 단락에서 브리프와 다음 맥락 체크를 순서대로 확인합니다."
     )
     _render_overview_market_context_refresh_reflection()
-    cockpit_model = load_overview_macro_context_cockpit()
-    render_macro_context_cockpit(cockpit_model)
+    analog_controls = _overview_historical_analog_control_state()
+    cockpit_model = load_overview_macro_context_cockpit(
+        as_of_date=analog_controls["as_of_date"],
+        pattern_window=str(analog_controls["pattern_window"] or "5D"),
+    )
+    render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
+    _render_overview_historical_analog_controls()
+    render_macro_context_reading_flow(cockpit_model)
     _render_overview_historical_analog_repair_action(cockpit_model)
     _render_overview_market_context_refresh_bar(cockpit_model)
 

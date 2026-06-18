@@ -2669,7 +2669,7 @@ def _macro_cockpit_next_checks_html(checks: list[dict[str, Any]]) -> str:
         '<section class="ov-macro-reading-section ov-macro-cues" style="--ov-reading-tone:var(--ov-mi-color-warning);">'
         '<div class="ov-macro-section-head">'
         '<div class="ov-macro-section-title">다음 맥락 체크</div>'
-        '<div class="ov-macro-section-note">오늘 흐름을 바로 예측하지 않고, 해석을 바꿀 수 있는 다음 관찰 지점만 표시합니다.</div>'
+        '<div class="ov-macro-section-note">오늘 흐름을 단정하지 않고, 해석을 바꿀 수 있는 다음 관찰 지점만 표시합니다.</div>'
         "</div>"
         f'<ul class="ov-macro-cues-list">{"".join(html)}</ul>'
         "</section>"
@@ -2747,11 +2747,12 @@ def _analog_summary_strip_html(model: dict[str, Any], rows: list[dict[str, Any]]
     if not rows:
         return ""
     proxy_etf = _display_value(model.get("proxy_etf"))
+    pattern_label = _display_value(model.get("pattern_window_label") or model.get("pattern_window") or "5D")
     reference = _analog_find_reference_row(rows, str(model.get("proxy_etf") or ""))
     reference_horizon = _display_value(reference.get("horizon") or "20D")
     sample_count = _display_value(model.get("sample_count") or reference.get("sample_count"))
     metrics = [
-        ("유사 사례", f"{sample_count}회", "현재 sector ETF의 SPY 대비 5D 상대강도 기준"),
+        ("유사 사례", f"{sample_count}회", f"선택 기준 시점의 SPY 대비 {pattern_label} 상대강도 기준"),
         (
             f"{proxy_etf} {reference_horizon} 중간값",
             _analog_pct(reference.get("median_return_pct")),
@@ -2822,11 +2823,12 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     repair_action = dict(model.get("repair_action") or {})
     condition = _display_value(model.get("condition_summary") or model.get("detail"))
     proxy_etf = _display_value(model.get("proxy_etf"))
+    pattern_label = _display_value(model.get("pattern_window_label") or model.get("pattern_window") or "5D")
     if rows:
         primary_rows, support_rows = _analog_rows_by_priority(rows, proxy_etf)
         explanation = (
-            f"현재 리더십 섹터를 ETF proxy로 보고, {proxy_etf}가 SPY 대비 5D 기준 강했던 과거 구간을 찾습니다. "
-            "그 날짜 이후 5D / 20D / 60D 동안 주요 자산이 어떻게 움직였는지 요약한 참고 통계입니다."
+            f"선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고, {proxy_etf}가 SPY 대비 {pattern_label} 기준 강했던 과거 구간을 찾습니다. "
+            "각 anchor 날짜 이후 5D / 20D / 60D 동안 주요 자산이 어떻게 움직였는지 요약한 참고 통계입니다."
         )
         body_html = (
             f'<div class="ov-analog-explain">{escape(explanation)}</div>'
@@ -2881,16 +2883,22 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     if not rows:
         section_class += " is-muted-reference"
     current_as_of = _display_value(model.get("current_as_of"))
+    requested_as_of = _display_value(model.get("requested_as_of") or "latest")
     data_window = _display_value(model.get("data_window"))
-    calculation_note = _display_value(model.get("calculation_note") or "현재 sector ETF의 SPY 대비 5D 상대강도 기준")
+    calculation_note = _display_value(model.get("calculation_note") or f"선택한 기준 시점의 sector ETF SPY 대비 {pattern_label} 상대강도 기준")
+    replay_basis = _display_value(model.get("leadership_replay_basis"))
     meta_items = [
         f"기준 sector: {_display_value(model.get('leadership_sector'))}",
         f"ETF proxy: {_display_value(model.get('proxy_etf'))}",
-        f"기준일: {current_as_of}",
+        f"기준 시점: {requested_as_of}",
+        f"계산 기준일: {current_as_of}",
+        f"패턴 기간: {pattern_label}",
         f"sample: {_display_value(model.get('sample_count'))}",
         f"자료 기간: {data_window}",
         f"계산식: {calculation_note}",
     ]
+    if replay_basis != "-":
+        meta_items.append(f"replay: {replay_basis}")
     meta_html = "".join(f"<span>{escape(item)}</span>" for item in meta_items)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
     return (
@@ -3034,11 +3042,11 @@ def _macro_context_reading_flow_html(model: dict[str, Any]) -> str:
     return f'<section class="ov-macro-reading-flow">{flow_html}</section>'
 
 
-def _macro_context_cockpit_html(model: dict[str, Any]) -> str:
+def _macro_context_cockpit_html(model: dict[str, Any], *, include_reading_flow: bool = True) -> str:
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
     body_html = _macro_cockpit_body_html(model)
-    reading_flow_html = _macro_context_reading_flow_html(model)
+    reading_flow_html = _macro_context_reading_flow_html(model) if include_reading_flow else ""
     return (
         f'<section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">'
         '<div class="ov-macro-cockpit-head">'
@@ -3055,10 +3063,17 @@ def _macro_context_cockpit_html(model: dict[str, Any]) -> str:
     )
 
 
-def render_macro_context_cockpit(model: dict[str, Any]) -> None:
+def render_macro_context_cockpit(model: dict[str, Any], *, include_reading_flow: bool = True) -> None:
     st.markdown(
         overview_ui_css()
-        + _macro_context_cockpit_html(model),
+        + _macro_context_cockpit_html(model, include_reading_flow=include_reading_flow),
+        unsafe_allow_html=True,
+    )
+
+
+def render_macro_context_reading_flow(model: dict[str, Any]) -> None:
+    st.markdown(
+        _macro_context_reading_flow_html(model),
         unsafe_allow_html=True,
     )
 

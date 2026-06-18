@@ -488,7 +488,7 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
     hg_z = _std_by_symbol(symbols, "HG=F") or 0.0
 
     scenario = "혼재된 매크로 흐름"
-    summary = "현재 선물 일봉 기준 신호가 한 방향으로 강하게 모이지 않아 혼재된 시장 흐름으로 해석됩니다."
+    summary = "현재 선물 일봉 기준 흐름이 한 방향으로 강하게 모이지 않아 혼재된 시장 흐름으로 해석됩니다."
     evidence: list[str] = []
 
     if inflation >= 20 and rate_pressure >= 20 and nq_z <= -SIGNAL_Z_THRESHOLD:
