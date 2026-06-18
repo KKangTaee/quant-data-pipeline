@@ -189,6 +189,11 @@ yfinance futures OHLCV
   -> app.services.futures_macro_validation.build_futures_macro_validation_snapshot()
   -> Workspace > Overview > Futures Monitor
   -> Workspace > Overview > Data Health
+
+finance_price.futures_ohlcv daily rows
+  -> finance.loaders.futures.load_futures_ohlcv(symbols=["ZN=F", "ZB=F"], interval_code="1d", end=selected_as_of)
+  -> app.services.overview_market_context_analog.build_historical_analog_snapshot()
+  -> Workspace > Overview > Market Context > Macro 조건 포함 pilot
 ```
 
 의미:
@@ -199,6 +204,7 @@ yfinance futures OHLCV
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
+- Market Context 3차-B의 Macro 조건 포함 pilot은 저장된 `ZN=F` / `ZB=F` daily rows만 읽어 Rate Pressure futures proxy bucket을 계산한다. selected as-of 이후 row와 anchor 이후 futures 움직임은 조건 계산에 쓰지 않는다.
 
 주의:
 

@@ -460,7 +460,7 @@ def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentime
 def load_overview_market_context_historical_analog(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
-    cache_schema_version: str = "overview-historical-analog-v3-macro-conditioned-pilot",
+    cache_schema_version: str = "overview-historical-analog-v4-futures-conditioned-pilot",
 ) -> dict[str, Any]:
     del cache_schema_version
     normalized_pattern = str(pattern_window or "5D").strip().upper()

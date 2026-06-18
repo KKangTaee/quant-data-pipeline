@@ -2952,7 +2952,7 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
     table_html = ""
     if rows:
         table_html = (
-            f"{_analog_table_block_html(primary_rows, title='Macro 조건 포함 핵심 자산', note='broad 조건에 GLD context를 더한 pilot 표본입니다.')}"
+            f"{_analog_table_block_html(primary_rows, title='Macro 조건 포함 핵심 자산', note='broad 조건에 추가 macro context를 더한 pilot 표본입니다.')}"
             f"{_analog_table_block_html(support_rows, title='Macro 조건 포함 보조 자산', note='같은 pilot 표본의 배경 자산 분포입니다.', secondary=True)}"
         )
     else:

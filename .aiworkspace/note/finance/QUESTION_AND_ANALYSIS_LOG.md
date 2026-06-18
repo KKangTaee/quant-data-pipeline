@@ -7838,3 +7838,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `일부 자료 확인 필요`를 raw job/status table로 키우는 것이 아니라, 어떤 source를 어느 tab에서 왜 확인하고 어떤 action으로 이어질지 먼저 보이게 해야 함.
 - Analysis result: 기존 `next_checks`는 모델에 있었지만 UI는 `interpretation_cues`를 렌더링해 반복감이 생겼다. Data Health handoff와 Events source review를 재사용해 `next_checks`를 실제 checklist 계약으로 승격하는 것이 가장 작은 안전한 변경이다.
 - Follow-up: 1차는 완료했다. 2차 / 3차는 `.aiworkspace/note/finance/tasks/active/overview-market-context-source-action-flow-v1-20260618/DESIGN.md`에서 승인 전 설계 후보로 남긴다.
+
+### 2026-06-18 - Market Context 3차-B로 futures Rate Pressure 조건을 추가한다
+
+- User request: 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV 기반 macro 조건 1개만 추가하고, FRED / events / sentiment / 새 provider / schema / loader는 열지 말라고 승인함.
+- Interpreted goal: broad analog 자체를 바꾸지 않고, 선택 기준 시점의 futures macro context와 비슷한 과거 anchor가 얼마나 남는지 context-only distribution으로 보여줘야 함.
+- Analysis result: 기존 `load_futures_ohlcv(end=...)`로 `ZN=F` / `ZB=F` daily row를 selected as-of 이하로 읽을 수 있어 새 loader/schema 없이 Rate Pressure futures proxy bucket을 만들 수 있다.
+- Follow-up: 3차-B는 완료했다. 남은 후보는 full PIT universe/sector metadata, event-window analog, FRED rates, events/sentiment conditioning, safe-haven futures variant이며 모두 별도 승인 대상이다.

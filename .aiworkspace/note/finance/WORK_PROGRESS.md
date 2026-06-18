@@ -5022,3 +5022,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `다음 맥락 체크`는 `next_checks` source/action checklist를 렌더링하고, source confidence footer와 보조 갱신 expander도 같은 action 흐름을 따른다.
   - Historical analog는 current as-of / data window / 계산식 기준을 표시하며 context-only boundary를 유지한다.
   - 2차 / 3차 후속 설계 메모는 task `DESIGN.md`에 남겼고, 새 provider / schema / replay storage / macro-conditioned analog 구현은 하지 않았다.
+- Overview Market Context Futures-Conditioned Analog V3B:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-futures-conditioned-analog-v3b-20260618/`에서 3차-B를 완료했다.
+  - 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV Rate Pressure proxy (`ZN=F` / `ZB=F`) 조건 1개를 추가했다.
+  - Browser QA 20D path는 broad 69회 -> Macro 조건 sample 1회, GLD / futures condition row 분리 표시, forbidden Korean copy 없음으로 확인했다.
+  - FRED rates, events, sentiment, 새 provider / schema / loader, Backtest / Validation / Final Review / Operations logic은 열지 않았다.

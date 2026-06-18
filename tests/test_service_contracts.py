@@ -9068,6 +9068,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             },
             price_history=pd.DataFrame(rows),
             comparison_symbols=("SPY", "QQQ", "GLD"),
+            futures_history=pd.DataFrame(),
             horizons=(20,),
             min_history_rows=90,
             min_sample_count=3,
@@ -9085,12 +9086,97 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("GLD", pilot["condition_summary"])
         self.assertIn("Broad 3회 중 Macro 조건 포함 2회", pilot["sample_reduction_reason"])
         self.assertEqual([item["id"] for item in pilot["used_conditions"]], ["sector_relative_strength", "gld_safe_haven_context"])
-        self.assertEqual(pilot["insufficient_conditions"], [])
-        self.assertIn("futures_macro_thermometer", [item["id"] for item in pilot["excluded_conditions"]])
+        self.assertEqual([item["id"] for item in pilot["insufficient_conditions"]], ["futures_rate_pressure_context"])
+        self.assertNotIn("futures_macro_thermometer", [item["id"] for item in pilot["excluded_conditions"]])
         self.assertEqual(
             [row["sample_count"] for row in pilot["rows"] if row["asset"] == "QQQ" and row["horizon"] == "20D"],
             [2],
         )
+
+    def test_historical_analog_adds_stored_futures_rate_pressure_condition_without_future_rows(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        as_of_index = 90
+        as_of_date = str(dates[as_of_index].date())
+        anchors = [30, 50, 70]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, as_of_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 120.0
+            if symbol == "GLD":
+                for anchor in anchors:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 102.0 if anchor in {30, 70} else 98.0
+                prices[as_of_index - 5] = 100.0
+                prices[as_of_index] = 102.0
+                prices[-5] = 100.0
+                prices[-1] = 98.0
+            for idx, day in enumerate(dates):
+                rows.append({"symbol": symbol, "date": day, "close": prices[idx], "adj_close": prices[idx]})
+
+        futures_rows: list[dict[str, object]] = []
+        for futures_symbol in ["ZN=F", "ZB=F"]:
+            prices = [100.0 for _ in dates]
+            for anchor in [30, as_of_index]:
+                prices[anchor - 5] = 100.0
+                prices[anchor] = 97.0
+            prices[70 - 5] = 100.0
+            prices[70] = 103.0
+            prices[-5] = 100.0
+            prices[-1] = 104.0
+            for idx, day in enumerate(dates):
+                futures_rows.append(
+                    {
+                        "provider_symbol": futures_symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": day,
+                        "open": prices[idx],
+                        "high": prices[idx],
+                        "low": prices[idx],
+                        "close": prices[idx],
+                        "volume": 1000,
+                    }
+                )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            futures_history=pd.DataFrame(futures_rows),
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(20,),
+            as_of_date=as_of_date,
+            min_history_rows=80,
+            min_sample_count=3,
+            min_anchor_gap=10,
+        )
+
+        pilot = model["macro_conditioned_analog"]
+        self.assertEqual(model["current_as_of"], as_of_date)
+        self.assertEqual(pilot["broad_sample_count"], 3)
+        self.assertEqual(pilot["sample_count"], 1)
+        self.assertEqual(pilot["additional_condition_count"], 2)
+        self.assertEqual(
+            [item["id"] for item in pilot["used_conditions"]],
+            ["sector_relative_strength", "gld_safe_haven_context", "futures_rate_pressure_context"],
+        )
+        self.assertEqual(pilot["insufficient_conditions"], [])
+        self.assertIn("Rate Pressure futures proxy", pilot["condition_summary"])
+        self.assertIn("ZN=F/ZB=F", pilot["condition_summary"])
+        self.assertIn(as_of_date, pilot["used_conditions"][-1]["detail"])
+        self.assertNotIn(str(dates[-1].date()), pilot["used_conditions"][-1]["detail"])
+        self.assertEqual(pilot["anchor_dates"], [str(dates[30].date())])
+        self.assertIn("futures proxy", pilot["sample_reduction_reason"])
 
     def test_historical_analog_marks_macro_pilot_insufficient_when_gld_context_is_missing(self) -> None:
         from app.services.overview_market_context_analog import build_historical_analog_snapshot
@@ -9105,6 +9191,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             },
             price_history=price_rows,
             comparison_symbols=("SPY", "QQQ", "GLD"),
+            futures_history=pd.DataFrame(),
             min_history_rows=90,
             min_sample_count=2,
             min_anchor_gap=10,
@@ -9358,9 +9445,10 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                     "used_conditions": [
                         {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
                         {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 상승 context"},
+                        {"id": "futures_rate_pressure_context", "label": "Rate Pressure futures proxy", "status_label": "사용", "detail": "ZN=F/ZB=F 5D through 2024-06-17"},
                     ],
                     "insufficient_conditions": [
-                        {"id": "futures_macro_thermometer", "label": "Stored futures daily OHLCV", "status_label": "조건 부족", "detail": "이번 pilot 표본에는 쓰지 않음"},
+                        {"id": "fred_rates", "label": "2Y / 10Y FRED rates", "status_label": "사용 안 함", "detail": "이번 차수 제외"},
                     ],
                     "excluded_conditions": [
                         {"id": "events_sentiment", "label": "Events / sentiment", "status_label": "이번 차수 제외", "detail": "3차-A 범위 밖"},
@@ -9386,6 +9474,9 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("사용한 조건", html)
         self.assertIn("조건 부족", html)
         self.assertIn("이번 차수 제외", html)
+        self.assertIn("GLD price proxy", html)
+        self.assertIn("Rate Pressure futures proxy", html)
+        self.assertIn("ZN=F/ZB=F 5D", html)
         self.assertIn("표본 품질", html)
         self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
         self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 pilot"))

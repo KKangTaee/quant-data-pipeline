@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from finance.loaders.futures import load_futures_ohlcv
 from finance.loaders.price import load_price_history
 
 
@@ -17,6 +18,8 @@ DEFAULT_RELATIVE_STRENGTH_FLOOR = 0.01
 DEFAULT_RELATIVE_STRENGTH_RATIO = 0.5
 DEFAULT_PATTERN_WINDOW = "5D"
 DEFAULT_GLD_CONTEXT_THRESHOLD = 0.01
+DEFAULT_FUTURES_CONTEXT_THRESHOLD = 0.005
+DEFAULT_FUTURES_RATE_PRESSURE_SYMBOLS = ("ZN=F", "ZB=F")
 PATTERN_WINDOW_SPECS: dict[str, dict[str, Any]] = {
     "5D": {"days": 5, "label": "5D", "group_period": "weekly"},
     "20D": {"days": 20, "label": "20D", "group_period": "monthly"},
@@ -124,25 +127,18 @@ def _condition_item(
 def _macro_pilot_excluded_conditions() -> list[dict[str, Any]]:
     return [
         _condition_item(
-            condition_id="futures_macro_thermometer",
-            label="Stored futures daily OHLCV rate / safe-haven context",
-            status="DEFERRED",
-            status_label="이번 차수 제외",
-            detail="3차-A는 GLD price proxy만 추가 조건으로 사용하고 futures 조건은 후속 차수에서 검토합니다.",
-        ),
-        _condition_item(
             condition_id="fred_rates",
             label="2Y / 10Y FRED rates context",
             status="DISABLED",
             status_label="사용 안 함",
-            detail="3차-A에서는 새 FRED series 수집, provider fetch, UI 직접 fetch를 하지 않습니다.",
+            detail="3차-B에서는 새 FRED series 수집, provider fetch, UI 직접 fetch를 하지 않습니다.",
         ),
         _condition_item(
             condition_id="events_sentiment",
             label="Events / sentiment historical conditioning",
             status="DISABLED",
             status_label="이번 차수 제외",
-            detail="events / sentiment 조건화는 이번 pilot 범위 밖입니다.",
+            detail="events / sentiment 조건화는 3차-B pilot 범위 밖입니다.",
         ),
     ]
 
@@ -408,6 +404,94 @@ def _filter_price_history_as_of(frame: pd.DataFrame, end_date: str | None) -> pd
     return frame[frame["date"] <= end_ts.normalize()]
 
 
+def _normalize_futures_history(futures_history: pd.DataFrame | None) -> pd.DataFrame:
+    if futures_history is None or futures_history.empty:
+        return pd.DataFrame(columns=["symbol", "date", "close"])
+    frame = futures_history.copy()
+    if "provider_symbol" not in frame.columns or "candle_time_utc" not in frame.columns or "close" not in frame.columns:
+        return pd.DataFrame(columns=["symbol", "date", "close"])
+    if "interval_code" in frame.columns:
+        frame = frame[frame["interval_code"].astype(str).str.lower() == "1d"]
+    frame["symbol"] = frame["provider_symbol"].astype(str).str.upper()
+    timestamps = pd.to_datetime(frame["candle_time_utc"], errors="coerce", utc=True)
+    frame["date"] = timestamps.dt.tz_convert(None).dt.normalize()
+    frame["close"] = pd.to_numeric(frame["close"], errors="coerce")
+    frame = frame.dropna(subset=["symbol", "date", "close"])
+    frame = frame[frame["close"] > 0]
+    if frame.empty:
+        return pd.DataFrame(columns=["symbol", "date", "close"])
+    return frame[["symbol", "date", "close"]].sort_values(["symbol", "date"]).drop_duplicates(["symbol", "date"], keep="last")
+
+
+def _rate_pressure_members() -> dict[str, float]:
+    try:
+        from app.services.futures_macro_thermometer import SCORE_DEFINITIONS
+
+        for definition in SCORE_DEFINITIONS:
+            if definition.name == "Rate Pressure Score":
+                return {str(symbol).upper(): float(weight) for symbol, weight in definition.members.items()}
+    except Exception:  # pragma: no cover - defensive fallback around optional service import
+        pass
+    return {"ZN=F": -1.0, "ZB=F": -1.0}
+
+
+def _futures_rate_pressure_bucket(
+    futures_history: pd.DataFrame,
+    *,
+    as_of_date: Any,
+    pattern_days: int,
+    pattern_label: str,
+    threshold: float = DEFAULT_FUTURES_CONTEXT_THRESHOLD,
+) -> dict[str, Any] | None:
+    frame = _normalize_futures_history(futures_history)
+    as_of_ts = pd.to_datetime(as_of_date, errors="coerce")
+    if frame.empty or pd.isna(as_of_ts):
+        return None
+    as_of_ts = as_of_ts.normalize()
+    members = _rate_pressure_members()
+    signed_values: list[float] = []
+    used_symbols: list[str] = []
+    latest_dates: list[str] = []
+    for symbol, signed_weight in members.items():
+        symbol_rows = frame[(frame["symbol"] == symbol) & (frame["date"] <= as_of_ts)].sort_values("date")
+        if len(symbol_rows) <= pattern_days:
+            continue
+        latest = float(symbol_rows.iloc[-1]["close"])
+        base = float(symbol_rows.iloc[-(pattern_days + 1)]["close"])
+        if base <= 0:
+            continue
+        raw_return = latest / base - 1.0
+        signed_values.append(raw_return * (1.0 if signed_weight >= 0 else -1.0))
+        used_symbols.append(symbol)
+        latest_dates.append(_format_date(symbol_rows.iloc[-1]["date"]) or "")
+    if not signed_values:
+        return None
+    signed_average = float(pd.Series(signed_values, dtype="float64").mean())
+    if signed_average >= threshold:
+        key = "rate_pressure_up"
+        label = "Rate pressure up"
+    elif signed_average <= -threshold:
+        key = "rate_pressure_easing"
+        label = "Rate pressure easing"
+    else:
+        key = "rates_mixed"
+        label = "Rates mixed"
+    used_label = "/".join(used_symbols)
+    latest_date = max(date for date in latest_dates if date) if any(latest_dates) else _format_date(as_of_ts)
+    return {
+        "key": key,
+        "label": label,
+        "signed_return": signed_average,
+        "used_symbols": used_symbols,
+        "used_label": used_label,
+        "latest_date": latest_date,
+        "detail": (
+            f"{used_label} {pattern_label} futures proxy {_format_pct(signed_average)}; "
+            f"{label}; stored daily OHLCV through {latest_date}"
+        ),
+    }
+
+
 def summarize_price_coverage(
     price_history: pd.DataFrame | None,
     *,
@@ -587,6 +671,9 @@ def _macro_conditioned_pilot_model(
     broad_condition_summary: str,
     coverage_by_symbol: dict[str, dict[str, Any]],
     min_sample_count: int,
+    futures_history: pd.DataFrame | None = None,
+    futures_as_of_date: str | None = None,
+    futures_load_error: str | None = None,
 ) -> dict[str, Any]:
     broad_sample_count = len(anchor_indices)
     sector_condition = _condition_item(
@@ -659,12 +746,101 @@ def _macro_conditioned_pilot_model(
             broad_sample_count=broad_sample_count,
         )
 
-    conditioned_anchor_indices: list[int] = []
+    gld_conditioned_anchor_indices: list[int] = []
     for anchor in anchor_indices:
         anchor_gld_return = _period_return(gld_series, int(anchor), pattern_days)
         anchor_bucket = _gld_context_bucket(anchor_gld_return)
         if anchor_bucket and anchor_bucket["key"] == current_bucket["key"]:
-            conditioned_anchor_indices.append(int(anchor))
+            gld_conditioned_anchor_indices.append(int(anchor))
+
+    conditioned_anchor_indices = list(gld_conditioned_anchor_indices)
+    used_conditions = [
+        sector_condition,
+        _condition_item(
+            condition_id="gld_safe_haven_context",
+            label="GLD price proxy safe-haven / gold context",
+            status="USED",
+            status_label="사용",
+            detail=(
+                f"현재 GLD {pattern_label} return {_format_pct(current_gld_return)}; "
+                f"{current_bucket['label']}와 같은 anchor만 사용"
+            ),
+        ),
+    ]
+    insufficient_conditions: list[dict[str, Any]] = []
+    additional_condition_count = 1
+    futures_condition_clause = ""
+    futures_condition_detail = ""
+    current_futures_bucket = _futures_rate_pressure_bucket(
+        futures_history if futures_history is not None else pd.DataFrame(),
+        as_of_date=futures_as_of_date or analysis_matrix.index[-1],
+        pattern_days=pattern_days,
+        pattern_label=pattern_label,
+    )
+    if current_futures_bucket is None:
+        detail = (
+            f"{'/'.join(DEFAULT_FUTURES_RATE_PRESSURE_SYMBOLS)} stored futures daily OHLCV "
+            f"{pattern_label} rows are insufficient through {futures_as_of_date or _format_date(analysis_matrix.index[-1]) or '-'}."
+        )
+        if futures_load_error:
+            detail = f"{detail} DB read failed: {futures_load_error}"
+        insufficient_conditions.append(
+            _condition_item(
+                condition_id="futures_rate_pressure_context",
+                label="Rate Pressure futures proxy (ZN=F/ZB=F)",
+                status="INSUFFICIENT_CONTEXT",
+                status_label="조건 부족",
+                detail=detail,
+            )
+        )
+    else:
+        futures_matched_anchor_indices: list[int] = []
+        futures_bucket_count = 0
+        for anchor in gld_conditioned_anchor_indices:
+            anchor_bucket = _futures_rate_pressure_bucket(
+                futures_history if futures_history is not None else pd.DataFrame(),
+                as_of_date=analysis_matrix.index[int(anchor)],
+                pattern_days=pattern_days,
+                pattern_label=pattern_label,
+            )
+            if anchor_bucket is None:
+                continue
+            futures_bucket_count += 1
+            if anchor_bucket["key"] == current_futures_bucket["key"]:
+                futures_matched_anchor_indices.append(int(anchor))
+        if futures_bucket_count <= 0:
+            insufficient_conditions.append(
+                _condition_item(
+                    condition_id="futures_rate_pressure_context",
+                    label="Rate Pressure futures proxy (ZN=F/ZB=F)",
+                    status="INSUFFICIENT_CONTEXT",
+                    status_label="조건 부족",
+                    detail=(
+                        f"Current {current_futures_bucket['detail']}; anchor-date futures buckets are unavailable "
+                        f"for GLD-conditioned anchors."
+                    ),
+                )
+            )
+        else:
+            conditioned_anchor_indices = futures_matched_anchor_indices
+            additional_condition_count = 2
+            futures_condition_detail = (
+                f"{current_futures_bucket['detail']}; anchor buckets computed "
+                f"{futures_bucket_count}/{len(gld_conditioned_anchor_indices)}"
+            )
+            used_conditions.append(
+                _condition_item(
+                    condition_id="futures_rate_pressure_context",
+                    label="Rate Pressure futures proxy (ZN=F/ZB=F)",
+                    status="USED",
+                    status_label="사용",
+                    detail=futures_condition_detail,
+                )
+            )
+            futures_condition_clause = (
+                f" + Rate Pressure futures proxy {current_futures_bucket['label']} "
+                f"({current_futures_bucket['used_label']} {pattern_label} {_format_pct(current_futures_bucket['signed_return'])})"
+            )
 
     rows = _distribution_rows_for_anchors(
         analysis_matrix,
@@ -681,18 +857,27 @@ def _macro_conditioned_pilot_model(
     )
     sample_reduction_reason = (
         f"Broad {broad_sample_count}회 중 Macro 조건 포함 {sample_count}회만 남았습니다. "
-        f"추가 조건은 {gld_detail}입니다."
+        f"추가 조건은 {gld_detail}"
+        f"{'; futures proxy ' + futures_condition_detail if futures_condition_detail else ''}입니다."
     )
+    if insufficient_conditions:
+        sample_reduction_reason = (
+            f"{sample_reduction_reason} "
+            f"{insufficient_conditions[0]['label']}은 조건 부족으로 이번 표본 축소에 사용하지 않았습니다."
+        )
     return {
         "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
         "status": status,
         "status_label": status_label,
         "headline": f"Macro 조건 포함 pilot 표본 {sample_count}회",
-        "detail": f"기존 broad analog {broad_sample_count}회 중 GLD context까지 맞는 {sample_count}회만 별도로 봅니다.",
-        "condition_summary": f"{proxy_etf} relative strength + GLD {pattern_label} context {current_bucket['label']} ({_format_pct(current_gld_return)})",
+        "detail": f"기존 broad analog {broad_sample_count}회 중 추가 macro context까지 맞는 {sample_count}회만 별도로 봅니다.",
+        "condition_summary": (
+            f"{proxy_etf} relative strength + GLD {pattern_label} context "
+            f"{current_bucket['label']} ({_format_pct(current_gld_return)}){futures_condition_clause}"
+        ),
         "broad_sample_count": broad_sample_count,
         "sample_count": sample_count,
-        "additional_condition_count": 1,
+        "additional_condition_count": additional_condition_count,
         "sample_reduction_reason": sample_reduction_reason,
         "sample_quality": _sample_quality(
             status,
@@ -700,17 +885,8 @@ def _macro_conditioned_pilot_model(
             broad_sample_count=broad_sample_count,
             min_sample_count=min_sample_count,
         ),
-        "used_conditions": [
-            sector_condition,
-            _condition_item(
-                condition_id="gld_safe_haven_context",
-                label="GLD price proxy safe-haven / gold context",
-                status="USED",
-                status_label="사용",
-                detail=gld_detail,
-            ),
-        ],
-        "insufficient_conditions": [],
+        "used_conditions": used_conditions,
+        "insufficient_conditions": insufficient_conditions,
         "excluded_conditions": _macro_pilot_excluded_conditions(),
         "coverage_gaps": [],
         "rows": rows,
@@ -731,6 +907,10 @@ def _load_default_price_history_as_of(symbols: Sequence[str], end_date: str | No
     return load_price_history(symbols=symbols, timeframe="1d", end=end_date)
 
 
+def _load_default_futures_ohlcv_as_of(symbols: Sequence[str], end_date: str | None) -> pd.DataFrame:
+    return load_futures_ohlcv(symbols=symbols, interval_code="1d", end=end_date)
+
+
 def build_historical_analog_snapshot(
     *,
     group_leadership_snapshot: dict[str, Any] | None,
@@ -744,6 +924,7 @@ def build_historical_analog_snapshot(
     min_anchor_gap: int = DEFAULT_MIN_ANCHOR_GAP,
     relative_strength_floor: float = DEFAULT_RELATIVE_STRENGTH_FLOOR,
     relative_strength_ratio: float = DEFAULT_RELATIVE_STRENGTH_RATIO,
+    futures_history: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     pattern = _normalize_pattern_window(pattern_window)
     pattern_days = int(pattern["days"])
@@ -906,6 +1087,15 @@ def build_historical_analog_snapshot(
         f"(선택 기준 gap {_format_pct(current_rel_window)}, 5D gap {_format_pct(current_rel_5d)}, "
         f"20D gap {_format_pct(current_rel_20d)})"
     )
+    first_date = _format_date(analysis_matrix.index.min()) or ""
+    last_date = _format_date(analysis_matrix.index.max()) or ""
+    futures_load_error: str | None = None
+    if futures_history is None:
+        try:
+            futures_history = _load_default_futures_ohlcv_as_of(DEFAULT_FUTURES_RATE_PRESSURE_SYMBOLS, last_date)
+        except Exception as exc:  # pragma: no cover - UI resilience around local DB availability
+            futures_history = pd.DataFrame()
+            futures_load_error = str(exc)
     macro_conditioned_analog = _macro_conditioned_pilot_model(
         analysis_matrix=analysis_matrix,
         symbols=symbols,
@@ -917,9 +1107,10 @@ def build_historical_analog_snapshot(
         broad_condition_summary=condition_summary,
         coverage_by_symbol=coverage_by_symbol,
         min_sample_count=min_sample_count,
+        futures_history=futures_history,
+        futures_as_of_date=last_date,
+        futures_load_error=futures_load_error,
     )
-    first_date = _format_date(analysis_matrix.index.min()) or ""
-    last_date = _format_date(analysis_matrix.index.max()) or ""
     return {
         "schema_version": "overview_market_context_historical_analog_v2",
         "status": status,
