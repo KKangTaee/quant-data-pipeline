@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-18 - Overview Market Context Analog As-Of Window V2
+- Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-asof-window-v2-20260618/` for the approved 2차 `참고: 과거 유사 맥락` 기준 시점 / 패턴 기간 expansion.
+- Extended the historical analog read model and UI so users can compare `latest` or a selected 기준일 with `5D` / `20D` / `monthly` pattern windows while keeping the existing positive rate / median / best / worst / sample table.
+- As-of replay is bounded by existing DB data: price history is filtered to the selected 기준일, while full point-in-time sector leadership still requires an approved historical universe / sector snapshot read path.
+- Boundary stayed Overview-only and context-only: no new provider, schema, persistence path, registry / saved JSONL write, macro-conditioned analog, Backtest / Practical Validation / Final Review / Operations core logic, or trading semantics.
+
 ### 2026-06-17 - Finance Integration Doc Merge Skill
 - Opened `.aiworkspace/note/finance/tasks/active/finance-integration-doc-merge-skill-20260617/` after the user approved strengthening the existing merge-review skill.
 - Added `references/doc-merge-conflict-checklist.md` to `finance-integration-review` for `.aiworkspace/note/finance` Markdown conflicts.
