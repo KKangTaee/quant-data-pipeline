@@ -6,7 +6,9 @@ from typing import Any
 import pandas as pd
 
 from finance.loaders.futures import load_futures_ohlcv
+from finance.loaders.macro import load_macro_series_observations
 from finance.loaders.price import load_price_history
+from finance.loaders.sentiment import load_market_sentiment_history
 
 
 DEFAULT_COMPARISON_SYMBOLS = ("SPY", "QQQ", "TLT", "GLD", "IWM", "HYG", "LQD")
@@ -20,11 +22,29 @@ DEFAULT_PATTERN_WINDOW = "5D"
 DEFAULT_GLD_CONTEXT_THRESHOLD = 0.01
 DEFAULT_FUTURES_CONTEXT_THRESHOLD = 0.005
 DEFAULT_FUTURES_RATE_PRESSURE_SYMBOLS = ("ZN=F", "ZB=F")
+DEFAULT_REFERENCE_MACRO_SERIES = ("T10Y3M", "VIXCLS", "BAA10Y")
 PATTERN_WINDOW_SPECS: dict[str, dict[str, Any]] = {
     "5D": {"days": 5, "label": "5D", "group_period": "weekly"},
     "20D": {"days": 20, "label": "20D", "group_period": "monthly"},
     "MONTHLY": {"days": 21, "label": "Monthly", "group_period": "monthly"},
 }
+MACRO_DIMENSION_SPECS: tuple[dict[str, str], ...] = (
+    {
+        "series_id": "T10Y3M",
+        "dimension_id": "macro_t10y3m",
+        "label": "T10Y3M yield curve proxy",
+    },
+    {
+        "series_id": "VIXCLS",
+        "dimension_id": "macro_vixcls",
+        "label": "VIXCLS volatility backdrop",
+    },
+    {
+        "series_id": "BAA10Y",
+        "dimension_id": "macro_baa10y",
+        "label": "BAA10Y credit spread backdrop",
+    },
+)
 
 
 _SECTOR_PROXY_ROWS: tuple[dict[str, Any], ...] = (
@@ -124,6 +144,51 @@ def _condition_item(
     }
 
 
+def _dimension_status_label(status: str) -> str:
+    return {
+        "USED": "사용",
+        "AVAILABLE_REFERENCE": "참고",
+        "INSUFFICIENT_HISTORY": "이력 부족",
+        "UNAVAILABLE": "자료 없음",
+        "DEFERRED": "보류",
+    }.get(str(status or "").upper(), str(status or "-"))
+
+
+def _dimension_item(
+    *,
+    dimension_id: str,
+    label: str,
+    status: str,
+    usage: str,
+    source: str,
+    detail: str,
+    latest_date: str | None = None,
+    coverage_start: str | None = None,
+    coverage_end: str | None = None,
+    anchor_preview_count: int = 0,
+    current_value: float | None = None,
+    current_bucket: str | None = None,
+) -> dict[str, Any]:
+    item: dict[str, Any] = {
+        "id": dimension_id,
+        "label": label,
+        "status": status,
+        "status_label": _dimension_status_label(status),
+        "usage": usage,
+        "source": source,
+        "detail": detail,
+        "latest_date": latest_date or "",
+        "coverage_start": coverage_start or "",
+        "coverage_end": coverage_end or "",
+        "anchor_preview_count": int(anchor_preview_count or 0),
+    }
+    if current_value is not None and not pd.isna(current_value):
+        item["current_value"] = round(float(current_value), 4)
+    if current_bucket:
+        item["current_bucket"] = current_bucket
+    return item
+
+
 def _macro_pilot_excluded_conditions() -> list[dict[str, Any]]:
     return [
         _condition_item(
@@ -131,14 +196,14 @@ def _macro_pilot_excluded_conditions() -> list[dict[str, Any]]:
             label="2Y / 10Y FRED rates context",
             status="DISABLED",
             status_label="사용 안 함",
-            detail="3차-B에서는 새 FRED series 수집, provider fetch, UI 직접 fetch를 하지 않습니다.",
+            detail="3차-C에서는 FRED series를 hard historical condition으로 쓰지 않고 저장 row availability와 bucket preview만 표시합니다.",
         ),
         _condition_item(
             condition_id="events_sentiment",
             label="Events / sentiment historical conditioning",
             status="DISABLED",
             status_label="이번 차수 제외",
-            detail="events / sentiment 조건화는 3차-B pilot 범위 밖입니다.",
+            detail="events / sentiment는 annotation 또는 deferred 상태로만 표시하고 anchor filtering에는 쓰지 않습니다.",
         ),
     ]
 
@@ -591,6 +656,389 @@ def _price_matrix(
     return matrix
 
 
+def _normalize_macro_history(macro_series_history: pd.DataFrame | None) -> pd.DataFrame:
+    if macro_series_history is None or macro_series_history.empty:
+        return pd.DataFrame(columns=["series_id", "observation_date", "value"])
+    frame = macro_series_history.copy()
+    if "series_id" not in frame.columns or "observation_date" not in frame.columns or "value" not in frame.columns:
+        return pd.DataFrame(columns=["series_id", "observation_date", "value"])
+    frame["series_id"] = frame["series_id"].astype(str).str.upper()
+    frame["observation_date"] = pd.to_datetime(frame["observation_date"], errors="coerce")
+    frame["value"] = pd.to_numeric(frame["value"], errors="coerce")
+    frame = frame.dropna(subset=["series_id", "observation_date", "value"])
+    return frame.sort_values(["series_id", "observation_date"])
+
+
+def _normalize_sentiment_history(sentiment_history: pd.DataFrame | None) -> pd.DataFrame:
+    if sentiment_history is None or sentiment_history.empty:
+        return pd.DataFrame(columns=["series_id", "observation_date", "value"])
+    frame = sentiment_history.copy()
+    if "series_id" not in frame.columns or "observation_date" not in frame.columns or "value" not in frame.columns:
+        return pd.DataFrame(columns=["series_id", "observation_date", "value"])
+    frame["series_id"] = frame["series_id"].astype(str).str.upper()
+    frame["observation_date"] = pd.to_datetime(frame["observation_date"], errors="coerce")
+    frame["value"] = pd.to_numeric(frame["value"], errors="coerce")
+    frame = frame.dropna(subset=["series_id", "observation_date", "value"])
+    return frame.sort_values(["series_id", "observation_date"])
+
+
+def _latest_row_at_or_before(frame: pd.DataFrame, as_of_date: Any) -> dict[str, Any] | None:
+    as_of_ts = pd.to_datetime(as_of_date, errors="coerce")
+    if frame.empty or pd.isna(as_of_ts):
+        return None
+    rows = frame[frame["observation_date"] <= as_of_ts.normalize()].sort_values("observation_date")
+    if rows.empty:
+        return None
+    return dict(rows.iloc[-1].to_dict())
+
+
+def _macro_bucket(series_id: str, value: float | None) -> dict[str, str] | None:
+    if value is None or pd.isna(value):
+        return None
+    numeric_value = float(value)
+    normalized = str(series_id or "").upper()
+    if normalized == "T10Y3M":
+        if numeric_value <= 0:
+            return {"key": "yield_curve_inverted", "label": "yield curve inverted"}
+        if numeric_value <= 0.5:
+            return {"key": "yield_curve_flat", "label": "yield curve flat"}
+        return {"key": "yield_curve_positive", "label": "yield curve positive"}
+    if normalized == "VIXCLS":
+        if numeric_value >= 25:
+            return {"key": "volatility_elevated", "label": "volatility elevated"}
+        if numeric_value >= 18:
+            return {"key": "volatility_watch", "label": "volatility watch"}
+        return {"key": "volatility_calm", "label": "volatility calm"}
+    if normalized == "BAA10Y":
+        if numeric_value >= 3:
+            return {"key": "credit_spread_elevated", "label": "credit spread elevated"}
+        if numeric_value >= 2:
+            return {"key": "credit_spread_watch", "label": "credit spread watch"}
+        return {"key": "credit_spread_contained", "label": "credit spread contained"}
+    return {"key": "macro_observed", "label": "macro observed"}
+
+
+def _macro_dimension_item(
+    *,
+    macro_frame: pd.DataFrame,
+    series_id: str,
+    dimension_id: str,
+    label: str,
+    as_of_date: Any,
+    anchor_dates: Sequence[Any],
+    load_error: str | None = None,
+) -> dict[str, Any]:
+    source = "finance.loaders.macro.load_macro_series_observations"
+    series_rows = macro_frame[macro_frame["series_id"] == str(series_id).upper()].sort_values("observation_date")
+    as_of_ts = pd.to_datetime(as_of_date, errors="coerce")
+    if pd.isna(as_of_ts):
+        as_of_ts = pd.Timestamp.utcnow().tz_localize(None).normalize()
+    as_of_ts = as_of_ts.normalize()
+    series_rows = series_rows[series_rows["observation_date"] <= as_of_ts]
+    if series_rows.empty:
+        detail = f"{series_id} stored observations are unavailable through {_format_date(as_of_ts) or '-'}."
+        if load_error:
+            detail = f"{detail} DB read failed: {load_error}"
+        return _dimension_item(
+            dimension_id=dimension_id,
+            label=label,
+            status="UNAVAILABLE",
+            usage="reference unavailable",
+            source=source,
+            detail=detail,
+        )
+
+    latest = dict(series_rows.iloc[-1].to_dict())
+    current_value = float(latest["value"])
+    current_bucket = _macro_bucket(series_id, current_value)
+    coverage_start = _format_date(series_rows["observation_date"].min())
+    coverage_end = _format_date(series_rows["observation_date"].max())
+    latest_date = _format_date(latest.get("observation_date"))
+    preview_count = 0
+    for anchor_date in anchor_dates:
+        anchor_row = _latest_row_at_or_before(series_rows, anchor_date)
+        if anchor_row is None:
+            continue
+        anchor_bucket = _macro_bucket(series_id, float(anchor_row.get("value")))
+        if current_bucket and anchor_bucket and anchor_bucket["key"] == current_bucket["key"]:
+            preview_count += 1
+    if current_bucket is None:
+        return _dimension_item(
+            dimension_id=dimension_id,
+            label=label,
+            status="INSUFFICIENT_HISTORY",
+            usage="reference preview only",
+            source=source,
+            detail=(
+                f"{series_id} has stored rows through {latest_date or '-'}, but broad anchor bucket preview is unavailable. "
+                "Not applied as a hard historical condition in 3차-C."
+            ),
+            latest_date=latest_date,
+            coverage_start=coverage_start,
+            coverage_end=coverage_end,
+            current_value=current_value,
+            current_bucket=(current_bucket or {}).get("label"),
+        )
+    return _dimension_item(
+        dimension_id=dimension_id,
+        label=label,
+        status="AVAILABLE_REFERENCE",
+        usage="bucket preview only",
+        source=source,
+        detail=(
+            f"{series_id} 기준일 {latest_date or '-'} value {current_value:.2f}; "
+            f"{current_bucket['label']}; broad anchor preview {preview_count}회. "
+            "3차-C에서는 표본을 줄이는 hard condition으로 사용하지 않습니다."
+        ),
+        latest_date=latest_date,
+        coverage_start=coverage_start,
+        coverage_end=coverage_end,
+        anchor_preview_count=preview_count,
+        current_value=current_value,
+        current_bucket=current_bucket["label"],
+    )
+
+
+def _event_dimension_item(events_snapshot: dict[str, Any] | None, *, as_of_date: Any) -> dict[str, Any]:
+    source = "build_market_events_snapshot / build_overview_macro_week_lane"
+    snapshot = events_snapshot or {}
+    rows = snapshot.get("rows")
+    frame = rows.copy() if isinstance(rows, pd.DataFrame) else pd.DataFrame(rows or [])
+    date_column = next((column for column in ("Date", "event_date", "Event Date") if column in frame.columns), None)
+    if frame.empty or date_column is None:
+        return _dimension_item(
+            dimension_id="events_calendar",
+            label="Events calendar",
+            status="UNAVAILABLE",
+            usage="annotation unavailable",
+            source=source,
+            detail="Stored event calendar rows are unavailable for this Market Context window.",
+        )
+    frame[date_column] = pd.to_datetime(frame[date_column], errors="coerce")
+    frame = frame.dropna(subset=[date_column])
+    if frame.empty:
+        return _dimension_item(
+            dimension_id="events_calendar",
+            label="Events calendar",
+            status="UNAVAILABLE",
+            usage="annotation unavailable",
+            source=source,
+            detail="Stored event calendar dates are unavailable for this Market Context window.",
+        )
+    as_of = _format_date(as_of_date)
+    coverage_start = _format_date(frame[date_column].min())
+    coverage_end = _format_date(frame[date_column].max())
+    event_count = int(len(frame))
+    return _dimension_item(
+        dimension_id="events_calendar",
+        label="Events calendar",
+        status="DEFERRED",
+        usage="annotation only",
+        source=source,
+        detail=(
+            f"{event_count} stored event rows are available around 기준일 {as_of or '-'}. "
+            "Near-term macro / earnings context remains annotation only; event rows are not applied to anchor filtering in 3차-C."
+        ),
+        latest_date=as_of or coverage_end,
+        coverage_start=coverage_start,
+        coverage_end=coverage_end,
+    )
+
+
+def _sentiment_dimension_item(
+    sentiment_history: pd.DataFrame | None,
+    *,
+    as_of_date: Any,
+    load_error: str | None = None,
+) -> dict[str, Any]:
+    source = "finance.loaders.sentiment.load_market_sentiment_history"
+    frame = _normalize_sentiment_history(sentiment_history)
+    as_of_ts = pd.to_datetime(as_of_date, errors="coerce")
+    if pd.isna(as_of_ts):
+        as_of_ts = pd.Timestamp.utcnow().tz_localize(None).normalize()
+    as_of_ts = as_of_ts.normalize()
+    frame = frame[frame["observation_date"] <= as_of_ts]
+    if frame.empty:
+        detail = f"Stored CNN / AAII sentiment history is unavailable through {_format_date(as_of_ts) or '-'}."
+        if load_error:
+            detail = f"{detail} DB read failed: {load_error}"
+        return _dimension_item(
+            dimension_id="market_sentiment",
+            label="CNN / AAII sentiment history",
+            status="UNAVAILABLE",
+            usage="annotation unavailable",
+            source=source,
+            detail=detail,
+        )
+    coverage_start = _format_date(frame["observation_date"].min())
+    coverage_end = _format_date(frame["observation_date"].max())
+    latest_date = _format_date(frame["observation_date"].max())
+    unique_days = int(frame["observation_date"].dt.normalize().nunique())
+    coverage_days = 0
+    if coverage_start and coverage_end:
+        coverage_days = int((pd.Timestamp(coverage_end) - pd.Timestamp(coverage_start)).days) + 1
+    if unique_days < 100 or coverage_days < 252:
+        return _dimension_item(
+            dimension_id="market_sentiment",
+            label="CNN / AAII sentiment history",
+            status="INSUFFICIENT_HISTORY",
+            usage="annotation only",
+            source=source,
+            detail=(
+                f"Stored sentiment history has {unique_days} observation dates from {coverage_start or '-'} to {coverage_end or '-'}. "
+                "It remains annotation context and is not used for historical anchor filtering in 3차-C."
+            ),
+            latest_date=latest_date,
+            coverage_start=coverage_start,
+            coverage_end=coverage_end,
+        )
+    return _dimension_item(
+        dimension_id="market_sentiment",
+        label="CNN / AAII sentiment history",
+        status="DEFERRED",
+        usage="annotation only",
+        source=source,
+        detail=(
+            f"Stored sentiment history has {unique_days} observation dates through {latest_date or '-'}. "
+            "It remains context only until a separate historical conditioning design is approved."
+        ),
+        latest_date=latest_date,
+        coverage_start=coverage_start,
+        coverage_end=coverage_end,
+    )
+
+
+def _condition_dimension_items(
+    *,
+    used_conditions: Sequence[dict[str, Any]],
+    insufficient_conditions: Sequence[dict[str, Any]],
+    as_of_date: Any,
+    coverage_start: str | None,
+    coverage_end: str | None,
+    broad_anchor_count: int,
+    conditioned_anchor_count: int,
+    gld_anchor_count: int,
+) -> list[dict[str, Any]]:
+    source_by_id = {
+        "sector_relative_strength": "finance_price.nyse_price_history",
+        "gld_safe_haven_context": "finance_price.nyse_price_history",
+        "futures_rate_pressure_context": "finance_price.futures_ohlcv",
+    }
+    preview_by_id = {
+        "sector_relative_strength": broad_anchor_count,
+        "gld_safe_haven_context": gld_anchor_count,
+        "futures_rate_pressure_context": conditioned_anchor_count,
+    }
+    labels = {
+        "sector_relative_strength": "Sector ETF vs SPY relative strength",
+        "gld_safe_haven_context": "GLD price proxy safe-haven / gold context",
+        "futures_rate_pressure_context": "Rate Pressure futures proxy (ZN=F/ZB=F)",
+    }
+    items: list[dict[str, Any]] = []
+    by_id = {str(item.get("id") or ""): item for item in used_conditions}
+    missing_by_id = {str(item.get("id") or ""): item for item in insufficient_conditions}
+    for dimension_id in ("sector_relative_strength", "gld_safe_haven_context", "futures_rate_pressure_context"):
+        condition = by_id.get(dimension_id)
+        if condition:
+            items.append(
+                _dimension_item(
+                    dimension_id=dimension_id,
+                    label=str(condition.get("label") or labels[dimension_id]),
+                    status="USED",
+                    usage="hard condition",
+                    source=source_by_id[dimension_id],
+                    detail=str(condition.get("detail") or ""),
+                    latest_date=_format_date(as_of_date),
+                    coverage_start=coverage_start,
+                    coverage_end=coverage_end,
+                    anchor_preview_count=preview_by_id[dimension_id],
+                )
+            )
+            continue
+        missing = missing_by_id.get(dimension_id)
+        status = "INSUFFICIENT_HISTORY" if missing else "UNAVAILABLE"
+        items.append(
+            _dimension_item(
+                dimension_id=dimension_id,
+                label=str((missing or {}).get("label") or labels[dimension_id]),
+                status=status,
+                usage="hard condition candidate",
+                source=source_by_id[dimension_id],
+                detail=str((missing or {}).get("detail") or "Stored rows are unavailable for this condition."),
+                latest_date=_format_date(as_of_date),
+                coverage_start=coverage_start,
+                coverage_end=coverage_end,
+            )
+        )
+    return items
+
+
+def _macro_dimension_audit_model(
+    *,
+    analysis_matrix: pd.DataFrame,
+    anchor_indices: Sequence[int],
+    conditioned_anchor_indices: Sequence[int],
+    gld_conditioned_anchor_indices: Sequence[int],
+    used_conditions: Sequence[dict[str, Any]],
+    insufficient_conditions: Sequence[dict[str, Any]],
+    macro_series_history: pd.DataFrame | None,
+    sentiment_history: pd.DataFrame | None,
+    events_snapshot: dict[str, Any] | None,
+    as_of_date: Any,
+    macro_load_error: str | None = None,
+    sentiment_load_error: str | None = None,
+) -> dict[str, Any]:
+    macro_frame = _normalize_macro_history(macro_series_history)
+    anchor_dates = [analysis_matrix.index[int(index)] for index in anchor_indices if 0 <= int(index) < len(analysis_matrix)]
+    first_date = _format_date(analysis_matrix.index.min()) if not analysis_matrix.empty else None
+    last_date = _format_date(as_of_date) or (_format_date(analysis_matrix.index.max()) if not analysis_matrix.empty else None)
+    dimensions = _condition_dimension_items(
+        used_conditions=used_conditions,
+        insufficient_conditions=insufficient_conditions,
+        as_of_date=last_date,
+        coverage_start=first_date,
+        coverage_end=last_date,
+        broad_anchor_count=len(anchor_indices),
+        conditioned_anchor_count=len(conditioned_anchor_indices),
+        gld_anchor_count=len(gld_conditioned_anchor_indices),
+    )
+    for spec in MACRO_DIMENSION_SPECS:
+        dimensions.append(
+            _macro_dimension_item(
+                macro_frame=macro_frame,
+                series_id=spec["series_id"],
+                dimension_id=spec["dimension_id"],
+                label=spec["label"],
+                as_of_date=last_date,
+                anchor_dates=anchor_dates,
+                load_error=macro_load_error,
+            )
+        )
+    dimensions.append(_event_dimension_item(events_snapshot, as_of_date=last_date))
+    dimensions.append(
+        _sentiment_dimension_item(
+            sentiment_history,
+            as_of_date=last_date,
+            load_error=sentiment_load_error,
+        )
+    )
+    used_count = sum(1 for item in dimensions if item.get("status") == "USED")
+    reference_count = sum(1 for item in dimensions if item.get("status") == "AVAILABLE_REFERENCE")
+    deferred_count = sum(1 for item in dimensions if item.get("status") == "DEFERRED")
+    insufficient_count = sum(1 for item in dimensions if item.get("status") in {"INSUFFICIENT_HISTORY", "UNAVAILABLE"})
+    return {
+        "schema_version": "overview_market_context_macro_dimension_audit_v1",
+        "status": "OK" if dimensions else "UNAVAILABLE",
+        "summary": (
+            f"{used_count}개 차원은 실제 조건, {reference_count}개 macro series는 참고 preview, "
+            f"{deferred_count}개 차원은 보류, {insufficient_count}개 차원은 이력 부족 또는 자료 없음입니다."
+        ),
+        "broad_anchor_count": int(len(anchor_indices)),
+        "conditioned_anchor_count": int(len(conditioned_anchor_indices)),
+        "dimensions": dimensions,
+    }
+
+
 def _period_return(series: pd.Series, index: int, periods: int) -> float | None:
     base_index = index - periods
     if base_index < 0 or index >= len(series):
@@ -674,6 +1122,11 @@ def _macro_conditioned_pilot_model(
     futures_history: pd.DataFrame | None = None,
     futures_as_of_date: str | None = None,
     futures_load_error: str | None = None,
+    macro_series_history: pd.DataFrame | None = None,
+    macro_load_error: str | None = None,
+    sentiment_history: pd.DataFrame | None = None,
+    sentiment_load_error: str | None = None,
+    events_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     broad_sample_count = len(anchor_indices)
     sector_condition = _condition_item(
@@ -722,6 +1175,20 @@ def _macro_conditioned_pilot_model(
                     "detail": gld_coverage.get("detail") or "",
                 }
             ]
+        model["macro_dimension_audit"] = _macro_dimension_audit_model(
+            analysis_matrix=analysis_matrix,
+            anchor_indices=anchor_indices,
+            conditioned_anchor_indices=[],
+            gld_conditioned_anchor_indices=[],
+            used_conditions=[sector_condition],
+            insufficient_conditions=list(model.get("insufficient_conditions") or []),
+            macro_series_history=macro_series_history,
+            sentiment_history=sentiment_history,
+            events_snapshot=events_snapshot,
+            as_of_date=futures_as_of_date or analysis_matrix.index[-1],
+            macro_load_error=macro_load_error,
+            sentiment_load_error=sentiment_load_error,
+        )
         return model
 
     latest_index = len(analysis_matrix) - 1
@@ -729,7 +1196,7 @@ def _macro_conditioned_pilot_model(
     current_gld_return = _period_return(gld_series, latest_index, pattern_days)
     current_bucket = _gld_context_bucket(current_gld_return)
     if current_bucket is None:
-        return _macro_conditioned_disabled_model(
+        model = _macro_conditioned_disabled_model(
             status="INSUFFICIENT_CONTEXT",
             headline="Macro 조건 포함 pilot 조건 부족",
             detail=f"GLD {pattern_label} context 계산 구간이 부족합니다.",
@@ -745,6 +1212,21 @@ def _macro_conditioned_pilot_model(
             ],
             broad_sample_count=broad_sample_count,
         )
+        model["macro_dimension_audit"] = _macro_dimension_audit_model(
+            analysis_matrix=analysis_matrix,
+            anchor_indices=anchor_indices,
+            conditioned_anchor_indices=[],
+            gld_conditioned_anchor_indices=[],
+            used_conditions=[sector_condition],
+            insufficient_conditions=list(model.get("insufficient_conditions") or []),
+            macro_series_history=macro_series_history,
+            sentiment_history=sentiment_history,
+            events_snapshot=events_snapshot,
+            as_of_date=futures_as_of_date or analysis_matrix.index[-1],
+            macro_load_error=macro_load_error,
+            sentiment_load_error=sentiment_load_error,
+        )
+        return model
 
     gld_conditioned_anchor_indices: list[int] = []
     for anchor in anchor_indices:
@@ -865,6 +1347,20 @@ def _macro_conditioned_pilot_model(
             f"{sample_reduction_reason} "
             f"{insufficient_conditions[0]['label']}은 조건 부족으로 이번 표본 축소에 사용하지 않았습니다."
         )
+    macro_dimension_audit = _macro_dimension_audit_model(
+        analysis_matrix=analysis_matrix,
+        anchor_indices=anchor_indices,
+        conditioned_anchor_indices=conditioned_anchor_indices,
+        gld_conditioned_anchor_indices=gld_conditioned_anchor_indices,
+        used_conditions=used_conditions,
+        insufficient_conditions=insufficient_conditions,
+        macro_series_history=macro_series_history,
+        sentiment_history=sentiment_history,
+        events_snapshot=events_snapshot,
+        as_of_date=futures_as_of_date or analysis_matrix.index[-1],
+        macro_load_error=macro_load_error,
+        sentiment_load_error=sentiment_load_error,
+    )
     return {
         "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
         "status": status,
@@ -888,6 +1384,7 @@ def _macro_conditioned_pilot_model(
         "used_conditions": used_conditions,
         "insufficient_conditions": insufficient_conditions,
         "excluded_conditions": _macro_pilot_excluded_conditions(),
+        "macro_dimension_audit": macro_dimension_audit,
         "coverage_gaps": [],
         "rows": rows,
         "anchor_dates": [
@@ -911,6 +1408,37 @@ def _load_default_futures_ohlcv_as_of(symbols: Sequence[str], end_date: str | No
     return load_futures_ohlcv(symbols=symbols, interval_code="1d", end=end_date)
 
 
+def _load_default_macro_series_history_as_of(series_ids: Sequence[str], end_date: str | None) -> pd.DataFrame:
+    return load_macro_series_observations(series_ids=series_ids, end=end_date)
+
+
+def _load_default_sentiment_history_as_of(end_date: str | None) -> pd.DataFrame:
+    return load_market_sentiment_history(end=end_date)
+
+
+def _resolve_reference_context_inputs(
+    *,
+    macro_series_history: pd.DataFrame | None,
+    sentiment_history: pd.DataFrame | None,
+    end_date: str | None,
+) -> tuple[pd.DataFrame, str | None, pd.DataFrame, str | None]:
+    macro_load_error: str | None = None
+    if macro_series_history is None:
+        try:
+            macro_series_history = _load_default_macro_series_history_as_of(DEFAULT_REFERENCE_MACRO_SERIES, end_date)
+        except Exception as exc:  # pragma: no cover - UI resilience around local DB availability
+            macro_series_history = pd.DataFrame()
+            macro_load_error = str(exc)
+    sentiment_load_error: str | None = None
+    if sentiment_history is None:
+        try:
+            sentiment_history = _load_default_sentiment_history_as_of(end_date)
+        except Exception as exc:  # pragma: no cover - UI resilience around local DB availability
+            sentiment_history = pd.DataFrame()
+            sentiment_load_error = str(exc)
+    return macro_series_history, macro_load_error, sentiment_history, sentiment_load_error
+
+
 def build_historical_analog_snapshot(
     *,
     group_leadership_snapshot: dict[str, Any] | None,
@@ -925,23 +1453,54 @@ def build_historical_analog_snapshot(
     relative_strength_floor: float = DEFAULT_RELATIVE_STRENGTH_FLOOR,
     relative_strength_ratio: float = DEFAULT_RELATIVE_STRENGTH_RATIO,
     futures_history: pd.DataFrame | None = None,
+    macro_series_history: pd.DataFrame | None = None,
+    sentiment_history: pd.DataFrame | None = None,
+    events_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     pattern = _normalize_pattern_window(pattern_window)
     pattern_days = int(pattern["days"])
     pattern_label = str(pattern["label"])
     normalized_as_of = _format_date(as_of_date)
+
+    def _with_disabled_macro_audit(model: dict[str, Any]) -> dict[str, Any]:
+        audit_as_of = _format_date(model.get("current_as_of")) or normalized_as_of
+        macro_rows, macro_error, sentiment_rows, sentiment_error = _resolve_reference_context_inputs(
+            macro_series_history=macro_series_history,
+            sentiment_history=sentiment_history,
+            end_date=audit_as_of,
+        )
+        pilot = dict(model.get("macro_conditioned_analog") or {})
+        pilot["macro_dimension_audit"] = _macro_dimension_audit_model(
+            analysis_matrix=pd.DataFrame(),
+            anchor_indices=[],
+            conditioned_anchor_indices=[],
+            gld_conditioned_anchor_indices=[],
+            used_conditions=list(pilot.get("used_conditions") or []),
+            insufficient_conditions=list(pilot.get("insufficient_conditions") or []),
+            macro_series_history=macro_rows,
+            sentiment_history=sentiment_rows,
+            events_snapshot=events_snapshot,
+            as_of_date=audit_as_of,
+            macro_load_error=macro_error,
+            sentiment_load_error=sentiment_error,
+        )
+        model["macro_conditioned_analog"] = pilot
+        return model
+
     leadership = resolve_leadership_sector_proxy(group_leadership_snapshot)
     leadership_sector = leadership.get("leadership_sector")
     proxy_etf = leadership.get("proxy_etf")
     if not proxy_etf:
-        return _base_model(
-            status="INSUFFICIENT_DATA",
-            headline="과거 유사 맥락 자료 부족",
-            detail=str(leadership.get("detail") or "Current sector leadership proxy is unavailable."),
-            leadership_sector=leadership_sector,
-            proxy_etf=None,
-            as_of_date=normalized_as_of,
-            pattern_window=str(pattern["key"]),
+        return _with_disabled_macro_audit(
+            _base_model(
+                status="INSUFFICIENT_DATA",
+                headline="과거 유사 맥락 자료 부족",
+                detail=str(leadership.get("detail") or "Current sector leadership proxy is unavailable."),
+                leadership_sector=leadership_sector,
+                proxy_etf=None,
+                as_of_date=normalized_as_of,
+                pattern_window=str(pattern["key"]),
+            )
         )
 
     symbols = list(dict.fromkeys([str(proxy_etf), "SPY", *[str(item) for item in comparison_symbols]]))
@@ -949,14 +1508,16 @@ def build_historical_analog_snapshot(
         try:
             price_history = _load_default_price_history_as_of(symbols, normalized_as_of)
         except Exception as exc:  # pragma: no cover - UI resilience around local DB availability
-            return _base_model(
-                status="INSUFFICIENT_DATA",
-                headline="과거 유사 맥락 자료 부족",
-                detail=f"DB price history read failed: {exc}",
-                leadership_sector=str(leadership_sector or ""),
-                proxy_etf=str(proxy_etf),
-                as_of_date=normalized_as_of,
-                pattern_window=str(pattern["key"]),
+            return _with_disabled_macro_audit(
+                _base_model(
+                    status="INSUFFICIENT_DATA",
+                    headline="과거 유사 맥락 자료 부족",
+                    detail=f"DB price history read failed: {exc}",
+                    leadership_sector=str(leadership_sector or ""),
+                    proxy_etf=str(proxy_etf),
+                    as_of_date=normalized_as_of,
+                    pattern_window=str(pattern["key"]),
+                )
             )
 
     coverage = summarize_price_coverage(
@@ -978,48 +1539,54 @@ def build_historical_analog_snapshot(
             f"{(insufficient or {}).get('row_count') or 0} rows "
             f"({(insufficient or {}).get('start_date') or '-'} ~ {(insufficient or {}).get('end_date') or '-'})."
         )
-        return _base_model(
-            status="INSUFFICIENT_DATA",
-            headline="과거 유사 맥락 자료 부족",
-            detail=detail,
-            leadership_sector=str(leadership_sector or ""),
-            proxy_etf=str(proxy_etf),
-            coverage=coverage,
-            coverage_gaps=coverage_gaps,
-            repair_action=repair_action,
-            as_of_date=normalized_as_of,
-            pattern_window=str(pattern["key"]),
+        return _with_disabled_macro_audit(
+            _base_model(
+                status="INSUFFICIENT_DATA",
+                headline="과거 유사 맥락 자료 부족",
+                detail=detail,
+                leadership_sector=str(leadership_sector or ""),
+                proxy_etf=str(proxy_etf),
+                coverage=coverage,
+                coverage_gaps=coverage_gaps,
+                repair_action=repair_action,
+                as_of_date=normalized_as_of,
+                pattern_window=str(pattern["key"]),
+            )
         )
 
     matrix = _price_matrix(price_history, symbols, end_date=normalized_as_of)
     if matrix.empty or str(proxy_etf) not in matrix.columns or "SPY" not in matrix.columns:
-        return _base_model(
-            status="INSUFFICIENT_DATA",
-            headline="과거 유사 맥락 자료 부족",
-            detail=f"{leadership_sector}({proxy_etf})와 SPY 공통 가격 구간이 없습니다.",
-            leadership_sector=str(leadership_sector or ""),
-            proxy_etf=str(proxy_etf),
-            coverage=coverage,
-            coverage_gaps=coverage_gaps,
-            repair_action=repair_action,
-            as_of_date=normalized_as_of,
-            pattern_window=str(pattern["key"]),
+        return _with_disabled_macro_audit(
+            _base_model(
+                status="INSUFFICIENT_DATA",
+                headline="과거 유사 맥락 자료 부족",
+                detail=f"{leadership_sector}({proxy_etf})와 SPY 공통 가격 구간이 없습니다.",
+                leadership_sector=str(leadership_sector or ""),
+                proxy_etf=str(proxy_etf),
+                coverage=coverage,
+                coverage_gaps=coverage_gaps,
+                repair_action=repair_action,
+                as_of_date=normalized_as_of,
+                pattern_window=str(pattern["key"]),
+            )
         )
 
     analysis_matrix = matrix.dropna(subset=[str(proxy_etf), "SPY"])
     max_horizon = max(int(horizon) for horizon in horizons)
     if len(analysis_matrix) < max(min_history_rows, max_horizon + pattern_days + 1):
-        return _base_model(
-            status="INSUFFICIENT_DATA",
-            headline="과거 유사 맥락 자료 부족",
-            detail=f"{leadership_sector}({proxy_etf})와 SPY 공통 history가 {len(analysis_matrix)} rows로 부족합니다.",
-            leadership_sector=str(leadership_sector or ""),
-            proxy_etf=str(proxy_etf),
-            coverage=coverage,
-            coverage_gaps=coverage_gaps,
-            repair_action=repair_action,
-            as_of_date=normalized_as_of,
-            pattern_window=str(pattern["key"]),
+        return _with_disabled_macro_audit(
+            _base_model(
+                status="INSUFFICIENT_DATA",
+                headline="과거 유사 맥락 자료 부족",
+                detail=f"{leadership_sector}({proxy_etf})와 SPY 공통 history가 {len(analysis_matrix)} rows로 부족합니다.",
+                leadership_sector=str(leadership_sector or ""),
+                proxy_etf=str(proxy_etf),
+                coverage=coverage,
+                coverage_gaps=coverage_gaps,
+                repair_action=repair_action,
+                as_of_date=normalized_as_of,
+                pattern_window=str(pattern["key"]),
+            )
         )
 
     latest_index = len(analysis_matrix) - 1
@@ -1028,17 +1595,19 @@ def build_historical_analog_snapshot(
     current_proxy_window = _period_return(proxy_series, latest_index, pattern_days)
     current_spy_window = _period_return(spy_series, latest_index, pattern_days)
     if current_proxy_window is None or current_spy_window is None:
-        return _base_model(
-            status="INSUFFICIENT_DATA",
-            headline="과거 유사 맥락 자료 부족",
-            detail=f"{leadership_sector}({proxy_etf})의 {pattern_label} 상대강도 계산 구간이 부족합니다.",
-            leadership_sector=str(leadership_sector or ""),
-            proxy_etf=str(proxy_etf),
-            coverage=coverage,
-            coverage_gaps=coverage_gaps,
-            repair_action=repair_action,
-            as_of_date=normalized_as_of,
-            pattern_window=str(pattern["key"]),
+        return _with_disabled_macro_audit(
+            _base_model(
+                status="INSUFFICIENT_DATA",
+                headline="과거 유사 맥락 자료 부족",
+                detail=f"{leadership_sector}({proxy_etf})의 {pattern_label} 상대강도 계산 구간이 부족합니다.",
+                leadership_sector=str(leadership_sector or ""),
+                proxy_etf=str(proxy_etf),
+                coverage=coverage,
+                coverage_gaps=coverage_gaps,
+                repair_action=repair_action,
+                as_of_date=normalized_as_of,
+                pattern_window=str(pattern["key"]),
+            )
         )
 
     current_rel_window = current_proxy_window - current_spy_window
@@ -1096,6 +1665,11 @@ def build_historical_analog_snapshot(
         except Exception as exc:  # pragma: no cover - UI resilience around local DB availability
             futures_history = pd.DataFrame()
             futures_load_error = str(exc)
+    macro_series_history, macro_load_error, sentiment_history, sentiment_load_error = _resolve_reference_context_inputs(
+        macro_series_history=macro_series_history,
+        sentiment_history=sentiment_history,
+        end_date=last_date,
+    )
     macro_conditioned_analog = _macro_conditioned_pilot_model(
         analysis_matrix=analysis_matrix,
         symbols=symbols,
@@ -1110,6 +1684,11 @@ def build_historical_analog_snapshot(
         futures_history=futures_history,
         futures_as_of_date=last_date,
         futures_load_error=futures_load_error,
+        macro_series_history=macro_series_history,
+        macro_load_error=macro_load_error,
+        sentiment_history=sentiment_history,
+        sentiment_load_error=sentiment_load_error,
+        events_snapshot=events_snapshot,
     )
     return {
         "schema_version": "overview_market_context_historical_analog_v2",

@@ -9178,6 +9178,204 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertEqual(pilot["anchor_dates"], [str(dates[30].date())])
         self.assertIn("futures proxy", pilot["sample_reduction_reason"])
 
+    def test_historical_analog_adds_macro_dimension_audit_without_hard_filtering_macro_series(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        as_of_index = 90
+        as_of_date = str(dates[as_of_index].date())
+        anchors = [30, 50, 70]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, as_of_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 120.0
+            if symbol == "GLD":
+                for anchor in anchors:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 102.0 if anchor in {30, 70} else 98.0
+                prices[as_of_index - 5] = 100.0
+                prices[as_of_index] = 102.0
+                prices[-5] = 100.0
+                prices[-1] = 98.0
+            for idx, day in enumerate(dates):
+                rows.append({"symbol": symbol, "date": day, "close": prices[idx], "adj_close": prices[idx]})
+
+        futures_rows: list[dict[str, object]] = []
+        for futures_symbol in ["ZN=F", "ZB=F"]:
+            prices = [100.0 for _ in dates]
+            for anchor in [30, as_of_index]:
+                prices[anchor - 5] = 100.0
+                prices[anchor] = 97.0
+            prices[70 - 5] = 100.0
+            prices[70] = 103.0
+            prices[-5] = 100.0
+            prices[-1] = 104.0
+            for idx, day in enumerate(dates):
+                futures_rows.append(
+                    {
+                        "provider_symbol": futures_symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": day,
+                        "open": prices[idx],
+                        "high": prices[idx],
+                        "low": prices[idx],
+                        "close": prices[idx],
+                        "volume": 1000,
+                    }
+                )
+
+        macro_values = {
+            "T10Y3M": {30: -0.25, 50: 0.75, 70: -0.15, as_of_index: -0.35, len(dates) - 1: 1.2},
+            "VIXCLS": {30: 16.0, 50: 28.0, 70: 17.0, as_of_index: 17.5, len(dates) - 1: 31.0},
+            "BAA10Y": {30: 1.65, 50: 2.65, 70: 1.75, as_of_index: 1.8, len(dates) - 1: 3.1},
+        }
+        macro_rows: list[dict[str, object]] = []
+        for series_id, indexed_values in macro_values.items():
+            for idx, value in indexed_values.items():
+                macro_rows.append(
+                    {
+                        "series_id": series_id,
+                        "observation_date": dates[idx],
+                        "source": "fred",
+                        "source_type": "official",
+                        "source_mode": "stored",
+                        "series_name": series_id,
+                        "category": "macro",
+                        "frequency": "daily",
+                        "units": "Percent",
+                        "value": value,
+                        "coverage_status": "actual",
+                    }
+                )
+        sentiment_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": dates[idx],
+                    "source": "cnn",
+                    "series_name": "CNN Fear & Greed",
+                    "category": "sentiment",
+                    "value": 45 + idx % 10,
+                    "coverage_status": "actual",
+                }
+                for idx in [84, 87, as_of_index]
+            ]
+        )
+        events_snapshot = {
+            "status": "OK",
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Date": as_of_date,
+                        "Type": "FOMC_MEETING",
+                        "Type Label": "FOMC",
+                        "Title": "FOMC meeting",
+                        "Days Until": 0,
+                        "Source": "federal_reserve",
+                    }
+                ]
+            ),
+            "coverage": {"event_count": 1, "official_count": 1, "latest_collected_at": as_of_date},
+        }
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            futures_history=pd.DataFrame(futures_rows),
+            macro_series_history=pd.DataFrame(macro_rows),
+            sentiment_history=sentiment_rows,
+            events_snapshot=events_snapshot,
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(20,),
+            as_of_date=as_of_date,
+            min_history_rows=80,
+            min_sample_count=3,
+            min_anchor_gap=10,
+        )
+
+        pilot = model["macro_conditioned_analog"]
+        audit = pilot["macro_dimension_audit"]
+        self.assertEqual(audit["schema_version"], "overview_market_context_macro_dimension_audit_v1")
+        self.assertEqual(pilot["sample_count"], 1)
+        self.assertEqual(audit["broad_anchor_count"], 3)
+        self.assertEqual(audit["conditioned_anchor_count"], 1)
+        dimensions = {item["id"]: item for item in audit["dimensions"]}
+        self.assertEqual(dimensions["sector_relative_strength"]["status"], "USED")
+        self.assertEqual(dimensions["gld_safe_haven_context"]["status"], "USED")
+        self.assertEqual(dimensions["futures_rate_pressure_context"]["status"], "USED")
+        self.assertEqual(dimensions["macro_t10y3m"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_t10y3m"]["latest_date"], as_of_date)
+        self.assertNotIn(str(dates[-1].date()), dimensions["macro_t10y3m"]["detail"])
+        self.assertEqual(dimensions["macro_t10y3m"]["anchor_preview_count"], 2)
+        self.assertEqual(dimensions["macro_vixcls"]["anchor_preview_count"], 2)
+        self.assertEqual(dimensions["macro_baa10y"]["anchor_preview_count"], 2)
+        self.assertEqual(dimensions["events_calendar"]["status"], "DEFERRED")
+        self.assertEqual(dimensions["market_sentiment"]["status"], "INSUFFICIENT_HISTORY")
+        for item in dimensions.values():
+            self.assertIn(item["status"], {"USED", "AVAILABLE_REFERENCE", "INSUFFICIENT_HISTORY", "UNAVAILABLE", "DEFERRED"})
+            self.assertIn("usage", item)
+            self.assertIn("source", item)
+
+    def test_historical_analog_keeps_macro_dimension_audit_when_broad_proxy_coverage_is_short(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-03-01", periods=70)
+        price_rows: list[dict[str, object]] = []
+        for symbol in ["XLB", "SPY", "GLD"]:
+            for idx, day in enumerate(dates):
+                price_rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": 100.0 + idx,
+                        "adj_close": 100.0 + idx,
+                    }
+                )
+        macro_rows: list[dict[str, object]] = []
+        for series_id, value in [("T10Y3M", -0.3), ("VIXCLS", 17.0), ("BAA10Y", 1.8)]:
+            macro_rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": dates[-1],
+                    "source": "fred",
+                    "series_name": series_id,
+                    "category": "macro",
+                    "value": value,
+                    "coverage_status": "actual",
+                }
+            )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Basic Materials", "Market Cap Weighted Return %": 1.2}]),
+            },
+            price_history=pd.DataFrame(price_rows),
+            macro_series_history=pd.DataFrame(macro_rows),
+            futures_history=pd.DataFrame(),
+            comparison_symbols=("SPY", "GLD"),
+            min_history_rows=120,
+        )
+
+        self.assertEqual(model["status"], "INSUFFICIENT_DATA")
+        audit = model["macro_conditioned_analog"]["macro_dimension_audit"]
+        dimensions = {item["id"]: item for item in audit["dimensions"]}
+        self.assertEqual(dimensions["sector_relative_strength"]["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(dimensions["macro_t10y3m"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_vixcls"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_baa10y"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_t10y3m"]["anchor_preview_count"], 0)
+
     def test_historical_analog_marks_macro_pilot_insufficient_when_gld_context_is_missing(self) -> None:
         from app.services.overview_market_context_analog import build_historical_analog_snapshot
 
@@ -9481,6 +9679,143 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
         self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 pilot"))
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_renders_macro_dimension_audit_inside_pilot(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 3회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 3,
+                "condition_summary": "XLV 5D-SPY 5D 상대강도 >= +2.0%",
+                "rows": [
+                    {
+                        "asset": "XLV",
+                        "horizon": "20D",
+                        "median_return_pct": 4.0,
+                        "positive_rate_pct": 66.7,
+                        "best_return_pct": 8.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 3,
+                    }
+                ],
+                "macro_conditioned_analog": {
+                    "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+                    "status": "REVIEW",
+                    "status_label": "pilot 표본 좁음",
+                    "headline": "Macro 조건 포함 pilot 표본 1회",
+                    "detail": "기존 broad analog 3회 중 추가 macro context까지 맞는 1회만 별도로 봅니다.",
+                    "condition_summary": "XLV relative strength + GLD 5D context",
+                    "broad_sample_count": 3,
+                    "sample_count": 1,
+                    "additional_condition_count": 2,
+                    "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 1회만 남았습니다.",
+                    "sample_quality": {
+                        "status": "REVIEW",
+                        "label": "pilot-limited",
+                        "detail": "broad 결과와 함께 읽어야 합니다.",
+                    },
+                    "used_conditions": [
+                        {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
+                        {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 상승 context"},
+                    ],
+                    "insufficient_conditions": [],
+                    "excluded_conditions": [],
+                    "macro_dimension_audit": {
+                        "schema_version": "overview_market_context_macro_dimension_audit_v1",
+                        "status": "OK",
+                        "summary": "3개 차원은 실제 조건, 3개 macro series는 참고 preview, event/sentiment는 보류입니다.",
+                        "broad_anchor_count": 3,
+                        "conditioned_anchor_count": 1,
+                        "dimensions": [
+                            {
+                                "id": "sector_relative_strength",
+                                "label": "Sector ETF vs SPY",
+                                "status": "USED",
+                                "status_label": "사용",
+                                "usage": "hard condition",
+                                "source": "DB price history",
+                                "detail": "Broad anchor condition",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 3,
+                            },
+                            {
+                                "id": "macro_t10y3m",
+                                "label": "T10Y3M yield curve proxy",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Current bucket inverted; broad anchors with same bucket: 2.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "macro_vixcls",
+                                "label": "VIXCLS volatility backdrop",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Current bucket calm; broad anchors with same bucket: 2.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "macro_baa10y",
+                                "label": "BAA10Y credit spread backdrop",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Current bucket contained; broad anchors with same bucket: 2.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "events_calendar",
+                                "label": "Events calendar",
+                                "status": "DEFERRED",
+                                "status_label": "보류",
+                                "usage": "annotation only",
+                                "source": "build_market_events_snapshot / build_overview_macro_week_lane",
+                                "detail": "Near-term event context remains annotation; not applied to anchors.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-05-06",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 0,
+                            },
+                        ],
+                    },
+                    "rows": [],
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("맥락 차원 상태", html)
+        self.assertIn("T10Y3M yield curve proxy", html)
+        self.assertIn("VIXCLS volatility backdrop", html)
+        self.assertIn("BAA10Y credit spread backdrop", html)
+        self.assertIn("Events calendar", html)
+        self.assertIn("참고", html)
+        self.assertIn("보류", html)
+        self.assertIn("anchor 2회", html)
+        self.assertLess(html.index("Macro 조건 포함 pilot"), html.index("맥락 차원 상태"))
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 
 

@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-19 - Macro dimension audit closes 3차-C without hard FRED/event/sentiment conditioning
+- User request:
+  - Overview > Market Context historical analog 3차-C 개발 진행을 승인하고, macro dimension availability + regime preview + deferred reason을 추가하되 event / sentiment를 hard condition으로 쓰지 말라고 요청함.
+- Interpreted goal:
+  - 3차-A/3차-B에서 실제 조건으로 쓰인 sector / GLD / futures와, 아직 참고 또는 보류인 FRED / events / sentiment를 같은 pilot 안에서 명확히 구분한다.
+- Analysis result:
+  - Stored FRED `T10Y3M`, `VIXCLS`, `BAA10Y`는 loader로 읽어 current bucket, coverage, broad-anchor preview count를 보여주되 표본 축소에는 쓰지 않는 것이 이번 승인 범위에 맞다. Events와 CNN / AAII sentiment는 annotation / deferred context로 표시한다.
+- Follow-up:
+  - 후속으로 열 수 있는 것은 FRED hard conditioning, event-window analog, sentiment historical conditioning, full PIT sector universe / metadata storage, 또는 sample-quality/PIT treatment 강화이며 모두 별도 승인 범위다.
+
 ### 2026-06-18 - Macro-conditioned analog should start as a GLD-only pilot
 - User request:
   - 3차-A 개발 진행을 승인하되, macro-conditioned historical analog 전체 구현이 아니라 pilot framework와 최소 조건 구현까지만 요청함.

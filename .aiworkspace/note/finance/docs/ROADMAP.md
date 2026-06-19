@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-18
+Last Verified: 2026-06-19
 
 ## Current State After Master Merge
 
@@ -31,7 +31,12 @@ Workspace > Ingestion
 - Latest completed task: `.aiworkspace/note/finance/tasks/active/finance-integration-doc-merge-skill-20260617/`
 - 목적: 반복될 multi-worktree merge에서 `.aiworkspace/note/finance` 문서 충돌을 손실 없이, 문서 역할과 읽기 흐름 기준으로 정리하도록 `finance-integration-review` skill에 전용 checklist를 추가했다.
 - 이번 차수에서 하지 않은 일: 새 별도 skill 생성, 자동 충돌 해결기 구현, task folder archive migration, registry / saved JSONL rewrite, generated artifact 정리.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-futures-conditioned-analog-v3b-20260618/`
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-dimension-audit-v3c-20260619/`
+- 목적: `Workspace > Overview > Market Context`의 3차-C historical analog 개선으로 `Macro 조건 포함 pilot` 안에 `맥락 차원 상태` audit/read model을 추가했다.
+- 실제 사용 조건: 필수 sector ETF vs SPY relative strength, GLD price proxy safe-haven / gold context, `ZN=F` / `ZB=F` Rate Pressure futures proxy는 3차-B와 동일하게 유지한다.
+- 참고 / 보류 차원: stored FRED `T10Y3M`, `VIXCLS`, `BAA10Y`는 availability + bucket preview count만 표시하고, Events와 CNN / AAII sentiment는 annotation / deferred 또는 insufficient-history 상태로 표시한다.
+- 이번 차수에서 하지 않은 일: FRED / events / sentiment hard historical conditioning, 새 FRED collection, 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-futures-conditioned-analog-v3b-20260618/`
 - 목적: `Workspace > Overview > Market Context`의 3차-B historical analog 개선으로 3차-A `Macro 조건 포함 pilot`에 stored futures daily OHLCV 기반 Rate Pressure proxy 조건 1개를 추가했다.
 - 실제 사용 조건: 필수 sector ETF vs SPY relative strength, GLD price proxy safe-haven / gold context, `ZN=F` / `ZB=F` Rate Pressure futures proxy.
 - 이번 차수에서 하지 않은 일: FRED 2Y/10Y 수집 또는 조건화, events / sentiment historical conditioning, 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, full PIT sector universe storage, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
@@ -135,8 +140,9 @@ Workspace > Ingestion
 | Overview Market Context Supporting Flow V3 | Complete | Market Context now reframes the lower supporting flow as `다음 맥락 체크`, `참고: 과거 유사 맥락`, and `근거: 자료 기준 / 출처 상태`. Data Health is no longer a primary market-variable row; it stays available as evidence/source context. It remains DB-backed and context-only. |
 | Overview Market Context Source Action Flow V1 | Complete | Market Context now renders `다음 맥락 체크` from `next_checks` instead of legacy `interpretation_cues`, with target tab, source area, reason, action, freshness, and priority visible. Source Confidence exposes review source/action hints while collapsed, historical analog shows current as-of / data window / calculation basis, and refresh assist remains a secondary collapsed action. |
 | Overview Market Context Analog As-Of Window V2 | Complete | Market Context historical analog now has 기준 시점 and 패턴 기간 controls. It can replay latest or a selected as-of date using existing DB prices plus current universe / sector metadata, and supports 5D / 20D / monthly pattern windows while keeping the existing distribution table. Full PIT sector membership / metadata replay remains a storage/read-path approval item. |
+| Overview Market Context Macro Dimension Audit V3C | Complete | Market Context `Macro 조건 포함 pilot` now includes `맥락 차원 상태`, showing actual hard conditions, stored FRED `T10Y3M` / `VIXCLS` / `BAA10Y` availability and bucket preview counts, plus event / sentiment annotation or deferred reasons. It remains context-only and does not add FRED / event / sentiment hard filtering. |
 | Overview Market Context Futures-Conditioned Analog V3B | Complete | Market Context `Macro 조건 포함 pilot` now keeps GLD context and adds one stored futures daily OHLCV Rate Pressure proxy condition using `ZN=F` / `ZB=F`. The condition is bounded by selected as-of / anchor date, shows used or insufficient state, and remains context-only. |
-| Overview Market Context Macro-Conditioned Analog Pilot V1 | Complete | Market Context historical analog separates the original broad analog from a `Macro 조건 포함 pilot`. 3차-A introduced GLD price proxy context and sample quality display; 3차-B extended it with the stored futures Rate Pressure proxy. FRED rates, events, and sentiment conditioning remain disabled or excluded. |
+| Overview Market Context Macro-Conditioned Analog Pilot V1 | Complete | Market Context historical analog separates the original broad analog from a `Macro 조건 포함 pilot`. 3차-A introduced GLD price proxy context and sample quality display; 3차-B extended it with the stored futures Rate Pressure proxy; 3차-C adds dimension availability / preview audit without applying FRED / events / sentiment as hard filters. |
 | Futures Market Monitoring / Macro Thermometer | Complete | yfinance futures 1m / daily OHLCV feeds Futures Monitor and Macro Thermometer. Historical validation is point-in-time read-only context, not a prediction guarantee. |
 
 ## Completed Foundations
@@ -216,7 +222,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |
 | Risk-On Momentum 5D governance | Strategy is implemented as research lane but not connected to validation / monitoring daily signal policy | Practical Validation module, Final Review gate, Portfolio Monitoring signal integration |
 | Overview scheduler hardening | Browser-session refresh exists; OS scheduler / launchd production operation is a separate decision | Enabling unattended scheduled collection |
-| Overview historical analog expansion | 2차 supports latest / selected as-of bounded replay and 5D / 20D / monthly pattern windows using current universe metadata plus DB prices. 3차-A adds GLD context; 3차-B adds one stored futures daily OHLCV Rate Pressure proxy condition with sample quality and condition availability display | Adding upload/import flow, full PIT sector universe / metadata storage, expanding sector ETF coverage, CPI/FOMC event-window analogs, events/sentiment conditioning, FRED rates collection, safe-haven futures variants beyond the current Rate Pressure proxy, or strengthening PIT/survivorship/sample-quality treatment |
+| Overview historical analog expansion | 2차 supports latest / selected as-of bounded replay and 5D / 20D / monthly pattern windows using current universe metadata plus DB prices. 3차-A adds GLD context; 3차-B adds one stored futures daily OHLCV Rate Pressure proxy condition; 3차-C shows macro dimension availability / preview status for FRED, events, and sentiment without hard filtering | Adding upload/import flow, full PIT sector universe / metadata storage, expanding sector ETF coverage, CPI/FOMC event-window analogs, events/sentiment conditioning, FRED rates collection, safe-haven futures variants beyond the current Rate Pressure proxy, or strengthening PIT/survivorship/sample-quality treatment |
 | UI platform split | Streamlit is workable but complex UX may eventually benefit from API + React/Next.js | Any large frontend migration or service API expansion |
 | Second-cycle investability hardening | Phase 13 carry-forward material can seed another phase | Opening a new phase from carry-forward matrix |
 

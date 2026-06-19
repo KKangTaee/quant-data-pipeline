@@ -1087,6 +1087,76 @@ def overview_ui_css() -> str:
 .ov-macro-conditioned-condition-group {
   margin-top: 0.72rem;
 }
+.ov-macro-dimension-audit {
+  margin-top: 0.78rem;
+  padding: 0.66rem 0.7rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.66);
+}
+.ov-macro-dimension-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+.ov-macro-dimension-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+}
+.ov-macro-dimension-summary {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.38;
+}
+.ov-macro-dimension-status {
+  color: var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  white-space: nowrap;
+}
+.ov-macro-dimension-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.48rem;
+  margin-top: 0.56rem;
+}
+.ov-macro-dimension-item {
+  min-width: 0;
+  padding: 0.48rem 0.52rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: 7px;
+  background: rgba(248,250,252,0.78);
+}
+.ov-macro-dimension-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+  align-items: flex-start;
+}
+.ov-macro-dimension-label {
+  min-width: 0;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ov-macro-dimension-pill {
+  flex: 0 0 auto;
+  color: var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-macro-dimension-meta {
+  margin-top: 0.18rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.36;
+  overflow-wrap: anywhere;
+}
 .ov-macro-conditioned-condition-title {
   color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-caption);
@@ -2364,6 +2434,17 @@ def overview_ui_css() -> str:
   .ov-analog-summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .ov-macro-conditioned-stats,
+  .ov-macro-conditioned-condition-list,
+  .ov-macro-dimension-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov-macro-dimension-head {
+    display: block;
+  }
+  .ov-macro-dimension-status {
+    margin-top: 0.16rem;
+  }
   .ov-analog-summary-item:nth-child(odd) {
     border-left: 0;
   }
@@ -2940,6 +3021,53 @@ def _macro_condition_list_html(title: str, items: list[dict[str, Any]]) -> str:
     )
 
 
+def _macro_dimension_audit_html(audit: dict[str, Any]) -> str:
+    if not audit:
+        return ""
+    dimensions = list(audit.get("dimensions") or [])
+    if not dimensions:
+        return ""
+    status_label = _display_value(audit.get("status_label") or _display_status_label(audit.get("status")))
+    summary = _display_value(audit.get("summary"))
+    item_html = ""
+    for item in dimensions[:8]:
+        latest = _display_value(item.get("latest_date"))
+        coverage_start = _display_value(item.get("coverage_start"))
+        coverage_end = _display_value(item.get("coverage_end"))
+        anchor_count = _display_value(item.get("anchor_preview_count"))
+        meta_parts = [
+            f"usage: {_display_value(item.get('usage'))}",
+            f"as-of: {latest}",
+            f"coverage: {coverage_start} - {coverage_end}",
+            f"anchor {anchor_count}회",
+        ]
+        bucket = _display_value(item.get("current_bucket"))
+        if bucket != "-":
+            meta_parts.append(f"bucket: {bucket}")
+        item_html += (
+            '<div class="ov-macro-dimension-item">'
+            '<div class="ov-macro-dimension-top">'
+            f'<div class="ov-macro-dimension-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-macro-dimension-pill">{escape(_display_value(item.get("status_label") or _display_status_label(item.get("status"))))}</div>'
+            "</div>"
+            f'<div class="ov-macro-dimension-meta">{escape(" · ".join(meta_parts))}</div>'
+            f'<div class="ov-macro-dimension-meta">{escape(_display_value(item.get("detail")))}</div>'
+            "</div>"
+        )
+    return (
+        '<div class="ov-macro-dimension-audit">'
+        '<div class="ov-macro-dimension-head">'
+        "<div>"
+        '<div class="ov-macro-dimension-title">맥락 차원 상태</div>'
+        f'<div class="ov-macro-dimension-summary">{escape(summary)}</div>'
+        "</div>"
+        f'<div class="ov-macro-dimension-status">{escape(status_label)}</div>'
+        "</div>"
+        f'<div class="ov-macro-dimension-grid">{item_html}</div>'
+        "</div>"
+    )
+
+
 def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> str:
     pilot = dict(model.get("macro_conditioned_analog") or {})
     if not pilot:
@@ -2978,6 +3106,7 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         f"{_macro_condition_list_html('조건 부족', list(pilot.get('insufficient_conditions') or []))}"
         f"{_macro_condition_list_html('이번 차수 제외', list(pilot.get('excluded_conditions') or []))}"
     )
+    dimension_audit_html = _macro_dimension_audit_html(dict(pilot.get("macro_dimension_audit") or {}))
     return (
         f'<div class="ov-macro-conditioned-pilot" style="--ov-macro-pilot-tone:{tone_color};">'
         '<div class="ov-macro-conditioned-head">'
@@ -2991,6 +3120,7 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         f'<div class="ov-macro-conditioned-stats">{stats_html}</div>'
         f'<div class="ov-macro-conditioned-quality"><strong>표본 품질</strong>: {escape(_display_value(sample_quality.get("label")))} · {escape(_display_value(sample_quality.get("detail")))}</div>'
         f'<div class="ov-macro-conditioned-reason">{escape(_display_value(pilot.get("sample_reduction_reason")))}</div>'
+        f"{dimension_audit_html}"
         f"{conditions_html}"
         f"{table_html}"
         "</div>"

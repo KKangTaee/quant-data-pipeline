@@ -316,6 +316,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
 - `regime-split-validation-v1`부터 Practical Validation은 stored FRED history를 read-only로 읽어 `neutral` / `caution` / `risk_off` bucket별 portfolio / benchmark 성과를 compact evidence로 계산한다.
+- Market Context 3차-C부터 `app.services.overview_market_context_analog.build_historical_analog_snapshot()`은 stored FRED `T10Y3M` / `VIXCLS` / `BAA10Y`와 CNN / AAII sentiment history를 loader로 읽어 `Macro 조건 포함 pilot`의 `맥락 차원 상태`에 availability / bucket preview / deferred reason을 표시한다. 이 read model은 기준일 이후 row를 쓰지 않고, FRED / events / sentiment를 historical anchor hard filter로 적용하지 않는다.
 
 ## Broad fundamentals / factors 흐름
 

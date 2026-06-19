@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-19 - Overview Market Context Macro Dimension Audit V3C
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-dimension-audit-v3c-20260619/` for the approved 3차-C Market Context historical analog follow-up.
+- Added `macro_dimension_audit` under `Macro 조건 포함 pilot` and rendered `맥락 차원 상태` so users can see actual conditions, stored FRED preview dimensions, and event / sentiment deferred context.
+- Actual hard conditions remain sector ETF vs SPY, GLD price proxy, and `ZN=F` / `ZB=F` Rate Pressure futures proxy; FRED / events / sentiment are not hard historical filters.
+- Verification details and Browser QA screenshot are in the task `RUNS.md`; generated screenshot is not staged.
+
 ### 2026-06-18 - Overview Market Context Macro-Conditioned Analog Pilot V1
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-conditioned-analog-pilot-v1-20260618/` for the approved 3차-A `Macro 조건 포함` pilot.
 - Preserved the existing broad historical analog and added a separate pilot payload/UI block that filters broad anchors with one additional stored-data condition: GLD price proxy safe-haven / gold context.

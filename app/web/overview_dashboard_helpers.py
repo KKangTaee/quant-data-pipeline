@@ -460,7 +460,8 @@ def load_overview_market_sentiment_snapshot(cache_schema_version: str = "sentime
 def load_overview_market_context_historical_analog(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
-    cache_schema_version: str = "overview-historical-analog-v4-futures-conditioned-pilot",
+    events_snapshot: dict[str, Any] | None = None,
+    cache_schema_version: str = "overview-historical-analog-v6-macro-dimension-disabled-audit",
 ) -> dict[str, Any]:
     del cache_schema_version
     normalized_pattern = str(pattern_window or "5D").strip().upper()
@@ -477,6 +478,7 @@ def load_overview_market_context_historical_analog(
         group_leadership_snapshot=group_snapshot,
         as_of_date=as_of_date,
         pattern_window=pattern_window,
+        events_snapshot=events_snapshot,
     )
 
 
@@ -541,31 +543,39 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 def load_overview_macro_context_cockpit(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
-    cache_schema_version: str = "overview-cockpit-v4-macro-conditioned-pilot-boundary-copy",
+    cache_schema_version: str = "overview-cockpit-v6-macro-dimension-disabled-audit",
 ) -> dict[str, Any]:
     del cache_schema_version
+    market_movers_snapshot = load_overview_market_movers_snapshot(
+        universe_code="SP500",
+        period="daily",
+        top_n=10,
+    )
+    group_leadership_snapshot = load_overview_group_leadership_snapshot(
+        universe_code="SP500",
+        group_by="sector",
+        period="daily",
+        top_n=10,
+    )
+    futures_macro_snapshot = load_overview_futures_macro_snapshot()
+    sentiment_snapshot = load_overview_market_sentiment_snapshot()
+    events_snapshot = load_overview_market_events_snapshot(
+        event_type=None,
+        horizon_days=60,
+        limit=100,
+    )
+    collection_ops_snapshot = load_overview_collection_ops_snapshot()
+    historical_analog_snapshot = load_overview_market_context_historical_analog(
+        as_of_date=as_of_date,
+        pattern_window=pattern_window,
+        events_snapshot=events_snapshot,
+    )
     return build_overview_macro_context_cockpit(
-        market_movers_snapshot=load_overview_market_movers_snapshot(
-            universe_code="SP500",
-            period="daily",
-            top_n=10,
-        ),
-        group_leadership_snapshot=load_overview_group_leadership_snapshot(
-            universe_code="SP500",
-            group_by="sector",
-            period="daily",
-            top_n=10,
-        ),
-        futures_macro_snapshot=load_overview_futures_macro_snapshot(),
-        sentiment_snapshot=load_overview_market_sentiment_snapshot(),
-        events_snapshot=load_overview_market_events_snapshot(
-            event_type=None,
-            horizon_days=60,
-            limit=100,
-        ),
-        collection_ops_snapshot=load_overview_collection_ops_snapshot(),
-        historical_analog_snapshot=load_overview_market_context_historical_analog(
-            as_of_date=as_of_date,
-            pattern_window=pattern_window,
-        ),
+        market_movers_snapshot=market_movers_snapshot,
+        group_leadership_snapshot=group_leadership_snapshot,
+        futures_macro_snapshot=futures_macro_snapshot,
+        sentiment_snapshot=sentiment_snapshot,
+        events_snapshot=events_snapshot,
+        collection_ops_snapshot=collection_ops_snapshot,
+        historical_analog_snapshot=historical_analog_snapshot,
     )
