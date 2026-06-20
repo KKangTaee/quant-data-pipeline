@@ -636,80 +636,6 @@ def overview_ui_css() -> str:
   line-height: 1.42;
   overflow-wrap: anywhere;
 }
-.ov-brief-confidence {
-  margin-top: 0.72rem;
-  padding-top: 0.68rem;
-  border-top: 1px solid var(--ov-mi-border-faint);
-}
-.ov-brief-confidence-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--ov-mi-gap-md);
-  margin-bottom: 0.36rem;
-}
-.ov-brief-confidence-title {
-  color: var(--ov-mi-color-text);
-  font-size: 0.96rem;
-  font-weight: var(--ov-mi-weight-heading);
-  line-height: 1.2;
-}
-.ov-brief-confidence-note {
-  max-width: 38rem;
-  color: var(--ov-mi-color-text-muted);
-  font-size: 0.8rem;
-  line-height: 1.34;
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-.ov-brief-confidence-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--ov-mi-border-faint);
-}
-.ov-brief-confidence-row {
-  display: grid;
-  grid-template-columns: minmax(7rem, 0.24fr) minmax(0, 1fr) minmax(12rem, 0.78fr);
-  gap: 0.78rem;
-  align-items: start;
-  min-width: 0;
-  padding: 0.66rem 0;
-  border-bottom: 1px solid var(--ov-mi-border-faint);
-}
-.ov-brief-confidence-label {
-  color: var(--ov-confidence-tone, var(--ov-mi-color-neutral));
-  font-size: 0.86rem;
-  font-weight: var(--ov-mi-weight-label);
-  line-height: 1.18;
-  overflow-wrap: anywhere;
-}
-.ov-brief-confidence-value {
-  color: var(--ov-mi-color-text);
-  font-size: 0.96rem;
-  font-weight: var(--ov-mi-weight-heading);
-  line-height: 1.22;
-  overflow-wrap: anywhere;
-}
-.ov-brief-confidence-detail,
-.ov-brief-confidence-action,
-.ov-brief-confidence-meta {
-  color: var(--ov-mi-color-text-subtle);
-  font-size: 0.84rem;
-  line-height: 1.34;
-  overflow-wrap: anywhere;
-}
-.ov-brief-confidence-action {
-  color: color-mix(in srgb, var(--ov-confidence-tone, var(--ov-mi-color-neutral)) 80%, var(--ov-mi-color-text));
-  font-weight: var(--ov-mi-weight-label);
-}
-.ov-brief-confidence-meta {
-  margin-top: 0.2rem;
-  color: var(--ov-mi-color-text-muted);
-  font-size: 0.76rem;
-}
 .ov-macro-brief-list {
   display: grid;
   gap: var(--ov-mi-gap-sm);
@@ -2758,7 +2684,6 @@ def overview_ui_css() -> str:
   .ov-macro-status-item,
   .ov-macro-cue-row,
   .ov-market-brief-row,
-  .ov-brief-confidence-row,
   .ov-context-finding-row,
   .ov-source-confidence-row,
   .ov-source-ledger-head,
@@ -2770,13 +2695,6 @@ def overview_ui_css() -> str:
     display: block;
   }
   .ov-market-brief-note {
-    margin-top: 0.16rem;
-    text-align: left;
-  }
-  .ov-brief-confidence-head {
-    display: block;
-  }
-  .ov-brief-confidence-note {
     margin-top: 0.16rem;
     text-align: left;
   }
@@ -3144,7 +3062,7 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
     html: list[str] = []
-    for index, row in enumerate(rows[:3], start=1):
+    for index, row in enumerate(rows[:4], start=1):
         tone_color = escape(_overview_tone_color(row.get("tone")))
         badges = _macro_cockpit_badges_html(list(row.get("badges") or []))
         html.append(
@@ -3165,51 +3083,8 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
         '<section class="ov-market-brief-lane">'
         '<div class="ov-market-brief-head">'
         '<div class="ov-market-brief-title">오늘의 시장 브리프</div>'
-        '<div class="ov-market-brief-note">상단 headline을 중복하지 않고, 움직임 · 확산 · macro 배경만 먼저 읽습니다.</div>'
         "</div>"
         f'<ol class="ov-market-brief-list">{"".join(html)}</ol>'
-        "</section>"
-    )
-
-
-def _macro_cockpit_brief_caveats_html(caveats: list[dict[str, Any]]) -> str:
-    if not caveats:
-        return ""
-    html: list[str] = []
-    for caveat in caveats[:3]:
-        tone_color = escape(_overview_tone_color(caveat.get("tone") or caveat.get("status")))
-        source = _display_value(caveat.get("target_tab") or caveat.get("source") or caveat.get("source_area"))
-        freshness = _display_value(caveat.get("freshness_label") or _display_freshness_label(caveat.get("freshness")))
-        status = _display_value(caveat.get("status_label") or _display_status_label(caveat.get("status")))
-        meta = " · ".join(
-            item
-            for item in [
-                f"자료 영역: {source}" if source != "-" else "",
-                f"자료 기준: {freshness}" if freshness != "-" else "",
-                status if status != "-" else "",
-            ]
-            if item
-        )
-        html.append(
-            f'<li class="ov-brief-confidence-row" style="--ov-confidence-tone:{tone_color};">'
-            f'<div class="ov-brief-confidence-label">{escape(_display_value(caveat.get("label")))}</div>'
-            "<div>"
-            f'<div class="ov-brief-confidence-value">{escape(_display_value(caveat.get("value")))}</div>'
-            f'<div class="ov-brief-confidence-detail">{escape(_display_value(caveat.get("detail")))}</div>'
-            "</div>"
-            "<div>"
-            f'<div class="ov-brief-confidence-action">{escape(_display_value(caveat.get("action")))}</div>'
-            f'<div class="ov-brief-confidence-meta">{escape(meta)}</div>'
-            "</div>"
-            "</li>"
-        )
-    return (
-        '<section class="ov-brief-confidence">'
-        '<div class="ov-brief-confidence-head">'
-        '<div class="ov-brief-confidence-title">브리프 신뢰도</div>'
-        '<div class="ov-brief-confidence-note">시장 결론이 아니라, 오늘 브리프를 얼마나 강하게 읽을지 조절하는 근거입니다.</div>'
-        "</div>"
-        f'<ol class="ov-brief-confidence-list">{"".join(html)}</ol>'
         "</section>"
     )
 
@@ -3889,9 +3764,8 @@ def _macro_cockpit_body_html(model: dict[str, Any]) -> str:
     if not rail_html:
         rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
     brief_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
-    caveats_html = _macro_cockpit_brief_caveats_html(list(model.get("brief_caveats") or []))
     visual_board_html = _macro_cockpit_visual_board_html(model)
-    return f"{rail_html}{brief_html}{caveats_html}{visual_board_html}"
+    return f"{rail_html}{brief_html}{visual_board_html}"
 
 
 def _macro_context_reading_flow_html(
@@ -3903,9 +3777,6 @@ def _macro_context_reading_flow_html(
     include_source_confidence: bool = True,
 ) -> str:
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or [])) if include_brief else ""
-    brief_caveats_html = (
-        _macro_cockpit_brief_caveats_html(list(model.get("brief_caveats") or [])) if include_brief else ""
-    )
     context_findings = list(model.get("extra_context_findings") or [])
     next_checks_html = _macro_cockpit_next_checks_html(context_findings) if include_next_checks else ""
     historical_analog_html = (
@@ -3925,7 +3796,6 @@ def _macro_context_reading_flow_html(
     )
     flow_html = (
         f"{brief_rows_html}"
-        f"{brief_caveats_html}"
         f"{next_checks_html}"
         f"{historical_analog_html}"
         f"{source_confidence_html}"

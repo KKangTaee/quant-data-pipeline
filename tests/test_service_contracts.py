@@ -4690,7 +4690,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
 
-    def test_overview_market_context_separates_brief_confidence_from_market_brief(self) -> None:
+    def test_overview_market_context_absorbs_context_limits_into_market_brief(self) -> None:
         from app.web import overview_ui_components
 
         model = {
@@ -4721,26 +4721,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 },
                 {
                     "label": "Futures/Macro 배경",
-                    "value": "Risk-on with rate pressure",
-                    "detail": "주식 강세를 단순 위험선호로만 읽기 어렵습니다.",
+                    "value": "장중 macro 해석 보류",
+                    "detail": "Futures Monitor 1m OHLCV가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다.",
                     "tone": "warning",
                 },
-            ],
-            "brief_caveats": [
                 {
-                    "label": "이벤트 일정",
-                    "value": "이벤트 요인은 약하게 읽기",
+                    "label": "이벤트 배경",
+                    "value": "직접 원인 근거 약함",
                     "detail": "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다.",
-                    "action": "공식 macro와 provider 추정 일정을 구분해서 읽습니다.",
                     "source_area": "Events · Earnings estimates",
-                    "tone": "warning",
-                },
-                {
-                    "label": "자료 기준",
-                    "value": "선물 기반 장중 해석 제한",
-                    "detail": "Futures Monitor 1m OHLCV가 오래되어 금리 압력 / risk-on 배경은 보수적으로 읽습니다.",
-                    "action": "필요하면 자료 보강 후 브리프를 다시 읽습니다.",
-                    "source_area": "Futures Monitor 1m OHLCV",
                     "tone": "warning",
                 },
             ],
@@ -4783,13 +4772,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-market-brief-lane", cockpit_html)
         self.assertIn("오늘의 시장 브리프", cockpit_html)
         self.assertIn("무엇이 움직였나", cockpit_html)
-        self.assertIn("브리프 신뢰도", cockpit_html)
-        self.assertIn("이벤트 일정", cockpit_html)
-        self.assertIn("이벤트 요인은 약하게 읽기", cockpit_html)
+        self.assertIn("장중 macro 해석 보류", cockpit_html)
+        self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다.", cockpit_html)
+        self.assertIn("이벤트 배경", cockpit_html)
+        self.assertIn("직접 원인 근거 약함", cockpit_html)
         self.assertIn("오늘 움직임의 원인을 이벤트로 단정하지 않습니다.", cockpit_html)
-        self.assertIn("자료 기준", cockpit_html)
-        self.assertIn("선물 기반 장중 해석 제한", cockpit_html)
-        self.assertIn("금리 압력 / risk-on 배경은 보수적으로 읽습니다.", cockpit_html)
+        self.assertNotIn("브리프 신뢰도", cockpit_html)
+        self.assertNotIn("이벤트 일정", cockpit_html)
+        self.assertNotIn("선물 기반 장중 해석 제한", cockpit_html)
         self.assertNotIn("이벤트 caveat", cockpit_html)
         self.assertNotIn("자료 신뢰도 caveat", cockpit_html)
         self.assertNotIn("ov-macro-reading-section ov-macro-brief", cockpit_html)
@@ -5097,13 +5087,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
             },
             "brief_rows": [
                 {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
-            ],
-            "brief_caveats": [
                 {
-                    "label": "이벤트 일정",
-                    "value": "이벤트 요인은 약하게 읽기",
+                    "label": "이벤트 배경",
+                    "value": "직접 원인 근거 약함",
                     "detail": "가까운 FOMC 일정은 배경 변수지만 오늘 움직임의 원인으로 단정하지 않습니다.",
-                    "action": "공식 macro 일정과 provider 추정 일정을 구분해서 읽습니다.",
                     "tone": "warning",
                 },
             ],
@@ -5149,9 +5136,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-macro-visual-board", cockpit_html)
         self.assertIn("오늘의 시장 브리프", cockpit_html)
         self.assertIn("ov-market-brief-lane", cockpit_html)
-        self.assertIn("브리프 신뢰도", cockpit_html)
-        self.assertIn("이벤트 일정", cockpit_html)
+        self.assertIn("이벤트 배경", cockpit_html)
+        self.assertIn("직접 원인 근거 약함", cockpit_html)
         self.assertIn("오늘 움직임의 원인으로 단정하지 않습니다.", cockpit_html)
+        self.assertNotIn("브리프 신뢰도", cockpit_html)
         self.assertNotIn("이벤트 caveat", cockpit_html)
         self.assertNotIn("해석할 때 같이 볼 변수", cockpit_html)
         self.assertNotIn("과거 유사 맥락 참고", cockpit_html)
@@ -5186,20 +5174,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "event_timeline": {},
             "brief_rows": [
                 {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
-            ],
-            "brief_caveats": [
                 {
-                    "label": "이벤트 일정",
-                    "value": "이벤트 요인은 약하게 읽기",
+                    "label": "이벤트 배경",
+                    "value": "직접 원인 근거 약함",
                     "detail": "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다.",
-                    "action": "공식 macro와 provider 추정 일정을 구분해서 읽습니다.",
-                    "tone": "warning",
-                },
-                {
-                    "label": "자료 기준",
-                    "value": "선물 기반 장중 해석 제한",
-                    "detail": "Futures Monitor 1m OHLCV가 오래되어 금리 압력 / risk-on 배경은 보수적으로 읽습니다.",
-                    "action": "필요하면 자료 보강 후 브리프를 다시 읽습니다.",
                     "tone": "warning",
                 },
             ],
@@ -5248,11 +5226,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("맥락 검토 결과", html)
         self.assertNotIn("Market Context가 이미 읽은 보조 맥락", html)
         self.assertNotIn("ov-context-finding-rail", html)
-        self.assertIn("브리프 신뢰도", html)
-        self.assertIn("이벤트 일정", html)
-        self.assertIn("자료 기준", html)
+        self.assertIn("이벤트 배경", html)
+        self.assertIn("직접 원인 근거 약함", html)
         self.assertIn("오늘 움직임의 원인을 이벤트로 단정하지 않습니다.", html)
-        self.assertIn("금리 압력 / risk-on 배경은 보수적으로 읽습니다.", html)
+        self.assertNotIn("브리프 신뢰도", html)
+        self.assertNotIn("이벤트 일정", html)
+        self.assertNotIn("선물 기반 장중 해석 제한", html)
         self.assertNotIn("이벤트 caveat", html)
         self.assertNotIn("자료 신뢰도 caveat", html)
         self.assertNotIn("다음 맥락 체크", html)
@@ -5283,8 +5262,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-analog-interpretation", css)
         self.assertIn(".ov-historical-analog-table-block", css)
         self.assertIn(".ov-source-confidence.is-evidence-footer", css)
-        self.assertIn(".ov-brief-confidence", css)
-        self.assertIn(".ov-brief-confidence-row", css)
+        self.assertNotIn(".ov-brief-confidence", css)
+        self.assertNotIn(".ov-brief-confidence-row", css)
 
         analog_section_block = css[css.index(".ov-historical-analog-row {") : css.index(".ov-historical-analog-head {")]
         self.assertNotIn("background: transparent", analog_section_block)
@@ -5312,7 +5291,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 inspect.getsource(overview_ui_components.render_macro_context_cockpit),
                 inspect.getsource(overview_ui_components._macro_context_cockpit_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_brief_rows_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_brief_caveats_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_next_checks_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_interpretation_cues_html),
                 inspect.getsource(overview_ui_components._macro_cockpit_row_meta_html),
@@ -5326,7 +5304,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
         self.assertIn("시장 브리프", component_source)
-        self.assertIn("브리프 신뢰도", component_source)
+        self.assertNotIn("브리프 신뢰도", component_source)
         self.assertNotIn("맥락 검토 결과", component_source)
         self.assertIn("자료 영역", component_source)
         self.assertNotIn("핵심 요약", component_source)
@@ -8875,19 +8853,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         self.assertEqual(
             [row["label"] for row in cockpit["brief_rows"]],
-            ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경"],
-        )
-        self.assertEqual(
-            [row["label"] for row in cockpit["brief_caveats"]],
-            ["이벤트 일정", "자료 기준"],
+            ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경", "이벤트 배경"],
         )
         self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인", "매크로 확인"])
         self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
         self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
-        self.assertEqual(cockpit["brief_caveats"][0]["target_tab"], "Events · Macro calendar")
-        self.assertEqual(cockpit["brief_caveats"][1]["target_tab"], "Earnings Calendar")
-        self.assertIn("이벤트", cockpit["brief_caveats"][0]["detail"])
-        self.assertIn("보수적으로 읽습니다", cockpit["brief_caveats"][1]["detail"])
+        self.assertEqual(cockpit["brief_rows"][2]["target_tab"], "Futures Monitor")
+        self.assertEqual(cockpit["brief_rows"][2]["value"], "장중 macro 해석 보류")
+        self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다", cockpit["brief_rows"][2]["detail"])
+        self.assertEqual(cockpit["brief_rows"][3]["target_tab"], "Events · Macro calendar")
+        self.assertEqual(cockpit["brief_rows"][3]["value"], "직접 원인 근거 약함")
+        self.assertIn("이벤트", cockpit["brief_rows"][3]["detail"])
+        self.assertNotIn("brief_caveats", cockpit)
         self.assertEqual(cockpit["interpretation_cues"][0]["target_tab"], "Events")
         self.assertEqual(cockpit["interpretation_cues"][2]["target_tab"], "Futures Monitor")
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])

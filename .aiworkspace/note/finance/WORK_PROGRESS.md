@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Brief Context Absorption V6
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-context-absorption-v6-20260620/` after user feedback that `브리프 신뢰도` still felt like a guide rather than necessary Market Context content.
+- Removed the independent `브리프 신뢰도` section and `brief_caveats` payload.
+- Folded event limitations into an optional `이벤트 배경` brief row and Futures data-health limitations into the `Futures/Macro 배경` row only when Futures/OHLCV freshness actually limits macro interpretation.
+- Boundaries stayed unchanged: DB-backed snapshots only, no render-time provider fetch, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Brief Confidence V5
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-confidence-v5-20260620/` after user feedback that Events / data caveats inside `오늘의 시장 브리프` did not read like market brief conclusions.
 - Returned `오늘의 시장 브리프` to three core rows: movement, breadth, and Futures/Macro background.

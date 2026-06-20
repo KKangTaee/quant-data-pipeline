@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Market Context should absorb interpretation limits instead of showing a guide section
+- User request:
+  - `브리프 신뢰도`가 생긴 것은 알겠지만, 이 정보가 무엇을 의미하고 사용자가 무엇을 해야 하는지 여전히 불명확하며 Market Context에는 필요한 정보만 남아야 한다고 지적함.
+- Interpreted goal:
+  - 이벤트 / 자료 상태를 별도 가이드 섹션으로 보여주지 말고, 실제 시장맥락 해석에 영향을 줄 때만 브리프 결론으로 흡수한다.
+- Analysis result:
+  - `이벤트 일정`과 `자료 기준`은 전체 Market Context 신뢰도 점수의 독립 축이 아니다. Events는 `이벤트 배경` 행에서 직접 원인 근거가 약한지 표시하고, Futures/OHLCV freshness가 실제로 제한될 때만 `Futures/Macro 배경`을 `장중 macro 해석 보류`로 낮춘다. 자세한 source / freshness는 하단 source confidence disclosure가 소유한다.
+- Follow-up:
+  - Future work should avoid recreating `브리프 신뢰도`, `다음 맥락 체크`, or other guide-like default sections in Market Context. The first screen should show market context conclusions, with source details kept as evidence.
+
 ### 2026-06-20 - Events and data caveats should be brief confidence, not brief conclusions
 - User request:
   - V4 화면에서 `오늘의 시장 브리프`에 들어간 이벤트 / 자료 신뢰도 문구가 "그래서 무엇을 말하는지" 알기 어렵고, 시장 브리프와 거리가 멀다고 지적함.

@@ -5242,47 +5242,32 @@ def _cockpit_brief_row(card: dict[str, Any], *, label: str) -> dict[str, Any]:
     }
 
 
-def _cockpit_brief_caveat(finding: dict[str, Any]) -> dict[str, Any]:
-    """Project a context finding into a reading-strength caveat, not a market brief row."""
+def _cockpit_event_brief_row(finding: dict[str, Any]) -> dict[str, Any]:
+    """Project event context into the market brief as an interpretation result."""
     finding_id = str(finding.get("id") or "").strip()
     source_area = str(finding.get("source_area") or finding.get("label") or "-").strip()
     conclusion = str(finding.get("conclusion") or "").strip()
     evidence = str(finding.get("evidence") or "").strip()
     lower_text = f"{source_area} {conclusion} {evidence}".lower()
-    if finding_id == "events":
+    status = str(finding.get("status") or "").strip().upper()
+    if "추정" in conclusion or "estimate" in lower_text or status == "REVIEW":
+        value = "직접 원인 근거 약함"
         if "추정" in conclusion or "estimate" in lower_text:
             detail = "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다."
         else:
-            detail = f"{conclusion} 오늘 움직임의 원인으로 단정하지 않고 배경 변수로만 둡니다."
-        detail = detail.replace("event", "이벤트")
-        return {
-            "id": finding_id,
-            "label": "이벤트 일정",
-            "value": "이벤트 요인은 약하게 읽기",
-            "detail": detail,
-            "action": "공식 macro와 provider 추정 일정을 구분해서 읽습니다.",
-            "status": finding.get("status"),
-            "status_label": finding.get("status_label"),
-            "tone": finding.get("tone"),
-            "target_tab": source_area,
-            "source": source_area,
-            "freshness": finding.get("freshness"),
-            "freshness_label": finding.get("freshness"),
-            "evidence": finding.get("evidence"),
-        }
-
-    if "futures" in lower_text or "ohlcv" in lower_text or "선물" in lower_text:
-        value = "선물 기반 장중 해석 제한"
-        detail = f"{source_area}가 오래되었거나 보강 대상이라 금리 압력 / risk-on 배경은 보수적으로 읽습니다."
+            detail = f"{conclusion} 오늘 움직임의 원인으로 단정하지 않습니다."
+    elif "확인" in conclusion or "제한" in lower_text or "review" in lower_text:
+        value = "이벤트 원인 해석 보류"
+        detail = f"{conclusion} 오늘 움직임과 직접 연결하기보다 배경 변수로만 둡니다."
     else:
-        value = "자료 기준 확인 필요"
-        detail = f"{source_area} 자료 기준이 낮아 관련 브리프 근거는 보수적으로 읽습니다."
+        value = "가까운 이벤트 참고"
+        detail = f"{conclusion} 오늘 가격 움직임의 직접 원인으로 단정하지는 않습니다."
+    detail = detail.replace("event", "이벤트")
     return {
-        "id": finding_id,
-        "label": "자료 기준",
+        "id": finding_id or "events",
+        "label": "이벤트 배경",
         "value": value,
         "detail": detail,
-        "action": "필요하면 자료 보강 후 브리프를 다시 읽습니다.",
         "status": finding.get("status"),
         "status_label": finding.get("status_label"),
         "tone": finding.get("tone"),
@@ -5292,6 +5277,59 @@ def _cockpit_brief_caveat(finding: dict[str, Any]) -> dict[str, Any]:
         "freshness_label": finding.get("freshness"),
         "evidence": finding.get("evidence"),
     }
+
+
+def _cockpit_apply_futures_data_limit(
+    row: dict[str, Any],
+    findings: list[dict[str, Any]],
+    data_health_handoff: dict[str, Any],
+) -> dict[str, Any]:
+    """Fold a Futures data-health limitation into the Futures/Macro brief row."""
+    handoff_items = [
+        {
+            "id": "data_health",
+            "source_area": item.get("area"),
+            "freshness": item.get("freshness"),
+            "status": item.get("status"),
+            "status_label": _cockpit_status_label(item.get("status") or "REVIEW"),
+        }
+        for item in list(data_health_handoff.get("priority_items") or [])
+        if isinstance(item, dict)
+    ]
+    data_finding = next(
+        (
+            finding
+            for finding in [*findings, *handoff_items]
+            if str(finding.get("id") or "").strip() == "data_health"
+            and any(
+                marker in str(finding.get("source_area") or finding.get("evidence") or "").lower()
+                for marker in ("futures", "ohlcv", "선물")
+            )
+        ),
+        None,
+    )
+    if not data_finding:
+        return row
+    limited = dict(row)
+    source_area = str(data_finding.get("source_area") or "Futures Monitor 1m OHLCV").strip()
+    limited["value"] = "장중 macro 해석 보류"
+    limited["detail"] = f"{source_area}가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다."
+    limited["status"] = data_finding.get("status") or row.get("status")
+    limited["status_label"] = data_finding.get("status_label") or row.get("status_label")
+    limited["tone"] = "warning"
+    limited["freshness_label"] = data_finding.get("freshness") or row.get("freshness_label")
+    return limited
+
+
+def _cockpit_extra_brief_rows(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    event_finding = next(
+        (finding for finding in findings if str(finding.get("id") or "").strip() == "events"),
+        None,
+    )
+    if event_finding:
+        rows.append(_cockpit_event_brief_row(event_finding))
+    return rows
 
 
 def build_overview_macro_context_cockpit(
@@ -5430,12 +5468,17 @@ def build_overview_macro_context_cockpit(
         card["group"] = "core" if index < 3 else "supporting"
         card["priority_label"] = "시장 브리프" if index < 3 else ("근거" if card.get("id") == "data" else "다음 맥락")
 
+    futures_brief_row = _cockpit_apply_futures_data_limit(
+        _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
+        brief_context_findings,
+        data_health_handoff,
+    )
     brief_rows = [
         _cockpit_brief_row(cards[0], label="무엇이 움직였나"),
         _cockpit_brief_row(cards[1], label="확산/집중인가"),
-        _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
+        futures_brief_row,
+        *_cockpit_extra_brief_rows(brief_context_findings),
     ]
-    brief_caveats = [_cockpit_brief_caveat(finding) for finding in brief_context_findings]
     interpretation_cues = [
         _cockpit_brief_row(cards[4], label="이벤트 압력"),
         _cockpit_brief_row(cards[3], label="심리 확인"),
@@ -5455,7 +5498,6 @@ def build_overview_macro_context_cockpit(
             "rail": rail,
         },
         "brief_rows": brief_rows,
-        "brief_caveats": brief_caveats,
         "interpretation_cues": interpretation_cues,
         "sector_pressure": sector_pressure,
         "event_timeline": event_timeline,
