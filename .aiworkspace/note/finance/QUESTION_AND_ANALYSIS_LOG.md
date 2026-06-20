@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Market Context brief should absorb non-duplicative caveats
+- User request:
+  - V3 `맥락 검토 결과`를 보니 P1/P2는 이미 오늘의 시장 브리프 / 시장 맥락과 중복되고, P3/P4만 브리프에 올리는 방향이 맞다고 지적함.
+- Interpreted goal:
+  - Market Context가 별도 checklist/rail을 늘리는 대신, 사용자가 읽는 한 흐름 안에서 시장 움직임, macro 배경, 이벤트 caveat, 자료 신뢰도 caveat를 이해하게 한다.
+- Analysis result:
+  - 가격 움직임과 Futures / Macro는 existing headline / tape / brief rows에 포함되어 있으므로 반복 rail에서 제거한다. Events / Data Health는 결론이 아니라 caveat이므로 `brief_rows`에 projection하고, `context_findings`는 compatibility payload로만 유지한다.
+- Follow-up:
+  - Future UI polish can further shorten caveat copy, but it should not reintroduce a default `다음 맥락 체크` or `맥락 검토 결과` action rail.
+
 ### 2026-06-20 - Market Context should report checked conclusions, not assign checks to the user
 - User request:
   - `다음 맥락 체크`가 Futures / Events / Market Movers를 사용자가 직접 확인하라는 guide처럼 보이며, Market Context가 이미 읽고 결론을 도출해야 한다고 지적함.

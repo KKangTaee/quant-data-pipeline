@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Brief Findings Integration V4
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-findings-integration-v4-20260620/` after user feedback that V3 `맥락 검토 결과` still repeated P1/P2 content already present in the main brief.
+- Moved Events / 자료 신뢰도 caveat into the `오늘의 시장 브리프` sequence and stopped rendering `context_findings` / `next_checks` as a default separate findings rail.
+- Removed the now-empty reading-flow call before historical analog controls; historical analog / source confidence remain below the 기준 controls.
+- Boundaries stayed unchanged: DB-backed snapshots only, no render-time provider fetch, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Context Findings V3
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-context-findings-v3-20260620/` after user feedback that `다음 맥락 체크` still told the user to inspect other tabs instead of producing conclusions.
 - Added `context_findings` to the Market Context cockpit read model and rendered `맥락 검토 결과` with conclusion / interpretation impact / evidence / freshness for price movement, Futures / Macro, Events, and Data Health caveat.

@@ -5242,6 +5242,27 @@ def _cockpit_brief_row(card: dict[str, Any], *, label: str) -> dict[str, Any]:
     }
 
 
+def _cockpit_finding_brief_row(finding: dict[str, Any], *, label: str) -> dict[str, Any]:
+    """Project a non-duplicative context finding into the main brief sequence."""
+    return {
+        "id": finding.get("id"),
+        "label": label,
+        "value": finding.get("conclusion"),
+        "detail": finding.get("interpretation"),
+        "status": finding.get("status"),
+        "status_label": finding.get("status_label"),
+        "tone": finding.get("tone"),
+        "target_tab": finding.get("source_area") or finding.get("label"),
+        "source": finding.get("source_area"),
+        "freshness": finding.get("freshness"),
+        "freshness_label": finding.get("freshness"),
+        "badges": [
+            {"label": "자료 영역", "value": finding.get("source_area"), "tone": finding.get("tone")},
+            {"label": "근거", "value": finding.get("evidence"), "tone": finding.get("tone")},
+        ],
+    }
+
+
 def build_overview_macro_context_cockpit(
     *,
     market_movers_snapshot: dict[str, Any] | None = None,
@@ -5325,9 +5346,14 @@ def build_overview_macro_context_cockpit(
         data_health_handoff=data_health_handoff,
     )
     context_review_count = max(data_review_count, len(review_cards))
+    brief_context_findings = [
+        item
+        for item in context_findings
+        if str(item.get("id") or "").strip() in {"events", "data_health"}
+    ]
     next_path = " → ".join(
         str(item.get("label") or item.get("source_area") or "-")
-        for item in context_findings
+        for item in brief_context_findings
         if str(item.get("label") or item.get("source_area") or "").strip()
     ) or "추가 보조 맥락 없음"
     source_status = str(source_confidence.get("status") or status)
@@ -5378,6 +5404,18 @@ def build_overview_macro_context_cockpit(
         _cockpit_brief_row(cards[1], label="확산/집중인가"),
         _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
     ]
+    finding_labels = {
+        "events": "이벤트 caveat",
+        "data_health": "자료 신뢰도 caveat",
+    }
+    for finding in brief_context_findings:
+        finding_id = str(finding.get("id") or "").strip()
+        brief_rows.append(
+            _cockpit_finding_brief_row(
+                finding,
+                label=finding_labels.get(finding_id, str(finding.get("label") or "자료 caveat")),
+            )
+        )
     interpretation_cues = [
         _cockpit_brief_row(cards[4], label="이벤트 압력"),
         _cockpit_brief_row(cards[3], label="심리 확인"),
@@ -5403,6 +5441,7 @@ def build_overview_macro_context_cockpit(
         "historical_analog": historical_analog_snapshot or {},
         "cards": cards,
         "context_findings": context_findings,
+        "brief_context_findings": brief_context_findings,
         "next_checks": context_findings,
         "data_health_handoff": data_health_handoff,
         "source_confidence": source_confidence,

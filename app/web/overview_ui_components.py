@@ -3062,7 +3062,7 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
     html: list[str] = []
-    for index, row in enumerate(rows[:3], start=1):
+    for index, row in enumerate(rows[:5], start=1):
         tone_color = escape(_overview_tone_color(row.get("tone")))
         badges = _macro_cockpit_badges_html(list(row.get("badges") or []))
         html.append(
@@ -3083,7 +3083,7 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
         '<section class="ov-market-brief-lane">'
         '<div class="ov-market-brief-head">'
         '<div class="ov-market-brief-title">오늘의 시장 브리프</div>'
-        '<div class="ov-market-brief-note">상단 headline을 중복하지 않고, 움직임 · 확산 · macro 배경만 이어서 읽습니다.</div>'
+        '<div class="ov-market-brief-note">상단 headline을 중복하지 않고, 움직임 · 확산 · macro 배경 · 이벤트/자료 caveat를 한 흐름으로 읽습니다.</div>'
         "</div>"
         f'<ol class="ov-market-brief-list">{"".join(html)}</ol>'
         "</section>"
@@ -3137,8 +3137,8 @@ def _macro_cockpit_next_checks_html(checks: list[dict[str, Any]]) -> str:
     return (
         '<section class="ov-macro-reading-section ov-macro-cues" style="--ov-reading-tone:var(--ov-mi-color-warning);">'
         '<div class="ov-macro-section-head">'
-        '<div class="ov-macro-section-title">맥락 검토 결과</div>'
-        '<div class="ov-macro-section-note">Market Context가 이미 읽은 보조 맥락의 결론입니다. 자료가 부족할 때만 보강 위치를 하단에 둡니다.</div>'
+        '<div class="ov-macro-section-title">추가 근거 메모</div>'
+        '<div class="ov-macro-section-note">기본 시장 브리프에 흡수하지 않은 보조 근거가 있을 때만 분리해 표시합니다.</div>'
         "</div>"
         f'<ol class="ov-context-finding-rail">{"".join(html)}</ol>'
         "</section>"
@@ -3778,7 +3778,7 @@ def _macro_context_reading_flow_html(
     include_source_confidence: bool = True,
 ) -> str:
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or [])) if include_brief else ""
-    context_findings = list(model.get("context_findings") or model.get("next_checks") or [])
+    context_findings = list(model.get("extra_context_findings") or [])
     next_checks_html = _macro_cockpit_next_checks_html(context_findings) if include_next_checks else ""
     historical_analog_html = (
         _macro_cockpit_historical_analog_html(dict(model.get("historical_analog") or {}))
