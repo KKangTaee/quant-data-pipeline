@@ -7,11 +7,11 @@ Last Verified: 2026-06-20
 
 Current active task:
 
-- None
+- none
 
 Latest completed task:
 
-- `overview-market-context-brief-context-absorption-v6-20260620`
+- `overview-market-context-smart-refresh-v7-20260620`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-smart-refresh-v7-20260620`: Completed record. `Overview > Market Context` V7 보정으로 Events를 상단 브리프에서 낮추고, 필요 자료 보강을 현재 이슈 기반 smart refresh로 전환했다. 전체 Market Context 자료 보강은 fallback으로 남긴다.
 - `overview-market-context-brief-context-absorption-v6-20260620`: Overview Market Context V5 follow-up / `브리프 신뢰도` 독립 섹션을 제거하고, 이벤트 / Futures 자료 제한을 별도 가이드가 아니라 `오늘의 시장 브리프`의 `이벤트 배경` 또는 `Futures/Macro 배경` 결론으로 흡수했다. 상세 source / freshness는 하단 근거 disclosure에 남긴다.
 - `overview-market-context-brief-confidence-v5-20260620`: Overview Market Context V4 follow-up / `오늘의 시장 브리프`를 움직임, 확산, Futures/Macro 배경의 3행 market story로 되돌리고, Events / 자료 기준은 별도 `브리프 신뢰도` 영역에서 브리프 읽기 강도 조절 근거로 표시한다. `context_findings` / `next_checks`는 compatibility payload로 유지하되 default user-facing rail로 렌더링하지 않는다.
 - `overview-market-context-brief-findings-integration-v4-20260620`: Overview Market Context V3 follow-up / 중복되는 가격 움직임과 Futures-Macro findings rail은 기본 화면에서 제거하고, Events / 자료 신뢰도 caveat를 `오늘의 시장 브리프` 안으로 통합했다. `context_findings` / `next_checks`는 compatibility payload로 유지하되 default user-facing rail로 렌더링하지 않는다.

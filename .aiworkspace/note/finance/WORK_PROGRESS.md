@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Smart Refresh V7
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-smart-refresh-v7-20260620/` after user feedback that Events caveats were not actual market-context conclusions and the refresh action should target current issues instead of always running every job.
+- Kept `오늘의 시장 브리프` to movement, breadth, and Futures/Macro rows; Events now stays in timeline/source evidence and `refresh_plan.excluded_items`.
+- Added `refresh_plan` plus `현재 이슈만 보강` smart refresh and kept `전체 Market Context 자료 보강` as fallback through the existing Overview action facade.
+- Boundaries stayed unchanged: DB-backed snapshots only, no render-time provider fetch, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Brief Context Absorption V6
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-context-absorption-v6-20260620/` after user feedback that `브리프 신뢰도` still felt like a guide rather than necessary Market Context content.
 - Removed the independent `브리프 신뢰도` section and `brief_caveats` payload.

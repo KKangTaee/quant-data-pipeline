@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Events caveats are not Market Context conclusions or refresh requirements
+- User request:
+  - `이벤트 배경: 직접 원인 근거 약함`은 실제 시장맥락 도출 기능처럼 보이지 않고, 자료 보강도 현재 문제가 있는 부분만 최신화하는 편이 낫지 않냐고 질문함.
+- Interpreted goal:
+  - Market Context first screen should show only market-context conclusions; source/calendar caveats should not masquerade as conclusions or mandatory checks.
+- Analysis result:
+  - Events schedule rows are timeline/source context, not a cause engine. They should stay out of default `brief_rows` and appear as non-actionable or partial refresh context only where useful. Stale/missing data that can actually be repaired should be represented in `refresh_plan.items`; caveats that collection cannot solve should be represented in `refresh_plan.excluded_items`.
+- Follow-up:
+  - Future work can improve Events cause-analysis only with a separate approved design. Until then, avoid adding guide-like sections or treating Events/sentiment/FRED as hard Market Context signals.
+
 ### 2026-06-20 - Market Context should absorb interpretation limits instead of showing a guide section
 - User request:
   - `브리프 신뢰도`가 생긴 것은 알겠지만, 이 정보가 무엇을 의미하고 사용자가 무엇을 해야 하는지 여전히 불명확하며 Market Context에는 필요한 정보만 남아야 한다고 지적함.

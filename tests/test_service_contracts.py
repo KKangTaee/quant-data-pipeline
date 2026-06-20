@@ -4448,7 +4448,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(store_index, clear_index)
         self.assertLess(clear_index, rerun_index)
 
-    def test_overview_market_context_refresh_assist_shows_source_action_before_job_result(self) -> None:
+    def test_overview_market_context_refresh_assist_shows_smart_plan_before_job_result(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         if "def _render_overview_market_context_refresh_bar" not in source:
             self.fail("Overview should keep the Market Context refresh bar helper.")
@@ -4457,8 +4457,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = helper_body[:helper_end]
 
         self.assertIn("_overview_market_context_refresh_expander_label(cockpit_model)", helper_body)
-        self.assertIn("_render_overview_market_context_refresh_action_hints(cockpit_model)", helper_body)
-        action_hint_index = helper_body.index("_render_overview_market_context_refresh_action_hints(cockpit_model)")
+        self.assertIn("_render_overview_market_context_smart_refresh_plan(cockpit_model)", helper_body)
+        action_hint_index = helper_body.index("_render_overview_market_context_smart_refresh_plan(cockpit_model)")
         button_index = helper_body.index("cols[1].button(")
         result_index = helper_body.index("_render_overview_market_context_refresh_result(result_key)")
 
@@ -4690,7 +4690,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
 
-    def test_overview_market_context_absorbs_context_limits_into_market_brief(self) -> None:
+    def test_overview_market_context_keeps_market_brief_to_actionable_context(self) -> None:
         from app.web import overview_ui_components
 
         model = {
@@ -4723,13 +4723,6 @@ class OverviewAutomationContractTests(unittest.TestCase):
                     "label": "Futures/Macro 배경",
                     "value": "장중 macro 해석 보류",
                     "detail": "Futures Monitor 1m OHLCV가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다.",
-                    "tone": "warning",
-                },
-                {
-                    "label": "이벤트 배경",
-                    "value": "직접 원인 근거 약함",
-                    "detail": "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다.",
-                    "source_area": "Events · Earnings estimates",
                     "tone": "warning",
                 },
             ],
@@ -4774,9 +4767,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("무엇이 움직였나", cockpit_html)
         self.assertIn("장중 macro 해석 보류", cockpit_html)
         self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다.", cockpit_html)
-        self.assertIn("이벤트 배경", cockpit_html)
-        self.assertIn("직접 원인 근거 약함", cockpit_html)
-        self.assertIn("오늘 움직임의 원인을 이벤트로 단정하지 않습니다.", cockpit_html)
+        self.assertNotIn("이벤트 배경", cockpit_html)
+        self.assertNotIn("직접 원인 근거 약함", cockpit_html)
+        self.assertNotIn("오늘 움직임의 원인을 이벤트로 단정하지 않습니다.", cockpit_html)
         self.assertNotIn("브리프 신뢰도", cockpit_html)
         self.assertNotIn("이벤트 일정", cockpit_html)
         self.assertNotIn("선물 기반 장중 해석 제한", cockpit_html)
@@ -5609,6 +5602,81 @@ class OverviewAutomationContractTests(unittest.TestCase):
         fomc.assert_called_once_with(years=(2026, 2027))
         earnings.assert_called_once_with()
         macro.assert_called_once_with(years=(2026, 2027))
+
+    def test_overview_action_facade_runs_smart_market_context_refresh_actions_only(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str, status: str = "success") -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": status, "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_market_intraday_snapshot",
+                side_effect=lambda **_: _result("market_intraday"),
+            ) as market_snapshot,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_ohlcv",
+                side_effect=lambda **_: _result("futures_1m"),
+            ) as futures_1m,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_daily_ohlcv",
+                side_effect=lambda: _result("futures_daily"),
+            ) as futures_daily,
+            patch.object(
+                overview_actions,
+                "run_overview_market_sentiment",
+                side_effect=lambda: _result("market_sentiment"),
+            ) as sentiment,
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar", status="partial_success"),
+            ) as earnings,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+        ):
+            summary = overview_actions.run_overview_market_context_refresh_smart(
+                action_ids=("futures_1m", "earnings_calendar"),
+                years=(2026, 2027),
+                futures_symbols=("ES=F", "NQ=F"),
+            )
+
+        self.assertEqual(summary["job_name"], "overview_market_context_refresh_smart")
+        self.assertEqual(summary["status"], "partial_success")
+        self.assertEqual(summary["jobs_run"], 2)
+        self.assertEqual(summary["jobs_failed"], 0)
+        self.assertEqual(calls, ["futures_1m", "earnings_calendar"])
+        market_snapshot.assert_not_called()
+        futures_1m.assert_called_once_with(symbols=["ES=F", "NQ=F"], cadence_mode="smart_refresh")
+        futures_daily.assert_not_called()
+        sentiment.assert_not_called()
+        fomc.assert_not_called()
+        earnings.assert_called_once_with()
+        macro.assert_not_called()
+
+    def test_overview_market_context_refresh_bar_prefers_smart_refresh_and_keeps_full_fallback(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertIn("run_overview_market_context_refresh_smart", source)
+        self.assertIn("_render_overview_market_context_smart_refresh_plan", source)
+        self.assertIn("현재 이슈만 보강", source)
+        self.assertIn("전체 Market Context 자료 보강", source)
+        self.assertIn("overview_market_context_refresh_smart", source)
+        self.assertIn("overview_market_context_refresh_all", source)
 
     def test_overview_action_facade_collects_historical_analog_price_gaps_with_existing_ohlcv_job(self) -> None:
         from app.jobs import overview_actions
@@ -8853,18 +8921,34 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         self.assertEqual(
             [row["label"] for row in cockpit["brief_rows"]],
-            ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경", "이벤트 배경"],
+            ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경"],
         )
         self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인", "매크로 확인"])
         self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
         self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
         self.assertEqual(cockpit["brief_rows"][2]["target_tab"], "Futures Monitor")
+        self.assertEqual(cockpit["brief_rows"][2]["source_area"], "Futures Monitor 1m OHLCV")
+        self.assertEqual(cockpit["brief_rows"][2]["freshness_label"], "8m old")
         self.assertEqual(cockpit["brief_rows"][2]["value"], "장중 macro 해석 보류")
         self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다", cockpit["brief_rows"][2]["detail"])
-        self.assertEqual(cockpit["brief_rows"][3]["target_tab"], "Events · Macro calendar")
-        self.assertEqual(cockpit["brief_rows"][3]["value"], "직접 원인 근거 약함")
-        self.assertIn("이벤트", cockpit["brief_rows"][3]["detail"])
+        self.assertNotIn("이벤트 배경", [row["label"] for row in cockpit["brief_rows"]])
         self.assertNotIn("brief_caveats", cockpit)
+        self.assertEqual(cockpit["refresh_plan"]["schema_version"], "overview_market_context_refresh_plan_v1")
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["primary_button_label"], "현재 이슈만 보강")
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["full_refresh_label"], "전체 Market Context 자료 보강")
+        self.assertEqual(
+            [item["action_id"] for item in cockpit["refresh_plan"]["items"]],
+            ["sp500_intraday_snapshot", "futures_1m", "earnings_calendar"],
+        )
+        self.assertEqual(
+            [item["resolution"] for item in cockpit["refresh_plan"]["items"]],
+            ["resolvable", "resolvable", "partial"],
+        )
+        self.assertEqual(cockpit["refresh_plan"]["items"][1]["source_area"], "Futures Monitor 1m OHLCV")
+        self.assertIn("시장 휴장", cockpit["refresh_plan"]["items"][1]["limitation"])
+        self.assertIn("추정", cockpit["refresh_plan"]["items"][2]["limitation"])
+        self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["source_area"], "Events")
+        self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["resolution"], "not_actionable")
         self.assertEqual(cockpit["interpretation_cues"][0]["target_tab"], "Events")
         self.assertEqual(cockpit["interpretation_cues"][2]["target_tab"], "Futures Monitor")
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])

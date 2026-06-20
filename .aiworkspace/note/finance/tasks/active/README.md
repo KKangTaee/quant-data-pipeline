@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| - | - | 현재 새로 열린 active execution task는 없다. |
+| _none_ | - | 새 active task는 user-approved scope가 정해지면 연다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-smart-refresh-v7-20260620` | Completed record | `Overview > Market Context` V7 follow-up. Events를 브리프에서 낮추고, smart refresh / full refresh fallback / result reflection을 정리했다. |
 | `overview-market-context-brief-context-absorption-v6-20260620` | Completed record | `Overview > Market Context` V6 follow-up. `브리프 신뢰도` 독립 섹션을 제거하고, Events / Futures 자료 제한은 `오늘의 시장 브리프`의 시장맥락 결론으로 흡수했다. |
 | `overview-market-context-brief-confidence-v5-20260620` | Completed record | `Overview > Market Context` V5 follow-up. `오늘의 시장 브리프`는 움직임 / 확산 / Futures-Macro 3행 market story로 유지하고, Events / 자료 기준은 별도 `브리프 신뢰도` 영역으로 분리했다. |
 | `overview-market-context-brief-findings-integration-v4-20260620` | Completed record | `Overview > Market Context` V4 follow-up. `맥락 검토 결과` rail의 P1/P2 중복을 제거하고 Events / 자료 신뢰도 caveat를 `오늘의 시장 브리프` 안으로 통합했다. |

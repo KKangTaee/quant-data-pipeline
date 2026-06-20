@@ -5317,8 +5317,205 @@ def _cockpit_apply_futures_data_limit(
     limited["status"] = data_finding.get("status") or row.get("status")
     limited["status_label"] = data_finding.get("status_label") or row.get("status_label")
     limited["tone"] = "warning"
+    limited["target_tab"] = "Futures Monitor"
+    limited["source"] = source_area
+    limited["source_area"] = source_area
     limited["freshness_label"] = data_finding.get("freshness") or row.get("freshness_label")
     return limited
+
+
+REFRESH_PLAN_BY_AREA: dict[str, dict[str, str]] = {
+    "S&P 500 Daily Snapshot": {
+        "action_id": "sp500_intraday_snapshot",
+        "label": "S&P 500 snapshot",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 최신 snapshot이 없을 수 있습니다.",
+    },
+    "Top1000 Daily Snapshot": {
+        "action_id": "top1000_intraday_snapshot",
+        "label": "Top1000 snapshot",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 최신 snapshot이 없을 수 있습니다.",
+    },
+    "Top2000 Daily Snapshot": {
+        "action_id": "top2000_intraday_snapshot",
+        "label": "Top2000 snapshot",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 최신 snapshot이 없을 수 있습니다.",
+    },
+    "S&P 500 Universe": {
+        "action_id": "sp500_universe",
+        "label": "S&P 500 universe",
+        "resolution": "resolvable",
+        "limitation": "공식 구성 변경 반영 시점에 따라 기존 universe가 유지될 수 있습니다.",
+    },
+    "Futures Monitor 1m OHLCV": {
+        "action_id": "futures_1m",
+        "label": "Futures 1m",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 stale 상태가 남을 수 있습니다.",
+    },
+    "Futures Monitor Daily OHLCV": {
+        "action_id": "futures_daily",
+        "label": "Futures daily",
+        "resolution": "resolvable",
+        "limitation": "provider daily bar 지연이면 최근 기준일이 남을 수 있습니다.",
+    },
+    "Market Sentiment": {
+        "action_id": "market_sentiment",
+        "label": "Sentiment",
+        "resolution": "resolvable",
+        "limitation": "CNN / AAII source 지연이나 실패가 있으면 기존 관측값을 유지합니다.",
+    },
+    "FOMC Calendar": {
+        "action_id": "fomc_calendar",
+        "label": "FOMC calendar",
+        "resolution": "resolvable",
+        "limitation": "공식 일정 page가 변하지 않았다면 표시 내용이 그대로일 수 있습니다.",
+    },
+    "Macro Calendar": {
+        "action_id": "macro_calendar",
+        "label": "Macro calendar",
+        "resolution": "resolvable",
+        "limitation": "공식 source coverage 밖의 이벤트는 보강 후에도 비어 있을 수 있습니다.",
+    },
+    "Earnings Calendar": {
+        "action_id": "earnings_calendar",
+        "label": "Earnings calendar",
+        "resolution": "partial",
+        "limitation": "재수집해도 provider 추정 일정이면 직접 원인 근거로 쓰지 않습니다.",
+    },
+}
+REFRESH_PLAN_ACTION_ORDER = {
+    "sp500_intraday_snapshot": 10,
+    "top1000_intraday_snapshot": 11,
+    "top2000_intraday_snapshot": 12,
+    "sp500_universe": 13,
+    "futures_1m": 20,
+    "futures_daily": 21,
+    "market_sentiment": 30,
+    "fomc_calendar": 40,
+    "macro_calendar": 41,
+    "earnings_calendar": 50,
+}
+
+
+def _refresh_plan_item(
+    *,
+    source_area: str,
+    status: Any,
+    freshness: Any,
+    reason: Any,
+    target_surface: Any = None,
+) -> dict[str, Any] | None:
+    spec = REFRESH_PLAN_BY_AREA.get(source_area)
+    if not spec:
+        return None
+    resolution = str(spec["resolution"])
+    return {
+        "source_area": source_area,
+        "label": spec["label"],
+        "action_id": spec["action_id"],
+        "resolution": resolution,
+        "resolution_label": "보강 가능" if resolution == "resolvable" else "일부 보강",
+        "status": status,
+        "status_label": _cockpit_status_label(status),
+        "tone": "warning" if resolution == "partial" else _cockpit_status_tone(status),
+        "freshness": str(freshness or "-"),
+        "reason": str(reason or "-"),
+        "limitation": spec["limitation"],
+        "target_surface": str(target_surface or "-"),
+    }
+
+
+def _refresh_plan_excluded_event(finding: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source_area": "Events",
+        "label": "Events calendar caveat",
+        "action_id": None,
+        "resolution": "not_actionable",
+        "resolution_label": "보강 대상 아님",
+        "status": finding.get("status") or "REVIEW",
+        "status_label": _cockpit_status_label(finding.get("status") or "REVIEW"),
+        "tone": "neutral",
+        "freshness": str(finding.get("freshness") or "-"),
+        "reason": str(finding.get("conclusion") or "이벤트 일정은 참고 정보입니다."),
+        "limitation": "현재 이벤트 정보는 원인 분석 엔진이 아니므로 시장 브리프의 직접 결론으로 쓰지 않습니다.",
+        "target_surface": "Events",
+    }
+
+
+def _cockpit_refresh_plan(
+    *,
+    cards: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    data_health_handoff: dict[str, Any],
+) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    excluded_items: list[dict[str, Any]] = []
+    seen_actions: set[str] = set()
+
+    movement = cards[0] if cards else {}
+    if _cockpit_status_tone(movement.get("status")) in {"warning", "danger"}:
+        item = _refresh_plan_item(
+            source_area="S&P 500 Daily Snapshot",
+            status=movement.get("status"),
+            freshness=movement.get("freshness_label") or movement.get("freshness"),
+            reason=movement.get("detail"),
+            target_surface="Workspace > Overview > Market Movers > 일중 스냅샷 갱신",
+        )
+        if item and str(item["action_id"]) not in seen_actions:
+            seen_actions.add(str(item["action_id"]))
+            items.append(item)
+
+    for priority_item in list(data_health_handoff.get("priority_items") or []):
+        if not isinstance(priority_item, dict):
+            continue
+        source_area = str(priority_item.get("area") or "").strip()
+        item = _refresh_plan_item(
+            source_area=source_area,
+            status=priority_item.get("status"),
+            freshness=priority_item.get("freshness"),
+            reason=priority_item.get("reason") or priority_item.get("next_action"),
+            target_surface=priority_item.get("target_surface") or priority_item.get("alternate_surface"),
+        )
+        if item and str(item["action_id"]) not in seen_actions:
+            seen_actions.add(str(item["action_id"]))
+            items.append(item)
+
+    for finding in findings:
+        if str(finding.get("id") or "").strip() == "events" and str(finding.get("status") or "").upper() != "OK":
+            excluded_items.append(_refresh_plan_excluded_event(finding))
+
+    items = sorted(
+        items,
+        key=lambda item: (
+            REFRESH_PLAN_ACTION_ORDER.get(str(item.get("action_id") or ""), 999),
+            str(item.get("source_area") or ""),
+        ),
+    )
+    partial_count = sum(1 for item in items if item.get("resolution") == "partial")
+    return {
+        "schema_version": "overview_market_context_refresh_plan_v1",
+        "status": "READY" if items else "NO_ACTION",
+        "summary": {
+            "headline": f"현재 보강 대상 {len(items)}개" if items else "현재 보강할 자료 이슈 없음",
+            "detail": (
+                "현재 브리프에서 실제 갱신 가능한 자료만 실행합니다."
+                if items
+                else "이벤트 caveat처럼 수집으로 해결되지 않는 제한은 보강 대상에서 제외합니다."
+            ),
+            "action_count": len(items),
+            "partial_count": partial_count,
+            "excluded_count": len(excluded_items),
+            "primary_button_label": "현재 이슈만 보강",
+            "full_refresh_label": "전체 Market Context 자료 보강",
+        },
+        "items": items,
+        "excluded_items": excluded_items,
+        "action_ids": [str(item["action_id"]) for item in items if item.get("action_id")],
+        "boundary_note": "Smart refresh는 저장 자료 보강 job만 실행하며 시장 결론, 추천, 검증 gate, 운영 signal을 만들지 않습니다.",
+    }
 
 
 def _cockpit_extra_brief_rows(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -5477,8 +5674,12 @@ def build_overview_macro_context_cockpit(
         _cockpit_brief_row(cards[0], label="무엇이 움직였나"),
         _cockpit_brief_row(cards[1], label="확산/집중인가"),
         futures_brief_row,
-        *_cockpit_extra_brief_rows(brief_context_findings),
     ]
+    refresh_plan = _cockpit_refresh_plan(
+        cards=cards,
+        findings=brief_context_findings,
+        data_health_handoff=data_health_handoff,
+    )
     interpretation_cues = [
         _cockpit_brief_row(cards[4], label="이벤트 압력"),
         _cockpit_brief_row(cards[3], label="심리 확인"),
@@ -5498,6 +5699,7 @@ def build_overview_macro_context_cockpit(
             "rail": rail,
         },
         "brief_rows": brief_rows,
+        "refresh_plan": refresh_plan,
         "interpretation_cues": interpretation_cues,
         "sector_pressure": sector_pressure,
         "event_timeline": event_timeline,

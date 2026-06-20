@@ -334,31 +334,70 @@ def _overview_bundle_status(results: list[JobResult]) -> str:
     return "success"
 
 
-def run_overview_market_context_refresh_all(
+def _overview_market_context_refresh_steps(
     *,
-    years: Iterable[int] | None = None,
-    futures_symbols: Iterable[str] | None = None,
-) -> JobResult:
-    """Run the existing bounded Overview market-context refresh actions as one manual bundle."""
-    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    current_year = datetime.now().year
-    target_years = tuple(years or (current_year, current_year + 1))
-    selected_futures = list(futures_symbols or DEFAULT_CORE_FUTURES_SYMBOLS)
-    steps: list[tuple[str, Callable[[], JobResult]]] = [
-        (
+    action_ids: Iterable[str],
+    years: Iterable[int],
+    futures_symbols: Iterable[str],
+    futures_cadence_mode: str,
+) -> list[tuple[str, Callable[[], JobResult]]]:
+    selected_futures = list(futures_symbols)
+    actions: dict[str, tuple[str, Callable[[], JobResult]]] = {
+        "sp500_intraday_snapshot": (
             "S&P 500 Market Movers",
             lambda: run_overview_market_intraday_snapshot(universe_code="SP500", universe_limit=500),
         ),
-        (
-            "Futures Monitor 1m OHLCV",
-            lambda: run_overview_futures_ohlcv(symbols=selected_futures, cadence_mode="manual_bundle"),
+        "top1000_intraday_snapshot": (
+            "Top1000 Market Movers",
+            lambda: run_overview_market_intraday_snapshot(universe_code="TOP1000", universe_limit=1000),
         ),
-        ("Futures Macro Daily OHLCV", run_overview_futures_daily_ohlcv),
-        ("Market Sentiment", run_overview_market_sentiment),
-        ("FOMC Calendar", lambda: run_overview_fomc_calendar(years=target_years)),
-        ("Earnings Calendar", run_overview_earnings_calendar),
-        ("Macro Calendar", lambda: run_overview_macro_calendar(years=target_years)),
-    ]
+        "top2000_intraday_snapshot": (
+            "Top2000 Market Movers",
+            lambda: run_overview_market_intraday_snapshot(universe_code="TOP2000", universe_limit=2000),
+        ),
+        "futures_1m": (
+            "Futures Monitor 1m OHLCV",
+            lambda: run_overview_futures_ohlcv(symbols=selected_futures, cadence_mode=futures_cadence_mode),
+        ),
+        "futures_daily": ("Futures Macro Daily OHLCV", run_overview_futures_daily_ohlcv),
+        "market_sentiment": ("Market Sentiment", run_overview_market_sentiment),
+        "fomc_calendar": ("FOMC Calendar", lambda: run_overview_fomc_calendar(years=years)),
+        "earnings_calendar": ("Earnings Calendar", run_overview_earnings_calendar),
+        "macro_calendar": ("Macro Calendar", lambda: run_overview_macro_calendar(years=years)),
+        "sp500_universe": ("S&P 500 Universe", run_overview_sp500_universe),
+    }
+    steps: list[tuple[str, Callable[[], JobResult]]] = []
+    seen: set[str] = set()
+    for action_id in action_ids:
+        normalized = str(action_id or "").strip()
+        if not normalized or normalized in seen or normalized not in actions:
+            continue
+        seen.add(normalized)
+        steps.append(actions[normalized])
+    return steps
+
+
+def _run_overview_market_context_refresh_steps(
+    *,
+    job_name: str,
+    execution_mode: str,
+    steps: list[tuple[str, Callable[[], JobResult]]],
+    started_at: str,
+) -> JobResult:
+    if not steps:
+        finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": job_name,
+            "status": "skipped",
+            "execution_mode": execution_mode,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "jobs_due": 0,
+            "jobs_run": 0,
+            "jobs_failed": 0,
+            "results": [],
+            "message": "현재 Market Context에서 실행할 보강 작업이 없습니다.",
+        }
 
     results: list[JobResult] = []
     for label, action in steps:
@@ -379,9 +418,9 @@ def run_overview_market_context_refresh_all(
     status = _overview_bundle_status(results)
     finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     return {
-        "job_name": "overview_market_context_refresh_all",
+        "job_name": job_name,
         "status": status,
-        "execution_mode": "manual_bundle",
+        "execution_mode": execution_mode,
         "started_at": started_at,
         "finished_at": finished_at,
         "jobs_due": len(steps),
@@ -389,11 +428,67 @@ def run_overview_market_context_refresh_all(
         "jobs_failed": failed_count,
         "results": results,
         "message": (
-            f"Overview market context 일괄 갱신: {len(results) - failed_count}/{len(steps)} jobs completed."
+            f"Overview market context 보강: {len(results) - failed_count}/{len(steps)} jobs completed."
             if status != "failed"
-            else "Overview market context 일괄 갱신이 실패했습니다."
+            else "Overview market context 보강이 실패했습니다."
         ),
     }
+
+
+def run_overview_market_context_refresh_all(
+    *,
+    years: Iterable[int] | None = None,
+    futures_symbols: Iterable[str] | None = None,
+) -> JobResult:
+    """Run the existing bounded Overview market-context refresh actions as one manual bundle."""
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_year = datetime.now().year
+    target_years = tuple(years or (current_year, current_year + 1))
+    all_action_ids = (
+        "sp500_intraday_snapshot",
+        "futures_1m",
+        "futures_daily",
+        "market_sentiment",
+        "fomc_calendar",
+        "earnings_calendar",
+        "macro_calendar",
+    )
+    steps = _overview_market_context_refresh_steps(
+        action_ids=all_action_ids,
+        years=target_years,
+        futures_symbols=futures_symbols or DEFAULT_CORE_FUTURES_SYMBOLS,
+        futures_cadence_mode="manual_bundle",
+    )
+    return _run_overview_market_context_refresh_steps(
+        job_name="overview_market_context_refresh_all",
+        execution_mode="manual_bundle",
+        steps=steps,
+        started_at=started_at,
+    )
+
+
+def run_overview_market_context_refresh_smart(
+    *,
+    action_ids: Iterable[str],
+    years: Iterable[int] | None = None,
+    futures_symbols: Iterable[str] | None = None,
+) -> JobResult:
+    """Run only the current Market Context refresh actions selected by the read model."""
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_year = datetime.now().year
+    target_years = tuple(years or (current_year, current_year + 1))
+    steps = _overview_market_context_refresh_steps(
+        action_ids=action_ids,
+        years=target_years,
+        futures_symbols=futures_symbols or DEFAULT_CORE_FUTURES_SYMBOLS,
+        futures_cadence_mode="smart_refresh",
+    )
+    return _run_overview_market_context_refresh_steps(
+        job_name="overview_market_context_refresh_smart",
+        execution_mode="smart_refresh",
+        steps=steps,
+        started_at=started_at,
+    )
 
 
 def run_overview_quote_gap_diagnostics(
