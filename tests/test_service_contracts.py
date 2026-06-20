@@ -4149,6 +4149,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["status"], "휴장")
         self.assertIn("Independence Day", model["detail"])
 
+    def test_market_context_session_payload_uses_previous_trading_day_when_closed(self) -> None:
+        from app.web.overview_dashboard import US_EASTERN_TZ, _market_context_session_payload
+
+        model = _market_context_session_payload(now=datetime(2026, 6, 20, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["phase"], "휴장")
+        self.assertFalse(model["is_market_open_now"])
+        self.assertEqual(model["session_date"], "2026-06-20")
+        self.assertEqual(model["basis_date"], "2026-06-18")
+
     def test_snapshot_status_labels_intraday_quote_time(self) -> None:
         from app.web.overview_dashboard import _snapshot_status_items
 
@@ -5361,7 +5371,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn("시장 맥락", dashboard_source)
-        self.assertIn("상단에서 오늘의 시장 브리프를 먼저 읽고", dashboard_source)
+        self.assertIn("상단에서 현재 세션 기준 시장 브리프를 먼저 읽고", dashboard_source)
         self.assertIn("필요 자료 보강", dashboard_source)
         self.assertNotIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
@@ -5742,6 +5752,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("run_overview_market_context_refresh_smart", source)
         self.assertIn("_render_overview_market_context_smart_refresh_plan", source)
+        self.assertIn('summary = dict(refresh_plan.get("summary") or {})', source)
         self.assertIn("현재 이슈만 보강", source)
         self.assertIn("전체 Market Context 자료 보강", source)
         self.assertIn("overview_market_context_refresh_smart", source)
@@ -9116,6 +9127,162 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
         self.assertIn("context 전용", cockpit["boundary_note"])
 
+    def test_overview_macro_context_cockpit_uses_last_market_basis_when_market_is_closed(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_session_context={
+                "phase": "휴장",
+                "is_trading_day": False,
+                "is_market_open_now": False,
+                "session_date": "2026-06-20",
+                "reason": "주말",
+            },
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "snapshot_time_utc": "2026-06-18 20:58",
+                    "effective_end_date": "2026-06-18",
+                    "refresh_state": {"status": "stale", "label": "Stale", "detail": "3020m old", "tone": "danger"},
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Symbol": "NVDA",
+                            "Name": "NVIDIA Corp",
+                            "Return %": 4.2,
+                            "Sector": "Technology",
+                        }
+                    ]
+                ),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-18"},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Group": "Technology",
+                            "Positive Symbol Share %": 82.0,
+                            "Market Cap Weighted Return %": 1.8,
+                        }
+                    ]
+                ),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "summary": {"scenario": "Risk-on with rate pressure", "summary": "Equity futures are firm."},
+                "scores": pd.DataFrame(),
+                "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_date": "2026-06-18"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {"phase_label": "혼합 중립", "data_confidence": {"status": "High", "detail": "latest rows"}},
+                "coverage": {},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 0},
+                "rows": pd.DataFrame(),
+            },
+            collection_ops_snapshot={
+                "status": "OK",
+                "coverage": {"ok_count": 6, "due_count": 0, "stale_count": 0, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(),
+            },
+        )
+
+        self.assertEqual(cockpit["market_session"]["brief_title"], "마지막 거래일 시장 브리프")
+        self.assertIn("기준: 2026-06-18", cockpit["market_session"]["brief_subtitle"])
+        self.assertIn("미국장 휴장", cockpit["market_session"]["brief_subtitle"])
+        self.assertIn("마지막 거래일", cockpit["summary"]["headline"])
+        self.assertNotIn("오늘은", cockpit["summary"]["headline"])
+        self.assertEqual(cockpit["summary"]["rail"][0]["value"], "자료 정상 · 휴장 기준")
+        self.assertEqual(cockpit["summary"]["review_count"], 0)
+        self.assertEqual(cockpit["refresh_plan"]["items"], [])
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["primary_button_label"], "현재 보강 없음")
+        self.assertEqual(cockpit["brief_rows"][0]["status_label"], "휴장 기준")
+        self.assertEqual(cockpit["brief_rows"][0]["freshness_label"], "2026-06-18")
+        self.assertEqual(cockpit["brief_rows"][1]["freshness_label"], "2026-06-18")
+        prices = next(item for item in cockpit["source_confidence"]["items"] if item["id"] == "prices")
+        self.assertEqual(prices["status"], "OK")
+        self.assertEqual(prices["status_label"], "자료 정상")
+
+    def test_overview_macro_context_cockpit_keeps_intraday_refresh_action_when_market_is_open(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_session_context={
+                "phase": "장중",
+                "is_trading_day": True,
+                "is_market_open_now": True,
+                "session_date": "2026-06-18",
+                "reason": "정규장",
+            },
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "snapshot_time_utc": "2026-06-18 15:00",
+                    "effective_end_date": "2026-06-18",
+                    "refresh_state": {"status": "stale", "label": "Stale", "detail": "30m old", "tone": "danger"},
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {"Rank": 1, "Symbol": "NVDA", "Name": "NVIDIA Corp", "Return %": 4.2, "Sector": "Technology"}
+                    ]
+                ),
+            },
+            group_leadership_snapshot={"status": "OK", "period_label": "Daily", "coverage": {}, "rows": pd.DataFrame()},
+            futures_macro_snapshot={"status": "OK", "summary": {}, "scores": pd.DataFrame(), "coverage": {}},
+            sentiment_snapshot={"status": "OK", "analysis": {"data_confidence": {"status": "High"}}, "coverage": {}},
+            events_snapshot={"status": "OK", "coverage": {"event_count": 0}, "rows": pd.DataFrame()},
+            collection_ops_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+        )
+
+        self.assertEqual(cockpit["market_session"]["brief_title"], "오늘의 시장 브리프")
+        self.assertIn("sp500_intraday_snapshot", cockpit["refresh_plan"]["action_ids"])
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["primary_button_label"], "현재 이슈만 보강")
+
+    def test_market_context_brief_html_renders_session_title_and_basis(self) -> None:
+        from app.web.overview_ui_components import _macro_context_cockpit_html
+
+        html = _macro_context_cockpit_html(
+            {
+                "status": "OK",
+                "summary": {
+                    "headline": "마지막 거래일에는 NVDA +4.2% 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다.",
+                    "detail": "Technology 리더십.",
+                    "status_label": "자료 정상 · 휴장 기준",
+                    "rail": [],
+                },
+                "market_session": {
+                    "brief_title": "마지막 거래일 시장 브리프",
+                    "brief_subtitle": "기준: 2026-06-18 · 현재 미국장 휴장",
+                },
+                "brief_rows": [
+                    {"label": "무엇이 움직였나", "value": "NVDA +4.2%", "detail": "Technology lead", "tone": "positive"}
+                ],
+                "sector_pressure": {},
+                "event_timeline": {},
+            },
+            include_reading_flow=False,
+        )
+
+        self.assertIn("마지막 거래일 시장 브리프", html)
+        self.assertIn("기준: 2026-06-18", html)
+        self.assertNotIn("오늘의 시장 브리프", html)
+
     def test_overview_macro_context_cockpit_uses_recent_cpi_as_compact_event_cue(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
 
@@ -10014,7 +10181,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("ov-analog-basis-ledger", html)
         self.assertIn("ov-analog-basis-group", html)
         self.assertIn("과거 유사 맥락 계산에만 적용", html)
-        self.assertIn("상단 시장 브리프는 최신 저장 자료 기준", html)
+        self.assertIn("상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준", html)
         self.assertIn("기준 시점", html)
         self.assertIn("latest", html)
         self.assertIn("계산 기준일", html)

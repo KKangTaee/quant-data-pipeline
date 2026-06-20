@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Market Context brief date should follow market session, not calendar today
+- User request:
+  - 주말 / 휴장일인데 `오늘의 시장 브리프`처럼 보이고, 새 장중 자료가 나올 수 없는 때에도 보강 자료가 뜨는 것은 어색하다고 지적함.
+- Interpreted goal:
+  - Market Context should name and judge the brief by the active US market session: open trading, pre-open, after close, or closed/holiday.
+- Analysis result:
+  - Calendar today is not the right anchor for a market-context brief. During closed sessions the brief should use the previous trading date as basis and lower intraday elapsed-age stale states out of actionable refresh. This does not hide failed / missing data; it only prevents stale age from accumulating while the market cannot produce new intraday rows.
+- Follow-up:
+  - Future Market Context copy should avoid fixed `오늘` language unless `market_session.is_market_open_now` is true or the copy explicitly says it is using current-session data.
+
 ### 2026-06-20 - Non-actionable Events and Data Health meta should not remain unresolved source issues
 - User request:
   - `현재 이슈만 보강`을 눌러도 Events와 Data Health가 계속 `자료 확인 필요`로 남는 것은, 버튼으로 해결할 수 없는 항목을 계속 사용자에게 해결하라고 보이는 문제라고 지적함.

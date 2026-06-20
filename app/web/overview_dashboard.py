@@ -384,6 +384,14 @@ def _next_market_session(start_date: date) -> MarketSessionInfo:
     return _market_session_for_date(start_date)
 
 
+def _previous_market_session(start_date: date) -> MarketSessionInfo:
+    for offset in range(1, 15):
+        candidate = _market_session_for_date(start_date - timedelta(days=offset))
+        if candidate.is_trading_day:
+            return candidate
+    return _market_session_for_date(start_date)
+
+
 def _current_market_session_info(now: datetime | None = None) -> MarketSessionInfo:
     now_et = (now or datetime.now(tz=US_EASTERN_TZ)).astimezone(US_EASTERN_TZ)
     session = _market_session_for_date(now_et.date())
@@ -459,6 +467,23 @@ def _market_session_banner_model(now: datetime | None = None) -> dict[str, Any]:
             _format_session_time_item("Next Open", session.next_open_at),
             _format_session_time_item("Next Close", session.next_close_at),
         ],
+    }
+
+
+def _market_context_session_payload(now: datetime | None = None) -> dict[str, Any]:
+    session = _current_market_session_info(now)
+    basis_session = (
+        session
+        if session.is_trading_day and session.phase in {"장중", "장 종료"}
+        else _previous_market_session(session.session_date)
+    )
+    return {
+        "phase": session.phase,
+        "is_trading_day": session.is_trading_day,
+        "is_market_open_now": session.is_trading_day and session.phase == "장중",
+        "session_date": session.session_date.isoformat(),
+        "basis_date": basis_session.session_date.isoformat(),
+        "reason": session.reason,
     }
 
 
@@ -2019,6 +2044,8 @@ def _render_overview_market_context_refresh_impact_summary(result: dict[str, Any
 
 def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -> None:
     result_key = MARKET_CONTEXT_REFRESH_RESULT_KEY
+    refresh_plan = dict(cockpit_model.get("refresh_plan") or {})
+    summary = dict(refresh_plan.get("summary") or {})
     with st.expander(_overview_market_context_refresh_expander_label(cockpit_model), expanded=False):
         st.markdown(
             '<div class="ov-macro-cockpit-refresh-assist">현재 화면은 저장된 DB snapshot을 읽고, 갱신은 기존 Overview action boundary로만 실행합니다.</div>',
@@ -2031,7 +2058,7 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
                 "자료 보강 후 Market Context cache를 비우고 같은 화면을 다시 읽습니다. raw job rows는 상세에만 표시합니다."
             )
         if cols[1].button(
-            "현재 이슈만 보강",
+            str(summary.get("primary_button_label") or "현재 이슈만 보강"),
             key="overview_market_context_refresh_smart",
             use_container_width=True,
             type="secondary",
@@ -2051,7 +2078,7 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
                 _clear_overview_market_context_caches()
             st.rerun()
         if cols[2].button(
-            "전체 Market Context 자료 보강",
+            str(summary.get("full_refresh_label") or "전체 Market Context 자료 보강"),
             key="overview_market_context_refresh_all",
             use_container_width=True,
             type="secondary",
@@ -2073,7 +2100,7 @@ def _render_overview_historical_analog_controls() -> dict[str, str | None]:
     st.markdown("#### 참고: 과거 유사 맥락 기준")
     st.caption(
         "선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포를 다시 계산합니다. "
-        "아래 기준은 과거 유사 맥락 계산에만 적용되며, 상단 오늘의 시장 맥락과 시장 브리프는 최신 저장 자료 기준입니다."
+        "아래 기준은 과거 유사 맥락 계산에만 적용되며, 상단 시장 브리프는 현재 세션 상태에 따라 장중 snapshot 또는 마지막 거래일 기준 자료를 사용합니다."
     )
     cols = st.columns([0.9, 1.0, 0.9], gap="small", vertical_alignment="bottom")
     basis = cols[0].selectbox(
@@ -2123,13 +2150,15 @@ def _overview_historical_analog_control_state() -> dict[str, str | None]:
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락")
     st.caption(
-        "상단에서 오늘의 시장 브리프를 먼저 읽고, 이어서 기준을 바꿔 과거 참고 통계를 확인합니다."
+        "상단에서 현재 세션 기준 시장 브리프를 먼저 읽고, 이어서 기준을 바꿔 과거 참고 통계를 확인합니다."
     )
     _render_overview_market_context_refresh_reflection()
+    market_session_context = _market_context_session_payload()
     initial_analog_controls = _overview_historical_analog_control_state()
     cockpit_model = load_overview_macro_context_cockpit(
         as_of_date=initial_analog_controls["as_of_date"],
         pattern_window=str(initial_analog_controls["pattern_window"] or "5D"),
+        market_session_context=market_session_context,
     )
     render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
     analog_controls = _render_overview_historical_analog_controls()
@@ -2137,6 +2166,7 @@ def _render_overview_market_context_tab() -> None:
         cockpit_model = load_overview_macro_context_cockpit(
             as_of_date=analog_controls["as_of_date"],
             pattern_window=str(analog_controls["pattern_window"] or "5D"),
+            market_session_context=market_session_context,
         )
     render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)
     _render_overview_historical_analog_repair_action(cockpit_model)

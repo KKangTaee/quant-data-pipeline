@@ -4408,6 +4408,7 @@ def build_overview_source_confidence_catalog(
     sentiment_snapshot: dict[str, Any] | None = None,
     events_snapshot: dict[str, Any] | None = None,
     collection_ops_snapshot: dict[str, Any] | None = None,
+    market_session_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a read-only source/provider confidence catalog from already loaded Overview snapshots."""
     movers = market_movers_snapshot or {}
@@ -4417,6 +4418,10 @@ def build_overview_source_confidence_catalog(
     refresh_detail = refresh_state.get("detail") if isinstance(refresh_state, dict) else None
     prices_review = bool(refresh_label and refresh_label.upper() not in {"OK", "SUCCESS", "FRESH"})
     prices_status = _source_confidence_status(movers, review_hint=prices_review, no_data_if_empty=True)
+    if _closed_session_intraday_stale(refresh_state or prices_status, "S&P 500 Daily Snapshot", market_session_context):
+        prices_status = "OK"
+        refresh_label = "Closed session basis"
+        refresh_detail = dict(market_session_context or {}).get("brief_subtitle") or refresh_detail
     prices_returnable = _cockpit_int(movers_coverage.get("returnable_count"))
     prices_universe = _cockpit_int(movers_coverage.get("universe_count"))
 
@@ -4667,10 +4672,138 @@ def _cockpit_copy_value(value: Any, fallback: str) -> str:
     return text
 
 
+def _cockpit_bool(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value in (None, ""):
+        return default
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on", "open", "장중"}:
+        return True
+    if text in {"0", "false", "no", "n", "off", "closed", "휴장"}:
+        return False
+    return default
+
+
+def _market_context_basis_date(*snapshots: dict[str, Any]) -> str | None:
+    for snapshot in snapshots:
+        coverage = dict((snapshot or {}).get("coverage") or {})
+        date_window = dict((snapshot or {}).get("date_window") or {})
+        for value in (
+            coverage.get("effective_end_date"),
+            date_window.get("effective_end_date"),
+            coverage.get("snapshot_time_utc"),
+            date_window.get("end_date"),
+            coverage.get("latest_date"),
+            coverage.get("latest_candle_time"),
+        ):
+            normalized = _iso_date(value)
+            if normalized:
+                return normalized
+    return None
+
+
+def _market_session_context_model(
+    context: dict[str, Any] | None,
+    *,
+    basis_date: str | None,
+) -> dict[str, Any]:
+    raw = dict(context or {})
+    basis_date = _iso_date(raw.get("basis_date")) or basis_date
+    phase = str(raw.get("phase") or raw.get("status") or "장중").strip()
+    open_value = raw.get("is_market_open_now", raw.get("is_market_open"))
+    is_market_open = _cockpit_bool(open_value, default=phase == "장중")
+    trading_value = raw.get("is_trading_day")
+    is_trading_day = _cockpit_bool(trading_value, default=phase != "휴장")
+    session_date = str(raw.get("session_date") or "").strip()
+    reason = str(raw.get("reason") or "").strip()
+    basis_text = basis_date or "-"
+
+    if is_market_open:
+        title = "오늘의 시장 브리프"
+        headline_prefix = "오늘은"
+        status_label = "미국장 장중"
+        rail_ok_label = "자료 정상"
+    elif phase == "장 시작 전":
+        title = "개장 전 시장 기준"
+        headline_prefix = "개장 전에는"
+        status_label = "미국장 장 시작 전"
+        rail_ok_label = "자료 정상 · 개장 전 기준"
+    elif phase == "장 종료":
+        title = "장 마감 기준 시장 브리프"
+        headline_prefix = "장 마감 후에는"
+        status_label = "미국장 장 종료"
+        rail_ok_label = "자료 정상 · 장 마감 기준"
+    else:
+        title = "마지막 거래일 시장 브리프"
+        headline_prefix = "마지막 거래일에는"
+        status_label = "미국장 휴장"
+        rail_ok_label = "자료 정상 · 휴장 기준"
+
+    subtitle_parts = [f"기준: {basis_text}"]
+    if session_date:
+        subtitle_parts.append(f"세션: {session_date}")
+    subtitle_parts.append(status_label)
+    if reason:
+        subtitle_parts.append(reason)
+
+    return {
+        "phase": phase,
+        "session_date": session_date,
+        "reason": reason,
+        "is_trading_day": is_trading_day,
+        "is_market_open_now": is_market_open,
+        "is_closed_session": not is_market_open,
+        "basis_date": basis_date,
+        "brief_title": title,
+        "brief_subtitle": " · ".join(part for part in subtitle_parts if part),
+        "headline_prefix": headline_prefix,
+        "status_label": status_label,
+        "rail_ok_label": rail_ok_label,
+        "suppress_intraday_refresh": not is_market_open,
+    }
+
+
+def _closed_session_intraday_stale(status: Any, source_area: Any, session_context: dict[str, Any] | None) -> bool:
+    if not dict(session_context or {}).get("suppress_intraday_refresh"):
+        return False
+    source = str(source_area or "").lower()
+    status_text = _cockpit_status_text(status).lower()
+    if status_text not in {"stale", "due", "update due"}:
+        return False
+    return any(marker in source for marker in ("intraday", "daily snapshot", "1m ohlcv", "1m", "장중"))
+
+
+def _apply_market_session_basis_to_cards(cards: list[dict[str, Any]], market_session: dict[str, Any]) -> None:
+    if not market_session.get("is_closed_session"):
+        return
+    basis_date = str(market_session.get("basis_date") or "").strip()
+    if not basis_date:
+        return
+    for card in cards:
+        card_id = str(card.get("id") or "")
+        if card_id in {"movement", "breadth"}:
+            card["freshness"] = basis_date
+            card["freshness_label"] = basis_date
+        if card_id == "movement" and _closed_session_intraday_stale(
+            card.get("status"),
+            "S&P 500 Daily Snapshot",
+            market_session,
+        ):
+            card["status"] = "OK"
+            card["status_label"] = "휴장 기준"
+            card["tone"] = "neutral"
+            for badge in list(card.get("badges") or []):
+                if str(badge.get("label") or "") == "자료 상태":
+                    badge["value"] = "휴장 기준"
+                    badge["tone"] = "neutral"
+
+
 def _build_cockpit_summary_copy(
     cards: Sequence[dict[str, Any]],
     *,
     context_review_count: int,
+    market_session: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     movement_card = cards[0] if len(cards) > 0 else {}
     breadth_card = cards[1] if len(cards) > 1 else {}
@@ -4678,11 +4811,12 @@ def _build_cockpit_summary_copy(
     movement_value = _cockpit_copy_value(movement_card.get("value"), "")
     breadth_value = _cockpit_copy_value(breadth_card.get("value"), "섹터 리더십 미확인")
     futures_value = _cockpit_copy_value(futures_card.get("value"), "혼재된 매크로 흐름")
+    headline_prefix = str((market_session or {}).get("headline_prefix") or "오늘은")
 
     headline = (
-        f"오늘은 {movement_value} 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다."
+        f"{headline_prefix} {movement_value} 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다."
         if movement_value
-        else "오늘은 아직 뚜렷한 상위 변동 종목보다 자료 상태와 확산 여부를 먼저 봅니다."
+        else f"{headline_prefix} 아직 뚜렷한 상위 변동 종목보다 자료 상태와 확산 여부를 먼저 봅니다."
     )
     breadth_clause = (
         "섹터 리더십은 아직 뚜렷하지 않고"
@@ -5315,6 +5449,7 @@ def _cockpit_apply_futures_data_limit(
     row: dict[str, Any],
     findings: list[dict[str, Any]],
     data_health_handoff: dict[str, Any],
+    market_session_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fold a Futures data-health limitation into the Futures/Macro brief row."""
     handoff_items = [
@@ -5341,6 +5476,12 @@ def _cockpit_apply_futures_data_limit(
         None,
     )
     if not data_finding:
+        return row
+    if _closed_session_intraday_stale(
+        data_finding.get("status"),
+        data_finding.get("source_area") or data_finding.get("evidence"),
+        market_session_context,
+    ):
         return row
     limited = dict(row)
     source_area = str(data_finding.get("source_area") or "Futures Monitor 1m OHLCV").strip()
@@ -5482,13 +5623,21 @@ def _cockpit_refresh_plan(
     cards: list[dict[str, Any]],
     findings: list[dict[str, Any]],
     data_health_handoff: dict[str, Any],
+    market_session_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     excluded_items: list[dict[str, Any]] = []
     seen_actions: set[str] = set()
 
     movement = cards[0] if cards else {}
-    if _cockpit_status_tone(movement.get("status")) in {"warning", "danger"}:
+    if (
+        _cockpit_status_tone(movement.get("status")) in {"warning", "danger"}
+        and not _closed_session_intraday_stale(
+            movement.get("status"),
+            "S&P 500 Daily Snapshot",
+            market_session_context,
+        )
+    ):
         item = _refresh_plan_item(
             source_area="S&P 500 Daily Snapshot",
             status=movement.get("status"),
@@ -5504,6 +5653,8 @@ def _cockpit_refresh_plan(
         if not isinstance(priority_item, dict):
             continue
         source_area = str(priority_item.get("area") or "").strip()
+        if _closed_session_intraday_stale(priority_item.get("status"), source_area, market_session_context):
+            continue
         item = _refresh_plan_item(
             source_area=source_area,
             status=priority_item.get("status"),
@@ -5527,6 +5678,7 @@ def _cockpit_refresh_plan(
         ),
     )
     partial_count = sum(1 for item in items if item.get("resolution") == "partial")
+    closed_session = bool(dict(market_session_context or {}).get("is_closed_session"))
     return {
         "schema_version": "overview_market_context_refresh_plan_v1",
         "status": "READY" if items else "NO_ACTION",
@@ -5535,13 +5687,16 @@ def _cockpit_refresh_plan(
             "detail": (
                 "현재 브리프에서 실제 갱신 가능한 자료만 실행합니다."
                 if items
+                else "미국장 휴장 / 장외 시간에는 장중 snapshot 경과 시간만으로 보강하지 않습니다."
+                if closed_session
                 else "이벤트 caveat처럼 수집으로 해결되지 않는 제한은 보강 대상에서 제외합니다."
             ),
             "action_count": len(items),
             "partial_count": partial_count,
             "excluded_count": len(excluded_items),
-            "primary_button_label": "현재 이슈만 보강",
+            "primary_button_label": "현재 이슈만 보강" if items else "현재 보강 없음",
             "full_refresh_label": "전체 Market Context 자료 보강",
+            "closed_session": closed_session,
         },
         "items": items,
         "excluded_items": excluded_items,
@@ -5570,6 +5725,7 @@ def build_overview_macro_context_cockpit(
     events_snapshot: dict[str, Any] | None = None,
     collection_ops_snapshot: dict[str, Any] | None = None,
     historical_analog_snapshot: dict[str, Any] | None = None,
+    market_session_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a summary-first Overview cockpit from existing read-only market context snapshots."""
     if market_movers_snapshot is None:
@@ -5623,11 +5779,21 @@ def build_overview_macro_context_cockpit(
     ]
     data_card, data_review_count = _build_cockpit_data_card(collection_ops_snapshot)
     cards.append(data_card)
+    market_session = _market_session_context_model(
+        market_session_context,
+        basis_date=_market_context_basis_date(
+            market_movers_snapshot,
+            group_leadership_snapshot,
+            futures_macro_snapshot,
+        ),
+    )
+    _apply_market_session_basis_to_cards(cards, market_session)
 
     review_cards = [
         card for card in cards
         if str(card.get("id") or "") not in {"events", "data"}
         and _cockpit_status_tone(card.get("status")) in {"warning", "danger"}
+        and not _closed_session_intraday_stale(card.get("status"), card.get("source") or card.get("title"), market_session)
     ]
     source_confidence = build_overview_source_confidence_catalog(
         market_movers_snapshot=market_movers_snapshot,
@@ -5636,6 +5802,7 @@ def build_overview_macro_context_cockpit(
         sentiment_snapshot=sentiment_snapshot,
         events_snapshot=events_snapshot,
         collection_ops_snapshot=collection_ops_snapshot,
+        market_session_context=market_session,
     )
     data_health_handoff = build_overview_data_health_ingestion_handoff(collection_ops_snapshot, limit=3)
     context_findings = _build_cockpit_context_findings(
@@ -5652,6 +5819,7 @@ def build_overview_macro_context_cockpit(
         cards=cards,
         findings=brief_context_findings,
         data_health_handoff=data_health_handoff,
+        market_session_context=market_session,
     )
     refresh_summary = dict(refresh_plan.get("summary") or {})
     actionable_refresh_count = _cockpit_int(refresh_summary.get("action_count"))
@@ -5662,6 +5830,8 @@ def build_overview_macro_context_cockpit(
     summary_status_label = (
         "자료 보강 필요"
         if actionable_refresh_count
+        else str(market_session.get("rail_ok_label"))
+        if market_session.get("is_closed_session")
         else "자료 정상 · 참고 제한"
         if reference_limit_count
         else "자료 정상"
@@ -5677,6 +5847,7 @@ def build_overview_macro_context_cockpit(
     summary_headline, summary_detail = _build_cockpit_summary_copy(
         cards,
         context_review_count=context_review_count,
+        market_session=market_session,
     )
     rail = [
         {
@@ -5684,6 +5855,8 @@ def build_overview_macro_context_cockpit(
             "value": (
                 f"보강 가능 자료 {actionable_refresh_count}개"
                 if actionable_refresh_count
+                else str(market_session.get("rail_ok_label"))
+                if market_session.get("is_closed_session")
                 else "자료 정상 · 참고 제한 있음"
                 if reference_limit_count
                 else "자료 정상"
@@ -5691,6 +5864,8 @@ def build_overview_macro_context_cockpit(
             "detail": (
                 "필요 자료 보강에서 실행 가능"
                 if actionable_refresh_count
+                else str(market_session.get("brief_subtitle") or "마지막 저장 기준")
+                if market_session.get("is_closed_session")
                 else "참고 제한 / 관리 메타는 근거에 분리"
                 if reference_limit_count
                 else "바로 참고 가능"
@@ -5730,6 +5905,7 @@ def build_overview_macro_context_cockpit(
         _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
         brief_context_findings,
         data_health_handoff,
+        market_session,
     )
     brief_rows = [
         _cockpit_brief_row(cards[0], label="무엇이 움직였나"),
@@ -5756,6 +5932,7 @@ def build_overview_macro_context_cockpit(
             "rail": rail,
         },
         "brief_rows": brief_rows,
+        "market_session": market_session,
         "refresh_plan": refresh_plan,
         "interpretation_cues": interpretation_cues,
         "sector_pressure": sector_pressure,

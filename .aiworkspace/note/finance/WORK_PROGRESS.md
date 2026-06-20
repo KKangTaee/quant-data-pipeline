@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Session Basis V9
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-session-basis-v9-20260620/` after user feedback that a weekend / closed market should not read as `오늘의 시장 브리프`.
+- Connected the existing NYSE session helper to Market Context so open sessions keep `오늘의 시장 브리프`, while weekends / holidays show `마지막 거래일 시장 브리프` with the previous trading date as basis.
+- Closed-session intraday elapsed-age stale states no longer create `현재 이슈만 보강` actions; genuinely failed / missing sources can still surface as actionable.
+- Boundaries stayed unchanged: DB-backed snapshots only, no render-time provider fetch, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Source Actionability V8
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-source-actionability-v8-20260620/` after user feedback that Events and Data Health still appeared as unresolved `자료 확인 필요` even though smart refresh excluded Events and Data Health is management meta.
 - Added source-confidence actionability metadata and made top `자료 상태` count only actionable refresh items.

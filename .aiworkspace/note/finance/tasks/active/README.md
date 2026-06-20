@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-session-basis-v9-20260620` | Completed record | `Overview > Market Context` V9 follow-up. 휴장 / 장외 시간에는 `오늘의 시장 브리프` 대신 마지막 거래일 또는 현재 세션 기준 브리프로 읽고, 장중 snapshot age만으로 현재 보강 이슈를 띄우지 않도록 보정했다. |
 | `overview-market-context-source-actionability-v8-20260620` | Completed record | `Overview > Market Context` V8 follow-up. Events estimate caveats는 `참고 제한`, Data Health는 `관리 메타`로 분리하고, top `자료 상태`와 source confidence summary는 보강 가능한 자료만 unresolved로 세도록 고쳤다. |
 | `overview-market-context-smart-refresh-v7-20260620` | Completed record | `Overview > Market Context` V7 follow-up. Events를 브리프에서 낮추고, smart refresh / full refresh fallback / result reflection을 정리했다. |
 | `overview-market-context-brief-context-absorption-v6-20260620` | Completed record | `Overview > Market Context` V6 follow-up. `브리프 신뢰도` 독립 섹션을 제거하고, Events / Futures 자료 제한은 `오늘의 시장 브리프`의 시장맥락 결론으로 흡수했다. |

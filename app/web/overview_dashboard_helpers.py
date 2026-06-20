@@ -543,7 +543,8 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
 def load_overview_macro_context_cockpit(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
-    cache_schema_version: str = "overview-cockpit-v6-macro-dimension-disabled-audit",
+    market_session_context: dict[str, Any] | None = None,
+    cache_schema_version: str = "overview-cockpit-v9-session-basis",
 ) -> dict[str, Any]:
     del cache_schema_version
     market_movers_snapshot = load_overview_market_movers_snapshot(
@@ -578,4 +579,5 @@ def load_overview_macro_context_cockpit(
         events_snapshot=events_snapshot,
         collection_ops_snapshot=collection_ops_snapshot,
         historical_analog_snapshot=historical_analog_snapshot,
+        market_session_context=market_session_context,
     )

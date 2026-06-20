@@ -3076,9 +3076,21 @@ def _macro_cockpit_visual_board_html(model: dict[str, Any]) -> str:
     return f'<section class="ov-macro-visual-board">{sector_html}{timeline_html}</section>'
 
 
-def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
+def _macro_cockpit_brief_rows_html(
+    rows: list[dict[str, Any]],
+    *,
+    market_session: dict[str, Any] | None = None,
+) -> str:
     if not rows:
         return ""
+    session = dict(market_session or {})
+    title = _display_value(session.get("brief_title") or "오늘의 시장 브리프")
+    subtitle = _display_value(session.get("brief_subtitle"))
+    note_html = (
+        f'<div class="ov-market-brief-note">{escape(subtitle)}</div>'
+        if subtitle != "-"
+        else ""
+    )
     html: list[str] = []
     for index, row in enumerate(rows[:4], start=1):
         tone_color = escape(_overview_tone_color(row.get("tone")))
@@ -3100,7 +3112,8 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
     return (
         '<section class="ov-market-brief-lane">'
         '<div class="ov-market-brief-head">'
-        '<div class="ov-market-brief-title">오늘의 시장 브리프</div>'
+        f'<div class="ov-market-brief-title">{escape(title)}</div>'
+        f"{note_html}"
         "</div>"
         f'<ol class="ov-market-brief-list">{"".join(html)}</ol>'
         "</section>"
@@ -3632,7 +3645,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     replay_basis = _display_value(model.get("leadership_replay_basis"))
     scope_html = (
         '<div class="ov-historical-analog-scope">'
-        "이 기준은 과거 유사 맥락 계산에만 적용됩니다. 상단 시장 브리프는 최신 저장 자료 기준이며, 기준 시점/기준일/패턴 기간 변경은 아래 참고 통계만 다시 계산합니다."
+        "이 기준은 과거 유사 맥락 계산에만 적용됩니다. 상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준이며, 기준 시점/기준일/패턴 기간 변경은 아래 참고 통계만 다시 계산합니다."
         "</div>"
     )
     meta_html = _analog_basis_ledger_html(
@@ -3815,7 +3828,10 @@ def _macro_cockpit_body_html(model: dict[str, Any]) -> str:
     rail_html = _macro_hybrid_tape_html(list(summary.get("rail") or []))
     if not rail_html:
         rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
-    brief_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
+    brief_html = _macro_cockpit_brief_rows_html(
+        list(model.get("brief_rows") or []),
+        market_session=dict(model.get("market_session") or {}),
+    )
     visual_board_html = _macro_cockpit_visual_board_html(model)
     return f"{rail_html}{brief_html}{visual_board_html}"
 
@@ -3828,7 +3844,14 @@ def _macro_context_reading_flow_html(
     include_historical_analog: bool = True,
     include_source_confidence: bool = True,
 ) -> str:
-    brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or [])) if include_brief else ""
+    brief_rows_html = (
+        _macro_cockpit_brief_rows_html(
+            list(model.get("brief_rows") or []),
+            market_session=dict(model.get("market_session") or {}),
+        )
+        if include_brief
+        else ""
+    )
     context_findings = list(model.get("extra_context_findings") or [])
     next_checks_html = _macro_cockpit_next_checks_html(context_findings) if include_next_checks else ""
     historical_analog_html = (
