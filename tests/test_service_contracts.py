@@ -4362,19 +4362,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn(
-            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)",
-            helper_body,
-        )
+        self.assertIn("include_brief=False", helper_body)
+        self.assertIn("include_historical_analog=False", helper_body)
+        self.assertIn("include_source_confidence=False", helper_body)
         self.assertIn(
             "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
             helper_body,
         )
         self.assertIn("_render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        reading_index = helper_body.index(
-            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)"
-        )
+        reading_index = helper_body.index("include_historical_analog=False")
         refresh_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_index)
         self.assertLess(reading_index, refresh_index)
@@ -4392,10 +4389,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn(
-            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)",
-            helper_body,
-        )
+        self.assertIn("include_brief=False", helper_body)
+        self.assertIn("include_historical_analog=False", helper_body)
+        self.assertIn("include_source_confidence=False", helper_body)
         self.assertIn(
             "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
             helper_body,
@@ -4569,18 +4565,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-cue-row", css)
         self.assertIn(".ov-macro-cue-action", css)
 
-    def test_overview_market_context_cue_cards_keep_left_rule_away_from_text(self) -> None:
+    def test_overview_market_context_next_checks_use_rail_without_card_left_rule(self) -> None:
         import re
 
         from app.web.overview_ui_components import overview_ui_css
 
         css = overview_ui_css()
-        scoped_match = re.search(r"\.ov-macro-reading-section \.ov-macro-cue-row \{(?P<body>.*?)\n\}", css, re.S)
-        self.assertIsNotNone(scoped_match, "Market Context cue row should have a scoped spacing rule.")
+        scoped_match = re.search(r"\.ov-next-check-row \{(?P<body>.*?)\n\}", css, re.S)
+        self.assertIsNotNone(scoped_match, "Market Context next checks should render as rail rows.")
         scoped_body = scoped_match.group("body") if scoped_match else ""
 
-        self.assertIn("padding-left: 0.88rem", scoped_body)
-        self.assertNotIn("padding: 0.52rem 0.18rem 0.54rem 0;", scoped_body)
+        self.assertIn("grid-template-columns: minmax(4rem, 0.18fr)", scoped_body)
+        self.assertIn("padding: 0.72rem 0;", scoped_body)
+        self.assertNotIn("border-left", scoped_body)
+        self.assertNotIn("min-height", scoped_body)
 
     def test_overview_market_context_shows_historical_analog_repair_action_before_support_expander(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
@@ -4617,24 +4615,19 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("as_of_date=analog_controls[\"as_of_date\"]", helper_body)
         self.assertIn("pattern_window=str(analog_controls[\"pattern_window\"] or \"5D\")", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn(
-            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)",
-            helper_body,
-        )
+        self.assertIn("include_brief=False", helper_body)
+        self.assertIn("include_historical_analog=False", helper_body)
+        self.assertIn("include_source_confidence=False", helper_body)
         self.assertIn(
             "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
             helper_body,
         )
         self.assertLess(
             helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)"),
-            helper_body.index(
-                "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)"
-            ),
+            helper_body.index("include_historical_analog=False"),
         )
         self.assertLess(
-            helper_body.index(
-                "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)"
-            ),
+            helper_body.index("include_historical_analog=False"),
             helper_body.index("_render_overview_historical_analog_controls()"),
         )
         self.assertLess(
@@ -4691,9 +4684,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn(".ov-macro-cues-list", css)
+        self.assertIn(".ov-next-check-rail", css)
         self.assertIn(".ov-analog-basis-ledger", css)
         self.assertIn(".ov-source-ledger", css)
-        self.assertIn("ov-macro-cues-list", cue_html)
+        self.assertIn("ov-next-check-rail", cue_html)
+        self.assertIn("ov-next-check-row", cue_html)
         self.assertIn("ov-historical-analog-row", analog_html)
         self.assertIn("ov-historical-analog-scope", analog_html)
         self.assertIn("과거 유사 맥락 계산에만 적용", analog_html)
@@ -4702,6 +4697,113 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("ov-macro-cues-grid", cue_html)
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
+
+    def test_overview_market_context_v2_uses_wide_brief_lane_and_next_check_rail(self) -> None:
+        from app.web import overview_ui_components
+
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Technology 리더십이 확인되고, 선물/매크로 배경은 금리 압력입니다.",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "3 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {},
+            "event_timeline": {},
+            "brief_rows": [
+                {
+                    "label": "무엇이 움직였나",
+                    "value": "SNDK +14.5%",
+                    "detail": "Technology 안에서 단일 종목 영향이 컸는지 breadth와 함께 확인합니다.",
+                    "tone": "warning",
+                },
+                {
+                    "label": "확산",
+                    "value": "Technology 우위",
+                    "detail": "리더십 sector와 market mover가 같은 방향인지 봅니다.",
+                    "tone": "positive",
+                },
+            ],
+            "next_checks": [
+                {
+                    "target_tab": "Events",
+                    "title": "추정 일정 확인",
+                    "reason": "추정 일정 중 검증/신선도 확인이 필요합니다.",
+                    "action": "Events에서 earnings estimate의 cross-check를 확인하세요.",
+                    "source_area": "Events · Earnings estimates",
+                    "freshness": "2026-06-15",
+                    "priority": "P1",
+                    "tone": "warning",
+                },
+                {
+                    "target_tab": "Futures Monitor",
+                    "title": "Futures 배경 확인",
+                    "reason": "가격 움직임과 금리 압력이 같은 방향인지 확인합니다.",
+                    "action": "Futures Monitor에서 risk-on, 금리 압력 근거를 확인하세요.",
+                    "source_area": "Futures Macro Thermometer",
+                    "freshness": "2026-06-15",
+                    "priority": "P2",
+                    "tone": "warning",
+                },
+            ],
+            "historical_analog": {},
+            "source_confidence": {},
+            "boundary_note": "context only",
+        }
+
+        cockpit_html = overview_ui_components._macro_context_cockpit_html(model, include_reading_flow=False)
+        next_html = overview_ui_components._macro_context_reading_flow_html(
+            model,
+            include_brief=False,
+            include_historical_analog=False,
+            include_source_confidence=False,
+        )
+
+        self.assertIn("ov-market-brief-lane", cockpit_html)
+        self.assertIn("오늘의 시장 브리프", cockpit_html)
+        self.assertIn("무엇이 움직였나", cockpit_html)
+        self.assertNotIn("ov-macro-reading-section ov-macro-brief", cockpit_html)
+        self.assertIn("ov-next-check-rail", next_html)
+        self.assertIn("ov-next-check-row", next_html)
+        self.assertIn("관찰 지점", next_html)
+        self.assertIn("왜 중요한가", next_html)
+        self.assertIn("확인 위치", next_html)
+        self.assertNotIn("ov-macro-cues-list", next_html)
+        self.assertNotIn("ov-macro-cue-row", next_html)
+
+    def test_overview_market_context_v2_css_removes_repeated_card_grid_language(self) -> None:
+        import re
+
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        reading_section = re.search(r"\.ov-macro-reading-section \{(?P<body>.*?)\n\}", css, re.S)
+        macro_comparison = re.search(r"\.ov-macro-comparison \{(?P<body>.*?)\n\}", css, re.S)
+        next_check_rail = re.search(r"\.ov-next-check-rail \{(?P<body>.*?)\n\}", css, re.S)
+        next_check_row = re.search(r"\.ov-next-check-row \{(?P<body>.*?)\n\}", css, re.S)
+
+        self.assertIsNotNone(reading_section)
+        self.assertIsNotNone(macro_comparison)
+        self.assertIsNotNone(next_check_rail)
+        self.assertIsNotNone(next_check_row)
+
+        reading_body = reading_section.group("body") if reading_section else ""
+        macro_body = macro_comparison.group("body") if macro_comparison else ""
+        rail_body = next_check_rail.group("body") if next_check_rail else ""
+        row_body = next_check_row.group("body") if next_check_row else ""
+
+        self.assertIn("background: transparent", reading_body)
+        self.assertNotIn("border-left", reading_body)
+        self.assertIn("display: grid", rail_body)
+        self.assertIn("grid-template-columns: minmax(4rem, 0.18fr) minmax(0, 0.95fr) minmax(0, 1.2fr) minmax(12rem, 0.8fr)", row_body)
+        self.assertNotIn("min-height", row_body)
+        self.assertNotIn("repeat(3", rail_body)
+        self.assertIn("background: transparent", macro_body)
+        self.assertNotIn("border-bottom", macro_body)
 
     def test_overview_source_confidence_summary_exposes_scan_metrics_before_opening(self) -> None:
         from app.web import overview_ui_components
@@ -5008,12 +5110,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("현재 맥락:", cockpit_html)
         self.assertIn("ov-macro-hybrid-tape", cockpit_html)
         self.assertIn("ov-macro-visual-board", cockpit_html)
-        self.assertNotIn("시장 브리프", cockpit_html)
+        self.assertIn("오늘의 시장 브리프", cockpit_html)
+        self.assertIn("ov-market-brief-lane", cockpit_html)
         self.assertNotIn("해석할 때 같이 볼 변수", cockpit_html)
         self.assertNotIn("과거 유사 맥락 참고", cockpit_html)
         self.assertNotIn("구형 해석 cue", reading_html)
-        self.assertIn("ov-macro-reading-section ov-macro-brief", reading_html)
+        self.assertNotIn("ov-macro-reading-section ov-macro-brief", reading_html)
         self.assertIn("ov-macro-reading-section ov-macro-cues", reading_html)
+        self.assertIn("ov-next-check-rail", reading_html)
         self.assertIn("가까운 주요 이벤트 확인", reading_html)
         self.assertIn("Events에서 official source를 확인하세요.", reading_html)
         self.assertIn("ov-macro-reading-section ov-historical-analog-row", reading_html)
@@ -5147,7 +5251,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn("시장 맥락", dashboard_source)
-        self.assertIn("상단에서 현재 시장을 먼저 훑고", dashboard_source)
+        self.assertIn("상단에서 오늘의 시장 브리프를 먼저 읽고", dashboard_source)
         self.assertIn("필요 자료 보강", dashboard_source)
         self.assertNotIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
@@ -9759,7 +9863,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         )
 
         self.assertIn("참고: 과거 유사 맥락", html)
-        self.assertIn("Macro 조건 포함 pilot", html)
+        self.assertIn("Macro 조건 포함 비교", html)
         self.assertIn("ov-macro-comparison", html)
         self.assertIn("Broad vs Macro 조건 포함", html)
         self.assertIn("표본 흐름", html)
@@ -9773,7 +9877,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("ZN=F/ZB=F 5D", html)
         self.assertIn("표본 품질", html)
         self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
-        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 pilot"))
+        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 비교"))
         self.assertNotIn('class="ov-macro-conditioned-pilot"', html)
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
             self.assertNotIn(forbidden, html)
@@ -9965,7 +10069,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("참고", html)
         self.assertIn("보류", html)
         self.assertIn("anchor 2회", html)
-        self.assertLess(html.index("Macro 조건 포함 pilot"), html.index("맥락 차원 상태"))
+        self.assertLess(html.index("Macro 조건 포함 비교"), html.index("맥락 차원 상태"))
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 

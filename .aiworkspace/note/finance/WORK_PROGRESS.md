@@ -5038,3 +5038,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Historical analog controls는 analog 섹션 흐름에 붙이고, 기준/패턴/표본/한계 basis ledger와 broad-vs-macro sample comparison, source ledger, `필요 자료 보강` refresh assist를 추가했다.
   - Browser QA 중 selected date/pattern 반영이 한 렌더 늦는 문제를 발견해 supporting model을 controls 후 즉시 reload하도록 수정했다.
   - 검증은 `git diff --check`, py_compile, `tests/test_service_contracts.py` 365개, Streamlit Browser QA screenshot으로 완료했다.
+- Overview Market Context Brief Flow Redesign V2:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-flow-redesign-v2-20260620/`에서 V1이 여전히 카드 재배치처럼 보인다는 사용자 피드백을 후속 보정했다.
+  - `시장 브리프` rows를 cockpit 안의 `오늘의 시장 브리프` wide lane으로 흡수하고, `다음 맥락 체크`는 priority / observation / reason / action rail로 바꿨다.
+  - Historical analog / macro comparison / source evidence는 반복 card background와 left-rule을 줄이고, `Macro 조건 포함 비교`로 broad vs conditioned sample 차이를 먼저 읽게 했다.
+  - 검증은 `git diff --check`, py_compile, `tests/test_service_contracts.py` 367개, selected as-of / 20D / monthly Browser QA와 screenshot으로 완료했다.

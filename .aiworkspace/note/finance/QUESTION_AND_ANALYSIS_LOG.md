@@ -7862,3 +7862,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 데이터 조건이나 진단 패널이 아니라, 같은 DB-backed content를 사용자가 시장 브리프 -> 과거 참고 -> 자료 근거 -> 필요 자료 보강 순서로 덜 헷갈리게 읽게 해야 함.
 - Analysis result: Streamlit 제약이나 AGENTS 지시 때문이 아니라, 기능이 누적되며 카드가 기본 visual container가 된 것이 문제였다. controls를 analog 흐름에 붙이고, basis ledger / sample funnel / source ledger로 시각 장치를 바꾸는 것이 가장 작은 안전한 변경이다.
 - Follow-up: UX redesign V1은 완료했다. 향후 후보는 source별 더 좁은 refresh 버튼, mobile density, full PIT universe/sector metadata 등이며 별도 승인 대상이다.
+
+### 2026-06-20 - Market Context V1 보정이 충분하지 않아 V2 UX 보정을 진행한다
+
+- User request: 사용자가 V1 결과가 위치만 옮겨지고 여전히 작은 카드 위주로 보이며, `다음 맥락 체크`, `시장 브리핑`, `Macro 조건 포함 pilot`이 충분히 개선되지 않았다고 재지적함.
+- Interpreted goal: V1을 완료로 간주하지 말고, Market Movers / Portfolio Monitoring처럼 넓은 읽기 UI로 Market Context의 visual language를 다시 잡아야 함.
+- Analysis result: 문제는 Streamlit 한계가 아니라 renderer CSS와 HTML이 card / boxed section을 기본 언어로 삼은 데 있었다. 상단 brief rows를 cockpit 안에 흡수하고, next checks를 rail로 바꾸며, historical / macro / source 섹션의 card background와 left-rule을 줄이는 보정이 필요했다.
+- Follow-up: V2는 완료했다. 남은 후보는 source별 좁은 refresh action, deeper macro comparison drill-down, mobile density polish이며, 새 provider / schema / validation / monitoring / trading semantics는 열지 않았다.

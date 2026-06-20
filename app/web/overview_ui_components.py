@@ -460,48 +460,44 @@ def overview_ui_css() -> str:
   align-items: baseline;
   justify-content: space-between;
   gap: var(--ov-mi-gap-md);
-  margin: 0 0 0.34rem 0;
+  margin: 0 0 0.62rem 0;
 }
 .ov-macro-section-title {
   color: var(--ov-mi-color-text);
-  font-size: var(--ov-mi-font-caption);
+  font-size: 1.05rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.2;
 }
 .ov-macro-section-note {
   color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-xs);
-  line-height: 1.2;
+  font-size: 0.84rem;
+  line-height: 1.34;
   text-align: right;
   overflow-wrap: anywhere;
 }
 .ov-macro-reading-flow {
   display: grid;
-  gap: 0.72rem;
-  margin: 0.86rem 0 1.04rem 0;
+  gap: 1.18rem;
+  margin: 1rem 0 1.18rem 0;
 }
 .ov-macro-reading-section {
   min-width: 0;
-  padding: 0.9rem 0 0.94rem 0.86rem;
+  padding: 1.08rem 0 0.96rem 0;
   border-top: 1px solid var(--ov-mi-border-faint);
-  border-bottom: 1px solid var(--ov-mi-border-faint);
-  border-left: 3px solid var(--ov-reading-tone, var(--ov-mi-color-neutral));
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--ov-reading-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
-    var(--ov-mi-color-surface);
+  background: transparent;
 }
 .ov-macro-reading-section .ov-macro-section-head {
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.66rem;
 }
 .ov-macro-reading-section .ov-macro-section-title {
-  font-size: 1rem;
+  font-size: 1.08rem;
   line-height: 1.2;
 }
 .ov-macro-reading-section .ov-macro-section-note {
-  max-width: 36rem;
-  font-size: 0.8rem;
-  line-height: 1.35;
+  max-width: 42rem;
+  font-size: 0.86rem;
+  line-height: 1.38;
   text-align: left;
 }
 .ov-macro-reading-section .ov-macro-brief-row {
@@ -526,25 +522,24 @@ def overview_ui_css() -> str:
   line-height: 1.36;
 }
 .ov-macro-reading-section .ov-macro-cue-row {
-  padding: 0.56rem 0.58rem 0.58rem;
-  padding-left: 0.88rem;
+  padding: 0.68rem 0;
 }
 .ov-macro-reading-section .ov-macro-cue-value {
-  font-size: 0.96rem;
+  font-size: 1rem;
   line-height: 1.22;
 }
 .ov-macro-reading-section .ov-macro-cue-detail {
-  font-size: 0.8rem;
-  line-height: 1.3;
+  font-size: 0.86rem;
+  line-height: 1.36;
 }
 .ov-macro-reading-section .ov-macro-cue-action {
-  margin-top: 0.2rem;
-  font-size: 0.78rem;
-  line-height: 1.3;
+  margin-top: 0.22rem;
+  font-size: 0.84rem;
+  line-height: 1.34;
 }
 .ov-macro-reading-section .ov-source-confidence-title,
 .ov-macro-reading-section .ov-historical-analog-title {
-  font-size: 0.98rem;
+  font-size: 1.08rem;
   line-height: 1.2;
 }
 .ov-macro-reading-section .ov-source-confidence-detail,
@@ -552,10 +547,7 @@ def overview_ui_css() -> str:
   line-height: 1.32;
 }
 .ov-historical-analog-row.is-muted-reference {
-  border-left-color: color-mix(in srgb, var(--ov-mi-color-neutral) 72%, transparent);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--ov-mi-color-neutral) 3%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
-    var(--ov-mi-color-surface);
+  background: transparent;
 }
 .ov-historical-analog-row.is-muted-reference .ov-historical-analog-title,
 .ov-historical-analog-row.is-muted-reference .ov-historical-analog-detail,
@@ -564,9 +556,85 @@ def overview_ui_css() -> str:
   color: var(--ov-mi-color-text-muted);
 }
 .ov-source-confidence.is-evidence-footer {
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--ov-source-status-tone, var(--ov-mi-color-neutral)) 3%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
-    var(--ov-mi-color-surface);
+  background: transparent;
+}
+.ov-market-brief-lane {
+  min-width: 0;
+  margin-top: 0.92rem;
+  padding-top: 0.76rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-market-brief-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--ov-mi-gap-md);
+  margin-bottom: 0.46rem;
+}
+.ov-market-brief-title {
+  color: var(--ov-mi-color-text);
+  font-size: 1.02rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-market-brief-note {
+  max-width: 38rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.34;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.ov-market-brief-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-market-brief-row {
+  display: grid;
+  grid-template-columns: minmax(2.4rem, 0.12fr) minmax(8rem, 0.35fr) minmax(0, 1fr);
+  gap: 0.78rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.72rem 0;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-market-brief-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.72rem;
+  height: 1.72rem;
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-row-tone, var(--ov-mi-color-neutral)) 10%, transparent);
+  color: var(--ov-row-tone, var(--ov-mi-color-neutral));
+  font-size: 0.82rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1;
+}
+.ov-market-brief-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.84rem;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+.ov-market-brief-value {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1.02rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-market-brief-detail {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
 }
 .ov-macro-brief-list {
   display: grid;
@@ -633,52 +701,111 @@ def overview_ui_css() -> str:
 }
 .ov-macro-cues-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--ov-mi-gap-sm);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
+  border-top: 1px solid var(--ov-mi-border-faint);
 }
 .ov-macro-cue-row {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--ov-mi-gap-sm);
+  display: grid;
+  grid-template-columns: minmax(4rem, 0.18fr) minmax(0, 0.95fr) minmax(0, 1.2fr) minmax(12rem, 0.8fr);
+  gap: 0.86rem;
+  align-items: start;
   min-width: 0;
-  min-height: 8.2rem;
-  padding: 0.62rem 0.66rem;
-  border: 1px solid color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 24%, transparent);
-  border-left: 3px solid var(--ov-cue-tone, var(--ov-mi-color-neutral));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
-    var(--ov-mi-color-surface);
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
 .ov-macro-cue-head {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--ov-mi-gap-sm);
-  align-items: baseline;
+  display: block;
+  min-width: 0;
 }
 .ov-macro-cue-status {
   color: var(--ov-cue-tone, var(--ov-mi-color-neutral));
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.84rem;
   font-weight: var(--ov-mi-weight-label);
-  line-height: 1.14;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 .ov-macro-cue-value {
   color: var(--ov-mi-color-text);
-  font-size: 0.96rem;
+  font-size: 1rem;
   font-weight: var(--ov-mi-weight-heading);
-  line-height: 1.18;
+  line-height: 1.22;
   overflow-wrap: anywhere;
 }
 .ov-macro-cue-detail {
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.86rem;
+  line-height: 1.36;
 }
 .ov-macro-cue-action {
   color: color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
   font-weight: var(--ov-mi-weight-label);
+}
+.ov-next-check-rail {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-next-check-row {
+  display: grid;
+  grid-template-columns: minmax(4rem, 0.18fr) minmax(0, 0.95fr) minmax(0, 1.2fr) minmax(12rem, 0.8fr);
+  gap: 0.86rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.72rem 0;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
+}
+.ov-next-check-priority {
+  color: var(--ov-check-tone, var(--ov-mi-color-neutral));
+  font-size: 0.9rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-next-check-tab {
+  margin-top: 0.18rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.78rem;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-next-check-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.76rem;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.18;
+}
+.ov-next-check-title {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+.ov-next-check-detail,
+.ov-next-check-action,
+.ov-next-check-meta {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.86rem;
+  line-height: 1.36;
+  overflow-wrap: anywhere;
+}
+.ov-next-check-action {
+  color: color-mix(in srgb, var(--ov-check-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-next-check-meta {
+  margin-top: 0.2rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.78rem;
 }
 .ov-macro-cockpit-row-meta {
   display: flex;
@@ -850,7 +977,7 @@ def overview_ui_css() -> str:
 }
 .ov-historical-analog-title {
   color: var(--ov-mi-color-text);
-  font-size: var(--ov-mi-font-body);
+  font-size: 1.08rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
 }
@@ -860,14 +987,14 @@ def overview_ui_css() -> str:
 .ov-historical-analog-limitations,
 .ov-historical-analog-note {
   color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-caption);
-  line-height: 1.25;
+  font-size: 0.86rem;
+  line-height: 1.36;
   overflow-wrap: anywhere;
 }
 .ov-historical-analog-status {
   flex: 0 0 auto;
   color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
-  font-size: var(--ov-mi-font-caption);
+  font-size: 0.86rem;
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.12;
   white-space: nowrap;
@@ -877,22 +1004,22 @@ def overview_ui_css() -> str:
   margin-top: 0.34rem;
 }
 .ov-historical-analog-scope {
-  margin-top: 0.42rem;
-  padding-top: 0.34rem;
+  margin-top: 0.5rem;
+  padding-top: 0.42rem;
   border-top: 1px solid var(--ov-mi-border-faint);
 }
 .ov-analog-basis-ledger {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  margin-top: 0.52rem;
+  margin-top: 0.68rem;
   border-top: 1px solid var(--ov-mi-border-subtle);
   border-bottom: 1px solid var(--ov-mi-border-subtle);
-  background: color-mix(in srgb, var(--ov-analog-tone, var(--ov-mi-color-neutral)) 3%, var(--ov-mi-color-surface));
+  background: transparent;
 }
 .ov-analog-basis-group {
   min-width: 0;
-  padding: 0.54rem 0.62rem;
+  padding: 0.68rem 0.72rem;
   border-left: 1px solid var(--ov-mi-border-faint);
 }
 .ov-analog-basis-group:first-child {
@@ -900,7 +1027,7 @@ def overview_ui_css() -> str:
 }
 .ov-analog-basis-title {
   color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.82rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.16;
 }
@@ -918,12 +1045,12 @@ def overview_ui_css() -> str:
 }
 .ov-analog-basis-label {
   color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.78rem;
   line-height: 1.18;
 }
 .ov-analog-basis-value {
   color: var(--ov-mi-color-text-subtle);
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.8rem;
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -952,23 +1079,23 @@ def overview_ui_css() -> str:
 }
 .ov-analog-explain {
   max-width: 58rem;
-  margin-top: 0.48rem;
+  margin-top: 0.68rem;
   color: var(--ov-mi-color-text-subtle);
-  font-size: 0.82rem;
-  line-height: 1.38;
+  font-size: 0.92rem;
+  line-height: 1.48;
   overflow-wrap: anywhere;
 }
 .ov-analog-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 0.58rem;
+  margin-top: 0.72rem;
   border-top: 1px solid var(--ov-mi-border-subtle);
   border-bottom: 1px solid var(--ov-mi-border-subtle);
-  background: color-mix(in srgb, var(--ov-analog-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface));
+  background: transparent;
 }
 .ov-analog-summary-item {
   min-width: 0;
-  padding: 0.52rem 0.64rem;
+  padding: 0.68rem 0.72rem;
   border-left: 1px solid var(--ov-mi-border-faint);
 }
 .ov-analog-summary-item:first-child {
@@ -976,7 +1103,7 @@ def overview_ui_css() -> str:
 }
 .ov-analog-summary-label {
   color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.8rem;
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.12;
   overflow-wrap: anywhere;
@@ -984,7 +1111,7 @@ def overview_ui_css() -> str:
 .ov-analog-summary-value {
   margin-top: 0.14rem;
   color: var(--ov-mi-color-text);
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
   overflow-wrap: anywhere;
@@ -997,12 +1124,12 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-analog-interpretation {
-  margin-top: 0.5rem;
-  padding-top: 0.38rem;
+  margin-top: 0.68rem;
+  padding-top: 0.52rem;
   border-top: 1px solid var(--ov-mi-border-faint);
   color: var(--ov-mi-color-text-subtle);
-  font-size: 0.82rem;
-  line-height: 1.38;
+  font-size: 0.92rem;
+  line-height: 1.48;
   overflow-wrap: anywhere;
 }
 .ov-analog-condition {
@@ -1102,13 +1229,10 @@ def overview_ui_css() -> str:
   margin-top: 0.4rem;
 }
 .ov-macro-comparison {
-  margin-top: 0.9rem;
-  padding: 0.82rem 0 0.1rem 0;
+  margin-top: 1.2rem;
+  padding: 1rem 0 0.1rem 0;
   border-top: 1px solid color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 24%, transparent);
-  border-bottom: 1px solid var(--ov-mi-border-faint);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface)), rgba(255,255,255,0.99)),
-    var(--ov-mi-color-surface);
+  background: transparent;
 }
 .ov-macro-conditioned-head {
   display: flex;
@@ -1117,22 +1241,22 @@ def overview_ui_css() -> str:
   align-items: flex-start;
 }
 .ov-macro-conditioned-title {
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: var(--ov-mi-weight-heading);
   color: var(--ov-mi-color-text);
 }
 .ov-macro-conditioned-status {
   color: var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
-  font-size: var(--ov-mi-font-xs);
+  font-size: 0.84rem;
   font-weight: var(--ov-mi-weight-label);
   white-space: nowrap;
 }
 .ov-macro-conditioned-detail,
 .ov-macro-conditioned-reason,
 .ov-macro-conditioned-quality {
-  margin-top: 0.34rem;
+  margin-top: 0.42rem;
   color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-caption);
+  font-size: 0.88rem;
   line-height: 1.45;
 }
 .ov-macro-conditioned-stats {
@@ -1154,9 +1278,9 @@ def overview_ui_css() -> str:
 .ov-macro-funnel-item,
 .ov-macro-comparison-item {
   min-width: 0;
-  padding: 0.5rem 0.56rem;
+  padding: 0.62rem 0.66rem;
   border-top: 1px solid var(--ov-mi-border-faint);
-  background: rgba(248,250,252,0.58);
+  background: transparent;
 }
 .ov-macro-funnel-label,
 .ov-macro-comparison-label {
@@ -1168,7 +1292,7 @@ def overview_ui_css() -> str:
 .ov-macro-comparison-value {
   margin-top: 0.14rem;
   color: var(--ov-mi-color-text);
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.18;
 }
@@ -1182,9 +1306,8 @@ def overview_ui_css() -> str:
 }
 .ov-macro-conditioned-stat {
   padding: 0.5rem 0.56rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-radius: 7px;
-  background: rgba(255,255,255,0.78);
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
 .ov-macro-conditioned-stat-label {
   color: var(--ov-mi-color-text-muted);
@@ -1261,10 +1384,9 @@ def overview_ui_css() -> str:
 }
 .ov-macro-dimension-item {
   min-width: 0;
-  padding: 0.48rem 0.52rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-radius: 7px;
-  background: rgba(248,250,252,0.78);
+  padding: 0.48rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
 .ov-macro-dimension-top {
   display: flex;
@@ -1305,10 +1427,9 @@ def overview_ui_css() -> str:
   margin-top: 0.42rem;
 }
 .ov-macro-conditioned-condition {
-  padding: 0.48rem 0.52rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-radius: 7px;
-  background: rgba(255,255,255,0.7);
+  padding: 0.48rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
 }
 .ov-macro-conditioned-condition strong {
   display: block;
@@ -2562,11 +2683,20 @@ def overview_ui_css() -> str:
   }
   .ov-macro-status-item,
   .ov-macro-cue-row,
+  .ov-market-brief-row,
+  .ov-next-check-row,
   .ov-source-confidence-row,
   .ov-source-ledger-head,
   .ov-event-timeline-row {
     grid-template-columns: 1fr;
     gap: var(--ov-mi-gap-xs);
+  }
+  .ov-market-brief-head {
+    display: block;
+  }
+  .ov-market-brief-note {
+    margin-top: 0.16rem;
+    text-align: left;
   }
   .ov-analog-summary-strip,
   .ov-analog-basis-ledger {
@@ -2936,24 +3066,26 @@ def _macro_cockpit_brief_rows_html(rows: list[dict[str, Any]]) -> str:
         tone_color = escape(_overview_tone_color(row.get("tone")))
         badges = _macro_cockpit_badges_html(list(row.get("badges") or []))
         html.append(
-            f'<li class="ov-macro-brief-row" style="--ov-row-tone:{tone_color};">'
-            f'<div class="ov-macro-brief-step">{index}</div>'
-            '<div class="ov-macro-brief-main">'
-            f'<div class="ov-macro-brief-label">{escape(_display_value(row.get("label")))}</div>'
-            f'<div class="ov-macro-brief-value">{escape(_display_value(row.get("value")))}</div>'
-            f'<div class="ov-macro-brief-detail">{escape(_display_value(row.get("detail")))}</div>'
+            f'<li class="ov-market-brief-row" style="--ov-row-tone:{tone_color};">'
+            f'<div class="ov-market-brief-step">{index}</div>'
+            "<div>"
+            f'<div class="ov-market-brief-label">{escape(_display_value(row.get("label")))}</div>'
+            f'<div class="ov-market-brief-value">{escape(_display_value(row.get("value")))}</div>'
+            "</div>"
+            "<div>"
+            f'<div class="ov-market-brief-detail">{escape(_display_value(row.get("detail")))}</div>'
             f'<div class="ov-macro-cockpit-badges">{badges}</div>'
             f'{_macro_cockpit_row_meta_html(row)}'
             "</div>"
             "</li>"
         )
     return (
-        '<section class="ov-macro-reading-section ov-macro-brief" style="--ov-reading-tone:var(--ov-mi-color-primary);">'
-        '<div class="ov-macro-section-head">'
-        '<div class="ov-macro-section-title">시장 브리프</div>'
-        '<div class="ov-macro-section-note">위에서 아래로 읽으면 시장 움직임, 확산, macro 배경이 이어집니다.</div>'
+        '<section class="ov-market-brief-lane">'
+        '<div class="ov-market-brief-head">'
+        '<div class="ov-market-brief-title">오늘의 시장 브리프</div>'
+        '<div class="ov-market-brief-note">상단 headline을 중복하지 않고, 움직임 · 확산 · macro 배경만 이어서 읽습니다.</div>'
         "</div>"
-        f'<ol class="ov-macro-brief-list">{"".join(html)}</ol>'
+        f'<ol class="ov-market-brief-list">{"".join(html)}</ol>'
         "</section>"
     )
 
@@ -2970,26 +3102,32 @@ def _macro_cockpit_next_checks_html(checks: list[dict[str, Any]]) -> str:
             or _display_status_label(check.get("status"))
         )
         source_area = _display_value(check.get("source_area"))
-        badges = list(check.get("badges") or [])
-        if source_area != "-":
-            badges = [{"label": "자료 영역", "value": source_area, "tone": check.get("tone") or "neutral"}, *badges]
-        badges_html = _macro_cockpit_badges_html(badges)
         action = _display_value(check.get("action"))
-        action_html = "" if action == "-" else f'<div class="ov-macro-cue-action">{escape(action)}</div>'
+        freshness = _display_value(check.get("freshness"))
+        meta_parts = []
+        if source_area != "-":
+            meta_parts.append(f"자료 영역: {source_area}")
+        if freshness != "-":
+            meta_parts.append(f"자료 기준: {freshness}")
+        meta_html = " · ".join(meta_parts)
         html.append(
-            f'<li class="ov-macro-cue-row" style="--ov-cue-tone:{tone_color};">'
-            '<div class="ov-macro-cue-head">'
-            f'<div class="ov-macro-cue-label">{escape(_display_value(check.get("target_tab") or check.get("label")))}</div>'
-            f'<div class="ov-macro-cue-status">{escape(status_label)}</div>'
+            f'<li class="ov-next-check-row" style="--ov-check-tone:{tone_color};">'
+            "<div>"
+            f'<div class="ov-next-check-priority">{escape(status_label)}</div>'
+            f'<div class="ov-next-check-tab">{escape(_display_value(check.get("target_tab") or check.get("label")))}</div>'
             "</div>"
             "<div>"
-            f'<div class="ov-macro-cue-value">{escape(_display_value(check.get("title") or check.get("value")))}</div>'
-            f'<div class="ov-macro-cue-detail">{escape(_display_value(check.get("reason") or check.get("detail")))}</div>'
-            f"{action_html}"
+            '<div class="ov-next-check-kicker">관찰 지점</div>'
+            f'<div class="ov-next-check-title">{escape(_display_value(check.get("title") or check.get("value")))}</div>'
             "</div>"
             "<div>"
-            f'<div class="ov-macro-cockpit-badges">{badges_html}</div>'
-            f'{_macro_cockpit_row_meta_html(check)}'
+            '<div class="ov-next-check-kicker">왜 중요한가</div>'
+            f'<div class="ov-next-check-detail">{escape(_display_value(check.get("reason") or check.get("detail")))}</div>'
+            "</div>"
+            "<div>"
+            '<div class="ov-next-check-kicker">확인 위치</div>'
+            f'<div class="ov-next-check-action">{escape(action)}</div>'
+            f'<div class="ov-next-check-meta">{escape(meta_html)}</div>'
             "</div>"
             "</li>"
         )
@@ -2999,7 +3137,7 @@ def _macro_cockpit_next_checks_html(checks: list[dict[str, Any]]) -> str:
         '<div class="ov-macro-section-title">다음 맥락 체크</div>'
         '<div class="ov-macro-section-note">오늘 흐름을 단정하지 않고, 해석을 바꿀 수 있는 다음 관찰 지점만 표시합니다.</div>'
         "</div>"
-        f'<ul class="ov-macro-cues-list">{"".join(html)}</ul>'
+        f'<ol class="ov-next-check-rail">{"".join(html)}</ol>'
         "</section>"
     )
 
@@ -3351,12 +3489,12 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
     )
     comparison = [
         (
-            "Broad analog",
+            "조건 포함 전: Broad analog",
             f"{_analog_pct(broad_reference.get('median_return_pct'))} median · {_analog_pct(broad_reference.get('positive_rate_pct'))} 상승 비율",
             f"{_display_value(broad_reference.get('asset') or proxy_etf)} {_display_value(broad_reference.get('horizon') or '20D')} · 표본 {_display_value(pilot.get('broad_sample_count'))}회 · 최악 {_analog_pct(broad_reference.get('worst_return_pct'))}",
         ),
         (
-            "Macro 조건 포함",
+            "조건 포함 후: Macro 조건 포함",
             f"{_analog_pct(pilot_reference.get('median_return_pct'))} median · {_analog_pct(pilot_reference.get('positive_rate_pct'))} 상승 비율",
             f"{_display_value(pilot_reference.get('asset') or proxy_etf)} {_display_value(pilot_reference.get('horizon') or '20D')} · 표본 {_display_value(pilot.get('sample_count'))}회 · 최악 {_analog_pct(pilot_reference.get('worst_return_pct'))}",
         ),
@@ -3379,7 +3517,7 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         f'<div class="ov-macro-comparison" style="--ov-macro-pilot-tone:{tone_color};">'
         '<div class="ov-macro-conditioned-head">'
         "<div>"
-        '<div class="ov-macro-conditioned-title">Macro 조건 포함 pilot</div>'
+        '<div class="ov-macro-conditioned-title">Macro 조건 포함 비교</div>'
         f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("headline")))}</div>'
         "</div>"
         f'<div class="ov-macro-conditioned-status">{escape(status_label)}</div>'
@@ -3623,8 +3761,9 @@ def _macro_cockpit_body_html(model: dict[str, Any]) -> str:
     rail_html = _macro_hybrid_tape_html(list(summary.get("rail") or []))
     if not rail_html:
         rail_html = _macro_cockpit_rail_html(list(summary.get("rail") or []))
+    brief_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or []))
     visual_board_html = _macro_cockpit_visual_board_html(model)
-    return f"{rail_html}{visual_board_html}"
+    return f"{rail_html}{brief_html}{visual_board_html}"
 
 
 def _macro_context_reading_flow_html(
@@ -3668,7 +3807,7 @@ def _macro_context_cockpit_html(model: dict[str, Any], *, include_reading_flow: 
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(summary.get("tone") or model.get("status")))
     body_html = _macro_cockpit_body_html(model)
-    reading_flow_html = _macro_context_reading_flow_html(model) if include_reading_flow else ""
+    reading_flow_html = _macro_context_reading_flow_html(model, include_brief=False) if include_reading_flow else ""
     return (
         f'<section class="ov-macro-cockpit" style="--ov-cockpit-tone:{tone_color};">'
         '<div class="ov-macro-cockpit-head">'

@@ -2034,7 +2034,7 @@ def _overview_historical_analog_control_state() -> dict[str, str | None]:
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락")
     st.caption(
-        "상단에서 현재 시장을 먼저 훑고, 아래 단락에서 브리프와 다음 맥락 체크를 순서대로 확인합니다."
+        "상단에서 오늘의 시장 브리프를 먼저 읽고, 이어서 해석을 바꿀 수 있는 관찰 지점과 과거 참고 통계를 확인합니다."
     )
     _render_overview_market_context_refresh_reflection()
     initial_analog_controls = _overview_historical_analog_control_state()
@@ -2043,7 +2043,12 @@ def _render_overview_market_context_tab() -> None:
         pattern_window=str(initial_analog_controls["pattern_window"] or "5D"),
     )
     render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
-    render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)
+    render_macro_context_reading_flow(
+        cockpit_model,
+        include_brief=False,
+        include_historical_analog=False,
+        include_source_confidence=False,
+    )
     analog_controls = _render_overview_historical_analog_controls()
     if analog_controls != initial_analog_controls:
         cockpit_model = load_overview_macro_context_cockpit(
