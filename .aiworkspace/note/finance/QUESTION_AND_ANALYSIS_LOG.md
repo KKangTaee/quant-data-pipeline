@@ -7939,3 +7939,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: V1을 완료로 간주하지 말고, Market Movers / Portfolio Monitoring처럼 넓은 읽기 UI로 Market Context의 visual language를 다시 잡아야 함.
 - Analysis result: 문제는 Streamlit 한계가 아니라 renderer CSS와 HTML이 card / boxed section을 기본 언어로 삼은 데 있었다. 상단 brief rows를 cockpit 안에 흡수하고, next checks를 rail로 바꾸며, historical / macro / source 섹션의 card background와 left-rule을 줄이는 보정이 필요했다.
 - Follow-up: V2는 완료했다. 남은 후보는 source별 좁은 refresh action, deeper macro comparison drill-down, mobile density polish이며, 새 provider / schema / validation / monitoring / trading semantics는 열지 않았다.
+
+### 2026-06-20 - Historical analog 기준일이 무시된 것처럼 보이는 문제를 보정한다
+
+- User request: 사용자가 `참고: 과거 유사 맥락 기준`에서 latest인데 계산 기준일이 2026-05-29이고, 2026-06-18을 선택해도 정보가 바뀌지 않는 것처럼 보인다고 지적함.
+- Interpreted goal: 날짜 선택을 실제로 고치되, 단순 라벨 변경이 아니라 요청 기준일 / 실제 계산 기준일 / 자료 최종일의 차이를 화면에서 이해 가능하게 해야 함.
+- Analysis result: 서비스는 선택일을 전달하고 있었지만, SPY / QQQ / GLD 등 comparison daily price coverage가 2026-05-29에서 끊겨 공통 matrix가 그 날짜로 제한됐다. UI가 이 fallback 이유를 숨긴 것이 핵심 문제였다.
+- Follow-up: V10에서 requested / effective as-of alignment와 limiting symbols를 service model과 UI에 추가했다. full PIT sector universe / historical sector membership은 여전히 별도 storage/read-path 승인 대상이다.

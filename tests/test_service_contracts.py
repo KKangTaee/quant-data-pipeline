@@ -9668,6 +9668,62 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(qqq_20d["median_return_pct"], 25.0, places=2)
         self.assertTrue(any("선택 기준일 이후 가격" in item for item in model["limitations"]))
 
+    def test_historical_analog_explains_when_selected_as_of_is_bounded_by_common_price_history(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=130)
+        effective_index = 100
+        requested_index = 120
+        effective_date = str(dates[effective_index].date())
+        requested_date = str(dates[requested_index].date())
+        anchors = [35, 60, 85]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, effective_index, requested_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 118.0
+            last_index = requested_index if symbol == "XLV" else effective_index
+            for idx, day in enumerate(dates[: last_index + 1]):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(5, 20),
+            as_of_date=requested_date,
+            pattern_window="5D",
+            min_history_rows=80,
+            min_sample_count=2,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["requested_as_of"], requested_date)
+        self.assertEqual(model["current_as_of"], effective_date)
+        alignment = model["as_of_alignment"]
+        self.assertFalse(alignment["is_aligned"])
+        self.assertEqual(alignment["requested_as_of"], requested_date)
+        self.assertEqual(alignment["effective_as_of"], effective_date)
+        self.assertIn("SPY", alignment["limiting_symbols"])
+        self.assertIn("공통 가격", alignment["reason"])
+        self.assertTrue(any(effective_date in warning for warning in model["basis_warnings"]))
+
     def test_historical_analog_builds_separate_gld_conditioned_pilot_without_changing_broad_rows(self) -> None:
         from app.services.overview_market_context_analog import build_historical_analog_snapshot
 
@@ -10336,6 +10392,90 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 비교"))
         self.assertNotIn('class="ov-macro-conditioned-pilot"', html)
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_names_requested_effective_dates_and_macro_condition_roles(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 3회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 3,
+                "condition_summary": "XLV 5D-SPY 5D 상대강도 >= +2.0%",
+                "data_window": "2024-01-02 - 2024-05-21",
+                "requested_as_of": "2024-06-18",
+                "current_as_of": "2024-05-21",
+                "as_of_alignment": {
+                    "requested_as_of": "2024-06-18",
+                    "effective_as_of": "2024-05-21",
+                    "is_aligned": False,
+                    "reason": "요청 기준일보다 이른 DB 공통 가격 기준으로 계산했습니다.",
+                    "limiting_symbols": ["SPY", "QQQ", "GLD"],
+                    "latest_by_symbol": {"XLV": "2024-06-18", "SPY": "2024-05-21"},
+                },
+                "basis_warnings": [
+                    "선택 기준일 2024-06-18은 SPY, QQQ, GLD 공통 가격 기준 2024-05-21로 계산했습니다."
+                ],
+                "rows": [
+                    {
+                        "asset": "XLV",
+                        "horizon": "20D",
+                        "median_return_pct": 4.0,
+                        "positive_rate_pct": 66.7,
+                        "best_return_pct": 8.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 3,
+                    }
+                ],
+                "macro_conditioned_analog": {
+                    "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+                    "status": "REVIEW",
+                    "status_label": "pilot 표본 좁음",
+                    "headline": "Macro 조건 포함 pilot 표본 1회",
+                    "detail": "기존 broad analog 3회 중 추가 macro context까지 맞는 1회만 별도로 봅니다.",
+                    "condition_summary": "XLV relative strength + GLD 5D context + Rate Pressure futures proxy",
+                    "broad_sample_count": 3,
+                    "sample_count": 1,
+                    "additional_condition_count": 2,
+                    "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 1회만 남았습니다.",
+                    "sample_quality": {
+                        "status": "REVIEW",
+                        "label": "pilot-limited",
+                        "detail": "broad 결과와 함께 읽어야 합니다.",
+                    },
+                    "used_conditions": [
+                        {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
+                        {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 중립권"},
+                        {"id": "futures_rate_pressure_context", "label": "Rate Pressure futures proxy", "status_label": "사용", "detail": "ZN=F/ZB=F 5D"},
+                    ],
+                    "insufficient_conditions": [
+                        {"id": "fred_rates", "label": "2Y / 10Y FRED rates", "status_label": "사용 안 함", "detail": "이번 화면에서는 참고만 표시"},
+                    ],
+                    "excluded_conditions": [
+                        {"id": "events_sentiment", "label": "Events / sentiment", "status_label": "이번 차수 제외", "detail": "annotation only"},
+                    ],
+                    "rows": [],
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("선택 기준일과 실제 계산일이 다릅니다", html)
+        self.assertIn("요청 기준일", html)
+        self.assertIn("실제 계산 기준일", html)
+        self.assertIn("2024-06-18", html)
+        self.assertIn("2024-05-21", html)
+        self.assertIn("표본을 실제로 줄인 조건", html)
+        self.assertIn("자료 부족으로 적용 못 한 조건", html)
+        self.assertIn("참고만 하는 정보", html)
+        self.assertIn("섹터 상대강도", html)
+        self.assertIn("GLD 배경", html)
+        self.assertIn("금리선물 압력", html)
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 
     def test_historical_analog_html_renders_macro_dimension_audit_inside_pilot(self) -> None:

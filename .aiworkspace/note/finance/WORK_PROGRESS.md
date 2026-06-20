@@ -5085,3 +5085,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `시장 브리프` rows를 cockpit 안의 `오늘의 시장 브리프` wide lane으로 흡수하고, `다음 맥락 체크`는 priority / observation / reason / action rail로 바꿨다.
   - Historical analog / macro comparison / source evidence는 반복 card background와 left-rule을 줄이고, `Macro 조건 포함 비교`로 broad vs conditioned sample 차이를 먼저 읽게 했다.
   - 검증은 `git diff --check`, py_compile, `tests/test_service_contracts.py` 367개, selected as-of / 20D / monthly Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Analog Basis Clarity V10:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-basis-clarity-v10-20260620/`에서 historical analog 기준일 UX 보정을 완료했다.
+  - 선택 기준일과 실제 계산 기준일이 다를 때 requested / effective as-of, limiting symbols, basis warning을 표시하고 latest도 DB 공통 가격 기준임을 설명한다.
+  - Macro 조건 포함 비교는 broad sample -> GLD 배경 -> 금리선물 압력 funnel과 사용자 언어 condition group으로 정리했다.
+  - 검증은 RED/GREEN focused tests, py_compile, `tests/test_service_contracts.py` 377개, latest / selected 2026-06-18 / 20D / monthly Browser QA와 screenshot으로 완료했다.

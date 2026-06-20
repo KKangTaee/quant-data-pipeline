@@ -315,6 +315,11 @@ def _base_model(
 ) -> dict[str, Any]:
     current_as_of = _coverage_current_as_of(coverage or [])
     pattern = _normalize_pattern_window(pattern_window)
+    alignment = _as_of_alignment_model(
+        coverage or [],
+        requested_as_of=as_of_date,
+        effective_as_of=current_as_of,
+    )
     return {
         "schema_version": "overview_market_context_historical_analog_v2",
         "status": status,
@@ -327,6 +332,8 @@ def _base_model(
         "data_window": "",
         "current_as_of": current_as_of,
         "requested_as_of": as_of_date or "latest",
+        "as_of_alignment": alignment,
+        "basis_warnings": _basis_warnings_for_alignment(alignment),
         "as_of_mode": "selected" if as_of_date else "latest",
         "pattern_window": pattern["key"],
         "pattern_window_label": pattern["label"],
@@ -620,6 +627,75 @@ def _coverage_current_as_of(coverage: Sequence[dict[str, Any]]) -> str:
         if parsed
     ]
     return max(dates) if dates else ""
+
+
+def _as_of_alignment_model(
+    coverage: Sequence[dict[str, Any]],
+    *,
+    requested_as_of: str | None,
+    effective_as_of: str | None,
+) -> dict[str, Any]:
+    requested = _format_date(requested_as_of)
+    effective = _format_date(effective_as_of) or _coverage_current_as_of(coverage)
+    latest_by_symbol = {
+        str(row.get("symbol") or "").strip().upper(): parsed
+        for row in coverage
+        if isinstance(row, dict)
+        for parsed in [_format_date(row.get("end_date"))]
+        if str(row.get("symbol") or "").strip() and parsed
+    }
+    limiting_symbols: list[str] = []
+    if requested:
+        requested_ts = pd.to_datetime(requested, errors="coerce")
+        if not pd.isna(requested_ts):
+            for symbol, latest in latest_by_symbol.items():
+                latest_ts = pd.to_datetime(latest, errors="coerce")
+                if not pd.isna(latest_ts) and latest_ts.normalize() < requested_ts.normalize():
+                    limiting_symbols.append(symbol)
+    is_aligned = not requested or not effective or requested == effective
+    if requested and effective and not is_aligned:
+        limiter_label = ", ".join(limiting_symbols[:4])
+        if len(limiting_symbols) > 4:
+            limiter_label = f"{limiter_label} 외 {len(limiting_symbols) - 4}개"
+        if not limiter_label:
+            limiter_label = "sector ETF / SPY 공통 가격"
+        reason = (
+            f"요청 기준일보다 이른 DB 공통 가격 기준으로 계산했습니다. "
+            f"{limiter_label} daily price가 {effective} 기준에서 공통 계산을 제한합니다."
+        )
+    elif requested:
+        reason = "선택 기준일의 DB 공통 가격 기준으로 계산했습니다."
+    else:
+        reason = "저장된 DB 공통 가격의 최신 usable 기준일로 계산했습니다."
+    return {
+        "requested_as_of": requested or "latest",
+        "effective_as_of": effective or "",
+        "is_aligned": bool(is_aligned),
+        "reason": reason,
+        "limiting_symbols": limiting_symbols,
+        "latest_by_symbol": latest_by_symbol,
+    }
+
+
+def _basis_warnings_for_alignment(alignment: dict[str, Any]) -> list[str]:
+    if not alignment or bool(alignment.get("is_aligned")):
+        return []
+    requested = str(alignment.get("requested_as_of") or "").strip()
+    effective = str(alignment.get("effective_as_of") or "").strip()
+    if not requested or not effective:
+        return []
+    limiting_symbols = [str(symbol) for symbol in alignment.get("limiting_symbols") or [] if str(symbol).strip()]
+    limiter_label = ", ".join(limiting_symbols[:4])
+    if len(limiting_symbols) > 4:
+        limiter_label = f"{limiter_label} 외 {len(limiting_symbols) - 4}개"
+    if not limiter_label:
+        limiter_label = "sector ETF / SPY"
+    return [
+        (
+            f"선택 기준일 {requested}은 {limiter_label} 공통 가격 기준 {effective}로 계산했습니다. "
+            "요청일 이후 가격은 anchor/condition 계산에 사용하지 않았습니다."
+        )
+    ]
 
 
 def _coverage_repair_action(coverage_gaps: Sequence[dict[str, Any]]) -> dict[str, Any]:
@@ -1657,6 +1733,11 @@ def build_historical_analog_snapshot(
     )
     first_date = _format_date(analysis_matrix.index.min()) or ""
     last_date = _format_date(analysis_matrix.index.max()) or ""
+    as_of_alignment = _as_of_alignment_model(
+        coverage,
+        requested_as_of=normalized_as_of,
+        effective_as_of=last_date,
+    )
     futures_load_error: str | None = None
     if futures_history is None:
         try:
@@ -1701,6 +1782,8 @@ def build_historical_analog_snapshot(
         "data_window": f"{first_date} - {last_date}" if first_date and last_date else "",
         "current_as_of": last_date,
         "requested_as_of": normalized_as_of or "latest",
+        "as_of_alignment": as_of_alignment,
+        "basis_warnings": _basis_warnings_for_alignment(as_of_alignment),
         "as_of_mode": "selected" if normalized_as_of else "latest",
         "pattern_window": pattern["key"],
         "pattern_window_label": pattern_label,

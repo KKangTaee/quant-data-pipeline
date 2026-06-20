@@ -1012,6 +1012,26 @@ def overview_ui_css() -> str:
   padding-top: 0.42rem;
   border-top: 1px solid var(--ov-mi-border-faint);
 }
+.ov-analog-basis-warning {
+  margin-top: 0.62rem;
+  padding: 0.58rem 0.66rem;
+  border-left: 3px solid var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  background: color-mix(in srgb, var(--ov-analog-tone, var(--ov-mi-color-neutral)) 7%, transparent);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.88rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+.ov-analog-basis-warning strong {
+  display: block;
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-size: 0.92rem;
+}
+.ov-analog-basis-warning span,
+.ov-analog-basis-warning p {
+  display: block;
+  margin: 0.18rem 0 0;
+}
 .ov-analog-basis-ledger {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3328,6 +3348,36 @@ def _analog_basis_group_html(title: str, items: list[tuple[str, Any]]) -> str:
     )
 
 
+def _analog_basis_warning_html(model: dict[str, Any]) -> str:
+    alignment = dict(model.get("as_of_alignment") or {})
+    warnings = [str(item) for item in list(model.get("basis_warnings") or []) if str(item).strip()]
+    if not warnings and bool(alignment.get("is_aligned", True)):
+        return ""
+    requested = _display_value(alignment.get("requested_as_of") or model.get("requested_as_of") or "latest")
+    effective = _display_value(alignment.get("effective_as_of") or model.get("current_as_of"))
+    reason = _display_value(alignment.get("reason") or (warnings[0] if warnings else ""))
+    warning = _display_value(warnings[0] if warnings else reason)
+    limiting_symbols = [
+        str(symbol).strip().upper()
+        for symbol in list(alignment.get("limiting_symbols") or [])
+        if str(symbol).strip()
+    ]
+    limiter_html = ""
+    if limiting_symbols:
+        limiter_html = (
+            f'<span>제한한 가격 자료: {escape(", ".join(limiting_symbols[:6]))}'
+            f'{escape(f" 외 {len(limiting_symbols) - 6}개" if len(limiting_symbols) > 6 else "")}</span>'
+        )
+    return (
+        '<div class="ov-analog-basis-warning">'
+        "<strong>선택 기준일과 실제 계산일이 다릅니다</strong>"
+        f'<span>요청 기준일: {escape(requested)} · 실제 계산 기준일: {escape(effective)}</span>'
+        f'<p>{escape(warning if warning != "-" else reason)}</p>'
+        f"{limiter_html}"
+        "</div>"
+    )
+
+
 def _analog_basis_ledger_html(
     model: dict[str, Any],
     *,
@@ -3338,33 +3388,36 @@ def _analog_basis_ledger_html(
     replay_basis: str,
     pattern_label: str,
 ) -> str:
+    alignment = dict(model.get("as_of_alignment") or {})
+    alignment_reason = alignment.get("reason")
     groups = [
         (
-            "기준",
+            "리더십",
             [
                 ("기준 sector", model.get("leadership_sector")),
                 ("ETF proxy", model.get("proxy_etf")),
-                ("기준 시점", requested_as_of),
-                ("계산 기준일", current_as_of),
             ],
         ),
         (
-            "패턴",
+            "날짜 기준",
+            [
+                ("기준 시점 / 요청 기준일", requested_as_of),
+                ("실제 계산 기준일", current_as_of),
+                ("계산 기준", alignment_reason),
+            ],
+        ),
+        (
+            "유사 조건",
             [
                 ("패턴 기간", pattern_label),
                 ("계산식", calculation_note),
             ],
         ),
         (
-            "표본",
+            "표본 / 경계",
             [
                 ("sample", model.get("sample_count")),
                 ("자료 기간", data_window),
-            ],
-        ),
-        (
-            "한계",
-            [
                 ("replay", replay_basis if replay_basis != "-" else "현재 universe/sector metadata 기준"),
                 ("as-of 경계", "선택 기준일 이후 가격은 anchor/condition 계산에 사용하지 않음"),
             ],
@@ -3395,6 +3448,18 @@ def _macro_condition_list_html(title: str, items: list[dict[str, Any]]) -> str:
         f'<div class="ov-macro-conditioned-condition-list">{item_html}</div>'
         "</div>"
     )
+
+
+def _macro_dimension_anchor_count(pilot: dict[str, Any], condition_id: str) -> Any:
+    audit = dict(pilot.get("macro_dimension_audit") or {})
+    for item in list(audit.get("dimensions") or []):
+        if str(item.get("id") or "") == condition_id:
+            return item.get("anchor_preview_count")
+    return None
+
+
+def _macro_condition_is_used(pilot: dict[str, Any], condition_id: str) -> bool:
+    return any(str(item.get("id") or "") == condition_id for item in list(pilot.get("used_conditions") or []))
 
 
 def _macro_dimension_audit_html(audit: dict[str, Any]) -> str:
@@ -3495,21 +3560,25 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
             "추가 macro 조건을 계산할 수 있으면 이 영역에 같은 median / 상승 비율 / 최선 / 최악 구조로 표시합니다. 지금은 broad 결과를 먼저 봅니다."
             "</div>"
         )
+    gld_anchor_count = _macro_dimension_anchor_count(pilot, "gld_safe_haven_context")
+    futures_anchor_count = _macro_dimension_anchor_count(pilot, "futures_rate_pressure_context")
+    gld_value = f"{_display_value(gld_anchor_count)}회" if gld_anchor_count is not None else ("적용" if _macro_condition_is_used(pilot, "gld_safe_haven_context") else "-")
+    futures_value = f"{_display_value(futures_anchor_count)}회" if futures_anchor_count is not None else f"{_display_value(pilot.get('sample_count'))}회"
     funnel = [
         (
-            "Broad sample",
+            "1. 섹터 상대강도",
             f"{_display_value(pilot.get('broad_sample_count'))}회",
-            "Sector ETF vs SPY 상대강도만 맞는 전체 참고 표본",
+            "Broad sample: sector ETF가 SPY 대비 강했던 전체 참고 표본입니다.",
         ),
         (
-            "Macro 조건 sample",
-            f"{_display_value(pilot.get('sample_count'))}회",
-            "GLD / futures 등 이번 pilot 조건까지 맞는 표본",
+            "2. GLD 배경",
+            gld_value,
+            "GLD price proxy가 현재와 같은 배경인 anchor만 남깁니다.",
         ),
         (
-            "추가 조건",
-            f"{_display_value(pilot.get('additional_condition_count'))}개",
-            "사용한 조건과 부족/제외 조건은 아래에서 분리해 봅니다.",
+            "3. 금리선물 압력",
+            futures_value,
+            "Macro 조건 sample: ZN=F / ZB=F rate pressure 배경까지 맞는 최종 표본입니다.",
         ),
     ]
     funnel_html = "".join(
@@ -3541,9 +3610,9 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         for label, value, detail in comparison
     )
     conditions_html = (
-        f"{_macro_condition_list_html('사용한 조건', list(pilot.get('used_conditions') or []))}"
-        f"{_macro_condition_list_html('조건 부족', list(pilot.get('insufficient_conditions') or []))}"
-        f"{_macro_condition_list_html('이번 차수 제외', list(pilot.get('excluded_conditions') or []))}"
+        f"{_macro_condition_list_html('표본을 실제로 줄인 조건 (사용한 조건)', list(pilot.get('used_conditions') or []))}"
+        f"{_macro_condition_list_html('자료 부족으로 적용 못 한 조건 (조건 부족)', list(pilot.get('insufficient_conditions') or []))}"
+        f"{_macro_condition_list_html('참고만 하는 정보 (이번 차수 제외)', list(pilot.get('excluded_conditions') or []))}"
     )
     dimension_audit_html = _macro_dimension_audit_html(dict(pilot.get("macro_dimension_audit") or {}))
     return (
@@ -3556,7 +3625,7 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         f'<div class="ov-macro-conditioned-status">{escape(status_label)}</div>'
         "</div>"
         f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("detail")))}</div>'
-        '<div class="ov-macro-conditioned-detail"><strong>표본 흐름</strong>: broad analog를 숨기지 않고, macro 조건을 추가했을 때 남는 표본만 별도로 비교합니다.</div>'
+        '<div class="ov-macro-conditioned-detail"><strong>표본 흐름</strong>: broad analog를 숨기지 않고, GLD와 금리선물 압력 조건을 더했을 때 남는 표본만 별도로 비교합니다.</div>'
         f'<div class="ov-macro-sample-funnel">{funnel_html}</div>'
         '<div class="ov-macro-conditioned-detail"><strong>Broad vs Macro 조건 포함</strong></div>'
         f'<div class="ov-macro-comparison-grid">{comparison_html}</div>'
@@ -3657,6 +3726,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         replay_basis=replay_basis,
         pattern_label=pattern_label,
     )
+    basis_warning_html = _analog_basis_warning_html(model)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
     macro_pilot_html = _macro_conditioned_pilot_html(model, proxy_etf=proxy_etf)
     return (
@@ -3669,6 +3739,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         f'<div class="ov-historical-analog-status">{escape(status_label)}</div>'
         "</div>"
         f"{scope_html}"
+        f"{basis_warning_html}"
         f'<div class="ov-historical-analog-meta">{meta_html}</div>'
         f"{condition_html}"
         f"{body_html}"

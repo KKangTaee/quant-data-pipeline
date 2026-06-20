@@ -2100,7 +2100,8 @@ def _render_overview_historical_analog_controls() -> dict[str, str | None]:
     st.markdown("#### 참고: 과거 유사 맥락 기준")
     st.caption(
         "선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포를 다시 계산합니다. "
-        "아래 기준은 과거 유사 맥락 계산에만 적용되며, 상단 시장 브리프는 현재 세션 상태에 따라 장중 snapshot 또는 마지막 거래일 기준 자료를 사용합니다."
+        "아래 기준은 과거 유사 맥락 계산에만 적용되며, 상단 시장 브리프는 현재 세션 상태에 따라 장중 snapshot 또는 마지막 거래일 기준 자료를 사용합니다. "
+        "선택일보다 ETF / 비교 자산의 공통 daily 가격 범위가 짧으면 실제 계산 기준일이 더 이른 날짜로 낮아질 수 있습니다."
     )
     cols = st.columns([0.9, 1.0, 0.9], gap="small", vertical_alignment="bottom")
     basis = cols[0].selectbox(
@@ -2109,7 +2110,7 @@ def _render_overview_historical_analog_controls() -> dict[str, str | None]:
         format_func=lambda value: MARKET_CONTEXT_ANALOG_AS_OF_OPTIONS.get(value, value),
         index=0,
         key="overview_market_context_analog_as_of_mode",
-        help="latest는 저장된 DB 가격의 최신 usable 기준일을 사용합니다.",
+        help="latest는 저장된 DB 공통 가격의 최신 usable 기준일을 사용합니다.",
     )
     stored_date = st.session_state.get("overview_market_context_analog_as_of_date")
     default_date = stored_date if isinstance(stored_date, date) else date.today()
@@ -2119,7 +2120,7 @@ def _render_overview_historical_analog_controls() -> dict[str, str | None]:
         max_value=date.today(),
         disabled=basis == "latest",
         key="overview_market_context_analog_as_of_date",
-        help="과거 기준일을 선택하면 해당 날짜 이하의 DB 가격 이력만 사용합니다.",
+        help="과거 기준일을 선택하면 해당 날짜 이하의 DB 가격 이력만 사용합니다. 비교 자산 가격이 더 오래되면 실제 계산 기준일이 낮아집니다.",
     )
     pattern_window = cols[2].selectbox(
         "패턴 기간",
