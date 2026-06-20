@@ -2097,11 +2097,11 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
 
 
 def _render_overview_historical_analog_controls() -> dict[str, str | None]:
-    st.markdown("#### 참고: 과거 유사 맥락 기준")
+    st.markdown("#### 과거 유사 맥락 기준 선택")
     st.caption(
-        "선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포를 다시 계산합니다. "
-        "아래 기준은 과거 유사 맥락 계산에만 적용되며, 상단 시장 브리프는 현재 세션 상태에 따라 장중 snapshot 또는 마지막 거래일 기준 자료를 사용합니다. "
-        "선택일보다 ETF / 비교 자산의 공통 daily 가격 범위가 짧으면 실제 계산 기준일이 더 이른 날짜로 낮아질 수 있습니다."
+        "아래 기준은 이어지는 과거 참고 통계에만 적용됩니다. "
+        "상단 시장 브리프는 현재 세션 상태에 따라 장중 snapshot 또는 마지막 거래일 기준 자료를 사용합니다. "
+        "비교 자산의 공통 daily 가격 범위가 짧으면 실제 계산 기준일이 선택일보다 이른 날짜로 낮아질 수 있습니다."
     )
     cols = st.columns([0.9, 1.0, 0.9], gap="small", vertical_alignment="bottom")
     basis = cols[0].selectbox(

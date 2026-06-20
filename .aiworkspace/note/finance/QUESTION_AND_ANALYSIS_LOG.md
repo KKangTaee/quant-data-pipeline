@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-21 - Historical analog and Macro comparison should read as analysis, not carded payload
+- User request:
+  - `참고: 과거 유사 맥락`과 `Macro 조건 포함 비교`가 여전히 카드 안에 작은 글씨를 넣은 prototype-like UI로 보이며, 이것이 최선인지 질문하고 1차~7차 개편을 승인함.
+- Interpreted goal:
+  - 기존 계산 / data boundary는 유지하면서, 사용자가 기준 선택 -> 유사 사례 조건 -> 결과 요약 -> Macro 조건 추가 시 변화 -> 조건 역할을 순서대로 읽게 만든다.
+- Analysis result:
+  - Streamlit 한계가 아니라 정보 구조 문제였다. Historical analog는 basis bar + method grid + insight split으로, Macro conditioned comparison은 broad analog의 nested card가 아니라 separate sibling section으로 분리하는 것이 맞다.
+- Follow-up:
+  - Macro dimension audit는 아직 정보량이 많으므로, 후속 polish에서는 낮은 우선순위 조건 상세를 접거나 더 요약할 수 있다. FRED / events / sentiment hard conditioning은 별도 승인 전까지 계속 금지한다.
+
 ### 2026-06-20 - Market Context brief date should follow market session, not calendar today
 - User request:
   - 주말 / 휴장일인데 `오늘의 시장 브리프`처럼 보이고, 새 장중 자료가 나올 수 없는 때에도 보강 자료가 뜨는 것은 어색하다고 지적함.

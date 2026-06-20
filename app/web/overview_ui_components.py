@@ -1012,6 +1012,45 @@ def overview_ui_css() -> str:
   padding-top: 0.42rem;
   border-top: 1px solid var(--ov-mi-border-faint);
 }
+.ov-analog-basis-bar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 0.72rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+}
+.ov-analog-basis-cell {
+  min-width: 0;
+  padding: 0.68rem 0.74rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-basis-cell:first-child {
+  border-left: 0;
+}
+.ov-analog-basis-cell span {
+  display: block;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.14;
+}
+.ov-analog-basis-cell strong {
+  display: block;
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.92rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-analog-basis-cell small {
+  display: block;
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
 .ov-analog-basis-warning {
   margin-top: 0.62rem;
   padding: 0.58rem 0.66rem;
@@ -1109,6 +1148,42 @@ def overview_ui_css() -> str:
   line-height: 1.48;
   overflow-wrap: anywhere;
 }
+.ov-analog-method-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0;
+  margin-top: 0.74rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+}
+.ov-analog-method-step {
+  min-width: 0;
+  padding: 0.74rem 0.78rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-method-step:first-child {
+  border-left: 0;
+}
+.ov-analog-method-kicker {
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+}
+.ov-analog-method-title {
+  margin-top: 0.14rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.94rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-analog-method-detail {
+  margin-top: 0.18rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
 .ov-analog-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1148,13 +1223,37 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-analog-interpretation {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 0;
   margin-top: 0.68rem;
-  padding-top: 0.52rem;
-  border-top: 1px solid var(--ov-mi-border-faint);
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  padding-top: 0;
   color: var(--ov-mi-color-text-subtle);
   font-size: 0.92rem;
   line-height: 1.48;
   overflow-wrap: anywhere;
+}
+.ov-analog-insight {
+  min-width: 0;
+  padding: 0.66rem 0.76rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-insight:first-child {
+  border-left: 0;
+}
+.ov-analog-insight-label {
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+}
+.ov-analog-insight-copy {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.42;
 }
 .ov-analog-condition {
   display: flex;
@@ -1252,7 +1351,7 @@ def overview_ui_css() -> str:
 .ov-historical-analog-limitations {
   margin-top: 0.4rem;
 }
-.ov-macro-comparison {
+.ov-macro-compare-section {
   margin-top: 1.2rem;
   padding: 1rem 0 0.1rem 0;
   border-top: 1px solid color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 24%, transparent);
@@ -1289,31 +1388,31 @@ def overview_ui_css() -> str:
   gap: 0.5rem;
   margin-top: 0.72rem;
 }
-.ov-macro-sample-funnel,
-.ov-macro-comparison-grid {
+.ov-macro-funnel-track,
+.ov-macro-compare-lanes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: 0.62rem;
 }
-.ov-macro-comparison-grid {
+.ov-macro-compare-lanes {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .ov-macro-funnel-item,
-.ov-macro-comparison-item {
+.ov-macro-compare-lane {
   min-width: 0;
   padding: 0.62rem 0.66rem;
   border-top: 1px solid var(--ov-mi-border-faint);
   background: transparent;
 }
 .ov-macro-funnel-label,
-.ov-macro-comparison-label {
+.ov-macro-compare-label {
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-xs);
   line-height: 1.16;
 }
 .ov-macro-funnel-value,
-.ov-macro-comparison-value {
+.ov-macro-compare-value {
   margin-top: 0.14rem;
   color: var(--ov-mi-color-text);
   font-size: 1rem;
@@ -1321,7 +1420,7 @@ def overview_ui_css() -> str:
   line-height: 1.18;
 }
 .ov-macro-funnel-detail,
-.ov-macro-comparison-detail {
+.ov-macro-compare-detail {
   margin-top: 0.12rem;
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-xs);
@@ -2737,12 +2836,19 @@ def overview_ui_css() -> str:
     text-align: left;
   }
   .ov-analog-summary-strip,
-  .ov-analog-basis-ledger {
+  .ov-analog-basis-ledger,
+  .ov-analog-basis-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-analog-method-grid,
+  .ov-analog-interpretation {
+    grid-template-columns: 1fr;
   }
   .ov-macro-conditioned-stats,
   .ov-macro-sample-funnel,
+  .ov-macro-funnel-track,
   .ov-macro-comparison-grid,
+  .ov-macro-compare-lanes,
   .ov-macro-conditioned-condition-list,
   .ov-macro-dimension-grid,
   .ov-macro-dimension-group-list {
@@ -2758,6 +2864,11 @@ def overview_ui_css() -> str:
     border-left: 0;
   }
   .ov-analog-basis-group:nth-child(odd) {
+    border-left: 0;
+  }
+  .ov-analog-basis-cell:nth-child(odd),
+  .ov-analog-method-step,
+  .ov-analog-insight {
     border-left: 0;
   }
   .ov-sector-pressure-tile:first-child {
@@ -3318,8 +3429,19 @@ def _analog_interpretation_html(model: dict[str, Any], rows: list[dict[str, Any]
         main = f"먼저 읽을 결론: 비슷한 상대강도 이후에도 {proxy_etf}의 {horizon} 흐름은 뚜렷하게 우호적이지 않았습니다."
     else:
         main = f"먼저 읽을 결론: 비슷한 상대강도 이후 {proxy_etf}의 {horizon} 분포는 한쪽으로 강하게 기울지 않았습니다."
-    caution = f"다만 표본 안의 최악은 {_analog_pct(worst)}라서, 이 통계는 미래 움직임 보장이 아닙니다."
-    return f'<div class="ov-analog-interpretation">{escape(main)} {escape(caution)}</div>'
+    caution = f"표본 안의 최악은 {_analog_pct(worst)}입니다. 이 통계는 미래 움직임 보장이 아닙니다."
+    return (
+        '<div class="ov-analog-interpretation">'
+        '<div class="ov-analog-insight">'
+        '<div class="ov-analog-insight-label">먼저 볼 점</div>'
+        f'<div class="ov-analog-insight-copy">{escape(main)}</div>'
+        "</div>"
+        '<div class="ov-analog-insight">'
+        '<div class="ov-analog-insight-label">주의할 점</div>'
+        f'<div class="ov-analog-insight-copy">{escape(caution)}</div>'
+        "</div>"
+        "</div>"
+    )
 
 
 def _analog_rows_by_priority(rows: list[dict[str, Any]], proxy_etf: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -3390,40 +3512,68 @@ def _analog_basis_ledger_html(
 ) -> str:
     alignment = dict(model.get("as_of_alignment") or {})
     alignment_reason = alignment.get("reason")
-    groups = [
+    cells = [
+        ("요청 기준일", requested_as_of, "latest는 DB 공통 가격 최신 usable 기준"),
+        ("실제 계산 기준일", current_as_of, alignment_reason or "선택 기준일 이하 가격만 사용"),
+        ("기준 섹터", model.get("leadership_sector"), "선택 기준일의 리더십 sector"),
+        ("ETF proxy", model.get("proxy_etf"), "sector ETF로 과거 사례 탐색"),
+        ("패턴 기간", pattern_label, f"계산식: {calculation_note}"),
+        ("표본 / 자료 기간", f"{_display_value(model.get('sample_count'))}회", data_window),
+    ]
+    cell_html = "".join(
+        '<div class="ov-analog-basis-cell">'
+        f'<span>{escape(label)}</span>'
+        f'<strong>{escape(_display_value(value))}</strong>'
+        f'<small>{escape(_display_value(detail))}</small>'
+        "</div>"
+        for label, value, detail in cells
+    )
+    replay_note = replay_basis if replay_basis != "-" else "현재 universe/sector metadata 기준"
+    boundary_note = "선택 기준일 이후 가격은 anchor/condition 계산에 사용하지 않음"
+    return (
+        f'<div class="ov-analog-basis-bar">{cell_html}</div>'
+        '<div class="ov-historical-analog-meta">'
+        f'replay: {escape(replay_note)} · as-of 경계: {escape(boundary_note)}'
+        '</div>'
+    )
+
+
+def _analog_method_grid_html(
+    model: dict[str, Any],
+    *,
+    condition: str,
+    data_window: str,
+    pattern_label: str,
+) -> str:
+    sector = _display_value(model.get("leadership_sector"))
+    proxy_etf = _display_value(model.get("proxy_etf"))
+    sample_count = _display_value(model.get("sample_count"))
+    steps = [
         (
-            "리더십",
-            [
-                ("기준 sector", model.get("leadership_sector")),
-                ("ETF proxy", model.get("proxy_etf")),
-            ],
+            "현재 기준",
+            f"{sector} · {proxy_etf}",
+            f"선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고 현재 기준을 잡습니다.",
         ),
         (
-            "날짜 기준",
-            [
-                ("기준 시점 / 요청 기준일", requested_as_of),
-                ("실제 계산 기준일", current_as_of),
-                ("계산 기준", alignment_reason),
-            ],
+            "유사 사례 조건",
+            condition,
+            f"{proxy_etf}가 SPY 대비 {pattern_label} 기준 강했던 과거 구간을 찾습니다.",
         ),
         (
-            "유사 조건",
-            [
-                ("패턴 기간", pattern_label),
-                ("계산식", calculation_note),
-            ],
-        ),
-        (
-            "표본 / 경계",
-            [
-                ("sample", model.get("sample_count")),
-                ("자료 기간", data_window),
-                ("replay", replay_basis if replay_basis != "-" else "현재 universe/sector metadata 기준"),
-                ("as-of 경계", "선택 기준일 이후 가격은 anchor/condition 계산에 사용하지 않음"),
-            ],
+            "표본 품질",
+            f"{sample_count}회 · {data_window}",
+            "표본 수와 자료 기간을 먼저 확인하고, 표본이 작으면 broad 결과와 함께 낮춰 읽습니다.",
         ),
     ]
-    return f'<div class="ov-analog-basis-ledger">{"".join(_analog_basis_group_html(title, items) for title, items in groups)}</div>'
+    step_html = "".join(
+        '<div class="ov-analog-method-step">'
+        f'<div class="ov-analog-method-kicker">{escape(kicker)}</div>'
+        f'<div class="ov-analog-method-title">{escape(title)}</div>'
+        f'<div class="ov-analog-method-detail">{escape(detail)}</div>'
+        "</div>"
+        for kicker, title, detail in steps
+    )
+    return f'<div class="ov-analog-method-grid">{step_html}</div>'
 
 
 def _macro_condition_list_html(title: str, items: list[dict[str, Any]]) -> str:
@@ -3527,6 +3677,7 @@ def _macro_dimension_audit_html(audit: dict[str, Any]) -> str:
         '<div class="ov-macro-dimension-head">'
         "<div>"
         '<div class="ov-macro-dimension-title">맥락 차원 상태</div>'
+        '<div class="ov-macro-dimension-summary">조건 역할 세부</div>'
         f'<div class="ov-macro-dimension-summary">{escape(summary)}</div>'
         "</div>"
         f'<div class="ov-macro-dimension-status">{escape(status_label)}</div>'
@@ -3602,21 +3753,21 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         ),
     ]
     comparison_html = "".join(
-        '<div class="ov-macro-comparison-item">'
-        f'<div class="ov-macro-comparison-label">{escape(label)}</div>'
-        f'<div class="ov-macro-comparison-value">{escape(value)}</div>'
-        f'<div class="ov-macro-comparison-detail">{escape(detail)}</div>'
+        '<div class="ov-macro-compare-lane">'
+        f'<div class="ov-macro-compare-label">{escape(label)}</div>'
+        f'<div class="ov-macro-compare-value">{escape(value)}</div>'
+        f'<div class="ov-macro-compare-detail">{escape(detail)}</div>'
         "</div>"
         for label, value, detail in comparison
     )
     conditions_html = (
-        f"{_macro_condition_list_html('표본을 실제로 줄인 조건 (사용한 조건)', list(pilot.get('used_conditions') or []))}"
+        f"{_macro_condition_list_html('실제로 반영한 조건 (표본을 줄인 조건)', list(pilot.get('used_conditions') or []))}"
         f"{_macro_condition_list_html('자료 부족으로 적용 못 한 조건 (조건 부족)', list(pilot.get('insufficient_conditions') or []))}"
         f"{_macro_condition_list_html('참고만 하는 정보 (이번 차수 제외)', list(pilot.get('excluded_conditions') or []))}"
     )
     dimension_audit_html = _macro_dimension_audit_html(dict(pilot.get("macro_dimension_audit") or {}))
     return (
-        f'<div class="ov-macro-comparison" style="--ov-macro-pilot-tone:{tone_color};">'
+        f'<section class="ov-macro-reading-section ov-macro-compare-section" style="--ov-macro-pilot-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-macro-conditioned-head">'
         "<div>"
         '<div class="ov-macro-conditioned-title">Macro 조건 포함 비교</div>'
@@ -3626,15 +3777,15 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         "</div>"
         f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("detail")))}</div>'
         '<div class="ov-macro-conditioned-detail"><strong>표본 흐름</strong>: broad analog를 숨기지 않고, GLD와 금리선물 압력 조건을 더했을 때 남는 표본만 별도로 비교합니다.</div>'
-        f'<div class="ov-macro-sample-funnel">{funnel_html}</div>'
+        f'<div class="ov-macro-funnel-track">{funnel_html}</div>'
         '<div class="ov-macro-conditioned-detail"><strong>Broad vs Macro 조건 포함</strong></div>'
-        f'<div class="ov-macro-comparison-grid">{comparison_html}</div>'
+        f'<div class="ov-macro-compare-lanes">{comparison_html}</div>'
         f'<div class="ov-macro-conditioned-quality"><strong>표본 품질</strong>: {escape(_display_value(sample_quality.get("label")))} · {escape(_display_value(sample_quality.get("detail")))}</div>'
         f'<div class="ov-macro-conditioned-reason">{escape(_display_value(pilot.get("sample_reduction_reason")))}</div>'
         f"{dimension_audit_html}"
         f"{conditions_html}"
         f"{table_html}"
-        "</div>"
+        "</section>"
     )
 
 
@@ -3651,15 +3802,10 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     pattern_label = _display_value(model.get("pattern_window_label") or model.get("pattern_window") or "5D")
     if rows:
         primary_rows, support_rows = _analog_rows_by_priority(rows, proxy_etf)
-        explanation = (
-            f"선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고, {proxy_etf}가 SPY 대비 {pattern_label} 기준 강했던 과거 구간을 찾습니다. "
-            "각 anchor 날짜 이후 5D / 20D / 60D 동안 주요 자산이 어떻게 움직였는지 요약한 참고 통계입니다."
-        )
         body_html = (
-            f'<div class="ov-analog-explain">{escape(explanation)}</div>'
+            f"{_analog_method_grid_html(model, condition=condition, data_window=_display_value(model.get('data_window')), pattern_label=pattern_label)}"
             f"{_analog_summary_strip_html(model, rows)}"
             f"{_analog_interpretation_html(model, rows)}"
-            f'<div class="ov-analog-condition"><span>현재 찾은 조건</span><strong>{escape(condition)}</strong></div>'
             f"{_analog_table_block_html(primary_rows, title='핵심 자산 요약', note='리더십 ETF, 시장 기준 SPY, 성장주 proxy QQQ를 먼저 봅니다.')}"
             f"{_analog_table_block_html(support_rows, title='보조 자산 참고', note='채권, 금, 중소형주, 크레딧 등 배경 자산은 참고로 낮춰 봅니다.', secondary=True)}"
         )
@@ -3714,7 +3860,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     replay_basis = _display_value(model.get("leadership_replay_basis"))
     scope_html = (
         '<div class="ov-historical-analog-scope">'
-        "이 기준은 과거 유사 맥락 계산에만 적용됩니다. 상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준이며, 기준 시점/기준일/패턴 기간 변경은 아래 참고 통계만 다시 계산합니다."
+        "기준 변경은 아래 과거 참고 통계에만 적용됩니다. 상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준이며, 기준 시점/기준일/패턴 기간 변경은 이 섹션의 과거 분포만 다시 계산합니다."
         "</div>"
     )
     meta_html = _analog_basis_ledger_html(
@@ -3729,7 +3875,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     basis_warning_html = _analog_basis_warning_html(model)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
     macro_pilot_html = _macro_conditioned_pilot_html(model, proxy_etf=proxy_etf)
-    return (
+    analog_section_html = (
         f'<section class="{section_class}" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
         "<div>"
@@ -3743,10 +3889,10 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         f'<div class="ov-historical-analog-meta">{meta_html}</div>'
         f"{condition_html}"
         f"{body_html}"
-        f"{macro_pilot_html}"
         f'<div class="ov-historical-analog-limitations">{escape(limitations)}</div>'
         "</section>"
     )
+    return f"{analog_section_html}{macro_pilot_html}"
 
 
 def _source_confidence_status_bucket(status: Any) -> str:

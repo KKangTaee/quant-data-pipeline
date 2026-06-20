@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-20
+Last Verified: 2026-06-21
 
 ## Current State After Master Merge
 
@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-basis-clarity-v10-20260620/`
-- 목적: `Workspace > Overview > Market Context`의 historical analog 기준일 UX 보정으로, 선택 기준일과 실제 계산 기준일이 다를 때 날짜가 무시된 것처럼 보이는 문제를 정리했다.
-- 주요 변경: historical analog service model에 requested / effective as-of alignment, limiting symbols, basis warning을 추가했다. UI는 `요청 기준일`과 `실제 계산 기준일`을 나눠 보여주고, Macro 조건 포함 비교는 broad sample -> GLD 배경 -> 금리선물 압력 funnel로 읽게 했다.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-macro-ux-v11-20260621/`
+- 목적: `Workspace > Overview > Market Context`의 historical analog / Macro 조건 비교 UX 보정으로, 과거 유사 맥락과 Macro 조건 포함 비교가 카드 안 카드 / prototype-like payload dump처럼 보이는 문제를 정리했다.
+- 주요 변경: historical analog 기준 영역을 wide basis bar로 바꾸고, 설명을 `현재 기준` / `유사 사례 조건` / `표본 품질`로 나눴다. 결과 해석은 `먼저 볼 점` / `주의할 점`으로 분리했고, Macro 조건 포함 비교는 broad analog의 sibling section으로 분리해 funnel, broad-vs-conditioned lanes, 조건 역할 그룹, dimension audit을 보여준다.
 - 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-basis-clarity-v10-20260620/`
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-macro-ux-v11-20260621/`
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-basis-clarity-v10-20260620/`
+- 목적: `Workspace > Overview > Market Context`의 historical analog 기준일 UX 보정으로, 선택 기준일과 실제 계산 기준일이 다를 때 날짜가 무시된 것처럼 보이는 문제를 정리했다.
+- 주요 변경: historical analog service model에 requested / effective as-of alignment, limiting symbols, basis warning을 추가했다. UI는 `요청 기준일`과 `실제 계산 기준일`을 나눠 보여주고, Macro 조건 포함 비교는 broad sample -> GLD 배경 -> 금리선물 압력 funnel로 읽게 했다. V11에서 이 표시 구조는 card stack에서 basis bar / separate Macro comparison section으로 재정리됐다.
+- 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-session-basis-v9-20260620/`
 - 목적: `Workspace > Overview > Market Context`의 V8 후속으로, 미국장 휴장 / 주말 / 장외 시간에도 `오늘의 시장 브리프`처럼 보이고 장중 snapshot age 때문에 보강 이슈가 과하게 보이는 문제를 정리했다.
 - 주요 변경: 기존 NYSE session helper를 Market Context cockpit에 전달해 `market_session` basis payload를 만들었다. 장중에는 `오늘의 시장 브리프`, 휴장에는 `마지막 거래일 시장 브리프`, 장 시작 전 / 장 종료 후에는 현재 세션 기준 브리프로 표시한다. 휴장 중에는 마지막 trading session date를 기준일로 고정하고, stale / due intraday elapsed age만으로 `현재 이슈만 보강` action을 만들지 않는다.
@@ -159,6 +163,7 @@ Workspace > Ingestion
 | Overview Source Confidence Catalog V1 | Complete | The Overview cockpit now includes a compact Source Confidence lane for prices, breadth, futures, sentiment, events, and data health source state. It reuses the same snapshots already loaded by the cockpit, exposes owner / freshness / caveat / next check, and does not add provider fetch, schema, persistence, validation, monitoring, or trading semantics. |
 | Overview IA Closeout V1 | Complete | Overview now places a compact `Overview Map / Deep Tab Reading Order` between the cockpit and deep tabs. It keeps Market Context, Data Repair, and transitional Candidate Ops boundaries visible without moving Candidate Ops, adding providers, changing storage, or creating validation / monitoring / trading semantics. |
 | Overview Market Context Brief Flow Redesign V2 | Complete | Market Context now absorbs `시장 브리프` rows into the top `오늘의 시장 브리프` lane, renders `다음 맥락 체크` as a priority / observation / reason / action rail instead of a card grid, and shows `Macro 조건 포함 비교` as broad vs conditioned sample context. It remains DB-backed and context-only with no provider fetch, schema, registry / saved write, validation, monitoring, or trading semantics. |
+| Overview Market Context Analog / Macro UX V11 | Complete | Historical analog now renders as an analysis flow: controls directly precede the analog section, requested/effective basis values sit in a wide basis bar, the similarity method is split into `현재 기준` / `유사 사례 조건` / `표본 품질`, and Macro conditioned comparison is a separate sibling section with funnel, broad-vs-conditioned lanes, condition-role groups, and dimension audit. It remains DB-backed and context-only. |
 | Overview Market Context Analog Basis Clarity V10 | Complete | Historical analog now separates requested basis date from actual calculation date when common DB daily price coverage is older. Selected dates such as 2026-06-18 show the effective 2026-05-29 calculation date, limiting symbols, and no-post-basis-price boundary; Macro comparison reads as broad sample -> GLD backdrop -> rate-pressure futures backdrop. |
 | Overview Market Context Session Basis V9 | Complete | Market Context now reads the existing US market session state before naming the brief. During open trading it can show `오늘의 시장 브리프`; during weekends / holidays it shows `마지막 거래일 시장 브리프` with the previous trading date as basis and does not create current refresh actions only because intraday snapshot age elapsed while the market was closed. |
 | Overview Market Context Source Actionability V8 | Complete | Market Context now separates source confidence into actionable brief sources, reference limitations, and management meta. `현재 이슈만 보강` exclusions such as Events estimate caveats no longer remain as unresolved `자료 확인 필요`, and Data Health is shown as `관리 메타` rather than a market-context source issue. |

@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-21 - Overview Market Context Analog / Macro UX V11
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-macro-ux-v11-20260621/` after user feedback that historical analog and Macro conditioned comparison still looked prototype-like and over-carded.
+- Reworked historical analog into a basis bar, method grid, summary strip, and `먼저 볼 점` / `주의할 점` split.
+- Moved Macro conditioned comparison into a separate sibling section with funnel, broad-vs-conditioned lanes, condition-role groups, and dimension audit details.
+- Boundaries stayed unchanged: DB-backed read model only, no render-time provider fetch, no schema / registry / saved write, no FRED / events / sentiment hard conditioning, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Session Basis V9
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-session-basis-v9-20260620/` after user feedback that a weekend / closed market should not read as `오늘의 시장 브리프`.
 - Connected the existing NYSE session helper to Market Context so open sessions keep `오늘의 시장 브리프`, while weekends / holidays show `마지막 거래일 시장 브리프` with the previous trading date as basis.
