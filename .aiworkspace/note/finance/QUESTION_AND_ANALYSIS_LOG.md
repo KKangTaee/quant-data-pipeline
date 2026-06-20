@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Non-actionable Events and Data Health meta should not remain unresolved source issues
+- User request:
+  - `현재 이슈만 보강`을 눌러도 Events와 Data Health가 계속 `자료 확인 필요`로 남는 것은, 버튼으로 해결할 수 없는 항목을 계속 사용자에게 해결하라고 보이는 문제라고 지적함.
+- Interpreted goal:
+  - Market Context should distinguish actionable stale/missing sources from reference limitations and management meta before showing an unresolved data state.
+- Analysis result:
+  - Events estimate limitations are reference context until an approved event cause-analysis feature exists. Data Health is a management/meta read model; it can explain where actionable issues came from, but should not itself count as a Market Context source issue. Top `자료 상태` and source confidence counts should be driven by actionable refresh items only.
+- Follow-up:
+  - Future source-confidence work should preserve `source_role` / `actionability` / `counts_for_status` boundaries and avoid reclassifying non-actionable caveats as `자료 확인 필요`.
+
 ### 2026-06-20 - Events caveats are not Market Context conclusions or refresh requirements
 - User request:
   - `이벤트 배경: 직접 원인 근거 약함`은 실제 시장맥락 도출 기능처럼 보이지 않고, 자료 보강도 현재 문제가 있는 부분만 최신화하는 편이 낫지 않냐고 질문함.

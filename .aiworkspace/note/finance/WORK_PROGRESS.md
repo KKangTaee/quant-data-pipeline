@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Source Actionability V8
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-source-actionability-v8-20260620/` after user feedback that Events and Data Health still appeared as unresolved `자료 확인 필요` even though smart refresh excluded Events and Data Health is management meta.
+- Added source-confidence actionability metadata and made top `자료 상태` count only actionable refresh items.
+- Events estimate caveats now show as `참고 제한`; Data Health now shows as `관리 메타`; the source ledger separates `브리프 자료` from `참고 / 관리 메타`.
+- Boundaries stayed unchanged: DB-backed snapshots only, no render-time provider fetch, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Smart Refresh V7
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-smart-refresh-v7-20260620/` after user feedback that Events caveats were not actual market-context conclusions and the refresh action should target current issues instead of always running every job.
 - Kept `오늘의 시장 브리프` to movement, breadth, and Futures/Macro rows; Events now stays in timeline/source evidence and `refresh_plan.excluded_items`.

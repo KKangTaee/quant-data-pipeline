@@ -3543,6 +3543,8 @@ def _cockpit_status_tone(status: Any) -> str:
     normalized = _cockpit_status_text(status).lower()
     if normalized in {"ok", "success", "actual", "high", "fresh"}:
         return "positive"
+    if normalized in {"reference_limit", "meta"}:
+        return "neutral"
     if normalized in {"failed", "error", "missing", "no_universe", "insufficient_data"}:
         return "danger"
     if normalized in {"review", "due", "stale", "partial", "not_run", "no_data"}:
@@ -4230,6 +4232,10 @@ def _source_confidence_item(
     detail: str,
     caveat: str,
     next_check: str,
+    source_role: str = "brief_source",
+    actionability: str = "actionable",
+    counts_for_status: bool = True,
+    status_label: str | None = None,
 ) -> dict[str, Any]:
     return {
         "id": item_id,
@@ -4238,13 +4244,16 @@ def _source_confidence_item(
         "source": source,
         "owner": owner,
         "status": status,
-        "status_label": _cockpit_status_label(status),
+        "status_label": status_label or _cockpit_status_label(status),
         "tone": _cockpit_status_tone(status),
         "freshness": str(freshness or "-"),
         "freshness_label": _cockpit_freshness_label(freshness),
         "detail": detail,
         "caveat": caveat,
         "next_check": next_check,
+        "source_role": source_role,
+        "actionability": actionability,
+        "counts_for_status": bool(counts_for_status),
     }
 
 
@@ -4443,16 +4452,17 @@ def build_overview_source_confidence_catalog(
         _cockpit_int(events_coverage.get("stale_estimate_count")),
         _cockpit_int(event_action_summary.get("review_count")),
     )
-    events_status = _source_confidence_status(
+    raw_events_status = _source_confidence_status(
         events,
         review_hint=event_review_count > 0,
         no_data_if_empty=True,
     )
+    events_status = "REFERENCE_LIMIT" if raw_events_status != "OK" else "OK"
 
     data_health = collection_ops_snapshot or {}
     data_coverage = dict(data_health.get("coverage") or {})
     data_review_count = _source_confidence_data_review_count(data_health)
-    data_status = _source_confidence_status(data_health, review_hint=data_review_count > 0, no_data_if_empty=True)
+    data_status = "META"
 
     items = [
         _source_confidence_item(
@@ -4523,7 +4533,10 @@ def build_overview_source_confidence_catalog(
                 f"{event_action_summary['detail']}"
             ),
             caveat="공식 macro 일정과 provider 추정 실적 일정은 구분해서 읽어야 합니다.",
-            next_check=str(event_action_summary.get("primary_action") or "추정/공식 source 상태가 이벤트 자료 주의점입니다."),
+            next_check="-",
+            source_role="reference_context",
+            actionability="not_actionable",
+            counts_for_status=False,
         ),
         _source_confidence_item(
             item_id="data_health",
@@ -4537,28 +4550,43 @@ def build_overview_source_confidence_catalog(
                 f"OK {_cockpit_int(data_coverage.get('ok_count'))} · "
                 f"확인 필요 {data_review_count}"
             ),
-            caveat="Data Health는 자료 관리 위치를 안내할 뿐 여기서 job queue를 만들거나 저장하지 않습니다.",
-            next_check="Data Health의 예정, 오래됨, 부분, 누락, 실패 상태가 자료 신뢰도 주의점입니다.",
+            caveat="Data Health는 자료 관리 메타입니다. 보강 가능한 항목은 필요 자료 보강에 반영됩니다.",
+            next_check="-",
+            source_role="management_meta",
+            actionability="meta",
+            counts_for_status=False,
         ),
     ]
 
-    review_items = [item for item in items if item["status"] != "OK"]
+    review_items = [item for item in items if item["counts_for_status"] and item["status"] != "OK"]
+    reference_items = [item for item in items if not item["counts_for_status"] and item["status"] != "OK"]
     status = "REVIEW" if review_items else "OK"
+    status_label = (
+        "자료 보강 필요"
+        if review_items
+        else "자료 정상 · 참고 제한"
+        if reference_items
+        else "자료 정상"
+    )
     prioritized_review_items = sorted(
         review_items,
-        key=lambda item: (0 if item["id"] == "data_health" else 1 if item["id"] == "events" else 2, item["id"]),
+        key=lambda item: (0 if item["id"] in {"prices", "futures"} else 1, item["id"]),
     )
     return {
         "schema_version": "overview_source_confidence_catalog_v1",
         "status": status,
+        "status_label": status_label,
         "summary": {
             "headline": (
                 f"확인할 자료 영역 {len(review_items)}개"
                 if review_items
+                else "자료 기준 정상 · 참고 제한 있음"
+                if reference_items
                 else "자료 기준 정상"
             ),
             "detail": "같은 저장 자료의 출처, 기준일, 관리 위치, 참고 위치입니다.",
             "review_count": len(review_items),
+            "reference_count": len(reference_items),
         },
         "items": items,
         "next_checks": [
@@ -4592,6 +4620,10 @@ def _cockpit_status_label(status: Any) -> str:
     normalized = _cockpit_status_text(status).strip().lower()
     if normalized in {"ok", "success", "actual", "fresh", "high"}:
         return "자료 정상"
+    if normalized == "reference_limit":
+        return "참고 제한"
+    if normalized == "meta":
+        return "관리 메타"
     if normalized in {"review", "due", "partial"}:
         return "자료 확인 필요"
     if normalized == "stale":
@@ -4659,7 +4691,7 @@ def _build_cockpit_summary_copy(
     )
     if context_review_count:
         next_sentence = (
-            f"확인할 자료 {context_review_count}개를 먼저 분리한 뒤 가격 움직임과 macro 배경을 함께 읽으세요."
+            f"보강 가능한 자료 {context_review_count}개를 먼저 분리한 뒤 가격 움직임과 macro 배경을 함께 읽으세요."
         )
     else:
         next_sentence = "저장된 DB 자료 기준으로 가격 움직임과 macro 배경을 바로 이어서 읽을 수 있습니다."
@@ -4918,10 +4950,10 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
         _cockpit_int(coverage.get(key))
         for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
     )
-    status = "REVIEW" if review_count else _cockpit_card_status(snapshot.get("status"))
-    value = "일부 자료 확인 필요" if review_count else "자료 정상"
+    status = "META" if review_count else _cockpit_card_status(snapshot.get("status"))
+    value = "관리 메타" if review_count else "자료 정상"
     detail = (
-        f"해석 전에 Data Health에서 확인할 자료 {review_count}개를 먼저 봅니다."
+        f"Data Health 확인 항목 {review_count}개 중 보강 가능한 항목은 필요 자료 보강에 반영됩니다."
         if review_count
         else "현재 추적 중인 Overview 자료는 바로 참고할 수 있습니다."
     )
@@ -5594,9 +5626,9 @@ def build_overview_macro_context_cockpit(
 
     review_cards = [
         card for card in cards
-        if _cockpit_status_tone(card.get("status")) in {"warning", "danger"}
+        if str(card.get("id") or "") not in {"events", "data"}
+        and _cockpit_status_tone(card.get("status")) in {"warning", "danger"}
     ]
-    status = "REVIEW" if review_cards else "OK"
     source_confidence = build_overview_source_confidence_catalog(
         market_movers_snapshot=market_movers_snapshot,
         group_leadership_snapshot=group_leadership_snapshot,
@@ -5611,18 +5643,35 @@ def build_overview_macro_context_cockpit(
         events_snapshot=events_snapshot,
         data_health_handoff=data_health_handoff,
     )
-    context_review_count = max(data_review_count, len(review_cards))
     brief_context_findings = [
         item
         for item in context_findings
         if str(item.get("id") or "").strip() in {"events", "data_health"}
     ]
+    refresh_plan = _cockpit_refresh_plan(
+        cards=cards,
+        findings=brief_context_findings,
+        data_health_handoff=data_health_handoff,
+    )
+    refresh_summary = dict(refresh_plan.get("summary") or {})
+    actionable_refresh_count = _cockpit_int(refresh_summary.get("action_count"))
+    reference_limit_count = _cockpit_int(refresh_summary.get("excluded_count")) + _cockpit_int(
+        dict(source_confidence.get("summary") or {}).get("reference_count")
+    )
+    status = "REVIEW" if actionable_refresh_count or review_cards else "OK"
+    summary_status_label = (
+        "자료 보강 필요"
+        if actionable_refresh_count
+        else "자료 정상 · 참고 제한"
+        if reference_limit_count
+        else "자료 정상"
+    )
+    context_review_count = actionable_refresh_count
     next_path = " → ".join(
-        str(item.get("label") or item.get("source_area") or "-")
-        for item in brief_context_findings
-        if str(item.get("label") or item.get("source_area") or "").strip()
-    ) or "추가 보조 맥락 없음"
-    source_status = str(source_confidence.get("status") or status)
+        str(item.get("source_area") or item.get("label") or "-")
+        for item in list(refresh_plan.get("items") or [])
+        if str(item.get("source_area") or item.get("label") or "").strip()
+    ) or ("참고 제한 분리" if reference_limit_count else "추가 보조 맥락 없음")
     sector_pressure = build_overview_breadth_heatmap_summary(group_leadership_snapshot, limit=8)
     event_timeline = build_overview_macro_week_lane(events_snapshot, horizon_days=14, limit=6)
     summary_headline, summary_detail = _build_cockpit_summary_copy(
@@ -5632,8 +5681,20 @@ def build_overview_macro_context_cockpit(
     rail = [
         {
             "label": "자료 상태",
-            "value": "일부 자료 확인 필요" if status == "REVIEW" else "자료 정상",
-            "detail": f"확인할 자료 {context_review_count}개" if context_review_count else "바로 참고 가능",
+            "value": (
+                f"보강 가능 자료 {actionable_refresh_count}개"
+                if actionable_refresh_count
+                else "자료 정상 · 참고 제한 있음"
+                if reference_limit_count
+                else "자료 정상"
+            ),
+            "detail": (
+                "필요 자료 보강에서 실행 가능"
+                if actionable_refresh_count
+                else "참고 제한 / 관리 메타는 근거에 분리"
+                if reference_limit_count
+                else "바로 참고 가능"
+            ),
             "tone": _cockpit_status_tone(status),
         },
         {
@@ -5675,11 +5736,6 @@ def build_overview_macro_context_cockpit(
         _cockpit_brief_row(cards[1], label="확산/집중인가"),
         futures_brief_row,
     ]
-    refresh_plan = _cockpit_refresh_plan(
-        cards=cards,
-        findings=brief_context_findings,
-        data_health_handoff=data_health_handoff,
-    )
     interpretation_cues = [
         _cockpit_brief_row(cards[4], label="이벤트 압력"),
         _cockpit_brief_row(cards[3], label="심리 확인"),
@@ -5693,6 +5749,7 @@ def build_overview_macro_context_cockpit(
             "headline": summary_headline,
             "detail": summary_detail,
             "tone": _cockpit_status_tone(status),
+            "status_label": summary_status_label,
             "review_count": context_review_count,
             "data_review_count": data_review_count,
             "next_path": next_path,

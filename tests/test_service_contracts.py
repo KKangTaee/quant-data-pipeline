@@ -4857,10 +4857,79 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("ov-source-confidence-strip", source_html)
         self.assertIn("정상 3", source_html)
-        self.assertIn("확인 2", source_html)
+        self.assertIn("보강 2", source_html)
         self.assertIn("부족 1", source_html)
         self.assertIn("Prices", source_html)
         self.assertIn("가격 맥락의 신뢰도 주의점", source_html)
+
+    def test_overview_source_confidence_groups_reference_and_meta_without_unresolved_copy(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "OK",
+                "status_label": "자료 정상 · 참고 제한",
+                "summary": {
+                    "detail": "브리프 자료와 참고/관리 메타를 분리합니다.",
+                    "ok_count": 3,
+                    "review_count": 0,
+                    "reference_count": 2,
+                    "missing_count": 0,
+                },
+                "items": [
+                    {
+                        "surface": "Market Movers",
+                        "status": "OK",
+                        "status_label": "자료 정상",
+                        "title": "Prices / Movers",
+                        "detail": "가격 움직임 자료",
+                        "freshness": "2026-06-20 12:35",
+                        "owner": "Overview",
+                        "caveat": "context only",
+                        "next_check": "-",
+                        "source_role": "brief_source",
+                        "counts_for_status": True,
+                    },
+                    {
+                        "surface": "Events",
+                        "status": "REFERENCE_LIMIT",
+                        "status_label": "참고 제한",
+                        "title": "Events",
+                        "detail": "추정 일정은 확정 일정처럼 읽지 않습니다.",
+                        "freshness": "2026-06-20 12:36",
+                        "owner": "Events",
+                        "caveat": "원인 분석 엔진이 아닙니다.",
+                        "next_check": "-",
+                        "source_role": "reference_context",
+                        "counts_for_status": False,
+                    },
+                    {
+                        "surface": "Data Health",
+                        "status": "META",
+                        "status_label": "관리 메타",
+                        "title": "Data Health",
+                        "detail": "보강 가능한 항목은 필요 자료 보강에 반영됩니다.",
+                        "freshness": "2026-06-20 12:36",
+                        "owner": "Data Health",
+                        "caveat": "자료 관리 메타입니다.",
+                        "next_check": "-",
+                        "source_role": "management_meta",
+                        "counts_for_status": False,
+                    },
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn("브리프 자료", source_html)
+        self.assertIn("참고 / 관리 메타", source_html)
+        self.assertIn("참고 2", source_html)
+        self.assertIn("Events", source_html)
+        self.assertIn("참고 제한", source_html)
+        self.assertIn("Data Health", source_html)
+        self.assertIn("관리 메타", source_html)
+        self.assertNotIn("Events · 자료 확인 필요", source_html)
+        self.assertNotIn("Data Health · 자료 확인 필요", source_html)
 
     def test_overview_source_confidence_uses_ledger_language_without_review_gate_copy(self) -> None:
         from app.web import overview_ui_components
@@ -8087,22 +8156,92 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertEqual(model["schema_version"], "overview_source_confidence_catalog_v1")
         self.assertEqual(model["status"], "REVIEW")
-        self.assertEqual(model["summary"]["review_count"], 4)
+        self.assertEqual(model["summary"]["review_count"], 2)
+        self.assertEqual(model["summary"]["reference_count"], 2)
         self.assertEqual(model["items"][0]["id"], "prices")
         self.assertEqual(model["items"][0]["status"], "REVIEW")
+        self.assertTrue(model["items"][0]["counts_for_status"])
+        self.assertEqual(model["items"][0]["source_role"], "brief_source")
         self.assertIn("가격 맥락의 신뢰도 주의점", model["items"][0]["next_check"])
         self.assertEqual(model["items"][2]["id"], "futures")
         self.assertIn("무료 선물 provider", model["items"][2]["caveat"])
         self.assertEqual(model["items"][3]["id"], "sentiment")
         self.assertEqual(model["items"][3]["status"], "REVIEW")
         self.assertEqual(model["items"][4]["id"], "events")
+        self.assertEqual(model["items"][4]["status"], "REFERENCE_LIMIT")
+        self.assertEqual(model["items"][4]["status_label"], "참고 제한")
+        self.assertFalse(model["items"][4]["counts_for_status"])
+        self.assertEqual(model["items"][4]["source_role"], "reference_context")
+        self.assertEqual(model["items"][4]["actionability"], "not_actionable")
         self.assertIn("추정 일정 확인", model["items"][4]["detail"])
         self.assertIn("stale estimate", model["items"][4]["detail"])
-        self.assertEqual(model["next_checks"][0]["target_tab"], "Data Health")
-        self.assertEqual(model["next_checks"][1]["target_tab"], "Events")
-        self.assertIn("source_area", model["next_checks"][1])
-        self.assertIn("action", model["next_checks"][1])
+        self.assertEqual(model["items"][5]["id"], "data_health")
+        self.assertEqual(model["items"][5]["status"], "META")
+        self.assertEqual(model["items"][5]["status_label"], "관리 메타")
+        self.assertFalse(model["items"][5]["counts_for_status"])
+        self.assertEqual(model["items"][5]["source_role"], "management_meta")
+        next_targets = [item["target_tab"] for item in model["next_checks"]]
+        self.assertNotIn("Data Health", next_targets)
+        self.assertNotIn("Events", next_targets)
         self.assertIn("context 전용", model["boundary_note"])
+
+    def test_overview_source_confidence_does_not_mark_events_and_data_health_meta_as_unresolved(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+
+        model = build_overview_source_confidence_catalog(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "snapshot_time_utc": "2026-06-20 12:35"},
+                "rows": pd.DataFrame([{"Symbol": "SNDK"}]),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-20"},
+                "rows": pd.DataFrame([{"Group": "Technology"}]),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_date": "2026-06-20"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {"data_confidence": {"status": "High", "detail": "fresh"}},
+                "coverage": {"cnn_score": 55, "aaii_bull_bear_spread": 1.2},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "event_count": 71,
+                    "official_count": 4,
+                    "estimate_count": 67,
+                    "needs_review_count": 67,
+                    "stale_estimate_count": 3,
+                    "latest_collected_at": "2026-06-20 12:36",
+                },
+                "rows": pd.DataFrame([{"Type": "EARNINGS", "Source Type": "Estimate", "Freshness": "Stale estimate"}]),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 3, "due_count": 0, "stale_count": 2, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Stale", "Data Freshness": "2006m old"},
+                    ]
+                ),
+            },
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["status_label"], "자료 정상 · 참고 제한")
+        self.assertEqual(model["summary"]["review_count"], 0)
+        self.assertEqual(model["summary"]["reference_count"], 2)
+        self.assertEqual(model["next_checks"], [])
+        event_item = next(item for item in model["items"] if item["id"] == "events")
+        data_item = next(item for item in model["items"] if item["id"] == "data_health")
+        self.assertEqual(event_item["status_label"], "참고 제한")
+        self.assertEqual(data_item["status_label"], "관리 메타")
+        self.assertFalse(event_item["counts_for_status"])
+        self.assertFalse(data_item["counts_for_status"])
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
@@ -8909,12 +9048,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertLessEqual(len(summary_sentences), 3)
         self.assertIn("Technology", cockpit["summary"]["detail"])
         self.assertIn("Risk-on with rate pressure", cockpit["summary"]["detail"])
-        self.assertIn("확인할 자료 4개", cockpit["summary"]["detail"])
-        self.assertEqual(cockpit["summary"]["review_count"], 4)
+        self.assertIn("보강 가능한 자료 3개", cockpit["summary"]["detail"])
+        self.assertEqual(cockpit["summary"]["status_label"], "자료 보강 필요")
+        self.assertEqual(cockpit["summary"]["review_count"], 3)
         self.assertEqual(cockpit["summary"]["data_review_count"], 4)
-        self.assertEqual(cockpit["summary"]["next_path"], "Events → 자료 신뢰도")
+        self.assertEqual(cockpit["summary"]["next_path"], "S&P 500 Daily Snapshot → Futures Monitor 1m OHLCV → Earnings Calendar")
         self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
-        self.assertEqual(cockpit["summary"]["rail"][0]["value"], "일부 자료 확인 필요")
+        self.assertEqual(cockpit["summary"]["rail"][0]["value"], "보강 가능 자료 3개")
         self.assertEqual(
             [item["label"] for item in cockpit["summary"]["rail"]],
             ["자료 상태", "Top Mover", "Breadth", "Macro", "Next Event"],
@@ -8959,7 +9099,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("금리 압력", cockpit["cards"][2]["badges"][1]["label"])
         self.assertEqual(cockpit["cards"][3]["value"], "혼합 중립")
         self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
-        self.assertEqual(cockpit["cards"][5]["value"], "일부 자료 확인 필요")
+        self.assertEqual(cockpit["cards"][5]["value"], "관리 메타")
         self.assertEqual([item["id"] for item in cockpit["context_findings"]], ["market_movers", "futures", "events", "data_health"])
         self.assertIn("source_area", cockpit["context_findings"][0])
         self.assertIn("conclusion", cockpit["context_findings"][0])
@@ -8972,6 +9112,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["data_health_handoff"]["schema_version"], "overview_data_health_ingestion_handoff_v1")
         self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
         self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
+        self.assertGreaterEqual(cockpit["source_confidence"]["summary"]["reference_count"], 2)
         self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
         self.assertIn("context 전용", cockpit["boundary_note"])
 

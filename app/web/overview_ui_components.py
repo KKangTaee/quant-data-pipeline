@@ -114,6 +114,10 @@ def _display_status_label(value: Any) -> str:
     normalized = str(value or "").strip().lower()
     if normalized in {"ok", "success", "actual", "fresh", "high"}:
         return "자료 정상"
+    if normalized == "reference_limit":
+        return "참고 제한"
+    if normalized == "meta":
+        return "관리 메타"
     if normalized in {"review", "due", "partial"}:
         return "자료 확인 필요"
     if normalized == "stale":
@@ -1459,6 +1463,20 @@ def overview_ui_css() -> str:
 }
 .ov-source-confidence-body {
   padding-top: 0.12rem;
+}
+.ov-source-confidence-group {
+  margin-top: 0.62rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--ov-mi-border);
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-source-confidence-group:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 .ov-source-confidence-row {
   display: grid;
@@ -3651,21 +3669,25 @@ def _source_confidence_status_bucket(status: Any) -> str:
     normalized = str(status or "").strip().upper()
     if normalized in {"OK", "PASS", "READY", "SUCCESS"}:
         return "ok"
+    if normalized in {"REFERENCE_LIMIT", "META", "INFO"}:
+        return "reference"
     if normalized in {"MISSING", "INSUFFICIENT_DATA", "BLOCKED", "FAILED", "ERROR"}:
         return "missing"
     return "review"
 
 
 def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[dict[str, Any]]) -> str:
-    bucket_counts = {"ok": 0, "review": 0, "missing": 0}
+    bucket_counts = {"ok": 0, "review": 0, "reference": 0, "missing": 0}
     for item in items:
         bucket_counts[_source_confidence_status_bucket(item.get("status"))] += 1
     ok_count = summary.get("ok_count", bucket_counts["ok"])
     review_count = summary.get("review_count", bucket_counts["review"])
+    reference_count = summary.get("reference_count", bucket_counts["reference"])
     missing_count = summary.get("missing_count", bucket_counts["missing"])
     metric_items = [
         ("정상", ok_count, "OK"),
-        ("확인", review_count, "REVIEW"),
+        ("보강", review_count, "REVIEW"),
+        ("참고", reference_count, "META"),
         ("부족", missing_count, "INSUFFICIENT_DATA"),
     ]
     chips: list[str] = []
@@ -3675,8 +3697,17 @@ def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[d
             f"{escape(label)} {escape(_display_value(count))}"
             "</span>"
         )
-    review_items = [item for item in items if _source_confidence_status_bucket(item.get("status")) != "ok"]
-    action_items = review_items[:3] or items[:2]
+    review_items = [
+        item
+        for item in items
+        if item.get("counts_for_status", True) and _source_confidence_status_bucket(item.get("status")) != "ok"
+    ]
+    reference_items = [
+        item
+        for item in items
+        if not item.get("counts_for_status", True) and _source_confidence_status_bucket(item.get("status")) != "ok"
+    ]
+    action_items = review_items[:3] or reference_items[:2] or items[:2]
     for item in action_items:
         surface = _display_value(item.get("surface"))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
@@ -3698,8 +3729,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
     source_items = list(model.get("items") or [])
     summary_strip_html = _source_confidence_summary_strip_html(summary, source_items)
-    rows: list[str] = []
-    for item in source_items[:6]:
+    def render_source_row(item: dict[str, Any]) -> str:
         tone_color = escape(_overview_tone_color(item.get("tone") or item.get("status")))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
         freshness = _display_value(item.get("freshness_label") or _display_freshness_label(item.get("freshness")))
@@ -3707,7 +3737,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         action_note = _display_value(item.get("caveat"))
         if next_check != "-":
             action_note = next_check
-        rows.append(
+        return (
             f'<div class="ov-source-confidence-row" style="--ov-source-tone:{tone_color};">'
             '<div>'
             f'<div class="ov-source-confidence-surface">{escape(_display_value(item.get("surface")))}</div>'
@@ -3723,6 +3753,28 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
             f'<div class="ov-source-confidence-row-caveat">{escape(action_note)}</div>'
             "</div>"
             "</div>"
+        )
+
+    direct_items = [
+        item
+        for item in source_items[:6]
+        if str(item.get("source_role") or "brief_source") in {"brief_source", "context_source"}
+    ]
+    reference_items = [
+        item
+        for item in source_items[:6]
+        if str(item.get("source_role") or "brief_source") not in {"brief_source", "context_source"}
+    ]
+    sections: list[str] = []
+    if direct_items:
+        sections.append(
+            '<div class="ov-source-confidence-group">브리프 자료</div>'
+            + "".join(render_source_row(item) for item in direct_items)
+        )
+    if reference_items:
+        sections.append(
+            '<div class="ov-source-confidence-group">참고 / 관리 메타</div>'
+            + "".join(render_source_row(item) for item in reference_items)
         )
     ledger_head = (
         '<div class="ov-source-ledger-head">'
@@ -3750,7 +3802,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         '</summary>'
         '<div class="ov-source-confidence-body ov-context-disclosure-body">'
         f"{ledger_head}"
-        f'<div class="ov-source-confidence-list ov-source-ledger">{"".join(rows)}</div>'
+        f'<div class="ov-source-confidence-list ov-source-ledger">{"".join(sections)}</div>'
         f"{action_strip}"
         f'<div class="ov-source-confidence-boundary">{escape(_display_value(model.get("boundary_note")))}</div>'
         '</div>'
