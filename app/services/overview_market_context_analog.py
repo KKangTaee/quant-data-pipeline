@@ -354,8 +354,7 @@ def _base_model(
         ),
         "limitations": _default_limitations(),
         "boundary_note": (
-            "Overview context-only 참고 정보입니다. Backtest strategy, validation gate, "
-            "Final Review decision, Operations monitoring으로 연결하지 않습니다."
+            "Overview context 전용 참고 정보입니다. Backtest strategy나 다른 화면의 승인/운영 판단으로 연결하지 않습니다."
         ),
     }
 
@@ -1725,7 +1724,6 @@ def build_historical_analog_snapshot(
             "as-of sector leadership은 현재 universe/sector metadata 기반 재계산",
         ],
         "boundary_note": (
-            "Overview context-only 참고 정보입니다. Backtest strategy, validation gate, "
-            "Final Review decision, Operations monitoring으로 연결하지 않습니다."
+            "Overview context 전용 참고 정보입니다. Backtest strategy나 다른 화면의 승인/운영 판단으로 연결하지 않습니다."
         ),
     }

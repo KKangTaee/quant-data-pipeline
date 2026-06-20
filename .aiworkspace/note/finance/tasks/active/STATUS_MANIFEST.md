@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-18
+Last Verified: 2026-06-20
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `finance-integration-doc-merge-skill-20260617`
+- `overview-market-context-brief-flow-redesign-v1-20260620`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-brief-flow-redesign-v1-20260620`: Overview Market Context UX redesign / current brief flow split, historical analog controls inside analog flow, basis ledger, broad-vs-macro sample comparison, source ledger, and `필요 자료 보강` refresh assist
 - `overview-market-context-futures-conditioned-analog-v3b-20260618`: Overview Market Context Historical Analog 3차-B / 3차-A GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV Rate Pressure proxy (`ZN=F` / `ZB=F`) 1개 추가, selected as-of / anchor-date bounded condition, sample quality 유지
 - `overview-market-context-macro-conditioned-analog-pilot-v1-20260618`: Overview Market Context Historical Analog 3차-A / 기존 broad analog와 별도인 Macro 조건 포함 pilot, GLD price proxy 조건, sample quality, deferred/disabled condition 표시
 - `overview-market-context-analog-asof-window-v2-20260618`: Overview Market Context Historical Analog 2차 / 기준 시점 replay, 5D / 20D / monthly pattern window, current universe metadata 기반 bounded replay 한계 문서화

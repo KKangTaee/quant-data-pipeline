@@ -4038,10 +4038,7 @@ def build_overview_macro_week_lane(
     coverage = dict(snapshot.get("coverage") or {})
     bounded_horizon_days = max(0, int(horizon_days or 14))
     bounded_recent_days = max(0, int(recent_days or 0))
-    boundary_note = (
-        "Context-only event calendar: not a trading action, not Practical Validation, "
-        "not Final Review decision, and not monitoring action."
-    )
+    boundary_note = "context 전용 이벤트 캘린더입니다. 거래 실행이나 다른 화면의 승인/운영 판단을 만들지 않습니다."
     if rows.empty or "Days Until" not in rows:
         return {
             "schema_version": "overview_macro_week_lane_v2",
@@ -4508,7 +4505,7 @@ def build_overview_source_confidence_catalog(
                 f"CNN {_overview_round(sentiment_coverage.get('cnn_score'))} · "
                 f"AAII spread {_overview_round(sentiment_coverage.get('aaii_bull_bear_spread'))}"
             ),
-            caveat="심리는 배경 자료일 뿐 validation, Final Review, monitoring gate를 바꾸지 않습니다.",
+            caveat="심리는 배경 자료일 뿐 다른 화면의 판단이나 운영 상태를 바꾸지 않습니다.",
             next_check="Sentiment에서 출처 수, 오래된 자료, 신뢰도 저하 여부를 확인합니다.",
         ),
         _source_confidence_item(
@@ -4581,8 +4578,8 @@ def build_overview_source_confidence_catalog(
             for index, item in enumerate(prioritized_review_items[:4], start=1)
         ],
         "boundary_note": (
-            "자료 기준은 context 전용입니다. trading action, validation PASS/BLOCKER, Final Review decision, "
-            "monitoring action, provider fetch, write action을 만들지 않습니다."
+            "자료 기준은 context 전용입니다. 거래 실행, 승인/차단 판단, provider 직접 호출, "
+            "registry/saved 기록 생성을 하지 않습니다."
         ),
     }
 
@@ -5269,8 +5266,8 @@ def build_overview_macro_context_cockpit(
         "data_health_handoff": data_health_handoff,
         "source_confidence": source_confidence,
         "boundary_note": (
-            "context 전용 market backdrop입니다. 이 cockpit은 trading action, validation PASS/BLOCKER, "
-            "Final Review decision, monitoring action, registry write, saved setup write, broker order, auto rebalance를 만들지 않습니다."
+            "context 전용 market backdrop입니다. 이 cockpit은 거래 실행, 승인/차단 판단, "
+            "registry/saved 기록, broker order, auto rebalance를 만들지 않습니다."
         ),
     }
 

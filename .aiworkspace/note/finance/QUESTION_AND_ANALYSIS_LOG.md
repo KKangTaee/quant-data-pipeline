@@ -7855,3 +7855,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: broad analog 자체를 바꾸지 않고, 선택 기준 시점의 futures macro context와 비슷한 과거 anchor가 얼마나 남는지 context-only distribution으로 보여줘야 함.
 - Analysis result: 기존 `load_futures_ohlcv(end=...)`로 `ZN=F` / `ZB=F` daily row를 selected as-of 이하로 읽을 수 있어 새 loader/schema 없이 Rate Pressure futures proxy bucket을 만들 수 있다.
 - Follow-up: 3차-B는 완료했다. 남은 후보는 full PIT universe/sector metadata, event-window analog, FRED rates, events/sentiment conditioning, safe-haven futures variant이며 모두 별도 승인 대상이다.
+
+### 2026-06-20 - Market Context를 card-first prototype UI에서 brief-first 흐름으로 정리한다
+
+- User request: 사용자가 실제 Market Context를 사용한 뒤 `오늘의 시장 맥락`과 `시장 브리프` 중복, historical analog controls 위치, 카드 안 카드형 macro pilot, source 상태와 갱신 액션의 약한 연결을 지적하고 개선 진행을 승인함.
+- Interpreted goal: 새 데이터 조건이나 진단 패널이 아니라, 같은 DB-backed content를 사용자가 시장 브리프 -> 과거 참고 -> 자료 근거 -> 필요 자료 보강 순서로 덜 헷갈리게 읽게 해야 함.
+- Analysis result: Streamlit 제약이나 AGENTS 지시 때문이 아니라, 기능이 누적되며 카드가 기본 visual container가 된 것이 문제였다. controls를 analog 흐름에 붙이고, basis ledger / sample funnel / source ledger로 시각 장치를 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: UX redesign V1은 완료했다. 향후 후보는 source별 더 좁은 refresh 버튼, mobile density, full PIT universe/sector metadata 등이며 별도 승인 대상이다.

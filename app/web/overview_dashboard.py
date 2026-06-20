@@ -1875,7 +1875,7 @@ def _render_overview_market_context_refresh_result(result_key: str) -> None:
             }
         )
     if rows:
-        with st.expander("일괄 갱신 결과", expanded=False):
+        with st.expander("갱신 상세", expanded=False):
             st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 
@@ -1928,18 +1928,18 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
 def _overview_market_context_refresh_expander_label(cockpit_model: dict[str, Any]) -> str:
     checks = [dict(item or {}) for item in list(cockpit_model.get("next_checks") or []) if isinstance(item, dict)]
     if not checks:
-        return "보조 갱신"
+        return "필요 자료 보강"
     top = checks[0]
     source = str(top.get("source_area") or top.get("title") or top.get("target_tab") or "자료 상태").strip()
-    return f"보조 갱신 · {source} 확인 후"
+    return f"필요 자료 보강 · {source}"
 
 
 def _render_overview_market_context_refresh_action_hints(cockpit_model: dict[str, Any]) -> None:
     checks = [dict(item or {}) for item in list(cockpit_model.get("next_checks") or []) if isinstance(item, dict)]
     if not checks:
-        st.caption("자료 상태를 먼저 확인한 뒤, 오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 실행합니다.")
+        st.caption("오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 실행합니다.")
         return
-    st.caption("아래 갱신은 다음 source/action을 확인한 뒤 필요한 경우에만 실행합니다.")
+    st.caption("아래 항목은 화면 해석에 영향을 줄 수 있는 자료 보강 후보입니다.")
     for check in checks[:3]:
         source = str(check.get("source_area") or check.get("title") or "-")
         target = str(check.get("target_tab") or "-")
@@ -1952,17 +1952,17 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
     result_key = MARKET_CONTEXT_REFRESH_RESULT_KEY
     with st.expander(_overview_market_context_refresh_expander_label(cockpit_model), expanded=False):
         st.markdown(
-            '<div class="ov-macro-cockpit-refresh-assist">자료 확인 checklist 뒤에 두는 보조 행동입니다.</div>',
+            '<div class="ov-macro-cockpit-refresh-assist">현재 화면은 저장된 DB snapshot을 읽고, 갱신은 기존 Overview action boundary로만 실행합니다.</div>',
             unsafe_allow_html=True,
         )
         _render_overview_market_context_refresh_action_hints(cockpit_model)
         cols = st.columns([1.5, 0.72], gap="small", vertical_alignment="center")
         with cols[0]:
             st.caption(
-                "화면은 저장된 DB snapshot을 읽습니다. 이 버튼도 기존 Overview action boundary를 통해서만 갱신합니다."
+                "자료 보강 후 Market Context cache를 비우고 같은 화면을 다시 읽습니다. 상세 rows는 접힌 영역에만 표시합니다."
             )
         if cols[1].button(
-            "필요할 때 자료 갱신",
+            "필요 자료 일괄 보강",
             key="overview_market_context_refresh_all",
             use_container_width=True,
             type="secondary",
@@ -1982,7 +1982,10 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
 
 def _render_overview_historical_analog_controls() -> dict[str, str | None]:
     st.markdown("#### 참고: 과거 유사 맥락 기준")
-    st.caption("선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포를 다시 계산합니다.")
+    st.caption(
+        "선택한 기준 시점과 유사한 과거 조건에서 관찰된 분포를 다시 계산합니다. "
+        "아래 기준은 과거 유사 맥락 계산에만 적용되며, 상단 오늘의 시장 맥락과 시장 브리프는 최신 저장 자료 기준입니다."
+    )
     cols = st.columns([0.9, 1.0, 0.9], gap="small", vertical_alignment="bottom")
     basis = cols[0].selectbox(
         "기준 시점",
@@ -2034,14 +2037,20 @@ def _render_overview_market_context_tab() -> None:
         "상단에서 현재 시장을 먼저 훑고, 아래 단락에서 브리프와 다음 맥락 체크를 순서대로 확인합니다."
     )
     _render_overview_market_context_refresh_reflection()
-    analog_controls = _overview_historical_analog_control_state()
+    initial_analog_controls = _overview_historical_analog_control_state()
     cockpit_model = load_overview_macro_context_cockpit(
-        as_of_date=analog_controls["as_of_date"],
-        pattern_window=str(analog_controls["pattern_window"] or "5D"),
+        as_of_date=initial_analog_controls["as_of_date"],
+        pattern_window=str(initial_analog_controls["pattern_window"] or "5D"),
     )
     render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
-    _render_overview_historical_analog_controls()
-    render_macro_context_reading_flow(cockpit_model)
+    render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)
+    analog_controls = _render_overview_historical_analog_controls()
+    if analog_controls != initial_analog_controls:
+        cockpit_model = load_overview_macro_context_cockpit(
+            as_of_date=analog_controls["as_of_date"],
+            pattern_window=str(analog_controls["pattern_window"] or "5D"),
+        )
+    render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)
     _render_overview_historical_analog_repair_action(cockpit_model)
     _render_overview_market_context_refresh_bar(cockpit_model)
 

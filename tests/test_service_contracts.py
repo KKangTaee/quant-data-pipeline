@@ -4362,10 +4362,19 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("render_macro_context_reading_flow(cockpit_model)", helper_body)
+        self.assertIn(
+            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)",
+            helper_body,
+        )
+        self.assertIn(
+            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
+            helper_body,
+        )
         self.assertIn("_render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        reading_index = helper_body.index("render_macro_context_reading_flow(cockpit_model)")
+        reading_index = helper_body.index(
+            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)"
+        )
         refresh_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_index)
         self.assertLess(reading_index, refresh_index)
@@ -4383,7 +4392,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("render_macro_context_reading_flow(cockpit_model)", helper_body)
+        self.assertIn(
+            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)",
+            helper_body,
+        )
+        self.assertIn(
+            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
+            helper_body,
+        )
         self.assertNotIn("load_overview_ia_closeout_model", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
         self.assertNotIn("Deep Tab", helper_body)
@@ -4454,7 +4470,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertLess(action_hint_index, button_index)
         self.assertLess(button_index, result_index)
-        self.assertIn('with st.expander("일괄 갱신 결과", expanded=False):', source)
+        self.assertIn('with st.expander("갱신 상세", expanded=False):', source)
 
     def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
@@ -4532,7 +4548,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-context-disclosure", css)
         self.assertIn(".ov-context-disclosure > summary", css)
         self.assertIn(
-            '<details class="ov-macro-reading-section ov-source-confidence ov-context-disclosure is-evidence-footer"',
+            '<details class="ov-macro-reading-section ov-source-confidence ov-source-ledger ov-context-disclosure is-evidence-footer"',
             source,
         )
         self.assertIn('<summary class="ov-source-confidence-summary"', source)
@@ -4575,7 +4591,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = helper_body[:helper_end]
 
         self.assertIn("_render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
-        render_index = helper_body.index("render_macro_context_reading_flow(cockpit_model)")
+        render_index = helper_body.index(
+            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)"
+        )
         analog_action_index = helper_body.index("_render_overview_historical_analog_repair_action(cockpit_model)")
         refresh_bar_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
 
@@ -4591,18 +4609,37 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = source[source.index("def _render_overview_market_context_tab"):]
         helper_body = helper_body[: helper_body.index("def _summarize_auto_refresh_plan")]
 
-        self.assertIn("analog_controls = _overview_historical_analog_control_state()", helper_body)
+        self.assertIn("initial_analog_controls = _overview_historical_analog_control_state()", helper_body)
+        self.assertIn("analog_controls = _render_overview_historical_analog_controls()", helper_body)
+        self.assertIn("if analog_controls != initial_analog_controls:", helper_body)
+        self.assertIn("as_of_date=initial_analog_controls[\"as_of_date\"]", helper_body)
+        self.assertIn("pattern_window=str(initial_analog_controls[\"pattern_window\"] or \"5D\")", helper_body)
         self.assertIn("as_of_date=analog_controls[\"as_of_date\"]", helper_body)
         self.assertIn("pattern_window=str(analog_controls[\"pattern_window\"] or \"5D\")", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("render_macro_context_reading_flow(cockpit_model)", helper_body)
+        self.assertIn(
+            "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)",
+            helper_body,
+        )
+        self.assertIn(
+            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
+            helper_body,
+        )
         self.assertLess(
             helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)"),
+            helper_body.index(
+                "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)"
+            ),
+        )
+        self.assertLess(
+            helper_body.index(
+                "render_macro_context_reading_flow(cockpit_model, include_historical_analog=False, include_source_confidence=False)"
+            ),
             helper_body.index("_render_overview_historical_analog_controls()"),
         )
         self.assertLess(
-            helper_body.index("_render_overview_historical_analog_controls()"),
-            helper_body.index("render_macro_context_reading_flow(cockpit_model)"),
+            helper_body.index("if analog_controls != initial_analog_controls:"),
+            helper_body.index("render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)"),
         )
 
     def test_overview_market_context_uses_cardless_brief_layout_contract(self) -> None:
@@ -4654,9 +4691,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn(".ov-macro-cues-list", css)
+        self.assertIn(".ov-analog-basis-ledger", css)
+        self.assertIn(".ov-source-ledger", css)
         self.assertIn("ov-macro-cues-list", cue_html)
         self.assertIn("ov-historical-analog-row", analog_html)
+        self.assertIn("ov-historical-analog-scope", analog_html)
+        self.assertIn("과거 유사 맥락 계산에만 적용", analog_html)
         self.assertIn("ov-source-confidence-list", source_html)
+        self.assertIn("ov-source-ledger", source_html)
         self.assertNotIn("ov-macro-cues-grid", cue_html)
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
@@ -4706,6 +4748,45 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("부족 1", source_html)
         self.assertIn("Prices", source_html)
         self.assertIn("Market Movers에서 기준일", source_html)
+
+    def test_overview_source_confidence_uses_ledger_language_without_review_gate_copy(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "REVIEW",
+                "status_label": "자료 확인 필요",
+                "summary": {
+                    "detail": "필요 자료를 확인하고 보강할 위치를 정리합니다.",
+                    "ok_count": 1,
+                    "review_count": 1,
+                    "missing_count": 0,
+                },
+                "items": [
+                    {
+                        "surface": "Futures Monitor",
+                        "status": "REVIEW",
+                        "title": "Futures Monitor 1m OHLCV",
+                        "detail": "선물 가격 이력 freshness를 확인합니다.",
+                        "freshness": "3950m old",
+                        "owner": "Data Health",
+                        "caveat": "시장 맥락 참고용",
+                        "next_check": "필요 자료 보강에서 기존 Overview 갱신을 실행합니다.",
+                    }
+                ],
+                "boundary_note": (
+                    "Market Context는 저장 자료의 출처와 한계를 설명하는 참고 화면이며, "
+                    "승인/차단 판단이나 운영 알림을 만들지 않습니다."
+                ),
+            }
+        )
+
+        self.assertIn("ov-source-ledger", source_html)
+        self.assertIn("자료 영역", source_html)
+        self.assertIn("해석 영향", source_html)
+        self.assertIn("필요 자료 보강", source_html)
+        for forbidden in ["PASS", "BLOCKER", "Final Review decision", "Operations monitoring", "monitoring action"]:
+            self.assertNotIn(forbidden, source_html)
 
     def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
@@ -5067,13 +5148,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("시장 맥락", dashboard_source)
         self.assertIn("상단에서 현재 시장을 먼저 훑고", dashboard_source)
-        self.assertIn("자료 확인 checklist", dashboard_source)
-        self.assertIn("보조 갱신", dashboard_source)
+        self.assertIn("필요 자료 보강", dashboard_source)
+        self.assertNotIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
         self.assertIn("시장 브리프", component_source)
         self.assertIn("다음 맥락 체크", component_source)
         self.assertIn("자료 영역", component_source)
-        self.assertIn("확인 위치", component_source)
+        self.assertIn("보강 위치", component_source)
         self.assertNotIn("핵심 요약", component_source)
         self.assertNotIn("해석 전 확인", component_source)
         self.assertNotIn("해석할 때 같이 볼 변수", component_source)
@@ -7557,7 +7638,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["clusters"]["Earnings"]["count"], 1)
         self.assertEqual(model["items"][0]["type"], "MACRO_CPI")
         self.assertNotIn("PASS", model["boundary_note"])
-        self.assertIn("not a trading", model["boundary_note"])
+        self.assertIn("context 전용", model["boundary_note"])
+        self.assertIn("거래 실행", model["boundary_note"])
 
     def test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_week_lane
@@ -9536,11 +9618,20 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
         self.assertIn("먼저 읽을 결론", html)
         self.assertIn("ov-analog-summary-strip", html)
-        self.assertIn("기준 시점: latest", html)
-        self.assertIn("계산 기준일: 2026-05-29", html)
-        self.assertIn("패턴 기간: 5D", html)
-        self.assertIn("자료 기간: 2016-06-16 - 2026-05-29", html)
-        self.assertIn("계산식: 선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준", html)
+        self.assertIn("ov-analog-basis-ledger", html)
+        self.assertIn("ov-analog-basis-group", html)
+        self.assertIn("과거 유사 맥락 계산에만 적용", html)
+        self.assertIn("상단 시장 브리프는 최신 저장 자료 기준", html)
+        self.assertIn("기준 시점", html)
+        self.assertIn("latest", html)
+        self.assertIn("계산 기준일", html)
+        self.assertIn("2026-05-29", html)
+        self.assertIn("패턴 기간", html)
+        self.assertIn("5D", html)
+        self.assertIn("자료 기간", html)
+        self.assertIn("2016-06-16 - 2026-05-29", html)
+        self.assertIn("계산식", html)
+        self.assertIn("선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준", html)
         self.assertIn("유사 사례", html)
         self.assertIn("XLK 20D 중간값", html)
         self.assertIn("+3.3%", html)
@@ -9669,6 +9760,11 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
 
         self.assertIn("참고: 과거 유사 맥락", html)
         self.assertIn("Macro 조건 포함 pilot", html)
+        self.assertIn("ov-macro-comparison", html)
+        self.assertIn("Broad vs Macro 조건 포함", html)
+        self.assertIn("표본 흐름", html)
+        self.assertIn("Broad sample", html)
+        self.assertIn("Macro 조건 sample", html)
         self.assertIn("사용한 조건", html)
         self.assertIn("조건 부족", html)
         self.assertIn("이번 차수 제외", html)
@@ -9678,6 +9774,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("표본 품질", html)
         self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
         self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 pilot"))
+        self.assertNotIn('class="ov-macro-conditioned-pilot"', html)
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
             self.assertNotIn(forbidden, html)
 
@@ -9798,6 +9895,58 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                                 "coverage_end": "2024-05-06",
                                 "anchor_preview_count": 0,
                             },
+                            {
+                                "id": "macro_t10y2y",
+                                "label": "T10Y2Y yield spread",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Reference preview only.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 1,
+                            },
+                            {
+                                "id": "macro_dff",
+                                "label": "DFF policy rate",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Reference preview only.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 1,
+                            },
+                            {
+                                "id": "macro_unrate",
+                                "label": "UNRATE labor backdrop",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Reference preview only.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 1,
+                            },
+                            {
+                                "id": "sentiment_aaii",
+                                "label": "AAII sentiment backdrop",
+                                "status": "DEFERRED",
+                                "status_label": "보류",
+                                "usage": "annotation only",
+                                "source": "finance.loaders.sentiment",
+                                "detail": "Sentiment remains annotation and is not applied to anchors.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-05-06",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 0,
+                            },
                         ],
                     },
                     "rows": [],
@@ -9811,6 +9960,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("VIXCLS volatility backdrop", html)
         self.assertIn("BAA10Y credit spread backdrop", html)
         self.assertIn("Events calendar", html)
+        self.assertIn("AAII sentiment backdrop", html)
+        self.assertIn("ov-macro-dimension-group", html)
         self.assertIn("참고", html)
         self.assertIn("보류", html)
         self.assertIn("anchor 2회", html)

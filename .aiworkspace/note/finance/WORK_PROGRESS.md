@@ -5033,3 +5033,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV Rate Pressure proxy (`ZN=F` / `ZB=F`) 조건 1개를 추가했다.
   - Browser QA 20D path는 broad 69회 -> Macro 조건 sample 1회, GLD / futures condition row 분리 표시, forbidden Korean copy 없음으로 확인했다.
   - FRED rates, events, sentiment, 새 provider / schema / loader, Backtest / Validation / Final Review / Operations logic은 열지 않았다.
+- Overview Market Context Brief Flow Redesign V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-flow-redesign-v1-20260620/`에서 사용자가 직접 테스트하며 지적한 card-first UX를 brief-first reading flow로 정리했다.
+  - Historical analog controls는 analog 섹션 흐름에 붙이고, 기준/패턴/표본/한계 basis ledger와 broad-vs-macro sample comparison, source ledger, `필요 자료 보강` refresh assist를 추가했다.
+  - Browser QA 중 selected date/pattern 반영이 한 렌더 늦는 문제를 발견해 supporting model을 controls 후 즉시 reload하도록 수정했다.
+  - 검증은 `git diff --check`, py_compile, `tests/test_service_contracts.py` 365개, Streamlit Browser QA screenshot으로 완료했다.
