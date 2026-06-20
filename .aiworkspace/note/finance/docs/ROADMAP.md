@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-19
+Last Verified: 2026-06-20
 
 ## Current State After Master Merge
 
@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-findings-integration-v4-20260620/`
-- 목적: `Workspace > Overview > Market Context`의 V3 `맥락 검토 결과`가 가격 움직임 / Futures-Macro를 상단 브리프와 중복해서 보여준다는 사용자 피드백에 따라, 중복 findings rail을 없애고 Events / 자료 신뢰도 caveat만 `오늘의 시장 브리프` 안으로 통합했다.
-- 주요 변경: `brief_rows`는 움직임, 확산, Futures/Macro 배경, 이벤트 caveat, 자료 신뢰도 caveat의 5행 흐름이 됐다. 기본 Market Context reading flow는 `context_findings` / `next_checks`를 별도 rail로 렌더링하지 않고 historical analog / source confidence만 이어서 보여준다.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-confidence-v5-20260620/`
+- 목적: `Workspace > Overview > Market Context`의 V4 보정 후 Events / 자료 신뢰도 caveat가 `오늘의 시장 브리프` 결론처럼 보인다는 사용자 피드백에 따라, 시장 브리프와 브리프 읽기 강도 근거를 분리했다.
+- 주요 변경: `brief_rows`는 움직임, 확산, Futures/Macro 배경의 3행 market story로 유지하고, Events / 자료 기준은 별도 `brief_caveats` / `브리프 신뢰도` 영역에서 `이벤트 요인은 약하게 읽기`, `선물 기반 장중 해석 제한`처럼 해석 강도를 낮추는 근거로 보여준다. 기본 Market Context reading flow는 `context_findings` / `next_checks`를 별도 rail로 렌더링하지 않고 historical analog / source confidence만 이어서 보여준다.
 - 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-findings-integration-v4-20260620/`
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-confidence-v5-20260620/`
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-findings-integration-v4-20260620/`
+- 목적: `Workspace > Overview > Market Context`의 V3 `맥락 검토 결과`가 가격 움직임 / Futures-Macro를 상단 브리프와 중복해서 보여준다는 사용자 피드백에 따라, 중복 findings rail을 없애고 Events / 자료 신뢰도 caveat만 `오늘의 시장 브리프` 안으로 통합했다. V5에서 이 caveat는 `브리프 신뢰도`로 다시 분리됐다.
+- 주요 변경: V4에서는 `brief_rows`가 움직임, 확산, Futures/Macro 배경, 이벤트 caveat, 자료 신뢰도 caveat의 5행 흐름이 됐다. V5부터 `brief_rows`는 3행 market story, `brief_caveats`는 별도 confidence row로 읽는다.
+- 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-context-findings-v3-20260620/`
 - 목적: `Workspace > Overview > Market Context`의 `다음 맥락 체크`가 여전히 사용자가 직접 다른 탭을 확인하라는 checklist처럼 보인다는 사용자 피드백에 따라, Market Context가 이미 읽은 보조 맥락의 결론을 보여주도록 바꿨다.
 - 주요 변경: user-facing `다음 맥락 체크`를 `맥락 검토 결과`로 전환하고, 가격 움직임 / Futures-Macro / Events / 자료 신뢰도 caveat를 `결론`, `해석 영향`, `자료 기준` 행으로 표시한다. V4에서 이 rail은 기본 화면에서 제거되고 Events / 자료 신뢰도 caveat만 브리프에 흡수됐다.
@@ -135,8 +139,9 @@ Workspace > Ingestion
 | Overview Source Confidence Catalog V1 | Complete | The Overview cockpit now includes a compact Source Confidence lane for prices, breadth, futures, sentiment, events, and data health source state. It reuses the same snapshots already loaded by the cockpit, exposes owner / freshness / caveat / next check, and does not add provider fetch, schema, persistence, validation, monitoring, or trading semantics. |
 | Overview IA Closeout V1 | Complete | Overview now places a compact `Overview Map / Deep Tab Reading Order` between the cockpit and deep tabs. It keeps Market Context, Data Repair, and transitional Candidate Ops boundaries visible without moving Candidate Ops, adding providers, changing storage, or creating validation / monitoring / trading semantics. |
 | Overview Market Context Brief Flow Redesign V2 | Complete | Market Context now absorbs `시장 브리프` rows into the top `오늘의 시장 브리프` lane, renders `다음 맥락 체크` as a priority / observation / reason / action rail instead of a card grid, and shows `Macro 조건 포함 비교` as broad vs conditioned sample context. It remains DB-backed and context-only with no provider fetch, schema, registry / saved write, validation, monitoring, or trading semantics. |
-| Overview Market Context Brief Findings Integration V4 | Complete | Market Context now absorbs Events / 자료 신뢰도 caveat into `오늘의 시장 브리프` and does not render the V3 `맥락 검토 결과` rail by default. Price movement and Futures / Macro remain in the main brief/headline, avoiding duplicate P1/P2 reading. `context_findings` / `next_checks` remain compatibility payloads only. |
-| Overview Market Context Context Findings V3 | Complete | Market Context converted `다음 맥락 체크` from an action checklist into `context_findings` conclusions for price movement, Futures / Macro, Events, and data-health caveat. V4 later absorbed non-duplicative caveats into the main brief and removed the default findings rail. |
+| Overview Market Context Brief Confidence V5 | Complete | Market Context keeps `오늘의 시장 브리프` to movement, breadth, and Futures/Macro background, while Events / data caveats now render as a separate `브리프 신뢰도` section that adjusts reading strength rather than acting as market conclusions. `context_findings` / `next_checks` remain compatibility payloads only. |
+| Overview Market Context Brief Findings Integration V4 | Complete | Market Context removed the default V3 `맥락 검토 결과` rail and temporarily absorbed Events / 자료 신뢰도 caveat into `오늘의 시장 브리프`; V5 later split those caveats into `브리프 신뢰도`. Price movement and Futures / Macro remain in the main brief/headline, avoiding duplicate P1/P2 reading. `context_findings` / `next_checks` remain compatibility payloads only. |
+| Overview Market Context Context Findings V3 | Complete | Market Context converted `다음 맥락 체크` from an action checklist into `context_findings` conclusions for price movement, Futures / Macro, Events, and data-health caveat. V4 removed the default findings rail; V5 keeps the brief to core market story and renders Events / data-source notes as brief confidence. |
 | Overview Market Context UX V3 | Complete | Market Context now opens as a summary-first cockpit: current context headline, separate data-state rail, core/supporting card hierarchy, action-oriented next check order, and secondary refresh placement. It keeps existing DB-backed read models and Overview action facade boundaries, with no provider fetch, schema, registry / saved write, validation, monitoring, or trading semantics. Direct `/overview` local first-load still has a Streamlit Page not found modal and remains a routing follow-up. |
 | Overview Market Context Events Data Trust V1 | Complete | Events now reads recent 7D plus upcoming horizon rows, prioritizes FOMC / CPI / PPI / Employment / GDP over earnings in context surfaces, splits Macro Week Lane into recent major and upcoming events, and keeps Market Context event/Data Health cues compact. Local DB still lacks CPI rows for 2026-06-10 and 2026-07-14, so Macro Calendar collection or BLS `.ics` import remains a data coverage follow-up. |
 | Overview Market Context Historical Analog V1 | Complete | Market Context now has a compact `과거 유사 맥락 참고` section that maps current sector leadership to a sector ETF proxy and, when price coverage is sufficient, summarizes 5D / 20D / 60D forward returns for major assets from simple SPY-relative historical anchors. It is context-only and does not create prediction, recommendation, trade signal, validation gate, Final Review, Operations monitoring, schema, provider, registry, or saved JSONL behavior. Coverage can be uneven by sector ETF; V4 turns those gaps into an explicit repair action. |

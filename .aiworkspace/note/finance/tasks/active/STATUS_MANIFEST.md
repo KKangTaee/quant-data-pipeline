@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-brief-findings-integration-v4-20260620`
+- `overview-market-context-brief-confidence-v5-20260620`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-brief-confidence-v5-20260620`: Overview Market Context V4 follow-up / `오늘의 시장 브리프`를 움직임, 확산, Futures/Macro 배경의 3행 market story로 되돌리고, Events / 자료 기준은 별도 `브리프 신뢰도` 영역에서 브리프 읽기 강도 조절 근거로 표시한다. `context_findings` / `next_checks`는 compatibility payload로 유지하되 default user-facing rail로 렌더링하지 않는다.
 - `overview-market-context-brief-findings-integration-v4-20260620`: Overview Market Context V3 follow-up / 중복되는 가격 움직임과 Futures-Macro findings rail은 기본 화면에서 제거하고, Events / 자료 신뢰도 caveat를 `오늘의 시장 브리프` 안으로 통합했다. `context_findings` / `next_checks`는 compatibility payload로 유지하되 default user-facing rail로 렌더링하지 않는다.
 - `overview-market-context-context-findings-v3-20260620`: Overview Market Context `다음 맥락 체크` follow-up / user-facing action checklist를 `맥락 검토 결과`로 바꿔 Market Context가 이미 읽은 가격 움직임, Futures/Macro, Events, 자료 신뢰도 caveat의 결론 / 해석 영향 / 자료 기준을 보여주게 했다. `next_checks`는 compatibility payload로 남기되 user-facing action checklist로 쓰지 않는다.
 - `overview-market-context-brief-flow-redesign-v2-20260620`: Overview Market Context V1 UX 보정 follow-up / top brief rows를 cockpit 안의 `오늘의 시장 브리프` wide lane으로 흡수, `다음 맥락 체크`를 card grid에서 priority / observation / reason / action rail로 변경, historical / macro / source sections의 반복 card visual language 축소

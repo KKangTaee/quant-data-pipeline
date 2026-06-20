@@ -4265,7 +4265,7 @@ def _event_review_action_summary(events_snapshot: dict[str, Any]) -> dict[str, A
             "detail": "event rows unavailable",
             "primary_title": "이벤트 자료 확인",
             "primary_reason": "저장된 event row가 없어 Events 탭의 source 상태를 먼저 봅니다.",
-            "primary_action": "Events calendar 수집 상태와 공식/추정 source 구분이 이벤트 자료의 caveat입니다.",
+            "primary_action": "Events calendar 수집 상태와 공식/추정 source 구분이 이벤트 자료 주의점입니다.",
             "source_area": "Events",
             "freshness": coverage.get("latest_collected_at") or "-",
             "needs_action": False,
@@ -4349,12 +4349,12 @@ def _event_review_action_summary(events_snapshot: dict[str, Any]) -> dict[str, A
             f"{_cockpit_int(coverage.get('estimate_count'))}개 추정 일정 중 "
             f"{estimate_review_count or stale_estimate_count or not_confirmed_count or estimate_only_count}개는 검증/신선도 확인이 필요합니다."
         )
-        primary_action = focus_action or "earnings estimate의 cross-check, stale 여부, superseded 여부가 이벤트 자료의 caveat입니다."
+        primary_action = focus_action or "earnings estimate의 cross-check, stale 여부, superseded 여부가 이벤트 자료 주의점입니다."
         source_area = "Events · Earnings estimates"
     elif official_macro_review_count:
         primary_title = "공식 macro 일정 확인"
         primary_reason = f"{focus_type} row의 official source 또는 freshness를 확인해야 합니다."
-        primary_action = focus_action or "FOMC/CPI/PPI/Employment/GDP row의 official source와 collected_at 기준이 이벤트 자료의 caveat입니다."
+        primary_action = focus_action or "FOMC/CPI/PPI/Employment/GDP row의 official source와 collected_at 기준이 이벤트 자료 주의점입니다."
         source_area = "Events · Official macro"
     else:
         primary_title = "가까운 주요 이벤트 확인"
@@ -4467,7 +4467,7 @@ def build_overview_source_confidence_catalog(
             or movers_coverage.get("effective_end_date"),
             detail=f"{prices_returnable}/{prices_universe} symbols returnable · 갱신 상태 {refresh_label or _cockpit_status_label(prices_status)}",
             caveat="가격 맥락은 오래됐거나 부분적일 수 있으며, 주문 실행용 가격이 아닙니다.",
-            next_check="Market Movers 기준일과 누락 상태가 가격 맥락의 신뢰도 caveat입니다.",
+            next_check="Market Movers 기준일과 누락 상태가 가격 맥락의 신뢰도 주의점입니다.",
         ),
         _source_confidence_item(
             item_id="breadth",
@@ -4479,7 +4479,7 @@ def build_overview_source_confidence_catalog(
             freshness=group_coverage.get("snapshot_time_utc") or group_coverage.get("effective_end_date"),
             detail=f"{_cockpit_int(group_coverage.get('returnable_count'))}/{_cockpit_int(group_coverage.get('universe_count'))} symbols grouped",
             caveat="시장 폭은 참여도와 집중도를 요약할 뿐 종목 선택 규칙이 아닙니다.",
-            next_check="Sector / Industry freshness와 그룹 coverage가 breadth 맥락의 caveat입니다.",
+            next_check="Sector / Industry freshness와 그룹 coverage가 breadth 맥락의 주의점입니다.",
         ),
         _source_confidence_item(
             item_id="futures",
@@ -4506,7 +4506,7 @@ def build_overview_source_confidence_catalog(
                 f"AAII spread {_overview_round(sentiment_coverage.get('aaii_bull_bear_spread'))}"
             ),
             caveat="심리는 배경 자료일 뿐 다른 화면의 판단이나 운영 상태를 바꾸지 않습니다.",
-            next_check="Sentiment 출처 수, 오래된 자료, 신뢰도 저하가 심리 맥락의 caveat입니다.",
+            next_check="Sentiment 출처 수, 오래된 자료, 신뢰도 저하가 심리 맥락의 주의점입니다.",
         ),
         _source_confidence_item(
             item_id="events",
@@ -4523,7 +4523,7 @@ def build_overview_source_confidence_catalog(
                 f"{event_action_summary['detail']}"
             ),
             caveat="공식 macro 일정과 provider 추정 실적 일정은 구분해서 읽어야 합니다.",
-            next_check=str(event_action_summary.get("primary_action") or "추정/공식 source 상태가 이벤트 자료의 caveat입니다."),
+            next_check=str(event_action_summary.get("primary_action") or "추정/공식 source 상태가 이벤트 자료 주의점입니다."),
         ),
         _source_confidence_item(
             item_id="data_health",
@@ -4538,7 +4538,7 @@ def build_overview_source_confidence_catalog(
                 f"확인 필요 {data_review_count}"
             ),
             caveat="Data Health는 자료 관리 위치를 안내할 뿐 여기서 job queue를 만들거나 저장하지 않습니다.",
-            next_check="Data Health의 예정, 오래됨, 부분, 누락, 실패 상태가 자료 신뢰도 caveat입니다.",
+            next_check="Data Health의 예정, 오래됨, 부분, 누락, 실패 상태가 자료 신뢰도 주의점입니다.",
         ),
     ]
 
@@ -4984,7 +4984,7 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
             "target_tab": "Data Health",
             "title": f"{area} 확인",
             "reason": str(item.get("reason") or f"{item.get('status') or 'Review'} · {item.get('freshness') or '-'}"),
-            "action": f"{area} 자료 caveat입니다. 필요하면 {target_surface}에서 {action}",
+            "action": f"{area} 자료 주의점입니다. 필요하면 {target_surface}에서 {action}",
             "source_area": area,
             "freshness": str(item.get("freshness") or "-"),
             "priority": f"P{item.get('rank') or 1}",
@@ -5045,7 +5045,7 @@ def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None
             "target_tab": "Events",
             "title": str(event_action_summary.get("primary_title") or row.get("Title") or row.get("Type Label") or "Upcoming event"),
             "reason": str(event_action_summary.get("primary_reason") or (_cockpit_event_days_korean(days) if row else f"확인할 일정 {needs_review}개")),
-            "action": str(event_action_summary.get("primary_action") or "Events 자료 상태가 시장 context의 이벤트 caveat입니다."),
+            "action": str(event_action_summary.get("primary_action") or "Events 자료 상태가 시장 context의 이벤트 주의점입니다."),
             "source_area": str(event_action_summary.get("source_area") or "Events"),
             "freshness": str(event_action_summary.get("freshness") or coverage.get("latest_collected_at") or "-"),
             "priority": "P2" if needs_review else "P3",
@@ -5170,7 +5170,7 @@ def _cockpit_events_finding(snapshot: dict[str, Any], card: dict[str, Any]) -> d
     ]
     evidence = " · ".join(part for part in evidence_parts if part and part != "-") or str(card.get("detail") or "-")
     interpretation = (
-        "이벤트 자료 제한은 오늘 브리프의 caveat입니다. 공식 macro와 provider 추정 일정은 구분해서 읽습니다."
+        "이벤트 자료 제한은 오늘 브리프의 주의점입니다. 공식 macro와 provider 추정 일정은 구분해서 읽습니다."
         if review_count
         else "이벤트는 시장 흐름을 확정하는 근거가 아니라, 오늘 브리프를 읽을 때의 배경 변수입니다."
     )
@@ -5199,7 +5199,7 @@ def _cockpit_data_health_finding(snapshot: dict[str, Any]) -> dict[str, Any] | N
         item_id="data_health",
         label="자료 신뢰도",
         conclusion=f"{source_area} 자료 상태가 {status_label}입니다.",
-        interpretation="시장 결론을 바꾸는 근거가 아니라, 현재 브리프를 읽을 때의 자료 caveat입니다.",
+        interpretation="시장 결론을 바꾸는 근거가 아니라, 현재 브리프를 읽을 때의 자료 주의점입니다.",
         evidence=reason,
         source_area=source_area,
         freshness=data_check.get("freshness"),
@@ -5242,24 +5242,55 @@ def _cockpit_brief_row(card: dict[str, Any], *, label: str) -> dict[str, Any]:
     }
 
 
-def _cockpit_finding_brief_row(finding: dict[str, Any], *, label: str) -> dict[str, Any]:
-    """Project a non-duplicative context finding into the main brief sequence."""
+def _cockpit_brief_caveat(finding: dict[str, Any]) -> dict[str, Any]:
+    """Project a context finding into a reading-strength caveat, not a market brief row."""
+    finding_id = str(finding.get("id") or "").strip()
+    source_area = str(finding.get("source_area") or finding.get("label") or "-").strip()
+    conclusion = str(finding.get("conclusion") or "").strip()
+    evidence = str(finding.get("evidence") or "").strip()
+    lower_text = f"{source_area} {conclusion} {evidence}".lower()
+    if finding_id == "events":
+        if "추정" in conclusion or "estimate" in lower_text:
+            detail = "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다."
+        else:
+            detail = f"{conclusion} 오늘 움직임의 원인으로 단정하지 않고 배경 변수로만 둡니다."
+        detail = detail.replace("event", "이벤트")
+        return {
+            "id": finding_id,
+            "label": "이벤트 일정",
+            "value": "이벤트 요인은 약하게 읽기",
+            "detail": detail,
+            "action": "공식 macro와 provider 추정 일정을 구분해서 읽습니다.",
+            "status": finding.get("status"),
+            "status_label": finding.get("status_label"),
+            "tone": finding.get("tone"),
+            "target_tab": source_area,
+            "source": source_area,
+            "freshness": finding.get("freshness"),
+            "freshness_label": finding.get("freshness"),
+            "evidence": finding.get("evidence"),
+        }
+
+    if "futures" in lower_text or "ohlcv" in lower_text or "선물" in lower_text:
+        value = "선물 기반 장중 해석 제한"
+        detail = f"{source_area}가 오래되었거나 보강 대상이라 금리 압력 / risk-on 배경은 보수적으로 읽습니다."
+    else:
+        value = "자료 기준 확인 필요"
+        detail = f"{source_area} 자료 기준이 낮아 관련 브리프 근거는 보수적으로 읽습니다."
     return {
-        "id": finding.get("id"),
-        "label": label,
-        "value": finding.get("conclusion"),
-        "detail": finding.get("interpretation"),
+        "id": finding_id,
+        "label": "자료 기준",
+        "value": value,
+        "detail": detail,
+        "action": "필요하면 자료 보강 후 브리프를 다시 읽습니다.",
         "status": finding.get("status"),
         "status_label": finding.get("status_label"),
         "tone": finding.get("tone"),
-        "target_tab": finding.get("source_area") or finding.get("label"),
-        "source": finding.get("source_area"),
+        "target_tab": source_area,
+        "source": source_area,
         "freshness": finding.get("freshness"),
         "freshness_label": finding.get("freshness"),
-        "badges": [
-            {"label": "자료 영역", "value": finding.get("source_area"), "tone": finding.get("tone")},
-            {"label": "근거", "value": finding.get("evidence"), "tone": finding.get("tone")},
-        ],
+        "evidence": finding.get("evidence"),
     }
 
 
@@ -5404,18 +5435,7 @@ def build_overview_macro_context_cockpit(
         _cockpit_brief_row(cards[1], label="확산/집중인가"),
         _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
     ]
-    finding_labels = {
-        "events": "이벤트 caveat",
-        "data_health": "자료 신뢰도 caveat",
-    }
-    for finding in brief_context_findings:
-        finding_id = str(finding.get("id") or "").strip()
-        brief_rows.append(
-            _cockpit_finding_brief_row(
-                finding,
-                label=finding_labels.get(finding_id, str(finding.get("label") or "자료 caveat")),
-            )
-        )
+    brief_caveats = [_cockpit_brief_caveat(finding) for finding in brief_context_findings]
     interpretation_cues = [
         _cockpit_brief_row(cards[4], label="이벤트 압력"),
         _cockpit_brief_row(cards[3], label="심리 확인"),
@@ -5435,6 +5455,7 @@ def build_overview_macro_context_cockpit(
             "rail": rail,
         },
         "brief_rows": brief_rows,
+        "brief_caveats": brief_caveats,
         "interpretation_cues": interpretation_cues,
         "sector_pressure": sector_pressure,
         "event_timeline": event_timeline,

@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Events and data caveats should be brief confidence, not brief conclusions
+- User request:
+  - V4 화면에서 `오늘의 시장 브리프`에 들어간 이벤트 / 자료 신뢰도 문구가 "그래서 무엇을 말하는지" 알기 어렵고, 시장 브리프와 거리가 멀다고 지적함.
+- Interpreted goal:
+  - Market Context의 시장 브리프는 사용자가 오늘 흐름을 읽는 결론으로 유지하고, 이벤트 / 자료 상태는 그 결론을 얼마나 조심해서 읽어야 하는지 알려주는 별도 근거로 낮춘다.
+- Analysis result:
+  - `brief_rows`는 movement / breadth / Futures-Macro 3행으로 되돌리고, Events / 자료 기준은 `brief_caveats`와 `브리프 신뢰도` UI로 분리한다. 이 영역은 시장 결론이 아니라 reading-strength modifier다.
+- Follow-up:
+  - Future UI polish should keep this split: refresh / source ledger can improve later, but `다음 맥락 체크` 또는 `맥락 검토 결과` action rail을 기본 화면에 다시 만들면 안 된다.
+
 ### 2026-06-20 - Market Context brief should absorb non-duplicative caveats
 - User request:
   - V3 `맥락 검토 결과`를 보니 P1/P2는 이미 오늘의 시장 브리프 / 시장 맥락과 중복되고, P3/P4만 브리프에 올리는 방향이 맞다고 지적함.

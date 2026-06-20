@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Brief Confidence V5
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-confidence-v5-20260620/` after user feedback that Events / data caveats inside `오늘의 시장 브리프` did not read like market brief conclusions.
+- Returned `오늘의 시장 브리프` to three core rows: movement, breadth, and Futures/Macro background.
+- Added a separate `브리프 신뢰도` section for Events / 자료 기준 so those rows adjust reading strength rather than becoming market conclusions.
+- Boundaries stayed unchanged: DB-backed snapshots only, no render-time provider fetch, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-20 - Overview Market Context Brief Findings Integration V4
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-brief-findings-integration-v4-20260620/` after user feedback that V3 `맥락 검토 결과` still repeated P1/P2 content already present in the main brief.
 - Moved Events / 자료 신뢰도 caveat into the `오늘의 시장 브리프` sequence and stopped rendering `context_findings` / `next_checks` as a default separate findings rail.

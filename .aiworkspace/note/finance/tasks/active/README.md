@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-brief-confidence-v5-20260620` | Completed record | `Overview > Market Context` V5 follow-up. `오늘의 시장 브리프`는 움직임 / 확산 / Futures-Macro 3행 market story로 유지하고, Events / 자료 기준은 별도 `브리프 신뢰도` 영역으로 분리했다. |
 | `overview-market-context-brief-findings-integration-v4-20260620` | Completed record | `Overview > Market Context` V4 follow-up. `맥락 검토 결과` rail의 P1/P2 중복을 제거하고 Events / 자료 신뢰도 caveat를 `오늘의 시장 브리프` 안으로 통합했다. |
 | `overview-market-context-context-findings-v3-20260620` | Completed record | `Overview > Market Context` V3 follow-up. `다음 맥락 체크` user action checklist를 `맥락 검토 결과`로 바꾸고, 가격 움직임 / Futures-Macro / Events / 자료 신뢰도 caveat를 결론, 해석 영향, 자료 기준으로 보여준다. |
 | `overview-market-context-futures-conditioned-analog-v3b-20260618` | Completed record | `Overview > Market Context` 3차-B. 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV 기반 Rate Pressure proxy (`ZN=F` / `ZB=F`) 조건 1개를 추가했다. FRED / events / sentiment / 새 provider / schema / loader는 열지 않았다. |
