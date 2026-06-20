@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Overview Market Context Context Findings V3
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-context-findings-v3-20260620/` after user feedback that `다음 맥락 체크` still told the user to inspect other tabs instead of producing conclusions.
+- Added `context_findings` to the Market Context cockpit read model and rendered `맥락 검토 결과` with conclusion / interpretation impact / evidence / freshness for price movement, Futures / Macro, Events, and Data Health caveat.
+- Kept boundaries unchanged: stored DB-backed snapshots only, Overview bounded refresh facade only, no provider fetch during render, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+- Verification details and Browser QA screenshot are in the task `RUNS.md`; generated screenshot is not staged.
+
 ### 2026-06-19 - Overview Market Context Macro Dimension Audit V3C
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-dimension-audit-v3c-20260619/` for the approved 3차-C Market Context historical analog follow-up.
 - Added `macro_dimension_audit` under `Macro 조건 포함 pilot` and rendered `맥락 차원 상태` so users can see actual conditions, stored FRED preview dimensions, and event / sentiment deferred context.

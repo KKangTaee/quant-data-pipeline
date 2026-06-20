@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-18
+Last Verified: 2026-06-20
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-context-findings-v3-20260620` | Completed record | `Overview > Market Context` V3 follow-up. `다음 맥락 체크` user action checklist를 `맥락 검토 결과`로 바꾸고, 가격 움직임 / Futures-Macro / Events / 자료 신뢰도 caveat를 결론, 해석 영향, 자료 기준으로 보여준다. |
 | `overview-market-context-futures-conditioned-analog-v3b-20260618` | Completed record | `Overview > Market Context` 3차-B. 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV 기반 Rate Pressure proxy (`ZN=F` / `ZB=F`) 조건 1개를 추가했다. FRED / events / sentiment / 새 provider / schema / loader는 열지 않았다. |
 | `overview-market-context-macro-conditioned-analog-pilot-v1-20260618` | Completed record | `Overview > Market Context` 3차-A. Historical analog broad 결과는 유지하면서 `Macro 조건 포함 pilot` 별도 영역을 추가했고, 추가 조건은 stored GLD price proxy context 1개만 사용했다. Futures / FRED rates / events / sentiment는 deferred / disabled / insufficient condition으로 표시한다. |
 | `overview-market-context-analog-asof-window-v2-20260618` | Completed record | `Overview > Market Context` 2차. Historical analog에 latest / 과거 기준 시점 replay와 5D / 20D / monthly pattern window controls를 추가했고, existing DB 기준 bounded replay와 full PIT replay 한계를 분리한 기록이다. |

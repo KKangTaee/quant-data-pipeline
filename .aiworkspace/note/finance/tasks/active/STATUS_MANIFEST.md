@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-brief-flow-redesign-v2-20260620`
+- `overview-market-context-context-findings-v3-20260620`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-context-findings-v3-20260620`: Overview Market Context `다음 맥락 체크` follow-up / user-facing action checklist를 `맥락 검토 결과`로 바꿔 Market Context가 이미 읽은 가격 움직임, Futures/Macro, Events, 자료 신뢰도 caveat의 결론 / 해석 영향 / 자료 기준을 보여주게 했다. `next_checks`는 compatibility payload로 남기되 user-facing action checklist로 쓰지 않는다.
 - `overview-market-context-brief-flow-redesign-v2-20260620`: Overview Market Context V1 UX 보정 follow-up / top brief rows를 cockpit 안의 `오늘의 시장 브리프` wide lane으로 흡수, `다음 맥락 체크`를 card grid에서 priority / observation / reason / action rail로 변경, historical / macro / source sections의 반복 card visual language 축소
 - `overview-market-context-brief-flow-redesign-v1-20260620`: Overview Market Context UX redesign / current brief flow split, historical analog controls inside analog flow, basis ledger, broad-vs-macro sample comparison, source ledger, and `필요 자료 보강` refresh assist
 - `overview-market-context-futures-conditioned-analog-v3b-20260618`: Overview Market Context Historical Analog 3차-B / 3차-A GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV Rate Pressure proxy (`ZN=F` / `ZB=F`) 1개 추가, selected as-of / anchor-date bounded condition, sample quality 유지

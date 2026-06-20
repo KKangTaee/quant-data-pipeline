@@ -744,7 +744,7 @@ def overview_ui_css() -> str:
   color: color-mix(in srgb, var(--ov-cue-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
   font-weight: var(--ov-mi-weight-label);
 }
-.ov-next-check-rail {
+.ov-context-finding-rail {
   display: grid;
   gap: 0;
   margin: 0;
@@ -752,9 +752,9 @@ def overview_ui_css() -> str:
   list-style: none;
   border-top: 1px solid var(--ov-mi-border-faint);
 }
-.ov-next-check-row {
+.ov-context-finding-row {
   display: grid;
-  grid-template-columns: minmax(4rem, 0.18fr) minmax(0, 0.95fr) minmax(0, 1.2fr) minmax(12rem, 0.8fr);
+  grid-template-columns: minmax(5rem, 0.22fr) minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(12rem, 0.8fr);
   gap: 0.86rem;
   align-items: start;
   min-width: 0;
@@ -762,13 +762,13 @@ def overview_ui_css() -> str:
   border-bottom: 1px solid var(--ov-mi-border-faint);
   background: transparent;
 }
-.ov-next-check-priority {
+.ov-context-finding-priority {
   color: var(--ov-check-tone, var(--ov-mi-color-neutral));
   font-size: 0.9rem;
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.2;
 }
-.ov-next-check-tab {
+.ov-context-finding-label {
   margin-top: 0.18rem;
   color: var(--ov-mi-color-text-muted);
   font-size: 0.78rem;
@@ -776,13 +776,13 @@ def overview_ui_css() -> str:
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
-.ov-next-check-kicker {
+.ov-context-finding-kicker {
   color: var(--ov-mi-color-text-muted);
   font-size: 0.76rem;
   font-weight: var(--ov-mi-weight-label);
   line-height: 1.18;
 }
-.ov-next-check-title {
+.ov-context-finding-conclusion {
   margin-top: 0.12rem;
   color: var(--ov-mi-color-text);
   font-size: 1rem;
@@ -790,19 +790,19 @@ def overview_ui_css() -> str:
   line-height: 1.22;
   overflow-wrap: anywhere;
 }
-.ov-next-check-detail,
-.ov-next-check-action,
-.ov-next-check-meta {
+.ov-context-finding-detail,
+.ov-context-finding-evidence,
+.ov-context-finding-meta {
   color: var(--ov-mi-color-text-subtle);
   font-size: 0.86rem;
   line-height: 1.36;
   overflow-wrap: anywhere;
 }
-.ov-next-check-action {
+.ov-context-finding-evidence {
   color: color-mix(in srgb, var(--ov-check-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
   font-weight: var(--ov-mi-weight-label);
 }
-.ov-next-check-meta {
+.ov-context-finding-meta {
   margin-top: 0.2rem;
   color: var(--ov-mi-color-text-muted);
   font-size: 0.78rem;
@@ -2684,7 +2684,7 @@ def overview_ui_css() -> str:
   .ov-macro-status-item,
   .ov-macro-cue-row,
   .ov-market-brief-row,
-  .ov-next-check-row,
+  .ov-context-finding-row,
   .ov-source-confidence-row,
   .ov-source-ledger-head,
   .ov-event-timeline-row {
@@ -2943,7 +2943,7 @@ def _macro_cockpit_row_meta_html(row: dict[str, Any]) -> str:
     status = _display_value(row.get("status_label") or _display_status_label(row.get("status")))
     return (
         '<div class="ov-macro-cockpit-row-meta">'
-        f"<span>확인 위치: {escape(target)}</span>"
+        f"<span>근거 화면: {escape(target)}</span>"
         f"<span>자료 기준: {escape(freshness)}</span>"
         f"<span>{escape(status)}</span>"
         "</div>"
@@ -3102,42 +3102,45 @@ def _macro_cockpit_next_checks_html(checks: list[dict[str, Any]]) -> str:
             or _display_status_label(check.get("status"))
         )
         source_area = _display_value(check.get("source_area"))
-        action = _display_value(check.get("action"))
+        evidence = _display_value(check.get("evidence") or check.get("reason") or check.get("detail"))
         freshness = _display_value(check.get("freshness"))
         meta_parts = []
         if source_area != "-":
             meta_parts.append(f"자료 영역: {source_area}")
         if freshness != "-":
             meta_parts.append(f"자료 기준: {freshness}")
+        repair_hint = _display_value(check.get("repair_hint"))
+        if repair_hint != "-":
+            meta_parts.append(f"보강: {repair_hint}")
         meta_html = " · ".join(meta_parts)
         html.append(
-            f'<li class="ov-next-check-row" style="--ov-check-tone:{tone_color};">'
+            f'<li class="ov-context-finding-row" style="--ov-check-tone:{tone_color};">'
             "<div>"
-            f'<div class="ov-next-check-priority">{escape(status_label)}</div>'
-            f'<div class="ov-next-check-tab">{escape(_display_value(check.get("target_tab") or check.get("label")))}</div>'
+            f'<div class="ov-context-finding-priority">{escape(status_label)}</div>'
+            f'<div class="ov-context-finding-label">{escape(_display_value(check.get("label") or check.get("target_tab")))}</div>'
             "</div>"
             "<div>"
-            '<div class="ov-next-check-kicker">관찰 지점</div>'
-            f'<div class="ov-next-check-title">{escape(_display_value(check.get("title") or check.get("value")))}</div>'
+            '<div class="ov-context-finding-kicker">결론</div>'
+            f'<div class="ov-context-finding-conclusion">{escape(_display_value(check.get("conclusion") or check.get("title") or check.get("value")))}</div>'
             "</div>"
             "<div>"
-            '<div class="ov-next-check-kicker">왜 중요한가</div>'
-            f'<div class="ov-next-check-detail">{escape(_display_value(check.get("reason") or check.get("detail")))}</div>'
+            '<div class="ov-context-finding-kicker">해석 영향</div>'
+            f'<div class="ov-context-finding-detail">{escape(_display_value(check.get("interpretation") or check.get("detail")))}</div>'
             "</div>"
             "<div>"
-            '<div class="ov-next-check-kicker">확인 위치</div>'
-            f'<div class="ov-next-check-action">{escape(action)}</div>'
-            f'<div class="ov-next-check-meta">{escape(meta_html)}</div>'
+            '<div class="ov-context-finding-kicker">자료 기준</div>'
+            f'<div class="ov-context-finding-evidence">{escape(evidence)}</div>'
+            f'<div class="ov-context-finding-meta">{escape(meta_html)}</div>'
             "</div>"
             "</li>"
         )
     return (
         '<section class="ov-macro-reading-section ov-macro-cues" style="--ov-reading-tone:var(--ov-mi-color-warning);">'
         '<div class="ov-macro-section-head">'
-        '<div class="ov-macro-section-title">다음 맥락 체크</div>'
-        '<div class="ov-macro-section-note">오늘 흐름을 단정하지 않고, 해석을 바꿀 수 있는 다음 관찰 지점만 표시합니다.</div>'
+        '<div class="ov-macro-section-title">맥락 검토 결과</div>'
+        '<div class="ov-macro-section-note">Market Context가 이미 읽은 보조 맥락의 결론입니다. 자료가 부족할 때만 보강 위치를 하단에 둡니다.</div>'
         "</div>"
-        f'<ol class="ov-next-check-rail">{"".join(html)}</ol>'
+        f'<ol class="ov-context-finding-rail">{"".join(html)}</ol>'
         "</section>"
     )
 
@@ -3775,7 +3778,8 @@ def _macro_context_reading_flow_html(
     include_source_confidence: bool = True,
 ) -> str:
     brief_rows_html = _macro_cockpit_brief_rows_html(list(model.get("brief_rows") or [])) if include_brief else ""
-    next_checks_html = _macro_cockpit_next_checks_html(list(model.get("next_checks") or [])) if include_next_checks else ""
+    context_findings = list(model.get("context_findings") or model.get("next_checks") or [])
+    next_checks_html = _macro_cockpit_next_checks_html(context_findings) if include_next_checks else ""
     historical_analog_html = (
         _macro_cockpit_historical_analog_html(dict(model.get("historical_analog") or {}))
         if include_historical_analog

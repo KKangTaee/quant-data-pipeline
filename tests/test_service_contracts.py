@@ -4565,17 +4565,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-macro-cue-row", css)
         self.assertIn(".ov-macro-cue-action", css)
 
-    def test_overview_market_context_next_checks_use_rail_without_card_left_rule(self) -> None:
+    def test_overview_market_context_findings_use_rail_without_card_left_rule(self) -> None:
         import re
 
         from app.web.overview_ui_components import overview_ui_css
 
         css = overview_ui_css()
-        scoped_match = re.search(r"\.ov-next-check-row \{(?P<body>.*?)\n\}", css, re.S)
-        self.assertIsNotNone(scoped_match, "Market Context next checks should render as rail rows.")
+        scoped_match = re.search(r"\.ov-context-finding-row \{(?P<body>.*?)\n\}", css, re.S)
+        self.assertIsNotNone(scoped_match, "Market Context findings should render as rail rows.")
         scoped_body = scoped_match.group("body") if scoped_match else ""
 
-        self.assertIn("grid-template-columns: minmax(4rem, 0.18fr)", scoped_body)
+        self.assertIn("grid-template-columns: minmax(5rem, 0.22fr)", scoped_body)
         self.assertIn("padding: 0.72rem 0;", scoped_body)
         self.assertNotIn("border-left", scoped_body)
         self.assertNotIn("min-height", scoped_body)
@@ -4684,11 +4684,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn(".ov-macro-cues-list", css)
-        self.assertIn(".ov-next-check-rail", css)
+        self.assertIn(".ov-context-finding-rail", css)
         self.assertIn(".ov-analog-basis-ledger", css)
         self.assertIn(".ov-source-ledger", css)
-        self.assertIn("ov-next-check-rail", cue_html)
-        self.assertIn("ov-next-check-row", cue_html)
+        self.assertIn("ov-context-finding-rail", cue_html)
+        self.assertIn("ov-context-finding-row", cue_html)
         self.assertIn("ov-historical-analog-row", analog_html)
         self.assertIn("ov-historical-analog-scope", analog_html)
         self.assertIn("과거 유사 맥락 계산에만 적용", analog_html)
@@ -4698,7 +4698,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("ov-source-confidence-card", source_html)
         self.assertNotIn("ov-historical-analog-empty", analog_html)
 
-    def test_overview_market_context_v2_uses_wide_brief_lane_and_next_check_rail(self) -> None:
+    def test_overview_market_context_uses_wide_brief_lane_and_context_finding_rail(self) -> None:
         from app.web import overview_ui_components
 
         model = {
@@ -4728,22 +4728,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
                     "tone": "positive",
                 },
             ],
-            "next_checks": [
+            "context_findings": [
                 {
-                    "target_tab": "Events",
-                    "title": "추정 일정 확인",
-                    "reason": "추정 일정 중 검증/신선도 확인이 필요합니다.",
-                    "action": "Events에서 earnings estimate의 cross-check를 확인하세요.",
+                    "label": "Events",
+                    "conclusion": "추정 일정 71개는 검증/신선도 제한이 있어 확정 일정처럼 읽으면 안 됩니다.",
+                    "interpretation": "오늘 브리프의 이벤트 배경은 caveat로만 둡니다.",
+                    "evidence": "96개 추정 일정 · 71개 제한",
                     "source_area": "Events · Earnings estimates",
                     "freshness": "2026-06-15",
                     "priority": "P1",
                     "tone": "warning",
                 },
                 {
-                    "target_tab": "Futures Monitor",
-                    "title": "Futures 배경 확인",
-                    "reason": "가격 움직임과 금리 압력이 같은 방향인지 확인합니다.",
-                    "action": "Futures Monitor에서 risk-on, 금리 압력 근거를 확인하세요.",
+                    "label": "Futures / 금리 압력",
+                    "conclusion": "선물 맥락은 risk-on 흐름과 금리 압력이 같이 보입니다.",
+                    "interpretation": "주식 강세를 단순 위험선호로만 읽기 어렵습니다.",
+                    "evidence": "Risk-on with rate pressure",
                     "source_area": "Futures Macro Thermometer",
                     "freshness": "2026-06-15",
                     "priority": "P2",
@@ -4767,11 +4767,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("오늘의 시장 브리프", cockpit_html)
         self.assertIn("무엇이 움직였나", cockpit_html)
         self.assertNotIn("ov-macro-reading-section ov-macro-brief", cockpit_html)
-        self.assertIn("ov-next-check-rail", next_html)
-        self.assertIn("ov-next-check-row", next_html)
-        self.assertIn("관찰 지점", next_html)
-        self.assertIn("왜 중요한가", next_html)
-        self.assertIn("확인 위치", next_html)
+        self.assertIn("ov-context-finding-rail", next_html)
+        self.assertIn("ov-context-finding-row", next_html)
+        self.assertIn("맥락 검토 결과", next_html)
+        self.assertIn("결론", next_html)
+        self.assertIn("해석 영향", next_html)
+        self.assertIn("자료 기준", next_html)
+        self.assertNotIn("관찰 지점", next_html)
+        self.assertNotIn("확인 위치", next_html)
+        self.assertNotIn("확인하세요", next_html)
         self.assertNotIn("ov-macro-cues-list", next_html)
         self.assertNotIn("ov-macro-cue-row", next_html)
 
@@ -4783,8 +4787,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         css = overview_ui_css()
         reading_section = re.search(r"\.ov-macro-reading-section \{(?P<body>.*?)\n\}", css, re.S)
         macro_comparison = re.search(r"\.ov-macro-comparison \{(?P<body>.*?)\n\}", css, re.S)
-        next_check_rail = re.search(r"\.ov-next-check-rail \{(?P<body>.*?)\n\}", css, re.S)
-        next_check_row = re.search(r"\.ov-next-check-row \{(?P<body>.*?)\n\}", css, re.S)
+        next_check_rail = re.search(r"\.ov-context-finding-rail \{(?P<body>.*?)\n\}", css, re.S)
+        next_check_row = re.search(r"\.ov-context-finding-row \{(?P<body>.*?)\n\}", css, re.S)
 
         self.assertIsNotNone(reading_section)
         self.assertIsNotNone(macro_comparison)
@@ -4799,7 +4803,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("background: transparent", reading_body)
         self.assertNotIn("border-left", reading_body)
         self.assertIn("display: grid", rail_body)
-        self.assertIn("grid-template-columns: minmax(4rem, 0.18fr) minmax(0, 0.95fr) minmax(0, 1.2fr) minmax(12rem, 0.8fr)", row_body)
+        self.assertIn("grid-template-columns: minmax(5rem, 0.22fr) minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(12rem, 0.8fr)", row_body)
         self.assertNotIn("min-height", row_body)
         self.assertNotIn("repeat(3", rail_body)
         self.assertIn("background: transparent", macro_body)
@@ -4827,7 +4831,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                         "freshness": "Update due",
                         "owner": "Data Health",
                         "caveat": "context only",
-                        "next_check": "Market Movers에서 기준일을 확인합니다.",
+                        "next_check": "Market Movers 기준일과 누락 상태가 가격 맥락의 신뢰도 caveat입니다.",
                     },
                     {
                         "surface": "Events",
@@ -4837,7 +4841,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                         "freshness": "Fresh",
                         "owner": "Events",
                         "caveat": "estimate caveat",
-                        "next_check": "Events에서 source type을 확인합니다.",
+                        "next_check": "Events source type이 이벤트 자료의 caveat입니다.",
                     },
                 ],
                 "boundary_note": "context only",
@@ -4849,7 +4853,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("확인 2", source_html)
         self.assertIn("부족 1", source_html)
         self.assertIn("Prices", source_html)
-        self.assertIn("Market Movers에서 기준일", source_html)
+        self.assertIn("가격 맥락의 신뢰도 caveat", source_html)
 
     def test_overview_source_confidence_uses_ledger_language_without_review_gate_copy(self) -> None:
         from app.web import overview_ui_components
@@ -5073,12 +5077,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "interpretation_cues": [
                 {"label": "구형 해석 cue", "value": "렌더링 대상 아님", "detail": "legacy", "tone": "warning"},
             ],
-            "next_checks": [
+            "context_findings": [
                 {
-                    "target_tab": "Events",
-                    "title": "가까운 주요 이벤트 확인",
-                    "reason": "FOMC 일정이 시장 해석을 바꿀 수 있습니다.",
-                    "action": "Events에서 official source를 확인하세요.",
+                    "label": "Events",
+                    "conclusion": "FOMC 일정이 시장 해석을 바꿀 수 있는 가까운 event입니다.",
+                    "interpretation": "이벤트는 오늘 브리프의 배경 변수로만 둡니다.",
+                    "evidence": "Official macro · 2026-06-15",
                     "source_area": "Events · Official macro",
                     "freshness": "2026-06-15",
                     "priority": "P1",
@@ -5117,9 +5121,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("구형 해석 cue", reading_html)
         self.assertNotIn("ov-macro-reading-section ov-macro-brief", reading_html)
         self.assertIn("ov-macro-reading-section ov-macro-cues", reading_html)
-        self.assertIn("ov-next-check-rail", reading_html)
-        self.assertIn("가까운 주요 이벤트 확인", reading_html)
-        self.assertIn("Events에서 official source를 확인하세요.", reading_html)
+        self.assertIn("ov-context-finding-rail", reading_html)
+        self.assertIn("맥락 검토 결과", reading_html)
+        self.assertIn("FOMC 일정이 시장 해석을 바꿀 수 있는 가까운 event입니다.", reading_html)
+        self.assertNotIn("Events에서 official source를 확인하세요.", reading_html)
+        self.assertNotIn("확인 위치", reading_html)
         self.assertIn("ov-macro-reading-section ov-historical-analog-row", reading_html)
         self.assertIn("ov-macro-reading-section ov-source-confidence", reading_html)
 
@@ -5148,22 +5154,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "interpretation_cues": [
                 {"label": "구형 해석 cue", "value": "렌더링 대상 아님", "detail": "legacy", "tone": "warning"},
             ],
-            "next_checks": [
+            "context_findings": [
                 {
-                    "target_tab": "Events",
-                    "title": "추정 일정 확인",
-                    "reason": "추정 일정 중 검증/신선도 확인이 필요합니다.",
-                    "action": "Events에서 earnings estimate의 cross-check를 확인하세요.",
+                    "label": "Events",
+                    "conclusion": "추정 일정 중 검증/신선도 제한이 있어 확정 일정처럼 읽으면 안 됩니다.",
+                    "interpretation": "오늘 브리프의 이벤트 배경은 caveat로만 둡니다.",
+                    "evidence": "Events · Earnings estimates",
                     "source_area": "Events · Earnings estimates",
                     "freshness": "2026-06-15",
                     "priority": "P1",
                     "tone": "warning",
                 },
                 {
-                    "target_tab": "Futures Monitor",
-                    "title": "Futures 배경 확인",
-                    "reason": "가격 움직임과 금리 압력이 같은 방향인지 확인합니다.",
-                    "action": "Futures Monitor에서 risk-on, 금리 압력 근거를 확인하세요.",
+                    "label": "Futures / 금리 압력",
+                    "conclusion": "선물 맥락은 risk-on 흐름과 금리 압력이 같이 보입니다.",
+                    "interpretation": "주식 강세를 단순 위험선호로만 읽기 어렵습니다.",
+                    "evidence": "Futures Macro Thermometer",
                     "source_area": "Futures Macro Thermometer",
                     "freshness": "2026-06-15",
                     "priority": "P2",
@@ -5187,10 +5193,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         html = overview_ui_components._macro_context_cockpit_html(model)
 
-        self.assertIn("다음 맥락 체크", html)
-        self.assertIn("오늘 흐름을 단정하지 않고", html)
-        self.assertIn("추정 일정 확인", html)
-        self.assertIn("Events에서 earnings estimate", html)
+        self.assertIn("맥락 검토 결과", html)
+        self.assertIn("Market Context가 이미 읽은 보조 맥락", html)
+        self.assertIn("추정 일정 중 검증/신선도 제한", html)
+        self.assertIn("해석 영향", html)
+        self.assertNotIn("다음 맥락 체크", html)
+        self.assertNotIn("확인 위치", html)
+        self.assertNotIn("확인하세요", html)
         self.assertNotIn("구형 해석 cue", html)
         self.assertIn("참고: 과거 유사 맥락", html)
         self.assertIn("근거: 자료 기준 / 출처 상태", html)
@@ -5256,13 +5265,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
         self.assertIn("시장 브리프", component_source)
-        self.assertIn("다음 맥락 체크", component_source)
+        self.assertIn("맥락 검토 결과", component_source)
         self.assertIn("자료 영역", component_source)
         self.assertIn("보강 위치", component_source)
         self.assertNotIn("핵심 요약", component_source)
         self.assertNotIn("해석 전 확인", component_source)
         self.assertNotIn("해석할 때 같이 볼 변수", component_source)
         self.assertNotIn("다음 확인 순서", component_source)
+        self.assertNotIn("확인 위치", component_source)
         self.assertNotIn("Overview Macro Context", component_source)
         self.assertNotIn("다음에 볼 Deep Tab", component_source)
         self.assertNotIn("Source Confidence / 출처 신뢰도", component_source)
@@ -7973,7 +7983,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["summary"]["review_count"], 4)
         self.assertEqual(model["items"][0]["id"], "prices")
         self.assertEqual(model["items"][0]["status"], "REVIEW")
-        self.assertIn("Market Movers에서 수익률 기준일", model["items"][0]["next_check"])
+        self.assertIn("가격 맥락의 신뢰도 caveat", model["items"][0]["next_check"])
         self.assertEqual(model["items"][2]["id"], "futures")
         self.assertIn("무료 선물 provider", model["items"][2]["caveat"])
         self.assertEqual(model["items"][3]["id"], "sentiment")
@@ -8795,7 +8805,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("확인할 자료 4개", cockpit["summary"]["detail"])
         self.assertEqual(cockpit["summary"]["review_count"], 4)
         self.assertEqual(cockpit["summary"]["data_review_count"], 4)
-        self.assertEqual(cockpit["summary"]["next_path"], "Data Health → Events → Futures Monitor → Market Movers")
+        self.assertEqual(cockpit["summary"]["next_path"], "가격 움직임 → Futures / Macro → Events → 자료 신뢰도")
         self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
         self.assertEqual(cockpit["summary"]["rail"][0]["value"], "일부 자료 확인 필요")
         self.assertEqual(
@@ -8817,13 +8827,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["cards"][3]["value"], "혼합 중립")
         self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
         self.assertEqual(cockpit["cards"][5]["value"], "일부 자료 확인 필요")
-        self.assertEqual(cockpit["next_checks"][0]["target_tab"], "Data Health")
-        self.assertIn("source_area", cockpit["next_checks"][0])
-        self.assertIn("action", cockpit["next_checks"][0])
-        self.assertIn("freshness", cockpit["next_checks"][0])
-        self.assertIn("priority", cockpit["next_checks"][0])
-        self.assertEqual(cockpit["next_checks"][1]["target_tab"], "Events")
-        self.assertNotEqual(cockpit["next_checks"][2]["reason"], cockpit["brief_rows"][2]["value"])
+        self.assertEqual([item["id"] for item in cockpit["context_findings"]], ["market_movers", "futures", "events", "data_health"])
+        self.assertIn("source_area", cockpit["context_findings"][0])
+        self.assertIn("conclusion", cockpit["context_findings"][0])
+        self.assertIn("interpretation", cockpit["context_findings"][0])
+        self.assertIn("evidence", cockpit["context_findings"][0])
+        self.assertIn("freshness", cockpit["context_findings"][0])
+        self.assertIn("priority", cockpit["context_findings"][0])
+        self.assertEqual(cockpit["context_findings"][2]["label"], "Events")
+        self.assertNotIn("확인하세요", " ".join(str(item) for item in cockpit["context_findings"]))
         self.assertEqual(cockpit["data_health_handoff"]["schema_version"], "overview_data_health_ingestion_handoff_v1")
         self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
         self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
@@ -8933,9 +8945,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["interpretation_cues"][0]["label"], "이벤트 압력")
         self.assertEqual(cockpit["interpretation_cues"][2]["label"], "매크로 확인")
         self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
-        self.assertEqual(cockpit["next_checks"][1]["target_tab"], "Events")
-        self.assertEqual(cockpit["next_checks"][1]["title"], "가까운 주요 이벤트 확인")
-        self.assertIn("Events", cockpit["next_checks"][1]["source_area"])
+        event_findings = [item for item in cockpit["context_findings"] if item["id"] == "events"]
+        self.assertEqual(len(event_findings), 1)
+        self.assertEqual(event_findings[0]["label"], "Events")
+        self.assertIn("가까운 event", event_findings[0]["conclusion"])
+        self.assertIn("Events", event_findings[0]["source_area"])
+        self.assertNotIn("확인하세요", event_findings[0]["conclusion"])
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit

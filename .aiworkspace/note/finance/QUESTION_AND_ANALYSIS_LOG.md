@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-20 - Market Context should report checked conclusions, not assign checks to the user
+- User request:
+  - `다음 맥락 체크`가 Futures / Events / Market Movers를 사용자가 직접 확인하라는 guide처럼 보이며, Market Context가 이미 읽고 결론을 도출해야 한다고 지적함.
+- Interpreted goal:
+  - Market Context lower flow should become a findings rail: what was checked, what conclusion came out, how it changes interpretation, and what data caveat remains.
+- Analysis result:
+  - The old `next_checks` contract encoded `target_tab / reason / action`, so UI copy naturally became imperative. A new `context_findings` payload with `conclusion / interpretation / evidence / freshness` is the correct user-facing contract; `next_checks` can remain compatibility-only.
+- Follow-up:
+  - Future UI work can further reduce generic card surfaces, but this change keeps the existing DB-backed Overview boundary and does not add provider fetch, storage, validation, monitoring, or trading semantics.
+
 ### 2026-06-19 - Macro dimension audit closes 3차-C without hard FRED/event/sentiment conditioning
 - User request:
   - Overview > Market Context historical analog 3차-C 개발 진행을 승인하고, macro dimension availability + regime preview + deferred reason을 추가하되 event / sentiment를 hard condition으로 쓰지 말라고 요청함.

@@ -1811,7 +1811,7 @@ def _overview_market_context_refresh_reflection_state(
         label = "갱신이 실행되지 않았습니다"
         detail = f"기존 자료를 계속 표시합니다 · {reflected_at_text}"
     else:
-        label = "갱신 상태를 확인하세요"
+        label = "갱신 상태 보기"
         detail = f"기존 자료를 기준으로 표시 중입니다 · {reflected_at_text}"
 
     if status == "partial_success" and jobs_failed:
@@ -1926,26 +1926,45 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
 
 
 def _overview_market_context_refresh_expander_label(cockpit_model: dict[str, Any]) -> str:
-    checks = [dict(item or {}) for item in list(cockpit_model.get("next_checks") or []) if isinstance(item, dict)]
+    checks = [
+        dict(item or {})
+        for item in list(cockpit_model.get("context_findings") or cockpit_model.get("next_checks") or [])
+        if isinstance(item, dict)
+    ]
     if not checks:
         return "필요 자료 보강"
-    top = checks[0]
-    source = str(top.get("source_area") or top.get("title") or top.get("target_tab") or "자료 상태").strip()
+    review_checks = [
+        check
+        for check in checks
+        if str(check.get("status") or "").upper() not in {"OK", "SUCCESS", "ACTUAL"}
+        or str(check.get("repair_hint") or "").strip()
+    ]
+    top = review_checks[0] if review_checks else checks[0]
+    source = str(top.get("source_area") or top.get("label") or top.get("title") or "자료 상태").strip()
     return f"필요 자료 보강 · {source}"
 
 
 def _render_overview_market_context_refresh_action_hints(cockpit_model: dict[str, Any]) -> None:
-    checks = [dict(item or {}) for item in list(cockpit_model.get("next_checks") or []) if isinstance(item, dict)]
+    checks = [
+        dict(item or {})
+        for item in list(cockpit_model.get("context_findings") or cockpit_model.get("next_checks") or [])
+        if isinstance(item, dict)
+    ]
+    checks = [
+        check
+        for check in checks
+        if str(check.get("status") or "").upper() not in {"OK", "SUCCESS", "ACTUAL"}
+        or str(check.get("repair_hint") or "").strip()
+    ]
     if not checks:
         st.caption("오래됐거나 부족한 자료가 있을 때만 기존 Overview 수집 작업을 실행합니다.")
         return
-    st.caption("아래 항목은 화면 해석에 영향을 줄 수 있는 자료 보강 후보입니다.")
+    st.caption("아래 항목은 현재 브리프의 신뢰도를 낮출 수 있는 자료 보강 후보입니다.")
     for check in checks[:3]:
-        source = str(check.get("source_area") or check.get("title") or "-")
-        target = str(check.get("target_tab") or "-")
-        reason = str(check.get("reason") or "-")
-        action = str(check.get("action") or "-")
-        st.caption(f"{source} · {target}: {reason} → {action}")
+        source = str(check.get("source_area") or check.get("label") or "-")
+        conclusion = str(check.get("conclusion") or check.get("reason") or "-")
+        repair_hint = str(check.get("repair_hint") or "필요하면 기존 Overview 갱신 경로로 보강합니다.")
+        st.caption(f"{source}: {conclusion} · {repair_hint}")
 
 
 def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -> None:
@@ -2034,7 +2053,7 @@ def _overview_historical_analog_control_state() -> dict[str, str | None]:
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락")
     st.caption(
-        "상단에서 오늘의 시장 브리프를 먼저 읽고, 이어서 해석을 바꿀 수 있는 관찰 지점과 과거 참고 통계를 확인합니다."
+        "상단에서 오늘의 시장 브리프를 먼저 읽고, 이어서 Market Context가 검토한 보조 맥락 결론과 과거 참고 통계를 봅니다."
     )
     _render_overview_market_context_refresh_reflection()
     initial_analog_controls = _overview_historical_analog_control_state()
@@ -4163,7 +4182,7 @@ def _render_market_mover_metadata_lane(
     st.caption(caption)
     display = _market_mover_open_link_frame(frame, columns)
     if failed:
-        st.error(f"{title} 조회가 실패했습니다. 상태 메시지를 확인하세요.")
+        st.error(f"{title} 조회가 실패했습니다. 상태 메시지를 참고하세요.")
     if not display.empty:
         st.dataframe(
             display,
