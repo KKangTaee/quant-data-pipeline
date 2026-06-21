@@ -3836,14 +3836,116 @@ def _overview_breadth_row_tone(row: dict[str, Any]) -> str:
     return "neutral"
 
 
+_OVERVIEW_SECTOR_DISPLAY_ALIASES = {
+    "communication services": "Communication Services",
+    "communications": "Communication Services",
+    "consumer cyclical": "Consumer Cyclical",
+    "consumer discretionary": "Consumer Cyclical",
+    "consumer defensive": "Consumer Defensive",
+    "consumer staples": "Consumer Defensive",
+    "energy": "Energy",
+    "financials": "Financial Services",
+    "financial services": "Financial Services",
+    "finance": "Financial Services",
+    "healthcare": "Healthcare",
+    "health care": "Healthcare",
+    "industrials": "Industrials",
+    "industrial": "Industrials",
+    "basic materials": "Basic Materials",
+    "materials": "Basic Materials",
+    "real estate": "Real Estate",
+    "realestate": "Real Estate",
+    "technology": "Technology",
+    "information technology": "Technology",
+    "tech": "Technology",
+    "utilities": "Utilities",
+    "utility": "Utilities",
+}
+
+
+def _overview_normalized_label(value: Any) -> str:
+    text = str(value or "").strip().lower().replace("&", " and ")
+    normalized = "".join(char if char.isalnum() else " " for char in text)
+    return " ".join(normalized.split())
+
+
+def _overview_sector_display_label(value: Any) -> str:
+    raw = str(value or "").strip() or "-"
+    return _OVERVIEW_SECTOR_DISPLAY_ALIASES.get(_overview_normalized_label(raw), raw)
+
+
+def _weighted_average(values: list[tuple[float | None, float]]) -> float | None:
+    usable = [(float(value), float(weight)) for value, weight in values if value is not None and float(weight) > 0]
+    if not usable:
+        return None
+    weight_sum = sum(weight for _, weight in usable)
+    if weight_sum <= 0:
+        return None
+    return sum(value * weight for value, weight in usable) / weight_sum
+
+
+def _canonical_sector_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    if rows.empty or "Group" not in rows:
+        return rows
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    changed = False
+    for _, row_value in rows.iterrows():
+        row = dict(row_value.dropna().to_dict())
+        original = str(row.get("Group") or "").strip()
+        label = _overview_sector_display_label(row.get("Group"))
+        changed = changed or bool(original and label != original)
+        grouped.setdefault(label, []).append(row)
+
+    if len(grouped) == len(rows) and not changed:
+        return rows
+
+    merged_rows: list[dict[str, Any]] = []
+    for label, group_rows in grouped.items():
+        symbols = sum(_cockpit_int(row.get("Symbols")) for row in group_rows)
+        positive_symbols = sum(_cockpit_int(row.get("Positive Symbols")) for row in group_rows)
+        weights = [float(_cockpit_int(row.get("Symbols")) or 1) for row in group_rows]
+        weighted_return = _weighted_average(
+            [(_safe_float(row.get("Market Cap Weighted Return %")), weights[index]) for index, row in enumerate(group_rows)]
+        )
+        equal_return = _weighted_average(
+            [(_safe_float(row.get("Equal Weight Return %")), weights[index]) for index, row in enumerate(group_rows)]
+        )
+        top_share = _weighted_average(
+            [(_safe_float(row.get("Top 3 Positive Share %")), weights[index]) for index, row in enumerate(group_rows)]
+        )
+        top_row = max(group_rows, key=lambda row: _safe_float(row.get("Top Symbol Return %")) or float("-inf"))
+        merged_rows.append(
+            {
+                **group_rows[0],
+                "Group": label,
+                "Symbols": symbols or None,
+                "Positive Symbols": positive_symbols or None,
+                "Positive Symbol Share %": (positive_symbols / symbols * 100.0) if symbols else None,
+                "Market Cap Weighted Return %": weighted_return,
+                "Equal Weight Return %": equal_return,
+                "Top 3 Positive Share %": top_share,
+                "Top Symbol": top_row.get("Top Symbol"),
+                "Top Symbol Return %": top_row.get("Top Symbol Return %"),
+            }
+        )
+
+    merged = pd.DataFrame(merged_rows)
+    if "Market Cap Weighted Return %" in merged:
+        merged = merged.sort_values("Market Cap Weighted Return %", ascending=False, na_position="last", kind="mergesort")
+    merged = merged.reset_index(drop=True)
+    merged["Rank"] = range(1, len(merged) + 1)
+    return merged
+
+
 def build_overview_breadth_heatmap_summary(
     group_leadership_snapshot: dict[str, Any] | None = None,
     *,
-    limit: int = 10,
+    limit: int | None = None,
 ) -> dict[str, Any]:
     """Compress an existing group leadership snapshot into a context-only breadth heatmap summary."""
     snapshot = group_leadership_snapshot or {}
-    rows = _cockpit_frame(snapshot)
+    rows = _canonical_sector_rows(_cockpit_frame(snapshot))
     coverage = dict(snapshot.get("coverage") or {})
     date_window = dict(snapshot.get("date_window") or {})
     if rows.empty:
@@ -3887,7 +3989,8 @@ def build_overview_breadth_heatmap_summary(
     concentration_label = _overview_breadth_concentration_label(top_share, cap_equal_gap)
 
     heatmap_rows: list[dict[str, Any]] = []
-    for fallback_rank, (_, row_value) in enumerate(rows.head(max(1, int(limit or 10))).iterrows(), start=1):
+    visible_rows = rows if limit is None else rows.head(max(1, int(limit or 10)))
+    for fallback_rank, (_, row_value) in enumerate(visible_rows.iterrows(), start=1):
         row = dict(row_value.dropna().to_dict())
         heatmap_rows.append(
             {
@@ -5842,7 +5945,7 @@ def build_overview_macro_context_cockpit(
         for item in list(refresh_plan.get("items") or [])
         if str(item.get("source_area") or item.get("label") or "").strip()
     ) or ("참고 제한 분리" if reference_limit_count else "추가 보조 맥락 없음")
-    sector_pressure = build_overview_breadth_heatmap_summary(group_leadership_snapshot, limit=8)
+    sector_pressure = build_overview_breadth_heatmap_summary(group_leadership_snapshot)
     event_timeline = build_overview_macro_week_lane(events_snapshot, horizon_days=14, limit=6)
     summary_headline, summary_detail = _build_cockpit_summary_copy(
         cards,

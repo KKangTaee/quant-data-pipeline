@@ -4637,6 +4637,40 @@ class OverviewAutomationContractTests(unittest.TestCase):
             helper_body.index("render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)"),
         )
 
+    def test_overview_market_context_historical_analog_can_reuse_visible_sector_snapshot(self) -> None:
+        from app.web import overview_dashboard_helpers
+
+        visible_snapshot = {
+            "status": "OK",
+            "rows": pd.DataFrame(
+                [
+                    {"Rank": 1, "Group": "Consumer Cyclical", "Market Cap Weighted Return %": 3.4},
+                    {"Rank": 2, "Group": "Basic Materials", "Market Cap Weighted Return %": 1.1},
+                ]
+            ),
+        }
+        captured: dict[str, object] = {}
+
+        def fake_loader(**kwargs):
+            raise AssertionError(f"historical analog should not reload sector leadership: {kwargs}")
+
+        def fake_builder(**kwargs):
+            captured.update(kwargs)
+            return {"status": "OK", "leadership_sector": "Consumer Cyclical", "proxy_etf": "XLY"}
+
+        with patch.object(overview_dashboard_helpers, "load_overview_group_leadership_snapshot", side_effect=fake_loader):
+            with patch.object(overview_dashboard_helpers, "build_historical_analog_snapshot", side_effect=fake_builder):
+                result = overview_dashboard_helpers.load_overview_market_context_historical_analog(
+                    as_of_date=None,
+                    pattern_window="20D",
+                    events_snapshot={"status": "OK"},
+                    group_leadership_snapshot=visible_snapshot,
+                )
+
+        self.assertEqual(result["proxy_etf"], "XLY")
+        self.assertIs(captured["group_leadership_snapshot"], visible_snapshot)
+        self.assertEqual(captured["pattern_window"], "20D")
+
     def test_overview_market_context_uses_cardless_brief_layout_contract(self) -> None:
         from app.web import overview_ui_components
 
@@ -7879,6 +7913,53 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["heatmap_rows"][0]["tone"], "positive")
         self.assertIn("not a trading action", model["boundary_note"])
 
+    def test_overview_breadth_heatmap_summary_keeps_full_canonical_sector_map(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+        from app.web.overview_ui_components import _sector_pressure_map_html
+
+        sector_names = [
+            "Communication Services",
+            "Consumer Cyclical",
+            "Consumer Defensive",
+            "Energy",
+            "Financials",
+            "Financial Services",
+            "Healthcare",
+            "Industrials",
+            "Basic Materials",
+            "Real Estate",
+            "Technology",
+            "Utilities",
+        ]
+        rows = pd.DataFrame(
+            [
+                {
+                    "Rank": index,
+                    "Group": sector,
+                    "Symbols": 20,
+                    "Positive Symbols": 12,
+                    "Positive Symbol Share %": 60.0,
+                    "Market Cap Weighted Return %": 3.0 - (index * 0.1),
+                    "Equal Weight Return %": 2.0 - (index * 0.05),
+                    "Top 3 Positive Share %": 25.0,
+                    "Top Symbol": f"S{index}",
+                    "Top Symbol Return %": 4.0,
+                }
+                for index, sector in enumerate(sector_names, start=1)
+            ]
+        )
+
+        model = build_overview_breadth_heatmap_summary({"status": "OK", "coverage": {}, "rows": rows}, limit=None)
+        groups = [row["group"] for row in model["heatmap_rows"]]
+        html = _sector_pressure_map_html(model)
+
+        self.assertEqual(len(groups), 11)
+        self.assertEqual(len(set(groups)), 11)
+        self.assertIn("Consumer Cyclical", groups)
+        self.assertIn("Financial Services", groups)
+        self.assertNotIn("Financials", groups)
+        self.assertEqual(html.count("ov-sector-pressure-tile"), 11)
+
     def test_overview_macro_week_lane_clusters_near_events_without_signal_language(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_week_lane
 
@@ -10238,7 +10319,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
 
         self.assertIn("선택한 기준 시점의 리더십 섹터", html)
         self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
-        self.assertIn("먼저 읽을 결론", html)
+        self.assertIn("유사 맥락 계산", html)
         self.assertIn("ov-analog-summary-strip", html)
         self.assertIn("ov-analog-basis-bar", html)
         self.assertIn("ov-analog-basis-summary", html)
@@ -10247,8 +10328,9 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertNotIn("ov-analog-method-grid", html)
         self.assertNotIn("현재 기준", html)
         self.assertNotIn("표본 품질", html)
-        self.assertIn("먼저 볼 점", html)
-        self.assertIn("주의할 점", html)
+        self.assertNotIn("먼저 볼 점", html)
+        self.assertNotIn("주의할 점", html)
+        self.assertNotIn("먼저 읽을 결론", html)
         self.assertIn("기준 변경은 아래 과거 참고 통계에만 적용", html)
         self.assertNotIn("ov-analog-basis-ledger", html)
         self.assertIn("상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준", html)
@@ -10267,9 +10349,9 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("+3.3%", html)
         self.assertIn("상승 비율", html)
         self.assertIn("최악", html)
-        self.assertIn("미래 움직임 보장이 아닙니다", html)
+        self.assertIn("미래 움직임 보장이 아님", html)
         self.assertIn("핵심 자산 비교", html)
-        self.assertIn("시장 배경 요약", html)
+        self.assertNotIn("시장 배경 요약", html)
         self.assertIn("상세 통계", html)
         self.assertLessEqual(html.count("29회"), 1)
 
@@ -10281,12 +10363,11 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertLess(summary_index, matrix_index)
         self.assertLess(matrix_index, table_index)
 
-        primary_block = html[html.index("핵심 자산 비교") : html.index("시장 배경 요약")]
-        support_block = html[html.index("시장 배경 요약") :]
+        primary_block = html[html.index("핵심 자산 비교") : html.index("상세 통계")]
         self.assertIn("XLK · 20D", primary_block)
         self.assertIn("SPY · 20D", primary_block)
         self.assertIn("QQQ · 20D", primary_block)
-        self.assertIn("TLT · 20D", support_block)
+        self.assertIn("TLT · 20D", primary_block)
 
     def test_historical_analog_html_prioritizes_matrix_and_collapses_stat_tables(self) -> None:
         from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
@@ -10334,7 +10415,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("5D", html)
         self.assertIn("20D", html)
         self.assertIn("60D", html)
-        self.assertIn("시장 배경 요약", html)
+        self.assertNotIn("시장 배경 요약", html)
         self.assertIn("TLT", html)
         self.assertIn("GLD", html)
         self.assertIn("ov-analog-detail-tables", html)
@@ -10378,6 +10459,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("TLT", html)
         self.assertIn("140 / 756", html)
         self.assertIn("아래 자료 수집 버튼", html)
+        self.assertNotIn("Macro 조건 비교", html)
         self.assertNotIn("자료가 충분한 sector ETF history가 쌓이면", html)
 
     def test_historical_analog_html_renders_macro_conditioned_pilot_as_separate_context(self) -> None:
@@ -10448,23 +10530,23 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         )
 
         self.assertIn("참고: 과거 유사 맥락", html)
-        self.assertIn("Macro 조건 포함 비교", html)
+        self.assertIn("Macro 조건 비교", html)
         self.assertIn("ov-macro-compare-section", html)
         self.assertIn("ov-macro-compare-lanes", html)
-        self.assertIn("ov-macro-funnel-track", html)
-        self.assertIn("Broad vs Macro 조건 포함", html)
-        self.assertIn("표본 흐름", html)
-        self.assertIn("Broad sample", html)
-        self.assertIn("Macro 조건 sample", html)
-        self.assertIn("실제로 반영한 조건", html)
-        self.assertIn("자료 부족으로 적용 못 한 조건", html)
-        self.assertIn("이번 차수 제외", html)
+        self.assertNotIn("ov-macro-funnel-track", html)
+        self.assertNotIn("Broad vs Macro 조건 포함", html)
+        self.assertNotIn("표본 흐름", html)
+        self.assertNotIn("Broad sample", html)
+        self.assertNotIn("Macro 조건 sample", html)
+        self.assertNotIn("실제로 반영한 조건", html)
+        self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
+        self.assertNotIn("이번 차수 제외", html)
         self.assertIn("GLD price proxy", html)
         self.assertIn("Rate Pressure futures proxy", html)
         self.assertIn("ZN=F/ZB=F 5D", html)
-        self.assertIn("표본 품질", html)
+        self.assertIn("조건 후 표본", html)
         self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
-        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 포함 비교"))
+        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 비교"))
         self.assertLess(html.index("ov-historical-analog-limitations"), html.index("ov-macro-compare-section"))
         self.assertNotIn('class="ov-macro-conditioned-pilot"', html)
         self.assertNotIn('class="ov-macro-comparison"', html)
@@ -10546,12 +10628,13 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("실제 계산 기준일", html)
         self.assertIn("2024-06-18", html)
         self.assertIn("2024-05-21", html)
-        self.assertIn("실제로 반영한 조건", html)
-        self.assertIn("자료 부족으로 적용 못 한 조건", html)
-        self.assertIn("참고만 하는 정보", html)
-        self.assertIn("섹터 상대강도", html)
-        self.assertIn("GLD 배경", html)
-        self.assertIn("금리선물 압력", html)
+        self.assertIn("사용 조건", html)
+        self.assertIn("Sector ETF vs SPY relative strength", html)
+        self.assertIn("GLD price proxy", html)
+        self.assertIn("Rate Pressure futures proxy", html)
+        self.assertNotIn("실제로 반영한 조건", html)
+        self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
+        self.assertNotIn("참고만 하는 정보", html)
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 
@@ -10743,7 +10826,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("참고", html)
         self.assertIn("보류", html)
         self.assertIn("anchor 2회", html)
-        self.assertLess(html.index("Macro 조건 포함 비교"), html.index("맥락 차원 상태"))
+        self.assertLess(html.index("Macro 조건 비교"), html.index("맥락 차원 상태"))
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 

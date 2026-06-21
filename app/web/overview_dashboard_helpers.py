@@ -461,19 +461,20 @@ def load_overview_market_context_historical_analog(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
     events_snapshot: dict[str, Any] | None = None,
+    group_leadership_snapshot: dict[str, Any] | None = None,
     cache_schema_version: str = "overview-historical-analog-v6-macro-dimension-disabled-audit",
 ) -> dict[str, Any]:
     del cache_schema_version
-    normalized_pattern = str(pattern_window or "5D").strip().upper()
-    leadership_period = "monthly" if normalized_pattern in {"20D", "MONTHLY", "MONTH", "1M"} else "weekly"
-    group_snapshot = load_overview_group_leadership_snapshot(
-        universe_code="SP500",
-        group_by="sector",
-        period=leadership_period,
-        top_n=10,
-        as_of_date=as_of_date,
-        prefer_intraday=False,
-    )
+    group_snapshot = group_leadership_snapshot
+    if group_snapshot is None:
+        group_snapshot = load_overview_group_leadership_snapshot(
+            universe_code="SP500",
+            group_by="sector",
+            period="daily",
+            top_n=20,
+            as_of_date=as_of_date,
+            prefer_intraday=as_of_date is None,
+        )
     return build_historical_analog_snapshot(
         group_leadership_snapshot=group_snapshot,
         as_of_date=as_of_date,
@@ -556,7 +557,7 @@ def load_overview_macro_context_cockpit(
         universe_code="SP500",
         group_by="sector",
         period="daily",
-        top_n=10,
+        top_n=20,
     )
     futures_macro_snapshot = load_overview_futures_macro_snapshot()
     sentiment_snapshot = load_overview_market_sentiment_snapshot()
@@ -570,6 +571,7 @@ def load_overview_macro_context_cockpit(
         as_of_date=as_of_date,
         pattern_window=pattern_window,
         events_snapshot=events_snapshot,
+        group_leadership_snapshot=group_leadership_snapshot if not as_of_date else None,
     )
     return build_overview_macro_context_cockpit(
         market_movers_snapshot=market_movers_snapshot,

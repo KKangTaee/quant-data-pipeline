@@ -5101,3 +5101,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - selected as-of 공통 daily price basis mismatch를 limiting symbols 대상 `overview_historical_analog_ohlcv` 최신화 action으로 연결했다.
   - broad analog UI는 compact basis summary / 접힌 계산 경계 상세 / core outcome matrix / support summary / 접힌 상세 통계로 정리했다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 378개, Streamlit Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Flow Alignment V13:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-flow-alignment-v13-20260621/`에서 Market Context 상단 섹터 흐름과 historical analog 기준 섹터를 정렬했다.
+  - latest historical analog는 visible daily sector leadership snapshot을 재사용하고, sector pressure map은 canonical 11개 섹터를 균일 tile로 표시한다.
+  - Historical analog는 guide block / 별도 시장 배경 요약을 낮추고 sector ETF / SPY / QQQ / TLT / GLD 핵심 matrix와 compact Macro 조건 비교 흐름으로 정리했다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 380개, Streamlit Browser QA와 screenshot으로 완료했다.

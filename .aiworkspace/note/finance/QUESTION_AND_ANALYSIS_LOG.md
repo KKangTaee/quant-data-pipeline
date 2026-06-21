@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-21 - Market Context analog should follow the visible sector flow
+- User request:
+  - `참고: 과거 유사 맥락`이 latest 기준인데도 상단 `섹터 압력 지도`의 leader와 다른 `Basic Materials`를 기준으로 잡고, 섹터 지도는 11개 섹터 중 일부만 보여주며, analog / macro UI가 여전히 guide-heavy prototype처럼 보인다고 지적함.
+- Interpreted goal:
+  - Market Context는 전체 시장 흐름 요약 화면이므로, 상단 섹터 흐름과 historical analog 기준을 일치시키고 과도한 guide block / 중복 배경 요약을 줄여야 한다.
+- Analysis result:
+  - 원인은 latest historical analog가 상단 daily sector snapshot을 재사용하지 않고 `pattern_window`에 따라 별도 weekly / monthly leadership snapshot을 로드할 수 있었던 점, 그리고 sector pressure map이 row cap과 provider sector alias drift 때문에 canonical 11개 섹터 전체를 안정적으로 보여주지 못했던 점이다.
+- Follow-up:
+  - V13에서 latest analog는 visible daily sector leadership snapshot을 재사용하고, selected as-of만 선택일 daily sector snapshot을 쓴다. Sector pressure map은 canonical 11개 섹터를 균일 tile로 표시한다. Broad analog rows가 없을 때는 Macro 조건 비교를 숨기고, 상세 raw 통계 / macro condition detail은 접힌 보조 정보로 낮춘다.
+
 ### 2026-06-21 - Historical analog and Macro comparison should read as analysis, not carded payload
 - User request:
   - `참고: 과거 유사 맥락`과 `Macro 조건 포함 비교`가 여전히 카드 안에 작은 글씨를 넣은 prototype-like UI로 보이며, 이것이 최선인지 질문하고 1차~7차 개편을 승인함.

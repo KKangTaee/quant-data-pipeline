@@ -389,9 +389,6 @@ def overview_ui_css() -> str:
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--ov-pressure-tone, var(--ov-mi-color-neutral)) 17%, var(--ov-mi-color-surface)), color-mix(in srgb, var(--ov-pressure-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)));
 }
-.ov-sector-pressure-tile:first-child {
-  grid-row: span 2;
-}
 .ov-sector-pressure-name {
   color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-body);
@@ -1624,6 +1621,58 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-xs);
   line-height: 1.22;
   overflow-wrap: anywhere;
+}
+.ov-macro-condition-summary {
+  margin-top: 0.64rem;
+  padding-top: 0.46rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-macro-condition-summary-title {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.14;
+}
+.ov-macro-condition-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  margin-top: 0.34rem;
+}
+.ov-macro-condition-chip {
+  max-width: 18rem;
+  padding: 0.36rem 0.48rem;
+  border: 1px solid color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  border-radius: var(--ov-mi-radius-card);
+  background: color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 5%, transparent);
+}
+.ov-macro-condition-chip strong,
+.ov-macro-condition-chip span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.ov-macro-condition-chip strong {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.14;
+}
+.ov-macro-condition-chip span {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.16;
+}
+.ov-macro-conditioned-details {
+  margin-top: 0.72rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+}
+.ov-macro-conditioned-details summary {
+  cursor: pointer;
+  padding: 0.44rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  color: var(--ov-mi-color-text);
+  font-weight: var(--ov-mi-weight-heading);
 }
 .ov-macro-conditioned-stat {
   padding: 0.5rem 0.56rem;
@@ -3093,9 +3142,6 @@ def overview_ui_css() -> str:
   .ov-analog-insight {
     border-left: 0;
   }
-  .ov-sector-pressure-tile:first-child {
-    grid-row: span 1;
-  }
   .ov-event-timeline-status {
     text-align: left;
   }
@@ -3334,7 +3380,7 @@ def _sector_pressure_map_html(model: dict[str, Any]) -> str:
     if not rows:
         return ""
     tiles: list[str] = []
-    for row in rows[:8]:
+    for row in rows:
         tone_color = escape(_overview_tone_color(row.get("tone")))
         group = _display_value(row.get("group"))
         weighted = _signed_pct(row.get("market_cap_weighted_return_pct"))
@@ -3734,8 +3780,8 @@ def _analog_support_summary_html(rows: list[dict[str, Any]]) -> str:
 
 def _analog_detail_tables_html(primary_rows: list[dict[str, Any]], support_rows: list[dict[str, Any]]) -> str:
     table_html = (
-        f"{_analog_table_block_html(primary_rows, title='핵심 자산 상세 통계', note='matrix에 사용한 원본 분포입니다.')}"
-        f"{_analog_table_block_html(support_rows, title='보조 자산 상세 통계', note='보조 배경 자산의 원본 분포입니다.', secondary=True)}"
+        f"{_analog_table_block_html(primary_rows, title='비교 자산 원본 통계', note='위 matrix에 사용한 원본 분포입니다.')}"
+        f"{_analog_table_block_html(support_rows, title='그 밖의 자산 원본 통계', note='기본 흐름에서는 낮춘 보조 자산 분포입니다.', secondary=True)}"
     )
     if not table_html:
         return ""
@@ -3787,7 +3833,7 @@ def _analog_interpretation_html(model: dict[str, Any], rows: list[dict[str, Any]
 
 def _analog_rows_by_priority(rows: list[dict[str, Any]], proxy_etf: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     display_rows = rows[:15]
-    primary_assets = {asset for asset in (proxy_etf.strip().upper(), "SPY", "QQQ") if asset}
+    primary_assets = {asset for asset in (proxy_etf.strip().upper(), "SPY", "QQQ", "TLT", "GLD") if asset}
     primary_rows = [row for row in display_rows if _analog_row_asset(row) in primary_assets]
     support_rows = [row for row in display_rows if _analog_row_asset(row) not in primary_assets]
     if not primary_rows:
@@ -3931,6 +3977,24 @@ def _macro_condition_list_html(title: str, items: list[dict[str, Any]]) -> str:
     )
 
 
+def _macro_used_condition_summary_html(items: list[dict[str, Any]]) -> str:
+    if not items:
+        return ""
+    item_html = "".join(
+        '<div class="ov-macro-condition-chip">'
+        f'<strong>{escape(_display_value(item.get("label")))}</strong>'
+        f'<span>{escape(_display_value(item.get("detail")))}</span>'
+        "</div>"
+        for item in items[:4]
+    )
+    return (
+        '<div class="ov-macro-condition-summary">'
+        '<div class="ov-macro-condition-summary-title">사용 조건</div>'
+        f'<div class="ov-macro-condition-chip-row">{item_html}</div>'
+        "</div>"
+    )
+
+
 def _macro_dimension_anchor_count(pilot: dict[str, Any], condition_id: str) -> Any:
     audit = dict(pilot.get("macro_dimension_audit") or {})
     for item in list(audit.get("dimensions") or []):
@@ -4036,49 +4100,14 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
             f"{_analog_table_block_html(primary_rows, title='Macro 조건 포함 핵심 자산', note='broad 조건에 추가 macro context를 더한 pilot 표본입니다.')}"
             f"{_analog_table_block_html(support_rows, title='Macro 조건 포함 보조 자산', note='같은 pilot 표본의 배경 자산 분포입니다.', secondary=True)}"
         )
-    else:
-        table_html = (
-            '<div class="ov-macro-conditioned-empty">'
-            "추가 macro 조건을 계산할 수 있으면 이 영역에 같은 median / 상승 비율 / 최선 / 최악 구조로 표시합니다. 지금은 broad 결과를 먼저 봅니다."
-            "</div>"
-        )
-    gld_anchor_count = _macro_dimension_anchor_count(pilot, "gld_safe_haven_context")
-    futures_anchor_count = _macro_dimension_anchor_count(pilot, "futures_rate_pressure_context")
-    gld_value = f"{_display_value(gld_anchor_count)}회" if gld_anchor_count is not None else ("적용" if _macro_condition_is_used(pilot, "gld_safe_haven_context") else "-")
-    futures_value = f"{_display_value(futures_anchor_count)}회" if futures_anchor_count is not None else f"{_display_value(pilot.get('sample_count'))}회"
-    funnel = [
-        (
-            "1. 섹터 상대강도",
-            f"{_display_value(pilot.get('broad_sample_count'))}회",
-            "Broad sample: sector ETF가 SPY 대비 강했던 전체 참고 표본입니다.",
-        ),
-        (
-            "2. GLD 배경",
-            gld_value,
-            "GLD price proxy가 현재와 같은 배경인 anchor만 남깁니다.",
-        ),
-        (
-            "3. 금리선물 압력",
-            futures_value,
-            "Macro 조건 sample: ZN=F / ZB=F rate pressure 배경까지 맞는 최종 표본입니다.",
-        ),
-    ]
-    funnel_html = "".join(
-        '<div class="ov-macro-funnel-item">'
-        f'<div class="ov-macro-funnel-label">{escape(label)}</div>'
-        f'<div class="ov-macro-funnel-value">{escape(value)}</div>'
-        f'<div class="ov-macro-funnel-detail">{escape(detail)}</div>'
-        "</div>"
-        for label, value, detail in funnel
-    )
     comparison = [
         (
-            "조건 포함 전: Broad analog",
+            "조건 전 표본",
             f"{_analog_pct(broad_reference.get('median_return_pct'))} median · {_analog_pct(broad_reference.get('positive_rate_pct'))} 상승 비율",
             f"{_display_value(broad_reference.get('asset') or proxy_etf)} {_display_value(broad_reference.get('horizon') or '20D')} · 표본 {_display_value(pilot.get('broad_sample_count'))}회 · 최악 {_analog_pct(broad_reference.get('worst_return_pct'))}",
         ),
         (
-            "조건 포함 후: Macro 조건 포함",
+            "조건 후 표본",
             f"{_analog_pct(pilot_reference.get('median_return_pct'))} median · {_analog_pct(pilot_reference.get('positive_rate_pct'))} 상승 비율",
             f"{_display_value(pilot_reference.get('asset') or proxy_etf)} {_display_value(pilot_reference.get('horizon') or '20D')} · 표본 {_display_value(pilot.get('sample_count'))}회 · 최악 {_analog_pct(pilot_reference.get('worst_return_pct'))}",
         ),
@@ -4091,31 +4120,32 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         "</div>"
         for label, value, detail in comparison
     )
-    conditions_html = (
-        f"{_macro_condition_list_html('실제로 반영한 조건 (표본을 줄인 조건)', list(pilot.get('used_conditions') or []))}"
-        f"{_macro_condition_list_html('자료 부족으로 적용 못 한 조건 (조건 부족)', list(pilot.get('insufficient_conditions') or []))}"
-        f"{_macro_condition_list_html('참고만 하는 정보 (이번 차수 제외)', list(pilot.get('excluded_conditions') or []))}"
-    )
+    conditions_html = _macro_used_condition_summary_html(list(pilot.get("used_conditions") or []))
     dimension_audit_html = _macro_dimension_audit_html(dict(pilot.get("macro_dimension_audit") or {}))
+    details_html = ""
+    if dimension_audit_html or table_html:
+        details_html = (
+            '<details class="ov-macro-conditioned-details">'
+            "<summary>Macro 조건 상세</summary>"
+            f"{dimension_audit_html}"
+            f"{table_html}"
+            "</details>"
+        )
     return (
         f'<section class="ov-macro-reading-section ov-macro-compare-section" style="--ov-macro-pilot-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-macro-conditioned-head">'
         "<div>"
-        '<div class="ov-macro-conditioned-title">Macro 조건 포함 비교</div>'
+        '<div class="ov-macro-conditioned-title">Macro 조건 비교</div>'
         f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("headline")))}</div>'
         "</div>"
         f'<div class="ov-macro-conditioned-status">{escape(status_label)}</div>'
         "</div>"
         f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("detail")))}</div>'
-        '<div class="ov-macro-conditioned-detail"><strong>표본 흐름</strong>: broad analog를 숨기지 않고, GLD와 금리선물 압력 조건을 더했을 때 남는 표본만 별도로 비교합니다.</div>'
-        f'<div class="ov-macro-funnel-track">{funnel_html}</div>'
-        '<div class="ov-macro-conditioned-detail"><strong>Broad vs Macro 조건 포함</strong></div>'
         f'<div class="ov-macro-compare-lanes">{comparison_html}</div>'
-        f'<div class="ov-macro-conditioned-quality"><strong>표본 품질</strong>: {escape(_display_value(sample_quality.get("label")))} · {escape(_display_value(sample_quality.get("detail")))}</div>'
+        f'<div class="ov-macro-conditioned-quality">표본 품질: {escape(_display_value(sample_quality.get("label")))} · {escape(_display_value(sample_quality.get("detail")))}</div>'
         f'<div class="ov-macro-conditioned-reason">{escape(_display_value(pilot.get("sample_reduction_reason")))}</div>'
-        f"{dimension_audit_html}"
         f"{conditions_html}"
-        f"{table_html}"
+        f"{details_html}"
         "</section>"
     )
 
@@ -4136,9 +4166,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
         body_html = (
             f"{_analog_method_line_html(model, condition=condition, pattern_label=pattern_label)}"
             f"{_analog_summary_strip_html(model, rows)}"
-            f"{_analog_outcome_matrix_html(primary_rows, title='핵심 자산 비교', note='리더십 ETF와 시장 기준 SPY, 성장주 proxy QQQ를 기간별로 먼저 비교합니다.')}"
-            f"{_analog_interpretation_html(model, rows)}"
-            f"{_analog_support_summary_html(support_rows)}"
+            f"{_analog_outcome_matrix_html(primary_rows, title='핵심 자산 비교', note='기준 섹터 ETF, SPY, QQQ, 채권 TLT, 금 GLD를 같은 표본으로 비교합니다.')}"
             f"{_analog_detail_tables_html(primary_rows, support_rows)}"
         )
     elif coverage_gaps and repair_action:
@@ -4206,7 +4234,7 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     )
     basis_warning_html = _analog_basis_warning_html(model)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
-    macro_pilot_html = _macro_conditioned_pilot_html(model, proxy_etf=proxy_etf)
+    macro_pilot_html = _macro_conditioned_pilot_html(model, proxy_etf=proxy_etf) if rows else ""
     section_detail = (
         "선택 기준과 유사했던 과거 구간의 이후 분포"
         if rows
