@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-matrix-v16-20260621/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-polish-v17-20260621/`
+- 목적: `Workspace > Overview > Market Context`의 V17 Macro polish 보정으로, Macro 조건 축소 bar의 `37회`, `6회`가 정확히 어떤 GLD / 금리선물 상태를 뜻하는지 바로 읽히지 않고 `현재 Macro 배경 참고`가 긴 텍스트 덩어리처럼 보이는 문제를 정리했다.
+- 주요 변경: Macro basis bar는 `XLY가 SPY 대비 5D 기준 비슷하게 강했던 구간` -> `GLD가 현재처럼 중립권이었던 과거 구간` -> `ZN=F/ZB=F가 현재처럼 금리 압력이 엇갈렸던 구간`처럼 각 단계의 조건 뜻을 먼저 보여준다. `조건에는 쓰지 않은 Macro 배경`은 T10Y3M / VIXCLS / BAA10Y를 한글 상태 badge, 현재 값, broad 표본 내 같은 상태 비율 bar, compact source 설명 순서로 보여준다.
+- 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-polish-v17-20260621/`
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-matrix-v16-20260621/`
 - 목적: `Workspace > Overview > Market Context`의 V16 Macro matrix 보정으로, V15 Macro 조건 비교가 여전히 wide table / verbose source text 중심의 prototype-like UI로 보이는 문제를 정리했다.
 - 주요 변경: Macro sample flow는 historical analog와 같은 basis bar로 표시하고, 결과 변화는 자산 x `기본 / 조건 후 / 변화` matrix로 렌더링한다. 긴 조건 source 원문은 접힌 상세로 낮추고, 현재 Macro 배경은 `금리곡선` / `변동성` / `신용스프레드` 한글 라벨을 우선 표시한다.
 - 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-matrix-v16-20260621/`
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-labels-v15-20260621/`
 - 목적: `Workspace > Overview > Market Context`의 V15 Macro labels 보정으로, `Macro 조건 후 결과 변화`에서 `37회`, `6회`, `같은 상태`가 무엇을 뜻하는지 기본 사용자가 바로 이해하기 어려운 문제를 정리했다.
 - 주요 변경: Macro sample flow를 `기본 유사 맥락` -> `GLD 조건 적용` -> `금리선물 조건 적용` 단계로 명명하고, 각 단계가 broad anchor pool에서 어떤 표본을 남겼는지 문장으로 설명한다. `현재 Macro 배경 참고`는 T10Y3M / VIXCLS / BAA10Y의 한글 지표 설명과 broad sample 중 같은 상태 횟수를 함께 표시한다.
@@ -172,6 +176,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Overview Market Context Macro Polish V17 | Complete | Macro conditioned comparison now shows the meaning of each narrowing step inside the basis bar: broad sector ETF vs SPY analog pool, current-like GLD bucket, then current-like ZN=F / ZB=F rate-pressure bucket. Reference-only T10Y3M / VIXCLS / BAA10Y backdrop now renders as Korean state badges, current value, same-state ratio bars, and compact source labels. |
 | Overview Market Context Macro Matrix V16 | Complete | Macro conditioned comparison now uses the same visual language as historical analog: a basis bar for broad -> GLD -> futures narrowing, a compact asset x `기본 / 조건 후 / 변화` matrix, collapsed verbose condition source details, and Korean-first labels for current Macro backdrop. |
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |

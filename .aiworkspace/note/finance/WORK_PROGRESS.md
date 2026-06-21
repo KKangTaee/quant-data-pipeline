@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-21 - Overview Market Context Macro Polish V17
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-polish-v17-20260621/` after user feedback that Macro condition steps still did not explain what GLD / rate-futures conditions meant and the reference Macro backdrop still looked text-heavy.
+- Added one-line condition meaning inside the Macro basis bar for broad sector ETF vs SPY analog pool, current-like GLD bucket, and current-like `ZN=F` / `ZB=F` rate-pressure bucket.
+- Reworked reference-only T10Y3M / VIXCLS / BAA10Y backdrop into Korean state badges, current values, same-state ratio bars, and compact source labels.
+- Boundaries stayed unchanged: DB-backed read model only, no render-time provider fetch, no schema / registry / saved write, no new hard Macro condition, and no validation / monitoring / trading semantics.
+
 ### 2026-06-21 - Overview Market Context Analog / Macro UX V11
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-macro-ux-v11-20260621/` after user feedback that historical analog and Macro conditioned comparison still looked prototype-like and over-carded.
 - Reworked historical analog into a basis bar, method grid, summary strip, and `먼저 볼 점` / `주의할 점` split.

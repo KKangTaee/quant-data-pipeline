@@ -10566,6 +10566,9 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("기본 유사 맥락", html)
         self.assertIn("GLD 조건 적용", html)
         self.assertIn("금리선물 조건 적용", html)
+        self.assertIn("XLV가 SPY 대비 5D 기준 비슷하게 강했던 구간", html)
+        self.assertIn("GLD가 현재처럼 상승 흐름이었던 과거 구간", html)
+        self.assertIn("ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간", html)
         self.assertIn("기본 유사 맥락 3회 중 Macro 추가 배경까지 현재와 같았던 표본은 2회입니다", html)
         self.assertIn("기본 3회 중 GLD 상태 2회", html)
         self.assertIn("GLD 조건 통과 2회 중 금리선물 상태 2회", html)
@@ -10677,6 +10680,9 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("기본 유사 맥락 기준", html)
         self.assertIn("GLD 조건 적용", html)
         self.assertIn("금리선물 조건 적용", html)
+        self.assertIn("XLV가 SPY 대비 5D 기준 비슷하게 강했던 구간", html)
+        self.assertIn("GLD가 현재처럼 중립권이었던 과거 구간", html)
+        self.assertIn("ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간", html)
         self.assertIn("Sector ETF vs SPY relative strength", html)
         self.assertIn("GLD price proxy", html)
         self.assertIn("Rate Pressure futures proxy", html)
@@ -10763,6 +10769,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                                 "source": "finance.loaders.macro.load_macro_series_observations",
                                 "detail": "Current bucket inverted; broad anchors with same bucket: 2.",
                                 "latest_date": "2024-05-06",
+                                "current_value": -0.25,
+                                "current_bucket": "yield curve inverted",
                                 "coverage_start": "2024-01-02",
                                 "coverage_end": "2024-05-06",
                                 "anchor_preview_count": 2,
@@ -10776,6 +10784,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                                 "source": "finance.loaders.macro.load_macro_series_observations",
                                 "detail": "Current bucket calm; broad anchors with same bucket: 2.",
                                 "latest_date": "2024-05-06",
+                                "current_value": 16.2,
+                                "current_bucket": "volatility calm",
                                 "coverage_start": "2024-01-02",
                                 "coverage_end": "2024-05-06",
                                 "anchor_preview_count": 2,
@@ -10789,6 +10799,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                                 "source": "finance.loaders.macro.load_macro_series_observations",
                                 "detail": "Current bucket contained; broad anchors with same bucket: 2.",
                                 "latest_date": "2024-05-06",
+                                "current_value": 1.7,
+                                "current_bucket": "credit spread contained",
                                 "coverage_start": "2024-01-02",
                                 "coverage_end": "2024-05-06",
                                 "anchor_preview_count": 2,
@@ -10866,8 +10878,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("현재 Macro 배경 참고", html)
-        self.assertIn("조건 미사용 참고 배경", html)
+        self.assertIn("조건에는 쓰지 않은 Macro 배경", html)
+        self.assertIn("참고 전용", html)
         self.assertIn("Macro 조건 상세", html)
         self.assertIn("T10Y3M yield curve proxy", html)
         self.assertIn("VIXCLS volatility backdrop", html)
@@ -10878,13 +10890,19 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("Events calendar", html)
         self.assertIn("AAII sentiment backdrop", html)
         self.assertIn("ov-macro-backdrop-grid", html)
+        self.assertIn("ov-macro-backdrop-state", html)
+        self.assertIn("ov-macro-backdrop-ratio", html)
+        self.assertIn("ov-macro-backdrop-fill", html)
         self.assertIn("ov-macro-dimension-group", html)
+        self.assertIn("역전 금리곡선", html)
+        self.assertIn("변동성 안정권", html)
+        self.assertIn("신용위험 안정권", html)
+        self.assertIn("2 / 3", html)
         self.assertIn("참고", html)
         self.assertIn("보류", html)
-        self.assertIn("기본 3회 중 같은 금리곡선 상태 2회", html)
-        self.assertIn("기본 3회 중 같은 변동성 상태 2회", html)
-        self.assertIn("기본 3회 중 같은 신용스프레드 상태 2회", html)
-        self.assertLess(html.index("현재 Macro 배경 참고"), html.index("Macro 조건 상세"))
+        self.assertIn("같은 상태 2 / 3", html)
+        self.assertIn("조건에는 쓰지 않은 참고 배경입니다", html)
+        self.assertLess(html.index("조건에는 쓰지 않은 Macro 배경"), html.index("Macro 조건 상세"))
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 

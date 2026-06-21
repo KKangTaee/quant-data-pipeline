@@ -1592,6 +1592,16 @@ def overview_ui_css() -> str:
 }
 .ov-macro-basis-bar {
   margin-top: 0.62rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+.ov-macro-basis-cell .ov-macro-basis-meaning {
+  color: var(--ov-mi-color-text);
+  font-size: 0.8rem;
+  line-height: 1.24;
+}
+.ov-macro-basis-cell .ov-macro-basis-count-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
 }
 .ov-macro-flow-item,
 .ov-macro-delta-row,
@@ -1659,6 +1669,45 @@ def overview_ui_css() -> str:
 }
 .ov-macro-backdrop-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ov-macro-backdrop-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+.ov-macro-backdrop-state {
+  flex: 0 0 auto;
+  padding: 0.08rem 0.34rem;
+  border: 1px solid color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 24%, var(--ov-mi-border-faint));
+  border-radius: 999px;
+  color: var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral));
+  font-size: 0.72rem;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.16;
+  white-space: nowrap;
+}
+.ov-macro-backdrop-item .ov-macro-backdrop-value {
+  margin-top: 0.34rem;
+  font-size: 1.12rem;
+}
+.ov-macro-backdrop-ratio {
+  margin-top: 0.32rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+}
+.ov-macro-backdrop-track {
+  height: 0.3rem;
+  margin-top: 0.18rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ov-mi-bg-subtle);
+}
+.ov-macro-backdrop-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--ov-macro-pilot-tone, var(--ov-mi-color-neutral)) 44%, transparent);
 }
 .ov-macro-conditioned-stats {
   display: grid;
@@ -4261,6 +4310,37 @@ def _macro_stage_detail(
     return f"{_macro_pool_label('직전 조건 통과', previous_count)} 중 {_macro_stage_state_name(condition_id)} {count_label}"
 
 
+def _macro_condition_meaning(
+    condition_id: str,
+    condition: dict[str, Any],
+    *,
+    proxy_etf: str,
+    pattern_label: str,
+) -> str:
+    detail = str(condition.get("detail") or condition.get("label") or "").strip().lower()
+    if condition_id == "sector_relative_strength":
+        proxy = _display_value(proxy_etf)
+        if proxy == "-":
+            proxy = "기준 섹터 ETF"
+        pattern = _display_value(pattern_label)
+        if pattern == "-":
+            pattern = "선택 패턴"
+        return f"{proxy}가 SPY 대비 {pattern} 기준 비슷하게 강했던 구간"
+    if condition_id == "gld_safe_haven_context":
+        if "중립" in detail or "neutral" in detail:
+            return "GLD가 현재처럼 중립권이었던 과거 구간"
+        if "상승" in detail or "positive" in detail or "up" in detail:
+            return "GLD가 현재처럼 상승 흐름이었던 과거 구간"
+        if "하락" in detail or "negative" in detail or "down" in detail:
+            return "GLD가 현재처럼 하락 흐름이었던 과거 구간"
+        return "GLD가 현재와 비슷한 금/안전자산 배경이었던 구간"
+    if condition_id == "futures_rate_pressure_context":
+        if "mixed" in detail or "엇갈" in detail:
+            return "ZN=F/ZB=F가 현재처럼 금리 압력이 엇갈렸던 구간"
+        return "ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간"
+    return f"{_macro_stage_state_name(condition_id)}가 현재와 비슷했던 구간"
+
+
 def _macro_condition_source_details_html(pilot: dict[str, Any]) -> str:
     conditions = [
         item for item in list(pilot.get("used_conditions") or [])
@@ -4298,7 +4378,7 @@ def _macro_sample_summary(pilot: dict[str, Any], macro_conditions: list[dict[str
     )
 
 
-def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
+def _macro_sample_flow_html(pilot: dict[str, Any], *, proxy_etf: str, pattern_label: str) -> str:
     used_conditions = list(pilot.get("used_conditions") or [])
     basis_condition = next(
         (item for item in used_conditions if str(item.get("id") or "") == "sector_relative_strength"),
@@ -4308,10 +4388,16 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
         item for item in used_conditions
         if str(item.get("id") or "") != "sector_relative_strength"
     ]
-    items: list[tuple[str, str, str]] = [
+    items: list[tuple[str, str, str, str]] = [
         (
             "기본 유사 맥락 기준",
             _macro_count_label(pilot.get("broad_sample_count")),
+            _macro_condition_meaning(
+                "sector_relative_strength",
+                basis_condition,
+                proxy_etf=proxy_etf,
+                pattern_label=pattern_label,
+            ),
             _display_value(basis_condition.get("label") or "Sector ETF vs SPY relative strength"),
         )
     ]
@@ -4324,6 +4410,12 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
             (
                 _macro_stage_label(condition_id),
                 _macro_count_label(count),
+                _macro_condition_meaning(
+                    condition_id,
+                    condition,
+                    proxy_etf=proxy_etf,
+                    pattern_label=pattern_label,
+                ),
                 _macro_stage_detail(
                     condition=condition,
                     count=count,
@@ -4340,9 +4432,10 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
         '<div class="ov-analog-basis-cell ov-macro-basis-cell">'
         f'<span>{escape(label)}</span>'
         f'<strong>{escape(count)}</strong>'
-        f'<small>{escape(detail)}</small>'
+        f'<small class="ov-macro-basis-meaning">{escape(meaning)}</small>'
+        f'<small class="ov-macro-basis-count-detail">{escape(detail)}</small>'
         "</div>"
-        for label, count, detail in items
+        for label, count, meaning, detail in items
     )
     return (
         f'<div class="ov-macro-conditioned-summary">{escape(summary)}</div>'
@@ -4459,21 +4552,68 @@ def _macro_backdrop_display_label(dimension_id: str) -> str:
 
 def _macro_backdrop_description(dimension_id: str) -> str:
     descriptions = {
-        "macro_t10y3m": "T10Y3M yield curve proxy · 10년물-3개월물 금리차. 금리곡선이 경기 둔화나 완화 기대를 어떻게 반영하는지 봅니다.",
-        "macro_vixcls": "VIXCLS volatility backdrop · VIX 지수. 주식시장 변동성과 위험 회피 분위기를 보는 지표입니다.",
-        "macro_baa10y": "BAA10Y credit spread backdrop · BAA 회사채와 10년 국채 금리차. 신용위험 부담이 커지는지 보는 지표입니다.",
+        "macro_t10y3m": "T10Y3M yield curve proxy · 10년물-3개월물 금리차",
+        "macro_vixcls": "VIXCLS volatility backdrop · VIX 지수",
+        "macro_baa10y": "BAA10Y credit spread backdrop · BAA 회사채와 10년 국채 금리차",
     }
     return descriptions.get(dimension_id, "")
 
 
-def _macro_backdrop_detail(item: dict[str, Any], *, broad_count: Any) -> str:
+def _macro_backdrop_state_label(dimension_id: str, raw_value: Any) -> str:
+    raw = str(raw_value or "").strip().lower()
+    if dimension_id == "macro_t10y3m":
+        if "inverted" in raw or "역전" in raw:
+            return "역전 금리곡선"
+        if "flat" in raw or "평탄" in raw:
+            return "평탄한 금리곡선"
+        if "positive" in raw or "양" in raw:
+            return "양의 금리곡선"
+        return "금리곡선 참고"
+    if dimension_id == "macro_vixcls":
+        if "calm" in raw or "low" in raw or "안정" in raw:
+            return "변동성 안정권"
+        if "stress" in raw or "high" in raw or "elevated" in raw or "경계" in raw:
+            return "변동성 경계"
+        if "watch" in raw or "주의" in raw:
+            return "변동성 주의"
+        return "변동성 참고"
+    if dimension_id == "macro_baa10y":
+        if "contained" in raw or "stable" in raw or "안정" in raw:
+            return "신용위험 안정권"
+        if "widen" in raw or "stress" in raw or "elevated" in raw or "주의" in raw:
+            return "신용위험 주의"
+        return "신용스프레드 참고"
+    return "Macro 참고"
+
+
+def _macro_backdrop_interpretation(dimension_id: str) -> str:
+    descriptions = {
+        "macro_t10y3m": "금리곡선이 경기 둔화나 완화 기대를 어떻게 반영하는지 봅니다.",
+        "macro_vixcls": "주식시장 변동성과 위험 회피 분위기를 보는 지표입니다.",
+        "macro_baa10y": "회사채와 국채 금리차로 신용위험 부담을 봅니다.",
+    }
+    return descriptions.get(dimension_id, "")
+
+
+def _macro_backdrop_ratio(item: dict[str, Any], *, broad_count: Any) -> tuple[str, str]:
+    count = item.get("anchor_preview_count")
+    label = f"{_display_value(count)} / {_display_value(broad_count)}"
+    try:
+        numerator = float(count)
+        denominator = float(broad_count)
+        if denominator <= 0:
+            raise ValueError
+        width = max(0.0, min(100.0, numerator / denominator * 100.0))
+    except (TypeError, ValueError):
+        width = 0.0
+    return label, f"{width:.1f}%"
+
+
+def _macro_backdrop_detail(item: dict[str, Any]) -> str:
     dimension_id = str(item.get("id") or "")
     latest_date = _display_value(item.get("latest_date"))
-    count = _macro_count_label(item.get("anchor_preview_count"))
-    return (
-        f"기준일 {latest_date} · 기본 {_macro_count_label(broad_count)} 중 "
-        f"같은 {_macro_backdrop_state_name(dimension_id)} 상태 {count}"
-    )
+    interpretation = _macro_backdrop_interpretation(dimension_id)
+    return f"기준일 {latest_date} · 조건에는 쓰지 않은 참고 배경입니다. {interpretation}"
 
 
 def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
@@ -4486,20 +4626,34 @@ def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
     if not dimensions:
         return ""
     broad_count = audit.get("broad_anchor_count") or pilot.get("broad_sample_count")
-    item_html = "".join(
-        '<div class="ov-macro-backdrop-item">'
-        f'<div class="ov-macro-backdrop-label">{escape(_macro_backdrop_display_label(str(item.get("id") or "")))}</div>'
-        f'<div class="ov-macro-backdrop-description">{escape(_macro_backdrop_description(str(item.get("id") or "")))}</div>'
-        f'<div class="ov-macro-backdrop-value">{escape(_display_value(item.get("current_value")))} · {escape(_display_value(item.get("current_bucket") or item.get("status_label")))}</div>'
-        f'<div class="ov-macro-backdrop-detail">{escape(_macro_backdrop_detail(item, broad_count=broad_count))}</div>'
-        "</div>"
-        for item in dimensions
-    )
+    item_parts: list[str] = []
+    for item in dimensions:
+        dimension_id = str(item.get("id") or "")
+        raw_state = item.get("current_bucket") or item.get("status_label")
+        ratio_label, ratio_width = _macro_backdrop_ratio(item, broad_count=broad_count)
+        item_parts.append(
+            '<div class="ov-macro-backdrop-item">'
+            '<div class="ov-macro-backdrop-top">'
+            f'<div class="ov-macro-backdrop-label">{escape(_macro_backdrop_display_label(dimension_id))}</div>'
+            f'<div class="ov-macro-backdrop-state">{escape(_macro_backdrop_state_label(dimension_id, raw_state))}</div>'
+            "</div>"
+            f'<div class="ov-macro-backdrop-value">{escape(_display_value(item.get("current_value")))}</div>'
+            '<div class="ov-macro-backdrop-ratio">'
+            f'<span>같은 상태 {escape(ratio_label)}</span>'
+            '<div class="ov-macro-backdrop-track">'
+            f'<div class="ov-macro-backdrop-fill" style="width:{escape(ratio_width)};"></div>'
+            "</div>"
+            "</div>"
+            f'<div class="ov-macro-backdrop-description">{escape(_macro_backdrop_description(dimension_id))}</div>'
+            f'<div class="ov-macro-backdrop-detail">{escape(_macro_backdrop_detail(item))}</div>'
+            "</div>"
+        )
+    item_html = "".join(item_parts)
     return (
         '<div class="ov-macro-backdrop">'
         '<div class="ov-macro-backdrop-head">'
-        '<div class="ov-macro-backdrop-title">현재 Macro 배경 참고</div>'
-        '<div class="ov-macro-backdrop-note">조건 미사용 참고 배경</div>'
+        '<div class="ov-macro-backdrop-title">조건에는 쓰지 않은 Macro 배경</div>'
+        '<div class="ov-macro-backdrop-note">참고 전용</div>'
         "</div>"
         f'<div class="ov-macro-backdrop-grid">{item_html}</div>'
         "</div>"
@@ -4524,7 +4678,8 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
             f"{_analog_table_block_html(primary_rows, title='Macro 조건 후 핵심 자산 원본 통계', note='Macro 추가 조건 후 남은 anchor 표본의 원본 분포입니다.')}"
             f"{_analog_table_block_html(support_rows, title='Macro 조건 후 보조 자산 원본 통계', note='같은 조건 후 표본의 배경 자산 분포입니다.', secondary=True)}"
         )
-    sample_flow_html = _macro_sample_flow_html(pilot)
+    pattern_label = _display_value(model.get("pattern_window_label") or model.get("pattern_window") or "5D")
+    sample_flow_html = _macro_sample_flow_html(pilot, proxy_etf=proxy_etf, pattern_label=pattern_label)
     comparison_html = _macro_result_delta_html(
         broad_rows=broad_rows,
         conditioned_rows=rows,

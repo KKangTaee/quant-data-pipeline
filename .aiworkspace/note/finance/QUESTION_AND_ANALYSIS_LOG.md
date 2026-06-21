@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-21 - Macro condition counts need visible meaning, not just counts
+- User request:
+  - `Macro 조건 후 결과 변화`의 `GLD 조건 적용 37회` / `금리선물 조건 적용 6회`가 무엇을 뜻하는지 기본 사용자가 바로 알 수 없고, `현재 Macro 배경 참고` 텍스트가 정리되지 않아 과거 유사 맥락 섹션보다 엉성해 보인다고 지적함.
+- Interpreted goal:
+  - Macro 비교는 숫자 축소 흐름을 보이되, 각 숫자가 어떤 조건으로 남은 표본인지 같은 위치에서 설명해야 한다. Reference-only Macro backdrop은 적용 조건이 아니라 현재 배경 상태와 broad sample 안의 같은 상태 비율로 읽혀야 한다.
+- Analysis result:
+  - GLD / Rate Pressure futures는 여전히 실제 hard 추가 조건이고, T10Y3M / VIXCLS / BAA10Y는 reference-only backdrop이다. 이 구분을 유지하면서 UI에서 GLD bucket, `ZN=F` / `ZB=F` rate-pressure bucket, reference-only badge / ratio를 드러내는 것이 가장 작은 변경이다.
+- Follow-up:
+  - V17에서 basis bar 조건 의미와 Macro backdrop 상태 / 비율 UI를 보정했다. FRED / events / sentiment hard conditioning은 별도 승인 전까지 계속 제외한다.
+
 ### 2026-06-21 - Macro conditioned analog should show what changed, not list conditions
 - User request:
   - `Macro 조건 비교`에서 `Sector ETF vs SPY relative strength`가 기본 조건인지, GLD / 금리선물 조건이 무엇을 의미하는지, `Macro 조건 포함 핵심 자산` 표가 더 좋은 결과표처럼 보이는 이유를 질문하고 1~4 개선 방향 개발을 승인함.
