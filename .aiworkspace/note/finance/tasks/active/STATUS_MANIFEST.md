@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-macro-intersection-v18-20260622`
+- `overview-market-context-macro-meaning-gradient-v19-20260622`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-macro-meaning-gradient-v19-20260622`: Completed record. `Overview > Market Context` V19 보정으로 핵심 자산 비교와 Macro 조건 결과 비교 matrix의 양수 / 음수 return gradient를 더 선명하게 표시하고, 조건에는 쓰지 않은 Macro 배경(T10Y3M / VIXCLS / BAA10Y)에 현재 값이 뜻하는 상태 판단 문장을 추가했다. 기존 DB-backed bucket / broad vs conditioned sample 계산은 바꾸지 않았고, 새 provider / schema / hard condition / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-intersection-v18-20260622`: Completed record. `Overview > Market Context` V18 보정으로 Macro 조건 표본이 `GLD 조건 적용` 후 `금리선물 조건 적용`처럼 순서 의존적으로 보이던 문제를 정리했다. 서비스 모델은 broad 표본, GLD 같은 상태 count, 금리선물 같은 상태 count, futures 계산 가능 count, 두 조건 교집합 count를 `macro_condition_counts`로 제공한다. UI는 `기본 유사 맥락 기준` / `GLD 같은 상태` / `금리선물 같은 상태` / `두 조건 모두` 4칸으로 표시하며, 최종 조건 후 결과는 두 조건 교집합 표본으로 계산한다. 계산 bucket 기준 / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-polish-v17-20260621`: Completed record. `Overview > Market Context` V17 보정으로 Macro 조건 축소 bar의 `GLD 조건 적용` / `금리선물 조건 적용`이 무엇을 의미하는지 바로 읽히게 했다. 각 단계는 broad relative-strength 표본에서 현재와 비슷한 GLD 상태, ZN=F / ZB=F 금리선물 배경을 차례로 남기는 흐름으로 표시한다. `조건에는 쓰지 않은 Macro 배경`은 T10Y3M / VIXCLS / BAA10Y를 한글 상태 badge, 현재 값, broad 표본 내 같은 상태 비율 bar, source 설명 순서로 보여준다. 계산 로직 / hard condition / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-matrix-v16-20260621`: Completed record. `Overview > Market Context` V16 보정으로 V15 Macro 조건 비교가 여전히 prototype-like wide table / verbose text처럼 보이던 문제를 정리했다. Macro 표본 흐름은 historical analog와 같은 basis bar로 바꾸고, 결과 변화는 자산 x `기본 / 조건 후 / 변화` matrix로 렌더링한다. 긴 조건 source 원문은 접힌 상세로 낮추고, 현재 Macro 배경은 `금리곡선` / `변동성` / `신용스프레드` 한글 라벨을 우선 표시한다. 계산 로직 / hard condition / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.

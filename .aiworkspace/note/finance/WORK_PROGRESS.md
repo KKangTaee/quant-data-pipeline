@@ -5133,3 +5133,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Macro 표본 흐름은 historical analog와 같은 basis bar로 바꾸고, 결과 변화는 자산 x `기본 / 조건 후 / 변화` matrix로 렌더링한다.
   - 긴 조건 source 원문과 raw 통계는 `Macro 조건 상세`로 낮추고, 현재 Macro 배경은 한글 우선 라벨로 정리했다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Macro Meaning Gradient V19:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-meaning-gradient-v19-20260622/`에서 matrix 색상 가시성과 Macro reference 값 해석을 보정했다.
+  - 핵심 자산 비교와 Macro 조건 결과 비교 matrix는 median / delta 방향과 크기를 green/red gradient로 더 분명히 보여준다.
+  - 조건에는 쓰지 않은 Macro 배경은 T10Y3M / VIXCLS / BAA10Y 현재 값이 어떤 상태인지 한 줄 의미 문장으로 설명한다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.

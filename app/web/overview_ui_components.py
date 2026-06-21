@@ -1359,11 +1359,19 @@ def overview_ui_css() -> str:
   text-align: right;
   background: transparent;
 }
-.ov-analog-matrix-cell.is-positive {
-  background: color-mix(in srgb, var(--ov-mi-color-success) var(--ov-analog-cell-strength, 5%), transparent);
+.ov-analog-matrix-cell.has-return-gradient {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ov-analog-cell-tone, var(--ov-mi-color-neutral)) calc(var(--ov-analog-cell-strength, 5%) + 7%), rgba(255,255,255,0.96)),
+      color-mix(in srgb, var(--ov-analog-cell-tone, var(--ov-mi-color-neutral)) calc(var(--ov-analog-cell-strength, 5%) * 0.42 + 3%), rgba(255,255,255,0.99))
+    );
 }
-.ov-analog-matrix-cell.is-negative {
-  background: color-mix(in srgb, var(--ov-mi-color-warning) var(--ov-analog-cell-strength, 5%), transparent);
+.ov-analog-matrix-cell.has-return-gradient.is-positive {
+  --ov-analog-cell-tone: var(--ov-mi-color-positive);
+}
+.ov-analog-matrix-cell.has-return-gradient.is-negative {
+  --ov-analog-cell-tone: var(--ov-mi-color-danger);
 }
 .ov-analog-matrix-cell-label {
   color: var(--ov-mi-color-text-muted);
@@ -1638,11 +1646,16 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-macro-conditioned-summary,
-.ov-macro-backdrop-description {
+.ov-macro-backdrop-description,
+.ov-macro-backdrop-meaning {
   margin-top: 0.16rem;
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-xs);
   line-height: 1.24;
+}
+.ov-macro-backdrop-meaning {
+  color: var(--ov-mi-color-text);
+  font-weight: var(--ov-mi-weight-label);
 }
 .ov-macro-delta-matrix .ov-analog-outcome-note {
   max-width: 34rem;
@@ -3876,8 +3889,9 @@ def _analog_outcome_matrix_html(rows: list[dict[str, Any]], *, title: str, note:
                 median_value = 0.0
             tone_class = "is-positive" if median_value > 0 else "is-negative" if median_value < 0 else "is-flat"
             strength = _analog_cell_strength(median)
+            gradient_class = "has-return-gradient" if tone_class in {"is-positive", "is-negative"} else ""
             cells.append(
-                f'<div class="ov-analog-matrix-cell {tone_class}" style="--ov-analog-cell-strength:{escape(strength)};">'
+                f'<div class="ov-analog-matrix-cell {gradient_class} {tone_class}" style="--ov-analog-cell-strength:{escape(strength)};">'
                 f'<div class="ov-analog-matrix-cell-label">{escape(asset)} · {escape(horizon)}</div>'
                 f'<strong>{escape(_analog_pct(row.get("median_return_pct")))}</strong>'
                 f'<span>상승 {escape(_analog_pct(row.get("positive_rate_pct")))}</span>'
@@ -4593,8 +4607,9 @@ def _macro_result_delta_html(
         except (TypeError, ValueError):
             numeric = 0.0
         tone_class = "is-positive" if numeric > 0 else "is-negative" if numeric < 0 else "is-flat"
+        gradient_class = "has-return-gradient" if tone_class in {"is-positive", "is-negative"} else ""
         return (
-            f'<div class="ov-analog-matrix-cell {tone_class}" style="--ov-analog-cell-strength:{escape(_analog_cell_strength(strength_source))};">'
+            f'<div class="ov-analog-matrix-cell {gradient_class} {tone_class}" style="--ov-analog-cell-strength:{escape(_analog_cell_strength(strength_source))};">'
             f'<div class="ov-analog-matrix-cell-label">{escape(label)}</div>'
             f'<strong>{escape(_analog_pct(value) if label != "변화" else _analog_delta_pct(value))}</strong>'
             f'<span>{escape(detail)}</span>'
@@ -4693,6 +4708,35 @@ def _macro_backdrop_interpretation(dimension_id: str) -> str:
     return descriptions.get(dimension_id, "")
 
 
+def _macro_backdrop_state_meaning(dimension_id: str, raw_value: Any) -> str:
+    raw = str(raw_value or "").strip().lower()
+    if dimension_id == "macro_t10y3m":
+        if "inverted" in raw or "역전" in raw:
+            return "단기금리가 장기금리보다 높아진 역전 구간입니다."
+        if "flat" in raw or "평탄" in raw:
+            return "장단기 금리차가 작아 경기 기대가 뚜렷하게 벌어지지 않은 구간입니다."
+        if "positive" in raw or "양" in raw:
+            return "10년물 금리가 3개월물보다 높아 현재는 역전 구간은 아닙니다."
+        return "금리곡선 상태를 참고 배경으로만 봅니다."
+    if dimension_id == "macro_vixcls":
+        if "calm" in raw or "low" in raw or "안정" in raw:
+            return "VIX가 18 아래라 변동성은 비교적 안정권입니다."
+        if "stress" in raw or "high" in raw or "elevated" in raw or "경계" in raw:
+            return "VIX가 25 이상이라 위험 회피 압력이 높은 구간입니다."
+        if "watch" in raw or "주의" in raw:
+            return "VIX가 18 이상 25 미만이라 평온 구간보다는 높은 주의 구간입니다."
+        return "변동성 상태를 참고 배경으로만 봅니다."
+    if dimension_id == "macro_baa10y":
+        if "contained" in raw or "stable" in raw or "안정" in raw:
+            return "스프레드가 2%p 아래라 신용 부담은 안정권입니다."
+        if "watch" in raw or "주의" in raw:
+            return "스프레드가 2~3%p 구간이라 신용 부담을 주의해서 봅니다."
+        if "widen" in raw or "stress" in raw or "elevated" in raw or "경계" in raw:
+            return "스프레드가 3%p 이상으로 벌어져 신용 부담이 높은 구간입니다."
+        return "신용스프레드 상태를 참고 배경으로만 봅니다."
+    return ""
+
+
 def _macro_backdrop_ratio(item: dict[str, Any], *, broad_count: Any) -> tuple[str, str]:
     count = item.get("anchor_preview_count")
     label = f"{_display_value(count)} / {_display_value(broad_count)}"
@@ -4729,6 +4773,7 @@ def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
         dimension_id = str(item.get("id") or "")
         raw_state = item.get("current_bucket") or item.get("status_label")
         ratio_label, ratio_width = _macro_backdrop_ratio(item, broad_count=broad_count)
+        state_meaning = _macro_backdrop_state_meaning(dimension_id, raw_state)
         item_parts.append(
             '<div class="ov-macro-backdrop-item">'
             '<div class="ov-macro-backdrop-top">'
@@ -4736,6 +4781,7 @@ def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
             f'<div class="ov-macro-backdrop-state">{escape(_macro_backdrop_state_label(dimension_id, raw_state))}</div>'
             "</div>"
             f'<div class="ov-macro-backdrop-value">{escape(_display_value(item.get("current_value")))}</div>'
+            f'<div class="ov-macro-backdrop-meaning">{escape(state_meaning)}</div>'
             '<div class="ov-macro-backdrop-ratio">'
             f'<span>같은 상태 {escape(ratio_label)}</span>'
             '<div class="ov-macro-backdrop-track">'

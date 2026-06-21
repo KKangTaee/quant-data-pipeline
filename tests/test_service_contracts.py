@@ -10614,6 +10614,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("+4.0%", html)
         self.assertIn("+5.0%", html)
         self.assertIn("+1.0%p", html)
+        macro_delta_html = html[html.index("Macro 조건 결과 비교") :]
+        self.assertIn("has-return-gradient is-positive", macro_delta_html)
         self.assertIn("표본 2회라 broad 결과와 함께 낮춰 읽습니다", html)
         self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 후 결과 변화"))
         self.assertLess(html.index("ov-historical-analog-limitations"), html.index("ov-macro-compare-section"))
@@ -10915,8 +10917,11 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("ov-macro-backdrop-fill", html)
         self.assertIn("ov-macro-dimension-group", html)
         self.assertIn("역전 금리곡선", html)
+        self.assertIn("단기금리가 장기금리보다 높아진 역전 구간입니다.", html)
         self.assertIn("변동성 안정권", html)
+        self.assertIn("VIX가 18 아래라 변동성은 비교적 안정권입니다.", html)
         self.assertIn("신용위험 안정권", html)
+        self.assertIn("스프레드가 2%p 아래라 신용 부담은 안정권입니다.", html)
         self.assertIn("2 / 3", html)
         self.assertIn("참고", html)
         self.assertIn("보류", html)
@@ -10974,6 +10979,8 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("--ov-analog-cell-strength:4.8%", html)
         self.assertIn("--ov-analog-cell-strength:20.0%", html)
         self.assertIn("--ov-analog-cell-strength:18.0%", html)
+        self.assertIn("has-return-gradient is-positive", html)
+        self.assertIn("has-return-gradient is-negative", html)
         self.assertIn("색상은 중간값 방향과 크기 기준", html)
 
     def test_sector_pressure_map_renders_weighted_returns_with_two_decimals(self) -> None:

@@ -8017,3 +8017,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 설명문을 더 늘리는 것이 아니라, Macro 조건 비교의 primary read path를 historical analog와 같은 기준 bar / matrix flow로 정리해야 함.
 - Analysis result: 기존 화면은 `ov-macro-sample-flow`와 `ov-macro-delta-table`이 별도 UI 문법을 써서 긴 source detail과 넓은 행 간격이 결과 해석을 방해했다. 같은 data를 basis bar와 asset comparison matrix로 바꾸는 것이 가장 작은 안전한 변경이다.
 - Follow-up: V16에서 Macro basis bar, asset x `기본 / 조건 후 / 변화` matrix, collapsed source detail, Korean-first Macro backdrop labels를 완료했다. 계산 / hard condition / data boundary는 바꾸지 않았다.
+
+### 2026-06-22 - Macro matrix 색상과 reference 값 의미를 더 명확히 한다
+
+- User request: 사용자가 핵심 자산 표와 Macro 조건 결과 비교 표에서 양수 green gradient가 충분히 보이지 않고, T10Y3M / VIXCLS / BAA10Y 값이 높고 낮은지 또는 무엇을 뜻하는지 모르겠다고 지적함.
+- Interpreted goal: 새 Macro hard condition이나 예측 로직이 아니라, 기존 historical analog / Macro reference 값의 읽기 보조 UI를 더 명확하게 해야 함.
+- Analysis result: matrix HTML은 이미 strength 값을 갖고 있었지만 CSS가 약해 화면상 거의 드러나지 않았다. Macro reference values도 기존 bucket이 있으므로 새 fetch 없이 bucket 의미를 사용자 문장으로 표시할 수 있다.
+- Follow-up: V19에서 matrix green/red gradient와 Macro reference backdrop meaning copy를 완료했다. DB / provider / hard conditioning / validation / monitoring / trading semantics는 바꾸지 않았다.
