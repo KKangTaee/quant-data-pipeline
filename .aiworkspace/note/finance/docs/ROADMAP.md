@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-clarity-v14-20260621/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-labels-v15-20260621/`
+- 목적: `Workspace > Overview > Market Context`의 V15 Macro labels 보정으로, `Macro 조건 후 결과 변화`에서 `37회`, `6회`, `같은 상태`가 무엇을 뜻하는지 기본 사용자가 바로 이해하기 어려운 문제를 정리했다.
+- 주요 변경: Macro sample flow를 `기본 유사 맥락` -> `GLD 조건 적용` -> `금리선물 조건 적용` 단계로 명명하고, 각 단계가 broad anchor pool에서 어떤 표본을 남겼는지 문장으로 설명한다. `현재 Macro 배경 참고`는 T10Y3M / VIXCLS / BAA10Y의 한글 지표 설명과 broad sample 중 같은 상태 횟수를 함께 표시한다.
+- 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-labels-v15-20260621/`
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-clarity-v14-20260621/`
 - 목적: `Workspace > Overview > Market Context`의 V14 Macro clarity 보정으로, `Macro 조건 비교`가 기본 유사 맥락 조건과 Macro 추가 조건을 섞어 보여주고, `Macro 조건 포함 핵심 자산` 표가 더 나은 예측표처럼 오해될 수 있던 문제를 정리했다.
 - 주요 변경: `Sector ETF vs SPY relative strength`는 broad sample을 만드는 기본 유사 맥락 기준으로 분리하고, GLD / Rate Pressure futures는 Macro 추가 조건으로 표시한다. Macro 섹션은 sample narrowing, broad vs conditioned 결과 변화, 현재 Macro 배경(T10Y3M / VIXCLS / BAA10Y), 접힌 상세 / 원본 통계 순서로 읽는다. Historical analog matrix는 median return 방향과 크기에 따라 색상 농도를 조절하고, sector pressure map 수익률은 소수점 둘째 자리까지 표시한다.
 - 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-clarity-v14-20260621/`
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-flow-alignment-v13-20260621/`
 - 목적: `Workspace > Overview > Market Context`의 V13 흐름 보정으로, 상단 섹터 압력 지도와 `참고: 과거 유사 맥락`이 서로 다른 섹터를 기준으로 보이고 섹터 지도 / analog / macro 비교가 여전히 prototype-like guide UI처럼 읽히는 문제를 정리했다.
 - 주요 변경: latest historical analog는 상단 Market Context의 visible daily sector leadership snapshot을 재사용한다. Selected as-of는 선택일 daily sector snapshot을 쓰고, pattern window는 sector source가 아니라 similarity window만 바꾼다. Sector pressure map은 provider sector alias를 canonical 11개 섹터로 normalize하고 전체를 균일 tile로 표시한다. Historical analog는 `먼저 볼 점` / `주의할 점` / `시장 배경 요약` guide block을 기본 화면에서 제거하고, sector ETF / SPY / QQQ / TLT / GLD를 하나의 핵심 비교 matrix로 보여준다. Broad analog rows가 없으면 Macro 조건 비교는 숨겨 dashed prototype UI를 만들지 않는다. V14에서 Macro 조건 비교는 broad-vs-conditioned 결과 변화와 현재 Macro 배경 중심으로 다시 정리됐다.
@@ -164,6 +168,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
 | Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |

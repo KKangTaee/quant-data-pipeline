@@ -5111,3 +5111,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Sector ETF vs SPY relative strength`는 broad sample 기준으로 분리하고, GLD / Rate Pressure futures는 Macro 추가 조건으로 표본 축소 흐름에 표시한다.
   - Macro 섹션은 broad-vs-conditioned 결과 변화, 현재 Macro 배경(T10Y3M / VIXCLS / BAA10Y), 접힌 상세 / 원본 통계 순서로 읽게 했고, matrix 색상 농도와 sector pressure 2자리 표시를 추가했다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Macro Labels V15:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-labels-v15-20260621/`에서 V14 Macro 조건 비교 문구를 사용자 언어로 보정했다.
+  - `Macro 추가 조건` 반복 라벨을 `GLD 조건 적용` / `금리선물 조건 적용`으로 바꾸고, `81회 -> 37회 -> 6회`가 broad anchor pool에서 조건별로 좁혀진 표본임을 문장으로 표시한다.
+  - `현재 Macro 배경 참고`에는 T10Y3M / VIXCLS / BAA10Y 한글 설명과 broad sample 중 같은 상태 횟수를 함께 보여준다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.

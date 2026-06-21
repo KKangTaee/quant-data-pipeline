@@ -7983,3 +7983,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 데이터 조건을 추가하는 것이 아니라, stale common daily price basis는 기존 bounded 수집 경로로 연결하고, broad analog 결과를 사용자가 먼저 읽을 수 있는 기준 요약과 자산 결과 matrix로 재구성해야 함.
 - Analysis result: 기존 coverage gap repair는 row 부족만 처리해 selected as-of mismatch를 보강하지 못했다. 또 basis bar / method grid / summary strip이 표본과 조건을 반복했고, 상세 표가 primary read path였다.
 - Follow-up: V12에서 stale basis repair action, compact basis summary, collapsed technical detail, core outcome matrix, support summary, collapsed statistics table을 완료했다. Macro 조건 포함 비교의 세부 UX polish는 별도 후속 후보로 남긴다.
+
+### 2026-06-21 - Macro 조건 비교의 표본 축소 의미를 사용자 언어로 정리한다
+
+- User request: 사용자가 `Macro 조건 후 결과 변화`에서 `Macro 추가조건 37회 / 6회`와 `현재 Macro 배경`의 `같은 상태`가 무엇을 뜻하는지 기본 사용자는 알기 어렵다고 지적함.
+- Interpreted goal: 새 macro 조건이나 예측 로직을 추가하는 것이 아니라, 기존 broad / GLD / Rate Pressure sample narrowing과 reference Macro backdrop counts를 화면에서 자연스럽게 이해하게 해야 함.
+- Analysis result: 계산 로직은 이미 `broad_sample_count`, GLD preview count, final conditioned count, FRED reference preview count를 갖고 있으므로 renderer에서 단계 라벨과 한글 지표 설명을 보강하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: V15에서 `기본 유사 맥락 -> GLD 조건 적용 -> 금리선물 조건 적용`, T10Y3M / VIXCLS / BAA10Y 한글 설명, broad sample 중 같은 상태 횟수 표시를 완료했다. Hard conditioning 확대는 별도 승인 대상이다.

@@ -10507,6 +10507,34 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                         {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 상승 context"},
                         {"id": "futures_rate_pressure_context", "label": "Rate Pressure futures proxy", "status_label": "사용", "detail": "ZN=F/ZB=F 5D through 2024-06-17"},
                     ],
+                    "macro_dimension_audit": {
+                        "schema_version": "overview_market_context_macro_dimension_audit_v1",
+                        "status": "OK",
+                        "broad_anchor_count": 3,
+                        "conditioned_anchor_count": 2,
+                        "dimensions": [
+                            {
+                                "id": "sector_relative_strength",
+                                "label": "Sector ETF vs SPY relative strength",
+                                "status": "USED",
+                                "anchor_preview_count": 3,
+                            },
+                            {
+                                "id": "gld_safe_haven_context",
+                                "label": "GLD price proxy",
+                                "status": "USED",
+                                "detail": "GLD 5D 상승 context",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "futures_rate_pressure_context",
+                                "label": "Rate Pressure futures proxy",
+                                "status": "USED",
+                                "detail": "ZN=F/ZB=F 5D through 2024-06-17",
+                                "anchor_preview_count": 2,
+                            },
+                        ],
+                    },
                     "insufficient_conditions": [
                         {"id": "fred_rates", "label": "2Y / 10Y FRED rates", "status_label": "사용 안 함", "detail": "이번 차수 제외"},
                     ],
@@ -10533,8 +10561,12 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("Macro 조건 후 결과 변화", html)
         self.assertIn("ov-macro-compare-section", html)
         self.assertIn("ov-macro-sample-flow", html)
-        self.assertIn("기본 유사 맥락 기준", html)
-        self.assertIn("Macro 추가 조건", html)
+        self.assertIn("기본 유사 맥락", html)
+        self.assertIn("GLD 조건 적용", html)
+        self.assertIn("금리선물 조건 적용", html)
+        self.assertIn("기본 유사 맥락 3회 중 Macro 추가 배경까지 현재와 같았던 표본은 2회입니다", html)
+        self.assertIn("기본 3회 중 GLD 상태 2회", html)
+        self.assertIn("GLD 조건 통과 2회 중 금리선물 상태 2회", html)
         self.assertIn("결과 변화", html)
         self.assertNotIn("ov-macro-funnel-track", html)
         self.assertNotIn("Broad vs Macro 조건 포함", html)
@@ -10639,12 +10671,13 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("2024-06-18", html)
         self.assertIn("2024-05-21", html)
         self.assertIn("기본 유사 맥락 기준", html)
-        self.assertIn("Macro 추가 조건", html)
+        self.assertIn("GLD 조건 적용", html)
+        self.assertIn("금리선물 조건 적용", html)
         self.assertIn("Sector ETF vs SPY relative strength", html)
         self.assertIn("GLD price proxy", html)
         self.assertIn("Rate Pressure futures proxy", html)
-        self.assertLess(html.index("기본 유사 맥락 기준"), html.index("Macro 추가 조건"))
-        macro_conditions = html[html.index("Macro 추가 조건") :]
+        self.assertLess(html.index("기본 유사 맥락 기준"), html.index("GLD 조건 적용"))
+        macro_conditions = html[html.index("GLD 조건 적용") :]
         self.assertNotIn("Sector ETF vs SPY relative strength</strong>", macro_conditions)
         self.assertNotIn("실제로 반영한 조건", html)
         self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
@@ -10829,20 +10862,25 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("현재 Macro 배경", html)
+        self.assertIn("현재 Macro 배경 참고", html)
         self.assertIn("조건 미사용 참고 배경", html)
         self.assertIn("Macro 조건 상세", html)
         self.assertIn("T10Y3M yield curve proxy", html)
         self.assertIn("VIXCLS volatility backdrop", html)
         self.assertIn("BAA10Y credit spread backdrop", html)
+        self.assertIn("10년물-3개월물 금리차", html)
+        self.assertIn("VIX 지수", html)
+        self.assertIn("BAA 회사채와 10년 국채 금리차", html)
         self.assertIn("Events calendar", html)
         self.assertIn("AAII sentiment backdrop", html)
         self.assertIn("ov-macro-backdrop-grid", html)
         self.assertIn("ov-macro-dimension-group", html)
         self.assertIn("참고", html)
         self.assertIn("보류", html)
-        self.assertIn("같은 상태 2회", html)
-        self.assertLess(html.index("현재 Macro 배경"), html.index("Macro 조건 상세"))
+        self.assertIn("기본 3회 중 같은 금리곡선 상태 2회", html)
+        self.assertIn("기본 3회 중 같은 변동성 상태 2회", html)
+        self.assertIn("기본 3회 중 같은 신용스프레드 상태 2회", html)
+        self.assertLess(html.index("현재 Macro 배경 참고"), html.index("Macro 조건 상세"))
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
 

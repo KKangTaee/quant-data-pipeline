@@ -1628,6 +1628,13 @@ def overview_ui_css() -> str:
   line-height: 1.22;
   overflow-wrap: anywhere;
 }
+.ov-macro-conditioned-summary,
+.ov-macro-backdrop-description {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.24;
+}
 .ov-macro-delta-table {
   grid-template-columns: 1fr;
 }
@@ -4243,6 +4250,72 @@ def _macro_condition_count(pilot: dict[str, Any], condition: dict[str, Any], *, 
     return pilot.get("sample_count") if is_last else "-"
 
 
+def _macro_count_label(value: Any) -> str:
+    display = _display_value(value)
+    return "확인 중" if display == "-" else f"{display}회"
+
+
+def _macro_pool_label(label: str, value: Any) -> str:
+    display = _display_value(value)
+    return f"{label} 표본" if display == "-" else f"{label} {display}회"
+
+
+def _macro_stage_label(condition_id: str) -> str:
+    labels = {
+        "gld_safe_haven_context": "GLD 조건 적용",
+        "futures_rate_pressure_context": "금리선물 조건 적용",
+    }
+    return labels.get(condition_id, "Macro 조건 적용")
+
+
+def _macro_stage_state_name(condition_id: str) -> str:
+    names = {
+        "gld_safe_haven_context": "GLD 상태",
+        "futures_rate_pressure_context": "금리선물 상태",
+    }
+    return names.get(condition_id, "Macro 상태")
+
+
+def _macro_stage_detail(
+    *,
+    condition: dict[str, Any],
+    count: Any,
+    broad_count: Any,
+    previous_condition_id: str | None,
+    previous_count: Any,
+) -> str:
+    condition_id = str(condition.get("id") or "")
+    count_label = _macro_count_label(count)
+    condition_label = _display_value(condition.get("label"))
+    detail = _display_value(condition.get("detail"))
+    if condition_label == "-" and detail == "-":
+        suffix = ""
+    elif condition_label == "-":
+        suffix = f" · {detail}"
+    elif detail == "-":
+        suffix = f" · {condition_label}"
+    else:
+        suffix = f" · {condition_label}: {detail}"
+    if condition_id == "gld_safe_haven_context":
+        return f"{_macro_pool_label('기본', broad_count)} 중 GLD 상태 {count_label}{suffix}"
+    if condition_id == "futures_rate_pressure_context":
+        previous_label = "GLD 조건 통과" if previous_condition_id == "gld_safe_haven_context" else "직전 조건 통과"
+        return f"{_macro_pool_label(previous_label, previous_count)} 중 금리선물 상태 {count_label}{suffix}"
+    return f"{_macro_pool_label('직전 조건 통과', previous_count)} 중 {_macro_stage_state_name(condition_id)} {count_label}{suffix}"
+
+
+def _macro_sample_summary(pilot: dict[str, Any], macro_conditions: list[dict[str, Any]]) -> str:
+    broad_count = pilot.get("broad_sample_count")
+    sample_count = pilot.get("sample_count")
+    if not macro_conditions:
+        return f"기본 유사 맥락 {_macro_count_label(broad_count)}을 Macro 추가 조건 없이 그대로 비교합니다."
+    return (
+        f"기본 유사 맥락 {_macro_count_label(broad_count)} 중 "
+        f"Macro 추가 배경까지 현재와 같았던 표본은 {_macro_count_label(sample_count)}입니다. "
+        f"아래는 기본 {_macro_count_label(broad_count)}와 최종 {_macro_count_label(sample_count)}의 결과 차이입니다."
+    )
+
+
 def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
     used_conditions = list(pilot.get("used_conditions") or [])
     basis_condition = next(
@@ -4260,24 +4333,39 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
             _display_value(basis_condition.get("label") or "Sector ETF vs SPY relative strength"),
         )
     ]
+    previous_condition_id: str | None = None
+    previous_count: Any = pilot.get("broad_sample_count")
     for index, condition in enumerate(macro_conditions):
+        condition_id = str(condition.get("id") or "")
         count = _macro_condition_count(pilot, condition, is_last=index == len(macro_conditions) - 1)
         items.append(
             (
-                "Macro 추가 조건",
+                _macro_stage_label(condition_id),
                 count,
-                f"{_display_value(condition.get('label'))}: {_display_value(condition.get('detail'))}",
+                _macro_stage_detail(
+                    condition=condition,
+                    count=count,
+                    broad_count=pilot.get("broad_sample_count"),
+                    previous_condition_id=previous_condition_id,
+                    previous_count=previous_count,
+                ),
             )
         )
+        previous_condition_id = condition_id
+        previous_count = count
+    summary = _macro_sample_summary(pilot, macro_conditions)
     item_html = "".join(
         '<div class="ov-macro-flow-item">'
         f'<div class="ov-macro-flow-label">{escape(label)}</div>'
-        f'<div class="ov-macro-flow-value">{escape(_display_value(count))}회</div>'
+        f'<div class="ov-macro-flow-value">{escape(_macro_count_label(count))}</div>'
         f'<div class="ov-macro-flow-detail">{escape(detail)}</div>'
         "</div>"
         for label, count, detail in items
     )
-    return f'<div class="ov-macro-sample-flow">{item_html}</div>'
+    return (
+        f'<div class="ov-macro-conditioned-summary">{escape(summary)}</div>'
+        f'<div class="ov-macro-sample-flow">{item_html}</div>'
+    )
 
 
 def _macro_result_delta_rows(
@@ -4336,6 +4424,34 @@ def _macro_result_delta_html(
     return f'<div class="ov-macro-delta-table">{row_html}</div>'
 
 
+def _macro_backdrop_state_name(dimension_id: str) -> str:
+    names = {
+        "macro_t10y3m": "금리곡선",
+        "macro_vixcls": "변동성",
+        "macro_baa10y": "신용스프레드",
+    }
+    return names.get(dimension_id, "Macro")
+
+
+def _macro_backdrop_description(dimension_id: str) -> str:
+    descriptions = {
+        "macro_t10y3m": "10년물-3개월물 금리차. 금리곡선이 경기 둔화나 완화 기대를 어떻게 반영하는지 봅니다.",
+        "macro_vixcls": "VIX 지수. 주식시장 변동성과 위험 회피 분위기를 보는 지표입니다.",
+        "macro_baa10y": "BAA 회사채와 10년 국채 금리차. 신용위험 부담이 커지는지 보는 지표입니다.",
+    }
+    return descriptions.get(dimension_id, "")
+
+
+def _macro_backdrop_detail(item: dict[str, Any], *, broad_count: Any) -> str:
+    dimension_id = str(item.get("id") or "")
+    latest_date = _display_value(item.get("latest_date"))
+    count = _macro_count_label(item.get("anchor_preview_count"))
+    return (
+        f"기준일 {latest_date} · 기본 {_macro_count_label(broad_count)} 중 "
+        f"같은 {_macro_backdrop_state_name(dimension_id)} 상태 {count}"
+    )
+
+
 def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
     audit = dict(pilot.get("macro_dimension_audit") or {})
     dimensions = [
@@ -4345,18 +4461,20 @@ def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
     ]
     if not dimensions:
         return ""
+    broad_count = audit.get("broad_anchor_count") or pilot.get("broad_sample_count")
     item_html = "".join(
         '<div class="ov-macro-backdrop-item">'
         f'<div class="ov-macro-backdrop-label">{escape(_display_value(item.get("label")))}</div>'
+        f'<div class="ov-macro-backdrop-description">{escape(_macro_backdrop_description(str(item.get("id") or "")))}</div>'
         f'<div class="ov-macro-backdrop-value">{escape(_display_value(item.get("current_value")))} · {escape(_display_value(item.get("current_bucket") or item.get("status_label")))}</div>'
-        f'<div class="ov-macro-backdrop-detail">기준일 {escape(_display_value(item.get("latest_date")))} · 같은 상태 {escape(_display_value(item.get("anchor_preview_count")))}회</div>'
+        f'<div class="ov-macro-backdrop-detail">{escape(_macro_backdrop_detail(item, broad_count=broad_count))}</div>'
         "</div>"
         for item in dimensions
     )
     return (
         '<div class="ov-macro-backdrop">'
         '<div class="ov-macro-backdrop-head">'
-        '<div class="ov-macro-backdrop-title">현재 Macro 배경</div>'
+        '<div class="ov-macro-backdrop-title">현재 Macro 배경 참고</div>'
         '<div class="ov-macro-backdrop-note">조건 미사용 참고 배경</div>'
         "</div>"
         f'<div class="ov-macro-backdrop-grid">{item_html}</div>'
