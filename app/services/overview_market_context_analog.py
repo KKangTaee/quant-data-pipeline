@@ -714,6 +714,34 @@ def _coverage_repair_action(coverage_gaps: Sequence[dict[str, Any]]) -> dict[str
     }
 
 
+def _as_of_alignment_repair_action(alignment: dict[str, Any]) -> dict[str, Any]:
+    if not alignment or bool(alignment.get("is_aligned")):
+        return {}
+    symbols = list(dict.fromkeys(str(symbol).strip().upper() for symbol in alignment.get("limiting_symbols") or []))
+    symbols = [symbol for symbol in symbols if symbol]
+    if not symbols:
+        return {}
+    requested = _format_date(alignment.get("requested_as_of"))
+    effective = _format_date(alignment.get("effective_as_of"))
+    reason = (
+        f"요청 기준일 {requested or '-'}까지 공통 daily price 기준을 맞추기 위해 "
+        f"{len(symbols)}개 ETF 가격 이력을 갱신합니다. 현재 실제 계산 기준일은 {effective or '-'}입니다."
+    )
+    return {
+        "label": "과거 유사 맥락 가격 기준 최신화",
+        "symbols": symbols,
+        "period": "10y",
+        "interval": "1d",
+        "target_table": "finance_price.nyse_price_history",
+        "source": "yfinance OHLCV",
+        "action": "overview_historical_analog_ohlcv",
+        "stale_basis": True,
+        "requested_as_of": requested or "",
+        "effective_as_of": effective or "",
+        "reason": reason,
+    }
+
+
 def _price_matrix(
     price_history: pd.DataFrame | None,
     symbols: Sequence[str],
@@ -1738,6 +1766,7 @@ def build_historical_analog_snapshot(
         requested_as_of=normalized_as_of,
         effective_as_of=last_date,
     )
+    repair_action = repair_action or _as_of_alignment_repair_action(as_of_alignment)
     futures_load_error: str | None = None
     if futures_history is None:
         try:

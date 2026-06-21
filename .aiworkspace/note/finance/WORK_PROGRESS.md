@@ -5096,3 +5096,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 선택 기준일과 실제 계산 기준일이 다를 때 requested / effective as-of, limiting symbols, basis warning을 표시하고 latest도 DB 공통 가격 기준임을 설명한다.
   - Macro 조건 포함 비교는 broad sample -> GLD 배경 -> 금리선물 압력 funnel과 사용자 언어 condition group으로 정리했다.
   - 검증은 RED/GREEN focused tests, py_compile, `tests/test_service_contracts.py` 377개, latest / selected 2026-06-18 / 20D / monthly Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Analog Usability V12:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-analog-usability-v12-20260621/`에서 historical analog V12 보정을 완료했다.
+  - selected as-of 공통 daily price basis mismatch를 limiting symbols 대상 `overview_historical_analog_ohlcv` 최신화 action으로 연결했다.
+  - broad analog UI는 compact basis summary / 접힌 계산 경계 상세 / core outcome matrix / support summary / 접힌 상세 통계로 정리했다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 378개, Streamlit Browser QA와 screenshot으로 완료했다.

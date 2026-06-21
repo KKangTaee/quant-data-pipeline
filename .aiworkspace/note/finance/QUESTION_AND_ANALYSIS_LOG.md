@@ -7956,3 +7956,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 날짜 선택을 실제로 고치되, 단순 라벨 변경이 아니라 요청 기준일 / 실제 계산 기준일 / 자료 최종일의 차이를 화면에서 이해 가능하게 해야 함.
 - Analysis result: 서비스는 선택일을 전달하고 있었지만, SPY / QQQ / GLD 등 comparison daily price coverage가 2026-05-29에서 끊겨 공통 matrix가 그 날짜로 제한됐다. UI가 이 fallback 이유를 숨긴 것이 핵심 문제였다.
 - Follow-up: V10에서 requested / effective as-of alignment와 limiting symbols를 service model과 UI에 추가했다. full PIT sector universe / historical sector membership은 여전히 별도 storage/read-path 승인 대상이다.
+
+### 2026-06-21 - Historical analog를 action 가능하고 matrix-first로 다시 보정한다
+
+- User request: 사용자가 `실제 계산 기준일`이 최신화 action으로 해결되지 않고, `참고: 과거 유사 맥락` 상단과 핵심/보조 자산 표가 중복되고 prototype-like로 보인다고 지적함.
+- Interpreted goal: 새 데이터 조건을 추가하는 것이 아니라, stale common daily price basis는 기존 bounded 수집 경로로 연결하고, broad analog 결과를 사용자가 먼저 읽을 수 있는 기준 요약과 자산 결과 matrix로 재구성해야 함.
+- Analysis result: 기존 coverage gap repair는 row 부족만 처리해 selected as-of mismatch를 보강하지 못했다. 또 basis bar / method grid / summary strip이 표본과 조건을 반복했고, 상세 표가 primary read path였다.
+- Follow-up: V12에서 stale basis repair action, compact basis summary, collapsed technical detail, core outcome matrix, support summary, collapsed statistics table을 완료했다. Macro 조건 포함 비교의 세부 UX polish는 별도 후속 후보로 남긴다.

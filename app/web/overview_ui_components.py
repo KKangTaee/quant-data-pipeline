@@ -1020,6 +1020,9 @@ def overview_ui_css() -> str:
   border-top: 1px solid var(--ov-mi-border-subtle);
   border-bottom: 1px solid var(--ov-mi-border-subtle);
 }
+.ov-analog-basis-summary {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.9fr);
+}
 .ov-analog-basis-cell {
   min-width: 0;
   padding: 0.68rem 0.74rem;
@@ -1049,6 +1052,21 @@ def overview_ui_css() -> str:
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-xs);
   line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-analog-technical-details {
+  margin-top: 0.42rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.28;
+}
+.ov-analog-technical-details summary {
+  cursor: pointer;
+  color: var(--ov-mi-color-text-subtle);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-analog-technical-details div {
+  margin-top: 0.18rem;
   overflow-wrap: anywhere;
 }
 .ov-analog-basis-warning {
@@ -1184,6 +1202,28 @@ def overview_ui_css() -> str:
   line-height: 1.38;
   overflow-wrap: anywhere;
 }
+.ov-analog-method-line {
+  display: grid;
+  gap: 0.16rem;
+  margin-top: 0.74rem;
+  padding: 0.62rem 0.72rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+.ov-analog-method-line strong {
+  color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.14;
+}
+.ov-analog-method-line small {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+}
 .ov-analog-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1254,6 +1294,164 @@ def overview_ui_css() -> str:
   color: var(--ov-mi-color-text-subtle);
   font-size: 0.9rem;
   line-height: 1.42;
+}
+.ov-analog-outcome-matrix {
+  margin-top: 0.74rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+}
+.ov-analog-outcome-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: baseline;
+  padding: 0.58rem 0.72rem 0.46rem;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-outcome-title {
+  color: var(--ov-mi-color-text);
+  font-size: 0.94rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+}
+.ov-analog-outcome-note {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+  text-align: right;
+}
+.ov-analog-matrix-grid {
+  display: grid;
+  min-width: 0;
+}
+.ov-analog-matrix-header,
+.ov-analog-matrix-row {
+  display: grid;
+  grid-template-columns: minmax(5.4rem, 0.55fr) repeat(var(--ov-analog-horizon-count, 3), minmax(0, 1fr));
+  min-width: 0;
+}
+.ov-analog-matrix-header {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-analog-matrix-heading,
+.ov-analog-matrix-asset,
+.ov-analog-matrix-cell {
+  border-left: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-matrix-heading:first-child,
+.ov-analog-matrix-asset:first-child {
+  border-left: 0;
+}
+.ov-analog-matrix-heading {
+  padding: 0.34rem 0.58rem;
+  text-align: right;
+}
+.ov-analog-matrix-asset {
+  padding: 0.62rem 0.66rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.9rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-analog-matrix-cell {
+  min-width: 0;
+  padding: 0.52rem 0.58rem;
+  text-align: right;
+  background: transparent;
+}
+.ov-analog-matrix-cell.is-positive {
+  background: color-mix(in srgb, var(--ov-mi-color-success) 5%, transparent);
+}
+.ov-analog-matrix-cell.is-negative {
+  background: color-mix(in srgb, var(--ov-mi-color-warning) 5%, transparent);
+}
+.ov-analog-matrix-cell-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.12;
+}
+.ov-analog-matrix-cell strong {
+  display: block;
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.98rem;
+  line-height: 1.16;
+}
+.ov-analog-matrix-cell span,
+.ov-analog-matrix-cell small {
+  display: block;
+  margin-top: 0.08rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.14;
+}
+.ov-analog-support-summary {
+  margin-top: 0.7rem;
+  border-top: 1px solid var(--ov-mi-border-subtle);
+  border-bottom: 1px solid var(--ov-mi-border-subtle);
+}
+.ov-analog-support-head {
+  padding: 0.58rem 0.72rem 0.42rem;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-support-title {
+  color: var(--ov-mi-color-text);
+  font-size: 0.92rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+}
+.ov-analog-support-note {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.22;
+}
+.ov-analog-support-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.ov-analog-support-item {
+  min-width: 0;
+  padding: 0.58rem 0.68rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-analog-support-item:first-child {
+  border-left: 0;
+}
+.ov-analog-support-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-analog-support-value {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: 0.94rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+}
+.ov-analog-support-detail {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+}
+.ov-analog-detail-tables {
+  margin-top: 0.66rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+}
+.ov-analog-detail-tables summary {
+  cursor: pointer;
+  padding: 0.48rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  color: var(--ov-mi-color-text);
+  font-weight: var(--ov-mi-weight-heading);
 }
 .ov-analog-condition {
   display: flex;
@@ -2844,6 +3042,30 @@ def overview_ui_css() -> str:
   .ov-analog-interpretation {
     grid-template-columns: 1fr;
   }
+  .ov-analog-outcome-head {
+    display: block;
+  }
+  .ov-analog-outcome-note {
+    margin-top: 0.14rem;
+    text-align: left;
+  }
+  .ov-analog-matrix-grid {
+    overflow-x: auto;
+  }
+  .ov-analog-matrix-header,
+  .ov-analog-matrix-row {
+    min-width: 42rem;
+  }
+  .ov-analog-support-list {
+    grid-template-columns: 1fr;
+  }
+  .ov-analog-support-item {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-analog-support-item:first-child {
+    border-top: 0;
+  }
   .ov-macro-conditioned-stats,
   .ov-macro-sample-funnel,
   .ov-macro-funnel-track,
@@ -3373,20 +3595,31 @@ def _analog_find_reference_row(rows: list[dict[str, Any]], proxy_etf: str) -> di
     return rows[0] if rows else {}
 
 
+def _analog_find_asset_horizon_row(rows: list[dict[str, Any]], asset: str, horizon: str) -> dict[str, Any]:
+    normalized_asset = asset.strip().upper()
+    normalized_horizon = horizon.strip().upper()
+    for row in rows:
+        if _analog_row_asset(row) == normalized_asset and _analog_row_horizon(row) == normalized_horizon:
+            return row
+    return {}
+
+
 def _analog_summary_strip_html(model: dict[str, Any], rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
     proxy_etf = _display_value(model.get("proxy_etf"))
-    pattern_label = _display_value(model.get("pattern_window_label") or model.get("pattern_window") or "5D")
     reference = _analog_find_reference_row(rows, str(model.get("proxy_etf") or ""))
     reference_horizon = _display_value(reference.get("horizon") or "20D")
-    sample_count = _display_value(model.get("sample_count") or reference.get("sample_count"))
+    spy_reference = _analog_find_asset_horizon_row(rows, "SPY", str(reference.get("horizon") or "20D"))
+    qqq_reference = _analog_find_asset_horizon_row(rows, "QQQ", str(reference.get("horizon") or "20D"))
+    comparison = spy_reference or qqq_reference
+    comparison_asset = _display_value(comparison.get("asset") or "SPY")
+    comparison_value = _analog_pct(comparison.get("median_return_pct")) if comparison else "-"
     metrics = [
-        ("유사 사례", f"{sample_count}회", f"선택 기준 시점의 SPY 대비 {pattern_label} 상대강도 기준"),
         (
             f"{proxy_etf} {reference_horizon} 중간값",
             _analog_pct(reference.get("median_return_pct")),
-            "유사 구간 이후 해당 기간 median",
+            "유사 구간 이후 해당 기간 중앙 경로",
         ),
         (
             "상승 비율",
@@ -3394,6 +3627,11 @@ def _analog_summary_strip_html(model: dict[str, Any], rows: list[dict[str, Any]]
             "같은 표본에서 양수였던 비율",
         ),
         ("최악", _analog_pct(reference.get("worst_return_pct")), "같은 표본 안의 가장 나쁜 경로"),
+        (
+            "시장 기준 비교",
+            f"{comparison_asset} {comparison_value}",
+            f"같은 표본의 {reference_horizon} 중앙 경로",
+        ),
     ]
     metric_html = "".join(
         '<div class="ov-analog-summary-item">'
@@ -3404,6 +3642,109 @@ def _analog_summary_strip_html(model: dict[str, Any], rows: list[dict[str, Any]]
         for label, value, detail in metrics
     )
     return f'<div class="ov-analog-summary-strip">{metric_html}</div>'
+
+
+def _analog_outcome_matrix_html(rows: list[dict[str, Any]], *, title: str, note: str) -> str:
+    if not rows:
+        return ""
+    asset_order = list(dict.fromkeys(_analog_row_asset(row) for row in rows if _analog_row_asset(row)))
+    horizon_order = [
+        horizon
+        for horizon in ("5D", "20D", "60D", "1M")
+        if any(_analog_row_horizon(row) == horizon for row in rows)
+    ]
+    if not horizon_order:
+        horizon_order = list(dict.fromkeys(_analog_row_horizon(row) for row in rows if _analog_row_horizon(row)))
+    header_html = "".join(f'<div class="ov-analog-matrix-heading">{escape(horizon)}</div>' for horizon in horizon_order)
+    row_html: list[str] = []
+    for asset in asset_order:
+        cells: list[str] = []
+        for horizon in horizon_order:
+            row = _analog_find_asset_horizon_row(rows, asset, horizon)
+            if not row:
+                cells.append('<div class="ov-analog-matrix-cell is-empty">-</div>')
+                continue
+            median = row.get("median_return_pct")
+            try:
+                median_value = float(median)
+            except (TypeError, ValueError):
+                median_value = 0.0
+            tone_class = "is-positive" if median_value > 0 else "is-negative" if median_value < 0 else "is-flat"
+            cells.append(
+                f'<div class="ov-analog-matrix-cell {tone_class}">'
+                f'<div class="ov-analog-matrix-cell-label">{escape(asset)} · {escape(horizon)}</div>'
+                f'<strong>{escape(_analog_pct(row.get("median_return_pct")))}</strong>'
+                f'<span>상승 {escape(_analog_pct(row.get("positive_rate_pct")))}</span>'
+                f'<small>최악 {escape(_analog_pct(row.get("worst_return_pct")))}</small>'
+                "</div>"
+            )
+        row_html.append(
+            '<div class="ov-analog-matrix-row">'
+            f'<div class="ov-analog-matrix-asset">{escape(asset)}</div>'
+            f'{"".join(cells)}'
+            "</div>"
+        )
+    return (
+        '<div class="ov-analog-outcome-matrix">'
+        '<div class="ov-analog-outcome-head">'
+        f'<div class="ov-analog-outcome-title">{escape(title)}</div>'
+        f'<div class="ov-analog-outcome-note">{escape(note)}</div>'
+        "</div>"
+        f'<div class="ov-analog-matrix-grid" style="--ov-analog-horizon-count:{len(horizon_order)};">'
+        f'<div class="ov-analog-matrix-header"><div></div>{header_html}</div>'
+        f'{"".join(row_html)}'
+        "</div>"
+        "</div>"
+    )
+
+
+def _analog_support_summary_html(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    asset_order = list(dict.fromkeys(_analog_row_asset(row) for row in rows if _analog_row_asset(row)))
+    items: list[str] = []
+    for asset in asset_order[:6]:
+        reference = (
+            _analog_find_asset_horizon_row(rows, asset, "20D")
+            or _analog_find_asset_horizon_row(rows, asset, "60D")
+            or _analog_find_asset_horizon_row(rows, asset, "5D")
+        )
+        if not reference:
+            continue
+        horizon = _display_value(reference.get("horizon"))
+        items.append(
+            '<div class="ov-analog-support-item">'
+            f'<div class="ov-analog-support-label">{escape(asset)} · {escape(horizon)}</div>'
+            f'<div class="ov-analog-support-value">{escape(_analog_pct(reference.get("median_return_pct")))} median</div>'
+            f'<div class="ov-analog-support-detail">상승 {escape(_analog_pct(reference.get("positive_rate_pct")))} · 최악 {escape(_analog_pct(reference.get("worst_return_pct")))}</div>'
+            "</div>"
+        )
+    if not items:
+        return ""
+    return (
+        '<div class="ov-analog-support-summary">'
+        '<div class="ov-analog-support-head">'
+        '<div class="ov-analog-support-title">시장 배경 요약</div>'
+        '<div class="ov-analog-support-note">채권, 금, 중소형주, 크레딧 등은 리더십 판단의 보조 배경으로 낮춰 봅니다.</div>'
+        "</div>"
+        f'<div class="ov-analog-support-list">{"".join(items)}</div>'
+        "</div>"
+    )
+
+
+def _analog_detail_tables_html(primary_rows: list[dict[str, Any]], support_rows: list[dict[str, Any]]) -> str:
+    table_html = (
+        f"{_analog_table_block_html(primary_rows, title='핵심 자산 상세 통계', note='matrix에 사용한 원본 분포입니다.')}"
+        f"{_analog_table_block_html(support_rows, title='보조 자산 상세 통계', note='보조 배경 자산의 원본 분포입니다.', secondary=True)}"
+    )
+    if not table_html:
+        return ""
+    return (
+        '<details class="ov-analog-detail-tables">'
+        "<summary>상세 통계</summary>"
+        f"{table_html}"
+        "</details>"
+    )
 
 
 def _analog_interpretation_html(model: dict[str, Any], rows: list[dict[str, Any]]) -> str:
@@ -3512,13 +3853,22 @@ def _analog_basis_ledger_html(
 ) -> str:
     alignment = dict(model.get("as_of_alignment") or {})
     alignment_reason = alignment.get("reason")
+    condition = _display_value(model.get("condition_summary") or model.get("detail"))
+    sector = _display_value(model.get("leadership_sector"))
+    proxy_etf = _display_value(model.get("proxy_etf"))
+    sample_count = _display_value(model.get("sample_count"))
+    is_aligned = bool(alignment.get("is_aligned", True))
+    basis_value = f"{requested_as_of} · 계산 기준일 {current_as_of}"
+    basis_detail = (
+        alignment_reason
+        if alignment_reason and not is_aligned
+        else "DB 공통 가격의 최신 usable 기준으로 계산"
+    )
     cells = [
-        ("요청 기준일", requested_as_of, "latest는 DB 공통 가격 최신 usable 기준"),
-        ("실제 계산 기준일", current_as_of, alignment_reason or "선택 기준일 이하 가격만 사용"),
-        ("기준 섹터", model.get("leadership_sector"), "선택 기준일의 리더십 sector"),
-        ("ETF proxy", model.get("proxy_etf"), "sector ETF로 과거 사례 탐색"),
-        ("패턴 기간", pattern_label, f"계산식: {calculation_note}"),
-        ("표본 / 자료 기간", f"{_display_value(model.get('sample_count'))}회", data_window),
+        ("계산 기준", basis_value, basis_detail),
+        ("기준 자산", f"{sector} · {proxy_etf}", "선택한 기준 시점의 리더십 섹터"),
+        ("유사 조건", pattern_label, condition),
+        ("표본", f"{sample_count}회", data_window),
     ]
     cell_html = "".join(
         '<div class="ov-analog-basis-cell">'
@@ -3531,49 +3881,30 @@ def _analog_basis_ledger_html(
     replay_note = replay_basis if replay_basis != "-" else "현재 universe/sector metadata 기준"
     boundary_note = "선택 기준일 이후 가격은 anchor/condition 계산에 사용하지 않음"
     return (
-        f'<div class="ov-analog-basis-bar">{cell_html}</div>'
-        '<div class="ov-historical-analog-meta">'
-        f'replay: {escape(replay_note)} · as-of 경계: {escape(boundary_note)}'
-        '</div>'
+        f'<div class="ov-analog-basis-bar ov-analog-basis-summary">{cell_html}</div>'
+        '<details class="ov-analog-technical-details">'
+        "<summary>계산 경계 상세</summary>"
+        f'<div>계산식: {escape(calculation_note)}</div>'
+        f'<div>replay: {escape(replay_note)}</div>'
+        f'<div>as-of 경계: {escape(boundary_note)}</div>'
+        "</details>"
     )
 
 
-def _analog_method_grid_html(
+def _analog_method_line_html(
     model: dict[str, Any],
     *,
     condition: str,
-    data_window: str,
     pattern_label: str,
 ) -> str:
-    sector = _display_value(model.get("leadership_sector"))
     proxy_etf = _display_value(model.get("proxy_etf"))
-    sample_count = _display_value(model.get("sample_count"))
-    steps = [
-        (
-            "현재 기준",
-            f"{sector} · {proxy_etf}",
-            f"선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고 현재 기준을 잡습니다.",
-        ),
-        (
-            "유사 사례 조건",
-            condition,
-            f"{proxy_etf}가 SPY 대비 {pattern_label} 기준 강했던 과거 구간을 찾습니다.",
-        ),
-        (
-            "표본 품질",
-            f"{sample_count}회 · {data_window}",
-            "표본 수와 자료 기간을 먼저 확인하고, 표본이 작으면 broad 결과와 함께 낮춰 읽습니다.",
-        ),
-    ]
-    step_html = "".join(
-        '<div class="ov-analog-method-step">'
-        f'<div class="ov-analog-method-kicker">{escape(kicker)}</div>'
-        f'<div class="ov-analog-method-title">{escape(title)}</div>'
-        f'<div class="ov-analog-method-detail">{escape(detail)}</div>'
+    return (
+        '<div class="ov-analog-method-line">'
+        '<strong>유사 맥락 계산</strong>'
+        f'<span>선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고, {escape(proxy_etf)}가 SPY 대비 {escape(pattern_label)} 기준 강했던 과거 구간을 찾습니다. 각 anchor 이후 5D / 20D / 60D 분포를 비교합니다.</span>'
+        f'<small>조건: {escape(condition)}</small>'
         "</div>"
-        for kicker, title, detail in steps
     )
-    return f'<div class="ov-analog-method-grid">{step_html}</div>'
 
 
 def _macro_condition_list_html(title: str, items: list[dict[str, Any]]) -> str:
@@ -3803,11 +4134,12 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     if rows:
         primary_rows, support_rows = _analog_rows_by_priority(rows, proxy_etf)
         body_html = (
-            f"{_analog_method_grid_html(model, condition=condition, data_window=_display_value(model.get('data_window')), pattern_label=pattern_label)}"
+            f"{_analog_method_line_html(model, condition=condition, pattern_label=pattern_label)}"
             f"{_analog_summary_strip_html(model, rows)}"
+            f"{_analog_outcome_matrix_html(primary_rows, title='핵심 자산 비교', note='리더십 ETF와 시장 기준 SPY, 성장주 proxy QQQ를 기간별로 먼저 비교합니다.')}"
             f"{_analog_interpretation_html(model, rows)}"
-            f"{_analog_table_block_html(primary_rows, title='핵심 자산 요약', note='리더십 ETF, 시장 기준 SPY, 성장주 proxy QQQ를 먼저 봅니다.')}"
-            f"{_analog_table_block_html(support_rows, title='보조 자산 참고', note='채권, 금, 중소형주, 크레딧 등 배경 자산은 참고로 낮춰 봅니다.', secondary=True)}"
+            f"{_analog_support_summary_html(support_rows)}"
+            f"{_analog_detail_tables_html(primary_rows, support_rows)}"
         )
     elif coverage_gaps and repair_action:
         gap_rows: list[str] = []
@@ -3875,12 +4207,17 @@ def _macro_cockpit_historical_analog_html(model: dict[str, Any]) -> str:
     basis_warning_html = _analog_basis_warning_html(model)
     condition_html = "" if rows else f'<div class="ov-historical-analog-detail">{escape(condition)}</div>'
     macro_pilot_html = _macro_conditioned_pilot_html(model, proxy_etf=proxy_etf)
+    section_detail = (
+        "선택 기준과 유사했던 과거 구간의 이후 분포"
+        if rows
+        else _display_value(model.get("headline"))
+    )
     analog_section_html = (
         f'<section class="{section_class}" style="--ov-analog-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-historical-analog-head">'
         "<div>"
         '<div class="ov-historical-analog-title">참고: 과거 유사 맥락</div>'
-        f'<div class="ov-historical-analog-detail">{escape(_display_value(model.get("headline")))}</div>'
+        f'<div class="ov-historical-analog-detail">{escape(section_detail)}</div>'
         "</div>"
         f'<div class="ov-historical-analog-status">{escape(status_label)}</div>'
         "</div>"

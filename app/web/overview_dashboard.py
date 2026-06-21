@@ -1917,15 +1917,30 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
     target_table = str(repair_action.get("target_table") or "finance_price.nyse_price_history")
     label = str(repair_action.get("label") or "부족 ETF 가격 이력 보강")
     symbol_text = ", ".join(symbols)
+    stale_basis = bool(repair_action.get("stale_basis"))
+    requested_as_of = str(repair_action.get("requested_as_of") or "").strip()
+    effective_as_of = str(repair_action.get("effective_as_of") or "").strip()
 
     st.markdown("#### 과거 유사 맥락 자료 수집")
-    st.caption(
-        f"`{symbol_text}` 가격 이력이 부족해 과거 유사 맥락 표를 계산하지 못하고 있습니다. "
-        f"아래 버튼을 누르면 기존 OHLCV 수집 경로로 `{target_table}`에 {period} {interval} 이력을 저장합니다."
-    )
+    if stale_basis:
+        st.caption(
+            f"`{symbol_text}` 가격 기준이 선택일보다 오래되어 과거 유사 맥락이 "
+            f"{effective_as_of or '이전'} 기준으로 계산되고 있습니다. "
+            f"아래 버튼을 누르면 기존 OHLCV 수집 경로로 `{target_table}`에 {period} {interval} 이력을 갱신합니다."
+        )
+    else:
+        st.caption(
+            f"`{symbol_text}` 가격 이력이 부족해 과거 유사 맥락 표를 계산하지 못하고 있습니다. "
+            f"아래 버튼을 누르면 기존 OHLCV 수집 경로로 `{target_table}`에 {period} {interval} 이력을 저장합니다."
+        )
     cols = st.columns([1.45, 0.82], gap="small", vertical_alignment="center")
     with cols[0]:
-        st.caption("이 작업은 현재 리더십 섹터 proxy와 부족 비교 자산만 대상으로 실행합니다.")
+        if stale_basis:
+            st.caption(
+                f"이 작업은 요청 기준일 {requested_as_of or 'selected'}까지 맞추는 데 제한이 된 가격 자료만 대상으로 실행합니다."
+            )
+        else:
+            st.caption("이 작업은 현재 리더십 섹터 proxy와 부족 비교 자산만 대상으로 실행합니다.")
     if cols[1].button(
         label,
         key="overview_market_context_historical_analog_ohlcv",
@@ -1933,7 +1948,8 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
         type="secondary",
         help=f"{symbol_text} OHLCV를 기존 collect_ohlcv 경로로 수집합니다.",
     ):
-        with st.spinner("과거 유사 맥락에 필요한 ETF 가격 이력을 보강하는 중입니다..."):
+        spinner_copy = "과거 유사 맥락 가격 기준을 최신화하는 중입니다..." if stale_basis else "과거 유사 맥락에 필요한 ETF 가격 이력을 보강하는 중입니다..."
+        with st.spinner(spinner_copy):
             result = run_overview_historical_analog_ohlcv(
                 symbols=symbols,
                 period=period,
@@ -1942,7 +1958,7 @@ def _render_overview_historical_analog_repair_action(cockpit_model: dict[str, An
             _store_overview_job_result(MARKET_CONTEXT_ANALOG_REFRESH_RESULT_KEY, result)
             st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = {
                 "tone": _status_tone(result.get("status")),
-                "label": "과거 유사 맥락 자료 보강을 반영했습니다",
+                "label": "과거 유사 맥락 가격 기준을 다시 읽었습니다" if stale_basis else "과거 유사 맥락 자료 보강을 반영했습니다",
                 "detail": f"{symbol_text} 가격 이력 수집 후 Market Context를 다시 읽었습니다.",
                 "reflected": str(result.get("status") or "").lower() in {"success", "partial_success"},
                 "reflected_at": datetime.now().strftime("%Y-%m-%d %H:%M"),

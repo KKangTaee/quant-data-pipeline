@@ -9724,6 +9724,11 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("SPY", alignment["limiting_symbols"])
         self.assertIn("공통 가격", alignment["reason"])
         self.assertTrue(any(effective_date in warning for warning in model["basis_warnings"]))
+        self.assertEqual(model["repair_action"]["label"], "과거 유사 맥락 가격 기준 최신화")
+        self.assertEqual(model["repair_action"]["symbols"], ["SPY", "QQQ", "GLD"])
+        self.assertTrue(model["repair_action"]["stale_basis"])
+        self.assertIn(requested_date, model["repair_action"]["reason"])
+        self.assertIn(effective_date, model["repair_action"]["reason"])
 
     def test_historical_analog_builds_separate_gld_conditioned_pilot_without_changing_broad_rows(self) -> None:
         from app.services.overview_market_context_analog import build_historical_analog_snapshot
@@ -10231,51 +10236,112 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고", html)
+        self.assertIn("선택한 기준 시점의 리더십 섹터", html)
         self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
         self.assertIn("먼저 읽을 결론", html)
         self.assertIn("ov-analog-summary-strip", html)
         self.assertIn("ov-analog-basis-bar", html)
-        self.assertIn("ov-analog-method-grid", html)
-        self.assertIn("현재 기준", html)
-        self.assertIn("유사 사례 조건", html)
-        self.assertIn("표본 품질", html)
+        self.assertIn("ov-analog-basis-summary", html)
+        self.assertIn("ov-analog-method-line", html)
+        self.assertIn("ov-analog-technical-details", html)
+        self.assertNotIn("ov-analog-method-grid", html)
+        self.assertNotIn("현재 기준", html)
+        self.assertNotIn("표본 품질", html)
         self.assertIn("먼저 볼 점", html)
         self.assertIn("주의할 점", html)
         self.assertIn("기준 변경은 아래 과거 참고 통계에만 적용", html)
         self.assertNotIn("ov-analog-basis-ledger", html)
         self.assertIn("상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준", html)
-        self.assertIn("기준 시점", html)
+        self.assertIn("계산 기준", html)
         self.assertIn("latest", html)
         self.assertIn("계산 기준일", html)
         self.assertIn("2026-05-29", html)
-        self.assertIn("패턴 기간", html)
+        self.assertIn("기준 자산", html)
+        self.assertIn("유사 조건", html)
         self.assertIn("5D", html)
-        self.assertIn("자료 기간", html)
+        self.assertIn("표본", html)
         self.assertIn("2016-06-16 - 2026-05-29", html)
         self.assertIn("계산식", html)
         self.assertIn("선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준", html)
-        self.assertIn("유사 사례", html)
         self.assertIn("XLK 20D 중간값", html)
         self.assertIn("+3.3%", html)
         self.assertIn("상승 비율", html)
         self.assertIn("최악", html)
         self.assertIn("미래 움직임 보장이 아닙니다", html)
-        self.assertIn("핵심 자산 요약", html)
-        self.assertIn("보조 자산 참고", html)
+        self.assertIn("핵심 자산 비교", html)
+        self.assertIn("시장 배경 요약", html)
+        self.assertIn("상세 통계", html)
+        self.assertLessEqual(html.count("29회"), 1)
 
         explanation_index = html.index("선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고")
         summary_index = html.index("ov-analog-summary-strip")
+        matrix_index = html.index("ov-analog-outcome-matrix")
         table_index = html.index("ov-historical-analog-table-block")
         self.assertLess(explanation_index, summary_index)
-        self.assertLess(summary_index, table_index)
+        self.assertLess(summary_index, matrix_index)
+        self.assertLess(matrix_index, table_index)
 
-        primary_block = html[html.index("핵심 자산 요약") : html.index("보조 자산 참고")]
-        support_block = html[html.index("보조 자산 참고") :]
+        primary_block = html[html.index("핵심 자산 비교") : html.index("시장 배경 요약")]
+        support_block = html[html.index("시장 배경 요약") :]
         self.assertIn("XLK · 20D", primary_block)
         self.assertIn("SPY · 20D", primary_block)
         self.assertIn("QQQ · 20D", primary_block)
         self.assertIn("TLT · 20D", support_block)
+
+    def test_historical_analog_html_prioritizes_matrix_and_collapses_stat_tables(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        rows = []
+        for asset in ["XLB", "SPY", "QQQ", "TLT", "GLD"]:
+            for horizon, median, positive, worst in [
+                ("5D", 0.5, 63.6, -13.1),
+                ("20D", 1.5, 63.6, -19.9),
+                ("60D", 3.6, 64.8, -16.5),
+            ]:
+                rows.append(
+                    {
+                        "asset": asset,
+                        "horizon": horizon,
+                        "median_return_pct": median,
+                        "positive_rate_pct": positive,
+                        "best_return_pct": median + 8.0,
+                        "worst_return_pct": worst,
+                        "sample_count": 88,
+                    }
+                )
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 88회 발견",
+                "detail": "Basic Materials(XLB)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Basic Materials",
+                "proxy_etf": "XLB",
+                "sample_count": 88,
+                "condition_summary": "XLB 5D-SPY 5D 상대강도 >= +1.0%",
+                "data_window": "2016-06-20 - 2026-05-29",
+                "current_as_of": "2026-05-29",
+                "rows": rows,
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("ov-analog-outcome-matrix", html)
+        self.assertIn("핵심 자산 비교", html)
+        self.assertIn("XLB", html)
+        self.assertIn("SPY", html)
+        self.assertIn("QQQ", html)
+        self.assertIn("5D", html)
+        self.assertIn("20D", html)
+        self.assertIn("60D", html)
+        self.assertIn("시장 배경 요약", html)
+        self.assertIn("TLT", html)
+        self.assertIn("GLD", html)
+        self.assertIn("ov-analog-detail-tables", html)
+        self.assertIn("<summary>상세 통계</summary>", html)
+        self.assertLess(html.index("ov-analog-outcome-matrix"), html.index("ov-analog-detail-tables"))
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
+            self.assertNotIn(forbidden, html)
 
     def test_historical_analog_html_turns_insufficient_data_into_actionable_gap_panel(self) -> None:
         from app.web.overview_ui_components import _macro_cockpit_historical_analog_html

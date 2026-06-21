@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-20
+Last Verified: 2026-06-21
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-analog-usability-v12-20260621` | Completed record | `Overview > Market Context` V12 follow-up. Historical analog selected-as-of common price basis mismatch now has a bounded price-basis refresh action, the basis/method area is deduped into compact summary + collapsed technical details, and core/support asset outcomes render as matrix/summary before detailed tables. |
 | `overview-market-context-session-basis-v9-20260620` | Completed record | `Overview > Market Context` V9 follow-up. 휴장 / 장외 시간에는 `오늘의 시장 브리프` 대신 마지막 거래일 또는 현재 세션 기준 브리프로 읽고, 장중 snapshot age만으로 현재 보강 이슈를 띄우지 않도록 보정했다. |
 | `overview-market-context-source-actionability-v8-20260620` | Completed record | `Overview > Market Context` V8 follow-up. Events estimate caveats는 `참고 제한`, Data Health는 `관리 메타`로 분리하고, top `자료 상태`와 source confidence summary는 보강 가능한 자료만 unresolved로 세도록 고쳤다. |
 | `overview-market-context-smart-refresh-v7-20260620` | Completed record | `Overview > Market Context` V7 follow-up. Events를 브리프에서 낮추고, smart refresh / full refresh fallback / result reflection을 정리했다. |

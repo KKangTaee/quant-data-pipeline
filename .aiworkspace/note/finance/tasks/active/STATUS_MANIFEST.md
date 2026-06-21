@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-analog-macro-ux-v11-20260621`
+- `overview-market-context-analog-usability-v12-20260621`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-analog-usability-v12-20260621`: Completed record. `Overview > Market Context` V12 보정으로 historical analog의 selected as-of 공통 daily price basis mismatch를 bounded 가격 기준 최신화 action으로 연결하고, 기준/조건/표본 중복을 compact basis summary + 접힌 계산 경계 상세로 낮췄다. 핵심 자산은 5D / 20D / 60D matrix로 먼저 읽고, 보조 자산은 배경 요약으로 낮추며, 원본 통계 표는 `상세 통계` disclosure에 남긴다.
 - `overview-market-context-analog-macro-ux-v11-20260621`: Completed record. `Overview > Market Context` V11 보정으로 historical analog / Macro 조건 포함 비교를 prototype-like card stack에서 분석형 flow로 재구성했다. 기준 선택은 analog flow 바로 앞에 두고, 결과는 basis bar, `현재 기준` / `유사 사례 조건` / `표본 품질`, `먼저 볼 점` / `주의할 점`, 별도 Macro comparison section, condition-role groups로 읽게 했다.
 - `overview-market-context-analog-basis-clarity-v10-20260620`: Completed record. `Overview > Market Context` V10 보정으로 historical analog의 요청 기준일과 실제 계산 기준일을 분리해 표시하고, 공통 daily 가격 coverage가 오래되어 선택일보다 이른 날짜로 계산될 때 limiting symbols와 basis warning을 보여준다. Macro 조건 포함 비교는 broad sample -> GLD 배경 -> 금리선물 압력 funnel과 사용자 언어 condition group으로 정리했다.
 - `overview-market-context-session-basis-v9-20260620`: Completed record. `Overview > Market Context` V9 보정으로 미국장 휴장 / 장외 시간에는 `오늘의 시장 브리프`를 마지막 거래일 또는 현재 세션 기준 브리프로 표시하고, 장중 snapshot elapsed age만으로 `현재 이슈만 보강`을 띄우지 않도록 했다.
