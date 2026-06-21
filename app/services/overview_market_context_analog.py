@@ -253,6 +253,13 @@ def _macro_conditioned_disabled_model(
         "condition_summary": detail,
         "broad_sample_count": int(broad_sample_count),
         "sample_count": 0,
+        "macro_condition_counts": {
+            "broad": int(broad_sample_count),
+            "gld": 0,
+            "futures": 0,
+            "futures_available": 0,
+            "intersection": 0,
+        },
         "additional_condition_count": 0,
         "sample_reduction_reason": detail,
         "sample_quality": _sample_quality(status, sample_count=0, broad_sample_count=int(broad_sample_count), min_sample_count=1),
@@ -1021,6 +1028,7 @@ def _condition_dimension_items(
     broad_anchor_count: int,
     conditioned_anchor_count: int,
     gld_anchor_count: int,
+    futures_anchor_count: int | None = None,
 ) -> list[dict[str, Any]]:
     source_by_id = {
         "sector_relative_strength": "finance_price.nyse_price_history",
@@ -1030,7 +1038,7 @@ def _condition_dimension_items(
     preview_by_id = {
         "sector_relative_strength": broad_anchor_count,
         "gld_safe_haven_context": gld_anchor_count,
-        "futures_rate_pressure_context": conditioned_anchor_count,
+        "futures_rate_pressure_context": conditioned_anchor_count if futures_anchor_count is None else futures_anchor_count,
     }
     labels = {
         "sector_relative_strength": "Sector ETF vs SPY relative strength",
@@ -1082,6 +1090,7 @@ def _macro_dimension_audit_model(
     anchor_indices: Sequence[int],
     conditioned_anchor_indices: Sequence[int],
     gld_conditioned_anchor_indices: Sequence[int],
+    futures_conditioned_anchor_indices: Sequence[int],
     used_conditions: Sequence[dict[str, Any]],
     insufficient_conditions: Sequence[dict[str, Any]],
     macro_series_history: pd.DataFrame | None,
@@ -1104,6 +1113,7 @@ def _macro_dimension_audit_model(
         broad_anchor_count=len(anchor_indices),
         conditioned_anchor_count=len(conditioned_anchor_indices),
         gld_anchor_count=len(gld_conditioned_anchor_indices),
+        futures_anchor_count=len(futures_conditioned_anchor_indices),
     )
     for spec in MACRO_DIMENSION_SPECS:
         dimensions.append(
@@ -1283,6 +1293,7 @@ def _macro_conditioned_pilot_model(
             anchor_indices=anchor_indices,
             conditioned_anchor_indices=[],
             gld_conditioned_anchor_indices=[],
+            futures_conditioned_anchor_indices=[],
             used_conditions=[sector_condition],
             insufficient_conditions=list(model.get("insufficient_conditions") or []),
             macro_series_history=macro_series_history,
@@ -1320,6 +1331,7 @@ def _macro_conditioned_pilot_model(
             anchor_indices=anchor_indices,
             conditioned_anchor_indices=[],
             gld_conditioned_anchor_indices=[],
+            futures_conditioned_anchor_indices=[],
             used_conditions=[sector_condition],
             insufficient_conditions=list(model.get("insufficient_conditions") or []),
             macro_series_history=macro_series_history,
@@ -1356,6 +1368,8 @@ def _macro_conditioned_pilot_model(
     additional_condition_count = 1
     futures_condition_clause = ""
     futures_condition_detail = ""
+    futures_conditioned_anchor_indices: list[int] = []
+    futures_bucket_count = 0
     current_futures_bucket = _futures_rate_pressure_bucket(
         futures_history if futures_history is not None else pd.DataFrame(),
         as_of_date=futures_as_of_date or analysis_matrix.index[-1],
@@ -1379,9 +1393,7 @@ def _macro_conditioned_pilot_model(
             )
         )
     else:
-        futures_matched_anchor_indices: list[int] = []
-        futures_bucket_count = 0
-        for anchor in gld_conditioned_anchor_indices:
+        for anchor in anchor_indices:
             anchor_bucket = _futures_rate_pressure_bucket(
                 futures_history if futures_history is not None else pd.DataFrame(),
                 as_of_date=analysis_matrix.index[int(anchor)],
@@ -1392,7 +1404,7 @@ def _macro_conditioned_pilot_model(
                 continue
             futures_bucket_count += 1
             if anchor_bucket["key"] == current_futures_bucket["key"]:
-                futures_matched_anchor_indices.append(int(anchor))
+                futures_conditioned_anchor_indices.append(int(anchor))
         if futures_bucket_count <= 0:
             insufficient_conditions.append(
                 _condition_item(
@@ -1402,16 +1414,22 @@ def _macro_conditioned_pilot_model(
                     status_label="조건 부족",
                     detail=(
                         f"Current {current_futures_bucket['detail']}; anchor-date futures buckets are unavailable "
-                        f"for GLD-conditioned anchors."
+                        f"for broad anchors."
                     ),
                 )
             )
         else:
-            conditioned_anchor_indices = futures_matched_anchor_indices
+            futures_matched = set(futures_conditioned_anchor_indices)
+            conditioned_anchor_indices = [
+                int(anchor)
+                for anchor in gld_conditioned_anchor_indices
+                if int(anchor) in futures_matched
+            ]
             additional_condition_count = 2
             futures_condition_detail = (
-                f"{current_futures_bucket['detail']}; anchor buckets computed "
-                f"{futures_bucket_count}/{len(gld_conditioned_anchor_indices)}"
+                f"{current_futures_bucket['detail']}; broad anchor buckets computed "
+                f"{futures_bucket_count}/{len(anchor_indices)}; same futures state "
+                f"{len(futures_conditioned_anchor_indices)}/{len(anchor_indices)}"
             )
             used_conditions.append(
                 _condition_item(
@@ -1455,6 +1473,7 @@ def _macro_conditioned_pilot_model(
         anchor_indices=anchor_indices,
         conditioned_anchor_indices=conditioned_anchor_indices,
         gld_conditioned_anchor_indices=gld_conditioned_anchor_indices,
+        futures_conditioned_anchor_indices=futures_conditioned_anchor_indices,
         used_conditions=used_conditions,
         insufficient_conditions=insufficient_conditions,
         macro_series_history=macro_series_history,
@@ -1476,6 +1495,13 @@ def _macro_conditioned_pilot_model(
         ),
         "broad_sample_count": broad_sample_count,
         "sample_count": sample_count,
+        "macro_condition_counts": {
+            "broad": int(broad_sample_count),
+            "gld": int(len(gld_conditioned_anchor_indices)),
+            "futures": int(len(futures_conditioned_anchor_indices)),
+            "futures_available": int(futures_bucket_count),
+            "intersection": int(sample_count),
+        },
         "additional_condition_count": additional_condition_count,
         "sample_reduction_reason": sample_reduction_reason,
         "sample_quality": _sample_quality(
@@ -1578,6 +1604,7 @@ def build_historical_analog_snapshot(
             anchor_indices=[],
             conditioned_anchor_indices=[],
             gld_conditioned_anchor_indices=[],
+            futures_conditioned_anchor_indices=[],
             used_conditions=list(pilot.get("used_conditions") or []),
             insufficient_conditions=list(pilot.get("insufficient_conditions") or []),
             macro_series_history=macro_rows,

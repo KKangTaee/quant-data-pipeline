@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-22 - Overview Market Context Macro Intersection V18
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-intersection-v18-20260622/` after user noted that applying GLD before rate futures could look order-dependent.
+- Added `macro_condition_counts` so Macro conditioned analog distinguishes broad sample, GLD same-state count, Rate Pressure futures same-state count, futures-computable count, and final GLD / futures intersection count.
+- Updated the Macro basis bar to `기본 유사 맥락 기준` / `GLD 같은 상태` / `금리선물 같은 상태` / `두 조건 모두`, while the conditioned result matrix still uses the final intersection sample.
+- Boundaries stayed unchanged: no new bucket rule, provider, schema, persistence, registry / saved write, validation, monitoring, or trading semantics.
+
 ### 2026-06-21 - Overview Market Context Macro Polish V17
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-polish-v17-20260621/` after user feedback that Macro condition steps still did not explain what GLD / rate-futures conditions meant and the reference Macro backdrop still looked text-heavy.
 - Added one-line condition meaning inside the Macro basis bar for broad sector ETF vs SPY analog pool, current-like GLD bucket, and current-like `ZN=F` / `ZB=F` rate-pressure bucket.

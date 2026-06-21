@@ -9952,6 +9952,16 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertEqual(pilot["sample_count"], 1)
         self.assertEqual(pilot["additional_condition_count"], 2)
         self.assertEqual(
+            pilot["macro_condition_counts"],
+            {
+                "broad": 3,
+                "gld": 2,
+                "futures": 1,
+                "futures_available": 3,
+                "intersection": 1,
+            },
+        )
+        self.assertEqual(
             [item["id"] for item in pilot["used_conditions"]],
             ["sector_relative_strength", "gld_safe_haven_context", "futures_rate_pressure_context"],
         )
@@ -10495,6 +10505,13 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
                     "condition_summary": "XLV relative strength + GLD 5D context",
                     "broad_sample_count": 3,
                     "sample_count": 2,
+                    "macro_condition_counts": {
+                        "broad": 3,
+                        "gld": 2,
+                        "futures": 2,
+                        "futures_available": 3,
+                        "intersection": 2,
+                    },
                     "additional_condition_count": 1,
                     "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 2회만 남았습니다.",
                     "sample_quality": {
@@ -10564,14 +10581,17 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("ov-macro-delta-matrix", html)
         self.assertIn("Macro 조건 결과 비교", html)
         self.assertIn("기본 유사 맥락", html)
-        self.assertIn("GLD 조건 적용", html)
-        self.assertIn("금리선물 조건 적용", html)
+        self.assertIn("GLD 같은 상태", html)
+        self.assertIn("금리선물 같은 상태", html)
         self.assertIn("XLV가 SPY 대비 5D 기준 비슷하게 강했던 구간", html)
         self.assertIn("GLD가 현재처럼 상승 흐름이었던 과거 구간", html)
         self.assertIn("ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간", html)
         self.assertIn("기본 유사 맥락 3회 중 Macro 추가 배경까지 현재와 같았던 표본은 2회입니다", html)
         self.assertIn("기본 3회 중 GLD 상태 2회", html)
-        self.assertIn("GLD 조건 통과 2회 중 금리선물 상태 2회", html)
+        self.assertIn("기본 3회 중 금리선물 상태 2회", html)
+        self.assertIn("GLD와 금리선물이 모두 같았던 2회", html)
+        self.assertIn("두 조건 모두", html)
+        self.assertNotIn("GLD 조건 통과 2회 중 금리선물 상태 2회", html)
         self.assertIn("결과 변화", html)
         self.assertNotIn("ov-macro-sample-flow", html)
         self.assertNotIn("ov-macro-delta-table", html)

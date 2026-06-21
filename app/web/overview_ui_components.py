@@ -4310,6 +4310,27 @@ def _macro_stage_detail(
     return f"{_macro_pool_label('직전 조건 통과', previous_count)} 중 {_macro_stage_state_name(condition_id)} {count_label}"
 
 
+def _macro_independent_stage_detail(
+    *,
+    condition_id: str,
+    count: Any,
+    broad_count: Any,
+    futures_available: Any = None,
+) -> str:
+    count_label = _macro_count_label(count)
+    broad_label = _macro_pool_label("기본", broad_count)
+    if condition_id == "gld_safe_haven_context":
+        return f"{broad_label} 중 GLD 상태 {count_label}"
+    if condition_id == "futures_rate_pressure_context":
+        detail = f"{broad_label} 중 금리선물 상태 {count_label}"
+        if futures_available not in (None, "", broad_count):
+            detail = f"{detail} · 계산 가능 {_macro_count_label(futures_available)}"
+        return detail
+    if condition_id == "macro_condition_intersection":
+        return f"GLD와 금리선물이 모두 같았던 {count_label}"
+    return f"{broad_label} 중 {_macro_stage_state_name(condition_id)} {count_label}"
+
+
 def _macro_condition_meaning(
     condition_id: str,
     condition: dict[str, Any],
@@ -4338,6 +4359,8 @@ def _macro_condition_meaning(
         if "mixed" in detail or "엇갈" in detail:
             return "ZN=F/ZB=F가 현재처럼 금리 압력이 엇갈렸던 구간"
         return "ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간"
+    if condition_id == "macro_condition_intersection":
+        return "GLD와 금리선물 배경이 모두 현재와 같았던 과거 구간"
     return f"{_macro_stage_state_name(condition_id)}가 현재와 비슷했던 구간"
 
 
@@ -4388,6 +4411,11 @@ def _macro_sample_flow_html(pilot: dict[str, Any], *, proxy_etf: str, pattern_la
         item for item in used_conditions
         if str(item.get("id") or "") != "sector_relative_strength"
     ]
+    by_condition_id = {str(item.get("id") or ""): item for item in used_conditions}
+    condition_counts = dict(pilot.get("macro_condition_counts") or {})
+    gld_condition = by_condition_id.get("gld_safe_haven_context")
+    futures_condition = by_condition_id.get("futures_rate_pressure_context")
+    has_intersection_counts = bool(condition_counts) and gld_condition and futures_condition
     items: list[tuple[str, str, str, str]] = [
         (
             "기본 유사 맥락 기준",
@@ -4401,6 +4429,76 @@ def _macro_sample_flow_html(pilot: dict[str, Any], *, proxy_etf: str, pattern_la
             _display_value(basis_condition.get("label") or "Sector ETF vs SPY relative strength"),
         )
     ]
+    if has_intersection_counts:
+        broad_count = condition_counts.get("broad", pilot.get("broad_sample_count"))
+        gld_count = condition_counts.get("gld")
+        futures_count = condition_counts.get("futures")
+        intersection_count = condition_counts.get("intersection", pilot.get("sample_count"))
+        futures_available = condition_counts.get("futures_available")
+        items.extend(
+            [
+                (
+                    "GLD 같은 상태",
+                    _macro_count_label(gld_count),
+                    _macro_condition_meaning(
+                        "gld_safe_haven_context",
+                        gld_condition,
+                        proxy_etf=proxy_etf,
+                        pattern_label=pattern_label,
+                    ),
+                    _macro_independent_stage_detail(
+                        condition_id="gld_safe_haven_context",
+                        count=gld_count,
+                        broad_count=broad_count,
+                    ),
+                ),
+                (
+                    "금리선물 같은 상태",
+                    _macro_count_label(futures_count),
+                    _macro_condition_meaning(
+                        "futures_rate_pressure_context",
+                        futures_condition,
+                        proxy_etf=proxy_etf,
+                        pattern_label=pattern_label,
+                    ),
+                    _macro_independent_stage_detail(
+                        condition_id="futures_rate_pressure_context",
+                        count=futures_count,
+                        broad_count=broad_count,
+                        futures_available=futures_available,
+                    ),
+                ),
+                (
+                    "두 조건 모두",
+                    _macro_count_label(intersection_count),
+                    _macro_condition_meaning(
+                        "macro_condition_intersection",
+                        {},
+                        proxy_etf=proxy_etf,
+                        pattern_label=pattern_label,
+                    ),
+                    _macro_independent_stage_detail(
+                        condition_id="macro_condition_intersection",
+                        count=intersection_count,
+                        broad_count=broad_count,
+                    ),
+                ),
+            ]
+        )
+        summary = _macro_sample_summary(pilot, macro_conditions)
+        item_html = "".join(
+            '<div class="ov-analog-basis-cell ov-macro-basis-cell">'
+            f'<span>{escape(label)}</span>'
+            f'<strong>{escape(count)}</strong>'
+            f'<small class="ov-macro-basis-meaning">{escape(meaning)}</small>'
+            f'<small class="ov-macro-basis-count-detail">{escape(detail)}</small>'
+            "</div>"
+            for label, count, meaning, detail in items
+        )
+        return (
+            f'<div class="ov-macro-conditioned-summary">{escape(summary)}</div>'
+            f'<div class="ov-analog-basis-bar ov-analog-basis-summary ov-macro-basis-bar">{item_html}</div>'
+        )
     previous_condition_id: str | None = None
     previous_count: Any = pilot.get("broad_sample_count")
     for index, condition in enumerate(macro_conditions):

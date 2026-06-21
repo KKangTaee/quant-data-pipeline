@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-22 - Macro condition display should be intersection-first, not order-dependent
+- User request:
+  - GLD 조건을 먼저 적용한 뒤 금리선물을 적용하면 결과가 6회인데, 금리선물을 먼저 적용하고 GLD를 적용하면 값이 달라질 수 있지 않냐고 질문하고, 순서가 아니라 조건별 count와 교집합으로 보여주는 방향을 승인함.
+- Interpreted goal:
+  - Macro conditioned analog should communicate that the final conditioned sample is the intersection of GLD same-state and Rate Pressure futures same-state anchors, not a result that depends on the visual order.
+- Analysis result:
+  - Existing code computed the final sample by filtering GLD anchors with the futures bucket, which is mathematically an intersection for anchors with computable buckets, but the UI made it look like a sequential funnel. V18 now counts GLD and futures independently over the broad sample and separately exposes the final intersection.
+- Follow-up:
+  - Future Macro conditions should follow the same pattern: show each condition's independent broad-sample count and the final combined intersection, with missing/computable counts explicit when a condition cannot be evaluated for all anchors.
+
 ### 2026-06-21 - Macro condition counts need visible meaning, not just counts
 - User request:
   - `Macro 조건 후 결과 변화`의 `GLD 조건 적용 37회` / `금리선물 조건 적용 6회`가 무엇을 뜻하는지 기본 사용자가 바로 알 수 없고, `현재 Macro 배경 참고` 텍스트가 정리되지 않아 과거 유사 맥락 섹션보다 엉성해 보인다고 지적함.
