@@ -1584,15 +1584,14 @@ def overview_ui_css() -> str:
   font-size: 0.88rem;
   line-height: 1.45;
 }
-.ov-macro-sample-flow,
-.ov-macro-delta-table,
+.ov-macro-delta-matrix,
 .ov-macro-backdrop-grid {
   display: grid;
   gap: 0.5rem;
   margin-top: 0.7rem;
 }
-.ov-macro-sample-flow {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.ov-macro-basis-bar {
+  margin-top: 0.62rem;
 }
 .ov-macro-flow-item,
 .ov-macro-delta-row,
@@ -1635,40 +1634,8 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-xs);
   line-height: 1.24;
 }
-.ov-macro-delta-table {
-  grid-template-columns: 1fr;
-}
-.ov-macro-delta-row {
-  display: grid;
-  grid-template-columns: minmax(5.2rem, 0.55fr) repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-  align-items: start;
-}
-.ov-macro-delta-value {
-  text-align: right;
-}
-.ov-macro-delta-value span,
-.ov-macro-delta-value strong,
-.ov-macro-delta-value small {
-  display: block;
-}
-.ov-macro-delta-value span {
-  color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-xs);
-  line-height: 1.12;
-}
-.ov-macro-delta-value strong {
-  margin-top: 0.12rem;
-  color: var(--ov-mi-color-text);
-  font-size: 1rem;
-  font-weight: var(--ov-mi-weight-heading);
-  line-height: 1.18;
-}
-.ov-macro-delta-value small {
-  margin-top: 0.08rem;
-  color: var(--ov-mi-color-text-muted);
-  font-size: var(--ov-mi-font-xs);
-  line-height: 1.14;
+.ov-macro-delta-matrix .ov-analog-outcome-note {
+  max-width: 34rem;
 }
 .ov-macro-backdrop {
   margin-top: 0.82rem;
@@ -4286,22 +4253,37 @@ def _macro_stage_detail(
 ) -> str:
     condition_id = str(condition.get("id") or "")
     count_label = _macro_count_label(count)
-    condition_label = _display_value(condition.get("label"))
-    detail = _display_value(condition.get("detail"))
-    if condition_label == "-" and detail == "-":
-        suffix = ""
-    elif condition_label == "-":
-        suffix = f" · {detail}"
-    elif detail == "-":
-        suffix = f" · {condition_label}"
-    else:
-        suffix = f" · {condition_label}: {detail}"
     if condition_id == "gld_safe_haven_context":
-        return f"{_macro_pool_label('기본', broad_count)} 중 GLD 상태 {count_label}{suffix}"
+        return f"{_macro_pool_label('기본', broad_count)} 중 GLD 상태 {count_label}"
     if condition_id == "futures_rate_pressure_context":
         previous_label = "GLD 조건 통과" if previous_condition_id == "gld_safe_haven_context" else "직전 조건 통과"
-        return f"{_macro_pool_label(previous_label, previous_count)} 중 금리선물 상태 {count_label}{suffix}"
-    return f"{_macro_pool_label('직전 조건 통과', previous_count)} 중 {_macro_stage_state_name(condition_id)} {count_label}{suffix}"
+        return f"{_macro_pool_label(previous_label, previous_count)} 중 금리선물 상태 {count_label}"
+    return f"{_macro_pool_label('직전 조건 통과', previous_count)} 중 {_macro_stage_state_name(condition_id)} {count_label}"
+
+
+def _macro_condition_source_details_html(pilot: dict[str, Any]) -> str:
+    conditions = [
+        item for item in list(pilot.get("used_conditions") or [])
+        if str(item.get("id") or "") != "sector_relative_strength"
+    ]
+    if not conditions:
+        return ""
+    item_html = "".join(
+        '<div class="ov-macro-dimension-item">'
+        '<div class="ov-macro-dimension-top">'
+        f'<div class="ov-macro-dimension-label">{escape(_display_value(item.get("label")))}</div>'
+        f'<div class="ov-macro-dimension-pill">{escape(_display_value(item.get("status_label") or _display_status_label(item.get("status"))))}</div>'
+        "</div>"
+        f'<div class="ov-macro-dimension-meta">{escape(_display_value(item.get("detail")))}</div>'
+        "</div>"
+        for item in conditions
+    )
+    return (
+        '<div class="ov-macro-dimension-group">'
+        '<div class="ov-macro-dimension-group-title">Macro 조건 원문</div>'
+        f'<div class="ov-macro-dimension-group-list">{item_html}</div>'
+        "</div>"
+    )
 
 
 def _macro_sample_summary(pilot: dict[str, Any], macro_conditions: list[dict[str, Any]]) -> str:
@@ -4326,10 +4308,10 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
         item for item in used_conditions
         if str(item.get("id") or "") != "sector_relative_strength"
     ]
-    items: list[tuple[str, Any, str]] = [
+    items: list[tuple[str, str, str]] = [
         (
             "기본 유사 맥락 기준",
-            pilot.get("broad_sample_count"),
+            _macro_count_label(pilot.get("broad_sample_count")),
             _display_value(basis_condition.get("label") or "Sector ETF vs SPY relative strength"),
         )
     ]
@@ -4341,7 +4323,7 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
         items.append(
             (
                 _macro_stage_label(condition_id),
-                count,
+                _macro_count_label(count),
                 _macro_stage_detail(
                     condition=condition,
                     count=count,
@@ -4355,16 +4337,16 @@ def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
         previous_count = count
     summary = _macro_sample_summary(pilot, macro_conditions)
     item_html = "".join(
-        '<div class="ov-macro-flow-item">'
-        f'<div class="ov-macro-flow-label">{escape(label)}</div>'
-        f'<div class="ov-macro-flow-value">{escape(_macro_count_label(count))}</div>'
-        f'<div class="ov-macro-flow-detail">{escape(detail)}</div>'
+        '<div class="ov-analog-basis-cell ov-macro-basis-cell">'
+        f'<span>{escape(label)}</span>'
+        f'<strong>{escape(count)}</strong>'
+        f'<small>{escape(detail)}</small>'
         "</div>"
         for label, count, detail in items
     )
     return (
         f'<div class="ov-macro-conditioned-summary">{escape(summary)}</div>'
-        f'<div class="ov-macro-sample-flow">{item_html}</div>'
+        f'<div class="ov-analog-basis-bar ov-analog-basis-summary ov-macro-basis-bar">{item_html}</div>'
     )
 
 
@@ -4412,16 +4394,49 @@ def _macro_result_delta_html(
     )
     if not rows:
         return ""
+    conditioned_sample = _display_value(rows[0][2].get("sample_count")) if rows else "-"
+
+    def cell_html(label: str, value: Any, detail: str, *, strength_source: Any) -> str:
+        try:
+            numeric = float(strength_source)
+        except (TypeError, ValueError):
+            numeric = 0.0
+        tone_class = "is-positive" if numeric > 0 else "is-negative" if numeric < 0 else "is-flat"
+        return (
+            f'<div class="ov-analog-matrix-cell {tone_class}" style="--ov-analog-cell-strength:{escape(_analog_cell_strength(strength_source))};">'
+            f'<div class="ov-analog-matrix-cell-label">{escape(label)}</div>'
+            f'<strong>{escape(_analog_pct(value) if label != "변화" else _analog_delta_pct(value))}</strong>'
+            f'<span>{escape(detail)}</span>'
+            "</div>"
+        )
+
+    header_html = (
+        '<div class="ov-analog-matrix-heading">기본</div>'
+        '<div class="ov-analog-matrix-heading">조건 후</div>'
+        '<div class="ov-analog-matrix-heading">변화</div>'
+    )
     row_html = "".join(
-        '<div class="ov-macro-delta-row">'
-        f'<div class="ov-macro-delta-label">{escape(label)}</div>'
-        f'<div class="ov-macro-delta-value"><span>기본</span><strong>{escape(_analog_pct(broad.get("median_return_pct")))}</strong><small>상승 {escape(_analog_pct(broad.get("positive_rate_pct")))}</small></div>'
-        f'<div class="ov-macro-delta-value"><span>조건 후</span><strong>{escape(_analog_pct(conditioned.get("median_return_pct")))}</strong><small>상승 {escape(_analog_pct(conditioned.get("positive_rate_pct")))}</small></div>'
-        f'<div class="ov-macro-delta-value"><span>결과 변화</span><strong>{escape(_analog_delta_pct(delta))}</strong><small>표본 {escape(_display_value(conditioned.get("sample_count")))}회</small></div>'
+        '<div class="ov-analog-matrix-row ov-macro-delta-matrix-row">'
+        f'<div class="ov-analog-matrix-asset">{escape(label)}</div>'
+        f'{cell_html("기본", broad.get("median_return_pct"), f"상승 {_analog_pct(broad.get("positive_rate_pct"))}", strength_source=broad.get("median_return_pct"))}'
+        f'{cell_html("조건 후", conditioned.get("median_return_pct"), f"상승 {_analog_pct(conditioned.get("positive_rate_pct"))}", strength_source=conditioned.get("median_return_pct"))}'
+        f'{cell_html("변화", delta, f"표본 {_display_value(conditioned.get("sample_count"))}회", strength_source=delta)}'
         "</div>"
         for label, broad, conditioned, delta in rows
     )
-    return f'<div class="ov-macro-delta-table">{row_html}</div>'
+    return (
+        '<div class="ov-analog-outcome-matrix ov-macro-delta-matrix">'
+        '<div class="ov-analog-outcome-head">'
+        '<div class="ov-analog-outcome-title">Macro 조건 결과 비교</div>'
+        f'<div class="ov-analog-outcome-note">기본 표본과 Macro 조건 후 최종 {escape(conditioned_sample)}회 표본의 중앙 경로 차이입니다.</div>'
+        "</div>"
+        '<div class="ov-analog-matrix-grid" style="--ov-analog-horizon-count:3;">'
+        f'<div class="ov-analog-matrix-header"><div></div>{header_html}</div>'
+        f"{row_html}"
+        "</div>"
+        '<div class="ov-analog-matrix-legend">색상은 중간값 또는 변화 방향과 크기 기준</div>'
+        "</div>"
+    )
 
 
 def _macro_backdrop_state_name(dimension_id: str) -> str:
@@ -4433,11 +4448,20 @@ def _macro_backdrop_state_name(dimension_id: str) -> str:
     return names.get(dimension_id, "Macro")
 
 
+def _macro_backdrop_display_label(dimension_id: str) -> str:
+    labels = {
+        "macro_t10y3m": "금리곡선",
+        "macro_vixcls": "변동성",
+        "macro_baa10y": "신용스프레드",
+    }
+    return labels.get(dimension_id, "Macro 배경")
+
+
 def _macro_backdrop_description(dimension_id: str) -> str:
     descriptions = {
-        "macro_t10y3m": "10년물-3개월물 금리차. 금리곡선이 경기 둔화나 완화 기대를 어떻게 반영하는지 봅니다.",
-        "macro_vixcls": "VIX 지수. 주식시장 변동성과 위험 회피 분위기를 보는 지표입니다.",
-        "macro_baa10y": "BAA 회사채와 10년 국채 금리차. 신용위험 부담이 커지는지 보는 지표입니다.",
+        "macro_t10y3m": "T10Y3M yield curve proxy · 10년물-3개월물 금리차. 금리곡선이 경기 둔화나 완화 기대를 어떻게 반영하는지 봅니다.",
+        "macro_vixcls": "VIXCLS volatility backdrop · VIX 지수. 주식시장 변동성과 위험 회피 분위기를 보는 지표입니다.",
+        "macro_baa10y": "BAA10Y credit spread backdrop · BAA 회사채와 10년 국채 금리차. 신용위험 부담이 커지는지 보는 지표입니다.",
     }
     return descriptions.get(dimension_id, "")
 
@@ -4464,7 +4488,7 @@ def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
     broad_count = audit.get("broad_anchor_count") or pilot.get("broad_sample_count")
     item_html = "".join(
         '<div class="ov-macro-backdrop-item">'
-        f'<div class="ov-macro-backdrop-label">{escape(_display_value(item.get("label")))}</div>'
+        f'<div class="ov-macro-backdrop-label">{escape(_macro_backdrop_display_label(str(item.get("id") or "")))}</div>'
         f'<div class="ov-macro-backdrop-description">{escape(_macro_backdrop_description(str(item.get("id") or "")))}</div>'
         f'<div class="ov-macro-backdrop-value">{escape(_display_value(item.get("current_value")))} · {escape(_display_value(item.get("current_bucket") or item.get("status_label")))}</div>'
         f'<div class="ov-macro-backdrop-detail">{escape(_macro_backdrop_detail(item, broad_count=broad_count))}</div>'
@@ -4508,12 +4532,14 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
     )
     backdrop_html = _macro_backdrop_preview_html(pilot)
     dimension_audit_html = _macro_dimension_audit_html(dict(pilot.get("macro_dimension_audit") or {}))
+    condition_source_html = "" if dimension_audit_html else _macro_condition_source_details_html(pilot)
     details_html = ""
-    if dimension_audit_html or table_html:
+    if dimension_audit_html or condition_source_html or table_html:
         details_html = (
             '<details class="ov-macro-conditioned-details">'
             "<summary>Macro 조건 상세</summary>"
             f"{dimension_audit_html}"
+            f"{condition_source_html}"
             f"{table_html}"
             "</details>"
         )

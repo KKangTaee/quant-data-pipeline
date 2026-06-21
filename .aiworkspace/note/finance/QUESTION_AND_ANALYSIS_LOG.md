@@ -7990,3 +7990,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 macro 조건이나 예측 로직을 추가하는 것이 아니라, 기존 broad / GLD / Rate Pressure sample narrowing과 reference Macro backdrop counts를 화면에서 자연스럽게 이해하게 해야 함.
 - Analysis result: 계산 로직은 이미 `broad_sample_count`, GLD preview count, final conditioned count, FRED reference preview count를 갖고 있으므로 renderer에서 단계 라벨과 한글 지표 설명을 보강하는 것이 가장 작은 안전한 변경이다.
 - Follow-up: V15에서 `기본 유사 맥락 -> GLD 조건 적용 -> 금리선물 조건 적용`, T10Y3M / VIXCLS / BAA10Y 한글 설명, broad sample 중 같은 상태 횟수 표시를 완료했다. Hard conditioning 확대는 별도 승인 대상이다.
+
+### 2026-06-21 - Macro 조건 비교 UI를 historical analog matrix 문법으로 맞춘다
+
+- User request: 사용자가 V15 Macro 섹션이 여전히 표와 텍스트가 엉망이고, 정리된 `참고: 과거 유사 맥락` 섹션과 비교해 완성도가 낮다고 지적함.
+- Interpreted goal: 설명문을 더 늘리는 것이 아니라, Macro 조건 비교의 primary read path를 historical analog와 같은 기준 bar / matrix flow로 정리해야 함.
+- Analysis result: 기존 화면은 `ov-macro-sample-flow`와 `ov-macro-delta-table`이 별도 UI 문법을 써서 긴 source detail과 넓은 행 간격이 결과 해석을 방해했다. 같은 data를 basis bar와 asset comparison matrix로 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: V16에서 Macro basis bar, asset x `기본 / 조건 후 / 변화` matrix, collapsed source detail, Korean-first Macro backdrop labels를 완료했다. 계산 / hard condition / data boundary는 바꾸지 않았다.

@@ -5116,3 +5116,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Macro 추가 조건` 반복 라벨을 `GLD 조건 적용` / `금리선물 조건 적용`으로 바꾸고, `81회 -> 37회 -> 6회`가 broad anchor pool에서 조건별로 좁혀진 표본임을 문장으로 표시한다.
   - `현재 Macro 배경 참고`에는 T10Y3M / VIXCLS / BAA10Y 한글 설명과 broad sample 중 같은 상태 횟수를 함께 보여준다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Macro Matrix V16:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-matrix-v16-20260621/`에서 V15 Macro 섹션이 여전히 wide table / verbose text처럼 보인다는 사용자 피드백을 보정했다.
+  - Macro 표본 흐름은 historical analog와 같은 basis bar로 바꾸고, 결과 변화는 자산 x `기본 / 조건 후 / 변화` matrix로 렌더링한다.
+  - 긴 조건 source 원문과 raw 통계는 `Macro 조건 상세`로 낮추고, 현재 Macro 배경은 한글 우선 라벨로 정리했다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.

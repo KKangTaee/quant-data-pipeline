@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-macro-labels-v15-20260621`
+- `overview-market-context-macro-matrix-v16-20260621`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-macro-matrix-v16-20260621`: Completed record. `Overview > Market Context` V16 보정으로 V15 Macro 조건 비교가 여전히 prototype-like wide table / verbose text처럼 보이던 문제를 정리했다. Macro 표본 흐름은 historical analog와 같은 basis bar로 바꾸고, 결과 변화는 자산 x `기본 / 조건 후 / 변화` matrix로 렌더링한다. 긴 조건 source 원문은 접힌 상세로 낮추고, 현재 Macro 배경은 `금리곡선` / `변동성` / `신용스프레드` 한글 라벨을 우선 표시한다. 계산 로직 / hard condition / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-labels-v15-20260621`: Completed record. `Overview > Market Context` V15 보정으로 `Macro 조건 후 결과 변화`의 표본 축소 흐름을 `기본 유사 맥락` -> `GLD 조건 적용` -> `금리선물 조건 적용`으로 명명했다. GLD / Rate Pressure 단계는 기존 broad anchor pool에서 몇 회가 남았는지 문장으로 설명하고, T10Y3M / VIXCLS / BAA10Y `현재 Macro 배경 참고`는 한글 지표 설명과 broad sample 중 같은 상태 횟수를 함께 표시한다. 계산 로직 / hard condition / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-clarity-v14-20260621`: Completed record. `Overview > Market Context` V14 보정으로 Macro 조건 비교를 기본 유사 맥락 기준과 Macro 추가 조건으로 분리했다. `Sector ETF vs SPY relative strength`는 broad sample 기준으로 낮추고, GLD / Rate Pressure futures 조건은 표본 축소 흐름으로 표시한다. Broad vs conditioned 결과 변화, 현재 Macro 배경(T10Y3M / VIXCLS / BAA10Y), 접힌 상세 / 원본 통계 순서로 읽게 했으며, matrix 색상은 median return 방향과 크기 기준으로 농도를 조절하고 sector pressure map 수익률은 소수점 둘째 자리까지 표시한다.
 - `overview-market-context-flow-alignment-v13-20260621`: Completed record. `Overview > Market Context` V13 보정으로 최신 historical analog가 상단 Market Context의 visible sector leadership snapshot과 같은 섹터를 쓰게 정렬했다. Sector pressure map은 provider sector alias를 canonical 11개 섹터로 normalize하고 전체를 균일 tile로 표시한다. Historical analog는 `먼저 볼 점` / `주의할 점` / `시장 배경 요약` guide block을 기본 흐름에서 제거하고, sector ETF / SPY / QQQ / TLT / GLD를 하나의 핵심 비교 matrix로 보여준다. Broad sample이 없을 때 Macro 조건 비교는 숨겨 dashed prototype UI를 만들지 않는다.
