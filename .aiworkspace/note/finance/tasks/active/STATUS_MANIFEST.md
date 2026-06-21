@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-flow-alignment-v13-20260621`
+- `overview-market-context-macro-clarity-v14-20260621`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-context-macro-clarity-v14-20260621`: Completed record. `Overview > Market Context` V14 보정으로 Macro 조건 비교를 기본 유사 맥락 기준과 Macro 추가 조건으로 분리했다. `Sector ETF vs SPY relative strength`는 broad sample 기준으로 낮추고, GLD / Rate Pressure futures 조건은 표본 축소 흐름으로 표시한다. Broad vs conditioned 결과 변화, 현재 Macro 배경(T10Y3M / VIXCLS / BAA10Y), 접힌 상세 / 원본 통계 순서로 읽게 했으며, matrix 색상은 median return 방향과 크기 기준으로 농도를 조절하고 sector pressure map 수익률은 소수점 둘째 자리까지 표시한다.
 - `overview-market-context-flow-alignment-v13-20260621`: Completed record. `Overview > Market Context` V13 보정으로 최신 historical analog가 상단 Market Context의 visible sector leadership snapshot과 같은 섹터를 쓰게 정렬했다. Sector pressure map은 provider sector alias를 canonical 11개 섹터로 normalize하고 전체를 균일 tile로 표시한다. Historical analog는 `먼저 볼 점` / `주의할 점` / `시장 배경 요약` guide block을 기본 흐름에서 제거하고, sector ETF / SPY / QQQ / TLT / GLD를 하나의 핵심 비교 matrix로 보여준다. Broad sample이 없을 때 Macro 조건 비교는 숨겨 dashed prototype UI를 만들지 않는다.
 - `overview-market-context-analog-usability-v12-20260621`: Completed record. `Overview > Market Context` V12 보정으로 historical analog의 selected as-of 공통 daily price basis mismatch를 bounded 가격 기준 최신화 action으로 연결하고, 기준/조건/표본 중복을 compact basis summary + 접힌 계산 경계 상세로 낮췄다. 핵심 자산은 5D / 20D / 60D matrix로 먼저 읽고, 보조 자산은 배경 요약으로 낮추며, 원본 통계 표는 `상세 통계` disclosure에 남긴다.
 - `overview-market-context-analog-macro-ux-v11-20260621`: Completed record. `Overview > Market Context` V11 보정으로 historical analog / Macro 조건 포함 비교를 prototype-like card stack에서 분석형 flow로 재구성했다. 기준 선택은 analog flow 바로 앞에 두고, 결과는 basis bar, `현재 기준` / `유사 사례 조건` / `표본 품질`, `먼저 볼 점` / `주의할 점`, 별도 Macro comparison section, condition-role groups로 읽게 했다.

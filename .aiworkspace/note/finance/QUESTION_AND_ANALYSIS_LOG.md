@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-21 - Macro conditioned analog should show what changed, not list conditions
+- User request:
+  - `Macro 조건 비교`에서 `Sector ETF vs SPY relative strength`가 기본 조건인지, GLD / 금리선물 조건이 무엇을 의미하는지, `Macro 조건 포함 핵심 자산` 표가 더 좋은 결과표처럼 보이는 이유를 질문하고 1~4 개선 방향 개발을 승인함.
+- Interpreted goal:
+  - Macro 조건 비교는 기본 유사 맥락 기준과 Macro 추가 조건을 분리하고, 표본 수 자체가 아니라 broad 결과 대비 conditioned 결과가 어떻게 달라졌는지 먼저 보여줘야 한다.
+- Analysis result:
+  - `Sector ETF vs SPY relative strength`는 broad sample을 만드는 기준이고, GLD / Rate Pressure futures만 현재 hard 추가 조건이다. T10Y3M / VIXCLS / BAA10Y는 current macro backdrop / bucket preview로 유효하지만 hard condition은 아니다. Events / sentiment는 annotation/deferred다.
+- Follow-up:
+  - V14에서 Macro 섹션은 sample narrowing, result delta, current Macro backdrop, collapsed detail order로 변경됐다. FRED macro / events / sentiment hard conditioning은 별도 검증 기준 승인 전까지 계속 금지한다.
+
 ### 2026-06-21 - Market Context analog should follow the visible sector flow
 - User request:
   - `참고: 과거 유사 맥락`이 latest 기준인데도 상단 `섹터 압력 지도`의 leader와 다른 `Basic Materials`를 기준으로 잡고, 섹터 지도는 11개 섹터 중 일부만 보여주며, analog / macro UI가 여전히 guide-heavy prototype처럼 보인다고 지적함.

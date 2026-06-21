@@ -1360,10 +1360,10 @@ def overview_ui_css() -> str:
   background: transparent;
 }
 .ov-analog-matrix-cell.is-positive {
-  background: color-mix(in srgb, var(--ov-mi-color-success) 5%, transparent);
+  background: color-mix(in srgb, var(--ov-mi-color-success) var(--ov-analog-cell-strength, 5%), transparent);
 }
 .ov-analog-matrix-cell.is-negative {
-  background: color-mix(in srgb, var(--ov-mi-color-warning) 5%, transparent);
+  background: color-mix(in srgb, var(--ov-mi-color-warning) var(--ov-analog-cell-strength, 5%), transparent);
 }
 .ov-analog-matrix-cell-label {
   color: var(--ov-mi-color-text-muted);
@@ -1460,6 +1460,13 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-caption);
   line-height: 1.24;
   overflow-wrap: anywhere;
+}
+.ov-analog-matrix-legend {
+  margin-top: 0.36rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.18;
+  text-align: right;
 }
 .ov-analog-condition span {
   color: var(--ov-analog-tone, var(--ov-mi-color-neutral));
@@ -1576,6 +1583,108 @@ def overview_ui_css() -> str:
   color: var(--ov-mi-color-text-muted);
   font-size: 0.88rem;
   line-height: 1.45;
+}
+.ov-macro-sample-flow,
+.ov-macro-delta-table,
+.ov-macro-backdrop-grid {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+.ov-macro-sample-flow {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ov-macro-flow-item,
+.ov-macro-delta-row,
+.ov-macro-backdrop-item {
+  min-width: 0;
+  padding: 0.62rem 0.66rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  background: transparent;
+}
+.ov-macro-flow-label,
+.ov-macro-delta-label,
+.ov-macro-backdrop-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.16;
+}
+.ov-macro-flow-value,
+.ov-macro-delta-value,
+.ov-macro-backdrop-value {
+  margin-top: 0.14rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-macro-flow-detail,
+.ov-macro-delta-detail,
+.ov-macro-backdrop-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+.ov-macro-delta-table {
+  grid-template-columns: 1fr;
+}
+.ov-macro-delta-row {
+  display: grid;
+  grid-template-columns: minmax(5.2rem, 0.55fr) repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: start;
+}
+.ov-macro-delta-value {
+  text-align: right;
+}
+.ov-macro-delta-value span,
+.ov-macro-delta-value strong,
+.ov-macro-delta-value small {
+  display: block;
+}
+.ov-macro-delta-value span {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.12;
+}
+.ov-macro-delta-value strong {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-macro-delta-value small {
+  margin-top: 0.08rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.14;
+}
+.ov-macro-backdrop {
+  margin-top: 0.82rem;
+}
+.ov-macro-backdrop-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: baseline;
+}
+.ov-macro-backdrop-title {
+  color: var(--ov-mi-color-text);
+  font-size: 0.96rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-macro-backdrop-note {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.2;
+}
+.ov-macro-backdrop-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .ov-macro-conditioned-stats {
   display: grid;
@@ -3116,6 +3225,8 @@ def overview_ui_css() -> str:
     border-top: 0;
   }
   .ov-macro-conditioned-stats,
+  .ov-macro-sample-flow,
+  .ov-macro-backdrop-grid,
   .ov-macro-sample-funnel,
   .ov-macro-funnel-track,
   .ov-macro-comparison-grid,
@@ -3127,6 +3238,12 @@ def overview_ui_css() -> str:
   }
   .ov-macro-dimension-head {
     display: block;
+  }
+  .ov-macro-delta-row {
+    grid-template-columns: 1fr;
+  }
+  .ov-macro-delta-value {
+    text-align: left;
   }
   .ov-macro-dimension-status {
     margin-top: 0.16rem;
@@ -3383,7 +3500,7 @@ def _sector_pressure_map_html(model: dict[str, Any]) -> str:
     for row in rows:
         tone_color = escape(_overview_tone_color(row.get("tone")))
         group = _display_value(row.get("group"))
-        weighted = _signed_pct(row.get("market_cap_weighted_return_pct"))
+        weighted = _signed_pct(row.get("market_cap_weighted_return_pct"), digits=2)
         positive = row.get("positive_symbol_share_pct")
         try:
             positive_label = "-" if positive in (None, "") else f"{float(positive):.0f}% positive"
@@ -3586,6 +3703,25 @@ def _analog_pct(value: Any) -> str:
     return f"{numeric:+.1f}%"
 
 
+def _analog_delta_pct(value: Any) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    return f"{numeric:+.1f}%p"
+
+
+def _analog_cell_strength(value: Any) -> str:
+    try:
+        numeric = abs(float(value))
+    except (TypeError, ValueError):
+        return "0.0%"
+    if numeric <= 0:
+        return "0.0%"
+    strength = min(20.0, 4.0 + numeric * 2.0)
+    return f"{strength:.1f}%"
+
+
 def _analog_row_asset(row: dict[str, Any]) -> str:
     return str(row.get("asset") or "").strip().upper()
 
@@ -3716,8 +3852,9 @@ def _analog_outcome_matrix_html(rows: list[dict[str, Any]], *, title: str, note:
             except (TypeError, ValueError):
                 median_value = 0.0
             tone_class = "is-positive" if median_value > 0 else "is-negative" if median_value < 0 else "is-flat"
+            strength = _analog_cell_strength(median)
             cells.append(
-                f'<div class="ov-analog-matrix-cell {tone_class}">'
+                f'<div class="ov-analog-matrix-cell {tone_class}" style="--ov-analog-cell-strength:{escape(strength)};">'
                 f'<div class="ov-analog-matrix-cell-label">{escape(asset)} · {escape(horizon)}</div>'
                 f'<strong>{escape(_analog_pct(row.get("median_return_pct")))}</strong>'
                 f'<span>상승 {escape(_analog_pct(row.get("positive_rate_pct")))}</span>'
@@ -3740,6 +3877,7 @@ def _analog_outcome_matrix_html(rows: list[dict[str, Any]], *, title: str, note:
         f'<div class="ov-analog-matrix-header"><div></div>{header_html}</div>'
         f'{"".join(row_html)}'
         "</div>"
+        '<div class="ov-analog-matrix-legend">색상은 중간값 방향과 크기 기준</div>'
         "</div>"
     )
 
@@ -4015,24 +4153,21 @@ def _macro_dimension_audit_html(audit: dict[str, Any]) -> str:
         return ""
     status_label = _display_value(audit.get("status_label") or _display_status_label(audit.get("status")))
     summary = _display_value(audit.get("summary"))
-    group_order = [
-        ("실제 조건", {"USED"}),
-        ("참고 preview", {"AVAILABLE_REFERENCE"}),
-        ("보류 / annotation", {"DEFERRED"}),
-        ("이력 부족 / 자료 없음", {"INSUFFICIENT_HISTORY", "UNAVAILABLE", "INSUFFICIENT_CONTEXT", "MISSING"}),
-        ("기타", set()),
-    ]
 
     def render_item(item: dict[str, Any]) -> str:
         latest = _display_value(item.get("latest_date"))
         coverage_start = _display_value(item.get("coverage_start"))
         coverage_end = _display_value(item.get("coverage_end"))
         anchor_count = _display_value(item.get("anchor_preview_count"))
+        if str(item.get("status") or "").strip().upper() == "AVAILABLE_REFERENCE":
+            anchor_text = f"같은 상태 {anchor_count}회"
+        else:
+            anchor_text = f"anchor {anchor_count}회"
         meta_parts = [
             f"usage: {_display_value(item.get('usage'))}",
             f"as-of: {latest}",
             f"coverage: {coverage_start} - {coverage_end}",
-            f"anchor {anchor_count}회",
+            anchor_text,
         ]
         bucket = _display_value(item.get("current_bucket"))
         if bucket != "-":
@@ -4048,16 +4183,26 @@ def _macro_dimension_audit_html(audit: dict[str, Any]) -> str:
             "</div>"
         )
 
+    group_order: list[tuple[str, Any]] = [
+        ("기본 유사 맥락 기준", lambda item: str(item.get("id") or "") == "sector_relative_strength"),
+        (
+            "Macro 추가 조건",
+            lambda item: str(item.get("status") or "").strip().upper() == "USED"
+            and str(item.get("id") or "") != "sector_relative_strength",
+        ),
+        ("조건 미사용 참고 배경", lambda item: str(item.get("status") or "").strip().upper() == "AVAILABLE_REFERENCE"),
+        ("보류 / annotation", lambda item: str(item.get("status") or "").strip().upper() == "DEFERRED"),
+        (
+            "이력 부족 / 자료 없음",
+            lambda item: str(item.get("status") or "").strip().upper()
+            in {"INSUFFICIENT_HISTORY", "UNAVAILABLE", "INSUFFICIENT_CONTEXT", "MISSING"},
+        ),
+        ("기타", lambda item: True),
+    ]
     used_ids: set[int] = set()
     group_html: list[str] = []
-    for title, statuses in group_order:
-        if statuses:
-            items = [
-                item for item in dimensions
-                if str(item.get("status") or "").strip().upper() in statuses and id(item) not in used_ids
-            ]
-        else:
-            items = [item for item in dimensions if id(item) not in used_ids]
+    for title, predicate in group_order:
+        items = [item for item in dimensions if id(item) not in used_ids and predicate(item)]
         if not items:
             continue
         used_ids.update(id(item) for item in items)
@@ -4082,6 +4227,143 @@ def _macro_dimension_audit_html(audit: dict[str, Any]) -> str:
     )
 
 
+def _macro_dimension_by_id(pilot: dict[str, Any], dimension_id: str) -> dict[str, Any]:
+    audit = dict(pilot.get("macro_dimension_audit") or {})
+    for item in list(audit.get("dimensions") or []):
+        if str(item.get("id") or "") == dimension_id:
+            return dict(item)
+    return {}
+
+
+def _macro_condition_count(pilot: dict[str, Any], condition: dict[str, Any], *, is_last: bool) -> Any:
+    dimension = _macro_dimension_by_id(pilot, str(condition.get("id") or ""))
+    count = dimension.get("anchor_preview_count")
+    if count not in (None, ""):
+        return count
+    return pilot.get("sample_count") if is_last else "-"
+
+
+def _macro_sample_flow_html(pilot: dict[str, Any]) -> str:
+    used_conditions = list(pilot.get("used_conditions") or [])
+    basis_condition = next(
+        (item for item in used_conditions if str(item.get("id") or "") == "sector_relative_strength"),
+        {},
+    )
+    macro_conditions = [
+        item for item in used_conditions
+        if str(item.get("id") or "") != "sector_relative_strength"
+    ]
+    items: list[tuple[str, Any, str]] = [
+        (
+            "기본 유사 맥락 기준",
+            pilot.get("broad_sample_count"),
+            _display_value(basis_condition.get("label") or "Sector ETF vs SPY relative strength"),
+        )
+    ]
+    for index, condition in enumerate(macro_conditions):
+        count = _macro_condition_count(pilot, condition, is_last=index == len(macro_conditions) - 1)
+        items.append(
+            (
+                "Macro 추가 조건",
+                count,
+                f"{_display_value(condition.get('label'))}: {_display_value(condition.get('detail'))}",
+            )
+        )
+    item_html = "".join(
+        '<div class="ov-macro-flow-item">'
+        f'<div class="ov-macro-flow-label">{escape(label)}</div>'
+        f'<div class="ov-macro-flow-value">{escape(_display_value(count))}회</div>'
+        f'<div class="ov-macro-flow-detail">{escape(detail)}</div>'
+        "</div>"
+        for label, count, detail in items
+    )
+    return f'<div class="ov-macro-sample-flow">{item_html}</div>'
+
+
+def _macro_result_delta_rows(
+    *,
+    broad_rows: list[dict[str, Any]],
+    conditioned_rows: list[dict[str, Any]],
+    proxy_etf: str,
+) -> list[tuple[str, dict[str, Any], dict[str, Any], float | None]]:
+    if not broad_rows or not conditioned_rows:
+        return []
+    reference = _analog_find_reference_row(conditioned_rows, proxy_etf)
+    reference_horizon = _analog_row_horizon(reference) or "20D"
+    primary_rows, _ = _analog_rows_by_priority(conditioned_rows, proxy_etf)
+    ordered = [
+        row for row in primary_rows
+        if _analog_row_horizon(row) == reference_horizon
+    ] or primary_rows[:5]
+    results: list[tuple[str, dict[str, Any], dict[str, Any], float | None]] = []
+    for row in ordered[:5]:
+        asset = _analog_row_asset(row)
+        horizon = _analog_row_horizon(row)
+        broad = _analog_find_asset_horizon_row(broad_rows, asset, horizon)
+        if not broad:
+            continue
+        delta: float | None = None
+        try:
+            delta = float(row.get("median_return_pct")) - float(broad.get("median_return_pct"))
+        except (TypeError, ValueError):
+            delta = None
+        results.append((f"{asset} {horizon}", broad, row, delta))
+    return results
+
+
+def _macro_result_delta_html(
+    *,
+    broad_rows: list[dict[str, Any]],
+    conditioned_rows: list[dict[str, Any]],
+    proxy_etf: str,
+) -> str:
+    rows = _macro_result_delta_rows(
+        broad_rows=broad_rows,
+        conditioned_rows=conditioned_rows,
+        proxy_etf=proxy_etf,
+    )
+    if not rows:
+        return ""
+    row_html = "".join(
+        '<div class="ov-macro-delta-row">'
+        f'<div class="ov-macro-delta-label">{escape(label)}</div>'
+        f'<div class="ov-macro-delta-value"><span>기본</span><strong>{escape(_analog_pct(broad.get("median_return_pct")))}</strong><small>상승 {escape(_analog_pct(broad.get("positive_rate_pct")))}</small></div>'
+        f'<div class="ov-macro-delta-value"><span>조건 후</span><strong>{escape(_analog_pct(conditioned.get("median_return_pct")))}</strong><small>상승 {escape(_analog_pct(conditioned.get("positive_rate_pct")))}</small></div>'
+        f'<div class="ov-macro-delta-value"><span>결과 변화</span><strong>{escape(_analog_delta_pct(delta))}</strong><small>표본 {escape(_display_value(conditioned.get("sample_count")))}회</small></div>'
+        "</div>"
+        for label, broad, conditioned, delta in rows
+    )
+    return f'<div class="ov-macro-delta-table">{row_html}</div>'
+
+
+def _macro_backdrop_preview_html(pilot: dict[str, Any]) -> str:
+    audit = dict(pilot.get("macro_dimension_audit") or {})
+    dimensions = [
+        dict(item) for item in list(audit.get("dimensions") or [])
+        if str(item.get("status") or "").strip().upper() == "AVAILABLE_REFERENCE"
+        and str(item.get("id") or "") in {"macro_t10y3m", "macro_vixcls", "macro_baa10y"}
+    ]
+    if not dimensions:
+        return ""
+    item_html = "".join(
+        '<div class="ov-macro-backdrop-item">'
+        f'<div class="ov-macro-backdrop-label">{escape(_display_value(item.get("label")))}</div>'
+        f'<div class="ov-macro-backdrop-value">{escape(_display_value(item.get("current_value")))} · {escape(_display_value(item.get("current_bucket") or item.get("status_label")))}</div>'
+        f'<div class="ov-macro-backdrop-detail">기준일 {escape(_display_value(item.get("latest_date")))} · 같은 상태 {escape(_display_value(item.get("anchor_preview_count")))}회</div>'
+        "</div>"
+        for item in dimensions
+    )
+    return (
+        '<div class="ov-macro-backdrop">'
+        '<div class="ov-macro-backdrop-head">'
+        '<div class="ov-macro-backdrop-title">현재 Macro 배경</div>'
+        '<div class="ov-macro-backdrop-note">조건 미사용 참고 배경</div>'
+        "</div>"
+        f'<div class="ov-macro-backdrop-grid">{item_html}</div>'
+        "</div>"
+    )
+
+
 def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> str:
     pilot = dict(model.get("macro_conditioned_analog") or {})
     if not pilot:
@@ -4097,30 +4379,16 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
     table_html = ""
     if rows:
         table_html = (
-            f"{_analog_table_block_html(primary_rows, title='Macro 조건 포함 핵심 자산', note='broad 조건에 추가 macro context를 더한 pilot 표본입니다.')}"
-            f"{_analog_table_block_html(support_rows, title='Macro 조건 포함 보조 자산', note='같은 pilot 표본의 배경 자산 분포입니다.', secondary=True)}"
+            f"{_analog_table_block_html(primary_rows, title='Macro 조건 후 핵심 자산 원본 통계', note='Macro 추가 조건 후 남은 anchor 표본의 원본 분포입니다.')}"
+            f"{_analog_table_block_html(support_rows, title='Macro 조건 후 보조 자산 원본 통계', note='같은 조건 후 표본의 배경 자산 분포입니다.', secondary=True)}"
         )
-    comparison = [
-        (
-            "조건 전 표본",
-            f"{_analog_pct(broad_reference.get('median_return_pct'))} median · {_analog_pct(broad_reference.get('positive_rate_pct'))} 상승 비율",
-            f"{_display_value(broad_reference.get('asset') or proxy_etf)} {_display_value(broad_reference.get('horizon') or '20D')} · 표본 {_display_value(pilot.get('broad_sample_count'))}회 · 최악 {_analog_pct(broad_reference.get('worst_return_pct'))}",
-        ),
-        (
-            "조건 후 표본",
-            f"{_analog_pct(pilot_reference.get('median_return_pct'))} median · {_analog_pct(pilot_reference.get('positive_rate_pct'))} 상승 비율",
-            f"{_display_value(pilot_reference.get('asset') or proxy_etf)} {_display_value(pilot_reference.get('horizon') or '20D')} · 표본 {_display_value(pilot.get('sample_count'))}회 · 최악 {_analog_pct(pilot_reference.get('worst_return_pct'))}",
-        ),
-    ]
-    comparison_html = "".join(
-        '<div class="ov-macro-compare-lane">'
-        f'<div class="ov-macro-compare-label">{escape(label)}</div>'
-        f'<div class="ov-macro-compare-value">{escape(value)}</div>'
-        f'<div class="ov-macro-compare-detail">{escape(detail)}</div>'
-        "</div>"
-        for label, value, detail in comparison
+    sample_flow_html = _macro_sample_flow_html(pilot)
+    comparison_html = _macro_result_delta_html(
+        broad_rows=broad_rows,
+        conditioned_rows=rows,
+        proxy_etf=proxy_etf,
     )
-    conditions_html = _macro_used_condition_summary_html(list(pilot.get("used_conditions") or []))
+    backdrop_html = _macro_backdrop_preview_html(pilot)
     dimension_audit_html = _macro_dimension_audit_html(dict(pilot.get("macro_dimension_audit") or {}))
     details_html = ""
     if dimension_audit_html or table_html:
@@ -4135,16 +4403,16 @@ def _macro_conditioned_pilot_html(model: dict[str, Any], *, proxy_etf: str) -> s
         f'<section class="ov-macro-reading-section ov-macro-compare-section" style="--ov-macro-pilot-tone:{tone_color};--ov-reading-tone:{tone_color};">'
         '<div class="ov-macro-conditioned-head">'
         "<div>"
-        '<div class="ov-macro-conditioned-title">Macro 조건 비교</div>'
+        '<div class="ov-macro-conditioned-title">Macro 조건 후 결과 변화</div>'
         f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("headline")))}</div>'
         "</div>"
         f'<div class="ov-macro-conditioned-status">{escape(status_label)}</div>'
         "</div>"
-        f'<div class="ov-macro-conditioned-detail">{escape(_display_value(pilot.get("detail")))}</div>'
-        f'<div class="ov-macro-compare-lanes">{comparison_html}</div>'
+        f"{sample_flow_html}"
+        f"{comparison_html}"
         f'<div class="ov-macro-conditioned-quality">표본 품질: {escape(_display_value(sample_quality.get("label")))} · {escape(_display_value(sample_quality.get("detail")))}</div>'
-        f'<div class="ov-macro-conditioned-reason">{escape(_display_value(pilot.get("sample_reduction_reason")))}</div>'
-        f"{conditions_html}"
+        f'<div class="ov-macro-conditioned-reason">표본 {escape(_display_value(pilot.get("sample_count")))}회라 broad 결과와 함께 낮춰 읽습니다.</div>'
+        f"{backdrop_html}"
         f"{details_html}"
         "</section>"
     )

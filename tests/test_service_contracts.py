@@ -10530,9 +10530,12 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         )
 
         self.assertIn("참고: 과거 유사 맥락", html)
-        self.assertIn("Macro 조건 비교", html)
+        self.assertIn("Macro 조건 후 결과 변화", html)
         self.assertIn("ov-macro-compare-section", html)
-        self.assertIn("ov-macro-compare-lanes", html)
+        self.assertIn("ov-macro-sample-flow", html)
+        self.assertIn("기본 유사 맥락 기준", html)
+        self.assertIn("Macro 추가 조건", html)
+        self.assertIn("결과 변화", html)
         self.assertNotIn("ov-macro-funnel-track", html)
         self.assertNotIn("Broad vs Macro 조건 포함", html)
         self.assertNotIn("표본 흐름", html)
@@ -10541,12 +10544,19 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertNotIn("실제로 반영한 조건", html)
         self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
         self.assertNotIn("이번 차수 제외", html)
+        self.assertNotIn("사용 조건", html)
+        self.assertNotIn("Macro 조건 포함 핵심 자산", html)
+        self.assertNotIn("Macro 조건 포함 보조 자산", html)
         self.assertIn("GLD price proxy", html)
         self.assertIn("Rate Pressure futures proxy", html)
         self.assertIn("ZN=F/ZB=F 5D", html)
-        self.assertIn("조건 후 표본", html)
-        self.assertIn("Broad 3회 중 Macro 조건 포함 2회", html)
-        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 비교"))
+        self.assertIn("조건 후", html)
+        self.assertIn("기본", html)
+        self.assertIn("+4.0%", html)
+        self.assertIn("+5.0%", html)
+        self.assertIn("+1.0%p", html)
+        self.assertIn("표본 2회라 broad 결과와 함께 낮춰 읽습니다", html)
+        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 후 결과 변화"))
         self.assertLess(html.index("ov-historical-analog-limitations"), html.index("ov-macro-compare-section"))
         self.assertNotIn('class="ov-macro-conditioned-pilot"', html)
         self.assertNotIn('class="ov-macro-comparison"', html)
@@ -10628,10 +10638,14 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertIn("실제 계산 기준일", html)
         self.assertIn("2024-06-18", html)
         self.assertIn("2024-05-21", html)
-        self.assertIn("사용 조건", html)
+        self.assertIn("기본 유사 맥락 기준", html)
+        self.assertIn("Macro 추가 조건", html)
         self.assertIn("Sector ETF vs SPY relative strength", html)
         self.assertIn("GLD price proxy", html)
         self.assertIn("Rate Pressure futures proxy", html)
+        self.assertLess(html.index("기본 유사 맥락 기준"), html.index("Macro 추가 조건"))
+        macro_conditions = html[html.index("Macro 추가 조건") :]
+        self.assertNotIn("Sector ETF vs SPY relative strength</strong>", macro_conditions)
         self.assertNotIn("실제로 반영한 조건", html)
         self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
         self.assertNotIn("참고만 하는 정보", html)
@@ -10815,20 +10829,94 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("맥락 차원 상태", html)
-        self.assertIn("조건 역할 세부", html)
+        self.assertIn("현재 Macro 배경", html)
+        self.assertIn("조건 미사용 참고 배경", html)
+        self.assertIn("Macro 조건 상세", html)
         self.assertIn("T10Y3M yield curve proxy", html)
         self.assertIn("VIXCLS volatility backdrop", html)
         self.assertIn("BAA10Y credit spread backdrop", html)
         self.assertIn("Events calendar", html)
         self.assertIn("AAII sentiment backdrop", html)
+        self.assertIn("ov-macro-backdrop-grid", html)
         self.assertIn("ov-macro-dimension-group", html)
         self.assertIn("참고", html)
         self.assertIn("보류", html)
-        self.assertIn("anchor 2회", html)
-        self.assertLess(html.index("Macro 조건 비교"), html.index("맥락 차원 상태"))
+        self.assertIn("같은 상태 2회", html)
+        self.assertLess(html.index("현재 Macro 배경"), html.index("Macro 조건 상세"))
         for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
             self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_uses_median_strength_gradient_for_matrix(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 10회 발견",
+                "detail": "Technology(XLK)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Technology",
+                "proxy_etf": "XLK",
+                "sample_count": 10,
+                "condition_summary": "XLK 5D-SPY 5D 상대강도 >= +1.0%",
+                "rows": [
+                    {
+                        "asset": "XLK",
+                        "horizon": "5D",
+                        "median_return_pct": 0.4,
+                        "positive_rate_pct": 60.0,
+                        "best_return_pct": 3.0,
+                        "worst_return_pct": -2.0,
+                        "sample_count": 10,
+                    },
+                    {
+                        "asset": "XLK",
+                        "horizon": "20D",
+                        "median_return_pct": 8.0,
+                        "positive_rate_pct": 90.0,
+                        "best_return_pct": 12.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 10,
+                    },
+                    {
+                        "asset": "TLT",
+                        "horizon": "20D",
+                        "median_return_pct": -7.0,
+                        "positive_rate_pct": 20.0,
+                        "best_return_pct": 2.0,
+                        "worst_return_pct": -9.0,
+                        "sample_count": 10,
+                    },
+                ],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("--ov-analog-cell-strength:4.8%", html)
+        self.assertIn("--ov-analog-cell-strength:20.0%", html)
+        self.assertIn("--ov-analog-cell-strength:18.0%", html)
+        self.assertIn("색상은 중간값 방향과 크기 기준", html)
+
+    def test_sector_pressure_map_renders_weighted_returns_with_two_decimals(self) -> None:
+        from app.web.overview_ui_components import _sector_pressure_map_html
+
+        html = _sector_pressure_map_html(
+            {
+                "summary": {"headline": "Mixed participation"},
+                "coverage": {"freshness": "2026-06-20 13:57"},
+                "heatmap_rows": [
+                    {
+                        "group": "Technology",
+                        "market_cap_weighted_return_pct": 1.234,
+                        "positive_symbol_share_pct": 55.5,
+                        "symbols": 82,
+                        "tone": "positive",
+                    }
+                ],
+            }
+        )
+
+        self.assertIn("+1.23%", html)
+        self.assertNotIn("+1.2%", html)
 
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
