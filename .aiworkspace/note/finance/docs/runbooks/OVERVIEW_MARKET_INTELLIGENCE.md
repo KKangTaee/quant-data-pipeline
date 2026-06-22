@@ -139,13 +139,11 @@ http://localhost:8501
    - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
    - Overview의 refresh buttons는 `app/jobs/overview_actions.py` facade를 통해 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
-10. `Workspace > Overview > Data Health`
-   - Market Intelligence 운영 대상 9개를 한 화면에서 확인한다.
-   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, Futures 1m OHLCV, Market Sentiment, FOMC calendar, Macro calendar, Earnings calendar다.
-   - 상태는 `OK`, `Due`, `Stale`, `Missing`, `Failed`, `Partial`로 표시된다.
-   - `Latest Success`, `Latest Issue`, `Rows`, `Processed`, `Failed`, `Duration Sec`은 Overview refresh button이 남긴 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`의 local run history를 읽는다.
-   - `Last Auto Run`, `Auto Source`, `Next Auto Due`, `Last Manual Run`, `Failure Streak`은 scheduled automation, browser-session auto refresh, 수동 refresh가 섞여 있을 때 실행 경로를 구분하기 위한 운영 지표다.
-   - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
+10. Data Health ownership
+   - `Data Health`는 V22부터 `Workspace > Overview` top-level tab이 아니다.
+   - Market Context의 `근거: 자료 기준 / 출처 상태`와 `필요 자료 보강`이 현재 brief에 필요한 source / refresh 판단을 보여준다.
+   - 상세 run health, 실패 artifact, log, system snapshot은 `Operations > System / Data Health`와 `Workspace > Ingestion`에서 확인한다.
+   - local run history와 DB freshness read model은 유지되지만, Overview 첫 화면의 시장 context 흐름을 대신하지 않는다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
 
 11. `Workspace > Overview > Market Movers > 데이터 갱신 > 자동 갱신`
@@ -256,7 +254,7 @@ PY
 - `Why It Moved` remains a manual investigation panel. It does not summarize, crawl, collect article bodies, collect filing bodies, run sentiment analysis, auto-classify catalysts, mutate DB schema, or write workflow JSONL / saved setup rows.
 - `간단 메타데이터 조회` is button-only and selected-ticker-only. The not-yet-run state is visible before lookup; `OK`, `PARTIAL`, no metadata, and failed lookup states are separate. Metadata URL columns render as clickable `열기` links. SEC filings are displayed as 양식 / 공시일 / 제목 / 열기 and sorted by date with form-priority tie-breaks.
 - Compact metadata is session-only. DB-backed metadata persistence is not part of V1.6 and requires a later V2 storage / freshness / retention decision.
-- Sector / Industry displays `Latest Ranking`, `Trend`, positive group ticker leaders, and a table fallback.
+- Sector / Industry displays `Latest Breadth Heatmap`, `Latest Ranking`, trend detail, positive group ticker leaders, and raw tables behind `상세 표`.
 - Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
 - Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.
 - Sector / Industry shows `Best Breadth`, `Cap vs Equal`, `Concentration`, and `Improving` insight cards above the latest ranking chart.
@@ -281,7 +279,7 @@ PY
 - Overview Events `Latest Collection` updates after a successful collector run.
 - Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then `시장 심리 읽기 - 6단계` covering current conclusion, why it reads that way, strong signals, weak signals, combined interpretation, and next checks.
 - Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, CNN component learning notes, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
-- Overview Data Health displays 9 collection targets with ops status cards, warning banner, status badges, auto/manual run columns, failure streak, and next-action table.
+- Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Operations > System / Data Health` for detailed operational diagnostics.
 - Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
@@ -302,8 +300,8 @@ PY
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Market Sentiment collection is partial | CNN or AAII official source changed, blocked the request, or returned an interstitial | Inspect `collect_market_sentiment` job details; refresh later or use Browser check to confirm whether the official public page still shows the table |
 | Sentiment tab still shows only raw cards after deployment | Streamlit served an old imported module or cache schema | Restart the Streamlit process and clear the Overview cache via normal app reload; confirm the top `시장 심리 컨텍스트` band and `분석 체크` section are visible |
-| Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
-| Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
+| Market Context source evidence shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run the relevant Market Context / Market Movers refresh for the affected coverage |
+| Operations / Ingestion shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Scheduled refresh exits as locked | A previous automation run is still active, or a stale lock file remains | Wait for the run to finish; if the process is gone and the lock is older than the stale threshold, rerun after the CLI clears it |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |
 

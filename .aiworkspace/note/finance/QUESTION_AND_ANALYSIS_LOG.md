@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-22 - Overview primary tabs should stay market-context focused
+- User request:
+  - 사용자가 Market Context 정리가 어느 정도 끝났으니 `Sector/Industry`, `Data Health`, `Candidate Ops` 탭이 현재 제품에서 필요한지 분석하고 필요 없으면 제거하거나 개선해 달라고 요청함.
+- Interpreted goal:
+  - Overview의 primary tab은 시장 context 흐름과 상세 근거에 집중하고, 운영 진단이나 backtest candidate 관리 성격의 화면은 같은 층위에서 노출하지 않아야 함.
+- Analysis result:
+  - `Sector / Industry`는 Market Context의 breadth / leadership drilldown이므로 유지한다. `Data Health`는 Market Context source / refresh evidence 및 Operations / Ingestion 소유로 demotion한다. `Candidate Ops`는 Backtest / Final Review / Operations workflow 성격이므로 Overview에서 제거한다.
+- Follow-up:
+  - V22에서 Overview selector를 `Market Context`, `Market Movers`, `Futures Monitor`, `Sentiment`, `Sector / Industry`, `Events`로 정리하고, Sector / Industry raw table은 접힌 상세로 낮췄다. Candidate snapshot helper code는 별도 Backtest / Operations audit 전까지 보존한다.
+
 ### 2026-06-22 - Source and refresh evidence should support action, not act as a diagnostic table
 - User request:
   - `근거: 자료 기준 / 출처 상태` and `필요 자료 보강` were still shown as dense status rows and large disabled actions, making the area feel prototype-like instead of helping the user understand what is normal, what is reference-only, and what can actually be refreshed.

@@ -43,9 +43,6 @@ from app.services.overview_market_intelligence import (
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_breadth_heatmap_summary,
-    load_overview_collection_ops_snapshot,
-    load_overview_dashboard_snapshot,
-    load_overview_data_health_ingestion_handoff,
     load_overview_group_leadership_snapshot,
     load_overview_market_context_historical_analog,
     load_overview_macro_context_cockpit,
@@ -76,7 +73,6 @@ from app.web.overview_ui_components import (
     OVERVIEW_SERIES_COLORS,
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
-    render_data_health_ingestion_handoff,
     render_breadth_heatmap_summary,
     render_event_agenda_sections,
     render_event_source_lane,
@@ -131,8 +127,6 @@ OVERVIEW_DEEP_TAB_OPTIONS = (
     "Sentiment",
     "Sector / Industry",
     "Events",
-    "Data Health",
-    "Candidate Ops",
 )
 GROUP_LEADERSHIP_PERIOD_LABELS = {
     "daily": "Daily",
@@ -503,76 +497,6 @@ def _option_index(options: list[str], current: Any, *, default: int = 0) -> int:
         return options.index(str(current))
     except ValueError:
         return default
-
-
-# Render one ranked candidate card in the Overview priority section.
-def _render_priority_candidate_card(candidate: dict[str, Any], rank: int) -> None:
-    cagr = candidate.get("cagr")
-    mdd = candidate.get("mdd")
-    cagr_text = f"{float(cagr):.2f}%" if cagr is not None else "-"
-    mdd_text = f"{float(mdd):.2f}%" if mdd is not None else "-"
-    st.markdown(f"##### #{rank} {candidate.get('title') or '-'}")
-    render_badge_strip(
-        [
-            {"label": "Score", "value": f"{candidate.get('score')} / 10", "tone": "positive"},
-            {"label": "Family", "value": candidate.get("family") or "-", "tone": "neutral"},
-            {"label": "Pre-Live", "value": candidate.get("pre_live_status") or "-", "tone": "positive"},
-        ]
-    )
-    render_status_card_grid(
-        [
-            {"title": "CAGR", "value": cagr_text, "tone": "positive"},
-            {"title": "MDD", "value": mdd_text, "tone": "warning"},
-            {"title": "Promotion", "value": candidate.get("promotion") or "-", "tone": "neutral"},
-        ]
-    )
-    st.caption(str(candidate.get("next_action") or ""))
-
-
-# Build an Altair donut chart for the candidate/proposal funnel.
-def _build_funnel_chart(funnel_rows: pd.DataFrame) -> alt.Chart:
-    chart_rows = funnel_rows.copy()
-    if chart_rows.empty or int(chart_rows["Count"].sum()) <= 0:
-        chart_rows = pd.DataFrame([{"Stage": "No Data", "Count": 1}])
-    total_count = max(1, int(chart_rows["Count"].sum()))
-    return (
-        alt.Chart(chart_rows)
-        .mark_arc(innerRadius=58, outerRadius=96, stroke=OVERVIEW_COLOR_TEXT_INVERSE)
-        .encode(
-            theta=alt.Theta("Count:Q", stack=True, scale=alt.Scale(domain=[0, total_count])),
-            color=alt.Color(
-                "Stage:N",
-                scale=alt.Scale(
-                    range=[
-                        OVERVIEW_COLOR_POSITIVE,
-                        OVERVIEW_COLOR_PRIMARY,
-                        OVERVIEW_COLOR_WARNING,
-                        OVERVIEW_COLOR_NEUTRAL,
-                        OVERVIEW_COLOR_SOFT,
-                    ]
-                ),
-                legend=alt.Legend(title=None, orient="bottom"),
-            ),
-            tooltip=["Stage:N", "Count:Q"],
-        )
-        .properties(height=260)
-    )
-
-
-# Render the next-action list as compact operator cards.
-def _render_next_actions(actions: list[dict[str, Any]]) -> None:
-    for action in actions:
-        priority = str(action.get("priority") or "Low")
-        tone = "danger" if priority == "High" else "warning" if priority == "Medium" else "neutral"
-        with st.container(border=True):
-            render_badge_strip(
-                [
-                    {"label": "Priority", "value": priority, "tone": tone},
-                    {"label": "Target", "value": action.get("target") or "-", "tone": "neutral"},
-                ]
-            )
-            st.markdown(f"**{escape(str(action.get('title') or '-'))}**")
-            st.caption(str(action.get("detail") or ""))
 
 
 # Return a compact display value for market-intelligence snapshot metadata.
@@ -4665,7 +4589,8 @@ def _render_market_movers_tab() -> None:
 
 
 def _render_sector_industry_tab() -> None:
-    st.markdown("### Sector / Industry Leadership")
+    st.markdown("### Sector / Industry")
+    st.caption("시장 맥락의 섹터 / 업종 확산, 리더십, 집중도를 확인하는 상세 근거입니다.")
     controls = _render_group_leadership_controls()
 
     loading_label = (
@@ -4699,98 +4624,96 @@ def _render_sector_industry_tab() -> None:
         return
     trend_rows = snapshot.get("trend_rows")
     ticker_leader_rows = snapshot.get("ticker_leader_rows")
-    chart_tab, table_tab = st.tabs(["Trend", "Table"])
-    with chart_tab:
-        st.markdown("#### Latest Breadth Heatmap")
-        st.altair_chart(_build_group_leadership_heatmap(rows), width="stretch")
-        st.markdown("#### Latest Ranking")
-        insight_cards = _group_leadership_insight_cards(
-            rows,
-            trend_rows if isinstance(trend_rows, pd.DataFrame) else None,
+    st.markdown("#### Latest Breadth Heatmap")
+    st.altair_chart(_build_group_leadership_heatmap(rows), width="stretch")
+    st.markdown("#### Latest Ranking")
+    insight_cards = _group_leadership_insight_cards(
+        rows,
+        trend_rows if isinstance(trend_rows, pd.DataFrame) else None,
+    )
+    if insight_cards:
+        render_status_card_grid(insight_cards)
+    st.altair_chart(_build_group_leadership_rank_chart(rows), width="stretch")
+    if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
+        st.markdown("#### Trend")
+        group_options = (
+            pd.concat(
+                [
+                    rows["Group"].dropna().astype(str),
+                    trend_rows["Group"].dropna().astype(str),
+                ],
+                ignore_index=True,
+            )
+            .drop_duplicates()
+            .tolist()
         )
-        if insight_cards:
-            render_status_card_grid(insight_cards)
-        st.altair_chart(_build_group_leadership_rank_chart(rows), width="stretch")
-        if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
-            st.markdown("#### Trend")
-            group_options = (
-                pd.concat(
-                    [
-                        rows["Group"].dropna().astype(str),
-                        trend_rows["Group"].dropna().astype(str),
+        selected_groups = _select_group_trend_groups(
+            group_by=controls.group_by,
+            group_options=group_options,
+        )
+        visible_trend_rows = (
+            trend_rows[trend_rows["Group"].astype(str).isin(selected_groups)]
+            if selected_groups
+            else trend_rows.iloc[0:0]
+        )
+        heatmap_tab, line_tab, delta_tab = st.tabs(["Heatmap", "Line", "Latest Delta"])
+        with heatmap_tab:
+            st.altair_chart(_build_group_leadership_trend_heatmap(visible_trend_rows), width="stretch")
+        with line_tab:
+            st.altair_chart(_build_group_leadership_trend_chart(visible_trend_rows), width="stretch")
+        with delta_tab:
+            st.altair_chart(_build_group_leadership_delta_chart(visible_trend_rows), width="stretch")
+    if isinstance(ticker_leader_rows, pd.DataFrame) and not ticker_leader_rows.empty:
+        st.markdown("#### Positive Group Detail")
+        positive_group_set = set(ticker_leader_rows["Group"].dropna().astype(str).tolist())
+        positive_groups = [
+            group_name
+            for group_name in rows["Group"].dropna().astype(str).drop_duplicates().tolist()
+            if group_name in positive_group_set
+        ]
+        if not positive_groups:
+            positive_groups = ticker_leader_rows["Group"].dropna().astype(str).drop_duplicates().tolist()
+        detail_controls = st.columns([1.4, 0.7], gap="small", vertical_alignment="bottom")
+        selected_detail_group = str(
+            detail_controls[0].selectbox(
+                "Positive Group",
+                positive_groups,
+                index=0,
+                key=(
+                    "overview_group_leadership_positive_group_"
+                    f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
+                ),
+            )
+        )
+        ticker_top_n = int(
+            detail_controls[1].selectbox(
+                "Ticker Top N",
+                [5, 10, 15, 20],
+                index=1,
+                key=(
+                    "overview_group_leadership_ticker_top_n_"
+                    f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
+                ),
+            )
+        )
+        detail_rows = ticker_leader_rows[
+            ticker_leader_rows["Group"].astype(str) == selected_detail_group
+        ].copy()
+        detail_rows = detail_rows.sort_values("Rank").head(ticker_top_n)
+        detail_bar, detail_share = st.columns([1.25, 0.75], gap="medium")
+        with detail_bar:
+            st.altair_chart(_build_group_ticker_leader_bar_chart(detail_rows), width="stretch")
+        with detail_share:
+            st.altair_chart(
+                _build_group_ticker_contribution_donut(
+                    ticker_leader_rows[
+                        ticker_leader_rows["Group"].astype(str) == selected_detail_group
                     ],
-                    ignore_index=True,
-                )
-                .drop_duplicates()
-                .tolist()
+                    top_n=ticker_top_n,
+                ),
+                width="stretch",
             )
-            selected_groups = _select_group_trend_groups(
-                group_by=controls.group_by,
-                group_options=group_options,
-            )
-            visible_trend_rows = (
-                trend_rows[trend_rows["Group"].astype(str).isin(selected_groups)]
-                if selected_groups
-                else trend_rows.iloc[0:0]
-            )
-            heatmap_tab, line_tab, delta_tab = st.tabs(["Heatmap", "Line", "Latest Delta"])
-            with heatmap_tab:
-                st.altair_chart(_build_group_leadership_trend_heatmap(visible_trend_rows), width="stretch")
-            with line_tab:
-                st.altair_chart(_build_group_leadership_trend_chart(visible_trend_rows), width="stretch")
-            with delta_tab:
-                st.altair_chart(_build_group_leadership_delta_chart(visible_trend_rows), width="stretch")
-        if isinstance(ticker_leader_rows, pd.DataFrame) and not ticker_leader_rows.empty:
-            st.markdown("#### Positive Group Detail")
-            positive_group_set = set(ticker_leader_rows["Group"].dropna().astype(str).tolist())
-            positive_groups = [
-                group_name
-                for group_name in rows["Group"].dropna().astype(str).drop_duplicates().tolist()
-                if group_name in positive_group_set
-            ]
-            if not positive_groups:
-                positive_groups = ticker_leader_rows["Group"].dropna().astype(str).drop_duplicates().tolist()
-            detail_controls = st.columns([1.4, 0.7], gap="small", vertical_alignment="bottom")
-            selected_detail_group = str(
-                detail_controls[0].selectbox(
-                    "Positive Group",
-                    positive_groups,
-                    index=0,
-                    key=(
-                        "overview_group_leadership_positive_group_"
-                        f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
-                    ),
-                )
-            )
-            ticker_top_n = int(
-                detail_controls[1].selectbox(
-                    "Ticker Top N",
-                    [5, 10, 15, 20],
-                    index=1,
-                    key=(
-                        "overview_group_leadership_ticker_top_n_"
-                        f"{controls.coverage}_{controls.group_by}_{controls.period}_{controls.top_n}_{controls.min_group_size}"
-                    ),
-                )
-            )
-            detail_rows = ticker_leader_rows[
-                ticker_leader_rows["Group"].astype(str) == selected_detail_group
-            ].copy()
-            detail_rows = detail_rows.sort_values("Rank").head(ticker_top_n)
-            detail_bar, detail_share = st.columns([1.25, 0.75], gap="medium")
-            with detail_bar:
-                st.altair_chart(_build_group_ticker_leader_bar_chart(detail_rows), width="stretch")
-            with detail_share:
-                st.altair_chart(
-                    _build_group_ticker_contribution_donut(
-                        ticker_leader_rows[
-                            ticker_leader_rows["Group"].astype(str) == selected_detail_group
-                        ],
-                        top_n=ticker_top_n,
-                    ),
-                    width="stretch",
-                )
-    with table_tab:
+    with st.expander("상세 표", expanded=False):
         st.dataframe(rows, width="stretch", hide_index=True)
         if isinstance(trend_rows, pd.DataFrame) and not trend_rows.empty:
             st.dataframe(trend_rows, width="stretch", hide_index=True)
@@ -6132,190 +6055,6 @@ def _render_events_tab() -> None:
         st.dataframe(filtered_rows.drop(columns=["Date Parsed"], errors="ignore"), width="stretch", hide_index=True)
 
 
-def _ops_tone(status: str) -> str:
-    normalized = str(status or "").lower()
-    if normalized == "ok":
-        return "positive"
-    if normalized in {"due", "partial"}:
-        return "warning"
-    if normalized in {"failed", "stale", "missing"}:
-        return "danger"
-    return "neutral"
-
-
-def _render_collection_ops_tab() -> None:
-    st.markdown("### Data Health")
-    st.caption("Stored DB freshness and local collection run history for Overview market intelligence.")
-    warning = st.session_state.get("overview_run_history_warning")
-    if warning:
-        st.warning(str(warning))
-
-    snapshot = load_overview_collection_ops_snapshot()
-    render_data_health_ingestion_handoff(
-        load_overview_data_health_ingestion_handoff(snapshot)
-    )
-    coverage = dict(snapshot.get("coverage") or {})
-    review_count = sum(
-        int(coverage.get(key) or 0)
-        for key in ("due_count", "stale_count", "missing_count", "failed_count", "partial_count")
-    )
-    render_status_card_grid(
-        [
-            {
-                "title": "Ops Status",
-                "value": snapshot.get("status") or "-",
-                "detail": f"{review_count} item(s) need review",
-                "tone": "positive" if snapshot.get("status") == "OK" else "warning",
-            },
-            {
-                "title": "Healthy",
-                "value": f"{coverage.get('ok_count') or 0} / {coverage.get('job_count') or 0}",
-                "detail": "collection targets",
-                "tone": "positive" if coverage.get("ok_count") else "neutral",
-            },
-            {
-                "title": "Latest Success",
-                "value": _snapshot_value(coverage.get("latest_success_at")),
-                "detail": "from local run history",
-                "tone": "positive" if coverage.get("latest_success_at") else "neutral",
-            },
-            {
-                "title": "Latest Auto",
-                "value": _snapshot_value(coverage.get("latest_auto_at")),
-                "detail": "scheduled or browser auto",
-                "tone": "positive" if coverage.get("latest_auto_at") else "neutral",
-            },
-            {
-                "title": "Latest Issue",
-                "value": _snapshot_value(coverage.get("latest_issue_at")),
-                "detail": "failed or partial run",
-                "tone": "danger" if coverage.get("latest_issue_at") else "neutral",
-            },
-            {
-                "title": "Failure Streak",
-                "value": coverage.get("max_failure_streak") or 0,
-                "detail": "max consecutive issues",
-                "tone": "danger" if int(coverage.get("max_failure_streak") or 0) else "positive",
-            },
-        ]
-    )
-    _render_snapshot_warnings(snapshot)
-
-    rows = snapshot.get("rows")
-    if not isinstance(rows, pd.DataFrame) or rows.empty:
-        st.info("No collection ops status is available yet.")
-        return
-
-    status_counts = rows["Status"].value_counts().to_dict() if "Status" in rows else {}
-    render_badge_strip(
-        [
-            {"label": str(status), "value": count, "tone": _ops_tone(str(status))}
-            for status, count in status_counts.items()
-        ]
-    )
-    st.dataframe(rows, width="stretch", hide_index=True)
-
-
-def _render_candidate_ops_tab(
-    *,
-    snapshot: dict[str, Any],
-    latest_result: dict[str, Any] | None,
-    recent_results: list[dict[str, Any]],
-    runtime_marker: str,
-    loaded_at: datetime,
-    git_sha: str | None,
-    render_runtime_snapshot: Callable[[], None] | None,
-) -> None:
-    kpis = dict(snapshot["kpis"])
-
-    render_status_card_grid(
-        [
-            {
-                "title": "Current Candidates",
-                "value": kpis["current_candidates"],
-                "detail": "registry에 남은 활성 후보",
-                "tone": "positive" if kpis["current_candidates"] else "neutral",
-            },
-            {
-                "title": "Paper Tracking",
-                "value": kpis["paper_tracking"],
-                "detail": "실전 전 관찰 중",
-                "tone": "positive" if kpis["paper_tracking"] else "neutral",
-            },
-            {
-                "title": "Proposal Drafts",
-                "value": kpis["proposal_drafts"],
-                "detail": "저장된 구성 초안",
-                "tone": "positive" if kpis["proposal_drafts"] else "neutral",
-            },
-            {
-                "title": "Recent Runs",
-                "value": kpis["recent_runs"],
-                "detail": "persistent backtest history",
-                "tone": "positive" if kpis["recent_runs"] else "warning",
-            },
-        ]
-    )
-
-    st.markdown("### 검토 우선 후보 Top 3")
-    st.caption("성과 순위가 아니라 Real-Money 신호, Pre-Live 상태, 배포 blocker, CAGR/MDD를 함께 본 운영 검토 우선순위입니다.")
-    top_candidates = list(snapshot["top_candidates"])
-    if top_candidates:
-        candidate_cols = st.columns(len(top_candidates), gap="small")
-        for index, candidate in enumerate(top_candidates, start=1):
-            with candidate_cols[index - 1].container(border=True):
-                _render_priority_candidate_card(candidate, index)
-    else:
-        st.info("아직 Overview에 표시할 current candidate가 없습니다.")
-
-    left, right = st.columns([1.05, 1.15], gap="medium")
-    with left:
-        st.markdown("### Candidate Funnel")
-        st.caption("현재 후보가 어느 운영 단계에 쌓여 있는지 한눈에 봅니다.")
-        st.altair_chart(_build_funnel_chart(snapshot["funnel_rows"]), width="stretch")
-        st.dataframe(snapshot["funnel_rows"], width="stretch", hide_index=True)
-
-    with right:
-        st.markdown("### Next Actions")
-        st.caption("다음에 눌러야 할 탭을 설명하는 운영 체크리스트입니다.")
-        _render_next_actions(list(snapshot["next_actions"]))
-
-    st.markdown("### Recent Activity")
-    st.caption("최근 candidate, pre-live, proposal, backtest history 이벤트를 한 줄 피드로 확인합니다.")
-    activity_rows = snapshot["activity_rows"]
-    if activity_rows.empty:
-        st.info("표시할 최근 활동이 없습니다.")
-    else:
-        st.dataframe(activity_rows, width="stretch", hide_index=True)
-
-    latest_status = str((latest_result or {}).get("status") or "").upper()
-    if latest_result:
-        with st.expander("Session Latest Completed Run", expanded=False):
-            label = str(latest_result.get("label") or latest_result.get("job_name") or "latest_run")
-            run_time = latest_result.get("finished_at") or latest_result.get("started_at") or "-"
-            render_status_card_grid(
-                [
-                    {"title": "Label", "value": label, "tone": "neutral"},
-                    {"title": "Status", "value": latest_status or "-", "tone": "positive" if latest_status == "SUCCESS" else "warning"},
-                    {"title": "Finished At", "value": str(run_time), "tone": "neutral"},
-                ]
-            )
-    elif not snapshot["history_rows"] and not recent_results:
-        st.info("아직 완료된 실행 기록이 없습니다. 먼저 `Ingestion`이나 `Backtest`에서 작업을 실행하면 Overview에도 요약이 보입니다.")
-
-    with st.expander("System Snapshot", expanded=False):
-        if render_runtime_snapshot:
-            render_runtime_snapshot()
-        else:
-            render_status_card_grid(
-                [
-                    {"title": "Runtime Marker", "value": runtime_marker, "tone": "neutral"},
-                    {"title": "Loaded At", "value": loaded_at.strftime("%Y-%m-%d %H:%M:%S"), "tone": "neutral"},
-                    {"title": "Git SHA", "value": git_sha or "unknown", "tone": "neutral"},
-                ]
-            )
-
-
 def _overview_active_tab_label(value: str | None) -> str:
     label = str(value or "").strip()
     if label in OVERVIEW_DEEP_TAB_OPTIONS:
@@ -6369,23 +6108,9 @@ def render_overview_dashboard(
     recent_results: list[dict[str, Any]] | None = None,
     render_runtime_snapshot: Callable[[], None] | None = None,
 ) -> None:
-    recent_results = recent_results or []
-
     st.title("Overview")
     st.caption("저장된 시장 자료를 브리프처럼 읽고, 필요한 세부 근거는 각 탭에서 이어서 확인합니다.")
     render_market_session_banner(_market_session_banner_model())
-
-    def _render_candidate_ops_lazy() -> None:
-        candidate_ops_model = load_overview_dashboard_snapshot()
-        _render_candidate_ops_tab(
-            snapshot=candidate_ops_model,
-            latest_result=latest_result,
-            recent_results=recent_results,
-            runtime_marker=runtime_marker,
-            loaded_at=loaded_at,
-            git_sha=git_sha,
-            render_runtime_snapshot=render_runtime_snapshot,
-        )
 
     active_tab = _render_overview_tab_selector()
     _render_selected_overview_tab(
@@ -6397,7 +6122,5 @@ def render_overview_dashboard(
             "Sentiment": _render_market_sentiment_tab,
             "Sector / Industry": _render_sector_industry_tab,
             "Events": _render_events_tab,
-            "Data Health": _render_collection_ops_tab,
-            "Candidate Ops": _render_candidate_ops_lazy,
         },
     )

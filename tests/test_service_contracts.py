@@ -4355,8 +4355,28 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("_render_selected_overview_tab(", render_body)
         self.assertNotIn("st.tabs(", render_body.split("def _render_market_movers_tab", 1)[0])
         self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body.split("def _render_market_movers_tab", 1)[0])
+        self.assertNotIn('"Data Health": _render_collection_ops_tab', render_body)
+        self.assertNotIn('"Candidate Ops"', render_body)
+        self.assertNotIn("load_overview_dashboard_snapshot", render_body)
         self.assertLess(context_label_index, market_label_index)
         self.assertLess(market_label_index, futures_label_index)
+
+    def test_overview_dashboard_primary_selector_excludes_ops_tabs(self) -> None:
+        from app.web.overview_dashboard import OVERVIEW_DEEP_TAB_OPTIONS
+
+        self.assertEqual(
+            OVERVIEW_DEEP_TAB_OPTIONS,
+            (
+                "Market Context",
+                "Market Movers",
+                "Futures Monitor",
+                "Sentiment",
+                "Sector / Industry",
+                "Events",
+            ),
+        )
+        self.assertNotIn("Data Health", OVERVIEW_DEEP_TAB_OPTIONS)
+        self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
         from app.web.overview_dashboard import _render_selected_overview_tab
@@ -4492,27 +4512,27 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(button_index, result_index)
         self.assertIn('with st.expander("갱신 상세", expanded=False):', source)
 
-    def test_overview_data_health_tab_renders_ingestion_handoff_before_raw_status_table(self) -> None:
+    def test_overview_data_health_is_not_a_primary_overview_tab(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
-        tab_body = source[source.index("def _render_collection_ops_tab"):]
-        handoff_index = tab_body.index("render_data_health_ingestion_handoff(")
-        status_cards_index = tab_body.index("render_status_card_grid(")
-        dataframe_index = tab_body.index("st.dataframe(rows")
+        render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertLess(handoff_index, status_cards_index)
-        self.assertLess(handoff_index, dataframe_index)
-        self.assertIn("load_overview_data_health_ingestion_handoff", tab_body)
-        self.assertIn("load_overview_collection_ops_snapshot", tab_body)
+        self.assertNotIn("def _render_collection_ops_tab", source)
+        self.assertNotIn("load_overview_data_health_ingestion_handoff", source)
+        self.assertNotIn("render_data_health_ingestion_handoff", source)
+        self.assertNotIn('"Data Health"', render_body)
 
     def test_overview_sector_industry_tab_renders_breadth_summary_before_trend_tabs(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def _render_sector_industry_tab"):]
         summary_index = tab_body.index("render_breadth_heatmap_summary(")
-        tabs_index = tab_body.index("st.tabs([\"Trend\", \"Table\"])")
+        chart_index = tab_body.index('st.markdown("#### Latest Breadth Heatmap")')
+        detail_index = tab_body.index('with st.expander("상세 표", expanded=False):')
         heatmap_index = tab_body.index("_build_group_leadership_heatmap(rows)")
 
-        self.assertLess(summary_index, tabs_index)
+        self.assertLess(summary_index, chart_index)
         self.assertLess(summary_index, heatmap_index)
+        self.assertLess(heatmap_index, detail_index)
+        self.assertNotIn('st.tabs(["Trend", "Table"])', tab_body)
         self.assertIn("load_overview_breadth_heatmap_summary(snapshot)", tab_body)
 
     def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
@@ -5530,7 +5550,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".ov-ia-closeout", css)
         self.assertIn(".ov-ia-closeout-card", css)
 
-    def test_overview_ia_closeout_model_marks_candidate_ops_transitional(self) -> None:
+    def test_overview_ia_closeout_model_demotes_ops_surfaces_from_primary_tabs(self) -> None:
         from app.web.overview_dashboard_helpers import load_overview_ia_closeout_model
 
         model = load_overview_ia_closeout_model()
@@ -5539,12 +5559,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["title"], "Deep Tab 읽는 순서")
         self.assertIn("cockpit", model["detail"])
         self.assertIn("먼저", model["detail"])
-        self.assertEqual([section["id"] for section in model["sections"]], ["market_context", "data_repair", "candidate_ops"])
-        candidate_section = model["sections"][2]
-        self.assertEqual(candidate_section["title"], "Candidate Ops")
-        self.assertEqual(candidate_section["status"], "TRANSITIONAL")
-        self.assertIn("Backtest", candidate_section["owner"])
-        self.assertIn("market context 탭이 아닙니다", candidate_section["detail"])
+        self.assertEqual([section["id"] for section in model["sections"]], ["market_context", "data_repair"])
+        market_section = model["sections"][0]
+        data_section = model["sections"][1]
+        self.assertIn("Sector / Industry", market_section["tabs"])
+        self.assertNotIn("Data Health", market_section["tabs"])
+        self.assertEqual(data_section["status"], "EXTERNAL")
+        self.assertIn("Operations > System / Data Health", data_section["owner"])
+        self.assertEqual(data_section["tabs"], [])
+        self.assertIn("Overview 최상위 탭", data_section["detail"])
+        self.assertNotIn("Candidate Ops", str(model))
         self.assertIn("context-only", model["boundary_note"])
         self.assertIn("생성하지 않습니다", model["boundary_note"])
 

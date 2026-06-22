@@ -26,6 +26,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
+
+## Recent Milestones
+
+- Overview IA Cleanup V22:
+  - `.aiworkspace/note/finance/tasks/active/overview-ia-cleanup-v22-20260622/`에서 Overview primary tab을 시장 context drilldown 중심으로 정리했다.
+  - `Data Health`는 Market Context source / refresh evidence와 Operations / Ingestion 소유로 낮췄고, `Candidate Ops`는 Overview render path에서 제거했다.
+  - `Sector / Industry`는 유지하되 raw table을 `상세 표`로 낮췄다. registry / saved JSONL, run history, provider / DB schema, Backtest / validation / monitoring / trade semantics는 바꾸지 않았다.
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 - historical archive note:
