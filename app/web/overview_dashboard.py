@@ -143,10 +143,16 @@ FUTURES_GROUP_OPTIONS = (
     "Rates",
     "Commodities",
     "FX Futures",
-    "Optional Micro",
-    "Optional Crypto",
     "All",
 )
+FUTURES_GROUP_LABELS = {
+    "Pre-open Core": "개장 전 핵심",
+    "Equity Index": "주가지수",
+    "Rates": "금리",
+    "Commodities": "원자재",
+    "FX Futures": "환율",
+    "All": "전체 보기",
+}
 FUTURES_LOOKBACK_OPTIONS = {
     "2H": 120,
     "6H": 360,
@@ -156,6 +162,43 @@ FUTURES_LOOKBACK_OPTIONS = {
 FUTURES_CHART_INTERVAL_OPTIONS = ("1m", "5m", "15m", "60m")
 FUTURES_COMPACT_CHART_LIMIT = 6
 FUTURES_CHART_SCOPE_OPTIONS = ("compact_6", "all_with_data")
+FUTURES_STATE_LABELS = {
+    "Calm": "안정",
+    "Moving": "움직임",
+    "Sharp": "급변",
+    "Stale": "오래됨",
+    "Missing": "자료 없음",
+    "OK": "정상",
+    "REVIEW": "확인 필요",
+    "MISSING": "자료 없음",
+}
+FUTURES_RUN_STATUS_LABELS = {
+    "success": "성공",
+    "partial_success": "부분 성공",
+    "failed": "실패",
+}
+MACRO_CONFIDENCE_LABELS = {
+    "High Confidence": "근거 강도 높음",
+    "Medium Confidence": "근거 강도 보통",
+    "Low Confidence": "근거 강도 낮음",
+    "Not Enough History": "근거 부족",
+}
+MACRO_SCORE_LABELS = {
+    "Risk-On Score": "위험선호",
+    "Growth Score": "성장",
+    "Rate Pressure Score": "금리",
+    "Dollar Pressure Score": "달러",
+    "Safe Haven Score": "안전자산",
+    "Inflation Pressure Score": "물가",
+}
+MACRO_EVIDENCE_TEXT_LABELS = {
+    "Risk-On": "위험선호",
+    "Growth": "성장",
+    "Rate Pressure": "금리 부담",
+    "Dollar Pressure": "달러 압력",
+    "Safe Haven": "안전자산",
+    "Inflation": "물가 압력",
+}
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 CHART_VALUE_LABEL_STYLE = {
@@ -256,9 +299,128 @@ def _group_by_label(value: str) -> str:
 def _futures_refresh_mode_label(value: str) -> str:
     return {
         "manual": "수동",
-        "auto_60s": "60초 자동",
-        "fast_20s": "20초 Fast",
+        "auto_60s": "60초 자동 확인",
+        "fast_20s": "20초 빠른 확인",
     }.get(value, value)
+
+
+def _futures_interval_label(value: str) -> str:
+    return {
+        "1m": "1분",
+        "5m": "5분",
+        "15m": "15분",
+        "60m": "60분",
+        "1h": "60분",
+    }.get(value, value)
+
+
+def _futures_group_label(value: str) -> str:
+    return FUTURES_GROUP_LABELS.get(value, value)
+
+
+def _futures_state_label(value: Any) -> str:
+    return FUTURES_STATE_LABELS.get(str(value or ""), str(value or "-"))
+
+
+def _futures_run_status_label(value: Any) -> str:
+    return FUTURES_RUN_STATUS_LABELS.get(str(value or ""), str(value or "-"))
+
+
+def _macro_confidence_label(value: Any) -> str:
+    return MACRO_CONFIDENCE_LABELS.get(str(value or ""), str(value or "근거 부족"))
+
+
+def _macro_evidence_summary_label(value: Any) -> str:
+    text = str(value or "")
+    for source_label, display_label in MACRO_EVIDENCE_TEXT_LABELS.items():
+        text = text.replace(source_label, display_label)
+    return text
+
+
+def _macro_validation_status_label(value: Any) -> str:
+    normalized = str(value or "")
+    if normalized == "OK":
+        return "점검 가능"
+    if normalized == "REVIEW":
+        return "확인 필요"
+    if normalized == "MISSING":
+        return "자료 부족"
+    if normalized == "ERROR":
+        return "점검 실패"
+    return normalized or "-"
+
+
+def _macro_confidence_reason_label(value: Any) -> str:
+    text = str(value or "")
+    if text.startswith("Latest daily futures candle is ") and text.endswith(" days old."):
+        age = text.removeprefix("Latest daily futures candle is ").removesuffix(" days old.")
+        return f"최근 선물 일봉 기준이 {age}일 전이라 오늘 해석은 신선도를 확인해야 합니다."
+    if text.startswith("Latest daily candle is ") and text.endswith(" days old."):
+        age = text.removeprefix("Latest daily candle is ").removesuffix(" days old.")
+        return f"최근 일봉 기준이 {age}일 전이라 오늘 해석은 신선도를 확인해야 합니다."
+    if "futures symbols have no daily rows" in text:
+        return text.replace("futures symbols have no daily rows", "개 선물의 일봉 데이터가 없습니다").replace(":", ":")
+    if "symbols have less than 6 months of daily data" in text:
+        return "일부 선물의 일봉 이력이 6개월 미만이라 표준화 움직임이 불안정할 수 있습니다."
+    translations = {
+        "Most core symbols have 60D standardized moves.": "대부분의 핵심 선물이 60D 표준화 이동을 계산할 수 있습니다.",
+        "Most, but not all, core symbols have 60D standardized moves.": "대부분의 핵심 선물이 60D 표준화 이동을 계산할 수 있습니다.",
+        "Daily standardized coverage is partial.": "일봉 표준화 계산 가능 범위가 일부에 그칩니다.",
+        "Current interpretation has multiple strong standardized components.": "현재 해석에 힘을 보태는 강한 표준화 움직임이 여러 개 있습니다.",
+        "Weak components outnumber strong components.": "강한 근거보다 약한 구성요소가 더 많습니다.",
+        "Latest daily candle is recent.": "최근 일봉 데이터가 비교적 최신입니다.",
+        "Historical validation has no usable point-in-time records.": "과거 점검에 쓸 PIT 기록이 부족합니다.",
+        "Current scenario has a useful directional historical sample.": "현재 시나리오와 비슷한 과거 방향성 표본이 충분합니다.",
+        "Current scenario has a moderate directional historical sample.": "현재 시나리오와 비슷한 과거 방향성 표본이 보통 수준입니다.",
+        "Current scenario has a small directional historical sample.": "현재 시나리오와 비슷한 과거 방향성 표본이 작습니다.",
+        "Current mixed scenario has historical occurrences, but no directional hit-rate rule.": "혼재 시나리오는 과거 발생 횟수만 보고, 방향성 적중률로 억지 평가하지 않습니다.",
+        "Current scenario directional historical sample is too small.": "현재 시나리오의 방향성 과거 표본이 너무 작습니다.",
+        "Current scenario 5D hit rate is above a basic consistency threshold.": "현재 시나리오의 5D 과거 일관성이 기본 기준보다 높습니다.",
+        "Current scenario 5D hit rate is below a basic consistency threshold.": "현재 시나리오의 5D 과거 일관성이 기본 기준보다 낮습니다.",
+        "Current scenario is not forced into a directional hit-rate rule.": "현재 시나리오는 방향성 적중률 규칙에 억지로 넣지 않습니다.",
+        "60D volatility or daily history is not sufficient for current symbols.": "현재 선물들의 60D 변동성 또는 일봉 이력이 부족합니다.",
+        "Historical validation could not run.": "과거 점검을 실행하지 못했습니다.",
+    }
+    return translations.get(text, text or "근거 점검 대기")
+
+
+def _futures_warning_label(value: Any) -> str:
+    text = str(value or "")
+    if "futures symbols are stale; refresh before relying on pre-open context." in text:
+        count = text.split(" futures symbols are stale", 1)[0].strip()
+        return f"{count}개 선물 candle이 오래됐습니다. 개장 전 맥락에 사용하기 전 1분봉 갱신을 확인하세요."
+    if text.startswith("Latest daily futures candle is ") and text.endswith(" days old."):
+        age = text.removeprefix("Latest daily futures candle is ").removesuffix(" days old.")
+        return f"최근 선물 일봉 기준이 {age}일 전입니다. 최신 해석이 필요한 경우 일봉 매크로 데이터를 갱신하세요."
+    if text.startswith("Stored futures daily OHLCV rows are not available yet."):
+        return "저장된 선물 일봉 OHLCV가 아직 없습니다. 일봉 매크로 데이터 갱신을 먼저 실행하세요."
+    if "futures symbols have no daily rows" in text:
+        return text.replace("futures symbols have no daily rows", "개 선물의 일봉 데이터가 없습니다")
+    if "symbols have less than 6 months of daily data" in text:
+        return "일부 선물의 일봉 이력이 6개월 미만입니다. 표준화 움직임은 보수적으로 해석하세요."
+    if text == "Some symbols could not compute 60D volatility standardized moves.":
+        return "일부 선물은 60D 변동성 표준화 움직임을 계산하지 못했습니다."
+    return text
+
+
+def _macro_caution_label(value: Any) -> str:
+    text = str(value or "")
+    translations = {
+        "Historical validation is an ex-post consistency check, not a prediction guarantee.": "과거 점검은 사후 일관성 확인이며 예측 보장이 아닙니다.",
+        "Futures targets use stored yfinance continuous futures rows when available.": "선물 대상은 저장된 yfinance 연속 선물 row가 있으면 그것을 사용합니다.",
+        "ETF proxy targets are labeled separately and do not prove futures contract performance.": "ETF proxy 대상은 별도로 표시되며 선물 계약 성과를 증명하지 않습니다.",
+        "yfinance continuous futures can differ from exchange roll and maturity behavior.": "yfinance 연속 선물은 거래소 roll / 만기 구조와 다를 수 있습니다.",
+        "Historical validation sample is small; confidence should be downgraded.": "과거 점검 표본이 작아 근거 강도는 낮춰 읽어야 합니다.",
+        "Some target validation may use ETF proxy rows when futures targets are unavailable.": "일부 과거 점검은 선물 대상이 없을 때 ETF proxy row를 사용할 수 있습니다.",
+        "Historical validation은 과거 일관성 평가이며 예측 보장이 아닙니다.": "과거 점검은 과거 일관성 평가이며 예측 보장이 아닙니다.",
+        "yfinance continuous futures는 실제 roll / 만기 구조와 다를 수 있습니다.": "yfinance 연속 선물은 실제 roll / 만기 구조와 다를 수 있습니다.",
+    }
+    if text.startswith("Historical validation has less than ") and text.endswith(" years of stored daily futures history."):
+        years = text.removeprefix("Historical validation has less than ").removesuffix(" years of stored daily futures history.")
+        return f"저장된 일봉 선물 이력이 {years}년 미만이라 과거 점검 표본을 보수적으로 읽어야 합니다."
+    if text.startswith("Historical validation could not run:"):
+        return f"과거 점검을 실행하지 못했습니다: {text.split(':', 1)[1].strip()}"
+    return translations.get(text, text)
 
 
 def _event_filter_label(value: str) -> str:
@@ -2741,8 +2903,8 @@ def _futures_chart_symbols(snapshot: dict[str, Any], *, chart_scope: str = "comp
 
 def _futures_chart_scope_label(scope: str) -> str:
     if scope == "all_with_data":
-        return "All with data"
-    return "Compact 6"
+        return "데이터 있는 전체"
+    return "핵심 6개"
 
 
 def _futures_chart_scope_detail(snapshot: dict[str, Any], *, chart_scope: str) -> str:
@@ -2750,8 +2912,8 @@ def _futures_chart_scope_detail(snapshot: dict[str, Any], *, chart_scope: str) -
     chartable_count = len(_futures_symbols_with_candles(snapshot))
     shown_count = len(_futures_chart_symbols(snapshot, chart_scope=chart_scope))
     if chart_scope == "all_with_data":
-        return f"showing {shown_count} data-backed charts from {selected_count} selected"
-    return f"showing {shown_count} of {chartable_count or selected_count} chartable symbols"
+        return f"선택 {selected_count}개 중 데이터 있는 {shown_count}개 표시"
+    return f"차트 가능 {chartable_count or selected_count}개 중 {shown_count}개 표시"
 
 
 def _format_futures_percent(value: Any) -> str:
@@ -2767,7 +2929,7 @@ def _format_futures_age(value: Any) -> str:
     try:
         if value is None or pd.isna(value):
             return "-"
-        return f"{float(value):.0f}m"
+        return f"{float(value):.0f}분"
     except (TypeError, ValueError):
         return "-"
 
@@ -2801,16 +2963,16 @@ def _render_futures_chart_card_header(metric: dict[str, Any], symbol: str) -> No
     metric_html = "".join(
         [
             _futures_chart_metric_chip(
-                "60m",
+                "60분",
                 _format_futures_percent(metric.get("60m %")),
                 _futures_value_tone(metric.get("60m %")),
             ),
             _futures_chart_metric_chip(
-                "15m",
+                "15분",
                 _format_futures_percent(metric.get("15m %")),
                 _futures_value_tone(metric.get("15m %")),
             ),
-            _futures_chart_metric_chip("Age", _format_futures_age(metric.get("Age Min")), state_tone),
+            _futures_chart_metric_chip("지연", _format_futures_age(metric.get("Age Min")), state_tone),
         ]
     )
     st.markdown(
@@ -2820,7 +2982,7 @@ def _render_futures_chart_card_header(metric: dict[str, Any], symbol: str) -> No
             <div class="ov-futures-chart-title">{escape(symbol)}</div>
             <div class="ov-futures-chart-subtitle">{escape(_futures_contract_title(metric, symbol))}</div>
           </div>
-          <span class="ov-futures-chart-state" style="--ov-chart-tone:{_overview_tone_color(state_tone)};">{escape(state)} · {_format_futures_age(metric.get("Age Min"))}</span>
+          <span class="ov-futures-chart-state" style="--ov-chart-tone:{_overview_tone_color(state_tone)};">{escape(_futures_state_label(state))} · {_format_futures_age(metric.get("Age Min"))}</span>
         </div>
         <div class="ov-futures-chart-metrics">{metric_html}</div>
         """,
@@ -2836,25 +2998,25 @@ def _futures_live_signal_cards(snapshot: dict[str, Any]) -> list[dict[str, Any]]
     latest_run_status = latest_run.get("status") or "-"
     return [
         {
-            "label": "Status",
-            "value": snapshot.get("status") or "-",
-            "detail": f"{coverage.get('returnable_count') or 0}/{coverage.get('symbol_count') or 0} symbols",
+            "label": "자료 상태",
+            "value": _futures_state_label(snapshot.get("status")),
+            "detail": f"{coverage.get('returnable_count') or 0}/{coverage.get('symbol_count') or 0}개 확인",
             "tone": "positive" if snapshot.get("status") == "OK" else "warning",
         },
         {
-            "label": "Top Move",
+            "label": "가장 큰 움직임",
             "value": top_move.get("Symbol") or "-",
             "detail": (
-                f"15m {_format_futures_percent(top_move.get('15m %'))} · 60m {_format_futures_percent(top_move.get('60m %'))}"
+                f"15분 {_format_futures_percent(top_move.get('15m %'))} · 60분 {_format_futures_percent(top_move.get('60m %'))}"
                 if top_move.get("Symbol")
-                else "waiting for candles"
+                else "저장 candle 대기"
             ),
             "tone": _futures_state_tone(str(top_move.get("State") or "")),
         },
         {
-            "label": "Freshness",
+            "label": "최신성",
             "value": _format_futures_age(latest_age),
-            "detail": f"oldest {_format_futures_age(coverage.get('oldest_age_minutes'))}",
+            "detail": f"가장 오래된 값 {_format_futures_age(coverage.get('oldest_age_minutes'))}",
             "tone": (
                 "positive"
                 if latest_age is not None and not pd.isna(latest_age) and int(latest_age or 0) <= 2
@@ -2862,9 +3024,9 @@ def _futures_live_signal_cards(snapshot: dict[str, Any]) -> list[dict[str, Any]]
             ),
         },
         {
-            "label": "Provider Run",
-            "value": latest_run_status,
-            "detail": f"{latest_run.get('rows_written') or 0} rows · yfinance",
+            "label": "수집 결과",
+            "value": _futures_run_status_label(latest_run_status),
+            "detail": f"{latest_run.get('rows_written') or 0}행 · yfinance",
             "tone": _status_tone(latest_run_status),
         },
     ]
@@ -2874,7 +3036,7 @@ def _futures_contract_title(metric: dict[str, Any], symbol: str) -> str:
     name = str(metric.get("Name") or "").strip()
     group = str(metric.get("Group") or "").strip()
     if name and group:
-        return f"{name} · {group}"
+        return f"{name} · {_futures_group_label(group)}"
     if name:
         return name
     return symbol
@@ -2899,28 +3061,28 @@ def _futures_feed_state(snapshot: dict[str, Any], *, refresh_mode: str) -> dict[
     oldest_age = coverage.get("oldest_age_minutes")
     status = str(snapshot.get("status") or "MISSING")
     if latest_age is None or pd.isna(latest_age):
-        label = "Missing"
-        detail = "no stored candles"
+        label = "자료 없음"
+        detail = "저장 candle 없음"
         tone = "danger"
     else:
         age_value = int(latest_age or 0)
         if age_value <= 2 and status == "OK":
-            label = "Fresh"
-            detail = f"latest {age_value}m"
+            label = "신선함"
+            detail = f"최신 {age_value}분"
             tone = "positive"
         elif age_value <= 10:
-            label = "Review"
-            detail = f"latest {age_value}m"
+            label = "확인 필요"
+            detail = f"최신 {age_value}분"
             tone = "warning"
         else:
-            label = "Stale"
-            detail = f"latest {age_value}m"
+            label = "오래됨"
+            detail = f"최신 {age_value}분"
             tone = "danger"
-    cadence = "manual"
+    cadence = "수동 확인"
     if refresh_mode == "auto_60s":
-        cadence = "60s browser auto"
+        cadence = "60초 자동 확인"
     elif refresh_mode == "fast_20s":
-        cadence = "20s browser auto"
+        cadence = "20초 자동 확인"
     return {
         "label": label,
         "detail": detail,
@@ -2950,16 +3112,17 @@ def _render_futures_command_center(
         symbols_label = f"{symbols_label} +{len(selected_symbols) - 6}"
     latest_run_label = str(latest_run.get("status") or "-")
     latest_run_detail = (
-        f"{latest_run.get('rows_written') or 0} rows · {_snapshot_value(latest_run.get('latest_candle_time_utc'))}"
+        f"{latest_run.get('rows_written') or 0}행 · {_snapshot_value(latest_run.get('latest_candle_time_utc'))}"
         if latest_run
-        else "no provider run"
+        else "최근 수집 없음"
     )
+    group_label = _futures_group_label(group)
     st.markdown(
         f"""
         <div class="ov-futures-command">
           <div class="ov-futures-command-cell">
-            <div class="ov-futures-kicker">Futures Workspace</div>
-            <div class="ov-futures-title">{escape(group)} · {len(selected_symbols)} selected</div>
+            <div class="ov-futures-kicker">선물 워크스페이스</div>
+            <div class="ov-futures-title">{escape(group_label)} · {len(selected_symbols)}개 선택</div>
             <div class="ov-futures-detail">{escape(symbols_label)}</div>
             <div class="ov-futures-feed-row">
               <span class="ov-futures-feed-pill" style="--ov-feed-tone: {tone_color};">{escape(str(feed.get("label") or "-"))}</span>
@@ -2967,20 +3130,20 @@ def _render_futures_command_center(
             </div>
           </div>
           <div class="ov-futures-command-cell">
-            <div class="ov-futures-kicker">Market Pulse</div>
+            <div class="ov-futures-kicker">단기 움직임</div>
             <div class="ov-futures-title">{escape(str(top_move.get("Symbol") or "-"))}</div>
-            <div class="ov-futures-detail">15m {_format_futures_percent(top_move.get("15m %"))} · 60m {_format_futures_percent(top_move.get("60m %"))}</div>
+            <div class="ov-futures-detail">15분 {_format_futures_percent(top_move.get("15m %"))} · 60분 {_format_futures_percent(top_move.get("60m %"))}</div>
             <div class="ov-futures-feed-row">
-              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_futures_state_tone(str(top_move.get("State") or "")))};">{escape(str(top_move.get("State") or "Waiting"))}</span>
-              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(lookback_label)} · {escape(chart_interval)} candles</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_futures_state_tone(str(top_move.get("State") or "")))};">{escape(_futures_state_label(top_move.get("State") or "대기"))}</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(lookback_label)} · {escape(_futures_interval_label(chart_interval))} 봉</span>
             </div>
           </div>
           <div class="ov-futures-command-cell">
-            <div class="ov-futures-kicker">Data Feed</div>
+            <div class="ov-futures-kicker">데이터 상태</div>
             <div class="ov-futures-title">{escape(str(feed.get("detail") or "-"))}</div>
-            <div class="ov-futures-detail">{coverage.get("returnable_count") or 0} / {coverage.get("symbol_count") or 0} symbols · oldest {_format_futures_age(feed.get("oldest_age"))}</div>
+            <div class="ov-futures-detail">{coverage.get("returnable_count") or 0} / {coverage.get("symbol_count") or 0}개 · 가장 오래된 값 {_format_futures_age(feed.get("oldest_age"))}</div>
             <div class="ov-futures-feed-row">
-              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_status_tone(latest_run_label))};">{escape(latest_run_label)}</span>
+              <span class="ov-futures-feed-pill" style="--ov-feed-tone: {_overview_tone_color(_status_tone(latest_run_label))};">{escape(_futures_run_status_label(latest_run_label))}</span>
               <span class="ov-futures-feed-pill" style="--ov-feed-tone: {OVERVIEW_COLOR_NEUTRAL};">{escape(latest_run_detail)}</span>
             </div>
           </div>
@@ -3035,22 +3198,14 @@ def _macro_score_cards(scores: Any) -> list[dict[str, Any]]:
 
 
 def _macro_score_badges(scores: Any) -> list[dict[str, Any]]:
-    labels = {
-        "Risk-On Score": "Risk-On",
-        "Growth Score": "Growth",
-        "Rate Pressure Score": "Rates",
-        "Dollar Pressure Score": "Dollar",
-        "Safe Haven Score": "Safe Haven",
-        "Inflation Pressure Score": "Inflation",
-    }
     if not isinstance(scores, pd.DataFrame) or scores.empty:
-        return [{"label": "Macro", "value": "-", "tone": "neutral"}]
+        return [{"label": "매크로", "value": "-", "tone": "neutral"}]
     badges: list[dict[str, Any]] = []
     for _, row in scores.iterrows():
         score_name = str(row.get("Score") or "-")
         badges.append(
             {
-                "label": labels.get(score_name, score_name.replace(" Score", "")),
+                "label": MACRO_SCORE_LABELS.get(score_name, score_name.replace(" Score", "")),
                 "value": _format_macro_score(row.get("Value")),
                 "tone": str(row.get("Tone") or "neutral"),
             }
@@ -3141,30 +3296,30 @@ def _macro_signal_cards(macro: dict[str, Any]) -> list[dict[str, Any]]:
     scenario = dict(macro.get("summary") or {}).get("scenario") or "해석 대기"
     return [
         {
-            "label": "Scenario",
+            "label": "시나리오",
             "value": scenario,
-            "detail": "mixed는 억지 분류하지 않음",
+            "detail": "혼재 흐름은 억지로 방향 분류하지 않음",
             "tone": "primary",
         },
         {
-            "label": "Confidence",
-            "value": confidence.get("label") or "Not Enough History",
-            "detail": ", ".join(list(confidence.get("reasons") or [])[:1]) or "validation pending",
+            "label": "근거 강도",
+            "value": _macro_confidence_label(confidence.get("label")),
+            "detail": _macro_confidence_reason_label((list(confidence.get("reasons") or [])[:1] or [""])[0]),
             "tone": confidence.get("tone") or "warning",
         },
         {
-            "label": "Validation",
-            "value": validation.get("status") or "MISSING",
-            "detail": f"{validation_dates} PIT dates · {span or '-'}y",
+            "label": "과거 점검",
+            "value": _macro_validation_status_label(validation.get("status")),
+            "detail": f"{validation_dates}개 PIT 날짜 · {span or '-'}년",
             "tone": "positive" if validation.get("status") == "OK" else "warning",
         },
         {
-            "label": "History",
+            "label": "유사 구간",
             "value": sample or occurrence_count or 0,
             "detail": (
-                f"5D hit {_format_macro_percent(hit_rate)}"
+                f"5D 적중 {_format_macro_percent(hit_rate)}"
                 if hit_applicable
-                else "occurrences, hit n/a"
+                else "발생 횟수, 적중률 n/a"
             ),
             "tone": "positive" if int(sample or occurrence_count or 0) >= 60 else "warning",
         },
@@ -3226,6 +3381,54 @@ def _render_macro_score_lane(scores: Any) -> None:
     )
 
 
+def _render_weekly_macro_context(weekly_context: dict[str, Any]) -> None:
+    cards = list(weekly_context.get("cards") or [])
+    if not cards:
+        return
+    st.markdown("#### 최근 1주 흐름")
+    st.caption(str(weekly_context.get("basis") or "저장된 1D 선물 OHLCV의 최근 5거래일 변화율"))
+    st.markdown(
+        f'<div class="ov-futures-macro-week-summary">{escape(str(weekly_context.get("summary") or ""))}</div>',
+        unsafe_allow_html=True,
+    )
+    _render_futures_signal_strip(
+        [
+            {
+                "label": card.get("label") or "-",
+                "value": card.get("value") or "-",
+                "detail": card.get("detail") or card.get("meaning") or "",
+                "tone": card.get("tone") or "neutral",
+            }
+            for card in cards
+        ],
+        class_prefix="ov-futures-week",
+    )
+
+
+def _render_macro_evidence_reading(sections: list[dict[str, Any]]) -> None:
+    if not sections:
+        st.info("해석 가능한 macro evidence가 아직 없습니다.")
+        return
+    st.markdown("#### 근거를 어떻게 읽을까")
+    cols = st.columns(2, gap="small")
+    for index, section in enumerate(sections):
+        with cols[index % 2]:
+            with st.container(border=True):
+                st.markdown(f"**{section.get('label') or '-'}**")
+                st.caption(str(section.get("description") or ""))
+                items = list(section.get("items") or [])
+                if not items:
+                    st.caption(str(section.get("empty_label") or "해당 항목 없음"))
+                    continue
+                for item in items[:4]:
+                    title = str(item.get("title") or "-")
+                    meaning = str(item.get("meaning") or "")
+                    detail = str(item.get("detail") or "")
+                    st.markdown(f"- **{title}**: {meaning}")
+                    if detail:
+                        st.caption(detail)
+
+
 def _render_macro_evidence_groups(groups: dict[str, Any]) -> None:
     cols = st.columns(4, gap="small")
     sections = [
@@ -3251,27 +3454,27 @@ def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
         render_badge_strip(
             [
                 {
-                    "label": "Current Scenario",
+                    "label": "현재 시나리오",
                     "value": current_metrics.get("Scenario") or "-",
                     "tone": "primary",
                 },
                 {
-                    "label": "5D Sample" if hit_applicable else "Occurrences",
+                    "label": "5D 표본" if hit_applicable else "발생 횟수",
                     "value": current_metrics.get("Sample 5D") if hit_applicable else current_metrics.get("Occurrence Count") or 0,
                     "tone": "neutral",
                 },
                 {
-                    "label": "5D Hit",
+                    "label": "5D 적중률",
                     "value": _format_macro_percent(current_metrics.get("Hit Rate 5D %")) if hit_applicable else "N/A",
                     "tone": "positive" if hit_applicable and (current_metrics.get("Hit Rate 5D %") or 0) >= 55 else "warning",
                 },
                 {
-                    "label": "5D False Positive",
+                    "label": "5D 오탐/반대",
                     "value": _format_macro_percent(current_metrics.get("False Positive 5D %")) if hit_applicable else "N/A",
                     "tone": "warning",
                 },
                 {
-                    "label": "5D Max Adverse",
+                    "label": "5D 최대 역행",
                     "value": _format_macro_percent(current_metrics.get("Max Adverse 5D %"), digits=2) if hit_applicable else "N/A",
                     "tone": "warning",
                 },
@@ -3279,7 +3482,7 @@ def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
         )
     scenario_summary = validation.get("scenario_summary")
     if isinstance(scenario_summary, pd.DataFrame) and not scenario_summary.empty:
-        st.markdown("#### Historical Validation Summary")
+        st.markdown("#### 과거 시나리오 요약")
         preferred_cols = [
             "Scenario",
             "Occurrence Count",
@@ -3306,10 +3509,10 @@ def _render_macro_validation_detail(validation: dict[str, Any]) -> None:
     relationships = validation.get("relationships")
     threshold_sensitivity = validation.get("threshold_sensitivity")
     if isinstance(relationships, pd.DataFrame) and not relationships.empty:
-        with st.expander("Score / Forward Return Relationships", expanded=False):
+        with st.expander("점수와 이후 수익률 관계 원본", expanded=False):
             st.dataframe(relationships, width="stretch", hide_index=True)
     if isinstance(threshold_sensitivity, pd.DataFrame) and not threshold_sensitivity.empty:
-        with st.expander("Score Threshold Sensitivity", expanded=False):
+        with st.expander("점수 기준 민감도 원본", expanded=False):
             st.dataframe(threshold_sensitivity, width="stretch", hide_index=True)
 
 
@@ -3324,40 +3527,43 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     validation = dict(macro.get("validation") or {})
 
     _render_futures_section_header(
-        "Macro Context",
-        f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0} daily symbols · {_snapshot_value(coverage.get('latest_daily_date'))}",
+        "매크로 컨텍스트",
+        f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개 · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}",
     )
     _render_futures_signal_strip(_macro_signal_cards(macro), class_prefix="ov-futures-macro")
     sentences = [str(sentence) for sentence in macro.get("summary_sentences") or [] if str(sentence).strip()]
-    evidence = [str(item) for item in macro.get("evidence") or [] if str(item).strip()]
+    evidence = [_macro_evidence_summary_label(item) for item in macro.get("evidence") or [] if str(item).strip()]
     st.markdown(
         f"""
         <div class="ov-futures-macro-hero">
+          <div class="ov-futures-macro-eyebrow">오늘 기준 시장 해석</div>
           <div class="ov-futures-macro-scenario">{escape(str(summary.get('scenario') or '시장 해석 대기'))}</div>
           <div class="ov-futures-macro-sentence">{escape(sentences[0] if sentences else '저장된 일봉 선물 데이터로 시장 흐름을 해석합니다.')}</div>
-          <div class="ov-futures-macro-evidence">{escape(' · '.join(evidence[:2]) if evidence else '주요 근거는 상세 영역에서 확인합니다.')}</div>
+          <div class="ov-futures-macro-evidence">근거: {escape(' · '.join(evidence[:2]) if evidence else '주요 근거는 상세 영역에서 확인합니다.')}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
     _render_macro_score_lane(scores)
     warnings = list(macro.get("warnings") or [])
     warnings.extend(str(item) for item in validation.get("warnings") or [])
     if warnings:
-        _render_snapshot_warnings({"warnings": warnings})
+        _render_snapshot_warnings({"warnings": [_futures_warning_label(warning) for warning in warnings]})
 
-    cautions = [str(item) for item in macro.get("cautions") or [] if str(item).strip()]
-    cautions.extend(str(item) for item in validation.get("caveats") or [] if str(item).strip())
-    with st.expander("Macro Evidence & Data", expanded=detail_expanded):
-        _render_futures_section_header("Daily Data", "stored 1D futures OHLCV for macro scoring")
+    cautions = [_macro_caution_label(item) for item in macro.get("cautions") or [] if str(item).strip()]
+    cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
+    with st.expander("근거 해석 / 원본 데이터", expanded=detail_expanded):
+        _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
+        _render_futures_section_header("일봉 매크로 데이터", "저장된 1D 선물 OHLCV로 macro score를 계산합니다")
         data_cols = st.columns([1, 1.6], gap="medium", vertical_alignment="top")
         with data_cols[0]:
             if st.button(
-                "Refresh Daily Macro OHLCV",
+                "일봉 매크로 데이터 갱신",
                 key="overview_futures_macro_daily_refresh",
                 use_container_width=True,
             ):
-                with st.spinner("Collecting futures 5y daily OHLCV from yfinance..."):
+                with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
                     _store_overview_job_result(
                         "overview_futures_daily_ohlcv_result",
                         _run_futures_daily_ohlcv_action(),
@@ -3368,25 +3574,23 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
         with data_cols[1]:
             _render_market_job_result("overview_futures_daily_ohlcv_result")
 
-        _render_futures_section_header("Evidence Groups", "strong / weak / conflicting / missing symbols")
-        _render_macro_evidence_groups(dict(macro.get("evidence_groups") or {}))
-        _render_futures_section_header("Historical Validation", "past scenario consistency, thresholds, and relationships")
+        _render_futures_section_header("과거 일관성 점검", "과거 PIT 재계산으로 현재 시나리오의 과거 표본을 확인합니다")
         _render_macro_validation_detail(validation)
         if isinstance(scores, pd.DataFrame) and not scores.empty:
-            _render_futures_section_header("Score Table", "direction, coverage, and standardized move summary")
+            _render_futures_section_header("원본 점수 표", "방향, 커버리지, 표준화 움직임 요약")
             st.dataframe(
                 scores.drop(columns=["Tone"], errors="ignore"),
                 width="stretch",
                 hide_index=True,
             )
         if isinstance(components, pd.DataFrame) and not components.empty:
-            _render_futures_section_header("Score Components", "ticker-level contribution by macro score")
+            _render_futures_section_header("구성 선물별 기여", "각 macro score에 어떤 선물이 얼마나 기여했는지")
             st.dataframe(components, width="stretch", hide_index=True)
         if isinstance(symbols, pd.DataFrame) and not symbols.empty:
-            _render_futures_section_header("Symbol Standardized Moves", "daily standardized move per futures symbol")
+            _render_futures_section_header("선물별 일봉 변화 원본", "최근 수익률, 표준화 움직임, 데이터 일수")
             st.dataframe(symbols, width="stretch", hide_index=True)
         if cautions:
-            _render_futures_section_header("Caveats", "interpretation limits and provider caveats")
+            _render_futures_section_header("해석 주의점", "시장 맥락 보조 정보의 한계")
             for caution in list(dict.fromkeys(cautions)):
                 st.caption(caution)
 
@@ -3409,9 +3613,9 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
     symbols = _futures_chart_symbols(snapshot, chart_scope=chart_scope)
     if not symbols:
         message = (
-            "No selected futures have stored candles."
+            "선택한 선물에 저장된 candle이 없습니다."
             if chart_scope == "all_with_data" and _futures_selected_symbols(snapshot)
-            else "No futures symbols are selected."
+            else "선택된 선물 심볼이 없습니다."
         )
         st.info(message)
         return
@@ -3429,7 +3633,7 @@ def _render_futures_mini_chart_grid(snapshot: dict[str, Any], *, chart_interval:
             with st.container(border=True):
                 _render_futures_chart_card_header(metric, symbol)
                 if display_candles.empty:
-                    st.info("No candles.")
+                    st.info("표시할 candle이 없습니다.")
                 else:
                     st.altair_chart(
                         _build_futures_candlestick_chart(
@@ -3453,19 +3657,19 @@ def _render_futures_live_panel(
     state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
     selected_count = len([symbol for symbol in snapshot.get("symbols") or [] if str(symbol).strip()])
     _render_futures_section_header(
-        "Live Futures Charts",
+        "실시간 선물 차트",
         (
-            f"{selected_count} selected futures · {chart_interval} candles · {lookback_label} window · "
+            f"선택 {selected_count}개 · {_futures_interval_label(chart_interval)} 봉 · {lookback_label} 범위 · "
             f"{_futures_chart_scope_detail(snapshot, chart_scope=chart_scope)}"
         ),
     )
     _render_futures_signal_strip(_futures_live_signal_cards(snapshot), class_prefix="ov-futures-live")
     warnings = list(snapshot.get("warnings") or [])
     if warnings:
-        _render_snapshot_warnings({"warnings": warnings})
+        _render_snapshot_warnings({"warnings": [_futures_warning_label(warning) for warning in warnings]})
     if state_counts:
         state_html = "".join(
-            _futures_chart_metric_chip(str(state), str(int(count)), _futures_state_tone(str(state)))
+            _futures_chart_metric_chip(_futures_state_label(state), str(int(count)), _futures_state_tone(str(state)))
             for state, count in state_counts.items()
         )
         st.markdown(f'<div class="ov-futures-chart-metrics">{state_html}</div>', unsafe_allow_html=True)
@@ -3477,25 +3681,25 @@ def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
     rows = snapshot.get("rows")
     candles = snapshot.get("candles")
     latest_run = snapshot.get("latest_run")
-    with st.expander("Diagnostics & Provider Evidence", expanded=False):
-        st.markdown("#### Shock Board")
+    with st.expander("진단 / Provider 근거", expanded=False):
+        st.markdown("#### 급변 상태 원본")
         if isinstance(rows, pd.DataFrame) and not rows.empty:
             st.dataframe(rows, width="stretch", hide_index=True)
         else:
-            st.info("Stored futures OHLCV rows are not available yet. Run Refresh Futures OHLCV first.")
-        st.markdown("#### Provider Run")
+            st.info("저장된 선물 OHLCV row가 아직 없습니다. 먼저 1분봉 데이터 갱신을 실행하세요.")
+        st.markdown("#### Provider 수집 결과")
         if isinstance(latest_run, dict) and latest_run:
             metric_cols = st.columns(4)
-            metric_cols[0].metric("Status", latest_run.get("status") or "-")
-            metric_cols[1].metric("Rows", latest_run.get("rows_written") or 0)
-            metric_cols[2].metric("Processed", f"{latest_run.get('symbols_processed') or 0} / {latest_run.get('symbols_requested') or 0}")
-            metric_cols[3].metric("Latest Candle", _snapshot_value(latest_run.get("latest_candle_time_utc")))
+            metric_cols[0].metric("상태", _futures_run_status_label(latest_run.get("status") or "-"))
+            metric_cols[1].metric("저장 행", latest_run.get("rows_written") or 0)
+            metric_cols[2].metric("처리", f"{latest_run.get('symbols_processed') or 0} / {latest_run.get('symbols_requested') or 0}")
+            metric_cols[3].metric("최신 candle", _snapshot_value(latest_run.get("latest_candle_time_utc")))
             st.caption(str(latest_run.get("message") or snapshot.get("source_note") or ""))
         else:
-            st.info("No futures provider run has been recorded yet.")
+            st.info("기록된 선물 provider 수집 결과가 없습니다.")
         _render_market_job_result("overview_futures_ohlcv_result")
         if isinstance(candles, pd.DataFrame) and not candles.empty:
-            st.markdown("#### Selected Candle Rows")
+            st.markdown("#### 선택 선물 candle 원본")
             st.dataframe(candles.tail(80), width="stretch", hide_index=True)
 
 
@@ -3523,7 +3727,7 @@ def _render_futures_live_workspace(
 
         @st.fragment(run_every=cadence)
         def _futures_live_auto_panel() -> None:
-            with st.spinner("Checking futures auto refresh..."):
+            with st.spinner("선물 1분봉 자동 확인 중입니다..."):
                 _store_overview_job_result(
                     "overview_futures_ohlcv_result",
                     _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="browser_auto"),
@@ -3550,21 +3754,22 @@ def _render_futures_live_workspace(
 
 
 def _render_futures_monitor_tab() -> None:
-    st.markdown("### Futures Monitor")
-    st.caption("미국장 / 한국장 전 주요 선물 OHLCV와 급변 상태를 read-only로 확인합니다.")
+    st.markdown("### 선물 모니터")
+    st.caption("미국장 / 한국장 전 주요 선물 OHLCV, 단기 급변 상태, 일봉 기반 매크로 맥락을 read-only로 확인합니다.")
 
     control_cols = st.columns([0.9, 2.25, 0.7, 0.7, 0.9, 0.8], gap="small", vertical_alignment="bottom")
     group = str(
         control_cols[0].selectbox(
-            "Watch Group",
+            "관찰 그룹",
             FUTURES_GROUP_OPTIONS,
             index=0,
             key="overview_futures_watch_group",
+            format_func=_futures_group_label,
         )
     )
     lookback_label = str(
         control_cols[2].selectbox(
-            "Window",
+            "시간 범위",
             list(FUTURES_LOOKBACK_OPTIONS.keys()),
             index=1,
             key="overview_futures_lookback",
@@ -3575,10 +3780,11 @@ def _render_futures_monitor_tab() -> None:
         st.session_state[chart_key] = "60m"
     chart_interval = str(
         control_cols[3].selectbox(
-            "Chart",
+            "차트 봉",
             FUTURES_CHART_INTERVAL_OPTIONS,
             index=1,
             key=chart_key,
+            format_func=_futures_interval_label,
         )
     )
     chart_scope_key = "overview_futures_chart_scope"
@@ -3586,11 +3792,11 @@ def _render_futures_monitor_tab() -> None:
         st.session_state[chart_scope_key] = "compact_6"
     chart_scope = str(
         control_cols[4].selectbox(
-            "Charts",
+            "차트 범위",
             FUTURES_CHART_SCOPE_OPTIONS,
             key=chart_scope_key,
             format_func=_futures_chart_scope_label,
-            help="Compact는 데이터가 있는 선물 중 첫 6개만, All with data는 저장 candle이 있는 선택 심볼 전체를 표시합니다.",
+            help="핵심 6개는 데이터가 있는 선물 중 첫 6개만, 데이터 있는 전체는 저장 candle이 있는 선택 심볼 전체를 표시합니다.",
         )
     )
 
@@ -3619,7 +3825,7 @@ def _render_futures_monitor_tab() -> None:
             default_symbols = retained
     selected_symbols = list(
         control_cols[1].multiselect(
-            "Symbols",
+            "선물 선택",
             options=symbol_options,
             default=default_symbols,
             key=symbols_key,
@@ -3637,42 +3843,40 @@ def _render_futures_monitor_tab() -> None:
     )
 
     mode_options = ["manual", "auto_60s"]
-    if len(selected_symbols) <= 4:
-        mode_options.append("fast_20s")
     mode_key = "overview_futures_refresh_mode"
     if st.session_state.get(mode_key) not in mode_options:
         st.session_state[mode_key] = "manual"
     refresh_mode = str(st.session_state.get(mode_key) or "manual")
-    with control_cols[5].popover("Data Actions", use_container_width=True):
+    with control_cols[5].popover("데이터 갱신", use_container_width=True):
         segmented_control = getattr(st, "segmented_control", None)
         if callable(segmented_control):
             refresh_mode = str(
                 segmented_control(
-                    "Refresh",
+                    "확인 방식",
                     mode_options,
                     key=mode_key,
                     format_func=_futures_refresh_mode_label,
-                    help="20초 Fast는 선택 심볼 4개 이하일 때만 사용합니다.",
+                    help="자동 확인은 현재 브라우저 세션이 열려 있을 때만 60초마다 선택 선물 1분봉 갱신 여부를 확인합니다.",
                 )
             )
         else:
             refresh_mode = str(
                 st.radio(
-                    "Refresh",
+                    "확인 방식",
                     mode_options,
                     key=mode_key,
                     format_func=_futures_refresh_mode_label,
                     horizontal=True,
-                    help="20초 Fast는 선택 심볼 4개 이하일 때만 사용합니다.",
+                    help="자동 확인은 현재 브라우저 세션이 열려 있을 때만 60초마다 선택 선물 1분봉 갱신 여부를 확인합니다.",
                 )
             )
         if st.button(
-            "Refresh Futures OHLCV",
+            "선택 선물 1분봉 갱신",
             key="overview_futures_manual_refresh",
             use_container_width=True,
             type="primary",
         ):
-            with st.spinner("Collecting futures 1m OHLCV from yfinance..."):
+            with st.spinner("선택 선물 1분봉을 yfinance에서 수집하는 중입니다..."):
                 _store_overview_job_result(
                     "overview_futures_ohlcv_result",
                     _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="manual"),
@@ -3683,11 +3887,11 @@ def _render_futures_monitor_tab() -> None:
                 selected_symbol=selected_symbol,
                 lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
             )
-        if st.button("화면 새로고침", key="overview_futures_reload", use_container_width=True):
+        if st.button("화면만 다시 읽기", key="overview_futures_reload", use_container_width=True):
             st.session_state["overview_futures_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.rerun()
         st.markdown(
-            '<div class="ov-futures-control-note">Provider fetch는 기본 60초 단위입니다. 현재 브라우저 세션이 열려 있을 때만 auto fragment가 확인합니다.</div>',
+            '<div class="ov-futures-control-note">1분봉 갱신은 선택한 선물만 수집합니다. 60초 자동 확인은 브라우저 세션이 열려 있을 때만 동작합니다.</div>',
             unsafe_allow_html=True,
         )
 

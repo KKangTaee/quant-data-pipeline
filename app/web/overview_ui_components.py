@@ -3195,14 +3195,16 @@ def overview_ui_css() -> str:
   margin: 0.15rem 0 0.35rem 0;
 }
 .ov-futures-live-strip,
-.ov-futures-macro-strip {
+.ov-futures-macro-strip,
+.ov-futures-week-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
   margin: 0.35rem 0 0.65rem 0;
 }
 .ov-futures-live-item,
-.ov-futures-macro-item {
+.ov-futures-macro-item,
+.ov-futures-week-item {
   min-width: 0;
   padding: 0.58rem 0.68rem;
   border: 1px solid color-mix(in srgb, var(--ov-signal-tone, var(--ov-mi-color-neutral)) 28%, transparent);
@@ -3211,7 +3213,8 @@ def overview_ui_css() -> str:
   background: color-mix(in srgb, var(--ov-signal-tone, var(--ov-mi-color-neutral)) 5%, transparent);
 }
 .ov-futures-live-label,
-.ov-futures-macro-label {
+.ov-futures-macro-label,
+.ov-futures-week-label {
   color: color-mix(in srgb, currentColor 68%, transparent);
   font-size: var(--ov-mi-font-xs);
   font-weight: var(--ov-mi-weight-label);
@@ -3219,7 +3222,8 @@ def overview_ui_css() -> str:
   text-transform: uppercase;
 }
 .ov-futures-live-value,
-.ov-futures-macro-value {
+.ov-futures-macro-value,
+.ov-futures-week-value {
   color: inherit;
   font-size: 1.02rem;
   font-weight: var(--ov-mi-weight-value);
@@ -3228,7 +3232,8 @@ def overview_ui_css() -> str:
   overflow-wrap: anywhere;
 }
 .ov-futures-live-detail,
-.ov-futures-macro-detail {
+.ov-futures-macro-detail,
+.ov-futures-week-detail {
   color: color-mix(in srgb, currentColor 70%, transparent);
   font-size: var(--ov-mi-font-caption);
   line-height: 1.22;
@@ -3304,6 +3309,13 @@ def overview_ui_css() -> str:
 .ov-futures-macro-hero {
   padding: 0.15rem 0 0.15rem 0;
 }
+.ov-futures-macro-eyebrow {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
 .ov-futures-macro-scenario {
   color: inherit;
   font-size: 1.08rem;
@@ -3322,6 +3334,12 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-caption);
   line-height: 1.3;
   margin-bottom: 0.55rem;
+}
+.ov-futures-macro-week-summary {
+  color: inherit;
+  font-size: var(--ov-mi-font-body);
+  line-height: 1.42;
+  margin: 0.18rem 0 0.48rem 0;
 }
 @media (max-width: 760px) {
   .ov-mm-status-bar {
@@ -3513,7 +3531,8 @@ def overview_ui_css() -> str:
     text-align: left;
   }
   .ov-futures-live-strip,
-  .ov-futures-macro-strip {
+  .ov-futures-macro-strip,
+  .ov-futures-week-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .ov-futures-chart-head {

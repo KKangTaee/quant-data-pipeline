@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Futures Monitor UX/UI V3:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-ux-ui-v3-20260622/`에서 `Workspace > Overview > Futures Monitor` 1차~4차 UX/UI 개선을 완료했다.
+  - 상단 watch group / data refresh UX를 한글 중심으로 단순화하고, Macro Context에 오늘 기준 해석 + 최근 1주 흐름 + 근거 해석 카드를 추가했다.
+  - 원본 표는 `근거 해석 / 원본 데이터` 하단으로 낮췄고, Browser QA 스크린샷은 local generated artifact로만 보존한다.
+  - Boundary stayed Overview context-only: no provider/schema/registry/saved write, no validation gate, monitoring signal, approval, order, or auto rebalance.
 - Overview IA Cleanup V22:
   - `.aiworkspace/note/finance/tasks/active/overview-ia-cleanup-v22-20260622/`에서 Overview primary tab을 시장 context drilldown 중심으로 정리했다.
   - `Data Health`는 Market Context source / refresh evidence와 Operations / Ingestion 소유로 낮췄고, `Candidate Ops`는 Overview render path에서 제거했다.
@@ -39,6 +44,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-22 - Futures Monitor UX/UI V3 1차~4차
+- Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-ux-ui-v3-20260622/` after the user approved sequential 1차~4차 development for `Workspace > Overview > Futures Monitor`.
+- Simplified the Futures Monitor controls and `데이터 갱신` popover, added recent 1-week macro context from stored 1D futures rows, and rendered evidence interpretation before raw data tables.
+- Added service contract coverage for `weekly_context` and Korean evidence reading; compile, focused service tests, and Browser QA passed.
+- Boundaries stayed unchanged: read-only Overview market context only, no schema/provider change, no registry / saved write, and no validation / monitoring / trading semantics.
 
 ### 2026-06-22 - Overview Market Context Source / Refresh UX V21
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-source-refresh-ux-v21-20260622/` after user feedback that `근거: 자료 기준 / 출처 상태` and `필요 자료 보강` still looked like prototype diagnostic UI.

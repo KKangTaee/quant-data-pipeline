@@ -11562,6 +11562,39 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 )
         return rows
 
+    def _daily_rows_with_recent_5d_moves(
+        self,
+        five_day_moves: dict[str, float],
+        *,
+        days: int = 260,
+    ) -> list[dict[str, object]]:
+        base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        rows: list[dict[str, object]] = []
+        for symbol_index, (symbol, five_day_move) in enumerate(five_day_moves.items()):
+            price = 100.0 + symbol_index * 7.0
+            recent_daily_move = (1.0 + five_day_move) ** (1 / 5) - 1.0
+            for idx in range(days):
+                daily_move = 0.0002
+                if idx >= days - 5:
+                    daily_move = recent_daily_move
+                price *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": price * 0.995,
+                        "high": price * 1.005,
+                        "low": price * 0.99,
+                        "close": price,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return rows
+
     def _risk_on_validation_rows(self, *, days: int = 150) -> tuple[list[str], list[dict[str, object]]]:
         symbols = [
             "ES=F",
@@ -11691,6 +11724,82 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertEqual(snapshot["summary"]["scenario"], "금리 상승 부담")
         self.assertIn("금리 상승 압력", snapshot["summary"]["summary"])
         self.assertGreater(snapshot["scores"].set_index("Score").loc["Rate Pressure Score", "Value"], 20)
+
+    def test_macro_thermometer_builds_weekly_context_from_5d_moves(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "HG=F",
+            "NG=F",
+            "GC=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        five_day_moves = {symbol: 0.001 for symbol in symbols}
+        five_day_moves.update(
+            {
+                "ES=F": 0.023,
+                "NQ=F": 0.031,
+                "RTY=F": 0.018,
+                "ZN=F": -0.015,
+                "ZB=F": -0.018,
+                "CL=F": 0.028,
+                "HG=F": 0.02,
+                "6E=F": -0.012,
+                "6A=F": -0.011,
+            }
+        )
+        candle_rows = self._daily_rows_with_recent_5d_moves(five_day_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        weekly = snapshot["weekly_context"]
+
+        self.assertEqual(weekly["status"], "OK")
+        self.assertIn("최근 1주", weekly["summary"])
+        card_by_label = {card["label"]: card for card in weekly["cards"]}
+        self.assertIn("위험선호", card_by_label)
+        self.assertIn("금리 부담", card_by_label)
+        self.assertGreater(card_by_label["금리 부담"]["raw_value"], 0)
+        self.assertIn("채권선물", card_by_label["금리 부담"]["meaning"])
+
+    def test_macro_thermometer_returns_korean_evidence_reading(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = ["ES=F", "NQ=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "HG=F", "CL=F", "6A=F"]
+        final_moves = {symbol: 0.001 for symbol in symbols}
+        final_moves.update({"NQ=F": -0.025, "ZN=F": -0.015, "ZB=F": -0.017, "GC=F": -0.018})
+        candle_rows = self._daily_rows(final_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        sections = {section["label"]: section for section in snapshot["evidence_reading"]}
+
+        self.assertIn("강하게 말하는 근거", sections)
+        self.assertIn("자료 부족", sections)
+        strong_items = sections["강하게 말하는 근거"]["items"]
+        self.assertTrue(strong_items)
+        self.assertTrue(all("meaning" in item for item in strong_items))
+        self.assertTrue(any("금리" in item["meaning"] or "위험선호" in item["meaning"] for item in strong_items))
 
     def test_macro_thermometer_warns_when_daily_history_is_short(self) -> None:
         from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot

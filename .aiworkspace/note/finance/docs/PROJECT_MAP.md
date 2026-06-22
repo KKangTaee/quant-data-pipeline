@@ -88,7 +88,7 @@ Last Verified: 2026-06-22
 | Overview Source Confidence Catalog read model | `app/services/overview_market_intelligence.py` via `build_overview_source_confidence_catalog`; embedded in the macro cockpit model and rendered by `app/web/overview_ui_components.py`. It exposes `source_role`, `actionability`, and `counts_for_status` so direct brief sources, reference limitations, and management meta are separated. Events estimate caveats are `참고 제한`; Data Health is `관리 메타`; only actionable source rows count as unresolved `자료 확인 필요` |
 | Overview IA Closeout guide | `app/web/overview_dashboard_helpers.py` via `load_overview_ia_closeout_model`; now documents market-context tabs plus external Data Repair ownership. Candidate Ops is no longer part of the Overview guide |
 | Overview futures monitor service | `app/services/futures_market_monitoring.py` |
-| Overview futures macro thermometer service | `app/services/futures_macro_thermometer.py` |
+| Overview futures macro thermometer service | `app/services/futures_macro_thermometer.py`; builds stored-1D futures macro score / scenario / confidence and now exposes `weekly_context` from recent 5D futures moves plus Korean `evidence_reading` groups for the Futures Monitor UX |
 | Overview futures macro historical validation service | `app/services/futures_macro_validation.py` |
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |

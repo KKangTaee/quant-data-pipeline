@@ -41,6 +41,96 @@ SYMBOL_ROLE_LABELS = {
     "6C=F": "canadian dollar / oil beta",
 }
 
+SCORE_DISPLAY_LABELS = {
+    "Risk-On Score": "위험선호",
+    "Growth Score": "성장/경기민감",
+    "Rate Pressure Score": "금리 부담",
+    "Dollar Pressure Score": "달러 압력",
+    "Safe Haven Score": "안전자산 선호",
+    "Inflation Pressure Score": "물가 압력",
+}
+
+SCORE_MEANING_LINES = {
+    "Risk-On Score": "주가지수 선물이 위험자산 선호를 얼마나 지지하는지 봅니다.",
+    "Growth Score": "러셀, 구리, 원유, 호주달러가 경기민감 흐름을 얼마나 지지하는지 봅니다.",
+    "Rate Pressure Score": "채권선물 가격 하락을 금리 상승 부담으로 뒤집어 해석합니다.",
+    "Dollar Pressure Score": "주요 FX 선물 약세를 달러 강세 압력으로 뒤집어 해석합니다.",
+    "Safe Haven Score": "금, 채권, 엔 선물이 방어적 수요를 지지하는지 봅니다.",
+    "Inflation Pressure Score": "에너지와 원자재 선물이 물가 압력을 지지하는지 봅니다.",
+}
+
+SYMBOL_ROLE_DISPLAY_LABELS = {
+    "ES=F": "S&P 500 위험선호",
+    "NQ=F": "나스닥 / 성장주",
+    "YM=F": "다우 대형주",
+    "RTY=F": "러셀2000 / 경기민감 확산",
+    "ZN=F": "10년물 채권선물",
+    "ZB=F": "30년물 채권선물",
+    "CL=F": "원유 / 물가 impulse",
+    "GC=F": "금 / 방어 자산",
+    "SI=F": "은 / 귀금속 beta",
+    "HG=F": "구리 / 글로벌 성장",
+    "NG=F": "천연가스",
+    "6E=F": "유로 FX",
+    "6J=F": "엔 FX / 안전통화",
+    "6B=F": "파운드 FX",
+    "6A=F": "호주달러 / 중국 성장 proxy",
+    "6C=F": "캐나다달러 / 원유 beta",
+}
+
+WEEKLY_CONTEXT_GROUPS = (
+    {
+        "label": "위험선호",
+        "symbols": ("ES=F", "NQ=F", "RTY=F"),
+        "multiplier": 1.0,
+        "positive_detail": "지수 선물이 최근 1주 위험자산 선호를 지지합니다.",
+        "negative_detail": "지수 선물이 최근 1주 위험자산 선호를 약화시킵니다.",
+        "meaning": "ES/NQ/RTY 5D 흐름으로 주식 선물의 평균적인 위험선호 방향을 봅니다.",
+        "positive_tone": "positive",
+        "negative_tone": "danger",
+    },
+    {
+        "label": "금리 부담",
+        "symbols": ("ZN=F", "ZB=F"),
+        "multiplier": -1.0,
+        "positive_detail": "채권선물 가격 하락이 최근 1주 금리 부담 확대처럼 읽힙니다.",
+        "negative_detail": "채권선물 가격 상승이 최근 1주 금리 부담 완화처럼 읽힙니다.",
+        "meaning": "채권선물은 가격과 금리가 반대로 움직이므로 5D 변화율을 뒤집어 봅니다.",
+        "positive_tone": "danger",
+        "negative_tone": "positive",
+    },
+    {
+        "label": "달러 압력",
+        "symbols": ("6E=F", "6J=F", "6B=F", "6A=F", "6C=F"),
+        "multiplier": -1.0,
+        "positive_detail": "주요 FX 선물 약세가 최근 1주 달러 강세 압력처럼 읽힙니다.",
+        "negative_detail": "주요 FX 선물 강세가 최근 1주 달러 압력 완화처럼 읽힙니다.",
+        "meaning": "FX 선물 하락을 달러 강세 압력으로 뒤집어 해석합니다.",
+        "positive_tone": "danger",
+        "negative_tone": "positive",
+    },
+    {
+        "label": "안전자산",
+        "symbols": ("GC=F", "ZN=F", "ZB=F", "6J=F"),
+        "multiplier": 1.0,
+        "positive_detail": "금 / 채권 / 엔 쪽 최근 1주 방어 수요가 보입니다.",
+        "negative_detail": "금 / 채권 / 엔 쪽 최근 1주 방어 수요는 약합니다.",
+        "meaning": "금, 채권선물, 엔 선물을 묶어 방어적 선호를 확인합니다.",
+        "positive_tone": "warning",
+        "negative_tone": "neutral",
+    },
+    {
+        "label": "원자재/물가",
+        "symbols": ("CL=F", "HG=F", "NG=F"),
+        "multiplier": 1.0,
+        "positive_detail": "에너지 / 원자재가 최근 1주 물가 압력을 지지합니다.",
+        "negative_detail": "에너지 / 원자재가 최근 1주 물가 압력을 낮춥니다.",
+        "meaning": "원유, 구리, 천연가스 5D 흐름으로 물가 / 경기민감 원자재 배경을 봅니다.",
+        "positive_tone": "warning",
+        "negative_tone": "positive",
+    },
+)
+
 
 @dataclass(frozen=True)
 class ScoreDefinition:
@@ -631,6 +721,192 @@ def build_current_evidence_groups(scores: pd.DataFrame, components: pd.DataFrame
     }
 
 
+def _signed_percent_label(value: float | None) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value):+.2f}%"
+
+
+def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> float | None:
+    if not isinstance(symbol_metrics, pd.DataFrame) or symbol_metrics.empty or "Symbol" not in symbol_metrics:
+        return None
+    values: list[float] = []
+    for symbol in group["symbols"]:
+        matches = symbol_metrics[symbol_metrics["Symbol"] == symbol]
+        if matches.empty:
+            continue
+        value = _safe_float(matches.iloc[0].get("5D %"))
+        if value is not None:
+            values.append(value * float(group.get("multiplier") or 1.0))
+    if not values:
+        return None
+    return _round(sum(values) / len(values), 2)
+
+
+def _weekly_tone(value: float | None, group: dict[str, Any]) -> str:
+    if value is None:
+        return "neutral"
+    if value >= 0.5:
+        return str(group.get("positive_tone") or "positive")
+    if value <= -0.5:
+        return str(group.get("negative_tone") or "danger")
+    return "neutral"
+
+
+def _weekly_detail(value: float | None, group: dict[str, Any]) -> str:
+    if value is None:
+        return "최근 1주 변화율을 계산할 일봉 데이터가 부족합니다."
+    if value >= 0.5:
+        return str(group.get("positive_detail") or "최근 1주 상승 흐름입니다.")
+    if value <= -0.5:
+        return str(group.get("negative_detail") or "최근 1주 하락 흐름입니다.")
+    return "최근 1주 변화는 중립권입니다."
+
+
+def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+    cards: list[dict[str, Any]] = []
+    for group in WEEKLY_CONTEXT_GROUPS:
+        value = _weekly_group_value(symbol_metrics, group)
+        cards.append(
+            {
+                "label": str(group["label"]),
+                "raw_value": value,
+                "value": _signed_percent_label(value),
+                "detail": _weekly_detail(value, group),
+                "meaning": str(group.get("meaning") or ""),
+                "tone": _weekly_tone(value, group),
+                "symbols": list(group["symbols"]),
+            }
+        )
+    usable = [card for card in cards if card.get("raw_value") is not None]
+    if not usable:
+        return {
+            "status": "MISSING",
+            "summary": "최근 1주 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+            "cards": cards,
+            "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+        }
+
+    dominant = max(usable, key=lambda card: abs(float(card.get("raw_value") or 0.0)))
+    by_label = {str(card.get("label")): card for card in cards}
+    risk = by_label.get("위험선호", {})
+    rates = by_label.get("금리 부담", {})
+    dollar = by_label.get("달러 압력", {})
+    summary = (
+        f"최근 1주 기준으로 {dominant.get('label')} 변화가 가장 두드러집니다"
+        f"({_signed_percent_label(dominant.get('raw_value'))}). "
+        f"위험선호 {_signed_percent_label(risk.get('raw_value'))}, "
+        f"금리 부담 {_signed_percent_label(rates.get('raw_value'))}, "
+        f"달러 압력 {_signed_percent_label(dollar.get('raw_value'))}을 함께 확인합니다."
+    )
+    return {
+        "status": "OK",
+        "summary": summary,
+        "cards": cards,
+        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+    }
+
+
+def _symbol_from_evidence_text(text: str) -> str | None:
+    cleaned = text.replace("/", " ").replace(",", " ")
+    for token in cleaned.split():
+        symbol = token.strip()
+        if symbol in SYMBOL_ROLE_DISPLAY_LABELS:
+            return symbol
+    return None
+
+
+def _score_from_evidence_text(text: str) -> str | None:
+    for score_name in SCORE_DISPLAY_LABELS:
+        if score_name in text:
+            return score_name
+    return None
+
+
+def _translate_conflict_text(text: str) -> str:
+    if "Risk-On and Safe Haven" in text:
+        return "위험선호와 안전자산 선호가 동시에 강해 단일 방향 해석이 어렵습니다."
+    if "Risk-On is elevated while Rate Pressure" in text:
+        return "위험선호가 보이지만 금리 부담도 커서 성장주 해석은 신중해야 합니다."
+    if "Risk-On is elevated while Dollar Pressure" in text:
+        return "위험선호가 보이지만 달러 강세 압력이 함께 있어 글로벌 위험자산에는 부담이 남습니다."
+    if "Growth-sensitive bid and safe-haven bid" in text:
+        return "경기민감 선호와 방어 수요가 동시에 보여 시장 성격이 섞여 있습니다."
+    if "Risk-Off price action appears while rate pressure is easing" in text:
+        return "위험회피성 가격 움직임과 금리 부담 완화가 같이 보여 원인을 분리해서 봐야 합니다."
+    if "Risk-Off price action appears while inflation pressure is easing" in text:
+        return "위험회피성 가격 움직임과 물가 압력 완화가 같이 보여 단순 risk-off로만 보기 어렵습니다."
+    return text
+
+
+def _evidence_item(raw_item: Any, section_key: str) -> dict[str, str]:
+    raw = str(raw_item or "").strip()
+    score_name = _score_from_evidence_text(raw)
+    symbol = _symbol_from_evidence_text(raw)
+    score_label = SCORE_DISPLAY_LABELS.get(score_name or "", score_name or "Macro")
+    symbol_label = SYMBOL_ROLE_DISPLAY_LABELS.get(symbol or "", symbol or "")
+    if section_key == "conflicting":
+        title = "충돌 신호"
+        meaning = _translate_conflict_text(raw)
+    elif section_key == "missing":
+        title = symbol_label or raw
+        meaning = f"{symbol_label or raw} 일봉 데이터가 없어 해당 축의 해석 강도를 낮춥니다."
+    elif symbol:
+        title = f"{score_label} · {symbol}"
+        score_meaning = SCORE_MEANING_LINES.get(score_name or "", "")
+        role = f"{symbol_label}가" if symbol_label else f"{symbol}가"
+        if section_key == "weak":
+            meaning = f"{role} {score_label} 판단에 들어가지만 움직임이 작아 결론 근거로는 약합니다. {score_meaning}"
+        else:
+            meaning = f"{role} {score_label} 판단에 크게 기여합니다. {score_meaning}"
+    else:
+        title = score_label
+        meaning = SCORE_MEANING_LINES.get(score_name or "", raw)
+    return {
+        "title": title,
+        "detail": raw,
+        "meaning": meaning.strip(),
+    }
+
+
+def build_macro_evidence_reading(evidence_groups: dict[str, Any]) -> list[dict[str, Any]]:
+    sections = [
+        (
+            "strong",
+            "강하게 말하는 근거",
+            "표준화 움직임이 커서 현재 해석에 직접 힘을 보태는 선물입니다.",
+        ),
+        (
+            "weak",
+            "약한 근거",
+            "계산에는 들어가지만 움직임이 작아 결론을 세게 만들지는 않는 선물입니다.",
+        ),
+        (
+            "conflicting",
+            "충돌 근거",
+            "서로 다른 시장 성격이 동시에 나타나 단일 방향 해석을 약하게 만드는 신호입니다.",
+        ),
+        (
+            "missing",
+            "자료 부족",
+            "일봉 row가 없어 해당 축의 confidence를 낮추는 선물입니다.",
+        ),
+    ]
+    out: list[dict[str, Any]] = []
+    for key, label, description in sections:
+        raw_items = list(evidence_groups.get(key) or [])
+        out.append(
+            {
+                "key": key,
+                "label": label,
+                "description": description,
+                "items": [_evidence_item(item, key) for item in raw_items[:8]],
+                "empty_label": "해당 항목 없음",
+            }
+        )
+    return out
+
+
 def build_macro_thermometer_read_model(
     *,
     candles: pd.DataFrame,
@@ -645,6 +921,7 @@ def build_macro_thermometer_read_model(
     warnings = _warnings(symbol_metrics, coverage)
     interpretation = generate_market_interpretation(score_rows, symbol_metrics)
     evidence_groups = build_current_evidence_groups(score_rows, component_rows, symbol_metrics)
+    weekly_context = build_weekly_macro_context(symbol_metrics)
     return {
         "status": _status(coverage, warnings),
         "coverage": coverage,
@@ -653,9 +930,11 @@ def build_macro_thermometer_read_model(
         "score_components": component_rows,
         "symbols": symbol_metrics,
         "summary": interpretation,
-        "summary_sentences": [interpretation["summary"]],
+        "summary_sentences": [interpretation["summary"], weekly_context["summary"]],
         "evidence": interpretation["evidence"],
         "evidence_groups": evidence_groups,
+        "evidence_reading": build_macro_evidence_reading(evidence_groups),
+        "weekly_context": weekly_context,
         "cautions": list(CAUTION_LINES),
         "source_note": "Uses stored yfinance futures daily OHLCV; scores are standardized by recent 60D daily volatility.",
         "as_of_date": as_of_date or date.today().isoformat(),

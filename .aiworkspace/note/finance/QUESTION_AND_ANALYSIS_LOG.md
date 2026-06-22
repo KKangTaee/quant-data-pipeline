@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-22 - Futures Monitor should explain evidence before showing raw tables
+- User request:
+  - 사용자가 `Workspace > Overview > Futures Monitor`의 watch group, data actions, Macro Context, Macro Evidence & Data가 prototype 수준이고 표 중심이라 해석하기 어렵다고 지적하고 1차~4차 순차 개발을 승인함.
+- Interpreted goal:
+  - Futures Monitor는 raw status / run diagnostics를 보기 좋게 배열하는 화면이 아니라, 사용자가 오늘 기준 선물/매크로 배경과 최근 1주 흐름, 근거 강도, 충돌 근거를 먼저 읽고 필요할 때 원본 표로 내려가는 context workflow여야 함.
+- Analysis result:
+  - 기존 stored 1D futures read model already has `5D %`, score groups, and historical validation. DB/schema/provider 변경 없이 `weekly_context`와 evidence-reading payload를 추가하는 것이 가장 작은 제품 개선 경로다.
+- Follow-up:
+  - V3에서 watch group / refresh UX를 한글 중심으로 정리하고, Macro Context에 최근 1주 흐름과 `근거를 어떻게 읽을까`를 추가했다. Futures Monitor는 여전히 read-only Overview context surface이며 validation gate / monitoring signal / trading semantics를 만들지 않는다.
+
 ### 2026-06-22 - Overview primary tabs should stay market-context focused
 - User request:
   - 사용자가 Market Context 정리가 어느 정도 끝났으니 `Sector/Industry`, `Data Health`, `Candidate Ops` 탭이 현재 제품에서 필요한지 분석하고 필요 없으면 제거하거나 개선해 달라고 요청함.

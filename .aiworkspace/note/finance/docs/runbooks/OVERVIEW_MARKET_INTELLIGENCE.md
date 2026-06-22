@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-06-05
+Last Verified: 2026-06-22
 
 ## Purpose
 
@@ -76,18 +76,19 @@ http://localhost:8501
    - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다. Ticker leader bar는 양수일 때 sector color, 음수일 때 danger red를 사용하고, 직전 동일 기간 return은 얇은 marker로 표시한다.
 
 4. `Workspace > Overview > Futures Monitor`
-   - 기본 `Watch Group`은 `Pre-open Core`다. 현재 기본 차트 후보는 `NQ=F`(지수), `ZN=F`(금리), `CL=F`(원유), `6E=F`(FX), `GC=F`(금), `6J=F`(엔)를 보여준다.
-   - `Watch Group`에서 `Equity Index`, `Rates`, `Commodities`, `FX Futures`, optional 그룹으로 바꿔 더 넓은 후보를 확인한다.
-   - `Symbols`에서 볼 선물을 고른다. 20초 fast mode는 4개 이하 symbol에서만 사용한다.
-   - `Refresh Futures OHLCV`를 눌러 yfinance pilot source의 1m OHLCV를 DB에 저장한다. yfinance가 `1d / 1m`에서 일부 symbol을 빈 응답이나 지나치게 적은 row로 반환하면 collector가 해당 symbol만 `2d / 1m`으로 한 번 보강 수집하고, Provider Run diagnostics의 `fallback_retries`에 초기 row 수와 회복 여부를 남긴다.
-   - 차트와 Shock Board는 각 symbol의 최신 저장 candle 기준 window를 표시한다. 선물 휴장, 주말, provider delay 때문에 최신 candle이 오래됐으면 그래프는 latest stored data를 보여주되 상태는 `Stale`로 남긴다.
-   - `Macro Thermometer` 탭은 core 16개 선물의 저장된 1d OHLCV를 읽어 Risk-On, Growth, Rate Pressure, Dollar Pressure, Safe Haven, Inflation Pressure score, 오늘의 시장 해석, Interpretation Confidence, historical validation summary를 표시한다.
-   - Macro Thermometer가 비어 있거나 `Not Enough History` / 3년 미만 warning이 있으면 `Refresh Daily Macro OHLCV`를 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
-   - Historical Validation Summary는 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 scenario의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. Mixed scenario는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
-   - 기본 자동 refresh는 60초 cadence다. 화면을 열어둔 동안만 동작하며 provider를 매초 호출하지 않는다.
-   - Shock Board에서 15m / 60m 움직임, range spike, volume spike, `Calm / Moving / Sharp / Stale / Missing` 상태를 확인한다.
-   - `Live Futures Charts`에서 선택 symbol을 포함한 최대 6개 미니 캔들 차트를 본다. `1m / 5m / 15m / 60m` view는 저장된 1m row에서 표시용으로 집계한다.
-   - Provider Run 탭에서 latest run status, rows, processed / requested, latest candle time을 확인한다.
+   - 기본 `관찰 그룹`은 `개장 전 핵심`이다. 기본 후보는 `NQ=F`(지수), `ZN=F`(금리), `CL=F`(원유), `6E=F`(FX), `GC=F`(금), `6J=F`(엔)를 보여준다.
+   - `관찰 그룹`은 1차 선택지를 `개장 전 핵심`, `주가지수`, `금리`, `원자재`, `환율`, `전체 보기`로 단순화했다. optional micro / crypto 그룹은 기본 사용 흐름에서 노출하지 않는다.
+   - `선물 선택`, `시간 범위`, `차트 봉`, `차트 범위`를 먼저 정한다. `차트 봉`은 저장된 1분봉 row를 표시용으로 `1분 / 5분 / 15분 / 60분` 집계한다.
+   - `데이터 갱신` popover에서 `수동` 또는 `60초 자동 확인`을 고른다. `선택 선물 1분봉 갱신`은 현재 선택한 선물만 수집하고, `화면만 다시 읽기`는 DB state를 다시 읽는다.
+   - 60초 자동 확인은 브라우저 세션이 열려 있을 때만 동작하며 provider를 매초 호출하지 않는다. 20초 fast mode는 이 화면의 기본 선택지로 노출하지 않는다.
+   - 상단 `선물 워크스페이스`, `단기 움직임`, `데이터 상태`를 먼저 본다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
+   - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 과거 일관성 점검, 유사 구간, score chip을 보여준다.
+   - `최근 1주 흐름`은 저장된 1D 선물의 최근 5거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
+   - `근거 해석 / 원본 데이터`를 열면 `강하게 말하는 근거`, `약한 근거`, `충돌 근거`, `자료 부족`을 먼저 읽고, 그 다음 historical validation / 원본 점수표 / 구성 선물별 기여 / 선물별 일봉 변화 원본을 확인한다.
+   - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
+   - Historical Validation은 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 시나리오의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. 혼재 시나리오는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
+   - `실시간 선물 차트`에서 선택 symbol을 포함한 최대 6개 미니 캔들 차트를 본다. 더 넓게 보려면 `차트 범위`를 `데이터 있는 전체`로 바꾼다.
+   - `진단 / Provider 근거`는 보조 disclosure다. 최신 run status, rows, processed / requested, latest candle time은 여기서 확인한다.
    - Futures Monitor는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
 5. `Workspace > Overview > Sentiment`
