@@ -4344,23 +4344,39 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("app.jobs.overview_automation", imported_modules)
         self.assertNotIn("app.jobs.run_history", imported_modules)
 
-    def test_overview_dashboard_renders_market_context_as_first_deep_tab(self) -> None:
+    def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
-        if "with context_tab:" not in render_body:
-            self.fail("Overview should render a dedicated first Market Context tab.")
-        tabs_index = render_body.index("st.tabs(")
-        context_tab_index = render_body.index("with context_tab:")
-        market_tab_index = render_body.index("with market_tab:")
         context_label_index = render_body.index('"Market Context"')
         market_label_index = render_body.index('"Market Movers"')
         futures_label_index = render_body.index('"Futures Monitor"')
 
-        self.assertIn("context_tab, market_tab, futures_tab", render_body)
+        self.assertIn("_render_overview_tab_selector(", render_body)
+        self.assertIn("_render_selected_overview_tab(", render_body)
+        self.assertNotIn("st.tabs(", render_body.split("def _render_market_movers_tab", 1)[0])
+        self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body.split("def _render_market_movers_tab", 1)[0])
         self.assertLess(context_label_index, market_label_index)
         self.assertLess(market_label_index, futures_label_index)
-        self.assertLess(tabs_index, context_tab_index)
-        self.assertLess(context_tab_index, market_tab_index)
+
+    def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
+        from app.web.overview_dashboard import _render_selected_overview_tab
+
+        calls: list[str] = []
+        renderers = {
+            "Market Context": lambda: calls.append("Market Context"),
+            "Market Movers": lambda: calls.append("Market Movers"),
+            "Futures Monitor": lambda: calls.append("Futures Monitor"),
+        }
+
+        _render_selected_overview_tab("Market Movers", renderers=renderers)
+
+        self.assertEqual(calls, ["Market Movers"])
+
+    def test_overview_dashboard_defaults_unknown_deep_tab_to_market_context(self) -> None:
+        from app.web.overview_dashboard import _overview_active_tab_label
+
+        self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
+        self.assertEqual(_overview_active_tab_label(None), "Market Context")
 
     def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")

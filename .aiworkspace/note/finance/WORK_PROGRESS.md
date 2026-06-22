@@ -5138,3 +5138,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 핵심 자산 비교와 Macro 조건 결과 비교 matrix는 median / delta 방향과 크기를 green/red gradient로 더 분명히 보여준다.
   - 조건에는 쓰지 않은 Macro 배경은 T10Y3M / VIXCLS / BAA10Y 현재 값이 어떤 상태인지 한 줄 의미 문장으로 설명한다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, `tests/test_service_contracts.py` 382개, Streamlit Browser QA와 screenshot으로 완료했다.
+- Overview Lazy Tab Render V20:
+  - `.aiworkspace/note/finance/tasks/active/overview-lazy-tab-render-v20-20260622/`에서 Overview 첫 진입 로딩을 줄이기 위해 top-level deep tab을 selected-tab lazy render로 바꿨다.
+  - 기본 선택은 `Market Context`이며 Market Movers / Futures Monitor / Sentiment / Sector / Industry / Events / Data Health / Candidate Ops는 선택 시점에만 렌더된다.
+  - Candidate Ops dashboard snapshot load도 Candidate Ops branch 안으로 지연했고, 각 탭 내부 read model / data boundary / trade semantics는 바꾸지 않았다.
+  - 검증은 RED/GREEN focused tests, OverviewAutomationContractTests 68개, `tests/test_service_contracts.py` 384개, py_compile, `git diff --check`, Streamlit Browser QA와 screenshot으로 완료했다.

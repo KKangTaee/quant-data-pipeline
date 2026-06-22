@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-macro-meaning-gradient-v19-20260622`
+- `overview-lazy-tab-render-v20-20260622`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-lazy-tab-render-v20-20260622`: Completed record. `Workspace > Overview` V20 보정으로 top-level deep tab 렌더링을 native eager `st.tabs`에서 selected-tab lazy renderer로 바꿨다. 기본 선택은 `Market Context`이며 Market Movers / Futures Monitor / Sentiment / Sector / Industry / Events / Data Health / Candidate Ops는 선택 시점에만 렌더된다. Candidate Ops의 dashboard snapshot load도 Candidate Ops branch 안으로 지연했다. 각 탭 내부 read model / UI 의미 / provider / DB / registry / validation / monitoring / trade semantics는 변경하지 않았다.
 - `overview-market-context-macro-meaning-gradient-v19-20260622`: Completed record. `Overview > Market Context` V19 보정으로 핵심 자산 비교와 Macro 조건 결과 비교 matrix의 양수 / 음수 return gradient를 더 선명하게 표시하고, 조건에는 쓰지 않은 Macro 배경(T10Y3M / VIXCLS / BAA10Y)에 현재 값이 뜻하는 상태 판단 문장을 추가했다. 기존 DB-backed bucket / broad vs conditioned sample 계산은 바꾸지 않았고, 새 provider / schema / hard condition / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-intersection-v18-20260622`: Completed record. `Overview > Market Context` V18 보정으로 Macro 조건 표본이 `GLD 조건 적용` 후 `금리선물 조건 적용`처럼 순서 의존적으로 보이던 문제를 정리했다. 서비스 모델은 broad 표본, GLD 같은 상태 count, 금리선물 같은 상태 count, futures 계산 가능 count, 두 조건 교집합 count를 `macro_condition_counts`로 제공한다. UI는 `기본 유사 맥락 기준` / `GLD 같은 상태` / `금리선물 같은 상태` / `두 조건 모두` 4칸으로 표시하며, 최종 조건 후 결과는 두 조건 교집합 표본으로 계산한다. 계산 bucket 기준 / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.
 - `overview-market-context-macro-polish-v17-20260621`: Completed record. `Overview > Market Context` V17 보정으로 Macro 조건 축소 bar의 `GLD 조건 적용` / `금리선물 조건 적용`이 무엇을 의미하는지 바로 읽히게 했다. 각 단계는 broad relative-strength 표본에서 현재와 비슷한 GLD 상태, ZN=F / ZB=F 금리선물 배경을 차례로 남기는 흐름으로 표시한다. `조건에는 쓰지 않은 Macro 배경`은 T10Y3M / VIXCLS / BAA10Y를 한글 상태 badge, 현재 값, broad 표본 내 같은 상태 비율 bar, source 설명 순서로 보여준다. 계산 로직 / hard condition / provider / schema / persistence / validation / monitoring / trade semantics는 추가하지 않았다.

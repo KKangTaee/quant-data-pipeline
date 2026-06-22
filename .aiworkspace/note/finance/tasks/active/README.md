@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-lazy-tab-render-v20-20260622` | Completed record | `Workspace > Overview` V20 follow-up. Top-level deep tabs now use selected-tab lazy rendering with `Market Context` as default, so Market Movers / Futures / Sentiment / Sector / Events / Data Health / Candidate Ops compute only after selection. Candidate Ops dashboard snapshot loading is also deferred to its selected branch. |
 | `overview-market-context-macro-meaning-gradient-v19-20260622` | Completed record | `Overview > Market Context` V19 follow-up. Historical analog / Macro conditioned comparison matrix cells now use clearer green/red return gradients, and reference-only T10Y3M / VIXCLS / BAA10Y cards explain what each current value means without changing hard-condition or data boundaries. |
 | `overview-market-context-analog-usability-v12-20260621` | Completed record | `Overview > Market Context` V12 follow-up. Historical analog selected-as-of common price basis mismatch now has a bounded price-basis refresh action, the basis/method area is deduped into compact summary + collapsed technical details, and core/support asset outcomes render as matrix/summary before detailed tables. |
 | `overview-market-context-session-basis-v9-20260620` | Completed record | `Overview > Market Context` V9 follow-up. 휴장 / 장외 시간에는 `오늘의 시장 브리프` 대신 마지막 거래일 또는 현재 세션 기준 브리프로 읽고, 장중 snapshot age만으로 현재 보강 이슈를 띄우지 않도록 보정했다. |

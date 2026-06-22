@@ -123,6 +123,17 @@ MARKET_MOVER_PERIOD_LABELS = {
     "monthly": "Monthly",
     "yearly": "Yearly",
 }
+OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
+OVERVIEW_DEEP_TAB_OPTIONS = (
+    "Market Context",
+    "Market Movers",
+    "Futures Monitor",
+    "Sentiment",
+    "Sector / Industry",
+    "Events",
+    "Data Health",
+    "Candidate Ops",
+)
 GROUP_LEADERSHIP_PERIOD_LABELS = {
     "daily": "Daily",
     "weekly": "Weekly",
@@ -6208,6 +6219,49 @@ def _render_candidate_ops_tab(
             )
 
 
+def _overview_active_tab_label(value: str | None) -> str:
+    label = str(value or "").strip()
+    if label in OVERVIEW_DEEP_TAB_OPTIONS:
+        return label
+    return OVERVIEW_DEEP_TAB_OPTIONS[0]
+
+
+def _render_overview_tab_selector() -> str:
+    current = _overview_active_tab_label(st.session_state.get(OVERVIEW_DEEP_TAB_KEY))
+    if st.session_state.get(OVERVIEW_DEEP_TAB_KEY) not in OVERVIEW_DEEP_TAB_OPTIONS:
+        st.session_state[OVERVIEW_DEEP_TAB_KEY] = current
+
+    segmented_control = getattr(st, "segmented_control", None)
+    if callable(segmented_control):
+        selected = segmented_control(
+            "Overview 영역",
+            OVERVIEW_DEEP_TAB_OPTIONS,
+            key=OVERVIEW_DEEP_TAB_KEY,
+            label_visibility="collapsed",
+            width="stretch",
+        )
+    else:
+        selected = st.radio(
+            "Overview 영역",
+            OVERVIEW_DEEP_TAB_OPTIONS,
+            key=OVERVIEW_DEEP_TAB_KEY,
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+    return _overview_active_tab_label(str(selected or current))
+
+
+def _render_selected_overview_tab(
+    selected_label: str | None,
+    *,
+    renderers: dict[str, Callable[[], None]],
+) -> None:
+    active_label = _overview_active_tab_label(selected_label)
+    renderer = renderers.get(active_label) or renderers.get(OVERVIEW_DEEP_TAB_OPTIONS[0])
+    if callable(renderer):
+        renderer()
+
+
 # Render the top-level product dashboard for Workspace > Overview.
 def render_overview_dashboard(
     *,
@@ -6218,42 +6272,16 @@ def render_overview_dashboard(
     recent_results: list[dict[str, Any]] | None = None,
     render_runtime_snapshot: Callable[[], None] | None = None,
 ) -> None:
-    snapshot = load_overview_dashboard_snapshot()
     recent_results = recent_results or []
 
     st.title("Overview")
     st.caption("저장된 시장 자료를 브리프처럼 읽고, 필요한 세부 근거는 각 탭에서 이어서 확인합니다.")
     render_market_session_banner(_market_session_banner_model())
 
-    context_tab, market_tab, futures_tab, sentiment_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
-        [
-            "Market Context",
-            "Market Movers",
-            "Futures Monitor",
-            "Sentiment",
-            "Sector / Industry",
-            "Events",
-            "Data Health",
-            "Candidate Ops",
-        ]
-    )
-    with context_tab:
-        _render_overview_market_context_tab()
-    with market_tab:
-        _render_market_movers_tab()
-    with futures_tab:
-        _render_futures_monitor_tab()
-    with sentiment_tab:
-        _render_market_sentiment_tab()
-    with group_tab:
-        _render_sector_industry_tab()
-    with events_tab:
-        _render_events_tab()
-    with ops_tab:
-        _render_collection_ops_tab()
-    with candidate_tab:
+    def _render_candidate_ops_lazy() -> None:
+        candidate_ops_model = load_overview_dashboard_snapshot()
         _render_candidate_ops_tab(
-            snapshot=snapshot,
+            snapshot=candidate_ops_model,
             latest_result=latest_result,
             recent_results=recent_results,
             runtime_marker=runtime_marker,
@@ -6261,3 +6289,18 @@ def render_overview_dashboard(
             git_sha=git_sha,
             render_runtime_snapshot=render_runtime_snapshot,
         )
+
+    active_tab = _render_overview_tab_selector()
+    _render_selected_overview_tab(
+        active_tab,
+        renderers={
+            "Market Context": _render_overview_market_context_tab,
+            "Market Movers": _render_market_movers_tab,
+            "Futures Monitor": _render_futures_monitor_tab,
+            "Sentiment": _render_market_sentiment_tab,
+            "Sector / Industry": _render_sector_industry_tab,
+            "Events": _render_events_tab,
+            "Data Health": _render_collection_ops_tab,
+            "Candidate Ops": _render_candidate_ops_lazy,
+        },
+    )

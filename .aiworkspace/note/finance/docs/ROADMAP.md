@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-meaning-gradient-v19-20260622/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-lazy-tab-render-v20-20260622/`
+- 목적: `Workspace > Overview` 최초 진입 로딩을 줄이기 위해 top-level deep tab 렌더링을 선택된 탭만 실행하는 lazy 구조로 바꿨다.
+- 주요 변경: Overview deep tab navigation은 `Market Context`를 기본값으로 하는 selector + renderer dispatch로 바뀌었다. `Market Movers`, `Futures Monitor`, `Sentiment`, `Sector / Industry`, `Events`, `Data Health`, `Candidate Ops`는 사용자가 해당 영역을 선택할 때만 렌더된다. `Candidate Ops`의 `load_overview_dashboard_snapshot()`도 해당 branch 안으로 지연됐다.
+- 이번 차수에서 하지 않은 일: 각 탭 내부 read model / UI 의미 / provider / DB schema / loader / registry / saved JSONL / validation / monitoring / trade semantics 변경.
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-lazy-tab-render-v20-20260622/`
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-meaning-gradient-v19-20260622/`
 - 목적: `Workspace > Overview > Market Context`의 V19 Macro meaning / gradient 보정으로, 핵심 자산 비교와 Macro 조건 결과 비교 matrix의 양수 / 음수 색상 구분을 더 분명히 하고, 조건에는 쓰지 않은 Macro 배경 값이 어떤 상태를 뜻하는지 바로 읽히게 했다.
 - 주요 변경: Historical analog / Macro conditioned comparison matrix cells는 median return 또는 delta 방향과 크기를 green / red gradient로 표시한다. Reference-only Macro backdrop cards는 T10Y3M / VIXCLS / BAA10Y 현재 값 옆에 `양의 금리곡선`, `변동성 주의`, `신용위험 안정권` 같은 상태와 해당 값의 의미 문장을 보여준다.
 - 이번 차수에서 하지 않은 일: 새 provider / DB schema / loader / persistence path, registry / saved JSONL write, UI render 중 external fetch, FRED / events / sentiment hard conditioning, Backtest / Practical Validation / Final Review / Operations core logic, trade signal / 추천 / validation or monitoring signal.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-meaning-gradient-v19-20260622/`
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-intersection-v18-20260622/`
 - 목적: `Workspace > Overview > Market Context`의 V18 Macro intersection 보정으로, Macro 조건 표본이 GLD 조건을 먼저 적용한 뒤 금리선물을 적용하는 순서 의존 결과처럼 보이는 문제를 정리했다.
 - 주요 변경: Macro conditioned analog 모델은 broad count, GLD 같은 상태 count, 금리선물 같은 상태 count, futures 계산 가능 count, 두 조건 교집합 count를 별도로 제공한다. Macro basis bar는 `기본 유사 맥락 기준` / `GLD 같은 상태` / `금리선물 같은 상태` / `두 조건 모두`로 표시하고, 최종 조건 후 결과는 두 조건 모두 현재와 같았던 교집합 표본으로 계산한다.

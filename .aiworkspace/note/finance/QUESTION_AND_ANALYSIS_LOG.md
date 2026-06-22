@@ -8024,3 +8024,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 Macro hard condition이나 예측 로직이 아니라, 기존 historical analog / Macro reference 값의 읽기 보조 UI를 더 명확하게 해야 함.
 - Analysis result: matrix HTML은 이미 strength 값을 갖고 있었지만 CSS가 약해 화면상 거의 드러나지 않았다. Macro reference values도 기존 bucket이 있으므로 새 fetch 없이 bucket 의미를 사용자 문장으로 표시할 수 있다.
 - Follow-up: V19에서 matrix green/red gradient와 Macro reference backdrop meaning copy를 완료했다. DB / provider / hard conditioning / validation / monitoring / trading semantics는 바꾸지 않았다.
+
+### 2026-06-22 - Overview 첫 진입에서 선택된 탭만 로딩한다
+
+- User request: 사용자가 Overview 최초 진입 시 시간이 오래 걸리는 이유를 물었고, 선택된 탭에 한해서 로딩하는 구조로 변경하자고 승인함.
+- Interpreted goal: `Market Context`를 기본 첫 화면으로 유지하면서, Streamlit `st.tabs`의 eager render 때문에 다른 Overview deep tab들이 함께 계산되는 문제를 줄여야 함.
+- Analysis result: `st.tabs` body는 비선택 탭도 실행하므로 Market Movers, Futures Monitor, Sentiment, Sector / Industry, Events, Data Health, Candidate Ops가 첫 진입 때 모두 렌더될 수 있었다. Top-level navigation을 selector + selected renderer dispatch로 바꾸는 것이 가장 작고 안전한 변경이다.
+- Follow-up: V20에서 selected-tab lazy render와 Candidate Ops snapshot lazy load를 완료했다. 각 탭 내부 read model / provider / DB / registry / validation / monitoring / trade semantics는 바꾸지 않았다.
