@@ -2005,6 +2005,14 @@ def _overview_market_context_refresh_expander_label(cockpit_model: dict[str, Any
 
 def _render_overview_market_context_smart_refresh_plan(cockpit_model: dict[str, Any]) -> list[str]:
     refresh_plan = dict(cockpit_model.get("refresh_plan") or {})
+    items = [dict(item or {}) for item in list(refresh_plan.get("items") or []) if isinstance(item, dict)]
+    return [str(item.get("action_id")) for item in items if str(item.get("action_id") or "").strip()]
+
+
+def _overview_market_context_refresh_plan_parts(
+    cockpit_model: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    refresh_plan = dict(cockpit_model.get("refresh_plan") or {})
     summary = dict(refresh_plan.get("summary") or {})
     items = [dict(item or {}) for item in list(refresh_plan.get("items") or []) if isinstance(item, dict)]
     excluded_items = [
@@ -2012,25 +2020,91 @@ def _render_overview_market_context_smart_refresh_plan(cockpit_model: dict[str, 
         for item in list(refresh_plan.get("excluded_items") or [])
         if isinstance(item, dict)
     ]
-    st.caption(str(summary.get("detail") or "현재 화면에서 실제 갱신 가능한 자료만 실행합니다."))
-    if items:
-        st.caption("현재 실행 대상")
-        for item in items[:5]:
-            resolution = str(item.get("resolution_label") or "-")
-            source = str(item.get("source_area") or item.get("label") or "-")
-            reason = str(item.get("reason") or "-")
-            limitation = str(item.get("limitation") or "")
-            st.caption(f"{source}: {resolution} · {reason} · {limitation}")
-    else:
-        st.caption("현재 실행할 자료 보강 job은 없습니다.")
+    return summary, items, excluded_items
+
+
+def _overview_market_context_refresh_tone_color(has_actions: bool) -> str:
+    return OVERVIEW_COLOR_WARNING if has_actions else OVERVIEW_COLOR_POSITIVE
+
+
+def _overview_market_context_refresh_item_html(
+    item: dict[str, Any],
+    *,
+    muted: bool = False,
+) -> str:
+    source = str(item.get("source_area") or item.get("label") or "-")
+    resolution = str(item.get("resolution_label") or ("보강 제외" if muted else "보강 대상"))
+    reason = str(item.get("reason") or "-")
+    limitation = str(item.get("limitation") or "").strip()
+    meta = f"{reason} · {limitation}" if limitation else reason
+    return (
+        '<div class="ov-refresh-status-row">'
+        f'<div class="ov-refresh-status-source">{escape(source)}</div>'
+        f'<div class="ov-refresh-status-copy">{escape(meta)}</div>'
+        '<div class="ov-refresh-status-meta">'
+        f'<span class="ov-refresh-status-pill">{escape(resolution)}</span>'
+        "</div>"
+        "</div>"
+    )
+
+
+def _render_overview_market_context_refresh_status_panel(
+    cockpit_model: dict[str, Any],
+    *,
+    action_ids: list[str],
+) -> None:
+    summary, items, excluded_items = _overview_market_context_refresh_plan_parts(cockpit_model)
+    has_actions = bool(action_ids)
+    title = "현재 보강할 자료 이슈" if has_actions else "현재 보강할 자료 이슈 없음"
+    badge = f"{len(action_ids)}개 실행 가능" if has_actions else "보강 없음"
+    detail = str(
+        summary.get("detail")
+        or (
+            "현재 화면에서 실제 갱신 가능한 자료만 기존 Overview action boundary로 실행합니다."
+            if has_actions
+            else "현재 브리프 자료는 저장 snapshot 기준으로 읽을 수 있으며, 참고 제한 항목은 보강 대상에서 제외합니다."
+        )
+    )
+    active_action_ids = set(action_ids)
+    active_items = [
+        item
+        for item in items
+        if str(item.get("action_id") or "").strip() in active_action_ids
+    ]
+    if has_actions and not active_items:
+        active_items = items
+    rows_html = "".join(_overview_market_context_refresh_item_html(item) for item in active_items[:5])
+    excluded_html = ""
     if excluded_items:
-        st.caption("보강 제외")
-        for item in excluded_items[:3]:
-            source = str(item.get("source_area") or item.get("label") or "-")
-            reason = str(item.get("reason") or "-")
-            limitation = str(item.get("limitation") or "")
-            st.caption(f"{source}: {reason} · {limitation}")
-    return [str(item.get("action_id")) for item in items if str(item.get("action_id") or "").strip()]
+        excluded_rows = " ".join(
+            f"{str(item.get('source_area') or item.get('label') or '-')}: {str(item.get('reason') or '-')}"
+            for item in excluded_items[:3]
+        )
+        excluded_html = f'<div class="ov-refresh-status-muted">보강 제외 · {escape(excluded_rows)}</div>'
+    no_action_note = ""
+    if not has_actions:
+        no_action_note = (
+            '<div class="ov-refresh-status-muted">'
+            "미국장 휴장 / 장외 시간에는 장중 snapshot 시간만으로 보강하지 않습니다. 필요하면 전체 보강을 수동으로 실행합니다."
+            "</div>"
+        )
+    rows_block = f'<div class="ov-refresh-status-list">{rows_html}</div>' if rows_html else ""
+    panel_html = (
+        f'<div class="ov-refresh-status-panel" style="--ov-refresh-status-tone:{_overview_market_context_refresh_tone_color(has_actions)};">'
+        '<div class="ov-refresh-status-head">'
+        f'<div class="ov-refresh-status-title">{escape(title)}</div>'
+        f'<div class="ov-refresh-status-badge">{escape(badge)}</div>'
+        "</div>"
+        f'<div class="ov-refresh-status-detail">{escape(detail)}</div>'
+        f"{rows_block}"
+        f"{excluded_html}"
+        f"{no_action_note}"
+        "</div>"
+    )
+    st.markdown(
+        panel_html,
+        unsafe_allow_html=True,
+    )
 
 
 def _overview_market_context_refresh_impact(label: str) -> str:
@@ -2079,47 +2153,70 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
             unsafe_allow_html=True,
         )
         action_ids = _render_overview_market_context_smart_refresh_plan(cockpit_model)
-        cols = st.columns([1.4, 0.72, 0.82], gap="small", vertical_alignment="center")
-        with cols[0]:
-            st.caption(
-                "자료 보강 후 Market Context cache를 비우고 같은 화면을 다시 읽습니다. raw job rows는 상세에만 표시합니다."
-            )
-        if cols[1].button(
-            str(summary.get("primary_button_label") or "현재 이슈만 보강"),
-            key="overview_market_context_refresh_smart",
-            use_container_width=True,
-            type="secondary",
-            disabled=not action_ids,
-            help="현재 Market Context에서 실제 보강 가능한 항목만 기존 Overview action boundary로 갱신합니다.",
-        ):
-            current_year = datetime.now().year
-            with st.spinner("Market Context 자료를 갱신하는 중입니다..."):
-                result = run_overview_market_context_refresh_smart(
-                    action_ids=action_ids,
-                    years=(current_year, current_year + 1),
+        _render_overview_market_context_refresh_status_panel(cockpit_model, action_ids=action_ids)
+        if not action_ids:
+            cols = st.columns([1.4, 0.82], gap="small", vertical_alignment="center")
+            with cols[0]:
+                st.caption(
+                    "현재 실행할 이슈별 보강은 없습니다. 필요하면 전체 저장 snapshot 보강을 수동으로 실행합니다."
                 )
-                _store_overview_job_result(result_key, result)
-                st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = (
-                    _overview_market_context_refresh_reflection_state(result)
+            if cols[1].button(
+                str(summary.get("full_refresh_label") or "전체 Market Context 자료 보강"),
+                key="overview_market_context_refresh_all",
+                use_container_width=True,
+                type="secondary",
+                help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 모두 갱신합니다.",
+            ):
+                current_year = datetime.now().year
+                with st.spinner("Market Context 전체 자료를 갱신하는 중입니다..."):
+                    result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
+                    _store_overview_job_result(result_key, result)
+                    st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = (
+                        _overview_market_context_refresh_reflection_state(result)
+                    )
+                    _clear_overview_market_context_caches()
+                st.rerun()
+        else:
+            cols = st.columns([1.4, 0.72, 0.82], gap="small", vertical_alignment="center")
+            with cols[0]:
+                st.caption(
+                    "자료 보강 후 Market Context cache를 비우고 같은 화면을 다시 읽습니다. raw job rows는 상세에만 표시합니다."
                 )
-                _clear_overview_market_context_caches()
-            st.rerun()
-        if cols[2].button(
-            str(summary.get("full_refresh_label") or "전체 Market Context 자료 보강"),
-            key="overview_market_context_refresh_all",
-            use_container_width=True,
-            type="secondary",
-            help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 모두 갱신합니다.",
-        ):
-            current_year = datetime.now().year
-            with st.spinner("Market Context 전체 자료를 갱신하는 중입니다..."):
-                result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
-                _store_overview_job_result(result_key, result)
-                st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = (
-                    _overview_market_context_refresh_reflection_state(result)
-                )
-                _clear_overview_market_context_caches()
-            st.rerun()
+            if cols[1].button(
+                str(summary.get("primary_button_label") or "현재 이슈만 보강"),
+                key="overview_market_context_refresh_smart",
+                use_container_width=True,
+                type="secondary",
+                help="현재 Market Context에서 실제 보강 가능한 항목만 기존 Overview action boundary로 갱신합니다.",
+            ):
+                current_year = datetime.now().year
+                with st.spinner("Market Context 자료를 갱신하는 중입니다..."):
+                    result = run_overview_market_context_refresh_smart(
+                        action_ids=action_ids,
+                        years=(current_year, current_year + 1),
+                    )
+                    _store_overview_job_result(result_key, result)
+                    st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = (
+                        _overview_market_context_refresh_reflection_state(result)
+                    )
+                    _clear_overview_market_context_caches()
+                st.rerun()
+            if cols[2].button(
+                str(summary.get("full_refresh_label") or "전체 Market Context 자료 보강"),
+                key="overview_market_context_refresh_all",
+                use_container_width=True,
+                type="secondary",
+                help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 모두 갱신합니다.",
+            ):
+                current_year = datetime.now().year
+                with st.spinner("Market Context 전체 자료를 갱신하는 중입니다..."):
+                    result = run_overview_market_context_refresh_all(years=(current_year, current_year + 1))
+                    _store_overview_job_result(result_key, result)
+                    st.session_state[MARKET_CONTEXT_REFRESH_REFLECTION_KEY] = (
+                        _overview_market_context_refresh_reflection_state(result)
+                    )
+                    _clear_overview_market_context_caches()
+                st.rerun()
         _render_overview_market_context_refresh_result(result_key)
 
 

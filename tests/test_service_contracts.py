@@ -4982,8 +4982,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             }
         )
 
-        self.assertIn("브리프 자료", source_html)
-        self.assertIn("참고 / 관리 메타", source_html)
+        self.assertIn("시장 브리프 직접 자료", source_html)
+        self.assertIn("참고 / 관리 자료", source_html)
         self.assertIn("참고 2", source_html)
         self.assertIn("Events", source_html)
         self.assertIn("참고 제한", source_html)
@@ -5025,11 +5025,93 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn("ov-source-ledger", source_html)
-        self.assertIn("자료 영역", source_html)
-        self.assertIn("해석 영향", source_html)
+        self.assertIn("자료 기준", source_html)
+        self.assertIn("사용 위치", source_html)
+        self.assertIn("보강 판단", source_html)
         self.assertIn("필요 자료 보강", source_html)
         for forbidden in ["PASS", "BLOCKER", "Final Review decision", "Operations monitoring", "monitoring action"]:
             self.assertNotIn(forbidden, source_html)
+
+    def test_overview_source_confidence_renders_status_board_not_diagnostic_table(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "OK",
+                "status_label": "자료 정상 · 참고 제한",
+                "summary": {
+                    "detail": "브리프 자료는 정상이고 참고 제한은 분리합니다.",
+                    "ok_count": 4,
+                    "review_count": 0,
+                    "reference_count": 2,
+                    "missing_count": 0,
+                },
+                "items": [
+                    {
+                        "surface": "Market Movers",
+                        "status": "OK",
+                        "status_label": "자료 정상",
+                        "title": "Prices / Movers",
+                        "detail": "503/503 symbols returnable",
+                        "freshness": "2026-06-20 13:57",
+                        "owner": "Workspace > Ingestion plus Overview refresh",
+                        "caveat": "가격 맥락 참고용",
+                        "next_check": "-",
+                        "source_role": "brief_source",
+                        "counts_for_status": True,
+                    },
+                    {
+                        "surface": "Events",
+                        "status": "REFERENCE_LIMIT",
+                        "status_label": "참고 제한",
+                        "title": "Events",
+                        "detail": "추정 일정은 확정 일정처럼 읽지 않습니다.",
+                        "freshness": "2026-06-20 12:36",
+                        "owner": "Events",
+                        "caveat": "원인 분석 엔진이 아닙니다.",
+                        "next_check": "-",
+                        "source_role": "reference_context",
+                        "counts_for_status": False,
+                    },
+                    {
+                        "surface": "Data Health",
+                        "status": "META",
+                        "status_label": "관리 메타",
+                        "title": "Data Health",
+                        "detail": "보강 가능한 항목은 별도 보강 판단에 반영됩니다.",
+                        "freshness": "2026-06-22 09:09",
+                        "owner": "Data Health",
+                        "caveat": "자료 관리 메타입니다.",
+                        "next_check": "-",
+                        "source_role": "management_meta",
+                        "counts_for_status": False,
+                    },
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn("ov-source-status-board", source_html)
+        self.assertIn("자료 상태 요약", source_html)
+        self.assertIn("시장 브리프 직접 자료", source_html)
+        self.assertIn("참고 / 관리 자료", source_html)
+        self.assertIn("보강 판단", source_html)
+        self.assertIn("브리프 자료 정상 4개", source_html)
+        self.assertIn("현재 보강 대상 0개", source_html)
+        self.assertIn("참고 제한 2개", source_html)
+        self.assertNotIn("자료 영역", source_html)
+        self.assertNotIn("관리 위치:", source_html)
+
+    def test_overview_market_context_refresh_bar_has_compact_no_action_state(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        self.assertIn("_render_overview_market_context_refresh_status_panel(", source)
+        self.assertIn("ov-refresh-status-panel", source)
+        self.assertIn("if not action_ids:", source)
+        self.assertIn("전체 Market Context 자료 보강", source)
+
+        no_action_branch = source[source.index("if not action_ids:") : source.index("else:", source.index("if not action_ids:"))]
+        self.assertNotIn('summary.get("primary_button_label")', no_action_branch)
+        self.assertNotIn('key="overview_market_context_refresh_smart"', no_action_branch)
 
     def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit

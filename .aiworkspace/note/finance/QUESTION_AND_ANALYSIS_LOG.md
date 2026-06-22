@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-22 - Source and refresh evidence should support action, not act as a diagnostic table
+- User request:
+  - `근거: 자료 기준 / 출처 상태` and `필요 자료 보강` were still shown as dense status rows and large disabled actions, making the area feel prototype-like instead of helping the user understand what is normal, what is reference-only, and what can actually be refreshed.
+- Interpreted goal:
+  - Market Context source evidence should first answer whether the current brief is usable, which sources directly support it, which rows are reference / management context, and what refresh action is actually available.
+- Analysis result:
+  - Events / Data Health should remain visible as reference / management rows, but not as unresolved action targets. Refresh UI should not show a disabled smart action when there are no actionable items.
+- Follow-up:
+  - V21 keeps refresh actions and data boundaries unchanged while changing the presentation to `자료 상태 요약 -> 시장 브리프 직접 자료 -> 참고 / 관리 자료 -> 보강 판단`; progressive Market Context loading remains separate.
+
 ### 2026-06-22 - Macro condition display should be intersection-first, not order-dependent
 - User request:
   - GLD 조건을 먼저 적용한 뒤 금리선물을 적용하면 결과가 6회인데, 금리선물을 먼저 적용하고 GLD를 적용하면 값이 달라질 수 있지 않냐고 질문하고, 순서가 아니라 조건별 count와 교집합으로 보여주는 방향을 승인함.

@@ -33,6 +33,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-22 - Overview Market Context Source / Refresh UX V21
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-source-refresh-ux-v21-20260622/` after user feedback that `근거: 자료 기준 / 출처 상태` and `필요 자료 보강` still looked like prototype diagnostic UI.
+- Reworked source confidence into `자료 상태 요약`, `시장 브리프 직접 자료`, `참고 / 관리 자료`, and `보강 판단` flow.
+- Reworked refresh assist so no-action state omits the disabled smart-refresh button and keeps only compact status plus full-refresh fallback.
+- Boundaries stayed unchanged: DB-backed stored snapshots only, existing Overview action boundary, no provider fetch during render, no schema / registry / saved write, and no validation / monitoring / trading semantics.
+
 ### 2026-06-22 - Overview Market Context Macro Intersection V18
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-macro-intersection-v18-20260622/` after user noted that applying GLD before rate futures could look order-dependent.
 - Added `macro_condition_counts` so Macro conditioned analog distinguishes broad sample, GLD same-state count, Rate Pressure futures same-state count, futures-computable count, and final GLD / futures intersection count.

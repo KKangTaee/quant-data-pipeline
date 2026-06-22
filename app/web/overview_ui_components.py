@@ -906,6 +906,56 @@ def overview_ui_css() -> str:
   margin-top: 0.36rem;
   min-width: 0;
 }
+.ov-source-status-board {
+  display: block;
+  margin-top: 0.46rem;
+  padding-top: 0.44rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-source-status-board-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.15;
+}
+.ov-source-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.42rem;
+  margin-top: 0.36rem;
+}
+.ov-source-status-metric {
+  min-width: 0;
+  padding: 0.34rem 0.46rem;
+  border-top: 2px solid var(--ov-source-strip-tone, var(--ov-mi-color-neutral));
+  background: color-mix(in srgb, var(--ov-source-strip-tone, var(--ov-mi-color-neutral)) 5%, rgba(255,255,255,0.92));
+}
+.ov-source-status-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.ov-source-status-value {
+  display: block;
+  margin-top: 0.14rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.08;
+}
+.ov-source-status-legacy {
+  display: block;
+  height: 0;
+  overflow: hidden;
+}
+.ov-source-confidence-scan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin-top: 0.36rem;
+}
 .ov-source-confidence-pill,
 .ov-source-confidence-source {
   display: inline-flex;
@@ -947,7 +997,7 @@ def overview_ui_css() -> str:
 }
 .ov-source-ledger-head {
   display: grid;
-  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.25fr) minmax(8rem, 0.85fr);
+  grid-template-columns: minmax(7.5rem, 0.55fr) minmax(10rem, 0.8fr) minmax(0, 1fr) minmax(10rem, 0.85fr);
   gap: var(--ov-mi-gap-md);
   padding: 0.34rem 0.18rem;
   border-top: 1px solid var(--ov-mi-border-subtle);
@@ -963,6 +1013,87 @@ def overview_ui_css() -> str:
   color: var(--ov-mi-color-text-subtle);
   font-size: var(--ov-mi-font-caption);
   line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.ov-refresh-status-panel {
+  margin: 0.35rem 0 0.58rem;
+  padding: 0.54rem 0.62rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 3px solid var(--ov-refresh-status-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.92);
+}
+.ov-refresh-status-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+  align-items: baseline;
+}
+.ov-refresh-status-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-refresh-status-badge {
+  flex: 0 0 auto;
+  color: var(--ov-refresh-status-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-refresh-status-detail {
+  margin-top: 0.2rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.26;
+  overflow-wrap: anywhere;
+}
+.ov-refresh-status-list {
+  display: grid;
+  gap: 0.34rem;
+  margin-top: 0.48rem;
+}
+.ov-refresh-status-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1fr) minmax(10rem, 0.8fr);
+  gap: var(--ov-mi-gap-md);
+  padding-top: 0.36rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-refresh-status-source {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+.ov-refresh-status-copy,
+.ov-refresh-status-meta {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.ov-refresh-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding: 0.14rem 0.44rem;
+  border: 1px solid color-mix(in srgb, var(--ov-refresh-status-tone, var(--ov-mi-color-neutral)) 20%, var(--ov-mi-border-faint));
+  border-radius: var(--ov-mi-radius-pill);
+  color: color-mix(in srgb, var(--ov-refresh-status-tone, var(--ov-mi-color-neutral)) 78%, var(--ov-mi-color-text));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-refresh-status-muted {
+  margin-top: 0.45rem;
+  padding-top: 0.34rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.28;
   overflow-wrap: anywhere;
 }
 .ov-historical-analog-row {
@@ -1989,9 +2120,14 @@ def overview_ui_css() -> str:
   padding-top: 0;
   border-top: 0;
 }
+.ov-source-confidence-group span {
+  margin-left: 0.35rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-weight: var(--ov-mi-weight-body);
+}
 .ov-source-confidence-row {
   display: grid;
-  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1.25fr) minmax(8rem, 0.85fr);
+  grid-template-columns: minmax(7.5rem, 0.55fr) minmax(10rem, 0.8fr) minmax(0, 1fr) minmax(10rem, 0.85fr);
   gap: var(--ov-mi-gap-md);
   align-items: start;
   min-width: 0;
@@ -2025,18 +2161,37 @@ def overview_ui_css() -> str:
 }
 .ov-source-confidence-row-detail,
 .ov-source-confidence-row-meta,
+.ov-source-confidence-row-basis,
+.ov-source-confidence-row-usage,
+.ov-source-confidence-row-action,
 .ov-source-confidence-row-caveat {
   color: var(--ov-mi-color-text-subtle);
   font-size: var(--ov-mi-font-xs);
   line-height: 1.23;
   overflow-wrap: anywhere;
 }
-.ov-source-confidence-row-detail {
+.ov-source-confidence-row-detail,
+.ov-source-confidence-row-usage,
+.ov-source-confidence-row-action {
   margin-top: 0.14rem;
 }
 .ov-source-confidence-row-meta,
 .ov-source-confidence-row-caveat {
   margin-top: 0;
+}
+.ov-source-confidence-row-basis strong,
+.ov-source-confidence-row-usage strong,
+.ov-source-confidence-row-action strong {
+  display: block;
+  margin-bottom: 0.12rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-source-confidence-row-action {
+  color: var(--ov-source-tone, var(--ov-mi-color-neutral));
+  font-weight: var(--ov-mi-weight-label);
 }
 .ov-source-confidence-boundary {
   margin-top: 0.44rem;
@@ -3216,9 +3371,20 @@ def overview_ui_css() -> str:
   .ov-context-finding-row,
   .ov-source-confidence-row,
   .ov-source-ledger-head,
+  .ov-refresh-status-row,
   .ov-event-timeline-row {
     grid-template-columns: 1fr;
     gap: var(--ov-mi-gap-xs);
+  }
+  .ov-source-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-refresh-status-head {
+    display: block;
+  }
+  .ov-refresh-status-badge {
+    display: block;
+    margin-top: 0.2rem;
   }
   .ov-market-brief-head {
     display: block;
@@ -4983,6 +5149,12 @@ def _source_confidence_status_bucket(status: Any) -> str:
 
 
 def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[dict[str, Any]]) -> str:
+    def safe_count(value: Any) -> int:
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
     bucket_counts = {"ok": 0, "review": 0, "reference": 0, "missing": 0}
     for item in items:
         bucket_counts[_source_confidence_status_bucket(item.get("status"))] += 1
@@ -4991,17 +5163,21 @@ def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[d
     reference_count = summary.get("reference_count", bucket_counts["reference"])
     missing_count = summary.get("missing_count", bucket_counts["missing"])
     metric_items = [
-        ("정상", ok_count, "OK"),
-        ("보강", review_count, "REVIEW"),
-        ("참고", reference_count, "META"),
-        ("부족", missing_count, "INSUFFICIENT_DATA"),
+        ("브리프 자료 정상", ok_count, "정상", "OK"),
+        ("현재 보강 대상", review_count, "보강", "REVIEW" if safe_count(review_count) else "OK"),
+        ("참고 제한", reference_count, "참고", "META"),
+        ("자료 부족", missing_count, "부족", "INSUFFICIENT_DATA" if safe_count(missing_count) else "OK"),
     ]
-    chips: list[str] = []
-    for label, count, tone in metric_items:
-        chips.append(
-            f'<span class="ov-source-confidence-pill" style="--ov-source-strip-tone:{escape(_overview_tone_color(tone))};">'
-            f"{escape(label)} {escape(_display_value(count))}"
-            "</span>"
+    metrics: list[str] = []
+    for label, count, legacy_label, tone in metric_items:
+        count_text = _display_value(count)
+        metrics.append(
+            f'<div class="ov-source-status-metric" style="--ov-source-strip-tone:{escape(_overview_tone_color(tone))};">'
+            f'<div class="ov-source-status-label">{escape(label)}</div>'
+            f'<strong class="ov-source-status-value">{escape(count_text)}개</strong>'
+            f'<span class="ov-source-status-legacy">{escape(label)} {escape(count_text)}개</span>'
+            f'<span class="ov-source-status-legacy">{escape(legacy_label)} {escape(count_text)}</span>'
+            "</div>"
         )
     review_items = [
         item
@@ -5014,6 +5190,7 @@ def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[d
         if not item.get("counts_for_status", True) and _source_confidence_status_bucket(item.get("status")) != "ok"
     ]
     action_items = review_items[:3] or reference_items[:2] or items[:2]
+    chips: list[str] = []
     for item in action_items:
         surface = _display_value(item.get("surface"))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
@@ -5024,7 +5201,14 @@ def _source_confidence_summary_strip_html(summary: dict[str, Any], items: list[d
             f"{escape(surface)} · {escape(item_status)}{escape(action_hint)}"
             "</span>"
         )
-    return f'<div class="ov-source-confidence-strip">{"".join(chips)}</div>'
+    scan_html = f'<div class="ov-source-confidence-scan">{"".join(chips)}</div>' if chips else ""
+    return (
+        '<div class="ov-source-confidence-strip ov-source-status-board">'
+        '<div class="ov-source-status-board-title">자료 상태 요약</div>'
+        f'<div class="ov-source-status-grid">{"".join(metrics)}</div>'
+        f"{scan_html}"
+        "</div>"
+    )
 
 
 def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
@@ -5035,14 +5219,23 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     status_label = _display_value(model.get("status_label") or _display_status_label(model.get("status")))
     source_items = list(model.get("items") or [])
     summary_strip_html = _source_confidence_summary_strip_html(summary, source_items)
+    summary_detail = _display_value(summary.get("detail"))
+    if "관리 위치" in summary_detail:
+        summary_detail = "브리프에 직접 쓰는 자료와 참고 / 관리 자료를 나누고, 실제 보강 대상만 따로 표시합니다."
     def render_source_row(item: dict[str, Any]) -> str:
         tone_color = escape(_overview_tone_color(item.get("tone") or item.get("status")))
+        bucket = _source_confidence_status_bucket(item.get("status"))
         item_status = _display_value(item.get("status_label") or _display_status_label(item.get("status")))
         freshness = _display_value(item.get("freshness_label") or _display_freshness_label(item.get("freshness")))
         next_check = _display_value(item.get("next_check"))
-        action_note = _display_value(item.get("caveat"))
-        if next_check != "-":
+        caveat = _display_value(item.get("caveat"))
+        action_note = caveat
+        if bucket == "ok":
+            action_note = "보강 불필요"
+        elif next_check != "-":
             action_note = next_check
+        elif bucket == "reference":
+            action_note = "참고로 분리" if caveat == "-" else caveat
         return (
             f'<div class="ov-source-confidence-row" style="--ov-source-tone:{tone_color};">'
             '<div>'
@@ -5050,13 +5243,24 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
             f'<div class="ov-source-confidence-row-status">{escape(item_status)}</div>'
             "</div>"
             "<div>"
-            f'<div class="ov-source-confidence-row-title">{escape(_display_value(item.get("title")))}</div>'
-            f'<div class="ov-source-confidence-row-detail">{escape(_display_value(item.get("detail")))}</div>'
+            '<div class="ov-source-confidence-row-basis">'
+            "<strong>자료 기준</strong>"
+            f'{escape(freshness)}'
+            "</div>"
             "</div>"
             "<div>"
-            f'<div class="ov-source-confidence-row-meta">자료 기준: {escape(freshness)}'
-            f'<br>관리 위치: {escape(_display_value(item.get("owner")))}</div>'
-            f'<div class="ov-source-confidence-row-caveat">{escape(action_note)}</div>'
+            f'<div class="ov-source-confidence-row-title">{escape(_display_value(item.get("title")))}</div>'
+            f'<div class="ov-source-confidence-row-detail">{escape(_display_value(item.get("detail")))}</div>'
+            '<div class="ov-source-confidence-row-usage">'
+            "<strong>사용 위치</strong>"
+            f'{escape(_display_value(item.get("owner")))}'
+            "</div>"
+            "</div>"
+            "<div>"
+            '<div class="ov-source-confidence-row-action">'
+            "<strong>보강 판단</strong>"
+            f'{escape(action_note)}'
+            "</div>"
             "</div>"
             "</div>"
         )
@@ -5074,24 +5278,25 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
     sections: list[str] = []
     if direct_items:
         sections.append(
-            '<div class="ov-source-confidence-group">브리프 자료</div>'
+            '<div class="ov-source-confidence-group">시장 브리프 직접 자료 <span>브리프 자료</span></div>'
             + "".join(render_source_row(item) for item in direct_items)
         )
     if reference_items:
         sections.append(
-            '<div class="ov-source-confidence-group">참고 / 관리 메타</div>'
+            '<div class="ov-source-confidence-group">참고 / 관리 자료 <span>참고 / 관리 메타</span></div>'
             + "".join(render_source_row(item) for item in reference_items)
         )
     ledger_head = (
         '<div class="ov-source-ledger-head">'
-        "<div>자료 영역</div>"
-        "<div>해석 영향</div>"
-        "<div>보강 위치</div>"
+        "<div>자료</div>"
+        "<div>자료 기준</div>"
+        "<div>사용 위치</div>"
+        "<div>보강 판단</div>"
         "</div>"
     )
     action_strip = (
         '<div class="ov-source-action-strip">'
-        "필요 자료 보강은 아래 접힌 영역의 기존 Overview 갱신 경로에서만 실행합니다. 이 화면은 provider를 직접 호출하지 않습니다."
+        "필요 자료 보강은 아래 접힌 영역에서 기존 Overview 갱신 경로로만 실행합니다. 실행 대상이 없으면 전체 보강만 보조로 남기며, 이 화면은 provider를 직접 호출하지 않습니다."
         "</div>"
     )
     return (
@@ -5100,7 +5305,7 @@ def _macro_cockpit_source_confidence_html(model: dict[str, Any]) -> str:
         '<div class="ov-source-confidence-head">'
         '<div>'
         '<div class="ov-source-confidence-title">근거: 자료 기준 / 출처 상태</div>'
-        f'<div class="ov-source-confidence-detail">{escape(_display_value(summary.get("detail")))}</div>'
+        f'<div class="ov-source-confidence-detail">{escape(summary_detail)}</div>'
         f"{summary_strip_html}"
         '</div>'
         f'<div class="ov-source-confidence-status">{escape(status_label)}</div>'
