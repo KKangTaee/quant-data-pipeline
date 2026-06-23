@@ -123,8 +123,6 @@ MARKET_MOVER_PERIOD_LABELS = {
 OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
 OVERVIEW_DEEP_TAB_WIDGET_KEY = "overview_active_deep_tab_widget"
 OVERVIEW_DEEP_TAB_QUERY_PARAM = "overview_tab"
-OVERVIEW_LOADED_TABS_KEY = "overview_loaded_deep_tabs"
-OVERVIEW_INITIAL_DEFERRED_TABS = ("Market Context",)
 OVERVIEW_DEEP_TAB_OPTIONS = (
     "Market Context",
     "Market Movers",
@@ -6859,50 +6857,12 @@ def _overview_tab_nav_css() -> str:
     )
 
 
-def _overview_loaded_tabs() -> set[str]:
-    raw = st.session_state.get(OVERVIEW_LOADED_TABS_KEY)
-    if not isinstance(raw, (set, list, tuple)):
-        return set()
-    return {
-        label
-        for value in raw
-        if (label := _overview_active_tab_label(str(value or ""))) in OVERVIEW_DEEP_TAB_OPTIONS
-    }
-
-
-def _overview_mark_tab_loaded(label: str) -> None:
-    loaded = _overview_loaded_tabs()
-    loaded.add(_overview_active_tab_label(label))
-    st.session_state[OVERVIEW_LOADED_TABS_KEY] = sorted(loaded)
-
-
-def _overview_should_defer_tab_body(active_label: str | None, *, loaded_tabs: tuple[str, ...] | set[str] | list[str]) -> bool:
-    active = _overview_active_tab_label(active_label)
-    loaded = {_overview_active_tab_label(str(value or "")) for value in loaded_tabs}
-    return active in OVERVIEW_INITIAL_DEFERRED_TABS and active not in loaded
-
-
-def _render_overview_tab_load_gate(active_label: str) -> bool:
-    active = _overview_active_tab_label(active_label)
-    if not _overview_should_defer_tab_body(active, loaded_tabs=_overview_loaded_tabs()):
-        return True
-
-    primary, secondary = OVERVIEW_DEEP_TAB_DISPLAY[active]
-    st.markdown(f"### {escape(primary)}")
-    st.caption(f"{secondary} 데이터를 불러오면 요약과 세부 근거가 표시됩니다.")
-    if st.button(f"{primary} 불러오기", key=f"overview_load_{OVERVIEW_DEEP_TAB_SLUGS[active]}", type="primary"):
-        _overview_mark_tab_loaded(active)
-        return True
-    return False
-
-
 def _render_overview_tab_selector() -> str:
     current = _overview_tab_seed_label(
         query_label=_overview_query_tab_label(),
         widget_value=st.session_state.get(OVERVIEW_DEEP_TAB_WIDGET_KEY),
         session_value=st.session_state.get(OVERVIEW_DEEP_TAB_KEY),
     )
-    previous = _overview_active_tab_label(st.session_state.get(OVERVIEW_DEEP_TAB_KEY))
 
     st.markdown(_overview_tab_nav_css(), unsafe_allow_html=True)
     selected = st.pills(
@@ -6917,14 +6877,8 @@ def _render_overview_tab_selector() -> str:
         width="stretch",
     )
     selected_label = _overview_active_tab_label(str(selected or current))
-    if selected_label != previous:
-        _overview_mark_tab_loaded(selected_label)
     st.session_state[OVERVIEW_DEEP_TAB_KEY] = selected_label
     return selected_label
-
-
-def _overview_should_render_tab_body(active_label: str) -> bool:
-    return _render_overview_tab_load_gate(active_label)
 
 
 def _render_selected_overview_tab(
@@ -6953,8 +6907,6 @@ def render_overview_dashboard(
     render_market_session_banner(_market_session_banner_model())
 
     active_tab = _render_overview_tab_selector()
-    if not _render_overview_tab_load_gate(active_tab):
-        return
     _render_selected_overview_tab(
         active_tab,
         renderers={

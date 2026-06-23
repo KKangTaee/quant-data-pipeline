@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-23
+Last Verified: 2026-06-24
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-nav-internal-lazy-load-v1-20260623`
+- `overview-market-context-load-gate-removal-v1-20260624`
 
 Latest completed docs cleanup task:
 
@@ -60,7 +60,8 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
-- `overview-nav-internal-lazy-load-v1-20260623`: Completed record. `Workspace > Overview` primary navigation now uses internal `st.pills` state styled as plain text tabs with an active red underline. It does not render tab anchors, so switching stays inside the current browser session. Query-param slugs remain read-only compatibility input, and fresh Overview entry defers the heavy default Market Context body until `시장 맥락 불러오기`. Boundaries stayed visual/navigation/loading-only: no provider / schema / registry / saved / validation / monitoring / trade semantics changed.
+- `overview-market-context-load-gate-removal-v1-20260624`: Completed record. `Workspace > Overview > Market Context` no longer shows an explicit `시장 맥락 불러오기` gate; the default Market Context body renders immediately when selected. Internal `st.pills` text-tab underline navigation remains and tab anchors are still not rendered. Cold timing showed the slow path is `load_overview_macro_context_cockpit`, especially futures macro validation. No provider / schema / registry / saved / validation / monitoring / trade semantics changed.
+- `overview-nav-internal-lazy-load-v1-20260623`: Superseded completed record. This introduced internal `st.pills` text-tab navigation and a first-load Market Context gate. The internal no-anchor tab navigation remains, but the explicit gate was removed by `overview-market-context-load-gate-removal-v1-20260624`.
 - `overview-primary-nav-pill-v1-20260623`: Superseded completed record. This first visual polish used a compact custom anchor nav with Korean primary labels and English secondary labels. It was replaced by `overview-nav-internal-lazy-load-v1-20260623` because tab switching must not behave as link navigation.
 - `overview-primary-tab-soft-remove-v1-20260623`: Completed record. `Workspace > Overview` primary selector now exposes only `Market Context`, `Market Movers`, `Sentiment`, and `Events`. `Futures Monitor` and `Sector / Industry` standalone tabs are soft-removed from primary navigation and old selected values fall back to `Market Context`. Futures / sector services and helper renderers were not physically deleted; no provider / schema / registry / saved / validation / monitoring / trade semantics changed.
 - `overview-ia-cleanup-v22-20260622`: Completed record superseded by `overview-primary-tab-soft-remove-v1-20260623` for current primary tab membership. V22 removed `Data Health` and `Candidate Ops` from the primary selector while still retaining `Futures Monitor` and `Sector / Industry`; V1 soft-remove later removed those two standalone tabs as well. registry / saved JSONL, run history, provider / DB schema, Backtest / validation / monitoring / trade semantics는 변경하지 않았다.

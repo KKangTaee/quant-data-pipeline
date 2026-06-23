@@ -25,12 +25,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-24 - Overview Market Context should load immediately; slow part is cockpit fan-out
+
+- User request: 사용자가 `시장 맥락 불러오기` 버튼은 기대한 흐름이 아니므로 바로 제거하고, Market Context 진입 시 무엇을 로드해서 느린지 파악해 달라고 요청함.
+- Interpreted goal: 탭 전환은 내부 widget으로 유지하되, 기본 Market Context는 전처럼 즉시 보여줘야 한다. 초기 지연 문제는 버튼으로 숨기지 말고 실제 느린 read model을 찾아야 한다.
+- Analysis result: `Market Context`는 `_render_overview_market_context_tab`에서 `load_overview_macro_context_cockpit`을 호출하고, 이 함수가 movers, sector leadership, futures macro, sentiment, events, collection ops, historical analog를 한 번에 로드한다. Local cold timing 기준 전체 cockpit은 약 15.8초였고, 가장 큰 항목은 futures macro validation 약 7.8초였다. `load_overview_futures_macro_snapshot(include_validation=False)`는 약 0.2초라서, 주 원인은 최신 macro snapshot 자체가 아니라 기본으로 켜진 5년 PIT validation이다.
+- Follow-up: `overview-market-context-load-gate-removal-v1-20260624`에서 explicit load gate를 제거했다. 후속 최적화가 필요하면 Market Context 첫 화면에서는 validation-lite futures macro를 쓰고, historical validation은 상세/근거 영역에서 별도 lazy 로드하는 방향을 검토한다.
+
 ### 2026-06-23 - Overview tabs should be internal text tabs, not anchor navigation
 
 - User request: 사용자가 이전 디자인 탭이 새 창/링크 이동처럼 느껴진다고 지적하고, 하나의 브라우저 안에서 처리되는 탭 방식과 초기 로딩 지연 개선을 요청한 뒤, 최종 visual reference로 plain text + red underline tab 형식을 제시함.
 - Interpreted goal: Overview primary tabs는 디자인만 바꾼 링크가 아니라 Streamlit 내부 상태 전환이어야 하며, 첫 진입 때 default `Market Context`가 무거운 read model fan-out을 즉시 실행하지 않아야 함.
 - Analysis result: Anchor HTML nav는 direct slug에는 편하지만 제품 탭처럼 느껴지지 않는다. `st.pills` 내부 widget state를 쓰고 CSS만 text-tab underline style로 좁히면 현재 브라우저 안에서 전환되며, query-param slug는 호환 입력으로만 남길 수 있다. 초기 지연 원인은 `load_overview_macro_context_cockpit`이 movers / sector leadership / futures macro / sentiment / events / collection ops / historical analog를 한 번에 로드하기 때문이다.
-- Follow-up: `overview-nav-internal-lazy-load-v1-20260623`에서 anchor rendering을 제거하고 내부 underline tabs와 `시장 맥락 불러오기` lazy gate를 구현했다. 3차 후보는 Market Context 내부 old source label 흡수 또는 helper code repurpose / cleanup 판단이다.
+- Follow-up: `overview-nav-internal-lazy-load-v1-20260623`에서 anchor rendering을 제거하고 내부 underline tabs를 구현했다. 당시 추가한 `시장 맥락 불러오기` lazy gate는 사용자 피드백에 따라 `overview-market-context-load-gate-removal-v1-20260624`에서 제거했다. 3차 후보는 Market Context 내부 old source label 흡수 또는 helper code repurpose / cleanup 판단이다.
 
 ### 2026-06-23 - Overview primary tab bar should feel like product navigation
 

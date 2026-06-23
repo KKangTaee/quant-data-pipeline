@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-23
+Last Verified: 2026-06-24
 
 ## Current State After Master Merge
 
@@ -28,9 +28,13 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-nav-internal-lazy-load-v1-20260623/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-load-gate-removal-v1-20260624/`
+- 목적: `Workspace > Overview > Market Context`의 `시장 맥락 불러오기` gate를 제거하고, 전처럼 기본 시장 맥락 본문이 즉시 렌더링되게 되돌린다.
+- 주요 변경: explicit load button / loaded-tab session state / lazy body gate를 제거했다. Internal `st.pills` text-tab underline selector와 no-anchor switching은 유지한다. Cold timing 기준 느린 구간은 `load_overview_macro_context_cockpit`의 snapshot fan-out, 특히 futures macro validation으로 확인했다.
+- 이번 차수에서 하지 않은 일: futures macro validation 최적화, loader 구조 분리, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed task: `.aiworkspace/note/finance/tasks/active/overview-nav-internal-lazy-load-v1-20260623/`
 - 목적: `Workspace > Overview` primary tab 전환을 anchor/link navigation이 아니라 같은 브라우저 안의 내부 탭 전환으로 고치고, 첫 진입 때 무거운 `Market Context` 본문 로드를 늦춘다.
-- 주요 변경: primary selector는 `st.pills` 내부 widget을 사용하되, user-provided reference처럼 plain text tabs + active red underline으로 보이게 scoped CSS를 적용한다. Query-param slug는 직접 진입 호환 입력으로만 읽고 `<a href>` navigation은 렌더링하지 않는다. Fresh Overview entry는 shell / nav / session banner만 먼저 보여주고 `시장 맥락 불러오기`를 눌렀을 때 `load_overview_macro_context_cockpit` fan-out을 실행한다.
+- 주요 변경: primary selector는 `st.pills` 내부 widget을 사용하되, user-provided reference처럼 plain text tabs + active red underline으로 보이게 scoped CSS를 적용한다. Query-param slug는 직접 진입 호환 입력으로만 읽고 `<a href>` navigation은 렌더링하지 않는다. 이 작업의 explicit load gate는 `overview-market-context-load-gate-removal-v1-20260624`에서 제거됐다.
 - 이번 차수에서 하지 않은 일: Market Context 내부 old source label 흡수, futures / sector service 또는 renderer helper 물리 삭제, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Previous completed task: `.aiworkspace/note/finance/tasks/active/overview-primary-nav-pill-v1-20260623/`
 - 목적: `Workspace > Overview`의 네 개 primary tab을 기본 Streamlit segmented/radio 위젯 느낌이 아니라 제품형 compact navigation으로 보이게 했다.
@@ -204,7 +208,8 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
-| Overview Nav Internal Lazy Load V1 | Complete | Current Overview primary navigation uses an internal `st.pills` selector styled as plain text tabs with a red active underline, not rendered anchors. Query-param tab slugs remain read-only compatibility input. Fresh Overview entry defers the heavy default Market Context body until the user clicks `시장 맥락 불러오기`. |
+| Overview Market Context Load Gate Removal V1 | Complete | Current Overview keeps the internal text-tab underline selector but removes the explicit `시장 맥락 불러오기` gate. Market Context renders immediately when selected. Cold timing shows the slow path is the cockpit snapshot fan-out, especially futures macro validation. |
+| Overview Nav Internal Lazy Load V1 | Superseded | This replaced anchor navigation with internal `st.pills` text tabs and added a first-load Market Context gate. The internal no-anchor navigation remains, but the explicit load gate was removed by Overview Market Context Load Gate Removal V1. |
 | Overview Primary Nav Pill V1 | Superseded | This first visual polish rendered a compact custom anchor nav with Korean primary labels, English secondary labels, and query-param tab slugs. It was replaced by Overview Nav Internal Lazy Load V1 because tab switching must stay inside the current browser session rather than behave as link navigation. |
 | Overview Primary Tab Soft Remove V1 | Complete | Current Overview primary tabs are Market Context, Market Movers, Sentiment, and Events. Futures Monitor and Sector / Industry standalone tabs are soft-removed from primary navigation, with stale selected values falling back to Market Context. Futures / sector services and helper renderers are retained for later cleanup or repurpose decision. |
 | Overview IA Cleanup V22 | Complete | Superseded by Overview Primary Tab Soft Remove V1 for current primary tab membership. V22 demoted Data Health to Market Context source / refresh evidence plus Operations / Ingestion ownership and removed Candidate Ops from the Overview render path, while still retaining Futures Monitor and Sector / Industry at that time. Registry / saved data and Backtest / Operations core workflows are unchanged. |

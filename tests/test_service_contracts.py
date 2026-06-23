@@ -4463,19 +4463,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "Market Movers",
         )
 
-    def test_overview_dashboard_defers_default_market_context_until_user_runs_it(self) -> None:
-        from app.web.overview_dashboard import _overview_should_defer_tab_body
-
-        self.assertTrue(_overview_should_defer_tab_body("Market Context", loaded_tabs=()))
-        self.assertFalse(_overview_should_defer_tab_body("Market Context", loaded_tabs=("Market Context",)))
-        self.assertFalse(_overview_should_defer_tab_body("Market Movers", loaded_tabs=()))
-
+    def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertIn("_render_overview_tab_load_gate(active_tab)", render_body)
+        self.assertNotIn("_render_overview_tab_load_gate", source)
+        self.assertNotIn("시장 맥락 불러오기", source)
+        self.assertNotIn("OVERVIEW_LOADED_TABS_KEY", source)
         self.assertLess(
-            render_body.index("_render_overview_tab_load_gate(active_tab)"),
+            render_body.index("active_tab = _render_overview_tab_selector()"),
             render_body.index("_render_selected_overview_tab("),
         )
 
