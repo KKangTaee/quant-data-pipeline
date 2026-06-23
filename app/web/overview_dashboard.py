@@ -3128,6 +3128,140 @@ def _futures_command_summary_items(
     ]
 
 
+def _futures_workbench_context_items(
+    *,
+    snapshot: dict[str, Any],
+    group: str,
+    selected_symbols: list[str],
+    lookback_label: str,
+    chart_interval: str,
+    chart_scope: str,
+    refresh_mode: str,
+) -> list[dict[str, Any]]:
+    feed = _futures_feed_state(snapshot, refresh_mode=refresh_mode)
+    action_value = "선택 선물 1분봉 갱신"
+    action_detail = _futures_data_action_hint(feed)
+    if str(feed.get("tone") or "") == "positive":
+        action_value = "현재 화면 확인"
+        action_detail = f"자료 상태 양호 · {feed.get('cadence') or '-'}"
+    return [
+        {
+            "label": "관찰",
+            "value": f"{_futures_group_label(group)} · {len(selected_symbols)}개",
+            "detail": _futures_compact_symbols_label(selected_symbols),
+            "tone": "neutral",
+        },
+        {
+            "label": "차트",
+            "value": f"{lookback_label} · {_futures_interval_label(chart_interval)} 봉 · {_futures_chart_scope_label(chart_scope)}",
+            "detail": _futures_chart_scope_detail(snapshot, chart_scope=chart_scope),
+            "tone": "neutral",
+        },
+        {
+            "label": "자료",
+            "value": str(feed.get("label") or "-"),
+            "detail": str(feed.get("detail") or "-"),
+            "tone": str(feed.get("tone") or "neutral"),
+        },
+        {
+            "label": "다음 행동",
+            "value": action_value,
+            "detail": action_detail,
+            "tone": str(feed.get("tone") or "neutral"),
+        },
+    ]
+
+
+def _render_futures_workbench_context_bar(
+    *,
+    snapshot: dict[str, Any],
+    group: str,
+    selected_symbols: list[str],
+    lookback_label: str,
+    chart_interval: str,
+    chart_scope: str,
+    refresh_mode: str,
+) -> None:
+    items = _futures_workbench_context_items(
+        snapshot=snapshot,
+        group=group,
+        selected_symbols=selected_symbols,
+        lookback_label=lookback_label,
+        chart_interval=chart_interval,
+        chart_scope=chart_scope,
+        refresh_mode=refresh_mode,
+    )
+    html_items: list[str] = []
+    for item in items:
+        tone_color = _overview_tone_color(str(item.get("tone") or "neutral"))
+        html_items.append(
+            f'<div class="ov-futures-workbench-item" style="--ov-workbench-tone:{tone_color};">'
+            f'<div class="ov-futures-workbench-label">{escape(str(item.get("label") or "-"))}</div>'
+            f'<div class="ov-futures-workbench-value">{escape(str(item.get("value") or "-"))}</div>'
+            f'<div class="ov-futures-workbench-detail">{escape(str(item.get("detail") or ""))}</div>'
+            "</div>"
+        )
+    st.markdown(
+        f"""
+        <div class="ov-futures-workbench-bar">
+          {"".join(html_items)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _futures_watch_strip_items(snapshot: dict[str, Any], selected_symbols: list[str]) -> list[dict[str, Any]]:
+    rows = snapshot.get("rows")
+    items: list[dict[str, Any]] = []
+    for symbol in selected_symbols:
+        metric = _futures_metric_for_symbol(rows, symbol)
+        state = str(metric.get("State") or "Missing")
+        items.append(
+            {
+                "symbol": symbol,
+                "title": _futures_contract_title(metric, symbol),
+                "state": _futures_state_label(state),
+                "move": (
+                    f"15분 {_format_futures_percent(metric.get('15m %'))} · "
+                    f"60분 {_format_futures_percent(metric.get('60m %'))}"
+                ),
+                "age": _format_futures_age(metric.get("Age Min")),
+                "tone": _futures_state_tone(state),
+            }
+        )
+    return items
+
+
+def _render_futures_watch_strip(snapshot: dict[str, Any], selected_symbols: list[str]) -> None:
+    items = _futures_watch_strip_items(snapshot, selected_symbols)
+    if not items:
+        return
+    html_items: list[str] = []
+    for item in items:
+        tone_color = _overview_tone_color(str(item.get("tone") or "neutral"))
+        html_items.append(
+            f'<div class="ov-futures-watch-item" style="--ov-watch-tone:{tone_color};">'
+            f'<div class="ov-futures-watch-symbol">{escape(str(item.get("symbol") or "-"))}</div>'
+            f'<div class="ov-futures-watch-title">{escape(str(item.get("title") or ""))}</div>'
+            f'<div class="ov-futures-watch-move">{escape(str(item.get("move") or ""))}</div>'
+            f'<div class="ov-futures-watch-meta"><span>{escape(str(item.get("state") or "-"))}</span><span>{escape(str(item.get("age") or "-"))}</span></div>'
+            "</div>"
+        )
+    st.markdown(
+        f"""
+        <div class="ov-futures-watch-strip">
+          <div class="ov-futures-watch-head">
+            <div class="ov-futures-watch-label">관찰 선물</div>
+            <div class="ov-futures-watch-note">선택 심볼의 단기 움직임과 데이터 상태</div>
+          </div>
+          <div class="ov-futures-watch-list">{"".join(html_items)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_futures_command_center(
     *,
     snapshot: dict[str, Any],
@@ -3342,6 +3476,95 @@ def _macro_support_items(macro: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _futures_market_brief_model(macro: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(macro.get("coverage") or {})
+    summary = dict(macro.get("summary") or {})
+    sentences = [str(sentence) for sentence in macro.get("summary_sentences") or [] if str(sentence).strip()]
+    evidence_chips = [
+        _macro_evidence_summary_label(item)
+        for item in macro.get("evidence") or []
+        if str(item).strip()
+    ]
+    support_items = _macro_support_items(macro)
+    support_items.append(
+        {
+            "label": "자료 기준",
+            "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개",
+            "detail": f"기준일 {_snapshot_value(coverage.get('latest_daily_date'))}",
+            "tone": "neutral",
+        }
+    )
+    return {
+        "eyebrow": "오늘 기준 시장 브리프",
+        "scenario": str(summary.get("scenario") or "시장 해석 대기"),
+        "sentence": sentences[0] if sentences else "저장된 일봉 선물 데이터로 시장 흐름을 해석합니다.",
+        "support_items": support_items,
+        "evidence_chips": evidence_chips[:4],
+    }
+
+
+def _render_futures_market_brief(macro: dict[str, Any]) -> None:
+    model = _futures_market_brief_model(macro)
+    support_html: list[str] = []
+    for item in model["support_items"]:
+        tone_color = _overview_tone_color(str(item.get("tone") or "neutral"))
+        support_html.append(
+            f'<div class="ov-futures-brief-support-item" style="--ov-brief-tone:{tone_color};">'
+            f'<div class="ov-futures-brief-support-label">{escape(str(item.get("label") or "-"))}</div>'
+            f'<div class="ov-futures-brief-support-value">{escape(str(item.get("value") or "-"))}</div>'
+            f'<div class="ov-futures-brief-support-detail">{escape(str(item.get("detail") or ""))}</div>'
+            "</div>"
+        )
+    evidence_html = "".join(
+        f'<span class="ov-futures-brief-evidence-chip">{escape(str(chip))}</span>'
+        for chip in model["evidence_chips"]
+    )
+    if not evidence_html:
+        evidence_html = '<span class="ov-futures-brief-evidence-chip">상세 근거는 아래 disclosure에서 확인</span>'
+    st.markdown(
+        f"""
+        <div class="ov-futures-brief">
+          <div class="ov-futures-brief-main">
+            <div class="ov-futures-brief-eyebrow">{escape(str(model["eyebrow"]))}</div>
+            <div class="ov-futures-brief-scenario">{escape(str(model["scenario"]))}</div>
+            <div class="ov-futures-brief-sentence">{escape(str(model["sentence"]))}</div>
+            <div class="ov-futures-brief-evidence">{evidence_html}</div>
+          </div>
+          <div class="ov-futures-brief-support">{"".join(support_html)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _macro_weekly_value_float(value: Any) -> float:
+    try:
+        text = str(value or "0").replace("%", "").replace(",", "").strip()
+        if text.startswith("+"):
+            text = text[1:]
+        return float(text)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _futures_weekly_flow_model(weekly_context: dict[str, Any]) -> dict[str, Any]:
+    cards = [dict(card) for card in weekly_context.get("cards") or []]
+    ranked = sorted(cards, key=lambda card: abs(_macro_weekly_value_float(card.get("value"))), reverse=True)
+    driver = ranked[0] if ranked else {}
+    supporting = [card for card in cards if str(card.get("tone") or "neutral") == "positive"]
+    tempering = [card for card in cards if str(card.get("tone") or "neutral") in {"danger", "warning"}]
+    neutral = [card for card in cards if str(card.get("tone") or "neutral") == "neutral"]
+    return {
+        "title": "최근 1주 흐름",
+        "basis": str(weekly_context.get("basis") or "저장된 1D 선물 OHLCV의 최근 5거래일 변화율"),
+        "summary": str(weekly_context.get("summary") or ""),
+        "driver": driver,
+        "supporting": supporting,
+        "tempering": tempering,
+        "neutral": neutral,
+    }
+
+
 def _render_futures_signal_strip(items: list[dict[str, Any]], *, class_prefix: str) -> None:
     html_items: list[str] = []
     for item in items:
@@ -3398,26 +3621,55 @@ def _render_macro_score_lane(scores: Any) -> None:
 
 
 def _render_weekly_macro_context(weekly_context: dict[str, Any]) -> None:
-    cards = list(weekly_context.get("cards") or [])
-    if not cards:
+    model = _futures_weekly_flow_model(weekly_context)
+    if not model["driver"]:
         return
-    st.markdown("#### 최근 1주 흐름")
-    st.caption(str(weekly_context.get("basis") or "저장된 1D 선물 OHLCV의 최근 5거래일 변화율"))
+    driver = dict(model["driver"])
+    driver_tone = _overview_tone_color(str(driver.get("tone") or "neutral"))
+
+    def _weekly_item_html(item: dict[str, Any]) -> str:
+        tone_color = _overview_tone_color(str(item.get("tone") or "neutral"))
+        return (
+            f'<div class="ov-futures-week-lane-item" style="--ov-week-tone:{tone_color};">'
+            f'<span class="ov-futures-week-lane-label">{escape(str(item.get("label") or "-"))}</span>'
+            f'<span class="ov-futures-week-lane-value">{escape(str(item.get("value") or "-"))}</span>'
+            f'<span class="ov-futures-week-lane-detail">{escape(str(item.get("detail") or item.get("meaning") or ""))}</span>'
+            "</div>"
+        )
+
+    supporting_html = "".join(_weekly_item_html(item) for item in model["supporting"][:3])
+    tempering_html = "".join(_weekly_item_html(item) for item in model["tempering"][:3])
+    if not supporting_html:
+        supporting_html = '<div class="ov-futures-week-lane-empty">뚜렷한 지지 흐름 없음</div>'
+    if not tempering_html:
+        tempering_html = '<div class="ov-futures-week-lane-empty">뚜렷한 완화/충돌 흐름 없음</div>'
     st.markdown(
-        f'<div class="ov-futures-macro-week-summary">{escape(str(weekly_context.get("summary") or ""))}</div>',
+        f"""
+        <div class="ov-futures-week-flow">
+          <div class="ov-futures-week-flow-head">
+            <div>
+              <div class="ov-futures-week-flow-title">{escape(str(model["title"]))}</div>
+              <div class="ov-futures-week-flow-basis">{escape(str(model["basis"]))}</div>
+            </div>
+            <div class="ov-futures-week-driver" style="--ov-week-tone:{driver_tone};">
+              <span>{escape(str(driver.get("label") or "-"))}</span>
+              <strong>{escape(str(driver.get("value") or "-"))}</strong>
+            </div>
+          </div>
+          <div class="ov-futures-week-summary">{escape(str(model["summary"]))}</div>
+          <div class="ov-futures-week-lanes">
+            <div class="ov-futures-week-lane">
+              <div class="ov-futures-week-lane-title">오늘 해석을 지지</div>
+              {supporting_html}
+            </div>
+            <div class="ov-futures-week-lane">
+              <div class="ov-futures-week-lane-title">주의해서 볼 흐름</div>
+              {tempering_html}
+            </div>
+          </div>
+        </div>
+        """,
         unsafe_allow_html=True,
-    )
-    _render_futures_signal_strip(
-        [
-            {
-                "label": card.get("label") or "-",
-                "value": card.get("value") or "-",
-                "detail": card.get("detail") or card.get("meaning") or "",
-                "tone": card.get("tone") or "neutral",
-            }
-            for card in cards
-        ],
-        class_prefix="ov-futures-week",
     )
 
 
@@ -3546,20 +3798,7 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
         "매크로 컨텍스트",
         f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개 · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}",
     )
-    _render_futures_signal_strip(_macro_support_items(macro), class_prefix="ov-futures-macro")
-    sentences = [str(sentence) for sentence in macro.get("summary_sentences") or [] if str(sentence).strip()]
-    evidence = [_macro_evidence_summary_label(item) for item in macro.get("evidence") or [] if str(item).strip()]
-    st.markdown(
-        f"""
-        <div class="ov-futures-macro-hero">
-          <div class="ov-futures-macro-eyebrow">오늘 기준 시장 해석</div>
-          <div class="ov-futures-macro-scenario">{escape(str(summary.get('scenario') or '시장 해석 대기'))}</div>
-          <div class="ov-futures-macro-sentence">{escape(sentences[0] if sentences else '저장된 일봉 선물 데이터로 시장 흐름을 해석합니다.')}</div>
-          <div class="ov-futures-macro-evidence">근거: {escape(' · '.join(evidence[:2]) if evidence else '주요 근거는 상세 영역에서 확인합니다.')}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    _render_futures_market_brief(macro)
     _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
     _render_macro_score_lane(scores)
     warnings = list(macro.get("warnings") or [])
@@ -3672,13 +3911,17 @@ def _render_futures_live_panel(
     rows = snapshot.get("rows")
     state_counts = rows["State"].value_counts().to_dict() if isinstance(rows, pd.DataFrame) and not rows.empty and "State" in rows else {}
     _render_futures_section_header(
-        "실시간 선물 차트",
+        "차트 워크스페이스",
         _futures_live_summary_line(
             snapshot,
             chart_interval=chart_interval,
             lookback_label=lookback_label,
             chart_scope=chart_scope,
         ),
+    )
+    st.markdown(
+        f'<div class="ov-futures-chart-question">이 차트에서 확인할 것: {escape(_futures_chart_workspace_question(snapshot, chart_scope=chart_scope))}</div>',
+        unsafe_allow_html=True,
     )
     warnings = list(snapshot.get("warnings") or [])
     if warnings:
@@ -3705,6 +3948,16 @@ def _futures_live_summary_line(
         f"선택 {selected_count}개 · {_futures_interval_label(chart_interval)} 봉 · {lookback_label} 범위 · "
         f"{_futures_chart_scope_detail(snapshot, chart_scope=chart_scope)}"
     )
+
+
+def _futures_chart_workspace_question(snapshot: dict[str, Any], *, chart_scope: str) -> str:
+    top_move = dict(snapshot.get("top_move") or {})
+    if top_move.get("Symbol"):
+        return (
+            f"{top_move.get('Symbol')}의 단기 움직임이 다른 선택 선물로 확산되는지, "
+            f"{_futures_chart_scope_detail(snapshot, chart_scope=chart_scope)} 기준으로 확인합니다."
+        )
+    return f"{_futures_chart_scope_detail(snapshot, chart_scope=chart_scope)} 기준으로 선택 선물의 단기 흐름을 확인합니다."
 
 
 def _render_futures_diagnostics(snapshot: dict[str, Any]) -> None:
@@ -3787,7 +4040,7 @@ def _render_futures_monitor_tab() -> None:
     st.markdown("### 선물 모니터")
     st.caption("미국장 / 한국장 전 주요 선물 OHLCV, 단기 급변 상태, 일봉 기반 매크로 맥락을 read-only로 확인합니다.")
 
-    control_cols = st.columns([0.9, 2.25, 0.7, 0.7, 0.9, 0.8], gap="small", vertical_alignment="bottom")
+    control_cols = st.columns([1.15, 0.78, 0.78, 1.05, 0.82], gap="small", vertical_alignment="bottom")
     group = str(
         control_cols[0].selectbox(
             "관찰 그룹",
@@ -3798,7 +4051,7 @@ def _render_futures_monitor_tab() -> None:
         )
     )
     lookback_label = str(
-        control_cols[2].selectbox(
+        control_cols[1].selectbox(
             "시간 범위",
             list(FUTURES_LOOKBACK_OPTIONS.keys()),
             index=1,
@@ -3809,7 +4062,7 @@ def _render_futures_monitor_tab() -> None:
     if st.session_state.get(chart_key) == "1h":
         st.session_state[chart_key] = "60m"
     chart_interval = str(
-        control_cols[3].selectbox(
+        control_cols[2].selectbox(
             "차트 봉",
             FUTURES_CHART_INTERVAL_OPTIONS,
             index=1,
@@ -3821,7 +4074,7 @@ def _render_futures_monitor_tab() -> None:
     if st.session_state.get(chart_scope_key) not in FUTURES_CHART_SCOPE_OPTIONS:
         st.session_state[chart_scope_key] = "compact_6"
     chart_scope = str(
-        control_cols[4].selectbox(
+        control_cols[3].selectbox(
             "차트 범위",
             FUTURES_CHART_SCOPE_OPTIONS,
             key=chart_scope_key,
@@ -3853,14 +4106,19 @@ def _render_futures_monitor_tab() -> None:
                 st.session_state[symbols_key] = retained
                 st.session_state[migration_key] = True
             default_symbols = retained
-    selected_symbols = list(
-        control_cols[1].multiselect(
-            "선물 선택",
-            options=symbol_options,
-            default=default_symbols,
-            key=symbols_key,
+    with st.expander("관찰 대상 편집", expanded=False):
+        selected_symbols = list(
+            st.multiselect(
+                "선물 선택",
+                options=symbol_options,
+                default=default_symbols,
+                key=symbols_key,
+            )
         )
-    )
+        st.markdown(
+            '<div class="ov-futures-control-note">기본 화면은 선택 심볼을 요약해서 보여줍니다. 관찰 대상을 바꿀 때만 이 영역을 열어 조정하세요.</div>',
+            unsafe_allow_html=True,
+        )
     if not selected_symbols:
         selected_symbols = default_symbols
     selected_symbol = selected_symbols[0]
@@ -3877,7 +4135,36 @@ def _render_futures_monitor_tab() -> None:
     if st.session_state.get(mode_key) not in mode_options:
         st.session_state[mode_key] = "manual"
     refresh_mode = str(st.session_state.get(mode_key) or "manual")
-    with control_cols[5].popover("데이터 갱신", use_container_width=True):
+    if control_cols[4].button(
+        "1분봉 갱신",
+        key="overview_futures_manual_refresh",
+        use_container_width=True,
+        type="primary",
+    ):
+        with st.spinner("선택 선물 1분봉을 yfinance에서 수집하는 중입니다..."):
+            _store_overview_job_result(
+                "overview_futures_ohlcv_result",
+                _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="manual"),
+            )
+        snapshot = load_overview_futures_monitor_snapshot(
+            group=group,
+            symbols=selected_symbols,
+            selected_symbol=selected_symbol,
+            lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
+        )
+
+    _render_futures_workbench_context_bar(
+        snapshot=snapshot,
+        group=group,
+        selected_symbols=selected_symbols,
+        lookback_label=lookback_label,
+        chart_interval=chart_interval,
+        chart_scope=chart_scope,
+        refresh_mode=refresh_mode,
+    )
+    _render_futures_watch_strip(snapshot, selected_symbols)
+
+    with st.expander("갱신 설정", expanded=False):
         segmented_control = getattr(st, "segmented_control", None)
         if callable(segmented_control):
             refresh_mode = str(
@@ -3900,23 +4187,6 @@ def _render_futures_monitor_tab() -> None:
                     help="자동 확인은 현재 브라우저 세션이 열려 있을 때만 60초마다 선택 선물 1분봉 갱신 여부를 확인합니다.",
                 )
             )
-        if st.button(
-            "선택 선물 1분봉 갱신",
-            key="overview_futures_manual_refresh",
-            use_container_width=True,
-            type="primary",
-        ):
-            with st.spinner("선택 선물 1분봉을 yfinance에서 수집하는 중입니다..."):
-                _store_overview_job_result(
-                    "overview_futures_ohlcv_result",
-                    _run_futures_ohlcv_action(symbols=selected_symbols, cadence_mode="manual"),
-                )
-            snapshot = load_overview_futures_monitor_snapshot(
-                group=group,
-                symbols=selected_symbols,
-                selected_symbol=selected_symbol,
-                lookback_minutes=FUTURES_LOOKBACK_OPTIONS[lookback_label],
-            )
         if st.button("화면만 다시 읽기", key="overview_futures_reload", use_container_width=True):
             st.session_state["overview_futures_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.rerun()
@@ -3924,15 +4194,6 @@ def _render_futures_monitor_tab() -> None:
             '<div class="ov-futures-control-note">1분봉 갱신은 선택한 선물만 수집합니다. 60초 자동 확인은 브라우저 세션이 열려 있을 때만 동작합니다.</div>',
             unsafe_allow_html=True,
         )
-
-    _render_futures_command_center(
-        snapshot=snapshot,
-        group=group,
-        selected_symbols=selected_symbols,
-        lookback_label=lookback_label,
-        chart_interval=chart_interval,
-        refresh_mode=refresh_mode,
-    )
     _render_futures_macro_fragment(detail_expanded=False)
     st.divider()
     _render_futures_live_workspace(

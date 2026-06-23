@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Futures Monitor Workbench Layout V1:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/`에서 benchmark guide를 코드로 옮겨 `Workspace > Overview > Futures Monitor`를 workbench형 기본 화면으로 재구성했다.
+  - 기본 화면은 `context bar -> compact watch strip -> market brief hero -> weekly flow lane -> chart workspace` 순서로 읽고, 심볼 편집 / 갱신 설정 / 원본 근거 / provider diagnostics는 접힌 상세로 낮췄다.
+  - Focused helper contract 4개, Overview/Futures contract 95개, py_compile, `git diff --check`, Browser QA가 통과했다.
 - Futures Monitor UI benchmark:
   - `.aiworkspace/note/finance/researches/active/2026-06-futures-monitor-ui-benchmark/`에서 Toss Securities를 포함한 5개 UX/UI benchmark 축을 정리했다.
   - 결론은 다음 구현이 copy polish가 아니라 `context bar -> market brief hero -> weekly flow lane -> linked watch/chart workspace`로 가는 workbench redesign이어야 한다는 것이다.
@@ -51,6 +55,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-23 - Futures Monitor Workbench Layout V1
+- Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/` after the user approved implementing the benchmark-led Futures Monitor redesign.
+- Replaced the default command-center/card feel with a workbench context bar, compact watch strip, market brief hero, weekly flow lane, and chart workspace question.
+- Moved symbol selection and refresh mode controls into collapsed edit/settings areas while preserving the existing DB-backed read-only data boundary.
+- Boundaries stayed unchanged: no provider/schema/registry/saved write, no live trading/order/recommendation/monitoring signal semantics.
 
 ### 2026-06-23 - Futures Monitor UI benchmark with Toss Securities
 - Opened `.aiworkspace/note/finance/researches/active/2026-06-futures-monitor-ui-benchmark/` after the user asked whether external UX/UI benchmarking was needed and requested Toss Securities to be included.

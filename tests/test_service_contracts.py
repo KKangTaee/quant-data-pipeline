@@ -4655,6 +4655,118 @@ class OverviewAutomationContractTests(unittest.TestCase):
         flattened = " ".join(str(value) for item in items for value in item.values())
         self.assertNotIn("혼재된 매크로 흐름", flattened)
 
+    def test_futures_workbench_context_bar_items_compactly_summarize_controls(self) -> None:
+        from app.web.overview_dashboard import _futures_workbench_context_items
+
+        selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
+        snapshot = {
+            "status": "REVIEW",
+            "coverage": {
+                "latest_age_minutes": 591,
+                "oldest_age_minutes": 591,
+            },
+            "latest_run": {
+                "status": "success",
+                "rows_written": 9874,
+                "latest_candle_time_utc": "2026-06-22 14:34:00",
+            },
+        }
+
+        items = _futures_workbench_context_items(
+            snapshot=snapshot,
+            group="Pre-open Core",
+            selected_symbols=selected_symbols,
+            lookback_label="6H",
+            chart_interval="5m",
+            chart_scope="compact_6",
+            refresh_mode="manual",
+        )
+
+        self.assertEqual([item["label"] for item in items], ["관찰", "차트", "자료", "다음 행동"])
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertIn("개장 전 핵심 · 6개", flattened)
+        self.assertIn("6H · 5분 봉 · 핵심 6개", flattened)
+        self.assertIn("오래됨", flattened)
+        self.assertIn("선택 선물 1분봉 갱신", flattened)
+        self.assertNotIn("9874", flattened)
+        self.assertNotIn("2026-06-22 14:34:00", flattened)
+
+    def test_futures_watch_strip_items_show_symbol_state_without_provider_run(self) -> None:
+        from app.web.overview_dashboard import _futures_watch_strip_items
+
+        rows = pd.DataFrame(
+            [
+                {"Symbol": "NQ=F", "State": "Stale", "15m %": -0.6, "60m %": -0.3, "Age Min": 26},
+                {"Symbol": "ZN=F", "State": "Calm", "15m %": 0.1, "60m %": 0.2, "Age Min": 2},
+            ]
+        )
+        snapshot = {
+            "rows": rows,
+            "latest_run": {"status": "success", "rows_written": 9874},
+        }
+
+        items = _futures_watch_strip_items(snapshot, ["NQ=F", "ZN=F"])
+
+        self.assertEqual([item["symbol"] for item in items], ["NQ=F", "ZN=F"])
+        self.assertEqual(items[0]["state"], "오래됨")
+        self.assertIn("15분 -0.60%", items[0]["move"])
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertNotIn("9874", flattened)
+        self.assertNotIn("success", flattened)
+
+    def test_futures_market_brief_model_places_scenario_and_support_together(self) -> None:
+        from app.web.overview_dashboard import _futures_market_brief_model
+
+        macro = {
+            "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_daily_date": "2026-06-19"},
+            "summary": {"scenario": "혼재된 매크로 흐름"},
+            "summary_sentences": ["현재 선물 일봉 기준 흐름이 한 방향으로 강하게 모이지 않습니다."],
+            "evidence": ["Risk-On +14, Growth +1, Rate Pressure +46", "Dollar Pressure -13"],
+            "confidence": {
+                "label": "Low Confidence",
+                "reasons": ["Most core symbols have 60D standardized moves."],
+                "occurrence_count": 950,
+                "hit_applicable": False,
+            },
+            "validation": {
+                "status": "OK",
+                "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+                "current_scenario_metrics": {"Occurrence Count": 950},
+            },
+        }
+
+        model = _futures_market_brief_model(macro)
+
+        self.assertEqual(model["eyebrow"], "오늘 기준 시장 브리프")
+        self.assertEqual(model["scenario"], "혼재된 매크로 흐름")
+        self.assertIn("한 방향으로 강하게 모이지", model["sentence"])
+        self.assertEqual([item["label"] for item in model["support_items"]], ["근거 강도", "과거 점검", "유사 구간", "자료 기준"])
+        self.assertIn("위험선호 +14", " ".join(model["evidence_chips"]))
+        self.assertNotIn("Risk-On", " ".join(model["evidence_chips"]))
+
+    def test_futures_weekly_flow_model_ranks_driver_and_supports(self) -> None:
+        from app.web.overview_dashboard import _futures_weekly_flow_model
+
+        weekly_context = {
+            "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+            "summary": "최근 1주 기준으로 원자재/물가 변화가 가장 두드러집니다(-2.93%).",
+            "cards": [
+                {"label": "위험선호", "value": "+2.20%", "detail": "지수 선물이 위험자산 선호를 지지합니다.", "tone": "positive"},
+                {"label": "금리 부담", "value": "+0.24%", "detail": "중립권입니다.", "tone": "neutral"},
+                {"label": "달러 압력", "value": "+0.75%", "detail": "달러 강세 압력처럼 읽힙니다.", "tone": "danger"},
+                {"label": "원자재/물가", "value": "-2.93%", "detail": "물가 압력을 낮춥니다.", "tone": "positive"},
+            ],
+        }
+
+        model = _futures_weekly_flow_model(weekly_context)
+
+        self.assertEqual(model["title"], "최근 1주 흐름")
+        self.assertEqual(model["driver"]["label"], "원자재/물가")
+        self.assertEqual(model["driver"]["value"], "-2.93%")
+        self.assertEqual([item["label"] for item in model["supporting"]], ["위험선호", "원자재/물가"])
+        self.assertEqual([item["label"] for item in model["tempering"]], ["달러 압력"])
+        self.assertIn("가장 두드러집니다", model["summary"])
+
     def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 

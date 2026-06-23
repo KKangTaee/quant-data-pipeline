@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Futures Monitor should read as a workbench, not translated controls
+- User request:
+  - 사용자가 이전 결과가 완성된 UI가 아니라 한글 문구만 바꾼 것처럼 보인다고 지적했고, benchmark guide를 바탕으로 순서대로 개발하라고 승인함.
+- Interpreted goal:
+  - Futures Monitor는 form controls / cards / raw tables를 정돈해 놓은 화면이 아니라, 사용자가 관찰 대상, 데이터 상태, 오늘의 시장 해석, 최근 1주 흐름, 차트에서 확인할 점을 순서대로 읽는 workbench여야 함.
+- Analysis result:
+  - 큰 symbol multiselect와 refresh popover가 기본 화면 피로를 키웠다. 기본 화면에는 context bar와 compact watch strip을 두고, 편집 / 갱신 mode / raw evidence / provider diagnostics는 disclosure로 낮추는 것이 현재 Streamlit 구조에서 가장 작은 제품 개선이다.
+- Follow-up:
+  - Workbench Layout V1에서 `context bar -> compact watch strip -> market brief hero -> weekly flow lane -> chart workspace question` 흐름을 구현했다. Provider/schema/registry/saved write와 trading/recommendation semantics는 계속 제외한다.
+
 ### 2026-06-23 - Futures Monitor needs benchmark-led workbench redesign
 - User request:
   - 사용자가 현재 UI가 완성된 UI가 아니라 한글 문구 변경처럼 보인다고 지적했고, Toss Securities까지 포함해 5개 UX/UI benchmark를 분석한 개선 가이드라인을 요청함.

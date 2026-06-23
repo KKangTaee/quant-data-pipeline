@@ -26,9 +26,10 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 
 기본 화면의 정보 소유권은 다음처럼 유지한다.
 
-- Command center: 관찰 범위, 데이터 상태 / 다음 행동, 가장 큰 단기 움직임.
-- Macro Context: 오늘 기준 해석, 근거 강도 / 과거 점검 / 유사 구간, 최근 1주 흐름, score chip.
-- Live chart: 차트 범위와 symbol-level 상태. Page-level provider run rows / latest candle details는 반복하지 않는다.
+- Workbench context bar: 관찰 범위, 시간/봉/차트 범위, 데이터 상태, 다음 행동을 한 줄로 요약한다.
+- Compact watch strip: 선택 심볼의 이름, 계약 설명, 15m/60m 움직임, symbol-level stale state만 보여준다. 심볼 선택 multiselect는 `관찰 대상 편집` disclosure 안에 둔다.
+- Macro Context: 오늘 기준 시장 브리프, 근거 강도 / 과거 점검 / 유사 구간 / 자료 기준, 최근 1주 dominant flow, score chip.
+- Chart workspace: “이 차트에서 확인할 것”을 먼저 말하고, 차트 범위와 symbol-level 상태를 이어서 보여준다. Page-level provider run rows / latest candle details는 반복하지 않는다.
 - Disclosure: 근거 해석 / 원본 데이터, 진단 / Provider 근거는 접힌 상세로 둔다.
 
 ## Backtest Selection Flow
