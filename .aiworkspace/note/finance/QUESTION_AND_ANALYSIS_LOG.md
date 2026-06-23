@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Overview primary tab에서 Futures Monitor와 Sector / Industry를 제거한다
+
+- User request: 사용자가 `Futures Monitor`와 `Sector / Industry`를 만들었지만 실제로 어떤 확실한 정보를 얻는지 모르겠고, 잘 모르는 기능을 계속 개선하는 것이 좋은 프로그램으로 이어지지 않는다고 판단해 제거를 승인함.
+- Interpreted goal: 기능/데이터 pipeline 삭제가 아니라, Overview의 primary navigation에서 사용 가치가 불명확한 standalone surfaces를 걷어내고 `Market Context` 중심으로 질문을 좁혀야 함.
+- Analysis result: `Market Context`가 이미 futures/macro backdrop과 sector pressure evidence를 흡수하고 있으므로, 두 탭은 primary selector에서 제거하고 stale selected value를 `Market Context`로 fallback하는 soft-remove가 가장 작고 되돌리기 쉬운 변경이다.
+- Follow-up: `overview-primary-tab-soft-remove-v1-20260623`에서 1차 soft-remove를 완료했다. 2차는 Market Context 흡수 근거가 충분한지 점검, 3차는 unused helper code 물리 삭제 또는 repurpose 여부 결정이다.
+
 ### 2026-06-23 - Futures Monitor Workbench V1 still needed product-flow cleanup
 - User request:
   - 사용자가 Workbench V1 후속으로 `근거를 어떻게 읽을까`, 과거 scenario table, split refresh controls, repeated stale/refresh wording이 아직 prototype-like하다고 지적하고 V1.1 진행을 요청함.

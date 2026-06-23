@@ -4349,19 +4349,23 @@ class OverviewAutomationContractTests(unittest.TestCase):
         render_body = source[source.index("def render_overview_dashboard"):]
         context_label_index = render_body.index('"Market Context"')
         market_label_index = render_body.index('"Market Movers"')
-        futures_label_index = render_body.index('"Futures Monitor"')
+        sentiment_label_index = render_body.index('"Sentiment"')
+        events_label_index = render_body.index('"Events"')
 
         self.assertIn("_render_overview_tab_selector(", render_body)
         self.assertIn("_render_selected_overview_tab(", render_body)
         self.assertNotIn("st.tabs(", render_body.split("def _render_market_movers_tab", 1)[0])
         self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body.split("def _render_market_movers_tab", 1)[0])
+        self.assertNotIn('"Futures Monitor": _render_futures_monitor_tab', render_body)
+        self.assertNotIn('"Sector / Industry": _render_sector_industry_tab', render_body)
         self.assertNotIn('"Data Health": _render_collection_ops_tab', render_body)
         self.assertNotIn('"Candidate Ops"', render_body)
         self.assertNotIn("load_overview_dashboard_snapshot", render_body)
         self.assertLess(context_label_index, market_label_index)
-        self.assertLess(market_label_index, futures_label_index)
+        self.assertLess(market_label_index, sentiment_label_index)
+        self.assertLess(sentiment_label_index, events_label_index)
 
-    def test_overview_dashboard_primary_selector_excludes_ops_tabs(self) -> None:
+    def test_overview_dashboard_primary_selector_excludes_inactive_tabs(self) -> None:
         from app.web.overview_dashboard import OVERVIEW_DEEP_TAB_OPTIONS
 
         self.assertEqual(
@@ -4369,12 +4373,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
             (
                 "Market Context",
                 "Market Movers",
-                "Futures Monitor",
                 "Sentiment",
-                "Sector / Industry",
                 "Events",
             ),
         )
+        self.assertNotIn("Futures Monitor", OVERVIEW_DEEP_TAB_OPTIONS)
+        self.assertNotIn("Sector / Industry", OVERVIEW_DEEP_TAB_OPTIONS)
         self.assertNotIn("Data Health", OVERVIEW_DEEP_TAB_OPTIONS)
         self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
 
@@ -4396,6 +4400,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         from app.web.overview_dashboard import _overview_active_tab_label
 
         self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
+        self.assertEqual(_overview_active_tab_label("Futures Monitor"), "Market Context")
+        self.assertEqual(_overview_active_tab_label("Sector / Industry"), "Market Context")
         self.assertEqual(_overview_active_tab_label(None), "Market Context")
 
     def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
@@ -5806,7 +5812,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual([section["id"] for section in model["sections"]], ["market_context", "data_repair"])
         market_section = model["sections"][0]
         data_section = model["sections"][1]
-        self.assertIn("Sector / Industry", market_section["tabs"])
+        self.assertEqual(market_section["tabs"], ["Market Movers", "Sentiment", "Events"])
+        self.assertNotIn("Futures Monitor", market_section["tabs"])
+        self.assertNotIn("Sector / Industry", market_section["tabs"])
         self.assertNotIn("Data Health", market_section["tabs"])
         self.assertEqual(data_section["status"], "EXTERNAL")
         self.assertIn("Operations > System / Data Health", data_section["owner"])

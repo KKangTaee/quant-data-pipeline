@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Primary Tab Soft Remove V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-primary-tab-soft-remove-v1-20260623/`에서 Overview primary navigation을 네 탭으로 줄였다.
+  - `Futures Monitor`와 `Sector / Industry` standalone tabs는 primary selector / lazy dispatch에서 제거했고, 기존 selected value는 `Market Context`로 fallback한다.
+  - Futures / sector service와 helper renderer는 물리 삭제하지 않았고, provider / schema / registry / saved / validation / monitoring / trading boundary는 그대로 유지했다.
 - Futures Monitor Workbench V1.1:
   - `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`에서 Workbench V1 후속 UX/UI 개선을 완료했다.
   - `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유하고, context bar는 버튼 문구 반복 없이 상태만 요약한다.
@@ -60,6 +64,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-23 - Overview Primary Tab Soft Remove V1
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-primary-tab-soft-remove-v1-20260623/` after the user decided `Futures Monitor` and `Sector / Industry` did not have clear enough standalone product value.
+- Removed both labels from the Overview primary selector and renderer dispatch, so stale selected values fall back to `Market Context`.
+- Synced Overview docs to current primary tabs: `Market Context`, `Market Movers`, `Sentiment`, `Events`.
+- Boundaries stayed unchanged: no provider/schema/DB/registry/saved write, no physical deletion of service/helper code, no validation/monitoring/trading semantics.
 
 ### 2026-06-23 - Futures Monitor Workbench V1.1
 - Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/` for the user-requested Workbench V1 follow-up.

@@ -124,9 +124,7 @@ OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
 OVERVIEW_DEEP_TAB_OPTIONS = (
     "Market Context",
     "Market Movers",
-    "Futures Monitor",
     "Sentiment",
-    "Sector / Industry",
     "Events",
 )
 GROUP_LEADERSHIP_PERIOD_LABELS = {
@@ -6809,9 +6807,7 @@ def render_overview_dashboard(
         renderers={
             "Market Context": _render_overview_market_context_tab,
             "Market Movers": _render_market_movers_tab,
-            "Futures Monitor": _render_futures_monitor_tab,
             "Sentiment": _render_market_sentiment_tab,
-            "Sector / Industry": _render_sector_industry_tab,
             "Events": _render_events_tab,
         },
     )

@@ -507,8 +507,8 @@ def load_overview_ia_closeout_model() -> dict[str, Any]:
                 "status": "PRIMARY",
                 "tone": "primary",
                 "owner": "Workspace > Overview",
-                "tabs": ["Market Movers", "Futures Monitor", "Sentiment", "Sector / Industry", "Events"],
-                "detail": "움직임, 참여도, futures backdrop, sentiment, 가까운 macro / earnings context를 확인하는 구역입니다.",
+                "tabs": ["Market Movers", "Sentiment", "Events"],
+                "detail": "움직임, sentiment, 가까운 macro / earnings context를 확인하는 구역입니다. Futures / sector evidence는 별도 primary tab이 아니라 Market Context 안의 보조 근거로 읽습니다.",
                 "next_step": "cockpit의 다음 확인 카드가 가리키는 탭부터 봅니다.",
             },
             {

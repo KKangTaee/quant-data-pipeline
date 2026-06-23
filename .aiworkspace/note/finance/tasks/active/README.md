@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-22
+Last Verified: 2026-06-23
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,7 +33,8 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `overview-lazy-tab-render-v20-20260622` | Completed record | `Workspace > Overview` V20 follow-up. Top-level deep tabs now use selected-tab lazy rendering with `Market Context` as default, so Market Movers / Futures / Sentiment / Sector / Events / Data Health / Candidate Ops compute only after selection. Candidate Ops dashboard snapshot loading is also deferred to its selected branch. |
+| `overview-primary-tab-soft-remove-v1-20260623` | Completed record | `Workspace > Overview` primary tab soft-remove. `Futures Monitor` and `Sector / Industry` are no longer primary selector options; old selected values fall back to `Market Context`. Futures / sector services and helper renderers are retained for now, with no provider / schema / registry / saved / trading boundary changes. |
+| `overview-lazy-tab-render-v20-20260622` | Completed record | `Workspace > Overview` V20 follow-up. Top-level deep tabs switched to selected-tab lazy rendering with `Market Context` as default. Current primary tab membership is superseded by `overview-primary-tab-soft-remove-v1-20260623`; Candidate Ops dashboard snapshot loading remains deferred to its selected branch. |
 | `overview-market-context-macro-meaning-gradient-v19-20260622` | Completed record | `Overview > Market Context` V19 follow-up. Historical analog / Macro conditioned comparison matrix cells now use clearer green/red return gradients, and reference-only T10Y3M / VIXCLS / BAA10Y cards explain what each current value means without changing hard-condition or data boundaries. |
 | `overview-market-context-analog-usability-v12-20260621` | Completed record | `Overview > Market Context` V12 follow-up. Historical analog selected-as-of common price basis mismatch now has a bounded price-basis refresh action, the basis/method area is deduped into compact summary + collapsed technical details, and core/support asset outcomes render as matrix/summary before detailed tables. |
 | `overview-market-context-session-basis-v9-20260620` | Completed record | `Overview > Market Context` V9 follow-up. 휴장 / 장외 시간에는 `오늘의 시장 브리프` 대신 마지막 거래일 또는 현재 세션 기준 브리프로 읽고, 장중 snapshot age만으로 현재 보강 이슈를 띄우지 않도록 보정했다. |
