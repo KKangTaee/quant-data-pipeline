@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Futures Monitor needs benchmark-led workbench redesign
+- User request:
+  - 사용자가 현재 UI가 완성된 UI가 아니라 한글 문구 변경처럼 보인다고 지적했고, Toss Securities까지 포함해 5개 UX/UI benchmark를 분석한 개선 가이드라인을 요청함.
+- Interpreted goal:
+  - Futures Monitor를 또 다른 카드/문구 정리로 고치는 것이 아니라, 금융 모니터링 / 운영 dashboard / 쉬운 투자 UX 패턴을 현재 read-only Overview context boundary에 맞게 재설계해야 함.
+- Analysis result:
+  - TradingView/Koyfin은 persistent watchlist와 linked chart workspace, IBKR은 dense linked workspace, Datadog/Grafana는 status/annotation/drilldown, Stripe/Linear는 compact action/overview discipline, Toss Securities는 plain-language simplification과 필요한 길목의 설명을 제공한다.
+- Follow-up:
+  - 다음 구현 후보는 `context bar -> market brief hero -> weekly flow lane -> linked watch/chart workspace -> evidence disclosures` 순서의 `Futures Workbench Layout V1`이다. Live trading/order/recommendation semantics는 계속 제외한다.
+
 ### 2026-06-23 - Futures Monitor default surface should avoid duplicate status exposure
 - User request:
   - 사용자가 `Workspace > Overview > Futures Monitor`에서 같은 정보가 여러 번 노출되면 피로가 생길 수 있다며, 중복되는 UX를 합치고 정리하는 방향의 분석과 단계별 개선을 승인함.

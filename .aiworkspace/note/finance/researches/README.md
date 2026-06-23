@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-06-futures-monitor-ui-benchmark/` | Workspace > Overview > Futures Monitor를 완성형 제품 UI로 재설계하기 위한 TradingView / Koyfin / IBKR / Datadog / Grafana / Stripe / Linear / Toss Securities 벤치마킹과 구현 가이드 |
 | `active/2026-06-market-context-visual-benchmark/` | Overview > Market Context를 카드 중심이 아닌 금융 UI pattern으로 재정리하기 위한 Koyfin / TradingView / OpenBB / Bloomberg 벤치마킹과 layout 선택지 |
 | `active/2026-06-sub-dev-overview-macro-base/` | sub-dev worktree에서 Overview / Ingestion / Operations 데이터 분석, 매크로 context, 시각화 개선 후보를 개발 착수 전 정리하기 위한 제품 audit / benchmark / 기능 후보 가이드 |
 | `active/2026-06-reference-guides-revamp/` | Reference > Guides를 현재 finance console 흐름에 맞는 task-first Reference Center로 개편하기 위한 제품 audit, benchmark, UX/UI pattern, 단계별 개발 가이드 |

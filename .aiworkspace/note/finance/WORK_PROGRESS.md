@@ -29,6 +29,9 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Futures Monitor UI benchmark:
+  - `.aiworkspace/note/finance/researches/active/2026-06-futures-monitor-ui-benchmark/`에서 Toss Securities를 포함한 5개 UX/UI benchmark 축을 정리했다.
+  - 결론은 다음 구현이 copy polish가 아니라 `context bar -> market brief hero -> weekly flow lane -> linked watch/chart workspace`로 가는 workbench redesign이어야 한다는 것이다.
 - Futures Monitor Dedup UX V1:
   - `.aiworkspace/note/finance/tasks/active/futures-monitor-dedup-ux-v1-20260623/`에서 `Workspace > Overview > Futures Monitor` 기본 화면의 중복 노출을 정리했다.
   - Command center / Macro Context / Live Chart의 정보 소유권을 분리해 provider run rows와 latest candle detail은 기본 화면에서 낮추고 diagnostics에 남겼다.
@@ -48,6 +51,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-23 - Futures Monitor UI benchmark with Toss Securities
+- Opened `.aiworkspace/note/finance/researches/active/2026-06-futures-monitor-ui-benchmark/` after the user asked whether external UX/UI benchmarking was needed and requested Toss Securities to be included.
+- Benchmarked five pattern classes: TradingView / Koyfin, IBKR-style professional workspaces, Datadog / Grafana, Stripe / Linear, and Toss Securities.
+- Recommended next build is a Streamlit workbench redesign using current DB-backed read models: compact context bar, market brief hero, weekly flow lane, linked watch/chart workspace, and evidence disclosures.
+- Boundaries remain read-only Overview context only; no live trading, broker order, provider/schema change, or investment recommendation semantics.
 
 ### 2026-06-23 - Futures Monitor Dedup UX V1
 - Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-dedup-ux-v1-20260623/` after the user asked whether the Futures Monitor default surface still had duplicate exposure.
