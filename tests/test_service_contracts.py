@@ -4560,6 +4560,101 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(_futures_chart_symbols(snapshot), chartable_symbols[:6])
         self.assertEqual(_futures_chart_symbols(snapshot, chart_scope="all_with_data"), chartable_symbols)
 
+    def test_futures_monitor_command_summary_owns_page_state_without_provider_rows(self) -> None:
+        from app.web.overview_dashboard import _futures_command_summary_items
+
+        selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
+        snapshot = {
+            "status": "REVIEW",
+            "coverage": {
+                "returnable_count": 6,
+                "symbol_count": 6,
+                "latest_age_minutes": 26,
+                "oldest_age_minutes": 26,
+            },
+            "top_move": {"Symbol": "NQ=F", "15m %": -0.6, "60m %": -0.3, "State": "Stale"},
+            "latest_run": {
+                "status": "success",
+                "rows_written": 9874,
+                "latest_candle_time_utc": "2026-06-22 14:34:00",
+            },
+        }
+
+        items = _futures_command_summary_items(
+            snapshot=snapshot,
+            group="Pre-open Core",
+            selected_symbols=selected_symbols,
+            lookback_label="6H",
+            chart_interval="5m",
+            refresh_mode="manual",
+        )
+
+        self.assertEqual([item["label"] for item in items], ["관찰 범위", "데이터 상태", "단기 움직임"])
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertIn("개장 전 핵심", flattened)
+        self.assertIn("갱신 필요", flattened)
+        self.assertIn("NQ=F", flattened)
+        self.assertNotIn("9874", flattened)
+        self.assertNotIn("2026-06-22 14:34:00", flattened)
+
+    def test_futures_monitor_live_summary_line_avoids_repeating_top_move_or_run(self) -> None:
+        from app.web.overview_dashboard import _futures_live_summary_line
+
+        selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
+        snapshot = {
+            "symbols": selected_symbols,
+            "top_move": {"Symbol": "NQ=F", "15m %": -0.6, "60m %": -0.3, "State": "Stale"},
+            "latest_run": {"status": "success", "rows_written": 9874},
+            "all_candles": pd.DataFrame(
+                {"Symbol": symbol, "Datetime": "2026-06-22 14:30:00", "Close": 100.0}
+                for symbol in selected_symbols
+            ),
+        }
+
+        summary = _futures_live_summary_line(
+            snapshot,
+            chart_interval="5m",
+            lookback_label="6H",
+            chart_scope="compact_6",
+        )
+
+        self.assertIn("선택 6개", summary)
+        self.assertIn("5분 봉", summary)
+        self.assertIn("차트 가능 6개 중 6개 표시", summary)
+        self.assertNotIn("NQ=F", summary)
+        self.assertNotIn("9874", summary)
+        self.assertNotIn("성공", summary)
+
+    def test_futures_monitor_macro_support_items_do_not_repeat_scenario(self) -> None:
+        from app.web.overview_dashboard import _macro_support_items
+
+        macro = {
+            "summary": {"scenario": "혼재된 매크로 흐름"},
+            "confidence": {
+                "label": "Medium Confidence",
+                "reasons": ["Most core symbols have 60D standardized moves."],
+                "sample_size": 0,
+                "occurrence_count": 950,
+                "hit_applicable": False,
+            },
+            "validation": {
+                "status": "OK",
+                "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+                "current_scenario_metrics": {
+                    "Occurrence Count": 950,
+                    "Directional Hit Applicable": False,
+                },
+            },
+        }
+
+        items = _macro_support_items(macro)
+
+        self.assertEqual([item["label"] for item in items], ["근거 강도", "과거 점검", "유사 구간"])
+        self.assertEqual(items[0]["value"], "보통")
+        self.assertNotIn("근거 강도", str(items[0]["value"]))
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertNotIn("혼재된 매크로 흐름", flattened)
+
     def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
         from app.web.overview_ui_components import overview_ui_css
 

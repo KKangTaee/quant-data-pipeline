@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-23
 
 ## Main User Flow
 
@@ -19,6 +19,17 @@ Workspace > Ingestion
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
 
 화면 경계가 code layer / storage boundary와 섞일 때는 [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md)를 먼저 확인한다.
+
+## Overview Futures Monitor Flow
+
+`Workspace > Overview > Futures Monitor`는 선물/매크로 context를 읽는 화면이며 provider run 진단이나 trading signal 화면이 아니다.
+
+기본 화면의 정보 소유권은 다음처럼 유지한다.
+
+- Command center: 관찰 범위, 데이터 상태 / 다음 행동, 가장 큰 단기 움직임.
+- Macro Context: 오늘 기준 해석, 근거 강도 / 과거 점검 / 유사 구간, 최근 1주 흐름, score chip.
+- Live chart: 차트 범위와 symbol-level 상태. Page-level provider run rows / latest candle details는 반복하지 않는다.
+- Disclosure: 근거 해석 / 원본 데이터, 진단 / Provider 근거는 접힌 상세로 둔다.
 
 ## Backtest Selection Flow
 

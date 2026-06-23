@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Futures Monitor Dedup UX V1:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-dedup-ux-v1-20260623/`에서 `Workspace > Overview > Futures Monitor` 기본 화면의 중복 노출을 정리했다.
+  - Command center / Macro Context / Live Chart의 정보 소유권을 분리해 provider run rows와 latest candle detail은 기본 화면에서 낮추고 diagnostics에 남겼다.
+  - Focused Futures contract 91개, py_compile, `git diff --check`, Browser QA가 통과했다.
 - Futures Monitor UX/UI V3:
   - `.aiworkspace/note/finance/tasks/active/futures-monitor-ux-ui-v3-20260622/`에서 `Workspace > Overview > Futures Monitor` 1차~4차 UX/UI 개선을 완료했다.
   - 상단 watch group / data refresh UX를 한글 중심으로 단순화하고, Macro Context에 오늘 기준 해석 + 최근 1주 흐름 + 근거 해석 카드를 추가했다.
@@ -44,6 +48,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-23 - Futures Monitor Dedup UX V1
+- Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-dedup-ux-v1-20260623/` after the user asked whether the Futures Monitor default surface still had duplicate exposure.
+- Consolidated default ownership: command center owns page state / next action / top move, Macro hero owns scenario, support strip owns confidence / validation, Live Chart owns chart context and symbol-level state.
+- Added regression contracts for default-surface duplication and shortened Macro confidence values to avoid repeating card titles.
+- Boundaries stayed unchanged: read-only Overview context only, no provider/schema/registry/saved write, and no validation / monitoring / trading semantics.
 
 ### 2026-06-22 - Futures Monitor UX/UI V3 1차~4차
 - Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-ux-ui-v3-20260622/` after the user approved sequential 1차~4차 development for `Workspace > Overview > Futures Monitor`.

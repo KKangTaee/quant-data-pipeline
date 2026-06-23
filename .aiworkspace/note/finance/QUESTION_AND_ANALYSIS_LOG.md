@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Futures Monitor default surface should avoid duplicate status exposure
+- User request:
+  - 사용자가 `Workspace > Overview > Futures Monitor`에서 같은 정보가 여러 번 노출되면 피로가 생길 수 있다며, 중복되는 UX를 합치고 정리하는 방향의 분석과 단계별 개선을 승인함.
+- Interpreted goal:
+  - 새 지표나 진단 패널을 추가하는 것이 아니라, 기존 V3 화면에서 page-level 상태, Macro 시나리오, Live Chart 상태, provider run detail의 기본 노출 소유권을 분리해야 함.
+- Analysis result:
+  - Command center는 관찰 범위 / 데이터 상태와 다음 행동 / top move만 소유하고, Macro hero는 시나리오를 단독 소유하며, Live Chart는 차트 표시 범위와 symbol-level 상태만 보여주는 것이 가장 작은 UX 개선 경로다.
+- Follow-up:
+  - Dedup UX V1에서 provider rows / latest candle detail은 diagnostics로 낮췄고, Macro support strip에서 scenario 반복을 제거했으며, Live Chart의 old status cards를 제거했다. Read-only Overview context boundary는 그대로 유지한다.
+
 ### 2026-06-22 - Futures Monitor should explain evidence before showing raw tables
 - User request:
   - 사용자가 `Workspace > Overview > Futures Monitor`의 watch group, data actions, Macro Context, Macro Evidence & Data가 prototype 수준이고 표 중심이라 해석하기 어렵다고 지적하고 1차~4차 순차 개발을 승인함.
