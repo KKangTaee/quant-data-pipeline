@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from html import escape
 from typing import Any, Callable
-from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import altair as alt
@@ -122,7 +121,10 @@ MARKET_MOVER_PERIOD_LABELS = {
     "yearly": "Yearly",
 }
 OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
+OVERVIEW_DEEP_TAB_WIDGET_KEY = "overview_active_deep_tab_widget"
 OVERVIEW_DEEP_TAB_QUERY_PARAM = "overview_tab"
+OVERVIEW_LOADED_TABS_KEY = "overview_loaded_deep_tabs"
+OVERVIEW_INITIAL_DEFERRED_TABS = ("Market Context",)
 OVERVIEW_DEEP_TAB_OPTIONS = (
     "Market Context",
     "Market Movers",
@@ -6788,106 +6790,141 @@ def _overview_query_tab_label() -> str | None:
     return _overview_tab_label_from_slug(raw_value)
 
 
-def _overview_tab_href(label: str) -> str:
+def _overview_tab_display_label(label: str) -> str:
     active_label = _overview_active_tab_label(label)
-    slug = OVERVIEW_DEEP_TAB_SLUGS[active_label]
-    return f"?{OVERVIEW_DEEP_TAB_QUERY_PARAM}={quote(slug)}"
+    primary, secondary = OVERVIEW_DEEP_TAB_DISPLAY[active_label]
+    return f"{primary} · {secondary}"
 
 
-def _overview_tab_nav_html(active_label: str) -> str:
-    current = _overview_active_tab_label(active_label)
-    items: list[str] = []
-    for label in OVERVIEW_DEEP_TAB_OPTIONS:
-        primary, secondary = OVERVIEW_DEEP_TAB_DISPLAY[label]
-        active = label == current
-        class_name = "ov-primary-nav-item is-active" if active else "ov-primary-nav-item"
-        aria_current = ' aria-current="page"' if active else ""
-        items.append(
-            f'<a class="{class_name}" href="{escape(_overview_tab_href(label))}"{aria_current}>'
-            f'<span class="ov-primary-nav-main">{escape(primary)}</span>'
-            f'<span class="ov-primary-nav-sub">{escape(secondary)}</span>'
-            "</a>"
-        )
+def _overview_tab_seed_label(
+    *,
+    query_label: str | None,
+    widget_value: str | None,
+    session_value: str | None,
+) -> str:
+    if widget_value in OVERVIEW_DEEP_TAB_OPTIONS:
+        return _overview_active_tab_label(widget_value)
+    if query_label in OVERVIEW_DEEP_TAB_OPTIONS:
+        return _overview_active_tab_label(query_label)
+    return _overview_active_tab_label(session_value)
+
+
+def _overview_tab_nav_css() -> str:
     return (
         """
 <style>
-.ov-primary-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.48rem;
-  align-items: center;
-  margin: 0.65rem 0 1.22rem 0;
+/* ov-primary-nav: scoped override for the Overview st.pills selector. */
+.st-key-overview_active_deep_tab_widget [data-testid="stButtonGroup"] {
+  margin: 0.42rem 0 1.08rem 0;
+  padding: 0;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.24);
 }
-.ov-primary-nav-item {
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 7.6rem;
-  min-height: 3rem;
-  padding: 0.5rem 0.82rem 0.48rem 0.78rem;
-  border: 1px solid rgba(26, 35, 51, 0.12);
-  border-left: 3px solid transparent;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #2f3542;
-  text-decoration: none !important;
-  box-shadow: 0 1px 2px rgba(22, 28, 36, 0.04);
-  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+.st-key-overview_active_deep_tab_widget div[data-baseweb="button-group"] {
+  gap: 1.45rem;
+  align-items: flex-end;
 }
-.ov-primary-nav-item:hover {
-  border-color: rgba(0, 116, 92, 0.28);
-  background: rgba(246, 251, 249, 0.98);
-  color: #1f2937;
-  box-shadow: 0 2px 6px rgba(22, 28, 36, 0.06);
-}
-.ov-primary-nav-item.is-active {
-  border-color: rgba(0, 116, 92, 0.32);
-  border-left-color: #00745c;
-  background: #f2faf7;
-  color: #0f3f35;
-  box-shadow: inset 0 0 0 1px rgba(0, 116, 92, 0.08);
-}
-.ov-primary-nav-main {
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.1;
+.st-key-overview_active_deep_tab_widget [data-testid="stBaseButton-pills"],
+.st-key-overview_active_deep_tab_widget [data-testid="stBaseButton-pillsActive"] {
+  min-height: 2.15rem;
+  padding: 0 0 0.62rem 0;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: rgba(100, 116, 139, 0.95);
+  color: color-mix(in srgb, var(--text-color) 70%, transparent);
+  box-shadow: none !important;
+  font-weight: 650;
   letter-spacing: 0;
 }
-.ov-primary-nav-sub {
-  margin-top: 0.18rem;
-  color: rgba(47, 53, 66, 0.62);
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: 0;
+.st-key-overview_active_deep_tab_widget [data-testid="stBaseButton-pillsActive"] {
+  border-bottom-color: #ff4b4b !important;
+  background: transparent !important;
+  color: #ff4b4b !important;
+  box-shadow: none !important;
 }
-.ov-primary-nav-item.is-active .ov-primary-nav-sub {
-  color: rgba(15, 63, 53, 0.7);
+.st-key-overview_active_deep_tab_widget [data-testid="stBaseButton-pills"]:hover {
+  color: #ff4b4b;
+  background: transparent !important;
 }
 @media (max-width: 760px) {
-  .ov-primary-nav {
-    gap: 0.42rem;
-  }
-  .ov-primary-nav-item {
-    min-width: calc(50% - 0.24rem);
-    min-height: 2.8rem;
+  .st-key-overview_active_deep_tab_widget [data-testid="stBaseButton-pills"],
+  .st-key-overview_active_deep_tab_widget [data-testid="stBaseButton-pillsActive"] {
+    min-height: 2.1rem;
+    padding-bottom: 0.55rem;
   }
 }
 </style>
 """
-        + f'<nav class="ov-primary-nav" aria-label="Overview sections">{"".join(items)}</nav>'
     )
 
 
-def _render_overview_tab_selector() -> str:
-    current = _overview_query_tab_label() or _overview_active_tab_label(st.session_state.get(OVERVIEW_DEEP_TAB_KEY))
-    if st.session_state.get(OVERVIEW_DEEP_TAB_KEY) not in OVERVIEW_DEEP_TAB_OPTIONS:
-        st.session_state[OVERVIEW_DEEP_TAB_KEY] = current
-    elif st.session_state.get(OVERVIEW_DEEP_TAB_KEY) != current:
-        st.session_state[OVERVIEW_DEEP_TAB_KEY] = current
+def _overview_loaded_tabs() -> set[str]:
+    raw = st.session_state.get(OVERVIEW_LOADED_TABS_KEY)
+    if not isinstance(raw, (set, list, tuple)):
+        return set()
+    return {
+        label
+        for value in raw
+        if (label := _overview_active_tab_label(str(value or ""))) in OVERVIEW_DEEP_TAB_OPTIONS
+    }
 
-    st.markdown(_overview_tab_nav_html(current), unsafe_allow_html=True)
-    return current
+
+def _overview_mark_tab_loaded(label: str) -> None:
+    loaded = _overview_loaded_tabs()
+    loaded.add(_overview_active_tab_label(label))
+    st.session_state[OVERVIEW_LOADED_TABS_KEY] = sorted(loaded)
+
+
+def _overview_should_defer_tab_body(active_label: str | None, *, loaded_tabs: tuple[str, ...] | set[str] | list[str]) -> bool:
+    active = _overview_active_tab_label(active_label)
+    loaded = {_overview_active_tab_label(str(value or "")) for value in loaded_tabs}
+    return active in OVERVIEW_INITIAL_DEFERRED_TABS and active not in loaded
+
+
+def _render_overview_tab_load_gate(active_label: str) -> bool:
+    active = _overview_active_tab_label(active_label)
+    if not _overview_should_defer_tab_body(active, loaded_tabs=_overview_loaded_tabs()):
+        return True
+
+    primary, secondary = OVERVIEW_DEEP_TAB_DISPLAY[active]
+    st.markdown(f"### {escape(primary)}")
+    st.caption(f"{secondary} 데이터를 불러오면 요약과 세부 근거가 표시됩니다.")
+    if st.button(f"{primary} 불러오기", key=f"overview_load_{OVERVIEW_DEEP_TAB_SLUGS[active]}", type="primary"):
+        _overview_mark_tab_loaded(active)
+        return True
+    return False
+
+
+def _render_overview_tab_selector() -> str:
+    current = _overview_tab_seed_label(
+        query_label=_overview_query_tab_label(),
+        widget_value=st.session_state.get(OVERVIEW_DEEP_TAB_WIDGET_KEY),
+        session_value=st.session_state.get(OVERVIEW_DEEP_TAB_KEY),
+    )
+    previous = _overview_active_tab_label(st.session_state.get(OVERVIEW_DEEP_TAB_KEY))
+
+    st.markdown(_overview_tab_nav_css(), unsafe_allow_html=True)
+    selected = st.pills(
+        "Overview 영역",
+        OVERVIEW_DEEP_TAB_OPTIONS,
+        selection_mode="single",
+        default=current,
+        required=True,
+        format_func=_overview_tab_display_label,
+        key=OVERVIEW_DEEP_TAB_WIDGET_KEY,
+        label_visibility="collapsed",
+        width="stretch",
+    )
+    selected_label = _overview_active_tab_label(str(selected or current))
+    if selected_label != previous:
+        _overview_mark_tab_loaded(selected_label)
+    st.session_state[OVERVIEW_DEEP_TAB_KEY] = selected_label
+    return selected_label
+
+
+def _overview_should_render_tab_body(active_label: str) -> bool:
+    return _render_overview_tab_load_gate(active_label)
 
 
 def _render_selected_overview_tab(
@@ -6916,6 +6953,8 @@ def render_overview_dashboard(
     render_market_session_banner(_market_session_banner_model())
 
     active_tab = _render_overview_tab_selector()
+    if not _render_overview_tab_load_gate(active_tab):
+        return
     _render_selected_overview_tab(
         active_tab,
         renderers={

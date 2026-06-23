@@ -24,10 +24,10 @@ Last Verified: 2026-06-23
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Overview Primary Nav Pill V1 2026-06-23](../tasks/active/overview-primary-nav-pill-v1-20260623/STATUS.md).
-- Latest completed product task: [Overview Primary Nav Pill V1 2026-06-23](../tasks/active/overview-primary-nav-pill-v1-20260623/STATUS.md).
+- Latest completed task: [Overview Nav Internal Lazy Load V1 2026-06-23](../tasks/active/overview-nav-internal-lazy-load-v1-20260623/STATUS.md).
+- Latest completed product task: [Overview Nav Internal Lazy Load V1 2026-06-23](../tasks/active/overview-nav-internal-lazy-load-v1-20260623/STATUS.md).
 - Recent Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are now `Market Context`, `Market Movers`, `Sentiment`, and `Events`, rendered through a compact custom pill nav; `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. See [Roadmap](./ROADMAP.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are now `Market Context`, `Market Movers`, `Sentiment`, and `Events`, rendered as an internal text-tab underline selector; `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. First Overview entry defers the heavy `Market Context` body behind an explicit load action. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
 

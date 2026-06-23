@@ -25,12 +25,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Overview tabs should be internal text tabs, not anchor navigation
+
+- User request: 사용자가 이전 디자인 탭이 새 창/링크 이동처럼 느껴진다고 지적하고, 하나의 브라우저 안에서 처리되는 탭 방식과 초기 로딩 지연 개선을 요청한 뒤, 최종 visual reference로 plain text + red underline tab 형식을 제시함.
+- Interpreted goal: Overview primary tabs는 디자인만 바꾼 링크가 아니라 Streamlit 내부 상태 전환이어야 하며, 첫 진입 때 default `Market Context`가 무거운 read model fan-out을 즉시 실행하지 않아야 함.
+- Analysis result: Anchor HTML nav는 direct slug에는 편하지만 제품 탭처럼 느껴지지 않는다. `st.pills` 내부 widget state를 쓰고 CSS만 text-tab underline style로 좁히면 현재 브라우저 안에서 전환되며, query-param slug는 호환 입력으로만 남길 수 있다. 초기 지연 원인은 `load_overview_macro_context_cockpit`이 movers / sector leadership / futures macro / sentiment / events / collection ops / historical analog를 한 번에 로드하기 때문이다.
+- Follow-up: `overview-nav-internal-lazy-load-v1-20260623`에서 anchor rendering을 제거하고 내부 underline tabs와 `시장 맥락 불러오기` lazy gate를 구현했다. 3차 후보는 Market Context 내부 old source label 흡수 또는 helper code repurpose / cleanup 판단이다.
+
 ### 2026-06-23 - Overview primary tab bar should feel like product navigation
 
 - User request: 사용자가 현재 Overview tab bar가 기본 segmented control처럼 보이고, 더 디자인적인 tab bar가 없는지 질문한 뒤 진행을 승인함.
 - Interpreted goal: 새 데이터 기능을 추가하는 것이 아니라, 이미 줄인 네 개 primary tab을 더 신뢰감 있는 제품형 navigation으로 보여줘야 함.
 - Analysis result: 현재는 탭 수가 네 개로 줄었기 때문에 full-width segmented bar보다 compact pill nav가 더 적합하다. Korean primary label과 English secondary label을 함께 두면 의미는 유지하면서 화면의 기본 위젯 느낌을 줄일 수 있다.
-- Follow-up: `overview-primary-nav-pill-v1-20260623`에서 custom pill nav와 query-param slug selection을 구현했다. 3차로는 Market Context 내부에 남은 old source label(`Futures Monitor`, `Sector / Industry`)을 흡수형 문구로 바꿀지 별도 판단할 수 있다.
+- Follow-up: `overview-primary-nav-pill-v1-20260623`에서 custom pill nav와 query-param slug selection을 구현했지만 anchor 기반이라 이후 `overview-nav-internal-lazy-load-v1-20260623`에서 내부 widget 기반 underline tabs로 대체했다. 3차로는 Market Context 내부에 남은 old source label(`Futures Monitor`, `Sector / Industry`)을 흡수형 문구로 바꿀지 별도 판단할 수 있다.
 
 ### 2026-06-23 - Overview primary tab에서 Futures Monitor와 Sector / Industry를 제거한다
 

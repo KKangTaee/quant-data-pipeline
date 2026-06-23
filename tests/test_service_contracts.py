@@ -4382,17 +4382,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Data Health", OVERVIEW_DEEP_TAB_OPTIONS)
         self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
 
-    def test_overview_dashboard_primary_selector_uses_custom_pill_nav(self) -> None:
+    def test_overview_dashboard_primary_selector_uses_internal_pill_widget(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def _render_overview_tab_selector"):]
         helper_body = helper_body[: helper_body.index("def _render_selected_overview_tab")]
 
-        self.assertIn("_overview_tab_nav_html(", helper_body)
+        self.assertIn("st.pills(", helper_body)
+        self.assertIn('selection_mode="single"', helper_body)
+        self.assertIn("required=True", helper_body)
+        self.assertIn("format_func=_overview_tab_display_label", helper_body)
         self.assertIn("st.markdown(", helper_body)
-        self.assertIn("unsafe_allow_html=True", helper_body)
+        self.assertIn("_overview_tab_nav_css()", helper_body)
         self.assertNotIn("segmented_control", helper_body)
         self.assertNotIn("st.radio(", helper_body)
+        self.assertNotIn("href=", helper_body)
+        self.assertNotIn("<a ", helper_body)
         self.assertIn("ov-primary-nav", source)
+        self.assertIn('stBaseButton-pillsActive', source)
+        self.assertIn("border-bottom: 1px solid", source)
+        self.assertIn("border-radius: 0", source)
+        self.assertIn("box-shadow: none", source)
+        self.assertIn("var(--text-color)", source)
+        self.assertIn("#ff4b4b", source)
+        self.assertNotIn("background: #f2faf7", source)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
         from app.web.overview_dashboard import _render_selected_overview_tab
@@ -4419,24 +4431,53 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_dashboard_pill_nav_slug_contract(self) -> None:
         from app.web.overview_dashboard import (
             OVERVIEW_DEEP_TAB_OPTIONS,
-            _overview_tab_href,
+            _overview_tab_seed_label,
+            _overview_tab_display_label,
             _overview_tab_label_from_slug,
-            _overview_tab_nav_html,
         )
 
         for label in OVERVIEW_DEEP_TAB_OPTIONS:
-            href = _overview_tab_href(label)
-            slug = href.split("overview_tab=", 1)[1]
-            self.assertEqual(_overview_tab_label_from_slug(slug), label)
+            display = _overview_tab_display_label(label)
+            self.assertIn(label, display)
 
-        html = _overview_tab_nav_html("Market Context")
+        self.assertEqual(_overview_tab_label_from_slug("market-context"), "Market Context")
+        self.assertEqual(_overview_tab_label_from_slug("market-movers"), "Market Movers")
+        self.assertIn("시장 맥락", _overview_tab_display_label("Market Context"))
+        self.assertIn("변동 종목", _overview_tab_display_label("Market Movers"))
+        self.assertIn("심리", _overview_tab_display_label("Sentiment"))
+        self.assertIn("일정", _overview_tab_display_label("Events"))
+        self.assertEqual(
+            _overview_tab_seed_label(
+                query_label="Market Movers",
+                widget_value="Sentiment",
+                session_value="Market Context",
+            ),
+            "Sentiment",
+        )
+        self.assertEqual(
+            _overview_tab_seed_label(
+                query_label="Market Movers",
+                widget_value=None,
+                session_value="Market Context",
+            ),
+            "Market Movers",
+        )
 
-        self.assertIn('class="ov-primary-nav-item is-active"', html)
-        self.assertIn('aria-current="page"', html)
-        self.assertIn("시장 맥락", html)
-        self.assertIn("변동 종목", html)
-        self.assertIn("심리", html)
-        self.assertIn("일정", html)
+    def test_overview_dashboard_defers_default_market_context_until_user_runs_it(self) -> None:
+        from app.web.overview_dashboard import _overview_should_defer_tab_body
+
+        self.assertTrue(_overview_should_defer_tab_body("Market Context", loaded_tabs=()))
+        self.assertFalse(_overview_should_defer_tab_body("Market Context", loaded_tabs=("Market Context",)))
+        self.assertFalse(_overview_should_defer_tab_body("Market Movers", loaded_tabs=()))
+
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+
+        self.assertIn("_render_overview_tab_load_gate(active_tab)", render_body)
+        self.assertLess(
+            render_body.index("_render_overview_tab_load_gate(active_tab)"),
+            render_body.index("_render_selected_overview_tab("),
+        )
 
     def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
