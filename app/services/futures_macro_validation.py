@@ -910,6 +910,99 @@ def _current_scenario_metrics(summary: pd.DataFrame, current_snapshot: dict[str,
     return dict(matches.iloc[0])
 
 
+def _validation_count_label(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "0회"
+        return f"{int(value):,}회"
+    except (TypeError, ValueError):
+        return "0회"
+
+
+def _validation_percent_label(value: Any, *, digits: int = 1) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):.{digits}f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def build_current_scenario_validation_summary(
+    validation_snapshot: dict[str, Any],
+    *,
+    confidence_label: str | None = None,
+) -> dict[str, Any]:
+    metrics = dict(validation_snapshot.get("current_scenario_metrics") or {})
+    if not metrics:
+        return {}
+    coverage = dict(validation_snapshot.get("coverage") or {})
+    scenario = str(metrics.get("Scenario") or "현재 시나리오")
+    occurrence_count = int(metrics.get("Occurrence Count") or 0)
+    sample_5d = int(metrics.get("Sample 5D") or 0)
+    hit_applicable = bool(metrics.get("Directional Hit Applicable"))
+    validation_dates = int(coverage.get("validation_dates") or 0)
+    history_span = coverage.get("history_span_years")
+    try:
+        history_span_label = f"{float(history_span):.2f}년"
+    except (TypeError, ValueError):
+        history_span_label = "기간 미확인"
+    coverage_label = f"{validation_dates}개 PIT 날짜 · {history_span_label}"
+    confidence_text = str(confidence_label or "").strip()
+    confidence_prefix = f"{confidence_text} 판단에서 " if confidence_text else ""
+
+    if hit_applicable:
+        hit_rate = _validation_percent_label(metrics.get("Hit Rate 5D %"))
+        false_positive = _validation_percent_label(metrics.get("False Positive 5D %"))
+        max_adverse = _validation_percent_label(metrics.get("Max Adverse 5D %"), digits=2)
+        occurrence = {
+            "label": "5D 표본",
+            "value": _validation_count_label(sample_5d),
+            "detail": f"과거 발생 {_validation_count_label(occurrence_count)} 중 5D 수익률 계산 가능 표본",
+        }
+        interpretation = (
+            f"현재 시나리오는 5D 방향성 점검이 가능한 상태입니다. "
+            f"과거 5D hit-rate {hit_rate}, false-positive {false_positive}, max-adverse {max_adverse}입니다."
+        )
+        confidence_effect = (
+            f"{confidence_prefix}현재 confidence를 보조하지만 매수/매도 신호나 검증 gate는 아닙니다."
+        )
+        metrics_out = [
+            {"label": "5D hit-rate", "value": hit_rate},
+            {"label": "false-positive", "value": false_positive},
+            {"label": "max-adverse", "value": max_adverse},
+        ]
+    else:
+        occurrence = {
+            "label": "과거 발생",
+            "value": _validation_count_label(occurrence_count),
+            "detail": "방향성 5D hit-rate 대신 현재 상태의 반복 빈도를 확인합니다.",
+        }
+        interpretation = (
+            "자주 나타난 상태지만 방향성 적중률을 강하게 말하기 어려운 혼재 상태입니다. "
+            "이 시나리오는 directional hit-rate로 읽으면 안 됩니다."
+        )
+        confidence_effect = (
+            f"{confidence_prefix}현재 confidence를 보조하지만 매수/매도 신호나 검증 gate는 아닙니다."
+        )
+        metrics_out = [
+            {"label": "5D hit-rate", "value": "적용 안 됨"},
+            {"label": "false-positive", "value": "적용 안 됨"},
+            {"label": "max-adverse", "value": "적용 안 됨"},
+        ]
+
+    return {
+        "title": "과거 점검 요약",
+        "scenario": scenario,
+        "occurrence": occurrence,
+        "coverage": coverage_label,
+        "hit_rate_applicable": hit_applicable,
+        "metrics": metrics_out,
+        "interpretation": interpretation,
+        "confidence_effect": confidence_effect,
+    }
+
+
 def build_futures_macro_validation_snapshot(
     *,
     symbols: Sequence[str] | None = None,
@@ -948,7 +1041,7 @@ def build_futures_macro_validation_snapshot(
     )
     status, warnings = _status_and_warnings(coverage, records)
     current_metrics = _current_scenario_metrics(scenario_summary, current_snapshot)
-    return {
+    snapshot = {
         "status": status,
         "coverage": coverage,
         "warnings": warnings,
@@ -960,6 +1053,8 @@ def build_futures_macro_validation_snapshot(
         "caveats": list(VALIDATION_CAVEATS),
         "source_note": "Point-in-time recalculation from stored daily futures OHLCV; ETF rows are used only as labeled proxy targets.",
     }
+    snapshot["current_scenario_summary"] = build_current_scenario_validation_summary(snapshot)
+    return snapshot
 
 
 def _latest_age_days(latest_daily_date: Any) -> int | None:

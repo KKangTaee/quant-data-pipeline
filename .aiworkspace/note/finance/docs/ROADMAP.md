@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-22
+Last Verified: 2026-06-23
 
 ## Current State After Master Merge
 
@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-ia-cleanup-v22-20260622/`
-- 목적: `Workspace > Overview`의 primary tab을 market-context drilldown 중심으로 정리하고, 운영/후보 관리 성격의 `Data Health`와 `Candidate Ops`를 top-level Overview에서 제외했다.
-- 주요 변경: Overview deep tab selector는 `Market Context`, `Market Movers`, `Futures Monitor`, `Sentiment`, `Sector / Industry`, `Events`만 노출한다. `Data Health`는 Market Context source / refresh evidence와 `Operations > System / Data Health` / `Workspace > Ingestion` 소유로 demotion했고, `Candidate Ops` render path는 Overview에서 제거했다. `Sector / Industry`는 유지하되 raw table은 `상세 표` disclosure로 낮췄다.
-- 이번 차수에서 하지 않은 일: registry / saved JSONL 삭제, run history 정리, Backtest / Practical Validation / Final Review / Operations core workflow 변경, provider / DB schema / loader 변경, validation / monitoring / trade semantics 추가.
-- Latest completed product task: `.aiworkspace/note/finance/tasks/active/overview-ia-cleanup-v22-20260622/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
+- 목적: `Workspace > Overview > Futures Monitor`의 Workbench V1 후속으로, prototype-like lower evidence / validation / refresh 영역을 제품형 read-only market context 흐름으로 정리했다.
+- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. `근거 해석 / 원본 데이터`는 `현재 근거 상태 -> 과거 점검 요약 -> 자료 관리 -> 원본 표` 순서로 읽히며, raw scenario / relationship / sensitivity tables는 접힌 원본 상세로 낮췄다.
+- 이번 차수에서 하지 않은 일: provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Latest completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
+- Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/`
+- 목적: `Workspace > Overview > Futures Monitor`를 form/card 느낌에서 compact workbench 기본 화면으로 재구성했다.
+- 주요 변경: Workbench context bar, compact watch strip, market brief hero, weekly flow lane, chart workspace question을 도입하고 symbol edit / refresh setting / raw evidence / provider diagnostics를 낮췄다.
+- 이번 차수에서 하지 않은 일: provider/schema/registry/saved write, live trading/order/recommendation/monitoring signal semantics.
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/overview-market-context-source-refresh-ux-v21-20260622/`
 - 목적: `Workspace > Overview > Market Context`의 V19 Macro meaning / gradient 보정으로, 핵심 자산 비교와 Macro 조건 결과 비교 matrix의 양수 / 음수 색상 구분을 더 분명히 하고, 조건에는 쓰지 않은 Macro 배경 값이 어떤 상태를 뜻하는지 바로 읽히게 했다.
 - 주요 변경: Historical analog / Macro conditioned comparison matrix cells는 median return 또는 delta 방향과 크기를 green / red gradient로 표시한다. Reference-only Macro backdrop cards는 T10Y3M / VIXCLS / BAA10Y 현재 값 옆에 `양의 금리곡선`, `변동성 주의`, `신용위험 안정권` 같은 상태와 해당 값의 의미 문장을 보여준다.

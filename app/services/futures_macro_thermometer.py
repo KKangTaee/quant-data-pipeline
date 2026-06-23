@@ -51,12 +51,12 @@ SCORE_DISPLAY_LABELS = {
 }
 
 SCORE_MEANING_LINES = {
-    "Risk-On Score": "주가지수 선물이 위험자산 선호를 얼마나 지지하는지 봅니다.",
-    "Growth Score": "러셀, 구리, 원유, 호주달러가 경기민감 흐름을 얼마나 지지하는지 봅니다.",
-    "Rate Pressure Score": "채권선물 가격 하락을 금리 상승 부담으로 뒤집어 해석합니다.",
-    "Dollar Pressure Score": "주요 FX 선물 약세를 달러 강세 압력으로 뒤집어 해석합니다.",
-    "Safe Haven Score": "금, 채권, 엔 선물이 방어적 수요를 지지하는지 봅니다.",
-    "Inflation Pressure Score": "에너지와 원자재 선물이 물가 압력을 지지하는지 봅니다.",
+    "Risk-On Score": "주가지수 선물 흐름은 현재 위험자산 선호의 근거입니다.",
+    "Growth Score": "러셀, 구리, 원유, 호주달러 흐름은 현재 경기민감 해석의 근거입니다.",
+    "Rate Pressure Score": "채권선물 가격 하락은 금리 상승 부담으로 뒤집어 해석합니다.",
+    "Dollar Pressure Score": "주요 FX 선물 약세는 달러 강세 압력으로 뒤집어 해석합니다.",
+    "Safe Haven Score": "금, 채권, 엔 선물 흐름은 현재 방어적 수요의 근거입니다.",
+    "Inflation Pressure Score": "에너지와 원자재 선물 흐름은 현재 물가 압력의 근거입니다.",
 }
 
 SYMBOL_ROLE_DISPLAY_LABELS = {
@@ -839,31 +839,65 @@ def _translate_conflict_text(text: str) -> str:
     return text
 
 
+def _contribution_z_from_evidence_text(text: str) -> str:
+    for token in text.replace(",", " ").split():
+        cleaned = token.strip()
+        if cleaned.endswith("z"):
+            try:
+                float(cleaned[:-1])
+            except ValueError:
+                continue
+            return cleaned
+    return "-"
+
+
+def _impact_label(section_key: str, contribution_z: str) -> str:
+    if section_key == "conflicting":
+        return "충돌"
+    if section_key == "missing":
+        return "자료 없음"
+    try:
+        value = abs(float(contribution_z.rstrip("z")))
+    except ValueError:
+        value = 0.0
+    if value >= STRONG_SIGNAL_Z_THRESHOLD:
+        return "영향 강함"
+    if value > 0:
+        return "영향 제한적"
+    return "영향 미확인"
+
+
 def _evidence_item(raw_item: Any, section_key: str) -> dict[str, str]:
     raw = str(raw_item or "").strip()
     score_name = _score_from_evidence_text(raw)
     symbol = _symbol_from_evidence_text(raw)
     score_label = SCORE_DISPLAY_LABELS.get(score_name or "", score_name or "Macro")
     symbol_label = SYMBOL_ROLE_DISPLAY_LABELS.get(symbol or "", symbol or "")
+    contribution_z = _contribution_z_from_evidence_text(raw)
+    impact_label = _impact_label(section_key, contribution_z)
     if section_key == "conflicting":
         title = "충돌 신호"
         meaning = _translate_conflict_text(raw)
     elif section_key == "missing":
         title = symbol_label or raw
-        meaning = f"{symbol_label or raw} 일봉 데이터가 없어 해당 축의 해석 강도를 낮춥니다."
+        meaning = f"{symbol_label or raw} 일봉 데이터가 없어 현재 해석 근거가 제한됩니다."
     elif symbol:
         title = f"{score_label} · {symbol}"
         score_meaning = SCORE_MEANING_LINES.get(score_name or "", "")
-        role = f"{symbol_label}가" if symbol_label else f"{symbol}가"
+        role = f"{symbol_label} 움직임이" if symbol_label else f"{symbol} 움직임이"
         if section_key == "weak":
-            meaning = f"{role} {score_label} 판단에 들어가지만 움직임이 작아 결론 근거로는 약합니다. {score_meaning}"
+            meaning = f"{role} 현재 {score_label} 해석에 들어가지만 영향은 제한적입니다. {score_meaning}"
         else:
-            meaning = f"{role} {score_label} 판단에 크게 기여합니다. {score_meaning}"
+            meaning = f"{role} 현재 {score_label} 해석을 강화합니다. {score_meaning}"
     else:
         title = score_label
         meaning = SCORE_MEANING_LINES.get(score_name or "", raw)
     return {
         "title": title,
+        "score_label": score_label if section_key != "missing" else "자료 부족",
+        "symbol": symbol or raw,
+        "contribution_z": contribution_z,
+        "impact_label": impact_label,
         "detail": raw,
         "meaning": meaning.strip(),
     }
@@ -873,35 +907,41 @@ def build_macro_evidence_reading(evidence_groups: dict[str, Any]) -> list[dict[s
     sections = [
         (
             "strong",
-            "강하게 말하는 근거",
-            "표준화 움직임이 커서 현재 해석에 직접 힘을 보태는 선물입니다.",
+            "강한 근거",
+            "현재 macro 해석을 직접 강화하는 표준화 움직임입니다.",
+            "강한 근거 없음",
         ),
         (
             "weak",
             "약한 근거",
-            "계산에는 들어가지만 움직임이 작아 결론을 세게 만들지는 않는 선물입니다.",
+            "계산에는 들어가지만 현재 해석 영향은 제한적인 움직임입니다.",
+            "약한 근거 없음",
         ),
         (
             "conflicting",
             "충돌 근거",
-            "서로 다른 시장 성격이 동시에 나타나 단일 방향 해석을 약하게 만드는 신호입니다.",
+            "서로 다른 시장 성격이 동시에 나타나 현재 해석을 약하게 만드는 신호입니다.",
+            "충돌 신호 없음",
         ),
         (
             "missing",
             "자료 부족",
-            "일봉 row가 없어 해당 축의 confidence를 낮추는 선물입니다.",
+            "일봉 row가 없어 현재 confidence를 낮추는 선물입니다.",
+            "자료 부족 없음",
         ),
     ]
     out: list[dict[str, Any]] = []
-    for key, label, description in sections:
+    counts = dict(evidence_groups.get("counts") or {})
+    for key, label, description, empty_label in sections:
         raw_items = list(evidence_groups.get(key) or [])
         out.append(
             {
                 "key": key,
                 "label": label,
                 "description": description,
+                "count": int(counts.get(key) if counts.get(key) is not None else len(raw_items)),
                 "items": [_evidence_item(item, key) for item in raw_items[:8]],
-                "empty_label": "해당 항목 없음",
+                "empty_label": empty_label,
             }
         )
     return out

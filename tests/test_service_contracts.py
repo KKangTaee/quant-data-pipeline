@@ -4687,9 +4687,46 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("개장 전 핵심 · 6개", flattened)
         self.assertIn("6H · 5분 봉 · 핵심 6개", flattened)
         self.assertIn("오래됨", flattened)
-        self.assertIn("선택 선물 1분봉 갱신", flattened)
+        self.assertIn("갱신 필요", flattened)
+        self.assertNotIn("선택 선물 1분봉 갱신", flattened)
         self.assertNotIn("9874", flattened)
         self.assertNotIn("2026-06-22 14:34:00", flattened)
+
+    def test_futures_refresh_module_groups_live_and_macro_actions(self) -> None:
+        from app.web.overview_dashboard import _futures_refresh_module_model
+
+        snapshot = {
+            "status": "REVIEW",
+            "coverage": {
+                "latest_age_minutes": 18,
+                "oldest_age_minutes": 24,
+            },
+        }
+        macro = {
+            "coverage": {
+                "latest_daily_date": "2026-06-19",
+                "standardized_count": 16,
+                "symbol_count": 16,
+            }
+        }
+
+        model = _futures_refresh_module_model(
+            snapshot=snapshot,
+            macro=macro,
+            selected_symbols=["NQ=F", "ZN=F", "CL=F"],
+            refresh_mode="auto_60s",
+        )
+
+        self.assertEqual(model["title"], "자료 갱신")
+        self.assertEqual([item["label"] for item in model["sources"]], ["실시간 차트 자료", "매크로 일봉 자료"])
+        self.assertIn("1분봉", model["sources"][0]["basis"])
+        self.assertIn("선택 선물 3개", model["sources"][0]["detail"])
+        self.assertIn("최신 candle 18분", model["sources"][0]["detail"])
+        self.assertIn("1D OHLCV", model["sources"][1]["basis"])
+        self.assertIn("기준일 2026-06-19", model["sources"][1]["detail"])
+        self.assertIn("16/16", model["sources"][1]["detail"])
+        self.assertEqual([item["label"] for item in model["actions"]], ["1분봉 갱신", "일봉 매크로 갱신", "화면 다시 읽기"])
+        self.assertEqual([mode["label"] for mode in model["modes"]], ["수동", "60초 자동 확인"])
 
     def test_futures_watch_strip_items_show_symbol_state_without_provider_run(self) -> None:
         from app.web.overview_dashboard import _futures_watch_strip_items
@@ -11984,7 +12021,41 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertGreater(card_by_label["금리 부담"]["raw_value"], 0)
         self.assertIn("채권선물", card_by_label["금리 부담"]["meaning"])
 
-    def test_macro_thermometer_returns_korean_evidence_reading(self) -> None:
+    def test_macro_thermometer_returns_current_state_evidence_reading(self) -> None:
+        from app.services.futures_macro_thermometer import build_macro_evidence_reading
+
+        sections = build_macro_evidence_reading(
+            {
+                "strong": ["Rate Pressure Score / ZN=F +1.85z"],
+                "weak": ["Risk-On Score / ES=F +0.42z"],
+                "conflicting": [],
+                "missing": [],
+                "counts": {"strong": 1, "weak": 1, "conflicting": 0, "missing": 0},
+            }
+        )
+
+        self.assertEqual([section["key"] for section in sections], ["strong", "weak", "conflicting", "missing"])
+        self.assertEqual([section["label"] for section in sections], ["강한 근거", "약한 근거", "충돌 근거", "자료 부족"])
+        self.assertEqual([section["count"] for section in sections], [1, 1, 0, 0])
+        empty_labels = {section["key"]: section["empty_label"] for section in sections}
+        self.assertEqual(empty_labels["weak"], "약한 근거 없음")
+        self.assertEqual(empty_labels["conflicting"], "충돌 신호 없음")
+        self.assertEqual(empty_labels["missing"], "자료 부족 없음")
+
+        strong_item = sections[0]["items"][0]
+        self.assertEqual(strong_item["score_label"], "금리 부담")
+        self.assertEqual(strong_item["symbol"], "ZN=F")
+        self.assertEqual(strong_item["contribution_z"], "+1.85z")
+        self.assertEqual(strong_item["impact_label"], "영향 강함")
+        self.assertIn("강화합니다", strong_item["meaning"])
+        flattened = " ".join(
+            str(value)
+            for section in sections
+            for value in [section.get("label"), section.get("description"), section.get("empty_label")]
+        )
+        self.assertNotIn("어떻게 읽을까", flattened)
+
+    def test_macro_thermometer_snapshot_exposes_current_evidence_counts(self) -> None:
         from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
 
         symbols = ["ES=F", "NQ=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "HG=F", "CL=F", "6A=F"]
@@ -11999,13 +12070,14 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             return []
 
         snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
-        sections = {section["label"]: section for section in snapshot["evidence_reading"]}
+        sections = {section["key"]: section for section in snapshot["evidence_reading"]}
 
-        self.assertIn("강하게 말하는 근거", sections)
-        self.assertIn("자료 부족", sections)
-        strong_items = sections["강하게 말하는 근거"]["items"]
+        self.assertIn("strong", sections)
+        self.assertIn("missing", sections)
+        self.assertIn("count", sections["strong"])
+        strong_items = sections["strong"]["items"]
         self.assertTrue(strong_items)
-        self.assertTrue(all("meaning" in item for item in strong_items))
+        self.assertTrue(all({"meaning", "score_label", "symbol", "contribution_z", "impact_label"}.issubset(item) for item in strong_items))
         self.assertTrue(any("금리" in item["meaning"] or "위험선호" in item["meaning"] for item in strong_items))
 
     def test_macro_thermometer_warns_when_daily_history_is_short(self) -> None:
@@ -12053,6 +12125,35 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertGreaterEqual(risk_on_row["Sample 5D"], 1)
         self.assertIsNotNone(risk_on_row["Hit Rate 5D %"])
         self.assertGreaterEqual(risk_on_row["Hit Rate 5D %"], 50)
+
+    def test_macro_validation_summary_focuses_current_scenario_before_raw_tables(self) -> None:
+        from app.services.futures_macro_validation import build_current_scenario_validation_summary
+
+        validation = {
+            "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+            "current_scenario_metrics": {
+                "Scenario": "혼재된 매크로 흐름",
+                "Occurrence Count": 950,
+                "Sample 5D": 0,
+                "Hit Rate 5D %": None,
+                "False Positive 5D %": None,
+                "Max Adverse 5D %": None,
+                "Directional Hit Applicable": False,
+            },
+        }
+
+        summary = build_current_scenario_validation_summary(validation, confidence_label="Medium Confidence")
+
+        self.assertEqual(summary["title"], "과거 점검 요약")
+        self.assertEqual(summary["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(summary["occurrence"]["label"], "과거 발생")
+        self.assertEqual(summary["occurrence"]["value"], "950회")
+        self.assertEqual(summary["coverage"], "1212개 PIT 날짜 · 5.05년")
+        self.assertFalse(summary["hit_rate_applicable"])
+        self.assertIn("방향성 적중률", summary["interpretation"])
+        self.assertIn("현재 confidence를 보조", summary["confidence_effect"])
+        self.assertIn("매수/매도 신호", summary["confidence_effect"])
+        self.assertIn("아닙니다", summary["confidence_effect"])
 
     def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
         from app.services.futures_macro_validation import build_interpretation_confidence

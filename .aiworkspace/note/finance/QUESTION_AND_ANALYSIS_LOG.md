@@ -25,6 +25,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Futures Monitor Workbench V1 still needed product-flow cleanup
+- User request:
+  - 사용자가 Workbench V1 후속으로 `근거를 어떻게 읽을까`, 과거 scenario table, split refresh controls, repeated stale/refresh wording이 아직 prototype-like하다고 지적하고 V1.1 진행을 요청함.
+- Interpreted goal:
+  - 새 기능이 아니라 existing stored futures OHLCV / macro score / validation read model을 `현재 상태 -> 현재 근거 -> 과거 점검 -> 자료 관리 -> 원본 표` 순서로 읽히게 해야 함.
+- Analysis result:
+  - Refresh action ownership은 `자료 갱신` module로 통합하고, context bar는 status only, watch strip은 symbol state, evidence disclosure는 current evidence / validation summary, raw disclosure는 source table을 소유하는 구조가 가장 작은 제품 개선이다.
+- Follow-up:
+  - Workbench V1.1에서 해당 흐름을 구현했다. Provider/schema/DB/registry/saved JSONL, render-time provider fetch, trading/recommendation/validation/monitoring/order semantics는 계속 제외한다.
+
 ### 2026-06-23 - Futures Monitor should read as a workbench, not translated controls
 - User request:
   - 사용자가 이전 결과가 완성된 UI가 아니라 한글 문구만 바꾼 것처럼 보인다고 지적했고, benchmark guide를 바탕으로 순서대로 개발하라고 승인함.

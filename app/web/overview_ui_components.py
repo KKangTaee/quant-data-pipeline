@@ -3185,6 +3185,76 @@ def overview_ui_css() -> str:
   margin-top: 0.14rem;
   overflow-wrap: anywhere;
 }
+.ov-futures-refresh-module {
+  display: grid;
+  gap: var(--ov-mi-gap-md);
+  margin: 0 0 0.48rem 0;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-panel);
+  background: var(--ov-mi-color-surface);
+}
+.ov-futures-refresh-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+}
+.ov-futures-refresh-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-refresh-meta {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.2;
+}
+.ov-futures-refresh-sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+}
+.ov-futures-refresh-source {
+  min-width: 0;
+  padding: 0.58rem 0.66rem;
+  border: 1px solid color-mix(in srgb, var(--ov-refresh-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  border-left: 4px solid var(--ov-refresh-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: color-mix(in srgb, var(--ov-refresh-tone, var(--ov-mi-color-neutral)) 5%, transparent);
+}
+.ov-futures-refresh-source-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+}
+.ov-futures-refresh-source-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ov-mi-gap-sm);
+  margin-top: 0.18rem;
+}
+.ov-futures-refresh-source-main strong {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-value);
+}
+.ov-futures-refresh-source-main span {
+  color: var(--ov-refresh-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-futures-refresh-source-detail {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin-top: 0.14rem;
+  overflow-wrap: anywhere;
+}
 .ov-futures-watch-strip {
   display: grid;
   grid-template-columns: minmax(8rem, 0.22fr) minmax(0, 1fr);
@@ -3658,6 +3728,156 @@ def overview_ui_css() -> str:
   line-height: 1.24;
   overflow-wrap: anywhere;
 }
+.ov-futures-evidence-state,
+.ov-futures-validation-summary,
+.ov-futures-data-management {
+  margin: 0.45rem 0 0.85rem 0;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-panel);
+  background: var(--ov-mi-color-surface);
+}
+.ov-futures-evidence-title,
+.ov-futures-validation-title,
+.ov-futures-data-management-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-evidence-summary,
+.ov-futures-validation-coverage {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.25;
+  margin-top: 0.18rem;
+}
+.ov-futures-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+  margin-top: 0.62rem;
+}
+.ov-futures-evidence-section {
+  min-width: 0;
+  padding: 0.58rem 0.62rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: var(--ov-mi-color-surface-subtle);
+}
+.ov-futures-evidence-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+}
+.ov-futures-evidence-section-head strong {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+}
+.ov-futures-evidence-description,
+.ov-futures-evidence-empty {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  margin-top: 0.22rem;
+}
+.ov-futures-evidence-item {
+  margin-top: 0.46rem;
+  padding-top: 0.42rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-futures-evidence-item-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-value);
+  line-height: 1.2;
+}
+.ov-futures-evidence-item-meta {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.18;
+  margin-top: 0.12rem;
+}
+.ov-futures-evidence-item-meaning {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  margin-top: 0.16rem;
+}
+.ov-futures-validation-head {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-md);
+}
+.ov-futures-validation-scenario {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-value);
+  line-height: 1.22;
+  margin-top: 0.16rem;
+}
+.ov-futures-validation-occurrence {
+  min-width: 8rem;
+  padding: 0.48rem 0.58rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: var(--ov-mi-color-surface-subtle);
+  text-align: right;
+}
+.ov-futures-validation-occurrence span,
+.ov-futures-validation-metric span,
+.ov-futures-data-management-grid span {
+  display: block;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-futures-validation-occurrence strong,
+.ov-futures-validation-metric strong,
+.ov-futures-data-management-grid strong {
+  display: block;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-value);
+  font-weight: var(--ov-mi-weight-value);
+  line-height: 1.18;
+  margin-top: 0.13rem;
+}
+.ov-futures-validation-metrics,
+.ov-futures-data-management-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+  margin-top: 0.58rem;
+}
+.ov-futures-validation-metric,
+.ov-futures-data-management-grid > div {
+  min-width: 0;
+  padding: 0.48rem 0.56rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: var(--ov-mi-color-surface-subtle);
+}
+.ov-futures-validation-copy,
+.ov-futures-validation-effect {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-body);
+  line-height: 1.35;
+  margin-top: 0.55rem;
+}
+.ov-futures-validation-effect {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+}
 @media (max-width: 760px) {
   .ov-mm-status-bar {
     align-items: flex-start;
@@ -3834,8 +4054,22 @@ def overview_ui_css() -> str:
   .ov-futures-workbench-bar,
   .ov-futures-watch-strip,
   .ov-futures-brief,
-  .ov-futures-week-lanes {
+  .ov-futures-week-lanes,
+  .ov-futures-refresh-sources,
+  .ov-futures-evidence-grid,
+  .ov-futures-validation-metrics,
+  .ov-futures-data-management-grid {
     grid-template-columns: 1fr;
+  }
+  .ov-futures-refresh-head,
+  .ov-futures-validation-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ov-futures-validation-occurrence {
+    min-width: 0;
+    text-align: left;
+    width: 100%;
   }
   .ov-futures-watch-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));

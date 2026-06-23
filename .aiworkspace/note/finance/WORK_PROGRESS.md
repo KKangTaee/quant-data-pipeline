@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Futures Monitor Workbench V1.1:
+  - `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`에서 Workbench V1 후속 UX/UI 개선을 완료했다.
+  - `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유하고, context bar는 버튼 문구 반복 없이 상태만 요약한다.
+  - `근거 해석 / 원본 데이터`는 `현재 근거 상태 -> 과거 점검 요약 -> 자료 관리 -> 원본 표` 순서로 재정렬했다.
+  - Focused 98 tests, py_compile, `git diff --check`, Browser QA가 통과했다. Screenshot artifacts는 local generated artifact로만 보존한다.
 - Futures Monitor Workbench Layout V1:
   - `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/`에서 benchmark guide를 코드로 옮겨 `Workspace > Overview > Futures Monitor`를 workbench형 기본 화면으로 재구성했다.
   - 기본 화면은 `context bar -> compact watch strip -> market brief hero -> weekly flow lane -> chart workspace` 순서로 읽고, 심볼 편집 / 갱신 설정 / 원본 근거 / provider diagnostics는 접힌 상세로 낮췄다.
@@ -55,6 +60,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-23 - Futures Monitor Workbench V1.1
+- Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/` for the user-requested Workbench V1 follow-up.
+- Unified refresh actions into `자료 갱신`, separated live 1분봉 and macro daily 1D states, and kept provider/schema/registry/saved boundaries unchanged.
+- Replaced guide-like evidence wording with current-state evidence counts and added current-scenario validation summary before raw tables.
+- Verification passed: focused 98 tests, py_compile, `git diff --check`, Browser QA with generated screenshots.
 
 ### 2026-06-23 - Futures Monitor Workbench Layout V1
 - Opened and completed `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/` after the user approved implementing the benchmark-led Futures Monitor redesign.
