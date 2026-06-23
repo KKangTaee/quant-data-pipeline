@@ -28,11 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-primary-tab-soft-remove-v1-20260623/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-primary-nav-pill-v1-20260623/`
+- 목적: `Workspace > Overview`의 네 개 primary tab을 기본 Streamlit segmented/radio 위젯 느낌이 아니라 제품형 compact navigation으로 보이게 했다.
+- 주요 변경: primary selector를 Korean-first compact pill nav로 바꾸고, English secondary label과 `?overview_tab=market-movers` 같은 query-param slug selection을 추가했다. selected-tab lazy dispatch와 현재 primary tab membership은 유지한다.
+- 이번 차수에서 하지 않은 일: Market Context 내부 old source label 흡수, futures / sector service 또는 renderer helper 물리 삭제, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed task: `.aiworkspace/note/finance/tasks/active/overview-primary-tab-soft-remove-v1-20260623/`
 - 목적: `Workspace > Overview`에서 사용 가치가 선명하지 않은 `Futures Monitor`와 `Sector / Industry` standalone tab을 primary navigation에서 제거하고, Overview를 더 작고 확실한 market context entry로 좁혔다.
 - 주요 변경: primary selector / lazy dispatch는 `Market Context`, `Market Movers`, `Sentiment`, `Events`만 노출한다. 기존 session 또는 deep-link 값이 `Futures Monitor` / `Sector / Industry`를 가리키면 `Market Context`로 fallback한다. IA guide와 durable docs도 현재 primary tab 목록에 맞췄다.
 - 이번 차수에서 하지 않은 일: futures / sector service 또는 renderer helper 물리 삭제, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
-- Previous completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
+- Earlier completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - 목적: `Workspace > Overview > Futures Monitor`의 Workbench V1 후속으로, prototype-like lower evidence / validation / refresh 영역을 제품형 read-only market context 흐름으로 정리했다.
 - 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. `근거 해석 / 원본 데이터`는 `현재 근거 상태 -> 과거 점검 요약 -> 자료 관리 -> 원본 표` 순서로 읽히며, raw scenario / relationship / sensitivity tables는 접힌 원본 상세로 낮췄다.
 - 이번 차수에서 하지 않은 일: provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
@@ -196,6 +200,7 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Overview Primary Nav Pill V1 | Complete | Current Overview primary navigation now renders as a compact custom pill nav with Korean primary labels, English secondary labels, and query-param tab slugs. It replaces the default-looking Streamlit segmented/radio selector while preserving selected-tab lazy dispatch and the four current primary tabs. |
 | Overview Primary Tab Soft Remove V1 | Complete | Current Overview primary tabs are Market Context, Market Movers, Sentiment, and Events. Futures Monitor and Sector / Industry standalone tabs are soft-removed from primary navigation, with stale selected values falling back to Market Context. Futures / sector services and helper renderers are retained for later cleanup or repurpose decision. |
 | Overview IA Cleanup V22 | Complete | Superseded by Overview Primary Tab Soft Remove V1 for current primary tab membership. V22 demoted Data Health to Market Context source / refresh evidence plus Operations / Ingestion ownership and removed Candidate Ops from the Overview render path, while still retaining Futures Monitor and Sector / Industry at that time. Registry / saved data and Backtest / Operations core workflows are unchanged. |
 | Overview Market Context Source Refresh UX V21 | Complete | Market Context source evidence now reads as `자료 상태 요약 -> 시장 브리프 직접 자료 -> 참고 / 관리 자료 -> 보강 판단`, and no-action refresh states use a compact no-action panel plus secondary full refresh instead of a prototype-like disabled action. Refresh action ids and data boundaries are unchanged. |

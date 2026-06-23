@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Primary Nav Pill V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-primary-nav-pill-v1-20260623/`에서 Overview primary navigation을 기본 Streamlit segmented/radio 느낌에서 compact custom pill nav로 바꿨다.
+  - Korean primary labels와 English secondary labels를 함께 두고, `?overview_tab=market-movers` 같은 query-param slug로 직접 탭 선택을 유지한다.
+  - 범위는 visual/navigation polish이며 provider / schema / registry / saved / validation / monitoring / trading boundary는 그대로 유지했다.
 - Overview Primary Tab Soft Remove V1:
   - `.aiworkspace/note/finance/tasks/active/overview-primary-tab-soft-remove-v1-20260623/`에서 Overview primary navigation을 네 탭으로 줄였다.
   - `Futures Monitor`와 `Sector / Industry` standalone tabs는 primary selector / lazy dispatch에서 제거했고, 기존 selected value는 `Market Context`로 fallback한다.
@@ -64,6 +68,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-23 - Overview Primary Nav Pill V1
+- Opened and completed `.aiworkspace/note/finance/tasks/active/overview-primary-nav-pill-v1-20260623/` after the user asked whether the current tab bar could be more designed.
+- Replaced the default-looking Streamlit segmented/radio selector with a scoped compact pill nav for `Market Context`, `Market Movers`, `Sentiment`, and `Events`.
+- Added query-param slugs for direct tab selection and verified `?overview_tab=market-movers` with Browser QA.
+- Boundaries stayed unchanged: no provider/schema/DB/registry/saved write, no validation/monitoring/trading semantics.
 
 ### 2026-06-23 - Overview Primary Tab Soft Remove V1
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-primary-tab-soft-remove-v1-20260623/` after the user decided `Futures Monitor` and `Sector / Industry` did not have clear enough standalone product value.

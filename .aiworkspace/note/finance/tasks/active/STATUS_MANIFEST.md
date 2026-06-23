@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-primary-tab-soft-remove-v1-20260623`
+- `overview-primary-nav-pill-v1-20260623`
 
 Latest completed docs cleanup task:
 
@@ -60,6 +60,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-primary-nav-pill-v1-20260623`: Completed record. `Workspace > Overview` primary navigation now uses a compact custom pill nav with Korean primary labels and English secondary labels instead of the default-looking Streamlit segmented/radio selector. Query-param tab slugs support direct selection such as `?overview_tab=market-movers`. Boundaries stayed visual/navigation-only: no provider / schema / registry / saved / validation / monitoring / trade semantics changed.
 - `overview-primary-tab-soft-remove-v1-20260623`: Completed record. `Workspace > Overview` primary selector now exposes only `Market Context`, `Market Movers`, `Sentiment`, and `Events`. `Futures Monitor` and `Sector / Industry` standalone tabs are soft-removed from primary navigation and old selected values fall back to `Market Context`. Futures / sector services and helper renderers were not physically deleted; no provider / schema / registry / saved / validation / monitoring / trade semantics changed.
 - `overview-ia-cleanup-v22-20260622`: Completed record superseded by `overview-primary-tab-soft-remove-v1-20260623` for current primary tab membership. V22 removed `Data Health` and `Candidate Ops` from the primary selector while still retaining `Futures Monitor` and `Sector / Industry`; V1 soft-remove later removed those two standalone tabs as well. registry / saved JSONL, run history, provider / DB schema, Backtest / validation / monitoring / trade semantics는 변경하지 않았다.
 - `overview-market-context-source-refresh-ux-v21-20260622`: Completed record. `Overview > Market Context` V21 보정으로 `근거: 자료 기준 / 출처 상태`를 긴 진단 표에서 `자료 상태 요약` / `시장 브리프 직접 자료` / `참고 / 관리 자료` / `보강 판단` 흐름으로 바꿨다. `필요 자료 보강`은 실행 대상이 없을 때 disabled smart-refresh button 대신 compact no-action panel과 보조 전체 보강 action만 남긴다. Refresh action id / provider / DB / registry / saved / validation / monitoring / trade semantics는 변경하지 않았다.

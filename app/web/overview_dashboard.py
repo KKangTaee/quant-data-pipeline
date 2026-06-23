@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from html import escape
 from typing import Any, Callable
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import altair as alt
@@ -121,12 +122,25 @@ MARKET_MOVER_PERIOD_LABELS = {
     "yearly": "Yearly",
 }
 OVERVIEW_DEEP_TAB_KEY = "overview_active_deep_tab"
+OVERVIEW_DEEP_TAB_QUERY_PARAM = "overview_tab"
 OVERVIEW_DEEP_TAB_OPTIONS = (
     "Market Context",
     "Market Movers",
     "Sentiment",
     "Events",
 )
+OVERVIEW_DEEP_TAB_DISPLAY = {
+    "Market Context": ("시장 맥락", "Market Context"),
+    "Market Movers": ("변동 종목", "Market Movers"),
+    "Sentiment": ("심리", "Sentiment"),
+    "Events": ("일정", "Events"),
+}
+OVERVIEW_DEEP_TAB_SLUGS = {
+    "Market Context": "market-context",
+    "Market Movers": "market-movers",
+    "Sentiment": "sentiment",
+    "Events": "events",
+}
 GROUP_LEADERSHIP_PERIOD_LABELS = {
     "daily": "Daily",
     "weekly": "Weekly",
@@ -6751,29 +6765,129 @@ def _overview_active_tab_label(value: str | None) -> str:
     return OVERVIEW_DEEP_TAB_OPTIONS[0]
 
 
+def _overview_tab_label_from_slug(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return None
+    for label, slug in OVERVIEW_DEEP_TAB_SLUGS.items():
+        if normalized == slug:
+            return label
+    return None
+
+
+def _overview_query_tab_label() -> str | None:
+    query_params = getattr(st, "query_params", None)
+    if query_params is None:
+        return None
+    try:
+        raw_value = query_params.get(OVERVIEW_DEEP_TAB_QUERY_PARAM)
+    except Exception:
+        return None
+    if isinstance(raw_value, list):
+        raw_value = raw_value[-1] if raw_value else None
+    return _overview_tab_label_from_slug(raw_value)
+
+
+def _overview_tab_href(label: str) -> str:
+    active_label = _overview_active_tab_label(label)
+    slug = OVERVIEW_DEEP_TAB_SLUGS[active_label]
+    return f"?{OVERVIEW_DEEP_TAB_QUERY_PARAM}={quote(slug)}"
+
+
+def _overview_tab_nav_html(active_label: str) -> str:
+    current = _overview_active_tab_label(active_label)
+    items: list[str] = []
+    for label in OVERVIEW_DEEP_TAB_OPTIONS:
+        primary, secondary = OVERVIEW_DEEP_TAB_DISPLAY[label]
+        active = label == current
+        class_name = "ov-primary-nav-item is-active" if active else "ov-primary-nav-item"
+        aria_current = ' aria-current="page"' if active else ""
+        items.append(
+            f'<a class="{class_name}" href="{escape(_overview_tab_href(label))}"{aria_current}>'
+            f'<span class="ov-primary-nav-main">{escape(primary)}</span>'
+            f'<span class="ov-primary-nav-sub">{escape(secondary)}</span>'
+            "</a>"
+        )
+    return (
+        """
+<style>
+.ov-primary-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+  align-items: center;
+  margin: 0.65rem 0 1.22rem 0;
+}
+.ov-primary-nav-item {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 7.6rem;
+  min-height: 3rem;
+  padding: 0.5rem 0.82rem 0.48rem 0.78rem;
+  border: 1px solid rgba(26, 35, 51, 0.12);
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #2f3542;
+  text-decoration: none !important;
+  box-shadow: 0 1px 2px rgba(22, 28, 36, 0.04);
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+.ov-primary-nav-item:hover {
+  border-color: rgba(0, 116, 92, 0.28);
+  background: rgba(246, 251, 249, 0.98);
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(22, 28, 36, 0.06);
+}
+.ov-primary-nav-item.is-active {
+  border-color: rgba(0, 116, 92, 0.32);
+  border-left-color: #00745c;
+  background: #f2faf7;
+  color: #0f3f35;
+  box-shadow: inset 0 0 0 1px rgba(0, 116, 92, 0.08);
+}
+.ov-primary-nav-main {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+.ov-primary-nav-sub {
+  margin-top: 0.18rem;
+  color: rgba(47, 53, 66, 0.62);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+.ov-primary-nav-item.is-active .ov-primary-nav-sub {
+  color: rgba(15, 63, 53, 0.7);
+}
+@media (max-width: 760px) {
+  .ov-primary-nav {
+    gap: 0.42rem;
+  }
+  .ov-primary-nav-item {
+    min-width: calc(50% - 0.24rem);
+    min-height: 2.8rem;
+  }
+}
+</style>
+"""
+        + f'<nav class="ov-primary-nav" aria-label="Overview sections">{"".join(items)}</nav>'
+    )
+
+
 def _render_overview_tab_selector() -> str:
-    current = _overview_active_tab_label(st.session_state.get(OVERVIEW_DEEP_TAB_KEY))
+    current = _overview_query_tab_label() or _overview_active_tab_label(st.session_state.get(OVERVIEW_DEEP_TAB_KEY))
     if st.session_state.get(OVERVIEW_DEEP_TAB_KEY) not in OVERVIEW_DEEP_TAB_OPTIONS:
         st.session_state[OVERVIEW_DEEP_TAB_KEY] = current
+    elif st.session_state.get(OVERVIEW_DEEP_TAB_KEY) != current:
+        st.session_state[OVERVIEW_DEEP_TAB_KEY] = current
 
-    segmented_control = getattr(st, "segmented_control", None)
-    if callable(segmented_control):
-        selected = segmented_control(
-            "Overview 영역",
-            OVERVIEW_DEEP_TAB_OPTIONS,
-            key=OVERVIEW_DEEP_TAB_KEY,
-            label_visibility="collapsed",
-            width="stretch",
-        )
-    else:
-        selected = st.radio(
-            "Overview 영역",
-            OVERVIEW_DEEP_TAB_OPTIONS,
-            key=OVERVIEW_DEEP_TAB_KEY,
-            horizontal=True,
-            label_visibility="collapsed",
-        )
-    return _overview_active_tab_label(str(selected or current))
+    st.markdown(_overview_tab_nav_html(current), unsafe_allow_html=True)
+    return current
 
 
 def _render_selected_overview_tab(

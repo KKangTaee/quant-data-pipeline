@@ -4382,6 +4382,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Data Health", OVERVIEW_DEEP_TAB_OPTIONS)
         self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
 
+    def test_overview_dashboard_primary_selector_uses_custom_pill_nav(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def _render_overview_tab_selector"):]
+        helper_body = helper_body[: helper_body.index("def _render_selected_overview_tab")]
+
+        self.assertIn("_overview_tab_nav_html(", helper_body)
+        self.assertIn("st.markdown(", helper_body)
+        self.assertIn("unsafe_allow_html=True", helper_body)
+        self.assertNotIn("segmented_control", helper_body)
+        self.assertNotIn("st.radio(", helper_body)
+        self.assertIn("ov-primary-nav", source)
+
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
         from app.web.overview_dashboard import _render_selected_overview_tab
 
@@ -4403,6 +4415,28 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(_overview_active_tab_label("Futures Monitor"), "Market Context")
         self.assertEqual(_overview_active_tab_label("Sector / Industry"), "Market Context")
         self.assertEqual(_overview_active_tab_label(None), "Market Context")
+
+    def test_overview_dashboard_pill_nav_slug_contract(self) -> None:
+        from app.web.overview_dashboard import (
+            OVERVIEW_DEEP_TAB_OPTIONS,
+            _overview_tab_href,
+            _overview_tab_label_from_slug,
+            _overview_tab_nav_html,
+        )
+
+        for label in OVERVIEW_DEEP_TAB_OPTIONS:
+            href = _overview_tab_href(label)
+            slug = href.split("overview_tab=", 1)[1]
+            self.assertEqual(_overview_tab_label_from_slug(slug), label)
+
+        html = _overview_tab_nav_html("Market Context")
+
+        self.assertIn('class="ov-primary-nav-item is-active"', html)
+        self.assertIn('aria-current="page"', html)
+        self.assertIn("시장 맥락", html)
+        self.assertIn("변동 종목", html)
+        self.assertIn("심리", html)
+        self.assertIn("일정", html)
 
     def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")

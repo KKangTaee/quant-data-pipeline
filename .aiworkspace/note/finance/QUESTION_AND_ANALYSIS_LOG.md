@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-23 - Overview primary tab bar should feel like product navigation
+
+- User request: 사용자가 현재 Overview tab bar가 기본 segmented control처럼 보이고, 더 디자인적인 tab bar가 없는지 질문한 뒤 진행을 승인함.
+- Interpreted goal: 새 데이터 기능을 추가하는 것이 아니라, 이미 줄인 네 개 primary tab을 더 신뢰감 있는 제품형 navigation으로 보여줘야 함.
+- Analysis result: 현재는 탭 수가 네 개로 줄었기 때문에 full-width segmented bar보다 compact pill nav가 더 적합하다. Korean primary label과 English secondary label을 함께 두면 의미는 유지하면서 화면의 기본 위젯 느낌을 줄일 수 있다.
+- Follow-up: `overview-primary-nav-pill-v1-20260623`에서 custom pill nav와 query-param slug selection을 구현했다. 3차로는 Market Context 내부에 남은 old source label(`Futures Monitor`, `Sector / Industry`)을 흡수형 문구로 바꿀지 별도 판단할 수 있다.
+
 ### 2026-06-23 - Overview primary tab에서 Futures Monitor와 Sector / Industry를 제거한다
 
 - User request: 사용자가 `Futures Monitor`와 `Sector / Industry`를 만들었지만 실제로 어떤 확실한 정보를 얻는지 모르겠고, 잘 모르는 기능을 계속 개선하는 것이 좋은 프로그램으로 이어지지 않는다고 판단해 제거를 승인함.
