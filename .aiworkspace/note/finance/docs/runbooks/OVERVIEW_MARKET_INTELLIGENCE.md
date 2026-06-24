@@ -142,7 +142,7 @@ http://localhost:8501
 
 10. Data Health ownership
    - `Data Health`는 V22부터 `Workspace > Overview` top-level tab이 아니다.
-   - Market Context의 `근거: 자료 기준 / 출처 상태`와 `필요 자료 보강`이 현재 brief에 필요한 source / refresh 판단을 보여준다.
+   - Market Context의 `근거: 자료 기준 / 출처 상태`와 `필요 자료 보강`이 현재 brief에 필요한 direct source / refresh 판단을 보여준다. 이 보강은 S&P 500 movers, sentiment, event calendars만 대상으로 하며 Top1000 / Top2000 / Futures refresh는 Market Movers, Futures Macro, 또는 Ingestion 전용 화면에서 실행한다.
    - 상세 run health, 실패 artifact, log, system snapshot은 `Operations > System / Data Health`와 `Workspace > Ingestion`에서 확인한다.
    - local run history와 DB freshness read model은 유지되지만, Overview 첫 화면의 시장 context 흐름을 대신하지 않는다.
    - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
@@ -281,7 +281,7 @@ PY
 - Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then `시장 심리 읽기 - 6단계` covering current conclusion, why it reads that way, strong signals, weak signals, combined interpretation, and next checks.
 - Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, CNN component learning notes, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
 - Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Operations > System / Data Health` for detailed operational diagnostics.
-- Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
+- Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
 
 ## Failure Handling
@@ -301,7 +301,7 @@ PY
 | Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Market Sentiment collection is partial | CNN or AAII official source changed, blocked the request, or returned an interstitial | Inspect `collect_market_sentiment` job details; refresh later or use Browser check to confirm whether the official public page still shows the table |
 | Sentiment tab still shows only raw cards after deployment | Streamlit served an old imported module or cache schema | Restart the Streamlit process and clear the Overview cache via normal app reload; confirm the top `시장 심리 컨텍스트` band and `분석 체크` section are visible |
-| Market Context source evidence shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run the relevant Market Context / Market Movers refresh for the affected coverage |
+| Market Context source evidence shows stale S&P 500 daily snapshot | Stored 5m S&P 500 snapshot is older than the intraday freshness threshold | Run Market Context `현재 이슈만 보강` or Market Movers S&P 500 refresh |
 | Operations / Ingestion shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Scheduled refresh exits as locked | A previous automation run is still active, or a stale lock file remains | Wait for the run to finish; if the process is gone and the lock is older than the stale threshold, rerun after the CLI clears it |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |

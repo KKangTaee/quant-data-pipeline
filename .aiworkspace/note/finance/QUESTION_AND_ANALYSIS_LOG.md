@@ -8150,3 +8150,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `Market Context`를 기본 첫 화면으로 유지하면서, Streamlit `st.tabs`의 eager render 때문에 다른 Overview deep tab들이 함께 계산되는 문제를 줄여야 함.
 - Analysis result: `st.tabs` body는 비선택 탭도 실행하므로 Market Movers, Futures Monitor, Sentiment, Sector / Industry, Events, Data Health, Candidate Ops가 첫 진입 때 모두 렌더될 수 있었다. Top-level navigation을 selector + selected renderer dispatch로 바꾸는 것이 가장 작고 안전한 변경이다.
 - Follow-up: V20에서 selected-tab lazy render와 Candidate Ops snapshot lazy load를 완료했다. 각 탭 내부 read model / provider / DB / registry / validation / monitoring / trade semantics는 바꾸지 않았다.
+
+### 2026-06-24 - Market Context 보강은 현재 화면 direct 자료로 제한한다
+
+- User request: 사용자가 Market Context 화면 확인에 필요 없는 Top1000 / Top2000 / Futures 보강이 `필요 자료 보강`에 섞여 오래 걸리는지 확인하고, 해당 화면에서는 제외해 달라고 요청함.
+- Interpreted goal: Market Context 보강 버튼은 현재 화면의 Top Mover / Breadth / Events / Sentiment source에 필요한 bounded action만 실행하고, 넓은 universe와 futures refresh는 전용 화면 소유로 분리해야 함.
+- Analysis result: 기존 smart refresh는 Data Health priority item을 그대로 action plan에 넣어 Top1000, Top2000, Futures 1m까지 실행할 수 있었다. 이는 Market Context direct read path보다 넓은 운영 보강이었다.
+- Follow-up: Market Context direct refresh scope를 도입해 Top1000 / Top2000 / Futures action을 제외했다. 전체 Market Context 보강도 S&P 500 movers, sentiment, event calendars만 실행한다.

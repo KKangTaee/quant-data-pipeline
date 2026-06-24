@@ -5264,3 +5264,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 기본 선택은 `Market Context`이며 Market Movers / Futures Monitor / Sentiment / Sector / Industry / Events / Data Health / Candidate Ops는 선택 시점에만 렌더된다.
   - Candidate Ops dashboard snapshot load도 Candidate Ops branch 안으로 지연했고, 각 탭 내부 read model / data boundary / trade semantics는 바꾸지 않았다.
   - 검증은 RED/GREEN focused tests, OverviewAutomationContractTests 68개, `tests/test_service_contracts.py` 384개, py_compile, `git diff --check`, Streamlit Browser QA와 screenshot으로 완료했다.
+- Overview Market Context Direct Refresh Scope 2026-06-24:
+  - Market Context `필요 자료 보강`은 현재 화면 direct 자료만 실행하도록 좁혔다.
+  - Top1000 / Top2000 / Futures refresh는 Market Context 보강에서 제외하고 Market Movers / Futures Macro / Ingestion 전용 흐름에 남겼다.
+  - 현재 DB 기준 `현재 이슈만 보강`은 S&P 500 Daily Snapshot 1개만 남는 것을 확인했다.
+  - 관련 경계는 `PROJECT_MAP.md`, `SCRIPT_STRUCTURE_MAP.md`, `OVERVIEW_MARKET_INTELLIGENCE.md`에 반영했다.

@@ -341,25 +341,12 @@ def _overview_market_context_refresh_steps(
     futures_symbols: Iterable[str],
     futures_cadence_mode: str,
 ) -> list[tuple[str, Callable[[], JobResult]]]:
-    selected_futures = list(futures_symbols)
+    del futures_symbols, futures_cadence_mode
     actions: dict[str, tuple[str, Callable[[], JobResult]]] = {
         "sp500_intraday_snapshot": (
             "S&P 500 Market Movers",
             lambda: run_overview_market_intraday_snapshot(universe_code="SP500", universe_limit=500),
         ),
-        "top1000_intraday_snapshot": (
-            "Top1000 Market Movers",
-            lambda: run_overview_market_intraday_snapshot(universe_code="TOP1000", universe_limit=1000),
-        ),
-        "top2000_intraday_snapshot": (
-            "Top2000 Market Movers",
-            lambda: run_overview_market_intraday_snapshot(universe_code="TOP2000", universe_limit=2000),
-        ),
-        "futures_1m": (
-            "Futures Monitor 1m OHLCV",
-            lambda: run_overview_futures_ohlcv(symbols=selected_futures, cadence_mode=futures_cadence_mode),
-        ),
-        "futures_daily": ("Futures Macro Daily OHLCV", run_overview_futures_daily_ohlcv),
         "market_sentiment": ("Market Sentiment", run_overview_market_sentiment),
         "fomc_calendar": ("FOMC Calendar", lambda: run_overview_fomc_calendar(years=years)),
         "earnings_calendar": ("Earnings Calendar", run_overview_earnings_calendar),
@@ -446,8 +433,6 @@ def run_overview_market_context_refresh_all(
     target_years = tuple(years or (current_year, current_year + 1))
     all_action_ids = (
         "sp500_intraday_snapshot",
-        "futures_1m",
-        "futures_daily",
         "market_sentiment",
         "fomc_calendar",
         "earnings_calendar",

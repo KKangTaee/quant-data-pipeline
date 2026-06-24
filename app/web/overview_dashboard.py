@@ -2277,7 +2277,7 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
                 key="overview_market_context_refresh_all",
                 use_container_width=True,
                 type="secondary",
-                help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 모두 갱신합니다.",
+                help="S&P 500 movers, sentiment, FOMC/earnings/macro calendar를 갱신합니다. Top1000/Top2000/Futures는 각 전용 화면에서 관리합니다.",
             ):
                 current_year = datetime.now().year
                 with st.spinner("Market Context 전체 자료를 갱신하는 중입니다..."):
@@ -2318,7 +2318,7 @@ def _render_overview_market_context_refresh_bar(cockpit_model: dict[str, Any]) -
                 key="overview_market_context_refresh_all",
                 use_container_width=True,
                 type="secondary",
-                help="S&P 500 movers, futures 1m/daily, sentiment, FOMC/earnings/macro calendar를 모두 갱신합니다.",
+                help="S&P 500 movers, sentiment, FOMC/earnings/macro calendar를 갱신합니다. Top1000/Top2000/Futures는 각 전용 화면에서 관리합니다.",
             ):
                 current_year = datetime.now().year
                 with st.spinner("Market Context 전체 자료를 갱신하는 중입니다..."):

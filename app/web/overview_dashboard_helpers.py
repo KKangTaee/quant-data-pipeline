@@ -579,4 +579,5 @@ def load_overview_macro_context_cockpit(
         historical_analog_snapshot=historical_analog_snapshot,
         market_session_context=market_session_context,
         include_futures_macro=include_futures_macro,
+        direct_market_context_refresh_only=True,
     )

@@ -5688,6 +5688,14 @@ REFRESH_PLAN_ACTION_ORDER = {
     "macro_calendar": 41,
     "earnings_calendar": 50,
 }
+MARKET_CONTEXT_DIRECT_REFRESH_AREAS = {
+    "S&P 500 Daily Snapshot",
+    "S&P 500 Universe",
+    "Market Sentiment",
+    "FOMC Calendar",
+    "Macro Calendar",
+    "Earnings Calendar",
+}
 
 
 def _refresh_plan_item(
@@ -5741,6 +5749,7 @@ def _cockpit_refresh_plan(
     findings: list[dict[str, Any]],
     data_health_handoff: dict[str, Any],
     market_session_context: dict[str, Any] | None = None,
+    direct_market_context_refresh_only: bool = False,
 ) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     excluded_items: list[dict[str, Any]] = []
@@ -5770,6 +5779,8 @@ def _cockpit_refresh_plan(
         if not isinstance(priority_item, dict):
             continue
         source_area = str(priority_item.get("area") or "").strip()
+        if direct_market_context_refresh_only and source_area not in MARKET_CONTEXT_DIRECT_REFRESH_AREAS:
+            continue
         if _closed_session_intraday_stale(priority_item.get("status"), source_area, market_session_context):
             continue
         item = _refresh_plan_item(
@@ -5844,6 +5855,7 @@ def build_overview_macro_context_cockpit(
     historical_analog_snapshot: dict[str, Any] | None = None,
     market_session_context: dict[str, Any] | None = None,
     include_futures_macro: bool = True,
+    direct_market_context_refresh_only: bool = False,
 ) -> dict[str, Any]:
     """Build a summary-first Overview cockpit from existing read-only market context snapshots."""
     if market_movers_snapshot is None:
@@ -5945,6 +5957,7 @@ def build_overview_macro_context_cockpit(
         findings=brief_context_findings,
         data_health_handoff=data_health_handoff,
         market_session_context=market_session,
+        direct_market_context_refresh_only=direct_market_context_refresh_only,
     )
     refresh_summary = dict(refresh_plan.get("summary") or {})
     actionable_refresh_count = _cockpit_int(refresh_summary.get("action_count"))

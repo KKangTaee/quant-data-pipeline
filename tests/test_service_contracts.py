@@ -6185,14 +6185,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(summary["job_name"], "overview_market_context_refresh_all")
         self.assertEqual(summary["status"], "partial_success")
-        self.assertEqual(summary["jobs_run"], 7)
+        self.assertEqual(summary["jobs_run"], 5)
         self.assertEqual(summary["jobs_failed"], 0)
         self.assertEqual(
             calls,
             [
                 "market_intraday",
-                "futures_1m",
-                "futures_daily",
                 "market_sentiment",
                 "fomc_calendar",
                 "earnings_calendar",
@@ -6200,8 +6198,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ],
         )
         market_snapshot.assert_called_once_with(universe_code="SP500", universe_limit=500)
-        futures_1m.assert_called_once_with(symbols=["ES=F", "NQ=F"], cadence_mode="manual_bundle")
-        futures_daily.assert_called_once_with()
+        futures_1m.assert_not_called()
+        futures_daily.assert_not_called()
         sentiment.assert_called_once_with()
         fomc.assert_called_once_with(years=(2026, 2027))
         earnings.assert_called_once_with()
@@ -6254,18 +6252,24 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ) as macro,
         ):
             summary = overview_actions.run_overview_market_context_refresh_smart(
-                action_ids=("futures_1m", "earnings_calendar"),
+                action_ids=(
+                    "top1000_intraday_snapshot",
+                    "top2000_intraday_snapshot",
+                    "futures_1m",
+                    "futures_daily",
+                    "earnings_calendar",
+                ),
                 years=(2026, 2027),
                 futures_symbols=("ES=F", "NQ=F"),
             )
 
         self.assertEqual(summary["job_name"], "overview_market_context_refresh_smart")
         self.assertEqual(summary["status"], "partial_success")
-        self.assertEqual(summary["jobs_run"], 2)
+        self.assertEqual(summary["jobs_run"], 1)
         self.assertEqual(summary["jobs_failed"], 0)
-        self.assertEqual(calls, ["futures_1m", "earnings_calendar"])
+        self.assertEqual(calls, ["earnings_calendar"])
         market_snapshot.assert_not_called()
-        futures_1m.assert_called_once_with(symbols=["ES=F", "NQ=F"], cadence_mode="smart_refresh")
+        futures_1m.assert_not_called()
         futures_daily.assert_not_called()
         sentiment.assert_not_called()
         fomc.assert_not_called()
@@ -9571,10 +9575,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 ),
             },
             collection_ops_snapshot={
-                "status": "OK",
-                "coverage": {"ok_count": 5, "due_count": 0, "stale_count": 0, "partial_count": 0, "missing_count": 0, "failed_count": 0},
-                "rows": pd.DataFrame(),
+                "status": "REVIEW",
+                "coverage": {"ok_count": 2, "due_count": 1, "stale_count": 3, "partial_count": 1, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "Top1000 Daily Snapshot", "Status": "Partial", "Data Freshness": "11m old", "Next Action": "Refresh Top1000."},
+                        {"Area": "Top2000 Daily Snapshot", "Status": "Stale", "Data Freshness": "37m old", "Next Action": "Refresh Top2000."},
+                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Stale", "Data Freshness": "47m old", "Next Action": "Refresh futures."},
+                        {"Area": "Earnings Calendar", "Status": "Partial", "Data Freshness": "covered 1/2", "Next Action": "Inspect failed symbols."},
+                    ]
+                ),
             },
+            direct_market_context_refresh_only=True,
         )
 
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "sentiment", "events", "data"])
@@ -9590,6 +9602,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("Macro", [item["label"] for item in cockpit["summary"]["rail"]])
         self.assertNotIn("futures", [card["id"] for card in cockpit["cards"]])
         self.assertNotIn("futures", [item["id"] for item in cockpit["source_confidence"]["items"]])
+        self.assertEqual(cockpit["refresh_plan"]["action_ids"], ["earnings_calendar"])
+        refresh_sources = [item["source_area"] for item in cockpit["refresh_plan"]["items"]]
+        self.assertNotIn("Top1000 Daily Snapshot", refresh_sources)
+        self.assertNotIn("Top2000 Daily Snapshot", refresh_sources)
+        self.assertNotIn("Futures Monitor 1m OHLCV", refresh_sources)
         summary_copy = f"{cockpit['summary']['headline']} {cockpit['summary']['detail']}"
         self.assertNotIn("macro", summary_copy.lower())
         self.assertNotIn("선물/매크로", summary_copy)
