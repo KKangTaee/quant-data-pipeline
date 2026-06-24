@@ -12,3 +12,16 @@
   - Result: passed 98 tests.
 - Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
   - Result: Market Context rendered with current session copy `장 마감 기준 시장 브리프`; Events rendered after tab switch; current browser console reported 0 errors. Screenshot: `overview-legacy-cleanup-v6-qa.png`.
+
+## V7 Navigation Surface Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_navigation_surface_owns_selector_entrypoints tests.test_service_contracts.OverviewAutomationContractTests.test_overview_page_uses_navigation_surface_instead_of_legacy_selector_body tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_primary_selector_uses_internal_pill_widget`
+  - Result: failed because `app/web/overview/navigation.py` did not exist and `page.py` still called legacy selector helpers.
+- GREEN focused: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_navigation_surface_owns_selector_entrypoints tests.test_service_contracts.OverviewAutomationContractTests.test_overview_page_uses_navigation_surface_instead_of_legacy_selector_body tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_primary_selector_uses_internal_pill_widget tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_dispatches_only_selected_deep_tab tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_defaults_unknown_deep_tab_to_market_context tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_pill_nav_slug_contract`
+  - Result: passed 6 tests.
+- Compile: `.venv/bin/python -m py_compile app/web/overview/navigation.py app/web/overview/page.py app/web/overview/legacy_dashboard.py tests/test_service_contracts.py`
+  - Result: passed.
+- Overview contract: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: passed 100 tests.
+- Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
+  - Result: Market Context rendered; Futures Macro tab switched through the navigation surface; current browser console reported 0 errors. Screenshot: `overview-legacy-cleanup-v7-qa.png`.

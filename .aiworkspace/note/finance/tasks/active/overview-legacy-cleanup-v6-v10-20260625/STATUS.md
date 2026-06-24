@@ -4,3 +4,4 @@
 
 - Started V6-V10 sequential cleanup after the user approved phased development with QA after each phase.
 - V6 complete: audited active legacy calls, retained compatibility names, removable standalone tab wrappers, and Candidate Ops snapshot helpers.
+- V7 complete: moved Overview primary navigation constants / selector functions into `app/web/overview/navigation.py`; active page now imports the navigation surface directly while legacy keeps compatibility imports.

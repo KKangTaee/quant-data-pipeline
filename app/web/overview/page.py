@@ -11,6 +11,10 @@ from app.web.overview.events import render_events_tab
 from app.web.overview.futures_macro import render_futures_macro_tab
 from app.web.overview.market_context import render_market_context_tab
 from app.web.overview.market_movers import render_market_movers_tab
+from app.web.overview.navigation import (
+    _render_overview_tab_selector,
+    _render_selected_overview_tab,
+)
 from app.web.overview.sentiment import render_sentiment_tab
 
 
@@ -29,8 +33,8 @@ def render_overview_dashboard(
     st.caption("저장된 시장 자료를 브리프처럼 읽고, 필요한 세부 근거는 각 탭에서 이어서 확인합니다.")
     render_market_session_banner(_legacy._market_session_banner_model())
 
-    active_tab = _legacy._render_overview_tab_selector()
-    _legacy._render_selected_overview_tab(
+    active_tab = _render_overview_tab_selector()
+    _render_selected_overview_tab(
         active_tab,
         renderers={
             "Market Context": render_market_context_tab,

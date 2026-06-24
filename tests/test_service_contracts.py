@@ -4578,6 +4578,37 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("`load_overview_dashboard_snapshot`", audit)
         self.assertIn("Candidate Ops", audit)
 
+    def test_overview_navigation_surface_owns_selector_entrypoints(self) -> None:
+        from app.web.overview import navigation
+
+        self.assertEqual(
+            navigation.OVERVIEW_DEEP_TAB_OPTIONS,
+            (
+                "Market Context",
+                "Market Movers",
+                "Futures Macro",
+                "Sentiment",
+                "Events",
+            ),
+        )
+        self.assertTrue(callable(navigation._render_overview_tab_selector))
+        self.assertTrue(callable(navigation._render_selected_overview_tab))
+        source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+        self.assertIn("def _render_overview_tab_selector", source)
+        self.assertIn("def _render_selected_overview_tab", source)
+
+    def test_overview_page_uses_navigation_surface_instead_of_legacy_selector_body(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.navigation import (", page_source)
+        self.assertIn("_render_overview_tab_selector()", page_source)
+        self.assertIn("_render_selected_overview_tab(", page_source)
+        self.assertNotIn("_legacy._render_overview_tab_selector()", page_source)
+        self.assertNotIn("_legacy._render_selected_overview_tab(", page_source)
+        self.assertNotIn("def _render_overview_tab_selector", legacy_source)
+        self.assertNotIn("def _render_selected_overview_tab", legacy_source)
+
     def test_overview_service_surfaces_stay_streamlit_free(self) -> None:
         import ast
 
@@ -4718,7 +4749,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
 
     def test_overview_dashboard_primary_selector_uses_internal_pill_widget(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def _render_overview_tab_selector"):]
         helper_body = helper_body[: helper_body.index("def _render_selected_overview_tab")]
 
