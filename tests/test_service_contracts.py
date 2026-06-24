@@ -4482,20 +4482,30 @@ class OverviewAutomationContractTests(unittest.TestCase):
         style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
         controls_body = source[source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
+        panel_body = source[source.index("def _render_futures_macro_panel") :]
+        panel_body = panel_body[: panel_body.index("def _render_futures_macro_fragment")]
         tab_body = source[source.index("def _render_futures_macro_tab") :]
         tab_body = tab_body[: tab_body.index("def _render_futures_mini_chart_grid")]
 
-        self.assertIn("_render_futures_macro_refresh_controls()", tab_body)
+        self.assertNotIn("_render_futures_macro_refresh_controls()", tab_body)
+        self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
+        self.assertIn("section_detail=", panel_body)
+        self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
         self.assertIn("_run_futures_daily_ohlcv_action()", controls_body)
         self.assertIn("clear_overview_futures_macro_snapshot_cache()", controls_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
-        self.assertIn("데이터 작업", controls_body)
+        self.assertIn("ov-futures-macro-action-title", controls_body)
+        self.assertIn("ov-futures-macro-action-rule", controls_body)
+        self.assertIn("section_detail", controls_body)
+        self.assertNotIn("데이터 작업", controls_body)
         self.assertIn("st.columns([1, 0.16, 0.16]", controls_body)
         self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
         self.assertIn('"일봉 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
+        self.assertIn(".ov-futures-macro-action-title", style_source)
+        self.assertIn(".ov-futures-macro-action-rule", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
 

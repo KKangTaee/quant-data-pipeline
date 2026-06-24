@@ -3518,20 +3518,33 @@ def overview_ui_css() -> str:
 }
 .ov-futures-macro-action-copy {
   min-width: 0;
-  padding: 0.12rem 0 0.16rem 0;
+  padding: 0.04rem 0 0.1rem 0;
 }
-.ov-futures-macro-action-label {
+.ov-futures-macro-action-title {
   color: var(--ov-mi-color-text);
-  font-size: var(--ov-mi-font-body);
+  font-size: var(--ov-mi-font-title);
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.2;
 }
-.ov-futures-macro-action-detail {
-  color: var(--ov-mi-color-text-muted);
+.ov-futures-macro-action-meta {
+  color: color-mix(in srgb, currentColor 72%, transparent);
   font-size: var(--ov-mi-font-caption);
-  line-height: 1.32;
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.28;
   margin-top: 0.12rem;
   overflow-wrap: anywhere;
+}
+.ov-futures-macro-action-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.26;
+  margin-top: 0.12rem;
+  overflow-wrap: anywhere;
+}
+.ov-futures-macro-action-rule {
+  height: 1px;
+  margin: 0.04rem 0 0.62rem 0;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
 }
 .st-key-overview_futures_macro_tab_daily_refresh button,
 .st-key-overview_futures_macro_tab_reload button {

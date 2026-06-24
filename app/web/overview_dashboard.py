@@ -4071,20 +4071,23 @@ def _render_futures_macro_raw_tables(
                 st.caption(caution)
 
 
-def _render_futures_macro_refresh_controls() -> None:
+def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
     refreshed_at = st.session_state.get("overview_futures_macro_daily_refreshed_at")
     reloaded_at = st.session_state.get("overview_futures_macro_reloaded_at")
     status_text = refreshed_at or reloaded_at
     status_label = "최근 일봉 갱신" if refreshed_at else "최근 다시 읽기"
-    detail = "저장된 일봉 수집 또는 현재 DB 기준으로 다시 계산"
+    status_detail = ""
     if status_text:
-        detail = f"{detail} · {status_label}: {status_text}"
+        status_detail = (
+            f'<div class="ov-futures-macro-action-detail">{escape(status_label)}: {escape(str(status_text))}</div>'
+        )
     cols = st.columns([1, 0.16, 0.16], gap="small", vertical_alignment="center")
     cols[0].markdown(
         f"""
         <div class="ov-futures-macro-action-copy">
-          <div class="ov-futures-macro-action-label">데이터 작업</div>
-          <div class="ov-futures-macro-action-detail">{escape(detail)}</div>
+          <div class="ov-futures-macro-action-title">매크로 컨텍스트</div>
+          <div class="ov-futures-macro-action-meta">{escape(section_detail)}</div>
+          {status_detail}
         </div>
         """,
         unsafe_allow_html=True,
@@ -4112,6 +4115,7 @@ def _render_futures_macro_refresh_controls() -> None:
         clear_overview_futures_macro_snapshot_cache()
         st.session_state["overview_futures_macro_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
+    st.markdown('<div class="ov-futures-macro-action-rule"></div>', unsafe_allow_html=True)
 
 
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
@@ -4124,9 +4128,11 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     confidence = dict(macro.get("confidence") or {})
     validation = dict(macro.get("validation") or {})
 
-    _render_futures_section_header(
-        "매크로 컨텍스트",
-        f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개 · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}",
+    _render_futures_macro_refresh_controls(
+        section_detail=(
+            f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개"
+            f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}"
+        ),
     )
     _render_futures_market_brief(macro)
     _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
@@ -4162,7 +4168,6 @@ def _render_futures_macro_fragment(*, detail_expanded: bool = False) -> None:
 def _render_futures_macro_tab() -> None:
     st.markdown("### 선물 매크로")
     st.caption("저장된 선물 일봉으로 현재 macro 상태와 과거 점검 근거를 함께 확인합니다.")
-    _render_futures_macro_refresh_controls()
     _render_futures_macro_fragment(detail_expanded=True)
 
 
