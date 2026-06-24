@@ -4403,6 +4403,65 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('"Sentiment": render_sentiment_tab', render_body)
         self.assertIn('"Events": render_events_tab', render_body)
 
+    def test_overview_primary_tab_modules_own_tab_orchestration(self) -> None:
+        module_contracts = {
+            "app/web/overview/market_context.py": {
+                "entrypoint": "def render_market_context_tab",
+                "forbidden": "_legacy._render_overview_market_context_tab",
+                "required": [
+                    '_legacy.st.markdown("### 시장 맥락")',
+                    "_legacy.load_overview_macro_context_cockpit(",
+                    "_legacy.render_macro_context_cockpit(",
+                    "_legacy._render_overview_market_context_refresh_bar(",
+                ],
+            },
+            "app/web/overview/market_movers.py": {
+                "entrypoint": "def render_market_movers_tab",
+                "forbidden": "_legacy._render_market_movers_tab",
+                "required": [
+                    '_legacy.st.markdown("### Market Movers")',
+                    "_legacy._render_market_movers_controls()",
+                    "_legacy._render_market_movers_refresh_bar(",
+                    "_legacy._render_market_movers_snapshot_panel(",
+                ],
+            },
+            "app/web/overview/futures_macro.py": {
+                "entrypoint": "def render_futures_macro_tab",
+                "forbidden": "_legacy._render_futures_macro_tab",
+                "required": [
+                    '_legacy.st.markdown("### 선물 매크로")',
+                    "_legacy._render_futures_macro_fragment(detail_expanded=True)",
+                ],
+            },
+            "app/web/overview/sentiment.py": {
+                "entrypoint": "def render_sentiment_tab",
+                "forbidden": "_legacy._render_market_sentiment_tab",
+                "required": [
+                    '_legacy.st.markdown("### 시장 심리 컨텍스트")',
+                    "_legacy.run_overview_market_sentiment()",
+                    "_legacy.load_overview_market_sentiment_snapshot()",
+                    "_legacy._render_sentiment_analysis_panel(",
+                ],
+            },
+            "app/web/overview/events.py": {
+                "entrypoint": "def render_events_tab",
+                "forbidden": "_legacy._render_events_tab",
+                "required": [
+                    '_legacy.st.markdown("### Events")',
+                    "_legacy._render_event_refresh_toolbar()",
+                    "_legacy.load_overview_market_events_snapshot(",
+                    "_legacy.render_macro_week_lane(",
+                ],
+            },
+        }
+
+        for path, contract in module_contracts.items():
+            source = Path(path).read_text(encoding="utf-8")
+            self.assertIn(contract["entrypoint"], source)
+            self.assertNotIn(contract["forbidden"], source)
+            for required in contract["required"]:
+                self.assertIn(required, source)
+
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
         source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
