@@ -4072,12 +4072,19 @@ def _render_futures_macro_raw_tables(
 
 
 def _render_futures_macro_refresh_controls() -> None:
-    cols = st.columns([2.05, 0.62, 0.62, 1.25], gap="small", vertical_alignment="center")
+    refreshed_at = st.session_state.get("overview_futures_macro_daily_refreshed_at")
+    reloaded_at = st.session_state.get("overview_futures_macro_reloaded_at")
+    status_text = refreshed_at or reloaded_at
+    status_label = "최근 일봉 갱신" if refreshed_at else "최근 다시 읽기"
+    detail = "저장된 일봉 수집 또는 현재 DB 기준으로 다시 계산"
+    if status_text:
+        detail = f"{detail} · {status_label}: {status_text}"
+    cols = st.columns([1, 0.16, 0.16], gap="small", vertical_alignment="center")
     cols[0].markdown(
-        """
+        f"""
         <div class="ov-futures-macro-action-copy">
           <div class="ov-futures-macro-action-label">데이터 작업</div>
-          <div class="ov-futures-macro-action-detail">저장된 일봉 수집 또는 현재 DB 기준으로 다시 계산</div>
+          <div class="ov-futures-macro-action-detail">{escape(detail)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -4105,12 +4112,6 @@ def _render_futures_macro_refresh_controls() -> None:
         clear_overview_futures_macro_snapshot_cache()
         st.session_state["overview_futures_macro_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
-    refreshed_at = st.session_state.get("overview_futures_macro_daily_refreshed_at")
-    reloaded_at = st.session_state.get("overview_futures_macro_reloaded_at")
-    status_text = refreshed_at or reloaded_at
-    if status_text:
-        label = "최근 일봉 갱신" if refreshed_at else "최근 다시 읽기"
-        cols[3].caption(f"{label}: {status_text}")
 
 
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:

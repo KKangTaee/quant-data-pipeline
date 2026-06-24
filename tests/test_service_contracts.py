@@ -4492,6 +4492,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
         self.assertIn("데이터 작업", controls_body)
+        self.assertIn("st.columns([1, 0.16, 0.16]", controls_body)
+        self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
         self.assertIn('"일봉 갱신"', controls_body)
         self.assertIn('"다시 읽기"', controls_body)
         self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
