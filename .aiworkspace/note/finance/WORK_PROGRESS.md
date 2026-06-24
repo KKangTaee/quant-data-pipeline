@@ -5269,3 +5269,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Top1000 / Top2000 / Futures refresh는 Market Context 보강에서 제외하고 Market Movers / Futures Macro / Ingestion 전용 흐름에 남겼다.
   - 현재 DB 기준 `현재 이슈만 보강`은 S&P 500 Daily Snapshot 1개만 남는 것을 확인했다.
   - 관련 경계는 `PROJECT_MAP.md`, `SCRIPT_STRUCTURE_MAP.md`, `OVERVIEW_MARKET_INTELLIGENCE.md`에 반영했다.
+- Overview Tab Module Split V1 2026-06-25:
+  - `app/web/overview_dashboard.py`를 compatibility wrapper로 줄이고 active page shell을 `app/web/overview/page.py`로 분리했다.
+  - Market Context / Market Movers / Futures Macro / Sentiment / Events primary tab entry modules를 `app/web/overview/` 아래에 추가했다.
+  - 기존 monolithic helper 구현은 `app/web/overview/legacy_dashboard.py`에 보존했다. V2는 탭별 helper / controls 이동이다.
+  - 작업 기록은 `.aiworkspace/note/finance/tasks/active/overview-tab-module-split-v1-20260625/`를 보면 된다.

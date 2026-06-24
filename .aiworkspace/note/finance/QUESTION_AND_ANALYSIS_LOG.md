@@ -8157,3 +8157,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Market Context 보강 버튼은 현재 화면의 Top Mover / Breadth / Events / Sentiment source에 필요한 bounded action만 실행하고, 넓은 universe와 futures refresh는 전용 화면 소유로 분리해야 함.
 - Analysis result: 기존 smart refresh는 Data Health priority item을 그대로 action plan에 넣어 Top1000, Top2000, Futures 1m까지 실행할 수 있었다. 이는 Market Context direct read path보다 넓은 운영 보강이었다.
 - Follow-up: Market Context direct refresh scope를 도입해 Top1000 / Top2000 / Futures action을 제외했다. 전체 Market Context 보강도 S&P 500 movers, sentiment, event calendars만 실행한다.
+
+### 2026-06-25 - Overview UI 구조를 page / tab entrypoint로 1차 분리한다
+
+- User request: 사용자가 Overview의 UI 노출과 엔진 분리를 명확히 관리해야 하며, 1차 구조 분리와 QA를 진행해 달라고 요청함.
+- Interpreted goal: 동작을 바꾸지 않고 active Overview shell과 primary tab entrypoint를 `app/web/overview/` package로 나눠 다음 차수의 탭별 helper 이동 기반을 만든다.
+- Analysis result: 엔진/read model은 이미 Streamlit-free service에 있으나, UI 파일은 monolithic이었다. 단번에 helper까지 모두 이동하면 기존 private helper contract와 회귀 위험이 커서 V1에서는 wrapper / page shell / tab entrypoint만 분리하는 것이 안전하다.
+- Follow-up: `overview_dashboard.py`는 compatibility wrapper가 되었고, active shell은 `overview/page.py`, tab entry는 `overview/{market_context,market_movers,futures_macro,sentiment,events}.py`가 소유한다. 기존 구현은 `legacy_dashboard.py`에 남아 있으며 V2에서 탭별 helper 이동을 진행한다.

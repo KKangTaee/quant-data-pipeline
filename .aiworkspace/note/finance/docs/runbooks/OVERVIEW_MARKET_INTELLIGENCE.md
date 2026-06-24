@@ -309,7 +309,7 @@ PY
 ## Verification Commands
 
 ```bash
-uv run python -m py_compile app/web/overview_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
+uv run python -m py_compile app/web/overview_dashboard.py app/web/overview/page.py app/web/overview/market_context.py app/web/overview/market_movers.py app/web/overview/futures_macro.py app/web/overview/sentiment.py app/web/overview/events.py app/web/overview/legacy_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
 uv run python -m unittest tests.test_service_contracts
 uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 git diff --check
