@@ -1172,9 +1172,11 @@ def _query_latest_raw_date(query_fn: QueryFn, *, end_date: str | None = None) ->
     rows = query_fn(
         "finance_price",
         f"""
-        SELECT MAX(`date`) AS latest_raw_date
-        FROM nyse_price_history
+        SELECT `date` AS latest_raw_date
+        FROM nyse_price_history FORCE INDEX (ix_date)
         WHERE {" AND ".join(conditions)}
+        ORDER BY `date` DESC
+        LIMIT 1
         """,
         params,
     )
@@ -4512,6 +4514,7 @@ def build_overview_source_confidence_catalog(
     events_snapshot: dict[str, Any] | None = None,
     collection_ops_snapshot: dict[str, Any] | None = None,
     market_session_context: dict[str, Any] | None = None,
+    include_futures_context: bool = True,
 ) -> dict[str, Any]:
     """Build a read-only source/provider confidence catalog from already loaded Overview snapshots."""
     movers = market_movers_snapshot or {}
@@ -4599,17 +4602,23 @@ def build_overview_source_confidence_catalog(
             caveat="시장 폭은 참여도와 집중도를 요약할 뿐 종목 선택 규칙이 아닙니다.",
             next_check="Sector / Industry freshness와 그룹 coverage가 breadth 맥락의 주의점입니다.",
         ),
-        _source_confidence_item(
-            item_id="futures",
-            title="Futures Context",
-            surface="Futures Monitor",
-            source="Stored futures OHLCV read by Macro Thermometer",
-            owner="Workspace > Ingestion futures collector / Overview bounded refresh",
-            status=futures_status,
-            freshness=futures_coverage.get("latest_date") or futures_coverage.get("latest_candle_time"),
-            detail=f"{standardized_count}/{futures_symbol_count} futures symbols standardized",
-            caveat="무료 선물 provider 기반의 배경 자료입니다. 오래됨과 공백은 그대로 보이며 신뢰 보장이 아닙니다.",
-            next_check="Futures Monitor의 risk-on, 금리 압력, 안전자산 근거가 macro 배경 자료입니다.",
+        *(
+            [
+                _source_confidence_item(
+                    item_id="futures",
+                    title="Futures Context",
+                    surface="Futures Macro",
+                    source="Stored futures OHLCV read by Macro Thermometer",
+                    owner="Workspace > Ingestion futures collector / Overview bounded refresh",
+                    status=futures_status,
+                    freshness=futures_coverage.get("latest_date") or futures_coverage.get("latest_candle_time"),
+                    detail=f"{standardized_count}/{futures_symbol_count} futures symbols standardized",
+                    caveat="무료 선물 provider 기반의 배경 자료입니다. 오래됨과 공백은 그대로 보이며 신뢰 보장이 아닙니다.",
+                    next_check="Futures Macro의 risk-on, 금리 압력, 안전자산 근거가 macro 배경 자료입니다.",
+                )
+            ]
+            if include_futures_context
+            else []
         ),
         _source_confidence_item(
             item_id="sentiment",
@@ -4908,12 +4917,13 @@ def _build_cockpit_summary_copy(
     context_review_count: int,
     market_session: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
-    movement_card = cards[0] if len(cards) > 0 else {}
-    breadth_card = cards[1] if len(cards) > 1 else {}
-    futures_card = cards[2] if len(cards) > 2 else {}
+    card_by_id = {str(card.get("id") or ""): card for card in cards}
+    movement_card = card_by_id.get("movement") or (cards[0] if len(cards) > 0 else {})
+    breadth_card = card_by_id.get("breadth") or (cards[1] if len(cards) > 1 else {})
+    futures_card = card_by_id.get("futures")
     movement_value = _cockpit_copy_value(movement_card.get("value"), "")
     breadth_value = _cockpit_copy_value(breadth_card.get("value"), "섹터 리더십 미확인")
-    futures_value = _cockpit_copy_value(futures_card.get("value"), "혼재된 매크로 흐름")
+    futures_value = _cockpit_copy_value(futures_card.get("value"), "") if futures_card else ""
     headline_prefix = str((market_session or {}).get("headline_prefix") or "오늘은")
 
     headline = (
@@ -4928,11 +4938,14 @@ def _build_cockpit_summary_copy(
     )
     if context_review_count:
         next_sentence = (
-            f"보강 가능한 자료 {context_review_count}개를 먼저 분리한 뒤 가격 움직임과 macro 배경을 함께 읽으세요."
+            f"보강 가능한 자료 {context_review_count}개를 먼저 분리한 뒤 가격 움직임과 배경 근거를 함께 읽으세요."
         )
     else:
-        next_sentence = "저장된 DB 자료 기준으로 가격 움직임과 macro 배경을 바로 이어서 읽을 수 있습니다."
-    detail = f"{breadth_clause}, 선물/매크로 배경은 {futures_value}입니다. {next_sentence}"
+        next_sentence = "저장된 DB 자료 기준으로 가격 움직임과 배경 근거를 바로 이어서 읽을 수 있습니다."
+    if futures_value:
+        detail = f"{breadth_clause}, 선물/매크로 배경은 {futures_value}입니다. {next_sentence}"
+    else:
+        detail = f"{breadth_clause}, 가까운 이벤트와 자료 상태는 보조 근거로 분리해 읽습니다. {next_sentence}"
     return headline, detail
 
 
@@ -5049,7 +5062,7 @@ def _build_cockpit_futures_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         "source": "Futures Macro Thermometer",
         "freshness": coverage.get("latest_date") or "-",
         "freshness_label": _cockpit_freshness_label(coverage.get("latest_date")),
-        "target_tab": "Futures Monitor",
+        "target_tab": "Futures Macro",
         "badges": _cockpit_score_badges(scores) or [
             {"label": "자료 범위", "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}", "tone": "neutral"}
         ],
@@ -5485,10 +5498,11 @@ def _build_cockpit_context_findings(
     events_snapshot: dict[str, Any],
     data_health_handoff: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    card_by_id = {str(card.get("id") or ""): card for card in cards}
     findings: list[dict[str, Any] | None] = [
-        _cockpit_market_movers_finding(cards[0]),
-        _cockpit_futures_finding(cards[2]),
-        _cockpit_events_finding(events_snapshot, cards[4]),
+        _cockpit_market_movers_finding(card_by_id.get("movement") or {}),
+        _cockpit_futures_finding(card_by_id.get("futures") or {}) if "futures" in card_by_id else None,
+        _cockpit_events_finding(events_snapshot, card_by_id.get("events") or {}),
         _cockpit_data_health_finding(data_health_handoff),
     ]
     return [finding for finding in findings if finding is not None][:4]
@@ -5829,6 +5843,7 @@ def build_overview_macro_context_cockpit(
     collection_ops_snapshot: dict[str, Any] | None = None,
     historical_analog_snapshot: dict[str, Any] | None = None,
     market_session_context: dict[str, Any] | None = None,
+    include_futures_macro: bool = True,
 ) -> dict[str, Any]:
     """Build a summary-first Overview cockpit from existing read-only market context snapshots."""
     if market_movers_snapshot is None:
@@ -5850,7 +5865,7 @@ def build_overview_macro_context_cockpit(
             )
         except Exception as exc:  # pragma: no cover - defensive fallback for UI display
             group_leadership_snapshot = _cockpit_error_snapshot("Sector leadership", exc)
-    if futures_macro_snapshot is None:
+    if include_futures_macro and futures_macro_snapshot is None:
         try:
             from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
 
@@ -5873,21 +5888,27 @@ def build_overview_macro_context_cockpit(
         except Exception as exc:  # pragma: no cover - defensive fallback for UI display
             collection_ops_snapshot = _cockpit_error_snapshot("Data Health", exc)
 
+    movement_card = _build_cockpit_movement_card(market_movers_snapshot)
+    breadth_card = _build_cockpit_breadth_card(group_leadership_snapshot)
+    futures_card = _build_cockpit_futures_card(futures_macro_snapshot or {}) if include_futures_macro else None
+    sentiment_card = _build_cockpit_sentiment_card(sentiment_snapshot)
+    events_card = _build_cockpit_events_card(events_snapshot)
     cards = [
-        _build_cockpit_movement_card(market_movers_snapshot),
-        _build_cockpit_breadth_card(group_leadership_snapshot),
-        _build_cockpit_futures_card(futures_macro_snapshot),
-        _build_cockpit_sentiment_card(sentiment_snapshot),
-        _build_cockpit_events_card(events_snapshot),
+        movement_card,
+        breadth_card,
+        *([futures_card] if futures_card is not None else []),
+        sentiment_card,
+        events_card,
     ]
     data_card, data_review_count = _build_cockpit_data_card(collection_ops_snapshot)
     cards.append(data_card)
+    card_by_id = {str(card.get("id") or ""): card for card in cards}
     market_session = _market_session_context_model(
         market_session_context,
         basis_date=_market_context_basis_date(
             market_movers_snapshot,
             group_leadership_snapshot,
-            futures_macro_snapshot,
+            futures_macro_snapshot if include_futures_macro else {},
         ),
     )
     _apply_market_session_basis_to_cards(cards, market_session)
@@ -5906,6 +5927,7 @@ def build_overview_macro_context_cockpit(
         events_snapshot=events_snapshot,
         collection_ops_snapshot=collection_ops_snapshot,
         market_session_context=market_session,
+        include_futures_context=include_futures_macro,
     )
     data_health_handoff = build_overview_data_health_ingestion_handoff(collection_ops_snapshot, limit=3)
     context_findings = _build_cockpit_context_findings(
@@ -5977,49 +5999,66 @@ def build_overview_macro_context_cockpit(
         },
         {
             "label": "Top Mover",
-            "value": str(cards[0].get("value") or "-"),
-            "detail": str(cards[0].get("freshness_label") or cards[0].get("target_tab") or "Market Movers"),
-            "tone": cards[0].get("tone") or "neutral",
+            "value": str(card_by_id.get("movement", {}).get("value") or "-"),
+            "detail": str(card_by_id.get("movement", {}).get("freshness_label") or card_by_id.get("movement", {}).get("target_tab") or "Market Movers"),
+            "tone": card_by_id.get("movement", {}).get("tone") or "neutral",
         },
         {
             "label": "Breadth",
-            "value": str(cards[1].get("value") or "-"),
-            "detail": str(cards[1].get("freshness_label") or cards[1].get("target_tab") or "Group Leadership"),
-            "tone": cards[1].get("tone") or "neutral",
+            "value": str(card_by_id.get("breadth", {}).get("value") or "-"),
+            "detail": str(card_by_id.get("breadth", {}).get("freshness_label") or card_by_id.get("breadth", {}).get("target_tab") or "Group Leadership"),
+            "tone": card_by_id.get("breadth", {}).get("tone") or "neutral",
         },
-        {
-            "label": "Macro",
-            "value": str(cards[2].get("value") or "-"),
-            "detail": str(cards[2].get("freshness_label") or cards[2].get("target_tab") or "Futures Monitor"),
-            "tone": cards[2].get("tone") or "neutral",
-        },
+        *(
+            [
+                {
+                    "label": "Macro",
+                    "value": str(card_by_id.get("futures", {}).get("value") or "-"),
+                    "detail": str(card_by_id.get("futures", {}).get("freshness_label") or card_by_id.get("futures", {}).get("target_tab") or "Futures Macro"),
+                    "tone": card_by_id.get("futures", {}).get("tone") or "neutral",
+                }
+            ]
+            if include_futures_macro
+            else []
+        ),
         {
             "label": "Next Event",
-            "value": str(cards[4].get("value") or "-"),
-            "detail": str(cards[4].get("freshness_label") or cards[4].get("target_tab") or "Events"),
-            "tone": cards[4].get("tone") or "neutral",
+            "value": str(card_by_id.get("events", {}).get("value") or "-"),
+            "detail": str(card_by_id.get("events", {}).get("freshness_label") or card_by_id.get("events", {}).get("target_tab") or "Events"),
+            "tone": card_by_id.get("events", {}).get("tone") or "neutral",
         },
     ]
     for index, card in enumerate(cards):
-        card["group"] = "core" if index < 3 else "supporting"
-        card["priority_label"] = "시장 브리프" if index < 3 else ("근거" if card.get("id") == "data" else "다음 맥락")
+        card_id = str(card.get("id") or "")
+        card["group"] = "core" if card_id in {"movement", "breadth", "futures"} else "supporting"
+        card["priority_label"] = "시장 브리프" if card_id in {"movement", "breadth", "futures"} else ("근거" if card_id == "data" else "다음 맥락")
 
-    futures_brief_row = _cockpit_apply_futures_data_limit(
-        _cockpit_brief_row(cards[2], label="Futures/Macro 배경"),
-        brief_context_findings,
-        data_health_handoff,
-        market_session,
-    )
     brief_rows = [
-        _cockpit_brief_row(cards[0], label="무엇이 움직였나"),
-        _cockpit_brief_row(cards[1], label="확산/집중인가"),
-        futures_brief_row,
+        _cockpit_brief_row(card_by_id.get("movement") or {}, label="무엇이 움직였나"),
+        _cockpit_brief_row(card_by_id.get("breadth") or {}, label="확산/집중인가"),
     ]
+    if include_futures_macro and "futures" in card_by_id:
+        brief_rows.append(
+            _cockpit_apply_futures_data_limit(
+                _cockpit_brief_row(card_by_id["futures"], label="Futures/Macro 배경"),
+                brief_context_findings,
+                data_health_handoff,
+                market_session,
+            )
+        )
+    else:
+        event_finding = next(
+            (item for item in context_findings if str(item.get("id") or "") == "events"),
+            None,
+        )
+        if event_finding:
+            brief_rows.append(_cockpit_event_brief_row(event_finding))
     interpretation_cues = [
-        _cockpit_brief_row(cards[4], label="이벤트 압력"),
-        _cockpit_brief_row(cards[3], label="심리 확인"),
-        _cockpit_brief_row(cards[2], label="매크로 확인"),
+        _cockpit_brief_row(card_by_id.get("events") or {}, label="이벤트 압력"),
+        _cockpit_brief_row(card_by_id.get("sentiment") or {}, label="심리 확인"),
     ]
+    if include_futures_macro and "futures" in card_by_id:
+        interpretation_cues.append(_cockpit_brief_row(card_by_id["futures"], label="매크로 확인"))
 
     return {
         "schema_version": "overview_macro_context_cockpit_v1",

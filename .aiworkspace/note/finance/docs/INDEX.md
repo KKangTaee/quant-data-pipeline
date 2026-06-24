@@ -24,10 +24,10 @@ Last Verified: 2026-06-24
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Overview Market Context Load Gate Removal V1 2026-06-24](../tasks/active/overview-market-context-load-gate-removal-v1-20260624/STATUS.md).
-- Latest completed product task: [Overview Market Context Load Gate Removal V1 2026-06-24](../tasks/active/overview-market-context-load-gate-removal-v1-20260624/STATUS.md).
+- Latest completed task: [Overview Futures Macro Tab Split V1 2026-06-24](../tasks/active/overview-futures-macro-tab-split-v1-20260624/STATUS.md).
+- Latest completed product task: [Overview Futures Macro Tab Split V1 2026-06-24](../tasks/active/overview-futures-macro-tab-split-v1-20260624/STATUS.md).
 - Recent Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are now `Market Context`, `Market Movers`, `Sentiment`, and `Events`, rendered as an internal text-tab underline selector; `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. `Market Context` renders immediately when selected; no explicit `시장 맥락 불러오기` gate is used. See [Roadmap](./ROADMAP.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are now `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`, rendered as an internal text-tab underline selector; `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. `Market Context` renders immediately with a light cockpit and does not default-load futures macro or historical analog validation; `Futures Macro` owns stored futures daily macro diagnosis and historical validation. See [Roadmap](./ROADMAP.md).
 
 ## By Purpose
 

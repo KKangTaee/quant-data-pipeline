@@ -28,7 +28,11 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-load-gate-removal-v1-20260624/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-tab-split-v1-20260624/`
+- 목적: `Workspace > Overview`의 기본 진입 화면인 `Market Context`에서 무거운 futures macro historical validation을 분리하고, 별도 `Futures Macro` primary tab에서 선물 매크로 진단을 관리한다.
+- 주요 변경: Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events` 순서다. `Market Context` helper는 기본 `include_futures_macro=False`, `include_historical_analog=False`로 cockpit을 만들며 movement / breadth / sentiment / events / data 중심의 light brief만 즉시 로드한다. `Market Context` renderer에서는 historical analog controls / reading flow / repair action을 제외했다. `Futures Macro` tab은 저장된 선물 일봉 snapshot과 historical validation이 필요한 상세 진단을 소유한다. `nyse_price_history` 최신 raw date 조회는 `MAX(date)` 대신 `ORDER BY date DESC LIMIT 1` read path로 바꿨다.
+- 이번 차수에서 하지 않은 일: futures validation 결과 DB 저장 테이블 추가, provider / schema / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed task: `.aiworkspace/note/finance/tasks/active/overview-market-context-load-gate-removal-v1-20260624/`
 - 목적: `Workspace > Overview > Market Context`의 `시장 맥락 불러오기` gate를 제거하고, 전처럼 기본 시장 맥락 본문이 즉시 렌더링되게 되돌린다.
 - 주요 변경: explicit load button / loaded-tab session state / lazy body gate를 제거했다. Internal `st.pills` text-tab underline selector와 no-anchor switching은 유지한다. Cold timing 기준 느린 구간은 `load_overview_macro_context_cockpit`의 snapshot fan-out, 특히 futures macro validation으로 확인했다.
 - 이번 차수에서 하지 않은 일: futures macro validation 최적화, loader 구조 분리, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.

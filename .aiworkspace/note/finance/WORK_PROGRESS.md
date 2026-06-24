@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro Tab Split V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-tab-split-v1-20260624/`에서 `선물 매크로` primary tab을 추가했다.
+  - `시장 맥락` 기본 로드는 futures macro historical validation과 historical analog를 제외하고 movement / breadth / sentiment / events / data 중심의 light cockpit을 렌더링한다.
+  - `선물 매크로` 탭은 저장된 futures 일봉 기반 macro 진단과 과거 validation을 소유한다.
+  - `nyse_price_history` 최신 raw date 조회는 `MAX(date)` 대신 latest row ordering query로 바꿨다.
 - Overview Market Context Load Gate Removal V1:
   - `.aiworkspace/note/finance/tasks/active/overview-market-context-load-gate-removal-v1-20260624/`에서 `시장 맥락 불러오기` gate를 제거했다.
   - Market Context는 전처럼 선택 즉시 cockpit body를 렌더링한다.

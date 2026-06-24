@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-24 - Futures macro validation should live in its own Overview tab
+
+- User request: 사용자가 `시장 맥락` 첫 진입이 느린 원인이 futures macro의 과거 validation이라면, Overview에 `선물 매크로` 탭을 추가하고 `시장 맥락`에서는 매크로 진단을 빼는 흐름을 승인함.
+- Interpreted goal: 초기 Overview 진입은 오늘 시장 맥락을 빠르게 읽는 화면이어야 하고, 저장된 futures 일봉 약 5년치 기반 macro diagnosis / historical validation은 의도적으로 들어가는 별도 탭에서 관리해야 한다.
+- Analysis result: `load_overview_futures_macro_snapshot(include_validation=False)`는 약 0.2초지만, validation을 포함하면 약 7.5초 이상 걸렸다. 기본 `Market Context`에는 historical analog / Macro 조건 섹션도 남아 있었기 때문에, 첫 진입은 movement / breadth / sentiment / events / data 중심 light cockpit으로 좁히고 futures / historical macro path는 opt-in surface로 분리하는 것이 가장 작은 구조 개선이다.
+- Follow-up: `overview-futures-macro-tab-split-v1-20260624`에서 primary tab, helper flags, cockpit optional futures rows, source confidence gating, default historical analog opt-out, latest raw date query rewrite를 구현했다. 후속으로는 실제 DB index plan과 Browser QA 기준 체감 시간을 계속 관찰한다.
+
 ### 2026-06-24 - Overview Market Context should load immediately; slow part is cockpit fan-out
 
 - User request: 사용자가 `시장 맥락 불러오기` 버튼은 기대한 흐름이 아니므로 바로 제거하고, Market Context 진입 시 무엇을 로드해서 느린지 파악해 달라고 요청함.

@@ -535,7 +535,9 @@ def load_overview_macro_context_cockpit(
     as_of_date: str | None = None,
     pattern_window: str = "5D",
     market_session_context: dict[str, Any] | None = None,
-    cache_schema_version: str = "overview-cockpit-v9-session-basis",
+    include_futures_macro: bool = False,
+    include_historical_analog: bool = False,
+    cache_schema_version: str = "overview-cockpit-v10-light-entry",
 ) -> dict[str, Any]:
     del cache_schema_version
     market_movers_snapshot = load_overview_market_movers_snapshot(
@@ -549,7 +551,9 @@ def load_overview_macro_context_cockpit(
         period="daily",
         top_n=20,
     )
-    futures_macro_snapshot = load_overview_futures_macro_snapshot()
+    futures_macro_snapshot = None
+    if include_futures_macro:
+        futures_macro_snapshot = load_overview_futures_macro_snapshot()
     sentiment_snapshot = load_overview_market_sentiment_snapshot()
     events_snapshot = load_overview_market_events_snapshot(
         event_type=None,
@@ -557,12 +561,14 @@ def load_overview_macro_context_cockpit(
         limit=100,
     )
     collection_ops_snapshot = load_overview_collection_ops_snapshot()
-    historical_analog_snapshot = load_overview_market_context_historical_analog(
-        as_of_date=as_of_date,
-        pattern_window=pattern_window,
-        events_snapshot=events_snapshot,
-        group_leadership_snapshot=group_leadership_snapshot if not as_of_date else None,
-    )
+    historical_analog_snapshot = None
+    if include_historical_analog:
+        historical_analog_snapshot = load_overview_market_context_historical_analog(
+            as_of_date=as_of_date,
+            pattern_window=pattern_window,
+            events_snapshot=events_snapshot,
+            group_leadership_snapshot=group_leadership_snapshot if not as_of_date else None,
+        )
     return build_overview_macro_context_cockpit(
         market_movers_snapshot=market_movers_snapshot,
         group_leadership_snapshot=group_leadership_snapshot,
@@ -572,4 +578,5 @@ def load_overview_macro_context_cockpit(
         collection_ops_snapshot=collection_ops_snapshot,
         historical_analog_snapshot=historical_analog_snapshot,
         market_session_context=market_session_context,
+        include_futures_macro=include_futures_macro,
     )

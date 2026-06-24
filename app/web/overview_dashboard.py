@@ -126,18 +126,21 @@ OVERVIEW_DEEP_TAB_QUERY_PARAM = "overview_tab"
 OVERVIEW_DEEP_TAB_OPTIONS = (
     "Market Context",
     "Market Movers",
+    "Futures Macro",
     "Sentiment",
     "Events",
 )
 OVERVIEW_DEEP_TAB_DISPLAY = {
     "Market Context": ("시장 맥락", "Market Context"),
     "Market Movers": ("변동 종목", "Market Movers"),
+    "Futures Macro": ("선물 매크로", "Futures Macro"),
     "Sentiment": ("심리", "Sentiment"),
     "Events": ("일정", "Events"),
 }
 OVERVIEW_DEEP_TAB_SLUGS = {
     "Market Context": "market-context",
     "Market Movers": "market-movers",
+    "Futures Macro": "futures-macro",
     "Sentiment": "sentiment",
     "Events": "events",
 }
@@ -2383,27 +2386,13 @@ def _overview_historical_analog_control_state() -> dict[str, str | None]:
 
 def _render_overview_market_context_tab() -> None:
     st.markdown("### 시장 맥락")
-    st.caption(
-        "상단에서 현재 세션 기준 시장 브리프를 먼저 읽고, 이어서 기준을 바꿔 과거 참고 통계를 확인합니다."
-    )
+    st.caption("저장된 시장 자료로 현재 세션의 움직임, 확산, 이벤트 배경을 빠르게 확인합니다.")
     _render_overview_market_context_refresh_reflection()
     market_session_context = _market_context_session_payload()
-    initial_analog_controls = _overview_historical_analog_control_state()
     cockpit_model = load_overview_macro_context_cockpit(
-        as_of_date=initial_analog_controls["as_of_date"],
-        pattern_window=str(initial_analog_controls["pattern_window"] or "5D"),
         market_session_context=market_session_context,
     )
     render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
-    analog_controls = _render_overview_historical_analog_controls()
-    if analog_controls != initial_analog_controls:
-        cockpit_model = load_overview_macro_context_cockpit(
-            as_of_date=analog_controls["as_of_date"],
-            pattern_window=str(analog_controls["pattern_window"] or "5D"),
-            market_session_context=market_session_context,
-        )
-    render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)
-    _render_overview_historical_analog_repair_action(cockpit_model)
     _render_overview_market_context_refresh_bar(cockpit_model)
 
 
@@ -4109,6 +4098,8 @@ def _render_futures_macro_fragment(*, detail_expanded: bool = False) -> None:
 
 
 def _render_futures_macro_tab() -> None:
+    st.markdown("### 선물 매크로")
+    st.caption("저장된 선물 일봉으로 현재 macro 상태와 과거 점검 근거를 함께 확인합니다.")
     _render_futures_macro_fragment(detail_expanded=True)
 
 
@@ -6912,6 +6903,7 @@ def render_overview_dashboard(
         renderers={
             "Market Context": _render_overview_market_context_tab,
             "Market Movers": _render_market_movers_tab,
+            "Futures Macro": _render_futures_macro_tab,
             "Sentiment": _render_market_sentiment_tab,
             "Events": _render_events_tab,
         },

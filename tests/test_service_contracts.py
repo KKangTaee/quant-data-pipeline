@@ -4349,6 +4349,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         render_body = source[source.index("def render_overview_dashboard"):]
         context_label_index = render_body.index('"Market Context"')
         market_label_index = render_body.index('"Market Movers"')
+        futures_macro_label_index = render_body.index('"Futures Macro"')
         sentiment_label_index = render_body.index('"Sentiment"')
         events_label_index = render_body.index('"Events"')
 
@@ -4362,7 +4363,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('"Candidate Ops"', render_body)
         self.assertNotIn("load_overview_dashboard_snapshot", render_body)
         self.assertLess(context_label_index, market_label_index)
-        self.assertLess(market_label_index, sentiment_label_index)
+        self.assertLess(market_label_index, futures_macro_label_index)
+        self.assertLess(futures_macro_label_index, sentiment_label_index)
         self.assertLess(sentiment_label_index, events_label_index)
 
     def test_overview_dashboard_primary_selector_excludes_inactive_tabs(self) -> None:
@@ -4373,6 +4375,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             (
                 "Market Context",
                 "Market Movers",
+                "Futures Macro",
                 "Sentiment",
                 "Events",
             ),
@@ -4413,17 +4416,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         renderers = {
             "Market Context": lambda: calls.append("Market Context"),
             "Market Movers": lambda: calls.append("Market Movers"),
-            "Futures Monitor": lambda: calls.append("Futures Monitor"),
+            "Futures Macro": lambda: calls.append("Futures Macro"),
         }
 
-        _render_selected_overview_tab("Market Movers", renderers=renderers)
+        _render_selected_overview_tab("Futures Macro", renderers=renderers)
 
-        self.assertEqual(calls, ["Market Movers"])
+        self.assertEqual(calls, ["Futures Macro"])
 
     def test_overview_dashboard_defaults_unknown_deep_tab_to_market_context(self) -> None:
         from app.web.overview_dashboard import _overview_active_tab_label
 
         self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
+        self.assertEqual(_overview_active_tab_label("Futures Macro"), "Futures Macro")
         self.assertEqual(_overview_active_tab_label("Futures Monitor"), "Market Context")
         self.assertEqual(_overview_active_tab_label("Sector / Industry"), "Market Context")
         self.assertEqual(_overview_active_tab_label(None), "Market Context")
@@ -4442,8 +4446,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(_overview_tab_label_from_slug("market-context"), "Market Context")
         self.assertEqual(_overview_tab_label_from_slug("market-movers"), "Market Movers")
+        self.assertEqual(_overview_tab_label_from_slug("futures-macro"), "Futures Macro")
         self.assertIn("시장 맥락", _overview_tab_display_label("Market Context"))
         self.assertIn("변동 종목", _overview_tab_display_label("Market Movers"))
+        self.assertIn("선물 매크로", _overview_tab_display_label("Futures Macro"))
         self.assertIn("심리", _overview_tab_display_label("Sentiment"))
         self.assertIn("일정", _overview_tab_display_label("Events"))
         self.assertEqual(
@@ -4462,6 +4468,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ),
             "Market Movers",
         )
+
+    def test_overview_dashboard_routes_futures_macro_as_primary_tab(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+
+        self.assertIn('"Futures Macro": _render_futures_macro_tab', render_body)
+        self.assertIn("def _render_futures_macro_tab", source)
+        self.assertNotIn('"Futures Monitor": _render_futures_monitor_tab', render_body)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
@@ -4485,21 +4499,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("include_brief=False", helper_body)
-        self.assertIn(
-            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
-            helper_body,
-        )
         self.assertIn("_render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        controls_index = helper_body.index("analog_controls = _render_overview_historical_analog_controls()")
-        reading_index = helper_body.index("render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)")
         refresh_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
-        self.assertLess(cockpit_index, controls_index)
-        self.assertLess(controls_index, reading_index)
-        self.assertLess(reading_index, refresh_index)
+        self.assertLess(cockpit_index, refresh_index)
         self.assertIn("load_overview_macro_context_cockpit", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_repair_action(", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
 
     def test_overview_dashboard_keeps_deep_tab_guide_out_of_market_context_brief(self) -> None:
@@ -4512,14 +4520,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("include_brief=False", helper_body)
-        self.assertIn(
-            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
-            helper_body,
-        )
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("load_overview_ia_closeout_model", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
         self.assertNotIn("Deep Tab", helper_body)
+
+    def test_overview_market_context_loader_excludes_futures_macro_by_default(self) -> None:
+        source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def load_overview_macro_context_cockpit"):]
+
+        self.assertIn("include_futures_macro: bool = False", helper_body)
+        self.assertIn("include_historical_analog: bool = False", helper_body)
+        guard_index = helper_body.index("if include_futures_macro:")
+        call_index = helper_body.index("futures_macro_snapshot = load_overview_futures_macro_snapshot()")
+        self.assertLess(guard_index, call_index)
+        analog_guard_index = helper_body.index("if include_historical_analog:")
+        analog_call_index = helper_body.index("historical_analog_snapshot = load_overview_market_context_historical_analog(")
+        self.assertLess(analog_guard_index, analog_call_index)
+        self.assertIn("include_futures_macro=include_futures_macro", helper_body)
 
     def test_overview_market_context_refresh_reflection_copy_distinguishes_outcomes(self) -> None:
         from app.web import overview_dashboard
@@ -4945,7 +4964,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("border-left", scoped_body)
         self.assertNotIn("min-height", scoped_body)
 
-    def test_overview_market_context_shows_historical_analog_repair_action_before_support_expander(self) -> None:
+    def test_overview_market_context_keeps_historical_analog_out_of_default_entry(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         if "def _render_overview_market_context_tab" not in source:
             self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
@@ -4953,17 +4972,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_end = helper_body.index("def _summarize_auto_refresh_plan")
         helper_body = helper_body[:helper_end]
 
-        self.assertIn("_render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
-        render_index = helper_body.index(
-            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)"
-        )
-        analog_action_index = helper_body.index("_render_overview_historical_analog_repair_action(cockpit_model)")
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
         refresh_bar_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
+        self.assertLess(cockpit_index, refresh_bar_index)
 
-        self.assertLess(render_index, analog_action_index)
-        self.assertLess(analog_action_index, refresh_bar_index)
-
-    def test_overview_market_context_passes_historical_analog_controls_to_cockpit_loader(self) -> None:
+    def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         self.assertIn("def _render_overview_historical_analog_controls", source)
         self.assertIn('"기준 시점"', source)
@@ -4972,27 +4989,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = source[source.index("def _render_overview_market_context_tab"):]
         helper_body = helper_body[: helper_body.index("def _summarize_auto_refresh_plan")]
 
-        self.assertIn("initial_analog_controls = _overview_historical_analog_control_state()", helper_body)
-        self.assertIn("analog_controls = _render_overview_historical_analog_controls()", helper_body)
-        self.assertIn("if analog_controls != initial_analog_controls:", helper_body)
-        self.assertIn("as_of_date=initial_analog_controls[\"as_of_date\"]", helper_body)
-        self.assertIn("pattern_window=str(initial_analog_controls[\"pattern_window\"] or \"5D\")", helper_body)
-        self.assertIn("as_of_date=analog_controls[\"as_of_date\"]", helper_body)
-        self.assertIn("pattern_window=str(analog_controls[\"pattern_window\"] or \"5D\")", helper_body)
+        self.assertNotIn("initial_analog_controls = _overview_historical_analog_control_state()", helper_body)
+        self.assertNotIn("analog_controls = _render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("if analog_controls != initial_analog_controls:", helper_body)
+        self.assertNotIn("as_of_date=initial_analog_controls", helper_body)
+        self.assertNotIn("pattern_window=str(initial_analog_controls", helper_body)
+        self.assertNotIn("as_of_date=analog_controls", helper_body)
+        self.assertNotIn("pattern_window=str(analog_controls", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("include_brief=False", helper_body)
-        self.assertIn(
-            "render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)",
-            helper_body,
-        )
-        self.assertLess(
-            helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)"),
-            helper_body.index("_render_overview_historical_analog_controls()"),
-        )
-        self.assertLess(
-            helper_body.index("if analog_controls != initial_analog_controls:"),
-            helper_body.index("render_macro_context_reading_flow(cockpit_model, include_brief=False, include_next_checks=False)"),
-        )
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
 
     def test_overview_market_context_historical_analog_can_reuse_visible_sector_snapshot(self) -> None:
         from app.web import overview_dashboard_helpers
@@ -5845,7 +5850,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertIn("시장 맥락", dashboard_source)
-        self.assertIn("상단에서 현재 세션 기준 시장 브리프를 먼저 읽고", dashboard_source)
+        self.assertIn("저장된 시장 자료로 현재 세션의 움직임, 확산, 이벤트 배경을 빠르게 확인합니다.", dashboard_source)
         self.assertIn("필요 자료 보강", dashboard_source)
         self.assertNotIn("보조 갱신", dashboard_source)
         self.assertIn("오늘의 시장 맥락", component_source)
@@ -7145,7 +7150,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "source_ref": "test",
                 },
             ]
-        if "MAX(`date`) AS latest_raw_date" in sql:
+        if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
             return [{"latest_raw_date": "2026-05-19"}]
         if "MAX(`date`) AS latest_price_date" in sql:
             return [
@@ -7275,6 +7280,16 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(window["start_date"], "2026-05-15")
         self.assertEqual(window["stale_days"], 10)
 
+    def test_latest_raw_date_query_uses_ordered_latest_row(self) -> None:
+        import inspect
+        import app.services.overview_market_intelligence as service
+
+        source = inspect.getsource(service._query_latest_raw_date)
+
+        self.assertIn("ORDER BY `date` DESC", source)
+        self.assertIn("LIMIT 1", source)
+        self.assertNotIn("MAX(`date`)", source)
+
     def test_group_trend_window_contract_uses_compact_horizons(self) -> None:
         from app.services.overview_market_intelligence import resolve_group_trend_market_dates
 
@@ -7285,7 +7300,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "MAX(`date`) AS latest_raw_date" in sql:
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
                 return [{"latest_raw_date": market_dates[0]}]
             if "GROUP BY `date`" in sql:
                 return [{"date": item, "usable_rows": 1200} for item in market_dates]
@@ -7444,7 +7459,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                         "universe_source_url": "https://www.nasdaqtrader.com/",
                     },
                 ]
-            if "MAX(`date`) AS latest_raw_date" in sql:
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
                 return [{"latest_raw_date": "2026-06-16"}]
             if "GROUP BY `date`" in sql:
                 return [
@@ -7530,7 +7545,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                         "profile_exchange": "NMS",
                     },
                 ]
-            if "MAX(`date`) AS latest_raw_date" in sql:
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
                 return [{"latest_raw_date": "2026-06-16"}]
             if "GROUP BY `date`" in sql:
                 return [
@@ -9477,6 +9492,68 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("read-only", handoff["boundary_note"].lower())
         self.assertIn("does not execute", handoff["boundary_note"].lower())
 
+    def test_overview_macro_context_cockpit_can_omit_futures_macro_for_fast_entry(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            include_futures_macro=False,
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {"returnable_count": 470, "universe_count": 503, "effective_end_date": "2026-06-05"},
+                "rows": pd.DataFrame(
+                    [{"Rank": 1, "Symbol": "NVDA", "Name": "NVIDIA Corp", "Return %": 4.2, "Sector": "Technology"}]
+                ),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "coverage": {"returnable_count": 470, "universe_count": 503},
+                "rows": pd.DataFrame(
+                    [{"Rank": 1, "Group": "Technology", "Positive Symbol Share %": 82.0, "Market Cap Weighted Return %": 1.8}]
+                ),
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {
+                    "phase_label": "혼합 중립",
+                    "headline": "Fear & Greed is neutral while internals are mixed.",
+                    "data_confidence": {"status": "High", "detail": "latest CNN / AAII rows"},
+                },
+                "coverage": {"cnn_score": 54.7, "cnn_rating": "neutral", "aaii_bull_bear_spread": -0.7},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 1, "next_event_date": "2026-06-10", "needs_review_count": 0},
+                "rows": pd.DataFrame(
+                    [{"Date": "2026-06-10", "Type Label": "CPI", "Title": "CPI Release", "Days Until": 2, "Importance": "High"}]
+                ),
+            },
+            collection_ops_snapshot={
+                "status": "OK",
+                "coverage": {"ok_count": 5, "due_count": 0, "stale_count": 0, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(),
+            },
+        )
+
+        self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "sentiment", "events", "data"])
+        self.assertEqual(
+            [item["label"] for item in cockpit["summary"]["rail"]],
+            ["자료 상태", "Top Mover", "Breadth", "Next Event"],
+        )
+        self.assertEqual(
+            [row["label"] for row in cockpit["brief_rows"]],
+            ["무엇이 움직였나", "확산/집중인가", "이벤트 배경"],
+        )
+        self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인"])
+        self.assertNotIn("Macro", [item["label"] for item in cockpit["summary"]["rail"]])
+        self.assertNotIn("futures", [card["id"] for card in cockpit["cards"]])
+        self.assertNotIn("futures", [item["id"] for item in cockpit["source_confidence"]["items"]])
+        summary_copy = f"{cockpit['summary']['headline']} {cockpit['summary']['detail']}"
+        self.assertNotIn("macro", summary_copy.lower())
+        self.assertNotIn("선물/매크로", summary_copy)
+
     def test_overview_macro_context_cockpit_summarizes_existing_context_snapshots(self) -> None:
         from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
 
@@ -9628,7 +9705,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["source_area"], "Events")
         self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["resolution"], "not_actionable")
         self.assertEqual(cockpit["interpretation_cues"][0]["target_tab"], "Events")
-        self.assertEqual(cockpit["interpretation_cues"][2]["target_tab"], "Futures Monitor")
+        self.assertEqual(cockpit["interpretation_cues"][2]["target_tab"], "Futures Macro")
         self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
         self.assertEqual([card["group"] for card in cockpit["cards"][:3]], ["core", "core", "core"])
         self.assertEqual([card["group"] for card in cockpit["cards"][3:]], ["supporting", "supporting", "supporting"])
@@ -10652,7 +10729,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name
             captured.append((sql, list(params or [])))
-            if "MAX(`date`)" in sql:
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
                 return [{"latest_raw_date": "2024-03-15"}]
             return [{"date": day, "usable_rows": 500} for day in eligible_dates]
 
