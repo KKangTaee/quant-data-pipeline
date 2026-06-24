@@ -3516,6 +3516,54 @@ def overview_ui_css() -> str:
 .ov-futures-macro-hero {
   padding: 0.15rem 0 0.15rem 0;
 }
+.ov-futures-macro-action-copy {
+  min-width: 0;
+  padding: 0.12rem 0 0.16rem 0;
+}
+.ov-futures-macro-action-label {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+}
+.ov-futures-macro-action-detail {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.32;
+  margin-top: 0.12rem;
+  overflow-wrap: anywhere;
+}
+.st-key-overview_futures_macro_tab_daily_refresh button,
+.st-key-overview_futures_macro_tab_reload button {
+  min-height: 2.35rem;
+  padding: 0.36rem 0.7rem;
+  border-radius: var(--ov-mi-radius-card);
+  box-shadow: none;
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+.st-key-overview_futures_macro_tab_daily_refresh button {
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+.st-key-overview_futures_macro_tab_daily_refresh button:hover {
+  border-color: #115e59;
+  background: #115e59;
+  color: #fff;
+}
+.st-key-overview_futures_macro_tab_reload button {
+  border: 1px solid var(--ov-mi-border-control);
+  background: rgba(255,255,255,0.76);
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_futures_macro_tab_reload button:hover {
+  border-color: color-mix(in srgb, var(--ov-mi-color-primary) 34%, var(--ov-mi-border-control));
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 7%, rgba(255,255,255,0.9));
+  color: var(--ov-mi-color-text);
+}
 .ov-futures-brief {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.95fr);

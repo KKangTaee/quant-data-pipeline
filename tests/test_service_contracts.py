@@ -4479,6 +4479,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
         controls_body = source[source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
         tab_body = source[source.index("def _render_futures_macro_tab") :]
@@ -4489,6 +4490,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("clear_overview_futures_macro_snapshot_cache()", controls_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
+        self.assertIn("ov-futures-macro-action-copy", controls_body)
+        self.assertIn("데이터 작업", controls_body)
+        self.assertIn('"일봉 갱신"', controls_body)
+        self.assertIn('"다시 읽기"', controls_body)
+        self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
+        self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
