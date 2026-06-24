@@ -8171,3 +8171,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 동작을 바꾸지 않고 active Overview shell과 primary tab entrypoint를 `app/web/overview/` package로 나눠 다음 차수의 탭별 helper 이동 기반을 만든다.
 - Analysis result: 엔진/read model은 이미 Streamlit-free service에 있으나, UI 파일은 monolithic이었다. 단번에 helper까지 모두 이동하면 기존 private helper contract와 회귀 위험이 커서 V1에서는 wrapper / page shell / tab entrypoint만 분리하는 것이 안전하다.
 - Follow-up: `overview_dashboard.py`는 compatibility wrapper가 되었고, active shell은 `overview/page.py`, tab entry는 `overview/{market_context,market_movers,futures_macro,sentiment,events}.py`가 소유한다. 기존 구현은 `legacy_dashboard.py`에 남아 있으며 V2에서 탭별 helper 이동을 진행한다.
+
+### 2026-06-25 - Overview legacy cleanup V6-V10을 순차 진행한다
+
+- User request: 사용자가 6차에서 10차까지 차수별 진행과 각 차수 QA 후 다음 차수 진행을 요청함.
+- Interpreted goal: 무작정 helper를 대량 이동하지 않고, 사용 현황 감사 -> active surface 분리 -> bounded service 분리 -> 확인된 unused legacy 제거 -> 재도입 방지 guard 순서로 구조를 안정화해야 함.
+- Analysis result: `legacy_dashboard.py`는 아직 active 세부 helper 의존이 남아 있어 전체 삭제 대상은 아니지만, old page render / standalone tab wrappers / Candidate Ops overview snapshot helpers는 active 경로에서 끊겨 있어 삭제 가능했다.
+- Follow-up: V6-V10 완료. 다음 정리 후보는 남은 active helper cluster를 domain component / action / service 단위로 더 작게 이동하는 별도 task이며, 현재 Overview primary ownership은 `app/web/overview/` package가 맡는다.

@@ -51,3 +51,16 @@
   - Result: passed 102 tests.
 - Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
   - Result: Market Context rendered with `필요 자료 보강` expander; Events rendered after tab switch through the active tab module; current browser console reported 0 new errors. Screenshot: `overview-legacy-cleanup-v9-qa.png`.
+
+## V10 Boundary Guard / Final QA - 2026-06-25
+
+- Guard focused: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_removed_legacy_surfaces_do_not_leak_through_compat_wrapper tests.test_service_contracts.OverviewAutomationContractTests.test_overview_helpers_do_not_reintroduce_candidate_ops_runtime_imports`
+  - Result: passed 2 tests.
+- Compile: `.venv/bin/python -m py_compile tests/test_service_contracts.py app/web/overview_dashboard_helpers.py app/web/overview/legacy_dashboard.py app/web/overview/page.py app/web/overview/navigation.py`
+  - Result: passed.
+- Overview contract: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: passed 104 tests.
+- Diff check: `git diff --check`
+  - Result: passed.
+- Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
+  - Result: Events remained renderable after V9 removal; Futures Macro rendered through active tab fragment with `일봉 갱신` / `다시 읽기` controls; current browser console reported 0 errors. Screenshot: `overview-legacy-cleanup-v10-qa.png`.

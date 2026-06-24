@@ -69,15 +69,15 @@ Overview is a market context and data health surface with approved bounded refre
 
 It reads DB-backed service models for:
 
-- Market Movers, Sector / Industry, Events
-- Futures Monitor and Macro Thermometer
+- Market Movers, sector breadth evidence, Events
+- Futures Macro Thermometer
 - CNN Fear & Greed / AAII Sentiment
 - Why It Moved investigation metadata
 
 `Overview Macro Context Cockpit` is a summary-first read-only band over the existing deep tabs.
 It synthesizes the same DB-backed movers, breadth, futures, sentiment, event, and data-health snapshots, keeps source / freshness visible, and does not add new collection, storage, validation, monitoring, or trading semantics.
 
-`Overview Data Health Ingestion Handoff` is a read-only band inside the Data Health tab.
+`Overview Data Health Ingestion Handoff` is a retained read-only helper for data-repair ownership.
 It priority-ranks existing DB/run-history freshness rows and points the user to the owning Ingestion or approved Overview bounded refresh surface.
 It does not execute collection jobs, persist an action queue, change schema, fetch providers during render, or write registry / saved setup rows.
 
@@ -86,8 +86,8 @@ It reuses the already loaded cockpit snapshots to expose source, owner, freshnes
 It does not add providers, replace provider policy, persist provider scores, fetch providers during render, or write registry / saved setup rows.
 
 `Overview IA Closeout` is a static guide between the cockpit and deep tabs.
-It groups the existing tabs into market context, data repair, and transitional Candidate Ops ownership so the user can drill down without treating Overview as a backtest or trading decision surface.
-It does not move Candidate Ops, change Backtest workflows, fetch providers, persist rows, or write registry / saved setup rows.
+It groups the existing market-context tabs and external data-repair ownership so the user can drill down without treating Overview as a backtest or trading decision surface.
+It does not move Candidate Ops into Overview, change Backtest workflows, fetch providers, persist rows, or write registry / saved setup rows.
 
 Overview refresh buttons must route through `app/jobs/overview_actions.py`.
 The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.

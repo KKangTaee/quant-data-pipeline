@@ -5285,3 +5285,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Market Context / Market Movers / Futures Macro / Sentiment / Events primary tab entry modules를 `app/web/overview/` 아래에 추가했다.
   - 기존 monolithic helper 구현은 `app/web/overview/legacy_dashboard.py`에 보존했다. V2는 탭별 helper / controls 이동이다.
   - 작업 기록은 `.aiworkspace/note/finance/tasks/active/overview-tab-module-split-v1-20260625/`를 보면 된다.
+- Overview Legacy Cleanup V6-V10 2026-06-25:
+  - `.aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/`에서 legacy audit, navigation surface extraction, IA read model service extraction, confirmed unused wrapper / Candidate Ops snapshot helper removal, guard tests, final QA를 순서대로 완료했다.
+  - Active Overview ownership은 `app/web/overview/page.py`, `app/web/overview/navigation.py`, `app/web/overview/{market_context,market_movers,futures_macro,sentiment,events}.py`로 정리했고, `legacy_dashboard.py`는 helper compatibility surface로 남겼다.
+  - 검증은 V6-V10 각 차수별 Browser QA, py_compile, OverviewAutomationContractTests, `git diff --check`로 기록했다.

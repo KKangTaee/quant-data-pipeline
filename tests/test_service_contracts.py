@@ -4613,6 +4613,55 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertNotIn(f"def {function_name}", helper_source)
 
+    def test_overview_removed_legacy_surfaces_do_not_leak_through_compat_wrapper(self) -> None:
+        from app.web import overview_dashboard
+
+        for name in (
+            "load_overview_dashboard_snapshot",
+            "build_overview_top_candidates",
+            "build_overview_funnel_rows",
+            "build_overview_next_actions",
+            "build_overview_activity_rows",
+            "_render_overview_market_context_tab",
+            "_render_market_movers_tab",
+            "_render_futures_macro_tab",
+            "_render_futures_monitor_tab",
+            "_render_sector_industry_tab",
+            "_render_market_sentiment_tab",
+            "_render_events_tab",
+        ):
+            self.assertFalse(hasattr(overview_dashboard, name), f"{name} should stay removed from wrapper exports")
+
+    def test_overview_helpers_do_not_reintroduce_candidate_ops_runtime_imports(self) -> None:
+        import ast
+
+        source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        imported_names = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            for alias in node.names
+        }
+
+        self.assertNotIn("app.runtime", imported_modules)
+        self.assertFalse(
+            {
+                "load_current_candidate_registry_latest",
+                "load_pre_live_candidate_registry_latest",
+                "load_portfolio_proposals",
+                "load_backtest_run_history",
+                "load_saved_portfolios",
+                "load_candidate_review_notes",
+            }
+            & imported_names
+        )
+
     def test_overview_navigation_surface_owns_selector_entrypoints(self) -> None:
         from app.web.overview import navigation
 
