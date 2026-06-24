@@ -4411,7 +4411,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "required": [
                     '_legacy.st.markdown("### 시장 맥락")',
                     "_legacy.load_overview_macro_context_cockpit(",
-                    "_legacy.render_macro_context_cockpit(",
+                    "render_macro_context_cockpit(",
                     "_legacy._render_overview_market_context_refresh_bar(",
                 ],
             },
@@ -4450,7 +4450,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                     '_legacy.st.markdown("### Events")',
                     "_legacy._render_event_refresh_toolbar()",
                     "_legacy.load_overview_market_events_snapshot(",
-                    "_legacy.render_macro_week_lane(",
+                    "render_macro_week_lane(",
                 ],
             },
         }
@@ -4461,6 +4461,57 @@ class OverviewAutomationContractTests(unittest.TestCase):
             self.assertNotIn(contract["forbidden"], source)
             for required in contract["required"]:
                 self.assertIn(required, source)
+
+    def test_overview_component_surfaces_are_split_by_domain(self) -> None:
+        import importlib.util
+
+        expected_modules = {
+            "app.web.overview.components.layout": ["render_market_session_banner"],
+            "app.web.overview.components.market_context": ["render_macro_context_cockpit"],
+            "app.web.overview.components.events": [
+                "render_event_agenda_sections",
+                "render_event_source_lane",
+                "render_event_warning_strip",
+                "render_events_summary_strip",
+                "render_macro_week_lane",
+            ],
+        }
+
+        for module_name, entrypoints in expected_modules.items():
+            try:
+                spec = importlib.util.find_spec(module_name)
+            except ModuleNotFoundError:
+                spec = None
+            self.assertIsNotNone(spec, f"{module_name} should exist")
+            module = importlib.import_module(module_name)
+            for entrypoint in entrypoints:
+                self.assertTrue(callable(getattr(module, entrypoint, None)))
+
+    def test_overview_active_tabs_use_domain_component_surfaces(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        events_source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.components.layout import render_market_session_banner", page_source)
+        self.assertIn("render_market_session_banner(", page_source)
+        self.assertNotIn("_legacy.render_market_session_banner(", page_source)
+
+        self.assertIn(
+            "from app.web.overview.components.market_context import render_macro_context_cockpit",
+            market_context_source,
+        )
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", market_context_source)
+        self.assertNotIn("_legacy.render_macro_context_cockpit(", market_context_source)
+
+        self.assertIn("from app.web.overview.components.events import (", events_source)
+        self.assertIn("render_events_summary_strip(", events_source)
+        self.assertIn("render_event_source_lane(", events_source)
+        self.assertIn("render_event_warning_strip(", events_source)
+        self.assertIn("render_macro_week_lane(", events_source)
+        self.assertNotIn("_legacy.render_events_summary_strip(", events_source)
+        self.assertNotIn("_legacy.render_event_source_lane(", events_source)
+        self.assertNotIn("_legacy.render_event_warning_strip(", events_source)
+        self.assertNotIn("_legacy.render_macro_week_lane(", events_source)
 
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
         source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")

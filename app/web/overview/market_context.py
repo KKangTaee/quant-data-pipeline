@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.web.overview import legacy_dashboard as _legacy
+from app.web.overview.components.market_context import render_macro_context_cockpit
 
 
 def render_market_context_tab() -> None:
@@ -12,5 +13,5 @@ def render_market_context_tab() -> None:
     cockpit_model = _legacy.load_overview_macro_context_cockpit(
         market_session_context=market_session_context,
     )
-    _legacy.render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
+    render_macro_context_cockpit(cockpit_model, include_reading_flow=False)
     _legacy._render_overview_market_context_refresh_bar(cockpit_model)

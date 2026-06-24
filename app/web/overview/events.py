@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 from app.web.overview import legacy_dashboard as _legacy
+from app.web.overview.components.events import (
+    render_event_agenda_sections,
+    render_event_source_lane,
+    render_event_warning_strip,
+    render_events_summary_strip,
+    render_macro_week_lane,
+)
 
 
 def render_events_tab() -> None:
@@ -22,12 +29,12 @@ def render_events_tab() -> None:
             _legacy._render_market_job_result("overview_fomc_calendar_result")
             _legacy._render_market_job_result("overview_earnings_calendar_result")
             _legacy._render_market_job_result("overview_macro_calendar_result")
-    _legacy.render_events_summary_strip(
+    render_events_summary_strip(
         _legacy._event_summary_items(calendar_rows, coverage, event_type=snapshot.get("event_type"))
     )
-    _legacy.render_event_source_lane(_legacy._event_source_items(calendar_rows, event_filter=event_filter))
-    _legacy.render_event_warning_strip(list(snapshot.get("warnings") or []))
-    _legacy.render_macro_week_lane(_legacy.load_overview_macro_week_lane(snapshot))
+    render_event_source_lane(_legacy._event_source_items(calendar_rows, event_filter=event_filter))
+    render_event_warning_strip(list(snapshot.get("warnings") or []))
+    render_macro_week_lane(_legacy.load_overview_macro_week_lane(snapshot))
 
     if not isinstance(rows, _legacy.pd.DataFrame) or rows.empty:
         _legacy.st.info(
@@ -39,7 +46,7 @@ def render_events_tab() -> None:
 
     agenda_tab, calendar_tab, quality_tab, raw_tab = _legacy.st.tabs(["Agenda", "Calendar", "Quality", "Raw"])
     with agenda_tab:
-        _legacy.render_event_agenda_sections(
+        render_event_agenda_sections(
             _legacy._event_agenda_sections(filtered_rows),
             empty_message="No upcoming event rows match the selected filters.",
         )
@@ -47,7 +54,7 @@ def render_events_tab() -> None:
         _legacy._render_event_month_grid(filtered_rows)
         _legacy.st.altair_chart(_legacy._build_event_calendar_chart(filtered_rows), width="stretch")
     with quality_tab:
-        _legacy.render_event_agenda_sections(
+        render_event_agenda_sections(
             _legacy._event_quality_sections(filtered_rows),
             empty_message="No event rows currently need source or validation review.",
         )
