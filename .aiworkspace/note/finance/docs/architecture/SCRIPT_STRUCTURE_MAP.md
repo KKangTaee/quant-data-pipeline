@@ -185,7 +185,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
+| `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, Overview structure / boundary guard, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
 
 ## 같이 볼 상세 문서
 

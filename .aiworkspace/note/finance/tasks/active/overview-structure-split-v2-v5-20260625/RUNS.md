@@ -38,3 +38,18 @@
   - Result: passed 93 tests.
 - Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
   - Result: Market Context rendered; Events rendered after tab switch; current browser console reported 0 errors. Screenshot: `overview-structure-split-v4-qa.png`.
+
+## V5 Boundary Guard Tests - 2026-06-25
+
+- Focused guard: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_service_surfaces_stay_streamlit_free tests.test_service_contracts.OverviewAutomationContractTests.test_overview_component_surfaces_do_not_pull_services_or_data tests.test_service_contracts.OverviewAutomationContractTests.test_overview_active_page_and_tabs_do_not_import_data_or_jobs_directly tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_wrapper_remains_thin_compatibility_facade`
+  - Result: passed 4 tests.
+- Compile: `.venv/bin/python -m py_compile tests/test_service_contracts.py app/web/overview_dashboard.py app/web/overview/page.py app/web/overview/market_context.py app/web/overview/market_movers.py app/web/overview/futures_macro.py app/web/overview/sentiment.py app/web/overview/events.py app/web/overview/components/__init__.py app/web/overview/components/layout.py app/web/overview/components/market_context.py app/web/overview/components/events.py app/services/overview/__init__.py app/services/overview/data_health.py app/services/overview/events.py app/services/overview/market_context.py app/services/overview/market_movers.py app/services/overview/sentiment.py`
+  - Result: passed.
+- Overview contract: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: passed 97 tests.
+- Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
+  - Result: Market Context rendered; Events rendered after tab switch; current browser console reported 0 errors. Screenshot: `overview-structure-split-v5-qa.png`.
+- Full service contract: `.venv/bin/python -m unittest tests.test_service_contracts`
+  - Result: passed 423 tests.
+- Whitespace: `git diff --check`
+  - Result: passed.

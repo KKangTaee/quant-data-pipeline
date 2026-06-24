@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Structure Split V2-V5:
+  - `.aiworkspace/note/finance/tasks/active/overview-structure-split-v2-v5-20260625/`에서 Overview 구조 분리 2차~5차를 순서대로 완료했다.
+  - Primary tab orchestration은 `app/web/overview/*` entry module이 소유하고, visual component surface는 `app/web/overview/components/*`, service read-model surface는 `app/services/overview/*`로 분리했다.
+  - 5차에서는 service surface Streamlit-free, component surface service/data import 금지, active page/tab direct job/data import 금지, thin compatibility wrapper guard를 추가했다.
+  - 각 차수별 focused test, Overview contract, py_compile, Browser QA를 수행했고 QA screenshots는 local generated artifact로만 보존한다.
 - Overview Futures Macro Refresh State V1:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-refresh-state-v1-20260624/`에서 `선물 매크로` 탭의 최신일 표시 / cache 갱신 경로를 점검했다.
   - DB의 1D futures row는 16개 core symbol 모두 `2026-06-24`까지 들어와 있었고, stale 표시 원인은 열려 있는 앱 프로세스의 15분 snapshot cache와 탭-local refresh control 부재로 좁혔다.
@@ -92,6 +97,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-25 - Overview Structure Split V2-V5
+- Completed `.aiworkspace/note/finance/tasks/active/overview-structure-split-v2-v5-20260625/` after the user asked to continue 2차~5차 sequentially with QA after each phase.
+- V2 moved tab-level orchestration into `app/web/overview/*`; V3 added domain component surfaces; V4 added domain service surfaces; V5 added boundary guard contracts.
+- Verified each phase with focused contracts, py_compile, Overview contract, and Browser QA; final V5 Browser QA screenshot is `overview-structure-split-v5-qa.png`.
+- Remaining structural cleanup is physical extraction from `legacy_dashboard.py` and `overview_market_intelligence.py`, not another UI-only polish pass.
 
 ### 2026-06-24 - Overview Market Context Load Gate Removal V1
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-load-gate-removal-v1-20260624/` after the user rejected the extra `시장 맥락 불러오기` step.

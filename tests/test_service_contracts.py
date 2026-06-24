@@ -4558,6 +4558,104 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("from app.services.overview.sentiment import build_market_sentiment_snapshot", source)
         self.assertNotIn("from app.services.overview_market_intelligence import (", source)
 
+    def test_overview_service_surfaces_stay_streamlit_free(self) -> None:
+        import ast
+
+        for path in sorted(Path("app/services/overview").glob("*.py")):
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            imported_modules = {
+                alias.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Import)
+                for alias in node.names
+            }
+            imported_modules.update(
+                node.module
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module
+            )
+
+            self.assertNotIn("streamlit", imported_modules, f"{path} should stay Streamlit-free")
+            self.assertFalse(
+                any(module == "app.web" or module.startswith("app.web.") for module in imported_modules),
+                f"{path} should not import web UI modules",
+            )
+
+    def test_overview_component_surfaces_do_not_pull_services_or_data(self) -> None:
+        import ast
+
+        forbidden_prefixes = ("app.services", "app.jobs", "finance.data", "finance.loaders")
+        for path in sorted(Path("app/web/overview/components").glob("*.py")):
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            imported_modules = {
+                alias.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Import)
+                for alias in node.names
+            }
+            imported_modules.update(
+                node.module
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module
+            )
+
+            self.assertFalse(
+                any(module == prefix or module.startswith(f"{prefix}.") for module in imported_modules for prefix in forbidden_prefixes),
+                f"{path} should remain a visual component surface, not a service/data entrypoint",
+            )
+
+    def test_overview_active_page_and_tabs_do_not_import_data_or_jobs_directly(self) -> None:
+        import ast
+
+        guarded_paths = [
+            Path("app/web/overview/page.py"),
+            Path("app/web/overview/market_context.py"),
+            Path("app/web/overview/market_movers.py"),
+            Path("app/web/overview/futures_macro.py"),
+            Path("app/web/overview/sentiment.py"),
+            Path("app/web/overview/events.py"),
+        ]
+        forbidden_modules = {
+            "app.jobs.ingestion_jobs",
+            "app.jobs.overview_automation",
+            "app.jobs.run_history",
+            "finance.data",
+            "finance.loaders",
+        }
+        for path in guarded_paths:
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            imported_modules = {
+                alias.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Import)
+                for alias in node.names
+            }
+            imported_modules.update(
+                node.module
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module
+            )
+
+            self.assertFalse(
+                any(
+                    module == forbidden or module.startswith(f"{forbidden}.")
+                    for module in imported_modules
+                    for forbidden in forbidden_modules
+                ),
+                f"{path} should route data/job work through helpers or action facades",
+            )
+
+    def test_overview_dashboard_wrapper_remains_thin_compatibility_facade(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertLessEqual(len(source.splitlines()), 40)
+        self.assertIn("from app.web.overview.page import render_overview_dashboard as _render_overview_dashboard", source)
+        self.assertIn("render_overview_dashboard = _render_overview_dashboard", source)
+        self.assertNotIn("import streamlit", source)
+
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
         source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]

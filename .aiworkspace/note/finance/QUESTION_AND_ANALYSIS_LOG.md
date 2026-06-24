@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-25 - Overview UI and engine/read-model boundaries should be explicit
+
+- User request: 사용자가 Overview 구조 리뷰 후 1차 작업과 QA를 마친 뒤, 자는 동안 2차~5차를 순서대로 진행하되 각 차수 끝에 QA를 수행해 달라고 요청함.
+- Interpreted goal: Overview의 UI 노출, visual component, service/read-model, legacy compatibility 경계를 차수별로 나누고, 각 단계가 실제 화면을 깨뜨리지 않는지 확인해야 한다.
+- Analysis result: V1은 active page shell만 분리했기 때문에 tab orchestration, component import surface, service import surface, boundary guard가 아직 부족했다. V2-V5에서는 탭 orchestration ownership, `app/web/overview/components/*`, `app/services/overview/*`, import-boundary tests를 순서대로 세우는 것이 가장 작은 안전한 구조 개선이다.
+- Follow-up: V2-V5를 완료했다. 아직 renderer / calculation body는 각각 `legacy_dashboard.py`, `overview_ui_components.py`, `overview_market_intelligence.py`에 남아 있으므로 다음 cleanup은 물리적 extraction을 별도 승인된 단위로 다뤄야 한다.
+
 ### 2026-06-24 - Futures Macro tab refresh state should track stored daily candles
 
 - User request: 사용자가 `선물 매크로` 탭이 계속 `2026-06-23` 기준으로 머무는 것 같아 탭 진입 시 업데이트가 잘 되는지 확인을 요청함.

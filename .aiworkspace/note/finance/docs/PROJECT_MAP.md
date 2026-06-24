@@ -117,7 +117,7 @@ Last Verified: 2026-06-24
 | Backtest real-money / readiness runtime helpers | `app/runtime/backtest_real_money.py`; compatibility exports remain in `app/runtime/backtest.py` |
 | Backtest strict quality / value runtime wrappers | `app/runtime/backtest_strict.py`; compatibility exports remain in `app/runtime/backtest.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
-| Service contract tests | `tests/test_service_contracts.py` |
+| Service contract tests | `tests/test_service_contracts.py`; includes Overview structure contracts for active page / tab modules, component surfaces, service surfaces, lazy selected rendering, and UI / service / data import boundary guards |
 
 ## Practical Validation Core Files
 
