@@ -4558,6 +4558,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("from app.services.overview.sentiment import build_market_sentiment_snapshot", source)
         self.assertNotIn("from app.services.overview_market_intelligence import (", source)
 
+    def test_overview_legacy_cleanup_audit_tracks_active_retained_and_removable_buckets(self) -> None:
+        audit_path = Path(
+            ".aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/LEGACY_USAGE_AUDIT.md"
+        )
+        self.assertTrue(audit_path.exists())
+        audit = audit_path.read_text(encoding="utf-8")
+
+        for heading in (
+            "## Active Legacy Calls",
+            "## Retained Compatibility",
+            "## Removable Candidates",
+            "## Next Extraction Order",
+        ):
+            self.assertIn(heading, audit)
+
+        self.assertIn("`_render_overview_tab_selector`", audit)
+        self.assertIn("`_render_futures_monitor_tab`", audit)
+        self.assertIn("`load_overview_dashboard_snapshot`", audit)
+        self.assertIn("Candidate Ops", audit)
+
     def test_overview_service_surfaces_stay_streamlit_free(self) -> None:
         import ast
 
