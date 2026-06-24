@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro Refresh State V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-refresh-state-v1-20260624/`에서 `선물 매크로` 탭의 최신일 표시 / cache 갱신 경로를 점검했다.
+  - DB의 1D futures row는 16개 core symbol 모두 `2026-06-24`까지 들어와 있었고, stale 표시 원인은 열려 있는 앱 프로세스의 15분 snapshot cache와 탭-local refresh control 부재로 좁혔다.
+  - 최신 stored daily candle marker를 snapshot cache key에 포함하고, `일봉 매크로 갱신` / `최신 데이터 다시 읽기` 버튼을 `Futures Macro` 탭에 추가했다.
 - Overview Futures Macro Mixed Substates V1:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-mixed-substates-v1-20260624/`에서 `혼재된 매크로 흐름` fallback에 하위 맥락을 추가했다.
   - 상위 scenario label은 historical validation compatibility를 위해 그대로 유지하고, `sub_scenario`, `regime_hint`, `mixed_reason`만 read model / brief hero에 노출한다.

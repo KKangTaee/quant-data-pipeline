@@ -284,6 +284,29 @@ def _load_daily_rows(
         return []
 
 
+def _latest_daily_cache_marker(query_fn: QueryFn, symbols: Sequence[str]) -> str | None:
+    if not symbols:
+        return None
+    placeholders = ", ".join(["%s"] * len(symbols))
+    try:
+        rows = query_fn(
+            "finance_price",
+            f"""
+            SELECT MAX(candle_time_utc) AS latest_daily_candle
+            FROM futures_ohlcv
+            WHERE interval_code = %s
+              AND provider_symbol IN ({placeholders})
+            """,
+            [DAILY_INTERVAL, *symbols],
+        )
+    except Exception:
+        return None
+    if not rows:
+        return None
+    value = rows[0].get("latest_daily_candle")
+    return str(value) if value not in (None, "") else None
+
+
 def _to_timestamp(value: Any) -> pd.Timestamp | None:
     if value in (None, ""):
         return None
@@ -1219,6 +1242,7 @@ def load_overview_futures_macro_snapshot(**kwargs: Any) -> dict[str, Any]:
         selected_symbols,
         int(kwargs.get("lookback_days") or 0),
         bool(kwargs.get("include_validation")),
+        _latest_daily_cache_marker(_default_query, selected_symbols),
     )
     now = monotonic()
     cached = _OVERVIEW_MACRO_SNAPSHOT_CACHE.get(cache_key)

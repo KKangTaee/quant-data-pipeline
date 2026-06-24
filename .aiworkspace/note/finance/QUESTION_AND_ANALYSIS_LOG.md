@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-24 - Futures Macro tab refresh state should track stored daily candles
+
+- User request: 사용자가 `선물 매크로` 탭이 계속 `2026-06-23` 기준으로 머무는 것 같아 탭 진입 시 업데이트가 잘 되는지 확인을 요청함.
+- Interpreted goal: 실제 futures daily collection이 멈췄는지, 아니면 탭 / cache / 화면 refresh 경로가 stale snapshot을 보여주는지 분리해서 확인해야 한다.
+- Analysis result: DB에는 16개 core futures symbol 모두 `2026-06-24 00:00:00` 1D candle까지 저장되어 있었고, 최신 `manual_macro_daily` run도 성공이었다. 문제는 열려 있는 Streamlit process의 15분 macro snapshot cache가 DB 최신 marker를 cache key로 보지 않고, `Futures Macro` primary tab에 직접 `일봉 매크로 갱신` / cache reload control이 없던 UX 경계였다.
+- Follow-up: `overview-futures-macro-refresh-state-v1-20260624`에서 latest stored 1D candle marker 기반 cache invalidation과 tab-local refresh controls를 추가했다.
+
 ### 2026-06-24 - Futures Macro mixed scenarios should explain conflict, not force prediction
 
 - User request: 사용자가 `선물 매크로` 탭에서 `혼재된 매크로 흐름`이 자주 뜨는 이유와 macro context logic의 전문성을 질문했고, 우선 추천 1차 개선만 진행하라고 승인함.

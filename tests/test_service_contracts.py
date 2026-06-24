@@ -4477,6 +4477,19 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("def _render_futures_macro_tab", source)
         self.assertNotIn('"Futures Monitor": _render_futures_monitor_tab', render_body)
 
+    def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        controls_body = source[source.index("def _render_futures_macro_refresh_controls") :]
+        controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
+        tab_body = source[source.index("def _render_futures_macro_tab") :]
+        tab_body = tab_body[: tab_body.index("def _render_futures_mini_chart_grid")]
+
+        self.assertIn("_render_futures_macro_refresh_controls()", tab_body)
+        self.assertIn("_run_futures_daily_ohlcv_action()", controls_body)
+        self.assertIn("clear_overview_futures_macro_snapshot_cache()", controls_body)
+        self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
+        self.assertIn("overview_futures_macro_tab_reload", controls_body)
+
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
@@ -12566,6 +12579,38 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             self.assertEqual(len(calls), 2)
         finally:
             macro_service.build_futures_macro_thermometer_snapshot = original_builder
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+
+    def test_overview_macro_snapshot_cache_key_tracks_latest_daily_marker(self) -> None:
+        import app.services.futures_macro_thermometer as macro_service
+
+        calls: list[dict[str, Any]] = []
+        marker = {"value": "2026-06-23 00:00:00"}
+        original_builder = macro_service.build_futures_macro_thermometer_snapshot
+        original_marker = macro_service._latest_daily_cache_marker
+
+        def fake_builder(**kwargs: Any) -> dict[str, Any]:
+            calls.append(dict(kwargs))
+            return {"call_count": len(calls), "marker": marker["value"]}
+
+        try:
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+            macro_service.build_futures_macro_thermometer_snapshot = fake_builder
+            macro_service._latest_daily_cache_marker = lambda query_fn, symbols: marker["value"]
+
+            first = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            second = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            marker["value"] = "2026-06-24 00:00:00"
+            third = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+
+            self.assertIs(first, second)
+            self.assertEqual(first["call_count"], 1)
+            self.assertEqual(third["call_count"], 2)
+            self.assertEqual(third["marker"], "2026-06-24 00:00:00")
+            self.assertEqual(len(calls), 2)
+        finally:
+            macro_service.build_futures_macro_thermometer_snapshot = original_builder
+            macro_service._latest_daily_cache_marker = original_marker
             macro_service.clear_overview_futures_macro_snapshot_cache()
 
 

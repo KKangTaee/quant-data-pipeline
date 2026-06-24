@@ -4071,6 +4071,39 @@ def _render_futures_macro_raw_tables(
                 st.caption(caution)
 
 
+def _render_futures_macro_refresh_controls() -> None:
+    cols = st.columns([1, 1, 2.2], gap="small", vertical_alignment="center")
+    if cols[0].button(
+        "일봉 매크로 갱신",
+        key="overview_futures_macro_tab_daily_refresh",
+        use_container_width=True,
+        help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 매크로 snapshot cache를 비웁니다.",
+    ):
+        with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
+            _store_overview_job_result(
+                "overview_futures_daily_ohlcv_result",
+                _run_futures_daily_ohlcv_action(),
+            )
+            clear_overview_futures_macro_snapshot_cache()
+            st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+    if cols[1].button(
+        "최신 데이터 다시 읽기",
+        key="overview_futures_macro_tab_reload",
+        use_container_width=True,
+        help="수집 job은 실행하지 않고 현재 DB 기준으로 매크로 snapshot cache만 비운 뒤 다시 읽습니다.",
+    ):
+        clear_overview_futures_macro_snapshot_cache()
+        st.session_state["overview_futures_macro_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+    refreshed_at = st.session_state.get("overview_futures_macro_daily_refreshed_at")
+    reloaded_at = st.session_state.get("overview_futures_macro_reloaded_at")
+    status_text = refreshed_at or reloaded_at
+    if status_text:
+        label = "최근 일봉 갱신" if refreshed_at else "최근 다시 읽기"
+        cols[2].caption(f"{label}: {status_text}")
+
+
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     macro = load_overview_futures_macro_snapshot()
     coverage = dict(macro.get("coverage") or {})
@@ -4119,6 +4152,7 @@ def _render_futures_macro_fragment(*, detail_expanded: bool = False) -> None:
 def _render_futures_macro_tab() -> None:
     st.markdown("### 선물 매크로")
     st.caption("저장된 선물 일봉으로 현재 macro 상태와 과거 점검 근거를 함께 확인합니다.")
+    _render_futures_macro_refresh_controls()
     _render_futures_macro_fragment(detail_expanded=True)
 
 
