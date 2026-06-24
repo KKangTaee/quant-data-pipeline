@@ -4513,6 +4513,51 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("_legacy.render_event_warning_strip(", events_source)
         self.assertNotIn("_legacy.render_macro_week_lane(", events_source)
 
+    def test_overview_service_surfaces_are_split_by_domain(self) -> None:
+        import importlib.util
+
+        expected_modules = {
+            "app.services.overview.market_context": [
+                "build_overview_macro_context_cockpit",
+                "build_overview_source_confidence_catalog",
+            ],
+            "app.services.overview.market_movers": [
+                "build_group_leadership_snapshot",
+                "build_market_movers_snapshot",
+                "build_overview_breadth_heatmap_summary",
+                "load_market_mover_sector_options",
+            ],
+            "app.services.overview.events": [
+                "build_market_events_snapshot",
+                "build_overview_macro_week_lane",
+            ],
+            "app.services.overview.sentiment": ["build_market_sentiment_snapshot"],
+            "app.services.overview.data_health": [
+                "build_collection_ops_snapshot",
+                "build_overview_data_health_ingestion_handoff",
+            ],
+        }
+
+        for module_name, entrypoints in expected_modules.items():
+            try:
+                spec = importlib.util.find_spec(module_name)
+            except ModuleNotFoundError:
+                spec = None
+            self.assertIsNotNone(spec, f"{module_name} should exist")
+            module = importlib.import_module(module_name)
+            for entrypoint in entrypoints:
+                self.assertTrue(callable(getattr(module, entrypoint, None)))
+
+    def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
+        source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.services.overview.data_health import (", source)
+        self.assertIn("from app.services.overview.events import (", source)
+        self.assertIn("from app.services.overview.market_context import (", source)
+        self.assertIn("from app.services.overview.market_movers import (", source)
+        self.assertIn("from app.services.overview.sentiment import build_market_sentiment_snapshot", source)
+        self.assertNotIn("from app.services.overview_market_intelligence import (", source)
+
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
         source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
