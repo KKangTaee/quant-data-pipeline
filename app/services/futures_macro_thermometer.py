@@ -563,6 +563,85 @@ def _component_phrase(symbols: pd.DataFrame, members: Sequence[str], *, positive
     return ", ".join(parts[:4])
 
 
+def _mixed_macro_context(
+    *,
+    risk_on: int,
+    growth: int,
+    rate_pressure: int,
+    dollar_pressure: int,
+    safe_haven: int,
+    inflation: int,
+    symbols: pd.DataFrame,
+) -> dict[str, Any]:
+    score_line = (
+        f"Risk-On {risk_on:+d}, Growth {growth:+d}, Rate Pressure {rate_pressure:+d}, "
+        f"Dollar Pressure {dollar_pressure:+d}, Safe Haven {safe_haven:+d}, Inflation {inflation:+d}"
+    )
+    if risk_on <= -20 and growth <= -20 and safe_haven < 20:
+        sub_scenario = "성장 약세 + 방어 확인 부족"
+        regime_hint = "Risk-off 후보"
+        mixed_reason = (
+            "위험자산과 성장 proxy는 약하지만 금 / 채권 / 엔 안전자산 선호가 아직 충분히 동조하지 않아 "
+            "확정적인 risk-off로 분류하지 않습니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Risk-On {risk_on:+d}, Growth {growth:+d}, Safe Haven {safe_haven:+d}",
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F", "CL=F"], positive=False),
+            _component_phrase(symbols, ["GC=F", "ZN=F", "ZB=F", "6J=F"], positive=True),
+        ]
+    elif risk_on <= -20 and rate_pressure <= -20:
+        sub_scenario = "위험선호 약세 + 금리 부담 완화"
+        regime_hint = "성장주 부담 완화 확인 필요"
+        mixed_reason = (
+            "주가지수 선물은 약하지만 채권선물 흐름은 금리 부담 완화 쪽이라 "
+            "금리 쇼크형 약세와 구분해서 봅니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Risk-On {risk_on:+d}, Rate Pressure {rate_pressure:+d}",
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F"], positive=False),
+            _component_phrase(symbols, ["ZN=F", "ZB=F"], positive=True),
+        ]
+    elif dollar_pressure >= 20 and risk_on > -10:
+        sub_scenario = "달러/위험자산 충돌"
+        regime_hint = "달러 압력 확인 필요"
+        mixed_reason = (
+            "달러 압력은 높지만 주가지수와 경기민감 선물이 아직 뚜렷한 risk-off로 동조하지 않아 "
+            "달러 단독 부담인지 확인이 필요합니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Dollar Pressure {dollar_pressure:+d}, Risk-On {risk_on:+d}",
+            _component_phrase(symbols, ["6E=F", "6B=F", "6A=F", "6C=F"], positive=False),
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F"], positive=False),
+        ]
+    elif inflation <= -20 and growth <= 0:
+        sub_scenario = "원자재/물가 약세 혼재"
+        regime_hint = "수요 둔화 확인 필요"
+        mixed_reason = (
+            "원자재 / 물가 proxy는 약하지만 성장 둔화, 위험선호, 안전자산 흐름이 한 방향으로 완전히 모이지 않아 "
+            "수요 둔화 신호인지 추가 확인이 필요합니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Inflation {inflation:+d}, Growth {growth:+d}",
+            _component_phrase(symbols, ["CL=F", "NG=F", "HG=F"], positive=False),
+            score_line,
+        ]
+    else:
+        sub_scenario = "저신호 / 방향성 없음"
+        regime_hint = "관망"
+        mixed_reason = (
+            "주요 점수가 20점 기준의 방향성 임계값을 충분히 넘지 않아 선물 일봉만으로는 "
+            "우세한 매크로 흐름을 특정하기 어렵습니다."
+        )
+        evidence = [f"{sub_scenario}: {score_line}"]
+
+    return {
+        "sub_scenario": sub_scenario,
+        "regime_hint": regime_hint,
+        "mixed_reason": mixed_reason,
+        "evidence": [item for item in evidence if item and item != "-"],
+    }
+
+
 def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) -> dict[str, Any]:
     risk_on = _value_by_score(scores, "Risk-On Score") or 0
     growth = _value_by_score(scores, "Growth Score") or 0
@@ -580,6 +659,7 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
     scenario = "혼재된 매크로 흐름"
     summary = "현재 선물 일봉 기준 흐름이 한 방향으로 강하게 모이지 않아 혼재된 시장 흐름으로 해석됩니다."
     evidence: list[str] = []
+    mixed_context: dict[str, Any] = {}
 
     if inflation >= 20 and rate_pressure >= 20 and nq_z <= -SIGNAL_Z_THRESHOLD:
         scenario = "인플레이션 쇼크 가능성"
@@ -636,17 +716,36 @@ def generate_market_interpretation(scores: pd.DataFrame, symbols: pd.DataFrame) 
             _component_phrase(symbols, ["GC=F", "ZN=F", "ZB=F", "6J=F"], positive=True),
         ]
     else:
-        evidence = [
-            f"Risk-On {risk_on:+d}, Growth {growth:+d}, Rate Pressure {rate_pressure:+d}",
-            f"Dollar Pressure {dollar_pressure:+d}, Safe Haven {safe_haven:+d}, Inflation {inflation:+d}",
-        ]
+        mixed_context = _mixed_macro_context(
+            risk_on=risk_on,
+            growth=growth,
+            rate_pressure=rate_pressure,
+            dollar_pressure=dollar_pressure,
+            safe_haven=safe_haven,
+            inflation=inflation,
+            symbols=symbols,
+        )
+        summary = (
+            "현재 선물 일봉 기준 흐름은 한 방향으로 확정되지 않았고, "
+            f"하위 맥락은 {mixed_context.get('sub_scenario')}에 가깝습니다."
+        )
+        evidence = list(mixed_context.get("evidence") or [])
 
     cleaned_evidence = [item for item in evidence if item and item != "-"]
-    return {
+    result = {
         "scenario": scenario,
         "summary": summary,
         "evidence": cleaned_evidence,
     }
+    if mixed_context:
+        result.update(
+            {
+                "sub_scenario": mixed_context["sub_scenario"],
+                "regime_hint": mixed_context["regime_hint"],
+                "mixed_reason": mixed_context["mixed_reason"],
+            }
+        )
+    return result
 
 
 def _score_values(scores: pd.DataFrame) -> dict[str, int]:

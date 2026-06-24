@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-24 - Futures Macro mixed scenarios should explain conflict, not force prediction
+
+- User request: 사용자가 `선물 매크로` 탭에서 `혼재된 매크로 흐름`이 자주 뜨는 이유와 macro context logic의 전문성을 질문했고, 우선 추천 1차 개선만 진행하라고 승인함.
+- Interpreted goal: 현 단계에서는 외부 macro source를 새로 붙이기보다, 현재 저장된 futures 일봉 score 안에서 mixed가 어떤 종류의 mixed인지 설명해야 한다.
+- Analysis result: 기존 rule은 보수적으로 설계되어 명확한 risk-on / risk-off / rate / inflation 조합이 아닐 때 `혼재된 매크로 흐름`으로 빠진다. 이 판단 자체는 안전하지만 사용자가 읽을 정보량이 부족하므로, 상위 scenario는 그대로 유지하고 mixed subtype / reason을 보조 context로 붙이는 것이 가장 작은 개선이다.
+- Follow-up: `overview-futures-macro-mixed-substates-v1-20260624`에서 `sub_scenario`, `regime_hint`, `mixed_reason`을 추가했다. FRED `T10Y3M`, `VIXCLS`, `BAA10Y` 등 독립 macro source 기반 전문성 보강은 2차 후보로 남겨둔다.
+
 ### 2026-06-24 - Futures macro validation should live in its own Overview tab
 
 - User request: 사용자가 `시장 맥락` 첫 진입이 느린 원인이 futures macro의 과거 validation이라면, Overview에 `선물 매크로` 탭을 추가하고 `시장 맥락`에서는 매크로 진단을 빼는 흐름을 승인함.

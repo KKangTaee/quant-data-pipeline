@@ -3547,6 +3547,28 @@ def overview_ui_css() -> str:
   margin-top: 0.24rem;
   overflow-wrap: anywhere;
 }
+.ov-futures-brief-subscenario {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 0.42rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: var(--ov-mi-radius-pill);
+  border: 1px solid var(--ov-mi-border-control);
+  background: rgba(255,255,255,0.68);
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+.ov-futures-brief-mixed-reason {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.42;
+  margin-top: 0.38rem;
+  max-width: 68rem;
+}
 .ov-futures-brief-sentence {
   color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-body);

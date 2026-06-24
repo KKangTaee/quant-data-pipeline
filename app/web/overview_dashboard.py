@@ -3666,6 +3666,9 @@ def _futures_market_brief_model(macro: dict[str, Any]) -> dict[str, Any]:
     return {
         "eyebrow": "오늘 기준 시장 브리프",
         "scenario": str(summary.get("scenario") or "시장 해석 대기"),
+        "sub_scenario": str(summary.get("sub_scenario") or ""),
+        "regime_hint": str(summary.get("regime_hint") or ""),
+        "mixed_reason": str(summary.get("mixed_reason") or ""),
         "sentence": sentences[0] if sentences else "저장된 일봉 선물 데이터로 시장 흐름을 해석합니다.",
         "support_items": support_items,
         "evidence_chips": evidence_chips[:4],
@@ -3690,12 +3693,28 @@ def _render_futures_market_brief(macro: dict[str, Any]) -> None:
     )
     if not evidence_html:
         evidence_html = '<span class="ov-futures-brief-evidence-chip">상세 근거는 아래 disclosure에서 확인</span>'
+    sub_scenario = str(model.get("sub_scenario") or "").strip()
+    regime_hint = str(model.get("regime_hint") or "").strip()
+    subscenario_text = " · ".join(item for item in [sub_scenario, regime_hint] if item)
+    subscenario_html = (
+        f'<div class="ov-futures-brief-subscenario">{escape(subscenario_text)}</div>'
+        if subscenario_text
+        else ""
+    )
+    mixed_reason = str(model.get("mixed_reason") or "").strip()
+    mixed_reason_html = (
+        f'<div class="ov-futures-brief-mixed-reason">{escape(mixed_reason)}</div>'
+        if mixed_reason
+        else ""
+    )
     st.markdown(
         f"""
         <div class="ov-futures-brief">
           <div class="ov-futures-brief-main">
             <div class="ov-futures-brief-eyebrow">{escape(str(model["eyebrow"]))}</div>
             <div class="ov-futures-brief-scenario">{escape(str(model["scenario"]))}</div>
+            {subscenario_html}
+            {mixed_reason_html}
             <div class="ov-futures-brief-sentence">{escape(str(model["sentence"]))}</div>
             <div class="ov-futures-brief-evidence">{evidence_html}</div>
           </div>

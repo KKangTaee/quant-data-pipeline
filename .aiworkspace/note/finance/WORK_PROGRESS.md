@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro Mixed Substates V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-mixed-substates-v1-20260624/`에서 `혼재된 매크로 흐름` fallback에 하위 맥락을 추가했다.
+  - 상위 scenario label은 historical validation compatibility를 위해 그대로 유지하고, `sub_scenario`, `regime_hint`, `mixed_reason`만 read model / brief hero에 노출한다.
+  - 이번 1차는 저장된 futures 일봉 score만 사용하며 FRED / VIX / credit spread 기반 전문 macro score 확장은 2차 후보로 남겼다.
 - Overview Futures Macro Tab Split V1:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-tab-split-v1-20260624/`에서 `선물 매크로` primary tab을 추가했다.
   - `시장 맥락` 기본 로드는 futures macro historical validation과 historical analog를 제외하고 movement / breadth / sentiment / events / data 중심의 light cockpit을 렌더링한다.

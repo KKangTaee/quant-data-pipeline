@@ -4852,7 +4852,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         macro = {
             "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_daily_date": "2026-06-19"},
-            "summary": {"scenario": "혼재된 매크로 흐름"},
+            "summary": {
+                "scenario": "혼재된 매크로 흐름",
+                "sub_scenario": "성장 약세 + 방어 확인 부족",
+                "regime_hint": "Risk-off 후보",
+                "mixed_reason": "위험자산과 성장 proxy는 약하지만 안전자산 선호가 아직 충분하지 않습니다.",
+            },
             "summary_sentences": ["현재 선물 일봉 기준 흐름이 한 방향으로 강하게 모이지 않습니다."],
             "evidence": ["Risk-On +14, Growth +1, Rate Pressure +46", "Dollar Pressure -13"],
             "confidence": {
@@ -4872,6 +4877,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(model["eyebrow"], "오늘 기준 시장 브리프")
         self.assertEqual(model["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(model["sub_scenario"], "성장 약세 + 방어 확인 부족")
+        self.assertEqual(model["regime_hint"], "Risk-off 후보")
+        self.assertIn("안전자산 선호", model["mixed_reason"])
         self.assertIn("한 방향으로 강하게 모이지", model["sentence"])
         self.assertEqual([item["label"] for item in model["support_items"]], ["근거 강도", "과거 점검", "유사 구간", "자료 기준"])
         self.assertIn("위험선호 +14", " ".join(model["evidence_chips"]))
@@ -11935,6 +11943,12 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
 
 
 class FuturesMacroThermometerContractTests(unittest.TestCase):
+    def _macro_score_frame(self, values: dict[str, int]) -> pd.DataFrame:
+        return pd.DataFrame([{"Score": score, "Value": value} for score, value in values.items()])
+
+    def _macro_symbol_frame(self, values: dict[str, float]) -> pd.DataFrame:
+        return pd.DataFrame([{"Symbol": symbol, "Std Move": value} for symbol, value in values.items()])
+
     def _daily_rows(self, final_moves: dict[str, float], *, days: int = 260) -> list[dict[str, object]]:
         base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
         rows: list[dict[str, object]] = []
@@ -12124,6 +12138,107 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertEqual(snapshot["summary"]["scenario"], "금리 상승 부담")
         self.assertIn("금리 상승 압력", snapshot["summary"]["summary"])
         self.assertGreater(snapshot["scores"].set_index("Score").loc["Rate Pressure Score", "Value"], 20)
+
+    def test_macro_interpretation_explains_weak_growth_without_safe_haven_confirmation(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -27,
+                    "Growth Score": -31,
+                    "Rate Pressure Score": -14,
+                    "Dollar Pressure Score": 3,
+                    "Safe Haven Score": 10,
+                    "Inflation Pressure Score": -23,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": -1.06,
+                    "NQ=F": -1.19,
+                    "RTY=F": -0.75,
+                    "HG=F": -1.25,
+                    "CL=F": -0.68,
+                    "GC=F": 0.25,
+                    "ZN=F": 0.15,
+                    "ZB=F": 0.05,
+                    "6J=F": 0.10,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "성장 약세 + 방어 확인 부족")
+        self.assertEqual(interpretation["regime_hint"], "Risk-off 후보")
+        self.assertIn("하위 맥락", interpretation["summary"])
+        self.assertNotEqual(interpretation["summary"], interpretation["mixed_reason"])
+        self.assertIn("안전자산", interpretation["mixed_reason"])
+        self.assertIn("성장 약세", " ".join(interpretation["evidence"]))
+
+    def test_macro_interpretation_explains_risk_weakness_with_easing_rates(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -24,
+                    "Growth Score": -8,
+                    "Rate Pressure Score": -28,
+                    "Dollar Pressure Score": 2,
+                    "Safe Haven Score": -4,
+                    "Inflation Pressure Score": -6,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": -0.91,
+                    "NQ=F": -1.04,
+                    "RTY=F": -0.66,
+                    "ZN=F": 1.10,
+                    "ZB=F": 0.95,
+                    "GC=F": -0.10,
+                    "HG=F": -0.30,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "위험선호 약세 + 금리 부담 완화")
+        self.assertEqual(interpretation["regime_hint"], "성장주 부담 완화 확인 필요")
+        self.assertIn("금리 부담", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_keeps_low_signal_mixed_context_distinct(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": 5,
+                    "Growth Score": 4,
+                    "Rate Pressure Score": -3,
+                    "Dollar Pressure Score": 2,
+                    "Safe Haven Score": 3,
+                    "Inflation Pressure Score": -2,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": 0.12,
+                    "NQ=F": 0.18,
+                    "RTY=F": -0.08,
+                    "ZN=F": 0.10,
+                    "ZB=F": -0.07,
+                    "GC=F": 0.05,
+                    "HG=F": 0.11,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "저신호 / 방향성 없음")
+        self.assertEqual(interpretation["regime_hint"], "관망")
+        self.assertIn("20점", interpretation["mixed_reason"])
 
     def test_macro_thermometer_builds_weekly_context_from_5d_moves(self) -> None:
         from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
