@@ -4536,6 +4536,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "build_collection_ops_snapshot",
                 "build_overview_data_health_ingestion_handoff",
             ],
+            "app.services.overview.ia": ["load_overview_ia_closeout_model"],
         }
 
         for module_name, entrypoints in expected_modules.items():
@@ -4553,10 +4554,19 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("from app.services.overview.data_health import (", source)
         self.assertIn("from app.services.overview.events import (", source)
+        self.assertIn("from app.services.overview.ia import load_overview_ia_closeout_model", source)
         self.assertIn("from app.services.overview.market_context import (", source)
         self.assertIn("from app.services.overview.market_movers import (", source)
         self.assertIn("from app.services.overview.sentiment import build_market_sentiment_snapshot", source)
         self.assertNotIn("from app.services.overview_market_intelligence import (", source)
+
+    def test_overview_ia_closeout_body_lives_in_service_surface(self) -> None:
+        service_source = Path("app/services/overview/ia.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("def load_overview_ia_closeout_model", service_source)
+        self.assertIn('"schema_version": "overview_ia_closeout_v1"', service_source)
+        self.assertNotIn("def load_overview_ia_closeout_model", helper_source)
 
     def test_overview_legacy_cleanup_audit_tracks_active_retained_and_removable_buckets(self) -> None:
         audit_path = Path(

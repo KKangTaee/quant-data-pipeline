@@ -25,3 +25,16 @@
   - Result: passed 100 tests.
 - Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
   - Result: Market Context rendered; Futures Macro tab switched through the navigation surface; current browser console reported 0 errors. Screenshot: `overview-legacy-cleanup-v7-qa.png`.
+
+## V8 IA Read Model Service Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_service_surfaces_are_split_by_domain tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_helpers_use_domain_service_surfaces tests.test_service_contracts.OverviewAutomationContractTests.test_overview_ia_closeout_body_lives_in_service_surface`
+  - Result: failed because `app/services/overview/ia.py` did not exist and `overview_dashboard_helpers.py` still owned the `load_overview_ia_closeout_model` body.
+- GREEN focused: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_service_surfaces_are_split_by_domain tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_helpers_use_domain_service_surfaces tests.test_service_contracts.OverviewAutomationContractTests.test_overview_ia_closeout_body_lives_in_service_surface tests.test_service_contracts.OverviewAutomationContractTests.test_overview_ia_closeout_model_demotes_ops_surfaces_from_primary_tabs`
+  - Result: passed 4 tests.
+- Compile: `.venv/bin/python -m py_compile app/services/overview/ia.py app/web/overview_dashboard_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- Overview contract: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: passed 101 tests.
+- Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
+  - Result: Market Context rendered; Events rendered after tab switch; current browser console reported 0 errors. Screenshot: `overview-legacy-cleanup-v8-qa.png`.

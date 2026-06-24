@@ -1,6 +1,6 @@
 # Overview Legacy Usage Audit
 
-Status: V7 Updated
+Status: V8 Updated
 
 This document records active, retained, and removable legacy candidates for V6 cleanup.
 
@@ -23,6 +23,7 @@ These names are no longer active tab bodies, but they are currently retained bec
 
 | Name | Reason |
 |---|---|
+| `_render_overview_tab_selector`, `_render_selected_overview_tab` | Implementation body moved to `app/web/overview/navigation.py` in V7. Active page imports the navigation surface directly; legacy imports these names only for compatibility. |
 | `_overview_active_tab_label`, `_overview_tab_label_from_slug`, `_overview_tab_seed_label`, `_overview_tab_display_label` | Implementation body moved to `app/web/overview/navigation.py` in V7. Existing imports via `app.web.overview_dashboard` remain compatibility exports through `legacy_dashboard.py`. |
 | `OVERVIEW_DEEP_TAB_OPTIONS`, `OVERVIEW_DEEP_TAB_SLUGS`, `OVERVIEW_DEEP_TAB_DISPLAY` | Implementation constants moved to `app/web/overview/navigation.py` in V7. Legacy still imports them for compatibility. |
 | `_render_overview_market_context_tab`, `_render_market_movers_tab`, `_render_futures_macro_tab`, `_render_market_sentiment_tab`, `_render_events_tab` | Standalone legacy tab wrappers. Active tab modules no longer delegate to them, but older tests still inspect these bodies. V7/V9 should move tests to active modules and then remove these wrappers. |
@@ -43,6 +44,5 @@ These are not called by the active Overview page path and are cleanup candidates
 ## Next Extraction Order
 
 1. Move active Market Context / Events tests from legacy bodies to active tab modules.
-2. Move a small read-model body out of `overview_dashboard_helpers.py` or `overview_market_intelligence.py` into `app/services/overview/*`.
-3. Delete confirmed unused legacy wrappers and Candidate Ops snapshot helpers.
-4. Add final guard tests so removed standalone tabs do not re-enter primary dispatch.
+2. Delete confirmed unused legacy wrappers and Candidate Ops snapshot helpers.
+3. Add final guard tests so removed standalone tabs do not re-enter primary dispatch.
