@@ -4588,6 +4588,31 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("`load_overview_dashboard_snapshot`", audit)
         self.assertIn("Candidate Ops", audit)
 
+    def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
+        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+
+        for function_name in (
+            "render_overview_dashboard",
+            "_render_overview_market_context_tab",
+            "_render_market_movers_tab",
+            "_render_futures_macro_tab",
+            "_render_futures_monitor_tab",
+            "_render_sector_industry_tab",
+            "_render_market_sentiment_tab",
+            "_render_events_tab",
+        ):
+            self.assertNotIn(f"def {function_name}", legacy_source)
+
+        for function_name in (
+            "load_overview_dashboard_snapshot",
+            "build_overview_top_candidates",
+            "build_overview_funnel_rows",
+            "build_overview_next_actions",
+            "build_overview_activity_rows",
+        ):
+            self.assertNotIn(f"def {function_name}", helper_source)
+
     def test_overview_navigation_surface_owns_selector_entrypoints(self) -> None:
         from app.web.overview import navigation
 
@@ -4718,7 +4743,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("import streamlit", source)
 
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
         context_label_index = render_body.index('"Market Context"')
         market_label_index = render_body.index('"Market Movers"')
@@ -4728,10 +4753,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("_render_overview_tab_selector(", render_body)
         self.assertIn("_render_selected_overview_tab(", render_body)
-        self.assertNotIn("st.tabs(", render_body.split("def _render_market_movers_tab", 1)[0])
-        self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body.split("def _render_market_movers_tab", 1)[0])
-        self.assertNotIn('"Futures Monitor": _render_futures_monitor_tab', render_body)
-        self.assertNotIn('"Sector / Industry": _render_sector_industry_tab', render_body)
+        self.assertNotIn("st.tabs(", render_body)
+        self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body)
+        self.assertNotIn('"Futures Monitor"', render_body)
+        self.assertNotIn('"Sector / Industry"', render_body)
         self.assertNotIn('"Data Health": _render_collection_ops_tab', render_body)
         self.assertNotIn('"Candidate Ops"', render_body)
         self.assertNotIn("load_overview_dashboard_snapshot", render_body)
@@ -4843,24 +4868,27 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_overview_dashboard_routes_futures_macro_as_primary_tab(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertIn('"Futures Macro": _render_futures_macro_tab', render_body)
-        self.assertIn("def _render_futures_macro_tab", source)
-        self.assertNotIn('"Futures Monitor": _render_futures_monitor_tab', render_body)
+        self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
+        self.assertIn("def render_futures_macro_tab", futures_source)
+        self.assertIn("_legacy._render_futures_macro_fragment(detail_expanded=True)", futures_source)
+        self.assertNotIn('"Futures Monitor"', render_body)
 
     def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
         source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
         controls_body = source[source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
         panel_body = source[source.index("def _render_futures_macro_panel") :]
         panel_body = panel_body[: panel_body.index("def _render_futures_macro_fragment")]
-        tab_body = source[source.index("def _render_futures_macro_tab") :]
-        tab_body = tab_body[: tab_body.index("def _render_futures_mini_chart_grid")]
+        tab_body = futures_source[futures_source.index("def render_futures_macro_tab") :]
 
-        self.assertNotIn("_render_futures_macro_refresh_controls()", tab_body)
+        self.assertIn("_legacy._render_futures_macro_fragment(detail_expanded=True)", tab_body)
+        self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
@@ -4883,7 +4911,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
         self.assertNotIn("_render_overview_tab_load_gate", source)
@@ -4895,18 +4923,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        if "def _render_overview_market_context_tab" not in source:
-            self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
-        helper_body = source[source.index("def _render_overview_market_context_tab"):]
-        helper_end = helper_body.index("def _summarize_auto_refresh_plan")
-        helper_body = helper_body[:helper_end]
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
+        self.assertIn("cockpit_model = _legacy.load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("_render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
+        self.assertIn("_legacy._render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        refresh_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
+        refresh_index = helper_body.index("_legacy._render_overview_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_index)
         self.assertIn("load_overview_macro_context_cockpit", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
@@ -4916,14 +4940,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
 
     def test_overview_dashboard_keeps_deep_tab_guide_out_of_market_context_brief(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        if "def _render_overview_market_context_tab" not in source:
-            self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
-        helper_body = source[source.index("def _render_overview_market_context_tab"):]
-        helper_end = helper_body.index("def _summarize_auto_refresh_plan")
-        helper_body = helper_body[:helper_end]
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("cockpit_model = load_overview_macro_context_cockpit(", helper_body)
+        self.assertIn("cockpit_model = _legacy.load_overview_macro_context_cockpit(", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
@@ -4981,7 +5001,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         if "def _render_overview_market_context_refresh_bar" not in source:
             self.fail("Overview should keep the Market Context refresh bar helper.")
         helper_body = source[source.index("def _render_overview_market_context_refresh_bar"):]
-        helper_end = helper_body.index("def _render_overview_market_context_tab")
+        helper_end = helper_body.index("def _render_overview_historical_analog_controls")
         helper_body = helper_body[:helper_end]
 
         self.assertIn("_overview_market_context_refresh_reflection_state", helper_body)
@@ -5000,7 +5020,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         if "def _render_overview_market_context_refresh_bar" not in source:
             self.fail("Overview should keep the Market Context refresh bar helper.")
         helper_body = source[source.index("def _render_overview_market_context_refresh_bar"):]
-        helper_end = helper_body.index("def _render_overview_market_context_tab")
+        helper_end = helper_body.index("def _render_overview_historical_analog_controls")
         helper_body = helper_body[:helper_end]
 
         self.assertIn("_overview_market_context_refresh_expander_label(cockpit_model)", helper_body)
@@ -5014,36 +5034,32 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('with st.expander("갱신 상세", expanded=False):', source)
 
     def test_overview_data_health_is_not_a_primary_overview_tab(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertNotIn("def _render_collection_ops_tab", source)
-        self.assertNotIn("load_overview_data_health_ingestion_handoff", source)
-        self.assertNotIn("render_data_health_ingestion_handoff", source)
+        self.assertNotIn("def _render_collection_ops_tab", legacy_source)
+        self.assertNotIn("load_overview_data_health_ingestion_handoff", render_body)
+        self.assertNotIn("render_data_health_ingestion_handoff", render_body)
         self.assertNotIn('"Data Health"', render_body)
 
-    def test_overview_sector_industry_tab_renders_breadth_summary_before_trend_tabs(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        tab_body = source[source.index("def _render_sector_industry_tab"):]
-        summary_index = tab_body.index("render_breadth_heatmap_summary(")
-        chart_index = tab_body.index('st.markdown("#### Latest Breadth Heatmap")')
-        detail_index = tab_body.index('with st.expander("상세 표", expanded=False):')
-        heatmap_index = tab_body.index("_build_group_leadership_heatmap(rows)")
+    def test_overview_sector_industry_standalone_tab_is_removed_from_primary_overview(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        render_body = page_source[page_source.index("def render_overview_dashboard"):]
 
-        self.assertLess(summary_index, chart_index)
-        self.assertLess(summary_index, heatmap_index)
-        self.assertLess(heatmap_index, detail_index)
-        self.assertNotIn('st.tabs(["Trend", "Table"])', tab_body)
-        self.assertIn("load_overview_breadth_heatmap_summary(snapshot)", tab_body)
+        self.assertNotIn("def _render_sector_industry_tab", legacy_source)
+        self.assertNotIn('"Sector / Industry"', render_body)
+        self.assertIn("build_overview_breadth_heatmap_summary", Path("app/services/overview/market_movers.py").read_text(encoding="utf-8"))
 
     def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        tab_body = source[source.index("def _render_events_tab"):]
+        source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        tab_body = source[source.index("def render_events_tab"):]
         lane_index = tab_body.index("render_macro_week_lane(")
-        filter_index = tab_body.index("_filter_event_rows_for_calendar(calendar_rows)")
+        filter_index = tab_body.index("_legacy._filter_event_rows_for_calendar(calendar_rows)")
 
         self.assertLess(lane_index, filter_index)
-        self.assertIn("load_overview_macro_week_lane(snapshot)", tab_body)
+        self.assertIn("_legacy.load_overview_macro_week_lane(snapshot)", tab_body)
 
     def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
         from app.web.overview_dashboard import _futures_chart_symbols
@@ -5378,32 +5394,28 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("min-height", scoped_body)
 
     def test_overview_market_context_keeps_historical_analog_out_of_default_entry(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        if "def _render_overview_market_context_tab" not in source:
-            self.fail("Overview should group cockpit rendering in _render_overview_market_context_tab.")
-        helper_body = source[source.index("def _render_overview_market_context_tab"):]
-        helper_end = helper_body.index("def _summarize_auto_refresh_plan")
-        helper_body = helper_body[:helper_end]
+        helper_body = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_body = helper_body[helper_body.index("def render_market_context_tab"):]
 
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertNotIn("_render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
+        self.assertNotIn("_legacy._render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        refresh_bar_index = helper_body.index("_render_overview_market_context_refresh_bar(cockpit_model)")
+        refresh_bar_index = helper_body.index("_legacy._render_overview_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_bar_index)
 
     def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
         source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         self.assertIn("def _render_overview_historical_analog_controls", source)
         self.assertIn('"기준 시점"', source)
         self.assertIn('"패턴 기간"', source)
         self.assertIn("아래 기준은 이어지는 과거 참고 통계에만 적용", source)
-        helper_body = source[source.index("def _render_overview_market_context_tab"):]
-        helper_body = helper_body[: helper_body.index("def _summarize_auto_refresh_plan")]
+        helper_body = market_context_source[market_context_source.index("def render_market_context_tab"):]
 
-        self.assertNotIn("initial_analog_controls = _overview_historical_analog_control_state()", helper_body)
-        self.assertNotIn("analog_controls = _render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("initial_analog_controls = _legacy._overview_historical_analog_control_state()", helper_body)
+        self.assertNotIn("analog_controls = _legacy._render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("if analog_controls != initial_analog_controls:", helper_body)
         self.assertNotIn("as_of_date=initial_analog_controls", helper_body)
         self.assertNotIn("pattern_window=str(initial_analog_controls", helper_body)
@@ -6247,10 +6259,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_market_context_copy_uses_korean_summary_first_language(self) -> None:
         import inspect
 
-        from app.web.overview import legacy_dashboard
+        from app.web.overview import legacy_dashboard, market_context
         from app.web import overview_ui_components
 
-        dashboard_source = inspect.getsource(legacy_dashboard)
+        dashboard_source = "\n".join(
+            [
+                inspect.getsource(market_context),
+                inspect.getsource(legacy_dashboard._overview_market_context_refresh_expander_label),
+                inspect.getsource(legacy_dashboard._render_overview_market_context_refresh_bar),
+            ]
+        )
         component_source = "\n".join(
             [
                 inspect.getsource(overview_ui_components.render_macro_context_cockpit),

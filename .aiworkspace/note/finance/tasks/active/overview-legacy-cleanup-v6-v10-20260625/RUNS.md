@@ -38,3 +38,16 @@
   - Result: passed 101 tests.
 - Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
   - Result: Market Context rendered; Events rendered after tab switch; current browser console reported 0 errors. Screenshot: `overview-legacy-cleanup-v8-qa.png`.
+
+## V9 Confirmed Legacy Removal - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_legacy_cleanup_removes_confirmed_unused_surfaces`
+  - Result: failed because `legacy_dashboard.py` still contained old standalone tab wrappers and `overview_dashboard_helpers.py` still contained Candidate Ops overview snapshot helpers.
+- GREEN focused: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_legacy_cleanup_removes_confirmed_unused_surfaces tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_uses_lazy_selected_deep_tab_rendering tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_routes_futures_macro_as_primary_tab tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_tab_exposes_daily_refresh_and_cache_reload tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_keeps_historical_analog_out_of_default_entry tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_tab_renders_macro_week_lane_before_calendar_filters`
+  - Result: passed 7 tests.
+- Compile: `.venv/bin/python -m py_compile app/web/overview_dashboard_helpers.py app/web/overview/legacy_dashboard.py app/web/overview/page.py app/web/overview/market_context.py app/web/overview/market_movers.py app/web/overview/futures_macro.py app/web/overview/sentiment.py app/web/overview/events.py tests/test_service_contracts.py`
+  - Result: passed.
+- Overview contract: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: passed 102 tests.
+- Browser QA: Streamlit `http://localhost:8521/?overview_tab=market-context`
+  - Result: Market Context rendered with `필요 자료 보강` expander; Events rendered after tab switch through the active tab module; current browser console reported 0 new errors. Screenshot: `overview-legacy-cleanup-v9-qa.png`.
