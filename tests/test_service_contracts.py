@@ -4616,6 +4616,34 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("legacy_dashboard.py", audit)
 
+    def test_overview_legacy_dashboard_removal_audit_tracks_phase_targets(self) -> None:
+        audit_path = Path(
+            ".aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/"
+            "LEGACY_DASHBOARD_REMOVAL_AUDIT.md"
+        )
+        self.assertTrue(audit_path.exists())
+        audit = audit_path.read_text(encoding="utf-8")
+
+        for heading in (
+            "## Remaining Direct Dependencies",
+            "## Removal Phases",
+            "## Migration Targets",
+            "## Deletion Guard",
+        ):
+            self.assertIn(heading, audit)
+
+        for target in (
+            "session_helpers.py",
+            "market_context_helpers.py",
+            "events_helpers.py",
+            "sentiment_helpers.py",
+            "market_movers_helpers.py",
+            "futures_macro_helpers.py",
+            "overview_dashboard.py",
+            "legacy_dashboard.py",
+        ):
+            self.assertIn(target, audit)
+
     def test_overview_market_context_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
