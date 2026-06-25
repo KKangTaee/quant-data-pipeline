@@ -10,7 +10,7 @@
 | Events | `app/web/overview/events.py` | event refresh toolbar, events snapshot load, calendar frame/filters, agenda/calendar/quality render helpers, Streamlit/pandas bridge | `app/web/overview/events_helpers.py` (V13 extracted) |
 | Futures Macro | `app/web/overview/futures_macro.py` | header/caption and futures macro fragment render bridge | `app/web/overview/futures_macro_helpers.py` (V14 extracted) |
 | Market Movers | `app/web/overview/market_movers.py` | controls, auto-refresh browser checks, snapshot load, refresh bar, snapshot panel | `app/web/overview/market_movers_helpers.py` (V15 extracted) |
-| Sentiment | `app/web/overview/sentiment.py` | refresh actions, snapshot load, job result panel, status cards, charts, tables, Streamlit/pandas bridge | `app/web/overview/sentiment_helpers.py` |
+| Sentiment | `app/web/overview/sentiment.py` | refresh actions, snapshot load, job result panel, status cards, charts, tables, Streamlit/pandas bridge | `app/web/overview/sentiment_helpers.py` (V16 extracted) |
 
 Detailed active call groups:
 
@@ -55,3 +55,4 @@ The tab entrypoint should read as the user workflow for that tab. The helper mod
 - V13 Events: `events.py` now imports `events_helpers.py` and no longer imports `legacy_dashboard.py` or event components directly. The helper module owns refresh result display, event lanes, calendar filtering, and detail tabs.
 - V14 Futures Macro: `futures_macro.py` now imports `futures_macro_helpers.py` and no longer imports `legacy_dashboard.py` directly. The helper module owns the heading/caption and futures macro fragment bridge.
 - V15 Market Movers: `market_movers.py` now imports `market_movers_helpers.py` and no longer imports `legacy_dashboard.py` directly. The helper module owns controls, refresh mode normalization, auto-refresh fragment, snapshot load, refresh bar, and snapshot panel.
+- V16 Sentiment: `sentiment.py` now imports `sentiment_helpers.py` and no longer imports `legacy_dashboard.py` directly. The helper module owns controls, job result display, snapshot load, overview status cards, warnings, and detail chart/table sections.

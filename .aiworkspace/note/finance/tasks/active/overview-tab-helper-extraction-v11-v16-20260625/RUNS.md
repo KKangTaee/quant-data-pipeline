@@ -77,3 +77,26 @@
 - Browser QA: `http://localhost:8521/?nav=overview`, switched to `변동 종목 · Market Movers`.
   - Result: controls, refresh bar, snapshot panel, and Why It Moved panel rendered; console errors 0.
   - Screenshot: `overview-tab-helper-extraction-v15-market-movers-qa.png` (generated artifact, not committed).
+
+## V16 Sentiment Helper Extraction / Final QA - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `app/web/overview/sentiment_helpers.py` did not exist yet.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_entrypoint_uses_tab_helper_module`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_primary_tab_modules_own_tab_orchestration tests.test_service_contracts.OverviewAutomationContractTests.test_overview_active_page_and_tabs_do_not_import_data_or_jobs_directly`
+  - Result: 2 tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 110 tests passed.
+- Browser QA: `http://localhost:8521/?nav=overview`, switched to `심리 · Sentiment`.
+  - Result: Sentiment controls, analysis panel, status cards, driver sections, and chart tabs rendered; console errors 0.
+  - Screenshot: `overview-tab-helper-extraction-v16-sentiment-qa.png` (generated artifact, not committed).
+- FINAL GREEN: `rg -n "legacy_dashboard|_legacy\\." app/web/overview/market_context.py app/web/overview/events.py app/web/overview/futures_macro.py app/web/overview/market_movers.py app/web/overview/sentiment.py`
+  - Result: no matches. Active primary tab files no longer import/call `legacy_dashboard.py` directly.
+- FINAL GREEN: `.venv/bin/python -m py_compile app/web/overview/market_context.py app/web/overview/market_context_helpers.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/futures_macro.py app/web/overview/futures_macro_helpers.py app/web/overview/market_movers.py app/web/overview/market_movers_helpers.py app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- FINAL GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 110 tests passed.
+- Docs sync: updated `docs/INDEX.md`, `docs/PROJECT_MAP.md`, `docs/architecture/SCRIPT_STRUCTURE_MAP.md`, `docs/flows/BACKTEST_UI_FLOW.md`, `WORK_PROGRESS.md`, and `QUESTION_AND_ANALYSIS_LOG.md`.

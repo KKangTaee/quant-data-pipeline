@@ -23,4 +23,14 @@
   - Added `app/web/overview/market_movers_helpers.py`.
   - Made `app/web/overview/market_movers.py` call semantic helper functions instead of importing `legacy_dashboard.py`.
   - QA passed with TDD red/green check, related contract tests, Overview contract suite, py_compile, and Market Movers Browser QA.
-- Next step: V16 Sentiment helper extraction and final docs/QA.
+- V16 Sentiment helper extraction and final docs/QA completed.
+  - Added `app/web/overview/sentiment_helpers.py`.
+  - Made `app/web/overview/sentiment.py` call semantic helper functions instead of importing `legacy_dashboard.py`.
+  - Updated durable docs for the Overview entrypoint/helper/legacy compatibility structure.
+  - QA passed with TDD red/green check, related contract tests, Overview contract suite, py_compile, Sentiment Browser QA, final structure checks, and `git diff --check`.
+
+## Completed Scope
+
+- 11차~16차 completed in sequence with QA after each step.
+- All primary Overview tab entry modules now avoid direct `legacy_dashboard.py` imports.
+- Low-level helper bodies that still need compatibility remain in `legacy_dashboard.py`; active entrypoints now reach them through tab-local helper bridge modules.

@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Tab Helper Extraction V11-V16:
+  - `.aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/`에서 11차~16차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
+  - Active primary tab entrypoint는 `app/web/overview/{tab}.py`, tab-local Streamlit glue는 `app/web/overview/{tab}_helpers.py`가 소유하도록 정리했다.
+  - `legacy_dashboard.py`는 active page / tab owner가 아니라 lower-level compatibility helper surface로 남겼고, active primary tab files는 직접 import하지 않는다.
+  - QA screenshots는 local generated artifact로만 보존한다.
 - Overview Structure Split V2-V5:
   - `.aiworkspace/note/finance/tasks/active/overview-structure-split-v2-v5-20260625/`에서 Overview 구조 분리 2차~5차를 순서대로 완료했다.
   - Primary tab orchestration은 `app/web/overview/*` entry module이 소유하고, visual component surface는 `app/web/overview/components/*`, service read-model surface는 `app/services/overview/*`로 분리했다.
@@ -103,6 +108,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - V2 moved tab-level orchestration into `app/web/overview/*`; V3 added domain component surfaces; V4 added domain service surfaces; V5 added boundary guard contracts.
 - Verified each phase with focused contracts, py_compile, Overview contract, and Browser QA; final V5 Browser QA screenshot is `overview-structure-split-v5-qa.png`.
 - Remaining structural cleanup is physical extraction from `legacy_dashboard.py` and `overview_market_intelligence.py`, not another UI-only polish pass.
+
+### 2026-06-25 - Overview Tab Helper Extraction V11-V16
+- Completed `.aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/` after the user approved continuing 11차~16차 sequentially with QA after each phase.
+- Added `market_context_helpers.py`, `events_helpers.py`, `futures_macro_helpers.py`, `market_movers_helpers.py`, and `sentiment_helpers.py` under `app/web/overview/`.
+- Active Overview tab entry modules no longer import `legacy_dashboard.py` directly; low-level compatibility helpers remain there behind tab-local helper bridge modules.
+- Verified each phase with focused contracts, py_compile, Overview contract, and Browser QA; final V16 Browser QA screenshot is `overview-tab-helper-extraction-v16-sentiment-qa.png`.
 
 ### 2026-06-24 - Overview Market Context Load Gate Removal V1
 - Opened and completed `.aiworkspace/note/finance/tasks/active/overview-market-context-load-gate-removal-v1-20260624/` after the user rejected the extra `시장 맥락 불러오기` step.

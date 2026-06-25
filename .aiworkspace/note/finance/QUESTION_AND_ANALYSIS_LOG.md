@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-25 - Overview active tabs should have tab-local helper bridges
+
+- User request: 사용자가 11차~16차를 한 차수씩 진행하고 각 차수 끝에 QA를 한 뒤 다음 차수로 넘어가 달라고 승인함.
+- Interpreted goal: Overview의 primary tab entrypoint가 계속 `legacy_dashboard.py` 세부 helper를 직접 호출하면 UI 노출과 helper/compatibility 경계가 다시 흐려지므로, 탭별 entrypoint와 helper를 짝으로 분리해야 한다.
+- Analysis result: V11 audit 결과 old full-tab wrapper 호출은 제거되어 있었고 남은 문제는 `market_context.py`, `events.py`, `futures_macro.py`, `market_movers.py`, `sentiment.py`가 legacy helper를 직접 호출하는 것이었다. 가장 작은 안전한 구조는 각 tab entrypoint는 user flow order만 남기고, Streamlit glue / legacy bridge는 matching `*_helpers.py`에 두는 것이다.
+- Follow-up: V12~V16에서 5개 tab helper를 추가했고, active primary tab files는 더 이상 `legacy_dashboard.py`를 직접 import하지 않는다. `legacy_dashboard.py`에는 아직 low-level compatibility helper body가 남아 있으므로 향후 물리 삭제는 helper cluster 단위 reference audit 후 진행해야 한다.
+
 ### 2026-06-25 - Overview UI and engine/read-model boundaries should be explicit
 
 - User request: 사용자가 Overview 구조 리뷰 후 1차 작업과 QA를 마친 뒤, 자는 동안 2차~5차를 순서대로 진행하되 각 차수 끝에 QA를 수행해 달라고 요청함.

@@ -3,4 +3,4 @@
 - `legacy_dashboard.py` still contains shared constants and lower-level helpers used by multiple tab helper groups. Do not delete broad helper clusters without direct usage checks.
 - Streamlit UI helpers can be moved into tab helper modules, but service/data calculations must stay Streamlit-free and outside `app/web`.
 - Browser QA screenshots are generated artifacts and should not be committed unless explicitly requested.
-
+- V16 does not delete every low-level function body from `legacy_dashboard.py`; it removes direct legacy ownership from active primary tab entrypoints. Future deletion should target one low-level helper cluster at a time with import/reference tests.

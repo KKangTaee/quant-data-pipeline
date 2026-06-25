@@ -4437,10 +4437,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "entrypoint": "def render_sentiment_tab",
                 "forbidden": "_legacy._render_market_sentiment_tab",
                 "required": [
-                    '_legacy.st.markdown("### 시장 심리 컨텍스트")',
-                    "_legacy.run_overview_market_sentiment()",
-                    "_legacy.load_overview_market_sentiment_snapshot()",
-                    "_legacy._render_sentiment_analysis_panel(",
+                    "render_sentiment_header()",
+                    "render_sentiment_controls()",
+                    "load_sentiment_snapshot()",
+                    "render_sentiment_snapshot_overview(",
                 ],
             },
             "app/web/overview/events.py": {
@@ -4696,6 +4696,31 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("_legacy._render_market_movers_controls()", helper_source)
         self.assertIn("_legacy._render_market_movers_refresh_bar(", helper_source)
         self.assertIn("_legacy._render_market_movers_snapshot_panel(", helper_source)
+
+    def test_overview_sentiment_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/sentiment_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.sentiment_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_sentiment_header",
+            "render_sentiment_controls",
+            "render_sentiment_job_result",
+            "load_sentiment_snapshot",
+            "render_sentiment_snapshot_overview",
+            "has_sentiment_rows",
+            "render_sentiment_empty_state",
+            "render_sentiment_detail_sections",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertIn("_legacy.run_overview_market_sentiment()", helper_source)
+        self.assertIn("_legacy.load_overview_market_sentiment_snapshot()", helper_source)
+        self.assertIn("_legacy._render_sentiment_analysis_panel(analysis)", helper_source)
+        self.assertIn("_legacy._sentiment_trend_chart(", helper_source)
 
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
         legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
