@@ -4409,10 +4409,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "entrypoint": "def render_market_context_tab",
                 "forbidden": "_legacy._render_overview_market_context_tab",
                 "required": [
-                    '_legacy.st.markdown("### 시장 맥락")',
-                    "_legacy.load_overview_macro_context_cockpit(",
+                    "render_market_context_header()",
+                    "load_market_context_cockpit_model()",
                     "render_macro_context_cockpit(",
-                    "_legacy._render_overview_market_context_refresh_bar(",
+                    "render_market_context_refresh_bar(",
                 ],
             },
             "app/web/overview/market_movers.py": {
@@ -4614,6 +4614,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
             self.assertIn(module_name, audit)
 
         self.assertIn("legacy_dashboard.py", audit)
+
+    def test_overview_market_context_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.market_context_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_market_context_header",
+            "render_market_context_refresh_reflection",
+            "load_market_context_cockpit_model",
+            "render_market_context_refresh_bar",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertIn("_legacy.load_overview_macro_context_cockpit(", helper_source)
+        self.assertIn("_legacy._render_overview_market_context_refresh_bar(cockpit_model)", helper_source)
 
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
         legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
@@ -5000,26 +5019,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("cockpit_model = _legacy.load_overview_macro_context_cockpit(", helper_body)
+        self.assertIn("cockpit_model = load_market_context_cockpit_model()", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("_legacy._render_overview_market_context_refresh_bar(cockpit_model)", helper_body)
+        self.assertIn("render_market_context_refresh_bar(cockpit_model)", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        refresh_index = helper_body.index("_legacy._render_overview_market_context_refresh_bar(cockpit_model)")
+        refresh_index = helper_body.index("render_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_index)
-        self.assertIn("load_overview_macro_context_cockpit", helper_body)
+        self.assertIn("load_market_context_cockpit_model", helper_body)
         self.assertIn("render_macro_context_cockpit", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
         self.assertNotIn("_render_overview_historical_analog_repair_action(", helper_body)
         self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
+        self.assertIn("_legacy.load_overview_macro_context_cockpit(", helper_source)
+        self.assertIn("_legacy._render_overview_market_context_refresh_bar(cockpit_model)", helper_source)
 
     def test_overview_dashboard_keeps_deep_tab_guide_out_of_market_context_brief(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("cockpit_model = _legacy.load_overview_macro_context_cockpit(", helper_body)
+        self.assertIn("cockpit_model = load_market_context_cockpit_model()", helper_body)
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
@@ -5478,7 +5500,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
         cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        refresh_bar_index = helper_body.index("_legacy._render_overview_market_context_refresh_bar(cockpit_model)")
+        refresh_bar_index = helper_body.index("render_market_context_refresh_bar(cockpit_model)")
         self.assertLess(cockpit_index, refresh_bar_index)
 
     def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
@@ -6335,12 +6357,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_market_context_copy_uses_korean_summary_first_language(self) -> None:
         import inspect
 
-        from app.web.overview import legacy_dashboard, market_context
+        from app.web.overview import legacy_dashboard, market_context, market_context_helpers
         from app.web import overview_ui_components
 
         dashboard_source = "\n".join(
             [
                 inspect.getsource(market_context),
+                inspect.getsource(market_context_helpers),
                 inspect.getsource(legacy_dashboard._overview_market_context_refresh_expander_label),
                 inspect.getsource(legacy_dashboard._render_overview_market_context_refresh_bar),
             ]
