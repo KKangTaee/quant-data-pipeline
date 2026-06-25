@@ -59,3 +59,20 @@
   - Result: Events summary, warning strip, view filters, and Agenda tab rendered.
   - Screenshot: `overview-legacy-dashboard-removal-v20-events-qa.png`.
   - Current-page console: 0 errors.
+
+## V21 Sentiment Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `sentiment_helpers.py` still imported `legacy_dashboard`.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_entrypoint_uses_tab_helper_module`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/sentiment_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 112 tests passed.
+- GREEN: `rg -n "legacy_dashboard|_legacy\\." app/web/overview/sentiment_helpers.py app/web/overview/sentiment.py`
+  - Result: no matches.
+- Browser QA: `http://localhost:8521/?nav=overview`, Sentiment tab.
+  - Result: sentiment analysis panel, 6-step reading flow, status cards, driver cards, learning notes, and detail tabs rendered.
+  - Screenshot: `overview-legacy-dashboard-removal-v21-sentiment-qa.png`.
+  - Current-page console: 0 errors, 12 warnings.

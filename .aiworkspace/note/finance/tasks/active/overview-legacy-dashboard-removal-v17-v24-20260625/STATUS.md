@@ -22,4 +22,9 @@
   - Moved Events refresh toolbar, snapshot context loading, calendar frame transforms, agenda/quality sections, and month grid rendering into the Events tab helper.
   - Kept collection jobs in `app.jobs.overview_actions` and read-model loading in `app.web.overview_dashboard_helpers`.
   - QA passed with focused Events tests, py_compile, Overview contract suite, and browser QA.
-- Next step: V21 Sentiment helper extraction.
+- V21 Sentiment helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/sentiment_helpers.py`.
+  - Moved Sentiment controls, job result rendering, analysis panel, step cards, driver cards, learning cards, status cards, and charts into the Sentiment tab helper.
+  - Kept sentiment collection in `app.jobs.overview_actions` and snapshot loading in `app.web.overview_dashboard_helpers`.
+  - QA passed with focused Sentiment tests, py_compile, Overview contract suite, and browser QA.
+- Next step: V22 Market Movers helper extraction.

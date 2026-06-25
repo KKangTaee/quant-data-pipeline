@@ -4761,10 +4761,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertIn(f"def {function_name}", helper_source)
 
-        self.assertIn("_legacy.run_overview_market_sentiment()", helper_source)
-        self.assertIn("_legacy.load_overview_market_sentiment_snapshot()", helper_source)
-        self.assertIn("_legacy._render_sentiment_analysis_panel(analysis)", helper_source)
-        self.assertIn("_legacy._sentiment_trend_chart(", helper_source)
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("run_overview_market_sentiment()", helper_source)
+        self.assertIn("load_overview_market_sentiment_snapshot()", helper_source)
+        self.assertIn("_render_sentiment_analysis_panel(analysis)", helper_source)
+        self.assertIn("_sentiment_trend_chart(", helper_source)
 
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
         legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
