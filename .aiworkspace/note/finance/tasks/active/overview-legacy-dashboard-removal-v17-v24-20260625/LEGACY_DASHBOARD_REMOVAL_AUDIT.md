@@ -6,7 +6,6 @@ Current direct import paths:
 
 | File | Direct dependency | Why it remains |
 |---|---|---|
-| `app/web/overview/market_context_helpers.py` | `legacy_dashboard` | refresh reflection, cockpit loader bridge, refresh bar |
 | `app/web/overview/events_helpers.py` | `legacy_dashboard` | event toolbar, frame/filter helpers, job result, calendar render helpers |
 | `app/web/overview/futures_macro_helpers.py` | `legacy_dashboard` | futures macro fragment / panel bridge |
 | `app/web/overview/market_movers_helpers.py` | `legacy_dashboard` | controls, auto-refresh, snapshot load, refresh bar, snapshot panel |
@@ -19,6 +18,7 @@ Current direct import paths:
 | Step | Extracted |
 |---|---|
 | V18 | `app/web/overview/session_helpers.py` now owns market session dataclass, NYSE calendar helpers, market session banner model, Market Context session payload, and snapshot status model helpers. `app/web/overview/page.py` no longer imports `legacy_dashboard`. |
+| V19 | `app/web/overview/market_context_helpers.py` now owns Market Context header, refresh reflection, cockpit model load bridge, refresh status panel, refresh result summary, and refresh action buttons. It calls `app.jobs.overview_actions` and `app.web.overview_dashboard_helpers` directly instead of `legacy_dashboard`. |
 
 ## Removal Phases
 

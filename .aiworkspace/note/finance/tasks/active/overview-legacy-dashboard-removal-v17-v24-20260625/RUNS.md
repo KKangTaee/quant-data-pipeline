@@ -25,3 +25,20 @@
   - Result: Overview / 미국장 session banner / Market Context rendered.
   - Screenshot: `overview-legacy-dashboard-removal-v18-session-qa.png`.
   - Current-page console: 0 errors.
+
+## V19 Market Context Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `market_context_helpers.py` still imported `legacy_dashboard`.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_entrypoint_uses_tab_helper_module ...test_overview_market_context_copy_uses_korean_summary_first_language`
+  - Result: 3 focused Market Context tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/market_context_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 112 tests passed.
+- GREEN: `rg -n "legacy_dashboard|_legacy\\." app/web/overview/market_context_helpers.py app/web/overview/market_context.py`
+  - Result: no matches.
+- Browser QA: `http://localhost:8521/?nav=overview`
+  - Result: Market Context and `필요 자료 보강` expander rendered.
+  - Screenshot: `overview-legacy-dashboard-removal-v19-market-context-qa.png`.
+  - Current-page console: 0 errors.

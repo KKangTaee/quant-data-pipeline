@@ -12,4 +12,9 @@
   - Removed the direct `legacy_dashboard` dependency from `app/web/overview/page.py`.
   - Moved Market Context session-basis payload calculation to the new helper.
   - QA passed with focused session tests, py_compile, Overview contract suite, and browser QA.
-- Next step: V19 Market Context refresh helper extraction.
+- V19 Market Context refresh helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/market_context_helpers.py`.
+  - Moved the refresh reflection, refresh bar, result summary, refresh plan panel, and cache clear behavior into the tab helper.
+  - Kept the refresh action boundary in `app.jobs.overview_actions`; the helper only coordinates UI state and cache invalidation.
+  - QA passed with focused Market Context tests, py_compile, Overview contract suite, and browser QA.
+- Next step: V20 Events helper extraction.
