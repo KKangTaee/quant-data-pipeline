@@ -5,7 +5,6 @@ from typing import Any, Callable
 
 import streamlit as st
 
-from app.web.overview import legacy_dashboard as _legacy
 from app.web.overview.components.layout import render_market_session_banner
 from app.web.overview.events import render_events_tab
 from app.web.overview.futures_macro import render_futures_macro_tab
@@ -16,6 +15,7 @@ from app.web.overview.navigation import (
     _render_selected_overview_tab,
 )
 from app.web.overview.sentiment import render_sentiment_tab
+from app.web.overview.session_helpers import _market_session_banner_model
 
 
 def render_overview_dashboard(
@@ -31,7 +31,7 @@ def render_overview_dashboard(
     del runtime_marker, loaded_at, git_sha, latest_result, recent_results, render_runtime_snapshot
     st.title("Overview")
     st.caption("저장된 시장 자료를 브리프처럼 읽고, 필요한 세부 근거는 각 탭에서 이어서 확인합니다.")
-    render_market_session_banner(_legacy._market_session_banner_model())
+    render_market_session_banner(_market_session_banner_model())
 
     active_tab = _render_overview_tab_selector()
     _render_selected_overview_tab(

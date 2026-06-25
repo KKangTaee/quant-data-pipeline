@@ -4120,7 +4120,7 @@ class JobResultArtifactContractTests(unittest.TestCase):
 
 class OverviewAutomationContractTests(unittest.TestCase):
     def test_market_session_banner_reports_open_day_times(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_session_banner_model
 
         model = _market_session_banner_model(now=datetime(2026, 5, 29, 10, 0, tzinfo=US_EASTERN_TZ))
 
@@ -4132,7 +4132,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["items"][1]["detail"], "16:00 ET")
 
     def test_market_session_banner_reports_weekend_closure(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_session_banner_model
 
         model = _market_session_banner_model(now=datetime(2026, 5, 30, 10, 0, tzinfo=US_EASTERN_TZ))
 
@@ -4142,7 +4142,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["items"][1]["detail"], "09:30 ET")
 
     def test_market_session_banner_reports_observed_holiday_closure(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_session_banner_model
 
         model = _market_session_banner_model(now=datetime(2026, 7, 3, 10, 0, tzinfo=US_EASTERN_TZ))
 
@@ -4150,7 +4150,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("Independence Day", model["detail"])
 
     def test_market_context_session_payload_uses_previous_trading_day_when_closed(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_context_session_payload
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_context_session_payload
 
         model = _market_context_session_payload(now=datetime(2026, 6, 20, 10, 0, tzinfo=US_EASTERN_TZ))
 
@@ -4160,7 +4160,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["basis_date"], "2026-06-18")
 
     def test_snapshot_status_labels_intraday_quote_time(self) -> None:
-        from app.web.overview_dashboard import _snapshot_status_items
+        from app.web.overview.session_helpers import _snapshot_status_items
 
         items = _snapshot_status_items(
             {
@@ -4179,7 +4179,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("previous close", items[0]["detail"])
 
     def test_snapshot_status_labels_sparse_eod_date(self) -> None:
-        from app.web.overview_dashboard import _snapshot_status_items
+        from app.web.overview.session_helpers import _snapshot_status_items
 
         items = _snapshot_status_items(
             {
@@ -4643,6 +4643,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "legacy_dashboard.py",
         ):
             self.assertIn(target, audit)
+
+    def test_overview_page_uses_session_helper_instead_of_legacy_dashboard(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/session_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.session_helpers import _market_session_banner_model", page_source)
+        self.assertNotIn("legacy_dashboard", page_source)
+        self.assertNotIn("_legacy.", page_source)
+        self.assertIn("def _market_session_banner_model", helper_source)
+        self.assertIn("def _market_context_session_payload", helper_source)
+        self.assertIn("def _snapshot_status_items", helper_source)
 
     def test_overview_market_context_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")

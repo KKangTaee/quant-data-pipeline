@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.web.overview import legacy_dashboard as _legacy
+from app.web.overview.session_helpers import _market_context_session_payload
 
 
 def render_market_context_header() -> None:
@@ -16,7 +17,7 @@ def render_market_context_refresh_reflection() -> None:
 
 
 def load_market_context_cockpit_model() -> dict[str, Any]:
-    market_session_context = _legacy._market_context_session_payload()
+    market_session_context = _market_context_session_payload()
     return _legacy.load_overview_macro_context_cockpit(
         market_session_context=market_session_context,
     )

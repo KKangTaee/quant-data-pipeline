@@ -7,4 +7,9 @@
   - Added `LEGACY_DASHBOARD_REMOVAL_AUDIT.md`.
   - Added a contract test that locks the V17-V24 target modules and deletion guard.
   - QA passed with focused audit test, py_compile, and Overview contract suite.
-- Next step: V18 market session/banner helper extraction.
+- V18 market session/banner helper extraction completed.
+  - Added `app/web/overview/session_helpers.py`.
+  - Removed the direct `legacy_dashboard` dependency from `app/web/overview/page.py`.
+  - Moved Market Context session-basis payload calculation to the new helper.
+  - QA passed with focused session tests, py_compile, Overview contract suite, and browser QA.
+- Next step: V19 Market Context refresh helper extraction.

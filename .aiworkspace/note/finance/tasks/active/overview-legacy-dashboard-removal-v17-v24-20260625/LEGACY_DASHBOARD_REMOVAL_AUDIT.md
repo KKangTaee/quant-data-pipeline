@@ -6,7 +6,6 @@ Current direct import paths:
 
 | File | Direct dependency | Why it remains |
 |---|---|---|
-| `app/web/overview/page.py` | `legacy_dashboard._market_session_banner_model` | market session/banner model still lives in legacy |
 | `app/web/overview/market_context_helpers.py` | `legacy_dashboard` | refresh reflection, cockpit loader bridge, refresh bar |
 | `app/web/overview/events_helpers.py` | `legacy_dashboard` | event toolbar, frame/filter helpers, job result, calendar render helpers |
 | `app/web/overview/futures_macro_helpers.py` | `legacy_dashboard` | futures macro fragment / panel bridge |
@@ -14,6 +13,12 @@ Current direct import paths:
 | `app/web/overview/sentiment_helpers.py` | `legacy_dashboard` | controls, job result, snapshot, sentiment panels/charts |
 | `app/web/overview_dashboard.py` | `legacy_dashboard` | compatibility re-export of legacy private helpers |
 | `tests/test_service_contracts.py` | `overview_dashboard` private imports | tests still import old private helper names from wrapper |
+
+## Completed Extractions
+
+| Step | Extracted |
+|---|---|
+| V18 | `app/web/overview/session_helpers.py` now owns market session dataclass, NYSE calendar helpers, market session banner model, Market Context session payload, and snapshot status model helpers. `app/web/overview/page.py` no longer imports `legacy_dashboard`. |
 
 ## Removal Phases
 
