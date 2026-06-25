@@ -61,3 +61,19 @@
 - Browser QA: `http://localhost:8521/?nav=overview`, switched to `선물 매크로 · Futures Macro`.
   - Result: Futures Macro tab rendered action buttons and macro context panel; console errors 0.
   - Screenshot: `overview-tab-helper-extraction-v14-futures-macro-qa.png` (generated artifact, not committed).
+
+## V15 Market Movers Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `app/web/overview/market_movers_helpers.py` did not exist yet.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_entrypoint_uses_tab_helper_module`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_primary_tab_modules_own_tab_orchestration tests.test_service_contracts.OverviewAutomationContractTests.test_overview_active_page_and_tabs_do_not_import_data_or_jobs_directly`
+  - Result: 2 tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/market_movers.py app/web/overview/market_movers_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 109 tests passed.
+- Browser QA: `http://localhost:8521/?nav=overview`, switched to `변동 종목 · Market Movers`.
+  - Result: controls, refresh bar, snapshot panel, and Why It Moved panel rendered; console errors 0.
+  - Screenshot: `overview-tab-helper-extraction-v15-market-movers-qa.png` (generated artifact, not committed).

@@ -4419,10 +4419,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "entrypoint": "def render_market_movers_tab",
                 "forbidden": "_legacy._render_market_movers_tab",
                 "required": [
-                    '_legacy.st.markdown("### Market Movers")',
-                    "_legacy._render_market_movers_controls()",
-                    "_legacy._render_market_movers_refresh_bar(",
-                    "_legacy._render_market_movers_snapshot_panel(",
+                    "render_market_movers_header()",
+                    "render_market_movers_controls()",
+                    "is_market_movers_auto_refresh_enabled(",
+                    "render_market_movers_snapshot(",
                 ],
             },
             "app/web/overview/futures_macro.py": {
@@ -4673,6 +4673,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
             self.assertIn(f"def {function_name}", helper_source)
 
         self.assertIn("_legacy._render_futures_macro_fragment(detail_expanded=detail_expanded)", helper_source)
+
+    def test_overview_market_movers_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/market_movers.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.market_movers_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_market_movers_header",
+            "render_market_movers_controls",
+            "render_market_movers_context_captions",
+            "normalize_market_movers_refresh_mode",
+            "is_market_movers_auto_refresh_enabled",
+            "render_market_movers_auto_refresh_panel",
+            "render_market_movers_snapshot",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertIn("_legacy._render_market_movers_controls()", helper_source)
+        self.assertIn("_legacy._render_market_movers_refresh_bar(", helper_source)
+        self.assertIn("_legacy._render_market_movers_snapshot_panel(", helper_source)
 
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
         legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")

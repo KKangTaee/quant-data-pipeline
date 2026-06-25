@@ -19,4 +19,8 @@
   - Added `app/web/overview/futures_macro_helpers.py`.
   - Made `app/web/overview/futures_macro.py` call semantic helper functions instead of importing `legacy_dashboard.py`.
   - QA passed with TDD red/green check, related contract tests, Overview contract suite, py_compile, and Futures Macro Browser QA.
-- Next step: V15 Market Movers helper extraction.
+- V15 Market Movers helper extraction completed.
+  - Added `app/web/overview/market_movers_helpers.py`.
+  - Made `app/web/overview/market_movers.py` call semantic helper functions instead of importing `legacy_dashboard.py`.
+  - QA passed with TDD red/green check, related contract tests, Overview contract suite, py_compile, and Market Movers Browser QA.
+- Next step: V16 Sentiment helper extraction and final docs/QA.
