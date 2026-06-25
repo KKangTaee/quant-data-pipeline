@@ -4697,8 +4697,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertIn(f"def {function_name}", helper_source)
 
-        self.assertIn("_legacy.load_overview_market_events_snapshot(", helper_source)
-        self.assertIn("_legacy._render_event_month_grid(filtered_rows)", helper_source)
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("load_overview_market_events_snapshot(", helper_source)
+        self.assertIn("_render_event_month_grid(filtered_rows)", helper_source)
 
     def test_overview_futures_macro_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
@@ -5294,7 +5296,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         filter_index = tab_body.index("filter_event_calendar_rows(")
 
         self.assertLess(lane_index, filter_index)
-        self.assertIn("_legacy.load_overview_macro_week_lane(context.snapshot)", helper_source)
+        self.assertIn("load_overview_macro_week_lane(context.snapshot)", helper_source)
+        self.assertNotIn("_legacy.load_overview_macro_week_lane", helper_source)
 
     def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
         from app.web.overview_dashboard import _futures_chart_symbols

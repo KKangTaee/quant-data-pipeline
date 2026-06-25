@@ -42,3 +42,20 @@
   - Result: Market Context and `필요 자료 보강` expander rendered.
   - Screenshot: `overview-legacy-dashboard-removal-v19-market-context-qa.png`.
   - Current-page console: 0 errors.
+
+## V20 Events Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `events_helpers.py` still imported `legacy_dashboard`.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_entrypoint_uses_tab_helper_module ...test_overview_active_tabs_use_domain_component_surfaces`
+  - Result: 3 focused Events / component tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/events_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 112 tests passed.
+- GREEN: `rg -n "legacy_dashboard|_legacy\\." app/web/overview/events_helpers.py app/web/overview/events.py`
+  - Result: no matches.
+- Browser QA: `http://localhost:8521/?nav=overview`, Events tab.
+  - Result: Events summary, warning strip, view filters, and Agenda tab rendered.
+  - Screenshot: `overview-legacy-dashboard-removal-v20-events-qa.png`.
+  - Current-page console: 0 errors.
