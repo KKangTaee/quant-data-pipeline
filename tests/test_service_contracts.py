@@ -4588,6 +4588,33 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("`load_overview_dashboard_snapshot`", audit)
         self.assertIn("Candidate Ops", audit)
 
+    def test_overview_helper_extraction_audit_tracks_target_helper_modules(self) -> None:
+        audit_path = Path(
+            ".aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/"
+            "HELPER_EXTRACTION_AUDIT.md"
+        )
+        self.assertTrue(audit_path.exists())
+        audit = audit_path.read_text(encoding="utf-8")
+
+        for heading in (
+            "## Active Legacy Helper Calls",
+            "## Target Helper Modules",
+            "## Extraction Order",
+            "## Guard Rules",
+        ):
+            self.assertIn(heading, audit)
+
+        for module_name in (
+            "market_context_helpers.py",
+            "events_helpers.py",
+            "futures_macro_helpers.py",
+            "market_movers_helpers.py",
+            "sentiment_helpers.py",
+        ):
+            self.assertIn(module_name, audit)
+
+        self.assertIn("legacy_dashboard.py", audit)
+
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
         legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
