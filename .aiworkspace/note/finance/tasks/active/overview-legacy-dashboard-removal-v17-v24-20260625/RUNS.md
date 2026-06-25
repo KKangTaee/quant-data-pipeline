@@ -76,3 +76,20 @@
   - Result: sentiment analysis panel, 6-step reading flow, status cards, driver cards, learning notes, and detail tabs rendered.
   - Screenshot: `overview-legacy-dashboard-removal-v21-sentiment-qa.png`.
   - Current-page console: 0 errors, 12 warnings.
+
+## V22 Market Movers Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `market_movers_helpers.py` still imported `legacy_dashboard`.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_entrypoint_uses_tab_helper_module`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/market_movers_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 112 tests passed.
+- GREEN: `rg -n "legacy_dashboard|_legacy\\." app/web/overview/market_movers_helpers.py app/web/overview/market_movers.py`
+  - Result: no matches.
+- Browser QA: `http://localhost:8521/?nav=overview`, Market Movers tab.
+  - Result: controls, data refresh bar, snapshot meta strip, rank/chart area, table, and Why It Moved section rendered.
+  - Screenshot: `overview-legacy-dashboard-removal-v22-market-movers-qa.png`.
+  - Current-page console: 0 errors, 12 warnings.

@@ -4737,9 +4737,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertIn(f"def {function_name}", helper_source)
 
-        self.assertIn("_legacy._render_market_movers_controls()", helper_source)
-        self.assertIn("_legacy._render_market_movers_refresh_bar(", helper_source)
-        self.assertIn("_legacy._render_market_movers_snapshot_panel(", helper_source)
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("_render_market_movers_controls()", helper_source)
+        self.assertIn("_render_market_movers_refresh_bar(", helper_source)
+        self.assertIn("_render_market_movers_snapshot_panel(", helper_source)
 
     def test_overview_sentiment_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")

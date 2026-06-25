@@ -27,4 +27,9 @@
   - Moved Sentiment controls, job result rendering, analysis panel, step cards, driver cards, learning cards, status cards, and charts into the Sentiment tab helper.
   - Kept sentiment collection in `app.jobs.overview_actions` and snapshot loading in `app.web.overview_dashboard_helpers`.
   - QA passed with focused Sentiment tests, py_compile, Overview contract suite, and browser QA.
-- Next step: V22 Market Movers helper extraction.
+- V22 Market Movers helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/market_movers_helpers.py`.
+  - Moved Market Movers controls, refresh mode, job result rendering, auto-refresh plan, snapshot meta strip, ranking charts, tables, and Why It Moved links into the tab helper.
+  - Kept collection jobs in `app.jobs.overview_actions` and snapshot loading in `app.web.overview_dashboard_helpers`.
+  - QA passed with focused Market Movers tests, py_compile, Overview contract suite, and browser QA.
+- Next step: V23 Futures Macro helper extraction.
