@@ -32,4 +32,9 @@
   - Moved Market Movers controls, refresh mode, job result rendering, auto-refresh plan, snapshot meta strip, ranking charts, tables, and Why It Moved links into the tab helper.
   - Kept collection jobs in `app.jobs.overview_actions` and snapshot loading in `app.web.overview_dashboard_helpers`.
   - QA passed with focused Market Movers tests, py_compile, Overview contract suite, and browser QA.
-- Next step: V23 Futures Macro helper extraction.
+- V23 Futures Macro helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/futures_macro_helpers.py`.
+  - Moved Futures Macro header, refresh controls, macro brief, weekly flow, score lane, evidence/validation disclosure, raw table rendering, and futures helper models into the tab helper.
+  - Kept daily futures collection in `app.jobs.overview_actions` and macro snapshot loading/clearing in `app.services.futures_macro_thermometer`.
+  - QA passed with focused Futures Macro tests, py_compile, Overview contract suite, and browser QA.
+- Next step: V24 compatibility wrapper cleanup and `legacy_dashboard.py` deletion.

@@ -4713,10 +4713,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         for function_name in (
             "render_futures_macro_header",
             "render_futures_macro_fragment",
+            "_render_futures_macro_refresh_controls",
+            "_render_futures_macro_panel",
+            "_futures_market_brief_model",
+            "_futures_weekly_flow_model",
         ):
             self.assertIn(f"def {function_name}", helper_source)
 
-        self.assertIn("_legacy._render_futures_macro_fragment(detail_expanded=detail_expanded)", helper_source)
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("load_overview_futures_macro_snapshot(", helper_source)
 
     def test_overview_market_movers_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_movers.py").read_text(encoding="utf-8")
@@ -5107,23 +5113,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
         self.assertIn("def render_futures_macro_tab", futures_source)
         self.assertIn("render_futures_macro_fragment(detail_expanded=True)", futures_source)
-        self.assertIn("_legacy._render_futures_macro_fragment(detail_expanded=detail_expanded)", futures_helper_source)
+        self.assertNotIn("legacy_dashboard", futures_helper_source)
+        self.assertNotIn("_legacy.", futures_helper_source)
+        self.assertIn("_render_futures_macro_panel(detail_expanded=detail_expanded)", futures_helper_source)
         self.assertNotIn('"Futures Monitor"', render_body)
 
     def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
         futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
-        controls_body = source[source.index("def _render_futures_macro_refresh_controls") :]
+        controls_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
-        panel_body = source[source.index("def _render_futures_macro_panel") :]
-        panel_body = panel_body[: panel_body.index("def _render_futures_macro_fragment")]
+        panel_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_futures_macro_fragment")]
         tab_body = futures_source[futures_source.index("def render_futures_macro_tab") :]
 
         self.assertIn("render_futures_macro_fragment(detail_expanded=True)", tab_body)
         self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
-        self.assertIn("_legacy._render_futures_macro_fragment(detail_expanded=detail_expanded)", futures_helper_source)
+        self.assertNotIn("legacy_dashboard", futures_helper_source)
+        self.assertNotIn("_legacy.", futures_helper_source)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)

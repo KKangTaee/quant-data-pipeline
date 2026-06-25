@@ -93,3 +93,20 @@
   - Result: controls, data refresh bar, snapshot meta strip, rank/chart area, table, and Why It Moved section rendered.
   - Screenshot: `overview-legacy-dashboard-removal-v22-market-movers-qa.png`.
   - Current-page console: 0 errors, 12 warnings.
+
+## V23 Futures Macro Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_futures_macro_entrypoint_uses_tab_helper_module ...test_futures_macro_tab_exposes_daily_refresh_and_cache_reload`
+  - Result: failed as expected because `futures_macro_helpers.py` still bridged into `legacy_dashboard`.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_futures_macro_entrypoint_uses_tab_helper_module ...test_futures_weekly_flow_model_ranks_driver_and_supports`
+  - Result: 12 focused Futures Macro / futures helper tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 112 tests passed.
+- GREEN: `rg -n "legacy_dashboard|_legacy\\." app/web/overview/futures_macro_helpers.py app/web/overview/futures_macro.py`
+  - Result: no matches.
+- Browser QA: `http://localhost:8521/?nav=overview`, Futures Macro tab.
+  - Result: action buttons, macro brief, weekly flow, score lane, and evidence/raw data disclosure rendered.
+  - Screenshot: `overview-legacy-dashboard-removal-v23-futures-macro-qa.png`.
+  - Current-page console: 0 errors, 12 warnings.

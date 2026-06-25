@@ -6,7 +6,6 @@ Current direct import paths:
 
 | File | Direct dependency | Why it remains |
 |---|---|---|
-| `app/web/overview/futures_macro_helpers.py` | `legacy_dashboard` | futures macro fragment / panel bridge |
 | `app/web/overview_dashboard.py` | `legacy_dashboard` | compatibility re-export of legacy private helpers |
 | `tests/test_service_contracts.py` | `overview_dashboard` private imports | tests still import old private helper names from wrapper |
 
@@ -19,6 +18,7 @@ Current direct import paths:
 | V20 | `app/web/overview/events_helpers.py` now owns Events toolbar, event snapshot context loading, event calendar frame transforms, summary/source item models, agenda/quality sections, chart model, and calendar month grid rendering. It calls Overview action and helper modules directly instead of `legacy_dashboard`. |
 | V21 | `app/web/overview/sentiment_helpers.py` now owns Sentiment controls, job result rendering, snapshot loading bridge, analysis panel, 6-step reading flow, status cards, driver cards, learning cards, next checks, and trend/component charts. It calls Overview action and helper modules directly instead of `legacy_dashboard`. |
 | V22 | `app/web/overview/market_movers_helpers.py` now owns Market Movers controls, manual/auto refresh UI, snapshot metadata, ranking charts/tables, sector pulse, and Why It Moved link helpers. It calls Overview action and helper modules directly instead of `legacy_dashboard`. |
+| V23 | `app/web/overview/futures_macro_helpers.py` now owns Futures Macro refresh controls, macro brief, weekly flow, score lane, evidence/validation disclosure, raw table rendering, and futures helper models. It calls Overview action and macro service modules directly instead of `legacy_dashboard`. |
 
 ## Removal Phases
 
