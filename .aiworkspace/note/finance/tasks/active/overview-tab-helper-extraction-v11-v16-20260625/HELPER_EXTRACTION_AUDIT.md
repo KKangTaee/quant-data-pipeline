@@ -7,7 +7,7 @@
 | Active tab | Current file | Legacy dependency shape | Target owner |
 |---|---|---|---|
 | Market Context | `app/web/overview/market_context.py` | header/caption, market context refresh reflection, session payload, cockpit loader, refresh bar | `app/web/overview/market_context_helpers.py` (V12 extracted) |
-| Events | `app/web/overview/events.py` | event refresh toolbar, events snapshot load, calendar frame/filters, agenda/calendar/quality render helpers, Streamlit/pandas bridge | `app/web/overview/events_helpers.py` |
+| Events | `app/web/overview/events.py` | event refresh toolbar, events snapshot load, calendar frame/filters, agenda/calendar/quality render helpers, Streamlit/pandas bridge | `app/web/overview/events_helpers.py` (V13 extracted) |
 | Futures Macro | `app/web/overview/futures_macro.py` | header/caption and futures macro fragment render bridge | `app/web/overview/futures_macro_helpers.py` |
 | Market Movers | `app/web/overview/market_movers.py` | controls, auto-refresh browser checks, snapshot load, refresh bar, snapshot panel | `app/web/overview/market_movers_helpers.py` |
 | Sentiment | `app/web/overview/sentiment.py` | refresh actions, snapshot load, job result panel, status cards, charts, tables, Streamlit/pandas bridge | `app/web/overview/sentiment_helpers.py` |
@@ -52,3 +52,4 @@ The tab entrypoint should read as the user workflow for that tab. The helper mod
 ## Completed Extractions
 
 - V12 Market Context: `market_context.py` now imports `market_context_helpers.py` and no longer imports `legacy_dashboard.py` directly. The helper module owns the remaining Market Context Streamlit bridge calls while keeping the user-facing render order unchanged.
+- V13 Events: `events.py` now imports `events_helpers.py` and no longer imports `legacy_dashboard.py` or event components directly. The helper module owns refresh result display, event lanes, calendar filtering, and detail tabs.

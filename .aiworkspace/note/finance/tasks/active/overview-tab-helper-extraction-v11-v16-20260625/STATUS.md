@@ -11,4 +11,8 @@
   - Added `app/web/overview/market_context_helpers.py`.
   - Made `app/web/overview/market_context.py` call semantic helper functions instead of importing `legacy_dashboard.py`.
   - QA passed with TDD red/green check, related contract tests, Overview contract suite, py_compile, and Browser QA.
-- Next step: V13 Events helper extraction.
+- V13 Events helper extraction completed.
+  - Added `app/web/overview/events_helpers.py`.
+  - Made `app/web/overview/events.py` call semantic helper functions instead of importing `legacy_dashboard.py`.
+  - QA passed with TDD red/green check, related contract tests, Overview contract suite, py_compile, and Events Browser QA.
+- Next step: V14 Futures Macro helper extraction.

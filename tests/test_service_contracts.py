@@ -4447,10 +4447,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "entrypoint": "def render_events_tab",
                 "forbidden": "_legacy._render_events_tab",
                 "required": [
-                    '_legacy.st.markdown("### Events")',
-                    "_legacy._render_event_refresh_toolbar()",
-                    "_legacy.load_overview_market_events_snapshot(",
-                    "render_macro_week_lane(",
+                    "render_events_header()",
+                    "render_event_refresh_toolbar()",
+                    "load_event_snapshot_context(",
+                    "render_events_overview_lanes(",
                 ],
             },
         }
@@ -4491,6 +4491,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         events_source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        events_helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
 
         self.assertIn("from app.web.overview.components.layout import render_market_session_banner", page_source)
         self.assertIn("render_market_session_banner(", page_source)
@@ -4503,11 +4504,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", market_context_source)
         self.assertNotIn("_legacy.render_macro_context_cockpit(", market_context_source)
 
-        self.assertIn("from app.web.overview.components.events import (", events_source)
-        self.assertIn("render_events_summary_strip(", events_source)
-        self.assertIn("render_event_source_lane(", events_source)
-        self.assertIn("render_event_warning_strip(", events_source)
-        self.assertIn("render_macro_week_lane(", events_source)
+        self.assertIn("from app.web.overview.components.events import (", events_helper_source)
+        self.assertIn("render_events_summary_strip(", events_helper_source)
+        self.assertIn("render_event_source_lane(", events_helper_source)
+        self.assertIn("render_event_warning_strip(", events_helper_source)
+        self.assertIn("render_macro_week_lane(", events_helper_source)
         self.assertNotIn("_legacy.render_events_summary_strip(", events_source)
         self.assertNotIn("_legacy.render_event_source_lane(", events_source)
         self.assertNotIn("_legacy.render_event_warning_strip(", events_source)
@@ -4633,6 +4634,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("_legacy.load_overview_macro_context_cockpit(", helper_source)
         self.assertIn("_legacy._render_overview_market_context_refresh_bar(cockpit_model)", helper_source)
+
+    def test_overview_events_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.events_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_events_header",
+            "render_event_refresh_toolbar",
+            "load_event_snapshot_context",
+            "render_event_refresh_results",
+            "render_events_overview_lanes",
+            "has_event_rows",
+            "filter_event_calendar_rows",
+            "render_event_detail_tabs",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertIn("_legacy.load_overview_market_events_snapshot(", helper_source)
+        self.assertIn("_legacy._render_event_month_grid(filtered_rows)", helper_source)
 
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
         legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
@@ -5152,12 +5176,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def render_events_tab"):]
-        lane_index = tab_body.index("render_macro_week_lane(")
-        filter_index = tab_body.index("_legacy._filter_event_rows_for_calendar(calendar_rows)")
+        lane_index = tab_body.index("render_events_overview_lanes(")
+        filter_index = tab_body.index("filter_event_calendar_rows(")
 
         self.assertLess(lane_index, filter_index)
-        self.assertIn("_legacy.load_overview_macro_week_lane(snapshot)", tab_body)
+        self.assertIn("_legacy.load_overview_macro_week_lane(context.snapshot)", helper_source)
 
     def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
         from app.web.overview_dashboard import _futures_chart_symbols

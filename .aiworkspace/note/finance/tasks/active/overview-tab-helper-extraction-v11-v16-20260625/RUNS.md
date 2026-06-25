@@ -29,3 +29,19 @@
 - Browser QA: `http://localhost:8521/?nav=overview`
   - Result: Overview default Market Context tab rendered, console errors 0.
   - Screenshot: `overview-tab-helper-extraction-v12-market-context-qa.png` (generated artifact, not committed).
+
+## V13 Events Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `app/web/overview/events_helpers.py` did not exist yet.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_entrypoint_uses_tab_helper_module`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_primary_tab_modules_own_tab_orchestration tests.test_service_contracts.OverviewAutomationContractTests.test_overview_active_tabs_use_domain_component_surfaces tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_tab_renders_macro_week_lane_before_calendar_filters`
+  - Result: 3 tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/events.py app/web/overview/events_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 107 tests passed.
+- Browser QA: `http://localhost:8521/?nav=overview`, switched to `일정 · Events`.
+  - Result: Events tab rendered summary lane, macro week lane, detail tabs; console errors 0.
+  - Screenshot: `overview-tab-helper-extraction-v13-events-qa.png` (generated artifact, not committed).
