@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from app.web.overview import legacy_dashboard as _legacy
+from app.web.overview.futures_macro_helpers import (
+    render_futures_macro_fragment,
+    render_futures_macro_header,
+)
 
 
 def render_futures_macro_tab() -> None:
     """Render the Futures Macro Overview tab."""
-    _legacy.st.markdown("### 선물 매크로")
-    _legacy.st.caption("저장된 선물 일봉으로 현재 macro 상태와 과거 점검 근거를 함께 확인합니다.")
-    _legacy._render_futures_macro_fragment(detail_expanded=True)
+    render_futures_macro_header()
+    render_futures_macro_fragment(detail_expanded=True)

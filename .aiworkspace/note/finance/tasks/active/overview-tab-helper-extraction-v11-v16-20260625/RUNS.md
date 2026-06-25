@@ -45,3 +45,19 @@
 - Browser QA: `http://localhost:8521/?nav=overview`, switched to `일정 · Events`.
   - Result: Events tab rendered summary lane, macro week lane, detail tabs; console errors 0.
   - Screenshot: `overview-tab-helper-extraction-v13-events-qa.png` (generated artifact, not committed).
+
+## V14 Futures Macro Helper Extraction - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_futures_macro_entrypoint_uses_tab_helper_module`
+  - Result: failed as expected because `app/web/overview/futures_macro_helpers.py` did not exist yet.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_futures_macro_entrypoint_uses_tab_helper_module`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_primary_tab_modules_own_tab_orchestration tests.test_service_contracts.OverviewAutomationContractTests.test_overview_dashboard_routes_futures_macro_as_primary_tab tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_tab_exposes_daily_refresh_and_cache_reload`
+  - Result: 3 tests passed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview/futures_macro.py app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 108 tests passed.
+- Browser QA: `http://localhost:8521/?nav=overview`, switched to `선물 매크로 · Futures Macro`.
+  - Result: Futures Macro tab rendered action buttons and macro context panel; console errors 0.
+  - Screenshot: `overview-tab-helper-extraction-v14-futures-macro-qa.png` (generated artifact, not committed).
