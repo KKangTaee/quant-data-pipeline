@@ -110,3 +110,18 @@
   - Result: action buttons, macro brief, weekly flow, score lane, and evidence/raw data disclosure rendered.
   - Screenshot: `overview-legacy-dashboard-removal-v23-futures-macro-qa.png`.
   - Current-page console: 0 errors, 12 warnings.
+
+## V24 Compatibility Wrapper Cleanup / Legacy File Deletion - 2026-06-25
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_legacy_dashboard_removal_audit_tracks_phase_targets`
+  - Result: failed as expected while `app/web/overview/legacy_dashboard.py` still existed.
+- GREEN: `.venv/bin/python -m py_compile app/web/overview_dashboard.py app/web/overview/market_context_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 112 tests passed.
+- GREEN: `rg -n "from app\\.web\\.overview import legacy_dashboard|import legacy_dashboard|_legacy_dashboard|_legacy\\." app tests`
+  - Result: no active app imports; remaining matches are negative contract strings in tests.
+- Browser QA: `http://localhost:8521/?nav=overview`, Overview final pass.
+  - Result: refreshed the app after deleting `legacy_dashboard.py`; Futures Macro and Market Context rendered with current wrapper imports.
+  - Screenshot: `overview-legacy-dashboard-removal-v24-final-qa.png`.
+  - Current-page console: 0 errors, 12 warnings.

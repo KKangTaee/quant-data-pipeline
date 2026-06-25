@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-25 - Overview legacy dashboard should be physically removed, not renamed
+
+- User request: 사용자가 남은 `legacy_dashboard.py` 제거를 위해 17차~24차를 순서대로 진행하고 각 차수마다 QA 후 다음 차수로 넘어가 달라고 승인함.
+- Interpreted goal: 기존 Overview active tab 분리가 끝났더라도 compatibility wrapper가 monolithic legacy module을 re-export하면 UI / helper / action boundary가 다시 흐려지므로, helper body를 domain owner로 옮기고 파일을 실제 삭제해야 한다.
+- Analysis result: 안전한 삭제 경로는 session/banner, Market Context, Events, Sentiment, Market Movers, Futures Macro 순으로 직접 의존성을 제거한 뒤, 마지막에 `overview_dashboard.py`를 explicit compatibility facade로 바꾸는 것이었다. Group trend heatmap 같은 남은 private helper contract는 새 helper module에 귀속시켰다.
+- Follow-up: V24에서 `app/web/overview/legacy_dashboard.py`를 삭제했다. 남은 개선 후보는 `overview_dashboard.py`의 private compatibility exports를 downstream imports가 사라질 때 하나씩 줄이는 것이다.
+
 ### 2026-06-25 - Overview active tabs should have tab-local helper bridges
 
 - User request: 사용자가 11차~16차를 한 차수씩 진행하고 각 차수 끝에 QA를 한 뒤 다음 차수로 넘어가 달라고 승인함.

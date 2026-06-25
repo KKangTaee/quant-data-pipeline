@@ -6,8 +6,7 @@ Current direct import paths:
 
 | File | Direct dependency | Why it remains |
 |---|---|---|
-| `app/web/overview_dashboard.py` | `legacy_dashboard` | compatibility re-export of legacy private helpers |
-| `tests/test_service_contracts.py` | `overview_dashboard` private imports | tests still import old private helper names from wrapper |
+| None | None | V24 removed the legacy file and replaced the wrapper with explicit compatibility exports. |
 
 ## Completed Extractions
 
@@ -19,6 +18,7 @@ Current direct import paths:
 | V21 | `app/web/overview/sentiment_helpers.py` now owns Sentiment controls, job result rendering, snapshot loading bridge, analysis panel, 6-step reading flow, status cards, driver cards, learning cards, next checks, and trend/component charts. It calls Overview action and helper modules directly instead of `legacy_dashboard`. |
 | V22 | `app/web/overview/market_movers_helpers.py` now owns Market Movers controls, manual/auto refresh UI, snapshot metadata, ranking charts/tables, sector pulse, and Why It Moved link helpers. It calls Overview action and helper modules directly instead of `legacy_dashboard`. |
 | V23 | `app/web/overview/futures_macro_helpers.py` now owns Futures Macro refresh controls, macro brief, weekly flow, score lane, evidence/validation disclosure, raw table rendering, and futures helper models. It calls Overview action and macro service modules directly instead of `legacy_dashboard`. |
+| V24 | `app/web/overview_dashboard.py` is now an explicit compatibility facade, `app/web/overview/legacy_dashboard.py` is deleted, and tests assert the file no longer exists. |
 
 ## Removal Phases
 
@@ -40,10 +40,10 @@ Current direct import paths:
 - `app/web/overview/sentiment_helpers.py`: sentiment panel, steps, driver groups, learning cards, charts, tone helpers.
 - `app/web/overview/market_movers_helpers.py`: controls, snapshot load, browser auto refresh, refresh bars, charts, Why It Moved metadata helpers.
 - `app/web/overview/futures_macro_helpers.py`: futures macro panel, refresh controls, score/validation/evidence helpers, retained futures chart model helpers still covered by tests.
-- `app/web/overview_dashboard.py`: should export `render_overview_dashboard` only unless a small compatibility export is explicitly retained.
+- `app/web/overview_dashboard.py`: explicit compatibility facade for `render_overview_dashboard`, navigation helpers, Market Movers helper models, Futures helper models, and the retained group trend heatmap contract.
 
 ## Deletion Guard
 
 - Add and maintain tests that prevent active Overview modules and helper modules from importing `app.web.overview.legacy_dashboard`.
-- V24 should assert that `app/web/overview/legacy_dashboard.py` no longer exists.
+- V24 asserts that `app/web/overview/legacy_dashboard.py` no longer exists.
 - Do not replace the file with another monolithic renamed legacy file.

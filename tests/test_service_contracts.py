@@ -4331,8 +4331,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_dashboard_routes_collection_through_action_facade(self) -> None:
         import ast
 
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        tree = ast.parse(source)
+        helper_sources = "\n".join(
+            Path(path).read_text(encoding="utf-8")
+            for path in (
+                "app/web/overview/market_context_helpers.py",
+                "app/web/overview/market_movers_helpers.py",
+                "app/web/overview/futures_macro_helpers.py",
+                "app/web/overview/sentiment_helpers.py",
+                "app/web/overview/events_helpers.py",
+            )
+        )
+        tree = ast.parse(helper_sources)
         imported_modules = {
             node.module
             for node in ast.walk(tree)
@@ -4644,6 +4653,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertIn(target, audit)
 
+        self.assertFalse(Path("app/web/overview/legacy_dashboard.py").exists())
+
     def test_overview_page_uses_session_helper_instead_of_legacy_dashboard(self) -> None:
         page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/session_helpers.py").read_text(encoding="utf-8")
@@ -4777,9 +4788,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("_sentiment_trend_chart(", helper_source)
 
     def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
-        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        legacy_path = Path("app/web/overview/legacy_dashboard.py")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
 
+        self.assertFalse(legacy_path.exists())
         for function_name in (
             "render_overview_dashboard",
             "_render_overview_market_context_tab",
@@ -4790,7 +4803,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "_render_market_sentiment_tab",
             "_render_events_tab",
         ):
-            self.assertNotIn(f"def {function_name}", legacy_source)
+            self.assertNotIn(f"def {function_name}", wrapper_source)
 
         for function_name in (
             "load_overview_dashboard_snapshot",
@@ -4871,15 +4884,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_overview_page_uses_navigation_surface_instead_of_legacy_selector_body(self) -> None:
         page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
-        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
 
         self.assertIn("from app.web.overview.navigation import (", page_source)
         self.assertIn("_render_overview_tab_selector()", page_source)
         self.assertIn("_render_selected_overview_tab(", page_source)
         self.assertNotIn("_legacy._render_overview_tab_selector()", page_source)
         self.assertNotIn("_legacy._render_selected_overview_tab(", page_source)
-        self.assertNotIn("def _render_overview_tab_selector", legacy_source)
-        self.assertNotIn("def _render_selected_overview_tab", legacy_source)
+        self.assertNotIn("legacy_dashboard", wrapper_source)
+        self.assertNotIn("_legacy_dashboard", wrapper_source)
 
     def test_overview_service_surfaces_stay_streamlit_free(self) -> None:
         import ast
@@ -4974,10 +4987,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_dashboard_wrapper_remains_thin_compatibility_facade(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
 
-        self.assertLessEqual(len(source.splitlines()), 40)
-        self.assertIn("from app.web.overview.page import render_overview_dashboard as _render_overview_dashboard", source)
-        self.assertIn("render_overview_dashboard = _render_overview_dashboard", source)
+        self.assertLessEqual(len(source.splitlines()), 80)
+        self.assertIn("from app.web.overview.page import render_overview_dashboard", source)
+        self.assertIn("from app.web.overview.navigation import (", source)
+        self.assertIn("from app.web.overview.market_movers_helpers import (", source)
+        self.assertIn("from app.web.overview.futures_macro_helpers import (", source)
         self.assertNotIn("import streamlit", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("for _name in dir", source)
 
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
@@ -5245,12 +5262,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("기존 자료", failed["detail"])
 
     def test_overview_market_context_refresh_clears_cache_before_rerun(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        if "def _render_overview_market_context_refresh_bar" not in source:
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        if "def render_market_context_refresh_bar" not in source:
             self.fail("Overview should keep the Market Context refresh bar helper.")
-        helper_body = source[source.index("def _render_overview_market_context_refresh_bar"):]
-        helper_end = helper_body.index("def _render_overview_historical_analog_controls")
-        helper_body = helper_body[:helper_end]
+        helper_body = source[source.index("def render_market_context_refresh_bar"):]
 
         self.assertIn("_overview_market_context_refresh_reflection_state", helper_body)
         self.assertIn("overview_market_context_refresh_reflection", helper_body)
@@ -5264,12 +5279,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(clear_index, rerun_index)
 
     def test_overview_market_context_refresh_assist_shows_smart_plan_before_job_result(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
-        if "def _render_overview_market_context_refresh_bar" not in source:
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        if "def render_market_context_refresh_bar" not in source:
             self.fail("Overview should keep the Market Context refresh bar helper.")
-        helper_body = source[source.index("def _render_overview_market_context_refresh_bar"):]
-        helper_end = helper_body.index("def _render_overview_historical_analog_controls")
-        helper_body = helper_body[:helper_end]
+        helper_body = source[source.index("def render_market_context_refresh_bar"):]
 
         self.assertIn("_overview_market_context_refresh_expander_label(cockpit_model)", helper_body)
         self.assertIn("_render_overview_market_context_smart_refresh_plan(cockpit_model)", helper_body)
@@ -5283,20 +5296,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
     def test_overview_data_health_is_not_a_primary_overview_tab(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
-        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]
 
-        self.assertNotIn("def _render_collection_ops_tab", legacy_source)
+        self.assertNotIn("def _render_collection_ops_tab", wrapper_source)
         self.assertNotIn("load_overview_data_health_ingestion_handoff", render_body)
         self.assertNotIn("render_data_health_ingestion_handoff", render_body)
         self.assertNotIn('"Data Health"', render_body)
 
     def test_overview_sector_industry_standalone_tab_is_removed_from_primary_overview(self) -> None:
         page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
-        legacy_source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
         render_body = page_source[page_source.index("def render_overview_dashboard"):]
 
-        self.assertNotIn("def _render_sector_industry_tab", legacy_source)
+        self.assertNotIn("def _render_sector_industry_tab", wrapper_source)
         self.assertNotIn('"Sector / Industry"', render_body)
         self.assertIn("build_overview_breadth_heatmap_summary", Path("app/services/overview/market_movers.py").read_text(encoding="utf-8"))
 
@@ -5656,12 +5669,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(cockpit_index, refresh_bar_index)
 
     def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
         market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
-        self.assertIn("def _render_overview_historical_analog_controls", source)
-        self.assertIn('"기준 시점"', source)
-        self.assertIn('"패턴 기간"', source)
-        self.assertIn("아래 기준은 이어지는 과거 참고 통계에만 적용", source)
+        self.assertIn("_macro_cockpit_historical_analog_html", source)
+        self.assertIn("Macro 조건 결과 비교", source)
+        self.assertIn("macro_dimension_audit", source)
         helper_body = market_context_source[market_context_source.index("def render_market_context_tab"):]
 
         self.assertNotIn("initial_analog_controls = _legacy._overview_historical_analog_control_state()", helper_body)
@@ -6124,7 +6136,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("관리 위치:", source_html)
 
     def test_overview_market_context_refresh_bar_has_compact_no_action_state(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
         self.assertIn("_render_overview_market_context_refresh_status_panel(", source)
         self.assertIn("ov-refresh-status-panel", source)
         self.assertIn("if not action_ids:", source)
@@ -6745,15 +6757,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertTrue(intraday_row["market_hours_only"])
 
     def test_overview_market_movers_refresh_bar_renders_eod_action_for_non_daily_without_auto_mode(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 
         self.assertIn("run_overview_market_movers_eod_history", source)
         self.assertIn("def _render_market_movers_daily_refresh_bar", source)
         self.assertIn("def _render_market_movers_eod_refresh_bar", source)
-        import_block = source[source.index("from app.jobs.overview_actions import (") :]
-        import_block = import_block[: import_block.index(")\nfrom app.services")]
-        self.assertNotIn("run_overview_market_movers_eod_history,", import_block)
-        self.assertIn("from app.jobs import overview_actions as overview_actions_module", source)
+        self.assertIn("run_overview_market_movers_eod_history,", source)
 
         dispatch_body = source[source.index("def _render_market_movers_refresh_bar") :]
         dispatch_body = dispatch_body[: dispatch_body.index("def _rank_token")]
@@ -6763,12 +6772,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         eod_body = source[source.index("def _render_market_movers_eod_refresh_bar") :]
         eod_body = eod_body[: eod_body.index("def _render_market_movers_refresh_bar")]
         self.assertIn("가격 이력 갱신", eod_body)
-        self.assertIn("_run_market_movers_eod_history_action", eod_body)
+        self.assertIn("run_overview_market_movers_eod_history(", eod_body)
         self.assertNotIn("_select_market_refresh_mode", eod_body)
         self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
 
     def test_market_movers_empty_snapshot_replaces_stale_why_it_moved_panel(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 
         self.assertIn("Market mover rows are needed before Why It Moved can be shown.", source)
         self.assertIn("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.", source)
@@ -6918,7 +6927,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         macro.assert_not_called()
 
     def test_overview_market_context_refresh_bar_prefers_smart_refresh_and_keeps_full_fallback(self) -> None:
-        source = Path("app/web/overview/legacy_dashboard.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
 
         self.assertIn("run_overview_market_context_refresh_smart", source)
         self.assertIn("_render_overview_market_context_smart_refresh_plan", source)

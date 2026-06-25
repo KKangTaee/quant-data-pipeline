@@ -37,4 +37,9 @@
   - Moved Futures Macro header, refresh controls, macro brief, weekly flow, score lane, evidence/validation disclosure, raw table rendering, and futures helper models into the tab helper.
   - Kept daily futures collection in `app.jobs.overview_actions` and macro snapshot loading/clearing in `app.services.futures_macro_thermometer`.
   - QA passed with focused Futures Macro tests, py_compile, Overview contract suite, and browser QA.
-- Next step: V24 compatibility wrapper cleanup and `legacy_dashboard.py` deletion.
+- V24 compatibility wrapper cleanup and `legacy_dashboard.py` deletion completed.
+  - Replaced `app/web/overview_dashboard.py` monolithic re-export loop with explicit compatibility exports from the new helper modules.
+  - Moved the retained group trend heatmap contract into `app/web/overview/market_context_helpers.py`.
+  - Deleted `app/web/overview/legacy_dashboard.py`.
+  - QA passed with py_compile, Overview contract suite, legacy import scan, and final browser QA.
+- V17-V24 completed.

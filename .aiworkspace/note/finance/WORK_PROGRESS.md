@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Legacy Dashboard Removal V17-V24:
+  - `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`에서 17차~24차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
+  - `app/web/overview/legacy_dashboard.py`를 삭제했고, `app/web/overview_dashboard.py`는 필요한 compatibility helper만 explicit export하는 wrapper로 바꿨다.
+  - Market Context / Market Movers / Futures Macro / Sentiment / Events tab-local helpers가 active Streamlit glue와 refresh/render helper를 소유한다.
+  - QA screenshots는 local generated artifact로만 보존한다.
 - Overview Tab Helper Extraction V11-V16:
   - `.aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/`에서 11차~16차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
   - Active primary tab entrypoint는 `app/web/overview/{tab}.py`, tab-local Streamlit glue는 `app/web/overview/{tab}_helpers.py`가 소유하도록 정리했다.
@@ -102,6 +107,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-25 - Overview Legacy Dashboard Removal V17-V24
+- Completed `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/` after the user approved continuing 17차~24차 sequentially with QA after each phase.
+- Removed `app/web/overview/legacy_dashboard.py` and replaced the old wrapper re-export loop in `app/web/overview_dashboard.py` with explicit compatibility exports.
+- Moved remaining helper ownership into `app/web/overview/*_helpers.py`, including Market Context refresh, Market Movers refresh / Why It Moved helpers, Futures Macro panel/models, Sentiment, and Events.
+- Verification passed: py_compile, Overview contract 112 tests, legacy import scan, and Browser QA; final QA screenshot is `overview-legacy-dashboard-removal-v24-final-qa.png`.
 
 ### 2026-06-25 - Overview Structure Split V2-V5
 - Completed `.aiworkspace/note/finance/tasks/active/overview-structure-split-v2-v5-20260625/` after the user asked to continue 2차~5차 sequentially with QA after each phase.

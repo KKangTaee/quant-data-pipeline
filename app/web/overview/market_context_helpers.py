@@ -4,6 +4,7 @@ from datetime import datetime
 from html import escape
 from typing import Any
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -23,12 +24,17 @@ from app.web.overview_ui_components import (
     OVERVIEW_COLOR_DANGER,
     OVERVIEW_COLOR_NEUTRAL,
     OVERVIEW_COLOR_POSITIVE,
+    OVERVIEW_COLOR_TEXT,
+    OVERVIEW_COLOR_TEXT_INVERSE,
     OVERVIEW_COLOR_WARNING,
+    OVERVIEW_DIVERGING_RANGE,
 )
 
 
 MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
 MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
+GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
+GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 
 
 def render_market_context_header() -> None:
@@ -66,6 +72,77 @@ def _status_tone(status: Any) -> str:
     if normalized in {"failed", "error"}:
         return "danger"
     return "neutral"
+
+
+def _symmetric_return_domain(values: pd.Series) -> list[float]:
+    numeric = pd.to_numeric(values, errors="coerce").dropna()
+    max_abs = max(1.0, float(numeric.abs().max()) if not numeric.empty else 1.0)
+    return [-max_abs * 1.08, max_abs * 1.08]
+
+
+def _symmetric_return_scale(values: pd.Series) -> alt.Scale:
+    return alt.Scale(domain=_symmetric_return_domain(values), range=OVERVIEW_DIVERGING_RANGE)
+
+
+def _build_group_leadership_trend_heatmap(rows: pd.DataFrame) -> alt.Chart:
+    metric = "Market Cap Weighted Return %"
+    chart_rows = rows.copy()
+    if not chart_rows.empty and metric in chart_rows and "Date" in chart_rows:
+        chart_rows["Date"] = pd.to_datetime(chart_rows["Date"], errors="coerce")
+        chart_rows[metric] = pd.to_numeric(chart_rows[metric], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Date", metric])
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame(
+            [{"Date": pd.Timestamp.today().normalize(), "Group": "No Data", metric: 0.0, "Symbols": 0}]
+        )
+    chart_rows["Date Label"] = chart_rows["Date"].dt.strftime("%m-%d")
+    chart_rows["Return Label"] = chart_rows[metric].map(lambda value: f"{float(value):+.2f}%")
+    date_order = (
+        chart_rows.sort_values("Date")["Date Label"].drop_duplicates().tolist()
+        if "Date Label" in chart_rows
+        else []
+    )
+    group_order = chart_rows["Group"].drop_duplicates().tolist() if "Group" in chart_rows else ["No Data"]
+    chart_height = max(GROUP_TREND_HEATMAP_MIN_HEIGHT, GROUP_TREND_HEATMAP_ROW_HEIGHT * len(group_order))
+    base = (
+        alt.Chart(chart_rows)
+        .mark_rect(cornerRadius=2)
+        .encode(
+            x=alt.X(
+                "Date Label:N",
+                sort=date_order,
+                title=None,
+                axis=alt.Axis(labelAngle=0, labelFontSize=10),
+            ),
+            y=alt.Y(
+                "Group:N",
+                sort=group_order,
+                title=None,
+                axis=alt.Axis(labelLimit=240, labelFontSize=12),
+            ),
+            color=alt.Color(
+                f"{metric}:Q",
+                scale=_symmetric_return_scale(chart_rows[metric]),
+                legend=alt.Legend(title="Return %", orient="bottom"),
+            ),
+            tooltip=["Date:T", "Group:N", "Return Label:N", "Symbols:Q", "Top Symbol:N"],
+        )
+    )
+    text = (
+        alt.Chart(chart_rows)
+        .mark_text(fontSize=11)
+        .encode(
+            x=alt.X("Date Label:N", sort=date_order, title=None),
+            y=alt.Y("Group:N", sort=group_order, title=None),
+            text=alt.Text("Return Label:N"),
+            color=alt.condition(
+                f"datum['{metric}'] >= 8 || datum['{metric}'] <= -8",
+                alt.value(OVERVIEW_COLOR_TEXT_INVERSE),
+                alt.value(OVERVIEW_COLOR_TEXT),
+            ),
+        )
+    )
+    return (base + text).properties(height=chart_height)
 
 
 def _overview_market_context_refresh_reflection_state(

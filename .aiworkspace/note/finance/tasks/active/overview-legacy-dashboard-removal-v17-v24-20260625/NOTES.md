@@ -10,3 +10,4 @@
 - V21 keeps Sentiment as tab-local UI/model glue because no separate Sentiment component package exists yet; the extraction still removes the monolithic legacy bridge.
 - V22 keeps Market Movers job execution and DB read boundaries unchanged; the tab helper now owns the user-facing scan controls, refresh state, ranking visuals, and manual Why It Moved search links without relying on `legacy_dashboard.py`.
 - V23 gives futures-related private helper models a new home in `futures_macro_helpers.py`; this keeps the V24 wrapper cleanup mechanical instead of leaving those functions stranded in the legacy file.
+- V24 deletes the legacy file rather than renaming it. The remaining `overview_dashboard.py` compatibility surface is explicit and should be trimmed later only if downstream tests/imports stop using those private helper names.
