@@ -202,6 +202,258 @@ def _resolve_dynamic_etf_promotion_policy_defaults(
     }
 
 
+def _normalize_grs_score_contract(
+    *,
+    score_lookback_months: Sequence[int] | None,
+    score_return_columns: Sequence[str] | None,
+    score_weights: dict[str, float] | None,
+) -> tuple[list[int], list[str], dict[str, float]]:
+    if score_return_columns is not None:
+        normalized_columns = [
+            str(column).strip()
+            for column in score_return_columns
+            if str(column).strip()
+        ]
+    else:
+        lookbacks = (
+            list(score_lookback_months)
+            if score_lookback_months is not None
+            else list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS)
+        )
+        normalized_columns = [f"{int(months)}MReturn" for months in lookbacks]
+
+    if not normalized_columns:
+        raise BacktestInputError("Global Relative Strength score window must contain at least one return column.")
+
+    parsed_months: list[int] = []
+    for column in normalized_columns:
+        if column.endswith("MReturn"):
+            raw_months = column[: -len("MReturn")]
+            if raw_months.isdigit():
+                parsed_months.append(int(raw_months))
+
+    if score_lookback_months is not None:
+        normalized_months = [int(value) for value in score_lookback_months]
+    else:
+        normalized_months = parsed_months
+
+    if not normalized_months:
+        raise BacktestInputError("Global Relative Strength score lookback months could not be derived from the selected windows.")
+
+    if score_weights is None:
+        normalized_weights = {column: 1.0 for column in normalized_columns}
+    else:
+        normalized_weights = {
+            column: float(score_weights.get(column, 0.0))
+            for column in normalized_columns
+        }
+
+    if sum(abs(value) for value in normalized_weights.values()) <= 0:
+        raise BacktestInputError("Global Relative Strength score weights must include at least one non-zero weight.")
+
+    return normalized_months, normalized_columns, normalized_weights
+
+
+def _build_grs_top_n_concentration_summary(result_df: pd.DataFrame) -> dict[str, Any]:
+    if result_df is None or result_df.empty:
+        return {
+            "contract_version": "grs_top_n_concentration_v1",
+            "observation_count": 0,
+        }
+
+    def _numeric_series(column: str) -> pd.Series:
+        if column not in result_df.columns:
+            return pd.Series(dtype="float64")
+        return pd.to_numeric(result_df[column], errors="coerce")
+
+    selected = _numeric_series("Selected Count")
+    target_slots = _numeric_series("Target Slot Count")
+    unfilled = _numeric_series("Unfilled Slot Count")
+    cash_share = _numeric_series("Cash Share")
+    max_weight = _numeric_series("Max Position Weight")
+    statuses = (
+        result_df.get("Concentration Status", pd.Series(dtype=object))
+        .dropna()
+        .astype(str)
+        .str.strip()
+    )
+
+    return {
+        "contract_version": "grs_top_n_concentration_v1",
+        "observation_count": int(len(result_df)),
+        "max_selected_count": int(selected.max()) if not selected.dropna().empty else None,
+        "max_target_slot_count": int(target_slots.max()) if not target_slots.dropna().empty else None,
+        "max_unfilled_slot_count": int(unfilled.max()) if not unfilled.dropna().empty else None,
+        "max_cash_share": float(cash_share.max()) if not cash_share.dropna().empty else None,
+        "avg_cash_share": float(cash_share.mean()) if not cash_share.dropna().empty else None,
+        "max_position_weight": float(max_weight.max()) if not max_weight.dropna().empty else None,
+        "status_values": sorted(dict.fromkeys(status for status in statuses.tolist() if status)),
+    }
+
+
+def _build_grs_strategy_contract(
+    *,
+    cash_ticker: str | None,
+    benchmark_contract: str,
+    benchmark_ticker: str | None,
+    top: int,
+    interval: int,
+    trend_filter_window: int,
+    score_lookback_months: list[int],
+    score_return_columns: list[str],
+    score_weights: dict[str, float],
+) -> dict[str, Any]:
+    return {
+        "contract_version": "grs_strategy_contract_v1",
+        "cash_proxy_ticker": cash_ticker,
+        "benchmark_contract": benchmark_contract,
+        "benchmark_ticker": benchmark_ticker,
+        "top_n": int(top),
+        "rebalance_interval_months": int(interval),
+        "trend_filter_window": int(trend_filter_window),
+        "score_lookback_months": list(score_lookback_months),
+        "score_return_columns": list(score_return_columns),
+        "score_weights": dict(score_weights),
+        "cash_handling": "trend_rejected_slots_retained_in_cash_proxy",
+    }
+
+
+def _numeric_result_series(result_df: pd.DataFrame, column: str) -> pd.Series:
+    if result_df is None or result_df.empty or column not in result_df.columns:
+        return pd.Series(dtype="float64")
+    return pd.to_numeric(result_df[column], errors="coerce")
+
+
+def _bool_result_series(result_df: pd.DataFrame, column: str) -> pd.Series:
+    if result_df is None or result_df.empty or column not in result_df.columns:
+        return pd.Series(dtype=bool)
+    return result_df[column].fillna(False).astype(bool)
+
+
+def _unique_text_values(result_df: pd.DataFrame, column: str) -> list[str]:
+    if result_df is None or result_df.empty or column not in result_df.columns:
+        return []
+    values: list[str] = []
+    for value in result_df[column].dropna().tolist():
+        if isinstance(value, (list, tuple, set)):
+            values.extend(str(item).strip() for item in value if str(item).strip())
+        else:
+            text = str(value).strip()
+            if text:
+                values.append(text)
+    return sorted(dict.fromkeys(values))
+
+
+def _build_risk_parity_trend_contract(
+    *,
+    vol_window: int,
+    rebalance_interval: int,
+    min_price_filter: float | None,
+    benchmark_ticker: str | None,
+    underperformance_guardrail_enabled: bool,
+    drawdown_guardrail_enabled: bool,
+) -> dict[str, Any]:
+    return {
+        "contract_version": "risk_parity_trend_contract_v1",
+        "volatility_window_months": int(vol_window),
+        "rebalance_interval_months": int(rebalance_interval),
+        "trend_filter_window": 200,
+        "weighting_mode": "inverse_vol",
+        "eligible_universe": "trend_and_min_price_filtered",
+        "cash_handling": "cash_only_when_no_positive_inverse_vol_or_guardrail",
+        "min_price_filter": min_price_filter,
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+    }
+
+
+def _build_risk_parity_inverse_vol_summary(result_df: pd.DataFrame) -> dict[str, Any]:
+    if result_df is None or result_df.empty:
+        return {
+            "contract_version": "risk_parity_inverse_vol_summary_v1",
+            "observation_count": 0,
+        }
+
+    selected = _numeric_result_series(result_df, "Selected Count")
+    eligible = _numeric_result_series(result_df, "Eligible Count")
+    cash_share = _numeric_result_series(result_df, "Cash Share")
+    max_weight = _numeric_result_series(result_df, "Max Position Weight")
+    cash_only = _bool_result_series(result_df, "Cash Only State")
+    guardrail_cash_only = _bool_result_series(result_df, "Guardrail Cash Only State")
+
+    return {
+        "contract_version": "risk_parity_inverse_vol_summary_v1",
+        "observation_count": int(len(result_df)),
+        "max_selected_count": int(selected.max()) if not selected.dropna().empty else None,
+        "max_eligible_count": int(eligible.max()) if not eligible.dropna().empty else None,
+        "cash_only_rebalances": int(cash_only.sum()) if not cash_only.empty else 0,
+        "guardrail_cash_only_rebalances": int(guardrail_cash_only.sum()) if not guardrail_cash_only.empty else 0,
+        "max_cash_share": float(cash_share.max()) if not cash_share.dropna().empty else None,
+        "max_position_weight": float(max_weight.max()) if not max_weight.dropna().empty else None,
+        "low_vol_overweight_tickers": _unique_text_values(result_df, "Low Vol Overweight Ticker"),
+        "cash_only_reasons": _unique_text_values(result_df, "Cash Only Reason"),
+    }
+
+
+def _build_dual_momentum_contract(
+    *,
+    top: int,
+    rebalance_interval: int,
+    min_price_filter: float | None,
+    benchmark_ticker: str | None,
+    underperformance_guardrail_enabled: bool,
+    drawdown_guardrail_enabled: bool,
+    cash_proxy_ticker: str = "BIL",
+) -> dict[str, Any]:
+    return {
+        "contract_version": "dual_momentum_contract_v1",
+        "top_n": int(top),
+        "rebalance_interval_months": int(rebalance_interval),
+        "lookback_column": "12MReturn",
+        "trend_filter_window": 200,
+        "weighting_mode": "equal_slot_with_cash_retention",
+        "cash_proxy_ticker": cash_proxy_ticker,
+        "cash_handling": "trend_rejected_top_n_slots_retained_in_cash_proxy",
+        "min_price_filter": min_price_filter,
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+    }
+
+
+def _build_dual_momentum_concentration_turnover_summary(result_df: pd.DataFrame) -> dict[str, Any]:
+    if result_df is None or result_df.empty:
+        return {
+            "contract_version": "dual_momentum_concentration_turnover_v1",
+            "observation_count": 0,
+        }
+
+    selected = _numeric_result_series(result_df, "Selected Count")
+    target_slots = _numeric_result_series(result_df, "Target Slot Count")
+    trend_rejected = _numeric_result_series(result_df, "Trend Rejected Count")
+    unfilled = _numeric_result_series(result_df, "Unfilled Slot Count")
+    cash_share = _numeric_result_series(result_df, "Cash Share")
+    max_weight = _numeric_result_series(result_df, "Max Position Weight")
+    selection_changed = _bool_result_series(result_df, "Selection Changed")
+    statuses = _unique_text_values(result_df, "Concentration Status")
+    whipsaw_statuses = _unique_text_values(result_df, "Whipsaw Status")
+
+    return {
+        "contract_version": "dual_momentum_concentration_turnover_v1",
+        "observation_count": int(len(result_df)),
+        "max_selected_count": int(selected.max()) if not selected.dropna().empty else None,
+        "max_target_slot_count": int(target_slots.max()) if not target_slots.dropna().empty else None,
+        "max_trend_rejected_count": int(trend_rejected.max()) if not trend_rejected.dropna().empty else None,
+        "max_unfilled_slot_count": int(unfilled.max()) if not unfilled.dropna().empty else None,
+        "max_cash_share": float(cash_share.max()) if not cash_share.dropna().empty else None,
+        "max_position_weight": float(max_weight.max()) if not max_weight.dropna().empty else None,
+        "selection_change_events": int(selection_changed.sum()) if not selection_changed.empty else 0,
+        "concentration_status_values": statuses,
+        "whipsaw_status_values": whipsaw_statuses,
+    }
+
+
 
 
 def _summary_frequency(option: str, timeframe: str) -> str:
@@ -415,6 +667,7 @@ def run_gtaa_backtest_from_db(
     top: int = 3,
     interval: int = GTAA_DEFAULT_SIGNAL_INTERVAL,
     min_price_filter: float | None = None,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float | None = None,
     benchmark_ticker: str | None = None,
     score_lookback_months: Sequence[int] | None = None,
@@ -512,6 +765,7 @@ def run_gtaa_backtest_from_db(
         top=top,
         interval=interval,
         min_price=min_price_filter,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         score_lookback_months=normalized_score_lookback_months,
         score_return_columns=normalized_score_return_columns,
         score_weights=normalized_score_weights,
@@ -547,6 +801,7 @@ def run_gtaa_backtest_from_db(
             "top": top,
             "rebalance_interval": interval,
             "min_price_filter": min_price_filter,
+            "min_avg_dollar_volume_20d_m_filter": min_avg_dollar_volume_20d_m_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
             "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
@@ -614,6 +869,7 @@ def run_global_relative_strength_backtest_from_db(
     min_price_filter: float | None = None,
     transaction_cost_bps: float | None = None,
     benchmark_ticker: str | None = None,
+    benchmark_contract: str | None = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     score_lookback_months: Sequence[int] | None = None,
     score_return_columns: Sequence[str] | None = None,
     score_weights: dict[str, float] | None = None,
@@ -633,6 +889,7 @@ def run_global_relative_strength_backtest_from_db(
     normalized_tickers = _normalize_tickers(tickers or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS)
     normalized_cash_ticker = str(cash_ticker or "").strip().upper() or None
     benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
+    normalized_benchmark_contract = str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
     _validate_backtest_date_range(start, end)
 
     preflight_tickers = list(normalized_tickers)
@@ -644,13 +901,18 @@ def run_global_relative_strength_backtest_from_db(
         timeframe=timeframe,
         context_label="Global Relative Strength universe",
     )
-    _preflight_price_strategy_data(
-        tickers=preflight_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
-    if benchmark_ticker and benchmark_ticker not in preflight_tickers:
+    if normalized_cash_ticker:
+        _preflight_price_strategy_data(
+            tickers=[normalized_cash_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+    if (
+        normalized_benchmark_contract == STRICT_BENCHMARK_CONTRACT_TICKER
+        and benchmark_ticker
+        and benchmark_ticker != normalized_cash_ticker
+    ):
         _preflight_price_strategy_data(
             tickers=[benchmark_ticker],
             start=start,
@@ -658,19 +920,14 @@ def run_global_relative_strength_backtest_from_db(
             timeframe=timeframe,
         )
 
-    normalized_score_lookback_months = [
-        int(value)
-        for value in (
-            list(score_lookback_months)
-            if score_lookback_months is not None
-            else list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS)
-        )
-    ]
-    normalized_score_return_columns = [f"{months}MReturn" for months in normalized_score_lookback_months]
-    normalized_score_weights = (
-        {f"{months}MReturn": 1.0 for months in normalized_score_lookback_months}
-        if score_weights is None
-        else dict(score_weights)
+    (
+        normalized_score_lookback_months,
+        normalized_score_return_columns,
+        normalized_score_weights,
+    ) = _normalize_grs_score_contract(
+        score_lookback_months=score_lookback_months,
+        score_return_columns=score_return_columns,
+        score_weights=score_weights,
     )
     promotion_policy = _resolve_dynamic_etf_promotion_policy_defaults(
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
@@ -752,6 +1009,7 @@ def run_global_relative_strength_backtest_from_db(
             "min_price_filter": min_price_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "benchmark_contract": normalized_benchmark_contract,
             "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
             "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
             **promotion_policy,
@@ -768,12 +1026,24 @@ def run_global_relative_strength_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    bundle["meta"]["grs_strategy_contract"] = _build_grs_strategy_contract(
+        cash_ticker=normalized_cash_ticker,
+        benchmark_contract=normalized_benchmark_contract,
+        benchmark_ticker=benchmark_ticker,
+        top=top,
+        interval=interval,
+        trend_filter_window=trend_filter_window,
+        score_lookback_months=normalized_score_lookback_months,
+        score_return_columns=normalized_score_return_columns,
+        score_weights=normalized_score_weights,
+    )
+    bundle["meta"]["grs_top_n_concentration"] = _build_grs_top_n_concentration_summary(result_df)
     return _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
-        benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
+        benchmark_contract=normalized_benchmark_contract,
         benchmark_ticker=benchmark_ticker,
         benchmark_universe_tickers=effective_tickers,
         promotion_min_etf_aum_b=promotion_min_etf_aum_b,
@@ -890,6 +1160,15 @@ def run_risk_parity_trend_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
+    bundle["meta"]["risk_parity_trend_contract"] = _build_risk_parity_trend_contract(
+        vol_window=vol_window,
+        rebalance_interval=rebalance_interval,
+        min_price_filter=min_price_filter,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+    )
+    bundle["meta"]["risk_parity_inverse_vol_summary"] = _build_risk_parity_inverse_vol_summary(result_df)
     bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
@@ -1025,6 +1304,15 @@ def run_dual_momentum_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
+    bundle["meta"]["dual_momentum_contract"] = _build_dual_momentum_contract(
+        top=top,
+        rebalance_interval=rebalance_interval,
+        min_price_filter=min_price_filter,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+    )
+    bundle["meta"]["dual_momentum_concentration_turnover"] = _build_dual_momentum_concentration_turnover_summary(result_df)
     bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),

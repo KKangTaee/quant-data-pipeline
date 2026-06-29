@@ -26,6 +26,7 @@ Last Verified: 2026-05-12
 | Type | Location | Notes |
 |---|---|---|
 | Legacy strategy search raw reports | [runs/2026/strategy_search/](./runs/2026/strategy_search/README.md) | phase13~phase18에서 생성된 원본성 전략 탐색 report 38개 |
+| GTAA current candidate | [runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md](./runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md) | SPY 대비 CAGR / MDD 개선, ADV-aware `real_money_candidate` 후보 |
 
 ## Strategy Hubs
 

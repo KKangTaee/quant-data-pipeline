@@ -393,7 +393,7 @@ def _render_latest_run_orientation(
     if not has_selection_history:
         st.caption(
             "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
-            "GTAA 같은 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
+            "GTAA 같은 일부 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
         )
 
 def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
@@ -2659,9 +2659,15 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
 
     selected_count_series = _first_series(selection_df, "Selected Count")
     raw_selected_count_series = _first_series(selection_df, "Raw Selected Count")
+    cash_only_state_series = _first_series(selection_df, "Cash Only State")
     selected_count = selected_count_series.fillna(0) if selected_count_series is not None else 0
     raw_selected_count = raw_selected_count_series.fillna(0) if raw_selected_count_series is not None else 0
-    selection_df = selection_df[(selected_count > 0) | (raw_selected_count > 0)].copy()
+    cash_only_state = (
+        cash_only_state_series.fillna(False).astype(bool)
+        if cash_only_state_series is not None
+        else False
+    )
+    selection_df = selection_df[(selected_count > 0) | (raw_selected_count > 0) | cash_only_state].copy()
     if selection_df.empty:
         return pd.DataFrame()
 
@@ -2683,6 +2689,13 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Ticker",
         "Raw Selected Count",
         "Raw Selected Score",
+        "Eligible Ticker",
+        "Eligible Count",
+        "Volatility Window",
+        "Eligible Volatility",
+        "Inverse Vol Weight",
+        "Volatility Rejected Ticker",
+        "Volatility Rejected Count",
         "Overlay Rejected Ticker",
         "Overlay Rejected Count",
         "Rejected Slot Handling",
@@ -2696,6 +2709,8 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Risk-Off Mode",
         "Risk-Off Reason",
         "Risk-Off Reasons",
+        "Cash Only State",
+        "Cash Only Reason",
         "Defensive Sleeve Ticker",
         "Defensive Sleeve Count",
         "Regime Blocked Ticker",
@@ -2707,6 +2722,19 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Trend Filter Column",
         "Weighting Contract",
         "Weighting Mode",
+        "Target Slot Count",
+        "Unfilled Slot Count",
+        "Max Position Weight",
+        "Concentration Status",
+        "Low Vol Overweight Ticker",
+        "Low Vol Overweight Reason",
+        "Cash Proxy Ticker",
+        "Cash Proxy Return",
+        "Cash Reason",
+        "Selection Changed",
+        "Added Ticker",
+        "Removed Ticker",
+        "Whipsaw Status",
         "Market Regime Enabled",
         "Market Regime Benchmark",
         "Market Regime Column",
@@ -2722,25 +2750,39 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Selected Score": "Selection Score",
         "Raw Selected Ticker": "Raw Selected Tickers",
         "Raw Selected Score": "Raw Selection Score",
+        "Eligible Ticker": "Eligible Tickers",
+        "Volatility Rejected Ticker": "Volatility Rejected Tickers",
         "Overlay Rejected Ticker": "Overlay Rejected Tickers",
         "Rejected Slot Fill Ticker": "Filled Tickers",
         "Rejected Slot Fill Count": "Filled Count",
         "Defensive Sleeve Ticker": "Defensive Sleeve Tickers",
         "Regime Blocked Ticker": "Regime Blocked Tickers",
+        "Cash Only Reason": "Cash Only Reasons",
+        "Cash Reason": "Cash Reasons",
+        "Added Ticker": "Added Tickers",
+        "Removed Ticker": "Removed Tickers",
     }
     selection_df = selection_df.rename(columns=rename_map).reset_index(drop=True)
 
     list_columns = [
         "Raw Selected Tickers",
+        "Eligible Tickers",
+        "Volatility Rejected Tickers",
         "Overlay Rejected Tickers",
         "Filled Tickers",
         "Defensive Sleeve Tickers",
         "Regime Blocked Tickers",
         "Selected Tickers",
+        "Cash Only Reasons",
+        "Cash Reasons",
+        "Added Tickers",
+        "Removed Tickers",
     ]
     score_list_columns = [
         "Raw Selection Score",
         "Selection Score",
+        "Eligible Volatility",
+        "Inverse Vol Weight",
     ]
     for column in list_columns:
         if column in selection_df.columns:
@@ -2774,6 +2816,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         weighting_contract = str(row.get("Weighting Contract") or "Equal Weight").strip()
         defensive_sleeve_count = int(row.get("Defensive Sleeve Count") or 0)
         defensive_sleeve_tickers = str(row.get("Defensive Sleeve Tickers") or "").strip()
+        cash_only_reasons = str(row.get("Cash Only Reasons") or "").strip()
         cash_share = row.get("Cash Share Ratio")
         cash_share_text = (
             f"{float(cash_share) * 100:.1f}%"
@@ -2782,7 +2825,12 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         )
 
         if raw_count <= 0:
-            return "No usable ranked candidates were available at this rebalance, so the portfolio stayed in cash."
+            if cash_only_reasons:
+                return (
+                    f"선택 가능한 최종 보유 종목이 없어 이 리밸런싱은 현금 상태로 유지됐습니다. "
+                    f"이유: `{cash_only_reasons}`. 현금 비중: {cash_share_text}."
+                )
+            return "선택 가능한 ranked candidate가 없어 이 리밸런싱은 현금 상태로 유지됐습니다."
         if regime_blocked_count > 0 and regime_state == "risk_off":
             if risk_off_contract == "Defensive Sleeve Preference" and defensive_sleeve_count > 0:
                 return (
@@ -2803,6 +2851,11 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
             return (
                 f"Portfolio-wide risk-off rule (`{risk_off_contract}`) {destination_text} because "
                 f"`{risk_off_reasons}` triggered after candidate selection."
+            )
+        if selected_count <= 0 and cash_only_reasons:
+            return (
+                f"최종 선택 종목이 없어 포트폴리오가 현금 상태로 유지됐습니다. "
+                f"이유: `{cash_only_reasons}`. 현금 비중: {cash_share_text}."
             )
         if selected_count <= 0 and rejected_count > 0:
             handling_label = str(row.get("Rejected Slot Handling") or "current rejection handling")
@@ -3105,7 +3158,7 @@ def _render_snapshot_selection_history(
     )
 
     st.caption(
-        "이 화면은 strict annual 전략 검증에서 가장 실무적인 질문인 "
+        "이 화면은 리밸런싱 전략 검토에서 가장 실무적인 질문인 "
         "‘각 리밸런싱 날짜에 실제로 어떤 종목이 선택되었는가?’를 읽기 쉽게 보여주기 위한 뷰입니다."
     )
     left, center, right = st.columns(3, gap="large")
@@ -3178,7 +3231,7 @@ def _render_snapshot_selection_history(
     st.dataframe(meta_df, use_container_width=True, hide_index=True)
     if overlay_active:
         st.caption(
-            "Raw Selected는 팩터 랭킹으로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 반영한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못한 원래 후보이고, Filled Tickers가 있으면 그 자리를 다음 순위의 추세 통과 종목으로 보충했다는 뜻입니다."
+            "Raw Selected는 전략 점수로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 반영한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못한 원래 후보이고, Filled Tickers가 있으면 그 자리를 다음 순위의 추세 통과 종목으로 보충했다는 뜻입니다."
         )
     if regime_active:
         st.caption(

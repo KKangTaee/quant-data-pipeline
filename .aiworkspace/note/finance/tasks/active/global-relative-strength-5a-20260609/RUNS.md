@@ -1,0 +1,50 @@
+# Global Relative Strength 5A Runs
+
+## 2026-06-09
+
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_get_global_relative_strength_keeps_raw_monthly_rows_for_strategy_cadence`
+  - Result: FAIL as expected.
+  - Evidence: current `get_global_relative_strength_from_db` calls `.interval(3)` before running `GlobalRelativeStrengthStrategy(rebalance_interval=3)`.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_get_global_relative_strength_keeps_raw_monthly_rows_for_strategy_cadence`
+  - Result: PASS after removing pre-strategy `.interval(interval)` from the GRS DB runtime chain.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_allocation_exposes_cash_proxy_and_top_n_concentration_contract`
+  - Result: FAIL as expected.
+  - Evidence: result rows do not yet expose `Selected Count`, cash share, unfilled slot, max position weight, or cash proxy return fields.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_allocation_exposes_cash_proxy_and_top_n_concentration_contract`
+  - Result: PASS after adding GRS row contract fields for selected count, target slots, unfilled slots, cash share, max position weight, concentration status, cash proxy ticker, cash proxy return, and cash reason.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_runtime_bundle_preserves_grs_strategy_contract_metadata`
+  - Result: FAIL as expected.
+  - Evidence: `run_global_relative_strength_backtest_from_db` does not yet accept `benchmark_contract` or preserve `grs_strategy_contract` metadata.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_runtime_bundle_preserves_grs_strategy_contract_metadata`
+  - Result: PASS after adding GRS `benchmark_contract`, score contract normalization, `grs_strategy_contract`, and `grs_top_n_concentration` metadata.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_runtime_preflight_keeps_risky_exclusion_path_open`
+  - Result: FAIL as expected.
+  - Evidence: runtime preflights the full risky universe plus cash proxy before `get_global_relative_strength_from_db` can exclude unusable risky tickers.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_runtime_preflight_keeps_risky_exclusion_path_open`
+  - Result: PASS after limiting GRS blocking preflight to cash proxy and ticker benchmark requirements.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_allocation_exposes_cash_proxy_and_top_n_concentration_contract`
+  - Result: FAIL as expected after extending the test to require result-display compatibility aliases.
+  - Evidence: GRS rows do not yet expose `Raw Selected Count`, `Overlay Rejected Ticker`, `Trend Filter Enabled`, or cash-retention compatibility fields.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy.GlobalRelativeStrengthRuntimeContractTests.test_allocation_exposes_cash_proxy_and_top_n_concentration_contract`
+  - Result: PASS after adding result-display compatibility aliases and enabling existing Selection History for GRS.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy`
+  - Result: PASS, 4 tests.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests`
+  - Result: FAIL.
+  - Evidence: `grs_top_n_concentration` summary failed when older GRS-like result fixtures lacked new row contract columns.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests`
+  - Result: PASS, 13 tests after making the GRS concentration summary tolerate older result fixtures without new row contract columns.
+- `.venv/bin/python -m py_compile app/runtime/backtest.py app/runtime/backtest_result_bundle.py finance/sample.py finance/strategy.py app/web/backtest_common.py app/web/backtest_result_display.py tests/test_global_relative_strength_strategy.py`
+  - Result: PASS.
+- `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy`
+  - Result: PASS, 4 tests. Fresh closeout verification. Only third-party `edgar` deprecation warnings were printed.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests`
+  - Result: PASS, 13 tests. Fresh closeout verification.
+- `.venv/bin/python -m py_compile app/runtime/backtest.py app/runtime/backtest_result_bundle.py finance/sample.py finance/strategy.py app/web/backtest_common.py app/web/backtest_result_display.py tests/test_global_relative_strength_strategy.py`
+  - Result: PASS. Fresh closeout verification.
+- `git diff --check`
+  - Result: PASS.
+- `.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8501 --server.headless true`
+  - Result: PASS. App served at `http://localhost:8501`.
+- Browser QA: opened `http://localhost:8501/backtest`
+  - Result: PASS. `Backtest Analysis` and `Single Strategy` rendered, and `Global Relative Strength` appeared in the existing `Strategy` combobox. Screenshot saved outside the repo at `/tmp/grs-5a-backtest-ui-qa.png`.

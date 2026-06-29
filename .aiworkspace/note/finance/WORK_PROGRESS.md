@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- GTAA Result Cadence Monthly Valuation V1:
+  - `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`에서 GTAA `interval`을 input row thinning이 아니라 strategy-owned rebalance cadence로 보정했다.
+  - GTAA month_end runtime은 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
+  - 2026-06-29 DB smoke 기준 결과 종료일은 `2026-03-16`이며, 이는 `SOXX/MTUM/QUAL/USMV` 가격 coverage가 그 날짜에서 멈춘 최신 공통일이다.
 - Overview Final Cleanup V33-V36:
   - `.aiworkspace/note/finance/tasks/active/overview-final-cleanup-v33-v36-20260629/`에서 남은 1순위~4순위 cleanup을 순서대로 진행했다.
   - `app/web/overview_ui_components.py`는 23줄 compatibility facade로 줄었고 renderer body는 `app/web/overview/components/*`가 소유한다.
@@ -116,6 +120,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-29 - GTAA result cadence now separates monthly valuation from rebalance cadence
+- Completed `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/` after the user clarified that non-rebalance months should still show new candidate signals.
+- GTAA sample/runtime paths no longer call `.interval(interval)` before strategy execution; `GTAA3Strategy(rebalance_interval=...)` owns actual holdings change cadence.
+- Added latest-common-trading-day row supplementation after month-end filtering, so current partial-period valuation can appear when all requested tickers have data for that trading day.
+- Verification passed: focused GTAA tests, ETF runtime contract tests, service contract tests, py_compile, DB-backed smoke, and `git diff --check`.
 
 ### 2026-06-25 - Overview Legacy Dashboard Removal V17-V24
 - Completed `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/` after the user approved continuing 17차~24차 sequentially with QA after each phase.
@@ -316,11 +326,76 @@ Detailed historical logs were archived on `2026-04-13`.
 - Local DB currently maps `Industrials -> XLI`, but `XLI` has only 63 daily rows, so the live UI shows `자료 부족` with the coverage reason rather than forcing an analog result.
 - Boundary stayed Overview-only: no prediction model, recommendation / trade signal, Backtest / Validation / Final Review / Operations connection, schema/provider change, registry write, or saved JSONL write.
 
+### 2026-06-12 - Backtest Direction Reset Research
+- Opened `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/` to re-audit Backtest Analysis, strategy runtime, validation handoff, history replay, and saved replay product direction.
+- Conclusion: Backtest Analysis should stay centered on execution / comparison / candidate source / replay, while evidence / governance / diagnostics should become compact handoff or downstream validation / review / monitoring context.
+- 4C execution-first reset and 5A/5B runtime/result contract hardening remain retained work; strict quarterly 5C and Risk-On downstream promotion remain deferred pending explicit approval.
+- Added `DEVELOPMENT_SESSION_GUIDE.md` with phased session prompts, scope, non-scope, completion criteria, and verification handoff.
+
 ### 2026-06-10 - Overview Market Context UX V3 1차~4차
 - Opened `.aiworkspace/note/finance/tasks/active/overview-market-context-ux-v3-20260610/` for `Overview > Market Context` first-screen UX polish.
 - Reworked the first tab to show market context summary, data-state separation, next check order, core/supporting card hierarchy, and secondary refresh placement.
 - Kept the boundary read-only / DB-backed: no provider fetch, schema change, registry / saved JSONL write, validation / monitoring / trading semantics.
 - Browser QA confirmed root `/` renders the new cockpit; direct `/overview` still shows Streamlit's Page not found modal and is recorded in task risks.
+
+### 2026-06-10 - Risk Parity / Dual Momentum 5B
+- Opened and completed `.aiworkspace/note/finance/tasks/active/risk-parity-dual-momentum-5b-20260610/` for Backtest 5B.
+- Improved Risk Parity Trend row/meta contracts for volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight interpretation.
+- Improved Dual Momentum row/meta contracts for top-N selection, trend rejection, cash proxy retention, concentration, and selection-change / whipsaw interpretation.
+- Reused existing Selection History; no new Backtest Analysis panel, registry / saved JSONL / run history write, provider fetch, Practical Validation, Final Review, or Monitoring behavior change.
+
+### 2026-06-09 - Global Relative Strength 5A
+- Opened and completed `.aiworkspace/note/finance/tasks/active/global-relative-strength-5a-20260609/` for Backtest 5A.
+- Improved GRS runtime / strategy / result bundle contracts: strategy owns rebalance cadence, score windows / weights are preserved, cash proxy and benchmark contract metadata are retained, and risky ETF gaps can flow to exclusion metadata.
+- Added GRS cash / top-N concentration row diagnostics and connected them to the existing Selection History surface without adding a new evidence / log / workbench panel.
+- Registry / saved JSONL / run history / generated artifacts were kept out of scope.
+
+### 2026-06-09 - Backtest Analysis Direction Reset 4C
+- Opened and completed `.aiworkspace/note/finance/tasks/active/backtest-analysis-direction-reset-20260609/` for Backtest 4차 4C.
+- Reordered Backtest Analysis so strategy execution / comparison / candidate creation appears before Reference / evidence / governance panels.
+- Added a Streamlit-free research board placement model and hid Reference help plus 3A~4B evidence / governance / ETF workbench panels behind `전략 개발 참고`.
+- Strategy runtime, DB schema, registry / saved JSONL, run history, generated artifacts, provider fetch, Practical Validation, Final Review, and Monitoring behavior were not changed.
+
+### 2026-06-08 - Backtest ETF Rerun Matrix Workbench 4B
+- Opened and completed `.aiworkspace/note/finance/tasks/active/etf-rerun-matrix-workbench-20260608/` for Backtest 4차 4B.
+- Added a Streamlit-free ETF rerun matrix service and Backtest Analysis workbench panel for GRS / Risk Parity / Dual Momentum.
+- The matrix shows 9 session-only scenarios and runs only the selected ETF strategy into session state; it does not write run history, registries, saved setups, validation results, final decisions, monitoring logs, or provider snapshots.
+- Verification and Browser QA screenshot are in the task `RUNS.md` / `STATUS.md`.
+
+### 2026-06-08 - Backtest ETF Current Anchor Workbench 4A
+- Opened and completed `.aiworkspace/note/finance/tasks/active/etf-current-anchor-workbench-20260608/` for Backtest 4차 4A.
+- Added a Streamlit-free ETF current-anchor read model and Backtest Analysis workbench panel for GRS / Risk Parity / Dual Momentum.
+- The workbench reads existing run history and Practical Validation source handoff rows to show latest run evidence, source evidence, missing evidence, and next action without reruns or registry writes.
+- Verification, Browser QA screenshot, and remaining 4B handoff are in the task `RUNS.md` / `STATUS.md`.
+
+### 2026-06-08 - Backtest ETF Evidence Expansion 3D
+- Opened and completed `.aiworkspace/note/finance/tasks/active/etf-evidence-expansion-20260608/` for Backtest 3차 3D.
+- Added a Streamlit-free ETF evidence expansion read model and Backtest Analysis read-only panel for GRS / Risk Parity / Dual Momentum.
+- The panel shows current anchor, near miss, not-ready reason, required evidence, and next workflow without current candidate promotion or durable write side effects.
+- Actual rerun matrix, strategy hub / report, and current candidate promotion remain separate approval scopes.
+
+### 2026-06-08 - Backtest Risk-On Momentum Governance 3C
+- Opened and completed `.aiworkspace/note/finance/tasks/active/risk-on-momentum-governance-20260608/` for Backtest 3차 3C.
+- Added a Streamlit-free governance readiness read model and Backtest Analysis read-only panel for Risk-On Momentum 5D.
+- Practical Validation module execution, Final Review route, Portfolio Monitoring daily signal policy, and downstream promotion remain deferred approval scopes.
+
+### 2026-06-08 - Backtest Strict Annual / ETF Bridge 3B
+- Opened and completed `.aiworkspace/note/finance/tasks/active/strict-annual-etf-bridge-20260608/` for Backtest 3차 3B.
+- Added a Streamlit-free strict annual + GTAA / Equal Weight bridge read model and Backtest Analysis bridge panel.
+- The bridge shows role, target use, Practical Validation evidence, recommended workflow, deferred exclusions, and storage / route boundaries without writing registry / saved / run history / validation / final decision rows.
+- Verification, Browser QA screenshot, and remaining 3C / 3D handoff are in the task `RUNS.md` / `STATUS.md`.
+
+### 2026-06-08 - Backtest Strategy Evidence Inventory 3A
+- Opened and completed `.aiworkspace/note/finance/tasks/active/strategy-evidence-inventory-direction-panel-20260608/` for Backtest 3차 3A.
+- Added Streamlit-free strategy catalog / evidence inventory read models and a read-only Backtest Analysis Direction Panel for all catalog strategies.
+- Risk-On Momentum 5D remains governance deferred; strict quarterly variants remain prototype / contract-smoke; strict annual 3종 + GTAA / Equal Weight are the first evidence-mature group.
+- Verification, boundary check, Browser QA screenshot, and remaining 3B / 3C / 3D handoff are in the task `RUNS.md` / `STATUS.md`.
+
+### 2026-06-08 - Backtest Strategy Direction 2차 Research
+- Opened `.aiworkspace/note/finance/researches/active/2026-06-backtest-strategy-direction/` as the 2차 analysis / direction bundle for Backtest strategy work.
+- Documented strategy inventory, weakness matrix, internal benchmark baseline, feature candidates, recommendation, risks, and next-session handoff.
+- Recommended 3차 work start with read-only Strategy Evidence Inventory / Direction Panel, then strict annual + GTAA / Equal Weight bridge.
+- Deferred implementation, registry / saved JSONL writes, roadmap commitment, Risk-On Momentum governance, quarterly maturation, and live trading boundaries to approved future scopes.
 
 ### 2026-06-08 - Merge Review Fixes
 - Opened `.aiworkspace/note/finance/tasks/active/merge-review-fixes-20260608/` after sub-dev / main-dev master merge review.
@@ -5320,3 +5395,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/`에서 legacy audit, navigation surface extraction, IA read model service extraction, confirmed unused wrapper / Candidate Ops snapshot helper removal, guard tests, final QA를 순서대로 완료했다.
   - Active Overview ownership은 `app/web/overview/page.py`, `app/web/overview/navigation.py`, `app/web/overview/{market_context,market_movers,futures_macro,sentiment,events}.py`로 정리했고, `legacy_dashboard.py`는 helper compatibility surface로 남겼다.
   - 검증은 V6-V10 각 차수별 Browser QA, py_compile, OverviewAutomationContractTests, `git diff --check`로 기록했다.
+- GTAA SPY Low-MDD Top-2 ADV20 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
+  - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
+  - GTAA runtime에 ADV20 liquidity evidence를 연결했고, preset 선택 시 핵심 파라미터가 자동 적용되도록 했다. 상세 결과는 `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`를 보면 된다.

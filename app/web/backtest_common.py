@@ -155,6 +155,8 @@ GTAA_QQQ_QUAL_USMV_XLE_IAU_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA",
 GTAA_U3_COMMODITY_TICKERS = ["SPY", "QQQ", "XLE", "COMT", "IAU", "GLD", "QUAL", "USMV", "TIP", "TLT", "IEF", "LQD", "VNQ", "EFA", "MTUM"]
 GTAA_U1_OFFENSIVE_TICKERS = ["SPY", "QQQ", "MTUM", "QUAL", "USMV", "VUG", "VTV", "RSP", "IAU", "XLE", "TIP", "TLT", "IEF", "LQD", "VNQ", "EFA"]
 GTAA_U5_SMALLCAP_VALUE_TICKERS = ["SPY", "QQQ", "IWM", "IWN", "IWD", "MTUM", "QUAL", "USMV", "EFA", "VNQ", "TLT", "IEF", "LQD", "IAU", "XLE", "TIP"]
+GTAA_SPY_LOW_MDD_STYLE_TOP3_TICKERS = ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"]
+GTAA_SPY_LOW_MDD_STYLE_TOP2_ADV20_TICKERS = ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"]
 
 GTAA_PRESETS = {
     "GTAA Universe": GTAA_DEFAULT_TICKERS,
@@ -164,6 +166,23 @@ GTAA_PRESETS = {
     "GTAA Universe (U3 Commodity Candidate Base)": GTAA_U3_COMMODITY_TICKERS,
     "GTAA Universe (U1 Offensive Candidate Base)": GTAA_U1_OFFENSIVE_TICKERS,
     "GTAA Universe (U5 Smallcap Value Candidate Base)": GTAA_U5_SMALLCAP_VALUE_TICKERS,
+    "GTAA SPY Low-MDD Style Top-3": GTAA_SPY_LOW_MDD_STYLE_TOP3_TICKERS,
+    "GTAA SPY Low-MDD Style Top-2 ADV20": GTAA_SPY_LOW_MDD_STYLE_TOP2_ADV20_TICKERS,
+}
+
+GTAA_PRESET_PARAMETER_DEFAULTS = {
+    "GTAA SPY Low-MDD Style Top-2 ADV20": {
+        "top": 2,
+        "interval": 4,
+        "score_lookback_months": [1, 6],
+        "trend_filter_window": 200,
+        "risk_off_mode": "cash_only",
+        "defensive_tickers": ["IEF", "TLT"],
+        "benchmark_ticker": "SPY",
+        "min_price_filter": 5.0,
+        "min_avg_dollar_volume_20d_m_filter": 20.0,
+        "transaction_cost_bps": 10.0,
+    },
 }
 
 GLOBAL_RELATIVE_STRENGTH_PRESETS = {
@@ -204,6 +223,9 @@ STRICT_REJECTION_HANDLING_MODE_EXPLANATIONS = {
     STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH: "먼저 다음 순위의 추세 통과 종목으로 빈 슬롯을 채우고, 그래도 남은 슬롯은 현금으로 남깁니다.",
 }
 SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
+    "global_relative_strength",
+    "risk_parity_trend",
+    "dual_momentum",
     "quality_snapshot",
     "quality_snapshot_strict_annual",
     "quality_snapshot_strict_quarterly_prototype",
@@ -1137,6 +1159,46 @@ def _render_gtaa_preset_note(preset_name: str | None) -> None:
         st.caption("Verified Phase 12 candidate base: growth + quality + style diversification mix. Best validated contract so far was `month_end`, `top=2`, `interval=3`, `Score Horizons=1/3/6/12`.")
     elif preset_name == "GTAA Universe (U5 Smallcap Value Candidate Base)":
         st.caption("Verified Phase 12 candidate base: smallcap/value-aware defensive mix. Best validated contract so far was `month_end`, `top=3`, `interval=3`, `Score Horizons=1/3/6/12`.")
+    elif preset_name == "GTAA SPY Low-MDD Style Top-3":
+        st.caption(
+            "Candidate Library reference: validated with `top=3`, `interval=3`, "
+            "`Score Horizons=1M/6M`, `MA250`, `cash_only`, and `Benchmark=SPY`."
+        )
+    elif preset_name == "GTAA SPY Low-MDD Style Top-2 ADV20":
+        st.caption(
+            "Current low-MDD candidate: defaults to `top=2`, `interval=4`, "
+            "`Score Horizons=1M/6M`, `MA200`, `cash_only`, `Benchmark=SPY`, "
+            "and `Min Avg Dollar Volume 20D=20M`."
+        )
+
+
+def _apply_gtaa_preset_parameter_defaults(*, key_prefix: str, preset_name: str | None) -> None:
+    defaults = GTAA_PRESET_PARAMETER_DEFAULTS.get(str(preset_name or ""))
+    if not defaults:
+        return
+
+    marker_key = f"{key_prefix}_applied_preset_defaults"
+    if st.session_state.get(marker_key) == preset_name:
+        return
+
+    st.session_state[f"{key_prefix}_top"] = int(defaults["top"])
+    st.session_state[f"{key_prefix}_interval"] = int(defaults["interval"])
+    _set_gtaa_score_selection_state(
+        key_prefix=key_prefix,
+        score_lookback_months=list(defaults["score_lookback_months"]),
+    )
+    st.session_state[f"{key_prefix}_trend_filter_window"] = int(defaults["trend_filter_window"])
+    st.session_state[f"{key_prefix}_risk_off_mode"] = _risk_off_mode_value_to_label(
+        str(defaults["risk_off_mode"])
+    )
+    st.session_state[f"{key_prefix}_defensive_tickers"] = ",".join(list(defaults["defensive_tickers"]))
+    st.session_state[f"{key_prefix}_benchmark_ticker"] = str(defaults["benchmark_ticker"])
+    st.session_state[f"{key_prefix}_min_price_filter"] = float(defaults["min_price_filter"])
+    st.session_state[f"{key_prefix}_min_avg_dollar_volume_20d_m_filter"] = float(
+        defaults["min_avg_dollar_volume_20d_m_filter"]
+    )
+    st.session_state[f"{key_prefix}_transaction_cost_bps"] = float(defaults["transaction_cost_bps"])
+    st.session_state[marker_key] = preset_name
 
 
 def _render_gtaa_universe_inputs(
@@ -1165,6 +1227,7 @@ def _render_gtaa_universe_inputs(
             key=f"{key_prefix}_preset",
         )
         tickers = list(GTAA_PRESETS[preset_name])
+        _apply_gtaa_preset_parameter_defaults(key_prefix=key_prefix, preset_name=preset_name)
         _render_gtaa_preset_note(preset_name)
     else:
         manual_tickers = st.text_input(
@@ -1792,6 +1855,12 @@ def _render_advanced_group_caption(message: str) -> None:
     st.caption(message)
 
 
+def _session_state_default_arg(key: str, arg_name: str, value: Any) -> dict[str, Any]:
+    if key in st.session_state:
+        return {}
+    return {arg_name: value}
+
+
 def _dynamic_etf_promotion_policy_defaults() -> dict[str, float]:
     return {
         "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
@@ -1822,60 +1891,69 @@ def _render_etf_real_money_inputs(
     )
     left, center, right, far_left, far_right = st.columns(5, gap="small")
     with left:
+        min_price_key = f"{key_prefix}_min_price_filter"
         min_price_filter = float(
             st.number_input(
                 "Minimum Price",
                 min_value=0.0,
                 max_value=1000.0,
-                value=float(default_min_price),
                 step=1.0,
-                key=f"{key_prefix}_min_price_filter",
+                key=min_price_key,
                 help="이 값보다 싼 ETF는 해당 날짜 후보 universe에서 제외합니다.",
+                **_session_state_default_arg(min_price_key, "value", float(default_min_price)),
             )
         )
     with center:
+        transaction_cost_key = f"{key_prefix}_transaction_cost_bps"
         transaction_cost_bps = float(
             st.number_input(
                 "Transaction Cost (bps)",
                 min_value=0.0,
                 max_value=500.0,
-                value=float(default_transaction_cost_bps),
                 step=1.0,
-                key=f"{key_prefix}_transaction_cost_bps",
+                key=transaction_cost_key,
                 help="리밸런싱 turnover 비율에 곱하는 왕복 비용 가정입니다. 10bps = 0.10%입니다.",
+                **_session_state_default_arg(transaction_cost_key, "value", float(default_transaction_cost_bps)),
             )
         )
     with right:
+        benchmark_key = f"{key_prefix}_benchmark_ticker"
         benchmark_ticker = str(
             st.text_input(
                 "Benchmark Ticker",
-                value=default_benchmark,
-                key=f"{key_prefix}_benchmark_ticker",
+                key=benchmark_key,
                 help="전략 결과를 비교할 기준 ETF ticker입니다. 기본값은 `SPY`입니다.",
+                **_session_state_default_arg(benchmark_key, "value", default_benchmark),
             )
         ).strip().upper()
     with far_left:
+        min_etf_aum_key = f"{key_prefix}_promotion_min_etf_aum_b"
         promotion_min_etf_aum_b = float(
             st.number_input(
                 "Min ETF AUM ($B)",
                 min_value=0.0,
                 max_value=1000.0,
-                value=float(default_min_etf_aum_b),
                 step=0.5,
-                key=f"{key_prefix}_promotion_min_etf_aum_b",
+                key=min_etf_aum_key,
                 help="현재 asset profile 기준 ETF 총자산이 이 값보다 작은 종목은 운용성 policy signal에서 보수적으로 평가합니다.",
+                **_session_state_default_arg(min_etf_aum_key, "value", float(default_min_etf_aum_b)),
             )
         )
     with far_right:
+        max_bid_ask_key = f"{key_prefix}_promotion_max_bid_ask_spread_pct"
         max_bid_ask_spread_percent = float(
             st.number_input(
                 "Max Bid-Ask Spread (%)",
                 min_value=0.0,
                 max_value=100.0,
-                value=float(default_max_bid_ask_spread_pct) * 100.0,
                 step=0.05,
-                key=f"{key_prefix}_promotion_max_bid_ask_spread_pct",
+                key=max_bid_ask_key,
                 help="현재 bid/ask 기준 스프레드가 이 값보다 넓은 ETF는 운용성 policy signal에서 보수적으로 평가합니다.",
+                **_session_state_default_arg(
+                    max_bid_ask_key,
+                    "value",
+                    float(default_max_bid_ask_spread_pct) * 100.0,
+                ),
             )
         )
 
@@ -2435,13 +2513,14 @@ def _render_gtaa_score_weight_inputs(*, key_prefix: str) -> tuple[list[int], dic
         "기본값은 `1M / 3M / 6M / 12M`이고, 여기서 사용할 horizon만 고를 수 있습니다. "
         "선택된 horizon은 모두 동일 비중으로 점수에 반영됩니다."
     )
+    score_key = f"{key_prefix}_score_lookback_months"
     score_lookback_months = st.multiselect(
         "Score Horizons",
         options=list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
-        default=list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
         format_func=lambda months: f"{int(months)}M",
-        key=f"{key_prefix}_score_lookback_months",
+        key=score_key,
         help="GTAA score 계산에 실제로 포함할 horizon입니다. 예를 들어 `1M, 3M`만 남기면 두 구간만 균등하게 사용합니다.",
+        **_session_state_default_arg(score_key, "default", list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)),
     )
     if not score_lookback_months:
         st.warning("Score Horizon을 최소 1개는 선택해야 합니다.")
@@ -2455,13 +2534,14 @@ def _render_global_relative_strength_score_weight_inputs(*, key_prefix: str) -> 
         "상대강도 점수를 계산할 기간입니다. 기본값은 `1M / 3M / 6M / 12M`이고, "
         "선택된 기간은 동일 비중으로 합산합니다."
     )
+    score_key = f"{key_prefix}_score_lookback_months"
     score_lookback_months = st.multiselect(
         "Score Horizons",
         options=list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS),
-        default=list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS),
         format_func=lambda months: f"{int(months)}M",
-        key=f"{key_prefix}_score_lookback_months",
+        key=score_key,
         help="Global Relative Strength score에 포함할 lookback 기간입니다.",
+        **_session_state_default_arg(score_key, "default", list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS)),
     )
     if not score_lookback_months:
         st.warning("Score Horizon을 최소 1개는 선택해야 합니다.")
@@ -2484,6 +2564,8 @@ def _strict_risk_off_mode_value_to_label(value: str | None) -> str:
 
 
 def _strict_weighting_mode_value_to_label(value: str | None) -> str:
+    if str(value or "").strip().lower() == "inverse_vol":
+        return "Inverse Volatility"
     for label, mode_value in STRICT_WEIGHTING_MODE_LABELS.items():
         if mode_value == value:
             return label
@@ -2547,31 +2629,42 @@ def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
     )
     left, right = st.columns(2, gap="small")
     with left:
+        trend_filter_key = f"{key_prefix}_trend_filter_window"
         trend_filter_window = int(
             st.number_input(
                 "Trend Filter Window",
                 min_value=20,
                 max_value=400,
-                value=GTAA_DEFAULT_TREND_FILTER_WINDOW,
                 step=10,
-                key=f"{key_prefix}_trend_filter_window",
+                key=trend_filter_key,
                 help="GTAA 각 후보가 통과해야 하는 이동평균 필터 기간입니다. 기본은 `MA200`입니다.",
+                **_session_state_default_arg(trend_filter_key, "value", GTAA_DEFAULT_TREND_FILTER_WINDOW),
             )
         )
     with right:
+        risk_off_mode_key = f"{key_prefix}_risk_off_mode"
         risk_off_mode_label = st.selectbox(
             "Fallback Mode",
             options=list(GTAA_RISK_OFF_MODE_LABELS.keys()),
-            index=list(GTAA_RISK_OFF_MODE_LABELS.values()).index(GTAA_DEFAULT_RISK_OFF_MODE),
-            key=f"{key_prefix}_risk_off_mode",
+            key=risk_off_mode_key,
             help="위험구간 또는 top 후보 부족 시 현금만 들고 있을지, 방어 채권으로 남은 슬롯을 채울지 고릅니다.",
+            **_session_state_default_arg(
+                risk_off_mode_key,
+                "index",
+                list(GTAA_RISK_OFF_MODE_LABELS.values()).index(GTAA_DEFAULT_RISK_OFF_MODE),
+            ),
         )
 
+    defensive_tickers_key = f"{key_prefix}_defensive_tickers"
     defensive_tickers_text = st.text_input(
         "Defensive Tickers",
-        value=",".join(GTAA_DEFAULT_DEFENSIVE_TICKERS),
-        key=f"{key_prefix}_defensive_tickers",
+        key=defensive_tickers_key,
         help="Fallback Mode가 `Defensive Bond Preference`일 때 사용할 방어 채권 후보입니다.",
+        **_session_state_default_arg(
+            defensive_tickers_key,
+            "value",
+            ",".join(GTAA_DEFAULT_DEFENSIVE_TICKERS),
+        ),
     )
 
     regime_enabled, regime_window, regime_benchmark = _render_market_regime_overlay_inputs(

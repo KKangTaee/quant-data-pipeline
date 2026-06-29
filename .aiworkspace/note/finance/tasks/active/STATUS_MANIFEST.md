@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-24
+Last Verified: 2026-06-29
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-load-gate-removal-v1-20260624`
+- `gtaa-result-cadence-monthly-valuation-20260629`
 
 Latest completed docs cleanup task:
 
@@ -50,6 +50,19 @@ Recent portfolio selection records:
 - `distinct-strategy-portfolio-discovery-20260609`: unique strategy family constraint / SPY superior GTAA U3 85% + GRS Compact 10% + Risk Parity Trend 5% portfolio / Final Review and Monitoring registration
 - `portfolio-discovery-final-review-monitoring-20260608`: current strategy catalog exploration / all-ETF Final Review selected decision / Portfolio Monitoring registration
 
+Recent Backtest strategy contract records:
+
+- `gtaa-result-cadence-monthly-valuation-20260629`: GTAA `interval` is now strategy-owned rebalance cadence rather than input row thinning. Month-end runtime appends the latest common trading day row at or before the requested end date, so non-rebalance months can still show candidate signal / valuation context. Current DB smoke for a 2026-06-29 request stops at `2026-03-16` because `SOXX/MTUM/QUAL/USMV` price coverage stops there.
+- `risk-parity-dual-momentum-5b-20260610`: Backtest 5B / Risk Parity Trend volatility-window, eligible-universe, inverse-vol, guardrail cash-only, and low-vol overweight diagnostics plus Dual Momentum trend-rejection, cash proxy retention, concentration, and whipsaw row/meta contracts. No new panel, registry / saved write, run history write, provider fetch, Practical Validation, Final Review, or Monitoring behavior change.
+- `global-relative-strength-5a-20260609`: Backtest 5A / Global Relative Strength strategy-owned rebalance cadence, score window / cash proxy / benchmark / stale price / top-N concentration result bundle contracts. No new evidence/log/workbench panel or registry / saved / run history / generated artifact write.
+- `backtest-analysis-direction-reset-20260609`: Backtest 4C / execution-first Backtest Analysis reset. Reference and 3A-4B evidence / governance / ETF workbench panels remain preserved behind the `전략 개발 참고` advanced control.
+- `etf-rerun-matrix-workbench-20260608`: Backtest 4B / session-only ETF rerun matrix for GRS / Risk Parity / Dual Momentum; no durable candidate or validation writes.
+- `etf-current-anchor-workbench-20260608`: Backtest 4A / read-only current-anchor readiness from existing run history and Practical Validation source handoff rows.
+- `etf-evidence-expansion-20260608`: Backtest 3D / read-only ETF current anchor, near miss, not-ready reason, required evidence, and next workflow for GRS / Risk Parity / Dual Momentum.
+- `risk-on-momentum-governance-20260608`: Backtest 3C / Risk-On Momentum 5D governance readiness and deferred validation / review / monitoring modules.
+- `strict-annual-etf-bridge-20260608`: Backtest 3B / Strict Annual + GTAA / Equal Weight bridge and validation handoff surface.
+- `strategy-evidence-inventory-direction-panel-20260608`: Backtest 3A / catalog strategy maturity, evidence, and next-action read-only surface.
+
 Recent Operations records:
 
 - `operations-v2-closeout-20260608`: Operations Overview V2 5차 / final QA and docs closeout
@@ -60,6 +73,13 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-final-cleanup-v33-v36-20260629`: Completed record. UI component bodies now live under `app/web/overview/components/*`, `overview_dashboard.py` is a 1-export wrapper, `app/services/overview_market_intelligence.py` was removed, and Data Health scope / coverage counts separate direct Market Context from reference / dedicated-tab sources.
+- `overview-service-split-v25-v32-20260629`: Completed record. Overview market intelligence read-model bodies now live in `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py` instead of the old monolithic service facade.
+- `overview-legacy-dashboard-removal-v17-v24-20260625`: Completed record. `app/web/overview/legacy_dashboard.py` was physically deleted after remaining helper ownership moved into tab-local helper modules; `app/web/overview_dashboard.py` now exposes explicit compatibility exports. QA passed with py_compile, Overview contracts, legacy import scan, and Browser QA.
+- `overview-tab-helper-extraction-v11-v16-20260625`: Completed record. Primary tab entry modules now use tab-local helper bridges for Market Context, Events, Futures Macro, Market Movers, and Sentiment instead of directly importing `legacy_dashboard.py`.
+- `overview-legacy-cleanup-v6-v10-20260625`: Completed record. Navigation moved to `app/web/overview/navigation.py`, Overview IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction.
+- `overview-structure-split-v2-v5-20260625`: Completed record. Primary tab modules own tab-level orchestration, component/service surfaces were introduced, and Overview boundary guard contracts protect active page / tab / component / service ownership.
+- `overview-tab-module-split-v1-20260625`: Completed record. `overview_dashboard.py` became a compatibility wrapper and active Overview page / primary tab entry modules moved under `app/web/overview/`.
 - `overview-market-context-load-gate-removal-v1-20260624`: Completed record. `Workspace > Overview > Market Context` no longer shows an explicit `시장 맥락 불러오기` gate; the default Market Context body renders immediately when selected. Internal `st.pills` text-tab underline navigation remains and tab anchors are still not rendered. Cold timing showed the slow path is `load_overview_macro_context_cockpit`, especially futures macro validation. No provider / schema / registry / saved / validation / monitoring / trade semantics changed.
 - `overview-nav-internal-lazy-load-v1-20260623`: Superseded completed record. This introduced internal `st.pills` text-tab navigation and a first-load Market Context gate. The internal no-anchor tab navigation remains, but the explicit gate was removed by `overview-market-context-load-gate-removal-v1-20260624`.
 - `overview-primary-nav-pill-v1-20260623`: Superseded completed record. This first visual polish used a compact custom anchor nav with Korean primary labels and English secondary labels. It was replaced by `overview-nav-internal-lazy-load-v1-20260623` because tab switching must not behave as link navigation.
