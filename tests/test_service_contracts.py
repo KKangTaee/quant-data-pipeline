@@ -9260,14 +9260,37 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         model = build_market_movers_sector_map_model(source_model)
 
         self.assertEqual(model["schema_version"], "market_movers_sector_map_v1")
-        self.assertEqual(model["headline"], "Broad participation, balanced leadership")
+        self.assertEqual(model["headline"], "넓은 참여, 균형 리더십")
+        self.assertIn("Technology 섹터가 선택 coverage를 주도합니다.", model["detail"])
         self.assertEqual(model["participation"]["value"], "50%")
         self.assertEqual(model["leadership"]["value"], "Technology")
+        self.assertEqual(model["leadership"]["detail"], "+2.00% 시총가중")
+        self.assertEqual(model["dispersion"]["value"], "혼재")
+        self.assertEqual(model["dispersion"]["detail"], "1개 양수 섹터 · 1개 음수 섹터")
         self.assertEqual(model["lanes"][0]["sector"], "Technology")
         self.assertEqual(model["lanes"][0]["return_label"], "+2.00%")
         self.assertEqual(model["lanes"][0]["bar_pct"], 100)
+        self.assertEqual(model["lanes"][0]["participation_label"], "상승 80%")
+        self.assertEqual(model["lanes"][0]["participation_detail"], "상승 8 / 하락 2 · 상승 비중 80%")
+        self.assertEqual(model["lanes"][0]["top_gainer_detail"], "상승 상위 AAA +5.50%")
+        self.assertEqual(model["lanes"][0]["top_loser_detail"], "하락 상위 BBB -1.10%")
         self.assertEqual(model["lanes"][1]["return_label"], "-1.00%")
         self.assertEqual(model["lanes"][1]["bar_pct"], 50)
+
+    def test_market_movers_polish_phase5_localizes_sector_context(self) -> None:
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Freshness:", component_source)
+        self.assertNotIn("Top Loser", component_source)
+        self.assertNotIn("Decliners", component_source)
+        self.assertNotIn("adv /", component_source)
+        self.assertNotIn("% positive", component_source)
+        self.assertIn("기준:", component_source)
+        self.assertIn("하락 상위", component_source)
+        sector_css = common_source[common_source.index(".ov-sector-breadth-lanes") :]
+        self.assertIn("max-height", sector_css)
+        self.assertIn("overflow-y: auto", sector_css)
 
     def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model
@@ -9334,8 +9357,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("섹터 / 시장 확산 맥락", helper_source)
         self.assertIn("섹터 breadth 상세 표", helper_source)
         self.assertIn("ov-sector-pressure-map", component_source)
-        self.assertIn("Decliners", component_source)
-        self.assertIn("Top Loser", component_source)
+        self.assertIn("하락", component_source)
+        self.assertNotIn("Top Loser", component_source)
         for forbidden in ["급등 가능성", "매수 후보", "추천", "trade signal"]:
             self.assertNotIn(forbidden, helper_source)
 

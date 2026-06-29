@@ -1782,6 +1782,54 @@ def _market_movers_sector_participation_label(value: Any) -> str:
     return f"{numeric:.0f}%"
 
 
+def _market_movers_sector_headline_label(value: Any) -> str:
+    text = str(value or "").strip()
+    mapping = {
+        "Broad participation, balanced leadership": "넓은 참여, 균형 리더십",
+        "Broad participation": "넓은 참여",
+        "Mixed participation": "혼재된 참여",
+        "Sector breadth context": "섹터 확산 맥락",
+    }
+    if text in mapping:
+        return mapping[text]
+    if not text:
+        return "섹터 확산 맥락"
+    return (
+        text.replace("Broad participation", "넓은 참여")
+        .replace("balanced leadership", "균형 리더십")
+        .replace("Mixed participation", "혼재된 참여")
+        .replace("Sector breadth context", "섹터 확산 맥락")
+    )
+
+
+def _market_movers_sector_detail_label(value: Any, *, leader: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "섹터별 움직임이 넓게 퍼졌는지 특정 그룹에 집중됐는지 확인합니다."
+    if "leads the selected universe" in text:
+        subject = text.split(" leads the selected universe", 1)[0].strip() or leader
+        return f"{subject} 섹터가 선택 coverage를 주도합니다. 섹터별 확산이 넓은지 특정 그룹에 집중됐는지 확인합니다."
+    return text.replace("Use sector lanes to see whether movement is broad or group-specific.", "섹터 레인에서 움직임의 확산/편중을 확인합니다.")
+
+
+def _market_movers_sector_status_label(value: Any) -> str:
+    text = str(value or "-").strip()
+    mapping = {
+        "OK": "정상",
+        "INSUFFICIENT_DATA": "데이터 부족",
+        "NO_UNIVERSE": "Universe 없음",
+        "ERROR": "오류",
+    }
+    return mapping.get(text, text)
+
+
+def _market_movers_sector_boundary_note(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text or text.lower().startswith("context-only sector breadth"):
+        return "섹터 확산은 맥락 확인용입니다. 거래 행동, 매매 판단, 검증 게이트, Final Review 결정, 모니터링 지침이 아닙니다."
+    return text.replace("Context-only sector breadth.", "섹터 확산은 맥락 확인용입니다.")
+
+
 def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any]:
     rows = [dict(row) for row in list(model.get("heatmap_rows") or [])]
     summary = dict(model.get("summary") or {})
@@ -1825,15 +1873,15 @@ def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any
             "return_label": _format_signed(sector_return),
             "bar_pct": normalized,
             "bar_width_pct": round(normalized / 2, 2),
-            "participation_label": f"{participation_label} positive",
-            "participation_detail": f"{advancers} adv / {decliners} dec · {participation_label} positive",
-            "cap_detail": f"{_market_movers_sector_pct_label(row.get('market_cap_share_pct'), decimals=1)} cap",
+            "participation_label": f"상승 {participation_label}",
+            "participation_detail": f"상승 {advancers} / 하락 {decliners} · 상승 비중 {participation_label}",
+            "cap_detail": f"시총비중 {_market_movers_sector_pct_label(row.get('market_cap_share_pct'), decimals=1)}",
             "top_gainer_detail": (
-                f"{row.get('top_symbol') or '-'} "
+                f"상승 상위 {row.get('top_symbol') or '-'} "
                 f"{_format_signed(row.get('top_symbol_return_pct'))}"
             ),
             "top_loser_detail": (
-                f"Top Loser {row.get('top_loser') or '-'} "
+                f"하락 상위 {row.get('top_loser') or '-'} "
                 f"{_format_signed(row.get('top_loser_return_pct'))}"
             ),
         }
@@ -1842,30 +1890,30 @@ def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any
     participation_rail = 0 if average_participation is None else max(0, min(100, int(round(average_participation))))
     return {
         "schema_version": "market_movers_sector_map_v1",
-        "status": model.get("status") or "-",
-        "headline": summary.get("headline") or "Sector breadth context",
-        "detail": summary.get("detail") or "Use sector lanes to see whether movement is broad or group-specific.",
+        "tone": model.get("status") or "-",
+        "status": _market_movers_sector_status_label(model.get("status") or "-"),
+        "headline": _market_movers_sector_headline_label(summary.get("headline")),
+        "detail": _market_movers_sector_detail_label(summary.get("detail"), leader=str(leader_row.get("group") or "-")),
         "freshness": coverage.get("freshness") or "-",
         "participation": {
             "label": "상승 참여",
             "value": participation_label,
-            "detail": f"{len(participation_values)} sectors average",
+            "detail": f"{len(participation_values)}개 섹터 평균",
             "rail_pct": participation_rail,
         },
         "leadership": {
             "label": "리더십",
             "value": str(leader_row.get("group") or "-"),
-            "detail": f"{_format_signed(leader_return)} cap-weighted",
+            "detail": f"{_format_signed(leader_return)} 시총가중",
         },
         "dispersion": {
             "label": "확산",
-            "value": "broad" if average_participation is not None and average_participation >= 60 else "mixed",
-            "detail": f"{positive_groups} positive groups · {negative_groups} negative groups",
+            "value": "넓음" if average_participation is not None and average_participation >= 60 else "혼재",
+            "detail": f"{positive_groups}개 양수 섹터 · {negative_groups}개 음수 섹터",
         },
         "lanes": lanes,
         "leaders": lanes[:5],
-        "boundary_note": model.get("boundary_note")
-        or "Context-only sector breadth: not a trading action, recommendation, validation gate, Final Review decision, or monitoring guidance.",
+        "boundary_note": _market_movers_sector_boundary_note(model.get("boundary_note")),
     }
 
 

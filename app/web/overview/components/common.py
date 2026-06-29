@@ -2605,8 +2605,8 @@ def overview_ui_css() -> str:
   background: rgba(248,250,252,0.82);
 }
 .ov-sector-breadth-map {
-  margin: 0.48rem 0 0.82rem 0;
-  padding: 0.68rem;
+  margin: 0.44rem 0 0.74rem 0;
+  padding: 0.58rem;
   border: 1px solid var(--ov-mi-border-faint);
   border-left: 4px solid var(--ov-band-tone, var(--ov-mi-color-neutral));
   border-radius: var(--ov-mi-radius-panel);
@@ -2713,6 +2713,9 @@ def overview_ui_css() -> str:
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
   margin-top: 0.56rem;
+  max-height: 31rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .ov-sector-breadth-lane {
   min-width: 0;

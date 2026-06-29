@@ -396,9 +396,9 @@ def _breadth_rows_html(rows: list[dict[str, Any]]) -> str:
             f'<div class="ov-breadth-row-label">#{escape(_display_value(row.get("rank")))} · {escape(group)}</div>'
             f'<div class="ov-breadth-row-value">{escape(weighted)}%</div>'
             "<div class=\"ov-breadth-row-detail\">"
-            f"{escape(positive)}% positive · Decliners {escape(decliners)}"
-            f" · {escape(top_symbol)} {escape(top_return)}%"
-            f" / Top Loser {escape(top_loser)} {escape(top_loser_return)}%"
+            f"상승 비중 {escape(positive)}% · 하락 {escape(decliners)}"
+            f" · 상승 상위 {escape(top_symbol)} {escape(top_return)}%"
+            f" / 하락 상위 {escape(top_loser)} {escape(top_loser_return)}%"
             "</div>"
             "</div>"
         )
@@ -420,7 +420,7 @@ def _sector_breadth_heatmap_html(rows: list[dict[str, Any]]) -> str:
             f'<div class="ov-sector-pressure-tile" style="--ov-pressure-tone:{tone_color};">'
             f'<div class="ov-sector-pressure-name">{escape(group)}</div>'
             f'<div class="ov-sector-pressure-value">{escape(weighted)}%</div>'
-            f'<div class="ov-sector-pressure-detail">{escape(advancers)} adv / {escape(decliners)} dec · {escape(size_share)}% cap</div>'
+            f'<div class="ov-sector-pressure-detail">상승 {escape(advancers)} / 하락 {escape(decliners)} · 시총비중 {escape(size_share)}%</div>'
             "</div>"
         )
     return f'<div class="ov-sector-pressure-map">{"".join(tiles)}</div>'
@@ -478,7 +478,7 @@ def _sector_breadth_leader_strip_html(leaders: list[dict[str, Any]]) -> str:
 
 
 def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
-    tone_color = escape(_overview_tone_color(model.get("status")))
+    tone_color = escape(_overview_tone_color(model.get("tone") or model.get("status")))
     stats = [
         dict(model.get("participation") or {}),
         dict(model.get("leadership") or {}),
@@ -496,7 +496,7 @@ def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
     <div>
       <div class="ov-sector-breadth-kicker">시장 확산 지도</div>
       <div class="ov-sector-breadth-title">{escape(_display_value(model.get("headline")))}</div>
-      <div class="ov-sector-breadth-detail">{escape(_display_value(model.get("detail")))} · Freshness: {escape(_display_value(model.get("freshness")))}</div>
+      <div class="ov-sector-breadth-detail">{escape(_display_value(model.get("detail")))} · 기준: {escape(_display_value(model.get("freshness")))}</div>
     </div>
     <span class="ov-sector-breadth-status">{escape(_display_value(model.get("status")))}</span>
   </div>
@@ -527,9 +527,9 @@ def render_breadth_heatmap_summary(model: dict[str, Any]) -> None:
 <section class="ov-breadth-summary" style="--ov-band-tone:{tone_color};">
   <div class="ov-breadth-head">
     <div>
-      <div class="ov-breadth-kicker">Sector Breadth / Heatmap</div>
+      <div class="ov-breadth-kicker">섹터 확산 / 히트맵</div>
       <div class="ov-breadth-title">{escape(_display_value(summary.get("headline")))}</div>
-      <div class="ov-breadth-detail">{escape(_display_value(summary.get("detail")))} · Freshness: {escape(freshness)}</div>
+      <div class="ov-breadth-detail">{escape(_display_value(summary.get("detail")))} · 기준: {escape(freshness)}</div>
     </div>
     <span class="ov-breadth-status">{escape(_display_value(model.get("status")))}</span>
   </div>
