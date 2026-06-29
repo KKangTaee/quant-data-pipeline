@@ -18,6 +18,11 @@ from app.jobs.overview_actions import (
     run_overview_quote_gap_diagnostics,
     run_overview_sp500_universe,
 )
+from app.services.overview.why_it_moved import (
+    build_market_mover_metadata_status_strip,
+    build_market_mover_why_it_moved_read_model,
+    fetch_market_mover_compact_metadata,
+)
 from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview_dashboard_helpers import (
     load_overview_market_mover_sectors,
@@ -1391,7 +1396,15 @@ MARKET_MOVER_UI_LABELS = {
 }
 
 
-def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFrame) -> list[dict[str, Any]]:
+def _market_mover_catalyst_candidates(
+    rows: pd.DataFrame,
+    volume_rows: pd.DataFrame,
+    *,
+    primary_rank_source: str = "Return Rank",
+    primary_id_prefix: str = "return",
+    primary_label_prefix: str = "수익률",
+    include_volume_candidates: bool = True,
+) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -1420,8 +1433,14 @@ def _market_mover_catalyst_candidates(rows: pd.DataFrame, volume_rows: pd.DataFr
                 }
             )
 
-    append_from_frame(rows, rank_source="Return Rank", id_prefix="return", label_prefix="수익률")
-    append_from_frame(volume_rows, rank_source="Volume Rank", id_prefix="volume", label_prefix="거래량")
+    append_from_frame(
+        rows,
+        rank_source=primary_rank_source,
+        id_prefix=primary_id_prefix,
+        label_prefix=primary_label_prefix,
+    )
+    if include_volume_candidates:
+        append_from_frame(volume_rows, rank_source="Volume Rank", id_prefix="volume", label_prefix="거래량")
     return candidates
 
 
@@ -1469,21 +1488,208 @@ def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
     return OVERVIEW_COLOR_TEXT, OVERVIEW_COLOR_SURFACE_SUBTLE, OVERVIEW_COLOR_BORDER
 
 
+def _detail_rows(items: list[tuple[str, Any]]) -> pd.DataFrame:
+    return pd.DataFrame([{"항목": label, "값": value if value not in (None, "") else "-"} for label, value in items])
+
+
+def _format_detail_money(value: Any) -> str:
+    return _compact_number(value, prefix="$")
+
+
+def _format_detail_number(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return _compact_number(float(numeric))
+
+
+def _format_relative_volume(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):.2f}x"
+
+
+def _market_mover_peer_context(peer_rows: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    if not isinstance(peer_rows, pd.DataFrame) or peer_rows.empty or "Symbol" not in peer_rows:
+        return _detail_rows([("같은 섹터 맥락", "표시된 peer rows가 없습니다.")])
+    normalized_symbol = str(symbol or "").strip().upper()
+    rows = peer_rows.copy()
+    rows["Symbol"] = rows["Symbol"].astype(str).str.strip().str.upper()
+    selected_matches = rows[rows["Symbol"] == normalized_symbol]
+    if selected_matches.empty:
+        return _detail_rows([("같은 섹터 맥락", "선택 종목을 현재 표시 rows에서 찾을 수 없습니다.")])
+    selected = selected_matches.iloc[0]
+    sector = str(selected.get("Sector") or "Unknown").strip() or "Unknown"
+    if "Sector" in rows:
+        same_sector = rows[rows["Sector"].fillna("Unknown").astype(str).str.strip().replace("", "Unknown") == sector]
+    else:
+        same_sector = rows.iloc[0:0]
+    same_sector = same_sector.reset_index(drop=True)
+    selected_positions = same_sector.index[same_sector["Symbol"] == normalized_symbol].tolist()
+    position = selected_positions[0] + 1 if selected_positions else "-"
+    avg_return = "-"
+    top_symbol = "-"
+    if not same_sector.empty and "Return %" in same_sector:
+        numeric_returns = pd.to_numeric(same_sector["Return %"], errors="coerce")
+        if numeric_returns.notna().any():
+            avg_return = _format_signed(numeric_returns.mean())
+            top_idx = numeric_returns.sort_values(ascending=False).index[0]
+            top_row = same_sector.loc[top_idx]
+            top_symbol = f"{top_row.get('Symbol', '-')} ({_format_signed(top_row.get('Return %'))})"
+    return _detail_rows(
+        [
+            ("같은 섹터 내 표시 순위", f"{position} / {len(same_sector)}"),
+            ("섹터", sector),
+            ("같은 섹터 평균 수익률", avg_return),
+            ("같은 섹터 상위 표시 종목", top_symbol),
+        ]
+    )
+
+
+def _market_mover_detail_panel_model(
+    selected: dict[str, Any],
+    *,
+    period: str,
+    coverage: str,
+    peer_rows: pd.DataFrame,
+) -> dict[str, Any]:
+    mover = dict(selected.get("mover") or {})
+    rank_source = str(selected.get("rank_source") or "Selected Rank")
+    read_model = build_market_mover_why_it_moved_read_model(
+        mover=mover,
+        period=period,
+        coverage=coverage,
+        rank_source=rank_source,
+    )
+    identity = dict(read_model.get("identity") or {})
+    context = dict(read_model.get("context") or {})
+    movement = dict(read_model.get("movement") or {})
+    symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()
+    identity_rows = _detail_rows(
+        [
+            ("종목", symbol or "-"),
+            ("회사", identity.get("Name") or "-"),
+            ("섹터", identity.get("Sector") or "-"),
+            ("산업", identity.get("Industry") or "-"),
+            ("시가총액", _format_detail_money(identity.get("Market Cap"))),
+        ]
+    )
+    context_rows = _detail_rows(
+        [
+            ("탐색 모드", context.get("Rank Type") or rank_source),
+            ("순위", context.get("Rank") or selected.get("rank") or "-"),
+            ("기간", context.get("Period") or _market_mover_period_label(period)),
+            ("Coverage", context.get("Coverage") or _coverage_label(coverage)),
+        ]
+    )
+    movement_rows = _detail_rows(
+        [
+            ("수익률", _format_signed(movement.get("Return %"))),
+            ("직전 수익률", _format_signed(movement.get("Previous Return %"))),
+            ("모멘텀 변화", _format_signed(movement.get("Momentum Delta pp"), suffix="pp")),
+            ("상대 거래량", _format_relative_volume(movement.get("Relative Volume"))),
+            ("현재 거래량", _format_detail_number(movement.get("Current Volume") or movement.get("Volume"))),
+            ("10일 평균 거래량", _format_detail_number(movement.get("Avg 10D Volume"))),
+            ("거래량 기준", movement.get("Volume Basis") or "-"),
+            ("거래대금", _format_detail_money(movement.get("Dollar Volume"))),
+        ]
+    )
+    metadata = dict(read_model.get("metadata") or {})
+    return {
+        "selected": selected,
+        "read_model": read_model,
+        "identity_rows": identity_rows,
+        "context_rows": context_rows,
+        "movement_rows": movement_rows,
+        "peer_context": _market_mover_peer_context(peer_rows, symbol),
+        "status_strip": build_market_mover_metadata_status_strip(metadata),
+        "links": read_model.get("links") if isinstance(read_model.get("links"), pd.DataFrame) else pd.DataFrame(),
+    }
+
+
+def _market_mover_metadata_session_key(read_model: dict[str, Any]) -> str:
+    identity = dict(read_model.get("identity") or {})
+    context = dict(read_model.get("context") or {})
+    raw_parts = [
+        "overview_market_mover_metadata",
+        identity.get("Symbol") or "UNKNOWN",
+        context.get("Coverage") or "-",
+        context.get("Period") or "-",
+        context.get("Rank Type") or "-",
+    ]
+    safe_parts = [
+        str(part).strip().replace(" ", "_").replace("/", "_").replace(":", "_").lower()
+        for part in raw_parts
+    ]
+    return "__".join(safe_parts)
+
+
+def _render_market_mover_status_strip(strip: dict[str, Any]) -> None:
+    items = list(strip.get("items") or [])
+    if not items:
+        return
+    blocks: list[str] = []
+    for item in items:
+        tone_color, tone_bg, tone_border = _market_mover_tone_style(str(item.get("tone") or "neutral"))
+        blocks.append(
+            "<div style='"
+            f"border:1px solid {tone_border}; background:{tone_bg}; border-radius:8px; "
+            "padding:8px 10px; min-width:120px;'>"
+            f"<div style='font-size:11px; color:{OVERVIEW_COLOR_TEXT_MUTED};'>{escape(str(item.get('label') or '-'))}</div>"
+            f"<div style='font-size:14px; font-weight:700; color:{tone_color};'>{escape(str(item.get('value') or '-'))}</div>"
+            "</div>"
+        )
+    st.markdown(
+        "<div style='display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px 0;'>"
+        + "".join(blocks)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_market_mover_detail_table(title: str, frame: pd.DataFrame) -> None:
+    st.markdown(f"##### {title}")
+    st.dataframe(frame, width="stretch", hide_index=True)
+
+
+def _render_market_mover_metadata_table(frame: pd.DataFrame, columns: list[str], empty_message: str) -> None:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        st.info(empty_message)
+        return
+    st.dataframe(
+        _market_mover_open_link_frame(frame, columns),
+        width="stretch",
+        hide_index=True,
+        column_config=_market_mover_metadata_column_config(),
+    )
+
+
 def _render_market_mover_why_it_moved_panel(
     rows: pd.DataFrame,
     volume_rows: pd.DataFrame,
     *,
     universe_code: str,
     period: str,
+    rank_source: str = "Return Rank",
+    id_prefix: str = "return",
+    label_prefix: str = "수익률",
 ) -> None:
-    candidates = _market_mover_catalyst_candidates(rows, volume_rows)
+    candidates = _market_mover_catalyst_candidates(
+        rows,
+        volume_rows,
+        primary_rank_source=rank_source,
+        primary_id_prefix=id_prefix,
+        primary_label_prefix=label_prefix,
+        include_volume_candidates=False,
+    )
     if not candidates:
         return
     st.markdown("#### 선택 종목 조사")
     st.caption("Why It Moved로 이어지는 수동 조사 시작점입니다. 자동 원인 판정, AI 요약, 원문 수집, DB 저장은 실행하지 않습니다.")
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
-    selection_key = "overview_market_mover_why_it_moved_selection"
+    selection_key = "overview_market_mover_detail_selection"
     if st.session_state.get(selection_key) not in candidate_by_id:
         st.session_state[selection_key] = option_ids[0]
     selected_id = str(
@@ -1495,36 +1701,71 @@ def _render_market_mover_why_it_moved_panel(
         )
     )
     selected = candidate_by_id[selected_id]
-    mover = dict(selected.get("mover") or {})
-    symbol = str(selected.get("symbol") or mover.get("Symbol") or "").upper()
-    name = str(selected.get("name") or mover.get("Name") or symbol)
-    search_query = f"{symbol} {name} stock news"
-    links = pd.DataFrame(
-        [
-            {
-                "Source": "Google News",
-                "URL": f"https://news.google.com/search?q={search_query.replace(' ', '+')}",
-                "Search Query": search_query,
-                "Purpose": "최근 뉴스 헤드라인 확인",
-            },
-            {
-                "Source": "SEC",
-                "URL": f"https://www.sec.gov/edgar/search/#/q={symbol}",
-                "Search Query": symbol,
-                "Purpose": "최근 공시 단서 확인",
-            },
-        ]
+    detail_model = _market_mover_detail_panel_model(
+        selected,
+        period=period,
+        coverage=universe_code,
+        peer_rows=rows,
     )
-    summary_rows = [
-        {"항목": "종목", "값": symbol},
-        {"항목": "회사", "값": name},
-        {"항목": "순위 기준", "값": selected.get("rank_source")},
-        {"항목": "수익률", "값": _format_signed(mover.get("Return %"))},
-        {"항목": "섹터", "값": mover.get("Sector") or "-"},
-    ]
-    st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
-    table_model = _market_mover_external_search_table_model(links)
-    with st.expander(str(table_model["label"]), expanded=False):
+    read_model = dict(detail_model["read_model"])
+    metadata_key = _market_mover_metadata_session_key(read_model)
+    stored_metadata = st.session_state.get(metadata_key)
+    if isinstance(stored_metadata, dict):
+        read_model["metadata"] = stored_metadata
+        detail_model["read_model"] = read_model
+        detail_model["status_strip"] = build_market_mover_metadata_status_strip(stored_metadata)
+
+    summary_cols = st.columns([1.0, 1.0, 1.1], gap="medium")
+    with summary_cols[0]:
+        _render_market_mover_detail_table("종목", detail_model["identity_rows"])
+    with summary_cols[1]:
+        _render_market_mover_detail_table("랭킹 맥락", detail_model["context_rows"])
+    with summary_cols[2]:
+        _render_market_mover_detail_table("가격 / 거래량", detail_model["movement_rows"])
+
+    _render_market_mover_detail_table("같은 섹터 맥락", detail_model["peer_context"])
+    _render_market_mover_status_strip(detail_model["status_strip"])
+
+    identity = dict(read_model.get("identity") or {})
+    symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()
+    if st.button(
+        "간단 메타데이터 조회",
+        key=f"{metadata_key}__fetch",
+        help="현재 선택 종목 1개에 대해 세션 전용 compact news / 한국어 뉴스 / SEC metadata만 조회합니다.",
+    ):
+        with st.spinner(f"{symbol} compact metadata를 조회하는 중입니다..."):
+            st.session_state[metadata_key] = fetch_market_mover_compact_metadata(
+                symbol,
+                name=identity.get("Name"),
+                max_news=3,
+                max_korean_news=3,
+                max_filings=3,
+            )
+        st.rerun()
+
+    st.markdown("##### 조사 단서")
+    metadata = dict(read_model.get("metadata") or {})
+    clue_tabs = st.tabs(["뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])
+    with clue_tabs[0]:
+        _render_market_mover_metadata_table(
+            metadata.get("news"),
+            ["Title", "Source", "Published At", "Open"],
+            "뉴스 메타데이터는 아직 조회하지 않았습니다. 필요할 때 현재 선택 종목만 조회하세요.",
+        )
+    with clue_tabs[1]:
+        _render_market_mover_metadata_table(
+            metadata.get("korean_news"),
+            ["Title", "Source", "Published At", "Snippet", "Open"],
+            "한국어 뉴스 메타데이터는 아직 조회하지 않았습니다. 원문 기사 본문은 수집하거나 저장하지 않습니다.",
+        )
+    with clue_tabs[2]:
+        _render_market_mover_metadata_table(
+            metadata.get("sec_filings"),
+            ["Form", "Filing Date", "Title", "Open"],
+            "SEC 공시 메타데이터는 아직 조회하지 않았습니다. 공시 원문은 공식 링크에서 직접 확인합니다.",
+        )
+    with clue_tabs[3]:
+        table_model = _market_mover_external_search_table_model(detail_model["links"])
         st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
         st.dataframe(
             table_model["rows"],
@@ -1593,11 +1834,17 @@ def _render_market_movers_snapshot_panel(
         if selected_model["kind"] == "symbol" and isinstance(selected_rows, pd.DataFrame) and not selected_rows.empty
         else rows
     )
+    investigation_rank_source = selected_model["label"] if selected_model["kind"] == "symbol" else "Top Gainers"
+    investigation_id_prefix = selected_model["mode"] if selected_model["kind"] == "symbol" else "top_gainers"
+    investigation_label_prefix = selected_model["label"] if selected_model["kind"] == "symbol" else "Top Gainers"
     _render_market_mover_why_it_moved_panel(
         investigation_rows,
         volume_rows,
         universe_code=controls.coverage,
         period=controls.period,
+        rank_source=investigation_rank_source,
+        id_prefix=investigation_id_prefix,
+        label_prefix=investigation_label_prefix,
     )
 
 

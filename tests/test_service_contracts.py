@@ -8862,6 +8862,94 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Google News KR", set(model["links"]["Source"]))
         self.assertIn("Naver News", set(model["links"]["Source"]))
 
+    def test_market_mover_why_it_moved_read_model_carries_relative_volume_context(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_why_it_moved_read_model
+
+        model = build_market_mover_why_it_moved_read_model(
+            mover={
+                "Rank": 3,
+                "Symbol": "AAA",
+                "Name": "AAA Corp",
+                "Sector": "Technology",
+                "Industry": "Software",
+                "Return %": -7.5,
+                "Relative Volume": 4.25,
+                "Current Volume": 4250000,
+                "Avg 10D Volume": 1000000,
+                "Volume Basis": "Daily share volume",
+            },
+            period="daily",
+            coverage="SP500",
+            rank_source="Unusual Volume",
+        )
+
+        self.assertEqual(model["context"]["Rank Type"], "Unusual Volume")
+        self.assertEqual(model["context"]["Rank"], "3")
+        self.assertEqual(model["movement"]["Relative Volume"], 4.25)
+        self.assertEqual(model["movement"]["Current Volume"], 4250000)
+        self.assertEqual(model["movement"]["Avg 10D Volume"], 1000000)
+        self.assertEqual(model["movement"]["Volume Basis"], "Daily share volume")
+        self.assertIn("Manual investigation", model["boundary_note"])
+        self.assertNotIn("score", model["boundary_note"].lower())
+
+    def test_market_movers_detail_panel_model_integrates_selected_mode_and_status_strip(self) -> None:
+        from app.web.overview.market_movers_helpers import _market_mover_detail_panel_model
+
+        selected = {
+            "id": "top_losers:1:AAA",
+            "symbol": "AAA",
+            "name": "AAA Corp",
+            "rank": "1",
+            "rank_source": "Top Losers",
+            "mover": {
+                "Rank": 1,
+                "Symbol": "AAA",
+                "Name": "AAA Corp",
+                "Sector": "Technology",
+                "Industry": "Software",
+                "Return %": -9.5,
+                "Volume": 500000,
+                "Relative Volume": 3.2,
+            },
+        }
+        peer_rows = pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "AAA", "Sector": "Technology", "Return %": -9.5},
+                {"Rank": 2, "Symbol": "BBB", "Sector": "Technology", "Return %": -6.5},
+                {"Rank": 3, "Symbol": "CCC", "Sector": "Healthcare", "Return %": -4.0},
+            ]
+        )
+
+        model = _market_mover_detail_panel_model(
+            selected,
+            period="daily",
+            coverage="SP500",
+            peer_rows=peer_rows,
+        )
+
+        self.assertEqual(model["read_model"]["identity"]["Symbol"], "AAA")
+        self.assertEqual(model["read_model"]["context"]["Rank Type"], "Top Losers")
+        self.assertEqual(model["read_model"]["movement"]["Relative Volume"], 3.2)
+        self.assertEqual(model["status_strip"]["lookup"]["value"], "조회 전")
+        self.assertEqual(model["peer_context"].iloc[0]["항목"], "같은 섹터 내 표시 순위")
+        self.assertEqual(model["peer_context"].iloc[0]["값"], "1 / 2")
+        self.assertEqual(len(model["links"]), 6)
+        self.assertIn("manual", model["read_model"]["mode"])
+
+    def test_market_movers_ui_why_it_moved_is_selected_symbol_workflow(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_why_it_moved_read_model", source)
+        self.assertIn("build_market_mover_metadata_status_strip", source)
+        self.assertIn("overview_market_mover_detail_selection", source)
+        self.assertIn("조사 단서", source)
+        self.assertIn("뉴스 메타데이터", source)
+        self.assertIn("한국어 뉴스", source)
+        self.assertIn("SEC 공시", source)
+        self.assertIn("간단 메타데이터 조회", source)
+        self.assertNotIn("catalyst score", source.lower())
+        self.assertNotIn("confidence score", source.lower())
+
     def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
         from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 

@@ -5407,3 +5407,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-modes-v2-20260629/`에서 2차 탐색 모드와 ranking read model 정리를 완료했다.
   - `mover_views`로 Top Gainers / Top Losers / Volume Leaders / Unusual Volume / Sector Leaders를 추가하고, UI는 선택 모드 표/차트를 첫 화면에 렌더링한다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 3차는 선택 종목 detail pane과 Why It Moved 통합이다.
+- Overview Market Movers Detail V3 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-detail-v3-20260629/`에서 3차 선택 종목 detail pane과 Why It Moved 조사 흐름 통합을 완료했다.
+  - 선택된 탐색 모드의 종목을 기준으로 rank / price / volume / relative volume / 같은 섹터 위치 / metadata 상태 / 뉴스·한국어 뉴스·SEC·외부 검색 시작점을 한 패널에 묶었다.
+  - metadata 조회는 기존 why_it_moved service boundary를 통한 사용자 버튼 동작으로만 유지하고, 자동 원인 판정 / score / 추천 / 저장은 추가하지 않았다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 4차는 sector/heatmap/breadth 맥락 개선이다.

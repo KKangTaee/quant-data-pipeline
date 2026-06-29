@@ -8344,3 +8344,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 상용 Market Movers처럼 상승/하락/거래량/이상거래량/섹터 흐름을 명확히 전환하되, context-only 경계와 기존 DB/read model boundary를 유지해야 함.
 - Analysis result: 새 provider나 schema 없이 `build_market_movers_snapshot`에 `mover_views`를 추가하고, UI는 `overview_market_movers_mode` selector가 선택한 view의 표/차트를 렌더링하는 것이 가장 작은 안전한 변경이다.
 - Follow-up: 2차 완료. 3차는 선택 종목 detail pane 안에 Why It Moved 조사 시작점을 통합하되 자동 원인 판정/추천/저장은 만들지 않는다.
+
+### 2026-06-29 - Market Movers 3차에서 선택 종목 조사 흐름을 통합한다
+
+- User request: 사용자가 `3차 진행`을 승인함.
+- Interpreted goal: Why It Moved를 별도 하단 부록처럼 두지 않고, 현재 선택한 변동종목의 rank / price / volume / sector / metadata 조사 시작점을 한 패널로 묶어야 함.
+- Analysis result: 자동 원인 판정 없이도 기존 `why_it_moved` service read model과 current mover rows만으로 선택 종목 detail pane을 구성할 수 있다. metadata 조회는 page render가 아니라 사용자가 누르는 버튼 뒤에만 실행하는 것이 기존 provider boundary와 가장 잘 맞는다.
+- Follow-up: 3차 완료. 4차는 개별 종목 패널을 넘어 sector pulse / heatmap / breadth 맥락을 context-only로 개선한다.
