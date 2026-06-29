@@ -9119,6 +9119,21 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("ov-mm-refresh-rail", common_source)
         self.assertIn('[class*="_market_movers_reload"] button', common_source)
 
+    def test_market_movers_polish_phase4_centers_ranking_board(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        panel_body = helper_source[helper_source.index("def _render_market_movers_snapshot_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_market_movers_snapshot")]
+        self.assertIn("render_market_mover_board", panel_body)
+        self.assertIn("모드별 상세 표 전체 높이로 보기", panel_body)
+        self.assertNotIn("render_market_mover_chart_workspace", panel_body)
+        self.assertNotIn("_build_market_mover_mode_chart", panel_body)
+        self.assertNotIn("상세 표로 보기", panel_body)
+        self.assertNotIn("list_col, context_col = st.columns", panel_body)
+        self.assertIn("max-height", common_source[common_source.index(".ov-mm-list") :])
+        self.assertIn("overflow-y: auto", common_source[common_source.index(".ov-mm-list") :])
+
     def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_board_model
 
@@ -9130,6 +9145,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "Name": "AAA Corp",
                     "Sector": "Technology",
                     "Return %": 12.34,
+                    "Previous Return %": 3.21,
                     "Volume": 1_250_000,
                     "Dollar Volume": 543_210_000,
                     "Relative Volume": 2.75,
@@ -9164,6 +9180,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["rows"][0]["primary_metric_label"], "수익률")
         self.assertEqual(model["rows"][0]["primary_metric"], "+12.34%")
         self.assertEqual(model["rows"][0]["tone"], "positive")
+        self.assertIn("직전 수익률 +3.21%", model["rows"][0]["secondary"])
         self.assertIn("거래량 1.2M", model["rows"][0]["secondary"])
         self.assertIn("상대 2.75x", model["rows"][0]["secondary"])
         self.assertIn("Context-only", model["boundary_note"])

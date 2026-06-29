@@ -1137,9 +1137,12 @@ def _market_mover_board_primary_metric(row: pd.Series, mode: str) -> tuple[str, 
 
 def _market_mover_board_secondary(row: pd.Series) -> str:
     parts: list[str] = []
+    previous_return = _format_signed(_market_mover_row_value(row, "Previous Return %"))
     volume = _compact_number(_market_mover_row_value(row, "Volume", "Current Volume"))
     dollar_volume = _compact_number(_market_mover_row_value(row, "Dollar Volume"), prefix="$")
     relative_volume = _format_relative_volume(_market_mover_row_value(row, "Relative Volume"))
+    if previous_return != "-":
+        parts.append(f"직전 수익률 {previous_return}")
     if volume != "-":
         parts.append(f"거래량 {volume}")
     if dollar_volume != "-":
@@ -2243,25 +2246,11 @@ def _render_market_movers_snapshot_panel(
     selected_model = _market_mover_view_model(snapshot, controls.mode)
     selected_rows = selected_model["rows"]
 
-    list_col, context_col = st.columns([1.18, 1.05], gap="medium")
-    with list_col:
-        if selected_rows.empty:
-            st.markdown(f"#### {selected_model['label']} 상위 종목")
-            st.info(selected_model["empty_reason"])
-        else:
-            render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
-            with st.expander("상세 표로 보기", expanded=False):
-                st.dataframe(
-                    selected_rows,
-                    width="stretch",
-                    height=min(620, _market_mover_chart_height(len(selected_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
-                    hide_index=True,
-                )
-    with context_col:
-        render_market_mover_chart_workspace(build_market_mover_chart_workspace_model(selected_model))
-        st.altair_chart(_build_market_mover_mode_chart(selected_model), width="stretch")
-        if selected_model["status"] != "OK" and selected_model["empty_reason"]:
-            st.caption(selected_model["empty_reason"])
+    if selected_rows.empty:
+        st.markdown(f"#### {selected_model['label']} 상위 종목")
+        st.info(selected_model["empty_reason"])
+    else:
+        render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
 
     _render_market_movers_sector_breadth_context(snapshot)
     _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)

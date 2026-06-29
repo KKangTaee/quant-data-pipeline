@@ -4703,6 +4703,9 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  gap: 0;
 	  margin-top: 0.5rem;
 	  border-top: 1px solid var(--ov-mi-border-faint);
+	  max-height: 42rem;
+	  overflow-y: auto;
+	  overscroll-behavior: contain;
 	}
 	.ov-mm-list-row {
 	  display: grid;
