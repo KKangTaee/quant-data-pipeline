@@ -5417,3 +5417,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 기존 mover return rows로 full `sector_breadth` read model을 만들고, advancers / decliners, 평균·중앙·시총가중 수익률, market-cap share proxy, sector별 top gainer / loser를 heatmap과 fallback table로 렌더링한다.
   - 4차도 context-only 경계를 유지했다. 새 provider / schema / 외부 fetch / sector rotation prediction / 추천 / Backtest·Validation·Final Review·Operations 연결은 추가하지 않았다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 5차는 Coverage/Data Quality trust UX 정리다.
+- Overview Market Movers Quality V5 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-quality-v5-20260629/`에서 5차 Coverage/Data Quality UX 정리를 완료했다.
+  - `coverage trust` read model과 `자료 신뢰 상태` strip을 추가하고, grouped missing diagnostics를 먼저 보여주며 raw diagnostics / quote-gap diagnosis는 collapsed expander에 남겼다.
+  - Nasdaq no-universe는 기존 Overview action facade의 Symbol Directory refresh로만 이어지며, 새 provider / schema / signal / monitoring UX는 추가하지 않았다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다.

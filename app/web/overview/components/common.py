@@ -4046,6 +4046,98 @@ def overview_ui_css() -> str:
   line-height: 1.16;
   overflow-wrap: anywhere;
 }
+.ov-mm-trust {
+  min-width: 0;
+  margin: 0.52rem 0 0.82rem 0;
+  padding: 0.56rem 0.64rem;
+  border-left: 3px solid var(--ov-trust-tone, var(--ov-mi-color-neutral));
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  background: color-mix(in srgb, var(--ov-trust-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface));
+}
+.ov-mm-trust-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.42rem;
+}
+.ov-mm-trust-kicker {
+  color: var(--ov-trust-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+.ov-mm-trust-title {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+}
+.ov-mm-trust-detail,
+.ov-mm-trust-boundary {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.ov-mm-trust-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.34rem;
+  padding: 0.12rem 0.46rem;
+  border: 1px solid color-mix(in srgb, var(--ov-trust-tone, var(--ov-mi-color-neutral)) 30%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-trust-tone, var(--ov-mi-color-neutral)) 7%, transparent);
+  color: var(--ov-trust-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  white-space: nowrap;
+}
+.ov-mm-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-trust-item {
+  min-width: 0;
+  padding: 0.36rem 0.46rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-trust-item:first-child {
+  border-left: 0;
+}
+.ov-mm-trust-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-mm-trust-value {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.ov-mm-trust-detail-small {
+  margin-top: 0.08rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+.ov-mm-trust-boundary {
+  padding: 0.34rem 0.4rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  background: rgba(248,250,252,0.74);
+}
 .ov-mm-empty-state {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.35fr);
@@ -4112,13 +4204,16 @@ def overview_ui_css() -> str:
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .ov-mm-command-head,
+  .ov-mm-trust-head,
   .ov-mm-empty-state {
     grid-template-columns: 1fr;
   }
-  .ov-mm-command-grid {
+  .ov-mm-command-grid,
+  .ov-mm-trust-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .ov-mm-command-item:nth-child(odd) {
+  .ov-mm-command-item:nth-child(odd),
+  .ov-mm-trust-item:nth-child(odd) {
     border-left: 0;
   }
   .ov-mm-empty-action {

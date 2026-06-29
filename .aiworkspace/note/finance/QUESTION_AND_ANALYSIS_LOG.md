@@ -8358,3 +8358,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 개별 급등락 목록 옆에 sector-level participation, concentration, breadth를 붙여 움직임이 특정 sector에 몰렸는지 시장 전반에 퍼졌는지 빠르게 읽게 해야 함.
 - Analysis result: 새 provider나 schema 없이 기존 Market Movers return rows와 group leadership 계산으로 full sector breadth model을 만들 수 있다. `top_n`은 탐색 표 길이에만 적용하고 sector breadth는 전체 returnable rows 기준으로 보여주는 것이 사용 흐름에 맞다.
 - Follow-up: 4차 완료. 5차는 stale / partial / missing / NASDAQ no-universe 같은 coverage trust UX를 같은 언어로 정리한다.
+
+### 2026-06-29 - Market Movers 5차에서 coverage trust / data quality UX를 정리한다
+
+- User request: 사용자가 `5차 작업 진행`을 승인함.
+- Interpreted goal: Coverage Diagnostics를 raw 진단 패널이 아니라 현재 결과 신뢰 상태를 이해하는 보조 UX로 바꾸되, 기존 refresh/action facade와 context-only 경계를 유지해야 함.
+- Analysis result: 기존 snapshot coverage, refresh_state, missing_rows만으로 Good / Stale / Partial / Needs Refresh / No Universe / Missing Quotes 상태와 grouped missing summary를 만들 수 있다. raw diagnostics는 보존하되 collapsed expander로 낮추는 것이 1~4차 workbench 흐름과 맞다.
+- Follow-up: 5차 완료. 1~5차 Market Movers gate는 완료됐고, 다음 작업은 사용자가 별도 승인할 때만 새 범위로 잡는다.

@@ -7050,6 +7050,21 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertFalse(model["show_why_it_moved"])
         self.assertIn("ranking row", model["investigation_note"])
 
+    def test_market_movers_coverage_trust_ui_keeps_raw_diagnostics_secondary(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_coverage_trust_model", helper_source)
+        self.assertIn("render_market_movers_coverage_trust", helper_source)
+        self.assertIn("자료 신뢰 상태", component_source)
+        self.assertIn("Coverage trust detail", helper_source)
+        self.assertIn("Grouped missing diagnostics", helper_source)
+        self.assertIn("Raw diagnostics", helper_source)
+        self.assertIn("overview_nasdaq_symbol_directory_result", helper_source)
+        self.assertIn("run_overview_nasdaq_symbol_directory()", helper_source)
+        self.assertNotIn("상장폐지 확정", helper_source)
+        self.assertNotIn("거래정지 확정", helper_source)
+
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
 
@@ -8802,6 +8817,87 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(technology["Market Cap Share %"], 57.14)
         self.assertIn("context-only", model["boundary_note"].lower())
         self.assertNotIn("prediction", model["boundary_note"].lower())
+
+    def test_market_movers_coverage_trust_model_groups_missing_diagnostics(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_coverage_trust_model
+
+        snapshot = {
+            "status": "OK",
+            "period": "daily",
+            "period_label": "Daily",
+            "universe_code": "SP500",
+            "universe_label": "S&P 500",
+            "coverage": {
+                "universe_count": 4,
+                "returnable_count": 2,
+                "missing_count": 2,
+                "returnable_pct": 50.0,
+                "snapshot_time_utc": "2026-06-29 14:20",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "partial", "label": "Partial", "detail": "2 missing"},
+            },
+            "missing_rows": pd.DataFrame(
+                [
+                    {
+                        "Symbol": "AAA",
+                        "Reason": "missing latest quote",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                        "Next Check": "Refresh daily snapshot; if repeated, run quote-gap diagnostics.",
+                    },
+                    {
+                        "Symbol": "BBB",
+                        "Reason": "missing latest quote",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                        "Next Check": "Refresh daily snapshot; if repeated, run quote-gap diagnostics.",
+                    },
+                ]
+            ),
+        }
+
+        model = build_market_movers_coverage_trust_model(snapshot)
+
+        self.assertEqual(model["schema_version"], "market_movers_coverage_trust_v1")
+        self.assertEqual(model["state"], "Missing Quotes")
+        self.assertEqual(model["tone"], "warning")
+        self.assertFalse(model["raw_detail_default_expanded"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+        grouped = model["grouped_missing_rows"]
+        self.assertEqual(list(grouped.columns), ["Missing Reason Group", "Likely Cause", "Suggested Next Action", "Affected Count", "Sample Tickers"])
+        self.assertEqual(grouped.iloc[0]["Missing Reason Group"], "missing latest quote")
+        self.assertEqual(grouped.iloc[0]["Affected Count"], 2)
+        self.assertEqual(grouped.iloc[0]["Sample Tickers"], "AAA, BBB")
+        self.assertIn("Refresh the daily snapshot", grouped.iloc[0]["Suggested Next Action"])
+        self.assertEqual(model["suggested_action"]["label"], "Open raw diagnostics")
+
+    def test_market_movers_coverage_trust_model_explains_nasdaq_no_universe(self) -> None:
+        from app.services.overview.market_movers import (
+            build_market_movers_coverage_trust_model,
+            build_market_movers_snapshot,
+        )
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="NASDAQ",
+            period="daily",
+            top_n=20,
+            query_fn=lambda _db_name, _sql, _params=None: [],
+        )
+
+        model = build_market_movers_coverage_trust_model(snapshot)
+
+        self.assertEqual(snapshot["status"], "NO_UNIVERSE")
+        self.assertEqual(model["state"], "No Universe")
+        self.assertEqual(model["tone"], "warning")
+        self.assertIn("Nasdaq Symbol Directory", model["headline"])
+        self.assertEqual(model["suggested_action"]["label"], "Nasdaq 목록 갱신")
+        self.assertEqual(model["suggested_action"]["action_id"], "overview_nasdaq_symbol_directory")
+        grouped = model["grouped_missing_rows"]
+        self.assertEqual(grouped.iloc[0]["Missing Reason Group"], "No universe")
+        self.assertIn("current snapshot", grouped.iloc[0]["Likely Cause"])
+        self.assertIn("Nasdaq 목록 갱신", grouped.iloc[0]["Suggested Next Action"])
+        self.assertNotIn("상장폐지", grouped.to_string())
+        self.assertNotIn("거래정지", grouped.to_string())
 
     def test_market_movers_unusual_volume_view_explains_missing_baseline(self) -> None:
         from app.services.overview.market_movers import build_market_movers_snapshot

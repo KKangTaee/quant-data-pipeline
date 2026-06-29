@@ -129,7 +129,7 @@ missing quote rows
   -> app.jobs.overview_actions.run_overview_quote_gap_diagnostics()
   -> app.jobs.ingestion_jobs.run_diagnose_market_quote_gaps()
   -> finance_meta.market_data_issue
-  -> Workspace > Overview > Market Movers > Coverage Diagnostics
+  -> Workspace > Overview > Market Movers > Coverage Trust / Raw diagnostics
 ```
 
 의미:

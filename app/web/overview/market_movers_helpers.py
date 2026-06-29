@@ -18,6 +18,7 @@ from app.jobs.overview_actions import (
     run_overview_quote_gap_diagnostics,
     run_overview_sp500_universe,
 )
+from app.services.overview.market_movers import build_market_movers_coverage_trust_model
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_status_strip,
     build_market_mover_why_it_moved_read_model,
@@ -49,6 +50,7 @@ from app.web.overview.components.market_movers import (
     render_breadth_heatmap_summary,
     render_market_auto_message,
     render_market_auto_waiting_panel,
+    render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
     render_market_refresh_status_bar,
@@ -882,11 +884,47 @@ def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str)
         st.dataframe(pd.DataFrame(rows)[display_columns], width="stretch", hide_index=True)
 
 
+def _render_market_movers_coverage_trust(snapshot: dict[str, Any], *, controls: MarketMoverControls) -> None:
+    model = build_market_movers_coverage_trust_model(snapshot)
+    render_market_movers_coverage_trust(model)
+    grouped_rows = model.get("grouped_missing_rows")
+    if not isinstance(grouped_rows, pd.DataFrame):
+        grouped_rows = pd.DataFrame()
+    action = dict(model.get("suggested_action") or {})
+    expanded = str(model.get("state") or "") not in {"Good"}
+    with st.expander("Coverage trust detail", expanded=expanded):
+        st.caption("Grouped missing diagnostics")
+        if grouped_rows.empty:
+            st.caption("현재 선택 조건에서 grouped missing diagnostics로 묶을 row가 없습니다.")
+        else:
+            st.dataframe(grouped_rows, width="stretch", hide_index=True)
+        st.caption(action.get("detail") or "Coverage trust는 현재 read model의 보조 설명입니다.")
+        if action.get("action_id") == "overview_nasdaq_symbol_directory":
+            cols = st.columns([1, 2], gap="small", vertical_alignment="center")
+            if cols[0].button(
+                "Nasdaq 목록 갱신",
+                key="overview_nasdaq_symbol_directory_refresh_trust",
+                use_container_width=True,
+                help="Nasdaq Symbol Directory current snapshot을 기존 Overview action facade를 통해 DB에 저장합니다.",
+            ):
+                with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
+                    _store_overview_job_result(
+                        "overview_nasdaq_symbol_directory_result",
+                        run_overview_nasdaq_symbol_directory(),
+                    )
+                st.rerun()
+            cols[1].caption("새 provider 경로 없이 Ingestion/DB/action facade 경계를 사용합니다.")
+            _render_market_job_result("overview_nasdaq_symbol_directory_result")
+
+
 def _render_missing_diagnostics(snapshot: dict[str, Any], *, universe_code: str, period: str) -> None:
     missing_rows = snapshot.get("missing_rows")
     if not isinstance(missing_rows, pd.DataFrame) or missing_rows.empty:
         return
-    with st.expander(f"Coverage Diagnostics ({len(missing_rows)} missing)", expanded=False):
+    with st.expander(f"Raw diagnostics ({len(missing_rows)} missing rows)", expanded=False):
+        st.caption(
+            "Grouped missing diagnostics를 먼저 확인하고, symbol-level evidence가 필요할 때만 raw rows를 엽니다."
+        )
         reason_counts = missing_rows["Reason"].value_counts().head(3) if "Reason" in missing_rows else pd.Series()
         if not reason_counts.empty:
             st.caption(
@@ -1894,6 +1932,7 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         universe_limit=controls.universe_limit,
         period=controls.period,
     )
+    _render_market_movers_coverage_trust(snapshot, controls=controls)
     _render_market_movers_snapshot_panel(
         snapshot,
         controls=controls,

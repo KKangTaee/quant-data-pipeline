@@ -1611,6 +1611,274 @@ def _coverage_warnings(coverage: dict[str, Any], *, date_window: dict[str, Any])
         warnings.append(f"Latest intraday snapshot is {snapshot_stale} minutes old.")
     return warnings
 
+COVERAGE_TRUST_GROUP_COLUMNS = [
+    "Missing Reason Group",
+    "Likely Cause",
+    "Suggested Next Action",
+    "Affected Count",
+    "Sample Tickers",
+]
+
+def _coverage_trust_missing_rows(snapshot: dict[str, Any]) -> pd.DataFrame:
+    rows = snapshot.get("missing_rows")
+    if isinstance(rows, pd.DataFrame):
+        return rows.copy()
+    if isinstance(rows, list):
+        return pd.DataFrame(rows)
+    return pd.DataFrame(columns=MISSING_COLUMNS)
+
+def _coverage_trust_safe_text(value: Any, *, fallback: str) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return fallback
+    lowered = text.lower()
+    if any(term in lowered for term in ("delisted", "suspended", "halt", "illegal", "fraud")):
+        return "Listing/profile evidence 확인 필요."
+    return text
+
+def _coverage_trust_int(value: Any) -> int:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return 0
+    return int(numeric)
+
+def _coverage_trust_pct(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):.1f}%"
+
+def _coverage_trust_timestamp(coverage: dict[str, Any]) -> str:
+    return str(
+        coverage.get("snapshot_time_utc")
+        or coverage.get("effective_end_date")
+        or coverage.get("latest_raw_date")
+        or "-"
+    )
+
+def _coverage_trust_state(
+    snapshot: dict[str, Any],
+    coverage: dict[str, Any],
+    missing_rows: pd.DataFrame,
+) -> tuple[str, str]:
+    status = str(snapshot.get("status") or "").strip().upper()
+    refresh_status = str(dict(coverage.get("refresh_state") or {}).get("status") or "").strip().lower()
+    universe_count = _coverage_trust_int(coverage.get("universe_count"))
+    returnable_count = _coverage_trust_int(coverage.get("returnable_count"))
+    missing_count = max(_coverage_trust_int(coverage.get("missing_count")), len(missing_rows))
+    price_mode = str(coverage.get("price_mode") or "")
+
+    if status == "NO_UNIVERSE" or (universe_count <= 0 and returnable_count <= 0):
+        return "No Universe", "warning"
+    if status in {"ERROR"} or refresh_status == "failed":
+        return "Needs Refresh", "danger"
+    if status in {"INSUFFICIENT_DATA"} or refresh_status == "due":
+        return "Needs Refresh", "warning"
+    if refresh_status == "stale":
+        return "Stale", "danger"
+    if missing_count:
+        reason_text = " ".join(missing_rows.get("Reason", pd.Series(dtype=str)).dropna().astype(str).tolist()).lower()
+        if price_mode == "Intraday Snapshot" or any(token in reason_text for token in ("quote", "intraday", "latest")):
+            return "Missing Quotes", "warning"
+        return "Partial", "warning"
+    if universe_count and returnable_count < universe_count:
+        return "Partial", "warning"
+    return "Good", "positive"
+
+def _coverage_trust_headline(
+    *,
+    state: str,
+    snapshot: dict[str, Any],
+    coverage: dict[str, Any],
+    missing_count: int,
+) -> tuple[str, str]:
+    universe_code = str(snapshot.get("universe_code") or "")
+    universe_label = str(snapshot.get("universe_label") or UNIVERSE_LABELS.get(universe_code, universe_code) or "Coverage")
+    refresh_state = dict(coverage.get("refresh_state") or {})
+    detail = str(refresh_state.get("detail") or snapshot.get("message") or "")
+    if state == "No Universe" and universe_code == "NASDAQ":
+        return (
+            "Nasdaq Symbol Directory current snapshot이 비어 있습니다.",
+            "Nasdaq-listed coverage는 DB의 Symbol Directory current listing snapshot을 먼저 읽습니다.",
+        )
+    if state == "No Universe":
+        return (
+            f"{universe_label} universe row가 비어 있습니다.",
+            "유니버스 refresh 후 Market Movers snapshot을 다시 읽어야 합니다.",
+        )
+    if state == "Missing Quotes":
+        return (
+            f"{universe_label} quote 누락 {missing_count:,}건이 있습니다.",
+            detail or "그룹 요약을 먼저 보고 raw row는 필요할 때만 확인하세요.",
+        )
+    if state == "Partial":
+        return (
+            f"{universe_label} 일부 row가 ranking에서 제외되었습니다.",
+            detail or "가격 history/profile/listing evidence를 함께 확인해야 합니다.",
+        )
+    if state == "Stale":
+        return (
+            f"{universe_label} snapshot이 오래되었습니다.",
+            detail or "갱신 후 현재 coverage를 다시 확인하세요.",
+        )
+    if state == "Needs Refresh":
+        return (
+            f"{universe_label} 자료 갱신이 필요합니다.",
+            detail or str(snapshot.get("message") or "현재 선택 조건의 ranking row를 만들기 어렵습니다."),
+        )
+    return (
+        f"{universe_label} coverage가 정상 범위입니다.",
+        detail or "현재 read model 기준으로 누락 row가 없습니다.",
+    )
+
+def _coverage_trust_grouped_missing_rows(
+    snapshot: dict[str, Any],
+    missing_rows: pd.DataFrame,
+) -> pd.DataFrame:
+    status = str(snapshot.get("status") or "").upper()
+    universe_code = str(snapshot.get("universe_code") or "")
+    if missing_rows.empty:
+        if status == "NO_UNIVERSE":
+            if universe_code == "NASDAQ":
+                return pd.DataFrame(
+                    [
+                        {
+                            "Missing Reason Group": "No universe",
+                            "Likely Cause": "Nasdaq Symbol Directory current snapshot is not loaded in DB.",
+                            "Suggested Next Action": "Nasdaq 목록 갱신 후 Market Movers를 다시 읽으세요.",
+                            "Affected Count": 0,
+                            "Sample Tickers": "-",
+                        }
+                    ],
+                    columns=COVERAGE_TRUST_GROUP_COLUMNS,
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "Missing Reason Group": "No universe",
+                        "Likely Cause": "Selected universe rows are not available in DB.",
+                        "Suggested Next Action": "Universe refresh 후 Market Movers를 다시 읽으세요.",
+                        "Affected Count": 0,
+                        "Sample Tickers": "-",
+                    }
+                ],
+                columns=COVERAGE_TRUST_GROUP_COLUMNS,
+            )
+        return pd.DataFrame(columns=COVERAGE_TRUST_GROUP_COLUMNS)
+
+    normalized_rows: list[dict[str, Any]] = []
+    for row in missing_rows.to_dict(orient="records"):
+        reason = _coverage_trust_safe_text(row.get("Reason"), fallback="Unclassified missing row")
+        likely = _coverage_trust_safe_text(row.get("Likely Cause"), fallback="Price/listing evidence 확인 필요.")
+        action = _coverage_trust_safe_text(
+            row.get("Recommended Action") or row.get("Next Check"),
+            fallback="Refresh the relevant DB-backed snapshot, then reopen raw diagnostics if the gap repeats.",
+        )
+        symbol = str(row.get("Symbol") or "").strip().upper()
+        normalized_rows.append(
+            {
+                "Missing Reason Group": reason,
+                "Likely Cause": likely,
+                "Suggested Next Action": action,
+                "Symbol": symbol,
+            }
+        )
+
+    grouped: list[dict[str, Any]] = []
+    frame = pd.DataFrame(normalized_rows)
+    group_columns = ["Missing Reason Group", "Likely Cause", "Suggested Next Action"]
+    for keys, group in frame.groupby(group_columns, dropna=False, sort=False):
+        reason, likely, action = keys
+        symbols = [symbol for symbol in group["Symbol"].tolist() if symbol]
+        grouped.append(
+            {
+                "Missing Reason Group": reason,
+                "Likely Cause": likely,
+                "Suggested Next Action": action,
+                "Affected Count": int(len(group)),
+                "Sample Tickers": ", ".join(symbols[:8]) if symbols else "-",
+            }
+        )
+    grouped.sort(key=lambda row: int(row["Affected Count"]), reverse=True)
+    return pd.DataFrame(grouped, columns=COVERAGE_TRUST_GROUP_COLUMNS)
+
+def _coverage_trust_suggested_action(
+    *,
+    state: str,
+    snapshot: dict[str, Any],
+    coverage: dict[str, Any],
+) -> dict[str, Any]:
+    universe_code = str(snapshot.get("universe_code") or "")
+    refresh_state = dict(coverage.get("refresh_state") or {})
+    if state == "No Universe" and universe_code == "NASDAQ":
+        return {
+            "label": "Nasdaq 목록 갱신",
+            "action_id": "overview_nasdaq_symbol_directory",
+            "result_key": "overview_nasdaq_symbol_directory_result",
+            "detail": "기존 Overview action facade를 통해 Symbol Directory current snapshot을 DB에 저장합니다.",
+        }
+    if state in {"Missing Quotes", "Partial"}:
+        return {
+            "label": "Open raw diagnostics",
+            "action_id": "open_raw_diagnostics",
+            "detail": "Grouped summary 아래의 raw diagnostics에서 symbol-level evidence를 확인합니다.",
+        }
+    if state in {"Stale", "Needs Refresh"}:
+        return {
+            "label": str(refresh_state.get("recommended_action") or "Refresh current coverage"),
+            "action_id": "use_existing_refresh_bar",
+            "detail": "상단 데이터 갱신 control을 사용합니다.",
+        }
+    return {
+        "label": "No action needed",
+        "action_id": "none",
+        "detail": "현재 read model 기준의 보조 신뢰 상태입니다.",
+    }
+
+def build_market_movers_coverage_trust_model(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    missing_rows = _coverage_trust_missing_rows(snapshot)
+    missing_count = max(_coverage_trust_int(coverage.get("missing_count")), len(missing_rows))
+    state, tone = _coverage_trust_state(snapshot, coverage, missing_rows)
+    headline, detail = _coverage_trust_headline(
+        state=state,
+        snapshot=snapshot,
+        coverage=coverage,
+        missing_count=missing_count,
+    )
+    universe_count = _coverage_trust_int(coverage.get("universe_count"))
+    returnable_count = _coverage_trust_int(coverage.get("returnable_count"))
+    return {
+        "schema_version": "market_movers_coverage_trust_v1",
+        "state": state,
+        "tone": tone,
+        "headline": headline,
+        "detail": detail,
+        "items": [
+            {"label": "Coverage", "value": str(snapshot.get("universe_label") or "-")},
+            {"label": "Freshness", "value": state, "detail": _coverage_trust_timestamp(coverage)},
+            {"label": "Universe", "value": f"{universe_count:,}"},
+            {
+                "label": "Returnable",
+                "value": f"{returnable_count:,}",
+                "detail": _coverage_trust_pct(coverage.get("returnable_pct")),
+            },
+            {"label": "Missing", "value": f"{missing_count:,}"},
+        ],
+        "grouped_missing_rows": _coverage_trust_grouped_missing_rows(snapshot, missing_rows),
+        "raw_missing_rows": missing_rows,
+        "raw_detail_default_expanded": False,
+        "suggested_action": _coverage_trust_suggested_action(
+            state=state,
+            snapshot=snapshot,
+            coverage=coverage,
+        ),
+        "boundary_note": (
+            "Coverage trust is context-only data-quality evidence for the current Market Movers view; "
+            "it is not a trading signal, validation gate, Final Review decision, or operations monitoring signal."
+        ),
+    }
+
 def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) -> dict[str, Any]:
     if not universe:
         return {}
@@ -3283,6 +3551,7 @@ __all__ = [
     "resolve_effective_market_dates",
     "resolve_group_trend_market_dates",
     "load_market_mover_sector_options",
+    "build_market_movers_coverage_trust_model",
     "build_market_movers_snapshot",
     "build_group_leadership_snapshot",
     "build_overview_breadth_heatmap_summary",

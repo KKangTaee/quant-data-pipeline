@@ -72,6 +72,46 @@ def render_market_movers_empty_state(model: dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
+def _coverage_trust_items_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items:
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-mm-trust-detail-small">{escape(_display_value(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        html.append(
+            '<div class="ov-mm-trust-item">'
+            f'<div class="ov-mm-trust-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-mm-trust-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_market_movers_coverage_trust(model: dict[str, Any]) -> None:
+    tone_color = _market_movers_workbench_tone(model.get("tone"))
+    action = dict(model.get("suggested_action") or {})
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-trust" style="--ov-trust-tone:{tone_color};">
+  <div class="ov-mm-trust-head">
+    <div>
+      <div class="ov-mm-trust-kicker">Coverage Trust</div>
+      <div class="ov-mm-trust-title">자료 신뢰 상태: {escape(_display_value(model.get("state")))}</div>
+      <div class="ov-mm-trust-detail">{escape(_display_value(model.get("headline")))} · {escape(_display_value(model.get("detail")))}</div>
+    </div>
+    <span class="ov-mm-trust-action">{escape(_display_value(action.get("label")))}</span>
+  </div>
+  <div class="ov-mm-trust-grid">{_coverage_trust_items_html(list(model.get("items") or []))}</div>
+  <div class="ov-mm-trust-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
 
 def _breadth_summary_cards_html(cards: list[dict[str, Any]]) -> str:
     html: list[str] = []
@@ -386,7 +426,9 @@ def render_auto_refresh_countdown(
 __all__ = [
     "_breadth_summary_cards_html",
     "_breadth_rows_html",
+    "_coverage_trust_items_html",
     "render_breadth_heatmap_summary",
+    "render_market_movers_coverage_trust",
     "render_market_movers_command_strip",
     "render_market_movers_empty_state",
     "_market_refresh_state_label",
