@@ -12,7 +12,8 @@ Started: 2026-06-29
 - 2026-06-29: V28 Data Health service body extracted into `app/services/overview/data_health.py`; collection ops and ingestion handoff implementation now live on the domain surface.
 - 2026-06-29: V29 Market Movers service body extracted into `app/services/overview/market_movers.py`; movers, group leadership, breadth, and date window helpers now live on the domain surface.
 - 2026-06-29: V30 Market Context service body extracted into `app/services/overview/market_context.py`; cockpit and source confidence now compose the split domain services.
+- 2026-06-29: V31 Why It Moved service body extracted into new `app/services/overview/why_it_moved.py`.
 
 ## Current Step
 
-- V31: Why It Moved service extraction.
+- V32: compatibility facade and documentation sync.

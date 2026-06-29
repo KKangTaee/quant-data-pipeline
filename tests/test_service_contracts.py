@@ -4546,6 +4546,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "build_collection_ops_snapshot",
                 "build_overview_data_health_ingestion_handoff",
             ],
+            "app.services.overview.why_it_moved": [
+                "build_market_mover_catalyst_links",
+                "build_market_mover_metadata_not_requested_state",
+                "build_market_mover_metadata_status_strip",
+                "build_market_mover_why_it_moved_read_model",
+                "fetch_market_mover_compact_metadata",
+                "sort_market_mover_sec_filings_by_form_priority",
+            ],
             "app.services.overview.ia": ["load_overview_ia_closeout_model"],
         }
 
@@ -4598,6 +4606,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("def build_overview_macro_context_cockpit", source)
         self.assertIn("def build_overview_source_confidence_catalog", source)
         self.assertIn("direct_market_context_refresh_only", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_why_it_moved_service_owns_implementation_body(self) -> None:
+        service_path = Path("app/services/overview/why_it_moved.py")
+        self.assertTrue(service_path.exists())
+        source = service_path.read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_mover_catalyst_links", source)
+        self.assertIn("def build_market_mover_why_it_moved_read_model", source)
+        self.assertIn("def fetch_market_mover_compact_metadata", source)
+        self.assertIn("WHY_IT_MOVED_STATUS_LABELS", source)
         self.assertNotIn("overview_market_intelligence", source)
 
     def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
