@@ -1,0 +1,45 @@
+# Overview Legacy Dashboard Removal V17-V24 Status
+
+## 2026-06-25
+
+- Started V17-V24 after the user approved removing `legacy_dashboard.py` in phases.
+- V17 audit / guard completed.
+  - Added `LEGACY_DASHBOARD_REMOVAL_AUDIT.md`.
+  - Added a contract test that locks the V17-V24 target modules and deletion guard.
+  - QA passed with focused audit test, py_compile, and Overview contract suite.
+- V18 market session/banner helper extraction completed.
+  - Added `app/web/overview/session_helpers.py`.
+  - Removed the direct `legacy_dashboard` dependency from `app/web/overview/page.py`.
+  - Moved Market Context session-basis payload calculation to the new helper.
+  - QA passed with focused session tests, py_compile, Overview contract suite, and browser QA.
+- V19 Market Context refresh helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/market_context_helpers.py`.
+  - Moved the refresh reflection, refresh bar, result summary, refresh plan panel, and cache clear behavior into the tab helper.
+  - Kept the refresh action boundary in `app.jobs.overview_actions`; the helper only coordinates UI state and cache invalidation.
+  - QA passed with focused Market Context tests, py_compile, Overview contract suite, and browser QA.
+- V20 Events helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/events_helpers.py`.
+  - Moved Events refresh toolbar, snapshot context loading, calendar frame transforms, agenda/quality sections, and month grid rendering into the Events tab helper.
+  - Kept collection jobs in `app.jobs.overview_actions` and read-model loading in `app.web.overview_dashboard_helpers`.
+  - QA passed with focused Events tests, py_compile, Overview contract suite, and browser QA.
+- V21 Sentiment helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/sentiment_helpers.py`.
+  - Moved Sentiment controls, job result rendering, analysis panel, step cards, driver cards, learning cards, status cards, and charts into the Sentiment tab helper.
+  - Kept sentiment collection in `app.jobs.overview_actions` and snapshot loading in `app.web.overview_dashboard_helpers`.
+  - QA passed with focused Sentiment tests, py_compile, Overview contract suite, and browser QA.
+- V22 Market Movers helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/market_movers_helpers.py`.
+  - Moved Market Movers controls, refresh mode, job result rendering, auto-refresh plan, snapshot meta strip, ranking charts, tables, and Why It Moved links into the tab helper.
+  - Kept collection jobs in `app.jobs.overview_actions` and snapshot loading in `app.web.overview_dashboard_helpers`.
+  - QA passed with focused Market Movers tests, py_compile, Overview contract suite, and browser QA.
+- V23 Futures Macro helper extraction completed.
+  - Removed the `legacy_dashboard` dependency from `app/web/overview/futures_macro_helpers.py`.
+  - Moved Futures Macro header, refresh controls, macro brief, weekly flow, score lane, evidence/validation disclosure, raw table rendering, and futures helper models into the tab helper.
+  - Kept daily futures collection in `app.jobs.overview_actions` and macro snapshot loading/clearing in `app.services.futures_macro_thermometer`.
+  - QA passed with focused Futures Macro tests, py_compile, Overview contract suite, and browser QA.
+- V24 compatibility wrapper cleanup and `legacy_dashboard.py` deletion completed.
+  - Replaced `app/web/overview_dashboard.py` monolithic re-export loop with explicit compatibility exports from the new helper modules.
+  - Moved the retained group trend heatmap contract into `app/web/overview/market_context_helpers.py`.
+  - Deleted `app/web/overview/legacy_dashboard.py`.
+  - QA passed with py_compile, Overview contract suite, legacy import scan, and final browser QA.
+- V17-V24 completed.

@@ -15,17 +15,15 @@ class ReferenceGuidesCatalogContractTests(unittest.TestCase):
         self.assertNotIn("streamlit", sys.modules)
         self.assertIn("task_cards", catalog)
         task_keys = {row["key"] for row in catalog["task_cards"]}
-        self.assertGreaterEqual(
-            {
-                "market_context",
-                "data_freshness",
-                "candidate_creation",
-                "evidence_review",
-                "portfolio_monitoring",
-                "troubleshooting",
-            },
-            task_keys,
-        )
+        expected_task_keys = {
+            "market_context",
+            "data_freshness",
+            "candidate_creation",
+            "evidence_review",
+            "portfolio_monitoring",
+            "troubleshooting",
+        }
+        self.assertGreaterEqual(task_keys, expected_task_keys)
 
         data_freshness = next(row for row in catalog["task_cards"] if row["key"] == "data_freshness")
         self.assertIn("Workspace > Ingestion", data_freshness["owner_screen"])

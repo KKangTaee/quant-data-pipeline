@@ -75,6 +75,7 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["gtaa_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in GTAA_PRESETS else "Manual"
         if st.session_state["gtaa_universe_mode"] == "Preset":
             st.session_state["gtaa_preset"] = preset_name
+            st.session_state["gtaa_applied_preset_defaults"] = preset_name
         else:
             st.session_state["gtaa_manual_tickers"] = tickers_text
         st.session_state["gtaa_start"] = start_date
@@ -114,6 +115,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS
         )
         st.session_state["gtaa_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["gtaa_min_avg_dollar_volume_20d_m_filter"] = float(
+            payload.get("min_avg_dollar_volume_20d_m_filter")
+            or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+        )
         st.session_state["gtaa_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
         st.session_state["gtaa_promotion_min_etf_aum_b"] = float(
             payload.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
@@ -879,23 +884,25 @@ def _render_gtaa_form() -> None:
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="gtaa_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="gtaa_option")
+            top_key = "gtaa_top"
             top = st.number_input(
                 "Top Assets",
                 min_value=1,
                 max_value=12,
-                value=3,
                 step=1,
                 help="GTAA는 평균 score 상위 자산을 선택합니다.",
-                key="gtaa_top",
+                key=top_key,
+                **_session_state_default_arg(top_key, "value", 3),
             )
+            interval_key = "gtaa_interval"
             interval = st.number_input(
                 "Signal Interval (months)",
                 min_value=1,
                 max_value=12,
-                value=GTAA_DEFAULT_SIGNAL_INTERVAL,
                 step=1,
                 help="현재 기본값은 1입니다. 1이면 매월, 2면 격월로 신호를 계산합니다.",
-                key="gtaa_interval",
+                key=interval_key,
+                **_session_state_default_arg(interval_key, "value", GTAA_DEFAULT_SIGNAL_INTERVAL),
             )
             score_lookback_months, score_weights = _render_gtaa_score_weight_inputs(key_prefix="gtaa")
             _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 추가 overlay / 실전 계약 / guardrail은 아래 그룹으로 분리했습니다.")
@@ -910,6 +917,24 @@ def _render_gtaa_form() -> None:
                     promotion_max_bid_ask_spread_pct,
                 ) = _render_etf_real_money_inputs(
                     key_prefix="gtaa",
+                )
+                min_adv_key = "gtaa_min_avg_dollar_volume_20d_m_filter"
+                min_avg_dollar_volume_20d_m_filter = float(
+                    st.number_input(
+                        "Min Avg Dollar Volume 20D ($M)",
+                        min_value=0.0,
+                        max_value=100000.0,
+                        step=5.0,
+                        key=min_adv_key,
+                        help=(
+                            "최근 20거래일 평균 거래대금이 이 값보다 낮은 ETF는 해당 리밸런싱 시점 후보에서 제외합니다."
+                        ),
+                        **_session_state_default_arg(
+                            min_adv_key,
+                            "value",
+                            STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+                        ),
+                    )
                 )
             with st.expander("ETF Guardrails", expanded=False):
                 (
@@ -965,6 +990,7 @@ def _render_gtaa_form() -> None:
         "crash_guardrail_drawdown_threshold": float(risk_off_contract["crash_guardrail_drawdown_threshold"]),
         "crash_guardrail_lookback_months": int(risk_off_contract["crash_guardrail_lookback_months"]),
         "min_price_filter": float(min_price_filter),
+        "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
         "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),

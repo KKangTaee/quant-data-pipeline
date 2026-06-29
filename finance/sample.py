@@ -585,6 +585,7 @@ def get_gtaa3_from_db(
     top=3,
     interval=GTAA_DEFAULT_SIGNAL_INTERVAL,
     min_price=0.0,
+    min_avg_dollar_volume_20d_m=0.0,
     score_lookback_months=None,
     score_return_columns=None,
     score_weights=None,
@@ -624,6 +625,14 @@ def get_gtaa3_from_db(
     effective_defensive_tickers = _normalize_symbol_list(
         defensive_tickers if defensive_tickers is not None else GTAA_DEFAULT_DEFENSIVE_TICKERS
     )
+    avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] = {}
+    if float(min_avg_dollar_volume_20d_m or 0.0) > 0.0:
+        avg_dollar_volume_20d_by_date = _get_cached_snapshot_strategy_avg_dollar_volume_20d(
+            symbols=tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
 
     engine = (
         _build_price_only_engine(
@@ -676,6 +685,7 @@ def get_gtaa3_from_db(
         top=top,
         filter_ma=f"MA{trend_filter_window}",
         min_price=min_price,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
         score_col="Avg Score",
         risk_off_mode=risk_off_mode,
         defensive_tickers=effective_defensive_tickers,
@@ -696,6 +706,7 @@ def get_gtaa3_from_db(
         drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         drawdown_guardrail_benchmark=benchmark_ticker,
         drawdown_guardrail_df=guardrail_benchmark_df if drawdown_guardrail_enabled else None,
+        avg_dollar_volume_20d_by_date=avg_dollar_volume_20d_by_date,
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
@@ -765,7 +776,6 @@ def get_global_relative_strength_from_db(
         .slice(start=start, end=end)
         .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
         .drop_columns(["High", "Low", "Open", "Volume", *effective_score_return_columns])
-        .interval(interval)
     )
 
     strategy = GlobalRelativeStrengthStrategy(

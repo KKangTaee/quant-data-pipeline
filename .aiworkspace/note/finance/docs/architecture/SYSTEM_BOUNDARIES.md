@@ -69,10 +69,25 @@ Overview is a market context and data health surface with approved bounded refre
 
 It reads DB-backed service models for:
 
-- Market Movers, Sector / Industry, Events
-- Futures Monitor and Macro Thermometer
+- Market Movers, sector breadth evidence, Events
+- Futures Macro Thermometer
 - CNN Fear & Greed / AAII Sentiment
 - Why It Moved investigation metadata
+
+`Overview Macro Context Cockpit` is a summary-first read-only band over the existing deep tabs.
+It synthesizes the same DB-backed movers, breadth, futures, sentiment, event, and data-health snapshots, keeps source / freshness visible, and does not add new collection, storage, validation, monitoring, or trading semantics.
+
+`Overview Data Health Ingestion Handoff` is a retained read-only helper for data-repair ownership.
+It priority-ranks existing DB/run-history freshness rows and points the user to the owning Ingestion or approved Overview bounded refresh surface.
+It does not execute collection jobs, persist an action queue, change schema, fetch providers during render, or write registry / saved setup rows.
+
+`Overview Source Confidence Catalog` is a read-only lane inside the Macro Context Cockpit.
+It reuses the already loaded cockpit snapshots to expose source, owner, freshness, caveat, and next-check context for prices, breadth, futures, sentiment, events, and data health.
+It does not add providers, replace provider policy, persist provider scores, fetch providers during render, or write registry / saved setup rows.
+
+`Overview IA Closeout` is a static guide between the cockpit and deep tabs.
+It groups the existing market-context tabs and external data-repair ownership so the user can drill down without treating Overview as a backtest or trading decision surface.
+It does not move Candidate Ops into Overview, change Backtest workflows, fetch providers, persist rows, or write registry / saved setup rows.
 
 Overview refresh buttons must route through `app/jobs/overview_actions.py`.
 The Overview UI must not import `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`, `app/jobs/run_history.py`, or raw provider / FRED / crawler modules directly.
@@ -113,7 +128,8 @@ Final Review does not create broker orders, live approval, account sync, auto re
 
 Operations Console is the Operations entry point.
 
-It should put Portfolio Monitoring and System / Data Health first, and treat Backtest Run History / Candidate Library as archive / recovery tools.
+It should put only Portfolio Monitoring and System / Data Health in the user-facing Operations navigation.
+Backtest Run History and Candidate Library are no longer top-level Operations tabs; their data/helper paths are preserved until a separate archive deletion audit is approved.
 It can summarize today action queue and no-live boundary, but it does not create candidate sources or run validation gates.
 
 ### Operations > Portfolio Monitoring

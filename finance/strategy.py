@@ -145,6 +145,8 @@ def gtaa3(
     drawdown_guardrail_gap_threshold: float = 0.08,
     drawdown_guardrail_benchmark: str | None = None,
     drawdown_guardrail_df: pd.DataFrame | None = None,
+    min_avg_dollar_volume_20d_m: float = 0.0,
+    avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
 ) -> dict:
     """
         gtaa3 전략
@@ -171,6 +173,8 @@ def gtaa3(
 
     if risk_off_mode not in {"cash_only", "defensive_bond_preference"}:
         raise ValueError("risk_off_mode must be one of {'cash_only', 'defensive_bond_preference'}.")
+    if min_avg_dollar_volume_20d_m < 0:
+        raise ValueError("min_avg_dollar_volume_20d_m must be non-negative.")
 
     regime_by_date: dict[pd.Timestamp, dict[str, float | str | bool]] = {}
     active_regime_col = f"MA{market_regime_window}"
@@ -199,6 +203,7 @@ def gtaa3(
     )
     guardrail_close_history: list[float] = []
     strategy_balance_history: list[float] = []
+    effective_avg_dollar_volume = dict(avg_dollar_volume_20d_by_date or {})
 
     base_df = dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = base_df["Date"]
@@ -216,7 +221,24 @@ def gtaa3(
         scores = [dfs[t].iloc[i][score_col] for t in tickers]
         mas = [dfs[t].iloc[i][filter_ma] for t in tickers]
 
-        top_idx = np.argsort(scores)[-n_assets:][::-1]
+        current_date = pd.to_datetime(date).normalize()
+        liquidity_excluded_tickers: list[str] = []
+        available_idx: list[int] = []
+        for idx, ticker in enumerate(tickers):
+            avg_dollar_volume = (effective_avg_dollar_volume.get(ticker) or {}).get(current_date)
+            if not _passes_min_avg_dollar_volume(avg_dollar_volume, float(min_avg_dollar_volume_20d_m or 0.0)):
+                liquidity_excluded_tickers.append(ticker)
+                continue
+            available_idx.append(idx)
+
+        top_idx = np.array(
+            sorted(
+                available_idx,
+                key=lambda idx: float(scores[idx]) if pd.notna(scores[idx]) else float("-inf"),
+                reverse=True,
+            )[:n_assets],
+            dtype=int,
+        )
         next_ticker = [tickers[i] for i in top_idx]
         raw_selected_tickers = next_ticker.copy()
         raw_selected_scores = [float(scores[idx]) for idx in top_idx]
@@ -230,7 +252,6 @@ def gtaa3(
         overlay_rejected_tickers = [ticker for ticker in next_ticker if ticker not in {t for t, _ in next_ticker_to_index}]
         defensive_fill_tickers: list[str] = []
 
-        current_date = pd.to_datetime(date).normalize()
         regime_state = "off"
         regime_close_now = np.nan
         regime_trend_now = np.nan
@@ -274,6 +295,10 @@ def gtaa3(
                 (ticker, idx)
                 for ticker, idx in candidate_pairs
                 if closes[idx] >= mas[idx] and _passes_min_price(closes[idx], min_price)
+                and _passes_min_avg_dollar_volume(
+                    (effective_avg_dollar_volume.get(ticker) or {}).get(current_date),
+                    float(min_avg_dollar_volume_20d_m or 0.0),
+                )
             ]
             candidate_pairs.sort(key=lambda item: float(scores[item[1]]), reverse=True)
             return candidate_pairs
@@ -370,6 +395,9 @@ def gtaa3(
             "Raw Selected Score": raw_selected_scores,
             "Overlay Rejected Ticker": overlay_rejected_tickers,
             "Overlay Rejected Count": len(overlay_rejected_tickers),
+            "Minimum Avg Dollar Volume 20D ($M)": float(min_avg_dollar_volume_20d_m or 0.0),
+            "Liquidity Excluded Ticker": liquidity_excluded_tickers,
+            "Liquidity Excluded Count": len(liquidity_excluded_tickers),
             "Defensive Fallback Ticker": defensive_fill_tickers,
             "Defensive Fallback Count": len(defensive_fill_tickers),
             "Trend Filter Column": filter_ma,
@@ -533,39 +561,54 @@ def risk_parity_trend(
             guardrail_fields["Underperformance Guardrail Triggered"]
             or guardrail_fields["Drawdown Guardrail Triggered"]
         )
+        risk_off_reasons: list[str] = []
+        if bool(guardrail_fields["Underperformance Guardrail Triggered"]):
+            risk_off_reasons.append("underperformance_guardrail")
+        if bool(guardrail_fields["Drawdown Guardrail Triggered"]):
+            risk_off_reasons.append("drawdown_guardrail")
+
+        eligible: list[int] = []
+        trend_rejected_tickers: list[str] = []
+        volatility_rejected_tickers: list[str] = []
+        vols: dict[int, float] = {}
+        weights: dict[int, float] = {}
+        cash_only_reasons: list[str] = []
 
         if rebalancing:
+            # Risk Parity 진단은 최종 보유 전 단계인 trend-eligible universe와
+            # inverse-vol 입력을 함께 남겨야 결과 비중이 왜 그렇게 나왔는지 설명할 수 있다.
+            for j, t in enumerate(tickers):
+                ma_val = dfs[t].iloc[i].get(filter_ma, np.nan)
+                if (
+                    pd.notna(ma_val)
+                    and closes[j] >= float(ma_val)
+                    and _passes_min_price(closes[j], min_price)
+                ):
+                    eligible.append(j)
+                else:
+                    trend_rejected_tickers.append(t)
+
+            for j in eligible:
+                start_idx = max(0, i - vol_window + 1)
+                window = rets_mat[start_idx:i+1, j]
+                window = window[~np.isnan(window)]
+                if len(window) < max(2, vol_window // 2):
+                    volatility_rejected_tickers.append(tickers[j])
+                    continue
+                v = float(np.std(window, ddof=1))
+                if v > 0:
+                    vols[j] = v
+                else:
+                    volatility_rejected_tickers.append(tickers[j])
+
             if guardrail_risk_off:
                 held_ticker_idx = []
                 next_balances = []
                 cash = base_balance
                 next_weights = []
                 next_tickers = []
+                cash_only_reasons = list(risk_off_reasons)
             else:
-                # (A) 트렌드 필터 통과 자산 선정
-                eligible = []
-                for j, t in enumerate(tickers):
-                    ma_val = dfs[t].iloc[i].get(filter_ma, np.nan)
-                    if (
-                        pd.notna(ma_val)
-                        and closes[j] >= float(ma_val)
-                        and _passes_min_price(closes[j], min_price)
-                    ):
-                        eligible.append(j)
-
-                # (B) 변동성 계산
-                vols = {}
-                for j in eligible:
-                    start_idx = max(0, i - vol_window + 1)
-                    window = rets_mat[start_idx:i+1, j]
-                    window = window[~np.isnan(window)]
-                    if len(window) < max(2, vol_window // 2):
-                        continue
-                    v = float(np.std(window, ddof=1))
-                    if v > 0:
-                        vols[j] = v
-
-                # (C) 가중치 = 1/vol 정규화
                 if vols:
                     inv = {j: 1.0 / v for j, v in vols.items()}
                     s = sum(inv.values())
@@ -582,18 +625,71 @@ def risk_parity_trend(
                     cash = base_balance
                     next_weights = []
                     next_tickers = []
+                    cash_only_reasons = (
+                        ["no_trend_qualified_assets"]
+                        if not eligible
+                        else ["insufficient_volatility_window"]
+                    )
         else:
             # 리밸런싱이 아니면, 그대로 보유(현금/보유자산 유지)
             next_weights = np.nan
             next_tickers = [tickers[j] for j in held_ticker_idx]
+            if not held_ticker_idx and cash > 0:
+                cash_only_reasons = ["cash_only_state_carried"]
 
         end_tickers = [tickers[j] for j in held_ticker_idx] if i != 0 else np.nan
+        selected_count = len(held_ticker_idx)
+        cash_share = float(cash / total_balance) if total_balance > 0 else np.nan
+        max_position_weight = (
+            float(max(next_weights))
+            if isinstance(next_weights, list) and next_weights
+            else 0.0
+        )
+        low_vol_overweight_ticker = (
+            tickers[max(weights, key=weights.get)]
+            if weights
+            else ""
+        )
+        low_vol_overweight_reason = (
+            f"{low_vol_overweight_ticker}는 eligible universe 안에서 변동성이 가장 낮아 inverse-vol 목표 비중이 가장 크게 배정됐습니다."
+            if low_vol_overweight_ticker
+            else ""
+        )
+        guardrail_cash_only_state = bool(guardrail_risk_off and selected_count <= 0 and cash_share >= 0.999)
+        cash_only_state = bool(selected_count <= 0 and cash_share >= 0.999)
 
         row = {
             "Date": date,
             "End Ticker": end_tickers,
             "Next Ticker": next_tickers,
+            "Raw Selected Ticker": [tickers[j] for j in eligible],
+            "Raw Selected Count": len(eligible),
+            "Overlay Rejected Ticker": trend_rejected_tickers,
+            "Overlay Rejected Count": len(trend_rejected_tickers),
+            "Eligible Ticker": [tickers[j] for j in eligible],
+            "Eligible Count": len(eligible),
+            "Volatility Window": int(vol_window),
+            "Eligible Volatility": [
+                float(vols[j]) if j in vols else np.nan
+                for j in eligible
+            ],
+            "Volatility Rejected Ticker": volatility_rejected_tickers,
+            "Volatility Rejected Count": len(volatility_rejected_tickers),
+            "Inverse Vol Weight": list(next_weights) if isinstance(next_weights, list) else [],
             "Next Weight": next_weights,
+            "Selected Count": selected_count,
+            "Cash Share": cash_share,
+            "Cash Only State": cash_only_state,
+            "Cash Only Reason": cash_only_reasons,
+            "Guardrail Cash Only State": guardrail_cash_only_state,
+            "Max Position Weight": max_position_weight,
+            "Low Vol Overweight Ticker": low_vol_overweight_ticker,
+            "Low Vol Overweight Reason": low_vol_overweight_reason,
+            "Trend Filter Enabled": True,
+            "Trend Filter Column": filter_ma,
+            "Weighting Mode": "inverse_vol",
+            "Risk-Off Mode": "cash_only",
+            "Risk-Off Reason": risk_off_reasons,
             "End Balance": end_balances,
             "Next Balance": next_balances,
             "Cash": float(cash),
@@ -685,6 +781,19 @@ def dual_momentum(
 
     rows = []
 
+    def _concentration_status(
+        *,
+        selected_count: int,
+        target_slot_count: int,
+        cash_share: float,
+        max_position_weight: float,
+    ) -> str:
+        if selected_count <= 0 and cash_share >= 0.999:
+            return "cash_only"
+        if target_slot_count <= 1 or max_position_weight >= 0.50:
+            return "concentrated_top_n"
+        return "balanced_top_n"
+
     for i, date in enumerate(dates):
         # 현재가/지표 로드
         close_now = {}
@@ -706,6 +815,7 @@ def dual_momentum(
             end_balances = []
             total_balance = float(start_balance)
             total_return = np.nan
+            cash_proxy_return = np.nan
         else:
             # 보유 자산 평가
             end_balances = []
@@ -718,7 +828,10 @@ def dual_momentum(
             # 현금(또는 cash_ticker 기반 현금 수익률 적용)
             if cash_ticker is not None and cash > 0 and prev_close[cash_ticker] is not None:
                 r_cash = (close_now[cash_ticker] / prev_close[cash_ticker]) - 1
+                cash_proxy_return = float(r_cash)
                 cash = cash * (1 + r_cash)
+            else:
+                cash_proxy_return = np.nan
 
             total_balance = float(sum(end_balances) + cash)
             total_return = np.nan if prev_total_balance is None else (total_balance / prev_total_balance) - 1
@@ -728,6 +841,7 @@ def dual_momentum(
         # =========================
         rebalancing = (i == 0) or (i % rebalance_interval == 0)
         base_balance = float(start_balance if i == 0 else total_balance)
+        previous_held = list(held)
         guardrail_fields = _evaluate_portfolio_guardrails(
             current_date=date,
             step_index=i,
@@ -749,16 +863,30 @@ def dual_momentum(
             guardrail_fields["Underperformance Guardrail Triggered"]
             or guardrail_fields["Drawdown Guardrail Triggered"]
         )
+        risk_off_reasons: list[str] = []
+        if bool(guardrail_fields["Underperformance Guardrail Triggered"]):
+            risk_off_reasons.append("underperformance_guardrail")
+        if bool(guardrail_fields["Drawdown Guardrail Triggered"]):
+            risk_off_reasons.append("drawdown_guardrail")
+
+        raw_selected_tickers: list[str] = []
+        raw_selected_scores: list[float] = []
+        trend_rejected_tickers: list[str] = []
+        cash_reasons: list[str] = []
 
         if rebalancing:
             if guardrail_risk_off:
                 held = []
                 next_balances = []
                 cash = base_balance
+                cash_reasons = list(risk_off_reasons)
             else:
                 risky_scores = [(t, score_now[t]) for t in risky_tickers if pd.notna(score_now[t])]
                 risky_scores.sort(key=lambda x: x[1])
-                picked = [t for t, _ in risky_scores[-top:]][::-1]
+                raw_selected = risky_scores[-top:][::-1]
+                picked = [t for t, _ in raw_selected]
+                raw_selected_tickers = [t for t, _ in raw_selected]
+                raw_selected_scores = [float(score) for _, score in raw_selected]
 
                 invest = [
                     t
@@ -767,24 +895,90 @@ def dual_momentum(
                     and close_now[t] >= ma_now[t]
                     and _passes_min_price(close_now[t], min_price)
                 ]
+                trend_rejected_tickers = [ticker for ticker in raw_selected_tickers if ticker not in invest]
 
                 if len(invest) == 0:
                     held = []
                     next_balances = []
                     cash = base_balance
+                    cash_reasons.append("no_trend_qualified_assets")
                 else:
-                    w = 1.0 / len(invest)
                     held = invest
-                    next_balances = [base_balance * w] * len(invest)
-                    cash = base_balance - sum(next_balances)
+                    slot_balance = base_balance / float(top)
+                    next_balances = [slot_balance] * len(invest)
+                    cash = slot_balance * max(top - len(held), 0)
+                    if trend_rejected_tickers:
+                        cash_reasons.append("trend_rejected_slot_retained_as_cash")
+                    if len(held) < top:
+                        cash_reasons.append("unfilled_top_n_slots")
         else:
             # 리밸런싱 아니면 그대로 유지
-            pass
+            if cash > 0:
+                cash_reasons.append("cash_proxy_balance_carried")
+
+        selected_count = len(held)
+        target_slot_count = int(top)
+        unfilled_slot_count = max(target_slot_count - selected_count, 0)
+        cash_share = float(cash / total_balance) if total_balance > 0 else np.nan
+        active_balances = list(next_balances) if rebalancing else list(end_balances)
+        max_position_weight = (
+            float(max(active_balances) / total_balance)
+            if active_balances and total_balance > 0
+            else 0.0
+        )
+        concentration_status = _concentration_status(
+            selected_count=selected_count,
+            target_slot_count=target_slot_count,
+            cash_share=cash_share if pd.notna(cash_share) else 0.0,
+            max_position_weight=max_position_weight,
+        )
+        added_tickers = sorted(ticker for ticker in held if ticker not in previous_held)
+        removed_tickers = sorted(ticker for ticker in previous_held if ticker not in held)
+        selection_changed = bool(rebalancing and i > 0 and (added_tickers or removed_tickers))
+        if rebalancing and i == 0:
+            whipsaw_status = "initial_selection"
+        elif selection_changed:
+            whipsaw_status = "selection_changed"
+        elif rebalancing:
+            whipsaw_status = "selection_unchanged"
+        else:
+            whipsaw_status = "held_until_next_rebalance"
 
         row = {
             "Date": date,
             "End Ticker": (np.nan if i == 0 else held),
             "Next Ticker": held,
+            "Raw Selected Ticker": raw_selected_tickers,
+            "Raw Selected Count": len(raw_selected_tickers),
+            "Raw Selected Score": raw_selected_scores,
+            "Trend Rejected Ticker": trend_rejected_tickers,
+            "Trend Rejected Count": len(trend_rejected_tickers),
+            "Overlay Rejected Ticker": trend_rejected_tickers,
+            "Overlay Rejected Count": len(trend_rejected_tickers),
+            "Selected Count": selected_count,
+            "Target Slot Count": target_slot_count,
+            "Unfilled Slot Count": unfilled_slot_count,
+            "Cash Share": cash_share,
+            "Max Position Weight": max_position_weight,
+            "Concentration Status": concentration_status,
+            "Trend Filter Enabled": True,
+            "Trend Filter Column": filter_ma,
+            "Weighting Mode": "equal_weight",
+            "Risk-Off Mode": "cash_only",
+            "Risk-Off Reason": risk_off_reasons,
+            "Partial Cash Retention Enabled": True,
+            "Partial Cash Retention Active": bool(cash > 0 and unfilled_slot_count > 0),
+            "Rejected Slot Fill Enabled": False,
+            "Rejected Slot Fill Active": False,
+            "Rejected Slot Fill Count": 0,
+            "Cash Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "Cash Proxy Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "Cash Proxy Return": cash_proxy_return,
+            "Cash Reason": cash_reasons,
+            "Selection Changed": selection_changed,
+            "Added Ticker": added_tickers,
+            "Removed Ticker": removed_tickers,
+            "Whipsaw Status": whipsaw_status,
             "End Balance": (np.nan if i == 0 else end_balances),
             "Next Balance": next_balances,
             "Cash": float(cash),
@@ -858,6 +1052,19 @@ def global_relative_strength_allocation(
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     rows: list[dict] = []
 
+    def _concentration_status(
+        *,
+        selected_count: int,
+        target_slot_count: int,
+        cash_share: float,
+        max_position_weight: float,
+    ) -> str:
+        if selected_count <= 0 and cash_share >= 0.999:
+            return "cash_only"
+        if target_slot_count <= 1 or max_position_weight >= 0.50:
+            return "concentrated_top_n"
+        return "balanced_top_n"
+
     for i, date in enumerate(dates):
         close_now: dict[str, float] = {}
         score_now: dict[str, float] = {}
@@ -874,6 +1081,7 @@ def global_relative_strength_allocation(
             end_balances: list[float] = []
             total_balance = float(start_balance)
             total_return = np.nan
+            cash_proxy_return = np.nan
         else:
             end_balances = []
             for ticker, balance in zip(held, next_balances):
@@ -885,8 +1093,10 @@ def global_relative_strength_allocation(
                 )
                 end_balances.append(float(balance) * (1.0 + asset_return))
 
+            cash_proxy_return = np.nan
             if cash > 0 and cash_ticker is not None and prev_close[cash_ticker] not in (None, 0):
                 cash_return = (close_now[cash_ticker] / prev_close[cash_ticker]) - 1
+                cash_proxy_return = float(cash_return)
                 cash = float(cash) * (1.0 + cash_return)
 
             total_balance = float(sum(end_balances) + cash)
@@ -896,6 +1106,7 @@ def global_relative_strength_allocation(
         raw_selected_tickers: list[str] = []
         raw_selected_scores: list[float] = []
         trend_rejected_tickers: list[str] = []
+        cash_reasons: list[str] = []
 
         if rebalancing:
             ranked_candidates = [
@@ -920,17 +1131,63 @@ def global_relative_strength_allocation(
             held = selected
             next_balances = [slot_balance] * len(held)
             cash = slot_balance * max(top - len(held), 0)
+            if trend_rejected_tickers:
+                cash_reasons.append("trend_rejected_slot_retained_as_cash")
+            if len(held) <= 0:
+                cash_reasons.append("no_trend_qualified_assets")
+            elif len(held) < top:
+                cash_reasons.append("unfilled_top_n_slots")
+
+        selected_count = len(held)
+        target_slot_count = int(top)
+        unfilled_slot_count = max(target_slot_count - selected_count, 0)
+        cash_share = float(cash / total_balance) if total_balance > 0 else np.nan
+        active_balances = list(next_balances) if rebalancing else list(end_balances)
+        max_position_weight = (
+            float(max(active_balances) / total_balance)
+            if active_balances and total_balance > 0
+            else 0.0
+        )
+        concentration_status = _concentration_status(
+            selected_count=selected_count,
+            target_slot_count=target_slot_count,
+            cash_share=cash_share if pd.notna(cash_share) else 0.0,
+            max_position_weight=max_position_weight,
+        )
+        if not rebalancing and cash > 0:
+            cash_reasons.append("cash_proxy_balance_carried")
 
         row = {
             "Date": date,
             "End Ticker": list(held),
             "Next Ticker": list(held),
             "Raw Selected Ticker": raw_selected_tickers,
+            "Raw Selected Count": len(raw_selected_tickers),
             "Raw Selected Score": raw_selected_scores,
             "Trend Rejected Ticker": trend_rejected_tickers,
             "Trend Rejected Count": len(trend_rejected_tickers),
+            "Overlay Rejected Ticker": trend_rejected_tickers,
+            "Overlay Rejected Count": len(trend_rejected_tickers),
+            "Selected Count": selected_count,
+            "Target Slot Count": target_slot_count,
+            "Unfilled Slot Count": unfilled_slot_count,
+            "Cash Share": cash_share,
+            "Max Position Weight": max_position_weight,
+            "Concentration Status": concentration_status,
+            "Trend Filter Enabled": True,
             "Trend Filter Column": filter_ma,
+            "Weighting Mode": "equal_weight",
+            "Risk-Off Mode": "cash_only",
+            "Risk-Off Reason": [],
+            "Partial Cash Retention Enabled": True,
+            "Partial Cash Retention Active": bool(cash > 0 and unfilled_slot_count > 0),
+            "Rejected Slot Fill Enabled": False,
+            "Rejected Slot Fill Active": False,
+            "Rejected Slot Fill Count": 0,
             "Cash Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "Cash Proxy Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "Cash Proxy Return": cash_proxy_return,
+            "Cash Reason": cash_reasons,
             "End Balance": end_balances,
             "Next Balance": list(next_balances),
             "Cash": float(cash),
@@ -1781,11 +2038,14 @@ class GTAA3Strategy(Strategy):
         drawdown_guardrail_gap_threshold: float = 0.08,
         drawdown_guardrail_benchmark: str | None = None,
         drawdown_guardrail_df: pd.DataFrame | None = None,
+        min_avg_dollar_volume_20d_m: float = 0.0,
+        avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
     ):
         self.start_balance = start_balance
         self.top = top
         self.filter_ma = filter_ma
         self.min_price = min_price
+        self.min_avg_dollar_volume_20d_m = min_avg_dollar_volume_20d_m
         self.score_col = score_col
         self.risk_off_mode = risk_off_mode
         self.defensive_tickers = defensive_tickers or []
@@ -1806,6 +2066,7 @@ class GTAA3Strategy(Strategy):
         self.drawdown_guardrail_gap_threshold = drawdown_guardrail_gap_threshold
         self.drawdown_guardrail_benchmark = drawdown_guardrail_benchmark
         self.drawdown_guardrail_df = drawdown_guardrail_df
+        self.avg_dollar_volume_20d_by_date = avg_dollar_volume_20d_by_date
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return gtaa3(
@@ -1834,6 +2095,8 @@ class GTAA3Strategy(Strategy):
             self.drawdown_guardrail_gap_threshold,
             self.drawdown_guardrail_benchmark,
             self.drawdown_guardrail_df,
+            min_avg_dollar_volume_20d_m=self.min_avg_dollar_volume_20d_m,
+            avg_dollar_volume_20d_by_date=self.avg_dollar_volume_20d_by_date,
         )
 
 

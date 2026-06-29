@@ -17,6 +17,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_macro_calendar,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
+    run_collect_symbol_directory_snapshots,
 )
 from app.jobs.run_history import append_run_history, load_run_history
 from app.workspace_paths import RUN_ARTIFACT_DIR
@@ -85,6 +86,10 @@ def _run_sp500_universe(_: datetime) -> JobResult:
     return run_collect_sp500_universe()
 
 
+def _run_nasdaq_symbol_directory(_: datetime) -> JobResult:
+    return run_collect_symbol_directory_snapshots(sources=("nasdaqlisted",))
+
+
 def _run_intraday_snapshot(
     universe_code: str,
     universe_limit: int,
@@ -138,6 +143,16 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         description="Refresh current S&P 500 membership for Overview market intelligence.",
     ),
     ScheduledJobSpec(
+        job_id="nasdaq_symbol_directory",
+        job_name="collect_symbol_directory_snapshots",
+        label="Nasdaq Symbol Directory",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad"),
+        market_hours_only=False,
+        runner=_run_nasdaq_symbol_directory,
+        description="Refresh Nasdaq-listed current Symbol Directory snapshot for Overview coverage.",
+    ),
+    ScheduledJobSpec(
         job_id="sp500_intraday",
         job_name="collect_sp500_intraday_snapshot",
         label="S&P 500 Daily Snapshot",
@@ -166,6 +181,16 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         market_hours_only=True,
         runner=_run_intraday_snapshot("TOP2000", 2000, fallback_to_yfinance=False),
         description="Collect Top2000 quote-fast daily movers snapshot during US market hours.",
+    ),
+    ScheduledJobSpec(
+        job_id="nasdaq_intraday",
+        job_name="collect_nasdaq_intraday_snapshot",
+        label="Nasdaq-listed Daily Snapshot",
+        cadence_minutes=30,
+        profiles=("standard", "broad", "intraday"),
+        market_hours_only=True,
+        runner=_run_intraday_snapshot("NASDAQ", 5000, fallback_to_yfinance=False),
+        description="Collect Nasdaq-listed quote-fast daily movers snapshot during US market hours.",
     ),
     ScheduledJobSpec(
         job_id="fomc_calendar",

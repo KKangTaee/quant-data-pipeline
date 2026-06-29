@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-23
 
 ## Main User Flow
 
@@ -20,6 +20,19 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 
 화면 경계가 code layer / storage boundary와 섞일 때는 [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md)를 먼저 확인한다.
 
+## Overview Futures Monitor Flow
+
+`Workspace > Overview > Futures Monitor`는 선물/매크로 context를 읽는 화면이며 provider run 진단이나 trading signal 화면이 아니다.
+
+기본 화면의 정보 소유권은 다음처럼 유지한다.
+
+- Workbench context bar: 관찰 범위, 시간/봉/차트 범위, 데이터 상태, 다음 행동을 한 줄로 요약한다.
+- 자료 갱신 module: 실제 갱신 행동을 소유한다. 실시간 차트 자료는 선택 선물 1분봉 / 최신 candle age / 60초 자동 확인 대상을 보여주고, 매크로 일봉 자료는 1D OHLCV / macro context 기준일 / daily coverage를 보여준다.
+- Compact watch strip: 선택 심볼의 이름, 계약 설명, 15m/60m 움직임, symbol-level stale state만 보여준다. 심볼 선택 multiselect는 `관찰 대상 편집` disclosure 안에 둔다.
+- Macro Context: 오늘 기준 시장 브리프, 근거 강도 / 과거 점검 / 유사 구간 / 자료 기준, 최근 1주 dominant flow, score chip.
+- Chart workspace: “이 차트에서 확인할 것”을 먼저 말하고, 차트 범위와 symbol-level 상태를 이어서 보여준다. Page-level provider run rows / latest candle details는 반복하지 않는다.
+- Disclosure: `근거 해석 / 원본 데이터`는 `현재 근거 상태 -> 과거 점검 요약 -> 자료 관리 -> 원본 표` 순서로 읽고, 진단 / Provider 근거는 별도 접힌 상세로 둔다.
+
 ## Backtest Selection Flow
 
 | Step | What Happens | Main Files |
@@ -27,7 +40,7 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 | Backtest Analysis | 단일 전략, compare, saved mix로 후보 source 생성 | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
 | Practical Validation | 후보 source를 12개 진단과 module gate로 검증하고, Gate 미통과 저장-only row는 audit trail로만 남긴다 | `app/web/backtest_practical_validation*.py` |
 | Final Review | Practical Validation Gate를 통과한 후보만 source picker에 표시하고 최종 select / hold / reject / re-review 판단 | `app/web/backtest_final_review*.py` |
-| Operations Console | 선정 후 monitoring, system / data health, archive / recovery 입구 | `app/web/operations_overview.py` |
+| Operations Console | 선정 후 monitoring과 system / data health 확인 입구 | `app/web/operations_overview.py` |
 | Portfolio Monitoring | 선정 이후 성과 재확인과 read-only monitoring / recheck signal 확인 | `app/web/final_selected_portfolio_dashboard*.py` |
 
 ## Practical Validation Provider Flow

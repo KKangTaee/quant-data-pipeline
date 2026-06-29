@@ -390,3 +390,44 @@
   - 사용자 요청에 따라 Candidate Library 노출용 Current Candidate Registry row를 append했다.
 - 저장:
   - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `gtaa_current_candidate_spy_low_mdd_style_top3_i3_1m6m_ma250`
+
+### 2026-06-29 - SPY benchmark ADV-aware 저MDD 후보 재검증
+
+- 목표:
+  - GTAA로 SPY보다 CAGR과 MDD가 모두 개선되고, `CAGR >= 11%`, MDD 절대값 `15%` 이하, current 1차 promotion gate를 통과하는 후보를 찾는다.
+  - 기존 `GTAA SPY Low-MDD Style Top-3`는 성과 조건은 유지했지만, ADV20 `$20M` 필터 기준 `liquidity_clean_coverage = 88.10%`로 `production_candidate`에 머물렀다.
+- 대표 후보:
+  - 전략 이름 / preset: `GTAA SPY Low-MDD Style Top-2 ADV20`
+  - input: `2016-01-01 ~ 2026-05-01`
+  - effective result window: `2016-01-29 ~ 2026-02-27`
+  - universe: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`
+  - `Top Assets = 2`
+  - `Signal Interval = 4`
+  - `Score Horizons = 1M / 6M`
+  - `Trend Filter = MA200`
+  - `Risk-Off Mode = cash_only`
+  - `Benchmark = SPY`
+  - `Minimum Price = 5.0`
+  - `Min Avg Dollar Volume 20D = 20M`
+  - `Transaction Cost = 10 bps`
+- 결과:
+  - `CAGR = 24.078108%`
+  - `MDD = -9.990100%`
+  - `Sharpe = 3.373899`
+  - `End Balance = 87,963.37`
+  - `SPY CAGR = 13.363791%`
+  - `SPY MDD = -20.610791%`
+  - `SPY Sharpe = 2.214603`
+  - `Liquidity Clean Coverage = 90.625%`
+  - `Rolling underperformance share = 0.00%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = small_capital_ready`
+  - `Validation = normal`
+  - `Benchmark / Liquidity / Guardrail / ETF Operability = normal`
+- 해석:
+  - 이번 후보는 current ADV-aware GTAA runtime에서 사용자 조건과 1차 후보 판단을 모두 통과한다.
+  - `top=2`, `interval=4` 조합은 Top-3 기존 후보보다 집중도가 높지만, 같은 기간 CAGR과 MDD가 모두 개선됐다.
+  - 이 후보는 Backtest first-pass 후보이며, Practical Validation / Final Review 선정은 별도 후속 단계다.
+- 보고서:
+  - `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`

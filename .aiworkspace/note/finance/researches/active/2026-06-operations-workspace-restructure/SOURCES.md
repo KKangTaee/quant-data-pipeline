@@ -1,6 +1,7 @@
 # Sources
 
 Access date: 2026-06-03
+Refresh date: 2026-06-07
 
 Evidence labels:
 
@@ -24,6 +25,8 @@ Evidence labels:
 | `app/web/backtest_history.py` | Observed | Backtest Run History restores/reruns/sends old runs to Practical Validation. |
 | `app/web/backtest_candidate_library.py` | Observed | Candidate Library inspects saved current/pre-live records and rebuilds result curves. |
 | `app/web/final_selected_portfolio_dashboard.py` | Observed | Selected Dashboard monitors Final Review selected rows in user-created monitoring portfolios. |
+| `app/web/operations_overview.py` | Observed | Current Operations Console already renders Today's Operations Queue, Portfolio Monitoring/System Data Health primary lanes, Archive/Recovery, Reference/Reports, and no-live boundary. |
+| `app/web/streamlit_app.py` | Observed | Current top navigation has Operations Overview, Portfolio Monitoring, System / Data Health, Archive: Backtest Runs, and Archive: Candidates as peer pages under Operations. |
 
 ## Web Sources
 
@@ -37,10 +40,14 @@ Evidence labels:
 | [Sharesight Reports Overview](https://help.sharesight.com/au/reports/) | Documented | Report taxonomy separates performance, asset allocation, and tax/compliance reports. |
 | [Koyfin Portfolio Tools](https://www.koyfin.com/features/portfolio-tools/) | Claimed | Portfolio tool emphasizes customizable holdings, summary rows, performance monitoring. |
 | [Composer](https://www.composer.trade/) | Claimed | Strategy creation/backtest/execution platform with historical allocation and fees/slippage visibility; automation-forward boundary contrast. |
+| [QuantConnect Reconciliation](https://www.quantconnect.com/docs/v2/cloud-platform/live-trading/reconciliation) | Documented | Separates live/backtest reconciliation, data timing, look-ahead, modeling, fill, and brokerage mismatch risks from the backtest itself. Accessed 2026-06-07. |
+| [Interactive Brokers PortfolioAnalyst Features](https://www.interactivebrokers.com/en/portfolioanalyst/features.php) | Documented / claimed | Portfolio reports and dashboard patterns around holdings, allocation, performance, attribution, income, risk, and Value at Risk. Accessed 2026-06-07. |
+| [Koyfin Portfolio Tools](https://www.koyfin.com/features/portfolio-tools/) | Claimed | Current-state portfolio tracking, summary rows, performance monitoring, and leading/lagging holdings pattern. Accessed 2026-06-07. |
+| [Composer Backtests](https://www.composer.trade/learn/how-do-backtests-work-in-composer) | Documented / claimed | Backtest page separates historical simulation caveat, fees/slippage, benchmarks, allocations, and broker/execution disclaimers. Accessed 2026-06-07. |
 
 ## Source Notes
 
 - Prefer current, official, primary sources.
 - Treat product marketing pages as feature-pattern evidence, not verified technical capability.
-- Web product details can change; this research used pages accessed on 2026-06-03.
+- Web product details can change; this research used pages accessed on 2026-06-03 and refreshed selected official sources on 2026-06-07.
 - Benchmark conclusions are pattern-level, not proof that this project should copy any product literally.

@@ -53,3 +53,15 @@ Evidence labels:
 | Selected Dashboard naming is accurate but long | Portfolio monitor products emphasize portfolio/current status | Consider UI copy around "Portfolio Monitoring" while keeping route compatibility. |
 | Rebalance target table can be misread | Morningstar rebalance review pattern | Keep read-only target/review wording and connect to actual allocation/drift evidence. |
 | Legacy candidate tools still visible as first-class Operations tabs | Stage separation from QuantConnect and current project docs | Demote but do not delete until audit/replay replacement exists. |
+
+## 2026-06-07 Benchmark Refresh
+
+Recent official-source recheck supports the same pattern, but changes the local interpretation because `Operations Overview` already exists.
+
+| Pattern | Current evidence | Updated implication |
+| --- | --- | --- |
+| Reconciliation / monitoring is distinct from backtest simulation | QuantConnect documents live-vs-backtest reconciliation, data timing differences, look-ahead and reality-model gaps as a separate concern from backtests. | Operations should not create new candidates; it should show whether monitored selected outcomes still reconcile with assumptions and data freshness. |
+| Portfolio operations unify state, risk, performance, data validation, scenarios, and reporting | Bloomberg PORT positions portfolio analytics around positions, risk, performance, data validation, scenarios, and reporting. | A useful Operations console should lead with current portfolio state and evidence health, not old run artifacts. |
+| Portfolio dashboards are current-state and report-oriented | IBKR PortfolioAnalyst emphasizes account/portfolio performance, allocation, risk, benchmarks, and reports; Sharesight separates performance, allocation, and tax/compliance reports. | Archive / recovery screens should become support tools; the primary lane should become monitoring status, review signals, allocation/drift evidence, and manual reports later. |
+| Holdings/exposure breakdown anchors portfolio review | Morningstar X-Ray centers holdings breakdown, asset class, sector, region, fees, and benchmark-relative exposure. | Portfolio Monitoring V2 should strengthen target-vs-current allocation / exposure review before adding more archive functionality. |
+| Execution-enabled products must be treated as boundary contrast | Composer connects backtests with brokerage/execution disclaimers and automation-forward workflows. | This project should preserve the no-live-trading boundary; Operations should not add broker/account/order semantics during IA cleanup. |

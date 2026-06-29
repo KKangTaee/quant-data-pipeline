@@ -13,8 +13,6 @@ DIRECT_RUN_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(DIRECT_RUN_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(DIRECT_RUN_PROJECT_ROOT))
 
-from app.web.backtest_candidate_library import render_candidate_library_page
-from app.web.backtest_history import render_backtest_run_history_page
 from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
 from app.web.ingestion_console import (
     apply_pending_ingestion_prefill,
@@ -26,6 +24,7 @@ from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
+from app.web import reference_contextual_help as reference_contextual_help_module
 from app.web.reference_guides import render_reference_guides_page
 from app.services.reference_glossary_catalog import (
     get_reference_concept_dictionary,
@@ -146,6 +145,12 @@ def _render_runtime_build_indicator() -> None:
         col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
 
 
+def _configure_reference_contextual_help_page_targets(page_targets: dict[str, object]) -> None:
+    configure = getattr(reference_contextual_help_module, "configure_reference_contextual_help_page_targets", None)
+    if callable(configure):
+        configure(page_targets)
+
+
 def _render_overview_page() -> None:
     _render_running_banner()
     render_overview_dashboard(
@@ -183,15 +188,6 @@ def _render_ops_review_page() -> None:
         csv_dir=CSV_DIR,
         render_runtime_snapshot=_render_runtime_build_indicator,
     )
-
-
-def _render_backtest_run_history_page(open_backtest_page) -> None:
-    render_backtest_run_history_page(open_backtest_page=open_backtest_page)
-
-
-# Render the saved candidate library and replay surface under Operations.
-def _render_candidate_library_page() -> None:
-    render_candidate_library_page()
 
 
 def _render_selected_portfolio_dashboard_page() -> None:
@@ -296,21 +292,6 @@ def main() -> None:
     backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
     ops_review_page = st.Page(_render_ops_review_page, title="System / Data Health", icon="🧾", url_path="ops-review")
 
-    def open_backtest_page() -> None:
-        st.switch_page(backtest_page)
-
-    backtest_history_page = st.Page(
-        lambda: _render_backtest_run_history_page(open_backtest_page),
-        title="Archive: Backtest Runs",
-        icon="🗂️",
-        url_path="backtest-run-history",
-    )
-    candidate_library_page = st.Page(
-        _render_candidate_library_page,
-        title="Archive: Candidates",
-        icon="📌",
-        url_path="candidate-library",
-    )
     selected_portfolio_dashboard_page = st.Page(
         _render_selected_portfolio_dashboard_page,
         title="Portfolio Monitoring",
@@ -319,13 +300,17 @@ def main() -> None:
     )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
+    _configure_reference_contextual_help_page_targets(
+        {
+            "guides": guides_page,
+            "glossary": glossary_page,
+        }
+    )
     operations_overview_page = st.Page(
         lambda: render_operations_overview_page(
             page_targets={
                 "portfolio_monitoring": selected_portfolio_dashboard_page,
                 "system_data_health": ops_review_page,
-                "archive_backtest_runs": backtest_history_page,
-                "archive_candidates": candidate_library_page,
                 "reference_guides": guides_page,
             }
         ),
@@ -345,8 +330,6 @@ def main() -> None:
                 operations_overview_page,
                 selected_portfolio_dashboard_page,
                 ops_review_page,
-                backtest_history_page,
-                candidate_library_page,
             ],
             "Reference": [
                 guides_page,

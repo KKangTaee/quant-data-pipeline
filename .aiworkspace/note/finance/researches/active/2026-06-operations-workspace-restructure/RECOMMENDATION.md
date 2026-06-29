@@ -75,3 +75,50 @@ Operations = Portfolio Monitoring + System/Data Health + Archive/Recovery
 ```
 
 After that lands and feels right, run a second pass on Selected Dashboard monitoring summaries and a third pass on archive demotion. This keeps useful legacy tools available while shifting the user's center of gravity from "old backtest artifacts" to "selected portfolio operations".
+
+## 2026-06-07 Updated Recommendation
+
+`Operations Overview / IA V1`은 현재 구현되어 있으므로, 다음 승인 후보는 `Operations Cockpit V2`로 좁히는 것이 맞다.
+
+### Updated One-Line Recommendation
+
+Keep the current Operations structure, but redesign the Overview around three operating questions:
+
+1. 내 selected portfolio monitoring 상태가 지금 어떤가?
+2. 이 상태를 판단할 데이터 / 실행 근거가 신뢰 가능한가?
+3. 과거 run / candidate를 복구해야 하는 예외 상황인가?
+
+### Recommended Next Build Scope
+
+1차 `Operations Cockpit Cleanup`
+
+- `Operations Overview`의 개발 이력 / surface audit 중심 정보를 낮추거나 Reference/docs로 이동한다.
+- Today's Operations Queue를 portfolio-first로 다시 정렬한다.
+- Archive metrics는 보조 drawer로 낮춘다.
+- no-live boundary는 유지하되, 과하게 반복되는 개발용 문구는 정리한다.
+
+2차 `Portfolio Monitoring First Summary`
+
+- Operations Overview에서 Portfolio Monitoring의 compact summary를 더 강하게 보여준다.
+- stale scenario, blocked/missing selected reference, open review item, next review date, target snapshot freshness를 우선 지표로 삼는다.
+- Portfolio Monitoring 본 화면은 계속 상세 cockpit 역할을 맡는다.
+
+3차 `Archive / Recovery Decision`
+
+- `Archive: Backtest Runs`와 `Archive: Candidates`는 삭제하지 않고, top navigation 노출 방식만 조정할 수 있는지 검토한다.
+- 제거는 registry read path, history restore, Practical Validation handoff, candidate replay 대체 경로가 확인된 뒤에만 한다.
+
+### What Should Not Be Done Now
+
+- Portfolio Monitoring을 Backtest로 되돌리지 않는다.
+- Archive screens를 즉시 삭제하지 않는다.
+- Operations에서 broker account sync, 주문, 자동 리밸런싱, scheduler-owned monitoring log write를 만들지 않는다.
+- 새 탭을 늘리는 방식으로 정체성 문제를 덮지 않는다. 먼저 기존 Overview와 Portfolio Monitoring의 목적을 날카롭게 만든다.
+
+### Approval Checkpoint
+
+구현으로 넘어가려면 사용자가 아래 범위를 승인해야 한다.
+
+- 이번 차수는 `Operations Cockpit V2`로 제한한다.
+- 1차에서는 삭제보다 화면 위계 / copy / summary 개선을 한다.
+- archive 도구는 보존하되 primary workflow처럼 보이지 않게 낮춘다.
