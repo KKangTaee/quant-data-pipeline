@@ -7003,11 +7003,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         model = build_market_movers_command_strip_model(
             snapshot,
             controls=controls,
-            exploration_mode="Return Rank",
+            exploration_mode="상승",
         )
 
         self.assertEqual(model["schema_version"], "market_movers_command_strip_v1")
-        self.assertEqual(model["headline"], "변동종목 작업대")
+        self.assertEqual(model["headline"], "변동 종목")
         self.assertEqual(model["context"], "S&P 500 · Daily · Technology")
         self.assertEqual(model["tone"], "warning")
         items = {item["label"]: item for item in model["items"]}
@@ -7018,8 +7018,24 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(items["Universe"]["value"], "503")
         self.assertEqual(items["Returnable"]["value"], "470")
         self.assertEqual(items["Missing"]["value"], "33")
-        self.assertEqual(items["Mode"]["value"], "Return Rank")
+        self.assertEqual(items["보기"]["value"], "상승")
         self.assertIn("93.4%", items["Returnable"]["detail"])
+
+    def test_market_movers_redesign_v2_uses_market_ranking_language(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn('"top_gainers": "상승"', source)
+        self.assertIn('"top_losers": "하락"', source)
+        self.assertIn('"volume_leaders": "거래량"', source)
+        self.assertIn('"unusual_volume": "이상 거래량"', source)
+        self.assertIn('"sector_leaders": "섹터"', source)
+        self.assertIn('"랭킹 기준"', source)
+        self.assertIn('"보기"', source)
+        self.assertNotIn("변동종목 작업대", source)
+        self.assertNotIn("탐색 모드", source)
+        self.assertNotIn("변동종목 작업대", component_source)
+        self.assertNotIn("탐색 모드", component_source)
 
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
@@ -8945,6 +8961,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("overview_market_movers_mode", source)
         self.assertIn("controls.mode", source)
         self.assertIn("mover_views", source)
+        self.assertIn("랭킹 기준", source)
+        self.assertNotIn("탐색 모드", source)
         self.assertNotIn("buy signal", source.lower())
         self.assertNotIn("sell signal", source.lower())
 
@@ -9099,7 +9117,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
         self.assertEqual(model["read_model"]["identity"]["Symbol"], "AAA")
-        self.assertEqual(model["read_model"]["context"]["Rank Type"], "Top Losers")
+        self.assertEqual(model["read_model"]["context"]["Rank Type"], "하락")
         self.assertEqual(model["read_model"]["movement"]["Relative Volume"], 3.2)
         self.assertEqual(model["status_strip"]["lookup"]["value"], "조회 전")
         self.assertEqual(model["peer_context"].iloc[0]["항목"], "같은 섹터 내 표시 순위")

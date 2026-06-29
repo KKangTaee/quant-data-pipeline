@@ -32,6 +32,10 @@ Workspace > Ingestion
 - 목적: GTAA `interval`을 결과 row thinning이 아니라 strategy-owned rebalance cadence로 해석하고, 비리밸런싱월에도 최신 후보 신호 / valuation row를 볼 수 있게 한다.
 - 주요 변경: GTAA sample / runtime path는 strategy 실행 전에 `.interval(...)`로 입력 row를 줄이지 않는다. `GTAA3Strategy(rebalance_interval=...)`가 실제 holdings 변경 cadence를 소유하고, month-end row 뒤에는 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
 - 이번 차수에서 하지 않은 일: 가격 데이터 coverage refresh, provider / DB schema / registry / saved JSONL 변경, Practical Validation / Final Review / Monitoring behavior 변경, live trading / broker order / auto rebalance semantics 추가.
+- Active UX redesign task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`
+- 목적: Overview > Market Movers가 metric-card / prototype pattern처럼 보이는 문제를 Toss Securities / Upbit / StockAnalysis / TradingView / Finviz benchmark 기반의 market-board UX로 1~6차 재설계한다.
+- 1차 범위: user-facing language / IA reset. `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리하고 새 provider / schema / UI external fetch / trade signal은 추가하지 않는다.
+- 후속: 2차 compact mover tape / list, 3차 chart workspace, 4차 sector breadth visual, 5차 selected-symbol investigation pane, 6차 data trust / empty state hardening.
 - Recent completed Overview task: `.aiworkspace/note/finance/tasks/active/overview-final-cleanup-v33-v36-20260629/`
 - 목적: Overview refactor의 남은 1순위~4순위 cleanup을 닫고, UI component body / dashboard wrapper / old service facade / Data Health scope ambiguity를 정리한다.
 - 주요 변경: renderer body를 `app/web/overview/components/*`로 옮기고 `overview_ui_components.py`를 thin facade로 축소했다. `overview_dashboard.py`는 `render_overview_dashboard`만 re-export한다. `app/services/overview_market_intelligence.py`는 삭제했고 internal imports는 `app/services/overview/*` domain modules로 이동했다. `data_health.py`는 unused import를 제거하고 direct Market Context vs reference context `Scope` / coverage counts를 제공한다.

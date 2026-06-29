@@ -31,6 +31,7 @@ Last Verified: 2026-06-02
 | --- | --- |
 | `active/2026-06-futures-monitor-ui-benchmark/` | Workspace > Overview > Futures Monitor를 완성형 제품 UI로 재설계하기 위한 TradingView / Koyfin / IBKR / Datadog / Grafana / Stripe / Linear / Toss Securities 벤치마킹과 구현 가이드 |
 | `active/2026-06-market-context-visual-benchmark/` | Overview > Market Context를 카드 중심이 아닌 금융 UI pattern으로 재정리하기 위한 Koyfin / TradingView / OpenBB / Bloomberg 벤치마킹과 layout 선택지 |
+| `active/2026-06-market-movers-redesign-v2-benchmark/` | Overview > Market Movers를 metric-card / prototype pattern에서 market-board형 변동 종목 UX로 재설계하기 위한 Toss Securities / Upbit / StockAnalysis / TradingView / Finviz benchmark |
 | `active/2026-06-sub-dev-overview-macro-base/` | sub-dev worktree에서 Overview / Ingestion / Operations 데이터 분석, 매크로 context, 시각화 개선 후보를 개발 착수 전 정리하기 위한 제품 audit / benchmark / 기능 후보 가이드 |
 | `active/backtest-direction-reset-research-20260612/` | Backtest Analysis와 strategy maturity 흐름을 panel 확장 중심이 아니라 실행, replay, validation handoff 중심으로 재정의하는 제품 방향 reset research |
 | `active/2026-06-backtest-strategy-direction/` | Backtest 전략군의 성숙도, 장단점, 약점 matrix, 3차 구현 세션 handoff를 정리하는 내부 방향성 research |

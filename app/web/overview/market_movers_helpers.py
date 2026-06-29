@@ -85,13 +85,23 @@ MARKET_MOVER_PERIOD_LABELS = {
     "yearly": "Yearly",
 }
 MARKET_MOVER_MODE_LABELS = {
-    "top_gainers": "Top Gainers",
-    "top_losers": "Top Losers",
-    "volume_leaders": "Volume Leaders",
-    "unusual_volume": "Unusual Volume",
-    "sector_leaders": "Sector Leaders",
+    "top_gainers": "상승",
+    "top_losers": "하락",
+    "volume_leaders": "거래량",
+    "unusual_volume": "이상 거래량",
+    "sector_leaders": "섹터",
 }
 MARKET_MOVER_MODE_ORDER = tuple(MARKET_MOVER_MODE_LABELS)
+MARKET_MOVER_RANK_SOURCE_LABELS = {
+    "Top Gainers": "상승",
+    "Top Losers": "하락",
+    "Volume Leaders": "거래량",
+    "Unusual Volume": "이상 거래량",
+    "Sector Leaders": "섹터",
+    "Return Rank": "수익률",
+    "Volume Rank": "거래량",
+    "Selected Rank": "선택 종목",
+}
 
 
 @dataclass(frozen=True)
@@ -118,6 +128,13 @@ def _market_mover_period_label(value: str) -> str:
 
 def _market_mover_mode_label(value: str) -> str:
     return MARKET_MOVER_MODE_LABELS.get(value, str(value).replace("_", " ").title())
+
+
+def _market_mover_rank_source_label(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "선택 종목"
+    return MARKET_MOVER_RANK_SOURCE_LABELS.get(text, text)
 
 
 def _normalize_market_mover_mode(value: Any) -> str:
@@ -255,7 +272,7 @@ def build_market_movers_command_strip_model(
     returnable_pct = coverage.get("returnable_pct")
     return {
         "schema_version": "market_movers_command_strip_v1",
-        "headline": "변동종목 작업대",
+        "headline": "변동 종목",
         "context": f"{coverage_label} · {period_label} · {sector_label}",
         "status_label": freshness,
         "tone": _command_strip_tone(snapshot, coverage),
@@ -271,7 +288,7 @@ def build_market_movers_command_strip_model(
                 "detail": _format_pct_detail(returnable_pct),
             },
             {"label": "Missing", "value": _format_count(coverage.get("missing_count"))},
-            {"label": "Mode", "value": exploration_mode, "detail": f"Top {controls.top_n}"},
+            {"label": "보기", "value": exploration_mode, "detail": f"Top {controls.top_n}"},
         ],
     }
 
@@ -697,20 +714,20 @@ def _select_market_mover_mode(container: Any) -> str:
     segmented_control = getattr(container, "segmented_control", None)
     if callable(segmented_control):
         selected = segmented_control(
-            "탐색 모드",
+            "랭킹 기준",
             list(MARKET_MOVER_MODE_ORDER),
             key=key,
             format_func=_market_mover_mode_label,
-            help="저장된 read model 안에서 상승, 하락, 거래량, 이상거래량, 섹터 흐름을 전환합니다.",
+            help="저장된 read model 안에서 상승, 하락, 거래량, 이상 거래량, 섹터 흐름을 전환합니다.",
         )
     else:
         selected = container.radio(
-            "탐색 모드",
+            "랭킹 기준",
             list(MARKET_MOVER_MODE_ORDER),
             key=key,
             format_func=_market_mover_mode_label,
             horizontal=True,
-            help="저장된 read model 안에서 상승, 하락, 거래량, 이상거래량, 섹터 흐름을 전환합니다.",
+            help="저장된 read model 안에서 상승, 하락, 거래량, 이상 거래량, 섹터 흐름을 전환합니다.",
         )
     return _normalize_market_mover_mode(selected)
 
@@ -799,7 +816,7 @@ def _render_market_movers_controls() -> MarketMoverControls:
 
 
 def render_market_movers_header() -> None:
-    st.markdown("### Market Movers")
+    st.markdown("### 변동 종목")
 
 
 def render_market_movers_controls() -> MarketMoverControls:
@@ -983,7 +1000,7 @@ def _market_mover_view_model(snapshot: dict[str, Any], mode: Any) -> dict[str, A
             "kind": "symbol",
             "sort_basis": "Legacy ranking rows",
             "rows": fallback_rows,
-            "empty_reason": "No rows are available for this exploration mode.",
+            "empty_reason": "No rows are available for this ranking view.",
             "boundary_note": "Context-only ranking view.",
         }
 
@@ -993,11 +1010,11 @@ def _market_mover_view_model(snapshot: dict[str, Any], mode: Any) -> dict[str, A
     status = str(model.get("status") or ("OK" if not rows.empty else "INSUFFICIENT_DATA"))
     return {
         "mode": normalized_mode,
-        "label": str(model.get("label") or _market_mover_mode_label(normalized_mode)),
+        "label": _market_mover_mode_label(normalized_mode),
         "kind": str(model.get("kind") or "symbol"),
         "status": status,
         "sort_basis": str(model.get("sort_basis") or ""),
-        "empty_reason": str(model.get("empty_reason") or "No rows are available for this exploration mode."),
+        "empty_reason": str(model.get("empty_reason") or "No rows are available for this ranking view."),
         "boundary_note": str(model.get("boundary_note") or "Context-only ranking view."),
         "rows": rows,
     }
@@ -1594,7 +1611,7 @@ def _market_mover_detail_panel_model(
     peer_rows: pd.DataFrame,
 ) -> dict[str, Any]:
     mover = dict(selected.get("mover") or {})
-    rank_source = str(selected.get("rank_source") or "Selected Rank")
+    rank_source = _market_mover_rank_source_label(selected.get("rank_source") or "Selected Rank")
     read_model = build_market_mover_why_it_moved_read_model(
         mover=mover,
         period=period,
@@ -1616,7 +1633,7 @@ def _market_mover_detail_panel_model(
     )
     context_rows = _detail_rows(
         [
-            ("탐색 모드", context.get("Rank Type") or rank_source),
+            ("랭킹 기준", context.get("Rank Type") or rank_source),
             ("순위", context.get("Rank") or selected.get("rank") or "-"),
             ("기간", context.get("Period") or _market_mover_period_label(period)),
             ("Coverage", context.get("Coverage") or _coverage_label(coverage)),

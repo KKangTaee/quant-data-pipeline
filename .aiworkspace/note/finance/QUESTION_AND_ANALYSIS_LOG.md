@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-29 - Market Movers redesign must benchmark market boards, not rename cards
+
+- User request: 사용자가 기존 Market Movers 1~5차 결과가 지난번과 달라 보이지 않고, 금융사이트 / 토스증권 / 업비트 같은 실제 UI를 파악한 완성본인지 강하게 문제제기한 뒤 1~6차 단계 진행을 승인함.
+- Interpreted goal: 이전 `작업대`, `탐색 모드`, metric-card 중심 패턴을 그대로 확장하지 말고, market mover 화면의 기본 문법을 ranking intent / market board density / sector breadth / selected-symbol investigation / trust strip으로 재정의해야 한다.
+- Analysis result: 1차는 새 기능 추가가 아니라 화면 언어 reset이다. user-facing mode는 `랭킹 기준`, option은 `상승`, `하락`, `거래량`, `이상 거래량`, `섹터`가 되어야 하며 내부 용어는 화면 전면에서 빠져야 한다.
+- Follow-up: 2차는 metric-card 중심 본문을 compact mover tape / list로 재구성하고, 3차~6차는 chart workspace, sector breadth map, investigation pane, data trust UX를 순서대로 다룬다.
+
 ### 2026-06-29 - GTAA interval should mean rebalance cadence, not result-row thinning
 
 - User request: GTAA `interval=4` 실행이 마지막 리밸런싱일 `2026-02-27`에서 멈추지 않고 현재 탐색 종료일 기준으로 평가되길 원했고, 비리밸런싱월에도 새 종목 선택 신호는 보고 싶다고 확인함.
