@@ -95,6 +95,19 @@ def _risk_on_momentum_fixture() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
     return pd.DataFrame(price_rows), pd.DataFrame(statement_rows), macro_scores
 
 
+class BacktestPresetCatalogContractTests(unittest.TestCase):
+    def test_gtaa_spy_low_mdd_top3_preset_is_available(self) -> None:
+        from app.web.backtest_common import GTAA_PRESETS
+
+        preset_name = "GTAA SPY Low-MDD Style Top-3"
+
+        self.assertIn(preset_name, GTAA_PRESETS)
+        self.assertEqual(
+            GTAA_PRESETS[preset_name],
+            ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"],
+        )
+
+
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:
         from finance.indicators import add_atr

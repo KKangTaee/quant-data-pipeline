@@ -155,6 +155,7 @@ GTAA_QQQ_QUAL_USMV_XLE_IAU_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA",
 GTAA_U3_COMMODITY_TICKERS = ["SPY", "QQQ", "XLE", "COMT", "IAU", "GLD", "QUAL", "USMV", "TIP", "TLT", "IEF", "LQD", "VNQ", "EFA", "MTUM"]
 GTAA_U1_OFFENSIVE_TICKERS = ["SPY", "QQQ", "MTUM", "QUAL", "USMV", "VUG", "VTV", "RSP", "IAU", "XLE", "TIP", "TLT", "IEF", "LQD", "VNQ", "EFA"]
 GTAA_U5_SMALLCAP_VALUE_TICKERS = ["SPY", "QQQ", "IWM", "IWN", "IWD", "MTUM", "QUAL", "USMV", "EFA", "VNQ", "TLT", "IEF", "LQD", "IAU", "XLE", "TIP"]
+GTAA_SPY_LOW_MDD_STYLE_TOP3_TICKERS = ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"]
 
 GTAA_PRESETS = {
     "GTAA Universe": GTAA_DEFAULT_TICKERS,
@@ -164,6 +165,7 @@ GTAA_PRESETS = {
     "GTAA Universe (U3 Commodity Candidate Base)": GTAA_U3_COMMODITY_TICKERS,
     "GTAA Universe (U1 Offensive Candidate Base)": GTAA_U1_OFFENSIVE_TICKERS,
     "GTAA Universe (U5 Smallcap Value Candidate Base)": GTAA_U5_SMALLCAP_VALUE_TICKERS,
+    "GTAA SPY Low-MDD Style Top-3": GTAA_SPY_LOW_MDD_STYLE_TOP3_TICKERS,
 }
 
 GLOBAL_RELATIVE_STRENGTH_PRESETS = {
@@ -1137,6 +1139,11 @@ def _render_gtaa_preset_note(preset_name: str | None) -> None:
         st.caption("Verified Phase 12 candidate base: growth + quality + style diversification mix. Best validated contract so far was `month_end`, `top=2`, `interval=3`, `Score Horizons=1/3/6/12`.")
     elif preset_name == "GTAA Universe (U5 Smallcap Value Candidate Base)":
         st.caption("Verified Phase 12 candidate base: smallcap/value-aware defensive mix. Best validated contract so far was `month_end`, `top=3`, `interval=3`, `Score Horizons=1/3/6/12`.")
+    elif preset_name == "GTAA SPY Low-MDD Style Top-3":
+        st.caption(
+            "Candidate Library reference: validated with `top=3`, `interval=3`, "
+            "`Score Horizons=1M/6M`, `MA250`, `cash_only`, and `Benchmark=SPY`."
+        )
 
 
 def _render_gtaa_universe_inputs(
