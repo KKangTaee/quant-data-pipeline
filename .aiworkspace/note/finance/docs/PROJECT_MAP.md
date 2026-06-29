@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-06-25
 
 ## Project Summary
 
@@ -12,7 +12,7 @@ Last Verified: 2026-06-09
 - Data / macro / sentiment / futures는 `finance/data/* -> MySQL -> finance/loaders/*` 흐름을 유지한다.
 - Backtest strategy engine과 daily swing research lane은 `finance/*`, `app/runtime/*`, `app/services/*`가 소유하고, Streamlit UI는 payload / render / session state에 집중한다.
 - Practical Validation / Final Review / Portfolio Monitoring은 compact evidence와 read-only service model을 공유하되, approval / broker / auto rebalance 경계는 넘지 않는다.
-- Overview의 Sentiment, Futures Monitor, Why It Moved는 context / investigation surface이며 validation gate나 monitoring signal을 만들지 않는다.
+- Overview의 Sentiment, Futures Macro, Why It Moved는 context / investigation surface이며 validation gate나 monitoring signal을 만들지 않는다.
 
 ## Top-Level Structure
 
@@ -54,23 +54,14 @@ Last Verified: 2026-06-09
 | Workspace > Ingestion read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
 | Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/pages/backtest.py` |
-| Strategy catalog service | `app/services/backtest_strategy_catalog.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
-| Backtest Analysis research board service | `app/services/backtest_analysis_research_board.py` |
-| Backtest strategy evidence inventory service | `app/services/backtest_strategy_evidence_inventory.py` |
-| Backtest strict annual / ETF bridge service | `app/services/backtest_strategy_bridge.py` |
-| Backtest Risk-On Momentum governance service | `app/services/backtest_risk_on_governance.py` |
-| Backtest ETF evidence expansion service | `app/services/backtest_etf_evidence_expansion.py` |
-| Backtest ETF current-anchor workbench service | `app/services/backtest_etf_current_anchor.py` |
-| Backtest ETF rerun matrix workbench service | `app/services/backtest_etf_rerun_matrix.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
 | Reference contextual help renderer | `app/web/reference_contextual_help.py` |
-| Strategy catalog web compatibility wrapper | `app/web/backtest_strategy_catalog.py` |
 | Backtest Compare visual components | `app/web/backtest_compare_components.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and surface-aware read-only CNN / AAII market sentiment context overlay |
 | Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |
@@ -88,15 +79,22 @@ Last Verified: 2026-06-09
 | Data coverage audit service | `app/services/backtest_data_coverage_audit.py` |
 | Backtest realism audit service | `app/services/backtest_realism_audit.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
-| Overview market intelligence service | `app/services/overview_market_intelligence.py` |
+| Overview dashboard render | `app/web/overview_dashboard.py` is an explicit compatibility wrapper; active page shell lives in `app/web/overview/page.py`, with primary tab entry orchestration under `app/web/overview/market_context.py`, `market_movers.py`, `futures_macro.py`, `sentiment.py`, and `events.py`, plus tab-local helper bridges in `market_context_helpers.py`, `market_movers_helpers.py`, `futures_macro_helpers.py`, `sentiment_helpers.py`, and `events_helpers.py`. Primary navigation constants / selector body live in `app/web/overview/navigation.py`. `app/web/overview/legacy_dashboard.py` was deleted in `overview-legacy-dashboard-removal-v17-v24-20260625`; active tab modules and helper modules no longer import or delegate to a legacy dashboard file. After V3, active page / helper modules import domain visual surfaces from `app/web/overview/components/` for layout, Market Context, and Events; those surfaces currently re-export renderer bodies from `app/web/overview_ui_components.py`. `Workspace > Overview` top-level deep navigation uses a selected-tab lazy renderer, not native eager `st.tabs`. The primary selector uses Streamlit internal `st.pills` state, styled as Korean-first text tabs with an active red underline rather than anchor navigation. Query-param slugs such as `?overview_tab=market-movers` and `?overview_tab=futures-macro` remain compatibility input, but the page does not render tab `<a href>` links. `Market Context` is the default selected surface and renders immediately when selected; no explicit `시장 맥락 불러오기` gate is used. Primary Overview tabs are Market Context, Market Movers, Futures Macro, Sentiment, and Events. `Futures Monitor` and `Sector / Industry` standalone tab wrappers are removed from Overview; `Futures Macro` owns stored daily futures macro diagnosis / historical validation, while sector evidence remains available inside Market Context read models and supporting service/helper functions. Data Health is handled through Market Context source / refresh evidence plus Operations / Ingestion ownership; Candidate Ops is not rendered in Overview and its old overview snapshot helpers are removed |
+| Overview market intelligence service | `app/services/overview/*` provides UI-facing domain service import surfaces for Market Context, Market Movers, Events, Sentiment, and Data Health. V4 기준 these surfaces re-export stable read-model entrypoints from the existing monolithic `app/services/overview_market_intelligence.py`, which still owns the full calculation body |
+| Overview historical analog service | `app/services/overview_market_context_analog.py`; sector leadership -> sector ETF proxy -> SPY-relative historical distribution read model. Supports selected as-of bounded replay and 5D / 20D / monthly pattern windows using existing DB prices plus current universe / sector metadata. Latest mode can receive a visible daily sector leadership snapshot from `app/web/overview_dashboard_helpers.py`, so the analog anchor sector can match the sector pressure map; selected as-of still loads a selected-date daily sector snapshot. `pattern_window` changes the similarity window, not the sector leadership source. The read model exposes requested vs effective as-of alignment, limiting symbols, basis warnings, and a bounded `overview_historical_analog_ohlcv` repair action when common daily price coverage is older than the selected date. As of `overview-futures-macro-tab-split-v1-20260624`, the default `Market Context` entry does not render historical analog controls or load this read model; it is retained as an opt-in read model / helper until a later approved surface decision. `app/web/overview_ui_components.py` still renders the broad result as compact basis summary, collapsed calculation-boundary detail, method line, summary strip, and a core 5D / 20D / 60D matrix across sector ETF / SPY / QQQ / TLT / GLD, with raw detail tables collapsed. Macro comparison remains a separate compact section and is hidden when broad analog rows are unavailable. The Macro section separates `Sector ETF vs SPY relative strength` as the broad basis from additional GLD / Rate Pressure futures conditions. FRED rates / events / sentiment hard conditioning remain disabled or excluded |
+| Overview Macro Context Cockpit read model | `app/services/overview/market_context.py` surface over `app/services/overview_market_intelligence.py` via `build_overview_macro_context_cockpit`; rendered by `app/web/overview_ui_components.py` and loaded through `app/web/overview_dashboard_helpers.py`. The default Market Context helper calls the cockpit with `include_futures_macro=False`, `include_historical_analog=False`, and direct Market Context refresh scope, so first entry reads movement, breadth, sentiment, events, and data state without running futures macro historical validation, historical analog, Top1000 / Top2000, or Futures refresh actions. Full futures macro diagnosis remains available when explicitly requested and is user-facing through `Futures Macro`. `brief_rows` is the user-facing Market Context brief sequence for movement, breadth, and event background in light mode; the full mode can include Futures/Macro backdrop. During open trading the brief can be `오늘의 시장 브리프`; during weekends / holidays it becomes `마지막 거래일 시장 브리프` and uses the previous trading date as basis. The sector pressure map normalizes provider sector aliases into the canonical 11 display sectors and should render all 11 as equal tiles; value and color, not tile size or omission, communicate pressure. Events remain in event timeline / source evidence / compatibility findings unless a future approved cause-analysis dimension changes that boundary. `refresh_plan` maps only direct Market Context resolvable or partially resolvable data issues to bounded Overview action ids; Top1000 / Top2000 and Futures refresh remain owned by Market Movers / Futures Macro or Ingestion surfaces. Non-actionable caveats and closed-session intraday elapsed-age stale states stay excluded; full Market Context refresh remains a secondary fallback limited to S&P 500 movers, sentiment, and event calendars. Top `자료 상태` should count actionable refresh items, not Events reference caveats or Data Health management meta. `context_findings` / `next_checks` remain compatibility payloads and should not be rendered as a default user-facing action checklist |
+| Overview Events / Macro Week read model | `app/services/overview/events.py` surface over `app/services/overview_market_intelligence.py` via `build_market_events_snapshot` and `build_overview_macro_week_lane`; active tab entry is `app/web/overview/events.py`, with tab-local UI glue in `app/web/overview/events_helpers.py` and visual components in `app/web/overview_ui_components.py`. Event context reads recent 7D plus upcoming rows and prioritizes FOMC / CPI / PPI / Employment / GDP over earnings for scan surfaces |
+| Overview Data Health Ingestion Handoff read model | `app/services/overview/data_health.py` surface over `app/services/overview_market_intelligence.py` via `build_overview_data_health_ingestion_handoff`; retained as a read-only helper / historical task artifact. Current user-facing Overview no longer has a `Data Health` tab; practical data-health navigation is Market Context source / refresh evidence plus `Operations > System / Data Health` / `Workspace > Ingestion` |
+| Overview Source Confidence Catalog read model | `app/services/overview/market_context.py` surface over `app/services/overview_market_intelligence.py` via `build_overview_source_confidence_catalog`; embedded in the macro cockpit model and rendered by `app/web/overview_ui_components.py`. It exposes `source_role`, `actionability`, and `counts_for_status` so direct brief sources, reference limitations, and management meta are separated. Futures source confidence is included only when the cockpit explicitly includes futures macro. Events estimate caveats are `참고 제한`; Data Health is `관리 메타`; only actionable source rows count as unresolved `자료 확인 필요` |
+| Overview IA Closeout guide | `app/services/overview/ia.py` via `load_overview_ia_closeout_model`, imported through `app/web/overview_dashboard_helpers.py` for compatibility; now documents market-context tabs plus external Data Repair ownership. Candidate Ops is no longer part of the Overview guide |
 | Overview futures monitor service | `app/services/futures_market_monitoring.py` |
-| Overview futures macro thermometer service | `app/services/futures_macro_thermometer.py` |
+| Overview futures macro thermometer service | `app/services/futures_macro_thermometer.py`; builds stored-1D futures macro score / scenario / confidence and exposes `weekly_context` from recent 5D futures moves plus Korean `evidence_reading` groups for the `Futures Macro` tab. Snapshot cache keys include the latest stored 1D futures candle marker so a newly collected daily candle invalidates stale in-process cache. The top-level `혼재된 매크로 흐름` scenario stays stable for validation compatibility, while the read model can add `sub_scenario`, `regime_hint`, and `mixed_reason` to explain mixed states such as growth weakness without safe-haven confirmation. Historical validation remains read-only context, not a prediction guarantee, trading signal, validation gate, or monitoring signal |
 | Overview futures macro historical validation service | `app/services/futures_macro_validation.py` |
 | Overview market intelligence ingestion | `finance/data/market_intelligence.py` |
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`; execution-first strategy run / compare / candidate creation wrapper. Contextual Reference help and 3A~4B evidence / governance / ETF workbench panels are available only behind the `전략 개발 참고` advanced reference control |
+| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help entry point |
 | Practical Validation | `app/web/backtest_practical_validation.py`; includes contextual Reference help entry point |
 | Practical Validation UI components | `app/web/backtest_practical_validation_components.py` |
 | Final Review | `app/web/backtest_final_review.py`; includes contextual Reference help entry point |
@@ -119,7 +117,7 @@ Last Verified: 2026-06-09
 | Backtest real-money / readiness runtime helpers | `app/runtime/backtest_real_money.py`; compatibility exports remain in `app/runtime/backtest.py` |
 | Backtest strict quality / value runtime wrappers | `app/runtime/backtest_strict.py`; compatibility exports remain in `app/runtime/backtest.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
-| Service contract tests | `tests/test_service_contracts.py` |
+| Service contract tests | `tests/test_service_contracts.py`; includes Overview structure contracts for active page / tab modules, component surfaces, service surfaces, lazy selected rendering, and UI / service / data import boundary guards |
 
 ## Practical Validation Core Files
 
@@ -198,8 +196,8 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 
 | Situation | Start Here |
 |---|---|
-| Overview market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
-| S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py` |
+| Overview macro context cockpit / historical analog / market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview/`, `app/services/overview_market_intelligence.py`, `app/services/overview_market_context_analog.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview/`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
+| S&P 500 / Nasdaq-listed universe, intraday snapshot, market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/symbol_directory.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview_market_intelligence.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare_components.py` |
 | Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest.py` compatibility facade, `app/web/backtest_single_forms.py`, `app/web/backtest_result_display.py` |

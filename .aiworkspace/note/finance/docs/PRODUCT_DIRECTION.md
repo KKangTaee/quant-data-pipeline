@@ -23,7 +23,7 @@ Last Verified: 2026-06-08
 ## Target Experience
 
 - 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
-- Workspace > Overview는 Market Movers, Why It Moved, Sector / Industry, Futures Monitor, Sentiment, Events, Data Health로 시장 context를 보여준다.
+- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Sector / Industry, Futures Monitor, Sentiment, Events로 시장 context를 보여준다. Data Health는 Market Context의 source / refresh evidence와 Operations / Ingestion 소유 흐름으로 분리한다.
 - Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
 - Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.
 - Operations > Portfolio Monitoring은 사용자가 만든 monitoring portfolio에 최종 선정 후보를 담고, 명시적 scenario update 후 성과와 review signal을 read-only로 확인한다.

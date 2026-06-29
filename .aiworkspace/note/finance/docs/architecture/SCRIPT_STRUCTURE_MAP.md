@@ -33,13 +33,19 @@
 | `app/services/reference_glossary_catalog.py` | `Reference > Guides`와 `Reference > Glossary`가 공유하는 Streamlit-free concept dictionary, markdown glossary section parser, search helper |
 | `app/services/reference_contextual_help.py` | 주요 workflow 화면이 공유하는 Streamlit-free contextual Reference help catalog, surface lookup helper, Glossary / link boundary drift report |
 | `app/web/ops_review.py` | `Operations > System / Data Health`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Why It Moved, Sector / Industry, Sentiment, Events, Data Health, Candidate Ops tab render. Market session banner, daily snapshot refresh action bar, browser-session auto refresh heartbeat, Market Movers manual investigation panel, Sector / Industry ranking/trend, Sentiment context, Events view routing을 조정. 수집 action은 `app/jobs/overview_actions.py` facade를 호출한다 |
-| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, cached market intelligence service wrapper |
-| `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
-| `app/web/backtest_strategy_catalog.py` | Strategy catalog compatibility wrapper. canonical Streamlit-free catalog는 `app/services/backtest_strategy_catalog.py`가 소유한다 |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`의 explicit compatibility wrapper. 기존 import path와 일부 private helper contract를 필요한 이름만 re-export하고 active `render_overview_dashboard`는 `app/web/overview/page.py`로 위임한다 |
+| `app/web/overview/page.py` | `Workspace > Overview` active page shell. title, market session banner, selected-tab lazy dispatch를 관리하고 primary tab entry modules로 위임한다 |
+| `app/web/overview/navigation.py` | Overview primary navigation constants, query-param slug mapping, `st.pills` selector render, selected-tab dispatch helper |
+| `app/web/overview/market_context.py` / `market_movers.py` / `futures_macro.py` / `sentiment.py` / `events.py` | Overview primary tab entrypoint modules. Active path는 선택된 tab의 user flow order만 소유하고, tab-local Streamlit glue는 각 `*_helpers.py`로 위임한다 |
+| `app/web/overview/market_context_helpers.py` / `market_movers_helpers.py` / `futures_macro_helpers.py` / `sentiment_helpers.py` / `events_helpers.py` | Overview primary tab helper modules. Header/control/refresh branch/snapshot detail/tabpanel glue를 tab별로 소유하며, action 실행은 `app/jobs/overview_actions.py`, read-model loading은 service/helper boundary를 통해 수행한다 |
+| `app/web/overview/components/*` | Overview active page / tab이 쓰는 domain visual component import surface. V3 기준 layout, Market Context, Events surface를 제공하며 실제 renderer body는 아직 `app/web/overview_ui_components.py`에 둔다 |
+| `app/web/overview/legacy_dashboard.py` | 삭제됨. V17-V24에서 남은 helper body를 tab-local helper modules로 옮기고 compatibility wrapper를 explicit export로 바꾼 뒤 파일을 제거했다 |
+| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 cached market intelligence service wrapper. Market Context, Market Movers, Events, Sentiment, Data Health, IA read model service imports를 제공한다. Candidate Ops overview snapshot helpers는 V9에서 제거했고 Candidate Ops는 Overview tab이 아니다 |
+| `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner renderer body. Active Overview page / tab은 가능한 경우 `app/web/overview/components/*` domain surface를 통해 이 renderer를 호출한다 |
+| `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
-| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Portfolio Mix Builder를 먼저 렌더링하고, Reference help와 Strategy Evidence / Bridge / Governance / ETF evidence / current-anchor / rerun matrix 패널은 `전략 개발 참고` advanced control 뒤에 숨기는 wrapper |
+| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
@@ -71,15 +77,7 @@
 | `app/services/ingestion_diagnostics.py` | Streamlit-free Ingestion read-only diagnostics facade. Price window preflight, Price Stale Diagnosis, Statement Coverage Diagnosis, Statement PIT Inspection의 loader/job/source inspection calls를 UI 대신 담당 |
 | `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. multi-strategy execution loop, elapsed timing, input/data/system error normalization을 담당 |
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. strategy별 default parameter, preset/manual universe resolution, runtime dispatch, runner signature filtering을 담당 |
-| `app/services/backtest_strategy_catalog.py` | Streamlit-free strategy display name, strategy key, family variant 선택 매핑의 canonical owner |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. strategy data trust row와 weighted component contribution view를 담당 |
-| `app/services/backtest_analysis_research_board.py` | Streamlit-free Backtest Analysis research/reference board placement service. Reference help와 3A~4B evidence / governance / workbench 항목을 분류하고 기본 숨김 정책을 제공한다 |
-| `app/services/backtest_strategy_evidence_inventory.py` | Streamlit-free strategy evidence inventory read model. catalog strategy별 maturity / evidence anchor / weakness / next action을 read-only로 제공하며 registry / saved setup / runtime / DB를 변경하지 않는다 |
-| `app/services/backtest_strategy_bridge.py` | Streamlit-free Strict Annual + GTAA / Equal Weight bridge read model. evidence-mature group의 role / target use / Practical Validation evidence / next workflow를 read-only로 제공한다 |
-| `app/services/backtest_risk_on_governance.py` | Streamlit-free Risk-On Momentum 5D governance read model. Daily Swing research evidence, deferred Practical Validation / Final Review / Portfolio Monitoring modules, artifact boundary, and next workflow를 read-only로 제공한다 |
-| `app/services/backtest_etf_evidence_expansion.py` | Streamlit-free ETF evidence expansion read model. Global Relative Strength / Risk Parity Trend / Dual Momentum의 current anchor / near miss / not-ready reason / required evidence / next workflow를 read-only로 제공한다 |
-| `app/services/backtest_etf_current_anchor.py` | Streamlit-free ETF current-anchor workbench read model. 기존 run history와 Practical Validation source handoff row를 읽어 GRS / Risk Parity Trend / Dual Momentum의 latest run / source evidence, missing evidence, recommended next action을 read-only로 제공한다 |
-| `app/services/backtest_etf_rerun_matrix.py` | Streamlit-free ETF rerun matrix workbench service. Global Relative Strength / Risk Parity Trend / Dual Momentum의 session-only scenario plan과 선택 전략 matrix 실행 결과를 compact evidence row로 제공하며 workflow artifact write는 하지 않는다 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. compared strategy result bundle을 월별 weighted result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun, weighted bundle 생성, replay source / history context 조립을 담당 |
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. result 생성 wrapper, selection source / validation result append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration, Practical Validation / Final Review / Portfolio Monitoring의 surface-aware CNN / AAII market sentiment context overlay를 담당 |
@@ -97,7 +95,8 @@
 | `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Practical Validation의 component return matrix, correlation, max risk contribution proxy, drop-one dependency, storage boundary evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Practical Validation의 proposal role, target weight, validation profile, role concentration, profile intent, weight reason evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review candidate board priority / decision cockpit / decision record guide / saved decision review / final decision status / investability evidence packet / profile-aware gate policy snapshot / selected-route gate / saved decision table row / Selected Dashboard evidence check row / Decision Dossier markdown read model과 selected decision source consistency contract를 담당. Validation Efficacy Audit의 walk-forward / OOS / regime non-PASS row를 gate policy evidence에 병합한다 |
-| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, Why It Moved manual investigation read model / session-only compact metadata helper, Sector / Industry ranking/trend/ticker leaders, market event calendar payload, collection ops snapshot을 담당 |
+| `app/services/overview/*` | Overview UI-facing domain service import surfaces. V8 기준 Market Context, Market Movers, Events, Sentiment, Data Health read-model entrypoint와 IA closeout read model을 도메인별로 제공한다. 대부분의 market intelligence 계산 body는 아직 `app/services/overview_market_intelligence.py`에 둔다 |
+| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service implementation body. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, Why It Moved manual investigation read model / session-only compact metadata helper, Sector / Industry ranking/trend/ticker leaders, market event calendar payload, collection ops snapshot을 담당 |
 
 ## App / Runtime
 
@@ -123,7 +122,7 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion`과 승인된 action facade에서 사용하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar job을 표준 `JobResult`로 감싼다 |
-| `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 market intraday snapshot, futures OHLCV, events, sentiment, quote-gap diagnostics, browser-session auto refresh, run-history append 호출을 모은다 |
+| `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 market intraday snapshot, futures OHLCV, events, sentiment, quote-gap diagnostics, browser-session auto refresh, run-history append 호출을 모은다. Market Context refresh bundle은 S&P 500 movers, sentiment, event calendars만 소유하며 Top1000 / Top2000 / Futures refresh는 전용 Market Movers / Futures Macro / Ingestion 흐름에 둔다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리 |
 
 ## Finance Core
@@ -188,7 +187,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
+| `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, Overview structure / boundary guard, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
 
 ## 같이 볼 상세 문서
 

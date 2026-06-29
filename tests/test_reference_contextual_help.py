@@ -77,6 +77,19 @@ class ReferenceContextualHelpContractTests(unittest.TestCase):
         self.assertIn("st.page_link", source)
         self.assertNotIn("]({target})", source)
 
+    def test_streamlit_shell_does_not_import_contextual_help_config_symbol_directly(self) -> None:
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+
+        self.assertNotIn(
+            "from app.web.reference_contextual_help import configure_reference_contextual_help_page_targets",
+            source,
+        )
+        self.assertIn("from app.web import reference_contextual_help as reference_contextual_help_module", source)
+        self.assertIn(
+            'getattr(reference_contextual_help_module, "configure_reference_contextual_help_page_targets"',
+            source,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

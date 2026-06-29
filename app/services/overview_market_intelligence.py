@@ -34,10 +34,19 @@ GROUP_TREND_PERIODS = {
 MARKET_INTRADAY_REFRESH_MINUTES = 5
 MARKET_INTRADAY_STALE_MINUTES = 15
 EVENT_ESTIMATE_STALE_DAYS = 14
+EVENT_RECENT_WINDOW_DAYS = 7
+MAJOR_MACRO_EVENT_TYPES = {
+    "FOMC_MEETING",
+    "MACRO_CPI",
+    "MACRO_PPI",
+    "MACRO_EMPLOYMENT",
+    "MACRO_GDP",
+}
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000 by market cap",
     "TOP2000": "Top 2000 by market cap",
+    "NASDAQ": "Nasdaq-listed current snapshot",
 }
 MOVERS_COLUMNS = [
     "Rank",
@@ -119,6 +128,12 @@ MISSING_COLUMNS = [
     "Industry",
     "Reason",
     "Recommended Action",
+    "Likely Cause",
+    "Evidence Summary",
+    "Next Check",
+    "Listing Evidence",
+    "Profile Freshness",
+    "Market Data Issue",
     "Start Date",
     "End Date",
     "Start Price",
@@ -179,6 +194,7 @@ GROUP_TICKER_LEADER_COLUMNS = [
 EVENT_COLUMNS = [
     "Date",
     "Days Until",
+    "Window",
     "Type",
     "Symbol",
     "Title",
@@ -481,6 +497,8 @@ def _universe_limit_from_code(universe_code: str, fallback: int) -> int:
         return 2000
     if universe_code == "TOP1000":
         return 1000
+    if universe_code == "NASDAQ":
+        return max(5000, int(fallback or 0))
     return fallback
 
 
@@ -517,6 +535,7 @@ def _empty_movers_snapshot(
             "price_mode": "Unavailable",
         },
         "warnings": [message] if message else [],
+        "message": message,
     }
 
 
@@ -573,13 +592,24 @@ def _empty_events_snapshot(
         "coverage": {
             "event_count": 0,
             "next_event_date": None,
+            "latest_recent_event_date": None,
             "latest_collected_at": None,
             "source_count": 0,
             "official_count": 0,
             "estimate_count": 0,
+            "estimate_only_count": 0,
             "cross_checked_count": 0,
             "not_confirmed_count": 0,
             "stale_estimate_count": 0,
+            "action_required_count": 0,
+            "high_importance_count": 0,
+            "needs_review_count": 0,
+            "this_week_count": 0,
+            "next_30d_count": 0,
+            "recent_event_count": 0,
+            "upcoming_event_count": 0,
+            "recent_high_importance_count": 0,
+            "upcoming_high_importance_count": 0,
             "superseded_count": 0,
         },
         "warnings": [message] if message else [],
@@ -1133,15 +1163,22 @@ def build_market_sentiment_snapshot(
     }
 
 
-def _query_latest_raw_date(query_fn: QueryFn) -> str | None:
+def _query_latest_raw_date(query_fn: QueryFn, *, end_date: str | None = None) -> str | None:
+    conditions = ["timeframe = %s"]
+    params: list[Any] = ["1d"]
+    if end_date:
+        conditions.append("`date` <= %s")
+        params.append(end_date)
     rows = query_fn(
         "finance_price",
-        """
-        SELECT MAX(`date`) AS latest_raw_date
-        FROM nyse_price_history
-        WHERE timeframe = %s
+        f"""
+        SELECT `date` AS latest_raw_date
+        FROM nyse_price_history FORCE INDEX (ix_date)
+        WHERE {" AND ".join(conditions)}
+        ORDER BY `date` DESC
+        LIMIT 1
         """,
-        ["1d"],
+        params,
     )
     if not rows:
         return None
@@ -1153,8 +1190,9 @@ def _eligible_market_dates(
     min_price_rows: int,
     limit: int,
     query_fn: QueryFn,
+    end_date: str | None = None,
 ) -> tuple[str | None, list[dict[str, Any]]]:
-    latest_raw_date = _query_latest_raw_date(query_fn)
+    latest_raw_date = _query_latest_raw_date(query_fn, end_date=end_date)
     bounded_since: str | None = None
     latest_raw_ts = pd.Timestamp(latest_raw_date) if latest_raw_date else pd.NaT
     if not pd.isna(latest_raw_ts):
@@ -1167,6 +1205,9 @@ def _eligible_market_dates(
         if since:
             conditions.append("`date` >= %s")
             params.append(since)
+        if end_date:
+            conditions.append("`date` <= %s")
+            params.append(end_date)
         params.extend([int(min_price_rows), int(limit)])
         return query_fn(
             "finance_price",
@@ -1202,6 +1243,7 @@ def resolve_effective_market_dates(
     *,
     period: str = "daily",
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
@@ -1212,23 +1254,30 @@ def resolve_effective_market_dates(
 
     query = query_fn or _default_query
     offset = VALID_PERIODS[normalized_period]
+    requested_as_of = _iso_date(as_of_date)
     latest_raw_date, eligible = _eligible_market_dates(
         min_price_rows=min_price_rows,
         limit=(offset * 2) + 1,
         query_fn=query,
+        end_date=requested_as_of,
     )
     if len(eligible) <= offset:
         return {
             "status": "INSUFFICIENT_DATA",
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
+            "requested_as_of": requested_as_of,
             "start_date": None,
             "end_date": eligible[0]["date"] if eligible else None,
             "latest_raw_date": latest_raw_date,
             "effective_end_date": eligible[0]["date"] if eligible else None,
             "eligible_dates": eligible,
             "stale_days": _stale_days(eligible[0]["date"] if eligible else None, today=today),
-            "message": "Not enough eligible daily price rows to resolve the requested period.",
+            "message": (
+                "Not enough eligible daily price rows to resolve the requested period at or before the selected as-of date."
+                if requested_as_of
+                else "Not enough eligible daily price rows to resolve the requested period."
+            ),
         }
 
     end_row = eligible[0]
@@ -1237,6 +1286,7 @@ def resolve_effective_market_dates(
         "status": "OK",
         "period": normalized_period,
         "period_label": PERIOD_LABELS[normalized_period],
+        "requested_as_of": requested_as_of,
         "start_date": start_row["date"],
         "end_date": end_row["date"],
         "latest_raw_date": latest_raw_date,
@@ -1251,6 +1301,7 @@ def resolve_group_trend_market_dates(
     *,
     period: str = "monthly",
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
@@ -1263,10 +1314,12 @@ def resolve_group_trend_market_dates(
     spec = GROUP_TREND_PERIODS[normalized_period]
     step = int(spec["step"])
     requested_windows = int(spec["windows"])
+    requested_as_of = _iso_date(as_of_date)
     latest_raw_date, eligible = _eligible_market_dates(
         min_price_rows=min_price_rows,
         limit=(step * requested_windows) + 1,
         query_fn=query,
+        end_date=requested_as_of,
     )
     available_windows = min(requested_windows, max(0, (len(eligible) - 1) // step))
     if available_windows <= 0:
@@ -1275,6 +1328,7 @@ def resolve_group_trend_market_dates(
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
             "trend_window_label": spec["window_label"],
+            "requested_as_of": requested_as_of,
             "start_date": None,
             "end_date": eligible[0]["date"] if eligible else None,
             "latest_raw_date": latest_raw_date,
@@ -1282,7 +1336,11 @@ def resolve_group_trend_market_dates(
             "eligible_dates": eligible,
             "windows": [],
             "stale_days": _stale_days(eligible[0]["date"] if eligible else None, today=today),
-            "message": "Not enough eligible daily price rows to resolve group trend windows.",
+            "message": (
+                "Not enough eligible daily price rows to resolve group trend windows at or before the selected as-of date."
+                if requested_as_of
+                else "Not enough eligible daily price rows to resolve group trend windows."
+            ),
         }
 
     windows: list[dict[str, Any]] = []
@@ -1304,6 +1362,7 @@ def resolve_group_trend_market_dates(
         "period": normalized_period,
         "period_label": PERIOD_LABELS[normalized_period],
         "trend_window_label": spec["window_label"],
+        "requested_as_of": requested_as_of,
         "start_date": latest_window["start_date"],
         "end_date": latest_window["end_date"],
         "latest_raw_date": latest_raw_date,
@@ -1339,6 +1398,7 @@ def _load_universe(
                 COALESCE(p.sector, m.sector) AS sector,
                 COALESCE(p.industry, m.industry) AS industry,
                 p.market_cap,
+                p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
                 p.last_collected_at,
@@ -1360,6 +1420,65 @@ def _load_universe(
         )
         return _filter_sector(rows, sector)
 
+    if universe_code == "NASDAQ":
+        rows = query_fn(
+            "finance_meta",
+            """
+            SELECT
+                l.symbol,
+                COALESCE(NULLIF(p.long_name, ''), NULLIF(l.name, ''), s.name) AS long_name,
+                p.sector,
+                p.industry,
+                p.market_cap,
+                p.exchange AS profile_exchange,
+                p.status,
+                p.error_msg,
+                p.last_collected_at,
+                l.event_date AS universe_event_date,
+                l.collected_at AS universe_collected_at,
+                l.source AS universe_source,
+                l.source_ref AS universe_source_url,
+                l.source_type AS universe_source_type,
+                l.coverage_status AS universe_coverage_status,
+                l.event_type AS universe_event_type,
+                l.listing_status AS universe_listing_status
+            FROM nyse_symbol_lifecycle l
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = l.symbol
+             AND p.kind = l.kind
+            LEFT JOIN nyse_stock s
+              ON s.symbol = l.symbol
+            WHERE l.source = %s
+              AND l.source_type = %s
+              AND l.event_type = %s
+              AND l.kind = %s
+              AND l.listing_status = %s
+              AND COALESCE(l.event_date, DATE(l.collected_at)) = (
+                    SELECT MAX(COALESCE(event_date, DATE(collected_at)))
+                    FROM nyse_symbol_lifecycle
+                    WHERE source = %s
+                      AND source_type = %s
+                      AND event_type = %s
+                      AND kind = %s
+                      AND listing_status = %s
+              )
+            ORDER BY COALESCE(p.market_cap, 0) DESC, l.symbol ASC
+            """,
+            [
+                "nasdaq_symdir_nasdaqlisted",
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+                "nasdaq_symdir_nasdaqlisted",
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+            ],
+        )
+        return _filter_sector(rows, sector)
+
     return _filter_sector(
         query_fn(
             "finance_meta",
@@ -1370,6 +1489,7 @@ def _load_universe(
                 p.sector,
                 p.industry,
                 p.market_cap,
+                p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
                 p.last_collected_at,
@@ -1550,6 +1670,106 @@ def _profile_collected_at(item: dict[str, Any]) -> str | None:
     return _display_datetime(item.get("last_collected_at"))
 
 
+def _profile_freshness_summary(row: dict[str, Any]) -> str:
+    parts: list[str] = []
+    status = str(row.get("Profile Status") or "").strip()
+    if status and status != "-":
+        parts.append(f"Profile status {status}")
+    exchange = str(row.get("Profile Exchange") or row.get("profile_exchange") or "").strip()
+    if exchange and exchange != "-":
+        parts.append(f"exchange {exchange}")
+    collected = str(row.get("Profile Collected At") or "").strip()
+    if collected and collected != "-":
+        parts.append(f"collected {collected}")
+    error = str(row.get("Profile Error") or "").strip()
+    if error and error != "-":
+        parts.append(f"error: {error}")
+    return "; ".join(parts) if parts else "No profile freshness evidence in current read model."
+
+
+def _format_listing_evidence(evidence: dict[str, Any] | None) -> str:
+    if not evidence:
+        return "No lifecycle evidence found in DB."
+    source = evidence.get("source") or "-"
+    source_type = evidence.get("source_type") or "-"
+    event_type = evidence.get("event_type") or "-"
+    event_date = _iso_date(evidence.get("event_date")) or "-"
+    coverage_status = evidence.get("coverage_status") or "-"
+    listing_status = evidence.get("listing_status") or "-"
+    if str(event_type).lower() == "delisting" or str(source_type).lower() == "delisting_feed":
+        return (
+            f"{source} {source_type} {event_type} event_date={event_date}; "
+            "delisting evidence exists from lifecycle source."
+        )
+    caveat = ""
+    if str(source_type).lower() == "current_listing_snapshot":
+        caveat = "; current listing observation only"
+    return (
+        f"{source} {source_type} {event_type} listing_status={listing_status} "
+        f"coverage={coverage_status} event_date={event_date}{caveat}"
+    )
+
+
+def _format_market_data_issue(issue: dict[str, Any] | None) -> str:
+    if not issue:
+        return "No repeated market data issue row found."
+    issue_type = issue.get("issue_type") or "-"
+    diagnosis = issue.get("diagnosis") or "-"
+    occurrences = issue.get("occurrence_count") or 0
+    last_seen = _display_datetime(issue.get("last_seen_at")) or "-"
+    evidence = str(issue.get("latest_evidence") or "").strip()
+    suffix = f"; {evidence}" if evidence else ""
+    return f"{issue_type}: {diagnosis}; occurrences={occurrences}; latest={last_seen}{suffix}"
+
+
+def _missing_likely_cause(row: dict[str, Any], issue: dict[str, Any] | None) -> str:
+    reason = str(row.get("Reason") or "").lower()
+    profile_status = str(row.get("Profile Status") or "").lower()
+    if issue:
+        return "Repeated market data issue evidence; confirm quote and price-history coverage."
+    if profile_status in {"error", "not_found", "delisted"}:
+        return "Profile metadata needs review alongside price-history coverage."
+    if "intraday" in reason or "latest quote" in reason:
+        return "Daily quote snapshot gap."
+    if "start" in reason or "end price" in reason:
+        return "EOD price-history coverage gap."
+    return "Price or listing evidence needs review."
+
+
+def _missing_next_check(row: dict[str, Any], issue: dict[str, Any] | None) -> str:
+    profile_status = str(row.get("Profile Status") or "").lower()
+    if profile_status in {"error", "not_found", "delisted"}:
+        return "Check profile refresh, listing evidence, then refresh daily OHLCV history."
+    if issue:
+        return "Open quote-gap diagnostics and inspect latest price/profile evidence before retrying refresh."
+    reason = str(row.get("Reason") or "").lower()
+    if "intraday" in reason or "latest quote" in reason:
+        return "Refresh daily snapshot; if repeated, run quote-gap diagnostics."
+    return "Refresh daily OHLCV history; if repeated, inspect lifecycle/profile evidence."
+
+
+def _missing_evidence_fields(
+    row: dict[str, Any],
+    *,
+    listing_evidence: dict[str, Any] | None = None,
+    market_data_issue: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    profile = _profile_freshness_summary(row)
+    listing = _format_listing_evidence(listing_evidence)
+    issue = _format_market_data_issue(market_data_issue)
+    latest_price = str(row.get("Latest Price Date") or "-")
+    reason = str(row.get("Reason") or "-")
+    evidence_summary = f"{reason}; latest price date {latest_price}; {profile}; {listing}; {issue}"
+    return {
+        "Likely Cause": _missing_likely_cause(row, market_data_issue),
+        "Evidence Summary": evidence_summary,
+        "Next Check": _missing_next_check(row, market_data_issue),
+        "Listing Evidence": listing,
+        "Profile Freshness": profile,
+        "Market Data Issue": issue,
+    }
+
+
 def _missing_row(
     *,
     item: dict[str, Any],
@@ -1560,7 +1780,7 @@ def _missing_row(
     end_price: float | None,
     latest_price_date: str | None,
 ) -> dict[str, Any]:
-    return {
+    row = {
         "Symbol": str(item.get("symbol") or "").strip().upper(),
         "Name": item.get("long_name") or "-",
         "Sector": item.get("sector") or "Unknown",
@@ -1575,7 +1795,111 @@ def _missing_row(
         "Profile Status": item.get("status") or "-",
         "Profile Error": item.get("error_msg") or "-",
         "Profile Collected At": _profile_collected_at(item) or "-",
+        "Profile Exchange": item.get("profile_exchange") or "-",
     }
+    row.update(_missing_evidence_fields(row))
+    return row
+
+
+def _load_symbol_lifecycle_evidence(
+    *,
+    symbols: list[str],
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    rows = query_fn(
+        "finance_meta",
+        f"""
+        SELECT
+            symbol,
+            listing_status,
+            source,
+            source_type,
+            coverage_status,
+            event_type,
+            event_date,
+            collected_at
+        FROM nyse_symbol_lifecycle
+        WHERE symbol IN ({placeholders})
+          AND kind = %s
+        ORDER BY
+            symbol ASC,
+            COALESCE(event_date, DATE(collected_at)) DESC,
+            collected_at DESC,
+            CASE WHEN event_type = 'delisting' THEN 0 ELSE 1 END
+        """,
+        list(symbols) + ["stock"],
+    )
+    evidence: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if symbol and symbol not in evidence:
+            evidence[symbol] = row
+    return evidence
+
+
+def _load_market_data_issue_evidence(
+    *,
+    symbols: list[str],
+    universe_code: str,
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    rows = query_fn(
+        "finance_meta",
+        f"""
+        SELECT
+            symbol,
+            issue_type,
+            diagnosis,
+            occurrence_count,
+            last_seen_at,
+            latest_evidence
+        FROM market_data_issue
+        WHERE symbol IN ({placeholders})
+          AND universe_code = %s
+          AND latest_status = %s
+        ORDER BY symbol ASC, occurrence_count DESC, last_seen_at DESC
+        """,
+        list(symbols) + [universe_code, "active"],
+    )
+    issues: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if symbol and symbol not in issues:
+            issues[symbol] = row
+    return issues
+
+
+def _enrich_missing_rows(
+    missing_rows: list[dict[str, Any]],
+    *,
+    universe_code: str,
+    query_fn: QueryFn,
+) -> list[dict[str, Any]]:
+    symbols = [str(row.get("Symbol") or "").strip().upper() for row in missing_rows if row.get("Symbol")]
+    if not symbols:
+        return missing_rows
+    lifecycle = _load_symbol_lifecycle_evidence(symbols=symbols, query_fn=query_fn)
+    issues = _load_market_data_issue_evidence(
+        symbols=symbols,
+        universe_code=universe_code,
+        query_fn=query_fn,
+    )
+    for row in missing_rows:
+        symbol = str(row.get("Symbol") or "").strip().upper()
+        row.update(
+            _missing_evidence_fields(
+                row,
+                listing_evidence=lifecycle.get(symbol),
+                market_data_issue=issues.get(symbol),
+            )
+        )
+    return missing_rows
 
 
 def _missing_recommended_action(reason: str) -> str:
@@ -1596,6 +1920,7 @@ def _missing_recommended_action(reason: str) -> str:
 def _build_return_rows(
     *,
     universe: list[dict[str, Any]],
+    universe_code: str,
     start_date: str,
     end_date: str,
     query_fn: QueryFn,
@@ -1679,7 +2004,11 @@ def _build_return_rows(
                     latest_price_date=latest_dates.get(str(row["symbol"])),
                 )
             )
-    return return_rows, missing_rows
+    return return_rows, _enrich_missing_rows(
+        missing_rows,
+        universe_code=universe_code,
+        query_fn=query_fn,
+    )
 
 
 def _build_return_rows_from_price_map(
@@ -2099,6 +2428,20 @@ def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) ->
             "universe_source_url": first.get("universe_source_url"),
             "coverage_basis": "Current S&P 500 constituents",
         }
+    if universe_code == "NASDAQ":
+        first = universe[0]
+        return {
+            "universe_event_date": _iso_date(first.get("universe_event_date") or first.get("event_date")),
+            "universe_collected_at": _display_datetime(first.get("universe_collected_at")),
+            "universe_source": first.get("universe_source"),
+            "universe_source_url": first.get("universe_source_url"),
+            "universe_source_type": first.get("universe_source_type") or first.get("source_type"),
+            "universe_coverage_status": first.get("universe_coverage_status") or first.get("coverage_status"),
+            "universe_event_type": first.get("universe_event_type") or first.get("event_type"),
+            "universe_listing_status": first.get("universe_listing_status") or first.get("listing_status"),
+            "universe_caveat": "Nasdaq Symbol Directory is current listing observation only; not historical membership proof.",
+            "coverage_basis": "Nasdaq-listed current snapshot",
+        }
     collected = [
         _display_datetime(row.get("last_collected_at"))
         for row in universe
@@ -2314,6 +2657,40 @@ def _event_days_until(row: dict[str, Any], *, today: date) -> int | None:
     return int((event_value - today_value).days)
 
 
+def _is_major_macro_event_type(value: Any) -> bool:
+    normalized = _normalize_event_type_value(value)
+    return bool(normalized in MAJOR_MACRO_EVENT_TYPES)
+
+
+def _event_window_label(row: dict[str, Any], *, today: date, recent_days: int = EVENT_RECENT_WINDOW_DAYS) -> str:
+    days_until = _event_days_until(row, today=today)
+    if days_until is None:
+        return "Unknown"
+    if days_until < 0:
+        return "Recent" if abs(days_until) <= max(0, int(recent_days or 0)) else "Past"
+    return "Upcoming"
+
+
+def _event_sort_key(row: dict[str, Any], *, today: date, recent_days: int) -> tuple[int, int, int, str, str]:
+    days_until = _event_days_until(row, today=today)
+    major_rank = 0 if _is_major_macro_event_type(row.get("event_type")) else 1
+    if days_until is None:
+        return (5, major_rank, 9999, str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if _is_major_macro_event_type(row.get("event_type")) and days_until < 0 and abs(days_until) <= recent_days:
+        return (0, major_rank, abs(days_until), str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if _is_major_macro_event_type(row.get("event_type")) and days_until >= 0:
+        return (1, major_rank, days_until, str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if days_until >= 0:
+        return (2, major_rank, days_until, str(row.get("event_type") or ""), str(row.get("title") or ""))
+    if abs(days_until) <= recent_days:
+        return (3, major_rank, abs(days_until), str(row.get("event_type") or ""), str(row.get("title") or ""))
+    return (4, major_rank, abs(days_until), str(row.get("event_type") or ""), str(row.get("title") or ""))
+
+
+def _prioritize_event_rows(rows: list[dict[str, Any]], *, today: date, recent_days: int) -> list[dict[str, Any]]:
+    return sorted(rows, key=lambda row: _event_sort_key(row, today=today, recent_days=recent_days))
+
+
 def _event_importance_label(row: dict[str, Any]) -> str:
     event_type = _normalize_event_type_value(row.get("event_type"))
     if event_type == "FOMC_MEETING" or event_type == "MACRO" or str(event_type or "").startswith("MACRO_"):
@@ -2340,7 +2717,7 @@ def _event_focus_label(row: dict[str, Any], *, today: date) -> str:
     return "Later"
 
 
-def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
+def _event_coverage(rows: list[dict[str, Any]], *, today: date, recent_days: int = EVENT_RECENT_WINDOW_DAYS) -> dict[str, Any]:
     source_types = [_event_source_type(row) for row in rows]
     freshness = [_event_freshness(row, today=today) for row in rows]
     validation = [_event_validation_label(row) for row in rows]
@@ -2348,13 +2725,33 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
     importance = [_event_importance_label(row) for row in rows]
     focus = [_event_focus_label(row, today=today) for row in rows]
     days_until = [_event_days_until(row, today=today) for row in rows]
+    upcoming_pairs = [(row, days) for row, days in zip(rows, days_until) if days is not None and days >= 0]
+    recent_pairs = [
+        (row, days)
+        for row, days in zip(rows, days_until)
+        if days is not None and days < 0 and abs(days) <= max(0, int(recent_days or 0))
+    ]
+    recent_major_pairs = [
+        (row, days) for row, days in recent_pairs if _is_major_macro_event_type(row.get("event_type"))
+    ]
+    upcoming_major_pairs = [
+        (row, days) for row, days in upcoming_pairs if _is_major_macro_event_type(row.get("event_type"))
+    ]
+    next_row = min(upcoming_pairs, key=lambda item: (item[1], str(item[0].get("event_type") or "")))[0] if upcoming_pairs else None
+    latest_recent_source = recent_major_pairs or recent_pairs
+    latest_recent_row = (
+        max(latest_recent_source, key=lambda item: (_iso_date(item[0].get("event_date")) or "", str(item[0].get("event_type") or "")))[0]
+        if latest_recent_source
+        else None
+    )
     latest_collected_at = max(
         (_display_datetime(row.get("collected_at")) or "" for row in rows),
         default="",
     ) or None
     return {
         "event_count": len(rows),
-        "next_event_date": _iso_date(rows[0].get("event_date")) if rows else None,
+        "next_event_date": _iso_date(next_row.get("event_date")) if next_row else None,
+        "latest_recent_event_date": _iso_date(latest_recent_row.get("event_date")) if latest_recent_row else None,
         "latest_collected_at": latest_collected_at,
         "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
         "official_count": source_types.count("Official"),
@@ -2372,6 +2769,10 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
         "needs_review_count": focus.count("Needs Review"),
         "this_week_count": sum(1 for value in focus if value in {"Today", "This Week"}),
         "next_30d_count": sum(1 for value in days_until if value is not None and 0 <= value <= 30),
+        "recent_event_count": len(recent_pairs),
+        "upcoming_event_count": len(upcoming_pairs),
+        "recent_high_importance_count": len(recent_major_pairs),
+        "upcoming_high_importance_count": len(upcoming_major_pairs),
         "superseded_count": statuses.count("Superseded"),
     }
 
@@ -2392,11 +2793,17 @@ def _event_warnings(coverage: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFrame:
+def _event_rows_frame(
+    rows: list[dict[str, Any]],
+    *,
+    today: date,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
+) -> pd.DataFrame:
     out = [
         {
             "Date": _iso_date(row.get("event_date")) or "-",
             "Days Until": _event_days_until(row, today=today),
+            "Window": _event_window_label(row, today=today, recent_days=recent_days),
             "Type": row.get("event_type") or "-",
             "Symbol": row.get("symbol") or "-",
             "Title": row.get("title") or "-",
@@ -2428,12 +2835,14 @@ def build_market_events_snapshot(
     end_date: str | None = None,
     event_type: str | None = "FOMC_MEETING",
     horizon_days: int = 365,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
     limit: int = 200,
     today: date | None = None,
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
     today_value = today or date.today()
-    normalized_start = _iso_date(start_date) or today_value.isoformat()
+    bounded_recent_days = max(0, int(recent_days or 0))
+    normalized_start = _iso_date(start_date) or (today_value - timedelta(days=bounded_recent_days)).isoformat()
     normalized_end = _iso_date(end_date) or (today_value + timedelta(days=int(horizon_days or 365))).isoformat()
     normalized_type = _normalize_event_type_value(event_type)
     query = query_fn or _default_query
@@ -2453,11 +2862,12 @@ def build_market_events_snapshot(
                 event_type=normalized_type,
                 message="No stored market events match the selected window. Run a matching event calendar collector first.",
             )
-        coverage = _event_coverage(rows, today=today_value)
+        rows = _prioritize_event_rows(rows, today=today_value, recent_days=bounded_recent_days)
+        coverage = _event_coverage(rows, today=today_value, recent_days=bounded_recent_days)
         return {
             "status": "OK",
             "event_type": normalized_type or "All",
-            "rows": _event_rows_frame(rows, today=today_value),
+            "rows": _event_rows_frame(rows, today=today_value, recent_days=bounded_recent_days),
             "date_window": {"start_date": normalized_start, "end_date": normalized_end},
             "coverage": coverage,
             "warnings": _event_warnings(coverage),
@@ -3086,6 +3496,2613 @@ def build_collection_ops_snapshot(
         "rows": pd.DataFrame(rows, columns=OPS_COLUMNS),
         "coverage": coverage,
         "warnings": warnings,
+    }
+
+
+def _cockpit_error_snapshot(label: str, exc: Exception) -> dict[str, Any]:
+    return {
+        "status": "ERROR",
+        "message": f"{label} snapshot failed: {exc}",
+        "coverage": {},
+        "rows": pd.DataFrame(),
+    }
+
+
+def _cockpit_frame(snapshot: dict[str, Any], key: str = "rows") -> pd.DataFrame:
+    rows = snapshot.get(key)
+    if isinstance(rows, pd.DataFrame):
+        return rows
+    if isinstance(rows, list):
+        return pd.DataFrame(rows)
+    return pd.DataFrame()
+
+
+def _cockpit_first_row(snapshot: dict[str, Any], key: str = "rows") -> dict[str, Any]:
+    frame = _cockpit_frame(snapshot, key=key)
+    if frame.empty:
+        return {}
+    return dict(frame.iloc[0].dropna().to_dict())
+
+
+def _cockpit_int(value: Any) -> int:
+    try:
+        if value in (None, ""):
+            return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _cockpit_status_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return str(value.get("label") or value.get("status") or "").strip()
+    return str(value or "").strip()
+
+
+def _cockpit_status_tone(status: Any) -> str:
+    if isinstance(status, dict) and status.get("tone"):
+        return str(status.get("tone"))
+    normalized = _cockpit_status_text(status).lower()
+    if normalized in {"ok", "success", "actual", "high", "fresh"}:
+        return "positive"
+    if normalized in {"reference_limit", "meta"}:
+        return "neutral"
+    if normalized in {"failed", "error", "missing", "no_universe", "insufficient_data"}:
+        return "danger"
+    if normalized in {"review", "due", "stale", "partial", "not_run", "no_data"}:
+        return "warning"
+    return "neutral"
+
+
+DATA_HEALTH_HANDOFF_TARGETS: dict[str, dict[str, str]] = {
+    "S&P 500 Universe": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > 유니버스 갱신",
+        "collection_action": "Run S&P 500 universe refresh through the existing Overview action facade.",
+    },
+    "S&P 500 Daily Snapshot": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > 일중 스냅샷 갱신",
+        "collection_action": "Run the S&P 500 intraday snapshot refresh from Market Movers.",
+    },
+    "Top1000 Daily Snapshot": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > Top1000 > 일중 스냅샷 갱신",
+        "collection_action": "Run the Top1000 intraday snapshot refresh from Market Movers.",
+    },
+    "Top2000 Daily Snapshot": {
+        "owner_surface": "Workspace > Overview bounded action facade",
+        "target_surface": "Workspace > Overview > Market Movers > Top2000 > 일중 스냅샷 갱신",
+        "collection_action": "Run the Top2000 intraday snapshot refresh from Market Movers.",
+    },
+    "Futures Monitor 1m OHLCV": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집",
+        "alternate_surface": "Workspace > Overview > Futures Monitor",
+        "collection_action": "Run futures OHLCV collection; Overview bounded refresh is also available for the Futures Monitor.",
+    },
+    "Market Sentiment": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 심리 수집",
+        "alternate_surface": "Workspace > Overview > Sentiment",
+        "collection_action": "Run Market Sentiment collection for CNN Fear & Greed / AAII rows.",
+    },
+    "FOMC Calendar": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정",
+        "alternate_surface": "Workspace > Overview > Events",
+        "collection_action": "Run FOMC calendar collection from the existing market events collector.",
+    },
+    "Macro Calendar": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 매크로 발표",
+        "alternate_surface": "Workspace > Overview > Events",
+        "collection_action": "Run official macro calendar collection or import the BLS .ics file.",
+    },
+    "Earnings Calendar": {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 실적 발표",
+        "alternate_surface": "Workspace > Overview > Events",
+        "collection_action": "Run earnings calendar collection with a bounded symbol source.",
+    },
+}
+DATA_HEALTH_HANDOFF_STATUS_ORDER = {
+    "FAILED": 0,
+    "MISSING": 1,
+    "STALE": 2,
+    "PARTIAL": 3,
+    "DUE": 4,
+    "REVIEW": 5,
+}
+DATA_HEALTH_HANDOFF_SEVERITY = {
+    "FAILED": "critical",
+    "MISSING": "critical",
+    "STALE": "high",
+    "PARTIAL": "high",
+    "DUE": "medium",
+    "REVIEW": "medium",
+}
+
+
+def _handoff_status(value: Any) -> str:
+    status = str(value or "").strip()
+    return status or "Unknown"
+
+
+def _handoff_status_rank(status: Any) -> int:
+    return DATA_HEALTH_HANDOFF_STATUS_ORDER.get(_handoff_status(status).upper(), 99)
+
+
+def _handoff_counts(rows: pd.DataFrame) -> dict[str, int]:
+    if rows.empty or "Status" not in rows:
+        return {}
+    counts = rows["Status"].fillna("Unknown").astype(str).value_counts().to_dict()
+    return {str(key): int(value) for key, value in counts.items()}
+
+
+def _handoff_reason(row: dict[str, Any]) -> str:
+    parts = [
+        _handoff_status(row.get("Status")),
+        str(row.get("Data Freshness") or "-"),
+    ]
+    failure_streak = _cockpit_int(row.get("Failure Streak"))
+    failed_count = _cockpit_int(row.get("Failed"))
+    last_issue = row.get("Last Issue")
+    if failure_streak:
+        parts.append(f"Failure streak {failure_streak}")
+    if failed_count:
+        parts.append(f"{failed_count} failed")
+    if last_issue not in (None, "", "-"):
+        parts.append(f"Last issue {last_issue}")
+    return " · ".join(parts)
+
+
+def _handoff_target(area: str) -> dict[str, str]:
+    target = dict(DATA_HEALTH_HANDOFF_TARGETS.get(area) or {})
+    if target:
+        return target
+    return {
+        "owner_surface": "Workspace > Ingestion",
+        "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터",
+        "collection_action": "Open the matching Ingestion collector and rerun a bounded collection.",
+    }
+
+
+def build_overview_data_health_ingestion_handoff(
+    collection_ops_snapshot: dict[str, Any] | None = None,
+    *,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Turn Overview Data Health rows into read-only handoff guidance for the owning collection surfaces."""
+    snapshot = collection_ops_snapshot or {}
+    rows = _cockpit_frame(snapshot)
+    counts = _handoff_counts(rows)
+    if rows.empty:
+        return {
+            "schema_version": "overview_data_health_ingestion_handoff_v1",
+            "status": "NO_DATA",
+            "summary": {
+                "headline": "No Data Health handoff available",
+                "detail": str(snapshot.get("message") or "No collection ops rows are available yet."),
+                "review_count": 0,
+                "top_priority": None,
+                "next_target_surface": None,
+            },
+            "counts": counts,
+            "priority_items": [],
+            "boundary_note": (
+                "Read-only handoff: Overview Data Health does not execute collection jobs, write registries, "
+                "write saved setup, change DB schema, or fetch providers during render."
+            ),
+        }
+
+    review_rows = rows[
+        ~rows.get("Status", pd.Series(dtype=str)).fillna("").astype(str).str.upper().isin({"OK", "SUCCESS"})
+    ].copy()
+    if review_rows.empty:
+        return {
+            "schema_version": "overview_data_health_ingestion_handoff_v1",
+            "status": "OK",
+            "summary": {
+                "headline": "Data Health handoff clear",
+                "detail": "All tracked Overview collection targets are currently OK.",
+                "review_count": 0,
+                "top_priority": None,
+                "next_target_surface": None,
+            },
+            "counts": counts,
+            "priority_items": [],
+            "boundary_note": (
+                "Read-only handoff: Overview Data Health does not execute collection jobs, write registries, "
+                "write saved setup, change DB schema, or fetch providers during render."
+            ),
+        }
+
+    review_rows["_status_rank"] = review_rows["Status"].map(_handoff_status_rank)
+    if "Failure Streak" not in review_rows:
+        review_rows["Failure Streak"] = 0
+    review_rows["_failure_streak"] = review_rows["Failure Streak"].map(_cockpit_int)
+    review_rows = review_rows.sort_values(
+        by=["_status_rank", "_failure_streak", "Area"],
+        ascending=[True, False, True],
+        kind="mergesort",
+    )
+
+    priority_items: list[dict[str, Any]] = []
+    for rank, (_, item_row) in enumerate(review_rows.head(max(1, int(limit or 5))).iterrows(), start=1):
+        row = dict(item_row.drop(labels=["_status_rank", "_failure_streak"], errors="ignore").to_dict())
+        area = str(row.get("Area") or "Unknown")
+        status = _handoff_status(row.get("Status"))
+        target = _handoff_target(area)
+        priority_items.append(
+            {
+                "rank": rank,
+                "area": area,
+                "status": status,
+                "severity": DATA_HEALTH_HANDOFF_SEVERITY.get(status.upper(), "low"),
+                "tone": _cockpit_status_tone(status),
+                "freshness": str(row.get("Data Freshness") or "-"),
+                "reason": _handoff_reason(row),
+                "next_action": str(row.get("Next Action") or target.get("collection_action") or "-"),
+                "collection_action": target.get("collection_action") or str(row.get("Next Action") or "-"),
+                "owner_surface": target.get("owner_surface") or "Workspace > Ingestion",
+                "target_surface": target.get("target_surface") or "Workspace > Ingestion",
+                "alternate_surface": target.get("alternate_surface"),
+                "last_success": row.get("Last Success") or "-",
+                "last_issue": row.get("Last Issue") or "-",
+            }
+        )
+
+    review_count = int(len(review_rows))
+    top_item = priority_items[0] if priority_items else {}
+    return {
+        "schema_version": "overview_data_health_ingestion_handoff_v1",
+        "status": "REVIEW" if review_count else "OK",
+        "summary": {
+            "headline": f"{review_count} Data Health targets need handoff" if review_count else "Data Health handoff clear",
+            "detail": (
+                "Open the owning collection surface for the highest-priority stale, missing, partial, due, or failed target."
+                if review_count
+                else "All tracked Overview collection targets are currently OK."
+            ),
+            "review_count": review_count,
+            "top_priority": top_item.get("area"),
+            "next_target_surface": top_item.get("target_surface"),
+        },
+        "counts": counts,
+        "priority_items": priority_items,
+        "boundary_note": (
+            "Read-only handoff: Overview Data Health does not execute collection jobs, write registries, "
+            "write saved setup, change DB schema, or fetch providers during render."
+        ),
+    }
+
+
+def _cockpit_card_status(*values: Any) -> str:
+    for value in values:
+        normalized = _cockpit_status_text(value)
+        if normalized and normalized.upper() not in {"OK", "SUCCESS", "ACTUAL"}:
+            return normalized
+    return "OK"
+
+
+def _cockpit_percent(value: Any, *, digits: int = 1) -> str:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return "-"
+    return f"{numeric:+.{digits}f}%"
+
+
+def _overview_round(value: Any, *, digits: int = 1) -> float | None:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return None
+    return round(numeric, digits)
+
+
+def _overview_percent_label(value: Any, *, digits: int = 0, signed: bool = False) -> str:
+    numeric = _safe_float(value)
+    if numeric is None:
+        return "-"
+    sign = "+" if signed else ""
+    return f"{numeric:{sign}.{digits}f}%"
+
+
+def _overview_breadth_participation_label(positive_share: float | None) -> str:
+    if positive_share is None:
+        return "unknown"
+    if positive_share >= 65.0:
+        return "broad"
+    if positive_share <= 45.0:
+        return "narrow"
+    return "mixed"
+
+
+def _overview_breadth_concentration_label(top_share: float | None, cap_equal_gap: float | None) -> str:
+    if top_share is None and cap_equal_gap is None:
+        return "unknown"
+    if (top_share is not None and top_share >= 65.0) or (cap_equal_gap is not None and abs(cap_equal_gap) >= 2.0):
+        return "concentrated"
+    return "balanced"
+
+
+def _overview_breadth_row_tone(row: dict[str, Any]) -> str:
+    weighted = _safe_float(row.get("Market Cap Weighted Return %"))
+    positive_share = _safe_float(row.get("Positive Symbol Share %"))
+    if weighted is not None and weighted < 0:
+        return "danger"
+    if positive_share is not None and positive_share < 45.0:
+        return "warning"
+    if weighted is not None and weighted > 0:
+        return "positive"
+    return "neutral"
+
+
+_OVERVIEW_SECTOR_DISPLAY_ALIASES = {
+    "communication services": "Communication Services",
+    "communications": "Communication Services",
+    "consumer cyclical": "Consumer Cyclical",
+    "consumer discretionary": "Consumer Cyclical",
+    "consumer defensive": "Consumer Defensive",
+    "consumer staples": "Consumer Defensive",
+    "energy": "Energy",
+    "financials": "Financial Services",
+    "financial services": "Financial Services",
+    "finance": "Financial Services",
+    "healthcare": "Healthcare",
+    "health care": "Healthcare",
+    "industrials": "Industrials",
+    "industrial": "Industrials",
+    "basic materials": "Basic Materials",
+    "materials": "Basic Materials",
+    "real estate": "Real Estate",
+    "realestate": "Real Estate",
+    "technology": "Technology",
+    "information technology": "Technology",
+    "tech": "Technology",
+    "utilities": "Utilities",
+    "utility": "Utilities",
+}
+
+
+def _overview_normalized_label(value: Any) -> str:
+    text = str(value or "").strip().lower().replace("&", " and ")
+    normalized = "".join(char if char.isalnum() else " " for char in text)
+    return " ".join(normalized.split())
+
+
+def _overview_sector_display_label(value: Any) -> str:
+    raw = str(value or "").strip() or "-"
+    return _OVERVIEW_SECTOR_DISPLAY_ALIASES.get(_overview_normalized_label(raw), raw)
+
+
+def _weighted_average(values: list[tuple[float | None, float]]) -> float | None:
+    usable = [(float(value), float(weight)) for value, weight in values if value is not None and float(weight) > 0]
+    if not usable:
+        return None
+    weight_sum = sum(weight for _, weight in usable)
+    if weight_sum <= 0:
+        return None
+    return sum(value * weight for value, weight in usable) / weight_sum
+
+
+def _canonical_sector_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    if rows.empty or "Group" not in rows:
+        return rows
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    changed = False
+    for _, row_value in rows.iterrows():
+        row = dict(row_value.dropna().to_dict())
+        original = str(row.get("Group") or "").strip()
+        label = _overview_sector_display_label(row.get("Group"))
+        changed = changed or bool(original and label != original)
+        grouped.setdefault(label, []).append(row)
+
+    if len(grouped) == len(rows) and not changed:
+        return rows
+
+    merged_rows: list[dict[str, Any]] = []
+    for label, group_rows in grouped.items():
+        symbols = sum(_cockpit_int(row.get("Symbols")) for row in group_rows)
+        positive_symbols = sum(_cockpit_int(row.get("Positive Symbols")) for row in group_rows)
+        weights = [float(_cockpit_int(row.get("Symbols")) or 1) for row in group_rows]
+        weighted_return = _weighted_average(
+            [(_safe_float(row.get("Market Cap Weighted Return %")), weights[index]) for index, row in enumerate(group_rows)]
+        )
+        equal_return = _weighted_average(
+            [(_safe_float(row.get("Equal Weight Return %")), weights[index]) for index, row in enumerate(group_rows)]
+        )
+        top_share = _weighted_average(
+            [(_safe_float(row.get("Top 3 Positive Share %")), weights[index]) for index, row in enumerate(group_rows)]
+        )
+        top_row = max(group_rows, key=lambda row: _safe_float(row.get("Top Symbol Return %")) or float("-inf"))
+        merged_rows.append(
+            {
+                **group_rows[0],
+                "Group": label,
+                "Symbols": symbols or None,
+                "Positive Symbols": positive_symbols or None,
+                "Positive Symbol Share %": (positive_symbols / symbols * 100.0) if symbols else None,
+                "Market Cap Weighted Return %": weighted_return,
+                "Equal Weight Return %": equal_return,
+                "Top 3 Positive Share %": top_share,
+                "Top Symbol": top_row.get("Top Symbol"),
+                "Top Symbol Return %": top_row.get("Top Symbol Return %"),
+            }
+        )
+
+    merged = pd.DataFrame(merged_rows)
+    if "Market Cap Weighted Return %" in merged:
+        merged = merged.sort_values("Market Cap Weighted Return %", ascending=False, na_position="last", kind="mergesort")
+    merged = merged.reset_index(drop=True)
+    merged["Rank"] = range(1, len(merged) + 1)
+    return merged
+
+
+def build_overview_breadth_heatmap_summary(
+    group_leadership_snapshot: dict[str, Any] | None = None,
+    *,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """Compress an existing group leadership snapshot into a context-only breadth heatmap summary."""
+    snapshot = group_leadership_snapshot or {}
+    rows = _canonical_sector_rows(_cockpit_frame(snapshot))
+    coverage = dict(snapshot.get("coverage") or {})
+    date_window = dict(snapshot.get("date_window") or {})
+    if rows.empty:
+        return {
+            "schema_version": "overview_breadth_heatmap_summary_v1",
+            "status": "NO_DATA",
+            "summary": {
+                "headline": "Breadth context unavailable",
+                "detail": str(snapshot.get("message") or "No stored group leadership rows are available."),
+                "participation_label": "unknown",
+                "concentration_label": "unknown",
+                "leader": None,
+            },
+            "coverage": {
+                "group_count": 0,
+                "returnable_count": coverage.get("returnable_count"),
+                "universe_count": coverage.get("universe_count"),
+                "price_mode": coverage.get("price_mode"),
+                "freshness": coverage.get("snapshot_time_utc") or coverage.get("effective_end_date"),
+            },
+            "cards": [],
+            "heatmap_rows": [],
+            "boundary_note": (
+                "Context-only breadth summary: not a trading action, not validation, not Final Review, "
+                "and not monitoring guidance."
+            ),
+        }
+
+    numeric_positive = rows.get("Positive Symbol Share %", pd.Series(dtype=float)).map(_safe_float).dropna()
+    numeric_weighted = rows.get("Market Cap Weighted Return %", pd.Series(dtype=float)).map(_safe_float).dropna()
+    negative_count = int((numeric_weighted < 0).sum()) if not numeric_weighted.empty else 0
+    positive_group_count = int((numeric_weighted > 0).sum()) if not numeric_weighted.empty else 0
+    average_positive_share = round(float(numeric_positive.mean()), 1) if not numeric_positive.empty else None
+    average_weighted_return = round(float(numeric_weighted.mean()), 2) if not numeric_weighted.empty else None
+    top_row = dict(rows.iloc[0].dropna().to_dict())
+    leader = str(top_row.get("Group") or "-")
+    leader_return = _safe_float(top_row.get("Market Cap Weighted Return %"))
+    top_share = _safe_float(top_row.get("Top 3 Positive Share %"))
+    cap_equal_gap = _safe_float(top_row.get("Cap vs Equal Gap pp"))
+    participation_label = _overview_breadth_participation_label(average_positive_share)
+    concentration_label = _overview_breadth_concentration_label(top_share, cap_equal_gap)
+
+    heatmap_rows: list[dict[str, Any]] = []
+    visible_rows = rows if limit is None else rows.head(max(1, int(limit or 10)))
+    for fallback_rank, (_, row_value) in enumerate(visible_rows.iterrows(), start=1):
+        row = dict(row_value.dropna().to_dict())
+        heatmap_rows.append(
+            {
+                "rank": _cockpit_int(row.get("Rank")) or fallback_rank,
+                "group": str(row.get("Group") or "-"),
+                "symbols": _cockpit_int(row.get("Symbols")),
+                "positive_symbols": _cockpit_int(row.get("Positive Symbols")),
+                "positive_symbol_share_pct": _overview_round(row.get("Positive Symbol Share %")),
+                "market_cap_weighted_return_pct": _overview_round(row.get("Market Cap Weighted Return %")),
+                "equal_weight_return_pct": _overview_round(row.get("Equal Weight Return %")),
+                "top_3_positive_share_pct": _overview_round(row.get("Top 3 Positive Share %")),
+                "top_symbol": str(row.get("Top Symbol") or "-"),
+                "top_symbol_return_pct": _overview_round(row.get("Top Symbol Return %")),
+                "tone": _overview_breadth_row_tone(row),
+            }
+        )
+
+    group_label = "groups" if len(rows) != 1 else "group"
+    cards = [
+        {
+            "title": "Participation",
+            "value": _overview_percent_label(average_positive_share),
+            "detail": f"{participation_label} average positive share across {len(rows)} {group_label}",
+            "tone": "positive" if participation_label == "broad" else "warning" if participation_label == "narrow" else "neutral",
+        },
+        {
+            "title": "Leadership",
+            "value": leader,
+            "detail": f"{_overview_percent_label(leader_return, digits=1, signed=True)} cap-weighted return",
+            "tone": _overview_breadth_row_tone(top_row),
+        },
+        {
+            "title": "Concentration",
+            "value": concentration_label,
+            "detail": f"Top 3 positive share {_overview_percent_label(top_share)} · cap/equal gap {_overview_percent_label(cap_equal_gap, digits=1, signed=True)}",
+            "tone": "warning" if concentration_label == "concentrated" else "positive" if concentration_label == "balanced" else "neutral",
+        },
+        {
+            "title": "Negative Groups",
+            "value": str(negative_count),
+            "detail": f"{positive_group_count} positive groups · avg cap-weighted {_overview_percent_label(average_weighted_return, digits=2, signed=True)}",
+            "tone": "warning" if negative_count else "positive",
+        },
+    ]
+
+    return {
+        "schema_version": "overview_breadth_heatmap_summary_v1",
+        "status": snapshot.get("status") or "OK",
+        "summary": {
+            "headline": f"{participation_label.title()} participation, {concentration_label} leadership",
+            "detail": (
+                f"{leader} leads the selected universe; use the heatmap to see whether movement is broad or group-specific."
+            ),
+            "participation_label": participation_label,
+            "concentration_label": concentration_label,
+            "leader": leader,
+        },
+        "coverage": {
+            "group_count": int(len(rows)),
+            "returnable_count": coverage.get("returnable_count"),
+            "universe_count": coverage.get("universe_count"),
+            "price_mode": coverage.get("price_mode") or "EOD DB",
+            "freshness": coverage.get("snapshot_time_utc")
+            or coverage.get("effective_end_date")
+            or date_window.get("effective_end_date")
+            or date_window.get("end_date"),
+        },
+        "cards": cards,
+        "heatmap_rows": heatmap_rows,
+        "boundary_note": (
+            "Context-only breadth summary: not a trading action, not validation, not Final Review, "
+            "and not monitoring guidance."
+        ),
+    }
+
+
+def _macro_week_cluster_label(event_type: Any) -> str:
+    normalized = str(event_type or "").strip().upper()
+    if normalized in {"FOMC_MEETING", "FOMC"}:
+        return "FOMC"
+    if normalized in {"MACRO_CPI", "CPI"}:
+        return "CPI"
+    if normalized in {"MACRO_PPI", "PPI"}:
+        return "PPI"
+    if normalized in {"MACRO_EMPLOYMENT", "EMPLOYMENT", "JOBS"}:
+        return "Employment"
+    if normalized in {"MACRO_GDP", "GDP"}:
+        return "GDP"
+    if normalized in {"EARNINGS", "EARNINGS CALENDAR"}:
+        return "Earnings"
+    if normalized.startswith("MACRO_"):
+        return normalized.replace("MACRO_", "").replace("_", " ").title()
+    return "Other"
+
+
+def _macro_week_event_needs_review(row: dict[str, Any]) -> bool:
+    action = str(row.get("Quality Action") or "").strip().lower()
+    freshness = str(row.get("Freshness") or "").strip().lower()
+    validation = str(row.get("Validation") or "").strip().lower()
+    if action and action != "no action":
+        return True
+    return any(token in freshness for token in ("stale", "unknown")) or any(
+        token in validation for token in ("not confirmed", "estimate only")
+    )
+
+
+def _macro_week_item_tone(row: dict[str, Any]) -> str:
+    if _macro_week_event_needs_review(row):
+        return "warning"
+    cluster = _macro_week_cluster_label(row.get("Type"))
+    if cluster == "Earnings":
+        return "earnings"
+    if cluster in {"FOMC", "CPI", "PPI", "Employment", "GDP"}:
+        return "macro"
+    return "neutral"
+
+
+def _macro_week_is_major_macro(row: dict[str, Any]) -> bool:
+    return _macro_week_cluster_label(row.get("Type")) in {"FOMC", "CPI", "PPI", "Employment", "GDP"}
+
+
+def _macro_week_item_from_row(row: dict[str, Any], *, days_until: int | None, window: str) -> dict[str, Any]:
+    return {
+        "date": str(row.get("Date") or "-"),
+        "days_until": days_until,
+        "window": window,
+        "type": str(row.get("Type") or "-"),
+        "cluster": _macro_week_cluster_label(row.get("Type")),
+        "title": str(row.get("Title") or "-"),
+        "symbol": str(row.get("Symbol") or "-"),
+        "source_type": str(row.get("Source Type") or "-"),
+        "validation": str(row.get("Validation") or "-"),
+        "freshness": str(row.get("Freshness") or "-"),
+        "quality_action": str(row.get("Quality Action") or "-"),
+        "importance": str(row.get("Importance") or "-"),
+        "tone": _macro_week_item_tone(row),
+    }
+
+
+def build_overview_macro_week_lane(
+    events_snapshot: dict[str, Any] | None = None,
+    *,
+    horizon_days: int = 14,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
+    limit: int = 8,
+) -> dict[str, Any]:
+    """Summarize existing event-calendar rows into a recent + upcoming macro context lane."""
+    snapshot = events_snapshot or {}
+    rows = _cockpit_frame(snapshot)
+    coverage = dict(snapshot.get("coverage") or {})
+    bounded_horizon_days = max(0, int(horizon_days or 14))
+    bounded_recent_days = max(0, int(recent_days or 0))
+    boundary_note = "context 전용 이벤트 캘린더입니다. 거래 실행이나 다른 화면의 승인/운영 판단을 만들지 않습니다."
+    if rows.empty or "Days Until" not in rows:
+        return {
+            "schema_version": "overview_macro_week_lane_v2",
+            "status": "NO_DATA",
+            "summary": {
+                "headline": "Macro week context unavailable",
+                "detail": str(snapshot.get("message") or "No stored event rows are available."),
+                "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
+                "next_event_label": "No event in view",
+            },
+            "coverage": {
+                "event_count": coverage.get("event_count"),
+                "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
+                "official_count": coverage.get("official_count"),
+                "estimate_count": coverage.get("estimate_count"),
+                "latest_collected_at": coverage.get("latest_collected_at"),
+            },
+            "clusters": {},
+            "recent_items": [],
+            "upcoming_items": [],
+            "items": [],
+            "boundary_note": boundary_note,
+        }
+
+    working = rows.copy()
+    if "Type" not in working.columns:
+        working["Type"] = working["Type Label"] if "Type Label" in working.columns else "Other"
+    elif "Type Label" in working.columns:
+        type_values = working["Type"].astype(str).str.strip()
+        working["Type"] = working["Type"].where(type_values.ne("") & type_values.ne("nan"), working["Type Label"])
+    working["_days_until"] = working["Days Until"].map(_safe_float)
+    recent_rows = working[
+        working["_days_until"].notna()
+        & (working["_days_until"] < 0)
+        & (working["_days_until"] >= -bounded_recent_days)
+    ].copy()
+    if not recent_rows.empty:
+        recent_rows = recent_rows[
+            recent_rows.apply(lambda row_value: _macro_week_is_major_macro(dict(row_value.dropna().to_dict())), axis=1)
+        ].copy()
+    upcoming_rows = working[
+        working["_days_until"].notna()
+        & (working["_days_until"] >= 0)
+        & (working["_days_until"] <= bounded_horizon_days)
+    ].copy()
+    near_rows = pd.concat([recent_rows, upcoming_rows], ignore_index=True)
+    if near_rows.empty:
+        return {
+            "schema_version": "overview_macro_week_lane_v2",
+            "status": snapshot.get("status") or "OK",
+            "summary": {
+                "headline": f"No stored major events from the last {bounded_recent_days} days through the next {bounded_horizon_days} days",
+                "detail": "Open Events for the full calendar and source quality view.",
+                "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
+                "next_event_label": "No event in view",
+            },
+            "coverage": {
+                "event_count": coverage.get("event_count"),
+                "near_event_count": 0,
+                "recent_event_count": 0,
+                "upcoming_event_count": 0,
+                "official_count": coverage.get("official_count"),
+                "estimate_count": coverage.get("estimate_count"),
+                "latest_collected_at": coverage.get("latest_collected_at"),
+            },
+            "clusters": {},
+            "recent_items": [],
+            "upcoming_items": [],
+            "items": [],
+            "boundary_note": boundary_note,
+        }
+
+    recent_rows = recent_rows.sort_values(by=["_days_until", "Date", "Type"], ascending=[False, False, True], kind="mergesort")
+    upcoming_rows = upcoming_rows.sort_values(by=["_days_until", "Date", "Type"], kind="mergesort")
+    near_rows = pd.concat([recent_rows, upcoming_rows], ignore_index=True)
+    recent_items: list[dict[str, Any]] = []
+    upcoming_items: list[dict[str, Any]] = []
+    cluster_order = ["FOMC", "CPI", "PPI", "Employment", "GDP", "Earnings", "Other"]
+    clusters: dict[str, dict[str, Any]] = {
+        label: {"label": label, "count": 0, "review_count": 0, "next_date": None, "tone": "neutral"}
+        for label in cluster_order
+    }
+
+    for _, row_value in near_rows.iterrows():
+        row = dict(row_value.drop(labels=["_days_until"], errors="ignore").dropna().to_dict())
+        days_until = _cockpit_int(row_value.get("_days_until"))
+        cluster = _macro_week_cluster_label(row.get("Type"))
+        if cluster not in clusters:
+            clusters[cluster] = {"label": cluster, "count": 0, "review_count": 0, "next_date": None, "tone": "neutral"}
+        needs_review = _macro_week_event_needs_review(row)
+        tone = _macro_week_item_tone(row)
+        clusters[cluster]["count"] += 1
+        clusters[cluster]["review_count"] += 1 if needs_review else 0
+        clusters[cluster]["next_date"] = clusters[cluster]["next_date"] or str(row.get("Date") or "-")
+        clusters[cluster]["tone"] = "warning" if clusters[cluster]["review_count"] else tone
+        item = _macro_week_item_from_row(
+            row,
+            days_until=days_until,
+            window="recent" if days_until is not None and days_until < 0 else "upcoming",
+        )
+        if item["window"] == "recent":
+            recent_items.append(item)
+        else:
+            upcoming_items.append(item)
+
+    clusters = {label: value for label, value in clusters.items() if int(value.get("count") or 0) > 0}
+    review_count = sum(1 for _, row_value in near_rows.iterrows() if _macro_week_event_needs_review(dict(row_value.to_dict())))
+    items = (recent_items + upcoming_items)[: max(1, int(limit or 8))]
+    recent_items = recent_items[: max(1, int(limit or 8))]
+    upcoming_items = upcoming_items[: max(1, int(limit or 8))]
+    next_item = upcoming_items[0] if upcoming_items else {}
+    next_event_label = (
+        f"{next_item.get('type')} in {next_item.get('days_until')}d"
+        if next_item
+        else "No event in view"
+    )
+    official_near_count = int(
+        near_rows.get("Source Type", pd.Series(dtype=str)).fillna("").astype(str).str.lower().eq("official").sum()
+    )
+    earnings_near_count = int(
+        near_rows.get("Type", pd.Series(dtype=str)).fillna("").astype(str).str.upper().eq("EARNINGS").sum()
+    )
+
+    return {
+        "schema_version": "overview_macro_week_lane_v2",
+        "status": "REVIEW" if review_count else (snapshot.get("status") or "OK"),
+        "summary": {
+            "headline": (
+                f"{len(recent_items)} recent major event(s) and {len(upcoming_rows)} upcoming event(s) in view"
+                if recent_items
+                else f"{len(upcoming_rows)} upcoming event(s) in the next {bounded_horizon_days} days"
+            ),
+            "detail": f"{official_near_count} official macro rows · {earnings_near_count} earnings rows · {review_count} need source review",
+            "near_event_count": int(len(near_rows)),
+            "recent_event_count": int(len(recent_rows)),
+            "upcoming_event_count": int(len(upcoming_rows)),
+            "next_event_label": next_event_label,
+        },
+        "coverage": {
+            "event_count": coverage.get("event_count"),
+            "near_event_count": int(len(near_rows)),
+            "recent_event_count": int(len(recent_rows)),
+            "upcoming_event_count": int(len(upcoming_rows)),
+            "official_count": coverage.get("official_count"),
+            "estimate_count": coverage.get("estimate_count"),
+            "latest_collected_at": coverage.get("latest_collected_at"),
+            "review_count": review_count,
+        },
+        "clusters": clusters,
+        "recent_items": recent_items,
+        "upcoming_items": upcoming_items,
+        "items": items,
+        "boundary_note": boundary_note,
+    }
+
+
+def _source_confidence_status(
+    snapshot: dict[str, Any],
+    *,
+    review_hint: bool = False,
+    no_data_if_empty: bool = False,
+    row_key: str = "rows",
+) -> str:
+    rows = _cockpit_frame(snapshot, key=row_key)
+    if no_data_if_empty and rows.empty:
+        return "NO_DATA"
+    status = _cockpit_card_status(snapshot.get("status"))
+    normalized = status.strip().upper()
+    if review_hint or normalized in {"REVIEW", "DUE", "STALE", "PARTIAL", "MISSING", "FAILED", "ERROR", "NO_DATA"}:
+        return "REVIEW" if normalized != "NO_DATA" else "NO_DATA"
+    return "OK"
+
+
+def _source_confidence_item(
+    *,
+    item_id: str,
+    title: str,
+    surface: str,
+    source: str,
+    owner: str,
+    status: str,
+    freshness: Any,
+    detail: str,
+    caveat: str,
+    next_check: str,
+    source_role: str = "brief_source",
+    actionability: str = "actionable",
+    counts_for_status: bool = True,
+    status_label: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": item_id,
+        "title": title,
+        "surface": surface,
+        "source": source,
+        "owner": owner,
+        "status": status,
+        "status_label": status_label or _cockpit_status_label(status),
+        "tone": _cockpit_status_tone(status),
+        "freshness": str(freshness or "-"),
+        "freshness_label": _cockpit_freshness_label(freshness),
+        "detail": detail,
+        "caveat": caveat,
+        "next_check": next_check,
+        "source_role": source_role,
+        "actionability": actionability,
+        "counts_for_status": bool(counts_for_status),
+    }
+
+
+def _source_confidence_data_review_count(collection_ops_snapshot: dict[str, Any]) -> int:
+    coverage = dict(collection_ops_snapshot.get("coverage") or {})
+    return sum(
+        _cockpit_int(coverage.get(key))
+        for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
+    )
+
+
+def _event_review_action_summary(events_snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Summarize event source actions without merging official and estimate caveats."""
+    coverage = dict(events_snapshot.get("coverage") or {})
+    rows = _cockpit_frame(events_snapshot)
+    if rows.empty:
+        return {
+            "detail": "event rows unavailable",
+            "primary_title": "이벤트 자료 확인",
+            "primary_reason": "저장된 event row가 없어 Events 탭의 source 상태를 먼저 봅니다.",
+            "primary_action": "Events calendar 수집 상태와 공식/추정 source 구분이 이벤트 자료 주의점입니다.",
+            "source_area": "Events",
+            "freshness": coverage.get("latest_collected_at") or "-",
+            "needs_action": False,
+        }
+
+    def series_value(column: str) -> pd.Series:
+        if column in rows:
+            return rows[column].fillna("").astype(str)
+        return pd.Series([""] * len(rows), index=rows.index, dtype=str)
+
+    quality_action = series_value("Quality Action")
+    freshness = series_value("Freshness")
+    source_type = series_value("Source Type")
+    validation = series_value("Validation")
+    event_type = series_value("Type")
+    type_label = series_value("Type Label")
+    quality_review = quality_action.str.strip().ne("") & (quality_action.str.lower() != "no action")
+    freshness_review = freshness.str.strip().ne("") & freshness.str.lower().str.contains("stale|unknown|age unknown", regex=True)
+    validation_review = validation.str.strip().ne("") & validation.str.lower().isin({"estimate only", "not confirmed", "conflict", "unknown"})
+    review_mask = (
+        quality_review
+        | freshness_review
+        | validation_review
+    )
+    estimate_mask = source_type.str.lower().str.contains("estimate", regex=False) | event_type.str.upper().eq("EARNINGS")
+    major_macro_mask = event_type.map(_is_major_macro_event_type)
+    official_macro_review_count = int(((major_macro_mask) & review_mask).sum())
+    estimate_review_count = int((estimate_mask & review_mask).sum())
+    stale_estimate_count = max(
+        _cockpit_int(coverage.get("stale_estimate_count")),
+        int((freshness.str.lower() == "stale estimate").sum()),
+    )
+    not_confirmed_count = max(
+        _cockpit_int(coverage.get("not_confirmed_count")),
+        int((validation.str.lower() == "not confirmed").sum()),
+    )
+    estimate_only_count = max(
+        _cockpit_int(coverage.get("estimate_only_count")),
+        int((validation.str.lower() == "estimate only").sum()),
+    )
+    review_count = max(
+        _cockpit_int(coverage.get("needs_review_count")),
+        _cockpit_int(coverage.get("action_required_count")),
+        int(review_mask.sum()),
+    )
+
+    parts: list[str] = []
+    if official_macro_review_count:
+        parts.append(f"공식 macro/source 확인 {official_macro_review_count}")
+    if estimate_review_count:
+        parts.append(f"추정 일정 확인 {estimate_review_count}")
+    if stale_estimate_count:
+        parts.append(f"stale estimate {stale_estimate_count}")
+    if not_confirmed_count:
+        parts.append(f"미확인 earnings {not_confirmed_count}")
+    if estimate_only_count:
+        parts.append(f"estimate-only {estimate_only_count}")
+    if not parts and review_count:
+        parts.append(f"확인 필요 {review_count}")
+    if not parts:
+        parts.append("공식/추정 source 구분 완료")
+
+    review_rows = rows[review_mask].copy()
+    focus_row: dict[str, Any] = {}
+    if not review_rows.empty:
+        focus_row = dict(review_rows.iloc[0].dropna().to_dict())
+    else:
+        major_rows = rows[major_macro_mask].copy()
+        if not major_rows.empty:
+            focus_row = dict(major_rows.iloc[0].dropna().to_dict())
+        else:
+            focus_row = dict(rows.iloc[0].dropna().to_dict())
+
+    focus_type = str(focus_row.get("Type Label") or focus_row.get("Type") or type_label.iloc[0] or "Event")
+    focus_title = str(focus_row.get("Title") or focus_type)
+    focus_action = _event_action_copy(focus_row.get("Quality Action"))
+
+    if estimate_review_count or stale_estimate_count or not_confirmed_count or estimate_only_count:
+        primary_title = "추정 일정 확인"
+        primary_reason = (
+            f"{_cockpit_int(coverage.get('estimate_count'))}개 추정 일정 중 "
+            f"{estimate_review_count or stale_estimate_count or not_confirmed_count or estimate_only_count}개는 검증/신선도 확인이 필요합니다."
+        )
+        primary_action = focus_action or "earnings estimate의 cross-check, stale 여부, superseded 여부가 이벤트 자료 주의점입니다."
+        source_area = "Events · Earnings estimates"
+    elif official_macro_review_count:
+        primary_title = "공식 macro 일정 확인"
+        primary_reason = f"{focus_type} row의 official source 또는 freshness를 확인해야 합니다."
+        primary_action = focus_action or "FOMC/CPI/PPI/Employment/GDP row의 official source와 collected_at 기준이 이벤트 자료 주의점입니다."
+        source_area = "Events · Official macro"
+    else:
+        primary_title = "가까운 주요 이벤트 확인"
+        primary_reason = f"{focus_title}가 현재 시장 해석을 바꿀 수 있는 가까운 event입니다."
+        primary_action = "recent/upcoming 주요 일정과 source type이 이벤트 배경 근거입니다."
+        source_area = "Events · Macro calendar"
+
+    return {
+        "detail": " · ".join(parts),
+        "primary_title": primary_title,
+        "primary_reason": primary_reason,
+        "primary_action": primary_action,
+        "source_area": source_area,
+        "freshness": coverage.get("latest_collected_at") or str(focus_row.get("Collected At") or "-"),
+        "focus_title": focus_title,
+        "needs_action": bool(review_count),
+        "review_count": review_count,
+        "official_macro_review_count": official_macro_review_count,
+        "estimate_review_count": estimate_review_count,
+        "stale_estimate_count": stale_estimate_count,
+    }
+
+
+def _event_action_copy(value: Any) -> str:
+    text = str(value or "").strip()
+    mapping = {
+        "Refresh earnings calendar": "Earnings Calendar 재수집이 추정 일정 신선도 보강 경로입니다.",
+        "Treat as unconfirmed; retry later or inspect source": "미확인 추정 일정으로 분류되며, 재수집 또는 source 재검토가 필요합니다.",
+        "Enable cross-check or refresh closer to date": "대체 일정 cross-check 또는 발표일 근접 재수집이 보강 경로입니다.",
+        "Inspect provider source": "provider source와 수집 시각 기준이 제한입니다.",
+        "Inspect source freshness": "공식/source freshness와 collected_at 기준이 제한입니다.",
+        "No action": "",
+    }
+    return mapping.get(text, text)
+
+
+def build_overview_source_confidence_catalog(
+    *,
+    market_movers_snapshot: dict[str, Any] | None = None,
+    group_leadership_snapshot: dict[str, Any] | None = None,
+    futures_macro_snapshot: dict[str, Any] | None = None,
+    sentiment_snapshot: dict[str, Any] | None = None,
+    events_snapshot: dict[str, Any] | None = None,
+    collection_ops_snapshot: dict[str, Any] | None = None,
+    market_session_context: dict[str, Any] | None = None,
+    include_futures_context: bool = True,
+) -> dict[str, Any]:
+    """Build a read-only source/provider confidence catalog from already loaded Overview snapshots."""
+    movers = market_movers_snapshot or {}
+    movers_coverage = dict(movers.get("coverage") or {})
+    refresh_state = movers_coverage.get("refresh_state")
+    refresh_label = _cockpit_status_text(refresh_state)
+    refresh_detail = refresh_state.get("detail") if isinstance(refresh_state, dict) else None
+    prices_review = bool(refresh_label and refresh_label.upper() not in {"OK", "SUCCESS", "FRESH"})
+    prices_status = _source_confidence_status(movers, review_hint=prices_review, no_data_if_empty=True)
+    if _closed_session_intraday_stale(refresh_state or prices_status, "S&P 500 Daily Snapshot", market_session_context):
+        prices_status = "OK"
+        refresh_label = "Closed session basis"
+        refresh_detail = dict(market_session_context or {}).get("brief_subtitle") or refresh_detail
+    prices_returnable = _cockpit_int(movers_coverage.get("returnable_count"))
+    prices_universe = _cockpit_int(movers_coverage.get("universe_count"))
+
+    groups = group_leadership_snapshot or {}
+    group_coverage = dict(groups.get("coverage") or {})
+    breadth_status = _source_confidence_status(groups, no_data_if_empty=True)
+
+    futures = futures_macro_snapshot or {}
+    futures_coverage = dict(futures.get("coverage") or {})
+    futures_status = _source_confidence_status(futures)
+    standardized_count = _cockpit_int(futures_coverage.get("standardized_count"))
+    futures_symbol_count = _cockpit_int(futures_coverage.get("symbol_count"))
+
+    sentiment = sentiment_snapshot or {}
+    sentiment_analysis = dict(sentiment.get("analysis") or {})
+    sentiment_confidence = dict(sentiment_analysis.get("data_confidence") or {})
+    sentiment_status_text = str(sentiment_confidence.get("status") or sentiment.get("status") or "NO_DATA")
+    sentiment_status_normalized = sentiment_status_text.strip().lower()
+    if sentiment_status_normalized in {"high", "ok", "fresh"}:
+        sentiment_status = "OK"
+    elif sentiment_status_normalized == "no_data":
+        sentiment_status = "NO_DATA"
+    else:
+        sentiment_status = _source_confidence_status(sentiment, review_hint=True)
+    sentiment_coverage = dict(sentiment.get("coverage") or {})
+
+    events = events_snapshot or {}
+    events_coverage = dict(events.get("coverage") or {})
+    event_action_summary = _event_review_action_summary(events)
+    event_review_count = max(
+        _cockpit_int(events_coverage.get("needs_review_count")),
+        _cockpit_int(events_coverage.get("action_required_count")),
+        _cockpit_int(events_coverage.get("stale_estimate_count")),
+        _cockpit_int(event_action_summary.get("review_count")),
+    )
+    raw_events_status = _source_confidence_status(
+        events,
+        review_hint=event_review_count > 0,
+        no_data_if_empty=True,
+    )
+    events_status = "REFERENCE_LIMIT" if raw_events_status != "OK" else "OK"
+
+    data_health = collection_ops_snapshot or {}
+    data_coverage = dict(data_health.get("coverage") or {})
+    data_review_count = _source_confidence_data_review_count(data_health)
+    data_status = "META"
+
+    items = [
+        _source_confidence_item(
+            item_id="prices",
+            title="Prices / Movers",
+            surface="Market Movers",
+            source="Stored price rows and intraday snapshot tables",
+            owner="Workspace > Ingestion plus approved Overview bounded refresh",
+            status=prices_status,
+            freshness=movers_coverage.get("snapshot_time_utc")
+            or refresh_detail
+            or movers_coverage.get("effective_end_date"),
+            detail=f"{prices_returnable}/{prices_universe} symbols returnable · 갱신 상태 {refresh_label or _cockpit_status_label(prices_status)}",
+            caveat="가격 맥락은 오래됐거나 부분적일 수 있으며, 주문 실행용 가격이 아닙니다.",
+            next_check="Market Movers 기준일과 누락 상태가 가격 맥락의 신뢰도 주의점입니다.",
+        ),
+        _source_confidence_item(
+            item_id="breadth",
+            title="Breadth / Groups",
+            surface="Sector / Industry",
+            source="Stored price rows plus profile sector / industry metadata",
+            owner="Overview group leadership read model",
+            status=breadth_status,
+            freshness=group_coverage.get("snapshot_time_utc") or group_coverage.get("effective_end_date"),
+            detail=f"{_cockpit_int(group_coverage.get('returnable_count'))}/{_cockpit_int(group_coverage.get('universe_count'))} symbols grouped",
+            caveat="시장 폭은 참여도와 집중도를 요약할 뿐 종목 선택 규칙이 아닙니다.",
+            next_check="Sector / Industry freshness와 그룹 coverage가 breadth 맥락의 주의점입니다.",
+        ),
+        *(
+            [
+                _source_confidence_item(
+                    item_id="futures",
+                    title="Futures Context",
+                    surface="Futures Macro",
+                    source="Stored futures OHLCV read by Macro Thermometer",
+                    owner="Workspace > Ingestion futures collector / Overview bounded refresh",
+                    status=futures_status,
+                    freshness=futures_coverage.get("latest_date") or futures_coverage.get("latest_candle_time"),
+                    detail=f"{standardized_count}/{futures_symbol_count} futures symbols standardized",
+                    caveat="무료 선물 provider 기반의 배경 자료입니다. 오래됨과 공백은 그대로 보이며 신뢰 보장이 아닙니다.",
+                    next_check="Futures Macro의 risk-on, 금리 압력, 안전자산 근거가 macro 배경 자료입니다.",
+                )
+            ]
+            if include_futures_context
+            else []
+        ),
+        _source_confidence_item(
+            item_id="sentiment",
+            title="Sentiment",
+            surface="Sentiment",
+            source="CNN Fear & Greed and AAII sentiment observations",
+            owner="Market sentiment ingestion and loader",
+            status=sentiment_status,
+            freshness=sentiment_confidence.get("detail") or sentiment_coverage.get("latest_observation_date"),
+            detail=(
+                f"CNN {_overview_round(sentiment_coverage.get('cnn_score'))} · "
+                f"AAII spread {_overview_round(sentiment_coverage.get('aaii_bull_bear_spread'))}"
+            ),
+            caveat="심리는 배경 자료일 뿐 다른 화면의 판단이나 운영 상태를 바꾸지 않습니다.",
+            next_check="Sentiment 출처 수, 오래된 자료, 신뢰도 저하가 심리 맥락의 주의점입니다.",
+        ),
+        _source_confidence_item(
+            item_id="events",
+            title="Events",
+            surface="Events",
+            source="Official macro calendars plus provider-estimated earnings rows",
+            owner="Market event calendar collectors",
+            status=events_status,
+            freshness=events_coverage.get("latest_collected_at"),
+            detail=(
+                f"{_cockpit_int(events_coverage.get('event_count'))} events · "
+                f"{_cockpit_int(events_coverage.get('official_count'))} official · "
+                f"{_cockpit_int(events_coverage.get('estimate_count'))} estimates · "
+                f"{event_action_summary['detail']}"
+            ),
+            caveat="공식 macro 일정과 provider 추정 실적 일정은 구분해서 읽어야 합니다.",
+            next_check="-",
+            source_role="reference_context",
+            actionability="not_actionable",
+            counts_for_status=False,
+        ),
+        _source_confidence_item(
+            item_id="data_health",
+            title="Data Health",
+            surface="Data Health",
+            source="DB freshness summaries and local run history",
+            owner="Data Health read model and owning collection surfaces",
+            status=data_status,
+            freshness=data_coverage.get("latest_success_at") or data_coverage.get("latest_auto_at"),
+            detail=(
+                f"OK {_cockpit_int(data_coverage.get('ok_count'))} · "
+                f"확인 필요 {data_review_count}"
+            ),
+            caveat="Data Health는 자료 관리 메타입니다. 보강 가능한 항목은 필요 자료 보강에 반영됩니다.",
+            next_check="-",
+            source_role="management_meta",
+            actionability="meta",
+            counts_for_status=False,
+        ),
+    ]
+
+    review_items = [item for item in items if item["counts_for_status"] and item["status"] != "OK"]
+    reference_items = [item for item in items if not item["counts_for_status"] and item["status"] != "OK"]
+    status = "REVIEW" if review_items else "OK"
+    status_label = (
+        "자료 보강 필요"
+        if review_items
+        else "자료 정상 · 참고 제한"
+        if reference_items
+        else "자료 정상"
+    )
+    prioritized_review_items = sorted(
+        review_items,
+        key=lambda item: (0 if item["id"] in {"prices", "futures"} else 1, item["id"]),
+    )
+    return {
+        "schema_version": "overview_source_confidence_catalog_v1",
+        "status": status,
+        "status_label": status_label,
+        "summary": {
+            "headline": (
+                f"확인할 자료 영역 {len(review_items)}개"
+                if review_items
+                else "자료 기준 정상 · 참고 제한 있음"
+                if reference_items
+                else "자료 기준 정상"
+            ),
+            "detail": "같은 저장 자료의 출처, 기준일, 관리 위치, 참고 위치입니다.",
+            "review_count": len(review_items),
+            "reference_count": len(reference_items),
+        },
+        "items": items,
+        "next_checks": [
+            {
+                "target_tab": item["surface"],
+                "surface": item["surface"],
+                "title": item["title"],
+                "reason": item["detail"],
+                "action": item["next_check"],
+                "source_area": item["title"],
+                "freshness": item["freshness"],
+                "priority": f"P{index}",
+                "status": item["status"],
+                "status_label": item["status_label"],
+                "tone": item["tone"],
+            }
+            for index, item in enumerate(prioritized_review_items[:4], start=1)
+        ],
+        "boundary_note": (
+            "자료 기준은 context 전용입니다. 거래 실행, 승인/차단 판단, provider 직접 호출, "
+            "registry/saved 기록 생성을 하지 않습니다."
+        ),
+    }
+
+
+def _cockpit_count_label(value: int, noun: str) -> str:
+    return f"{value} {noun}" if value != 1 else f"1 {noun.rstrip('s')}"
+
+
+def _cockpit_status_label(status: Any) -> str:
+    normalized = _cockpit_status_text(status).strip().lower()
+    if normalized in {"ok", "success", "actual", "fresh", "high"}:
+        return "자료 정상"
+    if normalized == "reference_limit":
+        return "참고 제한"
+    if normalized == "meta":
+        return "관리 메타"
+    if normalized in {"review", "due", "partial"}:
+        return "자료 확인 필요"
+    if normalized == "stale":
+        return "자료 오래됨"
+    if normalized in {"missing", "no_data", "not_run", "insufficient_data", "no_universe"}:
+        return "자료 부족"
+    if normalized in {"failed", "error"}:
+        return "확인 실패"
+    return _cockpit_status_text(status) or "상태 미확인"
+
+
+def _cockpit_badge_label(label: Any) -> str:
+    text = str(label or "").strip()
+    mapping = {
+        "coverage": "자료 범위",
+        "state": "자료 상태",
+        "participation": "참여 비율",
+        "confidence": "자료 신뢰도",
+        "AAII spread": "AAII 온도차",
+        "events": "일정",
+        "review": "확인 필요",
+        "OK": "정상",
+        "Risk-On": "위험선호",
+        "Rate Pressure": "금리 압력",
+        "Safe Haven": "안전자산",
+    }
+    return mapping.get(text, text)
+
+
+def _cockpit_freshness_label(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return "기준일 없음"
+    return text
+
+
+def _cockpit_copy_value(value: Any, fallback: str) -> str:
+    text = str(value or "").strip()
+    if not text or text == "-":
+        return fallback
+    return text
+
+
+def _cockpit_bool(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value in (None, ""):
+        return default
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "on", "open", "장중"}:
+        return True
+    if text in {"0", "false", "no", "n", "off", "closed", "휴장"}:
+        return False
+    return default
+
+
+def _market_context_basis_date(*snapshots: dict[str, Any]) -> str | None:
+    for snapshot in snapshots:
+        coverage = dict((snapshot or {}).get("coverage") or {})
+        date_window = dict((snapshot or {}).get("date_window") or {})
+        for value in (
+            coverage.get("effective_end_date"),
+            date_window.get("effective_end_date"),
+            coverage.get("snapshot_time_utc"),
+            date_window.get("end_date"),
+            coverage.get("latest_date"),
+            coverage.get("latest_candle_time"),
+        ):
+            normalized = _iso_date(value)
+            if normalized:
+                return normalized
+    return None
+
+
+def _market_session_context_model(
+    context: dict[str, Any] | None,
+    *,
+    basis_date: str | None,
+) -> dict[str, Any]:
+    raw = dict(context or {})
+    basis_date = _iso_date(raw.get("basis_date")) or basis_date
+    phase = str(raw.get("phase") or raw.get("status") or "장중").strip()
+    open_value = raw.get("is_market_open_now", raw.get("is_market_open"))
+    is_market_open = _cockpit_bool(open_value, default=phase == "장중")
+    trading_value = raw.get("is_trading_day")
+    is_trading_day = _cockpit_bool(trading_value, default=phase != "휴장")
+    session_date = str(raw.get("session_date") or "").strip()
+    reason = str(raw.get("reason") or "").strip()
+    basis_text = basis_date or "-"
+
+    if is_market_open:
+        title = "오늘의 시장 브리프"
+        headline_prefix = "오늘은"
+        status_label = "미국장 장중"
+        rail_ok_label = "자료 정상"
+    elif phase == "장 시작 전":
+        title = "개장 전 시장 기준"
+        headline_prefix = "개장 전에는"
+        status_label = "미국장 장 시작 전"
+        rail_ok_label = "자료 정상 · 개장 전 기준"
+    elif phase == "장 종료":
+        title = "장 마감 기준 시장 브리프"
+        headline_prefix = "장 마감 후에는"
+        status_label = "미국장 장 종료"
+        rail_ok_label = "자료 정상 · 장 마감 기준"
+    else:
+        title = "마지막 거래일 시장 브리프"
+        headline_prefix = "마지막 거래일에는"
+        status_label = "미국장 휴장"
+        rail_ok_label = "자료 정상 · 휴장 기준"
+
+    subtitle_parts = [f"기준: {basis_text}"]
+    if session_date:
+        subtitle_parts.append(f"세션: {session_date}")
+    subtitle_parts.append(status_label)
+    if reason:
+        subtitle_parts.append(reason)
+
+    return {
+        "phase": phase,
+        "session_date": session_date,
+        "reason": reason,
+        "is_trading_day": is_trading_day,
+        "is_market_open_now": is_market_open,
+        "is_closed_session": not is_market_open,
+        "basis_date": basis_date,
+        "brief_title": title,
+        "brief_subtitle": " · ".join(part for part in subtitle_parts if part),
+        "headline_prefix": headline_prefix,
+        "status_label": status_label,
+        "rail_ok_label": rail_ok_label,
+        "suppress_intraday_refresh": not is_market_open,
+    }
+
+
+def _closed_session_intraday_stale(status: Any, source_area: Any, session_context: dict[str, Any] | None) -> bool:
+    if not dict(session_context or {}).get("suppress_intraday_refresh"):
+        return False
+    source = str(source_area or "").lower()
+    status_text = _cockpit_status_text(status).lower()
+    if status_text not in {"stale", "due", "update due"}:
+        return False
+    return any(marker in source for marker in ("intraday", "daily snapshot", "1m ohlcv", "1m", "장중"))
+
+
+def _apply_market_session_basis_to_cards(cards: list[dict[str, Any]], market_session: dict[str, Any]) -> None:
+    if not market_session.get("is_closed_session"):
+        return
+    basis_date = str(market_session.get("basis_date") or "").strip()
+    if not basis_date:
+        return
+    for card in cards:
+        card_id = str(card.get("id") or "")
+        if card_id in {"movement", "breadth"}:
+            card["freshness"] = basis_date
+            card["freshness_label"] = basis_date
+        if card_id == "movement" and _closed_session_intraday_stale(
+            card.get("status"),
+            "S&P 500 Daily Snapshot",
+            market_session,
+        ):
+            card["status"] = "OK"
+            card["status_label"] = "휴장 기준"
+            card["tone"] = "neutral"
+            for badge in list(card.get("badges") or []):
+                if str(badge.get("label") or "") == "자료 상태":
+                    badge["value"] = "휴장 기준"
+                    badge["tone"] = "neutral"
+
+
+def _build_cockpit_summary_copy(
+    cards: Sequence[dict[str, Any]],
+    *,
+    context_review_count: int,
+    market_session: dict[str, Any] | None = None,
+) -> tuple[str, str]:
+    card_by_id = {str(card.get("id") or ""): card for card in cards}
+    movement_card = card_by_id.get("movement") or (cards[0] if len(cards) > 0 else {})
+    breadth_card = card_by_id.get("breadth") or (cards[1] if len(cards) > 1 else {})
+    futures_card = card_by_id.get("futures")
+    movement_value = _cockpit_copy_value(movement_card.get("value"), "")
+    breadth_value = _cockpit_copy_value(breadth_card.get("value"), "섹터 리더십 미확인")
+    futures_value = _cockpit_copy_value(futures_card.get("value"), "") if futures_card else ""
+    headline_prefix = str((market_session or {}).get("headline_prefix") or "오늘은")
+
+    headline = (
+        f"{headline_prefix} {movement_value} 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다."
+        if movement_value
+        else f"{headline_prefix} 아직 뚜렷한 상위 변동 종목보다 자료 상태와 확산 여부를 먼저 봅니다."
+    )
+    breadth_clause = (
+        "섹터 리더십은 아직 뚜렷하지 않고"
+        if breadth_value == "섹터 리더십 미확인"
+        else f"{breadth_value} 리더십이 확인되고"
+    )
+    if context_review_count:
+        next_sentence = (
+            f"보강 가능한 자료 {context_review_count}개를 먼저 분리한 뒤 가격 움직임과 배경 근거를 함께 읽으세요."
+        )
+    else:
+        next_sentence = "저장된 DB 자료 기준으로 가격 움직임과 배경 근거를 바로 이어서 읽을 수 있습니다."
+    if futures_value:
+        detail = f"{breadth_clause}, 선물/매크로 배경은 {futures_value}입니다. {next_sentence}"
+    else:
+        detail = f"{breadth_clause}, 가까운 이벤트와 자료 상태는 보조 근거로 분리해 읽습니다. {next_sentence}"
+    return headline, detail
+
+
+def _cockpit_score_badges(scores: pd.DataFrame, *, limit: int = 3) -> list[dict[str, Any]]:
+    badges: list[dict[str, Any]] = []
+    if scores.empty:
+        return badges
+    for _, row in scores.head(limit).iterrows():
+        score_name = str(row.get("Score") or row.get("score") or "-").replace(" Score", "")
+        score_value = row.get("Value") if "Value" in row else row.get("value")
+        tone = row.get("Tone") if "Tone" in row else row.get("tone")
+        badges.append(
+            {
+                "label": _cockpit_badge_label(score_name),
+                "value": "-" if score_value in (None, "") else str(score_value),
+                "tone": tone or _cockpit_status_tone(score_value),
+            }
+        )
+    return badges
+
+
+def _build_cockpit_movement_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    top_row = _cockpit_first_row(snapshot)
+    symbol = str(top_row.get("Symbol") or "-")
+    move = _cockpit_percent(top_row.get("Return %"))
+    name = top_row.get("Name") or symbol
+    sector = top_row.get("Sector") or "Unknown sector"
+    period = snapshot.get("period_label") or snapshot.get("period") or "Market"
+    universe = snapshot.get("universe_label") or snapshot.get("universe_code") or "selected universe"
+    refresh_state = coverage.get("refresh_state")
+    refresh_detail = refresh_state.get("detail") if isinstance(refresh_state, dict) else None
+    status = _cockpit_card_status(refresh_state, snapshot.get("status"))
+    if not top_row:
+        value = str(snapshot.get("status") or "No data")
+        detail = str(snapshot.get("message") or "No stored mover rows are available.")
+    else:
+        value = f"{symbol} {move}"
+        detail = f"{name} · {sector} · {period} · {universe}"
+    return {
+        "id": "movement",
+        "title": "Market Movement",
+        "question": "지금 무엇이 움직이나요?",
+        "value": value,
+        "detail": detail,
+        "status": status,
+        "status_label": _cockpit_status_label(status),
+        "tone": _cockpit_status_tone(status),
+        "source": "Market Movers",
+        "freshness": coverage.get("effective_end_date") or refresh_detail or coverage.get("snapshot_time_utc") or "-",
+        "freshness_label": _cockpit_freshness_label(
+            coverage.get("effective_end_date") or refresh_detail or coverage.get("snapshot_time_utc")
+        ),
+        "target_tab": "Market Movers",
+        "badges": [
+            {"label": "자료 범위", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
+            {"label": "자료 상태", "value": _cockpit_status_label(status), "tone": _cockpit_status_tone(status)},
+        ],
+    }
+
+
+def _build_cockpit_breadth_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    top_row = _cockpit_first_row(snapshot)
+    status = _cockpit_card_status(snapshot.get("status"))
+    if not top_row:
+        value = str(snapshot.get("status") or "No data")
+        detail = str(snapshot.get("message") or "No stored sector / industry leadership rows are available.")
+        share_value = "-"
+    else:
+        group = str(top_row.get("Group") or "-")
+        weighted = _cockpit_percent(top_row.get("Market Cap Weighted Return %"))
+        positive_share = _safe_float(top_row.get("Positive Symbol Share %"))
+        share_value = "-" if positive_share is None else f"{positive_share:.0f}%"
+        breadth_label = "넓게 확산" if positive_share is not None and positive_share >= 65 else "일부 그룹 집중"
+        value = group
+        detail = f"{group} 리더십: 시총가중 {weighted} · 상승 종목 {share_value} · {breadth_label}"
+    return {
+        "id": "breadth",
+        "title": "Breadth / Concentration",
+        "question": "움직임이 넓게 퍼졌나요, 일부에 집중됐나요?",
+        "value": value,
+        "detail": detail,
+        "status": status,
+        "status_label": _cockpit_status_label(status),
+        "tone": _cockpit_status_tone(status),
+        "source": "Sector / Industry",
+        "freshness": coverage.get("effective_end_date") or "-",
+        "freshness_label": _cockpit_freshness_label(coverage.get("effective_end_date")),
+        "target_tab": "Sector / Industry",
+        "badges": [
+            {"label": "자료 범위", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
+            {"label": "참여 비율", "value": share_value, "tone": "positive" if share_value != "-" else "neutral"},
+        ],
+    }
+
+
+def _build_cockpit_futures_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    summary = dict(snapshot.get("summary") or {})
+    scores = _cockpit_frame(snapshot, key="scores")
+    status = _cockpit_card_status(snapshot.get("status"))
+    scenario = str(summary.get("scenario") or snapshot.get("status") or "Futures context pending")
+    detail = str(summary.get("summary") or "Stored futures daily OHLCV provides context only.")
+    return {
+        "id": "futures",
+        "title": "Futures Background",
+        "question": "risk-on, rate pressure, safe-haven 중 어떤 배경인가요?",
+        "value": scenario,
+        "detail": detail,
+        "status": status,
+        "status_label": _cockpit_status_label(status),
+        "tone": _cockpit_status_tone(status),
+        "source": "Futures Macro Thermometer",
+        "freshness": coverage.get("latest_date") or "-",
+        "freshness_label": _cockpit_freshness_label(coverage.get("latest_date")),
+        "target_tab": "Futures Macro",
+        "badges": _cockpit_score_badges(scores) or [
+            {"label": "자료 범위", "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}", "tone": "neutral"}
+        ],
+    }
+
+
+def _build_cockpit_sentiment_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    analysis = dict(snapshot.get("analysis") or {})
+    confidence = dict(analysis.get("data_confidence") or {})
+    confidence_status = confidence.get("status") or snapshot.get("status")
+    status = _cockpit_card_status(snapshot.get("status"))
+    cnn_score = coverage.get("cnn_score")
+    cnn_rating = coverage.get("cnn_rating") or "-"
+    spread = coverage.get("aaii_bull_bear_spread")
+    return {
+        "id": "sentiment",
+        "title": "Sentiment Backdrop",
+        "question": "시장 심리 배경은 어떤가요?",
+        "value": analysis.get("phase_label") or cnn_rating or status,
+        "detail": analysis.get("headline") or "CNN Fear & Greed / AAII context is unavailable.",
+        "status": status,
+        "status_label": _cockpit_status_label(status),
+        "tone": _cockpit_status_tone(confidence_status),
+        "source": "CNN Fear & Greed / AAII",
+        "freshness": confidence.get("detail") or "-",
+        "freshness_label": _cockpit_freshness_label(confidence.get("detail")),
+        "target_tab": "Sentiment",
+        "badges": [
+            {"label": "CNN", "value": "-" if cnn_score in (None, "") else f"{float(cnn_score):.1f} {cnn_rating}", "tone": "neutral"},
+            {"label": "AAII 온도차", "value": "-" if spread in (None, "") else f"{float(spread):+.1f}pp", "tone": "neutral"},
+            {"label": "자료 신뢰도", "value": _cockpit_status_label(confidence_status), "tone": _cockpit_status_tone(confidence_status)},
+        ],
+    }
+
+
+def _cockpit_event_label(row: dict[str, Any]) -> str:
+    type_label = str(row.get("Type Label") or "").strip()
+    if type_label and type_label != "-":
+        return type_label
+    return _macro_week_cluster_label(row.get("Type"))
+
+
+def _cockpit_event_days_value(row: dict[str, Any]) -> int | None:
+    value = row.get("Days Until") if row else None
+    if value in (None, ""):
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except TypeError:
+        pass
+    safe_value = _safe_float(value)
+    return int(safe_value) if safe_value is not None else None
+
+
+def _cockpit_event_days_korean(days: int | None) -> str:
+    if days is None:
+        return "일정일 확인 필요"
+    if days < 0:
+        return f"{abs(days)}일 전"
+    if days == 0:
+        return "오늘"
+    return f"{days}일 후"
+
+
+def _cockpit_major_event_rows(rows: pd.DataFrame) -> pd.DataFrame:
+    if rows.empty or "Type" not in rows:
+        return pd.DataFrame()
+    return rows[rows["Type"].map(_is_major_macro_event_type)].copy()
+
+
+def _build_cockpit_events_card(snapshot: dict[str, Any]) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    rows = _cockpit_frame(snapshot)
+    major_rows = _cockpit_major_event_rows(rows)
+    if not major_rows.empty and "Days Until" in major_rows:
+        major_rows["Days Until"] = pd.to_numeric(major_rows["Days Until"], errors="coerce")
+    recent_major = pd.DataFrame()
+    upcoming_major = pd.DataFrame()
+    if not major_rows.empty and "Days Until" in major_rows:
+        recent_major = major_rows[(major_rows["Days Until"] < 0) & (major_rows["Days Until"] >= -EVENT_RECENT_WINDOW_DAYS)].sort_values(
+            ["Days Until", "Date", "Type"],
+            ascending=[False, False, True],
+            kind="mergesort",
+        )
+        upcoming_major = major_rows[major_rows["Days Until"] >= 0].sort_values(
+            ["Days Until", "Date", "Type"],
+            kind="mergesort",
+        )
+    row = dict(recent_major.iloc[0].dropna().to_dict()) if not recent_major.empty else _cockpit_first_row(snapshot)
+    next_major = dict(upcoming_major.iloc[0].dropna().to_dict()) if not upcoming_major.empty else {}
+    status = _cockpit_card_status(snapshot.get("status"))
+    next_date = coverage.get("next_event_date") or next_major.get("Date") or row.get("Date") or row.get("event_date")
+    title = row.get("Title") or row.get("title") or row.get("Type Label") or "Upcoming events"
+    days = _cockpit_event_days_value(row)
+    event_count = _cockpit_int(coverage.get("event_count"))
+    review_count = _cockpit_int(coverage.get("needs_review_count"))
+    event_label = _cockpit_event_label(row)
+    if row and days is not None and days < 0 and _is_major_macro_event_type(row.get("Type")):
+        value = f"최근 {event_label} 발표 확인 필요"
+    elif next_major:
+        next_days = _cockpit_event_days_value(next_major)
+        value = f"다음 {_cockpit_event_label(next_major)} {_cockpit_event_days_korean(next_days)}"
+    else:
+        value = str(next_date or "No upcoming event")
+    detail_parts = [str(title), _cockpit_event_days_korean(days)]
+    if next_major and row and next_major.get("Type") != row.get("Type"):
+        next_days = _cockpit_event_days_value(next_major)
+        detail_parts.append(f"다음 {_cockpit_event_label(next_major)} {_cockpit_event_days_korean(next_days)}")
+    detail_parts.append(f"주요 일정 {event_count}개")
+    return {
+        "id": "events",
+        "title": "Near Events",
+        "question": "가까운 주요 이벤트가 있나요?",
+        "value": value,
+        "detail": " · ".join(part for part in detail_parts if part and part != "-"),
+        "status": "Review" if review_count else status,
+        "status_label": _cockpit_status_label("Review" if review_count else status),
+        "tone": "warning" if review_count else _cockpit_status_tone(status),
+        "source": "Market Event Calendar",
+        "freshness": coverage.get("latest_collected_at") or "-",
+        "freshness_label": _cockpit_freshness_label(coverage.get("latest_collected_at")),
+        "target_tab": "Events",
+        "badges": [
+            {"label": "일정", "value": str(event_count), "tone": "neutral"},
+            {"label": "확인 필요", "value": str(review_count), "tone": "warning" if review_count else "positive"},
+        ],
+    }
+
+
+def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    coverage = dict(snapshot.get("coverage") or {})
+    review_count = sum(
+        _cockpit_int(coverage.get(key))
+        for key in ("due_count", "stale_count", "partial_count", "missing_count", "failed_count")
+    )
+    status = "META" if review_count else _cockpit_card_status(snapshot.get("status"))
+    value = "관리 메타" if review_count else "자료 정상"
+    detail = (
+        f"Data Health 확인 항목 {review_count}개 중 보강 가능한 항목은 필요 자료 보강에 반영됩니다."
+        if review_count
+        else "현재 추적 중인 Overview 자료는 바로 참고할 수 있습니다."
+    )
+    return (
+        {
+            "id": "data",
+            "title": "Data Confidence",
+            "question": "이 context를 그대로 참고해도 되나요?",
+            "value": value,
+            "detail": detail,
+            "status": status,
+            "status_label": _cockpit_status_label(status),
+            "tone": _cockpit_status_tone(status),
+            "source": "Data Health",
+            "freshness": coverage.get("latest_success_at") or coverage.get("latest_auto_at") or "-",
+            "freshness_label": _cockpit_freshness_label(coverage.get("latest_success_at") or coverage.get("latest_auto_at")),
+            "target_tab": "Data Health",
+            "badges": [
+                {"label": "정상", "value": str(coverage.get("ok_count") or 0), "tone": "positive"},
+                {"label": "확인 필요", "value": str(review_count), "tone": "warning" if review_count else "positive"},
+            ],
+        },
+        review_count,
+    )
+
+
+def _data_health_collection_action_copy(area: Any, action: Any) -> str:
+    area_text = str(area or "").strip()
+    mapping = {
+        "Futures Monitor 1m OHLCV": "기존 Futures OHLCV 수집 또는 Overview bounded refresh로 선물 가격 이력을 갱신하세요.",
+        "Futures Monitor Daily OHLCV": "기존 Futures OHLCV 수집으로 daily 선물 가격 이력을 갱신하세요.",
+        "FOMC Calendar": "FOMC calendar 수집을 다시 실행해 공식 일정 row를 보강하세요.",
+        "Macro Calendar": "공식 macro calendar 수집 또는 BLS .ics import로 발표 일정을 보강하세요.",
+        "Earnings Calendar": "bounded symbol source로 Earnings Calendar를 다시 수집하고 추정 일정 검증 상태를 보강하세요.",
+        "S&P 500 Daily Snapshot": "Market Movers의 S&P 500 일중 스냅샷 갱신을 실행하세요.",
+        "S&P 500 Universe": "Overview 유니버스 갱신 경로로 S&P 500 constituent snapshot을 갱신하세요.",
+        "Market Sentiment": "Market Sentiment 수집으로 CNN / AAII 관측값을 갱신하세요.",
+    }
+    if area_text in mapping:
+        return mapping[area_text]
+    text = str(action or "").strip()
+    fallback = {
+        "Run futures OHLCV collection; Overview bounded refresh is also available for the Futures Monitor.": "기존 Futures OHLCV 수집 또는 Overview bounded refresh를 실행하세요.",
+        "Run FOMC calendar collection from the existing market events collector.": "기존 market events collector로 FOMC calendar 수집을 실행하세요.",
+        "Run official macro calendar collection or import the BLS .ics file.": "공식 macro calendar 수집 또는 BLS .ics import를 실행하세요.",
+        "Run earnings calendar collection with a bounded symbol source.": "bounded symbol source로 earnings calendar 수집을 실행하세요.",
+    }
+    return fallback.get(text, text or "Owning collection surface에서 필요한 bounded collection을 실행하세요.")
+
+
+def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    priority_items = snapshot.get("priority_items")
+    if isinstance(priority_items, list) and priority_items:
+        item = dict(priority_items[0] or {})
+        area = str(item.get("area") or "Data Health")
+        target_surface = str(item.get("target_surface") or "Workspace > Ingestion")
+        action = _data_health_collection_action_copy(area, item.get("collection_action") or item.get("next_action"))
+        return {
+            "id": "data_health",
+            "target_tab": "Data Health",
+            "title": f"{area} 확인",
+            "reason": str(item.get("reason") or f"{item.get('status') or 'Review'} · {item.get('freshness') or '-'}"),
+            "action": f"{area} 자료 주의점입니다. 필요하면 {target_surface}에서 {action}",
+            "source_area": area,
+            "freshness": str(item.get("freshness") or "-"),
+            "priority": f"P{item.get('rank') or 1}",
+            "status": item.get("status") or "REVIEW",
+            "status_label": _cockpit_status_label(item.get("status") or "REVIEW"),
+            "tone": item.get("tone") or _cockpit_status_tone(item.get("status")),
+        }
+
+    rows = _cockpit_frame(snapshot)
+    if rows.empty or "Status" not in rows:
+        return None
+    review_rows = rows[~rows["Status"].astype(str).str.upper().isin(["OK", "SUCCESS"])]
+    if review_rows.empty:
+        return None
+    row = dict(review_rows.iloc[0].dropna().to_dict())
+    return {
+        "target_tab": "Data Health",
+        "title": str(row.get("Area") or "Data Health"),
+        "reason": f"{_cockpit_status_label(row.get('Status') or 'Review')} · 자료 기준 {_cockpit_freshness_label(row.get('Data Freshness'))}",
+        "action": "Data Health 자료 관리 위치와 필요한 갱신 경로를 봅니다.",
+        "source_area": str(row.get("Area") or "Data Health"),
+        "freshness": str(row.get("Data Freshness") or "-"),
+        "priority": "P1",
+        "status": row.get("Status") or "REVIEW",
+        "status_label": _cockpit_status_label(row.get("Status") or "REVIEW"),
+        "tone": _cockpit_status_tone(row.get("Status")),
+    }
+
+
+def _cockpit_event_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    coverage = dict(snapshot.get("coverage") or {})
+    event_action_summary = _event_review_action_summary(snapshot)
+    needs_review = _cockpit_int(coverage.get("needs_review_count"))
+    rows = _cockpit_frame(snapshot)
+    major_rows = _cockpit_major_event_rows(rows)
+    row: dict[str, Any] = {}
+    if not major_rows.empty and "Days Until" in major_rows:
+        major_rows = major_rows.copy()
+        major_rows["Days Until"] = pd.to_numeric(major_rows["Days Until"], errors="coerce")
+        recent = major_rows[(major_rows["Days Until"] < 0) & (major_rows["Days Until"] >= -EVENT_RECENT_WINDOW_DAYS)].sort_values(
+            ["Days Until", "Date", "Type"],
+            ascending=[False, False, True],
+            kind="mergesort",
+        )
+        upcoming = major_rows[major_rows["Days Until"] >= 0].sort_values(["Days Until", "Date", "Type"], kind="mergesort")
+        if not recent.empty:
+            row = dict(recent.iloc[0].dropna().to_dict())
+        elif not upcoming.empty:
+            row = dict(upcoming.iloc[0].dropna().to_dict())
+    if not row:
+        row = _cockpit_first_row(snapshot)
+    days = _cockpit_event_days_value(row)
+    if not row and not needs_review:
+        return None
+    if needs_review or (days is not None and -EVENT_RECENT_WINDOW_DAYS <= days <= 7):
+        return {
+            "id": "events",
+            "target_tab": "Events",
+            "title": str(event_action_summary.get("primary_title") or row.get("Title") or row.get("Type Label") or "Upcoming event"),
+            "reason": str(event_action_summary.get("primary_reason") or (_cockpit_event_days_korean(days) if row else f"확인할 일정 {needs_review}개")),
+            "action": str(event_action_summary.get("primary_action") or "Events 자료 상태가 시장 context의 이벤트 주의점입니다."),
+            "source_area": str(event_action_summary.get("source_area") or "Events"),
+            "freshness": str(event_action_summary.get("freshness") or coverage.get("latest_collected_at") or "-"),
+            "priority": "P2" if needs_review else "P3",
+            "status": "REVIEW" if needs_review else "OK",
+            "status_label": _cockpit_status_label("REVIEW" if needs_review else "OK"),
+            "tone": "warning" if needs_review else "primary",
+        }
+    return None
+
+
+def _cockpit_context_finding(
+    *,
+    item_id: str,
+    label: str,
+    conclusion: str,
+    interpretation: str,
+    evidence: str,
+    source_area: str,
+    freshness: Any,
+    priority: str,
+    status: Any,
+    tone: Any = None,
+    repair_hint: str | None = None,
+) -> dict[str, Any]:
+    status_text = _cockpit_card_status(status)
+    finding = {
+        "id": item_id,
+        "label": label,
+        "conclusion": conclusion,
+        "interpretation": interpretation,
+        "evidence": evidence,
+        "source_area": source_area,
+        "freshness": str(freshness or "-"),
+        "priority": priority,
+        "status": status_text,
+        "status_label": _cockpit_status_label(status_text),
+        "tone": str(tone or _cockpit_status_tone(status_text)),
+    }
+    if repair_hint:
+        finding["repair_hint"] = repair_hint
+    return finding
+
+
+def _cockpit_market_movers_finding(card: dict[str, Any]) -> dict[str, Any]:
+    value = str(card.get("value") or "-")
+    detail = str(card.get("detail") or "Stored mover rows unavailable.")
+    if value == "-" or value.lower() in {"no data", "error", "review"}:
+        conclusion = "가격 움직임 자료가 충분하지 않아 상위 움직임 결론의 신뢰도가 낮습니다."
+    else:
+        conclusion = f"상위 움직임은 {value}입니다."
+    return _cockpit_context_finding(
+        item_id="market_movers",
+        label="가격 움직임",
+        conclusion=conclusion,
+        interpretation="오늘 브리프의 출발점이며, 섹터 확산과 함께 읽어 단일 종목 영향인지 분리합니다.",
+        evidence=detail,
+        source_area="Prices / Movers",
+        freshness=card.get("freshness_label") or card.get("freshness"),
+        priority="P1",
+        status=card.get("status"),
+        tone=card.get("tone"),
+    )
+
+
+def _cockpit_futures_finding(card: dict[str, Any]) -> dict[str, Any]:
+    value = str(card.get("value") or "Futures context pending")
+    detail = str(card.get("detail") or "Stored futures OHLCV context unavailable.")
+    combined = f"{value} {detail}".lower()
+    if "rate pressure" in combined or "금리" in combined:
+        interpretation = "주식 강세를 단순 위험선호로만 읽기 어렵고, 금리 민감 영역은 따로 조심해서 읽습니다."
+    elif "safe" in combined or "haven" in combined or "안전" in combined:
+        interpretation = "위험선호와 안전자산 배경이 섞였는지 보는 보조 맥락입니다."
+    else:
+        interpretation = "오늘 브리프의 macro backdrop이며, 가격 움직임을 확정하는 근거로 쓰지 않습니다."
+    return _cockpit_context_finding(
+        item_id="futures",
+        label="Futures / Macro",
+        conclusion=f"저장된 선물 맥락은 {value} 상태입니다.",
+        interpretation=interpretation,
+        evidence=detail,
+        source_area="Futures Macro Thermometer",
+        freshness=card.get("freshness_label") or card.get("freshness"),
+        priority="P2",
+        status=card.get("status"),
+        tone=card.get("tone"),
+    )
+
+
+def _event_context_conclusion(event_action_summary: dict[str, Any]) -> str:
+    estimate_limited = (
+        _cockpit_int(event_action_summary.get("estimate_review_count"))
+        or _cockpit_int(event_action_summary.get("stale_estimate_count"))
+        or _cockpit_int(event_action_summary.get("not_confirmed_count"))
+        or _cockpit_int(event_action_summary.get("estimate_only_count"))
+    )
+    if estimate_limited:
+        return f"추정 일정 {estimate_limited}개는 검증/신선도 제한이 있어 확정 일정처럼 읽으면 안 됩니다."
+    if _cockpit_int(event_action_summary.get("official_macro_review_count")):
+        focus_title = str(event_action_summary.get("focus_title") or "공식 macro 일정")
+        return f"{focus_title} row는 official source 또는 freshness 제한이 있어 이벤트 배경의 신뢰도가 낮습니다."
+    reason = str(event_action_summary.get("primary_reason") or "").strip()
+    if reason:
+        return (
+            reason
+            .replace("확인이 필요합니다", "제한이 있습니다")
+            .replace("확인해야 합니다", "제한이 있습니다")
+            .replace("확인 필요", "자료 제한")
+        )
+    focus_title = str(event_action_summary.get("focus_title") or "가까운 주요 이벤트")
+    return f"{focus_title}가 현재 시장 해석을 바꿀 수 있는 가까운 event입니다."
+
+
+def _cockpit_events_finding(snapshot: dict[str, Any], card: dict[str, Any]) -> dict[str, Any] | None:
+    event_action_summary = _event_review_action_summary(snapshot)
+    if not event_action_summary and not card:
+        return None
+    review_count = _cockpit_int(event_action_summary.get("review_count"))
+    status = "REVIEW" if review_count else card.get("status")
+    evidence_parts = [
+        str(event_action_summary.get("detail") or "").strip(),
+        str(event_action_summary.get("focus_title") or card.get("detail") or "").strip(),
+    ]
+    evidence = " · ".join(part for part in evidence_parts if part and part != "-") or str(card.get("detail") or "-")
+    interpretation = (
+        "이벤트 자료 제한은 오늘 브리프의 주의점입니다. 공식 macro와 provider 추정 일정은 구분해서 읽습니다."
+        if review_count
+        else "이벤트는 시장 흐름을 확정하는 근거가 아니라, 오늘 브리프를 읽을 때의 배경 변수입니다."
+    )
+    return _cockpit_context_finding(
+        item_id="events",
+        label="Events",
+        conclusion=_event_context_conclusion(event_action_summary),
+        interpretation=interpretation,
+        evidence=evidence,
+        source_area=str(event_action_summary.get("source_area") or "Events"),
+        freshness=event_action_summary.get("freshness") or card.get("freshness_label") or card.get("freshness"),
+        priority="P3" if review_count else "P4",
+        status=status,
+        tone="warning" if review_count else card.get("tone"),
+    )
+
+
+def _cockpit_data_health_finding(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    data_check = _cockpit_ops_next_check(snapshot)
+    if not data_check:
+        return None
+    source_area = str(data_check.get("source_area") or "Data Health")
+    status_label = str(data_check.get("status_label") or _cockpit_status_label(data_check.get("status")))
+    reason = str(data_check.get("reason") or "-")
+    return _cockpit_context_finding(
+        item_id="data_health",
+        label="자료 신뢰도",
+        conclusion=f"{source_area} 자료 상태가 {status_label}입니다.",
+        interpretation="시장 결론을 바꾸는 근거가 아니라, 현재 브리프를 읽을 때의 자료 주의점입니다.",
+        evidence=reason,
+        source_area=source_area,
+        freshness=data_check.get("freshness"),
+        priority="P4",
+        status=data_check.get("status"),
+        tone=data_check.get("tone"),
+        repair_hint="필요 자료 보강에서 기존 Overview 갱신 경로로 보강할 수 있습니다.",
+    )
+
+
+def _build_cockpit_context_findings(
+    *,
+    cards: list[dict[str, Any]],
+    events_snapshot: dict[str, Any],
+    data_health_handoff: dict[str, Any],
+) -> list[dict[str, Any]]:
+    card_by_id = {str(card.get("id") or ""): card for card in cards}
+    findings: list[dict[str, Any] | None] = [
+        _cockpit_market_movers_finding(card_by_id.get("movement") or {}),
+        _cockpit_futures_finding(card_by_id.get("futures") or {}) if "futures" in card_by_id else None,
+        _cockpit_events_finding(events_snapshot, card_by_id.get("events") or {}),
+        _cockpit_data_health_finding(data_health_handoff),
+    ]
+    return [finding for finding in findings if finding is not None][:4]
+
+
+def _cockpit_brief_row(card: dict[str, Any], *, label: str) -> dict[str, Any]:
+    """Project an existing cockpit card into a sentence-first brief row."""
+    return {
+        "id": card.get("id"),
+        "label": label,
+        "value": card.get("value"),
+        "detail": card.get("detail"),
+        "status": card.get("status"),
+        "status_label": card.get("status_label"),
+        "tone": card.get("tone"),
+        "target_tab": card.get("target_tab"),
+        "source": card.get("source"),
+        "freshness_label": card.get("freshness_label"),
+        "badges": card.get("badges"),
+    }
+
+
+def _cockpit_event_brief_row(finding: dict[str, Any]) -> dict[str, Any]:
+    """Project event context into the market brief as an interpretation result."""
+    finding_id = str(finding.get("id") or "").strip()
+    source_area = str(finding.get("source_area") or finding.get("label") or "-").strip()
+    conclusion = str(finding.get("conclusion") or "").strip()
+    evidence = str(finding.get("evidence") or "").strip()
+    lower_text = f"{source_area} {conclusion} {evidence}".lower()
+    status = str(finding.get("status") or "").strip().upper()
+    if "추정" in conclusion or "estimate" in lower_text or status == "REVIEW":
+        value = "직접 원인 근거 약함"
+        if "추정" in conclusion or "estimate" in lower_text:
+            detail = "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다."
+        else:
+            detail = f"{conclusion} 오늘 움직임의 원인으로 단정하지 않습니다."
+    elif "확인" in conclusion or "제한" in lower_text or "review" in lower_text:
+        value = "이벤트 원인 해석 보류"
+        detail = f"{conclusion} 오늘 움직임과 직접 연결하기보다 배경 변수로만 둡니다."
+    else:
+        value = "가까운 이벤트 참고"
+        detail = f"{conclusion} 오늘 가격 움직임의 직접 원인으로 단정하지는 않습니다."
+    detail = detail.replace("event", "이벤트")
+    return {
+        "id": finding_id or "events",
+        "label": "이벤트 배경",
+        "value": value,
+        "detail": detail,
+        "status": finding.get("status"),
+        "status_label": finding.get("status_label"),
+        "tone": finding.get("tone"),
+        "target_tab": source_area,
+        "source": source_area,
+        "freshness": finding.get("freshness"),
+        "freshness_label": finding.get("freshness"),
+        "evidence": finding.get("evidence"),
+    }
+
+
+def _cockpit_apply_futures_data_limit(
+    row: dict[str, Any],
+    findings: list[dict[str, Any]],
+    data_health_handoff: dict[str, Any],
+    market_session_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Fold a Futures data-health limitation into the Futures/Macro brief row."""
+    handoff_items = [
+        {
+            "id": "data_health",
+            "source_area": item.get("area"),
+            "freshness": item.get("freshness"),
+            "status": item.get("status"),
+            "status_label": _cockpit_status_label(item.get("status") or "REVIEW"),
+        }
+        for item in list(data_health_handoff.get("priority_items") or [])
+        if isinstance(item, dict)
+    ]
+    data_finding = next(
+        (
+            finding
+            for finding in [*findings, *handoff_items]
+            if str(finding.get("id") or "").strip() == "data_health"
+            and any(
+                marker in str(finding.get("source_area") or finding.get("evidence") or "").lower()
+                for marker in ("futures", "ohlcv", "선물")
+            )
+        ),
+        None,
+    )
+    if not data_finding:
+        return row
+    if _closed_session_intraday_stale(
+        data_finding.get("status"),
+        data_finding.get("source_area") or data_finding.get("evidence"),
+        market_session_context,
+    ):
+        return row
+    limited = dict(row)
+    source_area = str(data_finding.get("source_area") or "Futures Monitor 1m OHLCV").strip()
+    limited["value"] = "장중 macro 해석 보류"
+    limited["detail"] = f"{source_area}가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다."
+    limited["status"] = data_finding.get("status") or row.get("status")
+    limited["status_label"] = data_finding.get("status_label") or row.get("status_label")
+    limited["tone"] = "warning"
+    limited["target_tab"] = "Futures Monitor"
+    limited["source"] = source_area
+    limited["source_area"] = source_area
+    limited["freshness_label"] = data_finding.get("freshness") or row.get("freshness_label")
+    return limited
+
+
+REFRESH_PLAN_BY_AREA: dict[str, dict[str, str]] = {
+    "S&P 500 Daily Snapshot": {
+        "action_id": "sp500_intraday_snapshot",
+        "label": "S&P 500 snapshot",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 최신 snapshot이 없을 수 있습니다.",
+    },
+    "Top1000 Daily Snapshot": {
+        "action_id": "top1000_intraday_snapshot",
+        "label": "Top1000 snapshot",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 최신 snapshot이 없을 수 있습니다.",
+    },
+    "Top2000 Daily Snapshot": {
+        "action_id": "top2000_intraday_snapshot",
+        "label": "Top2000 snapshot",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 최신 snapshot이 없을 수 있습니다.",
+    },
+    "S&P 500 Universe": {
+        "action_id": "sp500_universe",
+        "label": "S&P 500 universe",
+        "resolution": "resolvable",
+        "limitation": "공식 구성 변경 반영 시점에 따라 기존 universe가 유지될 수 있습니다.",
+    },
+    "Futures Monitor 1m OHLCV": {
+        "action_id": "futures_1m",
+        "label": "Futures 1m",
+        "resolution": "resolvable",
+        "limitation": "시장 휴장 또는 provider 지연이면 stale 상태가 남을 수 있습니다.",
+    },
+    "Futures Monitor Daily OHLCV": {
+        "action_id": "futures_daily",
+        "label": "Futures daily",
+        "resolution": "resolvable",
+        "limitation": "provider daily bar 지연이면 최근 기준일이 남을 수 있습니다.",
+    },
+    "Market Sentiment": {
+        "action_id": "market_sentiment",
+        "label": "Sentiment",
+        "resolution": "resolvable",
+        "limitation": "CNN / AAII source 지연이나 실패가 있으면 기존 관측값을 유지합니다.",
+    },
+    "FOMC Calendar": {
+        "action_id": "fomc_calendar",
+        "label": "FOMC calendar",
+        "resolution": "resolvable",
+        "limitation": "공식 일정 page가 변하지 않았다면 표시 내용이 그대로일 수 있습니다.",
+    },
+    "Macro Calendar": {
+        "action_id": "macro_calendar",
+        "label": "Macro calendar",
+        "resolution": "resolvable",
+        "limitation": "공식 source coverage 밖의 이벤트는 보강 후에도 비어 있을 수 있습니다.",
+    },
+    "Earnings Calendar": {
+        "action_id": "earnings_calendar",
+        "label": "Earnings calendar",
+        "resolution": "partial",
+        "limitation": "재수집해도 provider 추정 일정이면 직접 원인 근거로 쓰지 않습니다.",
+    },
+}
+REFRESH_PLAN_ACTION_ORDER = {
+    "sp500_intraday_snapshot": 10,
+    "top1000_intraday_snapshot": 11,
+    "top2000_intraday_snapshot": 12,
+    "sp500_universe": 13,
+    "futures_1m": 20,
+    "futures_daily": 21,
+    "market_sentiment": 30,
+    "fomc_calendar": 40,
+    "macro_calendar": 41,
+    "earnings_calendar": 50,
+}
+MARKET_CONTEXT_DIRECT_REFRESH_AREAS = {
+    "S&P 500 Daily Snapshot",
+    "S&P 500 Universe",
+    "Market Sentiment",
+    "FOMC Calendar",
+    "Macro Calendar",
+    "Earnings Calendar",
+}
+
+
+def _refresh_plan_item(
+    *,
+    source_area: str,
+    status: Any,
+    freshness: Any,
+    reason: Any,
+    target_surface: Any = None,
+) -> dict[str, Any] | None:
+    spec = REFRESH_PLAN_BY_AREA.get(source_area)
+    if not spec:
+        return None
+    resolution = str(spec["resolution"])
+    return {
+        "source_area": source_area,
+        "label": spec["label"],
+        "action_id": spec["action_id"],
+        "resolution": resolution,
+        "resolution_label": "보강 가능" if resolution == "resolvable" else "일부 보강",
+        "status": status,
+        "status_label": _cockpit_status_label(status),
+        "tone": "warning" if resolution == "partial" else _cockpit_status_tone(status),
+        "freshness": str(freshness or "-"),
+        "reason": str(reason or "-"),
+        "limitation": spec["limitation"],
+        "target_surface": str(target_surface or "-"),
+    }
+
+
+def _refresh_plan_excluded_event(finding: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source_area": "Events",
+        "label": "Events calendar caveat",
+        "action_id": None,
+        "resolution": "not_actionable",
+        "resolution_label": "보강 대상 아님",
+        "status": finding.get("status") or "REVIEW",
+        "status_label": _cockpit_status_label(finding.get("status") or "REVIEW"),
+        "tone": "neutral",
+        "freshness": str(finding.get("freshness") or "-"),
+        "reason": str(finding.get("conclusion") or "이벤트 일정은 참고 정보입니다."),
+        "limitation": "현재 이벤트 정보는 원인 분석 엔진이 아니므로 시장 브리프의 직접 결론으로 쓰지 않습니다.",
+        "target_surface": "Events",
+    }
+
+
+def _cockpit_refresh_plan(
+    *,
+    cards: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    data_health_handoff: dict[str, Any],
+    market_session_context: dict[str, Any] | None = None,
+    direct_market_context_refresh_only: bool = False,
+) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    excluded_items: list[dict[str, Any]] = []
+    seen_actions: set[str] = set()
+
+    movement = cards[0] if cards else {}
+    if (
+        _cockpit_status_tone(movement.get("status")) in {"warning", "danger"}
+        and not _closed_session_intraday_stale(
+            movement.get("status"),
+            "S&P 500 Daily Snapshot",
+            market_session_context,
+        )
+    ):
+        item = _refresh_plan_item(
+            source_area="S&P 500 Daily Snapshot",
+            status=movement.get("status"),
+            freshness=movement.get("freshness_label") or movement.get("freshness"),
+            reason=movement.get("detail"),
+            target_surface="Workspace > Overview > Market Movers > 일중 스냅샷 갱신",
+        )
+        if item and str(item["action_id"]) not in seen_actions:
+            seen_actions.add(str(item["action_id"]))
+            items.append(item)
+
+    for priority_item in list(data_health_handoff.get("priority_items") or []):
+        if not isinstance(priority_item, dict):
+            continue
+        source_area = str(priority_item.get("area") or "").strip()
+        if direct_market_context_refresh_only and source_area not in MARKET_CONTEXT_DIRECT_REFRESH_AREAS:
+            continue
+        if _closed_session_intraday_stale(priority_item.get("status"), source_area, market_session_context):
+            continue
+        item = _refresh_plan_item(
+            source_area=source_area,
+            status=priority_item.get("status"),
+            freshness=priority_item.get("freshness"),
+            reason=priority_item.get("reason") or priority_item.get("next_action"),
+            target_surface=priority_item.get("target_surface") or priority_item.get("alternate_surface"),
+        )
+        if item and str(item["action_id"]) not in seen_actions:
+            seen_actions.add(str(item["action_id"]))
+            items.append(item)
+
+    for finding in findings:
+        if str(finding.get("id") or "").strip() == "events" and str(finding.get("status") or "").upper() != "OK":
+            excluded_items.append(_refresh_plan_excluded_event(finding))
+
+    items = sorted(
+        items,
+        key=lambda item: (
+            REFRESH_PLAN_ACTION_ORDER.get(str(item.get("action_id") or ""), 999),
+            str(item.get("source_area") or ""),
+        ),
+    )
+    partial_count = sum(1 for item in items if item.get("resolution") == "partial")
+    closed_session = bool(dict(market_session_context or {}).get("is_closed_session"))
+    return {
+        "schema_version": "overview_market_context_refresh_plan_v1",
+        "status": "READY" if items else "NO_ACTION",
+        "summary": {
+            "headline": f"현재 보강 대상 {len(items)}개" if items else "현재 보강할 자료 이슈 없음",
+            "detail": (
+                "현재 브리프에서 실제 갱신 가능한 자료만 실행합니다."
+                if items
+                else "미국장 휴장 / 장외 시간에는 장중 snapshot 경과 시간만으로 보강하지 않습니다."
+                if closed_session
+                else "이벤트 caveat처럼 수집으로 해결되지 않는 제한은 보강 대상에서 제외합니다."
+            ),
+            "action_count": len(items),
+            "partial_count": partial_count,
+            "excluded_count": len(excluded_items),
+            "primary_button_label": "현재 이슈만 보강" if items else "현재 보강 없음",
+            "full_refresh_label": "전체 Market Context 자료 보강",
+            "closed_session": closed_session,
+        },
+        "items": items,
+        "excluded_items": excluded_items,
+        "action_ids": [str(item["action_id"]) for item in items if item.get("action_id")],
+        "boundary_note": "Smart refresh는 저장 자료 보강 job만 실행하며 시장 결론, 추천, 검증 gate, 운영 signal을 만들지 않습니다.",
+    }
+
+
+def _cockpit_extra_brief_rows(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    event_finding = next(
+        (finding for finding in findings if str(finding.get("id") or "").strip() == "events"),
+        None,
+    )
+    if event_finding:
+        rows.append(_cockpit_event_brief_row(event_finding))
+    return rows
+
+
+def build_overview_macro_context_cockpit(
+    *,
+    market_movers_snapshot: dict[str, Any] | None = None,
+    group_leadership_snapshot: dict[str, Any] | None = None,
+    futures_macro_snapshot: dict[str, Any] | None = None,
+    sentiment_snapshot: dict[str, Any] | None = None,
+    events_snapshot: dict[str, Any] | None = None,
+    collection_ops_snapshot: dict[str, Any] | None = None,
+    historical_analog_snapshot: dict[str, Any] | None = None,
+    market_session_context: dict[str, Any] | None = None,
+    include_futures_macro: bool = True,
+    direct_market_context_refresh_only: bool = False,
+) -> dict[str, Any]:
+    """Build a summary-first Overview cockpit from existing read-only market context snapshots."""
+    if market_movers_snapshot is None:
+        try:
+            market_movers_snapshot = build_market_movers_snapshot(
+                universe_code="SP500",
+                period="daily",
+                top_n=10,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            market_movers_snapshot = _cockpit_error_snapshot("Market movers", exc)
+    if group_leadership_snapshot is None:
+        try:
+            group_leadership_snapshot = build_group_leadership_snapshot(
+                universe_code="SP500",
+                group_by="sector",
+                period="daily",
+                top_n=10,
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            group_leadership_snapshot = _cockpit_error_snapshot("Sector leadership", exc)
+    if include_futures_macro and futures_macro_snapshot is None:
+        try:
+            from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
+
+            futures_macro_snapshot = load_overview_futures_macro_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            futures_macro_snapshot = _cockpit_error_snapshot("Futures macro", exc)
+    if sentiment_snapshot is None:
+        try:
+            sentiment_snapshot = build_market_sentiment_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            sentiment_snapshot = _cockpit_error_snapshot("Market sentiment", exc)
+    if events_snapshot is None:
+        try:
+            events_snapshot = build_market_events_snapshot(event_type=None, horizon_days=60, limit=100)
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            events_snapshot = _cockpit_error_snapshot("Market events", exc)
+    if collection_ops_snapshot is None:
+        try:
+            collection_ops_snapshot = build_collection_ops_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback for UI display
+            collection_ops_snapshot = _cockpit_error_snapshot("Data Health", exc)
+
+    movement_card = _build_cockpit_movement_card(market_movers_snapshot)
+    breadth_card = _build_cockpit_breadth_card(group_leadership_snapshot)
+    futures_card = _build_cockpit_futures_card(futures_macro_snapshot or {}) if include_futures_macro else None
+    sentiment_card = _build_cockpit_sentiment_card(sentiment_snapshot)
+    events_card = _build_cockpit_events_card(events_snapshot)
+    cards = [
+        movement_card,
+        breadth_card,
+        *([futures_card] if futures_card is not None else []),
+        sentiment_card,
+        events_card,
+    ]
+    data_card, data_review_count = _build_cockpit_data_card(collection_ops_snapshot)
+    cards.append(data_card)
+    card_by_id = {str(card.get("id") or ""): card for card in cards}
+    market_session = _market_session_context_model(
+        market_session_context,
+        basis_date=_market_context_basis_date(
+            market_movers_snapshot,
+            group_leadership_snapshot,
+            futures_macro_snapshot if include_futures_macro else {},
+        ),
+    )
+    _apply_market_session_basis_to_cards(cards, market_session)
+
+    review_cards = [
+        card for card in cards
+        if str(card.get("id") or "") not in {"events", "data"}
+        and _cockpit_status_tone(card.get("status")) in {"warning", "danger"}
+        and not _closed_session_intraday_stale(card.get("status"), card.get("source") or card.get("title"), market_session)
+    ]
+    source_confidence = build_overview_source_confidence_catalog(
+        market_movers_snapshot=market_movers_snapshot,
+        group_leadership_snapshot=group_leadership_snapshot,
+        futures_macro_snapshot=futures_macro_snapshot,
+        sentiment_snapshot=sentiment_snapshot,
+        events_snapshot=events_snapshot,
+        collection_ops_snapshot=collection_ops_snapshot,
+        market_session_context=market_session,
+        include_futures_context=include_futures_macro,
+    )
+    data_health_handoff = build_overview_data_health_ingestion_handoff(collection_ops_snapshot, limit=3)
+    context_findings = _build_cockpit_context_findings(
+        cards=cards,
+        events_snapshot=events_snapshot,
+        data_health_handoff=data_health_handoff,
+    )
+    brief_context_findings = [
+        item
+        for item in context_findings
+        if str(item.get("id") or "").strip() in {"events", "data_health"}
+    ]
+    refresh_plan = _cockpit_refresh_plan(
+        cards=cards,
+        findings=brief_context_findings,
+        data_health_handoff=data_health_handoff,
+        market_session_context=market_session,
+        direct_market_context_refresh_only=direct_market_context_refresh_only,
+    )
+    refresh_summary = dict(refresh_plan.get("summary") or {})
+    actionable_refresh_count = _cockpit_int(refresh_summary.get("action_count"))
+    reference_limit_count = _cockpit_int(refresh_summary.get("excluded_count")) + _cockpit_int(
+        dict(source_confidence.get("summary") or {}).get("reference_count")
+    )
+    status = "REVIEW" if actionable_refresh_count or review_cards else "OK"
+    summary_status_label = (
+        "자료 보강 필요"
+        if actionable_refresh_count
+        else str(market_session.get("rail_ok_label"))
+        if market_session.get("is_closed_session")
+        else "자료 정상 · 참고 제한"
+        if reference_limit_count
+        else "자료 정상"
+    )
+    context_review_count = actionable_refresh_count
+    next_path = " → ".join(
+        str(item.get("source_area") or item.get("label") or "-")
+        for item in list(refresh_plan.get("items") or [])
+        if str(item.get("source_area") or item.get("label") or "").strip()
+    ) or ("참고 제한 분리" if reference_limit_count else "추가 보조 맥락 없음")
+    sector_pressure = build_overview_breadth_heatmap_summary(group_leadership_snapshot)
+    event_timeline = build_overview_macro_week_lane(events_snapshot, horizon_days=14, limit=6)
+    summary_headline, summary_detail = _build_cockpit_summary_copy(
+        cards,
+        context_review_count=context_review_count,
+        market_session=market_session,
+    )
+    rail = [
+        {
+            "label": "자료 상태",
+            "value": (
+                f"보강 가능 자료 {actionable_refresh_count}개"
+                if actionable_refresh_count
+                else str(market_session.get("rail_ok_label"))
+                if market_session.get("is_closed_session")
+                else "자료 정상 · 참고 제한 있음"
+                if reference_limit_count
+                else "자료 정상"
+            ),
+            "detail": (
+                "필요 자료 보강에서 실행 가능"
+                if actionable_refresh_count
+                else str(market_session.get("brief_subtitle") or "마지막 저장 기준")
+                if market_session.get("is_closed_session")
+                else "참고 제한 / 관리 메타는 근거에 분리"
+                if reference_limit_count
+                else "바로 참고 가능"
+            ),
+            "tone": _cockpit_status_tone(status),
+        },
+        {
+            "label": "Top Mover",
+            "value": str(card_by_id.get("movement", {}).get("value") or "-"),
+            "detail": str(card_by_id.get("movement", {}).get("freshness_label") or card_by_id.get("movement", {}).get("target_tab") or "Market Movers"),
+            "tone": card_by_id.get("movement", {}).get("tone") or "neutral",
+        },
+        {
+            "label": "Breadth",
+            "value": str(card_by_id.get("breadth", {}).get("value") or "-"),
+            "detail": str(card_by_id.get("breadth", {}).get("freshness_label") or card_by_id.get("breadth", {}).get("target_tab") or "Group Leadership"),
+            "tone": card_by_id.get("breadth", {}).get("tone") or "neutral",
+        },
+        *(
+            [
+                {
+                    "label": "Macro",
+                    "value": str(card_by_id.get("futures", {}).get("value") or "-"),
+                    "detail": str(card_by_id.get("futures", {}).get("freshness_label") or card_by_id.get("futures", {}).get("target_tab") or "Futures Macro"),
+                    "tone": card_by_id.get("futures", {}).get("tone") or "neutral",
+                }
+            ]
+            if include_futures_macro
+            else []
+        ),
+        {
+            "label": "Next Event",
+            "value": str(card_by_id.get("events", {}).get("value") or "-"),
+            "detail": str(card_by_id.get("events", {}).get("freshness_label") or card_by_id.get("events", {}).get("target_tab") or "Events"),
+            "tone": card_by_id.get("events", {}).get("tone") or "neutral",
+        },
+    ]
+    for index, card in enumerate(cards):
+        card_id = str(card.get("id") or "")
+        card["group"] = "core" if card_id in {"movement", "breadth", "futures"} else "supporting"
+        card["priority_label"] = "시장 브리프" if card_id in {"movement", "breadth", "futures"} else ("근거" if card_id == "data" else "다음 맥락")
+
+    brief_rows = [
+        _cockpit_brief_row(card_by_id.get("movement") or {}, label="무엇이 움직였나"),
+        _cockpit_brief_row(card_by_id.get("breadth") or {}, label="확산/집중인가"),
+    ]
+    if include_futures_macro and "futures" in card_by_id:
+        brief_rows.append(
+            _cockpit_apply_futures_data_limit(
+                _cockpit_brief_row(card_by_id["futures"], label="Futures/Macro 배경"),
+                brief_context_findings,
+                data_health_handoff,
+                market_session,
+            )
+        )
+    else:
+        event_finding = next(
+            (item for item in context_findings if str(item.get("id") or "") == "events"),
+            None,
+        )
+        if event_finding:
+            brief_rows.append(_cockpit_event_brief_row(event_finding))
+    interpretation_cues = [
+        _cockpit_brief_row(card_by_id.get("events") or {}, label="이벤트 압력"),
+        _cockpit_brief_row(card_by_id.get("sentiment") or {}, label="심리 확인"),
+    ]
+    if include_futures_macro and "futures" in card_by_id:
+        interpretation_cues.append(_cockpit_brief_row(card_by_id["futures"], label="매크로 확인"))
+
+    return {
+        "schema_version": "overview_macro_context_cockpit_v1",
+        "status": status,
+        "summary": {
+            "headline": summary_headline,
+            "detail": summary_detail,
+            "tone": _cockpit_status_tone(status),
+            "status_label": summary_status_label,
+            "review_count": context_review_count,
+            "data_review_count": data_review_count,
+            "next_path": next_path,
+            "rail": rail,
+        },
+        "brief_rows": brief_rows,
+        "market_session": market_session,
+        "refresh_plan": refresh_plan,
+        "interpretation_cues": interpretation_cues,
+        "sector_pressure": sector_pressure,
+        "event_timeline": event_timeline,
+        "historical_analog": historical_analog_snapshot or {},
+        "cards": cards,
+        "context_findings": context_findings,
+        "brief_context_findings": brief_context_findings,
+        "next_checks": context_findings,
+        "data_health_handoff": data_health_handoff,
+        "source_confidence": source_confidence,
+        "boundary_note": (
+            "context 전용 market backdrop입니다. 이 cockpit은 거래 실행, 승인/차단 판단, "
+            "registry/saved 기록, broker order, auto rebalance를 만들지 않습니다."
+        ),
     }
 
 
@@ -4263,6 +7280,11 @@ def _build_intraday_return_payload(
         period=period,
         coverage=coverage,
     )
+    missing_rows = _enrich_missing_rows(
+        missing_rows,
+        universe_code=universe_code,
+        query_fn=query_fn,
+    )
     return {
         "snapshot_time": snapshot_time,
         "return_rows": return_rows,
@@ -4326,6 +7348,7 @@ def build_market_movers_snapshot(
     top_n: int = 20,
     sector: str | None = None,
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     prefer_intraday: bool = True,
     intraday_interval: str = "5m",
@@ -4338,6 +7361,7 @@ def build_market_movers_snapshot(
         normalized_universe,
         _normalize_limit(universe_limit, default=1000, min_value=100, max_value=3000),
     )
+    requested_as_of = _iso_date(as_of_date)
     query = query_fn or _default_query
 
     if normalized_period not in VALID_PERIODS:
@@ -4351,6 +7375,11 @@ def build_market_movers_snapshot(
             query_fn=query,
         )
         if not universe:
+            empty_message = (
+                "Nasdaq Symbol Directory refresh is required before Nasdaq-listed current snapshot coverage can render."
+                if normalized_universe == "NASDAQ"
+                else "Selected universe has no symbols. For S&P 500, run the universe refresh first."
+            )
             return _empty_movers_snapshot(
                 status="NO_UNIVERSE",
                 period=normalized_period,
@@ -4358,10 +7387,10 @@ def build_market_movers_snapshot(
                 universe_limit=normalized_limit,
                 top_n=normalized_top_n,
                 sector=sector,
-                message="Selected universe has no symbols. For S&P 500, run the universe refresh first.",
+                message=empty_message,
             )
 
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             intraday_snapshot = _build_intraday_movers_snapshot(
                 universe=universe,
                 universe_code=normalized_universe,
@@ -4381,6 +7410,7 @@ def build_market_movers_snapshot(
         date_window = resolve_effective_market_dates(
             period=normalized_period,
             min_price_rows=effective_min_rows,
+            as_of_date=requested_as_of,
             today=today,
             query_fn=query,
         )
@@ -4414,6 +7444,7 @@ def build_market_movers_snapshot(
         )
         return_rows, missing_rows = _build_return_rows(
             universe=universe,
+            universe_code=normalized_universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
@@ -4434,14 +7465,14 @@ def build_market_movers_snapshot(
             price_mode="EOD DB",
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             coverage["refresh_state"] = _intraday_refresh_state(
                 snapshot_status="OK",
                 period=normalized_period,
                 coverage=coverage,
             )
         warnings = _coverage_warnings(coverage, date_window=date_window)
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
         return {
             "status": "OK",
@@ -4591,6 +7622,7 @@ def build_group_leadership_snapshot(
     top_n: int = 10,
     min_group_size: int = 5,
     min_price_rows: int = 1000,
+    as_of_date: str | date | None = None,
     today: date | None = None,
     prefer_intraday: bool = True,
     intraday_interval: str = "5m",
@@ -4610,6 +7642,7 @@ def build_group_leadership_snapshot(
         _normalize_limit(universe_limit, default=2000, min_value=100, max_value=3000),
     )
     normalized_top_n = _normalize_limit(top_n, default=10, min_value=5, max_value=100)
+    requested_as_of = _iso_date(as_of_date)
     query = query_fn or _default_query
 
     try:
@@ -4618,7 +7651,7 @@ def build_group_leadership_snapshot(
             universe_limit=normalized_limit,
             query_fn=query,
         )
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             intraday_snapshot = _build_intraday_group_leadership_snapshot(
                 universe=universe,
                 universe_code=normalized_universe,
@@ -4640,6 +7673,7 @@ def build_group_leadership_snapshot(
         date_window = resolve_group_trend_market_dates(
             period=normalized_period,
             min_price_rows=effective_min_rows,
+            as_of_date=requested_as_of,
             today=today,
             query_fn=query,
         )
@@ -4673,6 +7707,7 @@ def build_group_leadership_snapshot(
         )
         return_rows, missing_rows = _build_return_rows(
             universe=universe,
+            universe_code=normalized_universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
@@ -4714,14 +7749,14 @@ def build_group_leadership_snapshot(
             date_window=date_window,
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             coverage["refresh_state"] = _intraday_refresh_state(
                 snapshot_status="OK",
                 period=normalized_period,
                 coverage=coverage,
             )
         warnings = _coverage_warnings(coverage, date_window=date_window)
-        if normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
         return {
             "status": "OK",

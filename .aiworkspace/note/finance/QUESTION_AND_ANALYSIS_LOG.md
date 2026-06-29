@@ -25,6 +25,356 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-25 - Overview legacy dashboard should be physically removed, not renamed
+
+- User request: 사용자가 남은 `legacy_dashboard.py` 제거를 위해 17차~24차를 순서대로 진행하고 각 차수마다 QA 후 다음 차수로 넘어가 달라고 승인함.
+- Interpreted goal: 기존 Overview active tab 분리가 끝났더라도 compatibility wrapper가 monolithic legacy module을 re-export하면 UI / helper / action boundary가 다시 흐려지므로, helper body를 domain owner로 옮기고 파일을 실제 삭제해야 한다.
+- Analysis result: 안전한 삭제 경로는 session/banner, Market Context, Events, Sentiment, Market Movers, Futures Macro 순으로 직접 의존성을 제거한 뒤, 마지막에 `overview_dashboard.py`를 explicit compatibility facade로 바꾸는 것이었다. Group trend heatmap 같은 남은 private helper contract는 새 helper module에 귀속시켰다.
+- Follow-up: V24에서 `app/web/overview/legacy_dashboard.py`를 삭제했다. 남은 개선 후보는 `overview_dashboard.py`의 private compatibility exports를 downstream imports가 사라질 때 하나씩 줄이는 것이다.
+
+### 2026-06-25 - Overview active tabs should have tab-local helper bridges
+
+- User request: 사용자가 11차~16차를 한 차수씩 진행하고 각 차수 끝에 QA를 한 뒤 다음 차수로 넘어가 달라고 승인함.
+- Interpreted goal: Overview의 primary tab entrypoint가 계속 `legacy_dashboard.py` 세부 helper를 직접 호출하면 UI 노출과 helper/compatibility 경계가 다시 흐려지므로, 탭별 entrypoint와 helper를 짝으로 분리해야 한다.
+- Analysis result: V11 audit 결과 old full-tab wrapper 호출은 제거되어 있었고 남은 문제는 `market_context.py`, `events.py`, `futures_macro.py`, `market_movers.py`, `sentiment.py`가 legacy helper를 직접 호출하는 것이었다. 가장 작은 안전한 구조는 각 tab entrypoint는 user flow order만 남기고, Streamlit glue / legacy bridge는 matching `*_helpers.py`에 두는 것이다.
+- Follow-up: V12~V16에서 5개 tab helper를 추가했고, active primary tab files는 더 이상 `legacy_dashboard.py`를 직접 import하지 않는다. `legacy_dashboard.py`에는 아직 low-level compatibility helper body가 남아 있으므로 향후 물리 삭제는 helper cluster 단위 reference audit 후 진행해야 한다.
+
+### 2026-06-25 - Overview UI and engine/read-model boundaries should be explicit
+
+- User request: 사용자가 Overview 구조 리뷰 후 1차 작업과 QA를 마친 뒤, 자는 동안 2차~5차를 순서대로 진행하되 각 차수 끝에 QA를 수행해 달라고 요청함.
+- Interpreted goal: Overview의 UI 노출, visual component, service/read-model, legacy compatibility 경계를 차수별로 나누고, 각 단계가 실제 화면을 깨뜨리지 않는지 확인해야 한다.
+- Analysis result: V1은 active page shell만 분리했기 때문에 tab orchestration, component import surface, service import surface, boundary guard가 아직 부족했다. V2-V5에서는 탭 orchestration ownership, `app/web/overview/components/*`, `app/services/overview/*`, import-boundary tests를 순서대로 세우는 것이 가장 작은 안전한 구조 개선이다.
+- Follow-up: V2-V5를 완료했다. 아직 renderer / calculation body는 각각 `legacy_dashboard.py`, `overview_ui_components.py`, `overview_market_intelligence.py`에 남아 있으므로 다음 cleanup은 물리적 extraction을 별도 승인된 단위로 다뤄야 한다.
+
+### 2026-06-24 - Futures Macro tab refresh state should track stored daily candles
+
+- User request: 사용자가 `선물 매크로` 탭이 계속 `2026-06-23` 기준으로 머무는 것 같아 탭 진입 시 업데이트가 잘 되는지 확인을 요청함.
+- Interpreted goal: 실제 futures daily collection이 멈췄는지, 아니면 탭 / cache / 화면 refresh 경로가 stale snapshot을 보여주는지 분리해서 확인해야 한다.
+- Analysis result: DB에는 16개 core futures symbol 모두 `2026-06-24 00:00:00` 1D candle까지 저장되어 있었고, 최신 `manual_macro_daily` run도 성공이었다. 문제는 열려 있는 Streamlit process의 15분 macro snapshot cache가 DB 최신 marker를 cache key로 보지 않고, `Futures Macro` primary tab에 직접 `일봉 매크로 갱신` / cache reload control이 없던 UX 경계였다.
+- Follow-up: `overview-futures-macro-refresh-state-v1-20260624`에서 latest stored 1D candle marker 기반 cache invalidation과 tab-local refresh controls를 추가했다.
+
+### 2026-06-24 - Futures Macro mixed scenarios should explain conflict, not force prediction
+
+- User request: 사용자가 `선물 매크로` 탭에서 `혼재된 매크로 흐름`이 자주 뜨는 이유와 macro context logic의 전문성을 질문했고, 우선 추천 1차 개선만 진행하라고 승인함.
+- Interpreted goal: 현 단계에서는 외부 macro source를 새로 붙이기보다, 현재 저장된 futures 일봉 score 안에서 mixed가 어떤 종류의 mixed인지 설명해야 한다.
+- Analysis result: 기존 rule은 보수적으로 설계되어 명확한 risk-on / risk-off / rate / inflation 조합이 아닐 때 `혼재된 매크로 흐름`으로 빠진다. 이 판단 자체는 안전하지만 사용자가 읽을 정보량이 부족하므로, 상위 scenario는 그대로 유지하고 mixed subtype / reason을 보조 context로 붙이는 것이 가장 작은 개선이다.
+- Follow-up: `overview-futures-macro-mixed-substates-v1-20260624`에서 `sub_scenario`, `regime_hint`, `mixed_reason`을 추가했다. FRED `T10Y3M`, `VIXCLS`, `BAA10Y` 등 독립 macro source 기반 전문성 보강은 2차 후보로 남겨둔다.
+
+### 2026-06-24 - Futures macro validation should live in its own Overview tab
+
+- User request: 사용자가 `시장 맥락` 첫 진입이 느린 원인이 futures macro의 과거 validation이라면, Overview에 `선물 매크로` 탭을 추가하고 `시장 맥락`에서는 매크로 진단을 빼는 흐름을 승인함.
+- Interpreted goal: 초기 Overview 진입은 오늘 시장 맥락을 빠르게 읽는 화면이어야 하고, 저장된 futures 일봉 약 5년치 기반 macro diagnosis / historical validation은 의도적으로 들어가는 별도 탭에서 관리해야 한다.
+- Analysis result: `load_overview_futures_macro_snapshot(include_validation=False)`는 약 0.2초지만, validation을 포함하면 약 7.5초 이상 걸렸다. 기본 `Market Context`에는 historical analog / Macro 조건 섹션도 남아 있었기 때문에, 첫 진입은 movement / breadth / sentiment / events / data 중심 light cockpit으로 좁히고 futures / historical macro path는 opt-in surface로 분리하는 것이 가장 작은 구조 개선이다.
+- Follow-up: `overview-futures-macro-tab-split-v1-20260624`에서 primary tab, helper flags, cockpit optional futures rows, source confidence gating, default historical analog opt-out, latest raw date query rewrite를 구현했다. 후속으로는 실제 DB index plan과 Browser QA 기준 체감 시간을 계속 관찰한다.
+
+### 2026-06-24 - Overview Market Context should load immediately; slow part is cockpit fan-out
+
+- User request: 사용자가 `시장 맥락 불러오기` 버튼은 기대한 흐름이 아니므로 바로 제거하고, Market Context 진입 시 무엇을 로드해서 느린지 파악해 달라고 요청함.
+- Interpreted goal: 탭 전환은 내부 widget으로 유지하되, 기본 Market Context는 전처럼 즉시 보여줘야 한다. 초기 지연 문제는 버튼으로 숨기지 말고 실제 느린 read model을 찾아야 한다.
+- Analysis result: `Market Context`는 `_render_overview_market_context_tab`에서 `load_overview_macro_context_cockpit`을 호출하고, 이 함수가 movers, sector leadership, futures macro, sentiment, events, collection ops, historical analog를 한 번에 로드한다. Local cold timing 기준 전체 cockpit은 약 15.8초였고, 가장 큰 항목은 futures macro validation 약 7.8초였다. `load_overview_futures_macro_snapshot(include_validation=False)`는 약 0.2초라서, 주 원인은 최신 macro snapshot 자체가 아니라 기본으로 켜진 5년 PIT validation이다.
+- Follow-up: `overview-market-context-load-gate-removal-v1-20260624`에서 explicit load gate를 제거했다. 후속 최적화가 필요하면 Market Context 첫 화면에서는 validation-lite futures macro를 쓰고, historical validation은 상세/근거 영역에서 별도 lazy 로드하는 방향을 검토한다.
+
+### 2026-06-23 - Overview tabs should be internal text tabs, not anchor navigation
+
+- User request: 사용자가 이전 디자인 탭이 새 창/링크 이동처럼 느껴진다고 지적하고, 하나의 브라우저 안에서 처리되는 탭 방식과 초기 로딩 지연 개선을 요청한 뒤, 최종 visual reference로 plain text + red underline tab 형식을 제시함.
+- Interpreted goal: Overview primary tabs는 디자인만 바꾼 링크가 아니라 Streamlit 내부 상태 전환이어야 하며, 첫 진입 때 default `Market Context`가 무거운 read model fan-out을 즉시 실행하지 않아야 함.
+- Analysis result: Anchor HTML nav는 direct slug에는 편하지만 제품 탭처럼 느껴지지 않는다. `st.pills` 내부 widget state를 쓰고 CSS만 text-tab underline style로 좁히면 현재 브라우저 안에서 전환되며, query-param slug는 호환 입력으로만 남길 수 있다. 초기 지연 원인은 `load_overview_macro_context_cockpit`이 movers / sector leadership / futures macro / sentiment / events / collection ops / historical analog를 한 번에 로드하기 때문이다.
+- Follow-up: `overview-nav-internal-lazy-load-v1-20260623`에서 anchor rendering을 제거하고 내부 underline tabs를 구현했다. 당시 추가한 `시장 맥락 불러오기` lazy gate는 사용자 피드백에 따라 `overview-market-context-load-gate-removal-v1-20260624`에서 제거했다. 3차 후보는 Market Context 내부 old source label 흡수 또는 helper code repurpose / cleanup 판단이다.
+
+### 2026-06-23 - Overview primary tab bar should feel like product navigation
+
+- User request: 사용자가 현재 Overview tab bar가 기본 segmented control처럼 보이고, 더 디자인적인 tab bar가 없는지 질문한 뒤 진행을 승인함.
+- Interpreted goal: 새 데이터 기능을 추가하는 것이 아니라, 이미 줄인 네 개 primary tab을 더 신뢰감 있는 제품형 navigation으로 보여줘야 함.
+- Analysis result: 현재는 탭 수가 네 개로 줄었기 때문에 full-width segmented bar보다 compact pill nav가 더 적합하다. Korean primary label과 English secondary label을 함께 두면 의미는 유지하면서 화면의 기본 위젯 느낌을 줄일 수 있다.
+- Follow-up: `overview-primary-nav-pill-v1-20260623`에서 custom pill nav와 query-param slug selection을 구현했지만 anchor 기반이라 이후 `overview-nav-internal-lazy-load-v1-20260623`에서 내부 widget 기반 underline tabs로 대체했다. 3차로는 Market Context 내부에 남은 old source label(`Futures Monitor`, `Sector / Industry`)을 흡수형 문구로 바꿀지 별도 판단할 수 있다.
+
+### 2026-06-23 - Overview primary tab에서 Futures Monitor와 Sector / Industry를 제거한다
+
+- User request: 사용자가 `Futures Monitor`와 `Sector / Industry`를 만들었지만 실제로 어떤 확실한 정보를 얻는지 모르겠고, 잘 모르는 기능을 계속 개선하는 것이 좋은 프로그램으로 이어지지 않는다고 판단해 제거를 승인함.
+- Interpreted goal: 기능/데이터 pipeline 삭제가 아니라, Overview의 primary navigation에서 사용 가치가 불명확한 standalone surfaces를 걷어내고 `Market Context` 중심으로 질문을 좁혀야 함.
+- Analysis result: `Market Context`가 이미 futures/macro backdrop과 sector pressure evidence를 흡수하고 있으므로, 두 탭은 primary selector에서 제거하고 stale selected value를 `Market Context`로 fallback하는 soft-remove가 가장 작고 되돌리기 쉬운 변경이다.
+- Follow-up: `overview-primary-tab-soft-remove-v1-20260623`에서 1차 soft-remove를 완료했다. 2차는 Market Context 흡수 근거가 충분한지 점검, 3차는 unused helper code 물리 삭제 또는 repurpose 여부 결정이다.
+
+### 2026-06-23 - Futures Monitor Workbench V1 still needed product-flow cleanup
+- User request:
+  - 사용자가 Workbench V1 후속으로 `근거를 어떻게 읽을까`, 과거 scenario table, split refresh controls, repeated stale/refresh wording이 아직 prototype-like하다고 지적하고 V1.1 진행을 요청함.
+- Interpreted goal:
+  - 새 기능이 아니라 existing stored futures OHLCV / macro score / validation read model을 `현재 상태 -> 현재 근거 -> 과거 점검 -> 자료 관리 -> 원본 표` 순서로 읽히게 해야 함.
+- Analysis result:
+  - Refresh action ownership은 `자료 갱신` module로 통합하고, context bar는 status only, watch strip은 symbol state, evidence disclosure는 current evidence / validation summary, raw disclosure는 source table을 소유하는 구조가 가장 작은 제품 개선이다.
+- Follow-up:
+  - Workbench V1.1에서 해당 흐름을 구현했다. Provider/schema/DB/registry/saved JSONL, render-time provider fetch, trading/recommendation/validation/monitoring/order semantics는 계속 제외한다.
+
+### 2026-06-23 - Futures Monitor should read as a workbench, not translated controls
+- User request:
+  - 사용자가 이전 결과가 완성된 UI가 아니라 한글 문구만 바꾼 것처럼 보인다고 지적했고, benchmark guide를 바탕으로 순서대로 개발하라고 승인함.
+- Interpreted goal:
+  - Futures Monitor는 form controls / cards / raw tables를 정돈해 놓은 화면이 아니라, 사용자가 관찰 대상, 데이터 상태, 오늘의 시장 해석, 최근 1주 흐름, 차트에서 확인할 점을 순서대로 읽는 workbench여야 함.
+- Analysis result:
+  - 큰 symbol multiselect와 refresh popover가 기본 화면 피로를 키웠다. 기본 화면에는 context bar와 compact watch strip을 두고, 편집 / 갱신 mode / raw evidence / provider diagnostics는 disclosure로 낮추는 것이 현재 Streamlit 구조에서 가장 작은 제품 개선이다.
+- Follow-up:
+  - Workbench Layout V1에서 `context bar -> compact watch strip -> market brief hero -> weekly flow lane -> chart workspace question` 흐름을 구현했다. Provider/schema/registry/saved write와 trading/recommendation semantics는 계속 제외한다.
+
+### 2026-06-23 - Futures Monitor needs benchmark-led workbench redesign
+- User request:
+  - 사용자가 현재 UI가 완성된 UI가 아니라 한글 문구 변경처럼 보인다고 지적했고, Toss Securities까지 포함해 5개 UX/UI benchmark를 분석한 개선 가이드라인을 요청함.
+- Interpreted goal:
+  - Futures Monitor를 또 다른 카드/문구 정리로 고치는 것이 아니라, 금융 모니터링 / 운영 dashboard / 쉬운 투자 UX 패턴을 현재 read-only Overview context boundary에 맞게 재설계해야 함.
+- Analysis result:
+  - TradingView/Koyfin은 persistent watchlist와 linked chart workspace, IBKR은 dense linked workspace, Datadog/Grafana는 status/annotation/drilldown, Stripe/Linear는 compact action/overview discipline, Toss Securities는 plain-language simplification과 필요한 길목의 설명을 제공한다.
+- Follow-up:
+  - 다음 구현 후보는 `context bar -> market brief hero -> weekly flow lane -> linked watch/chart workspace -> evidence disclosures` 순서의 `Futures Workbench Layout V1`이다. Live trading/order/recommendation semantics는 계속 제외한다.
+
+### 2026-06-23 - Futures Monitor default surface should avoid duplicate status exposure
+- User request:
+  - 사용자가 `Workspace > Overview > Futures Monitor`에서 같은 정보가 여러 번 노출되면 피로가 생길 수 있다며, 중복되는 UX를 합치고 정리하는 방향의 분석과 단계별 개선을 승인함.
+- Interpreted goal:
+  - 새 지표나 진단 패널을 추가하는 것이 아니라, 기존 V3 화면에서 page-level 상태, Macro 시나리오, Live Chart 상태, provider run detail의 기본 노출 소유권을 분리해야 함.
+- Analysis result:
+  - Command center는 관찰 범위 / 데이터 상태와 다음 행동 / top move만 소유하고, Macro hero는 시나리오를 단독 소유하며, Live Chart는 차트 표시 범위와 symbol-level 상태만 보여주는 것이 가장 작은 UX 개선 경로다.
+- Follow-up:
+  - Dedup UX V1에서 provider rows / latest candle detail은 diagnostics로 낮췄고, Macro support strip에서 scenario 반복을 제거했으며, Live Chart의 old status cards를 제거했다. Read-only Overview context boundary는 그대로 유지한다.
+
+### 2026-06-22 - Futures Monitor should explain evidence before showing raw tables
+- User request:
+  - 사용자가 `Workspace > Overview > Futures Monitor`의 watch group, data actions, Macro Context, Macro Evidence & Data가 prototype 수준이고 표 중심이라 해석하기 어렵다고 지적하고 1차~4차 순차 개발을 승인함.
+- Interpreted goal:
+  - Futures Monitor는 raw status / run diagnostics를 보기 좋게 배열하는 화면이 아니라, 사용자가 오늘 기준 선물/매크로 배경과 최근 1주 흐름, 근거 강도, 충돌 근거를 먼저 읽고 필요할 때 원본 표로 내려가는 context workflow여야 함.
+- Analysis result:
+  - 기존 stored 1D futures read model already has `5D %`, score groups, and historical validation. DB/schema/provider 변경 없이 `weekly_context`와 evidence-reading payload를 추가하는 것이 가장 작은 제품 개선 경로다.
+- Follow-up:
+  - V3에서 watch group / refresh UX를 한글 중심으로 정리하고, Macro Context에 최근 1주 흐름과 `근거를 어떻게 읽을까`를 추가했다. Futures Monitor는 여전히 read-only Overview context surface이며 validation gate / monitoring signal / trading semantics를 만들지 않는다.
+
+### 2026-06-22 - Overview primary tabs should stay market-context focused
+- User request:
+  - 사용자가 Market Context 정리가 어느 정도 끝났으니 `Sector/Industry`, `Data Health`, `Candidate Ops` 탭이 현재 제품에서 필요한지 분석하고 필요 없으면 제거하거나 개선해 달라고 요청함.
+- Interpreted goal:
+  - Overview의 primary tab은 시장 context 흐름과 상세 근거에 집중하고, 운영 진단이나 backtest candidate 관리 성격의 화면은 같은 층위에서 노출하지 않아야 함.
+- Analysis result:
+  - `Sector / Industry`는 Market Context의 breadth / leadership drilldown이므로 유지한다. `Data Health`는 Market Context source / refresh evidence 및 Operations / Ingestion 소유로 demotion한다. `Candidate Ops`는 Backtest / Final Review / Operations workflow 성격이므로 Overview에서 제거한다.
+- Follow-up:
+  - V22에서 Overview selector를 `Market Context`, `Market Movers`, `Futures Monitor`, `Sentiment`, `Sector / Industry`, `Events`로 정리하고, Sector / Industry raw table은 접힌 상세로 낮췄다. Candidate snapshot helper code는 별도 Backtest / Operations audit 전까지 보존한다.
+
+### 2026-06-22 - Source and refresh evidence should support action, not act as a diagnostic table
+- User request:
+  - `근거: 자료 기준 / 출처 상태` and `필요 자료 보강` were still shown as dense status rows and large disabled actions, making the area feel prototype-like instead of helping the user understand what is normal, what is reference-only, and what can actually be refreshed.
+- Interpreted goal:
+  - Market Context source evidence should first answer whether the current brief is usable, which sources directly support it, which rows are reference / management context, and what refresh action is actually available.
+- Analysis result:
+  - Events / Data Health should remain visible as reference / management rows, but not as unresolved action targets. Refresh UI should not show a disabled smart action when there are no actionable items.
+- Follow-up:
+  - V21 keeps refresh actions and data boundaries unchanged while changing the presentation to `자료 상태 요약 -> 시장 브리프 직접 자료 -> 참고 / 관리 자료 -> 보강 판단`; progressive Market Context loading remains separate.
+
+### 2026-06-22 - Macro condition display should be intersection-first, not order-dependent
+- User request:
+  - GLD 조건을 먼저 적용한 뒤 금리선물을 적용하면 결과가 6회인데, 금리선물을 먼저 적용하고 GLD를 적용하면 값이 달라질 수 있지 않냐고 질문하고, 순서가 아니라 조건별 count와 교집합으로 보여주는 방향을 승인함.
+- Interpreted goal:
+  - Macro conditioned analog should communicate that the final conditioned sample is the intersection of GLD same-state and Rate Pressure futures same-state anchors, not a result that depends on the visual order.
+- Analysis result:
+  - Existing code computed the final sample by filtering GLD anchors with the futures bucket, which is mathematically an intersection for anchors with computable buckets, but the UI made it look like a sequential funnel. V18 now counts GLD and futures independently over the broad sample and separately exposes the final intersection.
+- Follow-up:
+  - Future Macro conditions should follow the same pattern: show each condition's independent broad-sample count and the final combined intersection, with missing/computable counts explicit when a condition cannot be evaluated for all anchors.
+
+### 2026-06-21 - Macro condition counts need visible meaning, not just counts
+- User request:
+  - `Macro 조건 후 결과 변화`의 `GLD 조건 적용 37회` / `금리선물 조건 적용 6회`가 무엇을 뜻하는지 기본 사용자가 바로 알 수 없고, `현재 Macro 배경 참고` 텍스트가 정리되지 않아 과거 유사 맥락 섹션보다 엉성해 보인다고 지적함.
+- Interpreted goal:
+  - Macro 비교는 숫자 축소 흐름을 보이되, 각 숫자가 어떤 조건으로 남은 표본인지 같은 위치에서 설명해야 한다. Reference-only Macro backdrop은 적용 조건이 아니라 현재 배경 상태와 broad sample 안의 같은 상태 비율로 읽혀야 한다.
+- Analysis result:
+  - GLD / Rate Pressure futures는 여전히 실제 hard 추가 조건이고, T10Y3M / VIXCLS / BAA10Y는 reference-only backdrop이다. 이 구분을 유지하면서 UI에서 GLD bucket, `ZN=F` / `ZB=F` rate-pressure bucket, reference-only badge / ratio를 드러내는 것이 가장 작은 변경이다.
+- Follow-up:
+  - V17에서 basis bar 조건 의미와 Macro backdrop 상태 / 비율 UI를 보정했다. FRED / events / sentiment hard conditioning은 별도 승인 전까지 계속 제외한다.
+
+### 2026-06-21 - Macro conditioned analog should show what changed, not list conditions
+- User request:
+  - `Macro 조건 비교`에서 `Sector ETF vs SPY relative strength`가 기본 조건인지, GLD / 금리선물 조건이 무엇을 의미하는지, `Macro 조건 포함 핵심 자산` 표가 더 좋은 결과표처럼 보이는 이유를 질문하고 1~4 개선 방향 개발을 승인함.
+- Interpreted goal:
+  - Macro 조건 비교는 기본 유사 맥락 기준과 Macro 추가 조건을 분리하고, 표본 수 자체가 아니라 broad 결과 대비 conditioned 결과가 어떻게 달라졌는지 먼저 보여줘야 한다.
+- Analysis result:
+  - `Sector ETF vs SPY relative strength`는 broad sample을 만드는 기준이고, GLD / Rate Pressure futures만 현재 hard 추가 조건이다. T10Y3M / VIXCLS / BAA10Y는 current macro backdrop / bucket preview로 유효하지만 hard condition은 아니다. Events / sentiment는 annotation/deferred다.
+- Follow-up:
+  - V14에서 Macro 섹션은 sample narrowing, result delta, current Macro backdrop, collapsed detail order로 변경됐다. FRED macro / events / sentiment hard conditioning은 별도 검증 기준 승인 전까지 계속 금지한다.
+
+### 2026-06-21 - Market Context analog should follow the visible sector flow
+- User request:
+  - `참고: 과거 유사 맥락`이 latest 기준인데도 상단 `섹터 압력 지도`의 leader와 다른 `Basic Materials`를 기준으로 잡고, 섹터 지도는 11개 섹터 중 일부만 보여주며, analog / macro UI가 여전히 guide-heavy prototype처럼 보인다고 지적함.
+- Interpreted goal:
+  - Market Context는 전체 시장 흐름 요약 화면이므로, 상단 섹터 흐름과 historical analog 기준을 일치시키고 과도한 guide block / 중복 배경 요약을 줄여야 한다.
+- Analysis result:
+  - 원인은 latest historical analog가 상단 daily sector snapshot을 재사용하지 않고 `pattern_window`에 따라 별도 weekly / monthly leadership snapshot을 로드할 수 있었던 점, 그리고 sector pressure map이 row cap과 provider sector alias drift 때문에 canonical 11개 섹터 전체를 안정적으로 보여주지 못했던 점이다.
+- Follow-up:
+  - V13에서 latest analog는 visible daily sector leadership snapshot을 재사용하고, selected as-of만 선택일 daily sector snapshot을 쓴다. Sector pressure map은 canonical 11개 섹터를 균일 tile로 표시한다. Broad analog rows가 없을 때는 Macro 조건 비교를 숨기고, 상세 raw 통계 / macro condition detail은 접힌 보조 정보로 낮춘다.
+
+### 2026-06-21 - Historical analog and Macro comparison should read as analysis, not carded payload
+- User request:
+  - `참고: 과거 유사 맥락`과 `Macro 조건 포함 비교`가 여전히 카드 안에 작은 글씨를 넣은 prototype-like UI로 보이며, 이것이 최선인지 질문하고 1차~7차 개편을 승인함.
+- Interpreted goal:
+  - 기존 계산 / data boundary는 유지하면서, 사용자가 기준 선택 -> 유사 사례 조건 -> 결과 요약 -> Macro 조건 추가 시 변화 -> 조건 역할을 순서대로 읽게 만든다.
+- Analysis result:
+  - Streamlit 한계가 아니라 정보 구조 문제였다. Historical analog는 basis bar + method grid + insight split으로, Macro conditioned comparison은 broad analog의 nested card가 아니라 separate sibling section으로 분리하는 것이 맞다.
+- Follow-up:
+  - Macro dimension audit는 아직 정보량이 많으므로, 후속 polish에서는 낮은 우선순위 조건 상세를 접거나 더 요약할 수 있다. FRED / events / sentiment hard conditioning은 별도 승인 전까지 계속 금지한다.
+
+### 2026-06-20 - Market Context brief date should follow market session, not calendar today
+- User request:
+  - 주말 / 휴장일인데 `오늘의 시장 브리프`처럼 보이고, 새 장중 자료가 나올 수 없는 때에도 보강 자료가 뜨는 것은 어색하다고 지적함.
+- Interpreted goal:
+  - Market Context should name and judge the brief by the active US market session: open trading, pre-open, after close, or closed/holiday.
+- Analysis result:
+  - Calendar today is not the right anchor for a market-context brief. During closed sessions the brief should use the previous trading date as basis and lower intraday elapsed-age stale states out of actionable refresh. This does not hide failed / missing data; it only prevents stale age from accumulating while the market cannot produce new intraday rows.
+- Follow-up:
+  - Future Market Context copy should avoid fixed `오늘` language unless `market_session.is_market_open_now` is true or the copy explicitly says it is using current-session data.
+
+### 2026-06-20 - Non-actionable Events and Data Health meta should not remain unresolved source issues
+- User request:
+  - `현재 이슈만 보강`을 눌러도 Events와 Data Health가 계속 `자료 확인 필요`로 남는 것은, 버튼으로 해결할 수 없는 항목을 계속 사용자에게 해결하라고 보이는 문제라고 지적함.
+- Interpreted goal:
+  - Market Context should distinguish actionable stale/missing sources from reference limitations and management meta before showing an unresolved data state.
+- Analysis result:
+  - Events estimate limitations are reference context until an approved event cause-analysis feature exists. Data Health is a management/meta read model; it can explain where actionable issues came from, but should not itself count as a Market Context source issue. Top `자료 상태` and source confidence counts should be driven by actionable refresh items only.
+- Follow-up:
+  - Future source-confidence work should preserve `source_role` / `actionability` / `counts_for_status` boundaries and avoid reclassifying non-actionable caveats as `자료 확인 필요`.
+
+### 2026-06-20 - Events caveats are not Market Context conclusions or refresh requirements
+- User request:
+  - `이벤트 배경: 직접 원인 근거 약함`은 실제 시장맥락 도출 기능처럼 보이지 않고, 자료 보강도 현재 문제가 있는 부분만 최신화하는 편이 낫지 않냐고 질문함.
+- Interpreted goal:
+  - Market Context first screen should show only market-context conclusions; source/calendar caveats should not masquerade as conclusions or mandatory checks.
+- Analysis result:
+  - Events schedule rows are timeline/source context, not a cause engine. They should stay out of default `brief_rows` and appear as non-actionable or partial refresh context only where useful. Stale/missing data that can actually be repaired should be represented in `refresh_plan.items`; caveats that collection cannot solve should be represented in `refresh_plan.excluded_items`.
+- Follow-up:
+  - Future work can improve Events cause-analysis only with a separate approved design. Until then, avoid adding guide-like sections or treating Events/sentiment/FRED as hard Market Context signals.
+
+### 2026-06-20 - Market Context should absorb interpretation limits instead of showing a guide section
+- User request:
+  - `브리프 신뢰도`가 생긴 것은 알겠지만, 이 정보가 무엇을 의미하고 사용자가 무엇을 해야 하는지 여전히 불명확하며 Market Context에는 필요한 정보만 남아야 한다고 지적함.
+- Interpreted goal:
+  - 이벤트 / 자료 상태를 별도 가이드 섹션으로 보여주지 말고, 실제 시장맥락 해석에 영향을 줄 때만 브리프 결론으로 흡수한다.
+- Analysis result:
+  - `이벤트 일정`과 `자료 기준`은 전체 Market Context 신뢰도 점수의 독립 축이 아니다. Events는 `이벤트 배경` 행에서 직접 원인 근거가 약한지 표시하고, Futures/OHLCV freshness가 실제로 제한될 때만 `Futures/Macro 배경`을 `장중 macro 해석 보류`로 낮춘다. 자세한 source / freshness는 하단 source confidence disclosure가 소유한다.
+- Follow-up:
+  - Future work should avoid recreating `브리프 신뢰도`, `다음 맥락 체크`, or other guide-like default sections in Market Context. The first screen should show market context conclusions, with source details kept as evidence.
+
+### 2026-06-20 - Events and data caveats should be brief confidence, not brief conclusions
+- User request:
+  - V4 화면에서 `오늘의 시장 브리프`에 들어간 이벤트 / 자료 신뢰도 문구가 "그래서 무엇을 말하는지" 알기 어렵고, 시장 브리프와 거리가 멀다고 지적함.
+- Interpreted goal:
+  - Market Context의 시장 브리프는 사용자가 오늘 흐름을 읽는 결론으로 유지하고, 이벤트 / 자료 상태는 그 결론을 얼마나 조심해서 읽어야 하는지 알려주는 별도 근거로 낮춘다.
+- Analysis result:
+  - `brief_rows`는 movement / breadth / Futures-Macro 3행으로 되돌리고, Events / 자료 기준은 `brief_caveats`와 `브리프 신뢰도` UI로 분리한다. 이 영역은 시장 결론이 아니라 reading-strength modifier다.
+- Follow-up:
+  - Future UI polish should keep this split: refresh / source ledger can improve later, but `다음 맥락 체크` 또는 `맥락 검토 결과` action rail을 기본 화면에 다시 만들면 안 된다.
+
+### 2026-06-20 - Market Context brief should absorb non-duplicative caveats
+- User request:
+  - V3 `맥락 검토 결과`를 보니 P1/P2는 이미 오늘의 시장 브리프 / 시장 맥락과 중복되고, P3/P4만 브리프에 올리는 방향이 맞다고 지적함.
+- Interpreted goal:
+  - Market Context가 별도 checklist/rail을 늘리는 대신, 사용자가 읽는 한 흐름 안에서 시장 움직임, macro 배경, 이벤트 caveat, 자료 신뢰도 caveat를 이해하게 한다.
+- Analysis result:
+  - 가격 움직임과 Futures / Macro는 existing headline / tape / brief rows에 포함되어 있으므로 반복 rail에서 제거한다. Events / Data Health는 결론이 아니라 caveat이므로 `brief_rows`에 projection하고, `context_findings`는 compatibility payload로만 유지한다.
+- Follow-up:
+  - Future UI polish can further shorten caveat copy, but it should not reintroduce a default `다음 맥락 체크` or `맥락 검토 결과` action rail.
+
+### 2026-06-20 - Market Context should report checked conclusions, not assign checks to the user
+- User request:
+  - `다음 맥락 체크`가 Futures / Events / Market Movers를 사용자가 직접 확인하라는 guide처럼 보이며, Market Context가 이미 읽고 결론을 도출해야 한다고 지적함.
+- Interpreted goal:
+  - Market Context lower flow should become a findings rail: what was checked, what conclusion came out, how it changes interpretation, and what data caveat remains.
+- Analysis result:
+  - The old `next_checks` contract encoded `target_tab / reason / action`, so UI copy naturally became imperative. A new `context_findings` payload with `conclusion / interpretation / evidence / freshness` is the correct user-facing contract; `next_checks` can remain compatibility-only.
+- Follow-up:
+  - Future UI work can further reduce generic card surfaces, but this change keeps the existing DB-backed Overview boundary and does not add provider fetch, storage, validation, monitoring, or trading semantics.
+
+### 2026-06-19 - Macro dimension audit closes 3차-C without hard FRED/event/sentiment conditioning
+- User request:
+  - Overview > Market Context historical analog 3차-C 개발 진행을 승인하고, macro dimension availability + regime preview + deferred reason을 추가하되 event / sentiment를 hard condition으로 쓰지 말라고 요청함.
+- Interpreted goal:
+  - 3차-A/3차-B에서 실제 조건으로 쓰인 sector / GLD / futures와, 아직 참고 또는 보류인 FRED / events / sentiment를 같은 pilot 안에서 명확히 구분한다.
+- Analysis result:
+  - Stored FRED `T10Y3M`, `VIXCLS`, `BAA10Y`는 loader로 읽어 current bucket, coverage, broad-anchor preview count를 보여주되 표본 축소에는 쓰지 않는 것이 이번 승인 범위에 맞다. Events와 CNN / AAII sentiment는 annotation / deferred context로 표시한다.
+- Follow-up:
+  - 후속으로 열 수 있는 것은 FRED hard conditioning, event-window analog, sentiment historical conditioning, full PIT sector universe / metadata storage, 또는 sample-quality/PIT treatment 강화이며 모두 별도 승인 범위다.
+
+### 2026-06-18 - Macro-conditioned analog should start as a GLD-only pilot
+- User request:
+  - 3차-A 개발 진행을 승인하되, macro-conditioned historical analog 전체 구현이 아니라 pilot framework와 최소 조건 구현까지만 요청함.
+- Interpreted goal:
+  - 기존 broad analog를 유지하면서 `Macro 조건 포함` 영역을 별도로 보여주고, 계산 가능한 조건과 부족하거나 제외한 조건을 분리한다.
+- Analysis result:
+  - 기존 DB-backed price history에 이미 GLD가 comparison asset으로 들어오므로, 새 schema/provider/loader 없이 GLD price proxy context를 추가 조건으로 쓰는 것이 3차-A의 가장 좁은 구현이다. Stored futures daily OHLCV는 3차-B 후보로 남긴다.
+- Follow-up:
+  - 3차-B는 GLD pilot sample quality를 본 뒤 stored futures daily OHLCV 기반 rate pressure or safe-haven context를 붙일지 검토한다. FRED rates, events, sentiment conditioning은 별도 승인 전까지 열지 않는다.
+
+### 2026-06-17 - Repeated document merge conflicts need skill-level guardrails
+- User request:
+  - 여러 worktree 병합에서 문서 충돌이 반복될 예정이므로, 두 브랜치 내용이 유실되지 않고 자연스럽게 정리되도록 기존 병합 스킬을 강화하길 승인함.
+- Interpreted goal:
+  - 매번 ad hoc으로 판단하지 않고, finance 문서 역할별로 current pointer, retained task record, root handoff log, roadmap 흐름을 일관되게 병합하게 만든다.
+- Analysis result:
+  - 새 별도 skill보다 기존 `finance-integration-review`에 문서 충돌 전용 reference를 붙이는 편이 trigger 중복을 줄이고, merge/rebase 상황에서 바로 적용된다.
+- Follow-up:
+  - 반복 drift가 남으면 `Latest completed task` / active pointer consistency를 검사하는 helper script를 후속으로 추가할 수 있다.
+
+### 2026-06-16 - Market Movers non-daily periods need a manual EOD refresh path
+- User request:
+  - `Overview > Market Movers`에서 Daily 외 Weekly / Monthly / Yearly period에도 가격 이력 갱신 버튼을 추가하되, Daily 자동 갱신을 복사하지 말고 Market Movers 범위만 수정하길 요청함.
+- Interpreted goal:
+  - 사용자가 period를 바꿨을 때 해당 period의 데이터 기준과 갱신 행동을 같은 화면에서 이해하고 실행할 수 있어야 한다.
+- Analysis result:
+  - Daily는 `market_intraday_snapshot`, non-daily는 `finance_price.nyse_price_history` EOD row를 읽는다. 따라서 non-daily refresh는 기존 `run_collect_ohlcv` ingestion boundary를 Overview action facade에서 호출하는 수동 action으로 두는 것이 맞다.
+- Follow-up:
+  - Provider 실행 비용과 rate-limit는 Top1000 / Top2000에서 남는 운영 리스크다. 별도 queue / scheduler / chunk UI는 후속 승인 범위다.
+
+### 2026-06-16 - Historical analog table should explain the comparison before the statistics
+- User request:
+  - `참고: 과거 유사 맥락`이 무엇을 말하는지 이해하기 어렵고 표만으로는 해석이 어렵다며, 1차~3차 개선을 한꺼번에 진행하길 요청함.
+- Interpreted goal:
+  - Historical analog은 계속 context-only 참고로 두되, 사용자가 표를 보기 전에 similarity 기준, 먼저 읽을 요약, 핵심 / 보조 자산 구분을 파악하게 만든다.
+- Analysis result:
+  - 현재 similarity는 full market regime match가 아니라 current leadership sector의 ETF proxy가 SPY 대비 5D 기준 강했던 과거 구간이다. UI는 이 정의를 먼저 설명하고, sample / proxy median / positive-rate / worst-path summary와 `먼저 읽을 결론`을 표 앞에 둔다.
+- Follow-up:
+  - Macro / futures / event / sentiment conditioned analog, anchor date drill-down, PIT / survivorship / sample-quality 보강은 별도 승인 후속이다.
+
+### 2026-06-15 - Historical analog gaps should become explicit repair actions
+- User request:
+  - `Overview > Market Context`에서 `참고: 과거 유사 맥락`이 `자료 부족`으로 멈추는 문제와, `자료 기준 / 출처 상태`가 잘 보이지 않는 문제를 함께 개선하길 요청함.
+- Interpreted goal:
+  - Historical analog은 계속 context-only 참고로 두되, 부족한 sector ETF / 비교 자산 가격 이력을 사용자가 어디서 어떻게 보강할지 바로 알 수 있게 만든다.
+- Analysis result:
+  - Gap detection은 current leadership sector proxy와 comparison assets의 실제 DB coverage에서 일반화한다. 따라서 live target은 Technology / XLK로 고정되지 않고, QA 시점에는 Communication Services / XLC가 repair target이었다. 보강 실행은 UI 직접 수집이 아니라 기존 `app/jobs/overview_actions.py` facade와 기존 OHLCV collection path를 통한다.
+- Follow-up:
+  - CSV upload/import, broader sector ETF coverage expansion, macro/futures/event-conditioned analog, stronger PIT / survivorship / sample-quality handling은 별도 승인 후속이다.
+
+### 2026-06-15 - Historical analog should remain an Overview context reference
+- User request:
+  - `Overview > Market Context` 후속 개선 4차로 과거 유사국면 참고 MVP 개발을 승인함.
+- Interpreted goal:
+  - 현재 sector leadership을 ETF proxy에 연결하고, coverage가 충분할 때만 이후 5D / 20D / 60D 자산 흐름을 과거 참고 정보로 보여준다.
+- Analysis result:
+  - MVP는 current constituent sector membership을 과거로 되감지 않고 sector ETF proxy 가격 흐름으로 시작한다. Local DB 기준 current leadership은 `Industrials -> XLI`지만 `XLI` price coverage가 63 rows라 live UI는 `자료 부족`을 표시한다. 이 결론은 기능 실패가 아니라 과장 방지를 위한 의도된 coverage gate다.
+- Follow-up:
+  - Sector ETF coverage expansion, macro/futures regime condition, CPI/FOMC event-window analog, sample quality / PIT / survivorship 보강은 후속 작업이다.
+
+### 2026-06-12 - Backtest product direction should restart from research
+- User request:
+  - 기존 3A~5B 흐름을 그대로 이어가지 말고 Backtest Analysis / strategy runtime / validation handoff / history replay / saved replay의 올바른 제품 흐름을 다시 정의해 달라고 요청함.
+- Interpreted goal:
+  - 구현 없이 새 product direction research bundle을 만들고, 현재 branch drift, 외부 benchmark, 전략군별 maturity, 1차~n차 잠정 roadmap을 정리해야 함.
+- Analysis result:
+  - Backtest Analysis는 실행 / 비교 / 후보 source / replay 중심으로 유지하고, evidence / governance / diagnostics는 compact handoff와 Practical Validation / Final Review / Operations로 분리하는 방향이 맞다. 4C와 5A/5B는 유지 후보, strict quarterly 5C와 Risk-On downstream promotion은 보류 후보로 정리했다.
+- Follow-up:
+  - 상세 산출물은 `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`를 본다. 각 새 세션 요청문과 차수별 개발 guideline은 `DEVELOPMENT_SESSION_GUIDE.md`에 남겼고, 다음 세션 결정점은 1차 `Backtest Result Handoff Contract` 승인 여부다.
+
+### 2026-06-10 - Market Context should read as a cockpit, not a refresh console
+- User request:
+  - `Overview > Market Context` 탭의 1차~4차 UX/UI 개선 진행을 승인함.
+- Interpreted goal:
+  - 첫 화면에서 일괄 갱신 / 진단값보다 시장 맥락 요약, 자료 상태, 다음 확인 순서가 먼저 보이게 한다.
+- Analysis result:
+  - Market Context의 headline은 자료 경고가 아니라 현재 시장 맥락 한 줄이어야 한다. stale/partial/missing 같은 데이터 상태는 `자료 상태`와 `Data Health` handoff로 분리하고, core 3개 카드와 supporting 3개 카드를 나눠 읽는 순서를 만든다.
+- Follow-up:
+  - Direct `/overview` first-load Page not found modal은 normal root navigation과 분리된 Streamlit routing risk로 남긴다.
+
 ### 2026-06-10 - ETF 5B should harden Risk Parity / Dual Momentum contracts, not panels
 - User request:
   - 5A 이후 새 Backtest Analysis 패널이 아니라 Risk Parity Trend와 Dual Momentum의 실제 strategy runtime / result bundle 계약 고도화를 요청함.
@@ -45,6 +395,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Risk Parity Trend / Dual Momentum도 같은 ETF 전략 계약 hardening 후보지만, 5A 범위에서는 GRS만 다뤘다.
 
+### 2026-06-09 - Backtest Analysis should return to execution-first UX
+- User request:
+  - 4C 진행 전 3A~4B 방향이 evidence/log/workbench 패널 누적으로 흘렀다고 지적하고, 브랜치 목적을 전략 자체 고도화 / prototype 성숙화 / 신규 전략 개발로 재정렬해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis 기본 화면은 실제 전략 실행 / 비교 / 후보 생성 중심이어야 하며, Reference help와 3A~4B evidence / governance / ETF workbench 패널은 기본 화면에서 내려야 함.
+- Analysis result:
+  - 기존 패널은 삭제보다 `전략 개발 참고` advanced control 뒤에 숨기는 편이 안전하다. 이렇게 하면 3A~4B 산출물은 보존하되 일반 백테스트 실행 흐름을 방해하지 않는다.
+- Follow-up:
+  - 다음 개발 방향은 evidence panel 추가보다 전략 로직 / 데이터 계약 / 검증 가능성 / prototype 성숙화 우선이다.
+
+### 2026-06-08 - ETF rerun matrix should stay session-only
+- User request:
+  - 4차 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - GRS / Risk Parity / Dual Momentum의 current-anchor 판단을 read-only anchor 확인에서 한 단계 진행해, Backtest Analysis 안에서 rerun scenario matrix를 실행 / 비교할 수 있어야 함.
+- Analysis result:
+  - 4B는 Streamlit-free service와 session-only UI 실행으로 좁혀야 한다. 결과를 run history나 current candidate registry에 쓰면 promotion workflow가 섞이므로 후속 승인 scope로 둔다.
+- Follow-up:
+  - Provider snapshot collection, Practical Validation result creation, durable strategy hub / report, current candidate promotion은 후속 작업이다.
+
 ### 2026-06-08 - ETF current-anchor should start from artifact-backed readiness, not promotion writes
 - User request:
   - 3차 3D 이후 4차 작업 진행을 요청함.
@@ -54,6 +424,26 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 4A는 바로 rerun matrix 실행이나 current candidate registry write로 가면 경계가 크다. 먼저 existing run history와 Practical Validation source handoff row를 읽어 latest run / source evidence, missing provider-cost-benchmark evidence, next action을 표시하는 read-only workbench를 구현하는 것이 안전하다.
 - Follow-up:
   - 4B는 사용자 승인 후 ETF DB-backed rerun matrix / strategy hub update로 열고, current candidate promotion이나 Practical Validation result creation은 별도 승인 경계로 남긴다.
+
+### 2026-06-08 - Backtest 3차 3D should close as ETF evidence expansion
+- User request:
+  - 3C 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - GRS / Risk Parity / Dual Momentum을 바로 current candidate로 만들지 않고, GTAA / Equal Weight 대비 부족한 current anchor / evidence gap / next workflow를 제품 화면에서 확인하게 해야 함.
+- Analysis result:
+  - 세 ETF 전략은 실행 가능하지만 report depth와 provider / cost / benchmark evidence가 부족하므로, 3D는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다.
+- Follow-up:
+  - 실제 rerun matrix, strategy hub / report, current candidate promotion은 후속 승인 scope다.
+
+### 2026-06-08 - Backtest 3차 3C should close as Risk-On governance readiness
+- User request:
+  - Backtest 3차에서 3B 이후 3C 작업을 계속 진행해 달라고 요청함.
+- Interpreted goal:
+  - Risk-On Momentum 5D를 바로 Final Review 후보나 Portfolio Monitoring signal로 승격하지 않고, Daily Swing governance에 필요한 validation / review / monitoring module과 blocker를 제품 화면에서 확인하게 해야 함.
+- Analysis result:
+  - Risk-On은 기존 monthly / annual candidate gate와 다르므로, 3C는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다. Practical Validation module 실행, Final Review route, Portfolio Monitoring daily signal policy는 후속 승인 scope다.
+- Follow-up:
+  - 3D ETF evidence expansion이 다음 3차 scope로 남는다.
 
 ### 2026-06-08 - Bridge scope should be role / evidence handoff, not automatic candidate creation
 - User request:
@@ -7668,37 +8058,247 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: guard는 `app/services/reference_contextual_help.py`에 Streamlit-free report로 두고, renderer는 catalog text 표시만 담당하는 것이 UI-engine boundary에 맞다.
 - Follow-up: `build_reference_contextual_help_drift_report()`를 추가하고 raw `>` guide focus copy를 slash path로 정리했다. Reference query deep-linking과 신규 surface 확장은 후속 선택 사항으로 남긴다.
 
-### 2026-06-08 - Backtest 3차 3C는 Risk-On governance readiness로 닫는다
+### 2026-06-08 - sub-dev는 Overview / Ingestion / Operations 분석·시각화 베이스로 활용한다
 
-- User request: 사용자가 Backtest 3차에서 3B 이후 3C 작업을 계속 진행해 달라고 요청함.
-- Interpreted goal: Risk-On Momentum 5D를 바로 Final Review 후보나 Portfolio Monitoring signal로 승격하지 않고, Daily Swing governance에 필요한 validation / review / monitoring module과 blocker를 제품 화면에서 확인하게 해야 함.
-- Analysis result: Risk-On은 기존 monthly / annual candidate gate와 다르므로, 3C는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다. Practical Validation module 실행, Final Review route, Portfolio Monitoring daily signal policy는 후속 승인 scope다.
-- Follow-up: `app/services/backtest_risk_on_governance.py`, `app/web/backtest_analysis.py`, focused tests와 docs를 갱신했다. 3D ETF evidence expansion이 다음 3차 scope로 남는다.
+- User request: 사용자가 이 세션 / worktree를 핵심 백테스트·검증과 별개로 Overview, Ingestion, Operations 및 macro / 시장 자료 분석·시각화 개발 방향을 잡는 베이스로 쓰고 싶다고 설명하고, 현재 Overview 정보의 장점 / 약점 / 개선 후보를 정리해 달라고 요청함.
+- Interpreted goal: AGENTS.md를 지금 변경하지 않고, product direction research bundle로 sub-dev 역할과 다음 개발 후보를 정리한다.
+- Analysis result: 현재 Overview는 DB-backed market context coverage가 넓지만 futures / sentiment / events / movers / data health가 분산되어 있어 summary-first macro cockpit이 먼저 필요하다. 두 번째 후보는 Data Health와 Ingestion 실행 콘솔의 action handoff 강화다.
+- Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/2026-06-sub-dev-overview-macro-base/`를 본다. 구현은 사용자 승인 후 별도 세션에서 시작한다.
 
-### 2026-06-08 - Backtest 3차 3D는 ETF evidence expansion으로 닫는다
+### 2026-06-08 - Overview Macro Context Cockpit V1을 1차로 구현한다
 
-- User request: 사용자가 3C 이후 다음 단계를 진행해 달라고 요청함.
-- Interpreted goal: GRS / Risk Parity / Dual Momentum을 바로 current candidate로 만들지 않고, GTAA / Equal Weight 대비 부족한 current anchor / evidence gap / next workflow를 제품 화면에서 확인하게 해야 함.
-- Analysis result: 세 ETF 전략은 실행 가능하지만 report depth와 provider / cost / benchmark evidence가 부족하므로, 3D는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다.
-- Follow-up: `app/services/backtest_etf_evidence_expansion.py`, `app/web/backtest_analysis.py`, focused tests와 docs를 갱신했다. 실제 rerun matrix, strategy hub / report, current candidate promotion은 후속 승인 scope다.
+- User request: 사용자가 sub-dev worktree에서 승인된 1차 범위로 `Overview Macro Context Cockpit V1` 설계/구현, Browser QA, 문서 정리, commit까지 요청함.
+- Interpreted goal: 새 수집 / 스키마 / 저장 없이 기존 DB-backed Overview read model을 합성해 첫 화면에서 market movement, breadth, futures, sentiment, events, data freshness, next deep tab을 읽게 한다.
+- Analysis result: Cockpit 합성은 `app/services/overview_market_intelligence.py`에 두고, helper cache와 `overview_ui_components.py` 렌더러를 통해 `render_overview_dashboard` 탭 위에 표시하는 구조가 UI-engine boundary에 맞다.
+- Follow-up: 2차는 Data Health -> Ingestion handoff, 3차는 breadth / heatmap and macro week view다. Candidate Ops IA 변경은 별도 승인 후보로 남긴다.
 
-### 2026-06-08 - Backtest 4차 4B는 ETF rerun matrix workbench로 닫는다
+### 2026-06-08 - Overview Data Health -> Ingestion Handoff를 2차로 구현한다
 
-- User request: 사용자가 4차 다음 단계 진행을 요청함.
-- Interpreted goal: GRS / Risk Parity / Dual Momentum의 current-anchor 판단을 read-only anchor 확인에서 한 단계 진행해, Backtest Analysis 안에서 rerun scenario matrix를 실행 / 비교할 수 있어야 함.
-- Analysis result: 4B는 Streamlit-free service와 session-only UI 실행으로 좁혀야 한다. 결과를 run history나 current candidate registry에 쓰면 promotion workflow가 섞이므로 후속 승인 scope로 둔다.
-- Follow-up: `app/services/backtest_etf_rerun_matrix.py`, `app/web/backtest_analysis.py`, focused tests와 Browser QA를 추가했다. provider snapshot collection, Practical Validation result creation, durable strategy hub / report, current candidate promotion은 후속 작업이다.
+- User request: 사용자가 1차 Cockpit 다음 2차 작업 진행을 요청함.
+- Interpreted goal: Data Health가 보여주는 stale / missing / failed / partial / due 상태를 사용자가 실제로 확인할 collection surface로 넘기되, Overview가 Ingestion 실행 큐나 job owner가 되면 안 됨.
+- Analysis result: 기존 `build_collection_ops_snapshot` row를 재사용해 Streamlit-free handoff model을 만들고, Data Health 탭 상단에 우선순위 / owner / target / freshness / read-only boundary를 표시하는 것이 가장 작은 변경이다.
+- Follow-up: 3차 후보는 breadth / heatmap and macro week view이며, persistent Ingestion Action Queue나 Candidate Ops IA 변경은 별도 승인 후 진행한다.
 
-### 2026-06-09 - Backtest 4차 4C는 방향을 evidence panel 추가에서 실행 중심 UX 복구로 되돌린다
+### 2026-06-08 - Overview breadth / macro week first pass를 3차로 구현한다
 
-- User request: 사용자가 4C 진행 전 3A~4B 방향이 evidence/log/workbench 패널 누적으로 흘렀다고 지적하고, 브랜치 목적을 전략 자체 고도화 / prototype 성숙화 / 신규 전략 개발로 재정렬해 달라고 요청함.
-- Interpreted goal: Backtest Analysis 기본 화면은 실제 전략 실행 / 비교 / 후보 생성 중심이어야 하며, Reference help와 3A~4B evidence / governance / ETF workbench 패널은 기본 화면에서 내려야 함.
-- Analysis result: 기존 패널은 삭제보다 `전략 개발 참고` advanced control 뒤에 숨기는 편이 안전하다. 이렇게 하면 3A~4B 산출물은 보존하되 일반 백테스트 실행 흐름을 방해하지 않는다.
-- Follow-up: `app/services/backtest_analysis_research_board.py`와 `app/web/backtest_analysis.py`를 갱신해 기본 화면을 execution-first로 바꾸고, 참고 패널은 명시적으로 열 때만 보이게 했다. 다음 개발 방향은 evidence panel 추가보다 전략 로직 / 데이터 계약 / 검증 가능성 / prototype 성숙화 우선이다.
+- User request: 사용자가 2차 다음 3차 작업 진행을 요청함.
+- Interpreted goal: 첫 화면과 deep tab 진입 전에 움직임이 broad한지 집중됐는지, 가까운 FOMC / CPI / PPI / Employment / GDP / earnings 이벤트가 무엇인지 기존 DB-backed snapshot으로 보여줘야 함.
+- Analysis result: group leadership snapshot은 participation / concentration summary와 existing latest heatmap으로 접고, event calendar snapshot은 14일 macro week lane과 cluster로 접는 것이 가장 작은 변경이다.
+- Follow-up: full breadth heatmap, events quality workflow, source/provider hardening, Overview IA closeout은 후속 4~5차 후보로 남긴다.
 
-### 2026-06-12 - Backtest 제품 방향 리서치부터 다시 시작한다
+### 2026-06-08 - Overview source confidence catalog를 4차로 구현한다
 
-- User request: 기존 3A~5B 흐름을 그대로 이어가지 말고 Backtest Analysis / strategy runtime / validation handoff / history replay / saved replay의 올바른 제품 흐름을 다시 정의해 달라고 요청함.
-- Interpreted goal: 구현 없이 새 product direction research bundle을 만들고, 현재 branch drift, 외부 benchmark, 전략군별 maturity, 1차~n차 잠정 roadmap을 정리해야 함.
-- Analysis result: Backtest Analysis는 실행 / 비교 / 후보 source / replay 중심으로 유지하고, evidence / governance / diagnostics는 compact handoff와 Practical Validation / Final Review / Operations로 분리하는 방향이 맞다. 4C와 5A/5B는 유지 후보, strict quarterly 5C와 Risk-On downstream promotion은 보류 후보로 정리했다.
-- Follow-up: 상세 산출물은 `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`를 본다. 각 새 세션 요청문과 차수별 개발 guideline은 `DEVELOPMENT_SESSION_GUIDE.md`에 남겼고, 다음 세션 결정점은 1차 `Backtest Result Handoff Contract` 승인 여부다.
+- User request: 사용자가 3차 다음 4차 작업 진행을 요청함.
+- Interpreted goal: 1~3차 Overview context가 어떤 source / provider / collector 상태에 기대는지 cockpit 안에서 숨기지 않고 보여줘야 함.
+- Analysis result: 새 provider hardening이 아니라 기존 cockpit snapshots를 재사용해 source, owner, freshness, caveat, next check를 표시하는 read-only catalog가 가장 안전한 4차다.
+- Follow-up: 5차는 Overview IA closeout 후보이며, Reference companion이나 provider 교체 / paid source decision은 별도 승인 후보로 남긴다.
+
+### 2026-06-08 - Overview IA closeout을 5차로 구현한다
+
+- User request: 사용자가 다음 단계 진행을 요청함.
+- Interpreted goal: 1~4차로 만든 Overview cockpit 흐름을 deep tab IA와 연결하고 Candidate Ops 경계를 닫되, Backtest workflow나 navigation removal까지 확장하면 안 됨.
+- Analysis result: cockpit 아래 static `Overview Map / Deep Tab Reading Order`를 두고 Market Context / Data Repair / transitional Candidate Ops를 나누는 것이 가장 작은 closeout 변경이다.
+- Follow-up: 실제 Candidate Ops relocation / removal, Reference companion, provider hardening은 별도 승인 후보로 남긴다.
+
+### 2026-06-09 - Futures Monitor 전체 선택 시 chart가 6개만 보이는 원인을 고친다
+
+- User request: 사용자가 `Futures Monitor`에서 symbol을 전체로 해도 선물 그래프가 6개만 나오는 것 같다고 확인과 진행 방향을 요청함.
+- Interpreted goal: 전체 선택 상태에서 숨은 6개 cap 때문에 chart coverage가 오해되지 않도록 하되, 기본 렌더 성능은 유지해야 함.
+- Analysis result: DB read model은 23개 선택과 16개 OHLCV row coverage를 이미 전달했고, UI helper `_futures_chart_symbols()`가 chart grid를 첫 6개로 제한하고 있었다.
+- Follow-up: `Charts` control을 추가해 기본 `Compact 6`과 `All with data`를 분리했다. Provider / DB schema / persistence / validation / monitoring / trading boundary는 변경하지 않았다.
+
+### 2026-06-10 - Overview market context 안내를 한글화하고 일괄 갱신入口를 추가한다
+
+- User request: 사용자가 `Market context needs review`, `Overview Map` 등 영어-first 문구를 이해하기 쉽게 한글화하고, Overview 상단에서 보이는 데이터를 일괄 업데이트하는 기능을 먼저 요청함.
+- Interpreted goal: product term은 유지하되 설명 copy를 한국어 중심으로 바꾸고, 기존 개별 refresh job들을 한 버튼에서 실행하는 수동 bundle을 추가해야 함.
+- Analysis result: 새 provider / schema가 아니라 `app/jobs/overview_actions.py` facade 안에서 SP500 movers, futures 1m/daily, sentiment, FOMC, earnings, macro calendar 기존 action을 순차 실행하는 것이 경계에 맞다.
+- Follow-up: `Workspace > Overview` 상단에 `Market Context 일괄 갱신` 버튼을 추가했다. Scheduler hardening, source별 retry UX, action queue persistence는 후속 차수로 남겼다.
+
+### 2026-06-10 - Overview Macro Context를 별도 첫 탭으로 분리한다
+
+- User request: 사용자가 Overview Macro Context를 Market Movers 앞의 별도 탭으로 만들고, Deep Tab 안내도 cockpit과 같이 움직이는 것이 맞는지 질문 후 진행을 승인함.
+- Interpreted goal: Overview 진입 시 종합 context를 먼저 보게 하고, deep tab 안내 / Overview Map을 해당 summary surface 안에 묶어야 함.
+- Analysis result: `Market Context`를 첫 deep tab으로 두고 refresh / cockpit / Deep Tab guide / Overview Map을 함께 렌더링하는 것이 IA상 가장 명확하다.
+- Follow-up: `Workspace > Overview > Market Context` 첫 탭을 추가했다. 자동 갱신 정책과 refresh result UX 세분화는 후속 차수로 남겼다.
+
+### 2026-06-10 - Market Context cockpit을 card-first에서 summary-first로 개선한다
+
+- User request: 사용자가 card-heavy UX가 최선인지, `시장 context 확인이 필요합니다` copy가 오해를 줄 수 있는지 물은 뒤 전체 개선을 요청함.
+- Interpreted goal: 시장 상태 경고처럼 읽히는 headline을 source/data review 의미로 정정하고, 첫 화면에서 결론과 다음 확인 순서가 먼저 보이게 해야 함.
+- Analysis result: 기존 카드 분리는 source/freshness 노출에는 좋지만 읽는 순서가 약하므로, summary rail을 카드 위에 두고 analytical cards와 supporting cards의 밀도를 나누는 것이 적절하다.
+- Follow-up: `Market Context 일부 source 확인 필요` headline, 상태 / 다음 확인 / 자료 기준 rail, primary/secondary card styling을 추가했다. Source Confidence / Overview Map 접힘 UX는 후속 후보로 남긴다.
+
+### 2026-06-10 - Market Context 보조 섹션을 접힘 형태로 낮춘다
+
+- User request: 사용자가 2차 진행을 요청함.
+- Interpreted goal: Source Confidence와 Overview Map은 중요하지만 첫 화면의 분석 결론보다 보조 근거이므로 기본 노출 밀도를 낮춰야 함.
+- Analysis result: 두 섹션을 별도 탭으로 빼기보다 같은 Market Context 안에서 native disclosure로 접어 두는 것이 경계와 흐름을 보존한다.
+- Follow-up: `Source Confidence / 출처 신뢰도`와 `Overview Map / 화면 지도`를 기본 접힘 섹션으로 렌더링했다. refresh result UX 세분화는 3차로 남긴다.
+
+### 2026-06-12 - Market Context를 가이드 UI에서 시장 브리프 UI로 바꾼다
+
+- User request: 사용자가 `Overview > Market Context` 후속 개선 1차를 승인하면서, Events/Data Health 보강이나 과거 유사국면 기능은 구현하지 말고 후속 리스크로만 정리하라고 요청함.
+- Interpreted goal: 기존 `현재 맥락:` 핵심요약은 유지하되, 별도 `다음 확인 순서`, Deep Tab guide, `해석 전 확인` 카드 묶음이 시장 브리프 흐름을 끊지 않게 재배치해야 함.
+- Analysis result: cockpit read model에 `brief_rows`와 `interpretation_cues`를 추가하고, renderer는 시장 움직임 / 확산 / futures-macro 배경 / 이벤트·심리·자료 주의점을 row 흐름으로 보여주는 것이 가장 작은 변경이다.
+- Follow-up: 2차는 갱신 후 상단 context 반영과 Data Health 노출 범위 재검토, 별도 데이터 작업은 CPI/Event coverage 보강, 별도 제품 검토는 과거 유사국면 기능이다.
+
+### 2026-06-12 - Market Context 갱신 후 상단 브리프가 새 snapshot을 다시 읽게 한다
+
+- User request: 사용자가 후속 개선 2차로 `보조 갱신` 실행 후 상단 Market Context가 실제 새 snapshot을 반영하는지 고치라고 요청함.
+- Interpreted goal: job result table을 키우지 않고, cache/rerun 문제를 해결해 사용자가 상단 브리프의 반영 여부를 작게 확인할 수 있어야 함.
+- Analysis result: cockpit이 refresh button보다 먼저 렌더되므로 cache clear만으로는 같은 Streamlit pass의 상단 brief를 갱신할 수 없다. result 저장 -> reflection state 저장 -> cache clear -> `st.rerun()` 순서가 필요하다.
+- Follow-up: CPI/Event coverage 보강, Macro Calendar 수집/ICS fallback 검증, Data Health 노출 범위 재검토는 3차 이후 별도 작업으로 남긴다.
+
+### 2026-06-12 - Market Context 3차로 주요 macro event coverage와 Data Health 노출을 보강한다
+
+- User request: 사용자가 CPI/Event coverage 보강, BLS HTML/ICS fallback 검증, recent + upcoming Events read model, Market Context Data Health 노출 범위 재검토를 3차로 승인함.
+- Interpreted goal: CPI/FOMC 같은 context-only macro event가 earnings에 묻히거나 방금 지난 일정이라는 이유로 빠지지 않게 하되, Market Context를 job/result 진단 패널로 키우면 안 됨.
+- Analysis result: 로컬 DB는 FOMC/GDP/earnings row는 보유하지만 `2026-06-10` 및 `2026-07-14` CPI row가 없다. 기존 read model은 start date가 today라 just-past event를 놓쳤고, Macro Week Lane도 upcoming만 보았다.
+- Follow-up: read model은 recent 7D + upcoming horizon, major macro priority, recent/upcoming lane split으로 보강했다. CPI row 자체는 Macro Calendar collection 또는 BLS `.ics` import로 채워야 하며, 과거 유사국면/예측과 섹터 ETF 장기 coverage는 4차 후보로 남긴다.
+
+### 2026-06-15 - Market Context 카드 중심 UX를 브리프형 layout으로 정리한다
+
+- User request: 사용자가 Market Context UI가 지침 때문인지 Streamlit 기능 미숙 때문인지 물으며, 카드 안 카드 구조가 한눈에 보기 어렵고 정리되지 않은 느낌이라고 지적한 뒤 진행을 승인함.
+- Interpreted goal: 새 진단 패널이나 데이터 계산이 아니라, 기존 Market Context를 실제 읽기 쉬운 summary-first 브리프 형태로 바꿔야 함.
+- Analysis result: 문제는 Streamlit 제약이 아니라 누적 기능을 같은 visual weight의 card로 붙인 product/UI 구조였다. 내부 card grid를 row/list/disclosure로 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: desktop Browser QA는 통과했다. mobile density와 Market Context 전체 정보량은 별도 polish 후보로 남긴다.
+
+### 2026-06-15 - Market Context 벤치마크 후 option 1+3 hybrid를 구현한다
+
+- User request: 사용자가 카드형 시각화 고집 이유를 물은 뒤, 웹 벤치마킹 선택지 중 1번과 3번을 섞은 시안을 승인하고 "이렇게 만들어줄 수 있니?"라고 요청함.
+- Interpreted goal: `Market Brief Tape`의 빠른 스캔성과 `Heatmap + Timeline Board`의 시각적 압력/이벤트 읽기를 합치되, 새 provider나 진단 패널을 만들지 않아야 함.
+- Analysis result: 기존 `build_overview_breadth_heatmap_summary()`와 `build_overview_macro_week_lane()`을 cockpit model에 재사용하면 DB-backed boundary를 유지하면서 5칸 tape, sector pressure map, event timeline을 만들 수 있다.
+- Follow-up: 1차 hybrid visual 구현과 Browser QA는 완료했다. 2차는 색/밀도/mobile polish, 3차는 static board가 부족할 때만 drill-in interactivity 후보로 남긴다.
+
+### 2026-06-15 - Market Context 큰 단락을 cockpit 밖으로 분리한다
+
+- User request: 사용자가 hybrid 화면은 좋아졌지만 `시장 브리프`, `해석할 때 같이 볼 변수`, `과거 유사 맥락 참고`가 한 큰 surface 안에 묻혀 집중이 어렵다고 지적하고 단락 분리를 승인함.
+- Interpreted goal: 상단 `시장 맥락` 요약은 유지하되, 사용자가 흐름에 맞춰 읽을 수 있도록 brief / variables / reference를 명확한 sibling section으로 분리해야 함.
+- Analysis result: `.ov-macro-cockpit`에는 headline, tape, sector pressure, event timeline만 남기고, 나머지는 `.ov-macro-reading-flow` 아래 4개 section으로 빼는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 1차 section-flow split과 Browser QA는 완료했다. 2차는 실제 사용 후 typography/color density polish, 3차는 필요 시 낮은 우선순위 reference section 접힘 정책이다.
+
+### 2026-06-15 - Market Context 요약을 2~3문장형으로 풀고 2차 polish를 진행한다
+
+- User request: 사용자가 `오늘의 시장 맥락` 아래 `현재 맥락: ...` 한 줄 표기를 2~3문장으로 간략하게 풀고, 미뤘던 2차 typography / density 작업을 진행해 달라고 요청함.
+- Interpreted goal: 새 데이터나 진단 패널이 아니라, 같은 DB-backed context를 사용자가 첫 문장부터 자연스럽게 읽고 아래 단락을 흐름대로 따라가게 해야 함.
+- Analysis result: service copy는 headline + detail 문장 계약으로 바꾸고, renderer는 narrative wrapper와 reading-flow typography / color density 조정만 하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 2차는 완료했다. 남은 3차 후보는 실제 사용 후 reference section 접힘 정책이나 가벼운 drill-in interaction이 필요할 때만 별도 승인 대상으로 본다.
+
+### 2026-06-15 - Market Context 하단 보조 흐름을 다음 맥락 / 참고 / 근거로 재정의한다
+
+- User request: 사용자가 3차 작업 전 `해석할 때 같이 볼 변수`, `과거 유사맥락 참고`, `자료기준 / 출처상태`까지 종합적으로 개선할 작업 가이드를 요청하고 이후 진행을 승인함.
+- Interpreted goal: 오늘의 시장 맥락과 시장 브리프는 이미 핵심 흐름을 설명하므로, 하단 영역은 중복 브리프가 아니라 다음 관찰 지점, 과거 참고, 자료 근거로 역할을 분리해야 함.
+- Analysis result: Data Health는 시장 변수라기보다 evidence/source 상태이므로 main cue row에서 제거하고, Events / Sentiment / Macro만 `다음 맥락 체크`로 남기는 것이 가장 명확하다.
+- Follow-up: 3차는 완료했다. Deep drill-in interaction, prediction, provider/schema expansion, validation/monitoring/trading signal은 별도 승인 대상이다.
+
+### 2026-06-08 - 현재 프로그램으로 SPY보다 나은 모니터링 포트폴리오를 찾는다
+
+- User request: 현재 있는 전략을 모두 활용해 SPY보다 CAGR이 높고 MDD가 낮으며 MDD 15% 미만인 포트폴리오를 찾아 Final Review와 Portfolio Monitoring 등록까지 완료해 달라고 요청함.
+- Interpreted goal: 숫자상 백테스트 후보가 아니라 Practical Validation replay, Final Review selected-route gate, Portfolio Monitoring saved setup까지 같은 source chain으로 통과한 후보가 필요함.
+- Analysis result: strict/factor 후보는 숫자상 강했지만 현재 Practical Validation replay에서 `NOT_RUN` 없이 닫기 어려워 최종 등록 후보에서 제외했다. all-ETF GTAA U5 20% / GTAA U3 75% / GRS Compact 5%가 SPY 대비 CAGR 우위, MDD 개선, MDD 15% 미만 조건을 충족했다.
+- Follow-up: Final Review decision `final_gtaa_u3_u5_grs_monitoring_20260608`와 Portfolio Monitoring setup `selected_dashboard_portfolio_gtaa_u3_u5_grs_20260608`를 저장했다. remaining watch items는 provider look-through, liquidity coverage, survivorship / robustness review다.
+
+### 2026-06-09 - 중복 strategy family 없이 SPY보다 나은 포트폴리오를 찾는다
+
+- User request: 이전 후보가 SPY 대비 CAGR / MDD 조건은 좋지만 GTAA가 2개라 아쉬우므로, 각 component가 서로 다른 전략을 쓰는 조건으로 다시 찾아 달라고 요청함.
+- Interpreted goal: 숫자상 후보가 아니라 Practical Validation replay, Final Review selected-route, Portfolio Monitoring setup까지 통과한 distinct-family portfolio가 필요함.
+- Analysis result: 3-family Equal Weight / GTAA / GRS 후보는 수치가 좋았지만 selected-route preflight가 막혀 제외했다. macro context를 ingestion CSV mode로 갱신한 뒤 GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5% 후보가 SPY 대비 CAGR 우위, MDD 개선, MDD 15% 미만 조건과 Final Review gate를 충족했다.
+- Follow-up: Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`와 Portfolio Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609`를 저장했다. 이 기록은 monitoring-only이며 live approval / broker order / auto rebalance가 아니다.
+
+### 2026-06-17 - Market Movers coverage를 Nasdaq-listed current snapshot으로 확장한다
+
+- User request: `Workspace > Overview > Market Movers` coverage universe를 최신화하고 Nasdaq coverage, 반복 갱신, Coverage Diagnostics 설명력을 보강해 달라고 요청함.
+- Interpreted goal: Nasdaq Composite / Nasdaq-100이나 투자 신호가 아니라, Nasdaq Symbol Directory current listing observation을 별도 coverage로 읽고 갱신/진단 경로를 명확히 해야 함.
+- Analysis result: 새 table 또는 `market_universe_member` 물질화 없이 latest `nasdaq_symdir_nasdaqlisted` lifecycle rows를 직접 읽는 것이 source caveat와 중복 저장 위험 측면에서 가장 작고 명확하다.
+- Follow-up: `nasdaq_symbol_directory` / `nasdaq_intraday` automation dry-run plan과 diagnostics evidence columns를 추가했다. 실제 Symbol Directory / provider 대량 수집과 OS scheduler 등록은 별도 운영 실행으로 남긴다.
+
+### 2026-06-18 - Market Context 자료상태를 source/action checklist로 읽게 한다
+
+- User request: Overview > Market Context 개선 1차를 구현하고, 2차 historical analog replay/window와 3차 macro-conditioned analog는 후속 설계 메모로 남기라고 승인함.
+- Interpreted goal: `일부 자료 확인 필요`를 raw job/status table로 키우는 것이 아니라, 어떤 source를 어느 tab에서 왜 확인하고 어떤 action으로 이어질지 먼저 보이게 해야 함.
+- Analysis result: 기존 `next_checks`는 모델에 있었지만 UI는 `interpretation_cues`를 렌더링해 반복감이 생겼다. Data Health handoff와 Events source review를 재사용해 `next_checks`를 실제 checklist 계약으로 승격하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 1차는 완료했다. 2차 / 3차는 `.aiworkspace/note/finance/tasks/active/overview-market-context-source-action-flow-v1-20260618/DESIGN.md`에서 승인 전 설계 후보로 남긴다.
+
+### 2026-06-18 - Market Context 3차-B로 futures Rate Pressure 조건을 추가한다
+
+- User request: 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV 기반 macro 조건 1개만 추가하고, FRED / events / sentiment / 새 provider / schema / loader는 열지 말라고 승인함.
+- Interpreted goal: broad analog 자체를 바꾸지 않고, 선택 기준 시점의 futures macro context와 비슷한 과거 anchor가 얼마나 남는지 context-only distribution으로 보여줘야 함.
+- Analysis result: 기존 `load_futures_ohlcv(end=...)`로 `ZN=F` / `ZB=F` daily row를 selected as-of 이하로 읽을 수 있어 새 loader/schema 없이 Rate Pressure futures proxy bucket을 만들 수 있다.
+- Follow-up: 3차-B는 완료했다. 남은 후보는 full PIT universe/sector metadata, event-window analog, FRED rates, events/sentiment conditioning, safe-haven futures variant이며 모두 별도 승인 대상이다.
+
+### 2026-06-20 - Market Context를 card-first prototype UI에서 brief-first 흐름으로 정리한다
+
+- User request: 사용자가 실제 Market Context를 사용한 뒤 `오늘의 시장 맥락`과 `시장 브리프` 중복, historical analog controls 위치, 카드 안 카드형 macro pilot, source 상태와 갱신 액션의 약한 연결을 지적하고 개선 진행을 승인함.
+- Interpreted goal: 새 데이터 조건이나 진단 패널이 아니라, 같은 DB-backed content를 사용자가 시장 브리프 -> 과거 참고 -> 자료 근거 -> 필요 자료 보강 순서로 덜 헷갈리게 읽게 해야 함.
+- Analysis result: Streamlit 제약이나 AGENTS 지시 때문이 아니라, 기능이 누적되며 카드가 기본 visual container가 된 것이 문제였다. controls를 analog 흐름에 붙이고, basis ledger / sample funnel / source ledger로 시각 장치를 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: UX redesign V1은 완료했다. 향후 후보는 source별 더 좁은 refresh 버튼, mobile density, full PIT universe/sector metadata 등이며 별도 승인 대상이다.
+
+### 2026-06-20 - Market Context V1 보정이 충분하지 않아 V2 UX 보정을 진행한다
+
+- User request: 사용자가 V1 결과가 위치만 옮겨지고 여전히 작은 카드 위주로 보이며, `다음 맥락 체크`, `시장 브리핑`, `Macro 조건 포함 pilot`이 충분히 개선되지 않았다고 재지적함.
+- Interpreted goal: V1을 완료로 간주하지 말고, Market Movers / Portfolio Monitoring처럼 넓은 읽기 UI로 Market Context의 visual language를 다시 잡아야 함.
+- Analysis result: 문제는 Streamlit 한계가 아니라 renderer CSS와 HTML이 card / boxed section을 기본 언어로 삼은 데 있었다. 상단 brief rows를 cockpit 안에 흡수하고, next checks를 rail로 바꾸며, historical / macro / source 섹션의 card background와 left-rule을 줄이는 보정이 필요했다.
+- Follow-up: V2는 완료했다. 남은 후보는 source별 좁은 refresh action, deeper macro comparison drill-down, mobile density polish이며, 새 provider / schema / validation / monitoring / trading semantics는 열지 않았다.
+
+### 2026-06-20 - Historical analog 기준일이 무시된 것처럼 보이는 문제를 보정한다
+
+- User request: 사용자가 `참고: 과거 유사 맥락 기준`에서 latest인데 계산 기준일이 2026-05-29이고, 2026-06-18을 선택해도 정보가 바뀌지 않는 것처럼 보인다고 지적함.
+- Interpreted goal: 날짜 선택을 실제로 고치되, 단순 라벨 변경이 아니라 요청 기준일 / 실제 계산 기준일 / 자료 최종일의 차이를 화면에서 이해 가능하게 해야 함.
+- Analysis result: 서비스는 선택일을 전달하고 있었지만, SPY / QQQ / GLD 등 comparison daily price coverage가 2026-05-29에서 끊겨 공통 matrix가 그 날짜로 제한됐다. UI가 이 fallback 이유를 숨긴 것이 핵심 문제였다.
+- Follow-up: V10에서 requested / effective as-of alignment와 limiting symbols를 service model과 UI에 추가했다. full PIT sector universe / historical sector membership은 여전히 별도 storage/read-path 승인 대상이다.
+
+### 2026-06-21 - Historical analog를 action 가능하고 matrix-first로 다시 보정한다
+
+- User request: 사용자가 `실제 계산 기준일`이 최신화 action으로 해결되지 않고, `참고: 과거 유사 맥락` 상단과 핵심/보조 자산 표가 중복되고 prototype-like로 보인다고 지적함.
+- Interpreted goal: 새 데이터 조건을 추가하는 것이 아니라, stale common daily price basis는 기존 bounded 수집 경로로 연결하고, broad analog 결과를 사용자가 먼저 읽을 수 있는 기준 요약과 자산 결과 matrix로 재구성해야 함.
+- Analysis result: 기존 coverage gap repair는 row 부족만 처리해 selected as-of mismatch를 보강하지 못했다. 또 basis bar / method grid / summary strip이 표본과 조건을 반복했고, 상세 표가 primary read path였다.
+- Follow-up: V12에서 stale basis repair action, compact basis summary, collapsed technical detail, core outcome matrix, support summary, collapsed statistics table을 완료했다. Macro 조건 포함 비교의 세부 UX polish는 별도 후속 후보로 남긴다.
+
+### 2026-06-21 - Macro 조건 비교의 표본 축소 의미를 사용자 언어로 정리한다
+
+- User request: 사용자가 `Macro 조건 후 결과 변화`에서 `Macro 추가조건 37회 / 6회`와 `현재 Macro 배경`의 `같은 상태`가 무엇을 뜻하는지 기본 사용자는 알기 어렵다고 지적함.
+- Interpreted goal: 새 macro 조건이나 예측 로직을 추가하는 것이 아니라, 기존 broad / GLD / Rate Pressure sample narrowing과 reference Macro backdrop counts를 화면에서 자연스럽게 이해하게 해야 함.
+- Analysis result: 계산 로직은 이미 `broad_sample_count`, GLD preview count, final conditioned count, FRED reference preview count를 갖고 있으므로 renderer에서 단계 라벨과 한글 지표 설명을 보강하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: V15에서 `기본 유사 맥락 -> GLD 조건 적용 -> 금리선물 조건 적용`, T10Y3M / VIXCLS / BAA10Y 한글 설명, broad sample 중 같은 상태 횟수 표시를 완료했다. Hard conditioning 확대는 별도 승인 대상이다.
+
+### 2026-06-21 - Macro 조건 비교 UI를 historical analog matrix 문법으로 맞춘다
+
+- User request: 사용자가 V15 Macro 섹션이 여전히 표와 텍스트가 엉망이고, 정리된 `참고: 과거 유사 맥락` 섹션과 비교해 완성도가 낮다고 지적함.
+- Interpreted goal: 설명문을 더 늘리는 것이 아니라, Macro 조건 비교의 primary read path를 historical analog와 같은 기준 bar / matrix flow로 정리해야 함.
+- Analysis result: 기존 화면은 `ov-macro-sample-flow`와 `ov-macro-delta-table`이 별도 UI 문법을 써서 긴 source detail과 넓은 행 간격이 결과 해석을 방해했다. 같은 data를 basis bar와 asset comparison matrix로 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: V16에서 Macro basis bar, asset x `기본 / 조건 후 / 변화` matrix, collapsed source detail, Korean-first Macro backdrop labels를 완료했다. 계산 / hard condition / data boundary는 바꾸지 않았다.
+
+### 2026-06-22 - Macro matrix 색상과 reference 값 의미를 더 명확히 한다
+
+- User request: 사용자가 핵심 자산 표와 Macro 조건 결과 비교 표에서 양수 green gradient가 충분히 보이지 않고, T10Y3M / VIXCLS / BAA10Y 값이 높고 낮은지 또는 무엇을 뜻하는지 모르겠다고 지적함.
+- Interpreted goal: 새 Macro hard condition이나 예측 로직이 아니라, 기존 historical analog / Macro reference 값의 읽기 보조 UI를 더 명확하게 해야 함.
+- Analysis result: matrix HTML은 이미 strength 값을 갖고 있었지만 CSS가 약해 화면상 거의 드러나지 않았다. Macro reference values도 기존 bucket이 있으므로 새 fetch 없이 bucket 의미를 사용자 문장으로 표시할 수 있다.
+- Follow-up: V19에서 matrix green/red gradient와 Macro reference backdrop meaning copy를 완료했다. DB / provider / hard conditioning / validation / monitoring / trading semantics는 바꾸지 않았다.
+
+### 2026-06-22 - Overview 첫 진입에서 선택된 탭만 로딩한다
+
+- User request: 사용자가 Overview 최초 진입 시 시간이 오래 걸리는 이유를 물었고, 선택된 탭에 한해서 로딩하는 구조로 변경하자고 승인함.
+- Interpreted goal: `Market Context`를 기본 첫 화면으로 유지하면서, Streamlit `st.tabs`의 eager render 때문에 다른 Overview deep tab들이 함께 계산되는 문제를 줄여야 함.
+- Analysis result: `st.tabs` body는 비선택 탭도 실행하므로 Market Movers, Futures Monitor, Sentiment, Sector / Industry, Events, Data Health, Candidate Ops가 첫 진입 때 모두 렌더될 수 있었다. Top-level navigation을 selector + selected renderer dispatch로 바꾸는 것이 가장 작고 안전한 변경이다.
+- Follow-up: V20에서 selected-tab lazy render와 Candidate Ops snapshot lazy load를 완료했다. 각 탭 내부 read model / provider / DB / registry / validation / monitoring / trade semantics는 바꾸지 않았다.
+
+### 2026-06-24 - Market Context 보강은 현재 화면 direct 자료로 제한한다
+
+- User request: 사용자가 Market Context 화면 확인에 필요 없는 Top1000 / Top2000 / Futures 보강이 `필요 자료 보강`에 섞여 오래 걸리는지 확인하고, 해당 화면에서는 제외해 달라고 요청함.
+- Interpreted goal: Market Context 보강 버튼은 현재 화면의 Top Mover / Breadth / Events / Sentiment source에 필요한 bounded action만 실행하고, 넓은 universe와 futures refresh는 전용 화면 소유로 분리해야 함.
+- Analysis result: 기존 smart refresh는 Data Health priority item을 그대로 action plan에 넣어 Top1000, Top2000, Futures 1m까지 실행할 수 있었다. 이는 Market Context direct read path보다 넓은 운영 보강이었다.
+- Follow-up: Market Context direct refresh scope를 도입해 Top1000 / Top2000 / Futures action을 제외했다. 전체 Market Context 보강도 S&P 500 movers, sentiment, event calendars만 실행한다.
+
+### 2026-06-25 - Overview UI 구조를 page / tab entrypoint로 1차 분리한다
+
+- User request: 사용자가 Overview의 UI 노출과 엔진 분리를 명확히 관리해야 하며, 1차 구조 분리와 QA를 진행해 달라고 요청함.
+- Interpreted goal: 동작을 바꾸지 않고 active Overview shell과 primary tab entrypoint를 `app/web/overview/` package로 나눠 다음 차수의 탭별 helper 이동 기반을 만든다.
+- Analysis result: 엔진/read model은 이미 Streamlit-free service에 있으나, UI 파일은 monolithic이었다. 단번에 helper까지 모두 이동하면 기존 private helper contract와 회귀 위험이 커서 V1에서는 wrapper / page shell / tab entrypoint만 분리하는 것이 안전하다.
+- Follow-up: `overview_dashboard.py`는 compatibility wrapper가 되었고, active shell은 `overview/page.py`, tab entry는 `overview/{market_context,market_movers,futures_macro,sentiment,events}.py`가 소유한다. 기존 구현은 `legacy_dashboard.py`에 남아 있으며 V2에서 탭별 helper 이동을 진행한다.
+
+### 2026-06-25 - Overview legacy cleanup V6-V10을 순차 진행한다
+
+- User request: 사용자가 6차에서 10차까지 차수별 진행과 각 차수 QA 후 다음 차수 진행을 요청함.
+- Interpreted goal: 무작정 helper를 대량 이동하지 않고, 사용 현황 감사 -> active surface 분리 -> bounded service 분리 -> 확인된 unused legacy 제거 -> 재도입 방지 guard 순서로 구조를 안정화해야 함.
+- Analysis result: `legacy_dashboard.py`는 아직 active 세부 helper 의존이 남아 있어 전체 삭제 대상은 아니지만, old page render / standalone tab wrappers / Candidate Ops overview snapshot helpers는 active 경로에서 끊겨 있어 삭제 가능했다.
+- Follow-up: V6-V10 완료. 다음 정리 후보는 남은 active helper cluster를 domain component / action / service 단위로 더 작게 이동하는 별도 task이며, 현재 Overview primary ownership은 `app/web/overview/` package가 맡는다.

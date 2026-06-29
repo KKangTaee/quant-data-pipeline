@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -4119,7 +4120,7 @@ class JobResultArtifactContractTests(unittest.TestCase):
 
 class OverviewAutomationContractTests(unittest.TestCase):
     def test_market_session_banner_reports_open_day_times(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_session_banner_model
 
         model = _market_session_banner_model(now=datetime(2026, 5, 29, 10, 0, tzinfo=US_EASTERN_TZ))
 
@@ -4131,7 +4132,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["items"][1]["detail"], "16:00 ET")
 
     def test_market_session_banner_reports_weekend_closure(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_session_banner_model
 
         model = _market_session_banner_model(now=datetime(2026, 5, 30, 10, 0, tzinfo=US_EASTERN_TZ))
 
@@ -4141,15 +4142,25 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["items"][1]["detail"], "09:30 ET")
 
     def test_market_session_banner_reports_observed_holiday_closure(self) -> None:
-        from app.web.overview_dashboard import US_EASTERN_TZ, _market_session_banner_model
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_session_banner_model
 
         model = _market_session_banner_model(now=datetime(2026, 7, 3, 10, 0, tzinfo=US_EASTERN_TZ))
 
         self.assertEqual(model["status"], "휴장")
         self.assertIn("Independence Day", model["detail"])
 
+    def test_market_context_session_payload_uses_previous_trading_day_when_closed(self) -> None:
+        from app.web.overview.session_helpers import US_EASTERN_TZ, _market_context_session_payload
+
+        model = _market_context_session_payload(now=datetime(2026, 6, 20, 10, 0, tzinfo=US_EASTERN_TZ))
+
+        self.assertEqual(model["phase"], "휴장")
+        self.assertFalse(model["is_market_open_now"])
+        self.assertEqual(model["session_date"], "2026-06-20")
+        self.assertEqual(model["basis_date"], "2026-06-18")
+
     def test_snapshot_status_labels_intraday_quote_time(self) -> None:
-        from app.web.overview_dashboard import _snapshot_status_items
+        from app.web.overview.session_helpers import _snapshot_status_items
 
         items = _snapshot_status_items(
             {
@@ -4168,7 +4179,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("previous close", items[0]["detail"])
 
     def test_snapshot_status_labels_sparse_eod_date(self) -> None:
-        from app.web.overview_dashboard import _snapshot_status_items
+        from app.web.overview.session_helpers import _snapshot_status_items
 
         items = _snapshot_status_items(
             {
@@ -4320,8 +4331,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_dashboard_routes_collection_through_action_facade(self) -> None:
         import ast
 
-        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
-        tree = ast.parse(source)
+        helper_sources = "\n".join(
+            Path(path).read_text(encoding="utf-8")
+            for path in (
+                "app/web/overview/market_context_helpers.py",
+                "app/web/overview/market_movers_helpers.py",
+                "app/web/overview/futures_macro_helpers.py",
+                "app/web/overview/sentiment_helpers.py",
+                "app/web/overview/events_helpers.py",
+            )
+        )
+        tree = ast.parse(helper_sources)
         imported_modules = {
             node.module
             for node in ast.walk(tree)
@@ -4332,6 +4352,2255 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("app.jobs.ingestion_jobs", imported_modules)
         self.assertNotIn("app.jobs.overview_automation", imported_modules)
         self.assertNotIn("app.jobs.run_history", imported_modules)
+
+    def test_overview_dashboard_delegates_page_shell_to_overview_package(self) -> None:
+        import ast
+
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+
+        self.assertIn("app.web.overview.page", imported_modules)
+        self.assertIn("render_overview_dashboard", source)
+
+    def test_overview_primary_tab_entry_modules_exist(self) -> None:
+        import importlib.util
+
+        expected_modules = {
+            "app.web.overview.market_context": "render_market_context_tab",
+            "app.web.overview.market_movers": "render_market_movers_tab",
+            "app.web.overview.futures_macro": "render_futures_macro_tab",
+            "app.web.overview.sentiment": "render_sentiment_tab",
+            "app.web.overview.events": "render_events_tab",
+        }
+
+        for module_name, entrypoint in expected_modules.items():
+            try:
+                spec = importlib.util.find_spec(module_name)
+            except ModuleNotFoundError:
+                spec = None
+            self.assertIsNotNone(spec, f"{module_name} should exist")
+            module = importlib.import_module(module_name)
+            self.assertTrue(callable(getattr(module, entrypoint, None)))
+
+    def test_overview_page_dispatches_primary_tabs_to_tab_modules(self) -> None:
+        import ast
+
+        page_path = Path("app/web/overview/page.py")
+        self.assertTrue(page_path.exists(), "Overview page shell should live under app/web/overview/page.py")
+        source = page_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+
+        self.assertIn("app.web.overview.market_context", imported_modules)
+        self.assertIn("app.web.overview.market_movers", imported_modules)
+        self.assertIn("app.web.overview.futures_macro", imported_modules)
+        self.assertIn("app.web.overview.sentiment", imported_modules)
+        self.assertIn("app.web.overview.events", imported_modules)
+        render_body = source[source.index("def render_overview_dashboard"):]
+        self.assertIn('"Market Context": render_market_context_tab', render_body)
+        self.assertIn('"Market Movers": render_market_movers_tab', render_body)
+        self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
+        self.assertIn('"Sentiment": render_sentiment_tab', render_body)
+        self.assertIn('"Events": render_events_tab', render_body)
+
+    def test_overview_primary_tab_modules_own_tab_orchestration(self) -> None:
+        module_contracts = {
+            "app/web/overview/market_context.py": {
+                "entrypoint": "def render_market_context_tab",
+                "forbidden": "_legacy._render_overview_market_context_tab",
+                "required": [
+                    "render_market_context_header()",
+                    "load_market_context_cockpit_model()",
+                    "render_macro_context_cockpit(",
+                    "render_market_context_refresh_bar(",
+                ],
+            },
+            "app/web/overview/market_movers.py": {
+                "entrypoint": "def render_market_movers_tab",
+                "forbidden": "_legacy._render_market_movers_tab",
+                "required": [
+                    "render_market_movers_header()",
+                    "render_market_movers_controls()",
+                    "is_market_movers_auto_refresh_enabled(",
+                    "render_market_movers_snapshot(",
+                ],
+            },
+            "app/web/overview/futures_macro.py": {
+                "entrypoint": "def render_futures_macro_tab",
+                "forbidden": "_legacy._render_futures_macro_tab",
+                "required": [
+                    "render_futures_macro_header()",
+                    "render_futures_macro_fragment(detail_expanded=True)",
+                ],
+            },
+            "app/web/overview/sentiment.py": {
+                "entrypoint": "def render_sentiment_tab",
+                "forbidden": "_legacy._render_market_sentiment_tab",
+                "required": [
+                    "render_sentiment_header()",
+                    "render_sentiment_controls()",
+                    "load_sentiment_snapshot()",
+                    "render_sentiment_snapshot_overview(",
+                ],
+            },
+            "app/web/overview/events.py": {
+                "entrypoint": "def render_events_tab",
+                "forbidden": "_legacy._render_events_tab",
+                "required": [
+                    "render_events_header()",
+                    "render_event_refresh_toolbar()",
+                    "load_event_snapshot_context(",
+                    "render_events_overview_lanes(",
+                ],
+            },
+        }
+
+        for path, contract in module_contracts.items():
+            source = Path(path).read_text(encoding="utf-8")
+            self.assertIn(contract["entrypoint"], source)
+            self.assertNotIn(contract["forbidden"], source)
+            for required in contract["required"]:
+                self.assertIn(required, source)
+
+    def test_overview_component_surfaces_are_split_by_domain(self) -> None:
+        import importlib.util
+
+        expected_modules = {
+            "app.web.overview.components.layout": ["render_market_session_banner"],
+            "app.web.overview.components.market_context": ["render_macro_context_cockpit"],
+            "app.web.overview.components.events": [
+                "render_event_agenda_sections",
+                "render_event_source_lane",
+                "render_event_warning_strip",
+                "render_events_summary_strip",
+                "render_macro_week_lane",
+            ],
+        }
+
+        for module_name, entrypoints in expected_modules.items():
+            try:
+                spec = importlib.util.find_spec(module_name)
+            except ModuleNotFoundError:
+                spec = None
+            self.assertIsNotNone(spec, f"{module_name} should exist")
+            module = importlib.import_module(module_name)
+            for entrypoint in entrypoints:
+                self.assertTrue(callable(getattr(module, entrypoint, None)))
+
+    def test_overview_active_tabs_use_domain_component_surfaces(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        events_source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        events_helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.components.layout import render_market_session_banner", page_source)
+        self.assertIn("render_market_session_banner(", page_source)
+        self.assertNotIn("_legacy.render_market_session_banner(", page_source)
+
+        self.assertIn(
+            "from app.web.overview.components.market_context import render_macro_context_cockpit",
+            market_context_source,
+        )
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", market_context_source)
+        self.assertNotIn("_legacy.render_macro_context_cockpit(", market_context_source)
+
+        self.assertIn("from app.web.overview.components.events import (", events_helper_source)
+        self.assertIn("render_events_summary_strip(", events_helper_source)
+        self.assertIn("render_event_source_lane(", events_helper_source)
+        self.assertIn("render_event_warning_strip(", events_helper_source)
+        self.assertIn("render_macro_week_lane(", events_helper_source)
+        self.assertNotIn("_legacy.render_events_summary_strip(", events_source)
+        self.assertNotIn("_legacy.render_event_source_lane(", events_source)
+        self.assertNotIn("_legacy.render_event_warning_strip(", events_source)
+        self.assertNotIn("_legacy.render_macro_week_lane(", events_source)
+
+    def test_overview_service_surfaces_are_split_by_domain(self) -> None:
+        import importlib.util
+
+        expected_modules = {
+            "app.services.overview.market_context": [
+                "build_overview_macro_context_cockpit",
+                "build_overview_source_confidence_catalog",
+            ],
+            "app.services.overview.market_movers": [
+                "build_group_leadership_snapshot",
+                "build_market_movers_snapshot",
+                "build_overview_breadth_heatmap_summary",
+                "load_market_mover_sector_options",
+            ],
+            "app.services.overview.events": [
+                "build_market_events_snapshot",
+                "build_overview_macro_week_lane",
+            ],
+            "app.services.overview.sentiment": ["build_market_sentiment_snapshot"],
+            "app.services.overview.data_health": [
+                "build_collection_ops_snapshot",
+                "build_overview_data_health_ingestion_handoff",
+            ],
+            "app.services.overview.ia": ["load_overview_ia_closeout_model"],
+        }
+
+        for module_name, entrypoints in expected_modules.items():
+            try:
+                spec = importlib.util.find_spec(module_name)
+            except ModuleNotFoundError:
+                spec = None
+            self.assertIsNotNone(spec, f"{module_name} should exist")
+            module = importlib.import_module(module_name)
+            for entrypoint in entrypoints:
+                self.assertTrue(callable(getattr(module, entrypoint, None)))
+
+    def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
+        source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.services.overview.data_health import (", source)
+        self.assertIn("from app.services.overview.events import (", source)
+        self.assertIn("from app.services.overview.ia import load_overview_ia_closeout_model", source)
+        self.assertIn("from app.services.overview.market_context import (", source)
+        self.assertIn("from app.services.overview.market_movers import (", source)
+        self.assertIn("from app.services.overview.sentiment import build_market_sentiment_snapshot", source)
+        self.assertNotIn("from app.services.overview_market_intelligence import (", source)
+
+    def test_overview_ia_closeout_body_lives_in_service_surface(self) -> None:
+        service_source = Path("app/services/overview/ia.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("def load_overview_ia_closeout_model", service_source)
+        self.assertIn('"schema_version": "overview_ia_closeout_v1"', service_source)
+        self.assertNotIn("def load_overview_ia_closeout_model", helper_source)
+
+    def test_overview_legacy_cleanup_audit_tracks_active_retained_and_removable_buckets(self) -> None:
+        audit_path = Path(
+            ".aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/LEGACY_USAGE_AUDIT.md"
+        )
+        self.assertTrue(audit_path.exists())
+        audit = audit_path.read_text(encoding="utf-8")
+
+        for heading in (
+            "## Active Legacy Calls",
+            "## Retained Compatibility",
+            "## Removable Candidates",
+            "## Next Extraction Order",
+        ):
+            self.assertIn(heading, audit)
+
+        self.assertIn("`_render_overview_tab_selector`", audit)
+        self.assertIn("`_render_futures_monitor_tab`", audit)
+        self.assertIn("`load_overview_dashboard_snapshot`", audit)
+        self.assertIn("Candidate Ops", audit)
+
+    def test_overview_helper_extraction_audit_tracks_target_helper_modules(self) -> None:
+        audit_path = Path(
+            ".aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/"
+            "HELPER_EXTRACTION_AUDIT.md"
+        )
+        self.assertTrue(audit_path.exists())
+        audit = audit_path.read_text(encoding="utf-8")
+
+        for heading in (
+            "## Active Legacy Helper Calls",
+            "## Target Helper Modules",
+            "## Extraction Order",
+            "## Guard Rules",
+        ):
+            self.assertIn(heading, audit)
+
+        for module_name in (
+            "market_context_helpers.py",
+            "events_helpers.py",
+            "futures_macro_helpers.py",
+            "market_movers_helpers.py",
+            "sentiment_helpers.py",
+        ):
+            self.assertIn(module_name, audit)
+
+        self.assertIn("legacy_dashboard.py", audit)
+
+    def test_overview_legacy_dashboard_removal_audit_tracks_phase_targets(self) -> None:
+        audit_path = Path(
+            ".aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/"
+            "LEGACY_DASHBOARD_REMOVAL_AUDIT.md"
+        )
+        self.assertTrue(audit_path.exists())
+        audit = audit_path.read_text(encoding="utf-8")
+
+        for heading in (
+            "## Remaining Direct Dependencies",
+            "## Removal Phases",
+            "## Migration Targets",
+            "## Deletion Guard",
+        ):
+            self.assertIn(heading, audit)
+
+        for target in (
+            "session_helpers.py",
+            "market_context_helpers.py",
+            "events_helpers.py",
+            "sentiment_helpers.py",
+            "market_movers_helpers.py",
+            "futures_macro_helpers.py",
+            "overview_dashboard.py",
+            "legacy_dashboard.py",
+        ):
+            self.assertIn(target, audit)
+
+        self.assertFalse(Path("app/web/overview/legacy_dashboard.py").exists())
+
+    def test_overview_page_uses_session_helper_instead_of_legacy_dashboard(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/session_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.session_helpers import _market_session_banner_model", page_source)
+        self.assertNotIn("legacy_dashboard", page_source)
+        self.assertNotIn("_legacy.", page_source)
+        self.assertIn("def _market_session_banner_model", helper_source)
+        self.assertIn("def _market_context_session_payload", helper_source)
+        self.assertIn("def _snapshot_status_items", helper_source)
+
+    def test_overview_market_context_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.market_context_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_market_context_header",
+            "render_market_context_refresh_reflection",
+            "load_market_context_cockpit_model",
+            "render_market_context_refresh_bar",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("load_overview_macro_context_cockpit(", helper_source)
+        self.assertIn("run_overview_market_context_refresh_smart(", helper_source)
+        self.assertIn("run_overview_market_context_refresh_all(", helper_source)
+
+    def test_overview_events_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.events_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_events_header",
+            "render_event_refresh_toolbar",
+            "load_event_snapshot_context",
+            "render_event_refresh_results",
+            "render_events_overview_lanes",
+            "has_event_rows",
+            "filter_event_calendar_rows",
+            "render_event_detail_tabs",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("load_overview_market_events_snapshot(", helper_source)
+        self.assertIn("_render_event_month_grid(filtered_rows)", helper_source)
+
+    def test_overview_futures_macro_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.futures_macro_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_futures_macro_header",
+            "render_futures_macro_fragment",
+            "_render_futures_macro_refresh_controls",
+            "_render_futures_macro_panel",
+            "_futures_market_brief_model",
+            "_futures_weekly_flow_model",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("load_overview_futures_macro_snapshot(", helper_source)
+
+    def test_overview_market_movers_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/market_movers.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.market_movers_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_market_movers_header",
+            "render_market_movers_controls",
+            "render_market_movers_context_captions",
+            "normalize_market_movers_refresh_mode",
+            "is_market_movers_auto_refresh_enabled",
+            "render_market_movers_auto_refresh_panel",
+            "render_market_movers_snapshot",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("_render_market_movers_controls()", helper_source)
+        self.assertIn("_render_market_movers_refresh_bar(", helper_source)
+        self.assertIn("_render_market_movers_snapshot_panel(", helper_source)
+
+    def test_overview_sentiment_entrypoint_uses_tab_helper_module(self) -> None:
+        source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/sentiment_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.sentiment_helpers import (", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("_legacy.", source)
+
+        for function_name in (
+            "render_sentiment_header",
+            "render_sentiment_controls",
+            "render_sentiment_job_result",
+            "load_sentiment_snapshot",
+            "render_sentiment_snapshot_overview",
+            "has_sentiment_rows",
+            "render_sentiment_empty_state",
+            "render_sentiment_detail_sections",
+        ):
+            self.assertIn(f"def {function_name}", helper_source)
+
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("run_overview_market_sentiment()", helper_source)
+        self.assertIn("load_overview_market_sentiment_snapshot()", helper_source)
+        self.assertIn("_render_sentiment_analysis_panel(analysis)", helper_source)
+        self.assertIn("_sentiment_trend_chart(", helper_source)
+
+    def test_overview_legacy_cleanup_removes_confirmed_unused_surfaces(self) -> None:
+        legacy_path = Path("app/web/overview/legacy_dashboard.py")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+
+        self.assertFalse(legacy_path.exists())
+        for function_name in (
+            "render_overview_dashboard",
+            "_render_overview_market_context_tab",
+            "_render_market_movers_tab",
+            "_render_futures_macro_tab",
+            "_render_futures_monitor_tab",
+            "_render_sector_industry_tab",
+            "_render_market_sentiment_tab",
+            "_render_events_tab",
+        ):
+            self.assertNotIn(f"def {function_name}", wrapper_source)
+
+        for function_name in (
+            "load_overview_dashboard_snapshot",
+            "build_overview_top_candidates",
+            "build_overview_funnel_rows",
+            "build_overview_next_actions",
+            "build_overview_activity_rows",
+        ):
+            self.assertNotIn(f"def {function_name}", helper_source)
+
+    def test_overview_removed_legacy_surfaces_do_not_leak_through_compat_wrapper(self) -> None:
+        from app.web import overview_dashboard
+
+        for name in (
+            "load_overview_dashboard_snapshot",
+            "build_overview_top_candidates",
+            "build_overview_funnel_rows",
+            "build_overview_next_actions",
+            "build_overview_activity_rows",
+            "_render_overview_market_context_tab",
+            "_render_market_movers_tab",
+            "_render_futures_macro_tab",
+            "_render_futures_monitor_tab",
+            "_render_sector_industry_tab",
+            "_render_market_sentiment_tab",
+            "_render_events_tab",
+        ):
+            self.assertFalse(hasattr(overview_dashboard, name), f"{name} should stay removed from wrapper exports")
+
+    def test_overview_helpers_do_not_reintroduce_candidate_ops_runtime_imports(self) -> None:
+        import ast
+
+        source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+        imported_names = {
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            for alias in node.names
+        }
+
+        self.assertNotIn("app.runtime", imported_modules)
+        self.assertFalse(
+            {
+                "load_current_candidate_registry_latest",
+                "load_pre_live_candidate_registry_latest",
+                "load_portfolio_proposals",
+                "load_backtest_run_history",
+                "load_saved_portfolios",
+                "load_candidate_review_notes",
+            }
+            & imported_names
+        )
+
+    def test_overview_navigation_surface_owns_selector_entrypoints(self) -> None:
+        from app.web.overview import navigation
+
+        self.assertEqual(
+            navigation.OVERVIEW_DEEP_TAB_OPTIONS,
+            (
+                "Market Context",
+                "Market Movers",
+                "Futures Macro",
+                "Sentiment",
+                "Events",
+            ),
+        )
+        self.assertTrue(callable(navigation._render_overview_tab_selector))
+        self.assertTrue(callable(navigation._render_selected_overview_tab))
+        source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+        self.assertIn("def _render_overview_tab_selector", source)
+        self.assertIn("def _render_selected_overview_tab", source)
+
+    def test_overview_page_uses_navigation_surface_instead_of_legacy_selector_body(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertIn("from app.web.overview.navigation import (", page_source)
+        self.assertIn("_render_overview_tab_selector()", page_source)
+        self.assertIn("_render_selected_overview_tab(", page_source)
+        self.assertNotIn("_legacy._render_overview_tab_selector()", page_source)
+        self.assertNotIn("_legacy._render_selected_overview_tab(", page_source)
+        self.assertNotIn("legacy_dashboard", wrapper_source)
+        self.assertNotIn("_legacy_dashboard", wrapper_source)
+
+    def test_overview_service_surfaces_stay_streamlit_free(self) -> None:
+        import ast
+
+        for path in sorted(Path("app/services/overview").glob("*.py")):
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            imported_modules = {
+                alias.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Import)
+                for alias in node.names
+            }
+            imported_modules.update(
+                node.module
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module
+            )
+
+            self.assertNotIn("streamlit", imported_modules, f"{path} should stay Streamlit-free")
+            self.assertFalse(
+                any(module == "app.web" or module.startswith("app.web.") for module in imported_modules),
+                f"{path} should not import web UI modules",
+            )
+
+    def test_overview_component_surfaces_do_not_pull_services_or_data(self) -> None:
+        import ast
+
+        forbidden_prefixes = ("app.services", "app.jobs", "finance.data", "finance.loaders")
+        for path in sorted(Path("app/web/overview/components").glob("*.py")):
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            imported_modules = {
+                alias.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Import)
+                for alias in node.names
+            }
+            imported_modules.update(
+                node.module
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module
+            )
+
+            self.assertFalse(
+                any(module == prefix or module.startswith(f"{prefix}.") for module in imported_modules for prefix in forbidden_prefixes),
+                f"{path} should remain a visual component surface, not a service/data entrypoint",
+            )
+
+    def test_overview_active_page_and_tabs_do_not_import_data_or_jobs_directly(self) -> None:
+        import ast
+
+        guarded_paths = [
+            Path("app/web/overview/page.py"),
+            Path("app/web/overview/market_context.py"),
+            Path("app/web/overview/market_movers.py"),
+            Path("app/web/overview/futures_macro.py"),
+            Path("app/web/overview/sentiment.py"),
+            Path("app/web/overview/events.py"),
+        ]
+        forbidden_modules = {
+            "app.jobs.ingestion_jobs",
+            "app.jobs.overview_automation",
+            "app.jobs.run_history",
+            "finance.data",
+            "finance.loaders",
+        }
+        for path in guarded_paths:
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+            imported_modules = {
+                alias.name
+                for node in ast.walk(tree)
+                if isinstance(node, ast.Import)
+                for alias in node.names
+            }
+            imported_modules.update(
+                node.module
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module
+            )
+
+            self.assertFalse(
+                any(
+                    module == forbidden or module.startswith(f"{forbidden}.")
+                    for module in imported_modules
+                    for forbidden in forbidden_modules
+                ),
+                f"{path} should route data/job work through helpers or action facades",
+            )
+
+    def test_overview_dashboard_wrapper_remains_thin_compatibility_facade(self) -> None:
+        source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+
+        self.assertLessEqual(len(source.splitlines()), 80)
+        self.assertIn("from app.web.overview.page import render_overview_dashboard", source)
+        self.assertIn("from app.web.overview.navigation import (", source)
+        self.assertIn("from app.web.overview.market_movers_helpers import (", source)
+        self.assertIn("from app.web.overview.futures_macro_helpers import (", source)
+        self.assertNotIn("import streamlit", source)
+        self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("for _name in dir", source)
+
+    def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+        context_label_index = render_body.index('"Market Context"')
+        market_label_index = render_body.index('"Market Movers"')
+        futures_macro_label_index = render_body.index('"Futures Macro"')
+        sentiment_label_index = render_body.index('"Sentiment"')
+        events_label_index = render_body.index('"Events"')
+
+        self.assertIn("_render_overview_tab_selector(", render_body)
+        self.assertIn("_render_selected_overview_tab(", render_body)
+        self.assertNotIn("st.tabs(", render_body)
+        self.assertNotIn("snapshot = load_overview_dashboard_snapshot()", render_body)
+        self.assertNotIn('"Futures Monitor"', render_body)
+        self.assertNotIn('"Sector / Industry"', render_body)
+        self.assertNotIn('"Data Health": _render_collection_ops_tab', render_body)
+        self.assertNotIn('"Candidate Ops"', render_body)
+        self.assertNotIn("load_overview_dashboard_snapshot", render_body)
+        self.assertLess(context_label_index, market_label_index)
+        self.assertLess(market_label_index, futures_macro_label_index)
+        self.assertLess(futures_macro_label_index, sentiment_label_index)
+        self.assertLess(sentiment_label_index, events_label_index)
+
+    def test_overview_dashboard_primary_selector_excludes_inactive_tabs(self) -> None:
+        from app.web.overview_dashboard import OVERVIEW_DEEP_TAB_OPTIONS
+
+        self.assertEqual(
+            OVERVIEW_DEEP_TAB_OPTIONS,
+            (
+                "Market Context",
+                "Market Movers",
+                "Futures Macro",
+                "Sentiment",
+                "Events",
+            ),
+        )
+        self.assertNotIn("Futures Monitor", OVERVIEW_DEEP_TAB_OPTIONS)
+        self.assertNotIn("Sector / Industry", OVERVIEW_DEEP_TAB_OPTIONS)
+        self.assertNotIn("Data Health", OVERVIEW_DEEP_TAB_OPTIONS)
+        self.assertNotIn("Candidate Ops", OVERVIEW_DEEP_TAB_OPTIONS)
+
+    def test_overview_dashboard_primary_selector_uses_internal_pill_widget(self) -> None:
+        source = Path("app/web/overview/navigation.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def _render_overview_tab_selector"):]
+        helper_body = helper_body[: helper_body.index("def _render_selected_overview_tab")]
+
+        self.assertIn("st.pills(", helper_body)
+        self.assertIn('selection_mode="single"', helper_body)
+        self.assertIn("required=True", helper_body)
+        self.assertIn("format_func=_overview_tab_display_label", helper_body)
+        self.assertIn("st.markdown(", helper_body)
+        self.assertIn("_overview_tab_nav_css()", helper_body)
+        self.assertNotIn("segmented_control", helper_body)
+        self.assertNotIn("st.radio(", helper_body)
+        self.assertNotIn("href=", helper_body)
+        self.assertNotIn("<a ", helper_body)
+        self.assertIn("ov-primary-nav", source)
+        self.assertIn('stBaseButton-pillsActive', source)
+        self.assertIn("border-bottom: 1px solid", source)
+        self.assertIn("border-radius: 0", source)
+        self.assertIn("box-shadow: none", source)
+        self.assertIn("var(--text-color)", source)
+        self.assertIn("#ff4b4b", source)
+        self.assertNotIn("background: #f2faf7", source)
+
+    def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
+        from app.web.overview_dashboard import _render_selected_overview_tab
+
+        calls: list[str] = []
+        renderers = {
+            "Market Context": lambda: calls.append("Market Context"),
+            "Market Movers": lambda: calls.append("Market Movers"),
+            "Futures Macro": lambda: calls.append("Futures Macro"),
+        }
+
+        _render_selected_overview_tab("Futures Macro", renderers=renderers)
+
+        self.assertEqual(calls, ["Futures Macro"])
+
+    def test_overview_dashboard_defaults_unknown_deep_tab_to_market_context(self) -> None:
+        from app.web.overview_dashboard import _overview_active_tab_label
+
+        self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
+        self.assertEqual(_overview_active_tab_label("Futures Macro"), "Futures Macro")
+        self.assertEqual(_overview_active_tab_label("Futures Monitor"), "Market Context")
+        self.assertEqual(_overview_active_tab_label("Sector / Industry"), "Market Context")
+        self.assertEqual(_overview_active_tab_label(None), "Market Context")
+
+    def test_overview_dashboard_pill_nav_slug_contract(self) -> None:
+        from app.web.overview_dashboard import (
+            OVERVIEW_DEEP_TAB_OPTIONS,
+            _overview_tab_seed_label,
+            _overview_tab_display_label,
+            _overview_tab_label_from_slug,
+        )
+
+        for label in OVERVIEW_DEEP_TAB_OPTIONS:
+            display = _overview_tab_display_label(label)
+            self.assertIn(label, display)
+
+        self.assertEqual(_overview_tab_label_from_slug("market-context"), "Market Context")
+        self.assertEqual(_overview_tab_label_from_slug("market-movers"), "Market Movers")
+        self.assertEqual(_overview_tab_label_from_slug("futures-macro"), "Futures Macro")
+        self.assertIn("시장 맥락", _overview_tab_display_label("Market Context"))
+        self.assertIn("변동 종목", _overview_tab_display_label("Market Movers"))
+        self.assertIn("선물 매크로", _overview_tab_display_label("Futures Macro"))
+        self.assertIn("심리", _overview_tab_display_label("Sentiment"))
+        self.assertIn("일정", _overview_tab_display_label("Events"))
+        self.assertEqual(
+            _overview_tab_seed_label(
+                query_label="Market Movers",
+                widget_value="Sentiment",
+                session_value="Market Context",
+            ),
+            "Sentiment",
+        )
+        self.assertEqual(
+            _overview_tab_seed_label(
+                query_label="Market Movers",
+                widget_value=None,
+                session_value="Market Context",
+            ),
+            "Market Movers",
+        )
+
+    def test_overview_dashboard_routes_futures_macro_as_primary_tab(self) -> None:
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
+        futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+
+        self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
+        self.assertIn("def render_futures_macro_tab", futures_source)
+        self.assertIn("render_futures_macro_fragment(detail_expanded=True)", futures_source)
+        self.assertNotIn("legacy_dashboard", futures_helper_source)
+        self.assertNotIn("_legacy.", futures_helper_source)
+        self.assertIn("_render_futures_macro_panel(detail_expanded=detail_expanded)", futures_helper_source)
+        self.assertNotIn('"Futures Monitor"', render_body)
+
+    def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
+        futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
+        futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+        style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+        controls_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_refresh_controls") :]
+        controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
+        panel_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_futures_macro_fragment")]
+        tab_body = futures_source[futures_source.index("def render_futures_macro_tab") :]
+
+        self.assertIn("render_futures_macro_fragment(detail_expanded=True)", tab_body)
+        self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
+        self.assertNotIn("legacy_dashboard", futures_helper_source)
+        self.assertNotIn("_legacy.", futures_helper_source)
+        self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
+        self.assertIn("section_detail=", panel_body)
+        self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
+        self.assertIn("_run_futures_daily_ohlcv_action()", controls_body)
+        self.assertIn("clear_overview_futures_macro_snapshot_cache()", controls_body)
+        self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
+        self.assertIn("overview_futures_macro_tab_reload", controls_body)
+        self.assertIn("ov-futures-macro-action-copy", controls_body)
+        self.assertIn("ov-futures-macro-action-title", controls_body)
+        self.assertIn("ov-futures-macro-action-rule", controls_body)
+        self.assertIn("section_detail", controls_body)
+        self.assertNotIn("데이터 작업", controls_body)
+        self.assertIn("st.columns([1, 0.16, 0.16]", controls_body)
+        self.assertNotIn("2.05, 0.62, 0.62, 1.25", controls_body)
+        self.assertIn('"일봉 갱신"', controls_body)
+        self.assertIn('"다시 읽기"', controls_body)
+        self.assertIn(".ov-futures-macro-action-title", style_source)
+        self.assertIn(".ov-futures-macro-action-rule", style_source)
+        self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
+        self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
+
+    def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+
+        self.assertNotIn("_render_overview_tab_load_gate", source)
+        self.assertNotIn("시장 맥락 불러오기", source)
+        self.assertNotIn("OVERVIEW_LOADED_TABS_KEY", source)
+        self.assertLess(
+            render_body.index("active_tab = _render_overview_tab_selector()"),
+            render_body.index("_render_selected_overview_tab("),
+        )
+
+    def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def render_market_context_tab"):]
+
+        self.assertIn("cockpit_model = load_market_context_cockpit_model()", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_market_context_refresh_bar(cockpit_model)", helper_body)
+        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
+        refresh_index = helper_body.index("render_market_context_refresh_bar(cockpit_model)")
+        self.assertLess(cockpit_index, refresh_index)
+        self.assertIn("load_market_context_cockpit_model", helper_body)
+        self.assertIn("render_macro_context_cockpit", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_repair_action(", helper_body)
+        self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
+        self.assertNotIn("legacy_dashboard", helper_source)
+        self.assertNotIn("_legacy.", helper_source)
+        self.assertIn("load_overview_macro_context_cockpit(", helper_source)
+        self.assertIn("run_overview_market_context_refresh_smart(", helper_source)
+
+    def test_overview_dashboard_keeps_deep_tab_guide_out_of_market_context_brief(self) -> None:
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def render_market_context_tab"):]
+
+        self.assertIn("cockpit_model = load_market_context_cockpit_model()", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("load_overview_ia_closeout_model", helper_body)
+        self.assertNotIn("render_overview_ia_closeout_guide", helper_body)
+        self.assertNotIn("Deep Tab", helper_body)
+
+    def test_overview_market_context_loader_excludes_futures_macro_by_default(self) -> None:
+        source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
+        helper_body = source[source.index("def load_overview_macro_context_cockpit"):]
+
+        self.assertIn("include_futures_macro: bool = False", helper_body)
+        self.assertIn("include_historical_analog: bool = False", helper_body)
+        guard_index = helper_body.index("if include_futures_macro:")
+        call_index = helper_body.index("futures_macro_snapshot = load_overview_futures_macro_snapshot()")
+        self.assertLess(guard_index, call_index)
+        analog_guard_index = helper_body.index("if include_historical_analog:")
+        analog_call_index = helper_body.index("historical_analog_snapshot = load_overview_market_context_historical_analog(")
+        self.assertLess(analog_guard_index, analog_call_index)
+        self.assertIn("include_futures_macro=include_futures_macro", helper_body)
+
+    def test_overview_market_context_refresh_reflection_copy_distinguishes_outcomes(self) -> None:
+        from app.web import overview_dashboard
+
+        reflection_state = getattr(overview_dashboard, "_overview_market_context_refresh_reflection_state", None)
+        self.assertTrue(callable(reflection_state), "Market Context refresh should expose reflection state copy.")
+
+        reflected_at = datetime(2026, 6, 12, 14, 32)
+
+        success = reflection_state(
+            {"status": "success", "finished_at": "2026-06-12 14:31:59"},
+            reflected_at=reflected_at,
+        )
+        partial = reflection_state(
+            {"status": "partial_success", "finished_at": "2026-06-12 14:31:59"},
+            reflected_at=reflected_at,
+        )
+        failed = reflection_state(
+            {"status": "failed", "finished_at": "2026-06-12 14:31:59"},
+            reflected_at=reflected_at,
+        )
+
+        self.assertTrue(success["reflected"])
+        self.assertIn("방금 갱신을 반영했습니다", success["label"])
+        self.assertIn("2026-06-12 14:32", success["detail"])
+        self.assertTrue(partial["reflected"])
+        self.assertIn("일부 자료만 반영했습니다", partial["label"])
+        self.assertIn("오래된 항목", partial["detail"])
+        self.assertFalse(failed["reflected"])
+        self.assertIn("갱신 실패", failed["label"])
+        self.assertIn("기존 자료", failed["detail"])
+
+    def test_overview_market_context_refresh_clears_cache_before_rerun(self) -> None:
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        if "def render_market_context_refresh_bar" not in source:
+            self.fail("Overview should keep the Market Context refresh bar helper.")
+        helper_body = source[source.index("def render_market_context_refresh_bar"):]
+
+        self.assertIn("_overview_market_context_refresh_reflection_state", helper_body)
+        self.assertIn("overview_market_context_refresh_reflection", helper_body)
+        self.assertIn("st.rerun()", helper_body)
+
+        store_index = helper_body.index("_store_overview_job_result(result_key, result)")
+        clear_index = helper_body.index("_clear_overview_market_context_caches()")
+        rerun_index = helper_body.index("st.rerun()")
+
+        self.assertLess(store_index, clear_index)
+        self.assertLess(clear_index, rerun_index)
+
+    def test_overview_market_context_refresh_assist_shows_smart_plan_before_job_result(self) -> None:
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        if "def render_market_context_refresh_bar" not in source:
+            self.fail("Overview should keep the Market Context refresh bar helper.")
+        helper_body = source[source.index("def render_market_context_refresh_bar"):]
+
+        self.assertIn("_overview_market_context_refresh_expander_label(cockpit_model)", helper_body)
+        self.assertIn("_render_overview_market_context_smart_refresh_plan(cockpit_model)", helper_body)
+        action_hint_index = helper_body.index("_render_overview_market_context_smart_refresh_plan(cockpit_model)")
+        button_index = helper_body.index("cols[1].button(")
+        result_index = helper_body.index("_render_overview_market_context_refresh_result(result_key)")
+
+        self.assertLess(action_hint_index, button_index)
+        self.assertLess(button_index, result_index)
+        self.assertIn('with st.expander("갱신 상세", expanded=False):', source)
+
+    def test_overview_data_health_is_not_a_primary_overview_tab(self) -> None:
+        source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def render_overview_dashboard"):]
+
+        self.assertNotIn("def _render_collection_ops_tab", wrapper_source)
+        self.assertNotIn("load_overview_data_health_ingestion_handoff", render_body)
+        self.assertNotIn("render_data_health_ingestion_handoff", render_body)
+        self.assertNotIn('"Data Health"', render_body)
+
+    def test_overview_sector_industry_standalone_tab_is_removed_from_primary_overview(self) -> None:
+        page_source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
+        render_body = page_source[page_source.index("def render_overview_dashboard"):]
+
+        self.assertNotIn("def _render_sector_industry_tab", wrapper_source)
+        self.assertNotIn('"Sector / Industry"', render_body)
+        self.assertIn("build_overview_breadth_heatmap_summary", Path("app/services/overview/market_movers.py").read_text(encoding="utf-8"))
+
+    def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
+        source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+        tab_body = source[source.index("def render_events_tab"):]
+        lane_index = tab_body.index("render_events_overview_lanes(")
+        filter_index = tab_body.index("filter_event_calendar_rows(")
+
+        self.assertLess(lane_index, filter_index)
+        self.assertIn("load_overview_macro_week_lane(context.snapshot)", helper_source)
+        self.assertNotIn("_legacy.load_overview_macro_week_lane", helper_source)
+
+    def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
+        from app.web.overview_dashboard import _futures_chart_symbols
+
+        symbols = [f"S{index}=F" for index in range(1, 10)]
+        chartable_symbols = [symbol for symbol in symbols if symbol != "S4=F"]
+        snapshot = {
+            "symbols": symbols,
+            "all_candles": pd.DataFrame(
+                {"Symbol": symbol, "Datetime": "2026-06-09 09:30:00", "Close": 100.0}
+                for symbol in chartable_symbols
+            ),
+        }
+
+        self.assertEqual(_futures_chart_symbols(snapshot), chartable_symbols[:6])
+        self.assertEqual(_futures_chart_symbols(snapshot, chart_scope="all_with_data"), chartable_symbols)
+
+    def test_futures_monitor_command_summary_owns_page_state_without_provider_rows(self) -> None:
+        from app.web.overview_dashboard import _futures_command_summary_items
+
+        selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
+        snapshot = {
+            "status": "REVIEW",
+            "coverage": {
+                "returnable_count": 6,
+                "symbol_count": 6,
+                "latest_age_minutes": 26,
+                "oldest_age_minutes": 26,
+            },
+            "top_move": {"Symbol": "NQ=F", "15m %": -0.6, "60m %": -0.3, "State": "Stale"},
+            "latest_run": {
+                "status": "success",
+                "rows_written": 9874,
+                "latest_candle_time_utc": "2026-06-22 14:34:00",
+            },
+        }
+
+        items = _futures_command_summary_items(
+            snapshot=snapshot,
+            group="Pre-open Core",
+            selected_symbols=selected_symbols,
+            lookback_label="6H",
+            chart_interval="5m",
+            refresh_mode="manual",
+        )
+
+        self.assertEqual([item["label"] for item in items], ["관찰 범위", "데이터 상태", "단기 움직임"])
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertIn("개장 전 핵심", flattened)
+        self.assertIn("갱신 필요", flattened)
+        self.assertIn("NQ=F", flattened)
+        self.assertNotIn("9874", flattened)
+        self.assertNotIn("2026-06-22 14:34:00", flattened)
+
+    def test_futures_monitor_live_summary_line_avoids_repeating_top_move_or_run(self) -> None:
+        from app.web.overview_dashboard import _futures_live_summary_line
+
+        selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
+        snapshot = {
+            "symbols": selected_symbols,
+            "top_move": {"Symbol": "NQ=F", "15m %": -0.6, "60m %": -0.3, "State": "Stale"},
+            "latest_run": {"status": "success", "rows_written": 9874},
+            "all_candles": pd.DataFrame(
+                {"Symbol": symbol, "Datetime": "2026-06-22 14:30:00", "Close": 100.0}
+                for symbol in selected_symbols
+            ),
+        }
+
+        summary = _futures_live_summary_line(
+            snapshot,
+            chart_interval="5m",
+            lookback_label="6H",
+            chart_scope="compact_6",
+        )
+
+        self.assertIn("선택 6개", summary)
+        self.assertIn("5분 봉", summary)
+        self.assertIn("차트 가능 6개 중 6개 표시", summary)
+        self.assertNotIn("NQ=F", summary)
+        self.assertNotIn("9874", summary)
+        self.assertNotIn("성공", summary)
+
+    def test_futures_monitor_macro_support_items_do_not_repeat_scenario(self) -> None:
+        from app.web.overview_dashboard import _macro_support_items
+
+        macro = {
+            "summary": {"scenario": "혼재된 매크로 흐름"},
+            "confidence": {
+                "label": "Medium Confidence",
+                "reasons": ["Most core symbols have 60D standardized moves."],
+                "sample_size": 0,
+                "occurrence_count": 950,
+                "hit_applicable": False,
+            },
+            "validation": {
+                "status": "OK",
+                "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+                "current_scenario_metrics": {
+                    "Occurrence Count": 950,
+                    "Directional Hit Applicable": False,
+                },
+            },
+        }
+
+        items = _macro_support_items(macro)
+
+        self.assertEqual([item["label"] for item in items], ["근거 강도", "과거 점검", "유사 구간"])
+        self.assertEqual(items[0]["value"], "보통")
+        self.assertNotIn("근거 강도", str(items[0]["value"]))
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertNotIn("혼재된 매크로 흐름", flattened)
+
+    def test_futures_workbench_context_bar_items_compactly_summarize_controls(self) -> None:
+        from app.web.overview_dashboard import _futures_workbench_context_items
+
+        selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
+        snapshot = {
+            "status": "REVIEW",
+            "coverage": {
+                "latest_age_minutes": 591,
+                "oldest_age_minutes": 591,
+            },
+            "latest_run": {
+                "status": "success",
+                "rows_written": 9874,
+                "latest_candle_time_utc": "2026-06-22 14:34:00",
+            },
+        }
+
+        items = _futures_workbench_context_items(
+            snapshot=snapshot,
+            group="Pre-open Core",
+            selected_symbols=selected_symbols,
+            lookback_label="6H",
+            chart_interval="5m",
+            chart_scope="compact_6",
+            refresh_mode="manual",
+        )
+
+        self.assertEqual([item["label"] for item in items], ["관찰", "차트", "자료", "다음 행동"])
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertIn("개장 전 핵심 · 6개", flattened)
+        self.assertIn("6H · 5분 봉 · 핵심 6개", flattened)
+        self.assertIn("오래됨", flattened)
+        self.assertIn("갱신 필요", flattened)
+        self.assertNotIn("선택 선물 1분봉 갱신", flattened)
+        self.assertNotIn("9874", flattened)
+        self.assertNotIn("2026-06-22 14:34:00", flattened)
+
+    def test_futures_refresh_module_groups_live_and_macro_actions(self) -> None:
+        from app.web.overview_dashboard import _futures_refresh_module_model
+
+        snapshot = {
+            "status": "REVIEW",
+            "coverage": {
+                "latest_age_minutes": 18,
+                "oldest_age_minutes": 24,
+            },
+        }
+        macro = {
+            "coverage": {
+                "latest_daily_date": "2026-06-19",
+                "standardized_count": 16,
+                "symbol_count": 16,
+            }
+        }
+
+        model = _futures_refresh_module_model(
+            snapshot=snapshot,
+            macro=macro,
+            selected_symbols=["NQ=F", "ZN=F", "CL=F"],
+            refresh_mode="auto_60s",
+        )
+
+        self.assertEqual(model["title"], "자료 갱신")
+        self.assertEqual([item["label"] for item in model["sources"]], ["실시간 차트 자료", "매크로 일봉 자료"])
+        self.assertIn("1분봉", model["sources"][0]["basis"])
+        self.assertIn("선택 선물 3개", model["sources"][0]["detail"])
+        self.assertIn("최신 candle 18분", model["sources"][0]["detail"])
+        self.assertIn("1D OHLCV", model["sources"][1]["basis"])
+        self.assertIn("기준일 2026-06-19", model["sources"][1]["detail"])
+        self.assertIn("16/16", model["sources"][1]["detail"])
+        self.assertEqual([item["label"] for item in model["actions"]], ["1분봉 갱신", "일봉 매크로 갱신", "화면 다시 읽기"])
+        self.assertEqual([mode["label"] for mode in model["modes"]], ["수동", "60초 자동 확인"])
+
+    def test_futures_watch_strip_items_show_symbol_state_without_provider_run(self) -> None:
+        from app.web.overview_dashboard import _futures_watch_strip_items
+
+        rows = pd.DataFrame(
+            [
+                {"Symbol": "NQ=F", "State": "Stale", "15m %": -0.6, "60m %": -0.3, "Age Min": 26},
+                {"Symbol": "ZN=F", "State": "Calm", "15m %": 0.1, "60m %": 0.2, "Age Min": 2},
+            ]
+        )
+        snapshot = {
+            "rows": rows,
+            "latest_run": {"status": "success", "rows_written": 9874},
+        }
+
+        items = _futures_watch_strip_items(snapshot, ["NQ=F", "ZN=F"])
+
+        self.assertEqual([item["symbol"] for item in items], ["NQ=F", "ZN=F"])
+        self.assertEqual(items[0]["state"], "오래됨")
+        self.assertIn("15분 -0.60%", items[0]["move"])
+        flattened = " ".join(str(value) for item in items for value in item.values())
+        self.assertNotIn("9874", flattened)
+        self.assertNotIn("success", flattened)
+
+    def test_futures_market_brief_model_places_scenario_and_support_together(self) -> None:
+        from app.web.overview_dashboard import _futures_market_brief_model
+
+        macro = {
+            "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_daily_date": "2026-06-19"},
+            "summary": {
+                "scenario": "혼재된 매크로 흐름",
+                "sub_scenario": "성장 약세 + 방어 확인 부족",
+                "regime_hint": "Risk-off 후보",
+                "mixed_reason": "위험자산과 성장 proxy는 약하지만 안전자산 선호가 아직 충분하지 않습니다.",
+            },
+            "summary_sentences": ["현재 선물 일봉 기준 흐름이 한 방향으로 강하게 모이지 않습니다."],
+            "evidence": ["Risk-On +14, Growth +1, Rate Pressure +46", "Dollar Pressure -13"],
+            "confidence": {
+                "label": "Low Confidence",
+                "reasons": ["Most core symbols have 60D standardized moves."],
+                "occurrence_count": 950,
+                "hit_applicable": False,
+            },
+            "validation": {
+                "status": "OK",
+                "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+                "current_scenario_metrics": {"Occurrence Count": 950},
+            },
+        }
+
+        model = _futures_market_brief_model(macro)
+
+        self.assertEqual(model["eyebrow"], "오늘 기준 시장 브리프")
+        self.assertEqual(model["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(model["sub_scenario"], "성장 약세 + 방어 확인 부족")
+        self.assertEqual(model["regime_hint"], "Risk-off 후보")
+        self.assertIn("안전자산 선호", model["mixed_reason"])
+        self.assertIn("한 방향으로 강하게 모이지", model["sentence"])
+        self.assertEqual([item["label"] for item in model["support_items"]], ["근거 강도", "과거 점검", "유사 구간", "자료 기준"])
+        self.assertIn("위험선호 +14", " ".join(model["evidence_chips"]))
+        self.assertNotIn("Risk-On", " ".join(model["evidence_chips"]))
+
+    def test_futures_weekly_flow_model_ranks_driver_and_supports(self) -> None:
+        from app.web.overview_dashboard import _futures_weekly_flow_model
+
+        weekly_context = {
+            "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+            "summary": "최근 1주 기준으로 원자재/물가 변화가 가장 두드러집니다(-2.93%).",
+            "cards": [
+                {"label": "위험선호", "value": "+2.20%", "detail": "지수 선물이 위험자산 선호를 지지합니다.", "tone": "positive"},
+                {"label": "금리 부담", "value": "+0.24%", "detail": "중립권입니다.", "tone": "neutral"},
+                {"label": "달러 압력", "value": "+0.75%", "detail": "달러 강세 압력처럼 읽힙니다.", "tone": "danger"},
+                {"label": "원자재/물가", "value": "-2.93%", "detail": "물가 압력을 낮춥니다.", "tone": "positive"},
+            ],
+        }
+
+        model = _futures_weekly_flow_model(weekly_context)
+
+        self.assertEqual(model["title"], "최근 1주 흐름")
+        self.assertEqual(model["driver"]["label"], "원자재/물가")
+        self.assertEqual(model["driver"]["value"], "-2.93%")
+        self.assertEqual([item["label"] for item in model["supporting"]], ["위험선호", "원자재/물가"])
+        self.assertEqual([item["label"] for item in model["tempering"]], ["달러 압력"])
+        self.assertIn("가장 두드러집니다", model["summary"])
+
+    def test_overview_ui_css_defines_text_subtle_token_for_cockpit_readability(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn("--ov-mi-color-text-subtle:", css)
+        self.assertIn(".ov-macro-brief-detail", css)
+
+    def test_overview_ui_css_defines_source_confidence_lane(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-source-confidence", css)
+        self.assertIn(".ov-source-confidence-list", css)
+        self.assertIn(".ov-source-confidence-row", css)
+
+    def test_overview_ui_renders_supporting_sections_as_collapsible_disclosures(self) -> None:
+        import inspect
+
+        from app.web import overview_ui_components
+
+        css = overview_ui_components.overview_ui_css()
+        source = inspect.getsource(overview_ui_components)
+
+        self.assertIn(".ov-context-disclosure", css)
+        self.assertIn(".ov-context-disclosure > summary", css)
+        self.assertIn(
+            '<details class="ov-macro-reading-section ov-source-confidence ov-source-ledger ov-context-disclosure is-evidence-footer"',
+            source,
+        )
+        self.assertIn('<summary class="ov-source-confidence-summary"', source)
+        self.assertIn('<details class="ov-ia-closeout ov-context-disclosure"', source)
+        self.assertIn('<summary class="ov-ia-closeout-summary"', source)
+        self.assertNotIn('<section class="ov-ia-closeout">', source)
+
+    def test_overview_ui_css_defines_market_context_summary_rail(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-macro-cockpit-rail", css)
+        self.assertIn(".ov-macro-status-item", css)
+        self.assertIn(".ov-macro-section-title", css)
+        self.assertIn(".ov-macro-cockpit-refresh-assist", css)
+        self.assertIn(".ov-macro-brief-row", css)
+        self.assertIn(".ov-macro-cue-row", css)
+        self.assertIn(".ov-macro-cue-action", css)
+
+    def test_overview_market_context_findings_use_rail_without_card_left_rule(self) -> None:
+        import re
+
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        scoped_match = re.search(r"\.ov-context-finding-row \{(?P<body>.*?)\n\}", css, re.S)
+        self.assertIsNotNone(scoped_match, "Market Context findings should render as rail rows.")
+        scoped_body = scoped_match.group("body") if scoped_match else ""
+
+        self.assertIn("grid-template-columns: minmax(5rem, 0.22fr)", scoped_body)
+        self.assertIn("padding: 0.72rem 0;", scoped_body)
+        self.assertNotIn("border-left", scoped_body)
+        self.assertNotIn("min-height", scoped_body)
+
+    def test_overview_market_context_keeps_historical_analog_out_of_default_entry(self) -> None:
+        helper_body = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        helper_body = helper_body[helper_body.index("def render_market_context_tab"):]
+
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertNotIn("_legacy._render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
+        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
+        refresh_bar_index = helper_body.index("render_market_context_refresh_bar(cockpit_model)")
+        self.assertLess(cockpit_index, refresh_bar_index)
+
+    def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
+        source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+        market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+        self.assertIn("_macro_cockpit_historical_analog_html", source)
+        self.assertIn("Macro 조건 결과 비교", source)
+        self.assertIn("macro_dimension_audit", source)
+        helper_body = market_context_source[market_context_source.index("def render_market_context_tab"):]
+
+        self.assertNotIn("initial_analog_controls = _legacy._overview_historical_analog_control_state()", helper_body)
+        self.assertNotIn("analog_controls = _legacy._render_overview_historical_analog_controls()", helper_body)
+        self.assertNotIn("if analog_controls != initial_analog_controls:", helper_body)
+        self.assertNotIn("as_of_date=initial_analog_controls", helper_body)
+        self.assertNotIn("pattern_window=str(initial_analog_controls", helper_body)
+        self.assertNotIn("as_of_date=analog_controls", helper_body)
+        self.assertNotIn("pattern_window=str(analog_controls", helper_body)
+        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
+
+    def test_overview_market_context_historical_analog_can_reuse_visible_sector_snapshot(self) -> None:
+        from app.web import overview_dashboard_helpers
+
+        visible_snapshot = {
+            "status": "OK",
+            "rows": pd.DataFrame(
+                [
+                    {"Rank": 1, "Group": "Consumer Cyclical", "Market Cap Weighted Return %": 3.4},
+                    {"Rank": 2, "Group": "Basic Materials", "Market Cap Weighted Return %": 1.1},
+                ]
+            ),
+        }
+        captured: dict[str, object] = {}
+
+        def fake_loader(**kwargs):
+            raise AssertionError(f"historical analog should not reload sector leadership: {kwargs}")
+
+        def fake_builder(**kwargs):
+            captured.update(kwargs)
+            return {"status": "OK", "leadership_sector": "Consumer Cyclical", "proxy_etf": "XLY"}
+
+        with patch.object(overview_dashboard_helpers, "load_overview_group_leadership_snapshot", side_effect=fake_loader):
+            with patch.object(overview_dashboard_helpers, "build_historical_analog_snapshot", side_effect=fake_builder):
+                result = overview_dashboard_helpers.load_overview_market_context_historical_analog(
+                    as_of_date=None,
+                    pattern_window="20D",
+                    events_snapshot={"status": "OK"},
+                    group_leadership_snapshot=visible_snapshot,
+                )
+
+        self.assertEqual(result["proxy_etf"], "XLY")
+        self.assertIs(captured["group_leadership_snapshot"], visible_snapshot)
+        self.assertEqual(captured["pattern_window"], "20D")
+
+    def test_overview_market_context_uses_cardless_brief_layout_contract(self) -> None:
+        from app.web import overview_ui_components
+
+        css = overview_ui_components.overview_ui_css()
+        cue_html = overview_ui_components._macro_cockpit_interpretation_cues_html(
+            [
+                {
+                    "label": "가까운 주요 이벤트",
+                    "value": "다음 FOMC 2일 후",
+                    "detail": "FOMC Meeting",
+                    "status": "REVIEW",
+                    "target_tab": "Events",
+                    "freshness": "2026-06-15",
+                }
+            ]
+        )
+        analog_html = overview_ui_components._macro_cockpit_historical_analog_html(
+            {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "Industrials(XLI) coverage 부족",
+                "leadership_sector": "Industrials",
+                "proxy_etf": "XLI",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "REVIEW",
+                "summary": {"detail": "저장 자료 기준"},
+                "items": [
+                    {
+                        "surface": "Prices",
+                        "status": "REVIEW",
+                        "title": "가격 자료",
+                        "detail": "stale",
+                        "freshness": "2026-06-15",
+                        "owner": "Ingestion",
+                        "caveat": "context only",
+                    }
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn(".ov-macro-cues-list", css)
+        self.assertIn(".ov-context-finding-rail", css)
+        self.assertIn(".ov-analog-basis-bar", css)
+        self.assertIn(".ov-source-ledger", css)
+        self.assertIn("ov-context-finding-rail", cue_html)
+        self.assertIn("ov-context-finding-row", cue_html)
+        self.assertIn("ov-historical-analog-row", analog_html)
+        self.assertIn("ov-historical-analog-scope", analog_html)
+        self.assertIn("기준 변경은 아래 과거 참고 통계에만 적용", analog_html)
+        self.assertIn("ov-analog-basis-bar", analog_html)
+        self.assertIn("ov-source-confidence-list", source_html)
+        self.assertIn("ov-source-ledger", source_html)
+        self.assertNotIn("ov-macro-cues-grid", cue_html)
+        self.assertNotIn("ov-source-confidence-card", source_html)
+        self.assertNotIn("ov-historical-analog-empty", analog_html)
+
+    def test_overview_market_context_keeps_market_brief_to_actionable_context(self) -> None:
+        from app.web import overview_ui_components
+
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Technology 리더십이 확인되고, 선물/매크로 배경은 금리 압력입니다.",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "3 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {},
+            "event_timeline": {},
+            "brief_rows": [
+                {
+                    "label": "무엇이 움직였나",
+                    "value": "SNDK +14.5%",
+                    "detail": "Technology 안에서 단일 종목 영향이 컸는지 breadth와 함께 확인합니다.",
+                    "tone": "warning",
+                },
+                {
+                    "label": "확산",
+                    "value": "Technology 우위",
+                    "detail": "리더십 sector와 market mover가 같은 방향인지 봅니다.",
+                    "tone": "positive",
+                },
+                {
+                    "label": "Futures/Macro 배경",
+                    "value": "장중 macro 해석 보류",
+                    "detail": "Futures Monitor 1m OHLCV가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다.",
+                    "tone": "warning",
+                },
+            ],
+            "context_findings": [
+                {
+                    "label": "Events",
+                    "conclusion": "추정 일정 71개는 검증/신선도 제한이 있어 확정 일정처럼 읽으면 안 됩니다.",
+                    "interpretation": "오늘 브리프의 이벤트 배경은 caveat로만 둡니다.",
+                    "evidence": "96개 추정 일정 · 71개 제한",
+                    "source_area": "Events · Earnings estimates",
+                    "freshness": "2026-06-15",
+                    "priority": "P1",
+                    "tone": "warning",
+                },
+                {
+                    "label": "Futures / 금리 압력",
+                    "conclusion": "선물 맥락은 risk-on 흐름과 금리 압력이 같이 보입니다.",
+                    "interpretation": "주식 강세를 단순 위험선호로만 읽기 어렵습니다.",
+                    "evidence": "Risk-on with rate pressure",
+                    "source_area": "Futures Macro Thermometer",
+                    "freshness": "2026-06-15",
+                    "priority": "P2",
+                    "tone": "warning",
+                },
+            ],
+            "historical_analog": {},
+            "source_confidence": {},
+            "boundary_note": "context only",
+        }
+
+        cockpit_html = overview_ui_components._macro_context_cockpit_html(model, include_reading_flow=False)
+        full_html = overview_ui_components._macro_context_cockpit_html(model)
+        reading_html = overview_ui_components._macro_context_reading_flow_html(
+            model,
+            include_brief=False,
+            include_historical_analog=False,
+            include_source_confidence=False,
+        )
+
+        self.assertIn("ov-market-brief-lane", cockpit_html)
+        self.assertIn("오늘의 시장 브리프", cockpit_html)
+        self.assertIn("무엇이 움직였나", cockpit_html)
+        self.assertIn("장중 macro 해석 보류", cockpit_html)
+        self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다.", cockpit_html)
+        self.assertNotIn("이벤트 배경", cockpit_html)
+        self.assertNotIn("직접 원인 근거 약함", cockpit_html)
+        self.assertNotIn("오늘 움직임의 원인을 이벤트로 단정하지 않습니다.", cockpit_html)
+        self.assertNotIn("브리프 신뢰도", cockpit_html)
+        self.assertNotIn("이벤트 일정", cockpit_html)
+        self.assertNotIn("선물 기반 장중 해석 제한", cockpit_html)
+        self.assertNotIn("이벤트 caveat", cockpit_html)
+        self.assertNotIn("자료 신뢰도 caveat", cockpit_html)
+        self.assertNotIn("ov-macro-reading-section ov-macro-brief", cockpit_html)
+        self.assertNotIn("맥락 검토 결과", full_html)
+        self.assertNotIn("ov-context-finding-rail", full_html)
+        self.assertNotIn("맥락 검토 결과", reading_html)
+        self.assertNotIn("ov-context-finding-rail", reading_html)
+        self.assertNotIn("관찰 지점", full_html)
+        self.assertNotIn("확인 위치", full_html)
+        self.assertNotIn("확인하세요", full_html)
+        self.assertNotIn("ov-macro-cues-list", full_html)
+        self.assertNotIn("ov-macro-cue-row", full_html)
+
+    def test_overview_market_context_v2_css_removes_repeated_card_grid_language(self) -> None:
+        import re
+
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        reading_section = re.search(r"\.ov-macro-reading-section \{(?P<body>.*?)\n\}", css, re.S)
+        macro_comparison = re.search(r"\.ov-macro-compare-section \{(?P<body>.*?)\n\}", css, re.S)
+        next_check_rail = re.search(r"\.ov-context-finding-rail \{(?P<body>.*?)\n\}", css, re.S)
+        next_check_row = re.search(r"\.ov-context-finding-row \{(?P<body>.*?)\n\}", css, re.S)
+
+        self.assertIsNotNone(reading_section)
+        self.assertIsNotNone(macro_comparison)
+        self.assertIsNotNone(next_check_rail)
+        self.assertIsNotNone(next_check_row)
+
+        reading_body = reading_section.group("body") if reading_section else ""
+        macro_body = macro_comparison.group("body") if macro_comparison else ""
+        rail_body = next_check_rail.group("body") if next_check_rail else ""
+        row_body = next_check_row.group("body") if next_check_row else ""
+
+        self.assertIn("background: transparent", reading_body)
+        self.assertNotIn("border-left", reading_body)
+        self.assertIn("display: grid", rail_body)
+        self.assertIn("grid-template-columns: minmax(5rem, 0.22fr) minmax(0, 1.1fr) minmax(0, 1.15fr) minmax(12rem, 0.8fr)", row_body)
+        self.assertNotIn("min-height", row_body)
+        self.assertNotIn("repeat(3", rail_body)
+        self.assertIn("background: transparent", macro_body)
+        self.assertNotIn("border-bottom", macro_body)
+
+    def test_overview_source_confidence_summary_exposes_scan_metrics_before_opening(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "REVIEW",
+                "status_label": "자료 확인 필요",
+                "summary": {
+                    "detail": "일부 저장 자료 확인 필요",
+                    "ok_count": 3,
+                    "review_count": 2,
+                    "missing_count": 1,
+                },
+                "items": [
+                    {
+                        "surface": "Prices",
+                        "status": "REVIEW",
+                        "title": "가격 자료",
+                        "detail": "기준일 오래됨",
+                        "freshness": "Update due",
+                        "owner": "Data Health",
+                        "caveat": "context only",
+                        "next_check": "Market Movers 기준일과 누락 상태가 가격 맥락의 신뢰도 주의점입니다.",
+                    },
+                    {
+                        "surface": "Events",
+                        "status": "OK",
+                        "title": "이벤트 자료",
+                        "detail": "공식/추정 혼합",
+                        "freshness": "Fresh",
+                        "owner": "Events",
+                        "caveat": "estimate caveat",
+                        "next_check": "Events source type이 이벤트 자료 주의점입니다.",
+                    },
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn("ov-source-confidence-strip", source_html)
+        self.assertIn("정상 3", source_html)
+        self.assertIn("보강 2", source_html)
+        self.assertIn("부족 1", source_html)
+        self.assertIn("Prices", source_html)
+        self.assertIn("가격 맥락의 신뢰도 주의점", source_html)
+
+    def test_overview_source_confidence_groups_reference_and_meta_without_unresolved_copy(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "OK",
+                "status_label": "자료 정상 · 참고 제한",
+                "summary": {
+                    "detail": "브리프 자료와 참고/관리 메타를 분리합니다.",
+                    "ok_count": 3,
+                    "review_count": 0,
+                    "reference_count": 2,
+                    "missing_count": 0,
+                },
+                "items": [
+                    {
+                        "surface": "Market Movers",
+                        "status": "OK",
+                        "status_label": "자료 정상",
+                        "title": "Prices / Movers",
+                        "detail": "가격 움직임 자료",
+                        "freshness": "2026-06-20 12:35",
+                        "owner": "Overview",
+                        "caveat": "context only",
+                        "next_check": "-",
+                        "source_role": "brief_source",
+                        "counts_for_status": True,
+                    },
+                    {
+                        "surface": "Events",
+                        "status": "REFERENCE_LIMIT",
+                        "status_label": "참고 제한",
+                        "title": "Events",
+                        "detail": "추정 일정은 확정 일정처럼 읽지 않습니다.",
+                        "freshness": "2026-06-20 12:36",
+                        "owner": "Events",
+                        "caveat": "원인 분석 엔진이 아닙니다.",
+                        "next_check": "-",
+                        "source_role": "reference_context",
+                        "counts_for_status": False,
+                    },
+                    {
+                        "surface": "Data Health",
+                        "status": "META",
+                        "status_label": "관리 메타",
+                        "title": "Data Health",
+                        "detail": "보강 가능한 항목은 필요 자료 보강에 반영됩니다.",
+                        "freshness": "2026-06-20 12:36",
+                        "owner": "Data Health",
+                        "caveat": "자료 관리 메타입니다.",
+                        "next_check": "-",
+                        "source_role": "management_meta",
+                        "counts_for_status": False,
+                    },
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn("시장 브리프 직접 자료", source_html)
+        self.assertIn("참고 / 관리 자료", source_html)
+        self.assertIn("참고 2", source_html)
+        self.assertIn("Events", source_html)
+        self.assertIn("참고 제한", source_html)
+        self.assertIn("Data Health", source_html)
+        self.assertIn("관리 메타", source_html)
+        self.assertNotIn("Events · 자료 확인 필요", source_html)
+        self.assertNotIn("Data Health · 자료 확인 필요", source_html)
+
+    def test_overview_source_confidence_uses_ledger_language_without_review_gate_copy(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "REVIEW",
+                "status_label": "자료 확인 필요",
+                "summary": {
+                    "detail": "필요 자료를 확인하고 보강할 위치를 정리합니다.",
+                    "ok_count": 1,
+                    "review_count": 1,
+                    "missing_count": 0,
+                },
+                "items": [
+                    {
+                        "surface": "Futures Monitor",
+                        "status": "REVIEW",
+                        "title": "Futures Monitor 1m OHLCV",
+                        "detail": "선물 가격 이력 freshness를 확인합니다.",
+                        "freshness": "3950m old",
+                        "owner": "Data Health",
+                        "caveat": "시장 맥락 참고용",
+                        "next_check": "필요 자료 보강에서 기존 Overview 갱신을 실행합니다.",
+                    }
+                ],
+                "boundary_note": (
+                    "Market Context는 저장 자료의 출처와 한계를 설명하는 참고 화면이며, "
+                    "승인/차단 판단이나 운영 알림을 만들지 않습니다."
+                ),
+            }
+        )
+
+        self.assertIn("ov-source-ledger", source_html)
+        self.assertIn("자료 기준", source_html)
+        self.assertIn("사용 위치", source_html)
+        self.assertIn("보강 판단", source_html)
+        self.assertIn("필요 자료 보강", source_html)
+        for forbidden in ["PASS", "BLOCKER", "Final Review decision", "Operations monitoring", "monitoring action"]:
+            self.assertNotIn(forbidden, source_html)
+
+    def test_overview_source_confidence_renders_status_board_not_diagnostic_table(self) -> None:
+        from app.web import overview_ui_components
+
+        source_html = overview_ui_components._macro_cockpit_source_confidence_html(
+            {
+                "status": "OK",
+                "status_label": "자료 정상 · 참고 제한",
+                "summary": {
+                    "detail": "브리프 자료는 정상이고 참고 제한은 분리합니다.",
+                    "ok_count": 4,
+                    "review_count": 0,
+                    "reference_count": 2,
+                    "missing_count": 0,
+                },
+                "items": [
+                    {
+                        "surface": "Market Movers",
+                        "status": "OK",
+                        "status_label": "자료 정상",
+                        "title": "Prices / Movers",
+                        "detail": "503/503 symbols returnable",
+                        "freshness": "2026-06-20 13:57",
+                        "owner": "Workspace > Ingestion plus Overview refresh",
+                        "caveat": "가격 맥락 참고용",
+                        "next_check": "-",
+                        "source_role": "brief_source",
+                        "counts_for_status": True,
+                    },
+                    {
+                        "surface": "Events",
+                        "status": "REFERENCE_LIMIT",
+                        "status_label": "참고 제한",
+                        "title": "Events",
+                        "detail": "추정 일정은 확정 일정처럼 읽지 않습니다.",
+                        "freshness": "2026-06-20 12:36",
+                        "owner": "Events",
+                        "caveat": "원인 분석 엔진이 아닙니다.",
+                        "next_check": "-",
+                        "source_role": "reference_context",
+                        "counts_for_status": False,
+                    },
+                    {
+                        "surface": "Data Health",
+                        "status": "META",
+                        "status_label": "관리 메타",
+                        "title": "Data Health",
+                        "detail": "보강 가능한 항목은 별도 보강 판단에 반영됩니다.",
+                        "freshness": "2026-06-22 09:09",
+                        "owner": "Data Health",
+                        "caveat": "자료 관리 메타입니다.",
+                        "next_check": "-",
+                        "source_role": "management_meta",
+                        "counts_for_status": False,
+                    },
+                ],
+                "boundary_note": "context only",
+            }
+        )
+
+        self.assertIn("ov-source-status-board", source_html)
+        self.assertIn("자료 상태 요약", source_html)
+        self.assertIn("시장 브리프 직접 자료", source_html)
+        self.assertIn("참고 / 관리 자료", source_html)
+        self.assertIn("보강 판단", source_html)
+        self.assertIn("브리프 자료 정상 4개", source_html)
+        self.assertIn("현재 보강 대상 0개", source_html)
+        self.assertIn("참고 제한 2개", source_html)
+        self.assertNotIn("자료 영역", source_html)
+        self.assertNotIn("관리 위치:", source_html)
+
+    def test_overview_market_context_refresh_bar_has_compact_no_action_state(self) -> None:
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        self.assertIn("_render_overview_market_context_refresh_status_panel(", source)
+        self.assertIn("ov-refresh-status-panel", source)
+        self.assertIn("if not action_ids:", source)
+        self.assertIn("전체 Market Context 자료 보강", source)
+
+        no_action_branch = source[source.index("if not action_ids:") : source.index("else:", source.index("if not action_ids:"))]
+        self.assertNotIn('summary.get("primary_button_label")', no_action_branch)
+        self.assertNotIn('key="overview_market_context_refresh_smart"', no_action_branch)
+
+    def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        model = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 2, "universe_count": 2, "effective_end_date": "2026-06-15"},
+                "rows": [
+                    {
+                        "Symbol": "SNDK",
+                        "Name": "Sandisk",
+                        "Sector": "Technology",
+                        "Return %": 14.5,
+                        "Volume Ratio": 2.0,
+                    }
+                ],
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 20, "universe_count": 20, "effective_end_date": "2026-06-15"},
+                "rows": [
+                    {
+                        "Rank": 1,
+                        "Group": "Industrials",
+                        "Symbols": 10,
+                        "Positive Symbols": 9,
+                        "Positive Symbol Share %": 90.0,
+                        "Market Cap Weighted Return %": 3.3,
+                        "Equal Weight Return %": 2.1,
+                        "Top 3 Positive Share %": 35.0,
+                        "Top Symbol": "CAT",
+                        "Top Symbol Return %": 4.2,
+                    },
+                    {
+                        "Rank": 2,
+                        "Group": "Technology",
+                        "Symbols": 10,
+                        "Positive Symbols": 6,
+                        "Positive Symbol Share %": 60.0,
+                        "Market Cap Weighted Return %": 1.2,
+                        "Equal Weight Return %": 1.0,
+                        "Top 3 Positive Share %": 45.0,
+                        "Top Symbol": "SNDK",
+                        "Top Symbol Return %": 14.5,
+                    },
+                ],
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "coverage": {"latest_date": "2026-06-15"},
+                "summary": {"scenario": "좋은 risk-on", "summary": "금리 부담 제한"},
+                "scores": [{"Metric": "Risk Appetite", "Score": 54}],
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "coverage": {"cnn_score": 29.7, "cnn_rating": "fear", "aaii_bull_bear_spread": -17.3},
+                "analysis": {"phase_label": "공포 우위", "headline": "공포 심리가 우위", "data_confidence": {"status": "OK", "detail": "fresh"}},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 2, "needs_review_count": 1, "latest_collected_at": "2026-06-15"},
+                "rows": [
+                    {
+                        "Date": "2026-06-17",
+                        "Type": "FOMC_MEETING",
+                        "Type Label": "FOMC",
+                        "Title": "FOMC Meeting",
+                        "Days Until": 2,
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-22",
+                        "Type": "MACRO_CPI",
+                        "Type Label": "CPI",
+                        "Title": "CPI",
+                        "Days Until": 7,
+                        "Source Type": "Unknown",
+                        "Validation": "Unknown",
+                        "Freshness": "Stale source",
+                        "Quality Action": "Inspect source freshness",
+                        "Importance": "High",
+                    },
+                ],
+            },
+            collection_ops_snapshot={
+                "status": "OK",
+                "coverage": {"ok_count": 2, "due_count": 1, "stale_count": 0, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": [],
+            },
+        )
+
+        self.assertIn("sector_pressure", model)
+        self.assertIn("event_timeline", model)
+        self.assertGreaterEqual(len(model["sector_pressure"]["heatmap_rows"]), 2)
+        self.assertGreaterEqual(len(model["event_timeline"]["items"]), 2)
+
+    def test_overview_market_context_renders_tape_heatmap_and_timeline_contract(self) -> None:
+        from app.web import overview_ui_components
+
+        css = overview_ui_components.overview_ui_css()
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Industrials 리더십이 확인되고, 선물/매크로 배경은 risk-on입니다. 확인할 자료 7개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요.",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "7 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                    {"label": "Breadth", "value": "Industrials", "detail": "91%", "tone": "positive"},
+                    {"label": "Macro", "value": "Risk-on", "detail": "rates muted", "tone": "positive"},
+                    {"label": "Next Event", "value": "FOMC D-2", "detail": "review", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {
+                "summary": {"headline": "Broad participation"},
+                "heatmap_rows": [
+                    {"group": "Industrials", "market_cap_weighted_return_pct": 3.3, "positive_symbol_share_pct": 91, "symbols": 70, "tone": "positive"},
+                    {"group": "Technology", "market_cap_weighted_return_pct": 1.2, "positive_symbol_share_pct": 61, "symbols": 80, "tone": "primary"},
+                ],
+                "coverage": {"freshness": "2026-06-15"},
+            },
+            "event_timeline": {
+                "items": [
+                    {"cluster": "FOMC", "title": "FOMC Meeting", "days_until": 2, "freshness": "Official", "tone": "warning"},
+                    {"cluster": "CPI", "title": "CPI", "days_until": 7, "freshness": "Stale source", "tone": "warning"},
+                ],
+                "coverage": {"review_count": 1, "latest_collected_at": "2026-06-15"},
+            },
+            "brief_rows": [],
+            "interpretation_cues": [],
+            "boundary_note": "context only",
+        }
+
+        html = overview_ui_components._macro_cockpit_body_html(model)
+
+        self.assertIn(".ov-macro-hybrid-tape", css)
+        self.assertIn(".ov-sector-pressure-map", css)
+        self.assertIn(".ov-event-timeline", css)
+        self.assertIn("ov-macro-hybrid-tape", html)
+        self.assertIn("ov-sector-pressure-map", html)
+        self.assertIn("ov-event-timeline", html)
+        self.assertIn("ov-sector-pressure-tile", html)
+        self.assertIn("ov-event-timeline-row", html)
+
+    def test_overview_market_context_splits_dashboard_from_reading_flow_contract(self) -> None:
+        from app.web import overview_ui_components
+
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Industrials 리더십이 확인되고, 선물/매크로 배경은 risk-on입니다. 확인할 자료 7개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요.",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "7 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                    {"label": "Breadth", "value": "Industrials", "detail": "91%", "tone": "positive"},
+                    {"label": "Macro", "value": "Risk-on", "detail": "rates muted", "tone": "positive"},
+                    {"label": "Next Event", "value": "FOMC D-2", "detail": "review", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {
+                "summary": {"headline": "Broad participation"},
+                "heatmap_rows": [
+                    {"group": "Industrials", "market_cap_weighted_return_pct": 3.3, "positive_symbol_share_pct": 91, "symbols": 70, "tone": "positive"},
+                ],
+                "coverage": {"freshness": "2026-06-15"},
+            },
+            "event_timeline": {
+                "items": [{"cluster": "FOMC", "title": "FOMC Meeting", "days_until": 2, "freshness": "Official", "tone": "warning"}],
+                "coverage": {"review_count": 1, "latest_collected_at": "2026-06-15"},
+            },
+            "brief_rows": [
+                {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
+                {
+                    "label": "이벤트 배경",
+                    "value": "직접 원인 근거 약함",
+                    "detail": "가까운 FOMC 일정은 배경 변수지만 오늘 움직임의 원인으로 단정하지 않습니다.",
+                    "tone": "warning",
+                },
+            ],
+            "interpretation_cues": [
+                {"label": "구형 해석 cue", "value": "렌더링 대상 아님", "detail": "legacy", "tone": "warning"},
+            ],
+            "context_findings": [
+                {
+                    "label": "Events",
+                    "conclusion": "FOMC 일정이 시장 해석을 바꿀 수 있는 가까운 event입니다.",
+                    "interpretation": "이벤트는 오늘 브리프의 배경 변수로만 둡니다.",
+                    "evidence": "Official macro · 2026-06-15",
+                    "source_area": "Events · Official macro",
+                    "freshness": "2026-06-15",
+                    "priority": "P1",
+                    "tone": "warning",
+                },
+            ],
+            "historical_analog": {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "XLI coverage 부족",
+                "leadership_sector": "Industrials",
+                "proxy_etf": "XLI",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            },
+            "source_confidence": {"status": "OK", "summary": {"detail": "저장 자료 기준"}, "items": []},
+            "boundary_note": "context only",
+        }
+
+        html = overview_ui_components._macro_context_cockpit_html(model)
+        cockpit_html = html.split('<section class="ov-macro-reading-flow"', 1)[0]
+        reading_html = html.split('<section class="ov-macro-reading-flow"', 1)[1]
+
+        self.assertIn('<section class="ov-macro-cockpit"', cockpit_html)
+        self.assertIn("ov-macro-cockpit-narrative", cockpit_html)
+        self.assertIn("오늘 가장 큰 움직임은 SNDK +14.5%입니다.", cockpit_html)
+        self.assertNotIn("현재 맥락:", cockpit_html)
+        self.assertIn("ov-macro-hybrid-tape", cockpit_html)
+        self.assertIn("ov-macro-visual-board", cockpit_html)
+        self.assertIn("오늘의 시장 브리프", cockpit_html)
+        self.assertIn("ov-market-brief-lane", cockpit_html)
+        self.assertIn("이벤트 배경", cockpit_html)
+        self.assertIn("직접 원인 근거 약함", cockpit_html)
+        self.assertIn("오늘 움직임의 원인으로 단정하지 않습니다.", cockpit_html)
+        self.assertNotIn("브리프 신뢰도", cockpit_html)
+        self.assertNotIn("이벤트 caveat", cockpit_html)
+        self.assertNotIn("해석할 때 같이 볼 변수", cockpit_html)
+        self.assertNotIn("과거 유사 맥락 참고", cockpit_html)
+        self.assertNotIn("구형 해석 cue", reading_html)
+        self.assertNotIn("ov-macro-reading-section ov-macro-brief", reading_html)
+        self.assertNotIn("ov-macro-reading-section ov-macro-cues", reading_html)
+        self.assertNotIn("ov-context-finding-rail", reading_html)
+        self.assertNotIn("맥락 검토 결과", reading_html)
+        self.assertNotIn("Events에서 official source를 확인하세요.", reading_html)
+        self.assertNotIn("확인 위치", reading_html)
+        self.assertIn("ov-macro-reading-section ov-historical-analog-row", reading_html)
+        self.assertIn("ov-macro-reading-section ov-source-confidence", reading_html)
+
+    def test_overview_market_context_relabels_supporting_flow_as_next_context_reference_and_evidence(self) -> None:
+        from app.web import overview_ui_components
+
+        model = {
+            "status": "REVIEW",
+            "summary": {
+                "headline": "오늘 가장 큰 움직임은 SNDK +14.5%입니다.",
+                "detail": "Technology 리더십이 확인되고, 선물/매크로 배경은 금리 압력입니다. 확인할 자료 3개를 먼저 본 뒤 Market Movers, Sector, Futures 흐름을 함께 읽으세요.",
+                "tone": "warning",
+                "rail": [
+                    {"label": "자료 상태", "value": "확인 필요", "detail": "3 checks", "tone": "warning"},
+                    {"label": "Top Mover", "value": "SNDK +14.5%", "detail": "stale", "tone": "warning"},
+                    {"label": "Breadth", "value": "Technology", "detail": "91%", "tone": "positive"},
+                    {"label": "Macro", "value": "금리 압력", "detail": "rates firm", "tone": "warning"},
+                    {"label": "Next Event", "value": "FOMC D-2", "detail": "review", "tone": "warning"},
+                ],
+            },
+            "sector_pressure": {},
+            "event_timeline": {},
+            "brief_rows": [
+                {"label": "무엇이 움직였나", "value": "SNDK +14.5%", "detail": "Technology leader", "tone": "warning"},
+                {
+                    "label": "이벤트 배경",
+                    "value": "직접 원인 근거 약함",
+                    "detail": "추정 일정이 많아 오늘 움직임의 원인을 이벤트로 단정하지 않습니다.",
+                    "tone": "warning",
+                },
+            ],
+            "interpretation_cues": [
+                {"label": "구형 해석 cue", "value": "렌더링 대상 아님", "detail": "legacy", "tone": "warning"},
+            ],
+            "context_findings": [
+                {
+                    "label": "Events",
+                    "conclusion": "추정 일정 중 검증/신선도 제한이 있어 확정 일정처럼 읽으면 안 됩니다.",
+                    "interpretation": "오늘 브리프의 이벤트 배경은 caveat로만 둡니다.",
+                    "evidence": "Events · Earnings estimates",
+                    "source_area": "Events · Earnings estimates",
+                    "freshness": "2026-06-15",
+                    "priority": "P1",
+                    "tone": "warning",
+                },
+                {
+                    "label": "Futures / 금리 압력",
+                    "conclusion": "선물 맥락은 risk-on 흐름과 금리 압력이 같이 보입니다.",
+                    "interpretation": "주식 강세를 단순 위험선호로만 읽기 어렵습니다.",
+                    "evidence": "Futures Macro Thermometer",
+                    "source_area": "Futures Macro Thermometer",
+                    "freshness": "2026-06-15",
+                    "priority": "P2",
+                    "tone": "warning",
+                },
+            ],
+            "historical_analog": {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "XLK coverage 부족",
+                "leadership_sector": "Technology",
+                "proxy_etf": "XLK",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            },
+            "source_confidence": {"status": "REVIEW", "summary": {"detail": "저장 자료 기준"}, "items": []},
+            "boundary_note": "context only",
+        }
+
+        html = overview_ui_components._macro_context_cockpit_html(model)
+
+        self.assertNotIn("맥락 검토 결과", html)
+        self.assertNotIn("Market Context가 이미 읽은 보조 맥락", html)
+        self.assertNotIn("ov-context-finding-rail", html)
+        self.assertIn("이벤트 배경", html)
+        self.assertIn("직접 원인 근거 약함", html)
+        self.assertIn("오늘 움직임의 원인을 이벤트로 단정하지 않습니다.", html)
+        self.assertNotIn("브리프 신뢰도", html)
+        self.assertNotIn("이벤트 일정", html)
+        self.assertNotIn("선물 기반 장중 해석 제한", html)
+        self.assertNotIn("이벤트 caveat", html)
+        self.assertNotIn("자료 신뢰도 caveat", html)
+        self.assertNotIn("다음 맥락 체크", html)
+        self.assertNotIn("확인 위치", html)
+        self.assertNotIn("확인하세요", html)
+        self.assertNotIn("구형 해석 cue", html)
+        self.assertIn("참고: 과거 유사 맥락", html)
+        self.assertIn("근거: 자료 기준 / 출처 상태", html)
+        self.assertNotIn("해석할 때 같이 볼 변수", html)
+        self.assertNotIn("자료 상태 주의점", html)
+
+    def test_overview_ui_css_defines_market_context_reading_sections(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-macro-reading-flow", css)
+        self.assertIn(".ov-macro-reading-section", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-section-title", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-brief-value", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-brief-detail", css)
+        self.assertIn(".ov-macro-cockpit-narrative", css)
+        self.assertIn(".ov-macro-reading-section .ov-macro-cue-value", css)
+        self.assertIn(".ov-macro-reading-section .ov-source-confidence-title", css)
+        self.assertIn(".ov-historical-analog-row.is-muted-reference", css)
+        self.assertIn(".ov-analog-explain", css)
+        self.assertIn(".ov-analog-summary-strip", css)
+        self.assertIn(".ov-analog-interpretation", css)
+        self.assertIn(".ov-historical-analog-table-block", css)
+        self.assertIn(".ov-source-confidence.is-evidence-footer", css)
+        self.assertNotIn(".ov-brief-confidence", css)
+        self.assertNotIn(".ov-brief-confidence-row", css)
+
+        analog_section_block = css[css.index(".ov-historical-analog-row {") : css.index(".ov-historical-analog-head {")]
+        self.assertNotIn("background: transparent", analog_section_block)
+
+    def test_overview_market_session_banner_uses_surface_text_color(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        title_block = css[css.index(".ov-market-session-title {"):css.index(".ov-market-session-detail {")]
+        value_block = css[css.index(".ov-market-session-value {"):css.index(".ov-market-session-item-detail {")]
+
+        self.assertIn("color: var(--ov-mi-color-text);", title_block)
+        self.assertIn("color: var(--ov-mi-color-text);", value_block)
+        self.assertNotIn("color: inherit;", title_block)
+        self.assertNotIn("color: inherit;", value_block)
+
+    def test_overview_market_context_copy_uses_korean_summary_first_language(self) -> None:
+        import inspect
+
+        from app.web.overview import market_context, market_context_helpers
+        from app.web import overview_ui_components
+
+        dashboard_source = "\n".join(
+            [
+                inspect.getsource(market_context),
+                inspect.getsource(market_context_helpers),
+            ]
+        )
+        component_source = "\n".join(
+            [
+                inspect.getsource(overview_ui_components.render_macro_context_cockpit),
+                inspect.getsource(overview_ui_components._macro_context_cockpit_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_brief_rows_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_next_checks_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_interpretation_cues_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_row_meta_html),
+                inspect.getsource(overview_ui_components._macro_cockpit_source_confidence_html),
+            ]
+        )
+
+        self.assertIn("시장 맥락", dashboard_source)
+        self.assertIn("저장된 시장 자료로 현재 세션의 움직임, 확산, 이벤트 배경을 빠르게 확인합니다.", dashboard_source)
+        self.assertIn("필요 자료 보강", dashboard_source)
+        self.assertNotIn("보조 갱신", dashboard_source)
+        self.assertIn("오늘의 시장 맥락", component_source)
+        self.assertIn("시장 브리프", component_source)
+        self.assertNotIn("브리프 신뢰도", component_source)
+        self.assertNotIn("맥락 검토 결과", component_source)
+        self.assertIn("자료 영역", component_source)
+        self.assertNotIn("핵심 요약", component_source)
+        self.assertNotIn("해석 전 확인", component_source)
+        self.assertNotIn("해석할 때 같이 볼 변수", component_source)
+        self.assertNotIn("다음 확인 순서", component_source)
+        self.assertNotIn("확인 위치", component_source)
+        self.assertNotIn("Overview Macro Context", component_source)
+        self.assertNotIn("다음에 볼 Deep Tab", component_source)
+        self.assertNotIn("Source Confidence / 출처 신뢰도", component_source)
+        self.assertNotIn("Freshness: ", component_source)
+
+    def test_overview_ui_css_defines_ia_closeout_guide(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+
+        self.assertIn(".ov-ia-closeout", css)
+        self.assertIn(".ov-ia-closeout-card", css)
+
+    def test_overview_ia_closeout_model_demotes_ops_surfaces_from_primary_tabs(self) -> None:
+        from app.web.overview_dashboard_helpers import load_overview_ia_closeout_model
+
+        model = load_overview_ia_closeout_model()
+
+        self.assertEqual(model["schema_version"], "overview_ia_closeout_v1")
+        self.assertEqual(model["title"], "Deep Tab 읽는 순서")
+        self.assertIn("cockpit", model["detail"])
+        self.assertIn("먼저", model["detail"])
+        self.assertEqual([section["id"] for section in model["sections"]], ["market_context", "data_repair"])
+        market_section = model["sections"][0]
+        data_section = model["sections"][1]
+        self.assertEqual(market_section["tabs"], ["Market Movers", "Sentiment", "Events"])
+        self.assertNotIn("Futures Monitor", market_section["tabs"])
+        self.assertNotIn("Sector / Industry", market_section["tabs"])
+        self.assertNotIn("Data Health", market_section["tabs"])
+        self.assertEqual(data_section["status"], "EXTERNAL")
+        self.assertIn("Operations > System / Data Health", data_section["owner"])
+        self.assertEqual(data_section["tabs"], [])
+        self.assertIn("Overview 최상위 탭", data_section["detail"])
+        self.assertNotIn("Candidate Ops", str(model))
+        self.assertIn("context-only", model["boundary_note"])
+        self.assertIn("생성하지 않습니다", model["boundary_note"])
+
+    def test_overview_cockpit_shell_uses_surface_background_for_dark_theme_readability(self) -> None:
+        from app.web.overview_ui_components import overview_ui_css
+
+        css = overview_ui_css()
+        cockpit_block = css[css.index(".ov-macro-cockpit {"):css.index(".ov-macro-cockpit-head {")]
+
+        self.assertIn("var(--ov-mi-color-surface)", cockpit_block)
+        self.assertNotIn("transparent), rgba(255,255,255,0.97)", cockpit_block)
 
     def test_overview_action_facade_wraps_intraday_refresh_defaults(self) -> None:
         from app.jobs import overview_actions
@@ -4355,6 +6624,345 @@ class OverviewAutomationContractTests(unittest.TestCase):
             quote_batch_size=200,
             method="quote_fast",
             fallback_to_yfinance=False,
+        )
+
+    def test_overview_market_movers_refresh_action_collects_eod_history_through_ohlcv_job(self) -> None:
+        from app.jobs import overview_actions
+
+        action = getattr(overview_actions, "run_overview_market_movers_eod_history", None)
+        if not callable(action):
+            self.fail("Overview action facade should expose run_overview_market_movers_eod_history.")
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_market_universe_members",
+                return_value=[{"symbol": "AAA"}, {"symbol": "BBB"}, {"symbol": "AAA"}],
+            ) as load_universe,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 1512,
+                    "message": "OHLCV collection completed.",
+                },
+            ) as collect,
+        ):
+            result = action(
+                universe_code="SP500",
+                universe_limit=500,
+                period="yearly",
+            )
+
+        self.assertEqual(result["job_name"], "overview_market_movers_eod_history")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["target_tables"], ["finance_price.nyse_price_history"])
+        self.assertEqual(result["details"]["market_mover_period"], "yearly")
+        self.assertEqual(result["details"]["collection_period"], "3y")
+        self.assertEqual(result["details"]["symbols_requested"], 2)
+        load_universe.assert_called_once_with("SP500")
+        collect.assert_called_once_with(
+            ["AAA", "BBB"],
+            period="3y",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+
+    def test_overview_market_movers_refresh_action_uses_large_universe_loader_for_top1000(self) -> None:
+        from app.jobs import overview_actions
+
+        action = getattr(overview_actions, "run_overview_market_movers_eod_history", None)
+        if not callable(action):
+            self.fail("Overview action facade should expose run_overview_market_movers_eod_history.")
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_market_cap_universe_members",
+                return_value=[{"symbol": "AAA"}, {"symbol": "CCC"}],
+            ) as load_universe,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={"job_name": "collect_ohlcv", "status": "success", "rows_written": 504},
+            ) as collect,
+        ):
+            result = action(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                period="monthly",
+            )
+
+        self.assertEqual(result["details"]["collection_period"], "1y")
+        self.assertEqual(result["details"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        load_universe.assert_called_once_with("TOP1000", universe_limit=1000)
+        collect.assert_called_once_with(
+            ["AAA", "CCC"],
+            period="1y",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+
+    def test_overview_market_movers_refresh_action_uses_nasdaq_directory_loader(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_nasdaq_symbol_directory_universe_members",
+                return_value=[{"symbol": "AAPL"}, {"symbol": "MSFT"}, {"symbol": "AAPL"}],
+            ) as load_universe,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={"job_name": "collect_ohlcv", "status": "success", "rows_written": 756},
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="NASDAQ",
+                universe_limit=5000,
+                period="weekly",
+            )
+
+        self.assertEqual(result["details"]["coverage_basis"], "Nasdaq-listed current snapshot")
+        self.assertEqual(result["details"]["source"], "yfinance OHLCV")
+        load_universe.assert_called_once_with()
+        collect.assert_called_once_with(
+            ["AAPL", "MSFT"],
+            period="3mo",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+
+    def test_overview_automation_standard_plan_includes_symbol_directory_refresh(self) -> None:
+        from app.jobs.overview_automation import build_overview_automation_plan
+
+        plan = build_overview_automation_plan(
+            profile="standard",
+            history_rows=[],
+            now=datetime(2026, 6, 17, 15, 0, tzinfo=timezone.utc),
+            allow_outside_market_hours=True,
+        )
+        job_ids = [row["job_id"] for row in plan]
+
+        self.assertIn("nasdaq_symbol_directory", job_ids)
+        self.assertIn("nasdaq_intraday", job_ids)
+        directory_row = next(row for row in plan if row["job_id"] == "nasdaq_symbol_directory")
+        intraday_row = next(row for row in plan if row["job_id"] == "nasdaq_intraday")
+        self.assertFalse(directory_row["market_hours_only"])
+        self.assertEqual(directory_row["cadence_minutes"], 24 * 60)
+        self.assertEqual(intraday_row["cadence_minutes"], 30)
+        self.assertTrue(intraday_row["market_hours_only"])
+
+    def test_overview_market_movers_refresh_bar_renders_eod_action_for_non_daily_without_auto_mode(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("run_overview_market_movers_eod_history", source)
+        self.assertIn("def _render_market_movers_daily_refresh_bar", source)
+        self.assertIn("def _render_market_movers_eod_refresh_bar", source)
+        self.assertIn("run_overview_market_movers_eod_history,", source)
+
+        dispatch_body = source[source.index("def _render_market_movers_refresh_bar") :]
+        dispatch_body = dispatch_body[: dispatch_body.index("def _rank_token")]
+        self.assertIn("_render_market_movers_daily_refresh_bar", dispatch_body)
+        self.assertIn("_render_market_movers_eod_refresh_bar", dispatch_body)
+
+        eod_body = source[source.index("def _render_market_movers_eod_refresh_bar") :]
+        eod_body = eod_body[: eod_body.index("def _render_market_movers_refresh_bar")]
+        self.assertIn("가격 이력 갱신", eod_body)
+        self.assertIn("run_overview_market_movers_eod_history(", eod_body)
+        self.assertNotIn("_select_market_refresh_mode", eod_body)
+        self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
+
+    def test_market_movers_empty_snapshot_replaces_stale_why_it_moved_panel(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("Market mover rows are needed before Why It Moved can be shown.", source)
+        self.assertIn("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.", source)
+
+    def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str, status: str = "success") -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": status, "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_market_intraday_snapshot",
+                side_effect=lambda **_: _result("market_intraday"),
+            ) as market_snapshot,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_ohlcv",
+                side_effect=lambda **_: _result("futures_1m"),
+            ) as futures_1m,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_daily_ohlcv",
+                side_effect=lambda: _result("futures_daily"),
+            ) as futures_daily,
+            patch.object(
+                overview_actions,
+                "run_overview_market_sentiment",
+                side_effect=lambda: _result("market_sentiment"),
+            ) as sentiment,
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar", status="partial_success"),
+            ) as earnings,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+        ):
+            summary = overview_actions.run_overview_market_context_refresh_all(
+                years=(2026, 2027),
+                futures_symbols=("ES=F", "NQ=F"),
+            )
+
+        self.assertEqual(summary["job_name"], "overview_market_context_refresh_all")
+        self.assertEqual(summary["status"], "partial_success")
+        self.assertEqual(summary["jobs_run"], 5)
+        self.assertEqual(summary["jobs_failed"], 0)
+        self.assertEqual(
+            calls,
+            [
+                "market_intraday",
+                "market_sentiment",
+                "fomc_calendar",
+                "earnings_calendar",
+                "macro_calendar",
+            ],
+        )
+        market_snapshot.assert_called_once_with(universe_code="SP500", universe_limit=500)
+        futures_1m.assert_not_called()
+        futures_daily.assert_not_called()
+        sentiment.assert_called_once_with()
+        fomc.assert_called_once_with(years=(2026, 2027))
+        earnings.assert_called_once_with()
+        macro.assert_called_once_with(years=(2026, 2027))
+
+    def test_overview_action_facade_runs_smart_market_context_refresh_actions_only(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str, status: str = "success") -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": status, "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_market_intraday_snapshot",
+                side_effect=lambda **_: _result("market_intraday"),
+            ) as market_snapshot,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_ohlcv",
+                side_effect=lambda **_: _result("futures_1m"),
+            ) as futures_1m,
+            patch.object(
+                overview_actions,
+                "run_overview_futures_daily_ohlcv",
+                side_effect=lambda: _result("futures_daily"),
+            ) as futures_daily,
+            patch.object(
+                overview_actions,
+                "run_overview_market_sentiment",
+                side_effect=lambda: _result("market_sentiment"),
+            ) as sentiment,
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar", status="partial_success"),
+            ) as earnings,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+        ):
+            summary = overview_actions.run_overview_market_context_refresh_smart(
+                action_ids=(
+                    "top1000_intraday_snapshot",
+                    "top2000_intraday_snapshot",
+                    "futures_1m",
+                    "futures_daily",
+                    "earnings_calendar",
+                ),
+                years=(2026, 2027),
+                futures_symbols=("ES=F", "NQ=F"),
+            )
+
+        self.assertEqual(summary["job_name"], "overview_market_context_refresh_smart")
+        self.assertEqual(summary["status"], "partial_success")
+        self.assertEqual(summary["jobs_run"], 1)
+        self.assertEqual(summary["jobs_failed"], 0)
+        self.assertEqual(calls, ["earnings_calendar"])
+        market_snapshot.assert_not_called()
+        futures_1m.assert_not_called()
+        futures_daily.assert_not_called()
+        sentiment.assert_not_called()
+        fomc.assert_not_called()
+        earnings.assert_called_once_with()
+        macro.assert_not_called()
+
+    def test_overview_market_context_refresh_bar_prefers_smart_refresh_and_keeps_full_fallback(self) -> None:
+        source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("run_overview_market_context_refresh_smart", source)
+        self.assertIn("_render_overview_market_context_smart_refresh_plan", source)
+        self.assertIn('summary = dict(refresh_plan.get("summary") or {})', source)
+        self.assertIn("현재 이슈만 보강", source)
+        self.assertIn("전체 Market Context 자료 보강", source)
+        self.assertIn("overview_market_context_refresh_smart", source)
+        self.assertIn("overview_market_context_refresh_all", source)
+
+    def test_overview_action_facade_collects_historical_analog_price_gaps_with_existing_ohlcv_job(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_collect_ohlcv",
+            return_value={
+                "job_name": "collect_ohlcv",
+                "status": "success",
+                "rows_written": 2520,
+                "message": "OHLCV collection completed.",
+            },
+        ) as collect:
+            result = overview_actions.run_overview_historical_analog_ohlcv(
+                symbols=["XLK", "SPY", "XLK"],
+            )
+
+        self.assertEqual(result["job_name"], "overview_historical_analog_ohlcv")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["target_tables"], ["finance_price.nyse_price_history"])
+        self.assertEqual(result["details"]["symbols"], ["XLK", "SPY"])
+        collect.assert_called_once_with(
+            ["XLK", "SPY"],
+            period="10y",
+            interval="1d",
+            execution_profile="managed_safe",
         )
 
     def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
@@ -5236,7 +7844,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "source_ref": "test",
                 },
             ]
-        if "MAX(`date`) AS latest_raw_date" in sql:
+        if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
             return [{"latest_raw_date": "2026-05-19"}]
         if "MAX(`date`) AS latest_price_date" in sql:
             return [
@@ -5366,6 +7974,16 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(window["start_date"], "2026-05-15")
         self.assertEqual(window["stale_days"], 10)
 
+    def test_latest_raw_date_query_uses_ordered_latest_row(self) -> None:
+        import inspect
+        import app.services.overview_market_intelligence as service
+
+        source = inspect.getsource(service._query_latest_raw_date)
+
+        self.assertIn("ORDER BY `date` DESC", source)
+        self.assertIn("LIMIT 1", source)
+        self.assertNotIn("MAX(`date`)", source)
+
     def test_group_trend_window_contract_uses_compact_horizons(self) -> None:
         from app.services.overview_market_intelligence import resolve_group_trend_market_dates
 
@@ -5376,7 +7994,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "MAX(`date`) AS latest_raw_date" in sql:
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
                 return [{"latest_raw_date": market_dates[0]}]
             if "GROUP BY `date`" in sql:
                 return [{"date": item, "usable_rows": 1200} for item in market_dates]
@@ -5488,6 +8106,200 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_snapshot_uses_nasdaq_symbol_directory_current_snapshot(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_symbol_lifecycle" in sql:
+                return [
+                    {
+                        "symbol": "AAPL",
+                        "long_name": "Apple Inc.",
+                        "sector": "Technology",
+                        "industry": "Consumer Electronics",
+                        "market_cap": 3_000_000_000_000,
+                        "status": "active",
+                        "error_msg": None,
+                        "last_collected_at": "2026-06-16 10:00:00",
+                        "profile_exchange": "NMS",
+                        "listing_status": "active",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-06-17",
+                        "universe_collected_at": "2026-06-17 08:00:00",
+                        "universe_source": "nasdaq_symdir_nasdaqlisted",
+                        "universe_source_url": "https://www.nasdaqtrader.com/",
+                    },
+                    {
+                        "symbol": "MSFT",
+                        "long_name": "Microsoft Corp.",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 2_800_000_000_000,
+                        "status": "active",
+                        "error_msg": None,
+                        "last_collected_at": "2026-06-16 10:00:00",
+                        "profile_exchange": "NMS",
+                        "listing_status": "active",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-06-17",
+                        "universe_collected_at": "2026-06-17 08:00:00",
+                        "universe_source": "nasdaq_symdir_nasdaqlisted",
+                        "universe_source_url": "https://www.nasdaqtrader.com/",
+                    },
+                ]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-06-16"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-06-16", "usable_rows": 5000},
+                    {"date": "2026-06-15", "usable_rows": 5000},
+                    {"date": "2026-06-12", "usable_rows": 5000},
+                ]
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAPL", "date": "2026-06-15", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAPL", "date": "2026-06-16", "price": 106.0, "volume": 1500},
+                    {"symbol": "MSFT", "date": "2026-06-15", "price": 200.0, "volume": 900},
+                    {"symbol": "MSFT", "date": "2026-06-16", "price": 202.0, "volume": 1100},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="NASDAQ",
+            universe_limit=5000,
+            period="daily",
+            top_n=5,
+            today=date(2026, 6, 17),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "NASDAQ")
+        self.assertEqual(snapshot["universe_label"], "Nasdaq-listed current snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Nasdaq-listed current snapshot")
+        self.assertEqual(snapshot["coverage"]["universe_source"], "nasdaq_symdir_nasdaqlisted")
+        self.assertEqual(snapshot["coverage"]["universe_source_type"], "current_listing_snapshot")
+        self.assertEqual(snapshot["coverage"]["universe_coverage_status"], "partial")
+        self.assertEqual(snapshot["coverage"]["universe_event_date"], "2026-06-17")
+        self.assertIn("current listing observation only", snapshot["coverage"]["universe_caveat"])
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAPL")
+
+    def test_market_movers_snapshot_explains_missing_nasdaq_directory_refresh(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="NASDAQ",
+            universe_limit=5000,
+            period="daily",
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "NO_UNIVERSE")
+        self.assertEqual(snapshot["universe_code"], "NASDAQ")
+        self.assertIn("Nasdaq Symbol Directory refresh", snapshot["message"])
+
+    def test_market_movers_missing_rows_include_profile_lifecycle_and_issue_evidence(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_asset_profile" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "long_name": "AAA Corp",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 100,
+                        "status": "active",
+                        "error_msg": None,
+                        "last_collected_at": "2026-06-16 10:00:00",
+                        "profile_exchange": "NYS",
+                    },
+                    {
+                        "symbol": "STALE",
+                        "long_name": "Stale Corp",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 90,
+                        "status": "error",
+                        "error_msg": "provider profile unavailable",
+                        "last_collected_at": "2026-03-23 10:00:00",
+                        "profile_exchange": "NMS",
+                    },
+                ]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-06-16"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-06-16", "usable_rows": 5000},
+                    {"date": "2026-06-15", "usable_rows": 5000},
+                    {"date": "2026-06-12", "usable_rows": 5000},
+                ]
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-06-15", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-06-16", "price": 105.0, "volume": 1000},
+                    {"symbol": "STALE", "date": "2026-06-16", "price": 10.0, "volume": 100},
+                ]
+            if "MAX(`date`) AS latest_price_date" in sql:
+                return [{"symbol": "STALE", "latest_price_date": "2026-03-23"}]
+            if "FROM nyse_symbol_lifecycle" in sql:
+                return [
+                    {
+                        "symbol": "STALE",
+                        "listing_status": "active",
+                        "source": "nasdaq_symdir_nasdaqlisted",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-06-17",
+                        "collected_at": "2026-06-17 08:00:00",
+                    }
+                ]
+            if "FROM market_data_issue" in sql:
+                return [
+                    {
+                        "symbol": "STALE",
+                        "issue_type": "quote_gap",
+                        "diagnosis": "provider_quote_gap",
+                        "occurrence_count": 3,
+                        "last_seen_at": "2026-06-16 14:00:00",
+                        "latest_evidence": "quote endpoint missing while DB price exists",
+                    }
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            today=date(2026, 6, 17),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+        missing = snapshot["missing_rows"]
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(missing.iloc[0]["Symbol"], "STALE")
+        for column in ["Likely Cause", "Evidence Summary", "Next Check", "Listing Evidence", "Profile Freshness", "Market Data Issue"]:
+            self.assertIn(column, missing.columns)
+        self.assertIn("Profile status error", missing.iloc[0]["Evidence Summary"])
+        self.assertIn("current_listing_snapshot", missing.iloc[0]["Listing Evidence"])
+        self.assertIn("current listing observation only", missing.iloc[0]["Listing Evidence"])
+        self.assertIn("provider_quote_gap", missing.iloc[0]["Market Data Issue"])
+        self.assertIn("profile", missing.iloc[0]["Next Check"].lower())
 
     def test_market_movers_weekly_volume_rows_use_average_and_total_volume(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
@@ -6201,6 +9013,483 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(snapshot["trend_rows"].empty)
         self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
 
+    def test_overview_breadth_heatmap_summary_scores_participation_and_concentration(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+
+        snapshot = {
+            "status": "OK",
+            "period": "daily",
+            "universe_code": "SP500",
+            "coverage": {
+                "returnable_count": 503,
+                "price_mode": "Intraday Snapshot",
+                "snapshot_time_utc": "2026-06-08 14:00",
+            },
+            "date_window": {"start_date": "Previous Close", "effective_end_date": "2026-06-08"},
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Group": "Technology",
+                        "Symbols": 80,
+                        "Positive Symbols": 56,
+                        "Positive Symbol Share %": 70.0,
+                        "Market Cap Weighted Return %": 1.8,
+                        "Equal Weight Return %": 0.8,
+                        "Top 3 Positive Share %": 72.0,
+                        "Top Symbol": "NVDA",
+                        "Top Symbol Return %": 5.3,
+                    },
+                    {
+                        "Group": "Utilities",
+                        "Symbols": 30,
+                        "Positive Symbols": 15,
+                        "Positive Symbol Share %": 50.0,
+                        "Market Cap Weighted Return %": -0.4,
+                        "Equal Weight Return %": -0.2,
+                        "Top 3 Positive Share %": 40.0,
+                        "Top Symbol": "NEE",
+                        "Top Symbol Return %": 1.1,
+                    },
+                ]
+            ),
+        }
+
+        model = build_overview_breadth_heatmap_summary(snapshot)
+
+        self.assertEqual(model["schema_version"], "overview_breadth_heatmap_summary_v1")
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["coverage"]["group_count"], 2)
+        self.assertEqual(model["summary"]["participation_label"], "mixed")
+        self.assertEqual(model["summary"]["concentration_label"], "concentrated")
+        self.assertEqual(model["summary"]["leader"], "Technology")
+        self.assertEqual(model["cards"][0]["title"], "Participation")
+        self.assertEqual(model["heatmap_rows"][0]["group"], "Technology")
+        self.assertEqual(model["heatmap_rows"][0]["tone"], "positive")
+        self.assertIn("not a trading action", model["boundary_note"])
+
+    def test_overview_breadth_heatmap_summary_keeps_full_canonical_sector_map(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+        from app.web.overview_ui_components import _sector_pressure_map_html
+
+        sector_names = [
+            "Communication Services",
+            "Consumer Cyclical",
+            "Consumer Defensive",
+            "Energy",
+            "Financials",
+            "Financial Services",
+            "Healthcare",
+            "Industrials",
+            "Basic Materials",
+            "Real Estate",
+            "Technology",
+            "Utilities",
+        ]
+        rows = pd.DataFrame(
+            [
+                {
+                    "Rank": index,
+                    "Group": sector,
+                    "Symbols": 20,
+                    "Positive Symbols": 12,
+                    "Positive Symbol Share %": 60.0,
+                    "Market Cap Weighted Return %": 3.0 - (index * 0.1),
+                    "Equal Weight Return %": 2.0 - (index * 0.05),
+                    "Top 3 Positive Share %": 25.0,
+                    "Top Symbol": f"S{index}",
+                    "Top Symbol Return %": 4.0,
+                }
+                for index, sector in enumerate(sector_names, start=1)
+            ]
+        )
+
+        model = build_overview_breadth_heatmap_summary({"status": "OK", "coverage": {}, "rows": rows}, limit=None)
+        groups = [row["group"] for row in model["heatmap_rows"]]
+        html = _sector_pressure_map_html(model)
+
+        self.assertEqual(len(groups), 11)
+        self.assertEqual(len(set(groups)), 11)
+        self.assertIn("Consumer Cyclical", groups)
+        self.assertIn("Financial Services", groups)
+        self.assertNotIn("Financials", groups)
+        self.assertEqual(html.count("ov-sector-pressure-tile"), 11)
+
+    def test_overview_macro_week_lane_clusters_near_events_without_signal_language(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "event_count": 4,
+                "official_count": 2,
+                "estimate_count": 1,
+                "latest_collected_at": "2026-06-08 01:30",
+            },
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Date": "2026-06-10",
+                        "Days Until": 2,
+                        "Type": "MACRO_CPI",
+                        "Title": "CPI: Consumer Price Index",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-12",
+                        "Days Until": 4,
+                        "Type": "EARNINGS",
+                        "Symbol": "AAPL",
+                        "Title": "AAPL Earnings Release",
+                        "Source Type": "Estimate",
+                        "Validation": "Estimate",
+                        "Freshness": "Stale estimate",
+                        "Quality Action": "Refresh Earnings Calendar",
+                        "Importance": "Medium",
+                    },
+                    {
+                        "Date": "2026-06-24",
+                        "Days Until": 16,
+                        "Type": "MACRO_GDP",
+                        "Title": "GDP release",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                ]
+            ),
+        }
+
+        model = build_overview_macro_week_lane(snapshot, horizon_days=14)
+
+        self.assertEqual(model["schema_version"], "overview_macro_week_lane_v2")
+        self.assertEqual(model["status"], "REVIEW")
+        self.assertEqual(model["summary"]["near_event_count"], 2)
+        self.assertEqual(model["summary"]["next_event_label"], "MACRO_CPI in 2d")
+        self.assertEqual(model["clusters"]["CPI"]["count"], 1)
+        self.assertEqual(model["clusters"]["Earnings"]["count"], 1)
+        self.assertEqual(model["items"][0]["type"], "MACRO_CPI")
+        self.assertNotIn("PASS", model["boundary_note"])
+        self.assertIn("context 전용", model["boundary_note"])
+        self.assertIn("거래 실행", model["boundary_note"])
+
+    def test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "event_count": 5,
+                "official_count": 3,
+                "estimate_count": 2,
+                "latest_collected_at": "2026-06-12 01:30",
+            },
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Date": "2026-06-10",
+                        "Days Until": -2,
+                        "Type": "MACRO_CPI",
+                        "Title": "CPI: Consumer Price Index for May 2026",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-11",
+                        "Days Until": -1,
+                        "Type": "EARNINGS",
+                        "Symbol": "ORCL",
+                        "Title": "ORCL Earnings Release",
+                        "Source Type": "Provider Estimate",
+                        "Validation": "Not confirmed",
+                        "Freshness": "Current estimate",
+                        "Quality Action": "Treat as unconfirmed; retry later or inspect source",
+                        "Importance": "Medium",
+                    },
+                    {
+                        "Date": "2026-06-17",
+                        "Days Until": 5,
+                        "Type": "FOMC_MEETING",
+                        "Title": "FOMC Meeting: June 16-17*, 2026",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                    {
+                        "Date": "2026-06-23",
+                        "Days Until": 11,
+                        "Type": "EARNINGS",
+                        "Symbol": "CCL",
+                        "Title": "CCL Earnings Release",
+                        "Source Type": "Provider Estimate",
+                        "Validation": "Cross-checked",
+                        "Freshness": "Current estimate",
+                        "Quality Action": "No action",
+                        "Importance": "Medium",
+                    },
+                    {
+                        "Date": "2026-06-25",
+                        "Days Until": 13,
+                        "Type": "MACRO_GDP",
+                        "Title": "GDP: Third Estimate",
+                        "Source Type": "Official",
+                        "Validation": "Official",
+                        "Freshness": "Official",
+                        "Quality Action": "No action",
+                        "Importance": "High",
+                    },
+                ]
+            ),
+        }
+
+        model = build_overview_macro_week_lane(snapshot, horizon_days=14)
+
+        self.assertEqual(model["schema_version"], "overview_macro_week_lane_v2")
+        self.assertEqual(model["summary"]["recent_event_count"], 1)
+        self.assertEqual(model["summary"]["upcoming_event_count"], 3)
+        self.assertIn("recent major event", model["summary"]["headline"])
+        self.assertEqual(model["recent_items"][0]["type"], "MACRO_CPI")
+        self.assertEqual(model["recent_items"][0]["window"], "recent")
+        self.assertEqual(model["upcoming_items"][0]["type"], "FOMC_MEETING")
+        self.assertEqual(model["upcoming_items"][0]["window"], "upcoming")
+        self.assertEqual(model["items"][0]["type"], "MACRO_CPI")
+        self.assertEqual(model["items"][1]["type"], "FOMC_MEETING")
+
+    def test_market_events_snapshot_defaults_to_recent_plus_upcoming_and_prioritizes_major_macro(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        captured: dict[str, object] = {}
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql
+            captured["params"] = list(params or [])
+            return [
+                {
+                    "event_date": "2026-06-10",
+                    "event_type": "MACRO_CPI",
+                    "symbol": None,
+                    "title": "CPI: Consumer Price Index for May 2026",
+                    "source": "bureau_labor_statistics_release_schedule",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.bls.gov/schedule/2026/",
+                    "confidence": 0.95,
+                    "collected_at": "2026-06-11 23:45:00",
+                },
+                {
+                    "event_date": "2026-06-11",
+                    "event_type": "EARNINGS",
+                    "symbol": "ORCL",
+                    "title": "ORCL Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_type": "provider_estimate",
+                    "validation_status": "not_confirmed",
+                    "event_status": "active",
+                    "source_url": "https://finance.yahoo.com/quote/ORCL/analysis",
+                    "confidence": 0.6,
+                    "collected_at": "2026-06-11 23:44:00",
+                },
+                {
+                    "event_date": "2026-06-17",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: June 16-17*, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-06-11 23:44:00",
+                },
+                {
+                    "event_date": "2026-06-23",
+                    "event_type": "EARNINGS",
+                    "symbol": "CCL",
+                    "title": "CCL Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_type": "provider_estimate",
+                    "validation_status": "cross_checked",
+                    "event_status": "active",
+                    "source_url": "https://finance.yahoo.com/quote/CCL/analysis",
+                    "confidence": 0.75,
+                    "collected_at": "2026-06-11 23:44:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 6, 12),
+            horizon_days=14,
+            limit=100,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["date_window"]["start_date"], "2026-06-05")
+        self.assertEqual(snapshot["date_window"]["end_date"], "2026-06-26")
+        self.assertIn("2026-06-05", captured["params"])
+        self.assertEqual(snapshot["coverage"]["recent_event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["upcoming_event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["recent_high_importance_count"], 1)
+        self.assertEqual(snapshot["coverage"]["upcoming_high_importance_count"], 1)
+        self.assertEqual(snapshot["coverage"]["next_event_date"], "2026-06-17")
+        self.assertEqual(snapshot["coverage"]["latest_recent_event_date"], "2026-06-10")
+        self.assertEqual(list(snapshot["rows"]["Type"][:2]), ["MACRO_CPI", "FOMC_MEETING"])
+        self.assertEqual(snapshot["rows"].iloc[0]["Window"], "Recent")
+        self.assertEqual(snapshot["rows"].iloc[1]["Window"], "Upcoming")
+
+    def test_overview_source_confidence_catalog_surfaces_provider_caveats_and_review_items(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+
+        model = build_overview_source_confidence_catalog(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "snapshot_time_utc": "2026-06-08 14:00",
+                    "refresh_state": {"label": "Stale", "detail": "2962m old", "recommended_action": "Run Update Daily Snapshot."},
+                },
+                "rows": pd.DataFrame([{"Symbol": "NVDA"}]),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-08"},
+                "rows": pd.DataFrame([{"Group": "Technology"}]),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "coverage": {"standardized_count": 14, "symbol_count": 16, "latest_date": "2026-06-07"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {"data_confidence": {"status": "Review", "detail": "1 stale sentiment source"}},
+                "coverage": {"cnn_score": 54.7, "aaii_bull_bear_spread": -0.7},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "event_count": 12,
+                    "official_count": 5,
+                    "estimate_count": 7,
+                    "needs_review_count": 2,
+                    "stale_estimate_count": 1,
+                    "latest_collected_at": "2026-06-08 01:30",
+                },
+                "rows": pd.DataFrame([{"Type": "EARNINGS", "Freshness": "Stale estimate"}]),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 3, "due_count": 1, "stale_count": 1, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "S&P 500 Daily Snapshot", "Status": "Due", "Data Freshness": "8m old", "Next Action": "Refresh S&P 500 daily snapshot."},
+                        {"Area": "Market Sentiment", "Status": "OK", "Data Freshness": "1d old", "Next Action": "No action needed."},
+                    ]
+                ),
+            },
+        )
+
+        self.assertEqual(model["schema_version"], "overview_source_confidence_catalog_v1")
+        self.assertEqual(model["status"], "REVIEW")
+        self.assertEqual(model["summary"]["review_count"], 2)
+        self.assertEqual(model["summary"]["reference_count"], 2)
+        self.assertEqual(model["items"][0]["id"], "prices")
+        self.assertEqual(model["items"][0]["status"], "REVIEW")
+        self.assertTrue(model["items"][0]["counts_for_status"])
+        self.assertEqual(model["items"][0]["source_role"], "brief_source")
+        self.assertIn("가격 맥락의 신뢰도 주의점", model["items"][0]["next_check"])
+        self.assertEqual(model["items"][2]["id"], "futures")
+        self.assertIn("무료 선물 provider", model["items"][2]["caveat"])
+        self.assertEqual(model["items"][3]["id"], "sentiment")
+        self.assertEqual(model["items"][3]["status"], "REVIEW")
+        self.assertEqual(model["items"][4]["id"], "events")
+        self.assertEqual(model["items"][4]["status"], "REFERENCE_LIMIT")
+        self.assertEqual(model["items"][4]["status_label"], "참고 제한")
+        self.assertFalse(model["items"][4]["counts_for_status"])
+        self.assertEqual(model["items"][4]["source_role"], "reference_context")
+        self.assertEqual(model["items"][4]["actionability"], "not_actionable")
+        self.assertIn("추정 일정 확인", model["items"][4]["detail"])
+        self.assertIn("stale estimate", model["items"][4]["detail"])
+        self.assertEqual(model["items"][5]["id"], "data_health")
+        self.assertEqual(model["items"][5]["status"], "META")
+        self.assertEqual(model["items"][5]["status_label"], "관리 메타")
+        self.assertFalse(model["items"][5]["counts_for_status"])
+        self.assertEqual(model["items"][5]["source_role"], "management_meta")
+        next_targets = [item["target_tab"] for item in model["next_checks"]]
+        self.assertNotIn("Data Health", next_targets)
+        self.assertNotIn("Events", next_targets)
+        self.assertIn("context 전용", model["boundary_note"])
+
+    def test_overview_source_confidence_does_not_mark_events_and_data_health_meta_as_unresolved(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+
+        model = build_overview_source_confidence_catalog(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "snapshot_time_utc": "2026-06-20 12:35"},
+                "rows": pd.DataFrame([{"Symbol": "SNDK"}]),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-20"},
+                "rows": pd.DataFrame([{"Group": "Technology"}]),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_date": "2026-06-20"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {"data_confidence": {"status": "High", "detail": "fresh"}},
+                "coverage": {"cnn_score": 55, "aaii_bull_bear_spread": 1.2},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "event_count": 71,
+                    "official_count": 4,
+                    "estimate_count": 67,
+                    "needs_review_count": 67,
+                    "stale_estimate_count": 3,
+                    "latest_collected_at": "2026-06-20 12:36",
+                },
+                "rows": pd.DataFrame([{"Type": "EARNINGS", "Source Type": "Estimate", "Freshness": "Stale estimate"}]),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 3, "due_count": 0, "stale_count": 2, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Stale", "Data Freshness": "2006m old"},
+                    ]
+                ),
+            },
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["status_label"], "자료 정상 · 참고 제한")
+        self.assertEqual(model["summary"]["review_count"], 0)
+        self.assertEqual(model["summary"]["reference_count"], 2)
+        self.assertEqual(model["next_checks"], [])
+        event_item = next(item for item in model["items"] if item["id"] == "events")
+        data_item = next(item for item in model["items"] if item["id"] == "data_health")
+        self.assertEqual(event_item["status_label"], "참고 제한")
+        self.assertEqual(data_item["status_label"], "관리 메타")
+        self.assertFalse(event_item["counts_for_status"])
+        self.assertFalse(data_item["counts_for_status"])
+
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
 
@@ -6814,6 +10103,2137 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sentiment_row["Rows"], 260)
         self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
 
+    def test_overview_data_health_handoff_ranks_problem_rows_and_points_to_collection_surfaces(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_data_health_ingestion_handoff
+
+        handoff = build_overview_data_health_ingestion_handoff(
+            {
+                "status": "REVIEW",
+                "coverage": {
+                    "ok_count": 1,
+                    "due_count": 1,
+                    "stale_count": 1,
+                    "partial_count": 1,
+                    "missing_count": 1,
+                    "failed_count": 1,
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Area": "S&P 500 Daily Snapshot",
+                            "Status": "Due",
+                            "Data Freshness": "8m old",
+                            "Failure Streak": 0,
+                            "Next Action": "Refresh S&P 500 daily snapshot before using daily movers.",
+                        },
+                        {
+                            "Area": "FOMC Calendar",
+                            "Status": "Failed",
+                            "Data Freshness": "45d old; next 2026-06-17",
+                            "Failure Streak": 2,
+                            "Last Issue": "2026-06-08 09:30",
+                            "Next Action": "Open run history details and rerun after checking the failure message.",
+                        },
+                        {
+                            "Area": "Macro Calendar",
+                            "Status": "Missing",
+                            "Data Freshness": "No future MACRO rows",
+                            "Failure Streak": 0,
+                            "Next Action": "Run Refresh Macro Calendar or import the BLS .ics file.",
+                        },
+                        {
+                            "Area": "Futures Monitor 1m OHLCV",
+                            "Status": "Stale",
+                            "Data Freshness": "64m old; 16 symbols",
+                            "Failure Streak": 0,
+                            "Next Action": "Refresh before using futures context.",
+                        },
+                        {
+                            "Area": "Earnings Calendar",
+                            "Status": "Partial",
+                            "Data Freshness": "0d old; covered 1/2",
+                            "Failed": 7,
+                            "Failure Streak": 1,
+                            "Next Action": "Inspect failed symbols, then rerun a bounded collection.",
+                        },
+                        {
+                            "Area": "Market Sentiment",
+                            "Status": "OK",
+                            "Data Freshness": "1d old; latest 2026-06-04; 2/5 series",
+                            "Next Action": "No action needed.",
+                        },
+                    ]
+                ),
+            },
+            limit=4,
+        )
+
+        self.assertEqual(handoff["schema_version"], "overview_data_health_ingestion_handoff_v1")
+        self.assertEqual(handoff["status"], "REVIEW")
+        self.assertEqual(handoff["summary"]["review_count"], 5)
+        self.assertEqual(handoff["summary"]["top_priority"], "FOMC Calendar")
+        self.assertEqual(handoff["summary"]["next_target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정")
+        self.assertEqual([item["area"] for item in handoff["priority_items"]], ["FOMC Calendar", "Macro Calendar", "Futures Monitor 1m OHLCV", "Earnings Calendar"])
+        self.assertEqual(handoff["priority_items"][0]["status"], "Failed")
+        self.assertEqual(handoff["priority_items"][0]["severity"], "critical")
+        self.assertIn("Failure streak 2", handoff["priority_items"][0]["reason"])
+        self.assertEqual(handoff["priority_items"][1]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 매크로 발표")
+        self.assertEqual(handoff["priority_items"][2]["owner_surface"], "Workspace > Ingestion")
+        self.assertEqual(handoff["priority_items"][2]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집")
+        self.assertEqual(handoff["priority_items"][2]["alternate_surface"], "Workspace > Overview > Futures Monitor")
+        self.assertEqual(handoff["counts"]["OK"], 1)
+        self.assertEqual(handoff["counts"]["Failed"], 1)
+        self.assertIn("read-only", handoff["boundary_note"].lower())
+        self.assertIn("does not execute", handoff["boundary_note"].lower())
+
+    def test_overview_macro_context_cockpit_can_omit_futures_macro_for_fast_entry(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            include_futures_macro=False,
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {"returnable_count": 470, "universe_count": 503, "effective_end_date": "2026-06-05"},
+                "rows": pd.DataFrame(
+                    [{"Rank": 1, "Symbol": "NVDA", "Name": "NVIDIA Corp", "Return %": 4.2, "Sector": "Technology"}]
+                ),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "coverage": {"returnable_count": 470, "universe_count": 503},
+                "rows": pd.DataFrame(
+                    [{"Rank": 1, "Group": "Technology", "Positive Symbol Share %": 82.0, "Market Cap Weighted Return %": 1.8}]
+                ),
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {
+                    "phase_label": "혼합 중립",
+                    "headline": "Fear & Greed is neutral while internals are mixed.",
+                    "data_confidence": {"status": "High", "detail": "latest CNN / AAII rows"},
+                },
+                "coverage": {"cnn_score": 54.7, "cnn_rating": "neutral", "aaii_bull_bear_spread": -0.7},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 1, "next_event_date": "2026-06-10", "needs_review_count": 0},
+                "rows": pd.DataFrame(
+                    [{"Date": "2026-06-10", "Type Label": "CPI", "Title": "CPI Release", "Days Until": 2, "Importance": "High"}]
+                ),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 2, "due_count": 1, "stale_count": 3, "partial_count": 1, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "Top1000 Daily Snapshot", "Status": "Partial", "Data Freshness": "11m old", "Next Action": "Refresh Top1000."},
+                        {"Area": "Top2000 Daily Snapshot", "Status": "Stale", "Data Freshness": "37m old", "Next Action": "Refresh Top2000."},
+                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Stale", "Data Freshness": "47m old", "Next Action": "Refresh futures."},
+                        {"Area": "Earnings Calendar", "Status": "Partial", "Data Freshness": "covered 1/2", "Next Action": "Inspect failed symbols."},
+                    ]
+                ),
+            },
+            direct_market_context_refresh_only=True,
+        )
+
+        self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "sentiment", "events", "data"])
+        self.assertEqual(
+            [item["label"] for item in cockpit["summary"]["rail"]],
+            ["자료 상태", "Top Mover", "Breadth", "Next Event"],
+        )
+        self.assertEqual(
+            [row["label"] for row in cockpit["brief_rows"]],
+            ["무엇이 움직였나", "확산/집중인가", "이벤트 배경"],
+        )
+        self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인"])
+        self.assertNotIn("Macro", [item["label"] for item in cockpit["summary"]["rail"]])
+        self.assertNotIn("futures", [card["id"] for card in cockpit["cards"]])
+        self.assertNotIn("futures", [item["id"] for item in cockpit["source_confidence"]["items"]])
+        self.assertEqual(cockpit["refresh_plan"]["action_ids"], ["earnings_calendar"])
+        refresh_sources = [item["source_area"] for item in cockpit["refresh_plan"]["items"]]
+        self.assertNotIn("Top1000 Daily Snapshot", refresh_sources)
+        self.assertNotIn("Top2000 Daily Snapshot", refresh_sources)
+        self.assertNotIn("Futures Monitor 1m OHLCV", refresh_sources)
+        summary_copy = f"{cockpit['summary']['headline']} {cockpit['summary']['detail']}"
+        self.assertNotIn("macro", summary_copy.lower())
+        self.assertNotIn("선물/매크로", summary_copy)
+
+    def test_overview_macro_context_cockpit_summarizes_existing_context_snapshots(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {
+                    "returnable_count": 470,
+                    "universe_count": 503,
+                    "effective_end_date": "2026-06-05",
+                    "refresh_state": "Due",
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Symbol": "NVDA",
+                            "Name": "NVIDIA Corp",
+                            "Return %": 4.2,
+                            "Sector": "Technology",
+                        }
+                    ]
+                ),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "coverage": {"returnable_count": 470, "universe_count": 503},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Group": "Technology",
+                            "Positive Symbol Share %": 82.0,
+                            "Market Cap Weighted Return %": 1.8,
+                        },
+                        {
+                            "Rank": 2,
+                            "Group": "Energy",
+                            "Positive Symbol Share %": 41.0,
+                            "Market Cap Weighted Return %": -0.4,
+                        },
+                    ]
+                ),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "summary": {"scenario": "Risk-on with rate pressure", "summary": "Equity futures are firm while rates are pressuring duration."},
+                "scores": pd.DataFrame(
+                    [
+                        {"Score": "Risk-On Score", "Value": 33, "Direction": "risk-on", "Tone": "positive"},
+                        {"Score": "Rate Pressure Score", "Value": 27, "Direction": "rate pressure", "Tone": "warning"},
+                    ]
+                ),
+                "coverage": {"standardized_count": 14, "symbol_count": 16, "latest_date": "2026-06-05"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {
+                    "phase_label": "혼합 중립",
+                    "headline": "Fear & Greed is neutral while internals are mixed.",
+                    "data_confidence": {"status": "High", "detail": "latest CNN / AAII rows"},
+                },
+                "coverage": {"cnn_score": 54.7, "cnn_rating": "neutral", "aaii_bull_bear_spread": -0.7},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 3, "next_event_date": "2026-06-10", "needs_review_count": 1},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Date": "2026-06-10",
+                            "Type Label": "CPI",
+                            "Title": "CPI Release",
+                            "Days Until": 2,
+                            "Importance": "High",
+                            "Validation": "Official",
+                        }
+                    ]
+                ),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 4, "due_count": 2, "stale_count": 1, "partial_count": 1, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Due", "Data Freshness": "8m old", "Next Action": "Refresh before using futures context."},
+                        {"Area": "Earnings Calendar", "Status": "Partial", "Data Freshness": "covered 1/2", "Next Action": "Inspect failed symbols."},
+                    ]
+                ),
+            },
+        )
+
+        self.assertEqual(cockpit["schema_version"], "overview_macro_context_cockpit_v1")
+        self.assertEqual(cockpit["status"], "REVIEW")
+        summary_copy = f"{cockpit['summary']['headline']} {cockpit['summary']['detail']}"
+        summary_sentences = [
+            sentence.strip()
+            for sentence in re.split(r"(?<!\d)[.!?。]+", summary_copy)
+            if sentence.strip()
+        ]
+        self.assertEqual(cockpit["summary"]["headline"], "오늘은 NVDA +4.2% 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다.")
+        self.assertNotIn("현재 맥락:", summary_copy)
+        self.assertGreaterEqual(len(summary_sentences), 2)
+        self.assertLessEqual(len(summary_sentences), 3)
+        self.assertIn("Technology", cockpit["summary"]["detail"])
+        self.assertIn("Risk-on with rate pressure", cockpit["summary"]["detail"])
+        self.assertIn("보강 가능한 자료 3개", cockpit["summary"]["detail"])
+        self.assertEqual(cockpit["summary"]["status_label"], "자료 보강 필요")
+        self.assertEqual(cockpit["summary"]["review_count"], 3)
+        self.assertEqual(cockpit["summary"]["data_review_count"], 4)
+        self.assertEqual(cockpit["summary"]["next_path"], "S&P 500 Daily Snapshot → Futures Monitor 1m OHLCV → Earnings Calendar")
+        self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
+        self.assertEqual(cockpit["summary"]["rail"][0]["value"], "보강 가능 자료 3개")
+        self.assertEqual(
+            [item["label"] for item in cockpit["summary"]["rail"]],
+            ["자료 상태", "Top Mover", "Breadth", "Macro", "Next Event"],
+        )
+        self.assertEqual(
+            [row["label"] for row in cockpit["brief_rows"]],
+            ["무엇이 움직였나", "확산/집중인가", "Futures/Macro 배경"],
+        )
+        self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인", "매크로 확인"])
+        self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
+        self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
+        self.assertEqual(cockpit["brief_rows"][2]["target_tab"], "Futures Monitor")
+        self.assertEqual(cockpit["brief_rows"][2]["source_area"], "Futures Monitor 1m OHLCV")
+        self.assertEqual(cockpit["brief_rows"][2]["freshness_label"], "8m old")
+        self.assertEqual(cockpit["brief_rows"][2]["value"], "장중 macro 해석 보류")
+        self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다", cockpit["brief_rows"][2]["detail"])
+        self.assertNotIn("이벤트 배경", [row["label"] for row in cockpit["brief_rows"]])
+        self.assertNotIn("brief_caveats", cockpit)
+        self.assertEqual(cockpit["refresh_plan"]["schema_version"], "overview_market_context_refresh_plan_v1")
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["primary_button_label"], "현재 이슈만 보강")
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["full_refresh_label"], "전체 Market Context 자료 보강")
+        self.assertEqual(
+            [item["action_id"] for item in cockpit["refresh_plan"]["items"]],
+            ["sp500_intraday_snapshot", "futures_1m", "earnings_calendar"],
+        )
+        self.assertEqual(
+            [item["resolution"] for item in cockpit["refresh_plan"]["items"]],
+            ["resolvable", "resolvable", "partial"],
+        )
+        self.assertEqual(cockpit["refresh_plan"]["items"][1]["source_area"], "Futures Monitor 1m OHLCV")
+        self.assertIn("시장 휴장", cockpit["refresh_plan"]["items"][1]["limitation"])
+        self.assertIn("추정", cockpit["refresh_plan"]["items"][2]["limitation"])
+        self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["source_area"], "Events")
+        self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["resolution"], "not_actionable")
+        self.assertEqual(cockpit["interpretation_cues"][0]["target_tab"], "Events")
+        self.assertEqual(cockpit["interpretation_cues"][2]["target_tab"], "Futures Macro")
+        self.assertEqual([card["id"] for card in cockpit["cards"]], ["movement", "breadth", "futures", "sentiment", "events", "data"])
+        self.assertEqual([card["group"] for card in cockpit["cards"][:3]], ["core", "core", "core"])
+        self.assertEqual([card["group"] for card in cockpit["cards"][3:]], ["supporting", "supporting", "supporting"])
+        self.assertEqual(cockpit["cards"][0]["value"], "NVDA +4.2%")
+        self.assertIn("Technology 리더십", cockpit["cards"][1]["detail"])
+        self.assertIn("금리 압력", cockpit["cards"][2]["badges"][1]["label"])
+        self.assertEqual(cockpit["cards"][3]["value"], "혼합 중립")
+        self.assertEqual(cockpit["cards"][4]["value"], "2026-06-10")
+        self.assertEqual(cockpit["cards"][5]["value"], "관리 메타")
+        self.assertEqual([item["id"] for item in cockpit["context_findings"]], ["market_movers", "futures", "events", "data_health"])
+        self.assertIn("source_area", cockpit["context_findings"][0])
+        self.assertIn("conclusion", cockpit["context_findings"][0])
+        self.assertIn("interpretation", cockpit["context_findings"][0])
+        self.assertIn("evidence", cockpit["context_findings"][0])
+        self.assertIn("freshness", cockpit["context_findings"][0])
+        self.assertIn("priority", cockpit["context_findings"][0])
+        self.assertEqual(cockpit["context_findings"][2]["label"], "Events")
+        self.assertNotIn("확인하세요", " ".join(str(item) for item in cockpit["context_findings"]))
+        self.assertEqual(cockpit["data_health_handoff"]["schema_version"], "overview_data_health_ingestion_handoff_v1")
+        self.assertEqual(cockpit["source_confidence"]["schema_version"], "overview_source_confidence_catalog_v1")
+        self.assertEqual(cockpit["source_confidence"]["status"], "REVIEW")
+        self.assertGreaterEqual(cockpit["source_confidence"]["summary"]["reference_count"], 2)
+        self.assertIn("prices", [item["id"] for item in cockpit["source_confidence"]["items"]])
+        self.assertIn("context 전용", cockpit["boundary_note"])
+
+    def test_overview_macro_context_cockpit_uses_last_market_basis_when_market_is_closed(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_session_context={
+                "phase": "휴장",
+                "is_trading_day": False,
+                "is_market_open_now": False,
+                "session_date": "2026-06-20",
+                "reason": "주말",
+            },
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "snapshot_time_utc": "2026-06-18 20:58",
+                    "effective_end_date": "2026-06-18",
+                    "refresh_state": {"status": "stale", "label": "Stale", "detail": "3020m old", "tone": "danger"},
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Symbol": "NVDA",
+                            "Name": "NVIDIA Corp",
+                            "Return %": 4.2,
+                            "Sector": "Technology",
+                        }
+                    ]
+                ),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-18"},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Rank": 1,
+                            "Group": "Technology",
+                            "Positive Symbol Share %": 82.0,
+                            "Market Cap Weighted Return %": 1.8,
+                        }
+                    ]
+                ),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "summary": {"scenario": "Risk-on with rate pressure", "summary": "Equity futures are firm."},
+                "scores": pd.DataFrame(),
+                "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_date": "2026-06-18"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {"phase_label": "혼합 중립", "data_confidence": {"status": "High", "detail": "latest rows"}},
+                "coverage": {},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {"event_count": 0},
+                "rows": pd.DataFrame(),
+            },
+            collection_ops_snapshot={
+                "status": "OK",
+                "coverage": {"ok_count": 6, "due_count": 0, "stale_count": 0, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(),
+            },
+        )
+
+        self.assertEqual(cockpit["market_session"]["brief_title"], "마지막 거래일 시장 브리프")
+        self.assertIn("기준: 2026-06-18", cockpit["market_session"]["brief_subtitle"])
+        self.assertIn("미국장 휴장", cockpit["market_session"]["brief_subtitle"])
+        self.assertIn("마지막 거래일", cockpit["summary"]["headline"])
+        self.assertNotIn("오늘은", cockpit["summary"]["headline"])
+        self.assertEqual(cockpit["summary"]["rail"][0]["value"], "자료 정상 · 휴장 기준")
+        self.assertEqual(cockpit["summary"]["review_count"], 0)
+        self.assertEqual(cockpit["refresh_plan"]["items"], [])
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["primary_button_label"], "현재 보강 없음")
+        self.assertEqual(cockpit["brief_rows"][0]["status_label"], "휴장 기준")
+        self.assertEqual(cockpit["brief_rows"][0]["freshness_label"], "2026-06-18")
+        self.assertEqual(cockpit["brief_rows"][1]["freshness_label"], "2026-06-18")
+        prices = next(item for item in cockpit["source_confidence"]["items"] if item["id"] == "prices")
+        self.assertEqual(prices["status"], "OK")
+        self.assertEqual(prices["status_label"], "자료 정상")
+
+    def test_overview_macro_context_cockpit_keeps_intraday_refresh_action_when_market_is_open(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_session_context={
+                "phase": "장중",
+                "is_trading_day": True,
+                "is_market_open_now": True,
+                "session_date": "2026-06-18",
+                "reason": "정규장",
+            },
+            market_movers_snapshot={
+                "status": "OK",
+                "period_label": "Daily",
+                "universe_label": "S&P 500",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "snapshot_time_utc": "2026-06-18 15:00",
+                    "effective_end_date": "2026-06-18",
+                    "refresh_state": {"status": "stale", "label": "Stale", "detail": "30m old", "tone": "danger"},
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {"Rank": 1, "Symbol": "NVDA", "Name": "NVIDIA Corp", "Return %": 4.2, "Sector": "Technology"}
+                    ]
+                ),
+            },
+            group_leadership_snapshot={"status": "OK", "period_label": "Daily", "coverage": {}, "rows": pd.DataFrame()},
+            futures_macro_snapshot={"status": "OK", "summary": {}, "scores": pd.DataFrame(), "coverage": {}},
+            sentiment_snapshot={"status": "OK", "analysis": {"data_confidence": {"status": "High"}}, "coverage": {}},
+            events_snapshot={"status": "OK", "coverage": {"event_count": 0}, "rows": pd.DataFrame()},
+            collection_ops_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+        )
+
+        self.assertEqual(cockpit["market_session"]["brief_title"], "오늘의 시장 브리프")
+        self.assertIn("sp500_intraday_snapshot", cockpit["refresh_plan"]["action_ids"])
+        self.assertEqual(cockpit["refresh_plan"]["summary"]["primary_button_label"], "현재 이슈만 보강")
+
+    def test_market_context_brief_html_renders_session_title_and_basis(self) -> None:
+        from app.web.overview_ui_components import _macro_context_cockpit_html
+
+        html = _macro_context_cockpit_html(
+            {
+                "status": "OK",
+                "summary": {
+                    "headline": "마지막 거래일에는 NVDA +4.2% 같은 상위 움직임을 섹터 확산과 함께 읽는 구간입니다.",
+                    "detail": "Technology 리더십.",
+                    "status_label": "자료 정상 · 휴장 기준",
+                    "rail": [],
+                },
+                "market_session": {
+                    "brief_title": "마지막 거래일 시장 브리프",
+                    "brief_subtitle": "기준: 2026-06-18 · 현재 미국장 휴장",
+                },
+                "brief_rows": [
+                    {"label": "무엇이 움직였나", "value": "NVDA +4.2%", "detail": "Technology lead", "tone": "positive"}
+                ],
+                "sector_pressure": {},
+                "event_timeline": {},
+            },
+            include_reading_flow=False,
+        )
+
+        self.assertIn("마지막 거래일 시장 브리프", html)
+        self.assertIn("기준: 2026-06-18", html)
+        self.assertNotIn("오늘의 시장 브리프", html)
+
+    def test_overview_macro_context_cockpit_uses_recent_cpi_as_compact_event_cue(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-12"},
+                "rows": pd.DataFrame([{"Symbol": "SNDK", "Return %": 14.5, "Name": "Sandisk", "Sector": "Technology"}]),
+            },
+            group_leadership_snapshot={
+                "status": "OK",
+                "coverage": {"returnable_count": 503, "universe_count": 503, "effective_end_date": "2026-06-12"},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Group": "Technology",
+                            "Market Cap Weighted Return %": 0.9,
+                            "Positive Symbol Share %": 52.0,
+                        }
+                    ]
+                ),
+            },
+            futures_macro_snapshot={
+                "status": "OK",
+                "summary": {"scenario": "금리 압력", "summary": "Rates and USD are firm."},
+                "scores": pd.DataFrame([{"Score": "Rate Pressure Score", "Value": 64, "Tone": "warning"}]),
+                "coverage": {"standardized_count": 14, "symbol_count": 16, "latest_date": "2026-06-12"},
+            },
+            sentiment_snapshot={
+                "status": "OK",
+                "analysis": {
+                    "phase_label": "중립",
+                    "headline": "Sentiment is neutral.",
+                    "data_confidence": {"status": "High", "detail": "latest sentiment rows"},
+                },
+                "coverage": {"cnn_score": 55, "cnn_rating": "neutral", "aaii_bull_bear_spread": -1.0},
+            },
+            events_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "event_count": 4,
+                    "next_event_date": "2026-06-17",
+                    "latest_recent_event_date": "2026-06-10",
+                    "needs_review_count": 0,
+                    "official_count": 2,
+                    "estimate_count": 1,
+                    "latest_collected_at": "2026-06-12 01:30",
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Date": "2026-06-10",
+                            "Days Until": -2,
+                            "Window": "Recent",
+                            "Type": "MACRO_CPI",
+                            "Type Label": "CPI",
+                            "Title": "CPI: Consumer Price Index for May 2026",
+                            "Source Type": "Official",
+                            "Validation": "Official",
+                            "Freshness": "Official",
+                            "Quality Action": "No action",
+                            "Importance": "High",
+                        },
+                        {
+                            "Date": "2026-06-17",
+                            "Days Until": 5,
+                            "Window": "Upcoming",
+                            "Type": "FOMC_MEETING",
+                            "Type Label": "FOMC",
+                            "Title": "FOMC Meeting: June 16-17*, 2026",
+                            "Source Type": "Official",
+                            "Validation": "Official",
+                            "Freshness": "Official",
+                            "Quality Action": "No action",
+                            "Importance": "High",
+                        },
+                    ]
+                ),
+            },
+            collection_ops_snapshot={
+                "status": "REVIEW",
+                "coverage": {"ok_count": 4, "due_count": 0, "stale_count": 1, "partial_count": 0, "missing_count": 0, "failed_count": 0},
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Area": "Macro Calendar",
+                            "Status": "Stale",
+                            "Data Freshness": "covered 2/4",
+                            "Next Action": "Refresh Macro Calendar or import the BLS .ics file.",
+                        }
+                    ]
+                ),
+            },
+        )
+
+        event_card = cockpit["cards"][4]
+        self.assertEqual(event_card["value"], "최근 CPI 발표 확인 필요")
+        self.assertIn("2일 전", event_card["detail"])
+        self.assertIn("다음 FOMC 5일 후", event_card["detail"])
+        self.assertEqual(cockpit["interpretation_cues"][0]["value"], "최근 CPI 발표 확인 필요")
+        self.assertEqual(cockpit["interpretation_cues"][0]["label"], "이벤트 압력")
+        self.assertEqual(cockpit["interpretation_cues"][2]["label"], "매크로 확인")
+        self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
+        event_findings = [item for item in cockpit["context_findings"] if item["id"] == "events"]
+        self.assertEqual(len(event_findings), 1)
+        self.assertEqual(event_findings[0]["label"], "Events")
+        self.assertIn("가까운 event", event_findings[0]["conclusion"])
+        self.assertIn("Events", event_findings[0]["source_area"])
+        self.assertNotIn("확인하세요", event_findings[0]["conclusion"])
+
+    def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={
+                "status": "OK",
+                "coverage": {
+                    "returnable_count": 503,
+                    "universe_count": 503,
+                    "effective_end_date": "2026-06-05",
+                    "refresh_state": {
+                        "status": "stale",
+                        "label": "Stale",
+                        "detail": "2962m old",
+                        "tone": "warning",
+                        "recommended_action": "Run Update Daily Snapshot.",
+                    },
+                },
+                "rows": pd.DataFrame(
+                    [
+                        {
+                            "Symbol": "AAPL",
+                            "Name": "Apple Inc",
+                            "Return %": -1.2,
+                            "Sector": "Technology",
+                        }
+                    ]
+                ),
+            },
+            group_leadership_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+            futures_macro_snapshot={"status": "OK", "coverage": {}, "summary": {}, "scores": pd.DataFrame()},
+            sentiment_snapshot={"status": "OK", "coverage": {}, "analysis": {}},
+            events_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+            collection_ops_snapshot={"status": "OK", "coverage": {"ok_count": 6}, "rows": pd.DataFrame()},
+        )
+
+        movement = cockpit["cards"][0]
+        self.assertEqual(movement["status"], "Stale")
+        self.assertEqual(movement["badges"][1]["value"], "자료 오래됨")
+        self.assertNotIn("{", movement["badges"][1]["value"])
+
+
+class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
+    def _analog_price_rows(self, symbols: list[str], dates: pd.DatetimeIndex) -> pd.DataFrame:
+        rows: list[dict[str, object]] = []
+        anchors = [20, 35]
+        current_index = len(dates) - 1
+        for symbol in symbols:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in anchors + [current_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 5] = 105.0
+                    prices[anchor + 20] = 120.0
+                    prices[anchor + 60] = 160.0
+            for idx, day in enumerate(dates):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    def test_sector_etf_proxy_map_resolves_gics_and_provider_aliases(self) -> None:
+        from app.services.overview_market_context_analog import (
+            sector_etf_proxy_map,
+            resolve_sector_etf_proxy,
+        )
+
+        proxies = sector_etf_proxy_map()
+
+        self.assertEqual(proxies["Technology"]["symbol"], "XLK")
+        self.assertEqual(resolve_sector_etf_proxy("Consumer Defensive")["symbol"], "XLP")
+        self.assertEqual(resolve_sector_etf_proxy("Consumer Cyclical")["symbol"], "XLY")
+        self.assertEqual(resolve_sector_etf_proxy("Basic Materials")["symbol"], "XLB")
+        self.assertEqual(resolve_sector_etf_proxy("Health Care")["symbol"], "XLV")
+
+    def test_price_coverage_helper_marks_short_sector_etf_history_insufficient(self) -> None:
+        from app.services.overview_market_context_analog import summarize_price_coverage
+
+        short_dates = pd.bdate_range("2026-03-02", periods=63)
+        long_dates = pd.bdate_range("2024-01-02", periods=260)
+        price_rows = pd.concat(
+            [
+                pd.DataFrame(
+                    {
+                        "symbol": "XLI",
+                        "date": short_dates,
+                        "adj_close": [100.0] * len(short_dates),
+                        "close": [100.0] * len(short_dates),
+                    }
+                ),
+                pd.DataFrame(
+                    {
+                        "symbol": "SPY",
+                        "date": long_dates,
+                        "adj_close": [100.0] * len(long_dates),
+                        "close": [100.0] * len(long_dates),
+                    }
+                ),
+            ],
+            ignore_index=True,
+        )
+
+        coverage = summarize_price_coverage(price_rows, symbols=["XLI", "SPY"], min_rows=252)
+        by_symbol = {row["symbol"]: row for row in coverage}
+
+        self.assertEqual(by_symbol["XLI"]["status"], "INSUFFICIENT_DATA")
+        self.assertEqual(by_symbol["XLI"]["row_count"], 63)
+        self.assertEqual(by_symbol["XLI"]["start_date"], "2026-03-02")
+        self.assertEqual(by_symbol["SPY"]["status"], "OK")
+
+    def test_historical_analog_reports_current_leadership_proxy_but_does_not_force_short_history(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2026-03-02", periods=63)
+        price_rows = pd.concat(
+            [
+                pd.DataFrame({"symbol": "XLI", "date": dates, "adj_close": 100.0, "close": 100.0}),
+                pd.DataFrame({"symbol": "SPY", "date": pd.bdate_range("2024-01-02", periods=260), "adj_close": 100.0, "close": 100.0}),
+            ],
+            ignore_index=True,
+        )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Industrials", "Market Cap Weighted Return %": 3.34}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY",),
+            min_history_rows=252,
+        )
+
+        self.assertEqual(model["status"], "INSUFFICIENT_DATA")
+        self.assertEqual(model["leadership_sector"], "Industrials")
+        self.assertEqual(model["proxy_etf"], "XLI")
+        self.assertIn("자료 부족", model["headline"])
+        self.assertEqual(model["sample_count"], 0)
+        self.assertFalse(model["rows"])
+        self.assertEqual(model["current_as_of"], "2026-05-27")
+        self.assertIn("5D 상대강도", model["calculation_note"])
+
+    def test_historical_analog_exposes_generalized_repair_action_for_insufficient_proxy_or_comparison_symbols(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        short_dates = pd.bdate_range("2026-03-02", periods=63)
+        medium_dates = pd.bdate_range("2025-01-02", periods=140)
+        long_dates = pd.bdate_range("2022-01-03", periods=820)
+        price_rows = pd.concat(
+            [
+                pd.DataFrame({"symbol": "XLF", "date": short_dates, "adj_close": 100.0, "close": 100.0}),
+                pd.DataFrame({"symbol": "SPY", "date": long_dates, "adj_close": 100.0, "close": 100.0}),
+                pd.DataFrame({"symbol": "TLT", "date": medium_dates, "adj_close": 100.0, "close": 100.0}),
+            ],
+            ignore_index=True,
+        )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Financial Services", "Market Cap Weighted Return %": 2.4}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "TLT"),
+            min_history_rows=252,
+        )
+
+        self.assertEqual(model["proxy_etf"], "XLF")
+        self.assertEqual([item["symbol"] for item in model["coverage_gaps"]], ["XLF", "TLT"])
+        self.assertEqual(model["repair_action"]["symbols"], ["XLF", "TLT"])
+        self.assertEqual(model["repair_action"]["period"], "10y")
+        self.assertEqual(model["repair_action"]["interval"], "1d")
+        self.assertIn("finance_price.nyse_price_history", model["repair_action"]["target_table"])
+
+    def test_historical_analog_uses_anchor_after_returns_without_current_row_lookahead(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=100)
+        price_rows = self._analog_price_rows(["XLV", "SPY", "QQQ", "TLT", "GLD"], dates)
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "QQQ", "TLT", "GLD"),
+            min_history_rows=80,
+            min_sample_count=2,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["leadership_sector"], "Healthcare")
+        self.assertEqual(model["proxy_etf"], "XLV")
+        self.assertEqual(model["sample_count"], 2)
+        self.assertNotIn(str(dates[-1].date()), model["anchor_dates"])
+        self.assertIn("5D", model["condition_summary"])
+        self.assertEqual(model["current_as_of"], str(dates[-1].date()))
+        self.assertIn("5D 상대강도", model["calculation_note"])
+        qqq_5d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "5D")
+        qqq_60d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "60D")
+        self.assertAlmostEqual(qqq_5d["median_return_pct"], 5.0, places=2)
+        self.assertAlmostEqual(qqq_60d["median_return_pct"], 60.0, places=2)
+        self.assertTrue(any("미래 움직임 보장이 아님" in item for item in model["limitations"]))
+
+    def test_historical_analog_replays_selected_as_of_and_pattern_window_without_future_rows(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=140)
+        as_of_index = 100
+        anchors = [40, 70]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, as_of_index]:
+                    prices[anchor - 20] = 100.0
+                    prices[anchor] = 105.0
+                prices[-1] = 175.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 5] = 106.0
+                    prices[anchor + 20] = 125.0
+                prices[-1] = 250.0
+            for idx, day in enumerate(dates):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+        price_rows = pd.DataFrame(rows)
+        as_of_date = str(dates[as_of_index].date())
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "QQQ"),
+            horizons=(5, 20),
+            as_of_date=as_of_date,
+            pattern_window="20D",
+            min_history_rows=80,
+            min_sample_count=2,
+            min_anchor_gap=20,
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertEqual(model["schema_version"], "overview_market_context_historical_analog_v2")
+        self.assertEqual(model["requested_as_of"], as_of_date)
+        self.assertEqual(model["current_as_of"], as_of_date)
+        self.assertTrue(str(model["data_window"]).endswith(as_of_date))
+        self.assertEqual(model["pattern_window"], "20D")
+        self.assertEqual(model["pattern_window_label"], "20D")
+        self.assertIn("20D-SPY 20D", model["condition_summary"])
+        self.assertNotIn(str(dates[-1].date()), model["data_window"])
+        self.assertNotIn(str(dates[-1].date()), model["anchor_dates"])
+        qqq_20d = next(row for row in model["rows"] if row["asset"] == "QQQ" and row["horizon"] == "20D")
+        self.assertAlmostEqual(qqq_20d["median_return_pct"], 25.0, places=2)
+        self.assertTrue(any("선택 기준일 이후 가격" in item for item in model["limitations"]))
+
+    def test_historical_analog_explains_when_selected_as_of_is_bounded_by_common_price_history(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=130)
+        effective_index = 100
+        requested_index = 120
+        effective_date = str(dates[effective_index].date())
+        requested_date = str(dates[requested_index].date())
+        anchors = [35, 60, 85]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, effective_index, requested_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 118.0
+            last_index = requested_index if symbol == "XLV" else effective_index
+            for idx, day in enumerate(dates[: last_index + 1]):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(5, 20),
+            as_of_date=requested_date,
+            pattern_window="5D",
+            min_history_rows=80,
+            min_sample_count=2,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["requested_as_of"], requested_date)
+        self.assertEqual(model["current_as_of"], effective_date)
+        alignment = model["as_of_alignment"]
+        self.assertFalse(alignment["is_aligned"])
+        self.assertEqual(alignment["requested_as_of"], requested_date)
+        self.assertEqual(alignment["effective_as_of"], effective_date)
+        self.assertIn("SPY", alignment["limiting_symbols"])
+        self.assertIn("공통 가격", alignment["reason"])
+        self.assertTrue(any(effective_date in warning for warning in model["basis_warnings"]))
+        self.assertEqual(model["repair_action"]["label"], "과거 유사 맥락 가격 기준 최신화")
+        self.assertEqual(model["repair_action"]["symbols"], ["SPY", "QQQ", "GLD"])
+        self.assertTrue(model["repair_action"]["stale_basis"])
+        self.assertIn(requested_date, model["repair_action"]["reason"])
+        self.assertIn(effective_date, model["repair_action"]["reason"])
+
+    def test_historical_analog_builds_separate_gld_conditioned_pilot_without_changing_broad_rows(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        current_index = len(dates) - 1
+        anchors = [30, 50, 70]
+        gld_matching_anchors = {30, 70}
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, current_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 120.0
+            if symbol == "GLD":
+                for anchor in anchors:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 102.0 if anchor in gld_matching_anchors else 98.0
+                    prices[anchor + 20] = 110.0
+                prices[current_index - 5] = 100.0
+                prices[current_index] = 102.0
+            for idx, day in enumerate(dates):
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": prices[idx],
+                        "adj_close": prices[idx],
+                    }
+                )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            futures_history=pd.DataFrame(),
+            horizons=(20,),
+            min_history_rows=90,
+            min_sample_count=3,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["sample_count"], 3)
+        self.assertTrue(model["rows"])
+        pilot = model["macro_conditioned_analog"]
+        self.assertEqual(pilot["schema_version"], "overview_market_context_macro_conditioned_analog_pilot_v1")
+        self.assertEqual(pilot["additional_condition_count"], 1)
+        self.assertEqual(pilot["broad_sample_count"], 3)
+        self.assertEqual(pilot["sample_count"], 2)
+        self.assertEqual(pilot["sample_quality"]["status"], "REVIEW")
+        self.assertIn("GLD", pilot["condition_summary"])
+        self.assertIn("Broad 3회 중 Macro 조건 포함 2회", pilot["sample_reduction_reason"])
+        self.assertEqual([item["id"] for item in pilot["used_conditions"]], ["sector_relative_strength", "gld_safe_haven_context"])
+        self.assertEqual([item["id"] for item in pilot["insufficient_conditions"]], ["futures_rate_pressure_context"])
+        self.assertNotIn("futures_macro_thermometer", [item["id"] for item in pilot["excluded_conditions"]])
+        self.assertEqual(
+            [row["sample_count"] for row in pilot["rows"] if row["asset"] == "QQQ" and row["horizon"] == "20D"],
+            [2],
+        )
+
+    def test_historical_analog_adds_stored_futures_rate_pressure_condition_without_future_rows(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        as_of_index = 90
+        as_of_date = str(dates[as_of_index].date())
+        anchors = [30, 50, 70]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, as_of_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 120.0
+            if symbol == "GLD":
+                for anchor in anchors:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 102.0 if anchor in {30, 70} else 98.0
+                prices[as_of_index - 5] = 100.0
+                prices[as_of_index] = 102.0
+                prices[-5] = 100.0
+                prices[-1] = 98.0
+            for idx, day in enumerate(dates):
+                rows.append({"symbol": symbol, "date": day, "close": prices[idx], "adj_close": prices[idx]})
+
+        futures_rows: list[dict[str, object]] = []
+        for futures_symbol in ["ZN=F", "ZB=F"]:
+            prices = [100.0 for _ in dates]
+            for anchor in [30, as_of_index]:
+                prices[anchor - 5] = 100.0
+                prices[anchor] = 97.0
+            prices[70 - 5] = 100.0
+            prices[70] = 103.0
+            prices[-5] = 100.0
+            prices[-1] = 104.0
+            for idx, day in enumerate(dates):
+                futures_rows.append(
+                    {
+                        "provider_symbol": futures_symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": day,
+                        "open": prices[idx],
+                        "high": prices[idx],
+                        "low": prices[idx],
+                        "close": prices[idx],
+                        "volume": 1000,
+                    }
+                )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            futures_history=pd.DataFrame(futures_rows),
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(20,),
+            as_of_date=as_of_date,
+            min_history_rows=80,
+            min_sample_count=3,
+            min_anchor_gap=10,
+        )
+
+        pilot = model["macro_conditioned_analog"]
+        self.assertEqual(model["current_as_of"], as_of_date)
+        self.assertEqual(pilot["broad_sample_count"], 3)
+        self.assertEqual(pilot["sample_count"], 1)
+        self.assertEqual(pilot["additional_condition_count"], 2)
+        self.assertEqual(
+            pilot["macro_condition_counts"],
+            {
+                "broad": 3,
+                "gld": 2,
+                "futures": 1,
+                "futures_available": 3,
+                "intersection": 1,
+            },
+        )
+        self.assertEqual(
+            [item["id"] for item in pilot["used_conditions"]],
+            ["sector_relative_strength", "gld_safe_haven_context", "futures_rate_pressure_context"],
+        )
+        self.assertEqual(pilot["insufficient_conditions"], [])
+        self.assertIn("Rate Pressure futures proxy", pilot["condition_summary"])
+        self.assertIn("ZN=F/ZB=F", pilot["condition_summary"])
+        self.assertIn(as_of_date, pilot["used_conditions"][-1]["detail"])
+        self.assertNotIn(str(dates[-1].date()), pilot["used_conditions"][-1]["detail"])
+        self.assertEqual(pilot["anchor_dates"], [str(dates[30].date())])
+        self.assertIn("futures proxy", pilot["sample_reduction_reason"])
+
+    def test_historical_analog_adds_macro_dimension_audit_without_hard_filtering_macro_series(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        as_of_index = 90
+        as_of_date = str(dates[as_of_index].date())
+        anchors = [30, 50, 70]
+        rows: list[dict[str, object]] = []
+        for symbol in ["XLV", "SPY", "QQQ", "GLD"]:
+            prices = [100.0 for _ in dates]
+            if symbol == "XLV":
+                for anchor in [*anchors, as_of_index]:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 104.0
+            if symbol == "QQQ":
+                for anchor in anchors:
+                    prices[anchor] = 100.0
+                    prices[anchor + 20] = 120.0
+            if symbol == "GLD":
+                for anchor in anchors:
+                    prices[anchor - 5] = 100.0
+                    prices[anchor] = 102.0 if anchor in {30, 70} else 98.0
+                prices[as_of_index - 5] = 100.0
+                prices[as_of_index] = 102.0
+                prices[-5] = 100.0
+                prices[-1] = 98.0
+            for idx, day in enumerate(dates):
+                rows.append({"symbol": symbol, "date": day, "close": prices[idx], "adj_close": prices[idx]})
+
+        futures_rows: list[dict[str, object]] = []
+        for futures_symbol in ["ZN=F", "ZB=F"]:
+            prices = [100.0 for _ in dates]
+            for anchor in [30, as_of_index]:
+                prices[anchor - 5] = 100.0
+                prices[anchor] = 97.0
+            prices[70 - 5] = 100.0
+            prices[70] = 103.0
+            prices[-5] = 100.0
+            prices[-1] = 104.0
+            for idx, day in enumerate(dates):
+                futures_rows.append(
+                    {
+                        "provider_symbol": futures_symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": day,
+                        "open": prices[idx],
+                        "high": prices[idx],
+                        "low": prices[idx],
+                        "close": prices[idx],
+                        "volume": 1000,
+                    }
+                )
+
+        macro_values = {
+            "T10Y3M": {30: -0.25, 50: 0.75, 70: -0.15, as_of_index: -0.35, len(dates) - 1: 1.2},
+            "VIXCLS": {30: 16.0, 50: 28.0, 70: 17.0, as_of_index: 17.5, len(dates) - 1: 31.0},
+            "BAA10Y": {30: 1.65, 50: 2.65, 70: 1.75, as_of_index: 1.8, len(dates) - 1: 3.1},
+        }
+        macro_rows: list[dict[str, object]] = []
+        for series_id, indexed_values in macro_values.items():
+            for idx, value in indexed_values.items():
+                macro_rows.append(
+                    {
+                        "series_id": series_id,
+                        "observation_date": dates[idx],
+                        "source": "fred",
+                        "source_type": "official",
+                        "source_mode": "stored",
+                        "series_name": series_id,
+                        "category": "macro",
+                        "frequency": "daily",
+                        "units": "Percent",
+                        "value": value,
+                        "coverage_status": "actual",
+                    }
+                )
+        sentiment_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": dates[idx],
+                    "source": "cnn",
+                    "series_name": "CNN Fear & Greed",
+                    "category": "sentiment",
+                    "value": 45 + idx % 10,
+                    "coverage_status": "actual",
+                }
+                for idx in [84, 87, as_of_index]
+            ]
+        )
+        events_snapshot = {
+            "status": "OK",
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Date": as_of_date,
+                        "Type": "FOMC_MEETING",
+                        "Type Label": "FOMC",
+                        "Title": "FOMC meeting",
+                        "Days Until": 0,
+                        "Source": "federal_reserve",
+                    }
+                ]
+            ),
+            "coverage": {"event_count": 1, "official_count": 1, "latest_collected_at": as_of_date},
+        }
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=pd.DataFrame(rows),
+            futures_history=pd.DataFrame(futures_rows),
+            macro_series_history=pd.DataFrame(macro_rows),
+            sentiment_history=sentiment_rows,
+            events_snapshot=events_snapshot,
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            horizons=(20,),
+            as_of_date=as_of_date,
+            min_history_rows=80,
+            min_sample_count=3,
+            min_anchor_gap=10,
+        )
+
+        pilot = model["macro_conditioned_analog"]
+        audit = pilot["macro_dimension_audit"]
+        self.assertEqual(audit["schema_version"], "overview_market_context_macro_dimension_audit_v1")
+        self.assertEqual(pilot["sample_count"], 1)
+        self.assertEqual(audit["broad_anchor_count"], 3)
+        self.assertEqual(audit["conditioned_anchor_count"], 1)
+        dimensions = {item["id"]: item for item in audit["dimensions"]}
+        self.assertEqual(dimensions["sector_relative_strength"]["status"], "USED")
+        self.assertEqual(dimensions["gld_safe_haven_context"]["status"], "USED")
+        self.assertEqual(dimensions["futures_rate_pressure_context"]["status"], "USED")
+        self.assertEqual(dimensions["macro_t10y3m"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_t10y3m"]["latest_date"], as_of_date)
+        self.assertNotIn(str(dates[-1].date()), dimensions["macro_t10y3m"]["detail"])
+        self.assertEqual(dimensions["macro_t10y3m"]["anchor_preview_count"], 2)
+        self.assertEqual(dimensions["macro_vixcls"]["anchor_preview_count"], 2)
+        self.assertEqual(dimensions["macro_baa10y"]["anchor_preview_count"], 2)
+        self.assertEqual(dimensions["events_calendar"]["status"], "DEFERRED")
+        self.assertEqual(dimensions["market_sentiment"]["status"], "INSUFFICIENT_HISTORY")
+        for item in dimensions.values():
+            self.assertIn(item["status"], {"USED", "AVAILABLE_REFERENCE", "INSUFFICIENT_HISTORY", "UNAVAILABLE", "DEFERRED"})
+            self.assertIn("usage", item)
+            self.assertIn("source", item)
+
+    def test_historical_analog_keeps_macro_dimension_audit_when_broad_proxy_coverage_is_short(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-03-01", periods=70)
+        price_rows: list[dict[str, object]] = []
+        for symbol in ["XLB", "SPY", "GLD"]:
+            for idx, day in enumerate(dates):
+                price_rows.append(
+                    {
+                        "symbol": symbol,
+                        "date": day,
+                        "close": 100.0 + idx,
+                        "adj_close": 100.0 + idx,
+                    }
+                )
+        macro_rows: list[dict[str, object]] = []
+        for series_id, value in [("T10Y3M", -0.3), ("VIXCLS", 17.0), ("BAA10Y", 1.8)]:
+            macro_rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": dates[-1],
+                    "source": "fred",
+                    "series_name": series_id,
+                    "category": "macro",
+                    "value": value,
+                    "coverage_status": "actual",
+                }
+            )
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Basic Materials", "Market Cap Weighted Return %": 1.2}]),
+            },
+            price_history=pd.DataFrame(price_rows),
+            macro_series_history=pd.DataFrame(macro_rows),
+            futures_history=pd.DataFrame(),
+            comparison_symbols=("SPY", "GLD"),
+            min_history_rows=120,
+        )
+
+        self.assertEqual(model["status"], "INSUFFICIENT_DATA")
+        audit = model["macro_conditioned_analog"]["macro_dimension_audit"]
+        dimensions = {item["id"]: item for item in audit["dimensions"]}
+        self.assertEqual(dimensions["sector_relative_strength"]["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(dimensions["macro_t10y3m"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_vixcls"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_baa10y"]["status"], "AVAILABLE_REFERENCE")
+        self.assertEqual(dimensions["macro_t10y3m"]["anchor_preview_count"], 0)
+
+    def test_historical_analog_marks_macro_pilot_insufficient_when_gld_context_is_missing(self) -> None:
+        from app.services.overview_market_context_analog import build_historical_analog_snapshot
+
+        dates = pd.bdate_range("2024-01-02", periods=120)
+        price_rows = self._analog_price_rows(["XLV", "SPY", "QQQ"], dates)
+
+        model = build_historical_analog_snapshot(
+            group_leadership_snapshot={
+                "status": "OK",
+                "rows": pd.DataFrame([{"Rank": 1, "Group": "Healthcare", "Market Cap Weighted Return %": 2.1}]),
+            },
+            price_history=price_rows,
+            comparison_symbols=("SPY", "QQQ", "GLD"),
+            futures_history=pd.DataFrame(),
+            min_history_rows=90,
+            min_sample_count=2,
+            min_anchor_gap=10,
+        )
+
+        self.assertEqual(model["status"], "OK")
+        self.assertTrue(model["rows"])
+        pilot = model["macro_conditioned_analog"]
+        self.assertEqual(pilot["status"], "INSUFFICIENT_CONTEXT")
+        self.assertFalse(pilot["rows"])
+        self.assertEqual([item["id"] for item in pilot["used_conditions"]], ["sector_relative_strength"])
+        self.assertEqual([item["id"] for item in pilot["insufficient_conditions"]], ["gld_safe_haven_context"])
+
+    def test_group_leadership_date_resolver_respects_selected_as_of_date(self) -> None:
+        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+
+        captured: list[tuple[str, list[object]]] = []
+        eligible_dates = list(pd.bdate_range(end="2024-03-15", periods=6).strftime("%Y-%m-%d"))[::-1]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name
+            captured.append((sql, list(params or [])))
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2024-03-15"}]
+            return [{"date": day, "usable_rows": 500} for day in eligible_dates]
+
+        window = resolve_group_trend_market_dates(
+            period="weekly",
+            min_price_rows=100,
+            as_of_date="2024-03-15",
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(window["status"], "OK")
+        self.assertEqual(window["requested_as_of"], "2024-03-15")
+        self.assertEqual(window["end_date"], "2024-03-15")
+        self.assertLessEqual(window["start_date"], "2024-03-15")
+        self.assertTrue(any("`date` <= %s" in sql for sql, _ in captured))
+        self.assertTrue(any("2024-03-15" in params for _, params in captured))
+
+    def test_macro_context_cockpit_embeds_analog_read_model_when_supplied(self) -> None:
+        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+
+        cockpit = build_overview_macro_context_cockpit(
+            market_movers_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame([{"Symbol": "MRNA", "Return %": 7.2, "Name": "Moderna", "Sector": "Healthcare"}])},
+            group_leadership_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame([{"Group": "Healthcare", "Market Cap Weighted Return %": 2.1, "Positive Symbol Share %": 64.0}])},
+            futures_macro_snapshot={"status": "OK", "coverage": {}, "summary": {}, "scores": pd.DataFrame()},
+            sentiment_snapshot={"status": "OK", "coverage": {}, "analysis": {}},
+            events_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame()},
+            collection_ops_snapshot={"status": "OK", "coverage": {"ok_count": 6}, "rows": pd.DataFrame()},
+            historical_analog_snapshot={
+                "schema_version": "overview_market_context_historical_analog_v2",
+                "status": "OK",
+                "headline": "과거 유사 맥락 2회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 2,
+                "condition_summary": "5D relative strength 기준",
+                "data_window": "2024-01-02 - 2024-05-20",
+                "coverage": [],
+                "rows": [],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            },
+        )
+
+        self.assertEqual(cockpit["historical_analog"]["proxy_etf"], "XLV")
+        self.assertIn("과거 유사 맥락", cockpit["historical_analog"]["headline"])
+        self.assertIn("context 전용", cockpit["boundary_note"])
+
+    def test_historical_analog_html_keeps_context_only_language(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 2회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 2,
+                "condition_summary": "5D relative strength 기준",
+                "data_window": "2024-01-02 - 2024-05-20",
+                "rows": [
+                    {
+                        "asset": "QQQ",
+                        "horizon": "5D",
+                        "median_return_pct": 5.0,
+                        "positive_rate_pct": 100.0,
+                        "best_return_pct": 5.0,
+                        "worst_return_pct": 5.0,
+                        "sample_count": 2,
+                    }
+                ],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("참고: 과거 유사 맥락", html)
+        self.assertIn("QQQ", html)
+        for forbidden in ["추천", "매수", "매도", "신호", "PASS", "BLOCKER"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_explains_similarity_before_statistics(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        rows = []
+        for asset, median, positive, best, worst in [
+            ("XLK", 3.3, 65.5, 14.8, -11.8),
+            ("SPY", 2.5, 75.9, 9.2, -8.1),
+            ("QQQ", 4.0, 65.5, 13.0, -10.9),
+            ("TLT", -0.1, 48.3, 8.5, -8.4),
+        ]:
+            rows.append(
+                {
+                    "asset": asset,
+                    "horizon": "20D",
+                    "median_return_pct": median,
+                    "positive_rate_pct": positive,
+                    "best_return_pct": best,
+                    "worst_return_pct": worst,
+                    "sample_count": 29,
+                }
+            )
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 29회 발견",
+                "detail": "Technology(XLK)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Technology",
+                "proxy_etf": "XLK",
+                "sample_count": 29,
+                "condition_summary": "XLK 5D-SPY 5D 상대강도 >= +2.6% 기준",
+                "data_window": "2016-06-16 - 2026-05-29",
+                "current_as_of": "2026-05-29",
+                "calculation_note": "선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준",
+                "rows": rows,
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("선택한 기준 시점의 리더십 섹터", html)
+        self.assertIn("XLK가 SPY 대비 5D 기준 강했던 과거 구간", html)
+        self.assertIn("유사 맥락 계산", html)
+        self.assertIn("ov-analog-summary-strip", html)
+        self.assertIn("ov-analog-basis-bar", html)
+        self.assertIn("ov-analog-basis-summary", html)
+        self.assertIn("ov-analog-method-line", html)
+        self.assertIn("ov-analog-technical-details", html)
+        self.assertNotIn("ov-analog-method-grid", html)
+        self.assertNotIn("현재 기준", html)
+        self.assertNotIn("표본 품질", html)
+        self.assertNotIn("먼저 볼 점", html)
+        self.assertNotIn("주의할 점", html)
+        self.assertNotIn("먼저 읽을 결론", html)
+        self.assertIn("기준 변경은 아래 과거 참고 통계에만 적용", html)
+        self.assertNotIn("ov-analog-basis-ledger", html)
+        self.assertIn("상단 시장 브리프는 현재 세션에 맞춘 장중 snapshot 또는 마지막 거래일 기준", html)
+        self.assertIn("계산 기준", html)
+        self.assertIn("latest", html)
+        self.assertIn("계산 기준일", html)
+        self.assertIn("2026-05-29", html)
+        self.assertIn("기준 자산", html)
+        self.assertIn("유사 조건", html)
+        self.assertIn("5D", html)
+        self.assertIn("표본", html)
+        self.assertIn("2016-06-16 - 2026-05-29", html)
+        self.assertIn("계산식", html)
+        self.assertIn("선택한 기준 시점의 sector ETF SPY 대비 5D 상대강도 기준", html)
+        self.assertIn("XLK 20D 중간값", html)
+        self.assertIn("+3.3%", html)
+        self.assertIn("상승 비율", html)
+        self.assertIn("최악", html)
+        self.assertIn("미래 움직임 보장이 아님", html)
+        self.assertIn("핵심 자산 비교", html)
+        self.assertNotIn("시장 배경 요약", html)
+        self.assertIn("상세 통계", html)
+        self.assertLessEqual(html.count("29회"), 1)
+
+        explanation_index = html.index("선택한 기준 시점의 리더십 섹터를 ETF proxy로 보고")
+        summary_index = html.index("ov-analog-summary-strip")
+        matrix_index = html.index("ov-analog-outcome-matrix")
+        table_index = html.index("ov-historical-analog-table-block")
+        self.assertLess(explanation_index, summary_index)
+        self.assertLess(summary_index, matrix_index)
+        self.assertLess(matrix_index, table_index)
+
+        primary_block = html[html.index("핵심 자산 비교") : html.index("상세 통계")]
+        self.assertIn("XLK · 20D", primary_block)
+        self.assertIn("SPY · 20D", primary_block)
+        self.assertIn("QQQ · 20D", primary_block)
+        self.assertIn("TLT · 20D", primary_block)
+
+    def test_historical_analog_html_prioritizes_matrix_and_collapses_stat_tables(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        rows = []
+        for asset in ["XLB", "SPY", "QQQ", "TLT", "GLD"]:
+            for horizon, median, positive, worst in [
+                ("5D", 0.5, 63.6, -13.1),
+                ("20D", 1.5, 63.6, -19.9),
+                ("60D", 3.6, 64.8, -16.5),
+            ]:
+                rows.append(
+                    {
+                        "asset": asset,
+                        "horizon": horizon,
+                        "median_return_pct": median,
+                        "positive_rate_pct": positive,
+                        "best_return_pct": median + 8.0,
+                        "worst_return_pct": worst,
+                        "sample_count": 88,
+                    }
+                )
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 88회 발견",
+                "detail": "Basic Materials(XLB)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Basic Materials",
+                "proxy_etf": "XLB",
+                "sample_count": 88,
+                "condition_summary": "XLB 5D-SPY 5D 상대강도 >= +1.0%",
+                "data_window": "2016-06-20 - 2026-05-29",
+                "current_as_of": "2026-05-29",
+                "rows": rows,
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("ov-analog-outcome-matrix", html)
+        self.assertIn("핵심 자산 비교", html)
+        self.assertIn("XLB", html)
+        self.assertIn("SPY", html)
+        self.assertIn("QQQ", html)
+        self.assertIn("5D", html)
+        self.assertIn("20D", html)
+        self.assertIn("60D", html)
+        self.assertNotIn("시장 배경 요약", html)
+        self.assertIn("TLT", html)
+        self.assertIn("GLD", html)
+        self.assertIn("ov-analog-detail-tables", html)
+        self.assertIn("<summary>상세 통계</summary>", html)
+        self.assertLess(html.index("ov-analog-outcome-matrix"), html.index("ov-analog-detail-tables"))
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_turns_insufficient_data_into_actionable_gap_panel(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "INSUFFICIENT_DATA",
+                "headline": "과거 유사 맥락 자료 부족",
+                "detail": "Financials(XLF) 기준 가격 coverage가 부족합니다.",
+                "leadership_sector": "Financial Services",
+                "proxy_etf": "XLF",
+                "sample_count": 0,
+                "data_window": "",
+                "rows": [],
+                "coverage_gaps": [
+                    {"symbol": "XLF", "row_count": 63, "min_rows": 756, "detail": "63 rows from 2026-03-02"},
+                    {"symbol": "TLT", "row_count": 140, "min_rows": 756, "detail": "140 rows from 2025-01-02"},
+                ],
+                "repair_action": {
+                    "label": "부족 ETF 가격 이력 보강",
+                    "symbols": ["XLF", "TLT"],
+                    "period": "10y",
+                    "interval": "1d",
+                    "target_table": "finance_price.nyse_price_history",
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("ov-analog-gap-panel", html)
+        self.assertIn("부족 ETF 가격 이력 보강", html)
+        self.assertIn("XLF", html)
+        self.assertIn("63 / 756", html)
+        self.assertIn("TLT", html)
+        self.assertIn("140 / 756", html)
+        self.assertIn("아래 자료 수집 버튼", html)
+        self.assertNotIn("Macro 조건 비교", html)
+        self.assertNotIn("자료가 충분한 sector ETF history가 쌓이면", html)
+
+    def test_historical_analog_html_renders_macro_conditioned_pilot_as_separate_context(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 3회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 3,
+                "condition_summary": "XLV 5D-SPY 5D 상대강도 >= +2.0%",
+                "data_window": "2024-01-02 - 2024-06-17",
+                "rows": [
+                    {
+                        "asset": "XLV",
+                        "horizon": "20D",
+                        "median_return_pct": 4.0,
+                        "positive_rate_pct": 66.7,
+                        "best_return_pct": 8.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 3,
+                    }
+                ],
+                "macro_conditioned_analog": {
+                    "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+                    "status": "REVIEW",
+                    "status_label": "pilot 표본 좁음",
+                    "headline": "Macro 조건 포함 pilot 표본 2회",
+                    "detail": "Broad analog 3회 중 GLD context까지 맞는 2회만 표시합니다.",
+                    "condition_summary": "XLV relative strength + GLD 5D context",
+                    "broad_sample_count": 3,
+                    "sample_count": 2,
+                    "macro_condition_counts": {
+                        "broad": 3,
+                        "gld": 2,
+                        "futures": 2,
+                        "futures_available": 3,
+                        "intersection": 2,
+                    },
+                    "additional_condition_count": 1,
+                    "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 2회만 남았습니다.",
+                    "sample_quality": {
+                        "status": "REVIEW",
+                        "label": "pilot-limited",
+                        "detail": "표본이 좁아 broad 결과와 함께 읽어야 합니다.",
+                    },
+                    "used_conditions": [
+                        {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
+                        {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 상승 context"},
+                        {"id": "futures_rate_pressure_context", "label": "Rate Pressure futures proxy", "status_label": "사용", "detail": "ZN=F/ZB=F 5D through 2024-06-17"},
+                    ],
+                    "macro_dimension_audit": {
+                        "schema_version": "overview_market_context_macro_dimension_audit_v1",
+                        "status": "OK",
+                        "broad_anchor_count": 3,
+                        "conditioned_anchor_count": 2,
+                        "dimensions": [
+                            {
+                                "id": "sector_relative_strength",
+                                "label": "Sector ETF vs SPY relative strength",
+                                "status": "USED",
+                                "anchor_preview_count": 3,
+                            },
+                            {
+                                "id": "gld_safe_haven_context",
+                                "label": "GLD price proxy",
+                                "status": "USED",
+                                "detail": "GLD 5D 상승 context",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "futures_rate_pressure_context",
+                                "label": "Rate Pressure futures proxy",
+                                "status": "USED",
+                                "detail": "ZN=F/ZB=F 5D through 2024-06-17",
+                                "anchor_preview_count": 2,
+                            },
+                        ],
+                    },
+                    "insufficient_conditions": [
+                        {"id": "fred_rates", "label": "2Y / 10Y FRED rates", "status_label": "사용 안 함", "detail": "이번 차수 제외"},
+                    ],
+                    "excluded_conditions": [
+                        {"id": "events_sentiment", "label": "Events / sentiment", "status_label": "이번 차수 제외", "detail": "3차-A 범위 밖"},
+                    ],
+                    "rows": [
+                        {
+                            "asset": "XLV",
+                            "horizon": "20D",
+                            "median_return_pct": 5.0,
+                            "positive_rate_pct": 100.0,
+                            "best_return_pct": 6.0,
+                            "worst_return_pct": 4.0,
+                            "sample_count": 2,
+                        }
+                    ],
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("참고: 과거 유사 맥락", html)
+        self.assertIn("Macro 조건 후 결과 변화", html)
+        self.assertIn("ov-macro-compare-section", html)
+        self.assertIn("ov-macro-basis-bar", html)
+        self.assertIn("ov-macro-delta-matrix", html)
+        self.assertIn("Macro 조건 결과 비교", html)
+        self.assertIn("기본 유사 맥락", html)
+        self.assertIn("GLD 같은 상태", html)
+        self.assertIn("금리선물 같은 상태", html)
+        self.assertIn("XLV가 SPY 대비 5D 기준 비슷하게 강했던 구간", html)
+        self.assertIn("GLD가 현재처럼 상승 흐름이었던 과거 구간", html)
+        self.assertIn("ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간", html)
+        self.assertIn("기본 유사 맥락 3회 중 Macro 추가 배경까지 현재와 같았던 표본은 2회입니다", html)
+        self.assertIn("기본 3회 중 GLD 상태 2회", html)
+        self.assertIn("기본 3회 중 금리선물 상태 2회", html)
+        self.assertIn("GLD와 금리선물이 모두 같았던 2회", html)
+        self.assertIn("두 조건 모두", html)
+        self.assertNotIn("GLD 조건 통과 2회 중 금리선물 상태 2회", html)
+        self.assertIn("결과 변화", html)
+        self.assertNotIn("ov-macro-sample-flow", html)
+        self.assertNotIn("ov-macro-delta-table", html)
+        self.assertNotIn("ov-macro-funnel-track", html)
+        self.assertNotIn("Broad vs Macro 조건 포함", html)
+        self.assertNotIn("표본 흐름", html)
+        self.assertNotIn("Broad sample", html)
+        self.assertNotIn("Macro 조건 sample", html)
+        self.assertNotIn("실제로 반영한 조건", html)
+        self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
+        self.assertNotIn("이번 차수 제외", html)
+        self.assertNotIn("사용 조건", html)
+        self.assertNotIn("Macro 조건 포함 핵심 자산", html)
+        self.assertNotIn("Macro 조건 포함 보조 자산", html)
+        self.assertIn("GLD price proxy", html)
+        self.assertIn("Rate Pressure futures proxy", html)
+        self.assertIn("ZN=F/ZB=F 5D", html)
+        self.assertIn("조건 후", html)
+        self.assertIn("기본", html)
+        self.assertIn("+4.0%", html)
+        self.assertIn("+5.0%", html)
+        self.assertIn("+1.0%p", html)
+        macro_delta_html = html[html.index("Macro 조건 결과 비교") :]
+        self.assertIn("has-return-gradient is-positive", macro_delta_html)
+        self.assertIn("표본 2회라 broad 결과와 함께 낮춰 읽습니다", html)
+        self.assertLess(html.index("참고: 과거 유사 맥락"), html.index("Macro 조건 후 결과 변화"))
+        self.assertLess(html.index("ov-historical-analog-limitations"), html.index("ov-macro-compare-section"))
+        self.assertNotIn('class="ov-macro-conditioned-pilot"', html)
+        self.assertNotIn('class="ov-macro-comparison"', html)
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_names_requested_effective_dates_and_macro_condition_roles(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 3회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 3,
+                "condition_summary": "XLV 5D-SPY 5D 상대강도 >= +2.0%",
+                "data_window": "2024-01-02 - 2024-05-21",
+                "requested_as_of": "2024-06-18",
+                "current_as_of": "2024-05-21",
+                "as_of_alignment": {
+                    "requested_as_of": "2024-06-18",
+                    "effective_as_of": "2024-05-21",
+                    "is_aligned": False,
+                    "reason": "요청 기준일보다 이른 DB 공통 가격 기준으로 계산했습니다.",
+                    "limiting_symbols": ["SPY", "QQQ", "GLD"],
+                    "latest_by_symbol": {"XLV": "2024-06-18", "SPY": "2024-05-21"},
+                },
+                "basis_warnings": [
+                    "선택 기준일 2024-06-18은 SPY, QQQ, GLD 공통 가격 기준 2024-05-21로 계산했습니다."
+                ],
+                "rows": [
+                    {
+                        "asset": "XLV",
+                        "horizon": "20D",
+                        "median_return_pct": 4.0,
+                        "positive_rate_pct": 66.7,
+                        "best_return_pct": 8.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 3,
+                    }
+                ],
+                "macro_conditioned_analog": {
+                    "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+                    "status": "REVIEW",
+                    "status_label": "pilot 표본 좁음",
+                    "headline": "Macro 조건 포함 pilot 표본 1회",
+                    "detail": "기존 broad analog 3회 중 추가 macro context까지 맞는 1회만 별도로 봅니다.",
+                    "condition_summary": "XLV relative strength + GLD 5D context + Rate Pressure futures proxy",
+                    "broad_sample_count": 3,
+                    "sample_count": 1,
+                    "additional_condition_count": 2,
+                    "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 1회만 남았습니다.",
+                    "sample_quality": {
+                        "status": "REVIEW",
+                        "label": "pilot-limited",
+                        "detail": "broad 결과와 함께 읽어야 합니다.",
+                    },
+                    "used_conditions": [
+                        {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
+                        {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 중립권"},
+                        {"id": "futures_rate_pressure_context", "label": "Rate Pressure futures proxy", "status_label": "사용", "detail": "ZN=F/ZB=F 5D"},
+                    ],
+                    "insufficient_conditions": [
+                        {"id": "fred_rates", "label": "2Y / 10Y FRED rates", "status_label": "사용 안 함", "detail": "이번 화면에서는 참고만 표시"},
+                    ],
+                    "excluded_conditions": [
+                        {"id": "events_sentiment", "label": "Events / sentiment", "status_label": "이번 차수 제외", "detail": "annotation only"},
+                    ],
+                    "rows": [],
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("선택 기준일과 실제 계산일이 다릅니다", html)
+        self.assertIn("요청 기준일", html)
+        self.assertIn("실제 계산 기준일", html)
+        self.assertIn("2024-06-18", html)
+        self.assertIn("2024-05-21", html)
+        self.assertIn("기본 유사 맥락 기준", html)
+        self.assertIn("GLD 조건 적용", html)
+        self.assertIn("금리선물 조건 적용", html)
+        self.assertIn("XLV가 SPY 대비 5D 기준 비슷하게 강했던 구간", html)
+        self.assertIn("GLD가 현재처럼 중립권이었던 과거 구간", html)
+        self.assertIn("ZN=F/ZB=F가 현재와 비슷한 금리선물 배경이었던 구간", html)
+        self.assertIn("Sector ETF vs SPY relative strength", html)
+        self.assertIn("GLD price proxy", html)
+        self.assertIn("Rate Pressure futures proxy", html)
+        self.assertLess(html.index("기본 유사 맥락 기준"), html.index("GLD 조건 적용"))
+        macro_conditions = html[html.index("GLD 조건 적용") :]
+        self.assertNotIn("Sector ETF vs SPY relative strength</strong>", macro_conditions)
+        self.assertNotIn("실제로 반영한 조건", html)
+        self.assertNotIn("자료 부족으로 적용 못 한 조건", html)
+        self.assertNotIn("참고만 하는 정보", html)
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_renders_macro_dimension_audit_inside_pilot(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 3회 발견",
+                "detail": "Healthcare(XLV)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Healthcare",
+                "proxy_etf": "XLV",
+                "sample_count": 3,
+                "condition_summary": "XLV 5D-SPY 5D 상대강도 >= +2.0%",
+                "rows": [
+                    {
+                        "asset": "XLV",
+                        "horizon": "20D",
+                        "median_return_pct": 4.0,
+                        "positive_rate_pct": 66.7,
+                        "best_return_pct": 8.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 3,
+                    }
+                ],
+                "macro_conditioned_analog": {
+                    "schema_version": "overview_market_context_macro_conditioned_analog_pilot_v1",
+                    "status": "REVIEW",
+                    "status_label": "pilot 표본 좁음",
+                    "headline": "Macro 조건 포함 pilot 표본 1회",
+                    "detail": "기존 broad analog 3회 중 추가 macro context까지 맞는 1회만 별도로 봅니다.",
+                    "condition_summary": "XLV relative strength + GLD 5D context",
+                    "broad_sample_count": 3,
+                    "sample_count": 1,
+                    "additional_condition_count": 2,
+                    "sample_reduction_reason": "Broad 3회 중 Macro 조건 포함 1회만 남았습니다.",
+                    "sample_quality": {
+                        "status": "REVIEW",
+                        "label": "pilot-limited",
+                        "detail": "broad 결과와 함께 읽어야 합니다.",
+                    },
+                    "used_conditions": [
+                        {"id": "sector_relative_strength", "label": "Sector ETF vs SPY relative strength", "status_label": "사용", "detail": "XLV 5D gap"},
+                        {"id": "gld_safe_haven_context", "label": "GLD price proxy", "status_label": "사용", "detail": "GLD 5D 상승 context"},
+                    ],
+                    "insufficient_conditions": [],
+                    "excluded_conditions": [],
+                    "macro_dimension_audit": {
+                        "schema_version": "overview_market_context_macro_dimension_audit_v1",
+                        "status": "OK",
+                        "summary": "3개 차원은 실제 조건, 3개 macro series는 참고 preview, event/sentiment는 보류입니다.",
+                        "broad_anchor_count": 3,
+                        "conditioned_anchor_count": 1,
+                        "dimensions": [
+                            {
+                                "id": "sector_relative_strength",
+                                "label": "Sector ETF vs SPY",
+                                "status": "USED",
+                                "status_label": "사용",
+                                "usage": "hard condition",
+                                "source": "DB price history",
+                                "detail": "Broad anchor condition",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 3,
+                            },
+                            {
+                                "id": "macro_t10y3m",
+                                "label": "T10Y3M yield curve proxy",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Current bucket inverted; broad anchors with same bucket: 2.",
+                                "latest_date": "2024-05-06",
+                                "current_value": -0.25,
+                                "current_bucket": "yield curve inverted",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "macro_vixcls",
+                                "label": "VIXCLS volatility backdrop",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Current bucket calm; broad anchors with same bucket: 2.",
+                                "latest_date": "2024-05-06",
+                                "current_value": 16.2,
+                                "current_bucket": "volatility calm",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "macro_baa10y",
+                                "label": "BAA10Y credit spread backdrop",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Current bucket contained; broad anchors with same bucket: 2.",
+                                "latest_date": "2024-05-06",
+                                "current_value": 1.7,
+                                "current_bucket": "credit spread contained",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 2,
+                            },
+                            {
+                                "id": "events_calendar",
+                                "label": "Events calendar",
+                                "status": "DEFERRED",
+                                "status_label": "보류",
+                                "usage": "annotation only",
+                                "source": "build_market_events_snapshot / build_overview_macro_week_lane",
+                                "detail": "Near-term event context remains annotation; not applied to anchors.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-05-06",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 0,
+                            },
+                            {
+                                "id": "macro_t10y2y",
+                                "label": "T10Y2Y yield spread",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Reference preview only.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 1,
+                            },
+                            {
+                                "id": "macro_dff",
+                                "label": "DFF policy rate",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Reference preview only.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 1,
+                            },
+                            {
+                                "id": "macro_unrate",
+                                "label": "UNRATE labor backdrop",
+                                "status": "AVAILABLE_REFERENCE",
+                                "status_label": "참고",
+                                "usage": "bucket preview only",
+                                "source": "finance.loaders.macro.load_macro_series_observations",
+                                "detail": "Reference preview only.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-01-02",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 1,
+                            },
+                            {
+                                "id": "sentiment_aaii",
+                                "label": "AAII sentiment backdrop",
+                                "status": "DEFERRED",
+                                "status_label": "보류",
+                                "usage": "annotation only",
+                                "source": "finance.loaders.sentiment",
+                                "detail": "Sentiment remains annotation and is not applied to anchors.",
+                                "latest_date": "2024-05-06",
+                                "coverage_start": "2024-05-06",
+                                "coverage_end": "2024-05-06",
+                                "anchor_preview_count": 0,
+                            },
+                        ],
+                    },
+                    "rows": [],
+                },
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("조건에는 쓰지 않은 Macro 배경", html)
+        self.assertIn("참고 전용", html)
+        self.assertIn("Macro 조건 상세", html)
+        self.assertIn("T10Y3M yield curve proxy", html)
+        self.assertIn("VIXCLS volatility backdrop", html)
+        self.assertIn("BAA10Y credit spread backdrop", html)
+        self.assertIn("10년물-3개월물 금리차", html)
+        self.assertIn("VIX 지수", html)
+        self.assertIn("BAA 회사채와 10년 국채 금리차", html)
+        self.assertIn("Events calendar", html)
+        self.assertIn("AAII sentiment backdrop", html)
+        self.assertIn("ov-macro-backdrop-grid", html)
+        self.assertIn("ov-macro-backdrop-state", html)
+        self.assertIn("ov-macro-backdrop-ratio", html)
+        self.assertIn("ov-macro-backdrop-fill", html)
+        self.assertIn("ov-macro-dimension-group", html)
+        self.assertIn("역전 금리곡선", html)
+        self.assertIn("단기금리가 장기금리보다 높아진 역전 구간입니다.", html)
+        self.assertIn("변동성 안정권", html)
+        self.assertIn("VIX가 18 아래라 변동성은 비교적 안정권입니다.", html)
+        self.assertIn("신용위험 안정권", html)
+        self.assertIn("스프레드가 2%p 아래라 신용 부담은 안정권입니다.", html)
+        self.assertIn("2 / 3", html)
+        self.assertIn("참고", html)
+        self.assertIn("보류", html)
+        self.assertIn("같은 상태 2 / 3", html)
+        self.assertIn("조건에는 쓰지 않은 참고 배경입니다", html)
+        self.assertLess(html.index("조건에는 쓰지 않은 Macro 배경"), html.index("Macro 조건 상세"))
+        for forbidden in ["예측", "추천", "매수", "매도", "신호", "가능성이 높다", "PASS", "BLOCKER"]:
+            self.assertNotIn(forbidden, html)
+
+    def test_historical_analog_html_uses_median_strength_gradient_for_matrix(self) -> None:
+        from app.web.overview_ui_components import _macro_cockpit_historical_analog_html
+
+        html = _macro_cockpit_historical_analog_html(
+            {
+                "status": "OK",
+                "headline": "과거 유사 맥락 10회 발견",
+                "detail": "Technology(XLK)가 SPY 대비 강했던 과거 구간 기준",
+                "leadership_sector": "Technology",
+                "proxy_etf": "XLK",
+                "sample_count": 10,
+                "condition_summary": "XLK 5D-SPY 5D 상대강도 >= +1.0%",
+                "rows": [
+                    {
+                        "asset": "XLK",
+                        "horizon": "5D",
+                        "median_return_pct": 0.4,
+                        "positive_rate_pct": 60.0,
+                        "best_return_pct": 3.0,
+                        "worst_return_pct": -2.0,
+                        "sample_count": 10,
+                    },
+                    {
+                        "asset": "XLK",
+                        "horizon": "20D",
+                        "median_return_pct": 8.0,
+                        "positive_rate_pct": 90.0,
+                        "best_return_pct": 12.0,
+                        "worst_return_pct": -3.0,
+                        "sample_count": 10,
+                    },
+                    {
+                        "asset": "TLT",
+                        "horizon": "20D",
+                        "median_return_pct": -7.0,
+                        "positive_rate_pct": 20.0,
+                        "best_return_pct": 2.0,
+                        "worst_return_pct": -9.0,
+                        "sample_count": 10,
+                    },
+                ],
+                "limitations": ["과거 통계는 미래 움직임 보장이 아님"],
+            }
+        )
+
+        self.assertIn("--ov-analog-cell-strength:4.8%", html)
+        self.assertIn("--ov-analog-cell-strength:20.0%", html)
+        self.assertIn("--ov-analog-cell-strength:18.0%", html)
+        self.assertIn("has-return-gradient is-positive", html)
+        self.assertIn("has-return-gradient is-negative", html)
+        self.assertIn("색상은 중간값 방향과 크기 기준", html)
+
+    def test_sector_pressure_map_renders_weighted_returns_with_two_decimals(self) -> None:
+        from app.web.overview_ui_components import _sector_pressure_map_html
+
+        html = _sector_pressure_map_html(
+            {
+                "summary": {"headline": "Mixed participation"},
+                "coverage": {"freshness": "2026-06-20 13:57"},
+                "heatmap_rows": [
+                    {
+                        "group": "Technology",
+                        "market_cap_weighted_return_pct": 1.234,
+                        "positive_symbol_share_pct": 55.5,
+                        "symbols": 82,
+                        "tone": "positive",
+                    }
+                ],
+            }
+        )
+
+        self.assertIn("+1.23%", html)
+        self.assertNotIn("+1.2%", html)
+
 
 class FuturesMarketMonitoringContractTests(unittest.TestCase):
     def test_futures_monitor_snapshot_scores_moves_and_stale_state(self) -> None:
@@ -7222,8 +12642,14 @@ class FuturesMarketMonitoringContractTests(unittest.TestCase):
 
 
 class FuturesMacroThermometerContractTests(unittest.TestCase):
+    def _macro_score_frame(self, values: dict[str, int]) -> pd.DataFrame:
+        return pd.DataFrame([{"Score": score, "Value": value} for score, value in values.items()])
+
+    def _macro_symbol_frame(self, values: dict[str, float]) -> pd.DataFrame:
+        return pd.DataFrame([{"Symbol": symbol, "Std Move": value} for symbol, value in values.items()])
+
     def _daily_rows(self, final_moves: dict[str, float], *, days: int = 260) -> list[dict[str, object]]:
-        base = pd.Timestamp("2026-06-02 00:00:00", tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
         rows: list[dict[str, object]] = []
         for symbol_index, (symbol, final_move) in enumerate(final_moves.items()):
             price = 100.0 + symbol_index * 7.0
@@ -7231,6 +12657,39 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 daily_move = 0.0003 + 0.003 * ((idx % 9) - 4) / 4
                 if idx == days - 1:
                     daily_move = final_move
+                price *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": price * 0.995,
+                        "high": price * 1.005,
+                        "low": price * 0.99,
+                        "close": price,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return rows
+
+    def _daily_rows_with_recent_5d_moves(
+        self,
+        five_day_moves: dict[str, float],
+        *,
+        days: int = 260,
+    ) -> list[dict[str, object]]:
+        base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        rows: list[dict[str, object]] = []
+        for symbol_index, (symbol, five_day_move) in enumerate(five_day_moves.items()):
+            price = 100.0 + symbol_index * 7.0
+            recent_daily_move = (1.0 + five_day_move) ** (1 / 5) - 1.0
+            for idx in range(days):
+                daily_move = 0.0002
+                if idx >= days - 5:
+                    daily_move = recent_daily_move
                 price *= 1.0 + daily_move
                 ts = base + pd.Timedelta(days=idx)
                 rows.append(
@@ -7379,6 +12838,218 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIn("금리 상승 압력", snapshot["summary"]["summary"])
         self.assertGreater(snapshot["scores"].set_index("Score").loc["Rate Pressure Score", "Value"], 20)
 
+    def test_macro_interpretation_explains_weak_growth_without_safe_haven_confirmation(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -27,
+                    "Growth Score": -31,
+                    "Rate Pressure Score": -14,
+                    "Dollar Pressure Score": 3,
+                    "Safe Haven Score": 10,
+                    "Inflation Pressure Score": -23,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": -1.06,
+                    "NQ=F": -1.19,
+                    "RTY=F": -0.75,
+                    "HG=F": -1.25,
+                    "CL=F": -0.68,
+                    "GC=F": 0.25,
+                    "ZN=F": 0.15,
+                    "ZB=F": 0.05,
+                    "6J=F": 0.10,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "성장 약세 + 방어 확인 부족")
+        self.assertEqual(interpretation["regime_hint"], "Risk-off 후보")
+        self.assertIn("하위 맥락", interpretation["summary"])
+        self.assertNotEqual(interpretation["summary"], interpretation["mixed_reason"])
+        self.assertIn("안전자산", interpretation["mixed_reason"])
+        self.assertIn("성장 약세", " ".join(interpretation["evidence"]))
+
+    def test_macro_interpretation_explains_risk_weakness_with_easing_rates(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -24,
+                    "Growth Score": -8,
+                    "Rate Pressure Score": -28,
+                    "Dollar Pressure Score": 2,
+                    "Safe Haven Score": -4,
+                    "Inflation Pressure Score": -6,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": -0.91,
+                    "NQ=F": -1.04,
+                    "RTY=F": -0.66,
+                    "ZN=F": 1.10,
+                    "ZB=F": 0.95,
+                    "GC=F": -0.10,
+                    "HG=F": -0.30,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "위험선호 약세 + 금리 부담 완화")
+        self.assertEqual(interpretation["regime_hint"], "성장주 부담 완화 확인 필요")
+        self.assertIn("금리 부담", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_keeps_low_signal_mixed_context_distinct(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": 5,
+                    "Growth Score": 4,
+                    "Rate Pressure Score": -3,
+                    "Dollar Pressure Score": 2,
+                    "Safe Haven Score": 3,
+                    "Inflation Pressure Score": -2,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": 0.12,
+                    "NQ=F": 0.18,
+                    "RTY=F": -0.08,
+                    "ZN=F": 0.10,
+                    "ZB=F": -0.07,
+                    "GC=F": 0.05,
+                    "HG=F": 0.11,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "저신호 / 방향성 없음")
+        self.assertEqual(interpretation["regime_hint"], "관망")
+        self.assertIn("20점", interpretation["mixed_reason"])
+
+    def test_macro_thermometer_builds_weekly_context_from_5d_moves(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "HG=F",
+            "NG=F",
+            "GC=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        five_day_moves = {symbol: 0.001 for symbol in symbols}
+        five_day_moves.update(
+            {
+                "ES=F": 0.023,
+                "NQ=F": 0.031,
+                "RTY=F": 0.018,
+                "ZN=F": -0.015,
+                "ZB=F": -0.018,
+                "CL=F": 0.028,
+                "HG=F": 0.02,
+                "6E=F": -0.012,
+                "6A=F": -0.011,
+            }
+        )
+        candle_rows = self._daily_rows_with_recent_5d_moves(five_day_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        weekly = snapshot["weekly_context"]
+
+        self.assertEqual(weekly["status"], "OK")
+        self.assertIn("최근 1주", weekly["summary"])
+        card_by_label = {card["label"]: card for card in weekly["cards"]}
+        self.assertIn("위험선호", card_by_label)
+        self.assertIn("금리 부담", card_by_label)
+        self.assertGreater(card_by_label["금리 부담"]["raw_value"], 0)
+        self.assertIn("채권선물", card_by_label["금리 부담"]["meaning"])
+
+    def test_macro_thermometer_returns_current_state_evidence_reading(self) -> None:
+        from app.services.futures_macro_thermometer import build_macro_evidence_reading
+
+        sections = build_macro_evidence_reading(
+            {
+                "strong": ["Rate Pressure Score / ZN=F +1.85z"],
+                "weak": ["Risk-On Score / ES=F +0.42z"],
+                "conflicting": [],
+                "missing": [],
+                "counts": {"strong": 1, "weak": 1, "conflicting": 0, "missing": 0},
+            }
+        )
+
+        self.assertEqual([section["key"] for section in sections], ["strong", "weak", "conflicting", "missing"])
+        self.assertEqual([section["label"] for section in sections], ["강한 근거", "약한 근거", "충돌 근거", "자료 부족"])
+        self.assertEqual([section["count"] for section in sections], [1, 1, 0, 0])
+        empty_labels = {section["key"]: section["empty_label"] for section in sections}
+        self.assertEqual(empty_labels["weak"], "약한 근거 없음")
+        self.assertEqual(empty_labels["conflicting"], "충돌 신호 없음")
+        self.assertEqual(empty_labels["missing"], "자료 부족 없음")
+
+        strong_item = sections[0]["items"][0]
+        self.assertEqual(strong_item["score_label"], "금리 부담")
+        self.assertEqual(strong_item["symbol"], "ZN=F")
+        self.assertEqual(strong_item["contribution_z"], "+1.85z")
+        self.assertEqual(strong_item["impact_label"], "영향 강함")
+        self.assertIn("강화합니다", strong_item["meaning"])
+        flattened = " ".join(
+            str(value)
+            for section in sections
+            for value in [section.get("label"), section.get("description"), section.get("empty_label")]
+        )
+        self.assertNotIn("어떻게 읽을까", flattened)
+
+    def test_macro_thermometer_snapshot_exposes_current_evidence_counts(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = ["ES=F", "NQ=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "HG=F", "CL=F", "6A=F"]
+        final_moves = {symbol: 0.001 for symbol in symbols}
+        final_moves.update({"NQ=F": -0.025, "ZN=F": -0.015, "ZB=F": -0.017, "GC=F": -0.018})
+        candle_rows = self._daily_rows(final_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        sections = {section["key"]: section for section in snapshot["evidence_reading"]}
+
+        self.assertIn("strong", sections)
+        self.assertIn("missing", sections)
+        self.assertIn("count", sections["strong"])
+        strong_items = sections["strong"]["items"]
+        self.assertTrue(strong_items)
+        self.assertTrue(all({"meaning", "score_label", "symbol", "contribution_z", "impact_label"}.issubset(item) for item in strong_items))
+        self.assertTrue(any("금리" in item["meaning"] or "위험선호" in item["meaning"] for item in strong_items))
+
     def test_macro_thermometer_warns_when_daily_history_is_short(self) -> None:
         from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
 
@@ -7424,6 +13095,35 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertGreaterEqual(risk_on_row["Sample 5D"], 1)
         self.assertIsNotNone(risk_on_row["Hit Rate 5D %"])
         self.assertGreaterEqual(risk_on_row["Hit Rate 5D %"], 50)
+
+    def test_macro_validation_summary_focuses_current_scenario_before_raw_tables(self) -> None:
+        from app.services.futures_macro_validation import build_current_scenario_validation_summary
+
+        validation = {
+            "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+            "current_scenario_metrics": {
+                "Scenario": "혼재된 매크로 흐름",
+                "Occurrence Count": 950,
+                "Sample 5D": 0,
+                "Hit Rate 5D %": None,
+                "False Positive 5D %": None,
+                "Max Adverse 5D %": None,
+                "Directional Hit Applicable": False,
+            },
+        }
+
+        summary = build_current_scenario_validation_summary(validation, confidence_label="Medium Confidence")
+
+        self.assertEqual(summary["title"], "과거 점검 요약")
+        self.assertEqual(summary["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(summary["occurrence"]["label"], "과거 발생")
+        self.assertEqual(summary["occurrence"]["value"], "950회")
+        self.assertEqual(summary["coverage"], "1212개 PIT 날짜 · 5.05년")
+        self.assertFalse(summary["hit_rate_applicable"])
+        self.assertIn("방향성 적중률", summary["interpretation"])
+        self.assertIn("현재 confidence를 보조", summary["confidence_effect"])
+        self.assertIn("매수/매도 신호", summary["confidence_effect"])
+        self.assertIn("아닙니다", summary["confidence_effect"])
 
     def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
         from app.services.futures_macro_validation import build_interpretation_confidence
@@ -7565,6 +13265,38 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             self.assertEqual(len(calls), 2)
         finally:
             macro_service.build_futures_macro_thermometer_snapshot = original_builder
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+
+    def test_overview_macro_snapshot_cache_key_tracks_latest_daily_marker(self) -> None:
+        import app.services.futures_macro_thermometer as macro_service
+
+        calls: list[dict[str, Any]] = []
+        marker = {"value": "2026-06-23 00:00:00"}
+        original_builder = macro_service.build_futures_macro_thermometer_snapshot
+        original_marker = macro_service._latest_daily_cache_marker
+
+        def fake_builder(**kwargs: Any) -> dict[str, Any]:
+            calls.append(dict(kwargs))
+            return {"call_count": len(calls), "marker": marker["value"]}
+
+        try:
+            macro_service.clear_overview_futures_macro_snapshot_cache()
+            macro_service.build_futures_macro_thermometer_snapshot = fake_builder
+            macro_service._latest_daily_cache_marker = lambda query_fn, symbols: marker["value"]
+
+            first = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            second = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+            marker["value"] = "2026-06-24 00:00:00"
+            third = macro_service.load_overview_futures_macro_snapshot(cache_ttl_seconds=60)
+
+            self.assertIs(first, second)
+            self.assertEqual(first["call_count"], 1)
+            self.assertEqual(third["call_count"], 2)
+            self.assertEqual(third["marker"], "2026-06-24 00:00:00")
+            self.assertEqual(len(calls), 2)
+        finally:
+            macro_service.build_futures_macro_thermometer_snapshot = original_builder
+            macro_service._latest_daily_cache_marker = original_marker
             macro_service.clear_overview_futures_macro_snapshot_cache()
 
 
@@ -8113,6 +13845,55 @@ END:VCALENDAR
         self.assertEqual(rows[0]["raw_payload"]["import_method"], "official_ics_file")
         self.assertEqual(rows[0]["raw_payload"]["source_file_name"], "bls.ics")
         self.assertEqual(rows[2]["raw_payload"]["reference_period"], "May 2026")
+
+    def test_bls_macro_calendar_parsers_accept_abbreviated_cpi_ppi_titles(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Date Time</th><th>Release</th></tr></thead>
+          <tbody>
+            <tr><td>Wednesday, June 10, 2026 08:30 AM</td><td>CPI for May 2026</td></tr>
+            <tr><td>Thursday, June 11, 2026 08:30 AM</td><td>PPI for May 2026</td></tr>
+            <tr><td>Friday, June 5, 2026 08:30 AM</td><td>The Employment Situation for May 2026</td></tr>
+          </tbody>
+        </table>
+        """
+        html_rows = mi.parse_bls_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bls.gov/schedule/2026/",
+            year=2026,
+        )
+
+        ics_text = """
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:cpi-short-20260610@bls.gov
+DTSTART:20260610T123000Z
+SUMMARY:CPI for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:ppi-short-20260611@bls.gov
+DTSTART:20260611T123000Z
+SUMMARY:PPI for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:jobs-20260605@bls.gov
+DTSTART:20260605T123000Z
+SUMMARY:The Employment Situation for May 2026
+END:VEVENT
+END:VCALENDAR
+        """
+        ics_rows = mi.parse_bls_macro_calendar_events_from_ics(
+            ics_text,
+            years=[2026],
+            source_name="bls.ics",
+        )
+
+        self.assertEqual([row["event_type"] for row in html_rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual([row["event_type"] for row in ics_rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual(html_rows[0]["raw_payload"]["reference_period"], "May 2026")
+        self.assertEqual(ics_rows[1]["raw_payload"]["reference_period"], "May 2026")
 
     def test_collect_bls_macro_calendar_ics_writes_events(self) -> None:
         from finance.data import market_intelligence as mi

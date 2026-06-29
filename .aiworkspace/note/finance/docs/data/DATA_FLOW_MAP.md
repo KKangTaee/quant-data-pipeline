@@ -104,6 +104,12 @@ Wikipedia S&P 500 constituents
   -> finance.data.market_intelligence.collect_and_store_sp500_universe()
   -> finance_meta.market_universe_member
 
+Nasdaq public Symbol Directory nasdaqlisted.txt current file
+  -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
+  -> finance_meta.nyse_symbol_lifecycle (source=nasdaq_symdir_nasdaqlisted)
+  -> app.services.overview_market_intelligence.build_market_movers_snapshot(universe_code=NASDAQ)
+  -> Workspace > Overview > Market Movers
+
 yahoo quote batch via yfinance cookie / crumb session
   -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
@@ -129,9 +135,10 @@ missing quote rows
 의미:
 
 - `market_universe_member`의 S&P 500은 current constituents snapshot이며 historical PIT membership이 아니다.
+- Market Movers의 Nasdaq coverage는 `nyse_symbol_lifecycle`의 latest `nasdaq_symdir_nasdaqlisted` current snapshot을 직접 읽는다. 이는 Nasdaq-listed current observation이며 Nasdaq Composite / Nasdaq-100 또는 historical membership proof가 아니다.
 - `market_intraday_snapshot`은 daily movers에서 전일 종가 대비 최신 quote / intraday 가격을 빠르게 읽기 위한 coverage별 snapshot이다.
 - 기본 refresh path는 Yahoo quote batch이며, S&P 500은 quote path 실패 시 기존 yfinance 5m OHLCV download로 fallback할 수 있다.
-- Top1000 / Top2000 daily movers도 저장된 quote snapshot을 우선 읽는다. 해당 universe는 `nyse_asset_profile.market_cap` current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
+- Top1000 / Top2000 / Nasdaq-listed daily movers도 저장된 quote snapshot을 우선 읽는다. Top universe는 `nyse_asset_profile.market_cap` current snapshot 기준이고 Nasdaq-listed universe는 Symbol Directory current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
 - Missing quote diagnostics는 Yahoo single-symbol quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance `fast_info` evidence를 비교해 `provider_quote_gap` 같은 원인 후보를 job result로 표시한다.
 - 진단 결과는 `market_data_issue`에 `issue_type=quote_gap`으로 누적 저장한다. 이는 반복 발생 횟수와 최신 evidence를 추적하기 위한 운영 table이며, 상장폐지 / 거래정지 확정 판정은 아니다.
 - Sector / Industry daily leadership은 저장된 intraday snapshot이 있으면 `Previous Close -> latest quote` 기준을 사용한다. Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용하며, 최신 raw row가 sparse하면 prior eligible date로 fallback한다.
@@ -181,7 +188,13 @@ yfinance futures OHLCV
   -> app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot()
   -> app.services.futures_macro_validation.build_futures_macro_validation_snapshot()
   -> Workspace > Overview > Futures Monitor
-  -> Workspace > Overview > Data Health
+  -> Market Context source / refresh evidence
+  -> Operations > System / Data Health / Workspace > Ingestion for detailed diagnostics
+
+finance_price.futures_ohlcv daily rows
+  -> finance.loaders.futures.load_futures_ohlcv(symbols=["ZN=F", "ZB=F"], interval_code="1d", end=selected_as_of)
+  -> app.services.overview_market_context_analog.build_historical_analog_snapshot()
+  -> Workspace > Overview > Market Context > Macro 조건 포함 pilot
 ```
 
 의미:
@@ -192,6 +205,7 @@ yfinance futures OHLCV
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.
 - Macro Thermometer historical validation은 `futures_ohlcv` 1d row를 point-in-time으로 재계산하고, target futures가 부족할 때만 `nyse_price_history` ETF proxy를 labeled fallback으로 읽는다.
+- Market Context 3차-B의 Macro 조건 포함 pilot은 저장된 `ZN=F` / `ZB=F` daily rows만 읽어 Rate Pressure futures proxy bucket을 계산한다. selected as-of 이후 row와 anchor 이후 futures 움직임은 조건 계산에 쓰지 않는다.
 
 주의:
 
@@ -303,6 +317,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
 - `regime-split-validation-v1`부터 Practical Validation은 stored FRED history를 read-only로 읽어 `neutral` / `caution` / `risk_off` bucket별 portfolio / benchmark 성과를 compact evidence로 계산한다.
+- Market Context 3차-C부터 `app.services.overview_market_context_analog.build_historical_analog_snapshot()`은 stored FRED `T10Y3M` / `VIXCLS` / `BAA10Y`와 CNN / AAII sentiment history를 loader로 읽어 `Macro 조건 포함 pilot`의 `맥락 차원 상태`에 availability / bucket preview / deferred reason을 표시한다. 이 read model은 기준일 이후 row를 쓰지 않고, FRED / events / sentiment를 historical anchor hard filter로 적용하지 않는다.
 
 ## Broad fundamentals / factors 흐름
 

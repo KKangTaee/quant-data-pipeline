@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-06-25
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,40 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | Current active task는 없다. |
+| _none_ | - | 새 active task는 user-approved scope가 정해지면 연다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-legacy-dashboard-removal-v17-v24-20260625` | Completed record | `Workspace > Overview` V17-V24. Remaining helper ownership was moved into `app/web/overview/*_helpers.py`, `app/web/overview/legacy_dashboard.py` was deleted, and `overview_dashboard.py` now keeps explicit compatibility exports. QA passed with py_compile, Overview contract tests, legacy import scan, and Browser QA. |
+| `overview-tab-helper-extraction-v11-v16-20260625` | Completed record | `Workspace > Overview` V11-V16. Market Context, Events, Futures Macro, Market Movers, and Sentiment entry modules now call tab-local helper bridge modules instead of importing `legacy_dashboard.py` directly. |
+| `overview-legacy-cleanup-v6-v10-20260625` | Completed record | `Workspace > Overview` V6-V10. Navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |
+| `overview-structure-split-v2-v5-20260625` | Completed record | `Workspace > Overview` V2-V5. Primary tab modules own tab orchestration, component surfaces and service surfaces were introduced, and Overview boundary guard contracts now protect active page / tab / component / service ownership. |
+| `overview-tab-module-split-v1-20260625` | Completed record | `Workspace > Overview` V1. `overview_dashboard.py` became a compatibility wrapper, active page shell moved to `app/web/overview/page.py`, and primary tab entry modules were added for Market Context, Market Movers, Futures Macro, Sentiment, and Events. |
+| `overview-primary-nav-pill-v1-20260623` | Completed record | `Workspace > Overview` primary navigation now uses a compact custom pill nav with Korean primary labels and English secondary labels instead of the default-looking Streamlit segmented/radio selector. Query-param tab slugs keep direct tab selection stable. No provider / schema / registry / saved / validation / monitoring / trade semantics changed. |
+| `overview-primary-tab-soft-remove-v1-20260623` | Completed record | `Workspace > Overview` primary tab soft-remove. `Futures Monitor` and `Sector / Industry` are no longer primary selector options; old selected values fall back to `Market Context`. Futures / sector services and helper renderers are retained for now, with no provider / schema / registry / saved / trading boundary changes. |
+| `overview-lazy-tab-render-v20-20260622` | Completed record | `Workspace > Overview` V20 follow-up. Top-level deep tabs switched to selected-tab lazy rendering with `Market Context` as default. Current primary tab membership is superseded by `overview-primary-tab-soft-remove-v1-20260623`; Candidate Ops dashboard snapshot loading remains deferred to its selected branch. |
+| `overview-market-context-macro-meaning-gradient-v19-20260622` | Completed record | `Overview > Market Context` V19 follow-up. Historical analog / Macro conditioned comparison matrix cells now use clearer green/red return gradients, and reference-only T10Y3M / VIXCLS / BAA10Y cards explain what each current value means without changing hard-condition or data boundaries. |
+| `overview-market-context-analog-usability-v12-20260621` | Completed record | `Overview > Market Context` V12 follow-up. Historical analog selected-as-of common price basis mismatch now has a bounded price-basis refresh action, the basis/method area is deduped into compact summary + collapsed technical details, and core/support asset outcomes render as matrix/summary before detailed tables. |
+| `overview-market-context-session-basis-v9-20260620` | Completed record | `Overview > Market Context` V9 follow-up. 휴장 / 장외 시간에는 `오늘의 시장 브리프` 대신 마지막 거래일 또는 현재 세션 기준 브리프로 읽고, 장중 snapshot age만으로 현재 보강 이슈를 띄우지 않도록 보정했다. |
+| `overview-market-context-source-actionability-v8-20260620` | Completed record | `Overview > Market Context` V8 follow-up. Events estimate caveats는 `참고 제한`, Data Health는 `관리 메타`로 분리하고, top `자료 상태`와 source confidence summary는 보강 가능한 자료만 unresolved로 세도록 고쳤다. |
+| `overview-market-context-smart-refresh-v7-20260620` | Completed record | `Overview > Market Context` V7 follow-up. Events를 브리프에서 낮추고, smart refresh / full refresh fallback / result reflection을 정리했다. |
+| `overview-market-context-brief-context-absorption-v6-20260620` | Completed record | `Overview > Market Context` V6 follow-up. `브리프 신뢰도` 독립 섹션을 제거하고, Events / Futures 자료 제한은 `오늘의 시장 브리프`의 시장맥락 결론으로 흡수했다. |
+| `overview-market-context-brief-confidence-v5-20260620` | Completed record | `Overview > Market Context` V5 follow-up. `오늘의 시장 브리프`는 움직임 / 확산 / Futures-Macro 3행 market story로 유지하고, Events / 자료 기준은 별도 `브리프 신뢰도` 영역으로 분리했다. |
+| `overview-market-context-brief-findings-integration-v4-20260620` | Completed record | `Overview > Market Context` V4 follow-up. `맥락 검토 결과` rail의 P1/P2 중복을 제거하고 Events / 자료 신뢰도 caveat를 `오늘의 시장 브리프` 안으로 통합했다. |
+| `overview-market-context-context-findings-v3-20260620` | Completed record | `Overview > Market Context` V3 follow-up. `다음 맥락 체크` user action checklist를 `맥락 검토 결과`로 바꾸고, 가격 움직임 / Futures-Macro / Events / 자료 신뢰도 caveat를 결론, 해석 영향, 자료 기준으로 보여준다. |
+| `overview-market-context-futures-conditioned-analog-v3b-20260618` | Completed record | `Overview > Market Context` 3차-B. 3차-A의 GLD `Macro 조건 포함 pilot`에 stored futures daily OHLCV 기반 Rate Pressure proxy (`ZN=F` / `ZB=F`) 조건 1개를 추가했다. FRED / events / sentiment / 새 provider / schema / loader는 열지 않았다. |
+| `overview-market-context-macro-conditioned-analog-pilot-v1-20260618` | Completed record | `Overview > Market Context` 3차-A. Historical analog broad 결과는 유지하면서 `Macro 조건 포함 pilot` 별도 영역을 추가했고, 추가 조건은 stored GLD price proxy context 1개만 사용했다. Futures / FRED rates / events / sentiment는 deferred / disabled / insufficient condition으로 표시한다. |
+| `overview-market-context-analog-asof-window-v2-20260618` | Completed record | `Overview > Market Context` 2차. Historical analog에 latest / 과거 기준 시점 replay와 5D / 20D / monthly pattern window controls를 추가했고, existing DB 기준 bounded replay와 full PIT replay 한계를 분리한 기록이다. |
+| `overview-market-context-source-action-flow-v1-20260618` | Completed record | `Overview > Market Context` 1차. `next_checks`를 실제 source/action checklist로 렌더링하고, Data Health / Events 확인 이유와 action, source confidence footer action hint, historical analog 기준일 / 자료기간 / 계산식 표시를 보강한 기록이다. |
+| `finance-integration-doc-merge-skill-20260617` | Completed record | `finance-integration-review`에 `.aiworkspace/note/finance` 문서 충돌 전용 checklist를 추가해, latest/current pointer와 root handoff log를 손실 없이 자연스럽게 병합하도록 강화한 기록이다. |
+| `overview-market-movers-period-refresh-v1-20260616` | Completed record | `Overview > Market Movers` period refresh UX. Daily keeps intraday snapshot / auto refresh controls; Weekly / Monthly / Yearly now expose an EOD price-history manual refresh action through the existing Overview action facade and OHLCV job boundary. |
+| `overview-market-context-analog-readability-v5-20260616` | Completed record | `Overview > Market Context` V5. Historical analog OK state now explains the similarity rule before statistics, shows a compact summary strip / first-read conclusion, and splits detailed rows into core vs supporting assets without changing the context-only calculation. |
+| `overview-market-context-analog-repair-v4-20260615` | Completed record | `Overview > Market Context` V4. Historical analog `자료 부족`을 부족 ETF / row evidence / `보조 갱신` OHLCV repair action으로 연결하고, `자료 기준 / 출처 상태` summary에 정상 / 확인 / 부족 count와 source pill을 표시한 기록이다. |
+| `overview-market-context-historical-analog-v1-20260615` | Completed record | `Overview > Market Context` historical analog MVP. Current sector leadership을 sector ETF proxy로 연결하고, coverage가 충분할 때만 5D / 20D / 60D historical analog summary를 보여주는 context-only 기록이다. Sector ETF coverage가 부족하면 V4 repair action으로 이어진다. |
+| `overview-market-context-events-data-trust-v1-20260612` | Completed record | `Overview > Market Context / Events` 3차. 주요 macro event read model을 recent 7D + upcoming 관점으로 보강하고, Macro Week Lane recent/upcoming split, compact Market Context event cue, BLS CPI/PPI abbreviation parser coverage를 추가한 기록이다. |
+| `risk-parity-dual-momentum-5b-20260610` | Completed record | Backtest 5B. Risk Parity Trend의 inverse-vol / guardrail / low-vol overweight diagnostics와 Dual Momentum의 trend-rejected cash proxy / concentration / whipsaw diagnostics를 result row/meta와 기존 Selection History에서 읽게 한 기록이다. |
 | `global-relative-strength-5a-20260609` | Completed record | Backtest 5A. Global Relative Strength 전략 runtime / transform / result bundle 고도화. 새 evidence/log/workbench 패널과 registry / saved JSONL / run_history / generated artifact write는 제외했다. |
 | `backtest-analysis-direction-reset-20260609` | Completed record | Backtest 4차 4C. Backtest Analysis를 전략 실행 / 비교 / 후보 생성 중심으로 되돌리고, Reference / evidence / governance / ETF workbench 패널은 `전략 개발 참고` advanced control 뒤에 숨긴다. |
 | `etf-rerun-matrix-workbench-20260608` | Completed record | Backtest 4차 4B. GRS / Risk Parity / Dual Momentum의 rerun scenario matrix를 보여주고, 선택한 ETF 전략만 session-only로 실행해 compact result evidence를 표시한다. |
@@ -41,6 +69,10 @@ tasks/active/<task-name>/
 | `risk-on-momentum-governance-20260608` | Completed record | Backtest 3차 3C. Risk-On Momentum 5D의 Daily Swing research evidence와 deferred validation / review / monitoring governance module을 read-only로 보여준다. |
 | `strict-annual-etf-bridge-20260608` | Completed record | Backtest 3차 3B. Strict Annual 3종 + GTAA / Equal Weight bridge를 read-only로 정리해 component role / validation gap / recommended workflow를 보여준다. |
 | `strategy-evidence-inventory-direction-panel-20260608` | Completed record | Backtest 3차 3A. Strategy Evidence Inventory / Direction Panel을 read-only로 구현해 catalog strategy별 maturity / evidence / next action을 보여준다. |
+| `distinct-strategy-portfolio-discovery-20260609` | Completed record | GTAA U3 85% / GRS Compact 10% / Risk Parity Trend 5% distinct-family 후보를 Final Review decision `final_distinct_strategy_gtaa_u3_grs_risk_parity_20260609`와 Monitoring setup `selected_dashboard_portfolio_distinct_strategy_gtaa_grs_rp_20260609`까지 등록한 기록이다. |
+| `portfolio-discovery-final-review-monitoring-20260608` | Completed record | 현행 전략 전체를 탐색해 GTAA U5 20% / GTAA U3 75% / GRS Compact 5% all-ETF 후보를 Final Review / Portfolio Monitoring chain까지 등록한 기록이다. |
+| `overview-data-health-ingestion-handoff-v1-20260608` | Completed record | `Workspace > Overview > Data Health` 상단에 priority-ranked read-only handoff lane을 추가해 stale / missing / failed / partial / due target을 owning collection surface로 연결한 기록이다. |
+| `overview-macro-context-cockpit-v1-20260608` | Completed record | `Workspace > Overview` 상단에 기존 DB-backed market context / sentiment / events / data-health snapshot을 합성한 summary-first cockpit을 추가한 기록이다. |
 | `merge-review-fixes-20260608` | Completed record | sub-dev / main-dev master merge review 후 Reference internal link, Reference V4 status, catalog test assertion을 바로잡은 기록이다. |
 | `reference-drift-guard-qa-polish-v5-20260608` | Completed record | contextual Reference help가 Glossary term / Reference link boundary에서 drift되지 않도록 guard와 표시 polish를 추가한 5차 기록이다. |
 | `reference-contextual-links-v4-20260608` | Completed record | 주요 Backtest / Operations 화면에 read-only Reference help expander를 연결한 4차 기록이다. |
@@ -71,4 +103,4 @@ tasks/active/<task-name>/
 
 - 이 폴더에는 완료된 과거 task가 다수 남아 있다.
 - 상세 구현 근거, 실행 로그, QA 결과를 찾을 때는 관련 task 폴더의 `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`를 확인한다.
-- 2026-06-09 기준 201개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
+- 2026-06-08 기준 194개 task folder가 retained record로 남아 있다. 대량 이동 / archive migration은 별도 승인된 migration task에서 처리한다.
