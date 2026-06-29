@@ -4566,6 +4566,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("load_market_sentiment_snapshot", source)
         self.assertNotIn("overview_market_intelligence", source)
 
+    def test_overview_events_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/events.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_events_snapshot", source)
+        self.assertIn("def build_overview_macro_week_lane", source)
+        self.assertIn("EVENT_COLUMNS", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
     def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
         source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
 

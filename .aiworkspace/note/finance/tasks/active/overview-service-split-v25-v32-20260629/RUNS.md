@@ -9,3 +9,8 @@
 - V26 QA: `.venv/bin/python -m py_compile app/services/overview/sentiment.py tests/test_service_contracts.py` -> pass.
 - V26 QA: direct `app.services.overview.sentiment.build_market_sentiment_snapshot` empty-frame smoke -> returned `MISSING` with expected read-model keys.
 - V26 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context` -> pass.
+- V27 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_service_owns_implementation_body` -> failed because `events.py` was still a re-export wrapper.
+- V27 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_service_owns_implementation_body` -> pass.
+- V27 QA: `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` -> pass.
+- V27 QA: direct `app.services.overview.events` empty-query smoke -> event snapshot `NO_EVENTS`, macro week lane `NO_DATA`.
+- V27 QA: legacy path event tests `test_market_events_snapshot_macro_filter_reads_macro_prefix_rows`, `test_market_events_snapshot_warns_on_stale_earnings_estimates`, `test_overview_macro_week_lane_clusters_near_events_without_signal_language`, `test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events` -> pass.
