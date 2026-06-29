@@ -53,6 +53,54 @@ def render_market_movers_command_strip(model: dict[str, Any]) -> None:
     )
 
 
+def _unified_summary_items_html(items: list[dict[str, Any]]) -> str:
+    item_html: list[str] = []
+    for item in items:
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-mm-unified-detail">{escape(_display_value(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        item_html.append(
+            '<div class="ov-mm-unified-item">'
+            f'<div class="ov-mm-unified-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-mm-unified-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    return "".join(item_html)
+
+
+def render_market_movers_unified_summary(model: dict[str, Any]) -> None:
+    tone_color = _market_movers_workbench_tone(model.get("tone"))
+    trust_detail = _display_value(model.get("trust_detail"))
+    trust_detail_html = f"<small>{escape(trust_detail)}</small>" if trust_detail not in ("", "-") else ""
+    action = _display_value(model.get("action_label"))
+    action_html = f'<span class="ov-mm-unified-action">{escape(action)}</span>' if action not in ("", "-") else ""
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-unified-summary" style="--ov-summary-tone:{tone_color};">
+  <div class="ov-mm-unified-head">
+    <div>
+      <div class="ov-mm-unified-kicker">Market Movers</div>
+      <div class="ov-mm-unified-title">{escape(_display_value(model.get("title")))}</div>
+      <div class="ov-mm-unified-context">{escape(_display_value(model.get("context")))}</div>
+    </div>
+    <div class="ov-mm-unified-trust">
+      <span>자료 상태</span>
+      <strong>{escape(_display_value(model.get("trust_state")))}</strong>
+      {trust_detail_html}
+      {action_html}
+    </div>
+  </div>
+  <div class="ov-mm-unified-grid">{_unified_summary_items_html(list(model.get("items") or []))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
 def render_market_movers_empty_state(model: dict[str, Any]) -> None:
     tone_color = _market_movers_workbench_tone(model.get("tone"))
     trust_hint = dict(model.get("trust_hint") or {})
@@ -717,6 +765,7 @@ __all__ = [
     "_breadth_summary_cards_html",
     "_breadth_rows_html",
     "_coverage_trust_items_html",
+    "_unified_summary_items_html",
     "render_breadth_heatmap_summary",
     "render_sector_breadth_market_map",
     "render_market_movers_coverage_trust",
@@ -726,6 +775,7 @@ __all__ = [
     "render_market_mover_chart_workspace",
     "render_market_mover_investigation_pane",
     "render_market_movers_data_trust_strip",
+    "render_market_movers_unified_summary",
     "_market_refresh_state_label",
     "_market_refresh_state_detail",
     "render_market_refresh_status_bar",

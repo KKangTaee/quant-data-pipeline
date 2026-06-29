@@ -57,6 +57,7 @@ from app.web.overview.components.market_movers import (
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
+    render_market_movers_unified_summary,
     render_market_refresh_status_bar,
     render_sector_breadth_market_map,
 )
@@ -302,6 +303,41 @@ def build_market_movers_command_strip_model(
             {"label": "Period", "value": period_label, "detail": str(coverage.get("price_mode") or "-")},
             {"label": "Effective timestamp", "value": _effective_timestamp(coverage), "detail": "DB snapshot/read model"},
             {"label": "Freshness", "value": freshness, "detail": _freshness_detail(coverage)},
+            {"label": "Universe", "value": _format_count(coverage.get("universe_count"))},
+            {
+                "label": "Returnable",
+                "value": _format_count(coverage.get("returnable_count")),
+                "detail": _format_pct_detail(returnable_pct),
+            },
+            {"label": "Missing", "value": _format_count(coverage.get("missing_count"))},
+            {"label": "보기", "value": exploration_mode, "detail": f"Top {controls.top_n}"},
+        ],
+    }
+
+
+def build_market_movers_unified_summary_model(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+    exploration_mode: str,
+) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    coverage_label = _coverage_label(controls.coverage)
+    period_label = _market_mover_period_label(controls.period)
+    sector_label = controls.sector if controls.sector and controls.sector != "All" else "All sectors"
+    freshness = _freshness_label(snapshot, coverage)
+    returnable_pct = coverage.get("returnable_pct")
+    action_label = "정상" if _command_strip_tone(snapshot, coverage) == "positive" else "갱신 확인"
+    return {
+        "schema_version": "market_movers_unified_summary_v1",
+        "title": "변동 종목",
+        "context": f"{coverage_label} · {period_label} · {sector_label}",
+        "trust_state": freshness,
+        "trust_detail": _freshness_detail(coverage),
+        "tone": _command_strip_tone(snapshot, coverage),
+        "action_label": action_label,
+        "items": [
+            {"label": "기준", "value": _effective_timestamp(coverage), "detail": str(coverage.get("price_mode") or "-")},
             {"label": "Universe", "value": _format_count(coverage.get("universe_count"))},
             {
                 "label": "Returnable",
@@ -965,7 +1001,6 @@ def build_market_movers_data_trust_strip_model(trust_model: dict[str, Any]) -> d
 
 def _render_market_movers_coverage_trust(snapshot: dict[str, Any], *, controls: MarketMoverControls) -> None:
     model = build_market_movers_coverage_trust_model(snapshot)
-    render_market_movers_data_trust_strip(build_market_movers_data_trust_strip_model(model))
     grouped_rows = model.get("grouped_missing_rows")
     if not isinstance(grouped_rows, pd.DataFrame):
         grouped_rows = pd.DataFrame()
@@ -2291,8 +2326,8 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         top_n=controls.top_n,
         sector=controls.sector,
     )
-    render_market_movers_command_strip(
-        build_market_movers_command_strip_model(
+    render_market_movers_unified_summary(
+        build_market_movers_unified_summary_model(
             snapshot,
             controls=controls,
             exploration_mode=_market_mover_mode_label(controls.mode),

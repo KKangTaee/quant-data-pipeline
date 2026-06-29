@@ -4248,6 +4248,113 @@ def overview_ui_css() -> str:
   line-height: 1.16;
   overflow-wrap: anywhere;
 }
+.ov-mm-unified-summary {
+  min-width: 0;
+  margin: 0.38rem 0 0.62rem 0;
+  padding: 0.62rem 0.68rem;
+  border-top: 3px solid var(--ov-summary-tone, var(--ov-mi-color-neutral));
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ov-summary-tone, var(--ov-mi-color-neutral)) 7%, var(--ov-mi-color-surface)),
+      rgba(255,255,255,0.94) 42%,
+      var(--ov-mi-color-surface)
+    );
+}
+.ov-mm-unified-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, auto);
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.5rem;
+}
+.ov-mm-unified-kicker {
+  color: var(--ov-summary-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+.ov-mm-unified-title {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1.05rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-mm-unified-context {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+.ov-mm-unified-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+}
+.ov-mm-unified-trust span,
+.ov-mm-unified-trust small {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.14;
+}
+.ov-mm-unified-trust strong,
+.ov-mm-unified-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.34rem;
+  padding: 0.12rem 0.46rem;
+  border: 1px solid color-mix(in srgb, var(--ov-summary-tone, var(--ov-mi-color-neutral)) 32%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-summary-tone, var(--ov-mi-color-neutral)) 8%, transparent);
+  color: var(--ov-summary-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.14;
+  white-space: nowrap;
+}
+.ov-mm-unified-grid {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, 1.15fr) repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-unified-item {
+  min-width: 0;
+  padding: 0.4rem 0.52rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-unified-item:first-child {
+  border-left: 0;
+}
+.ov-mm-unified-label {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-mm-unified-value {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.ov-mm-unified-detail {
+  margin-top: 0.08rem;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
 .ov-mm-trust {
   min-width: 0;
   margin: 0.52rem 0 0.82rem 0;
@@ -4828,6 +4935,7 @@ def overview_ui_css() -> str:
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 	  .ov-mm-command-head,
+	  .ov-mm-unified-head,
 	  .ov-mm-trust-head,
 	  .ov-mm-data-trust-head,
 	  .ov-mm-empty-state,
@@ -4837,8 +4945,12 @@ def overview_ui_css() -> str:
 	    grid-template-columns: 1fr;
 	  }
 	  .ov-mm-command-grid,
+	  .ov-mm-unified-grid,
 	  .ov-mm-trust-grid {
 	    grid-template-columns: repeat(2, minmax(0, 1fr));
+	  }
+	  .ov-mm-unified-trust {
+	    justify-content: flex-start;
 	  }
 	  .ov-mm-tape {
 	    grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4872,6 +4984,7 @@ def overview_ui_css() -> str:
 	    text-align: left;
 	  }
   .ov-mm-command-item:nth-child(odd),
+  .ov-mm-unified-item:nth-child(odd),
   .ov-mm-trust-item:nth-child(odd) {
     border-left: 0;
   }

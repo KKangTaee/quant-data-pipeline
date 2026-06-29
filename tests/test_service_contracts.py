@@ -9043,6 +9043,63 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("segmented_control", controls_body)
         self.assertNotIn("st.columns([1.05, 1.0, 1.0, 0.72, 1.45]", controls_body)
 
+    def test_market_movers_polish_phase2_uses_unified_summary(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_unified_summary_model", helper_source)
+        self.assertIn("render_market_movers_unified_summary", helper_source)
+        self.assertIn("render_market_movers_unified_summary", component_source)
+        self.assertIn("ov-mm-unified-summary", common_source)
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("build_market_movers_unified_summary_model", render_body)
+        self.assertNotIn("render_market_movers_command_strip(", render_body)
+        trust_body = helper_source[helper_source.index("def _render_market_movers_coverage_trust") :]
+        trust_body = trust_body[: trust_body.index("def _render_missing_diagnostics")]
+        self.assertIn("Coverage trust detail", trust_body)
+        self.assertNotIn("render_market_movers_data_trust_strip", trust_body)
+
+    def test_market_movers_unified_summary_model_removes_duplicate_control_items(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_unified_summary_model,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "OK",
+            "universe_code": "SP500",
+            "universe_label": "S&P 500",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 503,
+                "missing_count": 0,
+                "returnable_pct": 100.0,
+                "snapshot_time_utc": "2026-06-24 14:31",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "stale", "label": "Stale", "detail": "7104m old"},
+            },
+        }
+
+        model = build_market_movers_unified_summary_model(snapshot, controls=controls, exploration_mode="상승")
+
+        self.assertEqual(model["schema_version"], "market_movers_unified_summary_v1")
+        self.assertEqual(model["title"], "변동 종목")
+        self.assertEqual(model["context"], "S&P 500 · Daily · All sectors")
+        self.assertEqual(model["trust_state"], "Stale")
+        labels = [item["label"] for item in model["items"]]
+        self.assertEqual(labels, ["기준", "Universe", "Returnable", "Missing", "보기"])
+        self.assertNotIn("Coverage", labels)
+        self.assertNotIn("Period", labels)
+
     def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_board_model
 
