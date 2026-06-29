@@ -9,7 +9,8 @@ Started: 2026-06-29
 - 2026-06-29: V25 task baseline and QA criteria documented.
 - 2026-06-29: V26 Sentiment service body extracted into `app/services/overview/sentiment.py`; legacy import path remains compatible.
 - 2026-06-29: V27 Events service body extracted into `app/services/overview/events.py`; event calendar and macro week lane implementation now live on the domain surface.
+- 2026-06-29: V28 Data Health service body extracted into `app/services/overview/data_health.py`; collection ops and ingestion handoff implementation now live on the domain surface.
 
 ## Current Step
 
-- V28: Data Health service extraction.
+- V29: Market Movers service extraction.
