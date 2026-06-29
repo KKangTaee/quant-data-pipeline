@@ -222,6 +222,7 @@ metadata가 없으면 pass로 추정하지 않고 보강 필요로 남긴다.
 - `add_interval_returns(...)`: trailing return warmup 이전 구간 제거
 - `align_dfs_by_date_intersection(...)`: 모든 ticker에 공통으로 있는 날짜만 유지
 - `align_dfs_by_date_union(...)`: 공통 날짜보다 넓은 union 기준이 필요한 경우 사용
+- `append_latest_common_row(...)`: period filter 이후 요청 종료일 이하의 최신 공통 거래일 row를 보강
 
 ETF basket 전략에서 특정 ticker의 가격 이력이나 결측이 부족하면,
 전체 결과가 짧아지거나 ticker가 excluded 처리될 수 있다.
@@ -233,6 +234,12 @@ Data Trust Summary metadata를 남기는 첫 적용 대상이다.
 월말 period row 전체를 넘기고, 실제 리밸런싱 간격은 `GlobalRelativeStrengthStrategy(rebalance_interval=...)`가 소유한다.
 따라서 `interval=3`은 3개월 리밸런싱 cadence로만 해석하며, runtime preflight는 cash proxy와 ticker benchmark처럼 반드시 필요한 row만 blocking check한다.
 위험자산 ETF의 데이터 부족은 strategy 준비 단계의 exclusion / warning / metadata 경로로 남겨야 한다.
+
+GTAA도 2026-06-29 cadence 보정 이후 period row를 strategy 전에 `.interval(...)`로 줄이지 않는다.
+월말 row는 계속 전달하고, 실제 리밸런싱 간격은 `GTAA3Strategy(rebalance_interval=...)`가 소유한다.
+`option=month_end` 실행에서는 월말 필터가 현재 partial month를 제거할 수 있으므로, `finance/sample.py` GTAA 경로가 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 덧붙인다.
+따라서 결과 종료일은 마지막 리밸런싱일이 아니라 GTAA 유니버스 전체가 동시에 평가 가능한 최신 거래일이다.
+DB 가격 데이터가 일부 ticker에서 더 일찍 멈추면 결과도 그 공통 최신일에서 멈추며, 이는 리밸런싱 cadence 문제가 아니라 price freshness / coverage 문제로 해석한다.
 
 ## Refinement / Compare 해석
 

@@ -505,7 +505,7 @@ component별 상세 결과는 weight를 정하기 위한 근거로 남기고, Pr
 - `8.0 / 10` 이상이면 `PASS`로 보고 Practical Validation으로 진행 가능하다.
 - `6.5 / 10` 이상이면 `CONDITIONAL`로 보고 조건부 진행 가능하되 Practical Validation에서 확인할 약점과 gap을 같이 남긴다.
 - 짧은 실제 종료일 불일치, warning, excluded / malformed ticker 같은 Data Trust 이슈는 score를 cap하지 않고 warning으로 표시한다.
-- GTAA처럼 `interval > 1`, `option=month_end`인 cadence 전략은 요청 종료일이 다음 정상 cadence close 전이면 `Data Trust blocked`가 아니라 cadence-aligned review로 표시한다.
+- GTAA처럼 `interval > 1`, `option=month_end`인 cadence 전략은 결과가 최신 공통 거래일 partial row까지 이어질 수 있다. 요청 종료일보다 결과 종료일이 이른 이유가 일부 ticker의 price freshness / coverage라면 Data Trust에서 coverage warning으로 해석하고, 단순 리밸런싱 cadence gap과는 분리한다.
 - 가격 최신성 error 또는 결과 기간이 크게 비는 Data Trust blocked 상태, component Promotion hold, 실행 / 검증 원천 blocker, weight discipline 실패는 `HOLD`로 보고 mix를 먼저 보강한다.
 
 실행:

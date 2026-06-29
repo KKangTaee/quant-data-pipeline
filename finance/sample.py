@@ -32,7 +32,11 @@ from .display import round_columns
 from .visualize import(
     plot_equity_curves
 )
-from .transform import align_dfs_by_date_union, align_dfs_to_canonical_period_dates
+from .transform import (
+    align_dfs_by_date_union,
+    align_dfs_to_canonical_period_dates,
+    append_latest_common_row,
+)
 
 from finance.data.asset_profile import(
     collect_and_store_asset_profiles,
@@ -276,6 +280,27 @@ def _build_price_only_engine(
     return engine.load_ohlcv()
 
 
+def _filter_period_with_latest_common_row(engine, *, end=None):
+    full_dfs = {ticker: df.copy() for ticker, df in (engine.dfs or {}).items()}
+    engine = engine.filter_by_period()
+    engine.dfs = append_latest_common_row(engine.dfs, full_dfs, end=end)
+    return engine
+
+
+def _latest_common_engine_date(dfs: dict) -> pd.Timestamp | None:
+    latest_dates = []
+    for df in dfs.values():
+        if "Date" not in df.columns:
+            continue
+        dates = pd.to_datetime(df["Date"], errors="coerce").dropna()
+        if dates.empty:
+            continue
+        latest_dates.append(dates.max())
+    if not latest_dates:
+        return None
+    return min(latest_dates)
+
+
 def _build_snapshot_strategy_price_dfs(
     tickers,
     *,
@@ -361,8 +386,9 @@ def _build_underperformance_guardrail_df(
     end=None,
     timeframe="1d",
     from_db=False,
+    include_latest_common_row=False,
 ) -> pd.DataFrame:
-    benchmark_dfs = _build_snapshot_strategy_price_dfs(
+    engine = _build_price_only_engine(
         [benchmark_ticker],
         option=option,
         start=start,
@@ -370,7 +396,12 @@ def _build_underperformance_guardrail_df(
         timeframe=timeframe,
         from_db=from_db,
     )
-    benchmark_df = next(iter(benchmark_dfs.values())).copy()
+    if include_latest_common_row:
+        engine = _filter_period_with_latest_common_row(engine, end=end)
+    else:
+        engine = engine.filter_by_period()
+    engine = engine.slice(start=start, end=end).drop_columns(["High", "Low", "Open", "Volume"])
+    benchmark_df = next(iter(engine.dfs.values())).copy()
     keep_cols = ["Date", "Close"]
     return benchmark_df[[column for column in keep_cols if column in benchmark_df.columns]].copy()
 
@@ -406,9 +437,9 @@ def _build_gtaa_risk_overlay_df(
     if market_regime_enabled:
         engine = engine.add_ma(market_regime_window)
 
+    engine = _filter_period_with_latest_common_row(engine, end=end)
     engine = (
-        engine.filter_by_period()
-        .slice(start=start, end=end)
+        engine.slice(start=start, end=end)
         .drop_columns(["High", "Low", "Open", "Volume"])
     )
 
@@ -531,21 +562,20 @@ def get_gtaa3(
         defensive_tickers if defensive_tickers is not None else GTAA_DEFAULT_DEFENSIVE_TICKERS
     )
 
+    engine = _build_price_only_engine(
+        tickers,
+        option=option,
+        period=period,
+    ).add_ma(trend_filter_window)
+    engine = _filter_period_with_latest_common_row(engine)
     engine = (
-        _build_price_only_engine(
-            tickers,
-            option=option,
-            period=period,
-        )
-        .add_ma(trend_filter_window)
-        .filter_by_period()
-        .add_interval_returns(effective_score_lookback_months)
+        engine.add_interval_returns(effective_score_lookback_months)
         .align_dates()
         .slice(start=start)
         .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
         .drop_columns(["High","Low","Open","Volume", *effective_score_return_columns])
-        .interval(interval)
     )
+    gtaa_valuation_end = _latest_common_engine_date(engine.dfs)
 
     risk_overlay_df = None
     if market_regime_enabled or crash_guardrail_enabled:
@@ -553,6 +583,7 @@ def get_gtaa3(
             market_regime_benchmark,
             option=option,
             start=start,
+            end=gtaa_valuation_end,
             timeframe="1d",
             from_db=False,
             market_regime_enabled=market_regime_enabled,
@@ -565,6 +596,7 @@ def get_gtaa3(
         start_balance=10000,
         top=top,
         filter_ma=f"MA{trend_filter_window}",
+        rebalance_interval=interval,
         score_col="Avg Score",
         risk_off_mode=risk_off_mode,
         defensive_tickers=effective_defensive_tickers,
@@ -634,25 +666,24 @@ def get_gtaa3_from_db(
             timeframe=timeframe,
         )
 
+    engine = _build_price_only_engine(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+        history_buffer_years=3,
+    ).add_ma(trend_filter_window)
+    engine = _filter_period_with_latest_common_row(engine, end=end)
     engine = (
-        _build_price_only_engine(
-            tickers,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=True,
-            history_buffer_years=3,
-        )
-        .add_ma(trend_filter_window)
-        .filter_by_period()
-        .add_interval_returns(effective_score_lookback_months)
+        engine.add_interval_returns(effective_score_lookback_months)
         .align_dates()
         .slice(start=start, end=end)
         .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
         .drop_columns(["High","Low","Open","Volume", *effective_score_return_columns])
-        .interval(interval)
     )
+    gtaa_valuation_end = _latest_common_engine_date(engine.dfs)
 
     risk_overlay_df = None
     if market_regime_enabled or crash_guardrail_enabled:
@@ -660,7 +691,7 @@ def get_gtaa3_from_db(
             market_regime_benchmark,
             option=option,
             start=start,
-            end=end,
+            end=gtaa_valuation_end or end,
             timeframe=timeframe,
             from_db=True,
             market_regime_enabled=market_regime_enabled,
@@ -675,9 +706,10 @@ def get_gtaa3_from_db(
             benchmark_ticker,
             option=option,
             start=start,
-            end=end,
+            end=gtaa_valuation_end or end,
             timeframe=timeframe,
             from_db=True,
+            include_latest_common_row=True,
         )
 
     strategy = GTAA3Strategy(
@@ -686,6 +718,7 @@ def get_gtaa3_from_db(
         filter_ma=f"MA{trend_filter_window}",
         min_price=min_price,
         min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
+        rebalance_interval=interval,
         score_col="Avg Score",
         risk_off_mode=risk_off_mode,
         defensive_tickers=effective_defensive_tickers,

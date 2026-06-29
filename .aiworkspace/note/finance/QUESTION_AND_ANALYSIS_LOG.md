@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-29 - GTAA interval should mean rebalance cadence, not result-row thinning
+
+- User request: GTAA `interval=4` 실행이 마지막 리밸런싱일 `2026-02-27`에서 멈추지 않고 현재 탐색 종료일 기준으로 평가되길 원했고, 비리밸런싱월에도 새 종목 선택 신호는 보고 싶다고 확인함.
+- Interpreted goal: GTAA 결과 row cadence와 actual holdings rebalance cadence를 분리해야 한다.
+- Analysis result: 기존 문제는 `.interval(interval)`이 strategy 입력 row를 줄인 것과, `month_end` 필터가 현재 partial month를 제거한 것이 겹친 결과였다. 해결은 월말 row를 유지하고 최신 공통 거래일 row를 보강한 뒤, `GTAA3Strategy(rebalance_interval=...)`가 실제 `Next Ticker` 변경만 제어하는 것이다.
+- Follow-up: 현재 DB에서는 `SOXX/MTUM/QUAL/USMV` 가격이 `2026-03-16`에서 멈춰 `2026-06-29` 요청의 최신 공통 평가일도 `2026-03-16`이다. 이후 endpoint를 더 늘리려면 가격 데이터 refresh가 먼저 필요하다.
+
 ### 2026-06-25 - Overview legacy dashboard should be physically removed, not renamed
 
 - User request: 사용자가 남은 `legacy_dashboard.py` 제거를 위해 17차~24차를 순서대로 진행하고 각 차수마다 QA 후 다음 차수로 넘어가 달라고 승인함.

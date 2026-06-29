@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- GTAA Result Cadence Monthly Valuation V1:
+  - `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`에서 GTAA `interval`을 input row thinning이 아니라 strategy-owned rebalance cadence로 보정했다.
+  - GTAA month_end runtime은 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
+  - 2026-06-29 DB smoke 기준 결과 종료일은 `2026-03-16`이며, 이는 `SOXX/MTUM/QUAL/USMV` 가격 coverage가 그 날짜에서 멈춘 최신 공통일이다.
 - Overview Legacy Dashboard Removal V17-V24:
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`에서 17차~24차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
   - `app/web/overview/legacy_dashboard.py`를 삭제했고, `app/web/overview_dashboard.py`는 필요한 compatibility helper만 explicit export하는 wrapper로 바꿨다.
@@ -107,6 +111,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-29 - GTAA result cadence now separates monthly valuation from rebalance cadence
+- Completed `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/` after the user clarified that non-rebalance months should still show new candidate signals.
+- GTAA sample/runtime paths no longer call `.interval(interval)` before strategy execution; `GTAA3Strategy(rebalance_interval=...)` owns actual holdings change cadence.
+- Added latest-common-trading-day row supplementation after month-end filtering, so current partial-period valuation can appear when all requested tickers have data for that trading day.
+- Verification passed: focused GTAA tests, ETF runtime contract tests, service contract tests, py_compile, DB-backed smoke, and `git diff --check`.
 
 ### 2026-06-25 - Overview Legacy Dashboard Removal V17-V24
 - Completed `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/` after the user approved continuing 17차~24차 sequentially with QA after each phase.

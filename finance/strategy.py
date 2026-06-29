@@ -147,6 +147,7 @@ def gtaa3(
     drawdown_guardrail_df: pd.DataFrame | None = None,
     min_avg_dollar_volume_20d_m: float = 0.0,
     avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
+    rebalance_interval: int = 1,
 ) -> dict:
     """
         gtaa3 전략
@@ -175,6 +176,8 @@ def gtaa3(
         raise ValueError("risk_off_mode must be one of {'cash_only', 'defensive_bond_preference'}.")
     if min_avg_dollar_volume_20d_m < 0:
         raise ValueError("min_avg_dollar_volume_20d_m must be non-negative.")
+    if rebalance_interval <= 0:
+        raise ValueError("rebalance_interval must be positive.")
 
     regime_by_date: dict[pd.Timestamp, dict[str, float | str | bool]] = {}
     active_regime_col = f"MA{market_regime_window}"
@@ -212,7 +215,8 @@ def gtaa3(
 
     prev_close = None
     prev_total_balance = None
-    end_ticker_to_index = None
+    end_ticker_to_index: list[tuple[str, int]] = []
+    next_balances: list[float] = []
     cash = 0
 
     for i, date in enumerate(dates):
@@ -244,12 +248,12 @@ def gtaa3(
         raw_selected_scores = [float(scores[idx]) for idx in top_idx]
 
         # 필터 후 결정된 티커들만 수집
-        next_ticker_to_index = [
+        signal_ticker_to_index = [
             (ticker, idx)
             for ticker, idx in zip(next_ticker, top_idx)
             if closes[idx] >= mas[idx] and _passes_min_price(closes[idx], min_price)
         ]
-        overlay_rejected_tickers = [ticker for ticker in next_ticker if ticker not in {t for t, _ in next_ticker_to_index}]
+        overlay_rejected_tickers = [ticker for ticker in next_ticker if ticker not in {t for t, _ in signal_ticker_to_index}]
         defensive_fill_tickers: list[str] = []
 
         regime_state = "off"
@@ -356,18 +360,18 @@ def gtaa3(
             risk_off_reasons.append("drawdown_guardrail")
 
         if guardrail_risk_off:
-            next_ticker_to_index = []
+            signal_ticker_to_index = []
         elif risk_off_reasons:
             if risk_off_mode == "defensive_bond_preference":
-                next_ticker_to_index = _build_defensive_candidates([])[:n_assets]
-                defensive_fill_tickers = [ticker for ticker, _ in next_ticker_to_index]
+                signal_ticker_to_index = _build_defensive_candidates([])[:n_assets]
+                defensive_fill_tickers = [ticker for ticker, _ in signal_ticker_to_index]
             else:
-                next_ticker_to_index = []
-        elif risk_off_mode == "defensive_bond_preference" and len(next_ticker_to_index) < n_assets:
-            defensive_candidates = _build_defensive_candidates(next_ticker_to_index)
-            slots_left = max(n_assets - len(next_ticker_to_index), 0)
+                signal_ticker_to_index = []
+        elif risk_off_mode == "defensive_bond_preference" and len(signal_ticker_to_index) < n_assets:
+            defensive_candidates = _build_defensive_candidates(signal_ticker_to_index)
+            slots_left = max(n_assets - len(signal_ticker_to_index), 0)
             added_pairs = defensive_candidates[:slots_left]
-            next_ticker_to_index = next_ticker_to_index + added_pairs
+            signal_ticker_to_index = signal_ticker_to_index + added_pairs
             defensive_fill_tickers = [ticker for ticker, _ in added_pairs]
 
 
@@ -375,15 +379,20 @@ def gtaa3(
         # Next Balance
         # =========================
         base_balance = start_balance if i == 0 else total_balance
-        bal = round(base_balance / n_assets, 1)
+        rebalancing = (i == 0) or (i % rebalance_interval == 0)
 
-        next_balances = [bal] * len(next_ticker_to_index)
-        cash = bal * (n_assets - len(next_ticker_to_index))
+        if rebalancing:
+            bal = round(base_balance / n_assets, 1)
+            next_ticker_to_index = list(signal_ticker_to_index)
+            next_balances = [bal] * len(next_ticker_to_index)
+            cash = bal * (n_assets - len(next_ticker_to_index))
+        else:
+            next_ticker_to_index = list(end_ticker_to_index)
+            next_balances = list(end_balances)
 
         end_tickers = (
+            np.nan if i == 0 else
             [t for t, _ in end_ticker_to_index]
-            if isinstance(end_ticker_to_index, (list, tuple))
-            else np.nan
         )
         
         row = {
@@ -391,6 +400,8 @@ def gtaa3(
             # "Ticker": tickers,
             "End Ticker" : end_tickers,
             "Next Ticker" : [t for t,_ in next_ticker_to_index],
+            "Signal Investable Ticker": [t for t, _ in signal_ticker_to_index],
+            "Signal Investable Count": len(signal_ticker_to_index),
             "Raw Selected Ticker": raw_selected_tickers,
             "Raw Selected Score": raw_selected_scores,
             "Overlay Rejected Ticker": overlay_rejected_tickers,
@@ -417,7 +428,8 @@ def gtaa3(
             "Cash" : int(cash),
             # "Return": returns,
             "Total Balance": total_balance,
-            "Total Return": total_return, 
+            "Total Return": total_return,
+            "Rebalancing": rebalancing,
         }
         row.update(guardrail_fields)
         rows.append(row)
@@ -2040,12 +2052,14 @@ class GTAA3Strategy(Strategy):
         drawdown_guardrail_df: pd.DataFrame | None = None,
         min_avg_dollar_volume_20d_m: float = 0.0,
         avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
+        rebalance_interval: int = 1,
     ):
         self.start_balance = start_balance
         self.top = top
         self.filter_ma = filter_ma
         self.min_price = min_price
         self.min_avg_dollar_volume_20d_m = min_avg_dollar_volume_20d_m
+        self.rebalance_interval = rebalance_interval
         self.score_col = score_col
         self.risk_off_mode = risk_off_mode
         self.defensive_tickers = defensive_tickers or []
@@ -2097,6 +2111,7 @@ class GTAA3Strategy(Strategy):
             self.drawdown_guardrail_df,
             min_avg_dollar_volume_20d_m=self.min_avg_dollar_volume_20d_m,
             avg_dollar_volume_20d_by_date=self.avg_dollar_volume_20d_by_date,
+            rebalance_interval=self.rebalance_interval,
         )
 
 
