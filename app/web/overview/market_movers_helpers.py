@@ -57,6 +57,7 @@ from app.web.overview.components.market_movers import (
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
+    render_market_movers_section_divider,
     render_market_movers_unified_summary,
     render_market_refresh_status_bar,
     render_sector_breadth_market_map,
@@ -2173,7 +2174,10 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
     model = snapshot.get("sector_breadth")
     if not isinstance(model, dict):
         return
-    st.markdown("#### 섹터 / 시장 확산 맥락")
+    render_market_movers_section_divider(
+        "섹터 / 시장 확산 맥락",
+        "선택 coverage의 움직임이 넓게 퍼졌는지, 특정 그룹에 집중됐는지 확인합니다.",
+    )
     render_sector_breadth_market_map(build_market_movers_sector_map_model(model))
     table_rows = _market_mover_sector_breadth_table(model)
     with st.expander("섹터 breadth 상세 표", expanded=False):
@@ -2203,7 +2207,10 @@ def _render_market_mover_why_it_moved_panel(
     )
     if not candidates:
         return
-    st.markdown("#### 선택 종목 조사")
+    render_market_movers_section_divider(
+        "선택 종목 조사",
+        "랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
+    )
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
     selection_key = "overview_market_mover_detail_selection"
@@ -2260,7 +2267,7 @@ def _render_market_mover_why_it_moved_panel(
             )
         st.rerun()
 
-    st.markdown("##### 조사 단서")
+    render_market_movers_section_divider("조사 단서", "뉴스 메타데이터, SEC 공시, 외부 검색 시작점")
     metadata = dict(read_model.get("metadata") or {})
     clue_tabs = st.tabs(["뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])
     with clue_tabs[0]:

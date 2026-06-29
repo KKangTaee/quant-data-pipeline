@@ -7136,6 +7136,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;", map_block)
         self.assertNotIn("border-radius: var(--ov-mi-radius-panel);", map_block)
 
+    def test_market_movers_followup_uses_section_dividers_instead_of_markdown_headings(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_market_movers_section_divider", helper_source)
+        self.assertIn("def render_market_movers_section_divider", component_source)
+        self.assertIn(".ov-mm-section-divider", common_source)
+        self.assertIn('"섹터 / 시장 확산 맥락"', helper_source)
+        self.assertIn('"선택 종목 조사"', helper_source)
+        self.assertNotIn('st.markdown("#### 섹터 / 시장 확산 맥락")', helper_source)
+        self.assertNotIn('st.markdown("#### 선택 종목 조사")', helper_source)
+        self.assertNotIn('st.markdown("##### 조사 단서")', helper_source)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,

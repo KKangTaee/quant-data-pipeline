@@ -2981,6 +2981,34 @@ def overview_ui_css() -> str:
   line-height: 1.35;
   margin: 0.1rem 0 0.35rem 0;
 }
+.ov-mm-section-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--ov-mi-gap-sm);
+  min-width: 0;
+  margin: 0.84rem 0 0.42rem 0;
+  color: inherit;
+}
+.ov-mm-section-divider::after {
+  content: "";
+  flex: 1 1 2rem;
+  height: 1px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.ov-mm-section-label {
+  color: currentColor;
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+  white-space: nowrap;
+}
+.ov-mm-section-detail {
+  min-width: 0;
+  color: color-mix(in srgb, currentColor 66%, transparent);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
 div[class*="st-key-overview_market_movers_refresh_mode"] div[data-baseweb="select"] > div {
   min-height: 2rem;
 }

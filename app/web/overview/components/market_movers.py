@@ -237,6 +237,21 @@ def render_market_mover_chart_workspace(model: dict[str, Any]) -> None:
     )
 
 
+def render_market_movers_section_divider(title: str, detail: str | None = None) -> None:
+    detail_html = ""
+    if detail:
+        detail_html = f'<span class="ov-mm-section-detail">{escape(_display_value(detail))}</span>'
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-mm-section-divider">
+  <span class="ov-mm-section-label">{escape(_display_value(title))}</span>
+  {detail_html}
+</div>""",
+        unsafe_allow_html=True,
+    )
+
+
 def _market_mover_investigation_facts_html(facts: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in facts:
@@ -773,6 +788,7 @@ __all__ = [
     "render_market_mover_board",
     "render_market_mover_chart_workspace",
     "render_market_mover_investigation_pane",
+    "render_market_movers_section_divider",
     "render_market_movers_data_trust_strip",
     "render_market_movers_unified_summary",
     "_market_refresh_state_label",
