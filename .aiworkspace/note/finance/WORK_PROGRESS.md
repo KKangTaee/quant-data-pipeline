@@ -5376,3 +5376,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/`에서 legacy audit, navigation surface extraction, IA read model service extraction, confirmed unused wrapper / Candidate Ops snapshot helper removal, guard tests, final QA를 순서대로 완료했다.
   - Active Overview ownership은 `app/web/overview/page.py`, `app/web/overview/navigation.py`, `app/web/overview/{market_context,market_movers,futures_macro,sentiment,events}.py`로 정리했고, `legacy_dashboard.py`는 helper compatibility surface로 남겼다.
   - 검증은 V6-V10 각 차수별 Browser QA, py_compile, OverviewAutomationContractTests, `git diff --check`로 기록했다.
+- Backtest Analysis Commercial UX Research 2026-06-29:
+  - `.aiworkspace/note/finance/researches/active/2026-06-backtest-analysis-commercial-ux/`에 Backtest Analysis 과도한 guide / Reference / readiness 흐름을 줄이기 위한 audit, benchmark, 단계별 개발 가이드를 작성했다.
+  - 결론은 `Backtest 사용 안내`와 `Reference help`를 기본 Backtest Analysis에서 제거하고, Latest Run을 summary-first / validation handoff eligibility 중심으로 재설계하는 것이다.
+  - 다음 구현 세션은 `DEVELOPMENT_GUIDELINES.md`의 1차 `Backtest Analysis Default Surface Cleanup`만 승인 범위로 여는 것을 권장한다.

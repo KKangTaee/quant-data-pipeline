@@ -8302,3 +8302,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 무작정 helper를 대량 이동하지 않고, 사용 현황 감사 -> active surface 분리 -> bounded service 분리 -> 확인된 unused legacy 제거 -> 재도입 방지 guard 순서로 구조를 안정화해야 함.
 - Analysis result: `legacy_dashboard.py`는 아직 active 세부 helper 의존이 남아 있어 전체 삭제 대상은 아니지만, old page render / standalone tab wrappers / Candidate Ops overview snapshot helpers는 active 경로에서 끊겨 있어 삭제 가능했다.
 - Follow-up: V6-V10 완료. 다음 정리 후보는 남은 active helper cluster를 domain component / action / service 단위로 더 작게 이동하는 별도 task이며, 현재 Overview primary ownership은 `app/web/overview/` package가 맡는다.
+
+### 2026-06-29 - Backtest Analysis를 가이드 추가가 아닌 상용형 workbench로 정리한다
+
+- User request: Backtest 영역부터 불필요한 기능 / 안내 / 복잡한 흐름을 줄이고, 증권 / 백테스트 제품 벤치마킹 기반으로 상용형 UX/UI 개선 가이드라인을 작성해 달라고 요청함.
+- Interpreted goal: `Backtest 사용 안내`, `Reference help`, strategy reference panel, Latest Run readiness 과잉을 audit하고, `Backtest Analysis -> Practical Validation -> Final Review`는 유지하되 기본 화면을 실행 / 결과 / 다음 행동 중심으로 바꿔야 함.
+- Analysis result: Backtest Analysis의 핵심 문제는 기능 부재가 아니라 guide/reference gravity와 반복되는 readiness UI다. Practical Validation handoff도 hard blocker와 review signal을 분리해야 한다.
+- Follow-up: `.aiworkspace/note/finance/researches/active/2026-06-backtest-analysis-commercial-ux/`에 audit, benchmark, UI patterns, feature candidates, recommendation, implementation guideline을 남겼다. 다음 구현은 1차 `Backtest Analysis Default Surface Cleanup` 승인부터 시작한다.
