@@ -279,6 +279,92 @@ def _sector_breadth_heatmap_html(rows: list[dict[str, Any]]) -> str:
     return f'<div class="ov-sector-pressure-map">{"".join(tiles)}</div>'
 
 
+def _sector_breadth_stat_html(item: dict[str, Any]) -> str:
+    return (
+        '<div class="ov-sector-breadth-stat">'
+        f'<span class="ov-sector-breadth-stat-label">{escape(_display_value(item.get("label")))}</span>'
+        f'<strong>{escape(_display_value(item.get("value")))}</strong>'
+        f'<span>{escape(_display_value(item.get("detail")))}</span>'
+        "</div>"
+    )
+
+
+def _sector_breadth_lanes_html(lanes: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for lane in lanes:
+        tone_color = escape(_overview_tone_color(lane.get("tone")))
+        direction = "negative" if str(lane.get("direction") or "") == "negative" else "positive"
+        bar_width = escape(_display_value(lane.get("bar_width_pct")))
+        html.append(
+            f'<div class="ov-sector-breadth-lane" style="--ov-lane-tone:{tone_color};--ov-lane-bar:{bar_width}%;">'
+            '<div class="ov-sector-breadth-lane-head">'
+            f'<span>#{escape(_display_value(lane.get("rank")))} · {escape(_display_value(lane.get("sector")))}</span>'
+            f'<strong>{escape(_display_value(lane.get("return_label")))}</strong>'
+            "</div>"
+            '<div class="ov-sector-breadth-lane-track">'
+            '<span class="ov-sector-breadth-zero"></span>'
+            f'<span class="ov-sector-breadth-bar ov-sector-breadth-bar--{direction}"></span>'
+            "</div>"
+            '<div class="ov-sector-breadth-lane-detail">'
+            f'{escape(_display_value(lane.get("participation_detail")))} · {escape(_display_value(lane.get("cap_detail")))}'
+            "</div>"
+            '<div class="ov-sector-breadth-lane-foot">'
+            f'{escape(_display_value(lane.get("top_gainer_detail")))} / {escape(_display_value(lane.get("top_loser_detail")))}'
+            "</div>"
+            "</div>"
+        )
+    return "".join(html)
+
+
+def _sector_breadth_leader_strip_html(leaders: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in leaders:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        html.append(
+            f'<div class="ov-sector-breadth-leader" style="--ov-leader-tone:{tone_color};">'
+            f'<span>{escape(_display_value(item.get("rank")))} · {escape(_display_value(item.get("sector")))}</span>'
+            f'<strong>{escape(_display_value(item.get("return_label")))}</strong>'
+            f'<small>{escape(_display_value(item.get("participation_label")))}</small>'
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
+    tone_color = escape(_overview_tone_color(model.get("status")))
+    stats = [
+        dict(model.get("participation") or {}),
+        dict(model.get("leadership") or {}),
+        dict(model.get("dispersion") or {}),
+    ]
+    stats_html = "".join(_sector_breadth_stat_html(item) for item in stats if item)
+    lanes_html = _sector_breadth_lanes_html(list(model.get("lanes") or []))
+    leaders_html = _sector_breadth_leader_strip_html(list(model.get("leaders") or []))
+    rail_pct = escape(_display_value(dict(model.get("participation") or {}).get("rail_pct") or 0))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-sector-breadth-map" style="--ov-band-tone:{tone_color};--ov-rail-fill:{rail_pct}%;">
+  <div class="ov-sector-breadth-head">
+    <div>
+      <div class="ov-sector-breadth-kicker">시장 확산 지도</div>
+      <div class="ov-sector-breadth-title">{escape(_display_value(model.get("headline")))}</div>
+      <div class="ov-sector-breadth-detail">{escape(_display_value(model.get("detail")))} · Freshness: {escape(_display_value(model.get("freshness")))}</div>
+    </div>
+    <span class="ov-sector-breadth-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-sector-breadth-rail">
+    <span class="ov-sector-breadth-rail-fill"></span>
+  </div>
+  <div class="ov-sector-breadth-stats">{stats_html}</div>
+  <div class="ov-sector-breadth-lanes">{lanes_html}</div>
+  <div class="ov-sector-breadth-leader-strip">{leaders_html}</div>
+  <div class="ov-sector-breadth-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
 def render_breadth_heatmap_summary(model: dict[str, Any]) -> None:
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(model.get("status")))
@@ -533,6 +619,7 @@ __all__ = [
     "_breadth_rows_html",
     "_coverage_trust_items_html",
     "render_breadth_heatmap_summary",
+    "render_sector_breadth_market_map",
     "render_market_movers_coverage_trust",
     "render_market_movers_command_strip",
     "render_market_movers_empty_state",

@@ -2604,6 +2604,208 @@ def overview_ui_css() -> str:
   border-radius: var(--ov-mi-radius-card);
   background: rgba(248,250,252,0.82);
 }
+.ov-sector-breadth-map {
+  margin: 0.48rem 0 0.82rem 0;
+  padding: 0.68rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-left: 4px solid var(--ov-band-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-panel);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+    var(--ov-mi-color-surface);
+}
+.ov-sector-breadth-head {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+  margin-bottom: 0.52rem;
+}
+.ov-sector-breadth-kicker {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.ov-sector-breadth-title {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-detail,
+.ov-sector-breadth-boundary {
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-detail {
+  margin-top: 0.16rem;
+}
+.ov-sector-breadth-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.42rem;
+  padding: 0.17rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 34%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 8%, transparent);
+  color: var(--ov-band-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.ov-sector-breadth-rail {
+  position: relative;
+  height: 0.46rem;
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-mi-color-neutral) 13%, transparent);
+  overflow: hidden;
+}
+.ov-sector-breadth-rail-fill {
+  display: block;
+  width: var(--ov-rail-fill, 0%);
+  height: 100%;
+  border-radius: var(--ov-mi-radius-pill);
+  background: var(--ov-band-tone, var(--ov-mi-color-positive));
+}
+.ov-sector-breadth-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  margin-top: 0.5rem;
+}
+.ov-sector-breadth-stat {
+  min-width: 0;
+  padding: 0.4rem 0.52rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-sector-breadth-stat:first-child {
+  border-left: 0;
+}
+.ov-sector-breadth-stat-label,
+.ov-sector-breadth-stat span,
+.ov-sector-breadth-lane-detail,
+.ov-sector-breadth-lane-foot,
+.ov-sector-breadth-leader small {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-stat strong {
+  display: block;
+  margin: 0.08rem 0 0.06rem 0;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-lanes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-sm);
+  margin-top: 0.56rem;
+}
+.ov-sector-breadth-lane {
+  min-width: 0;
+  padding: 0.48rem 0.52rem;
+  border: 1px solid color-mix(in srgb, var(--ov-lane-tone, var(--ov-mi-color-neutral)) 24%, transparent);
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.78);
+}
+.ov-sector-breadth-lane-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ov-mi-gap-sm);
+  align-items: baseline;
+  color: var(--ov-mi-color-text);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-lane-head strong {
+  color: var(--ov-lane-tone, var(--ov-mi-color-neutral));
+  white-space: nowrap;
+}
+.ov-sector-breadth-lane-track {
+  position: relative;
+  height: 0.48rem;
+  margin-top: 0.36rem;
+  border-radius: var(--ov-mi-radius-pill);
+  background: rgba(148,163,184,0.18);
+  overflow: hidden;
+}
+.ov-sector-breadth-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(100,116,139,0.42);
+}
+.ov-sector-breadth-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--ov-lane-bar, 0%);
+  border-radius: var(--ov-mi-radius-pill);
+  background: var(--ov-lane-tone, var(--ov-mi-color-neutral));
+}
+.ov-sector-breadth-bar--negative {
+  left: auto;
+  right: 50%;
+}
+.ov-sector-breadth-lane-detail,
+.ov-sector-breadth-lane-foot {
+  margin-top: 0.28rem;
+}
+.ov-sector-breadth-leader-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.55rem;
+}
+.ov-sector-breadth-leader {
+  min-width: 0;
+  padding: 0.4rem 0.46rem;
+  border-left: 3px solid var(--ov-leader-tone, var(--ov-mi-color-neutral));
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(255,255,255,0.72);
+}
+.ov-sector-breadth-leader span,
+.ov-sector-breadth-leader strong,
+.ov-sector-breadth-leader small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-leader span {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-sector-breadth-leader strong {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.12;
+}
+.ov-sector-breadth-boundary {
+  margin-top: 0.52rem;
+  padding: 0.4rem 0.48rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-card);
+  background: rgba(248,250,252,0.78);
+}
 .ov-macro-week-clusters {
   display: flex;
   flex-wrap: wrap;
@@ -4468,6 +4670,7 @@ def overview_ui_css() -> str:
   .ov-ia-closeout-head,
   .ov-data-handoff-head,
   .ov-breadth-head,
+  .ov-sector-breadth-head,
   .ov-macro-week-head {
     grid-template-columns: 1fr;
   }
@@ -4597,8 +4800,19 @@ def overview_ui_css() -> str:
   .ov-data-handoff-grid,
   .ov-breadth-card-grid,
   .ov-breadth-row-grid,
+  .ov-sector-breadth-stats,
+  .ov-sector-breadth-lanes,
+  .ov-sector-breadth-leader-strip,
   .ov-macro-week-items {
     grid-template-columns: 1fr;
+  }
+  .ov-sector-breadth-stat,
+  .ov-sector-breadth-stat:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-sector-breadth-stat:first-child {
+    border-top: 0;
   }
   .ov-mm-meta-item:nth-child(odd) {
     border-left: 0;

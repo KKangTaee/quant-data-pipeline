@@ -56,6 +56,7 @@ from app.web.overview.components.market_movers import (
     render_market_movers_command_strip,
     render_market_movers_empty_state,
     render_market_refresh_status_bar,
+    render_sector_breadth_market_map,
 )
 
 
@@ -1696,6 +1697,114 @@ def _market_mover_external_search_table_model(links: pd.DataFrame) -> dict[str, 
     }
 
 
+def _market_movers_sector_float(value: Any) -> float | None:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return None
+    return float(numeric)
+
+
+def _market_movers_sector_pct_label(value: Any, *, decimals: int = 0) -> str:
+    numeric = _market_movers_sector_float(value)
+    if numeric is None:
+        return "-"
+    return f"{numeric:.{decimals}f}%"
+
+
+def _market_movers_sector_participation_label(value: Any) -> str:
+    numeric = _market_movers_sector_float(value)
+    if numeric is None:
+        return "-"
+    return f"{numeric:.0f}%"
+
+
+def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any]:
+    rows = [dict(row) for row in list(model.get("heatmap_rows") or [])]
+    summary = dict(model.get("summary") or {})
+    coverage = dict(model.get("coverage") or {})
+    return_values = [
+        abs(value)
+        for value in (_market_movers_sector_float(row.get("market_cap_weighted_return_pct")) for row in rows)
+        if value is not None
+    ]
+    max_abs_return = max(return_values) if return_values else 0.0
+    participation_values = [
+        value
+        for value in (_market_movers_sector_float(row.get("positive_symbol_share_pct")) for row in rows)
+        if value is not None
+    ]
+    average_participation = sum(participation_values) / len(participation_values) if participation_values else None
+    positive_groups = sum(
+        1 for row in rows if (_market_movers_sector_float(row.get("market_cap_weighted_return_pct")) or 0.0) > 0
+    )
+    negative_groups = sum(
+        1 for row in rows if (_market_movers_sector_float(row.get("market_cap_weighted_return_pct")) or 0.0) < 0
+    )
+    leader_row = max(
+        rows,
+        key=lambda row: _market_movers_sector_float(row.get("market_cap_weighted_return_pct")) or float("-inf"),
+        default={},
+    )
+    leader_return = _market_movers_sector_float(leader_row.get("market_cap_weighted_return_pct"))
+    lanes: list[dict[str, Any]] = []
+    for index, row in enumerate(rows, start=1):
+        sector_return = _market_movers_sector_float(row.get("market_cap_weighted_return_pct"))
+        normalized = int(round((abs(sector_return or 0.0) / max_abs_return) * 100)) if max_abs_return > 0 else 0
+        participation_label = _market_movers_sector_participation_label(row.get("positive_symbol_share_pct"))
+        advancers = _format_count(row.get("advancers"))
+        decliners = _format_count(row.get("decliners"))
+        lane = {
+            "rank": row.get("rank") or index,
+            "sector": str(row.get("group") or "Unknown"),
+            "tone": row.get("tone") or ("negative" if (sector_return or 0.0) < 0 else "positive"),
+            "direction": "negative" if (sector_return or 0.0) < 0 else "positive",
+            "return_label": _format_signed(sector_return),
+            "bar_pct": normalized,
+            "bar_width_pct": round(normalized / 2, 2),
+            "participation_label": f"{participation_label} positive",
+            "participation_detail": f"{advancers} adv / {decliners} dec · {participation_label} positive",
+            "cap_detail": f"{_market_movers_sector_pct_label(row.get('market_cap_share_pct'), decimals=1)} cap",
+            "top_gainer_detail": (
+                f"{row.get('top_symbol') or '-'} "
+                f"{_format_signed(row.get('top_symbol_return_pct'))}"
+            ),
+            "top_loser_detail": (
+                f"Top Loser {row.get('top_loser') or '-'} "
+                f"{_format_signed(row.get('top_loser_return_pct'))}"
+            ),
+        }
+        lanes.append(lane)
+    participation_label = _market_movers_sector_participation_label(average_participation)
+    participation_rail = 0 if average_participation is None else max(0, min(100, int(round(average_participation))))
+    return {
+        "schema_version": "market_movers_sector_map_v1",
+        "status": model.get("status") or "-",
+        "headline": summary.get("headline") or "Sector breadth context",
+        "detail": summary.get("detail") or "Use sector lanes to see whether movement is broad or group-specific.",
+        "freshness": coverage.get("freshness") or "-",
+        "participation": {
+            "label": "상승 참여",
+            "value": participation_label,
+            "detail": f"{len(participation_values)} sectors average",
+            "rail_pct": participation_rail,
+        },
+        "leadership": {
+            "label": "리더십",
+            "value": str(leader_row.get("group") or "-"),
+            "detail": f"{_format_signed(leader_return)} cap-weighted",
+        },
+        "dispersion": {
+            "label": "확산",
+            "value": "broad" if average_participation is not None and average_participation >= 60 else "mixed",
+            "detail": f"{positive_groups} positive groups · {negative_groups} negative groups",
+        },
+        "lanes": lanes,
+        "leaders": lanes[:5],
+        "boundary_note": model.get("boundary_note")
+        or "Context-only sector breadth: not a trading action, recommendation, validation gate, Final Review decision, or monitoring guidance.",
+    }
+
+
 def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
     if tone == "success":
         return OVERVIEW_COLOR_POSITIVE, "rgba(24, 130, 84, 0.10)", "rgba(24, 130, 84, 0.28)"
@@ -1897,7 +2006,7 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
     if not isinstance(model, dict):
         return
     st.markdown("#### 섹터 / 시장 확산 맥락")
-    render_breadth_heatmap_summary(model)
+    render_sector_breadth_market_map(build_market_movers_sector_map_model(model))
     table_rows = _market_mover_sector_breadth_table(model)
     with st.expander("섹터 breadth 상세 표", expanded=False):
         if table_rows.empty:

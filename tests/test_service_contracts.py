@@ -7063,6 +7063,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-mm-chart-fact", common_source)
         self.assertIn("가격 / 거래량 워크스페이스", helper_source)
 
+    def test_market_movers_redesign_v2_phase4_uses_sector_market_map(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_sector_map_model", helper_source)
+        self.assertIn("render_sector_breadth_market_map", helper_source)
+        self.assertIn("render_sector_breadth_market_map", component_source)
+        self.assertIn("시장 확산 지도", component_source)
+        self.assertIn("ov-sector-breadth-lane", component_source)
+        self.assertIn("ov-sector-breadth-rail", common_source)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
@@ -9069,6 +9081,61 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(facts["상위"]["detail"], "4.25x")
         self.assertIn("2.50x", facts["범위"]["value"])
         self.assertIn("4.25x", facts["범위"]["value"])
+
+    def test_market_movers_sector_map_model_builds_breadth_lanes(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_movers_sector_map_model
+
+        source_model = {
+            "status": "OK",
+            "summary": {
+                "headline": "Broad participation, balanced leadership",
+                "detail": "Technology leads the selected universe.",
+            },
+            "coverage": {"freshness": "2026-06-26"},
+            "boundary_note": "Context-only sector breadth.",
+            "heatmap_rows": [
+                {
+                    "rank": 1,
+                    "group": "Technology",
+                    "tone": "positive",
+                    "market_cap_weighted_return_pct": 2.0,
+                    "positive_symbol_share_pct": 80.0,
+                    "advancers": 8,
+                    "decliners": 2,
+                    "market_cap_share_pct": 30.0,
+                    "top_symbol": "AAA",
+                    "top_symbol_return_pct": 5.5,
+                    "top_loser": "BBB",
+                    "top_loser_return_pct": -1.1,
+                },
+                {
+                    "rank": 2,
+                    "group": "Energy",
+                    "tone": "negative",
+                    "market_cap_weighted_return_pct": -1.0,
+                    "positive_symbol_share_pct": 20.0,
+                    "advancers": 1,
+                    "decliners": 4,
+                    "market_cap_share_pct": 10.0,
+                    "top_symbol": "CCC",
+                    "top_symbol_return_pct": 1.0,
+                    "top_loser": "DDD",
+                    "top_loser_return_pct": -4.0,
+                },
+            ],
+        }
+
+        model = build_market_movers_sector_map_model(source_model)
+
+        self.assertEqual(model["schema_version"], "market_movers_sector_map_v1")
+        self.assertEqual(model["headline"], "Broad participation, balanced leadership")
+        self.assertEqual(model["participation"]["value"], "50%")
+        self.assertEqual(model["leadership"]["value"], "Technology")
+        self.assertEqual(model["lanes"][0]["sector"], "Technology")
+        self.assertEqual(model["lanes"][0]["return_label"], "+2.00%")
+        self.assertEqual(model["lanes"][0]["bar_pct"], 100)
+        self.assertEqual(model["lanes"][1]["return_label"], "-1.00%")
+        self.assertEqual(model["lanes"][1]["bar_pct"], 50)
 
     def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
