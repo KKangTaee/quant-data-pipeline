@@ -9100,6 +9100,25 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("Coverage", labels)
         self.assertNotIn("Period", labels)
 
+    def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        refresh_mode_body = helper_source[helper_source.index("def _select_market_refresh_mode") :]
+        refresh_mode_body = refresh_mode_body[: refresh_mode_body.index("def _select_market_mover_mode")]
+        self.assertIn("container.selectbox", refresh_mode_body)
+        self.assertNotIn("segmented_control", refresh_mode_body)
+        self.assertNotIn(".radio(", refresh_mode_body)
+
+        auto_message_body = component_source[component_source.index("def render_market_auto_message") :]
+        auto_message_body = auto_message_body[: auto_message_body.index("def render_market_auto_waiting_panel")]
+        self.assertIn("_market_refresh_state_detail(message)", auto_message_body)
+        self.assertIn("ov-mm-refresh-rail", component_source)
+        self.assertNotIn("ov-mm-refresh-label", component_source)
+        self.assertIn("ov-mm-refresh-rail", common_source)
+        self.assertIn('[class*="_market_movers_reload"] button', common_source)
+
     def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_board_model
 

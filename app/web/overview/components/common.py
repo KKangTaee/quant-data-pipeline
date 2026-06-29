@@ -2868,42 +2868,42 @@ def overview_ui_css() -> str:
   border-radius: var(--ov-mi-radius-card);
   background: rgba(248,250,252,0.78);
 }
-.ov-mm-refresh-label {
-  margin: 0.85rem 0 0.42rem 0;
-  color: inherit;
-  font-size: var(--ov-mi-font-title);
-  font-weight: var(--ov-mi-weight-heading);
-}
-.ov-mm-status-bar {
+.ov-mm-refresh-rail {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--ov-mi-gap-lg);
-  padding: 0.54rem 0 0.62rem 0;
-  border-top: 1px solid var(--ov-mi-border-subtle);
-  border-bottom: 1px solid var(--ov-mi-border-subtle);
-  margin-bottom: var(--ov-mi-gap-md);
+  gap: var(--ov-mi-gap-md);
+  padding: 0.42rem 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  margin: 0.18rem 0 0.48rem 0;
 }
 .ov-mm-state-cluster {
   display: flex;
   align-items: center;
-  gap: var(--ov-mi-gap-md);
+  gap: var(--ov-mi-gap-sm);
   min-width: 0;
   flex-wrap: wrap;
+}
+.ov-mm-refresh-eyebrow {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
 }
 .ov-mm-state-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  min-height: 2rem;
-  padding: 0.34rem 0.64rem;
+  gap: 0.38rem;
+  min-height: 1.58rem;
+  padding: 0.18rem 0.52rem;
   border-radius: var(--ov-mi-radius-pill);
-  border: 1px solid var(--ov-mi-border-control);
-  background: var(--ov-mi-fill-control);
+  border: 1px solid var(--ov-mi-border-subtle);
+  background: var(--ov-mi-fill-subtle);
 }
 .ov-mm-state-dot {
-  width: 0.52rem;
-  height: 0.52rem;
+  width: 0.44rem;
+  height: 0.44rem;
   border-radius: var(--ov-mi-radius-pill);
   background: var(--ov-mm-state-color, var(--ov-mi-color-neutral));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ov-mm-state-color, var(--ov-mi-color-neutral)) 18%, transparent);
@@ -2928,8 +2928,8 @@ def overview_ui_css() -> str:
   display: inline-flex;
   align-items: center;
   gap: var(--ov-mi-gap-xs);
-  min-height: 1.7rem;
-  padding: 0.25rem 0.52rem;
+  min-height: 1.46rem;
+  padding: 0.14rem 0.44rem;
   border-radius: var(--ov-mi-radius-pill);
   border: 1px solid var(--ov-mi-border-subtle);
   background: var(--ov-mi-fill-subtle);
@@ -2977,6 +2977,18 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-body);
   line-height: 1.35;
   margin: 0.1rem 0 0.35rem 0;
+}
+div[class*="st-key-overview_market_movers_refresh_mode"] div[data-baseweb="select"] > div {
+  min-height: 2rem;
+}
+div[class*="st-key-overview_"][class*="_intraday_refresh"] button,
+div[class*="st-key-overview_"][class*="_eod_history_refresh"] button,
+div[class*="st-key-overview_"][class*="_market_movers_reload"] button,
+div[class*="st-key-overview_sp500_universe_refresh"] button,
+div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
+  min-height: 2rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 .ov-mm-meta-strip {
   display: grid;

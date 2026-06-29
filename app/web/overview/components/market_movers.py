@@ -584,22 +584,22 @@ def render_market_refresh_status_bar(
     st.markdown(
         overview_ui_css()
         + f"""
-<div class="ov-mm-refresh-label">데이터 갱신</div>
-<div class="ov-mm-status-bar">
-          <div class="ov-mm-state-cluster">
-            <span class="ov-mm-state-pill" style="--ov-mm-state-color:{escape(dot_color)};">
-              <span class="ov-mm-state-dot"></span>
-              <span class="ov-mm-state-label">{escape(label)}</span>
-              {detail_html}
-            </span>
-          </div>
-          <div class="ov-mm-chip-row">
-            <span class="ov-mm-chip">범위 <strong>{escape(universe_label)}</strong></span>
-            <span class="ov-mm-chip">가격 <strong>{escape(str(price_mode or "-"))}</strong></span>
-            <span class="ov-mm-chip">커버리지 <strong>{escape(coverage_text)}</strong></span>
-            <span class="ov-mm-chip">다음 확인 <strong>{escape(next_check_text)}</strong></span>
-          </div>
-        </div>""",
+<div class="ov-mm-refresh-rail">
+  <div class="ov-mm-state-cluster">
+    <span class="ov-mm-refresh-eyebrow">갱신</span>
+    <span class="ov-mm-state-pill" style="--ov-mm-state-color:{escape(dot_color)};">
+      <span class="ov-mm-state-dot"></span>
+      <span class="ov-mm-state-label">{escape(label)}</span>
+      {detail_html}
+    </span>
+  </div>
+  <div class="ov-mm-chip-row">
+    <span class="ov-mm-chip">범위 <strong>{escape(universe_label)}</strong></span>
+    <span class="ov-mm-chip">가격 <strong>{escape(str(price_mode or "-"))}</strong></span>
+    <span class="ov-mm-chip">커버리지 <strong>{escape(coverage_text)}</strong></span>
+    <span class="ov-mm-chip">다음 확인 <strong>{escape(next_check_text)}</strong></span>
+  </div>
+</div>""",
         unsafe_allow_html=True,
     )
 
@@ -607,8 +607,9 @@ def render_market_refresh_status_bar(
 def render_market_auto_message(message: Any) -> None:
     if message in (None, ""):
         return
+    message_text = _market_refresh_state_detail(message)
     st.markdown(
-        f'<div class="ov-mm-auto-message">{escape(str(message))}</div>',
+        f'<div class="ov-mm-auto-message">{escape(str(message_text))}</div>',
         unsafe_allow_html=True,
     )
 

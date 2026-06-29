@@ -746,26 +746,14 @@ def _select_market_refresh_mode(container: Any, *, auto_supported: bool) -> str:
     options = ["manual", "auto"] if auto_supported else ["manual"]
     if st.session_state.get(key) not in options:
         st.session_state[key] = "manual"
-    segmented_control = getattr(container, "segmented_control", None)
-    if callable(segmented_control):
-        selected = segmented_control(
-            "갱신 방식",
-            options,
-            key=key,
-            format_func=_market_refresh_mode_label,
-            disabled=not auto_supported,
-            help="자동 갱신은 현재 선택한 Daily coverage의 일중 스냅샷만 확인합니다.",
-        )
-    else:
-        selected = container.radio(
-            "갱신 방식",
-            options,
-            key=key,
-            format_func=_market_refresh_mode_label,
-            horizontal=True,
-            disabled=not auto_supported,
-            help="자동 갱신은 현재 선택한 Daily coverage의 일중 스냅샷만 확인합니다.",
-        )
+    selected = container.selectbox(
+        "방식",
+        options,
+        key=key,
+        format_func=_market_refresh_mode_label,
+        disabled=not auto_supported,
+        help="자동 갱신은 현재 선택한 Daily coverage의 일중 스냅샷만 확인합니다.",
+    )
     return str(selected or "manual")
 
 
@@ -1513,7 +1501,7 @@ def _render_market_movers_daily_refresh_bar(
         next_check_text=next_check_text,
         state=state,
     )
-    control_cols = st.columns([0.95, 1.1, 0.95, 0.95], gap="small", vertical_alignment="bottom")
+    control_cols = st.columns([0.75, 1.0, 0.9, 0.9], gap="small", vertical_alignment="bottom")
     selected_mode = _select_market_refresh_mode(control_cols[0], auto_supported=auto_supported)
     if control_cols[1].button(
         "일중 스냅샷 갱신",
@@ -1557,8 +1545,6 @@ def _render_market_movers_daily_refresh_bar(
 
     if selected_mode == "auto" and auto_supported:
         _render_market_auto_refresh_summary(universe_code=universe_code)
-    elif refresh_state.get("recommended_action"):
-        render_market_auto_message(refresh_state.get("recommended_action"))
     if universe_code == "SP500":
         _render_market_job_result("overview_sp500_universe_result")
     if universe_code == "NASDAQ":
@@ -1612,11 +1598,7 @@ def _render_market_movers_eod_refresh_bar(
         next_check_text="수동",
         state=_market_movers_eod_refresh_state(snapshot, period=period),
     )
-    st.caption(
-        f"{period_label}는 저장된 EOD 가격 이력을 기준으로 계산합니다. "
-        "최신 기간을 보려면 가격 이력을 수동 갱신하세요."
-    )
-    control_cols = st.columns([1.05, 0.95, 2.3], gap="small", vertical_alignment="bottom")
+    control_cols = st.columns([1.0, 1.0, 2.0], gap="small", vertical_alignment="bottom")
     if control_cols[0].button(
         "가격 이력 갱신",
         key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
@@ -1642,7 +1624,7 @@ def _render_market_movers_eod_refresh_bar(
     ):
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
-    control_cols[2].caption("자동 분당 갱신은 Daily 일중 스냅샷에만 적용됩니다.")
+    control_cols[2].caption(f"{period_label}는 저장된 EOD 가격 이력 기준입니다. 자동 갱신은 Daily 일중 스냅샷만 지원합니다.")
     _render_market_job_result(eod_result_key)
 
 
