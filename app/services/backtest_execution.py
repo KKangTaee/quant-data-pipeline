@@ -265,6 +265,10 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
                 GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
             ),
             min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            min_avg_dollar_volume_20d_m_filter=payload.get(
+                "min_avg_dollar_volume_20d_m_filter",
+                STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+            ),
             transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
             benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
             underperformance_guardrail_enabled=payload.get(

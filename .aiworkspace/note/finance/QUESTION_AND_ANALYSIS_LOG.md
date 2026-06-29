@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-29 - GTAA interval should mean rebalance cadence, not result-row thinning
+
+- User request: GTAA `interval=4` 실행이 마지막 리밸런싱일 `2026-02-27`에서 멈추지 않고 현재 탐색 종료일 기준으로 평가되길 원했고, 비리밸런싱월에도 새 종목 선택 신호는 보고 싶다고 확인함.
+- Interpreted goal: GTAA 결과 row cadence와 actual holdings rebalance cadence를 분리해야 한다.
+- Analysis result: 기존 문제는 `.interval(interval)`이 strategy 입력 row를 줄인 것과, `month_end` 필터가 현재 partial month를 제거한 것이 겹친 결과였다. 해결은 월말 row를 유지하고 최신 공통 거래일 row를 보강한 뒤, `GTAA3Strategy(rebalance_interval=...)`가 실제 `Next Ticker` 변경만 제어하는 것이다.
+- Follow-up: 현재 DB에서는 `SOXX/MTUM/QUAL/USMV` 가격이 `2026-03-16`에서 멈춰 `2026-06-29` 요청의 최신 공통 평가일도 `2026-03-16`이다. 이후 endpoint를 더 늘리려면 가격 데이터 refresh가 먼저 필요하다.
+
 ### 2026-06-25 - Overview legacy dashboard should be physically removed, not renamed
 
 - User request: 사용자가 남은 `legacy_dashboard.py` 제거를 위해 17차~24차를 순서대로 진행하고 각 차수마다 QA 후 다음 차수로 넘어가 달라고 승인함.
@@ -8309,3 +8316,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `Backtest 사용 안내`, `Reference help`, strategy reference panel, Latest Run readiness 과잉을 audit하고, `Backtest Analysis -> Practical Validation -> Final Review`는 유지하되 기본 화면을 실행 / 결과 / 다음 행동 중심으로 바꿔야 함.
 - Analysis result: Backtest Analysis의 핵심 문제는 기능 부재가 아니라 guide/reference gravity와 반복되는 readiness UI다. Practical Validation handoff도 hard blocker와 review signal을 분리해야 한다.
 - Follow-up: `.aiworkspace/note/finance/researches/active/2026-06-backtest-analysis-commercial-ux/`에 audit, benchmark, UI patterns, feature candidates, recommendation, implementation guideline을 남겼다. 다음 구현은 1차 `Backtest Analysis Default Surface Cleanup` 승인부터 시작한다.
+
+### 2026-06-29 - GTAA로 SPY보다 CAGR/MDD가 개선된 1차 통과 후보를 찾는다
+
+- User request: 사용자가 GTAA를 활용해 SPY보다 CAGR과 MDD가 개선되고, MDD 절대값 15% 이하, CAGR 11% 이상, 1차 후보 판단을 통과한 포트폴리오를 찾아 프리셋으로 만들 수 있는지 요청함.
+- Interpreted goal: 단순 성과 상위 조합이 아니라 current promotion policy까지 통과하는 GTAA 후보를 최신 DB/runtime으로 확인하고, Backtest UI preset에서 재현 가능하게 해야 함.
+- Analysis result: 기존 `GTAA SPY Low-MDD Style Top-3`는 성과 조건은 통과했지만 ADV20 liquidity evidence가 없거나 기준에 살짝 못 미쳐 current gate에서는 부족했다. GTAA runtime에 ADV20 evidence를 연결한 뒤 `GTAA SPY Low-MDD Style Top-2 ADV20`이 `24.08% / -9.99%`, SPY `13.36% / -20.61%`, `real_money_candidate / paper_probation / small_capital_ready`를 달성했다.
+- Follow-up: preset과 보고서는 등록했다. Practical Validation / Final Review 선정은 사용자가 원할 때 별도 후속 단계로 진행한다.

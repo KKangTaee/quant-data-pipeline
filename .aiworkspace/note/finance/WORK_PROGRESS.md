@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- GTAA Result Cadence Monthly Valuation V1:
+  - `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`에서 GTAA `interval`을 input row thinning이 아니라 strategy-owned rebalance cadence로 보정했다.
+  - GTAA month_end runtime은 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
+  - 2026-06-29 DB smoke 기준 결과 종료일은 `2026-03-16`이며, 이는 `SOXX/MTUM/QUAL/USMV` 가격 coverage가 그 날짜에서 멈춘 최신 공통일이다.
 - Overview Legacy Dashboard Removal V17-V24:
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`에서 17차~24차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
   - `app/web/overview/legacy_dashboard.py`를 삭제했고, `app/web/overview_dashboard.py`는 필요한 compatibility helper만 explicit export하는 wrapper로 바꿨다.
@@ -107,6 +111,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-29 - GTAA result cadence now separates monthly valuation from rebalance cadence
+- Completed `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/` after the user clarified that non-rebalance months should still show new candidate signals.
+- GTAA sample/runtime paths no longer call `.interval(interval)` before strategy execution; `GTAA3Strategy(rebalance_interval=...)` owns actual holdings change cadence.
+- Added latest-common-trading-day row supplementation after month-end filtering, so current partial-period valuation can appear when all requested tickers have data for that trading day.
+- Verification passed: focused GTAA tests, ETF runtime contract tests, service contract tests, py_compile, DB-backed smoke, and `git diff --check`.
 
 ### 2026-06-25 - Overview Legacy Dashboard Removal V17-V24
 - Completed `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/` after the user approved continuing 17차~24차 sequentially with QA after each phase.
@@ -5380,3 +5390,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/researches/active/2026-06-backtest-analysis-commercial-ux/`에 Backtest Analysis 과도한 guide / Reference / readiness 흐름을 줄이기 위한 audit, benchmark, 단계별 개발 가이드를 작성했다.
   - 결론은 `Backtest 사용 안내`와 `Reference help`를 기본 Backtest Analysis에서 제거하고, Latest Run을 summary-first / validation handoff eligibility 중심으로 재설계하는 것이다.
   - 다음 구현 세션은 `DEVELOPMENT_GUIDELINES.md`의 1차 `Backtest Analysis Default Surface Cleanup`만 승인 범위로 여는 것을 권장한다.
+- GTAA SPY Low-MDD Top-2 ADV20 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
+  - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
+  - GTAA runtime에 ADV20 liquidity evidence를 연결했고, preset 선택 시 핵심 파라미터가 자동 적용되도록 했다. 상세 결과는 `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`를 보면 된다.

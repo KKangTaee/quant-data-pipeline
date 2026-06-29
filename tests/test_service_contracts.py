@@ -95,6 +95,41 @@ def _risk_on_momentum_fixture() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFram
     return pd.DataFrame(price_rows), pd.DataFrame(statement_rows), macro_scores
 
 
+class BacktestPresetCatalogContractTests(unittest.TestCase):
+    def test_gtaa_spy_low_mdd_top3_preset_is_available(self) -> None:
+        from app.web.backtest_common import GTAA_PRESETS, GTAA_PRESET_PARAMETER_DEFAULTS
+
+        preset_name = "GTAA SPY Low-MDD Style Top-3"
+
+        self.assertIn(preset_name, GTAA_PRESETS)
+        self.assertEqual(
+            GTAA_PRESETS[preset_name],
+            ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"],
+        )
+
+        strongest_preset = "GTAA SPY Low-MDD Style Top-2 ADV20"
+        self.assertIn(strongest_preset, GTAA_PRESETS)
+        self.assertEqual(
+            GTAA_PRESETS[strongest_preset],
+            ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"],
+        )
+        self.assertEqual(
+            GTAA_PRESET_PARAMETER_DEFAULTS[strongest_preset],
+            {
+                "top": 2,
+                "interval": 4,
+                "score_lookback_months": [1, 6],
+                "trend_filter_window": 200,
+                "risk_off_mode": "cash_only",
+                "defensive_tickers": ["IEF", "TLT"],
+                "benchmark_ticker": "SPY",
+                "min_price_filter": 5.0,
+                "min_avg_dollar_volume_20d_m_filter": 20.0,
+                "transaction_cost_bps": 10.0,
+            },
+        )
+
+
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:
         from finance.indicators import add_atr
@@ -7248,6 +7283,79 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
 
 class BacktestRuntimeContractTests(unittest.TestCase):
+    def test_gtaa_strategy_records_liquidity_exclusions_when_adv_filter_is_enabled(self) -> None:
+        from finance.strategy import gtaa3
+
+        dates = pd.to_datetime(["2024-01-31", "2024-02-29"])
+        dfs = {
+            "AAA": pd.DataFrame(
+                {
+                    "Date": dates,
+                    "Close": [100.0, 101.0],
+                    "MA200": [90.0, 90.0],
+                    "Avg Score": [5.0, 5.0],
+                }
+            ),
+            "BBB": pd.DataFrame(
+                {
+                    "Date": dates,
+                    "Close": [100.0, 102.0],
+                    "MA200": [90.0, 90.0],
+                    "Avg Score": [1.0, 1.0],
+                }
+            ),
+        }
+
+        result = gtaa3(
+            dfs,
+            start_balance=10_000,
+            top=1,
+            filter_ma="MA200",
+            min_avg_dollar_volume_20d_m=5.0,
+            avg_dollar_volume_20d_by_date={
+                "AAA": {pd.Timestamp("2024-01-31"): 1_000_000.0, pd.Timestamp("2024-02-29"): 1_000_000.0},
+                "BBB": {pd.Timestamp("2024-01-31"): 10_000_000.0, pd.Timestamp("2024-02-29"): 10_000_000.0},
+            },
+        )
+
+        self.assertIn("Liquidity Excluded Count", result.columns)
+        self.assertEqual(result.loc[0, "Liquidity Excluded Ticker"], ["AAA"])
+        self.assertEqual(int(result.loc[0, "Liquidity Excluded Count"]), 1)
+        self.assertEqual(result.loc[0, "Raw Selected Ticker"], ["BBB"])
+
+    def test_gtaa_execution_dispatch_passes_min_adv_filter_to_runtime(self) -> None:
+        from app.services.backtest_execution import execute_single_backtest
+
+        payload = {
+            "strategy_key": "gtaa",
+            "tickers": ["QQQ", "SOXX", "MTUM", "QUAL", "USMV", "IAU", "IEF", "TLT"],
+            "start": "2016-01-01",
+            "end": "2026-05-01",
+            "timeframe": "1d",
+            "option": "month_end",
+            "top": 3,
+            "interval": 3,
+            "score_lookback_months": [1, 6],
+            "trend_filter_window": 250,
+            "risk_off_mode": "cash_only",
+            "defensive_tickers": ["IEF", "TLT"],
+            "min_price_filter": 5.0,
+            "min_avg_dollar_volume_20d_m_filter": 20.0,
+            "transaction_cost_bps": 10.0,
+            "benchmark_ticker": "SPY",
+            "universe_mode": "preset",
+            "preset_name": "GTAA SPY Low-MDD Style Top-3",
+        }
+
+        with patch(
+            "app.services.backtest_execution.run_gtaa_backtest_from_db",
+            return_value={"strategy_name": "GTAA", "meta": {}},
+        ) as runner:
+            result = execute_single_backtest(payload, strategy_name="GTAA")
+
+        self.assertTrue(result.ok, result.error_message)
+        self.assertEqual(runner.call_args.kwargs["min_avg_dollar_volume_20d_m_filter"], 20.0)
+
     def test_execution_preview_ignores_later_stage_probation_monitoring_fields(self) -> None:
         from app.runtime.backtest import _build_deployment_readiness_contract
 

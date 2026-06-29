@@ -21,7 +21,7 @@ strict annual family와 별도로 다시 볼 ETF 전략 후보를 한 장으로 
 | `Value` | `Top N = 14 + psr` | `28.13%` | `-24.55%` | `real_money_candidate` | `paper_probation` | `review_required` |
 | `Quality` | `capital_discipline + LQD + trend on + regime off + Top N 12` | `26.02%` | `-25.57%` | `real_money_candidate` | `paper_probation` | `review_required` |
 | `Quality + Value` | `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight` | `31.82%` | `-26.63%` | `real_money_candidate` | `small_capital_trial` | `review_required` |
-| `GTAA` | `GTAA SPY Low-MDD Style Top-3, 1M / 6M, MA250` | `19.35%` | `-11.03%` | `real_money_candidate` | `paper_probation` | `paper_only` |
+| `GTAA` | `GTAA SPY Low-MDD Style Top-2 ADV20, 1M / 6M, MA200` | `24.08%` | `-9.99%` | `real_money_candidate` | `paper_probation` | `small_capital_ready` |
 | `Equal Weight` | `QQQ / SOXX / XLE / XLU / GLD, annual rebalance` | `17.55%` | `-18.98%` | `real_money_candidate` | `paper_probation` | `paper_only` |
 
 ## family별 해석
@@ -30,21 +30,26 @@ strict annual family와 별도로 다시 볼 ETF 전략 후보를 한 장으로 
 
 - 사용자 요청으로 preset 밖 ETF universe를 다시 탐색했고,
   current DB/runtime 기준 `real_money_candidate`까지 올라간 compact ETF 후보를 확보했다.
-- 2026-05-05 기준 추천 기본 후보는:
+- 2026-06-29 기준 추천 기본 후보는:
   - `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`
-  - `Top = 3`
-  - `Interval = 3`
+  - `Top = 2`
+  - `Interval = 4`
   - `Score Horizons = 1M / 6M`
-  - `Trend Filter = MA250`
+  - `Trend Filter = MA200`
   - `Risk-Off Mode = cash_only`
+  - `Min Avg Dollar Volume 20D = 20M`
 - 결과:
-  - `CAGR = 19.35%`
-  - `MDD = -11.03%`
-  - `Sharpe = 2.42`
-  - `real_money_candidate / paper_probation / paper_only`
+  - `CAGR = 24.08%`
+  - `MDD = -9.99%`
+  - `Sharpe = 3.37`
+  - `real_money_candidate / paper_probation / small_capital_ready`
 - 해석:
-  - `SPY`를 formal benchmark로 두고도 `Validation = normal`, `ETF Operability = normal`을 함께 만족한 저MDD GTAA 후보다.
-  - ETF 전략의 current deployment는 `paper_only`이므로, 실전 투입 전 paper tracking 후보로 본다.
+  - `SPY`를 formal benchmark로 두고도 `Validation = normal`, `Liquidity Policy = normal`, `ETF Operability = normal`을 함께 만족한 저MDD GTAA 후보다.
+  - Backtest first-pass 후보이며, Practical Validation / Final Review 선정은 별도 후속 단계다.
+- 2026-05-05 previous anchor:
+  - `GTAA SPY Low-MDD Style Top-3`, `Top = 3`, `Interval = 3`, `1M / 6M`, `MA250`
+  - `19.35% / -11.03% / real_money_candidate / paper_probation / paper_only`
+  - 2026-06-29 ADV-aware runtime에서는 `Min ADV20D = 20M` 기준 `production_candidate`에 머문다.
 - 2026-04-20 follow-up:
   - ticker universe 부족을 보강하기 위해 `TLT`를 추가한
     `SPY, QQQ, GLD, IEF, LQD, TLT` 6개 ETF 조합을 다시 테스트했다.

@@ -166,6 +166,78 @@ def slice_ohlcv(dfs: dict, start=None, end=None) -> dict:
     return out
 
 
+def append_latest_common_row(
+    period_dfs: dict,
+    full_dfs: dict,
+    end=None,
+    date_col: str = "Date",
+) -> dict:
+    """
+    기간 필터링된 dfs에 요청 종료일 이하의 최신 공통 거래일 row를 보강한다.
+
+    month_end 필터는 아직 월말이 오지 않은 현재 partial period를 제거한다.
+    GTAA처럼 월별 스냅샷을 유지하면서도 현재 평가일을 함께 보여야 하는
+    전략은 기간 row에 원본 일별 데이터의 최신 공통 row를 덧붙여 사용한다.
+    """
+    out = {ticker: df.copy() for ticker, df in period_dfs.items()}
+    if not period_dfs or not full_dfs:
+        return out
+
+    if end is None:
+        end_ts = pd.Timestamp.today().normalize()
+    else:
+        end_ts = pd.to_datetime(end)
+
+    date_sets = []
+    normalized_full_dfs = {}
+    for ticker in period_dfs.keys():
+        if ticker not in full_dfs:
+            return out
+
+        full_df = full_dfs[ticker].copy()
+        if date_col not in full_df.columns:
+            raise KeyError(f"[{ticker}] '{date_col}' 컬럼이 없습니다.")
+
+        full_df[date_col] = pd.to_datetime(full_df[date_col], errors="coerce")
+        full_df = (
+            full_df.dropna(subset=[date_col])
+            .sort_values(date_col)
+            .drop_duplicates(subset=[date_col], keep="last")
+        )
+        full_df = full_df[full_df[date_col] <= end_ts]
+        if full_df.empty:
+            return out
+
+        normalized_full_dfs[ticker] = full_df
+        date_sets.append(set(full_df[date_col].tolist()))
+
+    common_dates = set.intersection(*date_sets) if date_sets else set()
+    if not common_dates:
+        return out
+
+    latest_common_date = max(common_dates)
+    for ticker, period_df in period_dfs.items():
+        if date_col not in period_df.columns:
+            raise KeyError(f"[{ticker}] '{date_col}' 컬럼이 없습니다.")
+
+        d = period_df.copy()
+        d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
+        existing_dates = set(d[date_col].dropna().tolist())
+        if latest_common_date not in existing_dates:
+            latest_row = normalized_full_dfs[ticker][
+                normalized_full_dfs[ticker][date_col] == latest_common_date
+            ].tail(1)
+            d = pd.concat([d, latest_row], ignore_index=True, sort=False)
+
+        out[ticker] = (
+            d.drop_duplicates(subset=[date_col], keep="last")
+            .sort_values(date_col)
+            .reset_index(drop=True)
+        )
+
+    return out
+
+
 def add_returns(
     dfs_by_ticker: dict,
     price_col: str = "Close",
