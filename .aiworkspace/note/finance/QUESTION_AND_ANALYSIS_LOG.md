@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-29 - Overview market intelligence service should be domain-owned, not monolithic
+
+- User request: 사용자가 `overview_market_intelligence.py`가 7,788줄인 이유와 개선 여부를 확인한 뒤, 25차~32차를 순서대로 진행해 달라고 승인함.
+- Interpreted goal: UI 탭 분리는 끝났지만 Overview read-model 계산 본문이 하나의 service monolith에 남아 있으면 수정 위치와 로딩 경계를 다시 파악하기 어렵다. 기존 import path는 유지하되 실제 구현 소유권은 도메인 파일로 옮겨야 한다.
+- Analysis result: 안전한 순서는 contract baseline, Sentiment, Events, Data Health, Market Movers, Market Context, Why It Moved, compatibility facade 축소였다. Market Context는 다른 도메인 구현을 다시 복제하지 않고 split domain services를 import해 조립하도록 유지했다.
+- Follow-up: `overview_market_intelligence.py`는 96줄 compatibility facade로 축소됐고, 남은 추가 후보는 old-path imports를 새 domain imports로 점진 전환한 뒤 facade 제거 가능성을 판단하는 것이다.
+
 ### 2026-06-25 - Overview legacy dashboard should be physically removed, not renamed
 
 - User request: 사용자가 남은 `legacy_dashboard.py` 제거를 위해 17차~24차를 순서대로 진행하고 각 차수마다 QA 후 다음 차수로 넘어가 달라고 승인함.

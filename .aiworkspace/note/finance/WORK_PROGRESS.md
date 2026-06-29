@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Service Split V25-V32:
+  - `.aiworkspace/note/finance/tasks/active/overview-service-split-v25-v32-20260629/`에서 25차~32차를 순서대로 진행했고 각 차수마다 red test, focused QA, py_compile을 수행했다.
+  - `app/services/overview_market_intelligence.py`는 7,788줄 구현체에서 96줄 compatibility facade로 축소했다.
+  - Overview service bodies는 `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py`가 도메인별로 소유한다.
 - Overview Legacy Dashboard Removal V17-V24:
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`에서 17차~24차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
   - `app/web/overview/legacy_dashboard.py`를 삭제했고, `app/web/overview_dashboard.py`는 필요한 compatibility helper만 explicit export하는 wrapper로 바꿨다.

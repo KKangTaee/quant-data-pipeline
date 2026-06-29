@@ -4619,6 +4619,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("WHY_IT_MOVED_STATUS_LABELS", source)
         self.assertNotIn("overview_market_intelligence", source)
 
+    def test_overview_market_intelligence_module_is_compatibility_facade(self) -> None:
+        source = Path("app/services/overview_market_intelligence.py").read_text(encoding="utf-8")
+
+        self.assertLess(len(source.splitlines()), 160)
+        self.assertIn("from app.services.overview.market_context import (", source)
+        self.assertIn("from app.services.overview.market_movers import (", source)
+        self.assertIn("from app.services.overview.why_it_moved import (", source)
+        self.assertNotIn("def build_market_movers_snapshot", source)
+        self.assertNotIn("def build_overview_macro_context_cockpit", source)
+        self.assertIn("Compatibility wrapper preserving monkeypatchable legacy provider hooks.", source)
+
     def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
         source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
 
