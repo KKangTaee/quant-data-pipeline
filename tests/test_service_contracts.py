@@ -7051,6 +7051,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("상위 종목", helper_source)
         self.assertNotIn("metric-card", helper_source.lower())
 
+    def test_market_movers_redesign_v2_phase3_uses_chart_workspace(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_chart_workspace_model", helper_source)
+        self.assertIn("render_market_mover_chart_workspace", helper_source)
+        self.assertIn("render_market_mover_chart_workspace", component_source)
+        self.assertIn("ov-mm-chart-workspace", component_source)
+        self.assertIn("ov-mm-chart-fact", common_source)
+        self.assertIn("가격 / 거래량 워크스페이스", helper_source)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
@@ -9028,6 +9040,35 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("거래량 1.2M", model["rows"][0]["secondary"])
         self.assertIn("상대 2.75x", model["rows"][0]["secondary"])
         self.assertIn("Context-only", model["boundary_note"])
+
+    def test_market_mover_chart_workspace_model_summarizes_mode_metric(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_chart_workspace_model
+
+        rows = pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "AAA", "Name": "AAA Corp", "Relative Volume": 4.25, "Return %": 8.1},
+                {"Rank": 2, "Symbol": "BBB", "Name": "BBB Corp", "Relative Volume": 2.5, "Return %": -1.2},
+            ]
+        )
+        mode_model = {
+            "mode": "unusual_volume",
+            "label": "이상 거래량",
+            "sort_basis": "Relative Volume vs 10D Avg descending",
+            "boundary_note": "Context-only ranking view.",
+            "rows": rows,
+        }
+
+        model = build_market_mover_chart_workspace_model(mode_model)
+
+        self.assertEqual(model["schema_version"], "market_mover_chart_workspace_v1")
+        self.assertEqual(model["title"], "이상 거래량 차트")
+        self.assertEqual(model["metric_label"], "상대 거래량")
+        facts = {item["label"]: item for item in model["facts"]}
+        self.assertEqual(facts["표시 rows"]["value"], "2")
+        self.assertEqual(facts["상위"]["value"], "AAA")
+        self.assertEqual(facts["상위"]["detail"], "4.25x")
+        self.assertIn("2.50x", facts["범위"]["value"])
+        self.assertIn("4.25x", facts["범위"]["value"])
 
     def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")

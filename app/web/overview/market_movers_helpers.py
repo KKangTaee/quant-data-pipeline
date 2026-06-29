@@ -51,6 +51,7 @@ from app.web.overview.components.market_movers import (
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_market_mover_board,
+    render_market_mover_chart_workspace,
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
@@ -109,6 +110,14 @@ MARKET_MOVER_BOARD_TITLES = {
     "volume_leaders": "거래량 상위 종목",
     "unusual_volume": "이상 거래량 상위 종목",
     "sector_leaders": "섹터 상위 종목",
+}
+MARKET_MOVER_CHART_WORKSPACE_KICKER = "가격 / 거래량 워크스페이스"
+MARKET_MOVER_CHART_TITLES = {
+    "top_gainers": "상승 수익률 차트",
+    "top_losers": "하락 수익률 차트",
+    "volume_leaders": "거래량 차트",
+    "unusual_volume": "이상 거래량 차트",
+    "sector_leaders": "섹터 수익률 차트",
 }
 
 
@@ -1111,6 +1120,68 @@ def build_market_mover_board_model(mode_model: dict[str, Any], *, top_n: int) ->
     }
 
 
+def _market_mover_chart_metric_value(row: pd.Series, mode: str) -> Any:
+    if mode == "volume_leaders":
+        return _market_mover_row_value(row, "Volume", "Current Volume")
+    if mode == "unusual_volume":
+        return _market_mover_row_value(row, "Relative Volume")
+    return _market_mover_return_value(row)
+
+
+def _market_mover_chart_metric_label(mode: str) -> str:
+    if mode == "volume_leaders":
+        return "거래량"
+    if mode == "unusual_volume":
+        return "상대 거래량"
+    if mode == "sector_leaders":
+        return "섹터 수익률"
+    return "수익률"
+
+
+def _format_market_mover_chart_metric(value: Any, mode: str) -> str:
+    if mode == "volume_leaders":
+        return _compact_number(value)
+    if mode == "unusual_volume":
+        return _format_relative_volume(value)
+    return _format_signed(value)
+
+
+def build_market_mover_chart_workspace_model(mode_model: dict[str, Any]) -> dict[str, Any]:
+    mode = _normalize_market_mover_mode(mode_model.get("mode"))
+    rows = mode_model.get("rows")
+    if not isinstance(rows, pd.DataFrame):
+        rows = pd.DataFrame()
+    metric_values = pd.Series(dtype="float64")
+    if not rows.empty:
+        metric_values = pd.to_numeric(
+            rows.apply(lambda row: _market_mover_chart_metric_value(row, mode), axis=1),
+            errors="coerce",
+        ).dropna()
+    top_row = rows.iloc[0] if not rows.empty else pd.Series(dtype="object")
+    top_symbol = str(_market_mover_row_value(top_row, "Symbol", "Group", "Sector") or "-").strip() or "-"
+    top_value = _format_market_mover_chart_metric(_market_mover_chart_metric_value(top_row, mode), mode)
+    if metric_values.empty:
+        range_value = "-"
+    else:
+        min_value = _format_market_mover_chart_metric(metric_values.min(), mode)
+        max_value = _format_market_mover_chart_metric(metric_values.max(), mode)
+        range_value = f"{min_value} ~ {max_value}"
+    return {
+        "schema_version": "market_mover_chart_workspace_v1",
+        "mode": mode,
+        "kicker": MARKET_MOVER_CHART_WORKSPACE_KICKER,
+        "title": MARKET_MOVER_CHART_TITLES.get(mode, f"{_market_mover_mode_label(mode)} 차트"),
+        "subtitle": f"{mode_model.get('sort_basis') or '-'} · {mode_model.get('boundary_note') or 'Context-only ranking view.'}",
+        "metric_label": _market_mover_chart_metric_label(mode),
+        "facts": [
+            {"label": "표시 rows", "value": _format_count(len(rows))},
+            {"label": "상위", "value": top_symbol, "detail": top_value},
+            {"label": "범위", "value": range_value},
+        ],
+        "boundary_note": str(mode_model.get("boundary_note") or "Context-only ranking view."),
+    }
+
+
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
     if not chart_rows.empty and "Return %" in chart_rows:
@@ -1978,7 +2049,7 @@ def _render_market_movers_snapshot_panel(
                     hide_index=True,
                 )
     with context_col:
-        st.markdown("#### 핵심 차트 / 섹터 요약")
+        render_market_mover_chart_workspace(build_market_mover_chart_workspace_model(selected_model))
         st.altair_chart(_build_market_mover_mode_chart(selected_model), width="stretch")
         if selected_model["status"] != "OK" and selected_model["empty_reason"]:
             st.caption(selected_model["empty_reason"])

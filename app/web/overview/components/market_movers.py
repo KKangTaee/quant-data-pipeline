@@ -139,6 +139,44 @@ def render_market_mover_board(model: dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
+
+def _market_mover_chart_facts_html(facts: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in facts:
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-mm-chart-fact-detail">{escape(_display_value(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        html.append(
+            '<div class="ov-mm-chart-fact">'
+            f'<div class="ov-mm-chart-fact-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-mm-chart-fact-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_market_mover_chart_workspace(model: dict[str, Any]) -> None:
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-chart-workspace">
+  <div class="ov-mm-chart-head">
+    <div>
+      <div class="ov-mm-chart-kicker">{escape(_display_value(model.get("kicker")))}</div>
+      <div class="ov-mm-chart-title">{escape(_display_value(model.get("title")))}</div>
+      <div class="ov-mm-chart-detail">{escape(_display_value(model.get("subtitle")))}</div>
+    </div>
+    <span class="ov-mm-chart-badge">{escape(_display_value(model.get("metric_label")))}</span>
+  </div>
+  <div class="ov-mm-chart-facts">{_market_mover_chart_facts_html(list(model.get("facts") or []))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
 def _coverage_trust_items_html(items: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in items:
@@ -499,6 +537,7 @@ __all__ = [
     "render_market_movers_command_strip",
     "render_market_movers_empty_state",
     "render_market_mover_board",
+    "render_market_mover_chart_workspace",
     "_market_refresh_state_label",
     "_market_refresh_state_detail",
     "render_market_refresh_status_bar",
