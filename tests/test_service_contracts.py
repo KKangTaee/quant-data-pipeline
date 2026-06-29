@@ -7099,6 +7099,33 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-mm-data-trust-strip", common_source)
         self.assertIn("Coverage trust detail", helper_source)
 
+    def test_market_movers_followup_keeps_refresh_actions_in_fixed_slots(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        daily_body = helper_source[helper_source.index("def _render_market_movers_daily_refresh_bar") :]
+        daily_body = daily_body[: daily_body.index("def _market_movers_eod_refresh_state")]
+
+        self.assertIn("def _render_market_movers_universe_action", helper_source)
+        self.assertIn("_render_market_movers_universe_action(control_cols[2]", daily_body)
+        self.assertIn("overview_{universe_code.lower()}_universe_static", helper_source)
+        self.assertIn("유니버스 기준", helper_source)
+        self.assertIn("disabled=True", helper_source)
+        self.assertNotIn("control_cols[2].caption", daily_body)
+        self.assertNotIn("Top universe는", daily_body)
+        self.assertIn("_universe_static", common_source)
+
+    def test_market_movers_followup_removes_duplicate_sector_leader_strip_from_main_map(self) -> None:
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        render_body = component_source[component_source.index("def render_sector_breadth_market_map") :]
+        render_body = render_body[: render_body.index("def render_breadth_heatmap_summary")]
+
+        self.assertNotIn("_sector_breadth_leader_strip_html", render_body)
+        self.assertNotIn("ov-sector-breadth-leader-strip", render_body)
+        self.assertIn("ov-sector-breadth-lanes", render_body)
+        self.assertIn("ov-sector-breadth-boundary", render_body)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,

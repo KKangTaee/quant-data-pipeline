@@ -486,7 +486,6 @@ def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
     ]
     stats_html = "".join(_sector_breadth_stat_html(item) for item in stats if item)
     lanes_html = _sector_breadth_lanes_html(list(model.get("lanes") or []))
-    leaders_html = _sector_breadth_leader_strip_html(list(model.get("leaders") or []))
     rail_pct = escape(_display_value(dict(model.get("participation") or {}).get("rail_pct") or 0))
     st.markdown(
         overview_ui_css()
@@ -505,7 +504,6 @@ def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
   </div>
   <div class="ov-sector-breadth-stats">{stats_html}</div>
   <div class="ov-sector-breadth-lanes">{lanes_html}</div>
-  <div class="ov-sector-breadth-leader-strip">{leaders_html}</div>
   <div class="ov-sector-breadth-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,

@@ -2987,6 +2987,7 @@ div[class*="st-key-overview_market_movers_refresh_mode"] div[data-baseweb="selec
 div[class*="st-key-overview_"][class*="_intraday_refresh"] button,
 div[class*="st-key-overview_"][class*="_eod_history_refresh"] button,
 div[class*="st-key-overview_"][class*="_market_movers_reload"] button,
+div[class*="st-key-overview_"][class*="_universe_static"] button,
 div[class*="st-key-overview_sp500_universe_refresh"] button,
 div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
   min-height: 2rem;

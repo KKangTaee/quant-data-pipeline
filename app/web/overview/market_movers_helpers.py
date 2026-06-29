@@ -1476,6 +1476,40 @@ def _build_market_mover_mode_chart(mode_model: dict[str, Any]) -> alt.Chart:
     return _build_return_bar_chart(rows)
 
 
+def _render_market_movers_universe_action(container: Any, *, universe_code: str) -> None:
+    if universe_code == "SP500":
+        if container.button(
+            "유니버스 갱신",
+            key="overview_sp500_universe_refresh",
+            use_container_width=True,
+        ):
+            with st.spinner("Refreshing S&P 500 universe..."):
+                _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
+            st.rerun()
+        return
+    if universe_code == "NASDAQ":
+        if container.button(
+            "Nasdaq 목록 갱신",
+            key="overview_nasdaq_symbol_directory_refresh",
+            use_container_width=True,
+            help="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
+        ):
+            with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
+                _store_overview_job_result(
+                    "overview_nasdaq_symbol_directory_result",
+                    run_overview_nasdaq_symbol_directory(),
+                )
+            st.rerun()
+        return
+    container.button(
+        "유니버스 기준",
+        key=f"overview_{universe_code.lower()}_universe_static",
+        use_container_width=True,
+        disabled=True,
+        help="Top universe는 market-cap ranked asset profile 기준입니다.",
+    )
+
+
 def _render_market_movers_daily_refresh_bar(
     snapshot: dict[str, Any],
     *,
@@ -1519,25 +1553,7 @@ def _render_market_movers_daily_refresh_bar(
                 run_overview_market_intraday_snapshot(universe_code=universe_code, universe_limit=universe_limit),
             )
         st.rerun()
-    if universe_code == "SP500" and control_cols[2].button(
-        "유니버스 갱신",
-        key="overview_sp500_universe_refresh",
-        use_container_width=True,
-    ):
-        with st.spinner("Refreshing S&P 500 universe..."):
-            _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
-        st.rerun()
-    if universe_code == "NASDAQ" and control_cols[2].button(
-        "Nasdaq 목록 갱신",
-        key="overview_nasdaq_symbol_directory_refresh",
-        use_container_width=True,
-        help="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
-    ):
-        with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
-            _store_overview_job_result("overview_nasdaq_symbol_directory_result", run_overview_nasdaq_symbol_directory())
-        st.rerun()
-    if universe_code not in {"SP500", "NASDAQ"}:
-        control_cols[2].caption("Top universe는 market-cap ranked asset profile 기준입니다.")
+    _render_market_movers_universe_action(control_cols[2], universe_code=universe_code)
     if control_cols[3].button(
         "화면 새로고침",
         key=f"overview_{universe_code.lower()}_market_movers_reload",
