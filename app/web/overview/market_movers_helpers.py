@@ -97,6 +97,7 @@ MARKET_MOVER_MODE_LABELS = {
     "sector_leaders": "섹터",
 }
 MARKET_MOVER_MODE_ORDER = tuple(MARKET_MOVER_MODE_LABELS)
+MARKET_MOVER_TOP_N_OPTIONS = (10, 20, 30, 50, 100)
 MARKET_MOVER_RANK_SOURCE_LABELS = {
     "Top Gainers": "상승",
     "Top Losers": "하락",
@@ -786,8 +787,8 @@ def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
 
 
 def _render_market_movers_controls() -> MarketMoverControls:
-    render_overview_toolbar_label("스캔 조건")
-    controls = st.columns([1.05, 1.0, 1.0, 0.72, 1.45], gap="small", vertical_alignment="bottom")
+    render_overview_toolbar_label("조건")
+    controls = st.columns([1.0, 0.92, 1.0, 0.78, 1.0], gap="small", vertical_alignment="bottom")
     coverage = str(
         controls[0].selectbox(
             "Coverage",
@@ -819,17 +820,29 @@ def _render_market_movers_controls() -> MarketMoverControls:
             key="overview_market_movers_sector",
         )
     )
+    top_n_key = "overview_market_movers_top_n"
+    if st.session_state.get(top_n_key) not in MARKET_MOVER_TOP_N_OPTIONS:
+        st.session_state[top_n_key] = 20
     top_n = int(
-        controls[3].number_input(
+        controls[3].selectbox(
             "Top N",
-            min_value=5,
-            max_value=100,
-            value=20,
-            step=5,
-            key="overview_market_movers_top_n",
+            list(MARKET_MOVER_TOP_N_OPTIONS),
+            key=top_n_key,
+            format_func=lambda value: f"Top {value}",
         )
     )
-    mode = _select_market_mover_mode(controls[4])
+    mode_key = "overview_market_movers_mode"
+    if st.session_state.get(mode_key) not in MARKET_MOVER_MODE_ORDER:
+        st.session_state[mode_key] = "top_gainers"
+    mode = _normalize_market_mover_mode(
+        controls[4].selectbox(
+            "랭킹 기준",
+            list(MARKET_MOVER_MODE_ORDER),
+            key=mode_key,
+            format_func=_market_mover_mode_label,
+            help="저장된 read model 안에서 상승, 하락, 거래량, 이상 거래량, 섹터 흐름을 전환합니다.",
+        )
+    )
     return MarketMoverControls(
         coverage=coverage,
         universe_limit=universe_limit,

@@ -9029,6 +9029,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("buy signal", source.lower())
         self.assertNotIn("sell signal", source.lower())
 
+    def test_market_movers_polish_phase1_uses_uniform_select_controls(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        controls_body = source[source.index("def _render_market_movers_controls") :]
+        controls_body = controls_body[: controls_body.index("def render_market_movers_header")]
+        self.assertIn("render_overview_toolbar_label(\"조건\")", controls_body)
+        self.assertIn("MARKET_MOVER_TOP_N_OPTIONS", source)
+        self.assertIn("\"랭킹 기준\"", controls_body)
+        self.assertIn("overview_market_movers_mode", controls_body)
+        self.assertIn("overview_market_movers_top_n", controls_body)
+        self.assertNotIn("number_input", controls_body)
+        self.assertNotIn("segmented_control", controls_body)
+        self.assertNotIn("st.columns([1.05, 1.0, 1.0, 0.72, 1.45]", controls_body)
+
     def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_board_model
 
