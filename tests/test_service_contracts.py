@@ -4582,6 +4582,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("DATA_HEALTH_HANDOFF_TARGETS", source)
         self.assertNotIn("overview_market_intelligence", source)
 
+    def test_overview_market_movers_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_movers_snapshot", source)
+        self.assertIn("def build_group_leadership_snapshot", source)
+        self.assertIn("def build_overview_breadth_heatmap_summary", source)
+        self.assertIn("def resolve_effective_market_dates", source)
+        self.assertIn("MOVERS_COLUMNS", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
     def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
         source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
 

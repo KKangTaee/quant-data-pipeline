@@ -19,3 +19,8 @@
 - V28 QA: `.venv/bin/python -m py_compile app/services/overview/data_health.py tests/test_service_contracts.py` -> pass.
 - V28 QA: direct `app.services.overview.data_health` empty-query smoke -> collection ops `REVIEW`, handoff schema `overview_data_health_ingestion_handoff_v1`.
 - V28 QA: legacy path data health tests `test_collection_ops_snapshot_combines_db_freshness_and_run_history`, `test_collection_ops_snapshot_tracks_market_sentiment_freshness`, `test_overview_data_health_handoff_ranks_problem_rows_and_points_to_collection_surfaces` -> pass.
+- V29 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_service_owns_implementation_body` -> failed because `market_movers.py` was still a re-export wrapper.
+- V29 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_service_owns_implementation_body` -> pass.
+- V29 QA: `.venv/bin/python -m py_compile app/services/overview/market_movers.py tests/test_service_contracts.py` -> pass.
+- V29 QA: direct `app.services.overview.market_movers` empty-query smoke -> sectors `[]`, movers `NO_UNIVERSE`, group leadership `INSUFFICIENT_DATA`.
+- V29 QA: legacy path tests `test_effective_market_date_skips_sparse_latest_raw_date`, `test_group_trend_window_contract_uses_compact_horizons`, `test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps`, `test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns`, `test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns`, `test_overview_breadth_heatmap_summary_keeps_full_canonical_sector_map` -> pass.
