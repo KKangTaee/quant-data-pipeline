@@ -8330,3 +8330,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 단순 성과 상위 조합이 아니라 current promotion policy까지 통과하는 GTAA 후보를 최신 DB/runtime으로 확인하고, Backtest UI preset에서 재현 가능하게 해야 함.
 - Analysis result: 기존 `GTAA SPY Low-MDD Style Top-3`는 성과 조건은 통과했지만 ADV20 liquidity evidence가 없거나 기준에 살짝 못 미쳐 current gate에서는 부족했다. GTAA runtime에 ADV20 evidence를 연결한 뒤 `GTAA SPY Low-MDD Style Top-2 ADV20`이 `24.08% / -9.99%`, SPY `13.36% / -20.61%`, `real_money_candidate / paper_probation / small_capital_ready`를 달성했다.
 - Follow-up: preset과 보고서는 등록했다. Practical Validation / Final Review 선정은 사용자가 원할 때 별도 후속 단계로 진행한다.
+
+### 2026-06-29 - Market Movers를 1차부터 5차까지 gate 방식으로 개선한다
+
+- User request: Overview > Market Movers를 1~5차로 개선하되, 이번 응답에서는 1차만 구현 / QA / commit 후 멈추라고 요청함.
+- Interpreted goal: 새 provider나 trade signal이 아니라 기존 snapshot/read model로 첫 화면을 변동종목 작업대처럼 재정렬해야 함.
+- Analysis result: 1차에서는 command strip과 본문 IA 재배치가 가장 작은 안전한 개선이다. Coverage Diagnostics는 보조로 낮추고, Why It Moved는 하단 부록 느낌을 줄여 `선택 종목 조사` 자리로 정리한다.
+- Follow-up: 1차 완료. 2차는 Top Gainers / Top Losers / Most Active / Unusual Volume / Sector Leaders 같은 explicit exploration mode와 ranking read model 정리다.

@@ -9,6 +9,70 @@ import streamlit.components.v1 as components
 
 from app.web.overview.components.common import *
 
+
+def _market_movers_workbench_tone(value: Any) -> str:
+    return escape(_overview_tone_color(value))
+
+
+def _command_strip_items_html(items: list[dict[str, Any]]) -> str:
+    item_html: list[str] = []
+    for item in items:
+        detail = item.get("detail")
+        detail_html = (
+            f'<div class="ov-mm-command-detail">{escape(_display_value(detail))}</div>'
+            if detail not in (None, "")
+            else ""
+        )
+        item_html.append(
+            '<div class="ov-mm-command-item">'
+            f'<div class="ov-mm-command-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-mm-command-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    return "".join(item_html)
+
+
+def render_market_movers_command_strip(model: dict[str, Any]) -> None:
+    tone_color = _market_movers_workbench_tone(model.get("tone"))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-command" style="--ov-command-tone:{tone_color};">
+  <div class="ov-mm-command-head">
+    <div>
+      <div class="ov-mm-command-kicker">Market Movers</div>
+      <div class="ov-mm-command-title">{escape(_display_value(model.get("headline")))}</div>
+      <div class="ov-mm-command-context">{escape(_display_value(model.get("context")))}</div>
+    </div>
+    <span class="ov-mm-command-badge">{escape(_display_value(model.get("status_label")))}</span>
+  </div>
+  <div class="ov-mm-command-grid">{_command_strip_items_html(list(model.get("items") or []))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_market_movers_empty_state(model: dict[str, Any]) -> None:
+    tone_color = _market_movers_workbench_tone(model.get("tone"))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-empty-state" style="--ov-empty-tone:{tone_color};">
+  <div>
+    <div class="ov-mm-empty-kicker">현재 선택 조건</div>
+    <div class="ov-mm-empty-title">{escape(_display_value(model.get("title")))}</div>
+    <div class="ov-mm-empty-detail">{escape(_display_value(model.get("detail")))}</div>
+  </div>
+  <div class="ov-mm-empty-action">
+    <span>{escape(_display_value(model.get("primary_action")))}</span>
+    <small>{escape(_display_value(model.get("investigation_note")))}</small>
+  </div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
 def _breadth_summary_cards_html(cards: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for card in cards[:4]:
@@ -292,6 +356,8 @@ __all__ = [
     "_breadth_summary_cards_html",
     "_breadth_rows_html",
     "render_breadth_heatmap_summary",
+    "render_market_movers_command_strip",
+    "render_market_movers_empty_state",
     "_market_refresh_state_label",
     "_market_refresh_state_detail",
     "render_market_refresh_status_bar",

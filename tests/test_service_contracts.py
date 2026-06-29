@@ -6969,8 +6969,86 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_market_movers_empty_snapshot_replaces_stale_why_it_moved_panel(self) -> None:
         source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 
-        self.assertIn("Market mover rows are needed before Why It Moved can be shown.", source)
-        self.assertIn("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.", source)
+        self.assertIn("render_market_movers_empty_state", source)
+        self.assertIn("build_market_movers_empty_state_model", source)
+        self.assertIn('"show_why_it_moved": False', source)
+        self.assertIn("선택한 coverage에 ranking row가 생기면 선택 종목 조사 패널을 사용할 수 있습니다.", source)
+
+    def test_market_movers_command_strip_model_summarizes_active_workbench_context(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_command_strip_model,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="Technology",
+            top_n=20,
+        )
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 470,
+                "missing_count": 33,
+                "returnable_pct": 93.44,
+                "snapshot_time_utc": "2026-06-29 14:15",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "partial", "label": "Partial", "detail": "33 missing"},
+            },
+        }
+
+        model = build_market_movers_command_strip_model(
+            snapshot,
+            controls=controls,
+            exploration_mode="Return Rank",
+        )
+
+        self.assertEqual(model["schema_version"], "market_movers_command_strip_v1")
+        self.assertEqual(model["headline"], "변동종목 작업대")
+        self.assertEqual(model["context"], "S&P 500 · Daily · Technology")
+        self.assertEqual(model["tone"], "warning")
+        items = {item["label"]: item for item in model["items"]}
+        self.assertEqual(items["Coverage"]["value"], "S&P 500")
+        self.assertEqual(items["Period"]["value"], "Daily")
+        self.assertEqual(items["Effective timestamp"]["value"], "2026-06-29 14:15")
+        self.assertEqual(items["Freshness"]["value"], "Partial")
+        self.assertEqual(items["Universe"]["value"], "503")
+        self.assertEqual(items["Returnable"]["value"], "470")
+        self.assertEqual(items["Missing"]["value"], "33")
+        self.assertEqual(items["Mode"]["value"], "Return Rank")
+        self.assertIn("93.4%", items["Returnable"]["detail"])
+
+    def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_empty_state_model,
+        )
+
+        controls = MarketMoverControls(
+            coverage="NASDAQ",
+            universe_limit=5000,
+            period="daily",
+            sector="All",
+            top_n=20,
+        )
+        snapshot = {
+            "status": "NO_UNIVERSE",
+            "message": "Nasdaq Symbol Directory refresh is required before Nasdaq-listed current snapshot coverage can render.",
+            "coverage": {"universe_count": 0, "returnable_count": 0, "missing_count": 0},
+        }
+
+        model = build_market_movers_empty_state_model(snapshot, controls=controls)
+
+        self.assertEqual(model["schema_version"], "market_movers_empty_state_v1")
+        self.assertEqual(model["tone"], "warning")
+        self.assertIn("Nasdaq-listed current snapshot", model["title"])
+        self.assertIn("Symbol Directory", model["detail"])
+        self.assertEqual(model["primary_action"], "Nasdaq 목록 갱신")
+        self.assertFalse(model["show_why_it_moved"])
+        self.assertIn("ranking row", model["investigation_note"])
 
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions

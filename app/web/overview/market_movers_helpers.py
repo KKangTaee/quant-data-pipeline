@@ -18,7 +18,7 @@ from app.jobs.overview_actions import (
     run_overview_quote_gap_diagnostics,
     run_overview_sp500_universe,
 )
-from app.web.overview.session_helpers import _snapshot_status_items, _snapshot_value
+from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview_dashboard_helpers import (
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
@@ -36,7 +36,6 @@ from app.web.overview.components.common import (
     OVERVIEW_COLOR_WARNING,
     OVERVIEW_SECTOR_COLOR_MAP,
     OVERVIEW_SERIES_COLORS,
-    render_market_snapshot_meta_strip,
     render_overview_toolbar_label,
 )
 from app.web.overview.components.market_movers import (
@@ -44,6 +43,8 @@ from app.web.overview.components.market_movers import (
     render_auto_refresh_timing_static,
     render_market_auto_message,
     render_market_auto_waiting_panel,
+    render_market_movers_command_strip,
+    render_market_movers_empty_state,
     render_market_refresh_status_bar,
 )
 
@@ -138,6 +139,145 @@ def _format_signed(value: Any, *, suffix: str = "%") -> str:
     if pd.isna(numeric):
         return "-"
     return f"{float(numeric):+.2f}{suffix}"
+
+
+def _format_count(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{int(numeric):,}"
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return default
+    return int(numeric)
+
+
+def _format_pct_detail(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):.1f}% of universe"
+
+
+def _freshness_label(snapshot: dict[str, Any], coverage: dict[str, Any]) -> str:
+    refresh_state = dict(coverage.get("refresh_state") or {})
+    label = refresh_state.get("label") or refresh_state.get("status")
+    if label:
+        return str(label).title() if str(label).islower() else str(label)
+    status = str(snapshot.get("status") or "").upper()
+    mapping = {
+        "OK": "Fresh",
+        "NO_UNIVERSE": "No Universe",
+        "INSUFFICIENT_DATA": "Needs Refresh",
+        "ERROR": "Failed",
+    }
+    return mapping.get(status, status.title() if status else "-")
+
+
+def _freshness_detail(coverage: dict[str, Any]) -> str:
+    refresh_state = dict(coverage.get("refresh_state") or {})
+    detail = refresh_state.get("detail")
+    if detail:
+        return str(detail)
+    stale_minutes = coverage.get("snapshot_stale_minutes")
+    if stale_minutes is not None:
+        return f"{stale_minutes}m old"
+    stale_days = coverage.get("stale_days")
+    if stale_days is not None:
+        return f"{stale_days}D old"
+    return str(coverage.get("price_mode") or "-")
+
+
+def _effective_timestamp(coverage: dict[str, Any]) -> str:
+    return str(
+        coverage.get("snapshot_time_utc")
+        or coverage.get("effective_end_date")
+        or coverage.get("latest_raw_date")
+        or "-"
+    )
+
+
+def _command_strip_tone(snapshot: dict[str, Any], coverage: dict[str, Any]) -> str:
+    status = str(snapshot.get("status") or "").strip().upper()
+    refresh_status = str(dict(coverage.get("refresh_state") or {}).get("status") or "").strip().lower()
+    missing_count = _safe_int(coverage.get("missing_count"))
+    if status in {"ERROR"} or refresh_status in {"failed", "stale"}:
+        return "danger"
+    if status in {"NO_UNIVERSE", "INSUFFICIENT_DATA"} or refresh_status in {"partial", "due"} or missing_count:
+        return "warning"
+    if status == "OK":
+        return "positive"
+    return "neutral"
+
+
+def build_market_movers_command_strip_model(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+    exploration_mode: str,
+) -> dict[str, Any]:
+    coverage = dict(snapshot.get("coverage") or {})
+    coverage_label = _coverage_label(controls.coverage)
+    period_label = _market_mover_period_label(controls.period)
+    sector_label = controls.sector if controls.sector and controls.sector != "All" else "All sectors"
+    freshness = _freshness_label(snapshot, coverage)
+    returnable_pct = coverage.get("returnable_pct")
+    return {
+        "schema_version": "market_movers_command_strip_v1",
+        "headline": "변동종목 작업대",
+        "context": f"{coverage_label} · {period_label} · {sector_label}",
+        "status_label": freshness,
+        "tone": _command_strip_tone(snapshot, coverage),
+        "items": [
+            {"label": "Coverage", "value": coverage_label, "detail": str(coverage.get("coverage_basis") or "")},
+            {"label": "Period", "value": period_label, "detail": str(coverage.get("price_mode") or "-")},
+            {"label": "Effective timestamp", "value": _effective_timestamp(coverage), "detail": "DB snapshot/read model"},
+            {"label": "Freshness", "value": freshness, "detail": _freshness_detail(coverage)},
+            {"label": "Universe", "value": _format_count(coverage.get("universe_count"))},
+            {
+                "label": "Returnable",
+                "value": _format_count(coverage.get("returnable_count")),
+                "detail": _format_pct_detail(returnable_pct),
+            },
+            {"label": "Missing", "value": _format_count(coverage.get("missing_count"))},
+            {"label": "Mode", "value": exploration_mode, "detail": f"Top {controls.top_n}"},
+        ],
+    }
+
+
+def build_market_movers_empty_state_model(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+) -> dict[str, Any]:
+    coverage_label = _coverage_label(controls.coverage)
+    period_label = _market_mover_period_label(controls.period)
+    status = str(snapshot.get("status") or "").upper()
+    message = str(snapshot.get("message") or "DB-backed market mover rows are not available for the selected controls.")
+    if controls.coverage == "NASDAQ" and status == "NO_UNIVERSE":
+        title = f"{coverage_label} universe가 아직 비어 있습니다."
+        primary_action = "Nasdaq 목록 갱신"
+        tone = "warning"
+    elif controls.period == "daily":
+        title = f"{coverage_label} {period_label} ranking row가 아직 없습니다."
+        primary_action = "일중 스냅샷 갱신"
+        tone = "warning" if status != "OK" else "neutral"
+    else:
+        title = f"{coverage_label} {period_label} ranking row가 아직 없습니다."
+        primary_action = "가격 이력 갱신"
+        tone = "warning" if status != "OK" else "neutral"
+    return {
+        "schema_version": "market_movers_empty_state_v1",
+        "tone": tone,
+        "title": title,
+        "detail": message,
+        "primary_action": primary_action,
+        "show_why_it_moved": False,
+        "investigation_note": "선택한 coverage에 ranking row가 생기면 선택 종목 조사 패널을 사용할 수 있습니다.",
+    }
 
 
 def _sector_bar_color(sector: Any, return_pct: Any | None = None) -> str:
@@ -1176,8 +1316,8 @@ def _render_market_mover_why_it_moved_panel(
     candidates = _market_mover_catalyst_candidates(rows, volume_rows)
     if not candidates:
         return
-    st.markdown("#### Why It Moved")
-    st.caption("수동 조사 패널입니다. 자동 원인 판정, AI 요약, 원문 수집, DB 저장은 실행하지 않습니다.")
+    st.markdown("#### 선택 종목 조사")
+    st.caption("Why It Moved로 이어지는 수동 조사 시작점입니다. 자동 원인 판정, AI 요약, 원문 수집, DB 저장은 실행하지 않습니다.")
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
     selection_key = "overview_market_mover_why_it_moved_selection"
@@ -1234,26 +1374,39 @@ def _render_market_mover_why_it_moved_panel(
 def _render_market_movers_snapshot_panel(
     snapshot: dict[str, Any],
     *,
-    universe_code: str,
-    period: str,
+    controls: MarketMoverControls,
 ) -> None:
-    render_market_snapshot_meta_strip(_snapshot_status_items(snapshot))
     _render_snapshot_warnings(snapshot)
-    _render_missing_diagnostics(snapshot, universe_code=universe_code, period=period)
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:
-        st.info("DB-backed market mover rows are not available for the selected controls.")
-        st.markdown("#### Why It Moved")
-        st.info("Market mover rows are needed before Why It Moved can be shown.")
-        st.caption("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.")
+        render_market_movers_empty_state(build_market_movers_empty_state_model(snapshot, controls=controls))
+        _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)
         return
     volume_rows = snapshot.get("volume_rows")
     if not isinstance(volume_rows, pd.DataFrame) or volume_rows.empty:
         volume_rows = rows
 
-    left, right = st.columns([0.95, 1.25], gap="medium")
-    with left:
+    list_col, context_col = st.columns([1.18, 1.05], gap="medium")
+    with list_col:
+        st.markdown("#### 상위 변동종목 목록")
+        return_table_tab, volume_table_tab = st.tabs(["Return Table", "Volume Table"])
+        with return_table_tab:
+            st.dataframe(
+                rows,
+                width="stretch",
+                height=min(620, _market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
+                hide_index=True,
+            )
+        with volume_table_tab:
+            st.dataframe(
+                volume_rows,
+                width="stretch",
+                height=min(620, _market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
+                hide_index=True,
+            )
+    with context_col:
+        st.markdown("#### 핵심 차트 / 섹터 요약")
         return_tab, volume_tab, sector_tab = st.tabs(["Return Rank", "Volume Rank", "Sector Pulse"])
         with return_tab:
             st.altair_chart(_build_return_bar_chart(rows), width="stretch")
@@ -1261,16 +1414,18 @@ def _render_market_movers_snapshot_panel(
             st.altair_chart(_build_volume_bar_chart(volume_rows), width="stretch")
         with sector_tab:
             st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
-    with right:
-        return_table_tab, volume_table_tab = st.tabs(["Return Table", "Volume Table"])
-        with return_table_tab:
+
+    _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)
+    with st.expander("상세 표 전체 높이로 보기", expanded=False):
+        table_tabs = st.tabs(["Return Table", "Volume Table"])
+        with table_tabs[0]:
             st.dataframe(
                 rows,
                 width="stretch",
                 height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
                 hide_index=True,
             )
-        with volume_table_tab:
+        with table_tabs[1]:
             st.dataframe(
                 volume_rows,
                 width="stretch",
@@ -1280,8 +1435,8 @@ def _render_market_movers_snapshot_panel(
     _render_market_mover_why_it_moved_panel(
         rows,
         volume_rows,
-        universe_code=universe_code,
-        period=period,
+        universe_code=controls.coverage,
+        period=controls.period,
     )
 
 
@@ -1293,6 +1448,13 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         top_n=controls.top_n,
         sector=controls.sector,
     )
+    render_market_movers_command_strip(
+        build_market_movers_command_strip_model(
+            snapshot,
+            controls=controls,
+            exploration_mode="Return Rank",
+        )
+    )
     _render_market_movers_refresh_bar(
         snapshot,
         universe_code=controls.coverage,
@@ -1301,6 +1463,5 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
     )
     _render_market_movers_snapshot_panel(
         snapshot,
-        universe_code=controls.coverage,
-        period=controls.period,
+        controls=controls,
     )

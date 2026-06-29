@@ -5399,3 +5399,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
   - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
   - GTAA runtime에 ADV20 liquidity evidence를 연결했고, preset 선택 시 핵심 파라미터가 자동 적용되도록 했다. 상세 결과는 `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`를 보면 된다.
+- Overview Market Movers Workbench V1 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-workbench-v1-20260629/`에서 1차 Market Movers UX 골격 재설계를 완료했다.
+  - 상단 command strip으로 coverage / period / effective timestamp / freshness / universe / returnable / missing / mode를 먼저 보여주고, 본문은 `상위 변동종목 목록` + `핵심 차트 / 섹터 요약` + 보조 diagnostics + `선택 종목 조사` 흐름으로 정리했다.
+  - 검증은 py_compile, `git diff --check`, focused unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ daily/weekly, narrow viewport)로 완료했다. 2차는 explicit exploration mode / ranking read model 정리다.
