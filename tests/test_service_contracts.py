@@ -8665,6 +8665,132 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Dollar Volume"], 2500000.0)
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Days"], 5)
 
+    def test_market_movers_snapshot_builds_context_only_exploration_mode_views(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_asset_profile" in sql:
+                return [
+                    {"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100},
+                    {"symbol": "BBB", "long_name": "BBB Corp", "sector": "Technology", "industry": "Software", "market_cap": 300},
+                    {"symbol": "CCC", "long_name": "CCC Corp", "sector": "Healthcare", "industry": "Devices", "market_cap": 200},
+                    {"symbol": "DDD", "long_name": "DDD Corp", "sector": "Energy", "industry": "Oil", "market_cap": 100},
+                ]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-05-20"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-05-20", "usable_rows": 1200},
+                    {"date": "2026-05-19", "usable_rows": 1200},
+                    {"date": "2026-05-18", "usable_rows": 1200},
+                    {"date": "2026-05-15", "usable_rows": 1200},
+                    {"date": "2026-05-14", "usable_rows": 1200},
+                    {"date": "2026-05-13", "usable_rows": 1200},
+                    {"date": "2026-05-12", "usable_rows": 1200},
+                    {"date": "2026-05-11", "usable_rows": 1200},
+                    {"date": "2026-05-08", "usable_rows": 1200},
+                    {"date": "2026-05-07", "usable_rows": 1200},
+                    {"date": "2026-05-06", "usable_rows": 1200},
+                    {"date": "2026-05-05", "usable_rows": 1200},
+                ]
+            if "AVG(volume) AS avg_10d_volume" in sql:
+                return [
+                    {"symbol": "AAA", "avg_10d_volume": 1000, "baseline_days": 10},
+                    {"symbol": "BBB", "avg_10d_volume": 800, "baseline_days": 10},
+                    {"symbol": "CCC", "avg_10d_volume": 1500, "baseline_days": 10},
+                    {"symbol": "DDD", "avg_10d_volume": 500, "baseline_days": 10},
+                ]
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-05-18", "price": 100.0, "volume": 900},
+                    {"symbol": "AAA", "date": "2026-05-19", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-05-20", "price": 130.0, "volume": 5000},
+                    {"symbol": "BBB", "date": "2026-05-18", "price": 100.0, "volume": 700},
+                    {"symbol": "BBB", "date": "2026-05-19", "price": 100.0, "volume": 800},
+                    {"symbol": "BBB", "date": "2026-05-20", "price": 90.0, "volume": 1000},
+                    {"symbol": "CCC", "date": "2026-05-18", "price": 100.0, "volume": 1400},
+                    {"symbol": "CCC", "date": "2026-05-19", "price": 100.0, "volume": 1500},
+                    {"symbol": "CCC", "date": "2026-05-20", "price": 108.0, "volume": 3000},
+                    {"symbol": "DDD", "date": "2026-05-18", "price": 100.0, "volume": 500},
+                    {"symbol": "DDD", "date": "2026-05-19", "price": 100.0, "volume": 500},
+                    {"symbol": "DDD", "date": "2026-05-20", "price": 70.0, "volume": 2000},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 21),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        views = snapshot["mover_views"]
+        self.assertEqual(
+            list(views),
+            ["top_gainers", "top_losers", "volume_leaders", "unusual_volume", "sector_leaders"],
+        )
+        self.assertEqual(views["top_gainers"]["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(views["top_losers"]["rows"].iloc[0]["Symbol"], "DDD")
+        self.assertLess(views["top_losers"]["rows"].iloc[0]["Return %"], 0)
+        self.assertEqual(views["volume_leaders"]["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(views["unusual_volume"]["status"], "OK")
+        self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Relative Volume"], 5.0)
+        self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Healthcare")
+        self.assertIn("context-only", views["top_gainers"]["boundary_note"].lower())
+
+    def test_market_movers_unusual_volume_view_explains_missing_baseline(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_asset_profile" in sql:
+                return [{"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100}]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-05-20"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-05-20", "usable_rows": 1200},
+                    {"date": "2026-05-19", "usable_rows": 1200},
+                    {"date": "2026-05-18", "usable_rows": 1200},
+                ]
+            if "AVG(volume) AS avg_10d_volume" in sql:
+                return []
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-05-18", "price": 100.0, "volume": 900},
+                    {"symbol": "AAA", "date": "2026-05-19", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-05-20", "price": 110.0, "volume": 5000},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 21),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        unusual = snapshot["mover_views"]["unusual_volume"]
+        self.assertEqual(unusual["status"], "INSUFFICIENT_DATA")
+        self.assertTrue(unusual["rows"].empty)
+        self.assertIn("10-day", unusual["empty_reason"])
+
+    def test_market_movers_ui_controls_include_explicit_exploration_mode(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("MARKET_MOVER_MODE_LABELS", source)
+        self.assertIn("overview_market_movers_mode", source)
+        self.assertIn("controls.mode", source)
+        self.assertIn("mover_views", source)
+        self.assertNotIn("buy signal", source.lower())
+        self.assertNotIn("sell signal", source.lower())
+
     def test_market_mover_catalyst_links_include_context_without_fetching_articles(self) -> None:
         from app.services.overview.why_it_moved import build_market_mover_catalyst_links
 

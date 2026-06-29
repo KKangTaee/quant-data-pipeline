@@ -8337,3 +8337,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 provider나 trade signal이 아니라 기존 snapshot/read model로 첫 화면을 변동종목 작업대처럼 재정렬해야 함.
 - Analysis result: 1차에서는 command strip과 본문 IA 재배치가 가장 작은 안전한 개선이다. Coverage Diagnostics는 보조로 낮추고, Why It Moved는 하단 부록 느낌을 줄여 `선택 종목 조사` 자리로 정리한다.
 - Follow-up: 1차 완료. 2차는 Top Gainers / Top Losers / Most Active / Unusual Volume / Sector Leaders 같은 explicit exploration mode와 ranking read model 정리다.
+
+### 2026-06-29 - Market Movers 2차에서 탐색 모드와 ranking read model을 정리한다
+
+- User request: 사용자가 `2차 진행`을 승인함.
+- Interpreted goal: 상용 Market Movers처럼 상승/하락/거래량/이상거래량/섹터 흐름을 명확히 전환하되, context-only 경계와 기존 DB/read model boundary를 유지해야 함.
+- Analysis result: 새 provider나 schema 없이 `build_market_movers_snapshot`에 `mover_views`를 추가하고, UI는 `overview_market_movers_mode` selector가 선택한 view의 표/차트를 렌더링하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 2차 완료. 3차는 선택 종목 detail pane 안에 Why It Moved 조사 시작점을 통합하되 자동 원인 판정/추천/저장은 만들지 않는다.

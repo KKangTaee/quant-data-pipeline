@@ -76,6 +76,14 @@ MARKET_MOVER_PERIOD_LABELS = {
     "monthly": "Monthly",
     "yearly": "Yearly",
 }
+MARKET_MOVER_MODE_LABELS = {
+    "top_gainers": "Top Gainers",
+    "top_losers": "Top Losers",
+    "volume_leaders": "Volume Leaders",
+    "unusual_volume": "Unusual Volume",
+    "sector_leaders": "Sector Leaders",
+}
+MARKET_MOVER_MODE_ORDER = tuple(MARKET_MOVER_MODE_LABELS)
 
 
 @dataclass(frozen=True)
@@ -85,6 +93,7 @@ class MarketMoverControls:
     period: str
     sector: str
     top_n: int
+    mode: str = "top_gainers"
 
 
 def _coverage_label(value: str) -> str:
@@ -97,6 +106,17 @@ def _universe_limit(value: str) -> int:
 
 def _market_mover_period_label(value: str) -> str:
     return MARKET_MOVER_PERIOD_LABELS.get(value, value.title())
+
+
+def _market_mover_mode_label(value: str) -> str:
+    return MARKET_MOVER_MODE_LABELS.get(value, str(value).replace("_", " ").title())
+
+
+def _normalize_market_mover_mode(value: Any) -> str:
+    normalized = str(value or "top_gainers").strip().lower()
+    if normalized in MARKET_MOVER_MODE_LABELS:
+        return normalized
+    return "top_gainers"
 
 
 def _market_refresh_mode_label(value: str) -> str:
@@ -662,6 +682,31 @@ def _select_market_refresh_mode(container: Any, *, auto_supported: bool) -> str:
     return str(selected or "manual")
 
 
+def _select_market_mover_mode(container: Any) -> str:
+    key = "overview_market_movers_mode"
+    if st.session_state.get(key) not in MARKET_MOVER_MODE_ORDER:
+        st.session_state[key] = "top_gainers"
+    segmented_control = getattr(container, "segmented_control", None)
+    if callable(segmented_control):
+        selected = segmented_control(
+            "탐색 모드",
+            list(MARKET_MOVER_MODE_ORDER),
+            key=key,
+            format_func=_market_mover_mode_label,
+            help="저장된 read model 안에서 상승, 하락, 거래량, 이상거래량, 섹터 흐름을 전환합니다.",
+        )
+    else:
+        selected = container.radio(
+            "탐색 모드",
+            list(MARKET_MOVER_MODE_ORDER),
+            key=key,
+            format_func=_market_mover_mode_label,
+            horizontal=True,
+            help="저장된 read model 안에서 상승, 하락, 거래량, 이상거래량, 섹터 흐름을 전환합니다.",
+        )
+    return _normalize_market_mover_mode(selected)
+
+
 def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
     summary, checked_at = _get_browser_auto_refresh_state(universe_code)
     if summary:
@@ -692,7 +737,7 @@ def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
 
 def _render_market_movers_controls() -> MarketMoverControls:
     render_overview_toolbar_label("스캔 조건")
-    controls = st.columns([1.1, 1.2, 1.1, 0.8], gap="small", vertical_alignment="bottom")
+    controls = st.columns([1.05, 1.0, 1.0, 0.72, 1.45], gap="small", vertical_alignment="bottom")
     coverage = str(
         controls[0].selectbox(
             "Coverage",
@@ -734,12 +779,14 @@ def _render_market_movers_controls() -> MarketMoverControls:
             key="overview_market_movers_top_n",
         )
     )
+    mode = _select_market_mover_mode(controls[4])
     return MarketMoverControls(
         coverage=coverage,
         universe_limit=universe_limit,
         period=period,
         sector=sector,
         top_n=top_n,
+        mode=mode,
     )
 
 
@@ -877,6 +924,39 @@ def _render_missing_diagnostics(snapshot: dict[str, Any], *, universe_code: str,
                 "Evidence-based hint only: quote endpoint, 5D history, DB EOD price, profile, and fast_info when needed."
             )
             _render_quote_gap_diagnostics_result(result_key, universe_code=universe_code)
+
+
+def _market_mover_view_model(snapshot: dict[str, Any], mode: Any) -> dict[str, Any]:
+    normalized_mode = _normalize_market_mover_mode(mode)
+    views = snapshot.get("mover_views")
+    model: dict[str, Any] = {}
+    if isinstance(views, dict):
+        model = dict(views.get(normalized_mode) or {})
+    if not model:
+        fallback_rows = snapshot.get("volume_rows") if normalized_mode == "volume_leaders" else snapshot.get("rows")
+        model = {
+            "label": _market_mover_mode_label(normalized_mode),
+            "kind": "symbol",
+            "sort_basis": "Legacy ranking rows",
+            "rows": fallback_rows,
+            "empty_reason": "No rows are available for this exploration mode.",
+            "boundary_note": "Context-only ranking view.",
+        }
+
+    rows = model.get("rows")
+    if not isinstance(rows, pd.DataFrame):
+        rows = pd.DataFrame()
+    status = str(model.get("status") or ("OK" if not rows.empty else "INSUFFICIENT_DATA"))
+    return {
+        "mode": normalized_mode,
+        "label": str(model.get("label") or _market_mover_mode_label(normalized_mode)),
+        "kind": str(model.get("kind") or "symbol"),
+        "status": status,
+        "sort_basis": str(model.get("sort_basis") or ""),
+        "empty_reason": str(model.get("empty_reason") or "No rows are available for this exploration mode."),
+        "boundary_note": str(model.get("boundary_note") or "Context-only ranking view."),
+        "rows": rows,
+    }
 
 
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
@@ -1017,6 +1097,89 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
         text=alt.Text("Average Return Label:N"),
     )
     return (bars + labels).properties(height=_market_mover_chart_height(source_row_count))
+
+
+def _build_relative_volume_bar_chart(rows: pd.DataFrame) -> alt.Chart:
+    chart_rows = rows.copy()
+    if not chart_rows.empty and "Relative Volume" in chart_rows:
+        chart_rows["Relative Volume"] = pd.to_numeric(chart_rows["Relative Volume"], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Relative Volume"])
+    elif not chart_rows.empty:
+        chart_rows = pd.DataFrame()
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame([{"Symbol": "No Data", "Name": "-", "Relative Volume": 0.0, "Sector": "Unknown"}])
+    if "Rank" in chart_rows:
+        chart_rows = chart_rows.sort_values("Rank").reset_index(drop=True)
+    chart_rows["Relative Volume Label"] = chart_rows["Relative Volume"].map(
+        lambda value: f"{float(value):.2f}x" if pd.notna(value) else "-"
+    )
+    if "Sector" not in chart_rows:
+        chart_rows["Sector"] = "Unknown"
+    chart_rows["Bar Color"] = chart_rows["Sector"].map(lambda value: _sector_bar_color(value))
+    symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
+    max_value = max(1.0, float(chart_rows["Relative Volume"].max()) if not chart_rows.empty else 1.0)
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X("Relative Volume:Q", title="Relative Volume vs 10D Avg", scale=alt.Scale(domain=[0, max_value * 1.12])),
+        y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=80)),
+        tooltip=["Rank:O", "Symbol:N", "Name:N", "Relative Volume Label:N", "Volume Basis:N", "Sector:N"],
+    )
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
+    labels = base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT).encode(
+        text=alt.Text("Relative Volume Label:N")
+    )
+    return (bars + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
+
+
+def _build_sector_leader_bar_chart(rows: pd.DataFrame) -> alt.Chart:
+    chart_rows = rows.copy()
+    metric_column = "Market Cap Weighted Return %"
+    if not chart_rows.empty and metric_column in chart_rows:
+        chart_rows[metric_column] = pd.to_numeric(chart_rows[metric_column], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=[metric_column])
+    elif not chart_rows.empty:
+        chart_rows = pd.DataFrame()
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame([{"Group": "No Data", metric_column: 0.0, "Symbols": 0, "Top Symbol": "-"}])
+    if "Rank" in chart_rows:
+        chart_rows = chart_rows.sort_values("Rank").reset_index(drop=True)
+    chart_rows["Return Magnitude %"] = chart_rows[metric_column].abs()
+    chart_rows["Return Label"] = chart_rows[metric_column].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    chart_rows["Bar Color"] = chart_rows.apply(
+        lambda row: _sector_bar_color(row.get("Group"), row.get(metric_column)),
+        axis=1,
+    )
+    group_order = chart_rows["Group"].drop_duplicates().tolist()
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X(
+            "Return Magnitude %:Q",
+            title="Sector Move Magnitude %",
+            stack=None,
+            scale=alt.Scale(domain=_positive_return_domain(chart_rows["Return Magnitude %"])),
+        ),
+        y=alt.Y("Group:N", sort=group_order, title=None, axis=alt.Axis(labelLimit=150)),
+        tooltip=["Rank:O", "Group:N", "Symbols:Q", "Return Label:N", "Top Symbol:N", "Top Symbol Return %:Q"],
+    )
+    bars = base.mark_bar(cornerRadiusEnd=3).encode(color=alt.Color("Bar Color:N", scale=None, legend=None))
+    labels = base.mark_text(align="left", baseline="middle", dx=5, fontSize=11, color=OVERVIEW_COLOR_TEXT).encode(
+        text=alt.Text("Return Label:N"),
+    )
+    return (bars + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
+
+
+def _build_market_mover_mode_chart(mode_model: dict[str, Any]) -> alt.Chart:
+    mode = _normalize_market_mover_mode(mode_model.get("mode"))
+    rows = mode_model.get("rows")
+    if not isinstance(rows, pd.DataFrame):
+        rows = pd.DataFrame()
+    if mode == "volume_leaders":
+        return _build_volume_bar_chart(rows)
+    if mode == "unusual_volume":
+        return _build_relative_volume_bar_chart(rows)
+    if mode == "sector_leaders":
+        return _build_sector_leader_bar_chart(rows)
+    return _build_return_bar_chart(rows)
 
 
 def _render_market_movers_daily_refresh_bar(
@@ -1386,54 +1549,52 @@ def _render_market_movers_snapshot_panel(
     volume_rows = snapshot.get("volume_rows")
     if not isinstance(volume_rows, pd.DataFrame) or volume_rows.empty:
         volume_rows = rows
+    selected_model = _market_mover_view_model(snapshot, controls.mode)
+    selected_rows = selected_model["rows"]
 
     list_col, context_col = st.columns([1.18, 1.05], gap="medium")
     with list_col:
-        st.markdown("#### 상위 변동종목 목록")
-        return_table_tab, volume_table_tab = st.tabs(["Return Table", "Volume Table"])
-        with return_table_tab:
+        st.markdown(f"#### {selected_model['label']}")
+        st.caption(f"{selected_model['sort_basis']} · {selected_model['boundary_note']}")
+        if selected_rows.empty:
+            st.info(selected_model["empty_reason"])
+        else:
             st.dataframe(
-                rows,
+                selected_rows,
                 width="stretch",
-                height=min(620, _market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
-                hide_index=True,
-            )
-        with volume_table_tab:
-            st.dataframe(
-                volume_rows,
-                width="stretch",
-                height=min(620, _market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
+                height=min(620, _market_mover_chart_height(len(selected_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
                 hide_index=True,
             )
     with context_col:
         st.markdown("#### 핵심 차트 / 섹터 요약")
-        return_tab, volume_tab, sector_tab = st.tabs(["Return Rank", "Volume Rank", "Sector Pulse"])
-        with return_tab:
-            st.altair_chart(_build_return_bar_chart(rows), width="stretch")
-        with volume_tab:
-            st.altair_chart(_build_volume_bar_chart(volume_rows), width="stretch")
-        with sector_tab:
-            st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
+        st.altair_chart(_build_market_mover_mode_chart(selected_model), width="stretch")
+        if selected_model["status"] != "OK" and selected_model["empty_reason"]:
+            st.caption(selected_model["empty_reason"])
 
     _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)
-    with st.expander("상세 표 전체 높이로 보기", expanded=False):
-        table_tabs = st.tabs(["Return Table", "Volume Table"])
-        with table_tabs[0]:
-            st.dataframe(
-                rows,
-                width="stretch",
-                height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
-                hide_index=True,
-            )
-        with table_tabs[1]:
-            st.dataframe(
-                volume_rows,
-                width="stretch",
-                height=_market_mover_chart_height(len(volume_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
-                hide_index=True,
-            )
+    mode_models = [_market_mover_view_model(snapshot, mode) for mode in MARKET_MOVER_MODE_ORDER]
+    with st.expander("모드별 상세 표 전체 높이로 보기", expanded=False):
+        table_tabs = st.tabs([model["label"] for model in mode_models])
+        for tab, model in zip(table_tabs, mode_models, strict=True):
+            with tab:
+                mode_rows = model["rows"]
+                st.caption(model["sort_basis"])
+                if mode_rows.empty:
+                    st.info(model["empty_reason"])
+                    continue
+                st.dataframe(
+                    mode_rows,
+                    width="stretch",
+                    height=_market_mover_chart_height(len(mode_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                    hide_index=True,
+                )
+    investigation_rows = (
+        selected_rows
+        if selected_model["kind"] == "symbol" and isinstance(selected_rows, pd.DataFrame) and not selected_rows.empty
+        else rows
+    )
     _render_market_mover_why_it_moved_panel(
-        rows,
+        investigation_rows,
         volume_rows,
         universe_code=controls.coverage,
         period=controls.period,
@@ -1452,7 +1613,7 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         build_market_movers_command_strip_model(
             snapshot,
             controls=controls,
-            exploration_mode="Return Rank",
+            exploration_mode=_market_mover_mode_label(controls.mode),
         )
     )
     _render_market_movers_refresh_bar(

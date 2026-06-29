@@ -5403,3 +5403,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-workbench-v1-20260629/`에서 1차 Market Movers UX 골격 재설계를 완료했다.
   - 상단 command strip으로 coverage / period / effective timestamp / freshness / universe / returnable / missing / mode를 먼저 보여주고, 본문은 `상위 변동종목 목록` + `핵심 차트 / 섹터 요약` + 보조 diagnostics + `선택 종목 조사` 흐름으로 정리했다.
   - 검증은 py_compile, `git diff --check`, focused unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ daily/weekly, narrow viewport)로 완료했다. 2차는 explicit exploration mode / ranking read model 정리다.
+- Overview Market Movers Modes V2 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-modes-v2-20260629/`에서 2차 탐색 모드와 ranking read model 정리를 완료했다.
+  - `mover_views`로 Top Gainers / Top Losers / Volume Leaders / Unusual Volume / Sector Leaders를 추가하고, UI는 선택 모드 표/차트를 첫 화면에 렌더링한다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 3차는 선택 종목 detail pane과 Why It Moved 통합이다.

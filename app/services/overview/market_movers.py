@@ -97,6 +97,24 @@ VOLUME_COLUMNS = [
     "Price Source",
 ]
 
+UNUSUAL_VOLUME_COLUMNS = [
+    "Rank",
+    "Symbol",
+    "Name",
+    "Relative Volume",
+    "Current Volume",
+    "Avg 10D Volume",
+    "Baseline Days",
+    "Volume Basis",
+    "Return %",
+    "Sector",
+    "Industry",
+    "Market Cap",
+    "Start Date",
+    "End Date",
+    "Price Source",
+]
+
 MISSING_COLUMNS = [
     "Symbol",
     "Name",
@@ -170,6 +188,27 @@ GROUP_TICKER_LEADER_COLUMNS = [
     "Previous Start Date",
     "Previous End Date",
 ]
+
+MOVER_VIEW_MODE_ORDER = [
+    "top_gainers",
+    "top_losers",
+    "volume_leaders",
+    "unusual_volume",
+    "sector_leaders",
+]
+
+MOVER_VIEW_LABELS = {
+    "top_gainers": "Top Gainers",
+    "top_losers": "Top Losers",
+    "volume_leaders": "Volume Leaders",
+    "unusual_volume": "Unusual Volume",
+    "sector_leaders": "Sector Leaders",
+}
+
+MOVER_VIEW_BOUNDARY_NOTE = (
+    "Context-only ranking view: not a trading signal, recommendation, validation gate, "
+    "Final Review decision, or monitoring signal."
+)
 
 def _default_query(db_name: str, sql: str, params: Sequence[Any] | None = None) -> list[dict[str, Any]]:
     import pymysql
@@ -1872,8 +1911,25 @@ def build_overview_breadth_heatmap_summary(
         ),
     }
 
-def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:
-    ranked = sorted(rows, key=lambda row: (-float(row["return_pct"]), row["symbol"]))[:top_n]
+def _ranked_return_frame(
+    rows: list[dict[str, Any]],
+    *,
+    top_n: int,
+    ascending: bool = False,
+    negative_only: bool = False,
+) -> pd.DataFrame:
+    source_rows = [
+        row
+        for row in rows
+        if (not negative_only or (_safe_float(row.get("return_pct")) is not None and float(row["return_pct"]) < 0))
+    ]
+    ranked = sorted(
+        source_rows,
+        key=lambda row: (
+            float(row["return_pct"]) if ascending else -float(row["return_pct"]),
+            row["symbol"],
+        ),
+    )[:top_n]
     out = [
         {
             "Rank": index,
@@ -1904,6 +1960,12 @@ def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFr
         for index, row in enumerate(ranked, start=1)
     ]
     return _rows_frame(out, columns=MOVERS_COLUMNS)
+
+def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:
+    return _ranked_return_frame(rows, top_n=top_n)
+
+def _ranked_losers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:
+    return _ranked_return_frame(rows, top_n=top_n, ascending=True, negative_only=True)
 
 def _current_period_volume_dates(date_window: dict[str, Any], *, period: str) -> list[str]:
     normalized_period = str(period or "daily").strip().lower()
@@ -2076,6 +2138,240 @@ def _ranked_volume_frame(
         for index, row in enumerate(ranked, start=1)
     ]
     return _rows_frame(out, columns=VOLUME_COLUMNS)
+
+def _relative_volume_baseline_dates(
+    date_window: dict[str, Any],
+    *,
+    period: str,
+    skip_current_period: bool = True,
+) -> list[str]:
+    normalized_period = str(period or "daily").strip().lower()
+    offset = VALID_PERIODS.get(normalized_period, 1)
+    start_index = offset if skip_current_period else 0
+    dates = [
+        row_date
+        for row in list(date_window.get("eligible_dates") or [])[start_index : start_index + 10]
+        if (row_date := _iso_date(row.get("date")))
+    ]
+    return dates[:10]
+
+def _load_relative_volume_baselines(
+    *,
+    symbols: list[str],
+    dates: list[str],
+    query_fn: QueryFn,
+) -> dict[str, dict[str, Any]]:
+    if not symbols or not dates:
+        return {}
+    symbol_placeholders = ",".join(["%s"] * len(symbols))
+    date_placeholders = ",".join(["%s"] * len(dates))
+    rows = query_fn(
+        "finance_price",
+        f"""
+        SELECT
+            symbol,
+            AVG(volume) AS avg_10d_volume,
+            COUNT(volume) AS baseline_days
+        FROM nyse_price_history FORCE INDEX (uk_symbol_timeframe_date)
+        WHERE symbol IN ({symbol_placeholders})
+          AND timeframe = %s
+          AND `date` IN ({date_placeholders})
+          AND volume IS NOT NULL
+        GROUP BY symbol
+        """,
+        list(symbols) + ["1d"] + list(dates),
+    )
+    baselines: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        avg_volume = _safe_float(row.get("avg_10d_volume"))
+        if not symbol or avg_volume is None or avg_volume <= 0:
+            continue
+        baselines[symbol] = {
+            "avg_10d_volume": avg_volume,
+            "baseline_days": int(row.get("baseline_days") or 0),
+        }
+    return baselines
+
+def _current_volume_for_relative(
+    row: dict[str, Any],
+    *,
+    period: str,
+    volume_stats: dict[str, dict[str, Any]],
+) -> tuple[float | None, str]:
+    normalized_period = str(period or "daily").strip().lower()
+    if normalized_period == "daily":
+        return _safe_float(row.get("volume")), "Daily share volume"
+    symbol = str(row.get("symbol") or "").strip().upper()
+    stats = volume_stats.get(symbol) or {}
+    avg_daily_volume = _safe_float(stats.get("avg_daily_volume"))
+    if avg_daily_volume is not None:
+        return avg_daily_volume, "Avg daily share volume"
+    return _safe_float(row.get("volume")), "End-date share volume"
+
+def _unusual_volume_frame(
+    return_rows: list[dict[str, Any]],
+    *,
+    top_n: int,
+    period: str,
+    volume_stats: dict[str, dict[str, Any]] | None = None,
+    relative_volume_baselines: dict[str, dict[str, Any]] | None = None,
+) -> pd.DataFrame:
+    volume_stats = volume_stats or {}
+    relative_volume_baselines = relative_volume_baselines or {}
+    ranked_rows: list[dict[str, Any]] = []
+    for row in return_rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        current_volume, volume_basis = _current_volume_for_relative(
+            row,
+            period=period,
+            volume_stats=volume_stats,
+        )
+        baseline = relative_volume_baselines.get(symbol) or {}
+        avg_10d_volume = _safe_float(baseline.get("avg_10d_volume"))
+        if current_volume is None or avg_10d_volume is None or avg_10d_volume <= 0:
+            continue
+        ranked_rows.append(
+            {
+                "symbol": symbol,
+                "name": row.get("name") or "-",
+                "relative_volume": float(current_volume) / float(avg_10d_volume),
+                "current_volume": current_volume,
+                "avg_10d_volume": avg_10d_volume,
+                "baseline_days": int(baseline.get("baseline_days") or 0),
+                "volume_basis": volume_basis,
+                "return_pct": row.get("return_pct"),
+                "sector": row.get("sector") or "Unknown",
+                "industry": row.get("industry") or "Unknown",
+                "market_cap": row.get("market_cap"),
+                "start_date": row.get("start_date"),
+                "end_date": row.get("end_date"),
+                "price_source": row.get("price_source") or "EOD DB",
+            }
+        )
+
+    ranked = sorted(
+        ranked_rows,
+        key=lambda item: (-float(item["relative_volume"]), item["symbol"]),
+    )[:top_n]
+    out = [
+        {
+            "Rank": index,
+            "Symbol": row["symbol"],
+            "Name": row["name"] or "-",
+            "Relative Volume": round(float(row["relative_volume"]), 2),
+            "Current Volume": int(round(float(row["current_volume"]))),
+            "Avg 10D Volume": int(round(float(row["avg_10d_volume"]))),
+            "Baseline Days": int(row["baseline_days"]),
+            "Volume Basis": row["volume_basis"],
+            "Return %": round(float(row["return_pct"]), 2) if row.get("return_pct") is not None else None,
+            "Sector": row["sector"],
+            "Industry": row["industry"],
+            "Market Cap": int(row["market_cap"]) if row.get("market_cap") else None,
+            "Start Date": row["start_date"],
+            "End Date": row["end_date"],
+            "Price Source": row["price_source"],
+        }
+        for index, row in enumerate(ranked, start=1)
+    ]
+    return _rows_frame(out, columns=UNUSUAL_VOLUME_COLUMNS)
+
+def _view_status(rows: pd.DataFrame) -> str:
+    return "OK" if isinstance(rows, pd.DataFrame) and not rows.empty else "INSUFFICIENT_DATA"
+
+def _mode_model(
+    *,
+    label: str,
+    rows: pd.DataFrame,
+    sort_basis: str,
+    kind: str,
+    empty_reason: str,
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "kind": kind,
+        "status": _view_status(rows),
+        "sort_basis": sort_basis,
+        "empty_reason": "" if _view_status(rows) == "OK" else empty_reason,
+        "rows": rows,
+        "boundary_note": MOVER_VIEW_BOUNDARY_NOTE,
+    }
+
+def _build_market_mover_views(
+    return_rows: list[dict[str, Any]],
+    *,
+    top_n: int,
+    period: str,
+    volume_stats: dict[str, dict[str, Any]] | None = None,
+    relative_volume_baselines: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    volume_stats = volume_stats or {}
+    top_gainers = _ranked_movers_frame(return_rows, top_n=top_n)
+    top_losers = _ranked_losers_frame(return_rows, top_n=top_n)
+    volume_leaders = _ranked_volume_frame(
+        return_rows,
+        top_n=top_n,
+        period=period,
+        volume_stats=volume_stats,
+    )
+    unusual_volume = _unusual_volume_frame(
+        return_rows,
+        top_n=top_n,
+        period=period,
+        volume_stats=volume_stats,
+        relative_volume_baselines=relative_volume_baselines,
+    )
+    sector_rows = _group_rows_frame(
+        _rank_group_rows(
+            _group_leadership_rows(
+                return_rows=return_rows,
+                group_by="sector",
+                min_group_size=1,
+                start_date=str(return_rows[0].get("start_date") or "-") if return_rows else "-",
+                end_date=str(return_rows[0].get("end_date") or "-") if return_rows else "-",
+            ),
+            top_n=top_n,
+        )
+    )
+    return {
+        "top_gainers": _mode_model(
+            label=MOVER_VIEW_LABELS["top_gainers"],
+            rows=top_gainers,
+            sort_basis="Return % descending",
+            kind="symbol",
+            empty_reason="No returnable rows are available for gainers.",
+        ),
+        "top_losers": _mode_model(
+            label=MOVER_VIEW_LABELS["top_losers"],
+            rows=top_losers,
+            sort_basis="Negative Return % ascending",
+            kind="symbol",
+            empty_reason="No negative return rows are available for the selected coverage and period.",
+        ),
+        "volume_leaders": _mode_model(
+            label=MOVER_VIEW_LABELS["volume_leaders"],
+            rows=volume_leaders,
+            sort_basis="Share / dollar volume descending from stored DB rows",
+            kind="symbol",
+            empty_reason="No usable volume rows are available for the selected coverage and period.",
+        ),
+        "unusual_volume": _mode_model(
+            label=MOVER_VIEW_LABELS["unusual_volume"],
+            rows=unusual_volume,
+            sort_basis="Current volume divided by prior 10-day average volume",
+            kind="symbol",
+            empty_reason="10-day volume baseline is unavailable from stored EOD history for this selection.",
+        ),
+        "sector_leaders": _mode_model(
+            label=MOVER_VIEW_LABELS["sector_leaders"],
+            rows=sector_rows,
+            sort_basis="Sector market-cap weighted return descending",
+            kind="sector",
+            empty_reason="No sector rows are available for the selected coverage and period.",
+        ),
+    }
 
 def _latest_intraday_snapshot_time(
     *,
@@ -2268,10 +2564,25 @@ def _build_intraday_return_payload(
         universe_code=universe_code,
         query_fn=query_fn,
     )
+    relative_volume_dates = (
+        _relative_volume_baseline_dates(
+            previous_date_window,
+            period="daily",
+            skip_current_period=False,
+        )
+        if previous_date_window.get("status") == "OK"
+        else []
+    )
+    relative_volume_baselines = _load_relative_volume_baselines(
+        symbols=[str(row.get("symbol") or "").strip().upper() for row in return_rows],
+        dates=relative_volume_dates,
+        query_fn=query_fn,
+    )
     return {
         "snapshot_time": snapshot_time,
         "return_rows": return_rows,
         "missing_rows": missing_rows,
+        "relative_volume_baselines": relative_volume_baselines,
         "date_window": date_window,
         "coverage": coverage,
     }
@@ -2302,6 +2613,12 @@ def _build_intraday_movers_snapshot(
         return None
     return_rows = list(payload["return_rows"])
     missing_rows = list(payload["missing_rows"])
+    mover_views = _build_market_mover_views(
+        return_rows,
+        top_n=top_n,
+        period=period,
+        relative_volume_baselines=dict(payload.get("relative_volume_baselines") or {}),
+    )
     date_window = dict(payload["date_window"])
     coverage = dict(payload["coverage"])
     return {
@@ -2313,8 +2630,9 @@ def _build_intraday_movers_snapshot(
         "universe_limit": universe_limit,
         "sector": sector or "All",
         "top_n": top_n,
-        "rows": _ranked_movers_frame(return_rows, top_n=top_n),
-        "volume_rows": _ranked_volume_frame(return_rows, top_n=top_n, period=period),
+        "rows": mover_views["top_gainers"]["rows"],
+        "volume_rows": mover_views["volume_leaders"]["rows"],
+        "mover_views": mover_views,
         "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
         "date_window": date_window,
         "coverage": coverage,
@@ -2439,6 +2757,19 @@ def build_market_movers_snapshot(
                 dates=volume_dates,
                 query_fn=query,
             )
+        relative_volume_dates = _relative_volume_baseline_dates(date_window, period=normalized_period)
+        relative_volume_baselines = _load_relative_volume_baselines(
+            symbols=[str(row.get("symbol") or "").strip().upper() for row in return_rows],
+            dates=relative_volume_dates,
+            query_fn=query,
+        )
+        mover_views = _build_market_mover_views(
+            return_rows,
+            top_n=normalized_top_n,
+            period=normalized_period,
+            volume_stats=volume_stats,
+            relative_volume_baselines=relative_volume_baselines,
+        )
         coverage = _coverage(
             universe_count=len(universe),
             returnable_count=len(return_rows),
@@ -2464,13 +2795,9 @@ def build_market_movers_snapshot(
             "universe_limit": normalized_limit,
             "sector": sector or "All",
             "top_n": normalized_top_n,
-            "rows": _ranked_movers_frame(return_rows, top_n=normalized_top_n),
-            "volume_rows": _ranked_volume_frame(
-                return_rows,
-                top_n=normalized_top_n,
-                period=normalized_period,
-                volume_stats=volume_stats,
-            ),
+            "rows": mover_views["top_gainers"]["rows"],
+            "volume_rows": mover_views["volume_leaders"]["rows"],
+            "mover_views": mover_views,
             "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,
@@ -2773,4 +3100,6 @@ __all__ = [
     "build_market_movers_snapshot",
     "build_group_leadership_snapshot",
     "build_overview_breadth_heatmap_summary",
+    "MOVER_VIEW_MODE_ORDER",
+    "MOVER_VIEW_LABELS",
 ]
