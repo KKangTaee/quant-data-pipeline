@@ -125,6 +125,8 @@ def build_backtest_result_bundle(
         meta["promotion_max_bid_ask_spread_pct"] = input_params.get("promotion_max_bid_ask_spread_pct")
     if input_params.get("benchmark_ticker") is not None:
         meta["benchmark_ticker"] = input_params.get("benchmark_ticker")
+    if input_params.get("benchmark_contract") is not None:
+        meta["benchmark_contract"] = input_params.get("benchmark_contract")
     if input_params.get("guardrail_reference_ticker") is not None:
         meta["guardrail_reference_ticker"] = input_params.get("guardrail_reference_ticker")
     if input_params.get("promotion_min_benchmark_coverage") is not None:

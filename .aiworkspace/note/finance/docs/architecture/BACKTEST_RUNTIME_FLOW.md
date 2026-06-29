@@ -133,6 +133,9 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 - `meta`: strategy settings, contract, coverage, warning context
 - `warnings`: 데이터 부족, excluded ticker, stale data 같은 사용자 주의사항
 - selection history가 있는 전략은 selection row와 interpretation context
+- `Global Relative Strength`는 5A 이후 `grs_strategy_contract`와 `grs_top_n_concentration`을 meta에 남긴다. 이 계약은 cash proxy, benchmark contract, top-N, rebalance interval, trend filter window, momentum score window / weight, cash share / unfilled slot / concentration status를 해석하기 위한 compact metadata다.
+- `Risk Parity Trend`는 5B 이후 `risk_parity_trend_contract`와 `risk_parity_inverse_vol_summary`를 meta에 남긴다. 이 계약은 volatility window, trend/min-price eligible universe, inverse-vol weight, cash-only state, guardrail cash-only effect, low-vol overweight를 해석하기 위한 compact metadata다.
+- `Dual Momentum`은 5B 이후 `dual_momentum_contract`와 `dual_momentum_concentration_turnover`를 meta에 남긴다. 이 계약은 top-N concentration, trend rejected ticker, selected / unfilled count, cash proxy retention, selection change / whipsaw events를 해석하기 위한 compact metadata다.
 
 Phase 27 이후 result bundle meta에는 Data Trust Summary가 읽을 수 있도록 아래 값도 포함한다.
 
@@ -226,6 +229,10 @@ ETF basket 전략에서 특정 ticker의 가격 이력이나 결측이 부족하
 
 `Global Relative Strength`는 Phase 27 첫 작업부터 price freshness preflight와
 Data Trust Summary metadata를 남기는 첫 적용 대상이다.
+5A 이후 GRS DB runtime은 period row를 strategy 전에 `.interval(...)`로 다시 줄이지 않는다.
+월말 period row 전체를 넘기고, 실제 리밸런싱 간격은 `GlobalRelativeStrengthStrategy(rebalance_interval=...)`가 소유한다.
+따라서 `interval=3`은 3개월 리밸런싱 cadence로만 해석하며, runtime preflight는 cash proxy와 ticker benchmark처럼 반드시 필요한 row만 blocking check한다.
+위험자산 ETF의 데이터 부족은 strategy 준비 단계의 exclusion / warning / metadata 경로로 남겨야 한다.
 
 ## Refinement / Compare 해석
 

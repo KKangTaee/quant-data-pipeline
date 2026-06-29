@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-24
+Last Verified: 2026-06-25
 
 ## Current State After Master Merge
 
@@ -28,7 +28,15 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-refresh-state-v1-20260624/`
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`
+- 목적: `Workspace > Overview`의 남은 `legacy_dashboard.py` dependency를 helper cluster 단위로 제거하고, active page / tab / helper ownership을 명시적 모듈 구조로 닫는다.
+- 주요 변경: Market Context / Events / Sentiment / Market Movers / Futures Macro helper ownership을 `app/web/overview/*_helpers.py`로 옮기고, `app/web/overview/legacy_dashboard.py`를 삭제했다. `app/web/overview_dashboard.py`는 필요한 compatibility export만 명시적으로 제공한다.
+- 이번 차수에서 하지 않은 일: Overview product flow 재설계, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed structure task: `.aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/`
+- 목적: Overview primary tab entrypoint가 직접 legacy helper를 호출하지 않도록, Market Context / Events / Futures Macro / Market Movers / Sentiment 각각의 tab-local helper bridge를 만든다.
+- 주요 변경: `app/web/overview/{market_context,events,futures_macro,market_movers,sentiment}_helpers.py`를 추가하고 active tab entry modules가 semantic helper functions를 호출하게 했다.
+- 이번 차수에서 하지 않은 일: low-level helper body 전체 물리 이동, `legacy_dashboard.py` 삭제, provider / schema / registry / saved JSONL 변경, validation / monitoring / trading semantics 추가.
+- Recent completed task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-refresh-state-v1-20260624/`
 - 목적: `Workspace > Overview > Futures Macro` 탭이 저장된 선물 일봉 최신일을 stale하게 보여주지 않도록 DB 최신 marker와 화면 snapshot cache 경계를 정리한다.
 - 주요 변경: `load_overview_futures_macro_snapshot` cache key에 latest stored 1D futures candle marker를 포함했다. `Futures Macro` 탭 상단에는 `일봉 매크로 갱신`과 `최신 데이터 다시 읽기` controls를 추가해 daily collection과 cache reload를 탭 안에서 직접 실행할 수 있게 했다.
 - 이번 차수에서 하지 않은 일: futures daily collector provider 교체, OS scheduler / automation cadence 변경, DB schema / registry / saved JSONL 변경, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
@@ -205,6 +213,13 @@ Workspace > Ingestion
 - Recent previous sub-dev task: `.aiworkspace/note/finance/tasks/active/operations-v2-closeout-20260608/`
 - 목적: Operations Overview V2 5차로 1차~4차 개편을 최종 QA / runbook / durable docs 기준으로 닫고, 정상 top-navigation QA path와 direct `/operations` local routing diagnostic을 분리한다.
 
+Recent Backtest strategy contract work retained from `backtest-dev`:
+
+- `risk-parity-dual-momentum-5b-20260610`: Backtest 5B로 Risk Parity Trend와 Dual Momentum의 strategy runtime / result bundle 계약을 고도화했다. Risk Parity는 volatility window / eligible universe / inverse-vol weight / cash-only state / guardrail effect / low-vol overweight를, Dual Momentum은 top-N concentration / trend rejected ticker / selected count / cash proxy retention / turnover-whipsaw 해석을 result row/meta와 기존 Selection History에서 확인할 수 있게 됐다. 새 Backtest Analysis evidence / log / workbench panel, registry / saved JSONL / run history / generated artifact write, provider / FRED direct fetch, Practical Validation / Final Review / Monitoring behavior, live trading / broker order / auto rebalance는 열지 않았다.
+- `global-relative-strength-5a-20260609`: Backtest 5A로 Global Relative Strength의 strategy runtime / result bundle 계약을 고도화했다. GRS는 strategy가 rebalance interval을 직접 소유하고, cash proxy / benchmark contract / excluded ticker / stale price / top-N concentration / momentum score window 정보를 result bundle meta와 기존 Selection History에서 해석할 수 있게 됐다. 새 evidence/log/workbench panel과 durable writes는 열지 않았다.
+- `backtest-analysis-direction-reset-20260609`: Backtest 4차 4C로 3A~4B evidence / governance / workbench 패널을 기본 화면에서 내리고, Backtest Analysis를 전략 실행 / 비교 / 후보 생성 중심으로 되돌렸다. 3A~4B 산출물은 `전략 개발 참고` advanced control 뒤에 보존한다.
+- `etf-rerun-matrix-workbench-20260608`, `etf-current-anchor-workbench-20260608`, `etf-evidence-expansion-20260608`, `risk-on-momentum-governance-20260608`, `strict-annual-etf-bridge-20260608`, `strategy-evidence-inventory-direction-panel-20260608`: Backtest 3A~4B read-only strategy evidence / bridge / governance / ETF readiness / rerun matrix workbench records. 이 흐름은 current candidate promotion, Practical Validation result creation, provider snapshot collection, live trading / broker order / auto rebalance를 열지 않는 retained work record다.
+
 ## Product Tracks
 
 | Track | Current State | Main Surfaces | Boundary |
@@ -220,6 +235,11 @@ Workspace > Ingestion
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
+| Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
+| Overview Legacy Cleanup V6-V10 | Complete | Overview navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |
+| Overview Structure Split V2-V5 | Complete | Overview primary tab modules own tab-level orchestration, `app/web/overview/components/` component surfaces and `app/services/overview/` service surfaces were introduced, and boundary guard contracts protect active page / tab / component / service ownership. |
+| Overview Tab Module Split V1 | Complete | `app/web/overview_dashboard.py` became a compatibility wrapper, active Overview shell moved to `app/web/overview/page.py`, and primary tab entry modules were added for Market Context, Market Movers, Futures Macro, Sentiment, and Events. |
 | Overview Market Context Load Gate Removal V1 | Complete | Current Overview keeps the internal text-tab underline selector but removes the explicit `시장 맥락 불러오기` gate. Market Context renders immediately when selected. Cold timing shows the slow path is the cockpit snapshot fan-out, especially futures macro validation. |
 | Overview Nav Internal Lazy Load V1 | Superseded | This replaced anchor navigation with internal `st.pills` text tabs and added a first-load Market Context gate. The internal no-anchor navigation remains, but the explicit load gate was removed by Overview Market Context Load Gate Removal V1. |
 | Overview Primary Nav Pill V1 | Superseded | This first visual polish rendered a compact custom anchor nav with Korean primary labels, English secondary labels, and query-param tab slugs. It was replaced by Overview Nav Internal Lazy Load V1 because tab switching must stay inside the current browser session rather than behave as link navigation. |
@@ -233,6 +253,9 @@ Workspace > Ingestion
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
 | Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |
+| Risk Parity / Dual Momentum 5B | Complete | Risk Parity Trend now exposes volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight diagnostics. Dual Momentum now retains trend-rejected top-N slots as cash proxy and exposes selected / rejected / unfilled counts, cash proxy return, concentration, and selection-change / whipsaw diagnostics. Both reuse existing Selection History and result bundle meta without adding a new panel. |
+| Global Relative Strength 5A | Complete | GRS strategy cadence now lives in strategy runtime, not duplicated period-row slicing. Cash proxy, benchmark, excluded ticker, stale price, top-N concentration, rebalance interval, and momentum window metadata flow to the result bundle and Selection History without new evidence/log/workbench panels or durable writes. |
+| Backtest Analysis Direction Reset 4C | Complete | Backtest Analysis returned to execution-first strategy run / comparison / candidate creation. Reference help and 3A-4B evidence / governance / ETF workbench panels remain preserved behind `전략 개발 참고` advanced control. |
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; period refresh V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. Weekly / Monthly / Yearly now expose a manual EOD price-history refresh action through the existing Overview action facade / OHLCV job boundary. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |

@@ -355,6 +355,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Sector ETF coverage expansion, macro/futures regime condition, CPI/FOMC event-window analog, sample quality / PIT / survivorship 보강은 후속 작업이다.
 
+### 2026-06-12 - Backtest product direction should restart from research
+- User request:
+  - 기존 3A~5B 흐름을 그대로 이어가지 말고 Backtest Analysis / strategy runtime / validation handoff / history replay / saved replay의 올바른 제품 흐름을 다시 정의해 달라고 요청함.
+- Interpreted goal:
+  - 구현 없이 새 product direction research bundle을 만들고, 현재 branch drift, 외부 benchmark, 전략군별 maturity, 1차~n차 잠정 roadmap을 정리해야 함.
+- Analysis result:
+  - Backtest Analysis는 실행 / 비교 / 후보 source / replay 중심으로 유지하고, evidence / governance / diagnostics는 compact handoff와 Practical Validation / Final Review / Operations로 분리하는 방향이 맞다. 4C와 5A/5B는 유지 후보, strict quarterly 5C와 Risk-On downstream promotion은 보류 후보로 정리했다.
+- Follow-up:
+  - 상세 산출물은 `.aiworkspace/note/finance/researches/active/backtest-direction-reset-research-20260612/`를 본다. 각 새 세션 요청문과 차수별 개발 guideline은 `DEVELOPMENT_SESSION_GUIDE.md`에 남겼고, 다음 세션 결정점은 1차 `Backtest Result Handoff Contract` 승인 여부다.
+
 ### 2026-06-10 - Market Context should read as a cockpit, not a refresh console
 - User request:
   - `Overview > Market Context` 탭의 1차~4차 UX/UI 개선 진행을 승인함.
@@ -364,6 +374,106 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Market Context의 headline은 자료 경고가 아니라 현재 시장 맥락 한 줄이어야 한다. stale/partial/missing 같은 데이터 상태는 `자료 상태`와 `Data Health` handoff로 분리하고, core 3개 카드와 supporting 3개 카드를 나눠 읽는 순서를 만든다.
 - Follow-up:
   - Direct `/overview` first-load Page not found modal은 normal root navigation과 분리된 Streamlit routing risk로 남긴다.
+
+### 2026-06-10 - ETF 5B should harden Risk Parity / Dual Momentum contracts, not panels
+- User request:
+  - 5A 이후 새 Backtest Analysis 패널이 아니라 Risk Parity Trend와 Dual Momentum의 실제 strategy runtime / result bundle 계약 고도화를 요청함.
+- Interpreted goal:
+  - Risk Parity는 inverse-vol weight와 cash-only / guardrail effect를, Dual Momentum은 top-N rejection / cash retention / whipsaw를 result row/meta와 기존 Selection History에서 설명 가능하게 만든다.
+- Analysis result:
+  - 5B는 strategy row diagnostics와 compact runtime meta summary를 추가하는 것이 맞다. Dual Momentum의 기존 survivor reweighting은 trend-rejected top-N slot을 숨기므로, 5B에서 GRS처럼 rejected slot을 cash proxy로 유지하는 계약으로 정리했다.
+- Follow-up:
+  - Practical Validation / Final Review / Monitoring gate behavior는 바꾸지 않았으며, downstream 정책 변경은 별도 승인 task가 필요하다.
+
+### 2026-06-09 - GRS 5A should harden strategy logic instead of adding panels
+- User request:
+  - Backtest Analysis에 패널을 더 추가하지 말고 Global Relative Strength 전략 자체를 고도화하라고 요청함.
+- Interpreted goal:
+  - GRS runtime / transform / result bundle 흐름에서 cash proxy, benchmark, 제외 ticker, stale price, top-N concentration, rebalance interval, momentum window의 실제 전략 로직 개선점을 반영한다.
+- Analysis result:
+  - GRS의 가장 큰 runtime 문제는 period row를 `.interval(...)`로 줄인 뒤 strategy에서도 `rebalance_interval`을 적용하는 cadence 중복 가능성이었다. 5A는 strategy가 cadence를 단독 소유하게 하고, score window / cash proxy / benchmark / concentration metadata를 result bundle 계약으로 남겼다.
+- Follow-up:
+  - Risk Parity Trend / Dual Momentum도 같은 ETF 전략 계약 hardening 후보지만, 5A 범위에서는 GRS만 다뤘다.
+
+### 2026-06-09 - Backtest Analysis should return to execution-first UX
+- User request:
+  - 4C 진행 전 3A~4B 방향이 evidence/log/workbench 패널 누적으로 흘렀다고 지적하고, 브랜치 목적을 전략 자체 고도화 / prototype 성숙화 / 신규 전략 개발로 재정렬해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis 기본 화면은 실제 전략 실행 / 비교 / 후보 생성 중심이어야 하며, Reference help와 3A~4B evidence / governance / ETF workbench 패널은 기본 화면에서 내려야 함.
+- Analysis result:
+  - 기존 패널은 삭제보다 `전략 개발 참고` advanced control 뒤에 숨기는 편이 안전하다. 이렇게 하면 3A~4B 산출물은 보존하되 일반 백테스트 실행 흐름을 방해하지 않는다.
+- Follow-up:
+  - 다음 개발 방향은 evidence panel 추가보다 전략 로직 / 데이터 계약 / 검증 가능성 / prototype 성숙화 우선이다.
+
+### 2026-06-08 - ETF rerun matrix should stay session-only
+- User request:
+  - 4차 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - GRS / Risk Parity / Dual Momentum의 current-anchor 판단을 read-only anchor 확인에서 한 단계 진행해, Backtest Analysis 안에서 rerun scenario matrix를 실행 / 비교할 수 있어야 함.
+- Analysis result:
+  - 4B는 Streamlit-free service와 session-only UI 실행으로 좁혀야 한다. 결과를 run history나 current candidate registry에 쓰면 promotion workflow가 섞이므로 후속 승인 scope로 둔다.
+- Follow-up:
+  - Provider snapshot collection, Practical Validation result creation, durable strategy hub / report, current candidate promotion은 후속 작업이다.
+
+### 2026-06-08 - ETF current-anchor should start from artifact-backed readiness, not promotion writes
+- User request:
+  - 3차 3D 이후 4차 작업 진행을 요청함.
+- Interpreted goal:
+  - ETF Evidence Expansion 다음 단계로 GRS / Risk Parity / Dual Momentum의 current-anchor readiness를 실제 workflow artifact 기준으로 확인하게 한다.
+- Analysis result:
+  - 4A는 바로 rerun matrix 실행이나 current candidate registry write로 가면 경계가 크다. 먼저 existing run history와 Practical Validation source handoff row를 읽어 latest run / source evidence, missing provider-cost-benchmark evidence, next action을 표시하는 read-only workbench를 구현하는 것이 안전하다.
+- Follow-up:
+  - 4B는 사용자 승인 후 ETF DB-backed rerun matrix / strategy hub update로 열고, current candidate promotion이나 Practical Validation result creation은 별도 승인 경계로 남긴다.
+
+### 2026-06-08 - Backtest 3차 3D should close as ETF evidence expansion
+- User request:
+  - 3C 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - GRS / Risk Parity / Dual Momentum을 바로 current candidate로 만들지 않고, GTAA / Equal Weight 대비 부족한 current anchor / evidence gap / next workflow를 제품 화면에서 확인하게 해야 함.
+- Analysis result:
+  - 세 ETF 전략은 실행 가능하지만 report depth와 provider / cost / benchmark evidence가 부족하므로, 3D는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다.
+- Follow-up:
+  - 실제 rerun matrix, strategy hub / report, current candidate promotion은 후속 승인 scope다.
+
+### 2026-06-08 - Backtest 3차 3C should close as Risk-On governance readiness
+- User request:
+  - Backtest 3차에서 3B 이후 3C 작업을 계속 진행해 달라고 요청함.
+- Interpreted goal:
+  - Risk-On Momentum 5D를 바로 Final Review 후보나 Portfolio Monitoring signal로 승격하지 않고, Daily Swing governance에 필요한 validation / review / monitoring module과 blocker를 제품 화면에서 확인하게 해야 함.
+- Analysis result:
+  - Risk-On은 기존 monthly / annual candidate gate와 다르므로, 3C는 Streamlit-free read model과 Backtest Analysis read-only panel로 좁히는 것이 안전하다. Practical Validation module 실행, Final Review route, Portfolio Monitoring daily signal policy는 후속 승인 scope다.
+- Follow-up:
+  - 3D ETF evidence expansion이 다음 3차 scope로 남는다.
+
+### 2026-06-08 - Bridge scope should be role / evidence handoff, not automatic candidate creation
+- User request:
+  - 3A가 가이드처럼 보인다는 점을 확인한 뒤 3B 작업 진행을 요청함.
+- Interpreted goal:
+  - Strict Annual 3종 + GTAA / Equal Weight를 first evidence-mature group으로 유지하면서, 실제 검증으로 이어질 role / target use / required Practical Validation evidence / recommended workflow를 Backtest Analysis에 추가한다.
+- Analysis result:
+  - 3B는 실행 기능이나 자동 후보 저장이 아니라 read-only bridge/handoff layer가 맞다. Practical Validation은 evidence result owner, Final Review는 selected-route decision owner, Portfolio Monitoring은 read-only monitoring owner로 유지한다.
+- Follow-up:
+  - 3C Risk-On Momentum governance와 3D ETF evidence expansion은 별도 scope로 남긴다. 실제 bridge candidate source creation / validation handoff automation이 필요하면 별도 승인 task로 열어야 한다.
+
+### 2026-06-08 - Strategy maturity should be visible before more governance work
+- User request:
+  - 2차 strategy direction research bundle을 읽고 Backtest 3차 3A `Strategy Evidence Inventory / Direction Panel` 구현 task를 진행해 달라고 요청함.
+- Interpreted goal:
+  - Backtest Analysis에서 모든 catalog strategy의 maturity / evidence / next action을 read-only로 보여주되 runtime, registry, saved setup, DB, provider fetch, governance 구현은 바꾸지 않는다.
+- Analysis result:
+  - Strategy catalog는 Streamlit-free service owner가 필요했다. 처음 inventory service가 `app.web.backtest_strategy_catalog`를 import하면서 UI / engine boundary checker가 실패했으므로, canonical catalog를 `app/services/backtest_strategy_catalog.py`로 승격하고 web file은 compatibility wrapper로 남겼다.
+- Follow-up:
+  - 3B는 strict annual 3종 + GTAA / Equal Weight bridge, 3C는 Risk-On Momentum governance, 3D는 ETF evidence expansion으로 분리한다.
+
+### 2026-06-08 - Backtest strategy direction should separate analysis, documentation, and implementation sessions
+- User request:
+  - 현재 backtest-dev worktree를 전략 분석과 방향성 결정 세션으로 쓰고, 3차부터 새 세션에서 개발할지 확인한 뒤 2차 작업 진행을 요청함.
+- Interpreted goal:
+  - 1차 전략 파악 결과를 durable research bundle로 고정하고, 다음 구현 세션이 바로 읽을 수 있는 handoff를 만든다.
+- Analysis result:
+  - 현재 실행 전략은 넓지만 evidence maturity는 uneven하다. strict annual 3종과 GTAA / Equal Weight가 가장 성숙하고, Risk-On Momentum 5D는 research lane으로 강하지만 validation / monitoring governance가 deferred이며, quarterly prototypes는 runtime contract smoke 수준이다.
+- Follow-up:
+  - 3차 새 세션은 `2026-06-backtest-strategy-direction/NEXT_SESSION_HANDOFF.md`를 읽고 read-only Strategy Evidence Inventory / Direction Panel부터 여는 것이 가장 안전하다.
 
 ### 2026-06-08 - Reference internal links should use page targets
 - User request:
