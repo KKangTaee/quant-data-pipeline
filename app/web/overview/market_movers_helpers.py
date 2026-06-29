@@ -46,6 +46,7 @@ from app.web.overview.components.common import (
 from app.web.overview.components.market_movers import (
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
+    render_breadth_heatmap_summary,
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_market_movers_command_strip,
@@ -1665,6 +1666,29 @@ def _render_market_mover_metadata_table(frame: pd.DataFrame, columns: list[str],
     )
 
 
+def _market_mover_sector_breadth_table(model: dict[str, Any]) -> pd.DataFrame:
+    rows = model.get("table_rows")
+    if isinstance(rows, pd.DataFrame):
+        return rows
+    if isinstance(rows, list):
+        return pd.DataFrame(rows)
+    return pd.DataFrame()
+
+
+def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> None:
+    model = snapshot.get("sector_breadth")
+    if not isinstance(model, dict):
+        return
+    st.markdown("#### 섹터 / 시장 확산 맥락")
+    render_breadth_heatmap_summary(model)
+    table_rows = _market_mover_sector_breadth_table(model)
+    with st.expander("섹터 breadth 상세 표", expanded=False):
+        if table_rows.empty:
+            st.info("선택한 coverage/period에서 표시할 sector breadth row가 없습니다.")
+        else:
+            st.dataframe(table_rows, width="stretch", hide_index=True)
+
+
 def _render_market_mover_why_it_moved_panel(
     rows: pd.DataFrame,
     volume_rows: pd.DataFrame,
@@ -1812,6 +1836,7 @@ def _render_market_movers_snapshot_panel(
         if selected_model["status"] != "OK" and selected_model["empty_reason"]:
             st.caption(selected_model["empty_reason"])
 
+    _render_market_movers_sector_breadth_context(snapshot)
     _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)
     mode_models = [_market_mover_view_model(snapshot, mode) for mode in MARKET_MOVER_MODE_ORDER]
     with st.expander("모드별 상세 표 전체 높이로 보기", expanded=False):

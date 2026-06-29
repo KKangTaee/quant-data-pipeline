@@ -8742,6 +8742,67 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Healthcare")
         self.assertIn("context-only", views["top_gainers"]["boundary_note"].lower())
 
+    def test_market_movers_snapshot_adds_full_sector_breadth_context(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM nyse_asset_profile" in sql:
+                return [
+                    {"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100},
+                    {"symbol": "BBB", "long_name": "BBB Corp", "sector": "Technology", "industry": "Software", "market_cap": 300},
+                    {"symbol": "CCC", "long_name": "CCC Corp", "sector": "Healthcare", "industry": "Devices", "market_cap": 200},
+                    {"symbol": "DDD", "long_name": "DDD Corp", "sector": "Energy", "industry": "Oil", "market_cap": 100},
+                ]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-05-20"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-05-20", "usable_rows": 1200},
+                    {"date": "2026-05-19", "usable_rows": 1200},
+                    {"date": "2026-05-18", "usable_rows": 1200},
+                ]
+            if "AVG(volume) AS avg_10d_volume" in sql:
+                return []
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-05-19", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-05-20", "price": 130.0, "volume": 5000},
+                    {"symbol": "BBB", "date": "2026-05-19", "price": 100.0, "volume": 800},
+                    {"symbol": "BBB", "date": "2026-05-20", "price": 90.0, "volume": 1000},
+                    {"symbol": "CCC", "date": "2026-05-19", "price": 100.0, "volume": 1500},
+                    {"symbol": "CCC", "date": "2026-05-20", "price": 108.0, "volume": 3000},
+                    {"symbol": "DDD", "date": "2026-05-19", "price": 100.0, "volume": 500},
+                    {"symbol": "DDD", "date": "2026-05-20", "price": 70.0, "volume": 2000},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=2,
+            today=date(2026, 5, 21),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        model = snapshot["sector_breadth"]
+        groups = [row["group"] for row in model["heatmap_rows"]]
+        technology = next(row for row in model["table_rows"] if row["Sector"] == "Technology")
+
+        self.assertEqual(model["schema_version"], "market_movers_sector_breadth_v1")
+        self.assertEqual(groups, ["Healthcare", "Technology", "Energy"])
+        self.assertEqual(model["coverage"]["group_count"], 3)
+        self.assertEqual(model["summary"]["participation_label"], "mixed")
+        self.assertEqual(technology["Advancers"], 1)
+        self.assertEqual(technology["Decliners"], 1)
+        self.assertEqual(technology["Median Return %"], 10.0)
+        self.assertEqual(technology["Top Gainer"], "AAA")
+        self.assertEqual(technology["Top Loser"], "BBB")
+        self.assertAlmostEqual(technology["Market Cap Share %"], 57.14)
+        self.assertIn("context-only", model["boundary_note"].lower())
+        self.assertNotIn("prediction", model["boundary_note"].lower())
+
     def test_market_movers_unusual_volume_view_explains_missing_baseline(self) -> None:
         from app.services.overview.market_movers import build_market_movers_snapshot
 
@@ -8790,6 +8851,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("mover_views", source)
         self.assertNotIn("buy signal", source.lower())
         self.assertNotIn("sell signal", source.lower())
+
+    def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_breadth_heatmap_summary", helper_source)
+        self.assertIn("sector_breadth", helper_source)
+        self.assertIn("섹터 / 시장 확산 맥락", helper_source)
+        self.assertIn("섹터 breadth 상세 표", helper_source)
+        self.assertIn("ov-sector-pressure-map", component_source)
+        self.assertIn("Decliners", component_source)
+        self.assertIn("Top Loser", component_source)
+        for forbidden in ["급등 가능성", "매수 후보", "추천", "trade signal"]:
+            self.assertNotIn(forbidden, helper_source)
 
     def test_market_mover_catalyst_links_include_context_without_fetching_articles(self) -> None:
         from app.services.overview.why_it_moved import build_market_mover_catalyst_links

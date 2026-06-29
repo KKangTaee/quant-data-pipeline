@@ -8351,3 +8351,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Why It Moved를 별도 하단 부록처럼 두지 않고, 현재 선택한 변동종목의 rank / price / volume / sector / metadata 조사 시작점을 한 패널로 묶어야 함.
 - Analysis result: 자동 원인 판정 없이도 기존 `why_it_moved` service read model과 current mover rows만으로 선택 종목 detail pane을 구성할 수 있다. metadata 조회는 page render가 아니라 사용자가 누르는 버튼 뒤에만 실행하는 것이 기존 provider boundary와 가장 잘 맞는다.
 - Follow-up: 3차 완료. 4차는 개별 종목 패널을 넘어 sector pulse / heatmap / breadth 맥락을 context-only로 개선한다.
+
+### 2026-06-29 - Market Movers 4차에서 sector 확산 / 집중 맥락을 추가한다
+
+- User request: 사용자가 `4차 진행`을 승인함.
+- Interpreted goal: 개별 급등락 목록 옆에 sector-level participation, concentration, breadth를 붙여 움직임이 특정 sector에 몰렸는지 시장 전반에 퍼졌는지 빠르게 읽게 해야 함.
+- Analysis result: 새 provider나 schema 없이 기존 Market Movers return rows와 group leadership 계산으로 full sector breadth model을 만들 수 있다. `top_n`은 탐색 표 길이에만 적용하고 sector breadth는 전체 returnable rows 기준으로 보여주는 것이 사용 흐름에 맞다.
+- Follow-up: 4차 완료. 5차는 stale / partial / missing / NASDAQ no-universe 같은 coverage trust UX를 같은 언어로 정리한다.

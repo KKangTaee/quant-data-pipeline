@@ -5412,3 +5412,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 선택된 탐색 모드의 종목을 기준으로 rank / price / volume / relative volume / 같은 섹터 위치 / metadata 상태 / 뉴스·한국어 뉴스·SEC·외부 검색 시작점을 한 패널에 묶었다.
   - metadata 조회는 기존 why_it_moved service boundary를 통한 사용자 버튼 동작으로만 유지하고, 자동 원인 판정 / score / 추천 / 저장은 추가하지 않았다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 4차는 sector/heatmap/breadth 맥락 개선이다.
+- Overview Market Movers Sector V4 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-sector-v4-20260629/`에서 4차 sector / heatmap / breadth 맥락 개선을 완료했다.
+  - 기존 mover return rows로 full `sector_breadth` read model을 만들고, advancers / decliners, 평균·중앙·시총가중 수익률, market-cap share proxy, sector별 top gainer / loser를 heatmap과 fallback table로 렌더링한다.
+  - 4차도 context-only 경계를 유지했다. 새 provider / schema / 외부 fetch / sector rotation prediction / 추천 / Backtest·Validation·Final Review·Operations 연결은 추가하지 않았다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 5차는 Coverage/Data Quality trust UX 정리다.

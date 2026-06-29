@@ -189,6 +189,25 @@ GROUP_TICKER_LEADER_COLUMNS = [
     "Previous End Date",
 ]
 
+SECTOR_BREADTH_TABLE_COLUMNS = [
+    "Rank",
+    "Sector",
+    "Symbols",
+    "Advancers",
+    "Decliners",
+    "Advancer Share %",
+    "Equal Weight Return %",
+    "Median Return %",
+    "Market Cap Weighted Return %",
+    "Market Cap Share %",
+    "Top Gainer",
+    "Top Gainer Return %",
+    "Top Loser",
+    "Top Loser Return %",
+    "Start Date",
+    "End Date",
+]
+
 MOVER_VIEW_MODE_ORDER = [
     "top_gainers",
     "top_losers",
@@ -324,6 +343,7 @@ def _empty_movers_snapshot(
         "rows": pd.DataFrame(columns=MOVERS_COLUMNS),
         "volume_rows": pd.DataFrame(columns=VOLUME_COLUMNS),
         "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
+        "sector_breadth": _empty_market_movers_sector_breadth_model(message=message),
         "date_window": {},
         "coverage": {
             "universe_count": 0,
@@ -1911,6 +1931,160 @@ def build_overview_breadth_heatmap_summary(
         ),
     }
 
+def _empty_market_movers_sector_breadth_model(message: str = "") -> dict[str, Any]:
+    return {
+        "schema_version": "market_movers_sector_breadth_v1",
+        "status": "NO_DATA",
+        "summary": {
+            "headline": "Sector breadth context unavailable",
+            "detail": message or "No returnable sector rows are available for this selection.",
+            "participation_label": "unknown",
+            "concentration_label": "unknown",
+            "leader": None,
+        },
+        "coverage": {
+            "group_count": 0,
+            "returnable_count": None,
+            "universe_count": None,
+            "price_mode": "Unavailable",
+            "freshness": None,
+        },
+        "cards": [],
+        "heatmap_rows": [],
+        "table_rows": [],
+        "table_columns": SECTOR_BREADTH_TABLE_COLUMNS,
+        "boundary_note": (
+            "Context-only sector breadth: not a trading action, recommendation, validation gate, "
+            "Final Review decision, or monitoring guidance."
+        ),
+    }
+
+
+def _build_market_movers_sector_breadth_model(
+    return_rows: list[dict[str, Any]],
+    *,
+    coverage: dict[str, Any],
+    date_window: dict[str, Any],
+) -> dict[str, Any]:
+    if not return_rows:
+        model = _empty_market_movers_sector_breadth_model()
+        model["coverage"].update(
+            {
+                "returnable_count": coverage.get("returnable_count"),
+                "universe_count": coverage.get("universe_count"),
+                "price_mode": coverage.get("price_mode") or "Unavailable",
+                "freshness": coverage.get("snapshot_time_utc")
+                or coverage.get("effective_end_date")
+                or date_window.get("effective_end_date"),
+            }
+        )
+        return model
+
+    canonical_rows = [
+        {
+            **row,
+            "sector": _overview_sector_display_label(row.get("sector"))
+            if _overview_sector_display_label(row.get("sector")) != "-"
+            else "Unknown",
+        }
+        for row in return_rows
+    ]
+    start_date = str(canonical_rows[0].get("start_date") or date_window.get("start_date") or "-")
+    end_date = str(canonical_rows[0].get("end_date") or date_window.get("end_date") or "-")
+    group_rows = _rank_group_rows(
+        _group_leadership_rows(
+            return_rows=canonical_rows,
+            group_by="sector",
+            min_group_size=1,
+            start_date=start_date,
+            end_date=end_date,
+        ),
+        top_n=None,
+    )
+    group_frame = _group_rows_frame(group_rows)
+    summary_model = build_overview_breadth_heatmap_summary(
+        {
+            "status": "OK",
+            "coverage": coverage,
+            "date_window": date_window,
+            "rows": group_frame,
+        },
+        limit=None,
+    )
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in canonical_rows:
+        grouped.setdefault(str(row.get("sector") or "Unknown"), []).append(row)
+    total_market_cap = sum(max(float(_safe_float(row.get("market_cap")) or 0.0), 0.0) for row in canonical_rows)
+
+    table_rows: list[dict[str, Any]] = []
+    for rank, group_row in enumerate(group_rows, start=1):
+        sector = str(group_row.get("group") or "Unknown")
+        members = grouped.get(sector, [])
+        returns = [_safe_float(row.get("return_pct")) for row in members]
+        usable_returns = [float(value) for value in returns if value is not None]
+        if not usable_returns:
+            continue
+        top_gainer = max(members, key=lambda row: _safe_float(row.get("return_pct")) or float("-inf"))
+        top_loser = min(members, key=lambda row: _safe_float(row.get("return_pct")) or float("inf"))
+        advancers = int(group_row.get("positive_symbols") or 0)
+        decliners = sum(1 for value in usable_returns if value < 0)
+        sector_market_cap = sum(max(float(_safe_float(row.get("market_cap")) or 0.0), 0.0) for row in members)
+        table_rows.append(
+            {
+                "Rank": rank,
+                "Sector": sector,
+                "Symbols": int(group_row.get("symbols") or len(members)),
+                "Advancers": advancers,
+                "Decliners": decliners,
+                "Advancer Share %": round(float(group_row.get("positive_symbol_share") or 0.0), 2),
+                "Equal Weight Return %": round(float(group_row.get("equal_weight_return") or 0.0), 2),
+                "Median Return %": round(float(pd.Series(usable_returns).median()), 2),
+                "Market Cap Weighted Return %": round(float(group_row.get("market_cap_weighted_return") or 0.0), 2),
+                "Market Cap Share %": round((sector_market_cap / total_market_cap) * 100.0, 2)
+                if total_market_cap > 0
+                else None,
+                "Top Gainer": str(top_gainer.get("symbol") or "-"),
+                "Top Gainer Return %": round(float(_safe_float(top_gainer.get("return_pct")) or 0.0), 2),
+                "Top Loser": str(top_loser.get("symbol") or "-"),
+                "Top Loser Return %": round(float(_safe_float(top_loser.get("return_pct")) or 0.0), 2),
+                "Start Date": start_date,
+                "End Date": end_date,
+            }
+        )
+
+    table_by_sector = {row["Sector"]: row for row in table_rows}
+    heatmap_rows = []
+    for row in list(summary_model.get("heatmap_rows") or []):
+        enriched = dict(row)
+        table_row = table_by_sector.get(str(row.get("group") or ""))
+        if table_row:
+            enriched.update(
+                {
+                    "advancers": table_row["Advancers"],
+                    "decliners": table_row["Decliners"],
+                    "median_return_pct": table_row["Median Return %"],
+                    "market_cap_share_pct": table_row["Market Cap Share %"],
+                    "top_loser": table_row["Top Loser"],
+                    "top_loser_return_pct": table_row["Top Loser Return %"],
+                }
+            )
+        heatmap_rows.append(enriched)
+
+    return {
+        **summary_model,
+        "schema_version": "market_movers_sector_breadth_v1",
+        "status": "OK",
+        "heatmap_rows": heatmap_rows,
+        "table_rows": table_rows,
+        "table_columns": SECTOR_BREADTH_TABLE_COLUMNS,
+        "boundary_note": (
+            "Context-only sector breadth: not a trading action, recommendation, validation gate, "
+            "Final Review decision, or monitoring guidance."
+        ),
+    }
+
+
 def _ranked_return_frame(
     rows: list[dict[str, Any]],
     *,
@@ -2621,6 +2795,11 @@ def _build_intraday_movers_snapshot(
     )
     date_window = dict(payload["date_window"])
     coverage = dict(payload["coverage"])
+    sector_breadth = _build_market_movers_sector_breadth_model(
+        return_rows,
+        coverage=coverage,
+        date_window=date_window,
+    )
     return {
         "status": "OK",
         "period": period,
@@ -2633,6 +2812,7 @@ def _build_intraday_movers_snapshot(
         "rows": mover_views["top_gainers"]["rows"],
         "volume_rows": mover_views["volume_leaders"]["rows"],
         "mover_views": mover_views,
+        "sector_breadth": sector_breadth,
         "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
         "date_window": date_window,
         "coverage": coverage,
@@ -2777,6 +2957,11 @@ def build_market_movers_snapshot(
             price_mode="EOD DB",
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
+        sector_breadth = _build_market_movers_sector_breadth_model(
+            return_rows,
+            coverage=coverage,
+            date_window=date_window,
+        )
         if normalized_period == "daily" and prefer_intraday and not requested_as_of:
             coverage["refresh_state"] = _intraday_refresh_state(
                 snapshot_status="OK",
@@ -2798,6 +2983,7 @@ def build_market_movers_snapshot(
             "rows": mover_views["top_gainers"]["rows"],
             "volume_rows": mover_views["volume_leaders"]["rows"],
             "mover_views": mover_views,
+            "sector_breadth": sector_breadth,
             "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,

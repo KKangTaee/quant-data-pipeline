@@ -94,23 +94,53 @@ def _breadth_rows_html(rows: list[dict[str, Any]]) -> str:
         group = _display_value(row.get("group"))
         weighted = _display_value(row.get("market_cap_weighted_return_pct"))
         positive = _display_value(row.get("positive_symbol_share_pct"))
+        decliners = _display_value(row.get("decliners"))
         top_symbol = _display_value(row.get("top_symbol"))
         top_return = _display_value(row.get("top_symbol_return_pct"))
+        top_loser = _display_value(row.get("top_loser"))
+        top_loser_return = _display_value(row.get("top_loser_return_pct"))
         html.append(
             f'<div class="ov-breadth-row" style="--ov-row-tone:{tone_color};">'
             f'<div class="ov-breadth-row-label">#{escape(_display_value(row.get("rank")))} · {escape(group)}</div>'
             f'<div class="ov-breadth-row-value">{escape(weighted)}%</div>'
-            f'<div class="ov-breadth-row-detail">{escape(positive)}% positive · {escape(top_symbol)} {escape(top_return)}%</div>'
+            "<div class=\"ov-breadth-row-detail\">"
+            f"{escape(positive)}% positive · Decliners {escape(decliners)}"
+            f" · {escape(top_symbol)} {escape(top_return)}%"
+            f" / Top Loser {escape(top_loser)} {escape(top_loser_return)}%"
+            "</div>"
             "</div>"
         )
     return "".join(html)
+
+
+def _sector_breadth_heatmap_html(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    tiles: list[str] = []
+    for row in rows:
+        tone_color = escape(_overview_tone_color(row.get("tone")))
+        group = _display_value(row.get("group"))
+        weighted = _display_value(row.get("market_cap_weighted_return_pct"))
+        advancers = _display_value(row.get("advancers"))
+        decliners = _display_value(row.get("decliners"))
+        size_share = _display_value(row.get("market_cap_share_pct"))
+        tiles.append(
+            f'<div class="ov-sector-pressure-tile" style="--ov-pressure-tone:{tone_color};">'
+            f'<div class="ov-sector-pressure-name">{escape(group)}</div>'
+            f'<div class="ov-sector-pressure-value">{escape(weighted)}%</div>'
+            f'<div class="ov-sector-pressure-detail">{escape(advancers)} adv / {escape(decliners)} dec · {escape(size_share)}% cap</div>'
+            "</div>"
+        )
+    return f'<div class="ov-sector-pressure-map">{"".join(tiles)}</div>'
 
 
 def render_breadth_heatmap_summary(model: dict[str, Any]) -> None:
     summary = dict(model.get("summary") or {})
     tone_color = escape(_overview_tone_color(model.get("status")))
     cards_html = _breadth_summary_cards_html(list(model.get("cards") or []))
-    rows_html = _breadth_rows_html(list(model.get("heatmap_rows") or []))
+    heatmap_rows = list(model.get("heatmap_rows") or [])
+    heatmap_html = _sector_breadth_heatmap_html(heatmap_rows)
+    rows_html = _breadth_rows_html(heatmap_rows)
     coverage = dict(model.get("coverage") or {})
     freshness = _display_value(coverage.get("freshness"))
     st.markdown(
@@ -119,13 +149,14 @@ def render_breadth_heatmap_summary(model: dict[str, Any]) -> None:
 <section class="ov-breadth-summary" style="--ov-band-tone:{tone_color};">
   <div class="ov-breadth-head">
     <div>
-      <div class="ov-breadth-kicker">Breadth / Concentration</div>
+      <div class="ov-breadth-kicker">Sector Breadth / Heatmap</div>
       <div class="ov-breadth-title">{escape(_display_value(summary.get("headline")))}</div>
       <div class="ov-breadth-detail">{escape(_display_value(summary.get("detail")))} · Freshness: {escape(freshness)}</div>
     </div>
     <span class="ov-breadth-status">{escape(_display_value(model.get("status")))}</span>
   </div>
   <div class="ov-breadth-card-grid">{cards_html}</div>
+  {heatmap_html}
   <div class="ov-breadth-row-grid">{rows_html}</div>
   <div class="ov-breadth-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
