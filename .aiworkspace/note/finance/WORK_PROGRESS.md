@@ -5311,3 +5311,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/`에서 legacy audit, navigation surface extraction, IA read model service extraction, confirmed unused wrapper / Candidate Ops snapshot helper removal, guard tests, final QA를 순서대로 완료했다.
   - Active Overview ownership은 `app/web/overview/page.py`, `app/web/overview/navigation.py`, `app/web/overview/{market_context,market_movers,futures_macro,sentiment,events}.py`로 정리했고, `legacy_dashboard.py`는 helper compatibility surface로 남겼다.
   - 검증은 V6-V10 각 차수별 Browser QA, py_compile, OverviewAutomationContractTests, `git diff --check`로 기록했다.
+- GTAA SPY Low-MDD Top-2 ADV20 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
+  - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
+  - GTAA runtime에 ADV20 liquidity evidence를 연결했고, preset 선택 시 핵심 파라미터가 자동 적용되도록 했다. 상세 결과는 `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`를 보면 된다.

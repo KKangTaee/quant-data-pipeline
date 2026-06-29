@@ -3087,6 +3087,10 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "crash_guardrail_drawdown_threshold": float(meta.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD),
             "crash_guardrail_lookback_months": int(meta.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS),
             "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "min_avg_dollar_volume_20d_m_filter": float(
+                meta.get("min_avg_dollar_volume_20d_m_filter")
+                or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+            ),
             "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
             "promotion_min_etf_aum_b": float(meta.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
             "promotion_max_bid_ask_spread_pct": float(
@@ -3715,6 +3719,7 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         )
         if st.session_state["compare_gtaa_universe_mode"] == "Preset":
             st.session_state["compare_gtaa_preset"] = preset_name or "GTAA Universe"
+            st.session_state["compare_gtaa_applied_preset_defaults"] = preset_name or "GTAA Universe"
         else:
             st.session_state["compare_gtaa_manual_tickers"] = tickers_text
         st.session_state["compare_gtaa_top"] = int(override.get("top") or 3)
@@ -4505,6 +4510,8 @@ def _render_strategy_compare_workspace() -> None:
                         ticker_label="GTAA Tickers",
                     )
                     _render_advanced_group_caption("핵심 GTAA 계약은 위에 두고, overlay / 실전 계약 / guardrail은 아래 그룹으로 분리했습니다.")
+                    compare_gtaa_top_key = "compare_gtaa_top"
+                    compare_gtaa_interval_key = "compare_gtaa_interval"
                     compare_strategy_overrides["GTAA"] = {
                         "tickers": list(compare_gtaa_tickers),
                         "preset_name": compare_gtaa_preset_name,
@@ -4514,9 +4521,9 @@ def _render_strategy_compare_workspace() -> None:
                                 "GTAA Top Assets",
                                 min_value=1,
                                 max_value=12,
-                                value=3,
                                 step=1,
-                                key="compare_gtaa_top",
+                                key=compare_gtaa_top_key,
+                                **_session_state_default_arg(compare_gtaa_top_key, "value", 3),
                             )
                         ),
                         "interval": int(
@@ -4524,9 +4531,13 @@ def _render_strategy_compare_workspace() -> None:
                                 "GTAA Signal Interval (months)",
                                 min_value=1,
                                 max_value=12,
-                                value=GTAA_DEFAULT_SIGNAL_INTERVAL,
                                 step=1,
-                                key="compare_gtaa_interval",
+                                key=compare_gtaa_interval_key,
+                                **_session_state_default_arg(
+                                    compare_gtaa_interval_key,
+                                    "value",
+                                    GTAA_DEFAULT_SIGNAL_INTERVAL,
+                                ),
                             )
                         ),
                     }
@@ -4559,7 +4570,28 @@ def _render_strategy_compare_workspace() -> None:
                         ) = _render_etf_real_money_inputs(
                             key_prefix="compare_gtaa",
                         )
+                        compare_gtaa_min_adv_key = "compare_gtaa_min_avg_dollar_volume_20d_m_filter"
+                        min_avg_dollar_volume_20d_m_filter = float(
+                            st.number_input(
+                                "GTAA Min Avg Dollar Volume 20D ($M)",
+                                min_value=0.0,
+                                max_value=100000.0,
+                                step=5.0,
+                                key=compare_gtaa_min_adv_key,
+                                help=(
+                                    "최근 20거래일 평균 거래대금이 이 값보다 낮은 ETF는 GTAA 리밸런싱 후보에서 제외합니다."
+                                ),
+                                **_session_state_default_arg(
+                                    compare_gtaa_min_adv_key,
+                                    "value",
+                                    STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+                                ),
+                            )
+                        )
                     compare_strategy_overrides["GTAA"]["min_price_filter"] = float(min_price_filter)
+                    compare_strategy_overrides["GTAA"]["min_avg_dollar_volume_20d_m_filter"] = float(
+                        min_avg_dollar_volume_20d_m_filter
+                    )
                     compare_strategy_overrides["GTAA"]["transaction_cost_bps"] = float(transaction_cost_bps)
                     compare_strategy_overrides["GTAA"]["benchmark_ticker"] = benchmark_ticker
                     compare_strategy_overrides["GTAA"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)

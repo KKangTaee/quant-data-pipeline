@@ -8192,3 +8192,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 무작정 helper를 대량 이동하지 않고, 사용 현황 감사 -> active surface 분리 -> bounded service 분리 -> 확인된 unused legacy 제거 -> 재도입 방지 guard 순서로 구조를 안정화해야 함.
 - Analysis result: `legacy_dashboard.py`는 아직 active 세부 helper 의존이 남아 있어 전체 삭제 대상은 아니지만, old page render / standalone tab wrappers / Candidate Ops overview snapshot helpers는 active 경로에서 끊겨 있어 삭제 가능했다.
 - Follow-up: V6-V10 완료. 다음 정리 후보는 남은 active helper cluster를 domain component / action / service 단위로 더 작게 이동하는 별도 task이며, 현재 Overview primary ownership은 `app/web/overview/` package가 맡는다.
+
+### 2026-06-29 - GTAA로 SPY보다 CAGR/MDD가 개선된 1차 통과 후보를 찾는다
+
+- User request: 사용자가 GTAA를 활용해 SPY보다 CAGR과 MDD가 개선되고, MDD 절대값 15% 이하, CAGR 11% 이상, 1차 후보 판단을 통과한 포트폴리오를 찾아 프리셋으로 만들 수 있는지 요청함.
+- Interpreted goal: 단순 성과 상위 조합이 아니라 current promotion policy까지 통과하는 GTAA 후보를 최신 DB/runtime으로 확인하고, Backtest UI preset에서 재현 가능하게 해야 함.
+- Analysis result: 기존 `GTAA SPY Low-MDD Style Top-3`는 성과 조건은 통과했지만 ADV20 liquidity evidence가 없거나 기준에 살짝 못 미쳐 current gate에서는 부족했다. GTAA runtime에 ADV20 evidence를 연결한 뒤 `GTAA SPY Low-MDD Style Top-2 ADV20`이 `24.08% / -9.99%`, SPY `13.36% / -20.61%`, `real_money_candidate / paper_probation / small_capital_ready`를 달성했다.
+- Follow-up: preset과 보고서는 등록했다. Practical Validation / Final Review 선정은 사용자가 원할 때 별도 후속 단계로 진행한다.

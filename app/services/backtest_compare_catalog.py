@@ -215,6 +215,7 @@ def _strategy_compare_defaults(
                 "crash_guardrail_drawdown_threshold": GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
                 "crash_guardrail_lookback_months": GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
                 "promotion_min_etf_aum_b": ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
                 "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,

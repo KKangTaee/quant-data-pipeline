@@ -145,6 +145,8 @@ def gtaa3(
     drawdown_guardrail_gap_threshold: float = 0.08,
     drawdown_guardrail_benchmark: str | None = None,
     drawdown_guardrail_df: pd.DataFrame | None = None,
+    min_avg_dollar_volume_20d_m: float = 0.0,
+    avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
 ) -> dict:
     """
         gtaa3 전략
@@ -171,6 +173,8 @@ def gtaa3(
 
     if risk_off_mode not in {"cash_only", "defensive_bond_preference"}:
         raise ValueError("risk_off_mode must be one of {'cash_only', 'defensive_bond_preference'}.")
+    if min_avg_dollar_volume_20d_m < 0:
+        raise ValueError("min_avg_dollar_volume_20d_m must be non-negative.")
 
     regime_by_date: dict[pd.Timestamp, dict[str, float | str | bool]] = {}
     active_regime_col = f"MA{market_regime_window}"
@@ -199,6 +203,7 @@ def gtaa3(
     )
     guardrail_close_history: list[float] = []
     strategy_balance_history: list[float] = []
+    effective_avg_dollar_volume = dict(avg_dollar_volume_20d_by_date or {})
 
     base_df = dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = base_df["Date"]
@@ -216,7 +221,24 @@ def gtaa3(
         scores = [dfs[t].iloc[i][score_col] for t in tickers]
         mas = [dfs[t].iloc[i][filter_ma] for t in tickers]
 
-        top_idx = np.argsort(scores)[-n_assets:][::-1]
+        current_date = pd.to_datetime(date).normalize()
+        liquidity_excluded_tickers: list[str] = []
+        available_idx: list[int] = []
+        for idx, ticker in enumerate(tickers):
+            avg_dollar_volume = (effective_avg_dollar_volume.get(ticker) or {}).get(current_date)
+            if not _passes_min_avg_dollar_volume(avg_dollar_volume, float(min_avg_dollar_volume_20d_m or 0.0)):
+                liquidity_excluded_tickers.append(ticker)
+                continue
+            available_idx.append(idx)
+
+        top_idx = np.array(
+            sorted(
+                available_idx,
+                key=lambda idx: float(scores[idx]) if pd.notna(scores[idx]) else float("-inf"),
+                reverse=True,
+            )[:n_assets],
+            dtype=int,
+        )
         next_ticker = [tickers[i] for i in top_idx]
         raw_selected_tickers = next_ticker.copy()
         raw_selected_scores = [float(scores[idx]) for idx in top_idx]
@@ -230,7 +252,6 @@ def gtaa3(
         overlay_rejected_tickers = [ticker for ticker in next_ticker if ticker not in {t for t, _ in next_ticker_to_index}]
         defensive_fill_tickers: list[str] = []
 
-        current_date = pd.to_datetime(date).normalize()
         regime_state = "off"
         regime_close_now = np.nan
         regime_trend_now = np.nan
@@ -274,6 +295,10 @@ def gtaa3(
                 (ticker, idx)
                 for ticker, idx in candidate_pairs
                 if closes[idx] >= mas[idx] and _passes_min_price(closes[idx], min_price)
+                and _passes_min_avg_dollar_volume(
+                    (effective_avg_dollar_volume.get(ticker) or {}).get(current_date),
+                    float(min_avg_dollar_volume_20d_m or 0.0),
+                )
             ]
             candidate_pairs.sort(key=lambda item: float(scores[item[1]]), reverse=True)
             return candidate_pairs
@@ -370,6 +395,9 @@ def gtaa3(
             "Raw Selected Score": raw_selected_scores,
             "Overlay Rejected Ticker": overlay_rejected_tickers,
             "Overlay Rejected Count": len(overlay_rejected_tickers),
+            "Minimum Avg Dollar Volume 20D ($M)": float(min_avg_dollar_volume_20d_m or 0.0),
+            "Liquidity Excluded Ticker": liquidity_excluded_tickers,
+            "Liquidity Excluded Count": len(liquidity_excluded_tickers),
             "Defensive Fallback Ticker": defensive_fill_tickers,
             "Defensive Fallback Count": len(defensive_fill_tickers),
             "Trend Filter Column": filter_ma,
@@ -1781,11 +1809,14 @@ class GTAA3Strategy(Strategy):
         drawdown_guardrail_gap_threshold: float = 0.08,
         drawdown_guardrail_benchmark: str | None = None,
         drawdown_guardrail_df: pd.DataFrame | None = None,
+        min_avg_dollar_volume_20d_m: float = 0.0,
+        avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
     ):
         self.start_balance = start_balance
         self.top = top
         self.filter_ma = filter_ma
         self.min_price = min_price
+        self.min_avg_dollar_volume_20d_m = min_avg_dollar_volume_20d_m
         self.score_col = score_col
         self.risk_off_mode = risk_off_mode
         self.defensive_tickers = defensive_tickers or []
@@ -1806,6 +1837,7 @@ class GTAA3Strategy(Strategy):
         self.drawdown_guardrail_gap_threshold = drawdown_guardrail_gap_threshold
         self.drawdown_guardrail_benchmark = drawdown_guardrail_benchmark
         self.drawdown_guardrail_df = drawdown_guardrail_df
+        self.avg_dollar_volume_20d_by_date = avg_dollar_volume_20d_by_date
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return gtaa3(
@@ -1834,6 +1866,8 @@ class GTAA3Strategy(Strategy):
             self.drawdown_guardrail_gap_threshold,
             self.drawdown_guardrail_benchmark,
             self.drawdown_guardrail_df,
+            min_avg_dollar_volume_20d_m=self.min_avg_dollar_volume_20d_m,
+            avg_dollar_volume_20d_by_date=self.avg_dollar_volume_20d_by_date,
         )
 
 
