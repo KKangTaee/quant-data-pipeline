@@ -177,6 +177,54 @@ def render_market_mover_chart_workspace(model: dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
+
+def _market_mover_investigation_facts_html(facts: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in facts:
+        html.append(
+            '<div class="ov-mm-investigation-fact">'
+            f'<span>{escape(_display_value(item.get("label")))}</span>'
+            f'<strong>{escape(_display_value(item.get("value")))}</strong>'
+            f'<small>{escape(_display_value(item.get("detail")))}</small>'
+            "</div>"
+        )
+    return "".join(html)
+
+
+def _market_mover_investigation_status_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        html.append(
+            f'<span class="ov-mm-investigation-status-item" style="--ov-status-tone:{tone_color};">'
+            f'{escape(_display_value(item.get("label")))} · {escape(_display_value(item.get("value")))}'
+            "</span>"
+        )
+    return "".join(html)
+
+
+def render_market_mover_investigation_pane(model: dict[str, Any]) -> None:
+    status_items_html = _market_mover_investigation_status_html(list(model.get("status_items") or []))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-investigation-pane">
+  <div class="ov-mm-investigation-head">
+    <div>
+      <div class="ov-mm-investigation-kicker">수동 조사 패널</div>
+      <div class="ov-mm-investigation-title">{escape(_display_value(model.get("title")))}</div>
+      <div class="ov-mm-investigation-subtitle">{escape(_display_value(model.get("subtitle")))}</div>
+    </div>
+    <span class="ov-mm-investigation-rank">{escape(_display_value(model.get("rank_badge")))}</span>
+  </div>
+  <div class="ov-mm-investigation-facts">{_market_mover_investigation_facts_html(list(model.get("facts") or []))}</div>
+  <div class="ov-mm-investigation-status">{status_items_html}</div>
+  <div class="ov-mm-investigation-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
 def _coverage_trust_items_html(items: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in items:
@@ -625,6 +673,7 @@ __all__ = [
     "render_market_movers_empty_state",
     "render_market_mover_board",
     "render_market_mover_chart_workspace",
+    "render_market_mover_investigation_pane",
     "_market_refresh_state_label",
     "_market_refresh_state_detail",
     "render_market_refresh_status_bar",

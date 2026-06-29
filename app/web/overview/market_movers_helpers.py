@@ -52,6 +52,7 @@ from app.web.overview.components.market_movers import (
     render_market_auto_waiting_panel,
     render_market_mover_board,
     render_market_mover_chart_workspace,
+    render_market_mover_investigation_pane,
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
@@ -1935,6 +1936,46 @@ def _market_mover_detail_panel_model(
     }
 
 
+def build_market_mover_investigation_pane_model(detail_model: dict[str, Any]) -> dict[str, Any]:
+    read_model = dict(detail_model.get("read_model") or {})
+    identity = dict(read_model.get("identity") or {})
+    context = dict(read_model.get("context") or {})
+    movement = dict(read_model.get("movement") or {})
+    symbol = str(identity.get("Symbol") or "-").strip().upper() or "-"
+    name = str(identity.get("Name") or "-").strip() or "-"
+    sector = str(identity.get("Sector") or "-").strip() or "-"
+    industry = str(identity.get("Industry") or "-").strip() or "-"
+    rank_type = str(context.get("Rank Type") or "-").strip() or "-"
+    rank = context.get("Rank") or "-"
+    coverage = str(context.get("Coverage") or "-").strip() or "-"
+    period = str(context.get("Period") or "-").strip() or "-"
+    status_strip = dict(detail_model.get("status_strip") or {})
+    status_items = [dict(item) for item in list(status_strip.get("items") or [])]
+    return {
+        "schema_version": "market_mover_investigation_pane_v1",
+        "title": f"{symbol} · {name}",
+        "subtitle": f"{sector} · {industry} · {rank_type} #{rank} · {coverage} {period}",
+        "rank_badge": f"{rank_type} #{rank}",
+        "facts": [
+            {"label": "수익률", "value": _format_signed(movement.get("Return %")), "detail": "selected period"},
+            {"label": "상대 거래량", "value": _format_relative_volume(movement.get("Relative Volume")), "detail": "if available"},
+            {
+                "label": "현재 거래량",
+                "value": _format_detail_number(movement.get("Current Volume") or movement.get("Volume")),
+                "detail": "DB row",
+            },
+            {"label": "거래대금", "value": _format_detail_money(movement.get("Dollar Volume")), "detail": "if available"},
+            {"label": "섹터", "value": sector, "detail": industry},
+            {"label": "Coverage", "value": coverage, "detail": period},
+        ],
+        "status_items": status_items,
+        "boundary_note": (
+            "Manual investigation starter only: not a trading signal, recommendation, automated cause rating, "
+            "validation gate, Final Review decision, or monitoring guidance."
+        ),
+    }
+
+
 def _market_mover_metadata_session_key(read_model: dict[str, Any]) -> str:
     identity = dict(read_model.get("identity") or {})
     context = dict(read_model.get("context") or {})
@@ -2036,7 +2077,6 @@ def _render_market_mover_why_it_moved_panel(
     if not candidates:
         return
     st.markdown("#### 선택 종목 조사")
-    st.caption("Why It Moved로 이어지는 수동 조사 시작점입니다. 자동 원인 판정, AI 요약, 원문 수집, DB 저장은 실행하지 않습니다.")
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
     selection_key = "overview_market_mover_detail_selection"
@@ -2065,16 +2105,16 @@ def _render_market_mover_why_it_moved_panel(
         detail_model["read_model"] = read_model
         detail_model["status_strip"] = build_market_mover_metadata_status_strip(stored_metadata)
 
-    summary_cols = st.columns([1.0, 1.0, 1.1], gap="medium")
-    with summary_cols[0]:
-        _render_market_mover_detail_table("종목", detail_model["identity_rows"])
-    with summary_cols[1]:
-        _render_market_mover_detail_table("랭킹 맥락", detail_model["context_rows"])
-    with summary_cols[2]:
-        _render_market_mover_detail_table("가격 / 거래량", detail_model["movement_rows"])
-
-    _render_market_mover_detail_table("같은 섹터 맥락", detail_model["peer_context"])
-    _render_market_mover_status_strip(detail_model["status_strip"])
+    render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
+    with st.expander("선택 종목 원천 detail 표", expanded=False):
+        summary_cols = st.columns([1.0, 1.0, 1.1], gap="medium")
+        with summary_cols[0]:
+            _render_market_mover_detail_table("종목", detail_model["identity_rows"])
+        with summary_cols[1]:
+            _render_market_mover_detail_table("랭킹 맥락", detail_model["context_rows"])
+        with summary_cols[2]:
+            _render_market_mover_detail_table("가격 / 거래량", detail_model["movement_rows"])
+        _render_market_mover_detail_table("같은 섹터 맥락", detail_model["peer_context"])
 
     identity = dict(read_model.get("identity") or {})
     symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()

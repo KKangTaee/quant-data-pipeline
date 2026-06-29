@@ -7075,6 +7075,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-sector-breadth-lane", component_source)
         self.assertIn("ov-sector-breadth-rail", common_source)
 
+    def test_market_movers_redesign_v2_phase5_uses_investigation_pane(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_investigation_pane_model", helper_source)
+        self.assertIn("render_market_mover_investigation_pane", helper_source)
+        self.assertIn("render_market_mover_investigation_pane", component_source)
+        self.assertIn("수동 조사 패널", component_source)
+        self.assertIn("선택 종목 원천 detail 표", helper_source)
+        self.assertIn("ov-mm-investigation-pane", common_source)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
@@ -9136,6 +9148,34 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["lanes"][0]["bar_pct"], 100)
         self.assertEqual(model["lanes"][1]["return_label"], "-1.00%")
         self.assertEqual(model["lanes"][1]["bar_pct"], 50)
+
+    def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model
+
+        detail_model = {
+            "read_model": {
+                "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Sector": "Technology", "Industry": "Software"},
+                "context": {"Rank": 1, "Rank Type": "Top Gainers", "Coverage": "S&P 500", "Period": "Daily"},
+                "movement": {"Return %": 3.2, "Relative Volume": 2.5, "Current Volume": 1234567, "Dollar Volume": 9876543},
+            },
+            "status_strip": {
+                "items": [
+                    {"label": "News", "value": "Ready", "tone": "neutral"},
+                    {"label": "SEC", "value": "Manual", "tone": "neutral"},
+                ]
+            },
+        }
+
+        model = build_market_mover_investigation_pane_model(detail_model)
+
+        self.assertEqual(model["schema_version"], "market_mover_investigation_pane_v1")
+        self.assertEqual(model["title"], "AAA · AAA Corp")
+        self.assertIn("Technology", model["subtitle"])
+        facts = {item["label"]: item for item in model["facts"]}
+        self.assertEqual(facts["수익률"]["value"], "+3.20%")
+        self.assertEqual(facts["상대 거래량"]["value"], "2.50x")
+        self.assertEqual(facts["현재 거래량"]["value"], "1.2M")
+        self.assertIn("not a trading signal", model["boundary_note"])
 
     def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")

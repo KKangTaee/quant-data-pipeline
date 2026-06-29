@@ -4601,6 +4601,120 @@ def overview_ui_css() -> str:
 	  line-height: 1.14;
 	  overflow-wrap: anywhere;
 	}
+	.ov-mm-investigation-pane {
+	  margin: 0.42rem 0 0.72rem 0;
+	  padding: 0.66rem;
+	  border: 1px solid var(--ov-mi-border-faint);
+	  border-left: 4px solid var(--ov-mi-color-primary);
+	  border-radius: var(--ov-mi-radius-panel);
+	  background:
+	    linear-gradient(135deg, color-mix(in srgb, var(--ov-mi-color-primary) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
+	    var(--ov-mi-color-surface);
+	}
+	.ov-mm-investigation-head {
+	  display: grid;
+	  grid-template-columns: minmax(0, 1fr) auto;
+	  gap: var(--ov-mi-gap-md);
+	  align-items: start;
+	  margin-bottom: 0.52rem;
+	}
+	.ov-mm-investigation-kicker {
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.12;
+	  text-transform: uppercase;
+	}
+	.ov-mm-investigation-title {
+	  margin-top: 0.12rem;
+	  color: var(--ov-mi-color-text);
+	  font-size: 1.02rem;
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.16;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-investigation-subtitle,
+	.ov-mm-investigation-boundary {
+	  color: var(--ov-mi-color-text-subtle);
+	  font-size: var(--ov-mi-font-caption);
+	  line-height: 1.26;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-investigation-subtitle {
+	  margin-top: 0.14rem;
+	}
+	.ov-mm-investigation-rank {
+	  display: inline-flex;
+	  align-items: center;
+	  min-height: 1.5rem;
+	  padding: 0.18rem 0.52rem;
+	  border: 1px solid color-mix(in srgb, var(--ov-mi-color-primary) 32%, transparent);
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: color-mix(in srgb, var(--ov-mi-color-primary) 8%, transparent);
+	  color: var(--ov-mi-color-primary);
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.1;
+	  white-space: nowrap;
+	}
+	.ov-mm-investigation-facts {
+	  display: grid;
+	  grid-template-columns: repeat(6, minmax(0, 1fr));
+	  border-top: 1px solid var(--ov-mi-border-faint);
+	  border-bottom: 1px solid var(--ov-mi-border-faint);
+	}
+	.ov-mm-investigation-fact {
+	  min-width: 0;
+	  padding: 0.42rem 0.48rem;
+	  border-left: 1px solid var(--ov-mi-border-faint);
+	}
+	.ov-mm-investigation-fact:first-child {
+	  border-left: 0;
+	}
+	.ov-mm-investigation-fact span,
+	.ov-mm-investigation-fact small {
+	  display: block;
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.14;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-investigation-fact strong {
+	  display: block;
+	  margin-top: 0.1rem;
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-body);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.14;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-investigation-status {
+	  display: flex;
+	  flex-wrap: wrap;
+	  gap: var(--ov-mi-gap-xs);
+	  margin-top: 0.5rem;
+	}
+	.ov-mm-investigation-status-item {
+	  display: inline-flex;
+	  align-items: center;
+	  min-height: 1.42rem;
+	  padding: 0.14rem 0.46rem;
+	  border: 1px solid color-mix(in srgb, var(--ov-status-tone, var(--ov-mi-color-neutral)) 28%, transparent);
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: color-mix(in srgb, var(--ov-status-tone, var(--ov-mi-color-neutral)) 7%, transparent);
+	  color: var(--ov-status-tone, var(--ov-mi-color-neutral));
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.1;
+	}
+	.ov-mm-investigation-boundary {
+	  margin-top: 0.52rem;
+	  padding: 0.4rem 0.48rem;
+	  border: 1px solid var(--ov-mi-border-faint);
+	  border-radius: var(--ov-mi-radius-card);
+	  background: rgba(248,250,252,0.78);
+	}
 	@media (max-width: 760px) {
 	  .ov-mm-status-bar {
 	    align-items: flex-start;
@@ -4616,7 +4730,8 @@ def overview_ui_css() -> str:
 	  .ov-mm-trust-head,
 	  .ov-mm-empty-state,
 	  .ov-mm-board-head,
-	  .ov-mm-chart-head {
+	  .ov-mm-chart-head,
+	  .ov-mm-investigation-head {
 	    grid-template-columns: 1fr;
 	  }
 	  .ov-mm-command-grid,
@@ -4635,6 +4750,9 @@ def overview_ui_css() -> str:
 	  .ov-mm-chart-facts {
 	    grid-template-columns: 1fr;
 	  }
+	  .ov-mm-investigation-facts {
+	    grid-template-columns: repeat(2, minmax(0, 1fr));
+	  }
 	  .ov-mm-chart-fact,
 	  .ov-mm-chart-fact:first-child {
 	    border-left: 0;
@@ -4642,6 +4760,9 @@ def overview_ui_css() -> str:
 	  }
 	  .ov-mm-chart-fact:first-child {
 	    border-top: 0;
+	  }
+	  .ov-mm-investigation-fact:nth-child(odd) {
+	    border-left: 0;
 	  }
 	  .ov-mm-list-sector,
 	  .ov-mm-list-metric {
