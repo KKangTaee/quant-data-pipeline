@@ -7126,6 +7126,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-sector-breadth-lanes", render_body)
         self.assertIn("ov-sector-breadth-boundary", render_body)
 
+    def test_market_movers_followup_uses_square_sector_breadth_map_rail(self) -> None:
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        map_block = common_source[common_source.index(".ov-sector-breadth-map {") :]
+        map_block = map_block[: map_block.index(".ov-sector-breadth-head")]
+
+        self.assertIn("border-left: 4px solid var(--ov-band-tone", map_block)
+        self.assertIn("border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;", map_block)
+        self.assertNotIn("border-radius: var(--ov-mi-radius-panel);", map_block)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,

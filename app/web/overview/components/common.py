@@ -2609,7 +2609,7 @@ def overview_ui_css() -> str:
   padding: 0.58rem;
   border: 1px solid var(--ov-mi-border-faint);
   border-left: 4px solid var(--ov-band-tone, var(--ov-mi-color-neutral));
-  border-radius: var(--ov-mi-radius-panel);
+  border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
     var(--ov-mi-color-surface);
