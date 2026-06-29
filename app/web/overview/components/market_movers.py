@@ -72,6 +72,73 @@ def render_market_movers_empty_state(model: dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
+
+def _market_mover_board_rows_html(rows: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for row in rows:
+        tone_color = escape(_overview_tone_color(row.get("tone")))
+        secondary = _display_value(row.get("secondary"))
+        secondary_html = (
+            f'<div class="ov-mm-list-secondary">{escape(secondary)}</div>'
+            if secondary not in ("", "-")
+            else ""
+        )
+        html.append(
+            f'<article class="ov-mm-list-row" style="--ov-row-tone:{tone_color};">'
+            f'<div class="ov-mm-list-rank">#{escape(_display_value(row.get("rank")))}</div>'
+            '<div class="ov-mm-list-identity">'
+            f'<div class="ov-mm-list-symbol">{escape(_display_value(row.get("symbol")))}</div>'
+            f'<div class="ov-mm-list-name">{escape(_display_value(row.get("name")))}</div>'
+            "</div>"
+            f'<div class="ov-mm-list-sector">{escape(_display_value(row.get("sector")))}</div>'
+            '<div class="ov-mm-list-metric">'
+            f'<span>{escape(_display_value(row.get("primary_metric_label")))}</span>'
+            f'<strong>{escape(_display_value(row.get("primary_metric")))}</strong>'
+            f"{secondary_html}"
+            "</div>"
+            "</article>"
+        )
+    return "".join(html)
+
+
+def _market_mover_tape_html(rows: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for row in rows[:5]:
+        tone_color = escape(_overview_tone_color(row.get("tone")))
+        html.append(
+            f'<div class="ov-mm-tape-cell" style="--ov-tape-tone:{tone_color};">'
+            f'<div class="ov-mm-tape-rank">#{escape(_display_value(row.get("rank")))}</div>'
+            f'<div class="ov-mm-tape-symbol">{escape(_display_value(row.get("symbol")))}</div>'
+            f'<div class="ov-mm-tape-value">{escape(_display_value(row.get("primary_metric")))}</div>'
+            f'<div class="ov-mm-tape-detail">{escape(_display_value(row.get("sector")))}</div>'
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_market_mover_board(model: dict[str, Any]) -> None:
+    rows = list(model.get("rows") or [])
+    if not rows:
+        return
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-board">
+  <div class="ov-mm-board-head">
+    <div>
+      <div class="ov-mm-board-kicker">Ranking Board</div>
+      <div class="ov-mm-board-title">{escape(_display_value(model.get("title")))}</div>
+      <div class="ov-mm-board-detail">{escape(_display_value(model.get("subtitle")))}</div>
+    </div>
+    <span class="ov-mm-board-count">{escape(_display_value(dict(model.get("summary") or {}).get("count")))} rows</span>
+  </div>
+  <div class="ov-mm-tape">{_market_mover_tape_html(rows)}</div>
+  <div class="ov-mm-list">{_market_mover_board_rows_html(rows)}</div>
+  <div class="ov-mm-board-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
 def _coverage_trust_items_html(items: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in items:
@@ -431,6 +498,7 @@ __all__ = [
     "render_market_movers_coverage_trust",
     "render_market_movers_command_strip",
     "render_market_movers_empty_state",
+    "render_market_mover_board",
     "_market_refresh_state_label",
     "_market_refresh_state_detail",
     "render_market_refresh_status_bar",

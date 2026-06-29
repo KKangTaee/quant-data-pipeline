@@ -50,6 +50,7 @@ from app.web.overview.components.market_movers import (
     render_breadth_heatmap_summary,
     render_market_auto_message,
     render_market_auto_waiting_panel,
+    render_market_mover_board,
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
@@ -101,6 +102,13 @@ MARKET_MOVER_RANK_SOURCE_LABELS = {
     "Return Rank": "수익률",
     "Volume Rank": "거래량",
     "Selected Rank": "선택 종목",
+}
+MARKET_MOVER_BOARD_TITLES = {
+    "top_gainers": "상승 상위 종목",
+    "top_losers": "하락 상위 종목",
+    "volume_leaders": "거래량 상위 종목",
+    "unusual_volume": "이상 거래량 상위 종목",
+    "sector_leaders": "섹터 상위 종목",
 }
 
 
@@ -1020,6 +1028,89 @@ def _market_mover_view_model(snapshot: dict[str, Any], mode: Any) -> dict[str, A
     }
 
 
+def _market_mover_row_value(row: pd.Series, *columns: str) -> Any:
+    for column in columns:
+        if column in row and row.get(column) not in (None, ""):
+            return row.get(column)
+    return None
+
+
+def _market_mover_return_value(row: pd.Series) -> Any:
+    return _market_mover_row_value(row, "Return %", "Market Cap Weighted Return %", "Average Return %")
+
+
+def _market_mover_board_tone(row: pd.Series) -> str:
+    numeric_return = pd.to_numeric(_market_mover_return_value(row), errors="coerce")
+    if pd.isna(numeric_return):
+        return "neutral"
+    if float(numeric_return) < 0:
+        return "danger"
+    return "positive"
+
+
+def _market_mover_board_primary_metric(row: pd.Series, mode: str) -> tuple[str, str]:
+    if mode == "volume_leaders":
+        return "거래량", _compact_number(_market_mover_row_value(row, "Volume", "Current Volume"))
+    if mode == "unusual_volume":
+        return "상대 거래량", _format_relative_volume(_market_mover_row_value(row, "Relative Volume"))
+    if mode == "sector_leaders":
+        return "섹터 수익률", _format_signed(_market_mover_return_value(row))
+    return "수익률", _format_signed(_market_mover_return_value(row))
+
+
+def _market_mover_board_secondary(row: pd.Series) -> str:
+    parts: list[str] = []
+    volume = _compact_number(_market_mover_row_value(row, "Volume", "Current Volume"))
+    dollar_volume = _compact_number(_market_mover_row_value(row, "Dollar Volume"), prefix="$")
+    relative_volume = _format_relative_volume(_market_mover_row_value(row, "Relative Volume"))
+    if volume != "-":
+        parts.append(f"거래량 {volume}")
+    if dollar_volume != "-":
+        parts.append(f"거래대금 {dollar_volume}")
+    if relative_volume != "-":
+        parts.append(f"상대 {relative_volume}")
+    return " · ".join(parts) if parts else "-"
+
+
+def _market_mover_board_row(row: pd.Series, *, mode: str, fallback_rank: int) -> dict[str, Any]:
+    symbol = str(_market_mover_row_value(row, "Symbol", "Group", "Sector") or "-").strip() or "-"
+    name = str(_market_mover_row_value(row, "Name", "Top Symbol", "Group", "Sector") or symbol).strip() or symbol
+    sector = str(_market_mover_row_value(row, "Sector", "Group") or "-").strip() or "-"
+    primary_label, primary_value = _market_mover_board_primary_metric(row, mode)
+    return {
+        "rank": _rank_token(_market_mover_row_value(row, "Rank"), fallback_rank),
+        "symbol": symbol,
+        "name": name,
+        "sector": sector,
+        "primary_metric_label": primary_label,
+        "primary_metric": primary_value,
+        "secondary": _market_mover_board_secondary(row),
+        "tone": _market_mover_board_tone(row),
+    }
+
+
+def build_market_mover_board_model(mode_model: dict[str, Any], *, top_n: int) -> dict[str, Any]:
+    mode = _normalize_market_mover_mode(mode_model.get("mode"))
+    rows = mode_model.get("rows")
+    if not isinstance(rows, pd.DataFrame):
+        rows = pd.DataFrame()
+    limit = max(0, int(top_n or 0))
+    board_rows = [
+        _market_mover_board_row(row, mode=mode, fallback_rank=offset)
+        for offset, (_, row) in enumerate(rows.head(limit).iterrows(), start=1)
+    ]
+    label = _market_mover_mode_label(mode)
+    return {
+        "schema_version": "market_mover_board_v1",
+        "mode": mode,
+        "title": MARKET_MOVER_BOARD_TITLES.get(mode, f"{label} 상위 종목"),
+        "subtitle": f"{mode_model.get('sort_basis') or '-'} · {mode_model.get('boundary_note') or 'Context-only ranking view.'}",
+        "summary": {"count": len(board_rows), "top_n": limit},
+        "rows": board_rows,
+        "boundary_note": str(mode_model.get("boundary_note") or "Context-only ranking view."),
+    }
+
+
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
     if not chart_rows.empty and "Return %" in chart_rows:
@@ -1874,17 +1965,18 @@ def _render_market_movers_snapshot_panel(
 
     list_col, context_col = st.columns([1.18, 1.05], gap="medium")
     with list_col:
-        st.markdown(f"#### {selected_model['label']}")
-        st.caption(f"{selected_model['sort_basis']} · {selected_model['boundary_note']}")
         if selected_rows.empty:
+            st.markdown(f"#### {selected_model['label']} 상위 종목")
             st.info(selected_model["empty_reason"])
         else:
-            st.dataframe(
-                selected_rows,
-                width="stretch",
-                height=min(620, _market_mover_chart_height(len(selected_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
-                hide_index=True,
-            )
+            render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
+            with st.expander("상세 표로 보기", expanded=False):
+                st.dataframe(
+                    selected_rows,
+                    width="stretch",
+                    height=min(620, _market_mover_chart_height(len(selected_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT),
+                    hide_index=True,
+                )
     with context_col:
         st.markdown("#### 핵심 차트 / 섹터 요약")
         st.altair_chart(_build_market_mover_mode_chart(selected_model), width="stretch")

@@ -7037,6 +7037,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("변동종목 작업대", component_source)
         self.assertNotIn("탐색 모드", component_source)
 
+    def test_market_movers_redesign_v2_phase2_uses_market_board_renderer(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_board_model", helper_source)
+        self.assertIn("render_market_mover_board", helper_source)
+        self.assertIn("render_market_mover_board", component_source)
+        self.assertIn("ov-mm-board", component_source)
+        self.assertIn("ov-mm-tape", common_source)
+        self.assertIn("ov-mm-list-row", common_source)
+        self.assertIn("상위 종목", helper_source)
+        self.assertNotIn("metric-card", helper_source.lower())
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
@@ -8965,6 +8979,55 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("탐색 모드", source)
         self.assertNotIn("buy signal", source.lower())
         self.assertNotIn("sell signal", source.lower())
+
+    def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_board_model
+
+        rows = pd.DataFrame(
+            [
+                {
+                    "Rank": 1,
+                    "Symbol": "AAA",
+                    "Name": "AAA Corp",
+                    "Sector": "Technology",
+                    "Return %": 12.34,
+                    "Volume": 1_250_000,
+                    "Dollar Volume": 543_210_000,
+                    "Relative Volume": 2.75,
+                },
+                {
+                    "Rank": 2,
+                    "Symbol": "BBB",
+                    "Name": "BBB Corp",
+                    "Sector": "Industrials",
+                    "Return %": 8.9,
+                    "Volume": 900_000,
+                },
+            ]
+        )
+        mode_model = {
+            "mode": "top_gainers",
+            "label": "상승",
+            "kind": "symbol",
+            "sort_basis": "Return % descending",
+            "boundary_note": "Context-only ranking view.",
+            "status": "OK",
+            "rows": rows,
+        }
+
+        model = build_market_mover_board_model(mode_model, top_n=20)
+
+        self.assertEqual(model["schema_version"], "market_mover_board_v1")
+        self.assertEqual(model["title"], "상승 상위 종목")
+        self.assertEqual(model["summary"]["count"], 2)
+        self.assertEqual(model["rows"][0]["symbol"], "AAA")
+        self.assertEqual(model["rows"][0]["name"], "AAA Corp")
+        self.assertEqual(model["rows"][0]["primary_metric_label"], "수익률")
+        self.assertEqual(model["rows"][0]["primary_metric"], "+12.34%")
+        self.assertEqual(model["rows"][0]["tone"], "positive")
+        self.assertIn("거래량 1.2M", model["rows"][0]["secondary"])
+        self.assertIn("상대 2.75x", model["rows"][0]["secondary"])
+        self.assertIn("Context-only", model["boundary_note"])
 
     def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
