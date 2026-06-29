@@ -4,3 +4,8 @@
 
 - V25 QA: `test -f .../PLAN.md && test -f .../STATUS.md` -> pass.
 - V25 QA: `.venv/bin/python -m py_compile app/services/overview_market_intelligence.py app/services/overview/sentiment.py app/services/overview/events.py app/services/overview/data_health.py app/services/overview/market_movers.py app/services/overview/market_context.py tests/test_service_contracts.py` -> pass.
+- V26 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_service_owns_implementation_body` -> failed because `sentiment.py` was still a re-export wrapper.
+- V26 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_service_owns_implementation_body` -> pass.
+- V26 QA: `.venv/bin/python -m py_compile app/services/overview/sentiment.py tests/test_service_contracts.py` -> pass.
+- V26 QA: direct `app.services.overview.sentiment.build_market_sentiment_snapshot` empty-frame smoke -> returned `MISSING` with expected read-model keys.
+- V26 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context` -> pass.
