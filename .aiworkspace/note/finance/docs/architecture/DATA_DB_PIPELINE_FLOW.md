@@ -27,7 +27,7 @@ external source
 |---|---|---|
 | Backtest Analysis | `app/runtime/backtest.py`, `finance/loaders/*`, `finance/*` runtime | 후보 source와 result bundle 생성. Final approval / monitoring policy는 소유하지 않는다 |
 | Practical Validation / Final Review | `app/services/backtest_*`, `finance/loaders/provider.py`, `finance/loaders/macro.py`, `finance/loaders/sentiment.py` | compact evidence와 gate / selected-route read model 생성. Full provider / macro / holdings row는 DB에 둔다 |
-| Workspace > Overview | `app/services/overview_market_intelligence.py`, futures / sentiment services | market context / data health only. Trade signal이나 validation PASS / BLOCKER가 아니다 |
+| Workspace > Overview | `app/services/overview/*`, futures / sentiment services | market context / data health only. Trade signal이나 validation PASS / BLOCKER가 아니다 |
 | Operations > Portfolio Monitoring | `app/runtime/final_selected_portfolios.py`, `app/services/backtest_practical_validation.py` sentiment overlay | read-only monitoring / explicit scenario update. No broker order, live approval, auto rebalance |
 
 ## 주요 데이터 소스

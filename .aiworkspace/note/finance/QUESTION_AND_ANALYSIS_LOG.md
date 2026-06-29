@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-29 - Overview final cleanup should remove remaining facades once internal imports move
+
+- User request: 사용자가 남은 정리 후보 1순위~4순위를 단계별로 진행하고 이 Overview refactor 작업을 마무리해 달라고 승인함.
+- Interpreted goal: refactor가 실제로 끝나려면 UI component body, dashboard private helper export, old service facade, Data Health scope ambiguity를 각각 소유 모듈 기준으로 닫아야 한다.
+- Analysis result: `overview_ui_components.py`와 `overview_dashboard.py`는 compatibility facade로만 남기고, renderer body는 `app/web/overview/components/*`, service body는 `app/services/overview/*`가 직접 소유하는 구조가 가장 작고 명확하다. Data Health는 전체 engine이 아니라 collection ops / handoff read model이므로 direct Market Context 자료와 reference / dedicated-tab 자료를 `Scope`로 분리한다.
+- Follow-up: V33-V36에서 `overview_market_intelligence.py`를 삭제했고 internal imports는 domain services로 이동했다. 현재 추가 큰 refactor 후보는 사용자 승인 없이는 없다; 새 Overview tab / 기능은 tab entry + helper + service/domain component 단위로 추가하면 된다.
+
 ### 2026-06-29 - Overview market intelligence service should be domain-owned, not monolithic
 
 - User request: 사용자가 `overview_market_intelligence.py`가 7,788줄인 이유와 개선 여부를 확인한 뒤, 25차~32차를 순서대로 진행해 달라고 승인함.

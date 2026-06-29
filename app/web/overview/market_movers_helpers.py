@@ -23,7 +23,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
 )
-from app.web.overview_ui_components import (
+from app.web.overview.components.common import (
     OVERVIEW_COLOR_BORDER,
     OVERVIEW_COLOR_DANGER,
     OVERVIEW_COLOR_NEUTRAL,
@@ -36,13 +36,15 @@ from app.web.overview_ui_components import (
     OVERVIEW_COLOR_WARNING,
     OVERVIEW_SECTOR_COLOR_MAP,
     OVERVIEW_SERIES_COLORS,
+    render_market_snapshot_meta_strip,
+    render_overview_toolbar_label,
+)
+from app.web.overview.components.market_movers import (
     render_auto_refresh_countdown,
     render_auto_refresh_timing_static,
     render_market_auto_message,
     render_market_auto_waiting_panel,
     render_market_refresh_status_bar,
-    render_market_snapshot_meta_strip,
-    render_overview_toolbar_label,
 )
 
 

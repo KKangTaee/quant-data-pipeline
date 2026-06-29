@@ -28,10 +28,14 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-refresh-state-v1-20260624/`
-- 목적: `Workspace > Overview > Futures Macro` 탭이 저장된 선물 일봉 최신일을 stale하게 보여주지 않도록 DB 최신 marker와 화면 snapshot cache 경계를 정리한다.
-- 주요 변경: `load_overview_futures_macro_snapshot` cache key에 latest stored 1D futures candle marker를 포함했다. `Futures Macro` 탭 상단에는 `일봉 매크로 갱신`과 `최신 데이터 다시 읽기` controls를 추가해 daily collection과 cache reload를 탭 안에서 직접 실행할 수 있게 했다.
-- 이번 차수에서 하지 않은 일: futures daily collector provider 교체, OS scheduler / automation cadence 변경, DB schema / registry / saved JSONL 변경, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-final-cleanup-v33-v36-20260629/`
+- 목적: Overview refactor의 남은 1순위~4순위 cleanup을 닫고, UI component body / dashboard wrapper / old service facade / Data Health scope ambiguity를 정리한다.
+- 주요 변경: renderer body를 `app/web/overview/components/*`로 옮기고 `overview_ui_components.py`를 thin facade로 축소했다. `overview_dashboard.py`는 `render_overview_dashboard`만 re-export한다. `app/services/overview_market_intelligence.py`는 삭제했고 internal imports는 `app/services/overview/*` domain modules로 이동했다. `data_health.py`는 unused import를 제거하고 direct Market Context vs reference context `Scope` / coverage counts를 제공한다.
+- 이번 차수에서 하지 않은 일: Overview 화면 레이아웃 / UX 재설계, 새 provider / DB schema / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed task: `.aiworkspace/note/finance/tasks/active/overview-service-split-v25-v32-20260629/`
+- 목적: Overview read-model service monolith를 domain-owned service modules로 나눠 향후 tab / 기능 추가 시 계산 위치를 명확히 한다.
+- 주요 변경: Sentiment, Events, Data Health, Market Movers, Market Context, Why It Moved 구현 본문을 `app/services/overview/*`로 분리했다. Market Context는 split domain services를 조립하고, old aggregate path는 final cleanup 전까지 compatibility facade로 축소했다.
+- 이번 차수에서 하지 않은 일: Overview 화면 레이아웃 / UX 재설계, 새 provider / DB schema / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Previous completed task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-mixed-substates-v1-20260624/`
 - 목적: `Workspace > Overview > Futures Macro`에서 자주 보이는 `혼재된 매크로 흐름`을 억지 directional signal로 바꾸지 않고, 현재 선물 일봉 점수만으로 어떤 혼재인지 더 읽히게 한다.
 - 주요 변경: `generate_market_interpretation`은 기존 directional scenario rule이 모두 빗나간 fallback에서만 mixed subtype을 계산한다. 상위 scenario는 `혼재된 매크로 흐름`으로 유지해 historical validation compatibility를 보존하고, summary에는 `sub_scenario`, `regime_hint`, `mixed_reason`을 추가한다. Overview brief hero는 하위 맥락을 보조 라벨로 보여준다.

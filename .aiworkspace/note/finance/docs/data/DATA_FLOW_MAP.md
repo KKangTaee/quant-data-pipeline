@@ -107,7 +107,7 @@ Wikipedia S&P 500 constituents
 Nasdaq public Symbol Directory nasdaqlisted.txt current file
   -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
   -> finance_meta.nyse_symbol_lifecycle (source=nasdaq_symdir_nasdaqlisted)
-  -> app.services.overview_market_intelligence.build_market_movers_snapshot(universe_code=NASDAQ)
+  -> app.services.overview.market_movers.build_market_movers_snapshot(universe_code=NASDAQ)
   -> Workspace > Overview > Market Movers
 
 yahoo quote batch via yfinance cookie / crumb session
@@ -117,11 +117,11 @@ yahoo quote batch via yfinance cookie / crumb session
 yfinance 5m OHLCV fallback
   -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
-  -> app.services.overview_market_intelligence.build_market_movers_snapshot()
+  -> app.services.overview.market_movers.build_market_movers_snapshot()
   -> Workspace > Overview > Market Movers
 
 finance_price.market_intraday_snapshot or finance_price.nyse_price_history
-  -> app.services.overview_market_intelligence.build_group_leadership_snapshot()
+  -> app.services.overview.market_movers.build_group_leadership_snapshot()
   -> Workspace > Overview > Sector / Industry
 
 missing quote rows
@@ -149,7 +149,7 @@ missing quote rows
 Federal Reserve official FOMC calendar HTML
   -> finance.data.market_intelligence.collect_and_store_fomc_calendar()
   -> finance_meta.market_event_calendar
-  -> app.services.overview_market_intelligence.build_market_events_snapshot()
+  -> app.services.overview.events.build_market_events_snapshot()
   -> Workspace > Overview > Events
 
 Yahoo / yfinance ticker calendar, bounded symbols
@@ -298,7 +298,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
   -> finance_meta.macro_series_observation
   -> finance.loaders.sentiment.load_market_sentiment_snapshot()
   -> finance.loaders.sentiment.load_market_sentiment_history()
-  -> app.services.overview_market_intelligence.build_market_sentiment_snapshot()
+  -> app.services.overview.sentiment.build_market_sentiment_snapshot()
   -> app.services.backtest_practical_validation.build_market_sentiment_context_overlay()
   -> Workspace > Overview > Sentiment / Data Health
   -> Backtest > Practical Validation / Final Review context overlay

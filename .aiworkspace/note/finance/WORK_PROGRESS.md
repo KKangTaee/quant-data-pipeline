@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Final Cleanup V33-V36:
+  - `.aiworkspace/note/finance/tasks/active/overview-final-cleanup-v33-v36-20260629/`에서 남은 1순위~4순위 cleanup을 순서대로 진행했다.
+  - `app/web/overview_ui_components.py`는 23줄 compatibility facade로 줄었고 renderer body는 `app/web/overview/components/*`가 소유한다.
+  - `app/web/overview_dashboard.py`는 `render_overview_dashboard` 1개 export만 남겼고, `app/services/overview_market_intelligence.py`는 삭제했다.
+  - `app/services/overview/data_health.py`는 unused import를 제거하고 direct Market Context vs reference context `Scope` / coverage counts를 제공한다.
 - Overview Service Split V25-V32:
   - `.aiworkspace/note/finance/tasks/active/overview-service-split-v25-v32-20260629/`에서 25차~32차를 순서대로 진행했고 각 차수마다 red test, focused QA, py_compile을 수행했다.
   - `app/services/overview_market_intelligence.py`는 7,788줄 구현체에서 96줄 compatibility facade로 축소했다.

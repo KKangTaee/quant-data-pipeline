@@ -1,0 +1,302 @@
+from __future__ import annotations
+
+import json
+from html import escape
+from typing import Any
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+from app.web.overview.components.common import *
+
+def _breadth_summary_cards_html(cards: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for card in cards[:4]:
+        tone_color = escape(_overview_tone_color(card.get("tone")))
+        html.append(
+            f'<article class="ov-breadth-card" style="--ov-card-tone:{tone_color};">'
+            f'<div class="ov-breadth-card-label">{escape(_display_value(card.get("title")))}</div>'
+            f'<div class="ov-breadth-card-value">{escape(_display_value(card.get("value")))}</div>'
+            f'<div class="ov-breadth-card-detail">{escape(_display_value(card.get("detail")))}</div>'
+            "</article>"
+        )
+    return "".join(html)
+
+
+def _breadth_rows_html(rows: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for row in rows[:5]:
+        tone_color = escape(_overview_tone_color(row.get("tone")))
+        group = _display_value(row.get("group"))
+        weighted = _display_value(row.get("market_cap_weighted_return_pct"))
+        positive = _display_value(row.get("positive_symbol_share_pct"))
+        top_symbol = _display_value(row.get("top_symbol"))
+        top_return = _display_value(row.get("top_symbol_return_pct"))
+        html.append(
+            f'<div class="ov-breadth-row" style="--ov-row-tone:{tone_color};">'
+            f'<div class="ov-breadth-row-label">#{escape(_display_value(row.get("rank")))} · {escape(group)}</div>'
+            f'<div class="ov-breadth-row-value">{escape(weighted)}%</div>'
+            f'<div class="ov-breadth-row-detail">{escape(positive)}% positive · {escape(top_symbol)} {escape(top_return)}%</div>'
+            "</div>"
+        )
+    return "".join(html)
+
+
+def render_breadth_heatmap_summary(model: dict[str, Any]) -> None:
+    summary = dict(model.get("summary") or {})
+    tone_color = escape(_overview_tone_color(model.get("status")))
+    cards_html = _breadth_summary_cards_html(list(model.get("cards") or []))
+    rows_html = _breadth_rows_html(list(model.get("heatmap_rows") or []))
+    coverage = dict(model.get("coverage") or {})
+    freshness = _display_value(coverage.get("freshness"))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-breadth-summary" style="--ov-band-tone:{tone_color};">
+  <div class="ov-breadth-head">
+    <div>
+      <div class="ov-breadth-kicker">Breadth / Concentration</div>
+      <div class="ov-breadth-title">{escape(_display_value(summary.get("headline")))}</div>
+      <div class="ov-breadth-detail">{escape(_display_value(summary.get("detail")))} · Freshness: {escape(freshness)}</div>
+    </div>
+    <span class="ov-breadth-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-breadth-card-grid">{cards_html}</div>
+  <div class="ov-breadth-row-grid">{rows_html}</div>
+  <div class="ov-breadth-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+def _market_refresh_state_label(value: Any) -> str:
+    text = str(value or "-").strip()
+    mapping = {
+        "Fresh": "최신",
+        "Update needed": "갱신 필요",
+        "Update due": "갱신 필요",
+        "Stale": "오래됨",
+        "Partial": "부분 누락",
+        "Failed": "실패",
+    }
+    return mapping.get(text, text)
+
+
+def _market_refresh_state_detail(value: Any) -> str:
+    text = str(value or "").strip()
+    mapping = {
+        "No action needed yet.": "아직 조치가 필요하지 않습니다.",
+        "Run Update Daily Snapshot.": "일중 스냅샷 갱신을 실행하면 최신 quote로 갱신됩니다.",
+        "using EOD fallback": "일중 스냅샷 대신 EOD fallback을 사용 중입니다.",
+    }
+    return mapping.get(text, text)
+
+
+def render_market_refresh_status_bar(
+    *,
+    universe_label: str,
+    price_mode: Any,
+    returnable: Any,
+    universe_count: Any,
+    returnable_pct: Any,
+    next_check_text: str,
+    state: dict[str, str | bool] | None,
+) -> None:
+    label = _market_refresh_state_label((state or {}).get("label") or "Unknown")
+    detail = _market_refresh_state_detail((state or {}).get("detail") or "")
+    dot_color = str((state or {}).get("dot_color") or OVERVIEW_COLOR_NEUTRAL)
+    coverage_text = f"{returnable} / {universe_count}"
+    if returnable_pct is not None:
+        coverage_text += f" ({float(returnable_pct):.1f}%)"
+    detail_html = f'<span class="ov-mm-state-detail">{escape(detail)}</span>' if detail else ""
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-mm-refresh-label">데이터 갱신</div>
+<div class="ov-mm-status-bar">
+          <div class="ov-mm-state-cluster">
+            <span class="ov-mm-state-pill" style="--ov-mm-state-color:{escape(dot_color)};">
+              <span class="ov-mm-state-dot"></span>
+              <span class="ov-mm-state-label">{escape(label)}</span>
+              {detail_html}
+            </span>
+          </div>
+          <div class="ov-mm-chip-row">
+            <span class="ov-mm-chip">범위 <strong>{escape(universe_label)}</strong></span>
+            <span class="ov-mm-chip">가격 <strong>{escape(str(price_mode or "-"))}</strong></span>
+            <span class="ov-mm-chip">커버리지 <strong>{escape(coverage_text)}</strong></span>
+            <span class="ov-mm-chip">다음 확인 <strong>{escape(next_check_text)}</strong></span>
+          </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_market_auto_message(message: Any) -> None:
+    if message in (None, ""):
+        return
+    st.markdown(
+        f'<div class="ov-mm-auto-message">{escape(str(message))}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_market_auto_waiting_panel(coverage_label: Any = "선택한 coverage") -> None:
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-mm-auto-static">
+          <div class="ov-mm-auto-static-title">자동 갱신 대기</div>
+          <div class="ov-mm-auto-static-detail">자동 갱신을 켜면 현재 브라우저 세션에서 {escape(str(coverage_label))} 일중 스냅샷 갱신 조건을 확인합니다.</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_auto_refresh_timing_static(timing: dict[str, Any]) -> None:
+    progress_pct = int(timing.get("progress_pct") or 0)
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<div class="ov-mm-auto-static">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div class="ov-mm-auto-static-title">{escape(str(timing["title"]))}</div>
+              <div class="ov-mm-auto-static-detail">{escape(str(timing["detail"]))}</div>
+            </div>
+            <div class="ov-mm-auto-static-due">다음 가능 시각: {escape(str(timing["next_due_at"]))}</div>
+          </div>
+          <div class="ov-mm-auto-static-track">
+            <div class="ov-mm-auto-static-bar" style="width:{progress_pct}%;"></div>
+          </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_auto_refresh_countdown(
+    timing: dict[str, Any],
+    *,
+    auto_reload: bool,
+    key_suffix: str,
+    default_cadence_seconds: int = 300,
+) -> None:
+    remaining = max(0, int(timing.get("remaining_seconds") or 0))
+    cadence_seconds = max(1, int(timing.get("cadence_seconds") or default_cadence_seconds))
+    title = str(timing.get("title") or "자동 갱신 대기")
+    detail = str(timing.get("detail") or "")
+    next_due_at = str(timing.get("next_due_at") or "-")
+    progress_pct = max(0, min(100, int(timing.get("progress_pct") or 0)))
+    component_id = f"overview-refresh-countdown-{abs(hash(key_suffix))}"
+    style_tokens = _style_token_block()
+    components.html(
+        f"""
+        <style>
+          {style_tokens}
+          html, body {{
+            margin: 0;
+            background: transparent;
+            color-scheme: light dark;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }}
+          .ov-auto-countdown {{
+            border: 1px solid var(--ov-mi-border-control);
+            border-radius: var(--ov-mi-radius-panel);
+            padding: 10px 12px;
+            background: var(--ov-mi-fill-control);
+          }}
+          .ov-auto-countdown-title {{ font-weight: var(--ov-mi-weight-strong); color: var(--ov-mi-color-text); }}
+          .ov-auto-countdown-detail {{ font-size: var(--ov-mi-font-body); color: var(--ov-mi-color-neutral); margin-top: 2px; }}
+          .ov-auto-countdown-due {{ font-size: var(--ov-mi-font-caption); color: var(--ov-mi-color-text-soft); }}
+          .ov-auto-countdown-track {{
+            height: 6px;
+            border-radius: var(--ov-mi-radius-pill);
+            background: var(--ov-mi-track-fill);
+            margin-top: 9px;
+            overflow: hidden;
+          }}
+          .ov-auto-countdown-bar {{
+            height: 100%;
+            width: {progress_pct}%;
+            background: var(--ov-mi-color-positive);
+            border-radius: var(--ov-mi-radius-pill);
+            transition: width 0.25s linear;
+          }}
+          @media (prefers-color-scheme: dark) {{
+            .ov-auto-countdown {{
+              border-color: rgba(148, 163, 184, 0.28);
+              background: rgba(148, 163, 184, 0.08);
+            }}
+            .ov-auto-countdown-title {{ color: var(--ov-mi-color-surface-subtle); }}
+            .ov-auto-countdown-detail, .ov-auto-countdown-due {{ color: {OVERVIEW_COLOR_SOFT}; }}
+            .ov-auto-countdown-track {{ background: rgba(203, 213, 225, 0.16); }}
+          }}
+        </style>
+        <div id="{component_id}" class="ov-auto-countdown">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div data-countdown-title class="ov-auto-countdown-title">{escape(title)}</div>
+              <div class="ov-auto-countdown-detail">{escape(detail)}</div>
+            </div>
+            <div class="ov-auto-countdown-due">다음 가능 시각: {escape(next_due_at)}</div>
+          </div>
+          <div class="ov-auto-countdown-track">
+            <div data-countdown-bar class="ov-auto-countdown-bar"></div>
+          </div>
+        </div>
+        <script>
+        (() => {{
+          const root = document.getElementById({json.dumps(component_id)});
+          if (!root) return;
+          const titleNode = root.querySelector("[data-countdown-title]");
+          const barNode = root.querySelector("[data-countdown-bar]");
+          const startedRemaining = {remaining};
+          const cadenceSeconds = {cadence_seconds};
+          const autoReload = {json.dumps(bool(auto_reload and remaining > 0))};
+          const loadedAt = Date.now();
+          let didReload = false;
+          function formatRemaining(totalSeconds) {{
+            const safe = Math.max(0, Math.floor(totalSeconds));
+            const minutes = Math.floor(safe / 60);
+            const seconds = safe % 60;
+            if (minutes <= 0) return `${{seconds}}초`;
+            if (seconds === 0) return `${{minutes}}분`;
+            return `${{minutes}}분 ${{seconds}}초`;
+          }}
+          function tick() {{
+            const elapsed = Math.floor((Date.now() - loadedAt) / 1000);
+            const remainingNow = Math.max(0, startedRemaining - elapsed);
+            const elapsedWithinCadence = Math.max(0, cadenceSeconds - remainingNow);
+            const progress = Math.max(0, Math.min(100, Math.round((elapsedWithinCadence / cadenceSeconds) * 100)));
+            titleNode.textContent = `다음 갱신까지 ${{formatRemaining(remainingNow)}}`;
+            barNode.style.width = `${{progress}}%`;
+            if (autoReload && remainingNow <= 0 && !didReload) {{
+              didReload = true;
+              setTimeout(() => {{
+                try {{
+                  window.parent.location.reload();
+                }} catch (error) {{
+                  window.location.reload();
+                }}
+              }}, 500);
+            }}
+          }}
+          tick();
+          window.setInterval(tick, 1000);
+        }})();
+        </script>
+        """,
+        height=86,
+    )
+
+__all__ = [
+    "_breadth_summary_cards_html",
+    "_breadth_rows_html",
+    "render_breadth_heatmap_summary",
+    "_market_refresh_state_label",
+    "_market_refresh_state_detail",
+    "render_market_refresh_status_bar",
+    "render_market_auto_message",
+    "render_market_auto_waiting_panel",
+    "render_auto_refresh_timing_static",
+    "render_auto_refresh_countdown",
+]

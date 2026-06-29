@@ -1,33 +1,14 @@
 from __future__ import annotations
 
-import json
-
-import os
-
-import re
-
-import urllib.request
-
 from collections.abc import Callable, Sequence
 
-from datetime import date, datetime, timezone, timedelta
-
-from html import unescape
+from datetime import date
 
 from typing import Any
 
-from urllib.parse import quote, quote_plus, urlencode, urlparse
-
-from xml.etree import ElementTree
-
 import pandas as pd
 
-from finance.loaders.sentiment import (
-    CNN_COMPONENT_SERIES,
-    CORE_SENTIMENT_SERIES,
-    load_market_sentiment_history,
-    load_market_sentiment_snapshot,
-)
+from finance.loaders.sentiment import CORE_SENTIMENT_SERIES
 
 QueryFn = Callable[[str, str, Sequence[Any] | None], list[dict[str, Any]]]
 
@@ -39,6 +20,7 @@ EVENT_ESTIMATE_STALE_DAYS = 14
 
 OPS_COLUMNS = [
     "Area",
+    "Scope",
     "Status",
     "Data Freshness",
     "Last Success",
@@ -55,6 +37,22 @@ OPS_COLUMNS = [
     "Next Action",
     "Message",
 ]
+
+DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE = "direct_market_context"
+
+DATA_HEALTH_REFERENCE_CONTEXT_SCOPE = "reference_context"
+
+DATA_HEALTH_AREA_SCOPES = {
+    "S&P 500 Universe": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
+    "S&P 500 Daily Snapshot": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
+    "Market Sentiment": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
+    "FOMC Calendar": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
+    "Earnings Calendar": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
+    "Macro Calendar": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
+    "Top1000 Daily Snapshot": DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
+    "Top2000 Daily Snapshot": DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
+    "Futures Monitor 1m OHLCV": DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
+}
 
 OPS_INTRADAY_TARGETS = [
     {
@@ -210,6 +208,10 @@ def _empty_ops_snapshot(*, message: str) -> dict[str, Any]:
             "missing_count": 0,
             "failed_count": 0,
             "partial_count": 0,
+            "direct_market_context_count": 0,
+            "reference_context_count": 0,
+            "direct_market_context_review_count": 0,
+            "reference_context_review_count": 0,
             "latest_success_at": None,
             "latest_issue_at": None,
         },
@@ -601,6 +603,9 @@ def _combined_event_ops_row(
         "covered_event_types": covered_event_types,
     }
 
+def _ops_area_scope(area: str) -> str:
+    return DATA_HEALTH_AREA_SCOPES.get(area, DATA_HEALTH_REFERENCE_CONTEXT_SCOPE)
+
 def _ops_row(
     *,
     area: str,
@@ -634,6 +639,7 @@ def _ops_row(
         action = next_action
     return {
         "Area": area,
+        "Scope": _ops_area_scope(area),
         "Status": status,
         "Data Freshness": data_freshness,
         **metrics,
@@ -642,6 +648,8 @@ def _ops_row(
 
 def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
     statuses = [str(row.get("Status") or "") for row in rows]
+    review_statuses = {"Due", "Stale", "Missing", "Failed", "Partial"}
+    scopes = [str(row.get("Scope") or _ops_area_scope(str(row.get("Area") or ""))) for row in rows]
     success_times = [row.get("Last Success") for row in rows if row.get("Last Success") not in (None, "-")]
     issue_times = [row.get("Last Issue") for row in rows if row.get("Last Issue") not in (None, "-")]
     auto_times = [
@@ -660,6 +668,22 @@ def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "missing_count": statuses.count("Missing"),
         "failed_count": statuses.count("Failed"),
         "partial_count": statuses.count("Partial"),
+        "direct_market_context_count": scopes.count(DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE),
+        "reference_context_count": scopes.count(DATA_HEALTH_REFERENCE_CONTEXT_SCOPE),
+        "direct_market_context_review_count": sum(
+            1
+            for row in rows
+            if str(row.get("Scope") or _ops_area_scope(str(row.get("Area") or "")))
+            == DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE
+            and str(row.get("Status") or "") in review_statuses
+        ),
+        "reference_context_review_count": sum(
+            1
+            for row in rows
+            if str(row.get("Scope") or _ops_area_scope(str(row.get("Area") or "")))
+            == DATA_HEALTH_REFERENCE_CONTEXT_SCOPE
+            and str(row.get("Status") or "") in review_statuses
+        ),
         "latest_success_at": max(success_times) if success_times else None,
         "latest_issue_at": max(issue_times) if issue_times else None,
         "latest_auto_at": max(auto_times) if auto_times else None,
@@ -1022,6 +1046,7 @@ def build_overview_data_health_ingestion_handoff(
             {
                 "rank": rank,
                 "area": area,
+                "scope": str(row.get("Scope") or _ops_area_scope(area)),
                 "status": status,
                 "severity": DATA_HEALTH_HANDOFF_SEVERITY.get(status.upper(), "low"),
                 "tone": _cockpit_status_tone(status),

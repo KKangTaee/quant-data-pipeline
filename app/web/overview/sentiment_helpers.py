@@ -15,7 +15,7 @@ from app.jobs.overview_actions import (
 from app.web.backtest_ui_components import render_status_card_grid
 from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview_dashboard_helpers import load_overview_market_sentiment_snapshot
-from app.web.overview_ui_components import (
+from app.web.overview.components.common import (
     OVERVIEW_COLOR_DANGER,
     OVERVIEW_COLOR_NEUTRAL,
     OVERVIEW_COLOR_POSITIVE,

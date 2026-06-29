@@ -28,7 +28,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_macro_week_lane,
     load_overview_market_events_snapshot,
 )
-from app.web.overview_ui_components import (
+from app.web.overview.components.common import (
     OVERVIEW_COLOR_BORDER,
     OVERVIEW_COLOR_NEUTRAL,
     OVERVIEW_COLOR_POSITIVE,

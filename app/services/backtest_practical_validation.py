@@ -22,7 +22,7 @@ from app.services.backtest_practical_validation_source import (
     build_validation_profile,
     source_components_dataframe,
 )
-from app.services.overview_market_intelligence import build_market_sentiment_snapshot
+from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.runtime import append_portfolio_selection_source, append_practical_validation_result
 from finance.data.etf_provider import (
     EXPOSURE_PROVIDER_SOURCES,

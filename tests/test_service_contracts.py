@@ -1202,7 +1202,12 @@ import app.services.backtest_practical_validation_source
 import app.services.backtest_risk_contribution_audit
 import app.services.backtest_selected_route_preflight
 import app.services.backtest_validation_efficacy
-import app.services.overview_market_intelligence
+import app.services.overview.market_context
+import app.services.overview.market_movers
+import app.services.overview.events
+import app.services.overview.sentiment
+import app.services.overview.data_health
+import app.services.overview.why_it_moved
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -4199,7 +4204,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("latest raw 2026-05-28 is sparse", items[0]["detail"])
 
     def test_browser_auto_refresh_timing_shows_remaining_cadence(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_timing
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_timing
 
         timing = _browser_auto_refresh_timing(
             {
@@ -4222,7 +4227,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["next_due_at"], "2026-05-29 10:05:00")
 
     def test_browser_auto_refresh_timing_waits_outside_market_hours(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_timing
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_timing
 
         timing = _browser_auto_refresh_timing(
             {
@@ -4244,7 +4249,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["progress_pct"], 0)
 
     def test_browser_auto_refresh_timing_rebases_success_to_next_cadence(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_timing
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_timing
 
         timing = _browser_auto_refresh_timing(
             {
@@ -4269,7 +4274,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["progress_pct"], 20)
 
     def test_browser_auto_refresh_check_due_uses_next_due(self) -> None:
-        from app.web.overview_dashboard import _should_run_browser_auto_refresh_check
+        from app.web.overview.market_movers_helpers import _should_run_browser_auto_refresh_check
 
         summary = {
             "status": "skipped",
@@ -4292,7 +4297,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_browser_auto_refresh_completion_label_uses_actionable_status(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_completion_label
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_completion_label
 
         self.assertEqual(
             _browser_auto_refresh_completion_label({"status": "success"}),
@@ -4313,7 +4318,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_browser_auto_refresh_job_config_tracks_selected_coverage(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_job_config
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_job_config
 
         self.assertEqual(
             _browser_auto_refresh_job_config("SP500"),
@@ -4590,6 +4595,21 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("DATA_HEALTH_HANDOFF_TARGETS", source)
         self.assertNotIn("overview_market_intelligence", source)
 
+    def test_overview_data_health_service_imports_only_used_dependencies(self) -> None:
+        source = Path("app/services/overview/data_health.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("import json", source)
+        self.assertNotIn("import os", source)
+        self.assertNotIn("import re", source)
+        self.assertNotIn("import urllib.request", source)
+        self.assertNotIn("from html import unescape", source)
+        self.assertNotIn("from urllib.parse import", source)
+        self.assertNotIn("from xml.etree import ElementTree", source)
+        self.assertNotIn("CNN_COMPONENT_SERIES", source)
+        self.assertNotIn("load_market_sentiment_history", source)
+        self.assertNotIn("load_market_sentiment_snapshot", source)
+        self.assertIn("CORE_SENTIMENT_SERIES", source)
+
     def test_overview_market_movers_service_owns_implementation_body(self) -> None:
         source = Path("app/services/overview/market_movers.py").read_text(encoding="utf-8")
 
@@ -4619,16 +4639,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("WHY_IT_MOVED_STATUS_LABELS", source)
         self.assertNotIn("overview_market_intelligence", source)
 
-    def test_overview_market_intelligence_module_is_compatibility_facade(self) -> None:
-        source = Path("app/services/overview_market_intelligence.py").read_text(encoding="utf-8")
+    def test_overview_market_intelligence_legacy_facade_removed(self) -> None:
+        self.assertFalse(Path("app/services/overview_market_intelligence.py").exists())
 
-        self.assertLess(len(source.splitlines()), 160)
-        self.assertIn("from app.services.overview.market_context import (", source)
-        self.assertIn("from app.services.overview.market_movers import (", source)
-        self.assertIn("from app.services.overview.why_it_moved import (", source)
-        self.assertNotIn("def build_market_movers_snapshot", source)
-        self.assertNotIn("def build_overview_macro_context_cockpit", source)
-        self.assertIn("Compatibility wrapper preserving monkeypatchable legacy provider hooks.", source)
+        guarded_roots = [Path("app")]
+        references: list[Path] = []
+        for root in guarded_roots:
+            references.extend(
+                path
+                for path in root.rglob("*.py")
+                if "overview_market_intelligence" in path.read_text(encoding="utf-8")
+            )
+        self.assertEqual(references, [])
 
     def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
         source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
@@ -4736,6 +4758,66 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("def _market_session_banner_model", helper_source)
         self.assertIn("def _market_context_session_payload", helper_source)
         self.assertIn("def _snapshot_status_items", helper_source)
+
+    def test_overview_component_modules_own_renderer_bodies(self) -> None:
+        component_contracts = {
+            Path("app/web/overview/components/common.py"): (
+                "def overview_ui_css",
+                "def render_overview_toolbar_label",
+                "def render_overview_meta_strip",
+            ),
+            Path("app/web/overview/components/layout.py"): (
+                "def render_market_session_banner",
+            ),
+            Path("app/web/overview/components/market_context.py"): (
+                "def render_macro_context_cockpit",
+                "def _macro_cockpit_historical_analog_html",
+                "def _sector_pressure_map_html",
+            ),
+            Path("app/web/overview/components/data_health.py"): (
+                "def render_data_health_ingestion_handoff",
+            ),
+            Path("app/web/overview/components/market_movers.py"): (
+                "def render_breadth_heatmap_summary",
+                "def render_market_refresh_status_bar",
+                "def render_auto_refresh_countdown",
+            ),
+            Path("app/web/overview/components/events.py"): (
+                "def render_macro_week_lane",
+                "def render_events_summary_strip",
+                "def render_event_agenda_sections",
+            ),
+        }
+
+        for path, expected_defs in component_contracts.items():
+            self.assertTrue(path.exists(), f"{path} should exist")
+            source = path.read_text(encoding="utf-8")
+            for expected in expected_defs:
+                self.assertIn(expected, source)
+            self.assertNotIn("from app.web.overview_ui_components import", source)
+
+    def test_overview_ui_components_is_compatibility_facade(self) -> None:
+        source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+
+        self.assertLessEqual(len(source.splitlines()), 120)
+        self.assertIn("from app.web.overview.components.common import", source)
+        self.assertIn("from app.web.overview.components.market_context import", source)
+        self.assertIn("from app.web.overview.components.events import", source)
+        self.assertNotIn("def _macro_context_cockpit_html", source)
+        self.assertNotIn("def render_auto_refresh_countdown", source)
+
+    def test_overview_tab_helpers_use_domain_component_surfaces(self) -> None:
+        helper_paths = [
+            Path("app/web/overview/market_context_helpers.py"),
+            Path("app/web/overview/market_movers_helpers.py"),
+            Path("app/web/overview/events_helpers.py"),
+            Path("app/web/overview/sentiment_helpers.py"),
+            Path("app/web/overview/futures_macro_helpers.py"),
+        ]
+
+        for path in helper_paths:
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("from app.web.overview_ui_components import", source)
 
     def test_overview_market_context_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
@@ -5058,13 +5140,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_dashboard_wrapper_remains_thin_compatibility_facade(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
 
-        self.assertLessEqual(len(source.splitlines()), 80)
+        self.assertLessEqual(len(source.splitlines()), 12)
         self.assertIn("from app.web.overview.page import render_overview_dashboard", source)
-        self.assertIn("from app.web.overview.navigation import (", source)
-        self.assertIn("from app.web.overview.market_movers_helpers import (", source)
-        self.assertIn("from app.web.overview.futures_macro_helpers import (", source)
+        self.assertEqual(source.count("from app.web.overview."), 1)
+        self.assertIn('__all__ = ["render_overview_dashboard"]', source)
         self.assertNotIn("import streamlit", source)
         self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("market_movers_helpers", source)
+        self.assertNotIn("futures_macro_helpers", source)
         self.assertNotIn("for _name in dir", source)
 
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
@@ -5091,7 +5174,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(sentiment_label_index, events_label_index)
 
     def test_overview_dashboard_primary_selector_excludes_inactive_tabs(self) -> None:
-        from app.web.overview_dashboard import OVERVIEW_DEEP_TAB_OPTIONS
+        from app.web.overview.navigation import OVERVIEW_DEEP_TAB_OPTIONS
 
         self.assertEqual(
             OVERVIEW_DEEP_TAB_OPTIONS,
@@ -5133,7 +5216,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("background: #f2faf7", source)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
-        from app.web.overview_dashboard import _render_selected_overview_tab
+        from app.web.overview.navigation import _render_selected_overview_tab
 
         calls: list[str] = []
         renderers = {
@@ -5147,7 +5230,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(calls, ["Futures Macro"])
 
     def test_overview_dashboard_defaults_unknown_deep_tab_to_market_context(self) -> None:
-        from app.web.overview_dashboard import _overview_active_tab_label
+        from app.web.overview.navigation import _overview_active_tab_label
 
         self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
         self.assertEqual(_overview_active_tab_label("Futures Macro"), "Futures Macro")
@@ -5156,7 +5239,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(_overview_active_tab_label(None), "Market Context")
 
     def test_overview_dashboard_pill_nav_slug_contract(self) -> None:
-        from app.web.overview_dashboard import (
+        from app.web.overview.navigation import (
             OVERVIEW_DEEP_TAB_OPTIONS,
             _overview_tab_seed_label,
             _overview_tab_display_label,
@@ -5209,7 +5292,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
         futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
-        style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+        style_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
         controls_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
         panel_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_panel") :]
@@ -5302,9 +5385,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("include_futures_macro=include_futures_macro", helper_body)
 
     def test_overview_market_context_refresh_reflection_copy_distinguishes_outcomes(self) -> None:
-        from app.web import overview_dashboard
+        from app.web.overview import market_context_helpers
 
-        reflection_state = getattr(overview_dashboard, "_overview_market_context_refresh_reflection_state", None)
+        reflection_state = getattr(market_context_helpers, "_overview_market_context_refresh_reflection_state", None)
         self.assertTrue(callable(reflection_state), "Market Context refresh should expose reflection state copy.")
 
         reflected_at = datetime(2026, 6, 12, 14, 32)
@@ -5396,7 +5479,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("_legacy.load_overview_macro_week_lane", helper_source)
 
     def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
-        from app.web.overview_dashboard import _futures_chart_symbols
+        from app.web.overview.futures_macro_helpers import _futures_chart_symbols
 
         symbols = [f"S{index}=F" for index in range(1, 10)]
         chartable_symbols = [symbol for symbol in symbols if symbol != "S4=F"]
@@ -5412,7 +5495,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(_futures_chart_symbols(snapshot, chart_scope="all_with_data"), chartable_symbols)
 
     def test_futures_monitor_command_summary_owns_page_state_without_provider_rows(self) -> None:
-        from app.web.overview_dashboard import _futures_command_summary_items
+        from app.web.overview.futures_macro_helpers import _futures_command_summary_items
 
         selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
         snapshot = {
@@ -5449,7 +5532,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2026-06-22 14:34:00", flattened)
 
     def test_futures_monitor_live_summary_line_avoids_repeating_top_move_or_run(self) -> None:
-        from app.web.overview_dashboard import _futures_live_summary_line
+        from app.web.overview.futures_macro_helpers import _futures_live_summary_line
 
         selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
         snapshot = {
@@ -5477,7 +5560,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("성공", summary)
 
     def test_futures_monitor_macro_support_items_do_not_repeat_scenario(self) -> None:
-        from app.web.overview_dashboard import _macro_support_items
+        from app.web.overview.futures_macro_helpers import _macro_support_items
 
         macro = {
             "summary": {"scenario": "혼재된 매크로 흐름"},
@@ -5507,7 +5590,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("혼재된 매크로 흐름", flattened)
 
     def test_futures_workbench_context_bar_items_compactly_summarize_controls(self) -> None:
-        from app.web.overview_dashboard import _futures_workbench_context_items
+        from app.web.overview.futures_macro_helpers import _futures_workbench_context_items
 
         selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
         snapshot = {
@@ -5544,7 +5627,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2026-06-22 14:34:00", flattened)
 
     def test_futures_refresh_module_groups_live_and_macro_actions(self) -> None:
-        from app.web.overview_dashboard import _futures_refresh_module_model
+        from app.web.overview.futures_macro_helpers import _futures_refresh_module_model
 
         snapshot = {
             "status": "REVIEW",
@@ -5580,7 +5663,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual([mode["label"] for mode in model["modes"]], ["수동", "60초 자동 확인"])
 
     def test_futures_watch_strip_items_show_symbol_state_without_provider_run(self) -> None:
-        from app.web.overview_dashboard import _futures_watch_strip_items
+        from app.web.overview.futures_macro_helpers import _futures_watch_strip_items
 
         rows = pd.DataFrame(
             [
@@ -5603,7 +5686,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("success", flattened)
 
     def test_futures_market_brief_model_places_scenario_and_support_together(self) -> None:
-        from app.web.overview_dashboard import _futures_market_brief_model
+        from app.web.overview.futures_macro_helpers import _futures_market_brief_model
 
         macro = {
             "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_daily_date": "2026-06-19"},
@@ -5641,7 +5724,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Risk-On", " ".join(model["evidence_chips"]))
 
     def test_futures_weekly_flow_model_ranks_driver_and_supports(self) -> None:
-        from app.web.overview_dashboard import _futures_weekly_flow_model
+        from app.web.overview.futures_macro_helpers import _futures_weekly_flow_model
 
         weekly_context = {
             "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
@@ -5684,9 +5767,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         import inspect
 
         from app.web import overview_ui_components
+        from app.web.overview.components import market_context as market_context_components
 
         css = overview_ui_components.overview_ui_css()
-        source = inspect.getsource(overview_ui_components)
+        source = inspect.getsource(market_context_components)
 
         self.assertIn(".ov-context-disclosure", css)
         self.assertIn(".ov-context-disclosure > summary", css)
@@ -5740,7 +5824,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(cockpit_index, refresh_bar_index)
 
     def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
-        source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/components/market_context.py").read_text(encoding="utf-8")
         market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         self.assertIn("_macro_cockpit_historical_analog_html", source)
         self.assertIn("Macro 조건 결과 비교", source)
@@ -6218,7 +6302,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('key="overview_market_context_refresh_smart"', no_action_branch)
 
     def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         model = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -7037,7 +7121,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
-        from app.web.overview_dashboard import (
+        from app.web.overview.market_context_helpers import (
             GROUP_TREND_HEATMAP_ROW_HEIGHT,
             _build_group_leadership_trend_heatmap,
         )
@@ -8030,7 +8114,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         return []
 
     def test_effective_market_date_skips_sparse_latest_raw_date(self) -> None:
-        from app.services.overview_market_intelligence import resolve_effective_market_dates
+        from app.services.overview.market_movers import resolve_effective_market_dates
 
         window = resolve_effective_market_dates(
             period="daily",
@@ -8047,7 +8131,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
     def test_latest_raw_date_query_uses_ordered_latest_row(self) -> None:
         import inspect
-        import app.services.overview_market_intelligence as service
+        import app.services.overview.market_movers as service
 
         source = inspect.getsource(service._query_latest_raw_date)
 
@@ -8056,7 +8140,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("MAX(`date`)", source)
 
     def test_group_trend_window_contract_uses_compact_horizons(self) -> None:
-        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+        from app.services.overview.market_movers import resolve_group_trend_market_dates
 
         market_dates = [
             item.strftime("%Y-%m-%d")
@@ -8083,7 +8167,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(len(monthly["windows"]), 12)
 
     def test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_limit=100,
@@ -8117,7 +8201,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
     def test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_code="SP500",
@@ -8156,7 +8240,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
     def test_market_movers_snapshot_uses_top1000_intraday_returns(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_code="TOP1000",
@@ -8179,7 +8263,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
 
     def test_market_movers_snapshot_uses_nasdaq_symbol_directory_current_snapshot(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -8263,7 +8347,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAPL")
 
     def test_market_movers_snapshot_explains_missing_nasdaq_directory_refresh(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, sql, params
@@ -8281,7 +8365,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Nasdaq Symbol Directory refresh", snapshot["message"])
 
     def test_market_movers_missing_rows_include_profile_lifecycle_and_issue_evidence(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -8373,7 +8457,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("profile", missing.iloc[0]["Next Check"].lower())
 
     def test_market_movers_weekly_volume_rows_use_average_and_total_volume(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_code="TOP1000",
@@ -8396,7 +8480,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Days"], 5)
 
     def test_market_mover_catalyst_links_include_context_without_fetching_articles(self) -> None:
-        from app.services.overview_market_intelligence import build_market_mover_catalyst_links
+        from app.services.overview.why_it_moved import build_market_mover_catalyst_links
 
         rows = build_market_mover_catalyst_links(
             symbol="AAA",
@@ -8429,7 +8513,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("search.naver.com/search.naver", rows.iloc[5]["URL"])
 
     def test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata(self) -> None:
-        from app.services.overview_market_intelligence import build_market_mover_why_it_moved_read_model
+        from app.services.overview.why_it_moved import build_market_mover_why_it_moved_read_model
 
         model = build_market_mover_why_it_moved_read_model(
             mover={
@@ -8467,7 +8551,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Naver News", set(model["links"]["Source"]))
 
     def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         def news_fetcher(symbol: str, max_items: int) -> list[dict[str, object]]:
             self.assertEqual(symbol, "AAA")
@@ -8517,7 +8601,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("Document", metadata["sec_filings"].columns)
 
     def test_market_mover_compact_metadata_fetcher_adds_korean_news_metadata_lane(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         def korean_news_fetcher(
             symbol: str,
@@ -8564,7 +8648,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def test_market_mover_google_news_kr_rss_fetcher_builds_keyless_metadata_rows(self) -> None:
         from urllib.parse import parse_qs, urlparse
 
-        import app.services.overview_market_intelligence as service
+        import app.services.overview.why_it_moved as service
 
         self.assertTrue(
             hasattr(service, "_fetch_google_news_kr_rss_metadata"),
@@ -8625,7 +8709,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("body", rows[0])
 
     def test_market_mover_compact_metadata_fetcher_uses_google_news_kr_without_naver_credentials(self) -> None:
-        import app.services.overview_market_intelligence as service
+        import app.services.overview.why_it_moved as service
 
         calls: list[tuple[str, str | None, int, float]] = []
 
@@ -8647,7 +8731,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 }
             ]
 
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         with patch.dict(
             "os.environ",
@@ -8678,7 +8762,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(any("NAVER_SEARCH" in message for message in metadata["messages"]))
 
     def test_market_mover_compact_metadata_fetcher_distinguishes_empty_and_failed(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         empty = fetch_market_mover_compact_metadata(
             "AAA",
@@ -8710,7 +8794,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("SEC 메타데이터 조회 실패: sec timeout", failed["messages"])
 
     def test_market_mover_compact_metadata_fetcher_marks_partial_provider_failure(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         def sec_timeout(symbol: str, max_items: int, user_agent: str | None, request_timeout: float) -> list[dict[str, object]]:
             raise RuntimeError("sec timeout")
@@ -8735,7 +8819,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("SEC 메타데이터 조회 실패: sec timeout", metadata["messages"])
 
     def test_market_mover_metadata_status_strip_distinguishes_lookup_states(self) -> None:
-        from app.services.overview_market_intelligence import (
+        from app.services.overview.why_it_moved import (
             WHY_IT_MOVED_NEWS_COLUMNS,
             WHY_IT_MOVED_KOREAN_NEWS_COLUMNS,
             WHY_IT_MOVED_SEC_COLUMNS,
@@ -8828,7 +8912,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(no_metadata["sec"]["value"], "0건")
 
     def test_market_mover_sec_filings_sort_by_form_priority_deterministically(self) -> None:
-        from app.services.overview_market_intelligence import sort_market_mover_sec_filings_by_form_priority
+        from app.services.overview.why_it_moved import sort_market_mover_sec_filings_by_form_priority
 
         filings = pd.DataFrame(
             [
@@ -8846,8 +8930,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(list(sorted_filings.columns), ["Form", "Filing Date", "Title", "URL"])
 
     def test_market_mover_sec_lane_keeps_metadata_table_only_without_preview_helpers(self) -> None:
-        import app.services.overview_market_intelligence as market_intelligence
-        import app.web.overview_dashboard as overview_dashboard
+        import app.services.overview.why_it_moved as market_intelligence
+        import app.web.overview.market_movers_helpers as overview_dashboard
 
         sec_filings = pd.DataFrame(
             [
@@ -8873,7 +8957,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(hasattr(market_intelligence, "parse_market_mover_sec_filing_preview"))
 
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
-        from app.web.overview_dashboard import _market_mover_catalyst_candidates
+        from app.web.overview.market_movers_helpers import _market_mover_catalyst_candidates
 
         return_rows = pd.DataFrame(
             [
@@ -8912,7 +8996,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(candidates[0]["mover"]["Momentum Delta pp"], 9.13)
 
     def test_market_mover_metadata_tables_configure_url_as_clickable_link(self) -> None:
-        from app.web.overview_dashboard import _market_mover_metadata_column_config
+        from app.web.overview.market_movers_helpers import _market_mover_metadata_column_config
 
         config = _market_mover_metadata_column_config()
 
@@ -8921,7 +9005,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
 
     def test_market_mover_korean_news_display_model_keeps_snippet_and_clickable_open_link(self) -> None:
-        from app.web.overview_dashboard import _market_mover_metadata_column_config, _market_mover_open_link_frame
+        from app.web.overview.market_movers_helpers import _market_mover_metadata_column_config, _market_mover_open_link_frame
 
         frame = pd.DataFrame(
             [
@@ -8944,7 +9028,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(config["열기"]["type_config"]["type"], "link")
 
     def test_market_mover_research_link_tables_share_clickable_url_config(self) -> None:
-        from app.web.overview_dashboard import _market_mover_external_search_table_model
+        from app.web.overview.market_movers_helpers import _market_mover_external_search_table_model
 
         table_model = _market_mover_external_search_table_model(
             pd.DataFrame(
@@ -8976,7 +9060,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         observed_sql: dict[str, str] = {}
 
@@ -9016,7 +9100,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Name"], "BBB LISTING INC")
 
     def test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns(self) -> None:
-        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+        from app.services.overview.market_movers import build_group_leadership_snapshot
 
         snapshot = build_group_leadership_snapshot(
             universe_limit=100,
@@ -9053,7 +9137,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Momentum Delta pp", technology_leaders.columns)
 
     def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
-        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+        from app.services.overview.market_movers import build_group_leadership_snapshot
 
         snapshot = build_group_leadership_snapshot(
             universe_code="SP500",
@@ -9085,7 +9169,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
 
     def test_overview_breadth_heatmap_summary_scores_participation_and_concentration(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+        from app.services.overview.market_movers import build_overview_breadth_heatmap_summary
 
         snapshot = {
             "status": "OK",
@@ -9139,7 +9223,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("not a trading action", model["boundary_note"])
 
     def test_overview_breadth_heatmap_summary_keeps_full_canonical_sector_map(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+        from app.services.overview.market_movers import build_overview_breadth_heatmap_summary
         from app.web.overview_ui_components import _sector_pressure_map_html
 
         sector_names = [
@@ -9186,7 +9270,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(html.count("ov-sector-pressure-tile"), 11)
 
     def test_overview_macro_week_lane_clusters_near_events_without_signal_language(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+        from app.services.overview.events import build_overview_macro_week_lane
 
         snapshot = {
             "status": "OK",
@@ -9250,7 +9334,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("거래 실행", model["boundary_note"])
 
     def test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+        from app.services.overview.events import build_overview_macro_week_lane
 
         snapshot = {
             "status": "OK",
@@ -9337,7 +9421,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["items"][1]["type"], "FOMC_MEETING")
 
     def test_market_events_snapshot_defaults_to_recent_plus_upcoming_and_prioritizes_major_macro(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         captured: dict[str, object] = {}
 
@@ -9421,7 +9505,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[1]["Window"], "Upcoming")
 
     def test_overview_source_confidence_catalog_surfaces_provider_caveats_and_review_items(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+        from app.services.overview.market_context import build_overview_source_confidence_catalog
 
         model = build_overview_source_confidence_catalog(
             market_movers_snapshot={
@@ -9504,7 +9588,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("context 전용", model["boundary_note"])
 
     def test_overview_source_confidence_does_not_mark_events_and_data_health_meta_as_unresolved(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+        from app.services.overview.market_context import build_overview_source_confidence_catalog
 
         model = build_overview_source_confidence_catalog(
             market_movers_snapshot={
@@ -9562,7 +9646,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(data_item["counts_for_status"])
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         snapshot = build_market_events_snapshot(
             today=date(2026, 5, 28),
@@ -9585,7 +9669,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Official")
 
     def test_market_events_snapshot_can_read_all_event_types(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         snapshot = build_market_events_snapshot(
             event_type=None,
@@ -9615,7 +9699,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(earnings_row["Quality Action"], "Enable cross-check or refresh closer to date")
 
     def test_market_events_snapshot_macro_filter_reads_macro_prefix_rows(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name
@@ -9664,7 +9748,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(set(snapshot["rows"]["Type"]), {"MACRO_CPI", "MACRO_GDP"})
 
     def test_market_events_snapshot_warns_on_stale_earnings_estimates(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, sql, params
@@ -9696,7 +9780,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
 
     def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -9796,7 +9880,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         rows = snapshot["rows"]
         self.assertEqual(snapshot["status"], "REVIEW")
         self.assertEqual(snapshot["coverage"]["partial_count"], 1)
+        self.assertEqual(snapshot["coverage"]["direct_market_context_count"], 6)
+        self.assertEqual(snapshot["coverage"]["reference_context_count"], 3)
+        self.assertGreaterEqual(snapshot["coverage"]["direct_market_context_review_count"], 1)
+        self.assertGreaterEqual(snapshot["coverage"]["reference_context_review_count"], 1)
         universe_row = rows[rows["Area"] == "S&P 500 Universe"].iloc[0]
+        self.assertEqual(universe_row["Scope"], "direct_market_context")
         self.assertEqual(universe_row["Status"], "OK")
         self.assertEqual(universe_row["Rows"], 503)
         self.assertEqual(universe_row["Last Auto Run"], "2026-05-28 01:05")
@@ -9807,7 +9896,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sp500_intraday_row["Last Auto Run"], "2026-05-28 04:05")
         self.assertEqual(sp500_intraday_row["Auto Source"], "Browser Auto")
         self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
+        top1000_row = rows[rows["Area"] == "Top1000 Daily Snapshot"].iloc[0]
+        self.assertEqual(top1000_row["Scope"], "reference_context")
         futures_row = rows[rows["Area"] == "Futures Monitor 1m OHLCV"].iloc[0]
+        self.assertEqual(futures_row["Scope"], "reference_context")
         self.assertEqual(futures_row["Status"], "OK")
         self.assertIn("4 symbols", futures_row["Data Freshness"])
         self.assertEqual(snapshot["coverage"]["latest_auto_at"], "2026-05-28 04:05")
@@ -9818,7 +9910,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Inspect failed symbols", earnings_row["Next Action"])
 
     def test_collection_ops_snapshot_supports_legacy_event_calendar_schema(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         event_query_count = 0
 
@@ -9871,7 +9963,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("next 2026-06-17", fomc_row["Data Freshness"])
 
     def test_collection_ops_snapshot_marks_macro_calendar_due_when_some_macro_types_missing(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -9900,7 +9992,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
 
     def test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context(self) -> None:
-        from app.services.overview_market_intelligence import build_market_sentiment_snapshot
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
 
         snapshot_rows = pd.DataFrame(
             [
@@ -10130,7 +10222,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
 
     def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -10175,7 +10267,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
 
     def test_overview_data_health_handoff_ranks_problem_rows_and_points_to_collection_surfaces(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_data_health_ingestion_handoff
+        from app.services.overview.data_health import build_overview_data_health_ingestion_handoff
 
         handoff = build_overview_data_health_ingestion_handoff(
             {
@@ -10246,10 +10338,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(handoff["summary"]["next_target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정")
         self.assertEqual([item["area"] for item in handoff["priority_items"]], ["FOMC Calendar", "Macro Calendar", "Futures Monitor 1m OHLCV", "Earnings Calendar"])
         self.assertEqual(handoff["priority_items"][0]["status"], "Failed")
+        self.assertEqual(handoff["priority_items"][0]["scope"], "direct_market_context")
         self.assertEqual(handoff["priority_items"][0]["severity"], "critical")
         self.assertIn("Failure streak 2", handoff["priority_items"][0]["reason"])
         self.assertEqual(handoff["priority_items"][1]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 매크로 발표")
         self.assertEqual(handoff["priority_items"][2]["owner_surface"], "Workspace > Ingestion")
+        self.assertEqual(handoff["priority_items"][2]["scope"], "reference_context")
         self.assertEqual(handoff["priority_items"][2]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집")
         self.assertEqual(handoff["priority_items"][2]["alternate_surface"], "Workspace > Overview > Futures Monitor")
         self.assertEqual(handoff["counts"]["OK"], 1)
@@ -10258,7 +10352,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("does not execute", handoff["boundary_note"].lower())
 
     def test_overview_macro_context_cockpit_can_omit_futures_macro_for_fast_entry(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             include_futures_macro=False,
@@ -10333,7 +10427,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("선물/매크로", summary_copy)
 
     def test_overview_macro_context_cockpit_summarizes_existing_context_snapshots(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -10510,7 +10604,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("context 전용", cockpit["boundary_note"])
 
     def test_overview_macro_context_cockpit_uses_last_market_basis_when_market_is_closed(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_session_context={
@@ -10598,7 +10692,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(prices["status_label"], "자료 정상")
 
     def test_overview_macro_context_cockpit_keeps_intraday_refresh_action_when_market_is_open(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_session_context={
@@ -10666,7 +10760,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("오늘의 시장 브리프", html)
 
     def test_overview_macro_context_cockpit_uses_recent_cpi_as_compact_event_cue(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -10776,7 +10870,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("확인하세요", event_findings[0]["conclusion"])
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -11499,7 +11593,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in pilot["insufficient_conditions"]], ["gld_safe_haven_context"])
 
     def test_group_leadership_date_resolver_respects_selected_as_of_date(self) -> None:
-        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+        from app.services.overview.market_movers import resolve_group_trend_market_dates
 
         captured: list[tuple[str, list[object]]] = []
         eligible_dates = list(pd.bdate_range(end="2024-03-15", periods=6).strftime("%Y-%m-%d"))[::-1]
@@ -11526,7 +11620,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertTrue(any("2024-03-15" in params for _, params in captured))
 
     def test_macro_context_cockpit_embeds_analog_read_model_when_supplied(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame([{"Symbol": "MRNA", "Return %": 7.2, "Name": "Moderna", "Sector": "Healthcare"}])},

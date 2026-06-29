@@ -17,7 +17,7 @@ from app.services.futures_macro_thermometer import (
 )
 from app.services.futures_macro_validation import build_current_scenario_validation_summary
 from app.web.overview.session_helpers import _snapshot_value
-from app.web.overview_ui_components import _overview_tone_color
+from app.web.overview.components.common import _overview_tone_color
 
 
 FUTURES_GROUP_LABELS = {
