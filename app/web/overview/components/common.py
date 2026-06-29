@@ -4340,9 +4340,89 @@ def overview_ui_css() -> str:
   border: 1px solid var(--ov-mi-border-faint);
   background: rgba(248,250,252,0.74);
 }
+.ov-mm-data-trust-strip {
+  min-width: 0;
+  margin: 0.48rem 0 0.72rem 0;
+  padding: 0.52rem 0.58rem;
+  border-left: 3px solid var(--ov-data-trust-tone, var(--ov-mi-color-neutral));
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  background: color-mix(in srgb, var(--ov-data-trust-tone, var(--ov-mi-color-neutral)) 4%, var(--ov-mi-color-surface));
+}
+.ov-mm-data-trust-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--ov-mi-gap-md);
+  align-items: start;
+}
+.ov-mm-data-trust-kicker {
+  color: var(--ov-data-trust-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.12;
+}
+.ov-mm-data-trust-title {
+  margin-top: 0.08rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+}
+.ov-mm-data-trust-detail,
+.ov-mm-data-trust-boundary {
+  margin-top: 0.1rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+.ov-mm-data-trust-action {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.32rem;
+  padding: 0.12rem 0.46rem;
+  border: 1px solid color-mix(in srgb, var(--ov-data-trust-tone, var(--ov-mi-color-neutral)) 30%, transparent);
+  border-radius: var(--ov-mi-radius-pill);
+  background: color-mix(in srgb, var(--ov-data-trust-tone, var(--ov-mi-color-neutral)) 7%, transparent);
+  color: var(--ov-data-trust-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  white-space: nowrap;
+}
+.ov-mm-data-trust-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ov-mi-gap-xs);
+  margin-top: 0.44rem;
+}
+.ov-mm-data-trust-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.24rem;
+  min-height: 1.42rem;
+  padding: 0.16rem 0.44rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  border-radius: var(--ov-mi-radius-pill);
+  background: rgba(255,255,255,0.72);
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.12;
+}
+.ov-mm-data-trust-chip strong {
+  color: var(--ov-mi-color-text);
+  font-weight: var(--ov-mi-weight-heading);
+}
+.ov-mm-data-trust-chip small {
+  color: var(--ov-mi-color-text-muted);
+}
+.ov-mm-data-trust-boundary {
+  padding: 0.3rem 0.38rem;
+  border: 1px solid var(--ov-mi-border-faint);
+  background: rgba(248,250,252,0.72);
+}
 .ov-mm-empty-state {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.35fr);
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.34fr) minmax(11rem, 0.3fr);
   gap: var(--ov-mi-gap-lg);
   align-items: center;
   margin: 0.62rem 0 0.86rem 0;
@@ -4394,6 +4474,27 @@ def overview_ui_css() -> str:
 	  font-size: var(--ov-mi-font-caption);
 	  line-height: 1.25;
 	}
+.ov-mm-empty-trust {
+  min-width: 0;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-empty-trust span,
+.ov-mm-empty-trust small {
+  display: block;
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.2;
+}
+.ov-mm-empty-trust strong {
+  display: block;
+  margin: 0.08rem 0;
+  color: var(--ov-empty-tone, var(--ov-mi-color-neutral));
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.14;
+  overflow-wrap: anywhere;
+}
 	.ov-mm-board {
 	  min-width: 0;
 	  margin: 0.1rem 0 0.82rem 0;
@@ -4728,6 +4829,7 @@ def overview_ui_css() -> str:
   }
 	  .ov-mm-command-head,
 	  .ov-mm-trust-head,
+	  .ov-mm-data-trust-head,
 	  .ov-mm-empty-state,
 	  .ov-mm-board-head,
 	  .ov-mm-chart-head,
@@ -4774,6 +4876,12 @@ def overview_ui_css() -> str:
     border-left: 0;
   }
   .ov-mm-empty-action {
+    padding-left: 0;
+    padding-top: 0.48rem;
+    border-left: 0;
+    border-top: 1px solid var(--ov-mi-border-faint);
+  }
+  .ov-mm-empty-trust {
     padding-left: 0;
     padding-top: 0.48rem;
     border-left: 0;

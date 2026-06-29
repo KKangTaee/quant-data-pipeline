@@ -7087,6 +7087,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("선택 종목 원천 detail 표", helper_source)
         self.assertIn("ov-mm-investigation-pane", common_source)
 
+    def test_market_movers_redesign_v2_phase6_uses_compact_data_trust_strip(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_data_trust_strip_model", helper_source)
+        self.assertIn("render_market_movers_data_trust_strip", helper_source)
+        self.assertIn("render_market_movers_data_trust_strip", component_source)
+        self.assertIn("현재 결과 신뢰도", component_source)
+        self.assertIn("ov-mm-data-trust-strip", common_source)
+        self.assertIn("Coverage trust detail", helper_source)
+
     def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
@@ -7115,6 +7127,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(model["primary_action"], "Nasdaq 목록 갱신")
         self.assertFalse(model["show_why_it_moved"])
         self.assertIn("ranking row", model["investigation_note"])
+        self.assertIn("No Universe", model["trust_hint"]["value"])
 
     def test_market_movers_coverage_trust_ui_keeps_raw_diagnostics_secondary(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
@@ -9176,6 +9189,34 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(facts["상대 거래량"]["value"], "2.50x")
         self.assertEqual(facts["현재 거래량"]["value"], "1.2M")
         self.assertIn("not a trading signal", model["boundary_note"])
+
+    def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model
+
+        trust_model = {
+            "state": "Missing Quotes",
+            "tone": "warning",
+            "headline": "S&P 500 quote 누락 2건이 있습니다.",
+            "detail": "그룹 요약을 먼저 봅니다.",
+            "items": [
+                {"label": "Coverage", "value": "S&P 500"},
+                {"label": "Freshness", "value": "Missing Quotes", "detail": "2026-06-29 14:20"},
+                {"label": "Universe", "value": "503"},
+                {"label": "Returnable", "value": "501", "detail": "99.6%"},
+                {"label": "Missing", "value": "2"},
+            ],
+            "suggested_action": {"label": "Open raw diagnostics", "detail": "Grouped summary 아래 raw diagnostics를 확인합니다."},
+            "boundary_note": "Coverage trust is context-only data-quality evidence.",
+        }
+
+        model = build_market_movers_data_trust_strip_model(trust_model)
+
+        self.assertEqual(model["schema_version"], "market_movers_data_trust_strip_v1")
+        self.assertEqual(model["state"], "Missing Quotes")
+        self.assertEqual(model["headline"], "S&P 500 quote 누락 2건이 있습니다.")
+        self.assertEqual(model["action_label"], "Open raw diagnostics")
+        self.assertEqual([item["label"] for item in model["items"]], ["Freshness", "Returnable", "Missing"])
+        self.assertIn("context-only", model["boundary_note"].lower())
 
     def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")

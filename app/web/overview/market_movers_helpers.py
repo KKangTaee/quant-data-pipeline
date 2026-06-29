@@ -53,6 +53,7 @@ from app.web.overview.components.market_movers import (
     render_market_mover_board,
     render_market_mover_chart_workspace,
     render_market_mover_investigation_pane,
+    render_market_movers_data_trust_strip,
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
     render_market_movers_empty_state,
@@ -341,6 +342,11 @@ def build_market_movers_empty_state_model(
         "primary_action": primary_action,
         "show_why_it_moved": False,
         "investigation_note": "선택한 coverage에 ranking row가 생기면 선택 종목 조사 패널을 사용할 수 있습니다.",
+        "trust_hint": {
+            "label": "현재 결과 신뢰도",
+            "value": _freshness_label(snapshot, dict(snapshot.get("coverage") or {})),
+            "detail": "Coverage trust detail에서 grouped diagnostics를 확인합니다.",
+        },
     }
 
 
@@ -920,9 +926,33 @@ def _render_quote_gap_diagnostics_result(result_key: str, *, universe_code: str)
         st.dataframe(pd.DataFrame(rows)[display_columns], width="stretch", hide_index=True)
 
 
+def build_market_movers_data_trust_strip_model(trust_model: dict[str, Any]) -> dict[str, Any]:
+    preferred_labels = {"Freshness", "Returnable", "Missing"}
+    items = [
+        dict(item)
+        for item in list(trust_model.get("items") or [])
+        if str(dict(item).get("label") or "") in preferred_labels
+    ]
+    action = dict(trust_model.get("suggested_action") or {})
+    return {
+        "schema_version": "market_movers_data_trust_strip_v1",
+        "state": str(trust_model.get("state") or "-"),
+        "tone": str(trust_model.get("tone") or "neutral"),
+        "headline": str(trust_model.get("headline") or "-"),
+        "detail": str(trust_model.get("detail") or "-"),
+        "items": items,
+        "action_label": str(action.get("label") or "No action needed"),
+        "action_detail": str(action.get("detail") or ""),
+        "boundary_note": str(
+            trust_model.get("boundary_note")
+            or "Coverage trust is context-only data-quality evidence for the current Market Movers view."
+        ),
+    }
+
+
 def _render_market_movers_coverage_trust(snapshot: dict[str, Any], *, controls: MarketMoverControls) -> None:
     model = build_market_movers_coverage_trust_model(snapshot)
-    render_market_movers_coverage_trust(model)
+    render_market_movers_data_trust_strip(build_market_movers_data_trust_strip_model(model))
     grouped_rows = model.get("grouped_missing_rows")
     if not isinstance(grouped_rows, pd.DataFrame):
         grouped_rows = pd.DataFrame()

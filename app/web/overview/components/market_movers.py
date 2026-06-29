@@ -55,6 +55,16 @@ def render_market_movers_command_strip(model: dict[str, Any]) -> None:
 
 def render_market_movers_empty_state(model: dict[str, Any]) -> None:
     tone_color = _market_movers_workbench_tone(model.get("tone"))
+    trust_hint = dict(model.get("trust_hint") or {})
+    trust_hint_html = ""
+    if trust_hint:
+        trust_hint_html = (
+            '<div class="ov-mm-empty-trust">'
+            f'<span>{escape(_display_value(trust_hint.get("label")))}</span>'
+            f'<strong>{escape(_display_value(trust_hint.get("value")))}</strong>'
+            f'<small>{escape(_display_value(trust_hint.get("detail")))}</small>'
+            "</div>"
+        )
     st.markdown(
         overview_ui_css()
         + f"""
@@ -68,6 +78,7 @@ def render_market_movers_empty_state(model: dict[str, Any]) -> None:
     <span>{escape(_display_value(model.get("primary_action")))}</span>
     <small>{escape(_display_value(model.get("investigation_note")))}</small>
   </div>
+  {trust_hint_html}
 </section>""",
         unsafe_allow_html=True,
     )
@@ -220,6 +231,46 @@ def render_market_mover_investigation_pane(model: dict[str, Any]) -> None:
   <div class="ov-mm-investigation-facts">{_market_mover_investigation_facts_html(list(model.get("facts") or []))}</div>
   <div class="ov-mm-investigation-status">{status_items_html}</div>
   <div class="ov-mm-investigation-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _data_trust_strip_items_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items:
+        detail = item.get("detail")
+        detail_html = (
+            f'<small>{escape(_display_value(detail))}</small>'
+            if detail not in (None, "")
+            else ""
+        )
+        html.append(
+            '<span class="ov-mm-data-trust-chip">'
+            f'<span>{escape(_display_value(item.get("label")))}</span>'
+            f'<strong>{escape(_display_value(item.get("value")))}</strong>'
+            f"{detail_html}"
+            "</span>"
+        )
+    return "".join(html)
+
+
+def render_market_movers_data_trust_strip(model: dict[str, Any]) -> None:
+    tone_color = escape(_overview_tone_color(model.get("tone")))
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-data-trust-strip" style="--ov-data-trust-tone:{tone_color};">
+  <div class="ov-mm-data-trust-head">
+    <div>
+      <div class="ov-mm-data-trust-kicker">현재 결과 신뢰도</div>
+      <div class="ov-mm-data-trust-title">{escape(_display_value(model.get("state")))}</div>
+      <div class="ov-mm-data-trust-detail">{escape(_display_value(model.get("headline")))} · {escape(_display_value(model.get("detail")))}</div>
+    </div>
+    <span class="ov-mm-data-trust-action">{escape(_display_value(model.get("action_label")))}</span>
+  </div>
+  <div class="ov-mm-data-trust-chips">{_data_trust_strip_items_html(list(model.get("items") or []))}</div>
+  <div class="ov-mm-data-trust-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,
     )
@@ -674,6 +725,7 @@ __all__ = [
     "render_market_mover_board",
     "render_market_mover_chart_workspace",
     "render_market_mover_investigation_pane",
+    "render_market_movers_data_trust_strip",
     "_market_refresh_state_label",
     "_market_refresh_state_detail",
     "render_market_refresh_status_bar",
