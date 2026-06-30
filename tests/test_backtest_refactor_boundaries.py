@@ -82,6 +82,23 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )
         self.assertIn("return weighted_strategy_role_flags(strategy_names)", compare_source)
 
+    def test_practical_validation_status_policy_is_service_owned(self) -> None:
+        from app.services.backtest_validation_status_policy import (
+            STATUS_RANK,
+            normalize_validation_status,
+            worst_validation_status,
+        )
+
+        self.assertEqual(normalize_validation_status(True), "PASS")
+        self.assertEqual(normalize_validation_status("FALSE"), "NEEDS_INPUT")
+        self.assertEqual(normalize_validation_status("unknown-status"), "NOT_RUN")
+        self.assertGreater(STATUS_RANK["BLOCKED"], STATUS_RANK["PASS"])
+        self.assertEqual(worst_validation_status(["PASS", "REVIEW", "BLOCKED"]), "BLOCKED")
+
+        modules_source = (PROJECT_ROOT / "app/services/backtest_practical_validation_modules.py").read_text()
+        self.assertIn("from app.services.backtest_validation_status_policy import", modules_source)
+        self.assertNotIn("STATUS_RANK = {", modules_source)
+
 
 if __name__ == "__main__":
     unittest.main()

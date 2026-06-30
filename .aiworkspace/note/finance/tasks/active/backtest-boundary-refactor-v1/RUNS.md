@@ -13,6 +13,17 @@ Command log for staged QA.
 - Diff check: `git diff --check`
   - Result: PASS.
 
+## 4차
+
+- RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_status_policy_is_service_owned -v`
+  - Expected failure: missing `app.services.backtest_validation_status_policy`.
+- GREEN QA: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries -v`
+  - Result: PASS.
+- Compile: `.venv/bin/python -m py_compile app/services/backtest_validation_status_policy.py app/services/backtest_practical_validation_modules.py app/services/backtest_practical_validation.py app/web/backtest_practical_validation.py`
+  - Result: PASS.
+- Diff check: `git diff --check`
+  - Result: PASS.
+
 ## 3차
 
 - RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_portfolio_mix_role_flags_are_service_owned -v`
