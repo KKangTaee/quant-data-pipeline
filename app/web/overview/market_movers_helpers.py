@@ -2412,26 +2412,7 @@ def _render_market_mover_why_it_moved_panel(
     identity = dict(read_model.get("identity") or {})
     symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()
 
-    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스 메타데이터, SEC 공시, 외부 검색 시작점")
-    action_cols = st.columns([0.28, 0.72], gap="medium")
-    with action_cols[0]:
-        if st.button(
-            "뉴스·공시 메타데이터 조회",
-            key=f"{metadata_key}__fetch",
-            help="현재 선택 종목 1개에 대해 세션 전용 뉴스 / 한국어 뉴스 / SEC metadata만 조회합니다.",
-        ):
-            with st.spinner(f"{symbol} compact metadata를 조회하는 중입니다..."):
-                st.session_state[metadata_key] = fetch_market_mover_compact_metadata(
-                    symbol,
-                    name=identity.get("Name"),
-                    max_news=3,
-                    max_korean_news=3,
-                    max_filings=3,
-                )
-            st.rerun()
-    with action_cols[1]:
-        st.caption("버튼을 누르면 아래 탭에 채웁니다: 뉴스 메타데이터, 한국어 뉴스, SEC 공시. 원문 본문은 저장하지 않습니다.")
-
+    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스, SEC 공시, 외부 검색 시작점")
     metadata = dict(read_model.get("metadata") or {})
     research_snapshot = build_market_mover_research_snapshot(
         mover={
@@ -2440,30 +2421,47 @@ def _render_market_mover_why_it_moved_panel(
             "Market Cap": identity.get("Market Cap") or dict(selected.get("mover") or {}).get("Market Cap"),
         }
     )
-    clue_tabs = st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])
+    clue_tabs = st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])
     with clue_tabs[0]:
         render_market_mover_research_snapshot(
             build_market_mover_research_snapshot_model(detail_model, research_snapshot=research_snapshot)
         )
     with clue_tabs[1]:
+        st.caption("일반 뉴스와 한국어 뉴스를 같은 탭에서 확인합니다. 원문 본문은 조회하거나 저장하지 않습니다.")
+        if st.button(
+            "뉴스·공시 메타데이터 조회",
+            key=f"{metadata_key}__fetch",
+            help="현재 선택 종목 1개에 대해 세션 전용 뉴스 / 한국어 뉴스 / SEC metadata만 조회합니다.",
+        ):
+            with st.spinner(f"{symbol} compact metadata를 조회하는 중입니다..."):
+                metadata = fetch_market_mover_compact_metadata(
+                    symbol,
+                    name=identity.get("Name"),
+                    max_news=3,
+                    max_korean_news=3,
+                    max_filings=3,
+                )
+                st.session_state[metadata_key] = metadata
+            st.success("뉴스, 한국어 뉴스, SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
+        st.caption("뉴스 메타데이터")
         _render_market_mover_metadata_table(
             metadata.get("news"),
             ["Title", "Source", "Published At", "Open"],
             "뉴스 메타데이터는 아직 조회하지 않았습니다. 필요할 때 현재 선택 종목만 조회하세요.",
         )
-    with clue_tabs[2]:
+        st.caption("한국어 뉴스")
         _render_market_mover_metadata_table(
             metadata.get("korean_news"),
             ["Title", "Source", "Published At", "Snippet", "Open"],
             "한국어 뉴스 메타데이터는 아직 조회하지 않았습니다. 원문 기사 본문은 수집하거나 저장하지 않습니다.",
         )
-    with clue_tabs[3]:
+    with clue_tabs[2]:
         _render_market_mover_metadata_table(
             metadata.get("sec_filings"),
             ["Form", "Filing Date", "Title", "Open"],
             "SEC 공시 메타데이터는 아직 조회하지 않았습니다. 공시 원문은 공식 링크에서 직접 확인합니다.",
         )
-    with clue_tabs[4]:
+    with clue_tabs[3]:
         table_model = _market_mover_external_search_table_model(detail_model["links"])
         st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
         st.dataframe(
