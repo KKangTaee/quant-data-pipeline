@@ -8372,3 +8372,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Coverage Diagnostics를 raw 진단 패널이 아니라 현재 결과 신뢰 상태를 이해하는 보조 UX로 바꾸되, 기존 refresh/action facade와 context-only 경계를 유지해야 함.
 - Analysis result: 기존 snapshot coverage, refresh_state, missing_rows만으로 Good / Stale / Partial / Needs Refresh / No Universe / Missing Quotes 상태와 grouped missing summary를 만들 수 있다. raw diagnostics는 보존하되 collapsed expander로 낮추는 것이 1~4차 workbench 흐름과 맞다.
 - Follow-up: 5차 완료. 1~5차 Market Movers gate는 완료됐고, 다음 작업은 사용자가 별도 승인할 때만 새 범위로 잡는다.
+
+### 2026-06-30 - 재무제표 source migration 전에 yfinance / EDGAR 의존성을 정리한다
+
+- User request: UI 작업 전에 yfinance 재무제표 수집을 없앨 수 있는지, EDGAR / edgartools를 신뢰할 수 있는지, 기존 backtest와 UI 의존성을 어떻게 마이그레이션할지 분석해 달라고 요청함.
+- Interpreted goal: 코드 변경보다 먼저 financial statement canonical source, legacy fallback, backtest/read model migration 순서를 확정해야 함.
+- Analysis result: annual EDGAR statement shadow는 primary 후보로 충분하지만 quarterly shadow는 10-K/FY 값이 quarterly row처럼 섞일 수 있어 먼저 보정해야 한다. yfinance broad fundamentals는 넓은 coverage와 legacy 호환성 때문에 즉시 삭제하지 말고 freeze/deprecate가 필요하다.
+- Follow-up: research bundle은 `.aiworkspace/note/finance/researches/active/2026-06-fundamental-source-migration/`에 남겼다. 다음 개발 순서는 source contract freeze -> Market Movers annual EDGAR 전환 -> quarterly correctness -> backtest migration -> ingestion UX cleanup -> broad yfinance decommission이다.

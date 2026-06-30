@@ -5426,3 +5426,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `coverage trust` read model과 `자료 신뢰 상태` strip을 추가하고, grouped missing diagnostics를 먼저 보여주며 raw diagnostics / quote-gap diagnosis는 collapsed expander에 남겼다.
   - Nasdaq no-universe는 기존 Overview action facade의 Symbol Directory refresh로만 이어지며, 새 provider / schema / signal / monitoring UX는 추가하지 않았다.
   - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다.
+- Fundamental Source Migration Research 2026-06-30:
+  - `.aiworkspace/note/finance/researches/active/2026-06-fundamental-source-migration/`에서 yfinance broad fundamentals와 EDGAR statement ledger / shadow 의존성을 audit했다.
+  - 결론은 yfinance financial statements를 즉시 삭제하지 말고 legacy/fallback으로 freeze하고, EDGAR annual statement shadow를 primary로 승격하되 quarterly 10-K/FY 혼입 문제를 먼저 수정하는 것이다.
+  - 다음 개발은 Market Movers detail annual source 전환, quarterly correctness, broad quality_snapshot deprecation 순서로 잡는 것이 안전하다.
