@@ -5445,3 +5445,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/researches/active/2026-06-fundamental-source-migration/`에서 yfinance broad fundamentals와 EDGAR statement ledger / shadow 의존성을 audit했다.
   - 결론은 yfinance financial statements를 즉시 삭제하지 말고 legacy/fallback으로 freeze하고, EDGAR annual statement shadow를 primary로 승격하되 quarterly 10-K/FY 혼입 문제를 먼저 수정하는 것이다.
   - 다음 개발은 Market Movers detail annual source 전환, quarterly correctness, broad quality_snapshot deprecation 순서로 잡는 것이 안전하다.
+- Fundamental Source Migration Phase 7 2026-06-30:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p7-legacy-yfinance-decommission/`에서 legacy broad yfinance active UI 제거를 완료했다.
+  - Ingestion의 broad fundamentals / factor 실행 카드는 내려가고, old run history / saved replay용 action handler와 table은 유지했다.
+  - 검증은 focused RED/GREEN, `git diff --check`, py_compile, service contract filtered pytest, Ingestion Browser QA로 기록했다.

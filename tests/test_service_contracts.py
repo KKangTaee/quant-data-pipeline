@@ -3922,17 +3922,14 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("finance.loaders.price", imported_modules)
         self.assertNotIn("_load_price_window_summary_cached", function_names)
 
-    def test_ingestion_financial_statement_refresh_is_edgar_first_with_legacy_broad_advanced(self) -> None:
+    def test_ingestion_financial_statement_refresh_is_edgar_first_with_legacy_broad_archived(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
         self.assertIn("EDGAR annual 재무제표 갱신", source)
-        self.assertIn("Legacy broad yfinance", source)
-        self.assertLess(
-            source.index('with st.expander("EDGAR annual 재무제표 갱신"'),
-            source.index('with st.expander("Legacy broad yfinance fundamentals / factors"'),
-        )
+        self.assertIn("Archived legacy broad yfinance fundamentals / factors", source)
+        self.assertNotIn('with st.expander("Legacy broad yfinance fundamentals / factors"', source)
         self.assertIn("primary financial statement refresh", source)
-        self.assertIn("not the canonical financial statement source", source)
+        self.assertIn("not an active financial statement refresh workflow", source)
 
     def test_statement_refresh_action_summary_focuses_on_coverage_freshness_and_next_action(self) -> None:
         from app.web.ingestion_console import _build_statement_refresh_action_summary
@@ -4068,6 +4065,25 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("run_statement_universe_coverage_qa", source)
         self.assertIn("EDGAR annual coverage by universe", source)
         self.assertNotIn("yfinance financial statements fallback", source)
+
+    def test_ingestion_ui_removes_legacy_broad_collection_cards_but_keeps_compatibility_actions(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertNotIn('with st.expander("Legacy broad yfinance fundamentals / factors"', source)
+        self.assertNotIn('with st.expander("핵심 시장 데이터 일괄 수집"', source)
+        self.assertNotIn('with st.expander("펀더멘털 수동 수집"', source)
+        self.assertNotIn('with st.expander("팩터 수동 계산"', source)
+        self.assertIn('if action == "weekly_fundamental_refresh":', source)
+        self.assertIn('if action == "collect_fundamentals":', source)
+        self.assertIn('if action == "calculate_factors":', source)
+        self.assertIn("Archived legacy broad yfinance compatibility path", source)
+
+    def test_quality_snapshot_form_marks_broad_yfinance_as_history_replay_only(self) -> None:
+        source = Path("app/web/backtest_single_forms.py").read_text(encoding="utf-8")
+
+        self.assertIn("Archived legacy broad yfinance compatibility path", source)
+        self.assertIn("saved/history replay", source)
+        self.assertIn("Quality Snapshot (Strict Annual)", source)
 
     def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
         import ast

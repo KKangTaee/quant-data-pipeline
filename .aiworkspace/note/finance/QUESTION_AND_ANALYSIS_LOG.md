@@ -8407,3 +8407,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 코드 변경보다 먼저 financial statement canonical source, legacy fallback, backtest/read model migration 순서를 확정해야 함.
 - Analysis result: annual EDGAR statement shadow는 primary 후보로 충분하지만 quarterly shadow는 10-K/FY 값이 quarterly row처럼 섞일 수 있어 먼저 보정해야 한다. yfinance broad fundamentals는 넓은 coverage와 legacy 호환성 때문에 즉시 삭제하지 말고 freeze/deprecate가 필요하다.
 - Follow-up: research bundle은 `.aiworkspace/note/finance/researches/active/2026-06-fundamental-source-migration/`에 남겼다. 다음 개발 순서는 source contract freeze -> Market Movers annual EDGAR 전환 -> quarterly correctness -> backtest migration -> ingestion UX cleanup -> broad yfinance decommission이다.
+
+### 2026-06-30 - legacy broad yfinance 재무제표 실행 카드를 active UI에서 내린다
+
+- User request: 재무제표 source migration 1~9차 중 Phase 7 legacy yfinance decommission을 앞선 commit 이후 이어서 진행.
+- Interpreted goal: yfinance package나 old table을 삭제하지 않고, 새 사용자가 broad yfinance financial statements를 canonical refresh로 실행하지 않게 active UI entry를 제거해야 함.
+- Analysis result: broad loader / writer / action handler는 saved/history replay compatibility 때문에 남겨야 하지만, Ingestion의 active broad collection cards와 broad `Quality Snapshot`의 새 실행 유도 문구는 제거 / archived 표시가 가능했다.
+- Follow-up: Ingestion UI는 EDGAR annual refresh와 statement shadow rebuild를 financial statement path로 노출한다. Phase 8에서 최종 docs / runbook alignment와 source audit closeout을 진행한다.

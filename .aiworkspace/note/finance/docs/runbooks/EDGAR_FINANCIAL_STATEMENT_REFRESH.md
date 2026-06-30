@@ -66,9 +66,9 @@ Use `Workspace > Ingestion > 수동 복구 / 진단 > 재무제표 universe cove
 
 ## Legacy Broad Path
 
-`Legacy broad yfinance fundamentals / factors` remains in the Ingestion UI for compatibility and explicit comparison.
+The legacy broad yfinance fundamentals / factors path is no longer exposed as an active Ingestion collection card.
 
-Use it only when an old saved run, history replay, or manual broad factor comparison requires `nyse_fundamentals` / `nyse_factors`.
+The underlying actions and tables remain for compatibility only. Use them only when an old saved run, history replay, or explicit manual broad factor comparison requires `nyse_fundamentals` / `nyse_factors`. New financial statement source preparation should start from `EDGAR annual 재무제표 갱신` and statement shadow rebuild.
 
 ## Related Docs
 

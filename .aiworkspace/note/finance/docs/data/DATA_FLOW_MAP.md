@@ -335,6 +335,7 @@ yfinance financial statements (legacy compatibility only)
 - `nyse_factors`는 fundamentals와 price as-of matching으로 만든 derived research layer다.
 - 이 경로는 `legacy_broad_yfinance` source contract로 표시한다.
 - 이 경로는 편리하지만 canonical financial statement source나 strict filing-time PIT source로 보지 않는다.
+- Phase 7 source migration부터 Ingestion UI의 active broad yfinance fundamentals / factors collection cards는 제거했다. action handlers와 tables는 saved/history replay 또는 explicit compatibility comparison을 위해서만 남긴다.
 - loader read model은 `financial_source`, `financial_source_mode`, `source_table`, `available_at`, `form_type`, `accession_no` 공통 source contract alias를 노출한다. broad yfinance row는 filing metadata가 없으므로 `available_at`, `form_type`, `accession_no`가 비어 있을 수 있다.
 
 ## Statement-driven shadow 흐름

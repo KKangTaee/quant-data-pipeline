@@ -41,7 +41,6 @@ from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 from app.jobs.result_artifacts import write_run_artifacts
 from app.jobs.preflight_checks import (
     check_asset_profile_prerequisites,
-    check_factor_prerequisites,
     check_symbol_input,
 )
 from app.jobs.run_history import (
@@ -105,13 +104,13 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "next_action": "부분 성공이면 Price Stale Diagnosis로 provider gap과 DB 수집 누락을 분리하세요.",
     },
     "weekly_fundamental_refresh": {
-        "title": "Legacy broad yfinance fundamentals / factors",
+        "title": "Archived legacy broad yfinance fundamentals / factors",
         "purpose": (
-            "Legacy broad yfinance compatibility refresh for nyse_fundamentals / nyse_factors; "
-            "not the canonical financial statement source."
+            "Archived legacy broad yfinance compatibility path for historical nyse_fundamentals / nyse_factors replay; "
+            "not an active financial statement refresh workflow."
         ),
         "targets": ["finance_fundamental.nyse_fundamentals", "finance_fundamental.nyse_factors"],
-        "used_by": ["Legacy broad Quality Snapshot replay / compatibility", "manual broad factor comparison"],
+        "used_by": ["Old run history replay", "explicit legacy broad factor comparison"],
         "caveats": [
             "broad fundamentals / factors는 strict filing-time PIT source가 아닙니다.",
             "strict annual backtests use EDGAR statement shadow.",
@@ -268,12 +267,12 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "next_action": "actual historical membership source가 필요한 symbol은 별도 source review로 넘기세요.",
     },
     "pipeline_core_market_data": {
-        "title": "핵심 시장 데이터 일괄 수집",
-        "purpose": "OHLCV, fundamentals, factor calculation을 순서대로 실행하는 수동 composite job입니다.",
+        "title": "Archived broad core market-data pipeline",
+        "purpose": "Archived legacy compatibility job that chained OHLCV, broad yfinance fundamentals, and broad factor calculation.",
         "targets": ["finance_price.nyse_price_history", "finance_fundamental.nyse_fundamentals", "finance_fundamental.nyse_factors"],
-        "used_by": ["Backtest Analysis", "factor prototype"],
-        "caveats": ["대량 실행은 rate limit과 partial coverage 가능성이 큽니다."],
-        "next_action": "Pipeline Steps에서 어느 단계가 partial / failed인지 먼저 확인하세요.",
+        "used_by": ["Old run history replay", "explicit legacy broad factor comparison"],
+        "caveats": ["financial statement canonical refresh는 EDGAR annual path입니다."],
+        "next_action": "새 재무제표 / factor 준비는 EDGAR annual refresh와 statement shadow path를 사용하세요.",
     },
     "collect_ohlcv": {
         "title": "가격 이력 수동 수집",
@@ -284,20 +283,20 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "next_action": "누락 symbol은 Price Stale Diagnosis로 원인을 분류하세요.",
     },
     "collect_fundamentals": {
-        "title": "펀더멘털 수동 수집",
-        "purpose": "선택한 symbol의 normalized fundamentals summary를 수동으로 수집합니다.",
+        "title": "Archived broad fundamentals manual collection",
+        "purpose": "Archived legacy compatibility job for broad yfinance normalized fundamentals.",
         "targets": ["finance_fundamental.nyse_fundamentals"],
-        "used_by": ["Factor calculation"],
-        "caveats": ["strict filing-time PIT source가 아닙니다."],
-        "next_action": "factor 계산 전에 price와 fundamentals preflight를 확인하세요.",
+        "used_by": ["Old run history replay", "explicit legacy broad factor comparison"],
+        "caveats": ["canonical financial statement source가 아닙니다."],
+        "next_action": "새 재무제표 source가 필요하면 EDGAR annual refresh를 사용하세요.",
     },
     "calculate_factors": {
-        "title": "팩터 수동 계산",
-        "purpose": "저장된 price와 fundamentals를 읽어 broad factor table을 계산합니다.",
+        "title": "Archived broad factor manual calculation",
+        "purpose": "Archived legacy compatibility job for calculating broad factors from nyse_fundamentals.",
         "targets": ["finance_fundamental.nyse_factors"],
-        "used_by": ["Factor strategy prototype"],
-        "caveats": ["입력 price / fundamentals coverage가 부족하면 row가 생성되지 않을 수 있습니다."],
-        "next_action": "missing prerequisite warning이 있으면 OHLCV / fundamentals를 먼저 보강하세요.",
+        "used_by": ["Old run history replay", "explicit legacy broad factor comparison"],
+        "caveats": ["strict annual strategies use statement shadow factors."],
+        "next_action": "새 factor 준비는 statement shadow factor path를 우선 사용하세요.",
     },
     "collect_asset_profiles": {
         "title": "자산 프로필 수동 수집",
@@ -3230,66 +3229,6 @@ def render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("extended_statement_refresh")
 
-            with st.expander("Legacy broad yfinance fundamentals / factors", expanded=False):
-                _render_job_brief("weekly_fundamental_refresh")
-                st.caption("고급 / 호환 경로입니다. 새 financial statement source나 strict annual factor 준비에는 사용하지 않습니다.")
-                st.caption("권장 source: legacy broad factor 비교가 필요한 좁은 universe만 선택하세요.")
-                st.caption("기본값: `NYSE Stocks`, `quarterly`.")
-                st.caption("NYSE stock 대량 실행은 fundamentals 수집과 factor 재계산을 함께 수행하므로 OHLCV보다 오래 걸릴 수 있습니다.")
-                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
-                weekly_symbol_result = _render_symbol_source_inputs(
-                    "weekly_fundamental",
-                    "Weekly Refresh Symbols",
-                    default_source_mode="NYSE Stocks",
-                )
-                weekly_symbols_input = weekly_symbol_result["symbols"]
-                weekly_freq_input = st.selectbox(
-                    "Legacy Broad Frequency",
-                    ["annual", "quarterly"],
-                    index=1,
-                    key="weekly_refresh_freq_input",
-                )
-                weekly_symbol_check = check_symbol_input(weekly_symbols_input)
-                _render_check_result(weekly_symbol_check)
-                weekly_run_allowed = _render_large_run_guard(
-                    prefix="weekly_fundamental",
-                    job_name="weekly_fundamental_refresh",
-                    symbols=weekly_symbols_input,
-                )
-                if st.button(
-                    "Legacy broad fundamentals / factors 업데이트 실행",
-                    use_container_width=True,
-                    disabled=_has_running_job() or _is_blocking(weekly_symbol_check) or not weekly_run_allowed,
-                ):
-                    _schedule_job(
-                        {
-                            "action": "weekly_fundamental_refresh",
-                            "job_name": "weekly_fundamental_refresh",
-                            "spinner_text": "Running legacy broad fundamental refresh...",
-                            "params": {
-                                "symbols": weekly_symbols_input,
-                                "freq": weekly_freq_input,
-                            },
-                            "run_metadata": _job_metadata(
-                                pipeline_type="weekly_fundamental_refresh",
-                                execution_mode="legacy_advanced",
-                                symbol_source=weekly_symbol_result.get("source_mode"),
-                                symbol_count=len(weekly_symbols_input),
-                                execution_context=(
-                                    "Legacy broad yfinance fundamentals / factors compatibility refresh; "
-                                    "not the canonical financial statement source."
-                                ),
-                                input_params={"freq": weekly_freq_input},
-                            ),
-                        }
-                    )
-                if _is_running_action("weekly_fundamental_refresh"):
-                    current_progress_callback = _build_progress_callback(
-                        st.session_state.running_job,
-                        label="Legacy Broad Fundamental Refresh",
-                    )
-                _render_inline_last_completed_result("weekly_fundamental_refresh")
-
             with st.expander("종목 메타데이터 업데이트", expanded=False):
                 _render_job_brief("metadata_refresh")
                 st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")
@@ -4241,106 +4180,6 @@ def render_ingestion_console() -> None:
                 "수동 복구 / 진단: 특정 심볼 재수집, 저수준 파이프라인 확인, PIT inspection 같은 보조 작업입니다. "
                 "정기 운영보다 느리거나 실험적인 작업은 이곳에서 필요한 범위만 좁혀 실행합니다."
             )
-            with st.expander("핵심 시장 데이터 일괄 수집", expanded=True):
-                _render_job_brief("pipeline_core_market_data")
-                st.caption(
-                    "실행 순서: OHLCV -> Fundamentals -> Factors. "
-                    "현재 symbol set을 한 번에 다시 채워야 할 때 쓰는 수동 composite job입니다."
-                )
-                st.caption("저장 테이블: `finance_price.nyse_price_history`, `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
-                pipeline_symbol_result = _render_symbol_source_inputs("pipeline", "Pipeline Symbols")
-                pipeline_symbols_input = pipeline_symbol_result["symbols"]
-                pipe_col1, pipe_col2 = st.columns(2)
-                pipeline_period_input = pipe_col1.selectbox("Pipeline Period", PERIOD_PRESETS, index=3, key="pipeline_period_input")
-                pipeline_interval_input = pipe_col2.selectbox("Pipeline Interval", ["1d", "1wk", "1mo"], index=0, key="pipeline_interval_input")
-                pipe_col3, pipe_col4, pipe_col5 = st.columns(3)
-                pipeline_start_input = pipe_col3.text_input("Pipeline Start", value="", key="pipeline_start_input")
-                pipeline_end_input = pipe_col4.text_input("Pipeline End", value="", key="pipeline_end_input")
-                pipeline_freq_input = pipe_col5.selectbox("Pipeline Freq", ["annual", "quarterly"], index=0, key="pipeline_freq_input")
-                pipeline_resolved_period, pipeline_resolved_start, pipeline_resolved_end = _normalize_ohlcv_window(
-                    pipeline_period_input,
-                    pipeline_start_input,
-                    pipeline_end_input,
-                )
-                if pipeline_period_input == "7d" and not pipeline_start_input and not pipeline_end_input:
-                    st.caption(
-                        f"`7d`는 rolling date window로 변환됩니다: start=`{pipeline_resolved_start}`, end=`{pipeline_resolved_end}`."
-                    )
-                _render_collection_contract(
-                    "실행 전 확인",
-                    [
-                        ("Source", _format_symbol_source_label(pipeline_symbol_result.get("source_mode") or "Manual")),
-                        ("대상 수", f"{len(pipeline_symbols_input):,} symbols"),
-                        (
-                            "가격 기간",
-                            _format_contract_window(
-                                period=pipeline_resolved_period,
-                                start=pipeline_resolved_start,
-                                end=pipeline_resolved_end,
-                            ),
-                        ),
-                        ("Interval", pipeline_interval_input),
-                        ("Fundamental freq", pipeline_freq_input),
-                    ],
-                    note=(
-                        "Composite job은 가격, fundamentals, factors 중 한 단계만 partial이어도 downstream coverage gap이 남습니다. "
-                        "실행 결과의 Pipeline Steps를 먼저 확인하세요."
-                    ),
-                )
-                _render_price_window_preflight(
-                    symbols=pipeline_symbols_input,
-                    start=pipeline_resolved_start,
-                    end=pipeline_resolved_end,
-                    timeframe=pipeline_interval_input,
-                )
-                pipeline_symbol_check = check_symbol_input(pipeline_symbols_input)
-                _render_check_result(pipeline_symbol_check)
-                pipeline_run_allowed = _render_large_run_guard(
-                    prefix="pipeline",
-                    job_name="pipeline_core_market_data",
-                    symbols=pipeline_symbols_input,
-                )
-                if st.button(
-                    "핵심 시장 데이터 일괄 수집 실행",
-                    use_container_width=True,
-                    disabled=_has_running_job() or _is_blocking(pipeline_symbol_check) or not pipeline_run_allowed,
-                ):
-                    _schedule_job(
-                        {
-                            "action": "pipeline_core_market_data",
-                            "job_name": "pipeline_core_market_data",
-                            "spinner_text": "Running core market-data pipeline...",
-                            "params": {
-                                "symbols": pipeline_symbols_input,
-                                "start": pipeline_resolved_start,
-                                "end": pipeline_resolved_end,
-                                "period": pipeline_resolved_period,
-                                "interval": pipeline_interval_input,
-                                "freq": pipeline_freq_input,
-                            },
-                            "run_metadata": _job_metadata(
-                                pipeline_type="core_market_data_pipeline",
-                                execution_mode="manual",
-                                symbol_source=pipeline_symbol_result.get("source_mode"),
-                                symbol_count=len(pipeline_symbols_input),
-                                execution_context="Manual composite run of OHLCV, fundamentals, and factor calculation in sequence.",
-                                input_params={
-                                    "start": pipeline_resolved_start,
-                                    "end": pipeline_resolved_end,
-                                    "period": pipeline_resolved_period,
-                                    "interval": pipeline_interval_input,
-                                    "freq": pipeline_freq_input,
-                                },
-                            ),
-                        }
-                    )
-                if _is_running_action("pipeline_core_market_data"):
-                    current_progress_callback = _build_progress_callback(
-                        st.session_state.running_job,
-                        label="Core Market Data Pipeline",
-                    )
-                _render_inline_last_completed_result("pipeline_core_market_data")
-
             with st.expander("가격 이력 수동 수집", expanded=False):
                 _render_job_brief("collect_ohlcv")
                 st.caption(
@@ -4433,114 +4272,6 @@ def render_ingestion_console() -> None:
                         label="OHLCV Collection",
                     )
                 _render_inline_last_completed_result("collect_ohlcv")
-
-            with st.expander("펀더멘털 수동 수집", expanded=False):
-                _render_job_brief("collect_fundamentals")
-                st.caption(
-                    "`Symbols` 입력을 사용합니다. 해당 symbol의 `Factor Calculation` 전에 필요한 normalized fundamentals를 채웁니다."
-                )
-                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`")
-                fundamentals_symbol_result = _render_symbol_source_inputs("fundamentals", "Fundamentals Symbols")
-                fundamentals_symbols_input = fundamentals_symbol_result["symbols"]
-                fundamentals_freq_input = st.selectbox(
-                    "Fundamentals Frequency",
-                    ["annual", "quarterly"],
-                    index=0,
-                    key="fundamentals_freq_input",
-                )
-                fundamentals_symbol_check = check_symbol_input(fundamentals_symbols_input)
-                _render_check_result(fundamentals_symbol_check)
-                fundamentals_run_allowed = _render_large_run_guard(
-                    prefix="fundamentals",
-                    job_name="collect_fundamentals",
-                    symbols=fundamentals_symbols_input,
-                )
-                if st.button(
-                    "펀더멘털 수동 수집 실행",
-                    use_container_width=True,
-                    disabled=_has_running_job() or _is_blocking(fundamentals_symbol_check) or not fundamentals_run_allowed,
-                ):
-                    _schedule_job(
-                        {
-                            "action": "collect_fundamentals",
-                            "job_name": "collect_fundamentals",
-                            "spinner_text": "Running fundamentals ingestion...",
-                            "params": {
-                                "symbols": fundamentals_symbols_input,
-                                "freq": fundamentals_freq_input,
-                            },
-                            "run_metadata": _job_metadata(
-                                pipeline_type="manual_fundamentals_ingestion",
-                                execution_mode="manual",
-                                symbol_source=fundamentals_symbol_result.get("source_mode"),
-                                symbol_count=len(fundamentals_symbols_input),
-                                execution_context="Manual normalized fundamentals ingestion for the selected symbols or universe source.",
-                                input_params={"freq": fundamentals_freq_input},
-                            ),
-                        }
-                    )
-                if _is_running_action("collect_fundamentals"):
-                    current_progress_callback = _build_progress_callback(
-                        st.session_state.running_job,
-                        label="Fundamentals Ingestion",
-                    )
-                _render_inline_last_completed_result("collect_fundamentals")
-
-            with st.expander("팩터 수동 계산", expanded=False):
-                _render_job_brief("calculate_factors")
-                st.caption(
-                    "`Symbols` 입력을 사용합니다. 같은 symbol의 OHLCV와 fundamentals가 MySQL에 먼저 있어야 계산됩니다."
-                )
-                st.caption("저장 테이블: `finance_fundamental.nyse_factors`")
-                factor_symbol_result = _render_symbol_source_inputs("factor", "Factor Symbols")
-                factor_symbols_input = factor_symbol_result["symbols"]
-                factor_col1, factor_col2, factor_col3 = st.columns(3)
-                factor_freq_input = factor_col1.selectbox("Factor Frequency", ["annual", "quarterly"], index=0, key="factor_freq_input")
-                factor_start_input = factor_col2.text_input("Factor Start", value="", key="factor_start_input")
-                factor_end_input = factor_col3.text_input("Factor End", value="", key="factor_end_input")
-                factor_check = check_factor_prerequisites(factor_symbols_input, freq=factor_freq_input)
-                _render_check_result(factor_check)
-                factor_run_allowed = _render_large_run_guard(
-                    prefix="factor",
-                    job_name="calculate_factors",
-                    symbols=factor_symbols_input,
-                )
-                if st.button(
-                    "팩터 수동 계산 실행",
-                    use_container_width=True,
-                    disabled=_has_running_job() or _is_blocking(factor_check) or not factor_run_allowed,
-                ):
-                    _schedule_job(
-                        {
-                            "action": "calculate_factors",
-                            "job_name": "calculate_factors",
-                            "spinner_text": "Running factor calculation...",
-                            "params": {
-                                "symbols": factor_symbols_input,
-                                "freq": factor_freq_input,
-                                "start": factor_start_input or None,
-                                "end": factor_end_input or None,
-                            },
-                            "run_metadata": _job_metadata(
-                                pipeline_type="manual_factor_calculation",
-                                execution_mode="manual",
-                                symbol_source=factor_symbol_result.get("source_mode"),
-                                symbol_count=len(factor_symbols_input),
-                                execution_context="Manual factor calculation using already stored prices and fundamentals.",
-                                input_params={
-                                    "freq": factor_freq_input,
-                                    "start": factor_start_input or None,
-                                    "end": factor_end_input or None,
-                                },
-                            ),
-                        }
-                    )
-                if _is_running_action("calculate_factors"):
-                    current_progress_callback = _build_progress_callback(
-                        st.session_state.running_job,
-                        label="Factor Calculation",
-                    )
-                _render_inline_last_completed_result("calculate_factors")
 
             with st.expander("자산 프로필 수동 수집", expanded=False):
                 _render_job_brief("collect_asset_profiles")

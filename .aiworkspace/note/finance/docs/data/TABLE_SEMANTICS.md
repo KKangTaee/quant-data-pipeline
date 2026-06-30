@@ -340,6 +340,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `period_end` 중심이므로 filing-time PIT source로 바로 쓰면 look-ahead risk가 있다.
 - filing metadata가 없으므로 source contract alias의 `available_at`, `form_type`, `accession_no`는 비어 있을 수 있다.
 - 새 기능의 canonical financial statement source로 추가 사용하지 않는다. 기존 run/history compatibility 또는 explicit fallback label이 있을 때만 사용한다.
+- Phase 7 source migration부터 active Ingestion UI에서는 이 table을 채우는 broad financial statement collection card를 제공하지 않는다.
 
 ## `nyse_fundamentals_statement`
 
@@ -380,6 +381,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `period_end` 기준 as-of price matching은 유용하지만, filing availability 기준과는 다를 수 있다.
 - current workflows should prefer statement annual factor paths. This table remains a legacy broad compatibility layer until decommissioned.
+- Phase 7 source migration부터 active Ingestion UI에서는 이 table을 계산하는 broad factor card를 제공하지 않는다. saved/history replay와 explicit broad comparison compatibility는 유지한다.
 
 ## `nyse_factors_statement`
 
