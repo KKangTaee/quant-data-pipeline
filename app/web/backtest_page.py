@@ -9,14 +9,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.web.backtest_common import (  # noqa: F401
+from app.web.backtest_state import (  # noqa: F401
     BACKTEST_WORKFLOW_PANEL_OPTIONS,
     QUALITY_STRICT_PRESETS,
-    _activate_backtest_workflow_panel,
-    _init_backtest_state,
-    _request_backtest_panel,
-    _set_single_strategy_target_from_strategy_key,
+    activate_backtest_workflow_panel,
     clear_backtest_preview_caches,
+    init_backtest_state,
+    request_backtest_panel,
+    set_single_strategy_target_from_strategy_key,
 )
 from app.web.backtest_analysis import render_backtest_analysis_workspace
 from app.web.backtest_compare import (
@@ -116,7 +116,7 @@ def _render_backtest_panel_selector() -> str:
         required=True,
         format_func=_backtest_workflow_stage_label,
         key="backtest_workflow_active_panel",
-        on_change=_activate_backtest_workflow_panel,
+        on_change=activate_backtest_workflow_panel,
         label_visibility="collapsed",
         width="stretch",
     )
@@ -128,7 +128,7 @@ def _render_backtest_panel_selector() -> str:
 
 
 def render_backtest_tab() -> None:
-    _init_backtest_state()
+    init_backtest_state()
 
     active_panel = _render_backtest_panel_selector()
 
