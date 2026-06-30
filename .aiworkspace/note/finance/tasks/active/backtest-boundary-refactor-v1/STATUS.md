@@ -12,6 +12,6 @@ Status: Active
 - 2차: Completed. Added `app/services/backtest_single_payload.py`; Single Strategy runner now normalizes execution payload through the service boundary before display/execution.
 - 3차: Completed. Added `app/services/backtest_portfolio_mix_readiness.py`; Portfolio Mix role flag detection now lives in the service layer with a web compatibility wrapper.
 - 4차: Completed. Added `app/services/backtest_validation_status_policy.py`; Practical Validation module planner now imports shared status normalization/ranking policy.
-- 5차: Pending
+- 5차: Completed. Added `app/services/backtest_final_review_policy.py`; selected-route preflight now delegates packet-to-policy mapping to the Final Review policy boundary.
 - 6차: Pending
 - 7차: Pending

@@ -99,6 +99,35 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("from app.services.backtest_validation_status_policy import", modules_source)
         self.assertNotIn("STATUS_RANK = {", modules_source)
 
+    def test_final_review_selected_route_policy_is_service_owned(self) -> None:
+        from app.services.backtest_final_review_policy import build_selected_route_preflight_from_packet
+
+        packet = {
+            "selection_gate_policy_snapshot": {
+                "select_allowed": True,
+                "outcome": "READY",
+                "suggested_decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                "next_action": "Save selected candidate.",
+                "blockers": [],
+                "review_required": ["Cost review"],
+                "policy_rows": [{"Criteria": "Gate", "Status": "PASS"}],
+            },
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "open_review_items": ["Cost review"],
+        }
+
+        preflight = build_selected_route_preflight_from_packet(packet)
+
+        self.assertEqual(preflight["route"], "SELECTED_ROUTE_PREFLIGHT_READY")
+        self.assertTrue(preflight["select_allowed"])
+        self.assertEqual(preflight["policy_outcome"], "READY")
+        self.assertEqual(preflight["open_review_items"], 1)
+
+        source = (PROJECT_ROOT / "app/services/backtest_selected_route_preflight.py").read_text()
+        self.assertIn("from app.services.backtest_final_review_policy import", source)
+        self.assertIn("build_selected_route_preflight_from_packet(packet)", source)
+
 
 if __name__ == "__main__":
     unittest.main()
