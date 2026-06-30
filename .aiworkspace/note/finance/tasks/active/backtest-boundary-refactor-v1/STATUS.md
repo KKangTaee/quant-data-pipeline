@@ -14,4 +14,10 @@ Status: Active
 - 4차: Completed. Added `app/services/backtest_validation_status_policy.py`; Practical Validation module planner now imports shared status normalization/ranking policy.
 - 5차: Completed. Added `app/services/backtest_final_review_policy.py`; selected-route preflight now delegates packet-to-policy mapping to the Final Review policy boundary.
 - 6차: Completed. Added `app/runtime/backtest_runner_catalog.py`; Single Strategy and Compare services now attach runtime owner metadata to result bundle meta.
-- 7차: Pending
+- 7차: Completed. Updated durable Backtest structure docs, root handoff logs, and task QA log. Browser QA confirmed `/backtest` renders stage tabs without import/traceback errors.
+
+## Closeout
+
+- Completed stages: 1차 through 7차.
+- Remaining scope: none for this V1 boundary refactor.
+- Follow-up candidate: deeper physical split of `backtest_common.py`, `backtest_single_forms.py`, and `backtest_compare.py` can proceed as a separate V2 once the current compatibility boundaries settle.

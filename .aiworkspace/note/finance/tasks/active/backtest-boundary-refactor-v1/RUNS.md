@@ -13,6 +13,20 @@ Command log for staged QA.
 - Diff check: `git diff --check`
   - Result: PASS.
 
+## 7차
+
+- Boundary tests: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries -v`
+  - Result: PASS, 8 tests.
+- Service contracts: `.venv/bin/python -m unittest tests.test_service_contracts -v`
+  - Result: PASS, 444 tests.
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_page.py app/web/backtest_state.py app/web/backtest_formatters.py app/web/backtest_single_runner.py app/web/backtest_compare.py app/services/backtest_single_payload.py app/services/backtest_portfolio_mix_readiness.py app/services/backtest_validation_status_policy.py app/services/backtest_practical_validation_modules.py app/services/backtest_final_review_policy.py app/services/backtest_selected_route_preflight.py app/runtime/backtest_runner_catalog.py app/services/backtest_execution.py app/services/backtest_compare_catalog.py`
+  - Result: PASS.
+- Diff check: `git diff --check`
+  - Result: PASS.
+- Browser QA: Streamlit `http://localhost:8507/backtest`
+  - Result: Backtest title, `후보 분석 · Backtest Analysis`, `실전 검증 · Practical Validation`, `최종 검토 · Final Review`, Single Strategy, Portfolio Mix Builder rendered. No Traceback / ModuleNotFoundError / ImportError detected.
+  - Screenshot artifact: `backtest-boundary-refactor-v1-browser-qa.png` (generated, not staged).
+
 ## 6차
 
 - RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_runtime_runner_catalog_identifies_strategy_owners -v`

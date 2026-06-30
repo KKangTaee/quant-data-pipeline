@@ -44,12 +44,14 @@
 | `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner renderer body. Active Overview page / tab은 가능한 경우 `app/web/overview/components/*` domain surface를 통해 이 renderer를 호출한다 |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_page.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. Native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
-| `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
+| `app/web/backtest_common.py` | Backtest 공용 preset / strategy input / real-money contract / guardrail input / legacy compatibility helper. 신규 호출은 가능한 경우 더 좁은 `backtest_state.py`, `backtest_formatters.py`, service boundary를 먼저 사용한다 |
+| `app/web/backtest_state.py` | Backtest page shell이 쓰는 workflow state boundary. 기존 `backtest_common.py`의 session state / stage request helper를 compatibility wrapper로 제공해 page entry가 common module을 직접 확장하지 않게 한다 |
+| `app/web/backtest_formatters.py` | Streamlit-free Backtest formatting / manual ticker parsing helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
 | `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
-| `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
+| `app/web/backtest_single_runner.py` | Single Strategy service-facing payload 표시, execution service 호출, latest bundle state 저장, run history append |
 | `app/web/backtest_compare.py` | `Backtest > Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff, preset catalog assembly |
 | `app/web/backtest_compare_components.py` | `Backtest > Portfolio Mix Builder` visual shell. CSS, flow stepper, section heading, component result card render를 담당하며 compare 실행 / 저장 / handoff 로직은 포함하지 않는다 |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display, summary / chart / data trust / real-money detail / selection history / compare result render wrapper |
@@ -73,10 +75,12 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, result bundle metadata update를 담당 |
+| `app/services/backtest_single_payload.py` | Streamlit-free Single Strategy payload normalization helper. UI form payload를 execution service-facing payload로 복사 / JSON-ready 변환한다 |
+| `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, runtime runner catalog metadata update를 담당 |
 | `app/services/ingestion_diagnostics.py` | Streamlit-free Ingestion read-only diagnostics facade. Price window preflight, Price Stale Diagnosis, Statement Coverage Diagnosis, Statement PIT Inspection의 loader/job/source inspection calls를 UI 대신 담당 |
 | `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. multi-strategy execution loop, elapsed timing, input/data/system error normalization을 담당 |
-| `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. strategy별 default parameter, preset/manual universe resolution, runtime dispatch, runner signature filtering을 담당 |
+| `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. strategy별 default parameter, preset/manual universe resolution, runtime dispatch, runner signature filtering, runtime runner catalog metadata update를 담당 |
+| `app/services/backtest_portfolio_mix_readiness.py` | Streamlit-free Portfolio Mix Builder readiness helper. GTAA / Equal Weight 같은 mix role flag를 UI 밖에서 판정한다 |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. strategy data trust row와 weighted component contribution view를 담당 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. compared strategy result bundle을 월별 weighted result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun, weighted bundle 생성, replay source / history context 조립을 담당 |
@@ -89,12 +93,14 @@
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime으로 최신 DB 데이터 기준 재검증하거나 저장 기간 그대로 재현해 component / portfolio curve evidence와 replay selection history snapshot을 만든다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize / compact records / curve provenance / benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage, provenance, freshness, diagnostic evidence, look-through board로 변환 |
-| `app/services/backtest_practical_validation_modules.py` | Streamlit-free Practical Validation module planner. source traits와 profile / input checks / diagnostics / audit rows를 읽어 필수 / 조건부 / 후속 참고 module, gate effect, gate reason, Final Review 이동 gate, evidence board 연결을 만든다 |
+| `app/services/backtest_validation_status_policy.py` | Streamlit-free validation status policy. `PASS / READY / REVIEW / NOT_RUN / NEEDS_INPUT / BLOCKED` normalization과 rank를 소유한다 |
+| `app/services/backtest_practical_validation_modules.py` | Streamlit-free Practical Validation module planner. source traits와 profile / input checks / diagnostics / audit rows를 읽어 필수 / 조건부 / 후속 참고 module, gate effect, gate reason, Final Review 이동 gate, evidence board 연결을 만든다. Status normalization은 `backtest_validation_status_policy.py`를 사용한다 |
 | `app/services/backtest_practical_validation_board_registry.py` | Streamlit-free Practical Validation board registry. 화면 보드가 어떤 validation module을 설명하는지, 현재 후보에 적용되는지, 어떤 gate effect를 갖는지 board map으로 변환 |
 | `app/services/backtest_construction_risk_audit.py` | Streamlit-free construction risk audit read model. Practical Validation metrics와 provider look-through board를 읽어 component concentration, provider coverage, top holding, holdings overlap, asset bucket exposure를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_risk_contribution_audit.py` | Streamlit-free risk contribution audit read model. Practical Validation의 component return matrix, correlation, max risk contribution proxy, drop-one dependency, storage boundary evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_component_role_weight_audit.py` | Streamlit-free component role / weight audit read model. Practical Validation의 proposal role, target weight, validation profile, role concentration, profile intent, weight reason evidence를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review candidate board priority / decision cockpit / decision record guide / saved decision review / final decision status / investability evidence packet / profile-aware gate policy snapshot / selected-route gate / saved decision table row / Selected Dashboard evidence check row / Decision Dossier markdown read model과 selected decision source consistency contract를 담당. Validation Efficacy Audit의 walk-forward / OOS / regime non-PASS row를 gate policy evidence에 병합한다 |
+| `app/services/backtest_final_review_policy.py` | Streamlit-free Final Review selected-route policy boundary. investability evidence packet을 selected-route preflight contract로 변환한다 |
 | `app/services/overview/*` | Overview UI-facing domain service import surfaces. V8 기준 Market Context, Market Movers, Events, Sentiment, Data Health read-model entrypoint와 IA closeout read model을 도메인별로 제공한다. 대부분의 market intelligence 계산 body는 아직 `app/services/overview_market_intelligence.py`에 둔다 |
 | `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service implementation body. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, Why It Moved manual investigation read model / session-only compact metadata helper, Sector / Industry ranking/trend/ticker leaders, market event calendar payload, collection ops snapshot을 담당 |
 
@@ -107,6 +113,7 @@
 | `app/runtime/backtest_real_money.py` | Backtest real-money / guardrail / benchmark / deployment readiness helper slice. constants, ticker normalization compatibility helper, cost / turnover postprocess, benchmark overlay, validation / promotion / shortlist / probation / monitoring / deployment readiness contracts, ETF operability policy, `_apply_real_money_hardening`을 담당하며 `app.runtime.backtest`가 compatibility export한다 |
 | `app/runtime/backtest_strict.py` | Strict quality / value / quality-value annual and quarterly runtime slice. strict price freshness, factor / statement snapshot preflight, dynamic universe handling, rejected slot handling, strict result metadata assembly를 담당하며 `app.runtime.backtest`가 compatibility export한다 |
 | `app/runtime/backtest_result_bundle.py` | Backtest runtime result bundle contract helper. `result_df`를 정렬하고 summary / chart / metadata bundle을 생성하며 `app.runtime.backtest` public export와 호환된다 |
+| `app/runtime/backtest_runner_catalog.py` | Runtime strategy runner ownership catalog. strategy key / display name / runtime module / runtime family metadata를 제공하며 execution / compare service가 result bundle meta에 소유권 정보를 붙인다 |
 | `app/runtime/candidate_library.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/runtime/candidate_registry.py` | current candidate, candidate review note, pre-live registry JSONL path / load / append helper |
 | `app/runtime/history.py` | Backtest run history persistence helper |

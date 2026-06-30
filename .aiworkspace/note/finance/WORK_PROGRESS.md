@@ -5408,3 +5408,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-entry-cleanup-tabs-v1-20260630/`에서 Backtest 첫 화면 안내 / strategy capability helper / 하단 연구 참고 보드를 기본 render path에서 제거했다.
   - 3단계 workflow selector는 Overview와 같은 `st.pills` 기반 Korean-first text tab + red underline으로 맞췄다.
   - 검증은 focused RED/GREEN, Boundary / Backtest 관련 43개 unittest, py_compile, `git diff --check`, Browser QA screenshot으로 완료했다.
+- Backtest Boundary Refactor V1 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/backtest-boundary-refactor-v1/`에서 1차~7차 staged refactor를 진행했다.
+  - UI state / formatter, Single Strategy payload, Portfolio Mix readiness, validation status policy, Final Review policy, runtime runner catalog 경계를 추가했다.
+  - 전략 계산식, validation threshold, registry / saved JSONL / provider DB 의미는 바꾸지 않았다.

@@ -8337,3 +8337,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 실행 / 후보 생성 흐름 자체는 유지하되 첫 화면에서 보조 설명과 연구 참고 gravity를 줄이고, stage selector의 시각 문법을 Overview primary tab과 맞춘다.
 - Analysis result: `st.segmented_control` 기반 selector와 안내 / snapshot / reference board가 기본 render path에 남아 있었다. `st.pills` Korean-first labels와 scoped CSS로 교체하고, 불필요한 보조 표면 호출을 제거하는 것이 가장 작은 안전한 변경이었다.
 - Follow-up: V1 완료. 다음 후보는 Latest Run / 결과 영역의 summary-first polish이며, registry / saved setup / validation / final review semantics는 바꾸지 않았다.
+
+### 2026-07-01 - Backtest UI / service / runtime / validation 경계를 차수별로 나눈다
+
+- User request: 사용자가 Backtest refactor를 1차 개발 -> QA -> 커밋 -> 2차 개발 순서로 7차까지 진행해 달라고 요청함.
+- Interpreted goal: 전략 계산식이나 validation threshold를 바꾸기 전에, UI가 소유할 것과 service / runtime / policy가 소유할 것을 작은 boundary module로 분리해야 함.
+- Analysis result: 가장 큰 혼합 지점은 `backtest_common.py`, `backtest_single_runner.py`, `backtest_compare.py`, Practical Validation status policy, Final Review selected-route policy, runtime runner ownership metadata였다.
+- Follow-up: V1에서 `backtest_state.py`, `backtest_formatters.py`, `backtest_single_payload.py`, `backtest_portfolio_mix_readiness.py`, `backtest_validation_status_policy.py`, `backtest_final_review_policy.py`, `backtest_runner_catalog.py`를 추가했다. registry / saved setup / provider DB / strategy math는 변경하지 않았다.
