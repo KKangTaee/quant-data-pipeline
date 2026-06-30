@@ -79,13 +79,15 @@
 
 좋은 점:
 
-- broad coverage summary layer가 있어 빠른 research가 가능하다.
+- legacy broad coverage summary layer가 있어 old replay나 explicit comparison을 빠르게 확인할 수 있다.
 - direct / derived / inferred source metadata를 추적할 수 있다.
 - valuation, profitability, growth 계열 factor를 빠르게 만들 수 있다.
 
 주의점:
 
 - `nyse_fundamentals`와 `nyse_factors`는 strict filing-time PIT source가 아니다.
+- Phase 8 source migration closeout 이후 새 financial statement source 준비와 strict annual factor research는 EDGAR statement shadow path를 우선한다.
+- broad yfinance fundamentals / factors는 production financial statement source가 아니라 saved/history replay compatibility 또는 explicit broad comparison layer다.
 - fallback 계산값은 accounting-grade precision이 아닐 수 있다.
 - provider account label과 coverage가 ticker별로 다를 수 있다.
 
@@ -95,13 +97,14 @@
 
 - filing / concept / period 단위 raw value를 저장한다.
 - `filing_date`, `accepted_at`, `available_at`, `accession_no`, `form_type`를 함께 저장한다.
-- 향후 custom PIT factor engine의 핵심 raw material이 될 수 있다.
+- EDGAR raw ledger와 statement shadow tables는 annual financial statement source migration의 canonical path다.
 
 주의점:
 
 - label standardization이 어렵다.
 - 기업별 concept / unit / period 표현이 다를 수 있다.
 - quarterly row와 annual row가 함께 존재할 수 있으며, synthetic Q4는 DB 저장 단계에서 만들지 않는다.
+- quarterly consumer path는 `10-Q` / `10-Q/A` rows만 usable row로 읽는다. `10-K` / FY full-year flow values는 quarterly flow value로 쓰지 않는다.
 - `nyse_financial_statement_labels`는 convenience summary이며, strict source of truth는 values table이다.
 
 ## PIT 해석 기준

@@ -5449,3 +5449,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p7-legacy-yfinance-decommission/`에서 legacy broad yfinance active UI 제거를 완료했다.
   - Ingestion의 broad fundamentals / factor 실행 카드는 내려가고, old run history / saved replay용 action handler와 table은 유지했다.
   - 검증은 focused RED/GREEN, `git diff --check`, py_compile, service contract filtered pytest, Ingestion Browser QA로 기록했다.
+- Fundamental Source Migration Phase 8 2026-06-30:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`에서 source migration closeout docs를 완료했다.
+  - Durable docs는 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 legacy compatibility로 정렬했다.
+  - 다음 세션은 `.aiworkspace/note/finance/docs/data/README.md`, `DB_SCHEMA_MAP.md`, `DATA_FLOW_MAP.md`, `TABLE_SEMANTICS.md`, `EDGAR_FINANCIAL_STATEMENT_REFRESH.md`를 보면 source contract를 확인할 수 있다.

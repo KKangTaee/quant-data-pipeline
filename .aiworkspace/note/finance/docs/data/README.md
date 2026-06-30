@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-06-30
 
 ## Purpose
 
@@ -49,7 +49,21 @@ Last Verified: 2026-06-07
 | `etf_holdings_snapshot` | ETF holdings row snapshot |
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
 | `macro_series_observation` | FRED VIX / yield curve / credit spread observation plus Overview CNN Fear & Greed / AAII sentiment context series |
+| `nyse_financial_statement_filings` | EDGAR filing-level metadata ledger |
+| `nyse_financial_statement_values` | EDGAR filing / concept / period raw fact ledger |
+| `nyse_fundamentals_statement` | EDGAR statement ledger 기반 canonical financial statement shadow |
+| `nyse_factors_statement` | EDGAR statement shadow 기반 canonical strict annual factor source |
+| `nyse_fundamentals` | legacy broad yfinance compatibility fundamentals summary |
+| `nyse_factors` | legacy broad yfinance compatibility factor table |
 | `practical_validation_stress_windows_v1.json` | Practical Validation static stress window reference data. JSON reference file이며 DB table은 아님 |
+
+## Financial Statement Source Contract
+
+- Canonical financial statement source path: `EDGAR -> nyse_financial_statement_* raw ledger -> nyse_fundamentals_statement -> nyse_factors_statement`.
+- Legacy compatibility path: `yfinance financial statements -> nyse_fundamentals -> nyse_factors`.
+- New Market Movers annual financial snapshots and strict annual factor backtests should prefer the EDGAR statement shadow path.
+- The legacy broad path remains for saved/history replay and explicit broad comparison only. It is not a production financial statement source.
+- Quarterly consumer paths must not treat `10-K` / FY full-year flow values as quarterly values. Quarterly reads are gated to `10-Q` / `10-Q/A` rows.
 
 ## JSONL Boundaries
 
@@ -91,6 +105,7 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 - loader가 source of truth를 바꿀 때
 - PIT 기준, filing timing, period_end 의미가 바뀔 때
 - provider coverage, stale data, survivorship risk 해석이 바뀔 때
+- financial statement canonical source, legacy compatibility status, or quarterly PIT policy가 바뀔 때
 
 ## 갱신하지 않아도 되는 경우
 

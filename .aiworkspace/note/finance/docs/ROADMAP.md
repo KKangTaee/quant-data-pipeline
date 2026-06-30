@@ -1,11 +1,19 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-29
+Last Verified: 2026-06-30
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
+
+Latest completed task: `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`
+
+목적: 재무제표 source migration 1~9차를 닫고, durable docs와 runbook에서 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 saved/history replay용 legacy compatibility로 고정한다.
+
+주요 변경: Market Movers annual financial snapshot, strict annual factor backtest family, Ingestion financial statement refresh, statement coverage QA, and docs now use EDGAR detailed statements / statement shadow as the primary source contract. Quarterly consumers remain gated to `10-Q` / `10-Q/A`; `10-K` / FY full-year flow values are not treated as quarterly values.
+
+이번 차수에서 하지 않은 일: yfinance package removal, table drop, registry / saved JSONL rewrite, paid provider adoption, full Top2000 / Nasdaq EDGAR coverage guarantee.
 
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 

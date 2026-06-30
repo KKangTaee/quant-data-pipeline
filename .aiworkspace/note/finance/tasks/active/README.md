@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-29
+Last Verified: 2026-06-30
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,8 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `fundamental-source-migration-p8-final-docs-runbook-alignment` | Completed record | 재무제표 source migration 1~9차 closeout. EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 legacy compatibility로 durable docs와 runbook에 정렬했다. |
+| `fundamental-source-migration-p7-legacy-yfinance-decommission` | Completed record | Ingestion active UI에서 broad yfinance fundamentals / factors 실행 카드를 제거하고, old run history / saved replay용 action handlers와 broad Quality Snapshot compatibility를 유지했다. |
 | `gtaa-result-cadence-monthly-valuation-20260629` | Completed record | GTAA `interval` now means strategy-owned rebalance cadence, not input row thinning. Month-end runtime appends the latest common trading day row at or before the requested end date, so non-rebalance months can still show candidate signal / valuation context. |
 | `overview-final-cleanup-v33-v36-20260629` | Completed record | `Workspace > Overview` V33-V36. UI component bodies now live under `app/web/overview/components/*`, `overview_dashboard.py` is a 1-export wrapper, `app/services/overview_market_intelligence.py` was removed, and Data Health scope / coverage counts separate direct Market Context from reference / dedicated-tab sources. |
 | `overview-service-split-v25-v32-20260629` | Completed record | `Workspace > Overview` V25-V32. Overview market intelligence read-model bodies now live in `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py` instead of the old monolithic service facade. |

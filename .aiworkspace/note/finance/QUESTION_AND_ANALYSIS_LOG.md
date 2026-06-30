@@ -8414,3 +8414,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: yfinance package나 old table을 삭제하지 않고, 새 사용자가 broad yfinance financial statements를 canonical refresh로 실행하지 않게 active UI entry를 제거해야 함.
 - Analysis result: broad loader / writer / action handler는 saved/history replay compatibility 때문에 남겨야 하지만, Ingestion의 active broad collection cards와 broad `Quality Snapshot`의 새 실행 유도 문구는 제거 / archived 표시가 가능했다.
 - Follow-up: Ingestion UI는 EDGAR annual refresh와 statement shadow rebuild를 financial statement path로 노출한다. Phase 8에서 최종 docs / runbook alignment와 source audit closeout을 진행한다.
+
+### 2026-06-30 - 재무제표 source migration 최종 문서 기준을 닫는다
+
+- User request: 재무제표 source migration 1~9차를 모두 이어서 진행하고, 마지막에는 docs / runbook alignment까지 commit하라는 승인.
+- Interpreted goal: 코드 변경 결과가 다음 세션의 source 선택 기준으로 남도록 `docs/`와 runbook에서 canonical / legacy / quarterly policy를 같은 의미로 정리해야 함.
+- Analysis result: canonical source는 EDGAR raw ledger + statement shadow tables이고, broad yfinance fundamentals / factors는 old replay와 explicit comparison compatibility로만 유지된다. Quarterly는 10-Q / 10-Q/A consumer gate를 유지하고 synthetic Q4 / Top2000-Nasdaq full coverage는 후속 결정이다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`에 있다.

@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-06-29
+Last Verified: 2026-06-30
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `gtaa-result-cadence-monthly-valuation-20260629`
+- `fundamental-source-migration-p8-final-docs-runbook-alignment`
 
 Latest completed docs cleanup task:
 
@@ -49,6 +49,14 @@ Recent portfolio selection records:
 
 - `distinct-strategy-portfolio-discovery-20260609`: unique strategy family constraint / SPY superior GTAA U3 85% + GRS Compact 10% + Risk Parity Trend 5% portfolio / Final Review and Monitoring registration
 - `portfolio-discovery-final-review-monitoring-20260608`: current strategy catalog exploration / all-ETF Final Review selected decision / Portfolio Monitoring registration
+
+Recent Fundamental Source Migration records:
+
+- `fundamental-source-migration-p8-final-docs-runbook-alignment`: Phase 8 / 9차 final docs and runbook alignment. Durable docs now state EDGAR statement shadow as canonical financial statement source and broad yfinance fundamentals / factors as legacy compatibility only.
+- `fundamental-source-migration-p7-legacy-yfinance-decommission`: Phase 7 / 8차 legacy yfinance decommission. Active Ingestion broad fundamentals / factor cards were removed, compatibility action handlers remain, and broad Quality Snapshot is archived for saved/history replay.
+- `fundamental-source-migration-p6-coverage-expansion-source-qa`: Phase 6 / 7차 coverage expansion and source QA. Ingestion now has DB-backed Statement Universe Coverage QA for SP500 / TOP1000 / TOP2000 / NASDAQ missing reason grouping.
+- `fundamental-source-migration-p5-ingestion-workflow-cleanup`: Phase 5 / 6차 ingestion workflow cleanup. EDGAR annual refresh is the visible operational financial statement refresh path, with statement shadow rebuild and coverage diagnosis handoffs.
+- `fundamental-source-migration-p4-backtest-strategy-migration`: Phase 4 / 5차 backtest strategy migration. Strict annual quality/value paths use statement shadow factors; broad Quality Snapshot is legacy compatibility.
 
 Recent Backtest strategy contract records:
 
