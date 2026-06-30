@@ -39,6 +39,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: legacy `quality_snapshot` runner는 saved/history replay 때문에 삭제하지 않는다. 대신 Single Strategy 기본값을 `Quality + Value / Strict Annual`로, Portfolio Mix Builder 기본 조합을 strict annual + ETF sleeves로 옮기고 broad Quality guide는 legacy compatibility로 낮춘다.
 - Follow-up: Phase 5는 ingestion workflow에서 broad yfinance financial statement path가 canonical처럼 보이지 않도록 cleanup한다.
 
+### 2026-06-30 - Ingestion financial statement refresh should start from EDGAR annual
+
+- User request: 재무제표 source migration Phase 5 ingestion workflow cleanup까지 순차 진행하라고 승인함.
+- Interpreted goal: 사용자가 새 재무제표 source를 갱신할 때 broad yfinance refresh가 아니라 EDGAR annual statement refresh를 먼저 실행해야 한다.
+- Analysis result: 새 action을 만들지 않고 기존 `extended_statement_refresh` action id를 유지해 run history compatibility를 보존한다. 화면 language와 order만 EDGAR-first로 바꾸고, broad yfinance path는 legacy compatibility / explicit comparison으로 낮춘다.
+- Follow-up: Phase 6은 coverage expansion과 source QA로 넘어가며, partial statement refresh는 Statement Coverage Diagnosis와 shadow rebuild로 처리한다.
+
 ### 2026-06-29 - Market Movers redesign must benchmark market boards, not rename cards
 
 - User request: 사용자가 기존 Market Movers 1~5차 결과가 지난번과 달라 보이지 않고, 금융사이트 / 토스증권 / 업비트 같은 실제 UI를 파악한 완성본인지 강하게 문제제기한 뒤 1~6차 단계 진행을 승인함.

@@ -36,6 +36,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Fundamental Source Migration P4:
   - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p4-backtest-strategy-migration/`에서 Backtest Analysis 기본 진입을 `Quality + Value / Strict Annual` statement annual path로 옮겼다.
   - Portfolio Mix Builder 기본 조합은 `Quality + Value`, `GTAA`, `Equal Weight`로 맞췄고, broad `Quality Snapshot`은 legacy replay / compatibility path로만 남겼다.
+- Fundamental Source Migration P5:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p5-ingestion-workflow-cleanup/`에서 Ingestion operational refresh 흐름을 EDGAR annual statement refresh 우선으로 정리했다.
+  - `Legacy broad yfinance fundamentals / factors`는 compatibility / explicit comparison path로 낮췄고, statement refresh result는 coverage / freshness / failed / next action 중심으로 해석한다.
+  - 운영 절차는 [EDGAR Financial Statement Refresh Runbook](./docs/runbooks/EDGAR_FINANCIAL_STATEMENT_REFRESH.md)에 남겼다.
 - Overview Market Movers Redesign V2 1차:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
   - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.

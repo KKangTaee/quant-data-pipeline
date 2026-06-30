@@ -3922,6 +3922,45 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("finance.loaders.price", imported_modules)
         self.assertNotIn("_load_price_window_summary_cached", function_names)
 
+    def test_ingestion_financial_statement_refresh_is_edgar_first_with_legacy_broad_advanced(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("EDGAR annual 재무제표 갱신", source)
+        self.assertIn("Legacy broad yfinance", source)
+        self.assertLess(
+            source.index('with st.expander("EDGAR annual 재무제표 갱신"'),
+            source.index('with st.expander("Legacy broad yfinance fundamentals / factors"'),
+        )
+        self.assertIn("primary financial statement refresh", source)
+        self.assertIn("not the canonical financial statement source", source)
+
+    def test_statement_refresh_action_summary_focuses_on_coverage_freshness_and_next_action(self) -> None:
+        from app.web.ingestion_console import _build_statement_refresh_action_summary
+
+        summary = _build_statement_refresh_action_summary(
+            {
+                "job_name": "extended_statement_refresh",
+                "status": "partial_success",
+                "rows_written": 42,
+                "symbols_requested": 3,
+                "symbols_processed": 2,
+                "failed_symbols": ["BAD"],
+                "details": {
+                    "freq": "annual",
+                    "steps": [
+                        {"job_name": "collect_financial_statements", "status": "success"},
+                        {"job_name": "statement_factors_shadow", "status": "failed"},
+                    ],
+                },
+            }
+        )
+
+        self.assertEqual(summary["coverage"], "2/3 symbols processed")
+        self.assertEqual(summary["failed"], "1 failed")
+        self.assertIn("annual", summary["freshness"])
+        self.assertIn("statement_factors_shadow", summary["next_action"])
+        self.assertIn("Statement Coverage Diagnosis", summary["next_action"])
+
     def test_ingestion_diagnostics_service_owns_public_entrypoints(self) -> None:
         from app.services.ingestion_diagnostics import (
             load_price_window_preflight_summary,

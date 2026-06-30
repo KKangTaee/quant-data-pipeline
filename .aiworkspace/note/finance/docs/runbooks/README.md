@@ -7,6 +7,7 @@ Last Verified: 2026-06-08
 
 | Runbook | Use When |
 |---|---|
+| [EDGAR_FINANCIAL_STATEMENT_REFRESH.md](./EDGAR_FINANCIAL_STATEMENT_REFRESH.md) | EDGAR annual statement refresh, statement coverage diagnosis, shadow rebuild, SEC fair-access / pacing 확인 |
 | [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview Market Movers / Sector / Futures Monitor / Events refresh 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
 | [OPERATIONS_OVERVIEW_QA.md](./OPERATIONS_OVERVIEW_QA.md) | Operations Overview V2 화면 / routing / review queue / no-live boundary QA |
 

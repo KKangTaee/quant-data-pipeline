@@ -376,6 +376,7 @@ EDGAR
 - detailed statement 계층은 filing-level metadata와 raw long-format values를 보존한다.
 - `values` table은 향후 PIT-friendly custom factor engine의 원재료다.
 - `labels`는 UI / 해석 보조용 convenience layer로 본다.
+- Phase 5 source migration부터 `Workspace > Ingestion`의 기본 재무제표 갱신 흐름은 `EDGAR annual 재무제표 갱신` card에서 시작한다. 같은 화면의 broad yfinance fundamentals / factors refresh는 legacy compatibility / explicit comparison path이며 canonical financial statement refresh가 아니다.
 
 ## Runtime read path
 

@@ -104,24 +104,36 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "next_action": "부분 성공이면 Price Stale Diagnosis로 provider gap과 DB 수집 누락을 분리하세요.",
     },
     "weekly_fundamental_refresh": {
-        "title": "주간 펀더멘털 / 팩터 업데이트",
-        "purpose": "정규화된 fundamentals를 수집하고 broad factor table을 다시 계산합니다.",
+        "title": "Legacy broad yfinance fundamentals / factors",
+        "purpose": (
+            "Legacy broad yfinance compatibility refresh for nyse_fundamentals / nyse_factors; "
+            "not the canonical financial statement source."
+        ),
         "targets": ["finance_fundamental.nyse_fundamentals", "finance_fundamental.nyse_factors"],
-        "used_by": ["Factor strategy prototype", "Backtest Analysis"],
-        "caveats": ["broad fundamentals / factors는 strict filing-time PIT source가 아닙니다."],
-        "next_action": "PIT가 중요한 전략은 Financial Statement / Shadow 계층 coverage를 함께 확인하세요.",
+        "used_by": ["Legacy broad Quality Snapshot replay / compatibility", "manual broad factor comparison"],
+        "caveats": [
+            "broad fundamentals / factors는 strict filing-time PIT source가 아닙니다.",
+            "strict annual backtests use EDGAR statement shadow.",
+        ],
+        "next_action": "새 financial statement coverage가 필요하면 EDGAR annual 재무제표 갱신을 먼저 실행하세요.",
     },
     "extended_statement_refresh": {
-        "title": "상세 재무제표 확장 수집",
-        "purpose": "EDGAR 상세 statement ledger를 수집하고 statement shadow fundamentals / factors를 재구성합니다.",
+        "title": "EDGAR annual 재무제표 갱신",
+        "purpose": (
+            "EDGAR detailed statement ledger를 수집하고 statement shadow fundamentals / factors를 재구성하는 "
+            "primary financial statement refresh입니다."
+        ),
         "targets": [
             "finance_fundamental.nyse_financial_statement_filings",
             "finance_fundamental.nyse_financial_statement_values",
             "finance_fundamental.nyse_fundamentals_statement",
             "finance_fundamental.nyse_factors_statement",
         ],
-        "used_by": ["Strict annual / quarterly factor runtime", "Statement PIT inspection"],
-        "caveats": ["period_end와 accepted_at / available_at를 구분해서 해석해야 합니다."],
+        "used_by": ["Strict annual factor runtime", "Market Movers financial snapshot", "Statement PIT inspection"],
+        "caveats": [
+            "period_end와 accepted_at / available_at를 구분해서 해석해야 합니다.",
+            "SEC fair access를 위해 User-Agent와 pacing을 지켜야 합니다.",
+        ],
         "next_action": "부분 성공이면 Statement Coverage Diagnosis로 raw 누락과 shadow rebuild 대상을 분리하세요.",
     },
     "metadata_refresh": {
@@ -1079,6 +1091,50 @@ def _render_result_guidance(result: JobResult) -> None:
             st.markdown(f"- {item}")
 
 
+def _build_statement_refresh_action_summary(result: JobResult) -> dict[str, str]:
+    details = result.get("details") or {}
+    requested = int(result.get("symbols_requested") or 0)
+    processed = int(result.get("symbols_processed") or 0)
+    failed_count = len(result.get("failed_symbols") or [])
+    rows_written = int(result.get("rows_written") or 0)
+    freq = str(details.get("freq") or details.get("period") or "statement").strip() or "statement"
+    raw_steps = details.get("steps") or []
+    steps = [step for step in raw_steps if isinstance(step, dict)]
+    failed_steps = [
+        str(step.get("job_name") or "-")
+        for step in steps
+        if str(step.get("status") or "") != "success"
+    ]
+
+    coverage = f"{processed}/{requested} symbols processed" if requested else f"{processed} symbols processed"
+    failed = f"{failed_count} failed"
+    freshness = (
+        f"{freq} EDGAR statement freshness is interpreted from accepted_at / available_at, "
+        "not from provider fetch time."
+    )
+
+    if failed_steps:
+        next_action = (
+            f"Check failed step(s): {', '.join(failed_steps[:5])}. "
+            "Run Statement Coverage Diagnosis, then rerun EDGAR annual refresh or shadow rebuild for affected symbols."
+        )
+    elif failed_count or str(result.get("status") or "") != "success":
+        next_action = (
+            "Run Statement Coverage Diagnosis, check SEC_USER_AGENT / fair-access pacing, "
+            "then rerun affected symbols."
+        )
+    else:
+        next_action = "Review statement shadow coverage and continue to Backtest strict annual preflight."
+
+    return {
+        "coverage": coverage,
+        "freshness": freshness,
+        "failed": failed,
+        "next_action": next_action,
+        "rows": f"{rows_written:,} rows written",
+    }
+
+
 def _render_result_interpretation(result: JobResult) -> None:
     job_name = str(result.get("job_name") or "")
     domain = _job_domain(job_name)
@@ -1124,6 +1180,25 @@ def _render_result_interpretation(result: JobResult) -> None:
                 "실제 backtest 범위 기준으로 다시 확인하세요.",
                 tone="info",
             )
+        return
+
+    if domain == "statement":
+        summary = _build_statement_refresh_action_summary(result)
+        tone = "warning" if status != "success" or failed_count else "info"
+        _render_ingestion_meta_grid(
+            [
+                ("Coverage", summary["coverage"]),
+                ("Freshness", summary["freshness"]),
+                ("Failed", summary["failed"]),
+                ("Rows", summary["rows"]),
+            ]
+        )
+        _render_data_quality_callout(
+            "EDGAR statement refresh 해석",
+            "Coverage와 freshness를 먼저 확인한 뒤 다음 행동을 고르세요. "
+            f"{summary['next_action']}",
+            tone=tone,
+        )
         return
 
     if domain == "lifecycle":
@@ -2939,76 +3014,20 @@ def render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("collect_market_sentiment")
 
-            with st.expander("주간 펀더멘털 / 팩터 업데이트", expanded=False):
-                _render_job_brief("weekly_fundamental_refresh")
-                st.caption("권장 주기: 주 1회 또는 earnings / filing update가 많이 쌓인 뒤 실행합니다.")
-                st.caption("권장 source: Daily Market Update와 같은 stock universe를 맞추면 factor coverage가 덜 어긋납니다.")
-                st.caption("기본값: `NYSE Stocks`, `quarterly`.")
-                st.caption("NYSE stock 대량 실행은 fundamentals 수집과 factor 재계산을 함께 수행하므로 OHLCV보다 오래 걸릴 수 있습니다.")
-                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
-                weekly_symbol_result = _render_symbol_source_inputs(
-                    "weekly_fundamental",
-                    "Weekly Refresh Symbols",
-                    default_source_mode="NYSE Stocks",
-                )
-                weekly_symbols_input = weekly_symbol_result["symbols"]
-                weekly_freq_input = st.selectbox(
-                    "Weekly Refresh Frequency",
-                    ["annual", "quarterly"],
-                    index=1,
-                    key="weekly_refresh_freq_input",
-                )
-                weekly_symbol_check = check_symbol_input(weekly_symbols_input)
-                _render_check_result(weekly_symbol_check)
-                weekly_run_allowed = _render_large_run_guard(
-                    prefix="weekly_fundamental",
-                    job_name="weekly_fundamental_refresh",
-                    symbols=weekly_symbols_input,
-                )
-                if st.button(
-                    "주간 펀더멘털 / 팩터 업데이트 실행",
-                    use_container_width=True,
-                    disabled=_has_running_job() or _is_blocking(weekly_symbol_check) or not weekly_run_allowed,
-                ):
-                    _schedule_job(
-                        {
-                            "action": "weekly_fundamental_refresh",
-                            "job_name": "weekly_fundamental_refresh",
-                            "spinner_text": "Running weekly fundamental refresh...",
-                            "params": {
-                                "symbols": weekly_symbols_input,
-                                "freq": weekly_freq_input,
-                            },
-                            "run_metadata": _job_metadata(
-                                pipeline_type="weekly_fundamental_refresh",
-                                execution_mode="operational",
-                                symbol_source=weekly_symbol_result.get("source_mode"),
-                                symbol_count=len(weekly_symbols_input),
-                                execution_context="Routine weekly refresh of normalized fundamentals and derived factors.",
-                                input_params={"freq": weekly_freq_input},
-                            ),
-                        }
-                    )
-                if _is_running_action("weekly_fundamental_refresh"):
-                    current_progress_callback = _build_progress_callback(
-                        st.session_state.running_job,
-                        label="Weekly Fundamental Refresh",
-                    )
-                _render_inline_last_completed_result("weekly_fundamental_refresh")
-
-            with st.expander("상세 재무제표 확장 수집", expanded=False):
+            with st.expander("EDGAR annual 재무제표 갱신", expanded=False):
                 _render_job_brief("extended_statement_refresh")
                 st.caption("권장 주기: 월 1회 또는 긴 기간 factor research / backtest 준비 전에 실행합니다.")
-                st.caption("권장 source: 이 작업은 무겁기 때문에 `Profile Filtered Stocks`나 더 좁은 research universe부터 사용하세요.")
+                st.caption("권장 source: `Profile Filtered Stocks`나 statement coverage preset부터 시작하세요.")
                 st.caption(
-                    "기존 checklist의 낮은 수준 `Financial Statement Ingestion` card는 `수동 복구 / 진단` 탭에 남아 있습니다. "
-                    "일상적인 PIT coverage 복구는 이 확장 수집 card에서 시작하세요."
+                    "새 재무제표 coverage와 strict annual factor 준비는 이 EDGAR annual refresh에서 시작합니다. "
+                    "수동 `Financial Statement Ingestion` card는 복구 / 진단용으로 남아 있습니다."
                 )
                 st.caption(
                     "symbol preset dropdown에는 관리용 coverage preset도 있습니다: "
                     "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
                 )
                 st.caption("기본값: `Profile Filtered Stocks`, `annual`, `0 periods (all available)`.")
+                st.caption("SEC fair access를 위해 `SEC_USER_AGENT`와 pacing을 확인한 뒤 대량 실행하세요.")
                 st.caption(
                     "저장 테이블: "
                     "`finance_fundamental.nyse_financial_statement_filings`, "
@@ -3019,14 +3038,14 @@ def render_ingestion_console() -> None:
                 )
                 ext_symbol_result = _render_symbol_source_inputs(
                     "extended_statement",
-                    "Extended Statement Symbols",
+                    "EDGAR Statement Symbols",
                     default_source_mode="Profile Filtered Stocks",
                 )
                 ext_symbols_input = ext_symbol_result["symbols"]
                 ext_col1, ext_col2 = st.columns(2)
-                ext_period_input = ext_col1.selectbox("Extended Statement Period Type", ["annual", "quarterly"], index=0, key="ext_period_input")
+                ext_period_input = ext_col1.selectbox("EDGAR Statement Period Type", ["annual", "quarterly"], index=0, key="ext_period_input")
                 ext_periods_input = ext_col2.number_input(
-                    "Extended Statement Periods",
+                    "EDGAR Statement Periods",
                     min_value=0,
                     max_value=80,
                     value=0,
@@ -3044,7 +3063,7 @@ def render_ingestion_console() -> None:
                     symbols=ext_symbols_input,
                 )
                 if st.button(
-                    "상세 재무제표 확장 수집 실행",
+                    "EDGAR annual 재무제표 갱신 실행",
                     use_container_width=True,
                     disabled=_has_running_job() or _is_blocking(ext_symbol_check) or not ext_run_allowed,
                 ):
@@ -3052,7 +3071,7 @@ def render_ingestion_console() -> None:
                         {
                             "action": "extended_statement_refresh",
                             "job_name": "extended_statement_refresh",
-                            "spinner_text": "Running extended statement refresh...",
+                            "spinner_text": "Running EDGAR annual statement refresh...",
                             "params": {
                                 "symbols": ext_symbols_input,
                                 "freq": ext_period_input,
@@ -3064,7 +3083,7 @@ def render_ingestion_console() -> None:
                                 execution_mode="operational",
                                 symbol_source=ext_symbol_result.get("source_mode"),
                                 symbol_count=len(ext_symbols_input),
-                                execution_context="Extended refresh of detailed financial statement ledgers for long-horizon analysis.",
+                                execution_context="Primary EDGAR annual financial statement refresh and statement shadow rebuild.",
                                 input_params={
                                     "freq": ext_period_input,
                                     "periods": int(ext_periods_input),
@@ -3076,9 +3095,69 @@ def render_ingestion_console() -> None:
                 if _is_running_action("extended_statement_refresh"):
                     current_progress_callback = _build_progress_callback(
                         st.session_state.running_job,
-                        label="Extended Statement Refresh",
+                        label="EDGAR Statement Refresh",
                     )
                 _render_inline_last_completed_result("extended_statement_refresh")
+
+            with st.expander("Legacy broad yfinance fundamentals / factors", expanded=False):
+                _render_job_brief("weekly_fundamental_refresh")
+                st.caption("고급 / 호환 경로입니다. 새 financial statement source나 strict annual factor 준비에는 사용하지 않습니다.")
+                st.caption("권장 source: legacy broad factor 비교가 필요한 좁은 universe만 선택하세요.")
+                st.caption("기본값: `NYSE Stocks`, `quarterly`.")
+                st.caption("NYSE stock 대량 실행은 fundamentals 수집과 factor 재계산을 함께 수행하므로 OHLCV보다 오래 걸릴 수 있습니다.")
+                st.caption("저장 테이블: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
+                weekly_symbol_result = _render_symbol_source_inputs(
+                    "weekly_fundamental",
+                    "Weekly Refresh Symbols",
+                    default_source_mode="NYSE Stocks",
+                )
+                weekly_symbols_input = weekly_symbol_result["symbols"]
+                weekly_freq_input = st.selectbox(
+                    "Legacy Broad Frequency",
+                    ["annual", "quarterly"],
+                    index=1,
+                    key="weekly_refresh_freq_input",
+                )
+                weekly_symbol_check = check_symbol_input(weekly_symbols_input)
+                _render_check_result(weekly_symbol_check)
+                weekly_run_allowed = _render_large_run_guard(
+                    prefix="weekly_fundamental",
+                    job_name="weekly_fundamental_refresh",
+                    symbols=weekly_symbols_input,
+                )
+                if st.button(
+                    "Legacy broad fundamentals / factors 업데이트 실행",
+                    use_container_width=True,
+                    disabled=_has_running_job() or _is_blocking(weekly_symbol_check) or not weekly_run_allowed,
+                ):
+                    _schedule_job(
+                        {
+                            "action": "weekly_fundamental_refresh",
+                            "job_name": "weekly_fundamental_refresh",
+                            "spinner_text": "Running legacy broad fundamental refresh...",
+                            "params": {
+                                "symbols": weekly_symbols_input,
+                                "freq": weekly_freq_input,
+                            },
+                            "run_metadata": _job_metadata(
+                                pipeline_type="weekly_fundamental_refresh",
+                                execution_mode="legacy_advanced",
+                                symbol_source=weekly_symbol_result.get("source_mode"),
+                                symbol_count=len(weekly_symbols_input),
+                                execution_context=(
+                                    "Legacy broad yfinance fundamentals / factors compatibility refresh; "
+                                    "not the canonical financial statement source."
+                                ),
+                                input_params={"freq": weekly_freq_input},
+                            ),
+                        }
+                    )
+                if _is_running_action("weekly_fundamental_refresh"):
+                    current_progress_callback = _build_progress_callback(
+                        st.session_state.running_job,
+                        label="Legacy Broad Fundamental Refresh",
+                    )
+                _render_inline_last_completed_result("weekly_fundamental_refresh")
 
             with st.expander("종목 메타데이터 업데이트", expanded=False):
                 _render_job_brief("metadata_refresh")
