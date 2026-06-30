@@ -9444,9 +9444,59 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(model["annual_financials"]["eps"], 3.0)
         self.assertAlmostEqual(model["annual_financials"]["per"], 41.666666666666664)
         self.assertEqual(model["annual_financials"]["net_income"], 1_200_000_000)
+        self.assertEqual(model["annual_financials"]["financial_source"], "legacy_broad_yfinance")
+        self.assertEqual(model["annual_financials"]["financial_source_mode"], "legacy_broad_summary")
+        self.assertEqual(model["annual_financials"]["source_table"], "finance_fundamental.nyse_fundamentals")
         self.assertAlmostEqual(model["quarterly_financials"]["eps"], 0.75)
         self.assertEqual(model["quarterly_financials"]["net_income"], 300_000_000)
         self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_financial_source_contract_helper_adds_legacy_and_statement_aliases(self) -> None:
+        from finance.loaders.financial_source_contract import (
+            LEGACY_BROAD_YFINANCE_SOURCE,
+            SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+            apply_financial_source_contract,
+        )
+
+        broad = apply_financial_source_contract(
+            pd.DataFrame([{"symbol": "AAA", "period_end": pd.Timestamp("2025-12-31")}]),
+            financial_source=LEGACY_BROAD_YFINANCE_SOURCE,
+            financial_source_mode="legacy_broad_summary",
+            source_table="finance_fundamental.nyse_fundamentals",
+        )
+
+        self.assertEqual(broad.loc[0, "financial_source"], "legacy_broad_yfinance")
+        self.assertEqual(broad.loc[0, "financial_source_mode"], "legacy_broad_summary")
+        self.assertEqual(broad.loc[0, "source_table"], "finance_fundamental.nyse_fundamentals")
+        self.assertIn("available_at", broad.columns)
+        self.assertTrue(pd.isna(broad.loc[0, "available_at"]))
+        self.assertIsNone(broad.loc[0, "form_type"])
+        self.assertIsNone(broad.loc[0, "accession_no"])
+
+        statement = apply_financial_source_contract(
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "period_end": pd.Timestamp("2025-12-31"),
+                        "latest_available_at": pd.Timestamp("2026-02-20"),
+                        "latest_form_type": "10-K",
+                        "latest_accession_no": "000-test",
+                    }
+                ]
+            ),
+            financial_source=SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+            financial_source_mode="statement_shadow",
+            source_table="finance_fundamental.nyse_fundamentals_statement",
+            available_at_column="latest_available_at",
+            form_type_column="latest_form_type",
+            accession_no_column="latest_accession_no",
+        )
+
+        self.assertEqual(statement.loc[0, "financial_source"], "sec_edgar_statement_shadow")
+        self.assertEqual(statement.loc[0, "available_at"], pd.Timestamp("2026-02-20"))
+        self.assertEqual(statement.loc[0, "form_type"], "10-K")
+        self.assertEqual(statement.loc[0, "accession_no"], "000-test")
 
     def test_market_mover_research_snapshot_model_formats_korean_metrics(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model

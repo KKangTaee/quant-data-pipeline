@@ -14,6 +14,13 @@ from ._common import (
     validate_snapshot_inputs,
 )
 from .financial_statements import load_statement_snapshot_strict
+from .financial_source_contract import (
+    LEGACY_BROAD_YFINANCE_SOURCE,
+    SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+    SEC_EDGAR_STATEMENT_STRICT_SOURCE,
+    apply_financial_source_contract,
+    source_contract_columns_present,
+)
 
 
 FACTOR_COLUMNS = [
@@ -119,7 +126,13 @@ def load_factors(
     if df.empty:
         return df
     df["period_end"] = pd.to_datetime(df["period_end"])
-    return df
+    return apply_financial_source_contract(
+        df,
+        financial_source=LEGACY_BROAD_YFINANCE_SOURCE,
+        financial_source_mode="legacy_broad_factor",
+        source_table="finance_fundamental.nyse_factors",
+        source_detail="yfinance financial statements broad compatibility factor layer",
+    )
 
 
 def load_factor_snapshot(
@@ -145,7 +158,11 @@ def load_factor_snapshot(
     snapshot["as_of_date"] = as_of_ts.normalize()
 
     if factor_names:
-        keep = ["symbol", "freq", "period_end", "as_of_date"] + [name for name in factor_names if name in snapshot.columns]
+        keep = (
+            ["symbol", "freq", "period_end", "as_of_date"]
+            + source_contract_columns_present(snapshot)
+            + [name for name in factor_names if name in snapshot.columns]
+        )
         snapshot = snapshot[keep]
     return snapshot
 
@@ -177,11 +194,20 @@ def load_statement_quality_snapshot_strict(
 
     quality_snapshot["freq"] = normalized_freq
     quality_snapshot["as_of_date"] = as_of_ts.normalize()
+    quality_snapshot = apply_financial_source_contract(
+        quality_snapshot,
+        financial_source=SEC_EDGAR_STATEMENT_STRICT_SOURCE,
+        financial_source_mode="strict_statement_snapshot",
+        source_table="finance_fundamental.nyse_financial_statement_values",
+        source_detail="SEC EDGAR raw statement value snapshot filtered by available_at",
+    )
 
     if factor_names:
-        keep = ["symbol", "freq", "statement_period_end", "as_of_date"] + [
-            name for name in factor_names if name in quality_snapshot.columns
-        ]
+        keep = (
+            ["symbol", "freq", "statement_period_end", "as_of_date"]
+            + source_contract_columns_present(quality_snapshot)
+            + [name for name in factor_names if name in quality_snapshot.columns]
+        )
         quality_snapshot = quality_snapshot[keep]
     return quality_snapshot
 
@@ -236,7 +262,7 @@ def load_statement_factor_snapshot_shadow(
             "period_end",
             "fundamental_available_at",
             "as_of_date",
-        ] + [name for name in factor_names if name in snapshot.columns]
+        ] + source_contract_columns_present(snapshot) + [name for name in factor_names if name in snapshot.columns]
         snapshot = snapshot[keep]
     return snapshot
 
@@ -311,4 +337,12 @@ def load_statement_factors_shadow(
         df["price_date"] = pd.to_datetime(df["price_date"])
     if "fundamental_available_at" in df.columns:
         df["fundamental_available_at"] = pd.to_datetime(df["fundamental_available_at"])
-    return df
+    return apply_financial_source_contract(
+        df,
+        financial_source=SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+        financial_source_mode="statement_factor_shadow",
+        source_table="finance_fundamental.nyse_factors_statement",
+        source_detail="SEC EDGAR statement shadow factors with available_at metadata",
+        available_at_column="fundamental_available_at",
+        accession_no_column="fundamental_accession_no",
+    )

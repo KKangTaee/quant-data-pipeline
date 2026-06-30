@@ -22,6 +22,30 @@ STRICT_QUARTERLY_PROTOTYPE_KEYS = {
 
 _FIRST_EVIDENCE_GROUP = "First evidence-mature candidate group"
 _NO_FIRST_GROUP = "Later evidence expansion"
+_LEGACY_BROAD_FACTOR_CONTRACT = {
+    "financial_source": "legacy_broad_yfinance",
+    "source_table": "finance_fundamental.nyse_factors",
+    "source_mode": "legacy_broad_factor",
+    "timing_basis": "period_end snapshot; not filing-time PIT",
+    "canonical": False,
+    "limitation": "Compatibility path for old broad quality runs; not the canonical financial statement source.",
+}
+_STRICT_ANNUAL_FACTOR_CONTRACT = {
+    "financial_source": "sec_edgar_statement_shadow",
+    "source_table": "finance_fundamental.nyse_factors_statement",
+    "source_mode": "statement_factor_shadow",
+    "timing_basis": "available_at <= rebalance_date",
+    "canonical": True,
+    "limitation": "Annual statement shadow is the primary EDGAR-backed factor path.",
+}
+_STRICT_QUARTERLY_FACTOR_CONTRACT = {
+    "financial_source": "sec_edgar_statement_shadow",
+    "source_table": "finance_fundamental.nyse_factors_statement",
+    "source_mode": "statement_factor_shadow",
+    "timing_basis": "available_at <= rebalance_date",
+    "canonical": False,
+    "limitation": "Quarterly prototype stays blocked from production promotion until 10-K/FY flow-value mixing is corrected.",
+}
 
 _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
     "equal_weight": {
@@ -161,6 +185,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Prefer strict annual Quality for Practical Validation candidate work",
         "governance_status": "Legacy research",
         "governance_note": "Keep as broad research compatibility, not a new governance route.",
+        "source_contract": _LEGACY_BROAD_FACTOR_CONTRACT,
         "candidate_group": "Legacy prototype",
         "tags": ["factor", "legacy", "prototype"],
     },
@@ -181,6 +206,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Use in Practical Validation as reference / stabilizer within the strict annual bridge group",
         "governance_status": "Standard workflow",
         "governance_note": "No special governance beyond existing Practical Validation and Final Review gates.",
+        "source_contract": _STRICT_ANNUAL_FACTOR_CONTRACT,
         "candidate_group": _FIRST_EVIDENCE_GROUP,
         "tags": ["factor", "strict-annual", "bridge"],
     },
@@ -201,6 +227,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Use in Practical Validation as return engine while tracking downside open review",
         "governance_status": "Standard workflow",
         "governance_note": "No special governance beyond existing Practical Validation and Final Review gates.",
+        "source_contract": _STRICT_ANNUAL_FACTOR_CONTRACT,
         "candidate_group": _FIRST_EVIDENCE_GROUP,
         "tags": ["factor", "strict-annual", "bridge"],
     },
@@ -221,6 +248,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Use in Practical Validation as first core bridge candidate with GTAA / Equal Weight sleeves",
         "governance_status": "Standard workflow",
         "governance_note": "No special governance beyond existing Practical Validation and Final Review gates.",
+        "source_contract": _STRICT_ANNUAL_FACTOR_CONTRACT,
         "candidate_group": _FIRST_EVIDENCE_GROUP,
         "tags": ["factor", "strict-annual", "bridge"],
     },
@@ -241,6 +269,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Keep prototype label and open quarterly maturation later",
         "governance_status": "Prototype",
         "governance_note": "Runtime contract smoke only; do not promote to annual strict readiness.",
+        "source_contract": _STRICT_QUARTERLY_FACTOR_CONTRACT,
         "candidate_group": "Quarterly prototype maturation",
         "tags": ["factor", "quarterly", "prototype"],
     },
@@ -261,6 +290,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Keep prototype label and open quarterly maturation later",
         "governance_status": "Prototype",
         "governance_note": "Runtime contract smoke only; do not promote to annual strict readiness.",
+        "source_contract": _STRICT_QUARTERLY_FACTOR_CONTRACT,
         "candidate_group": "Quarterly prototype maturation",
         "tags": ["factor", "quarterly", "prototype"],
     },
@@ -281,6 +311,7 @@ _BASE_ROW_BY_KEY: dict[str, dict[str, Any]] = {
         "next_action": "Keep prototype label and open quarterly maturation later",
         "governance_status": "Prototype",
         "governance_note": "Runtime contract smoke only; do not promote to annual strict readiness.",
+        "source_contract": _STRICT_QUARTERLY_FACTOR_CONTRACT,
         "candidate_group": "Quarterly prototype maturation",
         "tags": ["factor", "quarterly", "prototype"],
     },

@@ -57,6 +57,27 @@ class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
             self.assertIn("prototype", row["validation_readiness"].lower())
             self.assertIn("quarterly maturation", row["next_action"].lower())
 
+    def test_factor_strategy_rows_expose_financial_source_contracts(self) -> None:
+        from app.services.backtest_strategy_evidence_inventory import build_strategy_evidence_inventory
+
+        rows_by_key = {row["strategy_key"]: row for row in build_strategy_evidence_inventory()}
+
+        legacy = rows_by_key["quality_snapshot"]["source_contract"]
+        self.assertEqual(legacy["financial_source"], "legacy_broad_yfinance")
+        self.assertEqual(legacy["source_table"], "finance_fundamental.nyse_factors")
+        self.assertFalse(legacy["canonical"])
+
+        strict_annual = rows_by_key["quality_value_snapshot_strict_annual"]["source_contract"]
+        self.assertEqual(strict_annual["financial_source"], "sec_edgar_statement_shadow")
+        self.assertEqual(strict_annual["source_table"], "finance_fundamental.nyse_factors_statement")
+        self.assertTrue(strict_annual["canonical"])
+        self.assertEqual(strict_annual["timing_basis"], "available_at <= rebalance_date")
+
+        quarterly = rows_by_key["quality_snapshot_strict_quarterly_prototype"]["source_contract"]
+        self.assertEqual(quarterly["financial_source"], "sec_edgar_statement_shadow")
+        self.assertFalse(quarterly["canonical"])
+        self.assertIn("10-K", quarterly["limitation"])
+
     def test_first_evidence_mature_candidate_group_is_fixed(self) -> None:
         from app.services.backtest_strategy_evidence_inventory import build_strategy_evidence_inventory
 

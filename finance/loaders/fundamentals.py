@@ -12,6 +12,11 @@ from ._common import (
     resolve_loader_symbols,
     validate_snapshot_inputs,
 )
+from .financial_source_contract import (
+    LEGACY_BROAD_YFINANCE_SOURCE,
+    SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+    apply_financial_source_contract,
+)
 
 
 FUNDAMENTAL_COLUMNS = [
@@ -100,7 +105,13 @@ def load_fundamentals(
     if df.empty:
         return df
     df["period_end"] = pd.to_datetime(df["period_end"])
-    return df
+    return apply_financial_source_contract(
+        df,
+        financial_source=LEGACY_BROAD_YFINANCE_SOURCE,
+        financial_source_mode="legacy_broad_summary",
+        source_table="finance_fundamental.nyse_fundamentals",
+        source_detail="yfinance financial statements broad compatibility layer",
+    )
 
 
 def load_fundamental_snapshot(
@@ -168,7 +179,16 @@ def load_statement_fundamentals_shadow(
     df["period_end"] = pd.to_datetime(df["period_end"])
     if "latest_available_at" in df.columns:
         df["latest_available_at"] = pd.to_datetime(df["latest_available_at"])
-    return df
+    return apply_financial_source_contract(
+        df,
+        financial_source=SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+        financial_source_mode="statement_shadow",
+        source_table="finance_fundamental.nyse_fundamentals_statement",
+        source_detail="SEC EDGAR filing ledger rebuilt statement shadow",
+        available_at_column="latest_available_at",
+        form_type_column="latest_form_type",
+        accession_no_column="latest_accession_no",
+    )
 
 
 def load_statement_shadow_coverage_summary(

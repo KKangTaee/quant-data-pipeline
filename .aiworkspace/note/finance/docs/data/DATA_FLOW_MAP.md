@@ -322,7 +322,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 ## Broad fundamentals / factors 흐름
 
 ```text
-yfinance statements
+yfinance financial statements (legacy compatibility only)
   -> finance.data.fundamentals.upsert_fundamentals()
   -> finance_fundamental.nyse_fundamentals
   -> finance.data.factors.upsert_factors()
@@ -333,7 +333,9 @@ yfinance statements
 
 - `nyse_fundamentals`는 provider-normalized broad summary layer다.
 - `nyse_factors`는 fundamentals와 price as-of matching으로 만든 derived research layer다.
-- 이 경로는 편리하지만 strict filing-time PIT source로 보지는 않는다.
+- 이 경로는 `legacy_broad_yfinance` source contract로 표시한다.
+- 이 경로는 편리하지만 canonical financial statement source나 strict filing-time PIT source로 보지 않는다.
+- loader read model은 `financial_source`, `financial_source_mode`, `source_table`, `available_at`, `form_type`, `accession_no` 공통 source contract alias를 노출한다. broad yfinance row는 filing metadata가 없으므로 `available_at`, `form_type`, `accession_no`가 비어 있을 수 있다.
 
 ## Statement-driven shadow 흐름
 
@@ -350,6 +352,9 @@ finance_fundamental.nyse_financial_statement_values
 - broad public path와 statement-driven rebuild path를 분리한다.
 - strict annual / quarterly factor strategy는 이 shadow path를 더 중요하게 본다.
 - raw truth는 여전히 `nyse_financial_statement_values`다.
+- 이 경로는 `sec_edgar_statement_shadow` source contract로 표시한다.
+- statement shadow loader는 `latest_available_at`, `latest_form_type`, `latest_accession_no`를 공통 alias인 `available_at`, `form_type`, `accession_no`로도 노출한다.
+- annual shadow는 canonical 승격 대상이지만, quarterly shadow는 10-K/FY full-year flow-value 혼입 정책이 고정되기 전까지 production source로 승격하지 않는다.
 
 ## Detailed financial statements 흐름
 

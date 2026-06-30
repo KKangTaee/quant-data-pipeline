@@ -326,6 +326,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 역할:
 
 - provider-normalized broad fundamentals summary
+- loader source contract에서는 `financial_source=legacy_broad_yfinance`, `financial_source_mode=legacy_broad_summary`로 표시한다.
 
 성격:
 
@@ -337,12 +338,15 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - `period_end` 중심이므로 filing-time PIT source로 바로 쓰면 look-ahead risk가 있다.
+- filing metadata가 없으므로 source contract alias의 `available_at`, `form_type`, `accession_no`는 비어 있을 수 있다.
+- 새 기능의 canonical financial statement source로 추가 사용하지 않는다. 기존 run/history compatibility 또는 explicit fallback label이 있을 때만 사용한다.
 
 ## `nyse_fundamentals_statement`
 
 역할:
 
 - statement ledger 기반 fundamentals shadow
+- loader source contract에서는 `financial_source=sec_edgar_statement_shadow`, `financial_source_mode=statement_shadow`로 표시한다.
 
 성격:
 
@@ -354,12 +358,15 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - schema column 이름에 `latest_*`가 남아 있어도, 현재 해석은 period_end별 earliest usable snapshot 쪽으로 읽는다.
 - `shares_outstanding`은 statement-derived를 우선하고, 없으면 broad fallback을 사용할 수 있다.
+- loader는 `latest_available_at`, `latest_form_type`, `latest_accession_no`를 공통 alias인 `available_at`, `form_type`, `accession_no`로도 노출한다.
+- annual은 EDGAR-first migration의 primary source 후보지만, quarterly는 10-K/FY flow-value policy가 고정되기 전까지 blocked/prototype으로 읽는다.
 
 ## `nyse_factors`
 
 역할:
 
 - broad fundamentals와 as-of price를 이용한 derived factor table
+- loader source contract에서는 `financial_source=legacy_broad_yfinance`, `financial_source_mode=legacy_broad_factor`로 표시한다.
 
 성격:
 
@@ -370,12 +377,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - `period_end` 기준 as-of price matching은 유용하지만, filing availability 기준과는 다를 수 있다.
+- current workflows should prefer statement annual factor paths. This table remains a legacy broad compatibility layer until decommissioned.
 
 ## `nyse_factors_statement`
 
 역할:
 
 - statement fundamentals shadow와 as-of price를 이용한 derived factor shadow
+- loader source contract에서는 `financial_source=sec_edgar_statement_shadow`, `financial_source_mode=statement_factor_shadow`로 표시한다.
 
 성격:
 
@@ -386,6 +395,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - shares fallback이 없거나 부족한 row에서는 valuation 계열 factor가 `NULL`일 수 있다.
+- loader는 `fundamental_available_at`과 `fundamental_accession_no`를 공통 alias인 `available_at`, `accession_no`로도 노출한다.
+- annual strict strategies can treat this as the EDGAR-first factor path. Quarterly prototype rows stay non-canonical until 10-K/FY handling is corrected.
 
 ## `nyse_financial_statement_filings`
 

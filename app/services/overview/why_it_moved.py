@@ -23,6 +23,7 @@ from xml.etree import ElementTree
 import pandas as pd
 
 from finance.loaders.fundamentals import load_fundamental_snapshot
+from finance.loaders.financial_source_contract import LEGACY_BROAD_YFINANCE_SOURCE
 from finance.loaders.price import load_price_history
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
@@ -381,16 +382,33 @@ def _market_mover_fundamental_snapshot(
         work["period_end"] = pd.to_datetime(work["period_end"], errors="coerce")
         work = work.sort_values("period_end")
     row = dict(work.iloc[-1])
+    financial_source = _clean_optional_text(row.get("financial_source")) or LEGACY_BROAD_YFINANCE_SOURCE
+    financial_source_mode = _clean_optional_text(row.get("financial_source_mode")) or "legacy_broad_summary"
+    source_table = _clean_optional_text(row.get("source_table")) or "finance_fundamental.nyse_fundamentals"
+    source_detail = _clean_optional_text(row.get("source_detail"))
+    available_at = _iso_date_label(row.get("available_at"))
+    form_type = _clean_optional_text(row.get("form_type"), uppercase=True)
+    accession_no = _clean_optional_text(row.get("accession_no"))
     net_income = _coerce_optional_float(row.get("net_income"))
     shares = _coerce_optional_float(row.get("shares_outstanding"))
     eps = (net_income / shares) if net_income is not None and shares and shares > 0 else None
     per = (latest_price / eps) if latest_price is not None and eps and eps > 0 else None
+    source_payload = {
+        "financial_source": financial_source,
+        "financial_source_mode": financial_source_mode,
+        "source_table": source_table,
+        "source_detail": source_detail,
+        "available_at": available_at,
+        "form_type": form_type,
+        "accession_no": accession_no,
+    }
     if net_income is None and eps is None and per is None:
         return {
             "status": "UNAVAILABLE",
             "freq": freq,
             "period_end": _iso_date_label(row.get("period_end")),
             "reason": "net_income / shares_outstanding 필드가 부족합니다.",
+            **source_payload,
         }
     return {
         "status": "OK",
@@ -401,6 +419,7 @@ def _market_mover_fundamental_snapshot(
         "eps": eps,
         "per": per,
         "basis": f"latest {freq} DB fundamental snapshot",
+        **source_payload,
     }
 
 def build_market_mover_research_snapshot(
