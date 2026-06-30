@@ -3889,6 +3889,23 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("app.web.ingestion_console", imported_modules)
         self.assertNotIn("_render_ingestion_console", function_names)
 
+    def test_streamlit_shell_does_not_expose_legacy_pages_sidebar(self) -> None:
+        import ast
+
+        pages_dir = Path("app/web/pages")
+        self.assertFalse(pages_dir.exists())
+
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+
+        self.assertIn("app.web.backtest_page", imported_modules)
+        self.assertNotIn("app.web.pages.backtest", imported_modules)
+
     def test_ingestion_console_module_owns_render_entrypoint(self) -> None:
         from app.web.ingestion_console import render_ingestion_page
 

@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Streamlit Native Pages Sidebar Fix:
+  - `.aiworkspace/note/finance/tasks/active/streamlit-native-pages-sidebar-fix-20260630/`에서 cold/direct Backtest startup이 native Streamlit sidebar를 노출하던 원인을 정리했다.
+  - Root cause는 `streamlit_app.py`의 top navigation과 `app/web/pages/backtest.py` legacy auto-discovery가 동시에 존재한 것이다.
+  - Backtest shell은 `app/web/backtest_page.py`로 이동했고, `app/web/pages/`에는 user-facing `.py` page를 두지 않는 회귀 테스트를 추가했다.
 - GTAA Result Cadence Monthly Valuation V1:
   - `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`에서 GTAA `interval`을 input row thinning이 아니라 strategy-owned rebalance cadence로 보정했다.
   - GTAA month_end runtime은 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
@@ -111,6 +115,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-06-30 - Streamlit native pages sidebar removed from cold Backtest startup
+- Completed `.aiworkspace/note/finance/tasks/active/streamlit-native-pages-sidebar-fix-20260630/`.
+- Moved Backtest shell from `app/web/pages/backtest.py` to `app/web/backtest_page.py` so Streamlit no longer auto-discovers a legacy sidebar page alongside the Finance Console top navigation.
+- Added a service contract guard preventing user-facing `.py` files under `app/web/pages/`.
+- Durable maps now point future Backtest UI edits at `app/web/backtest_page.py` plus `app/web/backtest_*.py`.
 
 ### 2026-06-29 - GTAA result cadence now separates monthly valuation from rebalance cadence
 - Completed `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/` after the user clarified that non-rebalance months should still show new candidate signals.

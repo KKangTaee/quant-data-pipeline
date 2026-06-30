@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-30 - Backtest cold startup should use Finance Console top navigation, not native Streamlit pages
+
+- User request: 앱 최초 시작 시 좌측 native sidebar에 `streamlit app` / `backtest`가 뜨고, 클릭 후에야 원래 top navigation 화면으로 돌아오는 원인 파악과 수정 요청.
+- Interpreted goal: Finance Console의 canonical navigation은 `streamlit_app.py`의 top navigation이어야 하며, cold/direct Backtest load도 같은 shell 안에서 열려야 한다.
+- Analysis result: `app/web/streamlit_app.py`는 `st.navigation(..., position="top")`를 쓰지만, `app/web/pages/backtest.py`가 남아 있어 Streamlit legacy multipage auto-discovery가 native sidebar를 만들 수 있었다. 특히 `/backtest`가 첫 URL이면 native page route가 Backtest 본문을 먼저 렌더링한다.
+- Follow-up: Backtest shell을 `app/web/backtest_page.py`로 이동하고 `app/web/pages/` user-facing page 금지 회귀 테스트를 추가했다.
+
 ### 2026-06-29 - GTAA interval should mean rebalance cadence, not result-row thinning
 
 - User request: GTAA `interval=4` 실행이 마지막 리밸런싱일 `2026-02-27`에서 멈추지 않고 현재 탐색 종료일 기준으로 평가되길 원했고, 비리밸런싱월에도 새 종목 선택 신호는 보고 싶다고 확인함.

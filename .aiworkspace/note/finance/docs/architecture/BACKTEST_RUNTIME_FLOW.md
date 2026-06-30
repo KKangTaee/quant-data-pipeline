@@ -13,7 +13,7 @@ Single Strategy 실행 흐름:
 
 ```text
 app/web/streamlit_app.py
-  -> app/web/pages/backtest.py
+  -> app/web/backtest_page.py
   -> app/web/backtest_single_runner.py
   -> app/services/backtest_execution.py
   -> app/runtime/backtest.py
@@ -35,7 +35,7 @@ UI는 session state, history append call, notice, render side effect를 유지�
 
 ```text
 app/web/streamlit_app.py
-  -> app/web/pages/backtest.py
+  -> app/web/backtest_page.py
   -> app/web/backtest_compare.py
   -> app/services/backtest_compare_execution.py
   -> app/services/backtest_compare_catalog.py
@@ -53,7 +53,7 @@ Risk-On Momentum 5D 흐름은 기존 rebalance engine과 다른 Daily Swing 연�
 
 ```text
 app/web/streamlit_app.py
-  -> app/web/pages/backtest.py
+  -> app/web/backtest_page.py
   -> app/runtime/backtest.py compatibility export
   -> app/runtime/backtest_risk_on_momentum.py::run_risk_on_momentum_5d_backtest_from_db
   -> finance/loaders/price.py / futures.py / fundamentals.py
@@ -72,7 +72,7 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console navigation entry |
-| `app/web/pages/backtest.py` | form, panel, result surface, history, Portfolio Mix Builder, saved portfolio UI |
+| `app/web/backtest_page.py` | form, panel, result surface, history, Portfolio Mix Builder, saved portfolio UI |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, Streamlit spinner, session state / history append |
 | `app/services/backtest_execution.py` | Single Strategy runtime dispatch, elapsed timing, input/data/system error normalization |
 | `app/services/backtest_compare_execution.py` | Manual multi-strategy component execution loop, elapsed timing, input/data/system error normalization |
@@ -247,7 +247,7 @@ DB 가격 데이터가 일부 ticker에서 더 일찍 멈추면 결과도 그 �
 
 ```text
 app/web/streamlit_app.py
-  -> app/web/pages/backtest.py
+  -> app/web/backtest_page.py
   -> app/runtime/backtest.py
   -> finance/engine.py / finance/strategy.py
   -> result bundle / report / saved replay

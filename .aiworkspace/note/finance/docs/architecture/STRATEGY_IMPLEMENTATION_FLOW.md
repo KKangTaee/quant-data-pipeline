@@ -17,7 +17,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 | orchestration | `finance/engine.py` | price strategy chaining |
 | DB-backed sample/runtime helper | `finance/sample.py` | 수동 smoke와 reusable helper |
 | runtime adapter | `app/runtime/backtest.py`, family / helper modules such as `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest_real_money.py`, `app/runtime/backtest_strict.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
-| web UI | `app/web/pages/backtest.py` | form, compare, history, saved replay |
+| web UI | `app/web/backtest_page.py` | form, compare, history, saved replay |
 
 ## 새 전략 추가 순서
 
@@ -27,7 +27,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 4. 필요한 transform helper가 있으면 `finance/transform.py`에 재사용 가능한 함수로 둔다.
 5. DB-backed runtime helper를 `finance/sample.py` 또는 runtime adapter에서 재사용 가능하게 만든다.
 6. `app/runtime/backtest.py` 또는 family-specific `app/runtime/backtest_*` module에 `run_*_backtest_from_db(...)` wrapper를 추가하고, 기존 UI / service caller가 필요하면 `app/runtime/backtest.py`에서 compatibility export한다.
-7. `app/web/pages/backtest.py`의 single strategy catalog와 form에 연결한다.
+7. `app/web/backtest_page.py`의 single strategy catalog와 form에 연결한다.
 8. compare strategy catalog와 strategy-specific override를 연결한다.
 9. history payload, `Load Into Form`, `Run Again` 복원을 확인한다.
 10. `History Replay / Load Parity Snapshot`에서 핵심 설정이 저장되어 보이는지 확인한다.
