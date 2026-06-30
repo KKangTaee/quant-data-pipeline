@@ -55,8 +55,11 @@ def render_single_strategy_workspace() -> None:
     strategy_choice = st.selectbox(
         "Strategy",
         options=SINGLE_STRATEGY_OPTIONS,
-        index=0,
-        help="The first Phase 4 UI keeps one strategy form visible at a time.",
+        index=SINGLE_STRATEGY_OPTIONS.index(DEFAULT_SINGLE_STRATEGY_OPTION),
+        help=(
+            "New runs start from the statement annual factor family. "
+            "Saved history can still replay legacy broad runs through Load Into Form."
+        ),
         key="backtest_strategy_choice",
     )
     if not family_variant_options(strategy_choice):

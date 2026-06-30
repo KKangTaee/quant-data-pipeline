@@ -32,6 +32,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: table drop이나 schema 확장이 아니라 policy layer gate가 가장 안전하다. raw ledger와 기존 DB rows는 보존하고, new shadow build는 unsafe flow columns를 비우며, loaders는 quarterly 소비 경로에서 `10-Q` / `10-Q/A` rows만 반환한다.
 - Follow-up: synthetic Q4는 아직 미구현이다. 후속 phase는 annual statement factor path를 backtest primary로 올리고 legacy broad yfinance path를 명시적 fallback/legacy로 낮춘다.
 
+### 2026-06-30 - Backtest default financial source should be statement annual, not broad legacy
+
+- User request: 재무제표 source migration Phase 4에서 backtest strategy migration까지 순차 진행하라고 승인함.
+- Interpreted goal: 새 사용자가 broad yfinance factor path를 기본으로 실행하지 않고, statement annual factor family를 자연스럽게 먼저 실행해야 한다.
+- Analysis result: legacy `quality_snapshot` runner는 saved/history replay 때문에 삭제하지 않는다. 대신 Single Strategy 기본값을 `Quality + Value / Strict Annual`로, Portfolio Mix Builder 기본 조합을 strict annual + ETF sleeves로 옮기고 broad Quality guide는 legacy compatibility로 낮춘다.
+- Follow-up: Phase 5는 ingestion workflow에서 broad yfinance financial statement path가 canonical처럼 보이지 않도록 cleanup한다.
+
 ### 2026-06-29 - Market Movers redesign must benchmark market boards, not rename cards
 
 - User request: 사용자가 기존 Market Movers 1~5차 결과가 지난번과 달라 보이지 않고, 금융사이트 / 토스증권 / 업비트 같은 실제 UI를 파악한 완성본인지 강하게 문제제기한 뒤 1~6차 단계 진행을 승인함.

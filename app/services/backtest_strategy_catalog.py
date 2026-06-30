@@ -11,6 +11,11 @@ NON_FAMILY_STRATEGY_OPTIONS = [
     "Dual Momentum",
     "Risk-On Momentum 5D",
 ]
+PRIMARY_STATEMENT_STRATEGY_OPTIONS = [
+    "Quality + Value",
+    "Quality",
+    "Value",
+]
 
 STRATEGY_FAMILY_VARIANTS = {
     "Quality": OrderedDict(
@@ -69,8 +74,18 @@ STRATEGY_FAMILY_VARIANTS = {
     ),
 }
 
-SINGLE_STRATEGY_OPTIONS = NON_FAMILY_STRATEGY_OPTIONS + list(STRATEGY_FAMILY_VARIANTS.keys())
+SINGLE_STRATEGY_OPTIONS = PRIMARY_STATEMENT_STRATEGY_OPTIONS + NON_FAMILY_STRATEGY_OPTIONS
 COMPARE_STRATEGY_OPTIONS = SINGLE_STRATEGY_OPTIONS
+DEFAULT_SINGLE_STRATEGY_OPTION = "Quality + Value"
+DEFAULT_COMPARE_STRATEGY_OPTIONS = ["Quality + Value", "GTAA", "Equal Weight"]
+PRIMARY_STATEMENT_STRATEGY_KEYS = frozenset(
+    {
+        "quality_snapshot_strict_annual",
+        "value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_annual",
+    }
+)
+LEGACY_BROAD_STRATEGY_KEYS = frozenset({"quality_snapshot"})
 
 STRATEGY_KEY_TO_DISPLAY_NAME = {
     "equal_weight": "Equal Weight",
@@ -145,7 +160,12 @@ def strategy_key_to_selection(strategy_key: str | None) -> tuple[str | None, str
 
 __all__ = [
     "COMPARE_STRATEGY_OPTIONS",
+    "DEFAULT_COMPARE_STRATEGY_OPTIONS",
+    "DEFAULT_SINGLE_STRATEGY_OPTION",
+    "LEGACY_BROAD_STRATEGY_KEYS",
     "NON_FAMILY_STRATEGY_OPTIONS",
+    "PRIMARY_STATEMENT_STRATEGY_KEYS",
+    "PRIMARY_STATEMENT_STRATEGY_OPTIONS",
     "SINGLE_STRATEGY_OPTIONS",
     "STRATEGY_FAMILY_VARIANTS",
     "STRATEGY_KEY_TO_DISPLAY_NAME",

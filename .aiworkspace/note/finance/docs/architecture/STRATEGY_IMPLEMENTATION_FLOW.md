@@ -92,8 +92,10 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 현재 주요 구현 메모:
 
 - strict annual family는 `Quality`, `Value`, `Quality + Value`를 중심으로 운영된다.
-- strict annual은 broad factor path보다 statement shadow / annual PIT snapshot path를 더 중요하게 본다.
-- strict quarterly family는 Phase 23 이후 UI / payload / history / saved replay 계약이 보강됐지만, annual strict와 완전히 같은 real-money / guardrail parity를 가진 것은 아니다.
+- Phase 4 source migration 이후 Backtest Analysis의 새 사용자 기본 진입은 `Quality + Value / Strict Annual`이다. Portfolio Mix Builder도 strict annual factor bridge와 ETF sleeves(`GTAA`, `Equal Weight`)를 기본 조합으로 보여준다.
+- strict annual은 broad factor path보다 statement shadow / annual PIT snapshot path를 더 중요하게 보며, `nyse_factors_statement`가 기본 재무제표 factor source다.
+- legacy broad `Quality Snapshot`은 `nyse_factors` / yfinance broad compatibility path로 남기되 새 사용자 기본 선택지는 아니다. saved/history replay와 명시적 compatibility 비교를 위해 삭제하지 않는다.
+- strict quarterly family는 Phase 23 이후 UI / payload / history / saved replay 계약이 보강됐지만, annual strict와 완전히 같은 real-money / guardrail parity를 가진 것은 아니다. Phase 3 source migration 이후 quarterly loaders는 `10-Q` / `10-Q/A` row만 usable row로 반환한다.
 - 8C 이후 strict quality / value / quality-value annual and quarterly wrapper implementation owner는 `app/runtime/backtest_strict.py`이고, `app/runtime/backtest.py`는 compatibility export를 유지한다.
 - factor strategy는 단순 수익률 table만이 아니라 selection history, interpretation summary, contract metadata를 함께 보존해야 한다.
 

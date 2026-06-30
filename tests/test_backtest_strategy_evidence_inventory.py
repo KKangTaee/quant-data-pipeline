@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from pathlib import Path
 
 
 class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
@@ -119,6 +120,31 @@ class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
         self.assertEqual(web_catalog.STRATEGY_KEY_TO_DISPLAY_NAME, service_catalog.STRATEGY_KEY_TO_DISPLAY_NAME)
         self.assertEqual(web_catalog.SINGLE_STRATEGY_OPTIONS, service_catalog.SINGLE_STRATEGY_OPTIONS)
         self.assertEqual(web_catalog.STRATEGY_FAMILY_VARIANTS, service_catalog.STRATEGY_FAMILY_VARIANTS)
+
+    def test_strategy_catalog_defaults_prioritize_statement_annual_family(self) -> None:
+        from app.services import backtest_strategy_catalog as catalog
+
+        self.assertEqual(catalog.DEFAULT_SINGLE_STRATEGY_OPTION, "Quality + Value")
+        self.assertEqual(catalog.SINGLE_STRATEGY_OPTIONS[0], "Quality + Value")
+        self.assertEqual(
+            catalog.resolve_concrete_strategy_key(catalog.DEFAULT_SINGLE_STRATEGY_OPTION),
+            "quality_value_snapshot_strict_annual",
+        )
+        self.assertEqual(catalog.DEFAULT_COMPARE_STRATEGY_OPTIONS, ["Quality + Value", "GTAA", "Equal Weight"])
+        self.assertNotIn("Quality Snapshot", catalog.SINGLE_STRATEGY_OPTIONS)
+        self.assertNotIn("Quality Snapshot", catalog.COMPARE_STRATEGY_OPTIONS)
+        self.assertIn("quality_snapshot", catalog.LEGACY_BROAD_STRATEGY_KEYS)
+
+    def test_backtest_ui_uses_catalog_defaults_for_primary_strategy_surfaces(self) -> None:
+        single_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
+        compare_source = Path("app/web/backtest_compare.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        self.assertIn("DEFAULT_SINGLE_STRATEGY_OPTION", single_source)
+        self.assertIn("statement annual", single_source.lower())
+        self.assertIn("DEFAULT_COMPARE_STRATEGY_OPTIONS", compare_source)
+        self.assertIn("legacy broad yfinance", common_source.lower())
+        self.assertNotIn("research-oriented trial / quick UI runs", common_source)
 
 
 if __name__ == "__main__":

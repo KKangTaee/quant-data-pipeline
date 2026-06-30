@@ -4328,9 +4328,9 @@ def _render_strategy_compare_workspace() -> None:
     selected_strategies = st.multiselect(
         "Strategies",
         options=COMPARE_STRATEGY_OPTIONS,
-        default=["Equal Weight", "GTAA"],
+        default=DEFAULT_COMPARE_STRATEGY_OPTIONS,
         max_selections=4,
-        help="Up to four strategies can be compared at once in the first pass.",
+        help="New compare runs start from the statement annual factor bridge plus ETF sleeves.",
         key="compare_selected_strategies",
     )
     st.caption("Strategy selection updates the strategy-specific sections immediately.")
