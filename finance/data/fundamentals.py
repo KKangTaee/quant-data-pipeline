@@ -12,6 +12,8 @@ from time import perf_counter
 import pandas as pd
 import yfinance as yf
 
+from finance.financial_source_policy import sanitize_quarterly_statement_flow_record
+
 from .db.mysql import MySQLClient
 from .db.schema import FUNDAMENTAL_SCHEMAS, sync_table_schema
 
@@ -932,6 +934,7 @@ def build_fundamentals_history_from_statement_values(
             "last_collected_at": now,
             "error_msg": None,
         }
+        record = sanitize_quarterly_statement_flow_record(record)
         if _has_meaningful_fundamental_payload(record):
             records.append(record)
 

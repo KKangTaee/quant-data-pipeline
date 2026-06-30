@@ -360,6 +360,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `shares_outstanding`은 statement-derived를 우선하고, 없으면 broad fallback을 사용할 수 있다.
 - loader는 `latest_available_at`, `latest_form_type`, `latest_accession_no`를 공통 alias인 `available_at`, `form_type`, `accession_no`로도 노출한다.
 - annual은 EDGAR-first migration의 primary source 후보지만, quarterly는 10-K/FY flow-value policy가 고정되기 전까지 blocked/prototype으로 읽는다.
+- Phase 3 source migration부터 새 quarterly shadow 생성은 `10-K` / `10-K/A` filing의 full-year flow metrics를 분기 flow로 저장하지 않고 flow column을 비운다. balance sheet instant 항목은 남을 수 있으므로 flow와 instant 해석을 분리한다.
+- Phase 3 source migration부터 loader는 quarterly 소비 경로에서 `10-Q` / `10-Q/A` row만 반환한다. 기존 `10-K` / `10-K/A` quarterly row가 table에 남아 있어도 usable quarterly financial row로 보지 않는다.
 
 ## `nyse_factors`
 
@@ -395,8 +397,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - shares fallback이 없거나 부족한 row에서는 valuation 계열 factor가 `NULL`일 수 있다.
-- loader는 `fundamental_available_at`과 `fundamental_accession_no`를 공통 alias인 `available_at`, `accession_no`로도 노출한다.
-- annual strict strategies can treat this as the EDGAR-first factor path. Quarterly prototype rows stay non-canonical until 10-K/FY handling is corrected.
+- loader는 `fundamental_available_at`, `fundamental_accession_no`, joined `latest_form_type`을 공통 alias인 `available_at`, `accession_no`, `form_type`으로도 노출한다.
+- annual strict strategies can treat this as the EDGAR-first factor path. Quarterly prototype rows stay non-canonical; Phase 3 source migration gates quarterly factor reads to `10-Q` / `10-Q/A` rows only.
 
 ## `nyse_financial_statement_filings`
 
@@ -426,6 +428,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - quarterly path는 `10-Q`, `10-Q/A`, `10-K`, `10-K/A`를 함께 받을 수 있다.
 - DB 저장 단계에서 synthetic Q4를 만들지 않는다.
+- raw value ledger는 10-K/FY fact를 보존할 수 있다. 다만 shadow fundamentals / factors 소비 경로는 full-year flow fact를 quarterly flow metric처럼 쓰지 않도록 별도 policy를 적용한다.
 - provider의 `fiscal_year` / `fiscal_period`는 filing context일 수 있으므로, row identity는 `period_end`와 `accession_no`를 우선한다.
 - `periods=0` ingestion은 source가 가진 usable history를 최대한 적재하는 의미다.
 

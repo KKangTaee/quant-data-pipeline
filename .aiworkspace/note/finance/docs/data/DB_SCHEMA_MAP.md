@@ -57,6 +57,8 @@ Last Verified: 2026-06-07
 | `nyse_financial_statement_values` | filing / concept / period 단위 long-format raw fact ledger |
 | `nyse_financial_statement_labels` | concept summary / UI helper layer |
 
+Phase 3 source migration 기준으로 quarterly 10-K/FY 혼입 방지는 table drop이나 schema 확장이 아니라 policy layer에서 처리한다. `nyse_fundamentals_statement` write path는 unsafe quarterly flow metrics를 비우고, `nyse_fundamentals_statement` / `nyse_factors_statement` loaders는 quarterly 소비 경로에서 `10-Q` / `10-Q/A` row만 반환한다.
+
 ## Schema 관리 기준
 
 - 실제 table definition은 `finance/data/db/schema.py`를 기준으로 한다.

@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-06-30 - Quarterly statement shadow must gate 10-K FY flow before production use
+
+- User request: 재무제표 source migration을 DEVELOPMENT_GUIDE 기준으로 1~9차 순차 진행하라고 승인함.
+- Interpreted goal: quarterly statement shadow에 남은 `10-K` / `10-K/A` full-year flow values가 Market Movers / backtest / factor runtime에서 분기값처럼 쓰이는 길을 먼저 차단해야 한다.
+- Analysis result: table drop이나 schema 확장이 아니라 policy layer gate가 가장 안전하다. raw ledger와 기존 DB rows는 보존하고, new shadow build는 unsafe flow columns를 비우며, loaders는 quarterly 소비 경로에서 `10-Q` / `10-Q/A` rows만 반환한다.
+- Follow-up: synthetic Q4는 아직 미구현이다. 후속 phase는 annual statement factor path를 backtest primary로 올리고 legacy broad yfinance path를 명시적 fallback/legacy로 낮춘다.
+
 ### 2026-06-29 - Market Movers redesign must benchmark market boards, not rename cards
 
 - User request: 사용자가 기존 Market Movers 1~5차 결과가 지난번과 달라 보이지 않고, 금융사이트 / 토스증권 / 업비트 같은 실제 UI를 파악한 완성본인지 강하게 문제제기한 뒤 1~6차 단계 진행을 승인함.

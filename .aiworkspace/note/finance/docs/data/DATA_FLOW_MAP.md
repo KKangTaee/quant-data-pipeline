@@ -355,6 +355,9 @@ finance_fundamental.nyse_financial_statement_values
 - 이 경로는 `sec_edgar_statement_shadow` source contract로 표시한다.
 - statement shadow loader는 `latest_available_at`, `latest_form_type`, `latest_accession_no`를 공통 alias인 `available_at`, `form_type`, `accession_no`로도 노출한다.
 - annual shadow는 canonical 승격 대상이지만, quarterly shadow는 10-K/FY full-year flow-value 혼입 정책이 고정되기 전까지 production source로 승격하지 않는다.
+- Phase 3 source migration부터 quarterly shadow write path는 `10-K` / `10-K/A` filing에서 온 flow metrics를 분기값으로 저장하지 않도록 해당 flow column을 비운다. balance sheet instant 항목은 별도 policy로 남을 수 있다.
+- Phase 3 source migration부터 quarterly shadow loaders는 `10-Q` / `10-Q/A` row만 소비 경로에 반환한다. 기존 DB에 남아 있는 quarterly `10-K` / `10-K/A` row는 audit 대상일 수 있지만 Market Movers / backtest factor 소비 경로의 usable row가 아니다.
+- `nyse_factors_statement` 자체에는 form type column이 없으므로 factor shadow loader는 `nyse_fundamentals_statement`와 `symbol/freq/period_end/accession` 기준으로 join해 `form_type` source contract alias를 회수한 뒤 같은 quarterly gate를 적용한다.
 
 ## Detailed financial statements 흐름
 

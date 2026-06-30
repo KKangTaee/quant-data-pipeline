@@ -9585,6 +9585,151 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(statement.loc[0, "form_type"], "10-K")
         self.assertEqual(statement.loc[0, "accession_no"], "000-test")
 
+    def test_quarterly_statement_policy_filters_unsafe_10k_rows(self) -> None:
+        from finance.financial_source_policy import filter_safe_quarterly_statement_rows
+
+        rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "form_type": "10-Q"},
+                {"symbol": "BBB", "form_type": "10-K"},
+                {"symbol": "CCC", "form_type": "10-Q/A"},
+                {"symbol": "DDD", "form_type": "10-K/A"},
+            ]
+        )
+
+        quarterly = filter_safe_quarterly_statement_rows(
+            rows,
+            freq="quarterly",
+            form_type_column="form_type",
+        )
+        annual = filter_safe_quarterly_statement_rows(
+            rows,
+            freq="annual",
+            form_type_column="form_type",
+        )
+
+        self.assertEqual(list(quarterly["symbol"]), ["AAA", "CCC"])
+        self.assertEqual(list(annual["symbol"]), ["AAA", "BBB", "CCC", "DDD"])
+
+    def test_quarterly_statement_policy_clears_unsafe_10k_flow_values(self) -> None:
+        from finance.financial_source_policy import sanitize_quarterly_statement_flow_record
+
+        record = {
+            "symbol": "AAA",
+            "freq": "quarterly",
+            "latest_form_type": "10-K",
+            "total_revenue": 10_000_000_000,
+            "gross_profit": 4_000_000_000,
+            "operating_income": 2_000_000_000,
+            "net_income": 1_000_000_000,
+            "operating_cash_flow": 1_500_000_000,
+            "free_cash_flow": 1_200_000_000,
+            "total_assets": 50_000_000_000,
+            "cash_and_equivalents": 5_000_000_000,
+            "source_mode": "statement_shadow_first_available",
+            "timing_basis": "first_available_for_period_end",
+            "error_msg": None,
+        }
+
+        sanitized = sanitize_quarterly_statement_flow_record(record)
+
+        self.assertIsNone(sanitized["total_revenue"])
+        self.assertIsNone(sanitized["gross_profit"])
+        self.assertIsNone(sanitized["operating_income"])
+        self.assertIsNone(sanitized["net_income"])
+        self.assertIsNone(sanitized["operating_cash_flow"])
+        self.assertIsNone(sanitized["free_cash_flow"])
+        self.assertEqual(sanitized["total_assets"], 50_000_000_000)
+        self.assertEqual(sanitized["cash_and_equivalents"], 5_000_000_000)
+        self.assertEqual(sanitized["source_mode"], "quarterly_10k_flow_blocked")
+        self.assertEqual(sanitized["timing_basis"], "blocked_10k_fy_flow")
+        self.assertIn("10-K", sanitized["error_msg"])
+
+    def test_statement_fundamentals_shadow_loader_filters_quarterly_10k_rows(self) -> None:
+        from finance.loaders.fundamentals import load_statement_fundamentals_shadow
+
+        rows = [
+            {
+                "symbol": "AAA",
+                "freq": "quarterly",
+                "period_end": "2025-12-31",
+                "latest_available_at": "2026-02-20",
+                "latest_form_type": "10-K",
+                "latest_accession_no": "000-aaa-10k",
+                "net_income": 1_000_000_000,
+            },
+            {
+                "symbol": "BBB",
+                "freq": "quarterly",
+                "period_end": "2026-03-31",
+                "latest_available_at": "2026-05-05",
+                "latest_form_type": "10-Q",
+                "latest_accession_no": "000-bbb-10q",
+                "net_income": 250_000_000,
+            },
+        ]
+
+        class FakeClient:
+            def use_db(self, name: str) -> None:
+                self.name = name
+
+            def query(self, sql: str, params: list[object]) -> list[dict[str, object]]:
+                return rows
+
+            def close(self) -> None:
+                pass
+
+        with patch("finance.loaders.fundamentals.MySQLClient", return_value=FakeClient()):
+            loaded = load_statement_fundamentals_shadow(symbols=["AAA", "BBB"], freq="quarterly")
+
+        self.assertEqual(list(loaded["symbol"]), ["BBB"])
+        self.assertEqual(loaded.loc[0, "form_type"], "10-Q")
+        self.assertEqual(loaded.loc[0, "financial_source"], "sec_edgar_statement_shadow")
+
+    def test_statement_factors_shadow_loader_joins_form_type_and_filters_quarterly_10k_rows(self) -> None:
+        from finance.loaders.factors import load_statement_factors_shadow
+
+        captured_sql: dict[str, str] = {}
+        rows = [
+            {
+                "symbol": "AAA",
+                "freq": "quarterly",
+                "period_end": "2025-12-31",
+                "fundamental_available_at": "2026-02-20",
+                "fundamental_accession_no": "000-aaa-10k",
+                "fundamental_form_type": "10-K",
+                "price": 100.0,
+            },
+            {
+                "symbol": "BBB",
+                "freq": "quarterly",
+                "period_end": "2026-03-31",
+                "fundamental_available_at": "2026-05-05",
+                "fundamental_accession_no": "000-bbb-10q",
+                "fundamental_form_type": "10-Q",
+                "price": 50.0,
+            },
+        ]
+
+        class FakeClient:
+            def use_db(self, name: str) -> None:
+                self.name = name
+
+            def query(self, sql: str, params: list[object]) -> list[dict[str, object]]:
+                captured_sql["sql"] = sql
+                return rows
+
+            def close(self) -> None:
+                pass
+
+        with patch("finance.loaders.factors.MySQLClient", return_value=FakeClient()):
+            loaded = load_statement_factors_shadow(symbols=["AAA", "BBB"], freq="quarterly")
+
+        self.assertIn("nyse_fundamentals_statement", captured_sql["sql"])
+        self.assertEqual(list(loaded["symbol"]), ["BBB"])
+        self.assertEqual(loaded.loc[0, "form_type"], "10-Q")
+        self.assertEqual(loaded.loc[0, "financial_source"], "sec_edgar_statement_shadow")
+
     def test_market_mover_research_snapshot_model_formats_korean_metrics(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model
 

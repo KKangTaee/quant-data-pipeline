@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import pandas as pd
 
 from finance.data.db.mysql import MySQLClient
+from finance.financial_source_policy import filter_safe_quarterly_statement_rows
 
 from ._common import (
     normalize_date_range,
@@ -179,7 +180,7 @@ def load_statement_fundamentals_shadow(
     df["period_end"] = pd.to_datetime(df["period_end"])
     if "latest_available_at" in df.columns:
         df["latest_available_at"] = pd.to_datetime(df["latest_available_at"])
-    return apply_financial_source_contract(
+    annotated = apply_financial_source_contract(
         df,
         financial_source=SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
         financial_source_mode="statement_shadow",
@@ -188,6 +189,11 @@ def load_statement_fundamentals_shadow(
         available_at_column="latest_available_at",
         form_type_column="latest_form_type",
         accession_no_column="latest_accession_no",
+    )
+    return filter_safe_quarterly_statement_rows(
+        annotated,
+        freq=normalized_freq,
+        form_type_column="form_type",
     )
 
 

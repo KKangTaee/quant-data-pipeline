@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Fundamental Source Migration P0-P3:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p0-current-state-recheck/`부터 `p3-quarterly-correctness-gate/`까지 1~4차를 순차 진행했다.
+  - Source contract는 `legacy_broad_yfinance`와 `sec_edgar_statement_shadow/strict`로 분리했고, Market Movers annual financials는 EDGAR statement shadow 우선으로 전환했다.
+  - P3에서는 quarterly `10-K` / `10-K/A` full-year flow가 분기값으로 소비되지 않도록 shadow write/read policy gate를 추가했다.
 - Overview Market Movers Redesign V2 1차:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
   - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.
