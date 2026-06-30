@@ -42,6 +42,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         source = (PROJECT_ROOT / "app/web/backtest_formatters.py").read_text()
         self.assertNotIn("streamlit", source)
 
+    def test_single_strategy_payload_normalization_is_service_owned(self) -> None:
+        from app.services.backtest_single_payload import normalize_single_strategy_payload
+
+        original = {
+            "strategy_key": "gtaa",
+            "tickers": ("SPY", "QQQ"),
+            "start": "2020-01-01",
+            "end": "2024-12-31",
+        }
+
+        normalized = normalize_single_strategy_payload(original, strategy_name="GTAA")
+
+        self.assertIsNot(normalized, original)
+        self.assertEqual(normalized["strategy_key"], "gtaa")
+        self.assertEqual(normalized["strategy_name"], "GTAA")
+        self.assertEqual(normalized["tickers"], ["SPY", "QQQ"])
+        self.assertNotIn("strategy_name", original)
+
+        runner_source = (PROJECT_ROOT / "app/web/backtest_single_runner.py").read_text()
+        self.assertIn("from app.services.backtest_single_payload import normalize_single_strategy_payload", runner_source)
+        self.assertIn("execution_payload = normalize_single_strategy_payload", runner_source)
+
 
 if __name__ == "__main__":
     unittest.main()

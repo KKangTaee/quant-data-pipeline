@@ -12,3 +12,14 @@ Command log for staged QA.
   - Result: PASS.
 - Diff check: `git diff --check`
   - Result: PASS.
+
+## 2차
+
+- RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_single_strategy_payload_normalization_is_service_owned -v`
+  - Expected failure: missing `app.services.backtest_single_payload`.
+- GREEN QA: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries -v`
+  - Result: PASS.
+- Compile: `.venv/bin/python -m py_compile app/services/backtest_single_payload.py app/web/backtest_single_runner.py app/web/backtest_single_forms.py`
+  - Result: PASS.
+- Diff check: `git diff --check`
+  - Result: PASS.

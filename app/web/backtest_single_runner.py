@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.backtest_execution import execute_single_backtest
+from app.services.backtest_single_payload import normalize_single_strategy_payload
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_ui_components import render_badge_strip
 
@@ -26,15 +27,16 @@ def _payload_badges(payload: dict[str, Any], *, strategy_name: str) -> list[dict
 
 
 def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
+    execution_payload = normalize_single_strategy_payload(payload, strategy_name=strategy_name)
     st.markdown("#### Execution Summary")
-    render_badge_strip(_payload_badges(payload, strategy_name=strategy_name))
+    render_badge_strip(_payload_badges(execution_payload, strategy_name=strategy_name))
     with st.expander("Developer Payload", expanded=False):
         st.caption("실행 service에 전달되는 원본 payload입니다. 일반 결과 확인 중에는 접어두어도 됩니다.")
-        st.json(payload)
+        st.json(execution_payload)
 
     spinner_text = f"Running {strategy_name} backtest from DB..."
     with st.spinner(spinner_text, show_time=True):
-        result = execute_single_backtest(payload, strategy_name=strategy_name)
+        result = execute_single_backtest(execution_payload, strategy_name=strategy_name)
 
     if not result.ok:
         st.session_state.backtest_last_bundle = None
