@@ -9428,10 +9428,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 ]
             )
 
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            return pd.DataFrame()
+
         model = build_market_mover_research_snapshot(
             mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
             as_of_date="2026-06-30",
             price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
             fundamental_snapshot_loader=fake_fundamental_snapshot_loader,
         )
 
@@ -9447,9 +9452,91 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["annual_financials"]["financial_source"], "legacy_broad_yfinance")
         self.assertEqual(model["annual_financials"]["financial_source_mode"], "legacy_broad_summary")
         self.assertEqual(model["annual_financials"]["source_table"], "finance_fundamental.nyse_fundamentals")
-        self.assertAlmostEqual(model["quarterly_financials"]["eps"], 0.75)
-        self.assertEqual(model["quarterly_financials"]["net_income"], 300_000_000)
+        self.assertTrue(model["annual_financials"]["fallback_used"])
+        self.assertIn("EDGAR statement shadow", model["annual_financials"]["fallback_reason"])
+        self.assertEqual(model["quarterly_financials"]["status"], "UNAVAILABLE")
+        self.assertIn("10-Q", model["quarterly_financials"]["reason"])
         self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_mover_research_snapshot_prefers_edgar_annual_and_blocks_quarterly_10k(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        legacy_calls: list[str] = []
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "latest_available_at": pd.Timestamp("2026-02-20"),
+                            "latest_form_type": "10-K",
+                            "latest_accession_no": "000-aaa-10k",
+                            "financial_source": "sec_edgar_statement_shadow",
+                            "financial_source_mode": "statement_shadow",
+                            "source_table": "finance_fundamental.nyse_fundamentals_statement",
+                            "available_at": pd.Timestamp("2026-02-20"),
+                            "form_type": "10-K",
+                            "accession_no": "000-aaa-10k",
+                            "net_income": 1_000_000_000,
+                            "shares_outstanding": 500_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-03-31"),
+                        "latest_available_at": pd.Timestamp("2026-04-20"),
+                        "latest_form_type": "10-K",
+                        "latest_accession_no": "000-aaa-fy",
+                        "financial_source": "sec_edgar_statement_shadow",
+                        "financial_source_mode": "statement_shadow",
+                        "source_table": "finance_fundamental.nyse_fundamentals_statement",
+                        "available_at": pd.Timestamp("2026-04-20"),
+                        "form_type": "10-K",
+                        "accession_no": "000-aaa-fy",
+                        "net_income": 4_000_000_000,
+                        "shares_outstanding": 500_000_000,
+                    }
+                ]
+            )
+
+        def fake_legacy_loader(**kwargs: object) -> pd.DataFrame:
+            legacy_calls.append(str(kwargs["freq"]))
+            return pd.DataFrame()
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=fake_legacy_loader,
+        )
+
+        self.assertEqual(model["annual_financials"]["financial_source"], "sec_edgar_statement_shadow")
+        self.assertEqual(model["annual_financials"]["available_at"], "2026-02-20")
+        self.assertEqual(model["annual_financials"]["form_type"], "10-K")
+        self.assertEqual(model["annual_financials"]["accession_no"], "000-aaa-10k")
+        self.assertFalse(model["annual_financials"]["fallback_used"])
+        self.assertAlmostEqual(model["annual_financials"]["eps"], 2.0)
+        self.assertEqual(legacy_calls, [])
+        self.assertEqual(model["quarterly_financials"]["status"], "UNAVAILABLE")
+        self.assertEqual(model["quarterly_financials"]["form_type"], "10-K")
+        self.assertIn("10-Q", model["quarterly_financials"]["reason"])
 
     def test_financial_source_contract_helper_adds_legacy_and_statement_aliases(self) -> None:
         from finance.loaders.financial_source_contract import (
@@ -9521,6 +9608,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "annual_financials": {
                     "status": "OK",
                     "period_end": "2025-12-31",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "available_at": "2026-02-20",
+                    "form_type": "10-K",
                     "eps": 3.0,
                     "per": 41.666666666666664,
                     "net_income": 1_200_000_000,
@@ -9543,6 +9633,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(items["올해 수익률"]["value"], "+25.00%")
         self.assertIn("PER 41.67x", items["PER / EPS"]["value"])
         self.assertIn("EPS $3.00", items["PER / EPS"]["value"])
+        self.assertIn("EDGAR", items["PER / EPS"]["detail"])
+        self.assertIn("2026-02-20", items["PER / EPS"]["detail"])
         self.assertIn("연간 12.0억 달러", items["당기순이익"]["value"])
         self.assertIn("분기 3.0억 달러", items["당기순이익"]["value"])
         self.assertIn("context-only", model["boundary_note"].lower())

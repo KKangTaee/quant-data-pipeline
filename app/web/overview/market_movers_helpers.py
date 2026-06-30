@@ -2155,6 +2155,37 @@ def _financial_period_label(item: dict[str, Any], fallback: str) -> str:
     return str(item.get("period_end") or fallback)
 
 
+def _financial_source_label(item: dict[str, Any]) -> str:
+    source = str(item.get("financial_source") or "").strip()
+    fallback_used = bool(item.get("fallback_used"))
+    if source == "sec_edgar_statement_shadow":
+        return "EDGAR statement shadow"
+    if source == "legacy_broad_yfinance":
+        return "legacy yfinance fallback" if fallback_used else "legacy yfinance"
+    return source.replace("_", " ") if source else "source unknown"
+
+
+def _financial_source_detail(item: dict[str, Any], prefix: str) -> str:
+    status = str(item.get("status") or "").upper()
+    period = _financial_period_label(item, "-")
+    source_label = _financial_source_label(item)
+    parts = [f"{prefix} {period}", source_label]
+    available_at = item.get("available_at")
+    form_type = item.get("form_type")
+    accession_no = item.get("accession_no")
+    if available_at:
+        parts.append(f"available {available_at}")
+    if form_type:
+        parts.append(str(form_type))
+    if accession_no:
+        parts.append(f"accession {accession_no}")
+    if status != "OK":
+        reason = str(item.get("reason") or "").strip()
+        if reason:
+            parts.append(reason)
+    return " · ".join(str(part) for part in parts if str(part).strip())
+
+
 def _per_eps_line(item: dict[str, Any], prefix: str) -> str | None:
     if str(item.get("status") or "").upper() != "OK":
         return None
@@ -2203,6 +2234,11 @@ def build_market_mover_research_snapshot_model(
     per_eps_secondary = _per_eps_line(quarterly, "분기")
     per_eps_parts = [part for part in [per_eps_primary, per_eps_secondary] if part]
     per_eps_available = bool(per_eps_parts)
+    financial_detail_parts = [
+        _financial_source_detail(annual, "연간") if annual else "",
+        _financial_source_detail(quarterly, "분기") if quarterly else "",
+    ]
+    financial_detail = " / ".join(part for part in financial_detail_parts if part)
     annual_income = annual.get("net_income") if str(annual.get("status") or "").upper() == "OK" else None
     quarterly_income = quarterly.get("net_income") if str(quarterly.get("status") or "").upper() == "OK" else None
     income_parts: list[str] = []
@@ -2241,7 +2277,7 @@ def build_market_mover_research_snapshot_model(
             "PER / EPS",
             " · ".join(per_eps_parts) if per_eps_available else "계산 불가",
             (
-                f"연간 {_financial_period_label(annual, '-')} · 분기 {_financial_period_label(quarterly, '-')}"
+                financial_detail
                 if per_eps_available
                 else str(annual.get("reason") or quarterly.get("reason") or "재무제표 net_income / shares_outstanding 필요")
             ),
@@ -2252,7 +2288,7 @@ def build_market_mover_research_snapshot_model(
             "당기순이익",
             " · ".join(income_parts) if income_parts else "계산 불가",
             (
-                f"연간 {_financial_period_label(annual, '-')} · 분기 {_financial_period_label(quarterly, '-')}"
+                financial_detail
                 if income_parts
                 else str(annual.get("reason") or quarterly.get("reason") or "재무제표 snapshot 필요")
             ),
