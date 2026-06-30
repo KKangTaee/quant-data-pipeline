@@ -57,6 +57,7 @@ from app.services.ingestion_diagnostics import (
     run_price_stale_diagnosis,
     run_statement_coverage_diagnosis,
     run_statement_pit_inspection,
+    run_statement_universe_coverage_qa,
 )
 from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
 from app.workspace_paths import PROJECT_ROOT
@@ -446,6 +447,8 @@ def init_ingestion_state() -> None:
         st.session_state.price_stale_diagnosis_result = None
     if "statement_coverage_diagnosis_result" not in st.session_state:
         st.session_state.statement_coverage_diagnosis_result = None
+    if "statement_universe_coverage_qa_result" not in st.session_state:
+        st.session_state.statement_universe_coverage_qa_result = None
     if "ingestion_prefill_request" not in st.session_state:
         st.session_state.ingestion_prefill_request = None
     if "ingestion_prefill_notice" not in st.session_state:
@@ -2273,6 +2276,75 @@ def _render_statement_coverage_diagnosis_result(result: dict[str, Any]) -> None:
         st.code(rebuild_payload.get("payload_block") or "", language="text")
 
 
+def _render_statement_universe_coverage_qa_result(result: dict[str, Any]) -> None:
+    st.markdown("#### Statement Universe Coverage QA Result")
+    details = result.get("details") or {}
+    coverage = details.get("coverage") or {}
+    status = result.get("status")
+    if status == "ok":
+        st.success(result.get("message") or "Statement universe coverage QA completed.")
+    elif status == "warning":
+        st.warning(result.get("message") or "Statement universe coverage QA found coverage gaps.")
+    else:
+        st.error(result.get("message") or "Statement universe coverage QA failed.")
+
+    st.caption(
+        "EDGAR annual coverage by universe. This is DB-backed source QA: it reads stored raw/shadow/profile rows and does not "
+        "read yfinance statement data."
+    )
+    _render_ingestion_meta_grid(
+        [
+            ("Universe", str(details.get("universe_label") or details.get("universe_code") or "-")),
+            ("Coverage Basis", str(details.get("coverage_basis") or "-")),
+            ("Frequency", str(details.get("freq") or "-")),
+            ("As Of", str(details.get("as_of_date") or "-")),
+        ]
+    )
+    _render_ingestion_stat_grid(
+        [
+            ("Universe", _format_count(details.get("universe_count")), None),
+            ("Shadow Ready", _format_count(coverage.get("shadow_available_count")), None),
+            ("Raw Present", _format_count(coverage.get("raw_available_count")), None),
+            ("Not Ready", _format_count(coverage.get("missing_or_not_ready_count")), None),
+            ("Coverage %", f"{float(coverage.get('shadow_coverage_pct') or 0):.2f}%", None),
+        ]
+    )
+
+    reason_counts = details.get("reason_counts") or {}
+    if reason_counts:
+        st.markdown("##### Missing Reason Groups")
+        reason_df = pd.DataFrame(
+            [{"Reason Group": reason, "Count": count} for reason, count in reason_counts.items()]
+        ).sort_values(["Count", "Reason Group"], ascending=[False, True])
+        st.dataframe(reason_df, use_container_width=True, hide_index=True)
+
+    rows = details.get("rows") or []
+    if rows:
+        st.markdown("##### Sample Source QA Rows")
+        qa_df = pd.DataFrame(rows).rename(
+            columns={
+                "symbol": "Symbol",
+                "name": "Name",
+                "country": "Country",
+                "profile_status": "Profile Status",
+                "raw_strict_rows": "Raw Strict Rows",
+                "raw_max_period_end": "Raw Max Period End",
+                "shadow_rows": "Shadow Rows",
+                "shadow_max_period_end": "Shadow Max Period End",
+                "reason_group": "Reason Group",
+                "recommended_action": "Recommended Action",
+                "note": "Note",
+            }
+        )
+        st.dataframe(qa_df.head(80), use_container_width=True, hide_index=True)
+
+    next_actions = [str(item) for item in details.get("next_actions") or [] if str(item).strip()]
+    if next_actions:
+        st.markdown("##### Next Actions")
+        for item in next_actions:
+            st.markdown(f"- {item}")
+
+
 def _render_price_stale_diagnosis_card() -> None:
     with st.container(border=True):
         st.markdown("### Price Stale Diagnosis")
@@ -2333,6 +2405,65 @@ def _render_price_stale_diagnosis_card() -> None:
         result = st.session_state.get("price_stale_diagnosis_result")
         if result:
             _render_price_stale_diagnosis_result(result)
+
+
+def _render_statement_universe_coverage_qa_card() -> None:
+    with st.container(border=True):
+        st.markdown("### Statement Universe Coverage QA")
+        st.write("Top1000 / Top2000 / Nasdaq workflow의 EDGAR annual statement coverage를 universe 단위로 점검합니다.")
+        st.caption(
+            "EDGAR annual coverage by universe is DB-backed source QA. It groups missing reasons such as raw-present/shadow-missing, "
+            "non-US issuer / foreign-form expectation, stale annual period, and CIK mapping or EDGAR unavailability candidates."
+        )
+        st.caption("이 카드는 새 데이터를 저장하지 않고, paid provider나 yfinance statement data를 primary source로 읽지 않습니다.")
+
+        qa_col1, qa_col2, qa_col3, qa_col4 = st.columns(4)
+        universe_code = qa_col1.selectbox(
+            "Statement Universe",
+            ["SP500", "TOP1000", "TOP2000", "NASDAQ"],
+            index=1,
+            key="statement_universe_coverage_code",
+        )
+        universe_limit = int(
+            qa_col2.number_input(
+                "Universe Limit",
+                min_value=0,
+                max_value=5000,
+                value=1000,
+                step=100,
+                key="statement_universe_coverage_limit",
+                help="`0`이면 선택 universe의 기본 범위를 사용합니다.",
+            )
+        )
+        qa_freq = qa_col3.selectbox(
+            "QA Frequency",
+            ["annual", "quarterly"],
+            index=0,
+            key="statement_universe_coverage_freq",
+        )
+        qa_as_of = qa_col4.date_input(
+            "QA As Of",
+            value=date.today(),
+            key="statement_universe_coverage_as_of",
+        )
+
+        if st.button(
+            "Statement Universe Coverage QA 실행",
+            use_container_width=True,
+            disabled=_has_running_job(),
+        ):
+            with st.spinner("Running DB-backed statement universe coverage QA..."):
+                result = run_statement_universe_coverage_qa(
+                    universe_code=universe_code,
+                    universe_limit=universe_limit or None,
+                    freq=qa_freq,
+                    as_of_date=qa_as_of.isoformat(),
+                )
+            st.session_state.statement_universe_coverage_qa_result = result
+
+        result = st.session_state.get("statement_universe_coverage_qa_result")
+        if result:
+            _render_statement_universe_coverage_qa_result(result)
 
 
 def _render_statement_coverage_diagnosis_card() -> None:
@@ -4592,6 +4723,9 @@ def render_ingestion_console() -> None:
 
             with st.expander("가격 stale 원인 진단", expanded=False):
                 _render_price_stale_diagnosis_card()
+
+            with st.expander("재무제표 universe coverage QA", expanded=False):
+                _render_statement_universe_coverage_qa_card()
 
             with st.expander("재무제표 coverage 원인 진단", expanded=False):
                 _render_statement_coverage_diagnosis_card()

@@ -3967,12 +3967,107 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             run_price_stale_diagnosis,
             run_statement_coverage_diagnosis,
             run_statement_pit_inspection,
+            run_statement_universe_coverage_qa,
         )
 
         self.assertTrue(callable(load_price_window_preflight_summary))
         self.assertTrue(callable(run_price_stale_diagnosis))
         self.assertTrue(callable(run_statement_coverage_diagnosis))
         self.assertTrue(callable(run_statement_pit_inspection))
+        self.assertTrue(callable(run_statement_universe_coverage_qa))
+
+    def test_statement_universe_coverage_qa_groups_missing_reasons_without_live_source_probe(self) -> None:
+        from app.jobs.diagnostics import inspect_statement_universe_coverage
+
+        universe_rows = [
+            {"symbol": "GOOD", "name": "Good Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "RAW", "name": "Raw Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "OLD", "name": "Old Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "FGN", "name": "Foreign Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "MISS", "name": "Missing Co", "source": "nyse_asset_profile.market_cap"},
+        ]
+        raw_df = pd.DataFrame(
+            [
+                {
+                    "symbol": "RAW",
+                    "freq": "annual",
+                    "strict_rows": 12,
+                    "distinct_accessions": 3,
+                    "max_period_end": pd.Timestamp("2025-12-31"),
+                    "max_available_at": pd.Timestamp("2026-02-15"),
+                },
+                {
+                    "symbol": "OLD",
+                    "freq": "annual",
+                    "strict_rows": 7,
+                    "distinct_accessions": 2,
+                    "max_period_end": pd.Timestamp("2023-12-31"),
+                    "max_available_at": pd.Timestamp("2024-02-15"),
+                },
+            ]
+        )
+        shadow_df = pd.DataFrame(
+            [
+                {
+                    "symbol": "GOOD",
+                    "freq": "annual",
+                    "shadow_rows": 2,
+                    "max_period_end": pd.Timestamp("2025-12-31"),
+                    "max_available_at": pd.Timestamp("2026-02-15"),
+                }
+            ]
+        )
+        profile_df = pd.DataFrame(
+            [
+                {"symbol": "GOOD", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "RAW", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "OLD", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "FGN", "country": "Canada", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "MISS", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+            ]
+        )
+
+        with (
+            patch("app.jobs.diagnostics.load_market_cap_universe_members", return_value=universe_rows) as load_universe,
+            patch("app.jobs.diagnostics.load_statement_coverage_summary", return_value=raw_df),
+            patch("app.jobs.diagnostics.load_statement_shadow_coverage_summary", return_value=shadow_df),
+            patch("app.jobs.diagnostics.load_asset_profile_status_summary", return_value=profile_df),
+            patch("app.jobs.diagnostics.inspect_financial_statement_source") as live_source_probe,
+        ):
+            result = inspect_statement_universe_coverage(
+                universe_code="TOP1000",
+                universe_limit=5,
+                freq="annual",
+                as_of_date="2026-06-30",
+            )
+
+        load_universe.assert_called_once_with("TOP1000", universe_limit=5)
+        live_source_probe.assert_not_called()
+
+        details = result["details"]
+        self.assertEqual(details["universe_code"], "TOP1000")
+        self.assertEqual(details["universe_count"], 5)
+        self.assertEqual(details["coverage"]["shadow_available_count"], 1)
+        self.assertEqual(details["coverage"]["shadow_coverage_pct"], 20.0)
+        self.assertEqual(
+            details["reason_counts"],
+            {
+                "statement_shadow_available": 1,
+                "raw_present_shadow_missing": 1,
+                "raw_present_but_no_recent_10k": 1,
+                "non_us_issuer_or_foreign_form_expected": 1,
+                "edgar_unavailable_or_cik_mapping_issue": 1,
+            },
+        )
+        self.assertIn("Statement Coverage Diagnosis", details["next_actions"][0])
+
+    def test_ingestion_console_surfaces_statement_universe_coverage_qa_card(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("Statement Universe Coverage QA", source)
+        self.assertIn("run_statement_universe_coverage_qa", source)
+        self.assertIn("EDGAR annual coverage by universe", source)
+        self.assertNotIn("yfinance financial statements fallback", source)
 
     def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
         import ast

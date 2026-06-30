@@ -33,12 +33,28 @@ This runbook keeps broad yfinance fundamentals / factors as a legacy compatibili
 6. If partial or failed, run `재무제표 coverage 원인 진단`.
 7. If raw statement rows exist but shadow rows are missing, run `재무제표 shadow 재구성`.
 
+## Universe Coverage QA
+
+Use `Workspace > Ingestion > 수동 복구 / 진단 > 재무제표 universe coverage QA` before broad refresh planning.
+
+1. Select `SP500`, `TOP1000`, `TOP2000`, or `NASDAQ`.
+2. Keep `QA Frequency = annual` for the current canonical path.
+3. Read shadow-ready count, raw-present count, not-ready count, and coverage percent.
+4. Read missing reason groups:
+   - `raw_present_shadow_missing`: use shadow rebuild before re-collecting.
+   - `raw_present_but_no_recent_10k`: run targeted Statement Coverage Diagnosis before deciding refresh.
+   - `non_us_issuer_or_foreign_form_expected`: decide support / exclusion; do not assume local DB failure.
+   - `missing_profile_or_universe_metadata`: refresh metadata or universe source first.
+   - `edgar_unavailable_or_cik_mapping_issue`: sample with Statement Coverage Diagnosis before targeted EDGAR refresh.
+5. Expand coverage in order: `SP500 -> TOP1000 -> TOP2000 -> NASDAQ`.
+
 ## Expected Result
 
 - Raw statement rows land in `finance_fundamental.nyse_financial_statement_filings`, `nyse_financial_statement_labels`, and `nyse_financial_statement_values`.
 - Statement shadow rows are rebuilt in `nyse_fundamentals_statement` and `nyse_factors_statement`.
 - The job result highlights processed symbol coverage, statement freshness interpretation, failed symbols, and the next action.
 - Strict annual backtest paths and Market Movers annual financial snapshots can read the EDGAR statement shadow path.
+- Universe QA explains broad annual coverage and missing reason groups without live-probing EDGAR across the full universe.
 
 ## Failure Handling
 

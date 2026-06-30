@@ -40,6 +40,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p5-ingestion-workflow-cleanup/`에서 Ingestion operational refresh 흐름을 EDGAR annual statement refresh 우선으로 정리했다.
   - `Legacy broad yfinance fundamentals / factors`는 compatibility / explicit comparison path로 낮췄고, statement refresh result는 coverage / freshness / failed / next action 중심으로 해석한다.
   - 운영 절차는 [EDGAR Financial Statement Refresh Runbook](./docs/runbooks/EDGAR_FINANCIAL_STATEMENT_REFRESH.md)에 남겼다.
+- Fundamental Source Migration P6:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p6-coverage-expansion-source-qa/`에서 DB-backed `Statement Universe Coverage QA`를 추가했다.
+  - SP500 / Top1000 / Top2000 / Nasdaq annual statement shadow coverage를 reason group으로 설명하고, broad yfinance statement fallback 없이 targeted diagnosis / refresh / shadow rebuild로 이어지게 했다.
+  - 2026-06-30 DB smoke 기준 annual shadow coverage는 SP500 94.04%, Top1000 95.3%, Top2000 47.65%, Nasdaq universe unresolved다.
 - Overview Market Movers Redesign V2 1차:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
   - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.

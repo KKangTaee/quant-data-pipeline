@@ -46,6 +46,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 새 action을 만들지 않고 기존 `extended_statement_refresh` action id를 유지해 run history compatibility를 보존한다. 화면 language와 order만 EDGAR-first로 바꾸고, broad yfinance path는 legacy compatibility / explicit comparison으로 낮춘다.
 - Follow-up: Phase 6은 coverage expansion과 source QA로 넘어가며, partial statement refresh는 Statement Coverage Diagnosis와 shadow rebuild로 처리한다.
 
+### 2026-06-30 - Universe coverage QA should be DB-backed before targeted EDGAR refresh
+
+- User request: 재무제표 source migration Phase 6 coverage expansion / source QA까지 순차 진행하라고 승인함.
+- Interpreted goal: Top1000 / Top2000 / Nasdaq 확장 전, annual EDGAR statement shadow coverage와 missing reason을 broad yfinance fallback 없이 설명해야 한다.
+- Analysis result: broad universe QA는 DB raw/shadow/profile/universe rows로 요약하고, live EDGAR source probe는 소수 symbol 대상 `Statement Coverage Diagnosis`에 남기는 것이 안전하다. reason group은 raw-present/shadow-missing, stale/no recent 10-K, non-US/foreign form, metadata gap, EDGAR unavailable/CIK mapping candidate로 분리한다.
+- Follow-up: Top2000 coverage gap은 targeted EDGAR annual refresh batch 후보이며, Nasdaq은 current snapshot universe rows부터 복구해야 coverage를 판단할 수 있다.
+
 ### 2026-06-29 - Market Movers redesign must benchmark market boards, not rename cards
 
 - User request: 사용자가 기존 Market Movers 1~5차 결과가 지난번과 달라 보이지 않고, 금융사이트 / 토스증권 / 업비트 같은 실제 UI를 파악한 완성본인지 강하게 문제제기한 뒤 1~6차 단계 진행을 승인함.

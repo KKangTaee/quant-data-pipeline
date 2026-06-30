@@ -377,6 +377,7 @@ EDGAR
 - `values` table은 향후 PIT-friendly custom factor engine의 원재료다.
 - `labels`는 UI / 해석 보조용 convenience layer로 본다.
 - Phase 5 source migration부터 `Workspace > Ingestion`의 기본 재무제표 갱신 흐름은 `EDGAR annual 재무제표 갱신` card에서 시작한다. 같은 화면의 broad yfinance fundamentals / factors refresh는 legacy compatibility / explicit comparison path이며 canonical financial statement refresh가 아니다.
+- Phase 6 source migration부터 `Workspace > Ingestion > 수동 복구 / 진단`은 DB-backed `Statement Universe Coverage QA`를 제공한다. 이 QA는 `SP500` / `TOP1000` / `TOP2000` / `NASDAQ` universe를 raw statement / shadow / profile rows로 요약하고, live EDGAR source probe는 소수 symbol용 `Statement Coverage Diagnosis`에만 남긴다.
 
 ## Runtime read path
 
