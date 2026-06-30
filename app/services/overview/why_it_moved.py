@@ -22,6 +22,8 @@ from xml.etree import ElementTree
 
 import pandas as pd
 
+from finance.loaders.fundamentals import load_fundamental_snapshot
+from finance.loaders.price import load_price_history
 from finance.loaders.sentiment import (
     CNN_COMPONENT_SERIES,
     CORE_SENTIMENT_SERIES,
@@ -261,6 +263,206 @@ def _coerce_optional_int(value: Any) -> int | None:
         return int(float(value))
     except (TypeError, ValueError):
         return None
+
+def _iso_date_label(value: Any) -> str | None:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    try:
+        return pd.Timestamp(value).date().isoformat()
+    except (TypeError, ValueError):
+        text = str(value).strip()
+        return text or None
+
+def _research_as_of_date(value: Any | None) -> str:
+    if value is None:
+        return date.today().isoformat()
+    resolved = _iso_date_label(value)
+    return resolved or date.today().isoformat()
+
+def _first_available_float(row: dict[str, Any], keys: Sequence[str]) -> float | None:
+    for key in keys:
+        value = _coerce_optional_float(row.get(key))
+        if value is not None:
+            return value
+    return None
+
+def _market_cap_change_snapshot(row: dict[str, Any]) -> dict[str, Any]:
+    change_pct = _first_available_float(
+        row,
+        (
+            "Market Cap YoY Change %",
+            "Market Cap 1Y Change %",
+            "Market Cap Change YoY %",
+            "Market Cap Change %",
+        ),
+    )
+    if change_pct is None:
+        return {
+            "status": "UNAVAILABLE",
+            "reason": "과거 시총 snapshot이 현재 Market Movers read model에 없습니다.",
+        }
+    return {
+        "status": "OK",
+        "change_pct": change_pct,
+        "basis": "existing Market Movers read model field",
+    }
+
+def _market_mover_ytd_snapshot(
+    symbol: str,
+    *,
+    as_of_date: str,
+    price_history_loader: Callable[..., pd.DataFrame],
+) -> dict[str, Any]:
+    year_start = f"{pd.Timestamp(as_of_date).year}-01-01"
+    try:
+        frame = price_history_loader(symbols=symbol, start=year_start, end=as_of_date, timeframe="1d")
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "reason": f"가격 이력 조회 실패: {exc}", "start_date": year_start}
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return {"status": "UNAVAILABLE", "reason": "올해 가격 이력 row가 없습니다.", "start_date": year_start}
+
+    date_column = "date" if "date" in frame.columns else "Date" if "Date" in frame.columns else None
+    price_column = "adj_close" if "adj_close" in frame.columns else "close" if "close" in frame.columns else None
+    if date_column is None or price_column is None:
+        return {
+            "status": "UNAVAILABLE",
+            "reason": "가격 이력에 date/close 계열 필드가 없습니다.",
+            "start_date": year_start,
+        }
+
+    work = frame[[date_column, price_column]].copy()
+    work[date_column] = pd.to_datetime(work[date_column], errors="coerce")
+    work[price_column] = pd.to_numeric(work[price_column], errors="coerce")
+    work = work.dropna(subset=[date_column, price_column]).sort_values(date_column)
+    work = work[work[price_column] > 0]
+    if len(work.index) < 2:
+        return {
+            "status": "UNAVAILABLE",
+            "reason": "YTD 계산에 필요한 시작/현재 가격이 부족합니다.",
+            "start_date": year_start,
+        }
+
+    first = work.iloc[0]
+    latest = work.iloc[-1]
+    start_price = float(first[price_column])
+    latest_price = float(latest[price_column])
+    return {
+        "status": "OK",
+        "return_pct": ((latest_price / start_price) - 1.0) * 100.0,
+        "start_date": _iso_date_label(first[date_column]),
+        "end_date": _iso_date_label(latest[date_column]),
+        "start_price": start_price,
+        "latest_price": latest_price,
+        "basis": "DB daily adjusted close",
+    }
+
+def _market_mover_fundamental_snapshot(
+    symbol: str,
+    *,
+    as_of_date: str,
+    freq: str,
+    latest_price: float | None,
+    fundamental_snapshot_loader: Callable[..., pd.DataFrame],
+) -> dict[str, Any]:
+    try:
+        frame = fundamental_snapshot_loader(symbols=symbol, as_of_date=as_of_date, freq=freq)
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "freq": freq, "reason": f"재무제표 snapshot 조회 실패: {exc}"}
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return {"status": "UNAVAILABLE", "freq": freq, "reason": f"최신 {freq} 재무제표 snapshot row가 없습니다."}
+
+    work = frame.copy()
+    if "period_end" in work.columns:
+        work["period_end"] = pd.to_datetime(work["period_end"], errors="coerce")
+        work = work.sort_values("period_end")
+    row = dict(work.iloc[-1])
+    net_income = _coerce_optional_float(row.get("net_income"))
+    shares = _coerce_optional_float(row.get("shares_outstanding"))
+    eps = (net_income / shares) if net_income is not None and shares and shares > 0 else None
+    per = (latest_price / eps) if latest_price is not None and eps and eps > 0 else None
+    if net_income is None and eps is None and per is None:
+        return {
+            "status": "UNAVAILABLE",
+            "freq": freq,
+            "period_end": _iso_date_label(row.get("period_end")),
+            "reason": "net_income / shares_outstanding 필드가 부족합니다.",
+        }
+    return {
+        "status": "OK",
+        "freq": freq,
+        "period_end": _iso_date_label(row.get("period_end")),
+        "net_income": net_income,
+        "shares_outstanding": shares,
+        "eps": eps,
+        "per": per,
+        "basis": f"latest {freq} DB fundamental snapshot",
+    }
+
+def build_market_mover_research_snapshot(
+    *,
+    mover: dict[str, Any],
+    as_of_date: Any | None = None,
+    price_history_loader: Callable[..., pd.DataFrame] | None = None,
+    fundamental_snapshot_loader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    """Build DB-backed context-only fundamentals for a selected Market Movers row."""
+
+    row = dict(mover or {})
+    symbol = _clean_optional_text(row.get("Symbol") or row.get("symbol"), uppercase=True)
+    effective_as_of = _research_as_of_date(as_of_date)
+    if not symbol:
+        return {
+            "schema_version": "market_mover_research_snapshot_v1",
+            "status": "NO_SYMBOL",
+            "symbol": None,
+            "as_of_date": effective_as_of,
+            "current_market_cap": {"status": "UNAVAILABLE", "reason": "선택 symbol이 없습니다."},
+            "market_cap_change": {"status": "UNAVAILABLE", "reason": "선택 symbol이 없습니다."},
+            "ytd_return": {"status": "UNAVAILABLE", "reason": "선택 symbol이 없습니다."},
+            "annual_financials": {"status": "UNAVAILABLE", "freq": "annual", "reason": "선택 symbol이 없습니다."},
+            "quarterly_financials": {"status": "UNAVAILABLE", "freq": "quarterly", "reason": "선택 symbol이 없습니다."},
+            "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
+        }
+
+    current_market_cap = _coerce_optional_float(row.get("Market Cap") or row.get("market_cap"))
+    current_market_cap_item = (
+        {"status": "OK", "value": current_market_cap, "basis": "latest asset_profile / mover row"}
+        if current_market_cap is not None
+        else {"status": "UNAVAILABLE", "reason": "현재 시총이 선택 row에 없습니다."}
+    )
+    price_loader = price_history_loader or load_price_history
+    fundamental_loader = fundamental_snapshot_loader or load_fundamental_snapshot
+    ytd_return = _market_mover_ytd_snapshot(symbol, as_of_date=effective_as_of, price_history_loader=price_loader)
+    latest_price = _coerce_optional_float(ytd_return.get("latest_price"))
+    return {
+        "schema_version": "market_mover_research_snapshot_v1",
+        "status": "READY",
+        "symbol": symbol,
+        "as_of_date": effective_as_of,
+        "current_market_cap": current_market_cap_item,
+        "market_cap_change": _market_cap_change_snapshot(row),
+        "ytd_return": ytd_return,
+        "annual_financials": _market_mover_fundamental_snapshot(
+            symbol,
+            as_of_date=effective_as_of,
+            freq="annual",
+            latest_price=latest_price,
+            fundamental_snapshot_loader=fundamental_loader,
+        ),
+        "quarterly_financials": _market_mover_fundamental_snapshot(
+            symbol,
+            as_of_date=effective_as_of,
+            freq="quarterly",
+            latest_price=latest_price,
+            fundamental_snapshot_loader=fundamental_loader,
+        ),
+        "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
+    }
 
 def _metadata_timestamp(value: Any) -> str | None:
     if value is None:
@@ -835,6 +1037,7 @@ def fetch_market_mover_compact_metadata(
 __all__ = [
     "build_market_mover_catalyst_links",
     "build_market_mover_metadata_not_requested_state",
+    "build_market_mover_research_snapshot",
     "build_market_mover_metadata_status_strip",
     "build_market_mover_why_it_moved_read_model",
     "fetch_market_mover_compact_metadata",

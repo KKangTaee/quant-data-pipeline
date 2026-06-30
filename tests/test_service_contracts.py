@@ -7084,8 +7084,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_market_mover_investigation_pane", helper_source)
         self.assertIn("render_market_mover_investigation_pane", component_source)
         self.assertIn("수동 조사 패널", component_source)
-        self.assertIn("선택 종목 원천 detail 표", helper_source)
+        self.assertNotIn("선택 종목 원천 detail 표", helper_source)
+        self.assertIn("build_market_mover_research_snapshot_model", helper_source)
+        self.assertIn("render_market_mover_research_snapshot", helper_source)
+        self.assertIn("뉴스·공시 메타데이터 조회", helper_source)
+        self.assertIn("아래 탭에 채웁니다", helper_source)
         self.assertIn("ov-mm-investigation-pane", common_source)
+        self.assertIn("ov-mm-research-snapshot", common_source)
 
     def test_market_movers_redesign_v2_phase6_uses_compact_data_trust_strip(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
@@ -9371,6 +9376,117 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(facts["현재 거래량"]["value"], "1.2M")
         self.assertIn("not a trading signal", model["boundary_note"])
 
+    def test_market_mover_research_snapshot_reads_existing_db_loaders(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            self.assertEqual(kwargs["start"], "2026-01-01")
+            self.assertEqual(kwargs["end"], "2026-06-30")
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0, "close": 101.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 125.0, "close": 126.0},
+                ]
+            )
+
+        def fake_fundamental_snapshot_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            self.assertEqual(kwargs["as_of_date"], "2026-06-30")
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "net_income": 1_200_000_000,
+                            "shares_outstanding": 400_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-03-31"),
+                        "net_income": 300_000_000,
+                        "shares_outstanding": 400_000_000,
+                    }
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            fundamental_snapshot_loader=fake_fundamental_snapshot_loader,
+        )
+
+        self.assertEqual(model["schema_version"], "market_mover_research_snapshot_v1")
+        self.assertEqual(model["current_market_cap"]["value"], 5_500_000_000)
+        self.assertEqual(model["market_cap_change"]["status"], "UNAVAILABLE")
+        self.assertAlmostEqual(model["ytd_return"]["return_pct"], 25.0)
+        self.assertEqual(model["ytd_return"]["start_date"], "2026-01-02")
+        self.assertEqual(model["ytd_return"]["end_date"], "2026-06-30")
+        self.assertAlmostEqual(model["annual_financials"]["eps"], 3.0)
+        self.assertAlmostEqual(model["annual_financials"]["per"], 41.666666666666664)
+        self.assertEqual(model["annual_financials"]["net_income"], 1_200_000_000)
+        self.assertAlmostEqual(model["quarterly_financials"]["eps"], 0.75)
+        self.assertEqual(model["quarterly_financials"]["net_income"], 300_000_000)
+        self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_mover_research_snapshot_model_formats_korean_metrics(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model
+
+        model = build_market_mover_research_snapshot_model(
+            {
+                "read_model": {
+                    "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Market Cap": 5_500_000_000},
+                    "context": {"Coverage": "S&P 500", "Period": "Daily"},
+                    "movement": {},
+                }
+            },
+            research_snapshot={
+                "current_market_cap": {"status": "OK", "value": 5_500_000_000, "basis": "asset_profile latest"},
+                "market_cap_change": {"status": "UNAVAILABLE", "reason": "과거 시총 snapshot 없음"},
+                "ytd_return": {
+                    "status": "OK",
+                    "return_pct": 25.0,
+                    "start_date": "2026-01-02",
+                    "end_date": "2026-06-30",
+                },
+                "annual_financials": {
+                    "status": "OK",
+                    "period_end": "2025-12-31",
+                    "eps": 3.0,
+                    "per": 41.666666666666664,
+                    "net_income": 1_200_000_000,
+                },
+                "quarterly_financials": {
+                    "status": "OK",
+                    "period_end": "2026-03-31",
+                    "eps": 0.75,
+                    "per": 166.66666666666666,
+                    "net_income": 300_000_000,
+                },
+                "boundary_note": "Context-only fundamentals snapshot.",
+            },
+        )
+
+        self.assertEqual(model["schema_version"], "market_mover_research_metrics_v1")
+        items = {item["label"]: item for item in model["items"]}
+        self.assertEqual(items["현재 시총"]["value"], "55.0억 달러")
+        self.assertEqual(items["시총 변화"]["value"], "계산 불가")
+        self.assertEqual(items["올해 수익률"]["value"], "+25.00%")
+        self.assertIn("PER 41.67x", items["PER / EPS"]["value"])
+        self.assertIn("EPS $3.00", items["PER / EPS"]["value"])
+        self.assertIn("연간 12.0억 달러", items["당기순이익"]["value"])
+        self.assertIn("분기 3.0억 달러", items["당기순이익"]["value"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+
     def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model
 
@@ -9565,10 +9681,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("build_market_mover_metadata_status_strip", source)
         self.assertIn("overview_market_mover_detail_selection", source)
         self.assertIn("조사 단서", source)
+        self.assertIn("기본 지표", source)
         self.assertIn("뉴스 메타데이터", source)
         self.assertIn("한국어 뉴스", source)
         self.assertIn("SEC 공시", source)
-        self.assertIn("간단 메타데이터 조회", source)
+        self.assertIn("뉴스·공시 메타데이터 조회", source)
+        self.assertNotIn("선택 종목 원천 detail 표", source)
+        self.assertNotIn("간단 메타데이터 조회", source)
         self.assertNotIn("catalyst score", source.lower())
         self.assertNotIn("confidence score", source.lower())
 

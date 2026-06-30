@@ -4970,6 +4970,107 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  border-radius: var(--ov-mi-radius-card);
 	  background: rgba(248,250,252,0.78);
 	}
+	.ov-mm-research-snapshot {
+	  margin: 0.42rem 0 0.72rem 0;
+	  padding: 0.62rem;
+	  border: 1px solid var(--ov-mi-border-faint);
+	  border-radius: var(--ov-mi-radius-panel);
+	  background: var(--ov-mi-color-surface);
+	}
+	.ov-mm-research-head {
+	  display: grid;
+	  grid-template-columns: minmax(0, 1fr) auto;
+	  gap: var(--ov-mi-gap-md);
+	  align-items: start;
+	  margin-bottom: 0.48rem;
+	}
+	.ov-mm-research-kicker {
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.12;
+	  text-transform: uppercase;
+	}
+	.ov-mm-research-title {
+	  margin-top: 0.1rem;
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-title);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.14;
+	}
+	.ov-mm-research-subtitle,
+	.ov-mm-research-detail,
+	.ov-mm-research-boundary {
+	  color: var(--ov-mi-color-text-subtle);
+	  font-size: var(--ov-mi-font-caption);
+	  line-height: 1.24;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-subtitle {
+	  margin-top: 0.12rem;
+	}
+	.ov-mm-research-asof {
+	  display: inline-flex;
+	  align-items: center;
+	  min-height: 1.42rem;
+	  padding: 0.14rem 0.46rem;
+	  border: 1px solid var(--ov-mi-border-control);
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: var(--ov-mi-fill-control);
+	  color: var(--ov-mi-color-text-subtle);
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.1;
+	  white-space: nowrap;
+	}
+	.ov-mm-research-grid {
+	  display: grid;
+	  grid-template-columns: repeat(5, minmax(0, 1fr));
+	  border-top: 1px solid var(--ov-mi-border-faint);
+	  border-bottom: 1px solid var(--ov-mi-border-faint);
+	}
+	.ov-mm-research-item {
+	  min-width: 0;
+	  padding: 0.46rem 0.52rem;
+	  border-left: 1px solid var(--ov-mi-border-faint);
+	  border-top: 3px solid color-mix(in srgb, var(--ov-research-tone, var(--ov-mi-color-neutral)) 78%, transparent);
+	  background: rgba(248,250,252,0.58);
+	}
+	.ov-mm-research-item:first-child {
+	  border-left: 0;
+	}
+	.ov-mm-research-item.is-unavailable {
+	  border-top-color: color-mix(in srgb, var(--ov-mi-color-neutral) 38%, transparent);
+	  background: rgba(248,250,252,0.34);
+	}
+	.ov-mm-research-label {
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.12;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-value {
+	  margin-top: 0.12rem;
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-body);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.14;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-item.is-unavailable .ov-mm-research-value {
+	  color: var(--ov-mi-color-text-muted);
+	}
+	.ov-mm-research-detail {
+	  margin-top: 0.18rem;
+	}
+	.ov-mm-research-boundary {
+	  margin-top: 0.48rem;
+	  padding: 0.38rem 0.46rem;
+	  border: 1px solid var(--ov-mi-border-faint);
+	  border-radius: var(--ov-mi-radius-card);
+	  background: rgba(248,250,252,0.74);
+	}
 	@media (max-width: 760px) {
 	  .ov-mm-status-bar {
 	    align-items: flex-start;
@@ -4988,7 +5089,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  .ov-mm-empty-state,
 	  .ov-mm-board-head,
 	  .ov-mm-chart-head,
-	  .ov-mm-investigation-head {
+	  .ov-mm-investigation-head,
+	  .ov-mm-research-head {
 	    grid-template-columns: 1fr;
 	  }
 	  .ov-mm-command-grid,
@@ -5014,11 +5116,16 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  .ov-mm-investigation-facts {
 	    grid-template-columns: repeat(2, minmax(0, 1fr));
 	  }
+	  .ov-mm-research-grid {
+	    grid-template-columns: 1fr;
+	  }
 	  .ov-mm-chart-fact,
+	  .ov-mm-research-item,
 	  .ov-mm-chart-fact:first-child {
 	    border-left: 0;
 	    border-top: 1px solid var(--ov-mi-border-faint);
 	  }
+	  .ov-mm-research-item:first-child,
 	  .ov-mm-chart-fact:first-child {
 	    border-top: 0;
 	  }

@@ -21,6 +21,7 @@ from app.jobs.overview_actions import (
 from app.services.overview.market_movers import build_market_movers_coverage_trust_model
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_status_strip,
+    build_market_mover_research_snapshot,
     build_market_mover_why_it_moved_read_model,
     fetch_market_mover_compact_metadata,
 )
@@ -53,6 +54,7 @@ from app.web.overview.components.market_movers import (
     render_market_mover_board,
     render_market_mover_chart_workspace,
     render_market_mover_investigation_pane,
+    render_market_mover_research_snapshot,
     render_market_movers_data_trust_strip,
     render_market_movers_coverage_trust,
     render_market_movers_command_strip,
@@ -2104,6 +2106,173 @@ def build_market_mover_investigation_pane_model(detail_model: dict[str, Any]) ->
     }
 
 
+def _format_korean_money(value: Any, *, currency: str = "달러") -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    amount = float(numeric)
+    sign = "-" if amount < 0 else ""
+    absolute = abs(amount)
+    if absolute >= 1_000_000_000_000:
+        return f"{sign}{absolute / 1_000_000_000_000:.1f}조 {currency}"
+    if absolute >= 100_000_000:
+        return f"{sign}{absolute / 100_000_000:.1f}억 {currency}"
+    return f"{sign}{absolute:,.0f} {currency}"
+
+
+def _format_per(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):.2f}x"
+
+
+def _format_eps(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"${float(numeric):,.2f}"
+
+
+def _research_metric_item(
+    label: str,
+    value: str,
+    detail: str,
+    *,
+    available: bool,
+    tone: str = "neutral",
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "value": value if value else "계산 불가",
+        "detail": detail,
+        "available": bool(available),
+        "tone": tone,
+    }
+
+
+def _financial_period_label(item: dict[str, Any], fallback: str) -> str:
+    return str(item.get("period_end") or fallback)
+
+
+def _per_eps_line(item: dict[str, Any], prefix: str) -> str | None:
+    if str(item.get("status") or "").upper() != "OK":
+        return None
+    parts: list[str] = []
+    per = _format_per(item.get("per"))
+    eps = _format_eps(item.get("eps"))
+    if per != "-":
+        parts.append(f"PER {per}")
+    if eps != "-":
+        parts.append(f"EPS {eps}")
+    if not parts:
+        return None
+    return f"{prefix} " + " · ".join(parts)
+
+
+def build_market_mover_research_snapshot_model(
+    detail_model: dict[str, Any],
+    *,
+    research_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    read_model = dict(detail_model.get("read_model") or {})
+    identity = dict(read_model.get("identity") or {})
+    context = dict(read_model.get("context") or {})
+    symbol = str(identity.get("Symbol") or "-").strip().upper() or "-"
+    mover = dict(detail_model.get("selected", {}).get("mover") or {})
+    if research_snapshot is None:
+        research_snapshot = build_market_mover_research_snapshot(
+            mover={
+                **mover,
+                "Symbol": symbol,
+                "Market Cap": identity.get("Market Cap") or mover.get("Market Cap"),
+            }
+        )
+    snapshot = dict(research_snapshot or {})
+    current_market_cap = dict(snapshot.get("current_market_cap") or {})
+    market_cap_change = dict(snapshot.get("market_cap_change") or {})
+    ytd_return = dict(snapshot.get("ytd_return") or {})
+    annual = dict(snapshot.get("annual_financials") or {})
+    quarterly = dict(snapshot.get("quarterly_financials") or {})
+
+    current_available = str(current_market_cap.get("status") or "").upper() == "OK"
+    market_change_available = str(market_cap_change.get("status") or "").upper() == "OK"
+    ytd_available = str(ytd_return.get("status") or "").upper() == "OK"
+
+    per_eps_primary = _per_eps_line(annual, "연간")
+    per_eps_secondary = _per_eps_line(quarterly, "분기")
+    per_eps_parts = [part for part in [per_eps_primary, per_eps_secondary] if part]
+    per_eps_available = bool(per_eps_parts)
+    annual_income = annual.get("net_income") if str(annual.get("status") or "").upper() == "OK" else None
+    quarterly_income = quarterly.get("net_income") if str(quarterly.get("status") or "").upper() == "OK" else None
+    income_parts: list[str] = []
+    if annual_income is not None:
+        income_parts.append(f"연간 {_format_korean_money(annual_income)}")
+    if quarterly_income is not None:
+        income_parts.append(f"분기 {_format_korean_money(quarterly_income)}")
+
+    items = [
+        _research_metric_item(
+            "현재 시총",
+            _format_korean_money(current_market_cap.get("value")) if current_available else "계산 불가",
+            str(current_market_cap.get("basis") or current_market_cap.get("reason") or "현재 asset profile 기준"),
+            available=current_available,
+            tone="positive" if current_available else "neutral",
+        ),
+        _research_metric_item(
+            "시총 변화",
+            _format_signed(market_cap_change.get("change_pct")) if market_change_available else "계산 불가",
+            str(market_cap_change.get("basis") or market_cap_change.get("reason") or "과거 시총 snapshot 필요"),
+            available=market_change_available,
+            tone="positive" if market_change_available else "neutral",
+        ),
+        _research_metric_item(
+            "올해 수익률",
+            _format_signed(ytd_return.get("return_pct")) if ytd_available else "계산 불가",
+            (
+                f"{ytd_return.get('start_date')}부터 {ytd_return.get('end_date')}까지 · {ytd_return.get('basis')}"
+                if ytd_available
+                else str(ytd_return.get("reason") or "올해 가격 이력 필요")
+            ),
+            available=ytd_available,
+            tone="positive" if ytd_available else "neutral",
+        ),
+        _research_metric_item(
+            "PER / EPS",
+            " · ".join(per_eps_parts) if per_eps_available else "계산 불가",
+            (
+                f"연간 {_financial_period_label(annual, '-')} · 분기 {_financial_period_label(quarterly, '-')}"
+                if per_eps_available
+                else str(annual.get("reason") or quarterly.get("reason") or "재무제표 net_income / shares_outstanding 필요")
+            ),
+            available=per_eps_available,
+            tone="neutral",
+        ),
+        _research_metric_item(
+            "당기순이익",
+            " · ".join(income_parts) if income_parts else "계산 불가",
+            (
+                f"연간 {_financial_period_label(annual, '-')} · 분기 {_financial_period_label(quarterly, '-')}"
+                if income_parts
+                else str(annual.get("reason") or quarterly.get("reason") or "재무제표 snapshot 필요")
+            ),
+            available=bool(income_parts),
+            tone="neutral",
+        ),
+    ]
+    return {
+        "schema_version": "market_mover_research_metrics_v1",
+        "title": "기본 지표",
+        "subtitle": f"{symbol} · {context.get('Coverage') or '-'} · {context.get('Period') or '-'}",
+        "as_of_label": str(snapshot.get("as_of_date") or "현재 선택 기준"),
+        "items": items,
+        "boundary_note": str(
+            snapshot.get("boundary_note")
+            or "Context-only fundamentals snapshot; no trading signal or recommendation is produced."
+        ),
+    }
+
+
 def _market_mover_metadata_session_key(read_model: dict[str, Any]) -> str:
     identity = dict(read_model.get("identity") or {})
     context = dict(read_model.get("context") or {})
@@ -2240,55 +2409,61 @@ def _render_market_mover_why_it_moved_panel(
         detail_model["status_strip"] = build_market_mover_metadata_status_strip(stored_metadata)
 
     render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
-    with st.expander("선택 종목 원천 detail 표", expanded=False):
-        summary_cols = st.columns([1.0, 1.0, 1.1], gap="medium")
-        with summary_cols[0]:
-            _render_market_mover_detail_table("종목", detail_model["identity_rows"])
-        with summary_cols[1]:
-            _render_market_mover_detail_table("랭킹 맥락", detail_model["context_rows"])
-        with summary_cols[2]:
-            _render_market_mover_detail_table("가격 / 거래량", detail_model["movement_rows"])
-        _render_market_mover_detail_table("같은 섹터 맥락", detail_model["peer_context"])
-
     identity = dict(read_model.get("identity") or {})
     symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()
-    if st.button(
-        "간단 메타데이터 조회",
-        key=f"{metadata_key}__fetch",
-        help="현재 선택 종목 1개에 대해 세션 전용 compact news / 한국어 뉴스 / SEC metadata만 조회합니다.",
-    ):
-        with st.spinner(f"{symbol} compact metadata를 조회하는 중입니다..."):
-            st.session_state[metadata_key] = fetch_market_mover_compact_metadata(
-                symbol,
-                name=identity.get("Name"),
-                max_news=3,
-                max_korean_news=3,
-                max_filings=3,
-            )
-        st.rerun()
 
-    render_market_movers_section_divider("조사 단서", "뉴스 메타데이터, SEC 공시, 외부 검색 시작점")
+    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스 메타데이터, SEC 공시, 외부 검색 시작점")
+    action_cols = st.columns([0.28, 0.72], gap="medium")
+    with action_cols[0]:
+        if st.button(
+            "뉴스·공시 메타데이터 조회",
+            key=f"{metadata_key}__fetch",
+            help="현재 선택 종목 1개에 대해 세션 전용 뉴스 / 한국어 뉴스 / SEC metadata만 조회합니다.",
+        ):
+            with st.spinner(f"{symbol} compact metadata를 조회하는 중입니다..."):
+                st.session_state[metadata_key] = fetch_market_mover_compact_metadata(
+                    symbol,
+                    name=identity.get("Name"),
+                    max_news=3,
+                    max_korean_news=3,
+                    max_filings=3,
+                )
+            st.rerun()
+    with action_cols[1]:
+        st.caption("버튼을 누르면 아래 탭에 채웁니다: 뉴스 메타데이터, 한국어 뉴스, SEC 공시. 원문 본문은 저장하지 않습니다.")
+
     metadata = dict(read_model.get("metadata") or {})
-    clue_tabs = st.tabs(["뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])
+    research_snapshot = build_market_mover_research_snapshot(
+        mover={
+            **dict(selected.get("mover") or {}),
+            "Symbol": symbol,
+            "Market Cap": identity.get("Market Cap") or dict(selected.get("mover") or {}).get("Market Cap"),
+        }
+    )
+    clue_tabs = st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])
     with clue_tabs[0]:
+        render_market_mover_research_snapshot(
+            build_market_mover_research_snapshot_model(detail_model, research_snapshot=research_snapshot)
+        )
+    with clue_tabs[1]:
         _render_market_mover_metadata_table(
             metadata.get("news"),
             ["Title", "Source", "Published At", "Open"],
             "뉴스 메타데이터는 아직 조회하지 않았습니다. 필요할 때 현재 선택 종목만 조회하세요.",
         )
-    with clue_tabs[1]:
+    with clue_tabs[2]:
         _render_market_mover_metadata_table(
             metadata.get("korean_news"),
             ["Title", "Source", "Published At", "Snippet", "Open"],
             "한국어 뉴스 메타데이터는 아직 조회하지 않았습니다. 원문 기사 본문은 수집하거나 저장하지 않습니다.",
         )
-    with clue_tabs[2]:
+    with clue_tabs[3]:
         _render_market_mover_metadata_table(
             metadata.get("sec_filings"),
             ["Form", "Filing Date", "Title", "Open"],
             "SEC 공시 메타데이터는 아직 조회하지 않았습니다. 공시 원문은 공식 링크에서 직접 확인합니다.",
         )
-    with clue_tabs[3]:
+    with clue_tabs[4]:
         table_model = _market_mover_external_search_table_model(detail_model["links"])
         st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
         st.dataframe(

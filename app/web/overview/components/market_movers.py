@@ -299,6 +299,41 @@ def render_market_mover_investigation_pane(model: dict[str, Any]) -> None:
     )
 
 
+def _market_mover_research_items_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items:
+        tone_color = escape(_overview_tone_color(item.get("tone")))
+        state_class = "is-available" if item.get("available") else "is-unavailable"
+        html.append(
+            f'<article class="ov-mm-research-item {state_class}" style="--ov-research-tone:{tone_color};">'
+            f'<div class="ov-mm-research-label">{escape(_display_value(item.get("label")))}</div>'
+            f'<div class="ov-mm-research-value">{escape(_display_value(item.get("value")))}</div>'
+            f'<div class="ov-mm-research-detail">{escape(_display_value(item.get("detail")))}</div>'
+            "</article>"
+        )
+    return "".join(html)
+
+
+def render_market_mover_research_snapshot(model: dict[str, Any]) -> None:
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-research-snapshot">
+  <div class="ov-mm-research-head">
+    <div>
+      <div class="ov-mm-research-kicker">Research Snapshot</div>
+      <div class="ov-mm-research-title">{escape(_display_value(model.get("title")))}</div>
+      <div class="ov-mm-research-subtitle">{escape(_display_value(model.get("subtitle")))}</div>
+    </div>
+    <span class="ov-mm-research-asof">기준 {escape(_display_value(model.get("as_of_label")))}</span>
+  </div>
+  <div class="ov-mm-research-grid">{_market_mover_research_items_html(list(model.get("items") or []))}</div>
+  <div class="ov-mm-research-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
 def _data_trust_strip_items_html(items: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in items:
