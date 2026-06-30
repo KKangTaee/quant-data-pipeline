@@ -8330,3 +8330,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 단순 성과 상위 조합이 아니라 current promotion policy까지 통과하는 GTAA 후보를 최신 DB/runtime으로 확인하고, Backtest UI preset에서 재현 가능하게 해야 함.
 - Analysis result: 기존 `GTAA SPY Low-MDD Style Top-3`는 성과 조건은 통과했지만 ADV20 liquidity evidence가 없거나 기준에 살짝 못 미쳐 current gate에서는 부족했다. GTAA runtime에 ADV20 evidence를 연결한 뒤 `GTAA SPY Low-MDD Style Top-2 ADV20`이 `24.08% / -9.99%`, SPY `13.36% / -20.61%`, `real_money_candidate / paper_probation / small_capital_ready`를 달성했다.
 - Follow-up: preset과 보고서는 등록했다. Practical Validation / Final Review 선정은 사용자가 원할 때 별도 후속 단계로 진행한다.
+
+### 2026-06-30 - Backtest 첫 화면의 보조 설명을 제거하고 stage tabs를 맞춘다
+
+- User request: Backtest 사용 안내, strategy capability snapshot, 하단 전략 개발 참고를 제거하고 3개 stage tab을 Overview처럼 한글 / 영어 방식으로 바꿔 달라고 요청함.
+- Interpreted goal: 실행 / 후보 생성 흐름 자체는 유지하되 첫 화면에서 보조 설명과 연구 참고 gravity를 줄이고, stage selector의 시각 문법을 Overview primary tab과 맞춘다.
+- Analysis result: `st.segmented_control` 기반 selector와 안내 / snapshot / reference board가 기본 render path에 남아 있었다. `st.pills` Korean-first labels와 scoped CSS로 교체하고, 불필요한 보조 표면 호출을 제거하는 것이 가장 작은 안전한 변경이었다.
+- Follow-up: V1 완료. 다음 후보는 Latest Run / 결과 영역의 summary-first polish이며, registry / saved setup / validation / final review semantics는 바꾸지 않았다.

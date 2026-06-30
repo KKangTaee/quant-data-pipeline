@@ -5404,3 +5404,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
   - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
   - GTAA runtime에 ADV20 liquidity evidence를 연결했고, preset 선택 시 핵심 파라미터가 자동 적용되도록 했다. 상세 결과는 `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`를 보면 된다.
+- Backtest Entry Cleanup Tabs V1 2026-06-30:
+  - `.aiworkspace/note/finance/tasks/active/backtest-entry-cleanup-tabs-v1-20260630/`에서 Backtest 첫 화면 안내 / strategy capability helper / 하단 연구 참고 보드를 기본 render path에서 제거했다.
+  - 3단계 workflow selector는 Overview와 같은 `st.pills` 기반 Korean-first text tab + red underline으로 맞췄다.
+  - 검증은 focused RED/GREEN, Boundary / Backtest 관련 43개 unittest, py_compile, `git diff --check`, Browser QA screenshot으로 완료했다.

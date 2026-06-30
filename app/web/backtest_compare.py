@@ -4404,7 +4404,6 @@ def _render_strategy_compare_workspace() -> None:
                         )
                     st.caption(f"현재 compare 실행 variant: `{quality_compare_strategy_name}`")
                     st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
-                    _render_strategy_capability_snapshot(quality_compare_strategy_name)
                     quality_compare_settings_container = st.container()
 
             if "Value" in selected_strategies:
@@ -4423,7 +4422,6 @@ def _render_strategy_compare_workspace() -> None:
                         )
                     st.caption(f"현재 compare 실행 variant: `{value_compare_strategy_name}`")
                     st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
-                    _render_strategy_capability_snapshot(value_compare_strategy_name)
                     value_compare_settings_container = st.container()
 
             if "Quality + Value" in selected_strategies:
@@ -4442,13 +4440,11 @@ def _render_strategy_compare_workspace() -> None:
                         )
                     st.caption(f"현재 compare 실행 variant: `{quality_value_compare_strategy_name}`")
                     st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
-                    _render_strategy_capability_snapshot(quality_value_compare_strategy_name)
                     quality_value_compare_settings_container = st.container()
 
             if "Equal Weight" in selected_strategies:
                 with st.container(border=True):
                     st.markdown("##### Equal Weight")
-                    _render_strategy_capability_snapshot("Equal Weight")
                     (
                         compare_eq_universe_mode,
                         compare_eq_preset_name,
@@ -4498,7 +4494,6 @@ def _render_strategy_compare_workspace() -> None:
             if "GTAA" in selected_strategies:
                 with st.container(border=True):
                     st.markdown("##### GTAA")
-                    _render_strategy_capability_snapshot("GTAA")
                     (
                         compare_gtaa_universe_mode,
                         compare_gtaa_preset_name,
@@ -4623,7 +4618,6 @@ def _render_strategy_compare_workspace() -> None:
             if "Global Relative Strength" in selected_strategies:
                 with st.container(border=True):
                     st.markdown("##### Global Relative Strength")
-                    _render_strategy_capability_snapshot("Global Relative Strength")
                     (
                         compare_grs_universe_mode,
                         compare_grs_preset_name,
@@ -4717,7 +4711,6 @@ def _render_strategy_compare_workspace() -> None:
             if "Risk Parity Trend" in selected_strategies:
                 with st.container(border=True):
                     st.markdown("##### Risk Parity Trend")
-                    _render_strategy_capability_snapshot("Risk Parity Trend")
                     _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
                     compare_strategy_overrides["Risk Parity Trend"] = {
                         "rebalance_interval": int(
@@ -4783,7 +4776,6 @@ def _render_strategy_compare_workspace() -> None:
             if "Dual Momentum" in selected_strategies:
                 with st.container(border=True):
                     st.markdown("##### Dual Momentum")
-                    _render_strategy_capability_snapshot("Dual Momentum")
                     _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
                     compare_strategy_overrides["Dual Momentum"] = {
                         "top": int(

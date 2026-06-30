@@ -3906,6 +3906,32 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("app.web.backtest_page", imported_modules)
         self.assertNotIn("app.web.pages.backtest", imported_modules)
 
+    def test_backtest_page_uses_compact_korean_english_workflow_tabs(self) -> None:
+        source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+        selector_body = source[source.index("def _render_backtest_panel_selector"):]
+        selector_body = selector_body[: selector_body.index("def render_backtest_tab")]
+
+        self.assertIn("st.pills(", selector_body)
+        self.assertIn("format_func=_backtest_workflow_stage_label", selector_body)
+        self.assertIn("후보 분석 · Backtest Analysis", source)
+        self.assertIn("실전 검증 · Practical Validation", source)
+        self.assertIn("최종 검토 · Final Review", source)
+        self.assertIn("stBaseButton-pillsActive", source)
+        self.assertIn("#ff4b4b", source)
+        self.assertNotIn("segmented_control", selector_body)
+        self.assertNotIn("st.radio(", selector_body)
+
+    def test_backtest_page_removes_unused_guide_snapshot_and_reference_panels(self) -> None:
+        page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+        analysis_source = Path("app/web/backtest_analysis.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Backtest 사용 안내", page_source)
+        self.assertNotIn("Strategy Capability Snapshot", common_source)
+        self.assertNotIn("_render_strategy_capability_snapshot", common_source)
+        self.assertNotIn("전략 개발 참고", analysis_source)
+        self.assertNotIn("backtest_analysis_show_research_reference_panels", analysis_source)
+
     def test_ingestion_console_module_owns_render_entrypoint(self) -> None:
         from app.web.ingestion_console import render_ingestion_page
 

@@ -3163,18 +3163,6 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
         }
     ]
 
-def _render_strategy_capability_snapshot(strategy_name: str | None) -> None:
-    rows = _strategy_capability_rows(strategy_name)
-    if not rows:
-        return
-
-    with st.expander("Strategy Capability Snapshot", expanded=False):
-        st.caption(
-            "Phase 28 기준으로 이 전략이 어떤 cadence, data trust, promotion policy / Guardrail, "
-            "history/replay 지원 범위를 갖는지 빠르게 확인하는 표입니다."
-        )
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
 def _set_single_strategy_target_from_strategy_key(strategy_key: str | None) -> None:
     strategy_choice, strategy_variant = strategy_key_to_selection(strategy_key)
     if strategy_choice is None:

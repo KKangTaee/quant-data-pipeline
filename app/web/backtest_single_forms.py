@@ -16,7 +16,6 @@ def _render_single_strategy_family_form(strategy_choice: str) -> None:
         key=variant_key,
     )
     concrete_strategy_name = resolve_concrete_strategy_display_name(strategy_choice, selected_variant)
-    _render_strategy_capability_snapshot(concrete_strategy_name)
 
     if concrete_strategy_name == "Quality Snapshot":
         _render_quality_snapshot_form()

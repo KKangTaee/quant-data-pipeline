@@ -37,55 +37,98 @@ from app.web.backtest_workflow_routes import (
 )
 
 
+BACKTEST_WORKFLOW_STAGE_DISPLAY = {
+    BACKTEST_STAGE_ANALYSIS: "후보 분석 · Backtest Analysis",
+    BACKTEST_STAGE_PRACTICAL_VALIDATION: "실전 검증 · Practical Validation",
+    BACKTEST_STAGE_FINAL_REVIEW: "최종 검토 · Final Review",
+}
+
+
+def _backtest_workflow_stage_label(stage: str) -> str:
+    return BACKTEST_WORKFLOW_STAGE_DISPLAY.get(stage, str(stage))
+
+
+def _backtest_workflow_nav_css() -> str:
+    return (
+        """
+<style>
+/* bt-primary-nav: scoped override for the Backtest workflow st.pills selector. */
+.st-key-backtest_workflow_active_panel [data-testid="stButtonGroup"] {
+  margin: 0.42rem 0 1.08rem 0;
+  padding: 0;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.24);
+}
+.st-key-backtest_workflow_active_panel div[data-baseweb="button-group"] {
+  gap: 1.45rem;
+  align-items: flex-end;
+}
+.st-key-backtest_workflow_active_panel [data-testid="stBaseButton-pills"],
+.st-key-backtest_workflow_active_panel [data-testid="stBaseButton-pillsActive"] {
+  min-height: 2.15rem;
+  padding: 0 0 0.62rem 0;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: rgba(100, 116, 139, 0.95);
+  color: color-mix(in srgb, var(--text-color) 70%, transparent);
+  box-shadow: none !important;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.st-key-backtest_workflow_active_panel [data-testid="stBaseButton-pillsActive"] {
+  border-bottom-color: #ff4b4b !important;
+  background: transparent !important;
+  color: #ff4b4b !important;
+  box-shadow: none !important;
+}
+.st-key-backtest_workflow_active_panel [data-testid="stBaseButton-pills"]:hover {
+  color: #ff4b4b;
+  background: transparent !important;
+}
+@media (max-width: 760px) {
+  .st-key-backtest_workflow_active_panel [data-testid="stBaseButton-pills"],
+  .st-key-backtest_workflow_active_panel [data-testid="stBaseButton-pillsActive"] {
+    min-height: 2.1rem;
+    padding-bottom: 0.55rem;
+  }
+}
+</style>
+"""
+    )
+
+
 # Render the Backtest workflow as primary navigation.
 def _render_backtest_panel_selector() -> str:
     st.markdown("#### 후보 선정 흐름")
     st.caption("Backtest Analysis에서 후보를 만들고, Practical Validation에서 검증 근거를 만든 뒤, Final Review에서 Selected Dashboard 모니터링 후보 여부를 판단합니다.")
 
-    if hasattr(st, "segmented_control"):
-        st.segmented_control(
-            "Backtest Workflow",
-            options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
-            selection_mode="single",
-            required=True,
-            key="backtest_workflow_active_panel",
-            on_change=_activate_backtest_workflow_panel,
-            label_visibility="collapsed",
-            width="stretch",
-        )
-    else:
-        st.radio(
-            "Backtest Workflow",
-            options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
-            horizontal=True,
-            key="backtest_workflow_active_panel",
-            on_change=_activate_backtest_workflow_panel,
-            label_visibility="collapsed",
-        )
+    current_panel = str(st.session_state.get("backtest_active_panel") or BACKTEST_STAGE_ANALYSIS)
+    if current_panel not in BACKTEST_WORKFLOW_PANEL_OPTIONS:
+        current_panel = BACKTEST_STAGE_ANALYSIS
+    if st.session_state.get("backtest_workflow_active_panel") not in BACKTEST_WORKFLOW_PANEL_OPTIONS:
+        st.session_state.backtest_workflow_active_panel = current_panel
+    st.markdown(_backtest_workflow_nav_css(), unsafe_allow_html=True)
+    selected_panel = st.pills(
+        "Backtest Workflow",
+        BACKTEST_WORKFLOW_PANEL_OPTIONS,
+        selection_mode="single",
+        required=True,
+        format_func=_backtest_workflow_stage_label,
+        key="backtest_workflow_active_panel",
+        on_change=_activate_backtest_workflow_panel,
+        label_visibility="collapsed",
+        width="stretch",
+    )
+    if selected_panel in BACKTEST_WORKFLOW_PANEL_OPTIONS:
+        st.session_state.backtest_active_stage = selected_panel
+        st.session_state.backtest_active_panel = selected_panel
     st.caption("과거 실행 기록은 `Operations > Backtest Run History`, 선정 후 모니터링 관리는 `Operations > Selected Portfolio Dashboard`에서 확인합니다.")
     return str(st.session_state.get("backtest_active_panel") or BACKTEST_STAGE_ANALYSIS)
 
 
 def render_backtest_tab() -> None:
     _init_backtest_state()
-
-    with st.expander("Backtest 사용 안내", expanded=False):
-        st.markdown(
-            """
-            - `Backtest Analysis`: Single Strategy 또는 Portfolio Mix Builder로 1차 후보 source를 만듭니다.
-            - `Portfolio Mix Builder`: 여러 전략을 실행하고 비중을 정해 하나의 mix 후보로 만든 뒤, 통과한 mix만 Practical Validation으로 보냅니다.
-            - `Practical Validation`: 선택한 단일 후보 또는 mix 후보를 검증 근거 자료로 구조화합니다.
-            - `Final Review`: 검증 자료를 기준으로 selected-route gate까지 통과한 후보만 Selected Dashboard 모니터링 후보로 저장합니다.
-            - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
-            - `Operations > Selected Portfolio Dashboard`: Final Review에서 저장된 current decision을 읽어 모니터링 성과와 review signal을 확인합니다.
-            - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
-            - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
-            """
-        )
-        st.caption(
-            "`늦은 active start`는 요청한 시작일에는 아직 usable한 statement shadow가 부족해서, "
-            "실제 첫 보유/선택이 그보다 뒤에서 시작되는 상황을 뜻합니다."
-        )
 
     active_panel = _render_backtest_panel_selector()
 
