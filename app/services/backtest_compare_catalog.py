@@ -33,6 +33,7 @@ from app.runtime.backtest import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
+from app.runtime.backtest_runner_catalog import get_runner_definition_for_display_name
 from finance.sample import (
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS,
@@ -96,6 +97,7 @@ def run_compare_strategy(
     overrides: Mapping[str, Any] | None = None,
     preset_catalog: ComparePresetCatalog,
 ) -> dict[str, Any]:
+    runner_definition = get_runner_definition_for_display_name(strategy_name)
     config = _strategy_compare_defaults(strategy_name, preset_catalog=preset_catalog)
     runner = config["runner"]
     params = dict(config["extra"])
@@ -163,7 +165,7 @@ def run_compare_strategy(
             if key in runner_signature.parameters
         }
 
-    return runner(
+    bundle = runner(
         tickers=tickers,
         start=start,
         end=end,
@@ -173,6 +175,16 @@ def run_compare_strategy(
         preset_name=preset_name,
         **params,
     )
+    if runner_definition is None:
+        return bundle
+
+    normalized_bundle = dict(bundle)
+    meta = dict(normalized_bundle.get("meta") or {})
+    meta["runner_catalog_key"] = runner_definition.strategy_key
+    meta["runner_runtime_module"] = runner_definition.runtime_module
+    meta["runner_runtime_family"] = runner_definition.runtime_family
+    normalized_bundle["meta"] = meta
+    return normalized_bundle
 
 
 def _strategy_compare_defaults(

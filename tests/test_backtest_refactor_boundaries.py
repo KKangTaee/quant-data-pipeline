@@ -128,6 +128,29 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("from app.services.backtest_final_review_policy import", source)
         self.assertIn("build_selected_route_preflight_from_packet(packet)", source)
 
+    def test_runtime_runner_catalog_identifies_strategy_owners(self) -> None:
+        from app.runtime.backtest_runner_catalog import (
+            get_runner_definition_for_display_name,
+            known_strategy_keys,
+            require_runner_definition,
+        )
+
+        self.assertIn("equal_weight", known_strategy_keys())
+        self.assertIn("quality_snapshot_strict_annual", known_strategy_keys())
+        self.assertEqual(
+            require_runner_definition("risk_on_momentum_5d").runtime_module,
+            "app.runtime.backtest_risk_on_momentum",
+        )
+        self.assertEqual(
+            get_runner_definition_for_display_name("GTAA").strategy_key,
+            "gtaa",
+        )
+
+        execution_source = (PROJECT_ROOT / "app/services/backtest_execution.py").read_text()
+        compare_source = (PROJECT_ROOT / "app/services/backtest_compare_catalog.py").read_text()
+        self.assertIn("from app.runtime.backtest_runner_catalog import", execution_source)
+        self.assertIn("from app.runtime.backtest_runner_catalog import", compare_source)
+
 
 if __name__ == "__main__":
     unittest.main()

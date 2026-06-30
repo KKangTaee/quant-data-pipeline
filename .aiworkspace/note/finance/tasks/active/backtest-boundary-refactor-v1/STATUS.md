@@ -13,5 +13,5 @@ Status: Active
 - 3차: Completed. Added `app/services/backtest_portfolio_mix_readiness.py`; Portfolio Mix role flag detection now lives in the service layer with a web compatibility wrapper.
 - 4차: Completed. Added `app/services/backtest_validation_status_policy.py`; Practical Validation module planner now imports shared status normalization/ranking policy.
 - 5차: Completed. Added `app/services/backtest_final_review_policy.py`; selected-route preflight now delegates packet-to-policy mapping to the Final Review policy boundary.
-- 6차: Pending
+- 6차: Completed. Added `app/runtime/backtest_runner_catalog.py`; Single Strategy and Compare services now attach runtime owner metadata to result bundle meta.
 - 7차: Pending

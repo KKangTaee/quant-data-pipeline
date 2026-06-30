@@ -13,6 +13,17 @@ Command log for staged QA.
 - Diff check: `git diff --check`
   - Result: PASS.
 
+## 6차
+
+- RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_runtime_runner_catalog_identifies_strategy_owners -v`
+  - Expected failure: missing `app.runtime.backtest_runner_catalog`.
+- GREEN QA: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries -v`
+  - Result: PASS.
+- Compile: `.venv/bin/python -m py_compile app/runtime/backtest_runner_catalog.py app/services/backtest_execution.py app/services/backtest_compare_catalog.py app/runtime/backtest.py app/runtime/backtest_strict.py`
+  - Result: PASS.
+- Diff check: `git diff --check`
+  - Result: PASS.
+
 ## 5차
 
 - RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_final_review_selected_route_policy_is_service_owned -v`
