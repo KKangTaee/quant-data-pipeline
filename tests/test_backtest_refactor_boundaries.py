@@ -64,6 +64,24 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("from app.services.backtest_single_payload import normalize_single_strategy_payload", runner_source)
         self.assertIn("execution_payload = normalize_single_strategy_payload", runner_source)
 
+    def test_portfolio_mix_role_flags_are_service_owned(self) -> None:
+        from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags
+
+        flags = weighted_strategy_role_flags(["GTAA", "Equal Weight", "Dual Momentum"])
+
+        self.assertEqual(flags, {"gtaa": True, "equal_weight": True})
+        self.assertEqual(
+            weighted_strategy_role_flags(["Risk Parity Trend"]),
+            {"gtaa": False, "equal_weight": False},
+        )
+
+        compare_source = (PROJECT_ROOT / "app/web/backtest_compare.py").read_text()
+        self.assertIn(
+            "from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags",
+            compare_source,
+        )
+        self.assertIn("return weighted_strategy_role_flags(strategy_names)", compare_source)
+
 
 if __name__ == "__main__":
     unittest.main()

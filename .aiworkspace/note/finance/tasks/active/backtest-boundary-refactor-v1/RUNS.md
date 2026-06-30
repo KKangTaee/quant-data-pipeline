@@ -13,6 +13,17 @@ Command log for staged QA.
 - Diff check: `git diff --check`
   - Result: PASS.
 
+## 3차
+
+- RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_portfolio_mix_role_flags_are_service_owned -v`
+  - Expected failure: missing `app.services.backtest_portfolio_mix_readiness`.
+- GREEN QA: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries -v`
+  - Result: PASS.
+- Compile: `.venv/bin/python -m py_compile app/services/backtest_portfolio_mix_readiness.py app/web/backtest_compare.py app/services/backtest_weighted_portfolio.py app/services/backtest_compare_execution.py`
+  - Result: PASS.
+- Diff check: `git diff --check`
+  - Result: PASS.
+
 ## 2차
 
 - RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_single_strategy_payload_normalization_is_service_owned -v`

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
+from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
 from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
@@ -2280,10 +2281,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
 
 # Detect whether the latest compare result can offer GTAA / Equal Weight mix shortcuts.
 def _weighted_strategy_role_flags(strategy_names: list[str]) -> dict[str, bool]:
-    return {
-        "gtaa": any("gtaa" in str(name).lower() for name in strategy_names),
-        "equal_weight": any("equal weight" in str(name).lower() for name in strategy_names),
-    }
+    return weighted_strategy_role_flags(strategy_names)
 
 # Fill the weight inputs with a common core/satellite GTAA + Equal Weight allocation.
 def _apply_gtaa_equal_weight_mix_preset(strategy_names: list[str], *, gtaa_weight: float, equal_weight: float) -> None:
