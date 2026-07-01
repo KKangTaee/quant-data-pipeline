@@ -64,7 +64,7 @@ Backtest Analysis
 
 최근 closeout 기준 검증:
 
-- `.venv/bin/python -m py_compile app/web/backtest_compare.py`
+- `.venv/bin/python -m py_compile app/web/backtest_compare/page.py`
 - `git diff --check`
 - `.venv/bin/python -m unittest tests.test_service_contracts`
   - 133 tests passed

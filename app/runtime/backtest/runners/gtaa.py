@@ -52,7 +52,7 @@ def run_gtaa_backtest_from_db(
     normalized_tickers = _normalize_tickers(tickers)
     benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     _validate_backtest_date_range(start, end)
-    _preflight_price_strategy_data(
+    _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -61,7 +61,7 @@ def run_gtaa_backtest_from_db(
     if (market_regime_enabled or crash_guardrail_enabled) and market_regime_benchmark:
         benchmark_symbol = str(market_regime_benchmark).strip().upper()
         if benchmark_symbol and benchmark_symbol not in normalized_tickers:
-            _preflight_price_strategy_data(
+            _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
                 tickers=[benchmark_symbol],
                 start=start,
                 end=end,
@@ -70,7 +70,7 @@ def run_gtaa_backtest_from_db(
     if (underperformance_guardrail_enabled or drawdown_guardrail_enabled) and benchmark_ticker:
         guardrail_symbol = str(benchmark_ticker).strip().upper()
         if guardrail_symbol and guardrail_symbol not in normalized_tickers:
-            _preflight_price_strategy_data(
+            _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
                 tickers=[guardrail_symbol],
                 start=start,
                 end=end,
@@ -101,7 +101,7 @@ def run_gtaa_backtest_from_db(
         promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
 
-    result_df = get_gtaa3_from_db(
+    result_df = _runtime_hook("get_gtaa3_from_db", get_gtaa3_from_db, __name__)(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -176,7 +176,7 @@ def run_gtaa_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
-    bundle = _apply_real_money_hardening(
+    bundle = _runtime_hook("_apply_real_money_hardening", _apply_real_money_hardening, __name__)(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,

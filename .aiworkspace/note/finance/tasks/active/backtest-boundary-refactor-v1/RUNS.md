@@ -2,6 +2,33 @@
 
 Command log for staged QA.
 
+## V2-V8 final package refactor
+
+- V2 commit: `d58d2c6d backtest V2 runtime 패키지 foundation 정리`
+- V3 commit: `0d300369 backtest V3 runtime runner 패키지 분리`
+- V4 commit: `507bf72a backtest V4 stores read-model 패키지 정리`
+- V5 commit: `c427d87b backtest V5 single strategy UI 패키지 분리`
+- V6 commit: `19081622 backtest V6 portfolio mix UI 패키지 분리`
+- V7 commit: `39807f35 backtest V7 validation final-review UI 패키지 분리`
+
+Final V8 QA:
+
+- Diff check: `git diff --check`
+  - Result: PASS.
+- Boundary tests: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries`
+  - Result: PASS, 11 tests.
+- Service contracts: `.venv/bin/python -m unittest tests.test_service_contracts`
+  - Result: PASS, 444 tests.
+- GRS focused contracts: `.venv/bin/python -m unittest tests.test_global_relative_strength_strategy`
+  - Result: PASS, 4 tests.
+- ETF runtime strategy contracts: `.venv/bin/python -m unittest tests.test_etf_runtime_strategy_contracts`
+  - Result: PASS, 4 tests.
+- Compile: `find app/runtime/backtest app/services app/web -name "*.py" -print | sort | xargs .venv/bin/python -m py_compile`
+  - Result: PASS.
+- Browser QA: Streamlit `http://localhost:8509/backtest`
+  - Result: first entry rendered Backtest Analysis / Single Strategy / Portfolio Mix Builder with no Traceback / ModuleNotFoundError / ImportError. Practical Validation and Final Review stage selectors opened successfully.
+  - Screenshot artifact: `backtest-v8-browser-qa.png` (generated, not staged).
+
 ## 1차
 
 - RED: `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries -v`

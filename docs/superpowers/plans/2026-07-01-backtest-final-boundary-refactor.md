@@ -169,6 +169,14 @@ Compatibility rule:
 - UI imports such as `from app.web.backtest_compare import render_compare_portfolio_workspace` must continue to work through `app/web/backtest_compare/__init__.py`.
 - Internal imports should gradually move to the new explicit package paths.
 
+## Execution Closeout
+
+Status: Completed on 2026-07-01.
+
+- V2 through V7 were completed as separate development / QA / commit stages.
+- V8 aligned durable docs, restored legacy runtime monkeypatch compatibility through package runner hooks, ran full focused QA, and completed Browser QA.
+- Generated QA screenshots remain local artifacts and are not part of the commit scope.
+
 ---
 
 ## V2: Runtime Package Foundation
@@ -555,10 +563,10 @@ git diff --check
 
 **Steps:**
 
-- [ ] Run `rg` for old module paths and update internal imports to final package paths.
-- [ ] Delete only obsolete compatibility shim files that are no longer imported by app/tests/docs.
-- [ ] Update durable docs with the final structure and import compatibility policy.
-- [ ] Run full focused QA:
+- [x] Run `rg` for old module paths and update internal imports to final package paths.
+- [x] Delete only obsolete compatibility shim files that are no longer imported by app/tests/docs.
+- [x] Update durable docs with the final structure and import compatibility policy.
+- [x] Run full focused QA:
 
 ```bash
 git status --short
@@ -570,9 +578,9 @@ git diff --check
 find app/runtime/backtest app/services app/web -name "*.py" -print | sort | xargs .venv/bin/python -m py_compile
 ```
 
-- [ ] Run Browser QA for Backtest first entry, Single Strategy, Portfolio Mix Builder, Practical Validation, and Final Review.
-- [ ] Save one QA screenshot as generated artifact and do not stage it unless explicitly requested.
-- [ ] Commit: `backtest V8 최종 구조 문서화 및 QA`
+- [x] Run Browser QA for Backtest first entry, Single Strategy, Portfolio Mix Builder, Practical Validation, and Final Review.
+- [x] Save one QA screenshot as generated artifact and do not stage it unless explicitly requested.
+- [x] Commit: `backtest V8 최종 구조 문서화 및 QA`
 
 **Completion condition:** Code, tests, docs, and browser QA agree on the final package structure.
 
@@ -599,4 +607,3 @@ Do not mark the refactor complete before V8. If a stage changes strategy math, v
 - Do not change validation pass/fail thresholds.
 - Do not turn Final Review or Portfolio Monitoring into live approval, broker order, or auto rebalance.
 - Do not stage generated QA screenshots or local run artifacts unless explicitly requested.
-

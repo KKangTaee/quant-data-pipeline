@@ -41,14 +41,14 @@ def run_global_relative_strength_backtest_from_db(
     preflight_tickers = list(normalized_tickers)
     if normalized_cash_ticker and normalized_cash_ticker not in preflight_tickers:
         preflight_tickers.append(normalized_cash_ticker)
-    price_freshness = inspect_strict_annual_price_freshness(
+    price_freshness = _runtime_hook("inspect_strict_annual_price_freshness", inspect_strict_annual_price_freshness, __name__)(
         tickers=preflight_tickers,
         end=end,
         timeframe=timeframe,
         context_label="Global Relative Strength universe",
     )
     if normalized_cash_ticker:
-        _preflight_price_strategy_data(
+        _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
             tickers=[normalized_cash_ticker],
             start=start,
             end=end,
@@ -59,7 +59,7 @@ def run_global_relative_strength_backtest_from_db(
         and benchmark_ticker
         and benchmark_ticker != normalized_cash_ticker
     ):
-        _preflight_price_strategy_data(
+        _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
             tickers=[benchmark_ticker],
             start=start,
             end=end,
@@ -85,7 +85,7 @@ def run_global_relative_strength_backtest_from_db(
         promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
 
-    result_df = get_global_relative_strength_from_db(
+    result_df = _runtime_hook("get_global_relative_strength_from_db", get_global_relative_strength_from_db, __name__)(
         tickers=normalized_tickers,
         cash_ticker=normalized_cash_ticker,
         start=start,
@@ -184,7 +184,7 @@ def run_global_relative_strength_backtest_from_db(
         score_weights=normalized_score_weights,
     )
     bundle["meta"]["grs_top_n_concentration"] = _build_grs_top_n_concentration_summary(result_df)
-    return _apply_real_money_hardening(
+    return _runtime_hook("_apply_real_money_hardening", _apply_real_money_hardening, __name__)(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
@@ -196,5 +196,4 @@ def run_global_relative_strength_backtest_from_db(
         promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
         **promotion_policy,
     )
-
 

@@ -8344,3 +8344,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 전략 계산식이나 validation threshold를 바꾸기 전에, UI가 소유할 것과 service / runtime / policy가 소유할 것을 작은 boundary module로 분리해야 함.
 - Analysis result: 가장 큰 혼합 지점은 `backtest_common.py`, `backtest_single_runner.py`, `backtest_compare.py`, Practical Validation status policy, Final Review selected-route policy, runtime runner ownership metadata였다.
 - Follow-up: V1에서 `backtest_state.py`, `backtest_formatters.py`, `backtest_single_payload.py`, `backtest_portfolio_mix_readiness.py`, `backtest_validation_status_policy.py`, `backtest_final_review_policy.py`, `backtest_runner_catalog.py`를 추가했다. registry / saved setup / provider DB / strategy math는 변경하지 않았다.
+
+### 2026-07-01 - Backtest package boundary refactor를 V8까지 마무리한다
+
+- User request: 사용자가 V2부터 V8까지 development -> QA -> commit 순서로 최종 refactor를 진행해 달라고 요청함.
+- Interpreted goal: V1 경계 helper 위에 물리적 package 구조를 완성해 UI, service, runtime runner, JSONL store, read model ownership을 더 명확하게 나눠야 함.
+- Analysis result: 최종 구조는 `app/runtime/backtest/` package, `runners/`, `stores/`, `read_models/`, `app/web/backtest_single_forms/`, `backtest_compare/`, `backtest_practical_validation/`, `backtest_final_review/`로 정리했다. V8 중 legacy facade monkeypatch 호환이 깨지는 것을 발견해 runtime hook bridge로 복원했다.
+- Follow-up: V2-V8 완료. 남은 후보는 `backtest_common.py` 같은 transitional shared helper의 작은 후속 정리이며, strategy math / validation threshold / registry row format / provider DB semantics는 바꾸지 않았다.

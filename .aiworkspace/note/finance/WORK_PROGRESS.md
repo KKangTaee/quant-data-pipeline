@@ -5412,3 +5412,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-boundary-refactor-v1/`에서 1차~7차 staged refactor를 진행했다.
   - UI state / formatter, Single Strategy payload, Portfolio Mix readiness, validation status policy, Final Review policy, runtime runner catalog 경계를 추가했다.
   - 전략 계산식, validation threshold, registry / saved JSONL / provider DB 의미는 바꾸지 않았다.
+- Backtest Final Boundary Refactor V2-V8 2026-07-01:
+  - `docs/superpowers/plans/2026-07-01-backtest-final-boundary-refactor.md` 기준으로 runtime package, runners, stores/read_models, Single Strategy forms, Portfolio Mix Builder, Practical Validation, Final Review package split을 순차 완료했다.
+  - 각 차수는 development -> QA -> commit으로 닫았고, V8에서 durable docs / root logs / task logs / full QA / Browser QA를 마무리했다.
+  - 상세 완료 구조와 QA 기록은 `.aiworkspace/note/finance/tasks/active/backtest-boundary-refactor-v1/STATUS.md`와 `RUNS.md`를 보면 된다.

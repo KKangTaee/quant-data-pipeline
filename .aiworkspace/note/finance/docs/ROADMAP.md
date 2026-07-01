@@ -365,7 +365,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
-| Backtest Compare follow-up splits | 9차 first pass moved the visual shell, but saved replay, weighted result, and strategy-specific form body still remain in `app/web/backtest_compare.py` | Moving saved replay / weighted result / strategy form sections into focused modules while preserving service/runtime boundaries |
+| Backtest package refactor follow-up | V2-V8 moved Backtest runtime, stores/read models, Single Strategy forms, Portfolio Mix Builder, Practical Validation, and Final Review into packages. Remaining follow-up is smaller cleanup of transitional shared helpers such as `backtest_common.py`, not another broad same-name module split | Moving remaining shared helper ownership or public call paths |
 | Large-surface second refactor round | 10차 closeout confirmed large files remain in Backtest Compare, Overview, Operations / Portfolio Monitoring runtime, and Overview services | Opening a new focused refactor round that changes module ownership or public call paths |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |

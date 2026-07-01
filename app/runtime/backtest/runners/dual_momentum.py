@@ -45,7 +45,7 @@ def run_dual_momentum_backtest_from_db(
         promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
         promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
-    _preflight_price_strategy_data(
+    _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -54,14 +54,14 @@ def run_dual_momentum_backtest_from_db(
     if (underperformance_guardrail_enabled or drawdown_guardrail_enabled) and benchmark_ticker:
         guardrail_symbol = str(benchmark_ticker).strip().upper()
         if guardrail_symbol and guardrail_symbol not in normalized_tickers:
-            _preflight_price_strategy_data(
+            _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
                 tickers=[guardrail_symbol],
                 start=start,
                 end=end,
                 timeframe=timeframe,
             )
 
-    result_df = get_dual_momentum_from_db(
+    result_df = _runtime_hook("get_dual_momentum_from_db", get_dual_momentum_from_db, __name__)(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -119,7 +119,7 @@ def run_dual_momentum_backtest_from_db(
         drawdown_guardrail_enabled=drawdown_guardrail_enabled,
     )
     bundle["meta"]["dual_momentum_concentration_turnover"] = _build_dual_momentum_concentration_turnover_summary(result_df)
-    bundle = _apply_real_money_hardening(
+    bundle = _runtime_hook("_apply_real_money_hardening", _apply_real_money_hardening, __name__)(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,

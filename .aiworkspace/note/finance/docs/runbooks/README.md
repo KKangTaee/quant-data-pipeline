@@ -42,7 +42,7 @@ git diff --stat
 Python UI/helper 변경:
 
 ```bash
-.venv/bin/python -m py_compile app/web/backtest_practical_validation.py
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py
 ```
 
 Service contract 변경:

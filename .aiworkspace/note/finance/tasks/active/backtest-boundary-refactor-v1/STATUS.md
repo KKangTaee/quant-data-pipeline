@@ -1,10 +1,11 @@
 # Backtest Boundary Refactor V1 Status
 
-Status: Active
+Status: Complete
 
 ## Current
 
 - 2026-07-01: User approved staged `1차 -> QA -> commit -> ... -> 7차` refactor flow.
+- 2026-07-01: Follow-up V2-V8 package refactor completed with development -> QA -> commit cadence through final docs / Browser QA closeout.
 
 ## Stage Log
 
@@ -16,8 +17,18 @@ Status: Active
 - 6차: Completed. Added `app/runtime/backtest_runner_catalog.py`; Single Strategy and Compare services now attach runtime owner metadata to result bundle meta.
 - 7차: Completed. Updated durable Backtest structure docs, root handoff logs, and task QA log. Browser QA confirmed `/backtest` renders stage tabs without import/traceback errors.
 
+## V2-V8 Package Refactor Log
+
+- V2: Completed. Converted `app/runtime/backtest.py` into `app/runtime/backtest/` package with `__init__.py`, `facade.py`, and `common.py`.
+- V3: Completed. Moved result bundle, runner catalog, real-money helper, strict / risk-on momentum runners, and price strategy runners under `app/runtime/backtest/`.
+- V4: Completed. Moved JSONL stores into `app/runtime/backtest/stores/` and read models into `app/runtime/backtest/read_models/`.
+- V5: Completed. Split Single Strategy presets / inputs / strategy-specific forms into focused web modules.
+- V6: Completed. Split Portfolio Mix Builder into `app/web/backtest_compare/` package with execution, saved replay, weight builder, handoff, and component modules.
+- V7: Completed. Split Practical Validation and Final Review into package page / panel / component modules.
+- V8: Completed. Updated durable docs, restored runtime runner compatibility hooks for legacy patch surfaces, ran focused full QA, and completed Browser QA for Backtest first entry and stage transitions.
+
 ## Closeout
 
-- Completed stages: 1차 through 7차.
-- Remaining scope: none for this V1 boundary refactor.
-- Follow-up candidate: deeper physical split of `backtest_common.py`, `backtest_single_forms.py`, and `backtest_compare.py` can proceed as a separate V2 once the current compatibility boundaries settle.
+- Completed stages: V1 through V8.
+- Remaining scope: none for this boundary/package refactor.
+- Follow-up candidate: smaller cleanup of transitional shared helpers such as `app/web/backtest_common.py`; strategy math, validation thresholds, registry row format, and provider DB semantics were not changed.

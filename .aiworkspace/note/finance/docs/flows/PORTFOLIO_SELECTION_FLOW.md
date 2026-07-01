@@ -135,11 +135,11 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 | Area | Files |
 |---|---|
 | Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/backtest_page.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
-| Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
-| Final Review | `app/web/backtest_final_review*.py`, `app/services/backtest_evidence_read_model.py` |
-| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/final_selected_portfolios.py` |
-| Selection persistence | `app/runtime/portfolio_selection_v2.py` |
+| Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare/` |
+| Practical Validation | `app/web/backtest_practical_validation/`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
+| Final Review | `app/web/backtest_final_review/`, `app/services/backtest_evidence_read_model.py` |
+| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/backtest/read_models/final_selected_portfolios.py` |
+| Selection persistence | `app/runtime/backtest/stores/portfolio_selection.py` |
 
 ## Update Rules
 

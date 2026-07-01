@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from typing import Any
 
@@ -143,6 +144,22 @@ from app.runtime.backtest.runners.strict_factor import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
+
+
+_RUNTIME_HOOK_DEFAULTS: dict[str, Any] = {}
+
+
+def _runtime_hook(name: str, fallback: Any, *module_names: str) -> Any:
+    """Resolve patched compatibility facade hooks without changing production defaults."""
+    default = _RUNTIME_HOOK_DEFAULTS.get(name, fallback)
+    for module_name in (*module_names, "app.runtime.backtest", "app.runtime.backtest.facade"):
+        module = sys.modules.get(module_name)
+        if module is None:
+            continue
+        candidate = getattr(module, name, None)
+        if candidate is not None and candidate is not default:
+            return candidate
+    return fallback
 
 
 def _resolve_dynamic_etf_promotion_policy_defaults(
@@ -521,6 +538,20 @@ def _preflight_price_strategy_data(
 
 
 
+
+
+_RUNTIME_HOOK_DEFAULTS.update(
+    {
+        "_apply_real_money_hardening": _apply_real_money_hardening,
+        "_preflight_price_strategy_data": _preflight_price_strategy_data,
+        "get_dual_momentum_from_db": get_dual_momentum_from_db,
+        "get_equal_weight_from_db": get_equal_weight_from_db,
+        "get_global_relative_strength_from_db": get_global_relative_strength_from_db,
+        "get_gtaa3_from_db": get_gtaa3_from_db,
+        "get_risk_parity_trend_from_db": get_risk_parity_trend_from_db,
+        "inspect_strict_annual_price_freshness": inspect_strict_annual_price_freshness,
+    }
+)
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]
