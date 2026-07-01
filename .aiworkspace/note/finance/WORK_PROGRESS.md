@@ -5471,3 +5471,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/ingestion-console-action-unification-v2-20260701/`에서 Ingestion action registry, scheduled diagnostics, shared progress, active / compatibility action boundary를 1~6차로 정리했다.
   - Ingestion workbench는 `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` 3개 section을 유지하고, read-only 진단도 공용 scheduled job / run history / progress 흐름을 탄다.
   - Broad yfinance fundamentals / factors는 active UI가 아니라 old replay / explicit comparison compatibility로만 남긴다.
+- Overview Market Movers Statement Collection Status 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-statement-collection-status-20260701/`에서 기본 지표 하단에 재무제표 수집 / 반영 상태 lane을 추가했다.
+  - EDGAR filing ledger 최신 10-Q / 10-K report date와 statement shadow period를 비교해 미반영 공시는 `받아야 할 재무제표 있음`, 반영 완료는 OK로 표시한다.
+  - Browser QA 중 GIS fiscal quarter false positive를 발견해 prediction-only quarter-end 비교에 14일 tolerance를 추가했다.

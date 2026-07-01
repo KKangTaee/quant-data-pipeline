@@ -9998,6 +9998,148 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["quarterly_financials"]["form_type"], "10-K")
         self.assertIn("10-Q", model["quarterly_financials"]["reason"])
 
+    def test_market_mover_research_snapshot_flags_unreflected_edgar_quarterly_filing(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "available_at": pd.Timestamp("2026-02-12"),
+                            "form_type": "10-K",
+                            "accession_no": "000-aaa-10k",
+                            "net_income": 1_000_000_000,
+                            "shares_outstanding": 500_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2025-09-30"),
+                        "available_at": pd.Timestamp("2025-10-31"),
+                        "form_type": "10-Q",
+                        "accession_no": "000-aaa-old-10q",
+                        "net_income": 250_000_000,
+                        "shares_outstanding": 500_000_000,
+                    }
+                ]
+            )
+
+        def fake_statement_filings_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            self.assertEqual(kwargs["end"], "2026-06-30")
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "form_type": "10-K",
+                        "report_date": pd.Timestamp("2025-12-31"),
+                        "filing_date": pd.Timestamp("2026-02-12"),
+                        "available_at": pd.Timestamp("2026-02-12"),
+                        "accession_no": "000-aaa-10k",
+                    },
+                    {
+                        "symbol": "AAA",
+                        "form_type": "10-Q",
+                        "report_date": pd.Timestamp("2026-03-31"),
+                        "filing_date": pd.Timestamp("2026-05-01"),
+                        "available_at": pd.Timestamp("2026-05-01"),
+                        "accession_no": "000-aaa-new-10q",
+                    },
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=fake_statement_filings_loader,
+        )
+
+        collection = model["financial_statement_collection"]
+        self.assertEqual(collection["status"], "ACTION_REQUIRED")
+        self.assertEqual(collection["headline"], "받아야 할 재무제표 있음")
+        self.assertIn("2026-03-31", collection["detail"])
+        self.assertEqual(collection["missing_filings"][0]["form_type"], "10-Q")
+        self.assertEqual(collection["missing_filings"][0]["report_date"], "2026-03-31")
+        self.assertEqual(collection["missing_filings"][0]["filing_date"], "2026-05-01")
+        self.assertEqual(collection["items"][0]["label"], "최신 EDGAR 10-Q")
+        self.assertEqual(collection["items"][1]["value"], "2025-09-30")
+
+    def test_market_mover_research_snapshot_does_not_flag_nearby_fiscal_quarter_as_missing(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "GIS", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "GIS", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "GIS",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-05-25"),
+                            "available_at": pd.Timestamp("2025-06-25"),
+                            "form_type": "10-K",
+                            "accession_no": "000-gis-10k",
+                            "net_income": 290_000_000,
+                            "shares_outstanding": 550_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "GIS",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-02-22"),
+                        "available_at": pd.Timestamp("2026-03-18"),
+                        "form_type": "10-Q",
+                        "accession_no": "000-gis-10q",
+                        "net_income": 300_000_000,
+                        "shares_outstanding": 550_000_000,
+                    }
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "GIS", "Market Cap": 24_800_000_000},
+            as_of_date="2026-07-01",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=lambda **_: pd.DataFrame(),
+        )
+
+        collection = model["financial_statement_collection"]
+        self.assertNotEqual(collection["status"], "CHECK_REQUIRED")
+        self.assertNotIn("2026-02-25", collection["detail"])
+
     def test_financial_source_contract_helper_adds_legacy_and_statement_aliases(self) -> None:
         from finance.loaders.financial_source_contract import (
             LEGACY_BROAD_YFINANCE_SOURCE,
@@ -10146,6 +10288,43 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(loaded.loc[0, "form_type"], "10-Q")
         self.assertEqual(loaded.loc[0, "financial_source"], "sec_edgar_statement_shadow")
 
+    def test_statement_filings_loader_reads_edgar_filing_ledger(self) -> None:
+        from finance.loaders.financial_statements import load_statement_filings
+
+        captured: dict[str, object] = {}
+        rows = [
+            {
+                "symbol": "AAA",
+                "accession_no": "000-aaa-10q",
+                "form_type": "10-Q",
+                "filing_date": "2026-05-01",
+                "accepted_at": "2026-05-01 14:44:14",
+                "available_at": "2026-05-01 14:44:14",
+                "report_date": "2026-03-31",
+            }
+        ]
+
+        class FakeClient:
+            def use_db(self, name: str) -> None:
+                captured["db"] = name
+
+            def query(self, sql: str, params: list[object]) -> list[dict[str, object]]:
+                captured["sql"] = sql
+                captured["params"] = params
+                return rows
+
+            def close(self) -> None:
+                pass
+
+        with patch("finance.loaders.financial_statements.MySQLClient", return_value=FakeClient()):
+            loaded = load_statement_filings(symbols=["AAA"], forms=["10-Q", "10-K"], end="2026-06-30")
+
+        self.assertEqual(captured["db"], "finance_fundamental")
+        self.assertIn("nyse_financial_statement_filings", str(captured["sql"]))
+        self.assertEqual(list(loaded["form_type"]), ["10-Q"])
+        self.assertEqual(loaded.loc[0, "report_date"], pd.Timestamp("2026-03-31"))
+        self.assertEqual(loaded.loc[0, "available_at"], pd.Timestamp("2026-05-01 14:44:14"))
+
     def test_statement_factors_shadow_loader_joins_form_type_and_filters_quarterly_10k_rows(self) -> None:
         from finance.loaders.factors import load_statement_factors_shadow
 
@@ -10232,6 +10411,16 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "per": 166.66666666666666,
                     "net_income": 300_000_000,
                 },
+                "financial_statement_collection": {
+                    "status": "ACTION_REQUIRED",
+                    "headline": "받아야 할 재무제표 있음",
+                    "detail": "EDGAR 10-Q 2026-03-31 공시됨, DB 분기 반영은 2025-09-30입니다.",
+                    "tone": "warning",
+                    "items": [
+                        {"label": "최신 EDGAR 10-Q", "value": "2026-03-31", "detail": "공시 2026-05-02"},
+                        {"label": "DB 분기 반영", "value": "2025-09-30", "detail": "statement shadow"},
+                    ],
+                },
                 "boundary_note": "Context-only fundamentals snapshot.",
             },
         )
@@ -10285,7 +10474,31 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ],
         )
         self.assertEqual(income["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31 · 공시일 기준")
+        self.assertEqual(model["financial_statement_collection"]["headline"], "받아야 할 재무제표 있음")
+        self.assertIn("2026-03-31", model["financial_statement_collection"]["detail"])
         self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_mover_research_collection_html_renders_collection_status(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_collection_html
+
+        html = _market_mover_research_collection_html(
+            {
+                "status": "ACTION_REQUIRED",
+                "headline": "받아야 할 재무제표 있음",
+                "detail": "EDGAR 10-Q 2026-03-31 공시됨, DB 분기 반영은 2025-09-30입니다.",
+                "tone": "warning",
+                "items": [
+                    {"label": "최신 EDGAR 10-Q", "value": "2026-03-31", "detail": "공시 2026-05-02"},
+                    {"label": "DB 분기 반영", "value": "2025-09-30", "detail": "statement shadow"},
+                ],
+            }
+        )
+
+        self.assertIn("재무제표 수집 상태", html)
+        self.assertIn("받아야 할 재무제표 있음", html)
+        self.assertIn("최신 EDGAR 10-Q", html)
+        self.assertIn("2026-03-31", html)
+        self.assertIn("DB 분기 반영", html)
 
     def test_market_mover_research_items_html_renders_per_eps_rows_as_table(self) -> None:
         from app.web.overview.components.market_movers import _market_mover_research_items_html

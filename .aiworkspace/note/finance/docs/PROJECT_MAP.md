@@ -53,7 +53,7 @@ Last Verified: 2026-07-01
 | Finance Console shell / navigation | `app/web/streamlit_app.py` |
 | Workspace > Ingestion console | `app/web/ingestion_console.py`; collection workbench sections are `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, and `실행 기록 / 결과`. Active / legacy compatibility actions are classified by the local action registry, read-only diagnostics run through the same scheduled job / progress / run-history path as write jobs, and broad yfinance fundamentals / factors remain compatibility-only |
 | Workspace > Ingestion read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
-| Financial statement source migration path | EDGAR collection / raw ledger: `finance/data/financial_statements.py`; statement shadow rebuild: `finance/data/fundamentals.py`, `finance/data/factors.py`; loaders: `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`; Ingestion job orchestration: `app/jobs/ingestion_jobs.py`; UI entry: `app/web/ingestion_console.py` |
+| Financial statement source migration path | EDGAR collection / raw ledger: `finance/data/financial_statements.py`; statement shadow rebuild: `finance/data/fundamentals.py`, `finance/data/factors.py`; loaders: `finance/loaders/financial_statements.py`, `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`; Ingestion job orchestration: `app/jobs/ingestion_jobs.py`; UI entry: `app/web/ingestion_console.py` |
 | Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/pages/backtest.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
@@ -210,7 +210,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |
 | DB schema 변경 | `finance/data/db/schema.py` |
-| 재무제표 source / factor source 변경 | `finance/data/financial_statements.py`, `finance/data/fundamentals.py`, `finance/data/factors.py`, `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`, `app/jobs/ingestion_jobs.py`, `app/web/ingestion_console.py`, `.aiworkspace/note/finance/docs/data/` |
+| 재무제표 source / factor source 변경 | `finance/data/financial_statements.py`, `finance/data/fundamentals.py`, `finance/data/factors.py`, `finance/loaders/financial_statements.py`, `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`, `app/jobs/ingestion_jobs.py`, `app/web/ingestion_console.py`, `.aiworkspace/note/finance/docs/data/` |
 | Ingestion page / job UI 변경 | `app/web/ingestion_console.py`, `app/services/ingestion_diagnostics.py`, `app/jobs/ingestion_jobs.py`, `finance/data/*` |
 | Strategy runtime 변경 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` |
 | 제품 방향 / 벤치마킹 리서치 | `.aiworkspace/note/finance/researches/README.md`, `.aiworkspace/note/finance/researches/active/<research-id>/` |

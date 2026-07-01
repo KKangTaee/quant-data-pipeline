@@ -361,6 +361,47 @@ def _market_mover_research_items_html(items: list[dict[str, Any]]) -> str:
     return "".join(html)
 
 
+def _market_mover_research_collection_items_html(items: list[dict[str, Any]]) -> str:
+    html: list[str] = []
+    for item in items:
+        detail = item.get("detail")
+        detail_html = (
+            f'<small>{escape(_display_value(detail))}</small>'
+            if detail not in (None, "")
+            else ""
+        )
+        html.append(
+            '<div class="ov-mm-research-collection-item">'
+            f'<span>{escape(_display_value(item.get("label")))}</span>'
+            f'<strong>{escape(_display_value(item.get("value")))}</strong>'
+            f"{detail_html}"
+            "</div>"
+        )
+    return "".join(html)
+
+
+def _market_mover_research_collection_html(model: dict[str, Any]) -> str:
+    if not model:
+        return ""
+    headline = _display_value(model.get("headline"))
+    if headline in ("", "-"):
+        return ""
+    tone_color = escape(_overview_tone_color(model.get("tone") or model.get("status")))
+    status = _display_value(model.get("status"))
+    status_html = f'<span class="ov-mm-research-collection-badge">{escape(status)}</span>' if status != "-" else ""
+    return (
+        f'<div class="ov-mm-research-collection" style="--ov-research-collection-tone:{tone_color};">'
+        "<div>"
+        '<div class="ov-mm-research-collection-kicker">재무제표 수집 상태</div>'
+        f'<div class="ov-mm-research-collection-title">{escape(headline)}</div>'
+        f'<div class="ov-mm-research-collection-detail">{escape(_display_value(model.get("detail")))}</div>'
+        "</div>"
+        f"{status_html}"
+        f'<div class="ov-mm-research-collection-items">{_market_mover_research_collection_items_html(list(model.get("items") or []))}</div>'
+        "</div>"
+    )
+
+
 def render_market_mover_research_snapshot(model: dict[str, Any]) -> None:
     st.markdown(
         overview_ui_css()
@@ -375,6 +416,7 @@ def render_market_mover_research_snapshot(model: dict[str, Any]) -> None:
     <span class="ov-mm-research-asof">기준 {escape(_display_value(model.get("as_of_label")))}</span>
   </div>
   <div class="ov-mm-research-grid">{_market_mover_research_items_html(list(model.get("items") or []))}</div>
+  {_market_mover_research_collection_html(dict(model.get("financial_statement_collection") or {}))}
   <div class="ov-mm-research-boundary">{escape(_display_value(model.get("boundary_note")))}</div>
 </section>""",
         unsafe_allow_html=True,

@@ -90,7 +90,7 @@ external source
 | `finance/loaders/sentiment.py` | Overview sentiment read path. `macro_series_observation`에서 CNN / AAII latest snapshot과 history를 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
-| `finance/loaders/financial_statements.py` | statement values / labels / strict snapshot / timing audit 조회 |
+| `finance/loaders/financial_statements.py` | statement filing metadata / values / labels / strict snapshot / timing audit 조회 |
 | `finance/loaders/runtime_adapter.py` | runtime에서 쓰는 price strategy dict 생성 |
 
 ## 현재 중요한 구분

@@ -7,6 +7,7 @@ shared normalization and query helpers inside domain modules.
 
 from .financial_statements import (
     load_statement_coverage_summary,
+    load_statement_filings,
     load_statement_labels,
     load_statement_snapshot_strict,
     load_statement_timing_audit,
@@ -71,6 +72,7 @@ __all__ = [
     "load_statement_factors_shadow",
     "load_statement_quality_snapshot_strict",
     "load_statement_values",
+    "load_statement_filings",
     "load_statement_labels",
     "load_statement_coverage_summary",
     "load_statement_snapshot_strict",

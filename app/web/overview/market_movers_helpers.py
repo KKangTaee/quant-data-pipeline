@@ -2274,6 +2274,28 @@ def _income_row(item: dict[str, Any], period_label: str) -> dict[str, str] | Non
     }
 
 
+def _financial_statement_collection_model(collection: dict[str, Any]) -> dict[str, Any]:
+    if not collection:
+        return {}
+    items = [
+        {
+            "label": str(item.get("label") or "-"),
+            "value": str(item.get("value") or "-"),
+            "detail": str(item.get("detail") or ""),
+        }
+        for item in list(collection.get("items") or [])
+        if isinstance(item, dict)
+    ]
+    return {
+        "status": str(collection.get("status") or "UNKNOWN"),
+        "headline": str(collection.get("headline") or "재무제표 수집 상태 확인"),
+        "detail": str(collection.get("detail") or ""),
+        "tone": str(collection.get("tone") or "neutral"),
+        "items": items,
+        "missing_filings": list(collection.get("missing_filings") or []),
+    }
+
+
 def build_market_mover_research_snapshot_model(
     detail_model: dict[str, Any],
     *,
@@ -2297,6 +2319,9 @@ def build_market_mover_research_snapshot_model(
     ytd_return = dict(snapshot.get("ytd_return") or {})
     annual = dict(snapshot.get("annual_financials") or {})
     quarterly = dict(snapshot.get("quarterly_financials") or {})
+    collection = _financial_statement_collection_model(
+        dict(snapshot.get("financial_statement_collection") or {})
+    )
 
     current_available = str(current_market_cap.get("status") or "").upper() == "OK"
     ytd_available = str(ytd_return.get("status") or "").upper() == "OK"
@@ -2380,6 +2405,7 @@ def build_market_mover_research_snapshot_model(
         "subtitle": f"{symbol} · {context.get('Coverage') or '-'} · {context.get('Period') or '-'}",
         "as_of_label": str(snapshot.get("as_of_date") or "현재 선택 기준"),
         "items": items,
+        "financial_statement_collection": collection,
         "boundary_note": str(
             snapshot.get("boundary_note")
             or "Context-only fundamentals snapshot; no trading signal or recommendation is produced."

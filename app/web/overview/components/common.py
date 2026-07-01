@@ -5105,6 +5105,80 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	.ov-mm-research-detail {
 	  margin-top: 0.18rem;
 	}
+	.ov-mm-research-collection {
+	  display: grid;
+	  grid-template-columns: minmax(0, 1fr) auto minmax(15rem, 0.78fr);
+	  gap: var(--ov-mi-gap-md);
+	  align-items: center;
+	  margin-top: 0.48rem;
+	  padding: 0.48rem 0.56rem;
+	  border: 1px solid color-mix(in srgb, var(--ov-research-collection-tone, var(--ov-mi-color-neutral)) 30%, var(--ov-mi-border-faint));
+	  border-left: 3px solid var(--ov-research-collection-tone, var(--ov-mi-color-neutral));
+	  border-radius: var(--ov-mi-radius-card);
+	  background: color-mix(in srgb, var(--ov-research-collection-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface));
+	}
+	.ov-mm-research-collection-kicker {
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.12;
+	}
+	.ov-mm-research-collection-title {
+	  margin-top: 0.08rem;
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-body);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.14;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-collection-detail {
+	  margin-top: 0.12rem;
+	  color: var(--ov-mi-color-text-subtle);
+	  font-size: var(--ov-mi-font-caption);
+	  line-height: 1.24;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-collection-badge {
+	  display: inline-flex;
+	  align-items: center;
+	  min-height: 1.34rem;
+	  padding: 0.12rem 0.42rem;
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: color-mix(in srgb, var(--ov-research-collection-tone, var(--ov-mi-color-neutral)) 10%, transparent);
+	  color: var(--ov-research-collection-tone, var(--ov-mi-color-neutral));
+	  font-size: var(--ov-mi-font-xs);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.1;
+	  white-space: nowrap;
+	}
+	.ov-mm-research-collection-items {
+	  display: grid;
+	  grid-template-columns: repeat(2, minmax(0, 1fr));
+	  gap: 0.24rem;
+	  min-width: 0;
+	}
+	.ov-mm-research-collection-item {
+	  min-width: 0;
+	  padding-left: 0.44rem;
+	  border-left: 1px solid var(--ov-mi-border-faint);
+	}
+	.ov-mm-research-collection-item span,
+	.ov-mm-research-collection-item small {
+	  display: block;
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  line-height: 1.15;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-collection-item strong {
+	  display: block;
+	  margin-top: 0.08rem;
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.16;
+	  overflow-wrap: anywhere;
+	}
 	.ov-mm-research-boundary {
 	  margin-top: 0.48rem;
 	  padding: 0.38rem 0.46rem;
@@ -5156,6 +5230,19 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  }
 	  .ov-mm-investigation-facts {
 	    grid-template-columns: repeat(2, minmax(0, 1fr));
+	  }
+	  .ov-mm-research-collection {
+	    grid-template-columns: 1fr;
+	    align-items: start;
+	  }
+	  .ov-mm-research-collection-items {
+	    grid-template-columns: 1fr;
+	  }
+	  .ov-mm-research-collection-item {
+	    padding-left: 0;
+	    border-left: 0;
+	    border-top: 1px solid var(--ov-mi-border-faint);
+	    padding-top: 0.24rem;
 	  }
 		  .ov-mm-research-grid {
 		    grid-template-columns: 1fr;

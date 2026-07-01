@@ -8442,3 +8442,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 진단 패널을 추가하는 것이 아니라, active 수집 action과 legacy compatibility action을 분리하고, 실행 / 결과 / 진단 / 기록이 한 흐름으로 보이게 해야 함.
 - Analysis result: active write jobs, read-only diagnostics, legacy broad yfinance compatibility action을 action registry로 분류했다. 진단 카드는 inline 실행에서 scheduled job으로 바꾸고, futures / calendar / lifecycle / profile job에도 progress callback boundary를 추가했다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/ingestion-console-action-unification-v2-20260701/`에 있다. Browser QA screenshot은 generated artifact로만 보존하고 커밋하지 않는다.
+
+### 2026-07-01 - Market Movers 기본 지표에서 재무제표 수집 / 반영 상태를 보여준다
+
+- User request: 연간 / 분기 재무제표 제출 기간과 실제 수집 여부를 바탕으로 현재 받아야 하는 재무제표가 있는지 Overview 기본 지표에 표시해 달라고 요청함.
+- Interpreted goal: UI에서 provider를 직접 fetch하지 않고, 기존 EDGAR filing ledger와 statement shadow DB 상태를 비교해 사용자가 최신 공시 미반영 여부를 바로 알게 해야 함.
+- Analysis result: 실제 filing ledger에 최신 10-Q / 10-K가 있으면 그것을 우선 근거로 삼고, filing ledger가 비어 있을 때만 예상 제출 기한 기반 확인 필요 상태를 보조로 표시한다. Fiscal quarter end는 단순 월말이 아닐 수 있어 prediction-only 비교에는 14일 tolerance를 둔다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-statement-collection-status-20260701/`에 있다.

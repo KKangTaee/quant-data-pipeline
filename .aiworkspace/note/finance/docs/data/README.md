@@ -64,6 +64,7 @@ Last Verified: 2026-06-30
 - New Market Movers annual financial snapshots and strict annual factor backtests should prefer the EDGAR statement shadow path.
 - The legacy broad path remains for saved/history replay and explicit broad comparison only. It is not a production financial statement source.
 - Quarterly consumer paths must not treat `10-K` / FY full-year flow values as quarterly values. Quarterly reads are gated to `10-Q` / `10-Q/A` rows.
+- Market Movers 기본 지표 can compare `nyse_financial_statement_filings` latest 10-Q / 10-K report dates with statement shadow `period_end` to show whether a filed statement is not yet reflected.
 
 ## JSONL Boundaries
 

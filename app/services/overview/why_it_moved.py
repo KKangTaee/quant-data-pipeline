@@ -22,6 +22,7 @@ from xml.etree import ElementTree
 
 import pandas as pd
 
+from finance.loaders.financial_statements import load_statement_filings
 from finance.loaders.fundamentals import load_fundamental_snapshot, load_statement_fundamentals_shadow
 from finance.loaders.financial_source_contract import (
     LEGACY_BROAD_YFINANCE_SOURCE,
@@ -579,6 +580,324 @@ def _market_mover_statement_fundamental_snapshot(
         source_payload=source_payload,
     )
 
+
+def _statement_period_timestamp(item: dict[str, Any]) -> pd.Timestamp | None:
+    label = _iso_date_label(dict(item or {}).get("period_end"))
+    if not label:
+        return None
+    try:
+        timestamp = pd.Timestamp(label)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(timestamp):
+        return None
+    return timestamp.normalize()
+
+
+def _statement_filing_payload(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not row:
+        return None
+    form_type = _clean_optional_text(row.get("form_type"), uppercase=True)
+    return {
+        "symbol": _clean_optional_text(row.get("symbol"), uppercase=True),
+        "form_type": form_type,
+        "report_date": _iso_date_label(row.get("report_date")),
+        "filing_date": _iso_date_label(row.get("filing_date")),
+        "accepted_at": _iso_date_label(row.get("accepted_at")),
+        "available_at": _iso_date_label(row.get("available_at")),
+        "accession_no": _clean_optional_text(row.get("accession_no")),
+    }
+
+
+def _latest_statement_filing(
+    frame: pd.DataFrame,
+    *,
+    forms: set[str],
+    as_of_date: str,
+) -> dict[str, Any] | None:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return None
+    work = frame.copy()
+    if "form_type" not in work.columns or "report_date" not in work.columns:
+        return None
+    work["form_type"] = work["form_type"].map(lambda value: str(value or "").strip().upper())
+    work = work[work["form_type"].isin(forms)].copy()
+    if work.empty:
+        return None
+
+    for column in ("report_date", "filing_date", "accepted_at", "available_at"):
+        if column in work.columns:
+            work[column] = pd.to_datetime(work[column], errors="coerce")
+
+    work = work[work["report_date"].notna()].copy()
+    if work.empty:
+        return None
+
+    as_of_ts = pd.Timestamp(as_of_date).normalize()
+    as_of_eod = as_of_ts + pd.Timedelta(days=1)
+    work = work[work["report_date"] <= as_of_ts].copy()
+    if "available_at" in work.columns:
+        available = work["available_at"]
+        if "filing_date" in work.columns:
+            filing = work["filing_date"]
+            work = work[
+                ((available.notna()) & (available < as_of_eod))
+                | ((available.isna()) & ((filing.isna()) | (filing <= as_of_ts)))
+            ].copy()
+        else:
+            work = work[(available.isna()) | (available < as_of_eod)].copy()
+    if work.empty:
+        return None
+
+    sort_columns = [
+        column
+        for column in ("report_date", "available_at", "filing_date", "accession_no")
+        if column in work.columns
+    ]
+    if sort_columns:
+        work = work.sort_values(sort_columns)
+    return dict(work.iloc[-1])
+
+
+def _statement_current_period_label(item: dict[str, Any]) -> str:
+    return _iso_date_label(dict(item or {}).get("period_end")) or "미반영"
+
+
+def _statement_collection_current_items(
+    *,
+    annual_financials: dict[str, Any],
+    quarterly_financials: dict[str, Any],
+) -> list[dict[str, str]]:
+    return [
+        {
+            "label": "DB 연간 반영",
+            "value": _statement_current_period_label(annual_financials),
+            "detail": "statement shadow",
+        },
+        {
+            "label": "DB 분기 반영",
+            "value": _statement_current_period_label(quarterly_financials),
+            "detail": "statement shadow",
+        },
+    ]
+
+
+def _statement_collection_missing_payload(
+    *,
+    latest: dict[str, Any],
+    current_period: pd.Timestamp | None,
+    period_label: str,
+) -> dict[str, Any]:
+    filing = _statement_filing_payload(latest) or {}
+    report_date = str(filing.get("report_date") or "-")
+    filing_date = str(filing.get("filing_date") or filing.get("available_at") or "-")
+    form_type = str(filing.get("form_type") or "-")
+    current_label = current_period.date().isoformat() if current_period is not None else "미반영"
+    return {
+        **filing,
+        "period_label": period_label,
+        "current_period_end": current_label,
+        "items": [
+            {"label": f"최신 EDGAR {form_type}", "value": report_date, "detail": f"공시 {filing_date}"},
+            {"label": f"DB {period_label} 반영", "value": current_label, "detail": "statement shadow"},
+        ],
+    }
+
+
+def _statement_expected_due_checks(
+    *,
+    as_of_date: str,
+    annual_financials: dict[str, Any],
+    quarterly_financials: dict[str, Any],
+    latest_quarterly_filing: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    annual_period = _statement_period_timestamp(annual_financials)
+    if annual_period is None:
+        return []
+
+    as_of_ts = pd.Timestamp(as_of_date).normalize()
+    quarterly_period = _statement_period_timestamp(quarterly_financials)
+    latest_quarter_report = None
+    if latest_quarterly_filing:
+        latest_quarter_report = _statement_period_timestamp({"period_end": latest_quarterly_filing.get("report_date")})
+    reflected_periods = [period for period in (quarterly_period, latest_quarter_report) if period is not None]
+    latest_reflected_quarter = max(reflected_periods) if reflected_periods else None
+
+    due: list[dict[str, str]] = []
+    for offset in (3, 6, 9):
+        expected_period = (annual_period + pd.DateOffset(months=offset)).normalize()
+        deadline = expected_period + pd.Timedelta(days=45)
+        if deadline > as_of_ts:
+            continue
+        near_reflected_period = any(abs((expected_period - period).days) <= 14 for period in reflected_periods)
+        if near_reflected_period:
+            continue
+        if latest_reflected_quarter is not None and expected_period <= latest_reflected_quarter:
+            continue
+        due.append(
+            {
+                "form_type": "10-Q",
+                "report_date": expected_period.date().isoformat(),
+                "expected_deadline": deadline.date().isoformat(),
+                "basis": "보수적 45일 기준",
+            }
+        )
+    return due
+
+
+def _build_financial_statement_collection_status(
+    *,
+    symbol: str,
+    as_of_date: str,
+    annual_financials: dict[str, Any],
+    quarterly_financials: dict[str, Any],
+    statement_filings_loader: Callable[..., pd.DataFrame],
+) -> dict[str, Any]:
+    try:
+        filings = statement_filings_loader(
+            symbols=symbol,
+            forms=["10-K", "10-K/A", "10-Q", "10-Q/A"],
+            end=as_of_date,
+        )
+    except Exception as exc:
+        return {
+            "status": "UNKNOWN",
+            "headline": "재무제표 수집 상태 확인 불가",
+            "detail": f"EDGAR filing ledger 조회 실패: {exc}",
+            "tone": "neutral",
+            "items": _statement_collection_current_items(
+                annual_financials=annual_financials,
+                quarterly_financials=quarterly_financials,
+            ),
+            "missing_filings": [],
+        }
+
+    latest_annual = _latest_statement_filing(filings, forms={"10-K", "10-K/A"}, as_of_date=as_of_date)
+    latest_quarterly = _latest_statement_filing(filings, forms={"10-Q", "10-Q/A"}, as_of_date=as_of_date)
+    current_annual_period = _statement_period_timestamp(annual_financials)
+    current_quarterly_period = _statement_period_timestamp(quarterly_financials)
+    missing: list[dict[str, Any]] = []
+
+    if latest_quarterly:
+        latest_quarter_report = _statement_period_timestamp({"period_end": latest_quarterly.get("report_date")})
+        if latest_quarter_report is not None and (
+            current_quarterly_period is None or latest_quarter_report > current_quarterly_period
+        ):
+            missing.append(
+                _statement_collection_missing_payload(
+                    latest=latest_quarterly,
+                    current_period=current_quarterly_period,
+                    period_label="분기",
+                )
+            )
+    if latest_annual:
+        latest_annual_report = _statement_period_timestamp({"period_end": latest_annual.get("report_date")})
+        if latest_annual_report is not None and (
+            current_annual_period is None or latest_annual_report > current_annual_period
+        ):
+            missing.append(
+                _statement_collection_missing_payload(
+                    latest=latest_annual,
+                    current_period=current_annual_period,
+                    period_label="연간",
+                )
+            )
+
+    if missing:
+        first = missing[0]
+        form_type = str(first.get("form_type") or "-")
+        report_date = str(first.get("report_date") or "-")
+        period_label = str(first.get("period_label") or "재무제표")
+        current_label = str(first.get("current_period_end") or "미반영")
+        return {
+            "status": "ACTION_REQUIRED",
+            "headline": "받아야 할 재무제표 있음",
+            "detail": f"EDGAR {form_type} {report_date} 공시됨, DB {period_label} 반영은 {current_label}입니다.",
+            "tone": "warning",
+            "items": list(first.get("items") or []),
+            "missing_filings": missing,
+        }
+
+    expected_due = _statement_expected_due_checks(
+        as_of_date=as_of_date,
+        annual_financials=annual_financials,
+        quarterly_financials=quarterly_financials,
+        latest_quarterly_filing=latest_quarterly,
+    )
+    if expected_due:
+        first_due = expected_due[0]
+        return {
+            "status": "CHECK_REQUIRED",
+            "headline": "재무제표 공시 확인 필요",
+            "detail": (
+                f"예상 제출 기한이 지난 {first_due['form_type']} {first_due['report_date']} "
+                "filing ledger가 아직 확인되지 않았습니다."
+            ),
+            "tone": "warning",
+            "items": [
+                {
+                    "label": f"예상 {first_due['form_type']}",
+                    "value": first_due["report_date"],
+                    "detail": f"기한 {first_due['expected_deadline']} · {first_due['basis']}",
+                },
+                {
+                    "label": "DB 분기 반영",
+                    "value": _statement_current_period_label(quarterly_financials),
+                    "detail": "statement shadow",
+                },
+            ],
+            "missing_filings": expected_due,
+        }
+
+    if latest_annual is None and latest_quarterly is None:
+        return {
+            "status": "UNKNOWN",
+            "headline": "재무제표 수집 상태 확인 불가",
+            "detail": "EDGAR filing ledger에서 10-K / 10-Q row를 찾지 못했습니다.",
+            "tone": "neutral",
+            "items": _statement_collection_current_items(
+                annual_financials=annual_financials,
+                quarterly_financials=quarterly_financials,
+            ),
+            "missing_filings": [],
+        }
+
+    items: list[dict[str, str]] = []
+    if latest_quarterly:
+        latest_quarter_payload = _statement_filing_payload(latest_quarterly) or {}
+        items.append(
+            {
+                "label": f"최신 EDGAR {latest_quarter_payload.get('form_type') or '10-Q'}",
+                "value": str(latest_quarter_payload.get("report_date") or "-"),
+                "detail": f"공시 {latest_quarter_payload.get('filing_date') or latest_quarter_payload.get('available_at') or '-'}",
+            }
+        )
+    items.append(
+        {
+            "label": "DB 분기 반영",
+            "value": _statement_current_period_label(quarterly_financials),
+            "detail": "statement shadow",
+        }
+    )
+    if latest_annual:
+        latest_annual_payload = _statement_filing_payload(latest_annual) or {}
+        items.append(
+            {
+                "label": f"최신 EDGAR {latest_annual_payload.get('form_type') or '10-K'}",
+                "value": str(latest_annual_payload.get("report_date") or "-"),
+                "detail": f"공시 {latest_annual_payload.get('filing_date') or latest_annual_payload.get('available_at') or '-'}",
+            }
+        )
+    return {
+        "status": "OK",
+        "headline": "최신 재무제표 반영 완료",
+        "detail": "EDGAR filing ledger 기준 최신 공시가 statement shadow에 반영되어 있습니다.",
+        "tone": "positive",
+        "items": items,
+        "missing_filings": [],
+    }
+
+
 def build_market_mover_research_snapshot(
     *,
     mover: dict[str, Any],
@@ -586,6 +905,7 @@ def build_market_mover_research_snapshot(
     price_history_loader: Callable[..., pd.DataFrame] | None = None,
     statement_fundamentals_loader: Callable[..., pd.DataFrame] | None = None,
     fundamental_snapshot_loader: Callable[..., pd.DataFrame] | None = None,
+    statement_filings_loader: Callable[..., pd.DataFrame] | None = None,
 ) -> dict[str, Any]:
     """Build DB-backed context-only fundamentals for a selected Market Movers row."""
 
@@ -603,6 +923,14 @@ def build_market_mover_research_snapshot(
             "ytd_return": {"status": "UNAVAILABLE", "reason": "선택 symbol이 없습니다."},
             "annual_financials": {"status": "UNAVAILABLE", "freq": "annual", "reason": "선택 symbol이 없습니다."},
             "quarterly_financials": {"status": "UNAVAILABLE", "freq": "quarterly", "reason": "선택 symbol이 없습니다."},
+            "financial_statement_collection": {
+                "status": "UNKNOWN",
+                "headline": "재무제표 수집 상태 확인 불가",
+                "detail": "선택 symbol이 없습니다.",
+                "tone": "neutral",
+                "items": [],
+                "missing_filings": [],
+            },
             "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
         }
 
@@ -615,6 +943,7 @@ def build_market_mover_research_snapshot(
     price_loader = price_history_loader or load_price_history
     statement_loader = statement_fundamentals_loader or load_statement_fundamentals_shadow
     legacy_fundamental_loader = fundamental_snapshot_loader or load_fundamental_snapshot
+    filings_loader = statement_filings_loader or load_statement_filings
     ytd_return = _market_mover_ytd_snapshot(symbol, as_of_date=effective_as_of, price_history_loader=price_loader)
     latest_price = _coerce_optional_float(ytd_return.get("latest_price"))
     annual_statement = _market_mover_statement_fundamental_snapshot(
@@ -643,6 +972,13 @@ def build_market_mover_research_snapshot(
         statement_fundamentals_loader=statement_loader,
         require_quarterly_10q=True,
     )
+    collection_status = _build_financial_statement_collection_status(
+        symbol=symbol,
+        as_of_date=effective_as_of,
+        annual_financials=annual_financials,
+        quarterly_financials=quarterly_financials,
+        statement_filings_loader=filings_loader,
+    )
     return {
         "schema_version": "market_mover_research_snapshot_v1",
         "status": "READY",
@@ -653,6 +989,7 @@ def build_market_mover_research_snapshot(
         "ytd_return": ytd_return,
         "annual_financials": annual_financials,
         "quarterly_financials": quarterly_financials,
+        "financial_statement_collection": collection_status,
         "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
     }
 
