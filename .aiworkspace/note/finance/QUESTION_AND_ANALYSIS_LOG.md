@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Backtest result view should show result before interpretation and handoff
+
+- User request: Run Backtest 후 구조가 `Latest Backtest Run -> 데이터 기준 요약 -> Equal Weight -> 실전 검증 정보 -> 결과 tabs`처럼 보여 흐름이 어색하다고 지적하고 재정렬을 요청.
+- Interpreted goal: 사용자는 먼저 전략 결과와 핵심 성과를 보고, 그 다음 데이터 기준으로 해석 가능성을 확인한 뒤, 상세 결과와 다음 단계 handoff를 봐야 한다.
+- Analysis result: `Data Trust`는 사전 gate가 아니라 성과 해석 기준이고, `Practical Validation Handoff`는 결과 확인 후의 다음 action이므로 결과 위쪽에 둘 이유가 약했다.
+- Follow-up: `Latest Backtest Run` 제목을 제거하고 `전략명 백테스트 결과 -> 핵심 metric -> 데이터 기준 요약 -> 상세 결과 tabs -> 실전성 검증 Handoff` 순서로 재배치했다.
+
 ### 2026-07-01 - Data Trust Summary should answer user questions before raw metadata
 
 - User request: `Data Trust Summary`의 상단 정보가 처음 사용하는 사람에게 의미가 불명확하므로, 필요한 정보만 요약하고 더 시각적으로 정리해 달라고 요청.

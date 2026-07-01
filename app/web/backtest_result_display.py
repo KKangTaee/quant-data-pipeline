@@ -1085,6 +1085,105 @@ def _render_backtest_input_warning(message: str) -> None:
     st.warning(message)
 
 
+def _display_result_header_value(value: Any) -> str:
+    text = str(value or "").strip()
+    return text or "-"
+
+
+def _render_backtest_result_header(bundle: dict[str, Any]) -> None:
+    meta = dict(bundle.get("meta") or {})
+    strategy_name = _display_result_header_value(bundle.get("strategy_name") or meta.get("strategy_name"))
+    start = _display_result_header_value(meta.get("start"))
+    end = _display_result_header_value(meta.get("end"))
+    actual_end = _display_result_header_value(meta.get("actual_result_end") or end)
+    universe = _display_result_header_value(meta.get("preset_name") or meta.get("universe_mode"))
+    data_mode = _display_result_header_value(meta.get("data_mode"))
+    execution_mode = _display_result_header_value(meta.get("execution_mode"))
+    tickers = list(meta.get("tickers") or [])
+    ticker_label = f"{len(tickers)}개 종목" if tickers else "종목 수 미상"
+    period_label = f"{start} -> {end}" if start != "-" and end != "-" else "기간 정보 제한"
+    actual_label = f"계산 기준 {actual_end}" if actual_end != "-" else "계산 기준 제한"
+    headline = f"{strategy_name} 백테스트 결과"
+    subtitle = (
+        "먼저 핵심 성과를 확인하고, 이어서 데이터 기준과 상세 결과를 봅니다. "
+        "실전 검증 이동 여부는 화면 하단에서 최종 확인합니다."
+    )
+    chips = [
+        ("기간", period_label),
+        ("기준", actual_label),
+        ("Universe", universe),
+        ("구성", ticker_label),
+        ("Data", data_mode),
+        ("Execution", execution_mode),
+    ]
+    chips_html = "".join(
+        (
+            '<span class="backtest-result-hero__chip">'
+            f'<b>{escape(label)}</b>'
+            f'{escape(value)}'
+            '</span>'
+        )
+        for label, value in chips
+    )
+    st.markdown(
+        f"""
+<style>
+.backtest-result-hero {{
+  border-left: 4px solid #ff4b4b;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 1rem 1.1rem 0.95rem;
+  margin: 1.2rem 0 1rem;
+  background: linear-gradient(90deg, rgba(255, 75, 75, 0.09), rgba(255, 255, 255, 0));
+}}
+.backtest-result-hero__eyebrow {{
+  color: #ff6b6b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}}
+.backtest-result-hero h3 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.75rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}}
+.backtest-result-hero p {{
+  margin: 0.45rem 0 0;
+  color: #667085;
+  line-height: 1.5;
+}}
+.backtest-result-hero__chips {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}}
+.backtest-result-hero__chip {{
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}}
+.backtest-result-hero__chip b {{
+  color: var(--text-color);
+  margin-right: 0.32rem;
+}}
+</style>
+<section class="backtest-result-hero">
+  <div class="backtest-result-hero__eyebrow">백테스트 결과</div>
+  <h3>{escape(headline)}</h3>
+  <p>{escape(subtitle)}</p>
+  <div class="backtest-result-hero__chips">{chips_html}</div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -1107,7 +1206,6 @@ def _render_last_run() -> None:
     result_df = bundle["result_df"]
     meta = bundle["meta"]
 
-    st.markdown("### Latest Backtest Run")
     strategy_key = meta.get("strategy_key")
     has_selection_history = strategy_key in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS
 
@@ -1121,11 +1219,9 @@ def _render_last_run() -> None:
     has_real_money_details = bool(meta.get("real_money_hardening"))
     has_swing_details = bool(strategy_key == "risk_on_momentum_5d" or bundle.get("swing_trade_log_df") is not None)
 
-    _render_data_trust_summary(meta)
-
-    st.markdown(f"#### {bundle['strategy_name']}")
+    _render_backtest_result_header(bundle)
     _render_summary_metrics(summary_df)
-    _render_practical_validation_next_action(bundle)
+    _render_data_trust_summary(meta)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
@@ -1476,6 +1572,8 @@ def _render_last_run() -> None:
         with right:
             st.markdown("##### Runtime Metadata")
             st.json(meta)
+
+    _render_practical_validation_next_action(bundle)
 
 def _build_balance_compare_view(bundles: list[dict]) -> pd.DataFrame:
     series_list = []

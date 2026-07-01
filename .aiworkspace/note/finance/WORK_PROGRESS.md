@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Result Flow Reorder V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-result-flow-reorder-v1-20260701/`에서 Run Backtest 직후 결과 화면을 `전략 결과 -> 핵심 성과 -> 데이터 기준 -> 상세 결과 -> 실전 검증 Handoff` 순서로 재정렬했다.
+  - `Latest Backtest Run` 제목을 제거하고 전략명 기반 결과 헤더를 추가했다.
+  - Strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
 - Backtest Data Trust Summary Redesign V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-data-trust-summary-redesign-v1-20260701/`에서 `Latest Backtest Run`의 Data Trust 영역을 한국어 `데이터 기준 요약` 패널로 재구성했다.
   - 기존 영어 metric card / raw badge 중심 표시와 중복 reading row / 세부 기준 expander를 제거하고, `계산 기준일 / 가격 기준 / 사용 데이터 / 검토 큐` 요약과 `이번 실행 검토 큐`를 같은 패널에 둔다.

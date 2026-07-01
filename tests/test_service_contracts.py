@@ -7614,6 +7614,29 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("st.warning(", last_run_body)
         self.assertNotIn("이번 실행에서 같이 봐야 할 주의 사항", last_run_body)
 
+    def test_latest_backtest_run_prioritizes_result_then_data_trust_then_handoff(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        last_run_start = source.index("def _render_last_run")
+        last_run_body = source[last_run_start:]
+        last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
+
+        self.assertIn("_render_backtest_result_header(bundle)", last_run_body)
+        self.assertIn("_render_summary_metrics(summary_df)", last_run_body)
+        self.assertIn("_render_data_trust_summary(meta)", last_run_body)
+        self.assertIn("_render_practical_validation_next_action(bundle)", last_run_body)
+        self.assertNotIn("Latest Backtest Run", last_run_body)
+
+        header_pos = last_run_body.index("_render_backtest_result_header(bundle)")
+        metrics_pos = last_run_body.index("_render_summary_metrics(summary_df)")
+        data_trust_pos = last_run_body.index("_render_data_trust_summary(meta)")
+        tabs_pos = last_run_body.index("tabs = st.tabs(tab_labels)")
+        handoff_pos = last_run_body.index("_render_practical_validation_next_action(bundle)")
+
+        self.assertLess(header_pos, metrics_pos)
+        self.assertLess(metrics_pos, data_trust_pos)
+        self.assertLess(data_trust_pos, tabs_pos)
+        self.assertLess(tabs_pos, handoff_pos)
+
     def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
         from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
 
