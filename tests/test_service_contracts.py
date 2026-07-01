@@ -4203,6 +4203,41 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             INGESTION_COLLECTION_MANUAL,
         )
 
+    def test_ingestion_diagnostic_actions_dispatch_as_job_results(self) -> None:
+        from app.web import ingestion_console
+
+        with patch.object(
+            ingestion_console,
+            "run_price_stale_diagnosis",
+            return_value={"status": "ok", "message": "diagnosis ok", "details": {"rows": []}},
+        ) as diagnose:
+            result = ingestion_console._dispatch_job(
+                {
+                    "action": "diagnose_price_stale",
+                    "job_name": "diagnose_price_stale",
+                    "params": {"symbols": ["AAPL"], "end": "2026-07-01", "timeframe": "1d"},
+                }
+            )
+
+        diagnose.assert_called_once_with(["AAPL"], end="2026-07-01", timeframe="1d")
+        self.assertEqual(result["job_name"], "diagnose_price_stale")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 0)
+        self.assertEqual(result["symbols_requested"], 1)
+        self.assertEqual(result["details"]["diagnostic_result"]["message"], "diagnosis ok")
+
+    def test_ingestion_diagnostic_cards_schedule_jobs_instead_of_running_inline(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn('"action": "diagnose_price_stale"', source)
+        self.assertIn('"action": "diagnose_statement_universe_coverage"', source)
+        self.assertIn('"action": "diagnose_statement_coverage"', source)
+        self.assertIn('"action": "inspect_statement_pit"', source)
+        self.assertNotIn('with st.spinner("Running price stale diagnosis...")', source)
+        self.assertNotIn('with st.spinner("Running DB-backed statement universe coverage QA...")', source)
+        self.assertNotIn('with st.spinner("Running statement coverage diagnosis...")', source)
+        self.assertNotIn('with st.spinner("Running statement PIT inspection...")', source)
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
@@ -10064,11 +10099,23 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(
             per_eps["rows"],
             [
-                {"period": "연간", "date": "2025-12-31", "per": "41.67x", "eps": "$3.00"},
-                {"period": "분기", "date": "2026-03-31", "per": "166.67x", "eps": "$0.75"},
+                {
+                    "period": "연간",
+                    "period_end": "2025-12-31",
+                    "disclosure_date": "2026-02-20",
+                    "per": "41.67x",
+                    "eps": "$3.00",
+                },
+                {
+                    "period": "분기",
+                    "period_end": "2026-03-31",
+                    "disclosure_date": "2026-05-02",
+                    "per": "166.67x",
+                    "eps": "$0.75",
+                },
             ],
         )
-        self.assertEqual(per_eps["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31")
+        self.assertEqual(per_eps["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31 · 공시일 기준")
         self.assertNotIn("available", per_eps["detail"])
         self.assertNotIn("accession", per_eps["detail"])
         income = items["당기순이익"]
@@ -10076,11 +10123,21 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(
             income["rows"],
             [
-                {"period": "연간", "date": "2025-12-31", "net_income": "12.0억 달러"},
-                {"period": "분기", "date": "2026-03-31", "net_income": "3.0억 달러"},
+                {
+                    "period": "연간",
+                    "period_end": "2025-12-31",
+                    "disclosure_date": "2026-02-20",
+                    "net_income": "12.0억 달러",
+                },
+                {
+                    "period": "분기",
+                    "period_end": "2026-03-31",
+                    "disclosure_date": "2026-05-02",
+                    "net_income": "3.0억 달러",
+                },
             ],
         )
-        self.assertEqual(income["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31")
+        self.assertEqual(income["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31 · 공시일 기준")
         self.assertIn("context-only", model["boundary_note"].lower())
 
     def test_market_mover_research_items_html_renders_per_eps_rows_as_table(self) -> None:
@@ -10095,8 +10152,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "available": True,
                     "tone": "neutral",
                     "rows": [
-                        {"period": "연간", "date": "2025-12-31", "per": "41.67x", "eps": "$3.00"},
-                        {"period": "분기", "date": "2026-03-31", "per": "166.67x", "eps": "$0.75"},
+                        {
+                            "period": "연간",
+                            "period_end": "2025-12-31",
+                            "disclosure_date": "2026-02-20",
+                            "per": "41.67x",
+                            "eps": "$3.00",
+                        },
+                        {
+                            "period": "분기",
+                            "period_end": "2026-03-31",
+                            "disclosure_date": "2026-05-02",
+                            "per": "166.67x",
+                            "eps": "$0.75",
+                        },
                     ],
                 }
             ]
@@ -10104,11 +10173,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertIn('class="ov-mm-research-table is-per-eps"', html)
         self.assertIn("구분", html)
-        self.assertIn("날짜", html)
+        self.assertIn("회계기간", html)
+        self.assertIn("공시일", html)
         self.assertIn("PER", html)
         self.assertIn("EPS", html)
         self.assertIn("2025-12-31", html)
+        self.assertIn("2026-02-20", html)
         self.assertIn("2026-03-31", html)
+        self.assertIn("2026-05-02", html)
         self.assertIn("41.67x", html)
         self.assertIn("$0.75", html)
 
@@ -10124,8 +10196,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "available": True,
                     "tone": "neutral",
                     "rows": [
-                        {"period": "연간", "date": "2025-12-31", "net_income": "12.0억 달러"},
-                        {"period": "분기", "date": "2026-03-31", "net_income": "3.0억 달러"},
+                        {
+                            "period": "연간",
+                            "period_end": "2025-12-31",
+                            "disclosure_date": "2026-02-20",
+                            "net_income": "12.0억 달러",
+                        },
+                        {
+                            "period": "분기",
+                            "period_end": "2026-03-31",
+                            "disclosure_date": "2026-05-02",
+                            "net_income": "3.0억 달러",
+                        },
                     ],
                 }
             ]
@@ -10133,10 +10215,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertIn('class="ov-mm-research-table is-income"', html)
         self.assertIn("구분", html)
-        self.assertIn("날짜", html)
+        self.assertIn("회계기간", html)
+        self.assertIn("공시일", html)
         self.assertIn("당기순이익", html)
         self.assertIn("2025-12-31", html)
+        self.assertIn("2026-02-20", html)
         self.assertIn("2026-03-31", html)
+        self.assertIn("2026-05-02", html)
         self.assertIn("12.0억 달러", html)
         self.assertIn("3.0억 달러", html)
         self.assertNotIn("accession", html)

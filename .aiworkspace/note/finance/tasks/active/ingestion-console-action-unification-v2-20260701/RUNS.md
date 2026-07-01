@@ -12,3 +12,13 @@
   - Result: PASS.
 - `git diff --check`
   - Result: PASS.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_diagnostic_actions_dispatch_as_job_results tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_diagnostic_cards_schedule_jobs_instead_of_running_inline`
+  - Result: RED before implementation. `_dispatch_job` did not support `diagnose_price_stale`, and diagnostic cards still ran inline with `st.spinner`.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_diagnostic_actions_dispatch_as_job_results tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_diagnostic_cards_schedule_jobs_instead_of_running_inline`
+  - Result: PASS after routing read-only diagnostic actions through scheduled job dispatch and session-state result storage.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_action_registry_classifies_active_and_compatibility_actions tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_diagnostic_actions_dispatch_as_job_results tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_diagnostic_cards_schedule_jobs_instead_of_running_inline tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_common_last_result_summary_preserves_next_action_focus tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_job_briefs_explain_operational_alias_relationships tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_console_dispatches_collection_sections_to_dedicated_renderers tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_console_moves_run_records_into_third_collection_section tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_collection_section_selector_is_stateful_across_reruns tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_running_jobs_preserve_section_and_show_elapsed_time tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_ui_removes_legacy_broad_collection_cards_but_keeps_compatibility_actions`
+  - Result: PASS, 10 tests.
+- `.venv/bin/python -m py_compile app/web/ingestion_console.py tests/test_service_contracts.py`
+  - Result: PASS.
+- `git diff --check`
+  - Result: PASS.

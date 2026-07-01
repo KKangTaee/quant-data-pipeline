@@ -651,6 +651,48 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "caveats": ["요청 범위와 실제 provider 응답 범위가 다를 수 있습니다."],
         "next_action": "누락 symbol은 Price Stale Diagnosis로 원인을 분류하세요.",
     },
+    "diagnose_price_stale": {
+        "title": "가격 stale 원인 진단",
+        "purpose": "DB latest date, provider probe, asset profile 상태를 읽어 가격 stale 원인을 분리합니다.",
+        "targets": ["finance_price.nyse_price_history", "finance_meta.nyse_asset_profile"],
+        "used_by": ["Manual recovery", "Data Coverage Audit", "Price Freshness Preflight"],
+        "caveats": ["읽기 전용 진단이며 새 가격 row를 저장하지 않습니다."],
+        "next_action": "local ingestion gap이면 가격 이력 수동 수집으로 기간을 좁혀 보강하세요.",
+    },
+    "diagnose_statement_universe_coverage": {
+        "title": "재무제표 universe coverage QA",
+        "purpose": "Top1000 / Top2000 / Nasdaq 등 universe 단위로 EDGAR statement coverage 원인을 점검합니다.",
+        "targets": [
+            "finance_fundamental.nyse_financial_statement_values",
+            "finance_fundamental.nyse_fundamentals_statement",
+            "finance_fundamental.nyse_factors_statement",
+        ],
+        "used_by": ["Strict statement coverage review", "Statement recovery planning"],
+        "caveats": ["읽기 전용 QA이며 paid provider나 yfinance statement data를 primary source로 읽지 않습니다."],
+        "next_action": "raw present / shadow missing이면 shadow rebuild, raw missing이면 EDGAR refresh로 분리하세요.",
+    },
+    "diagnose_statement_coverage": {
+        "title": "재무제표 coverage 원인 진단",
+        "purpose": "선택 symbol의 raw statement, shadow table, live EDGAR sample 상태를 비교합니다.",
+        "targets": [
+            "finance_fundamental.nyse_financial_statement_values",
+            "finance_fundamental.nyse_fundamentals_statement",
+        ],
+        "used_by": ["Manual statement recovery", "PIT inspection"],
+        "caveats": ["읽기 전용 진단이며 EDGAR sample 조회는 source shape 확인 목적입니다."],
+        "next_action": "source-present raw-missing이면 EDGAR refresh, raw-present shadow-missing이면 shadow rebuild를 실행하세요.",
+    },
+    "inspect_statement_pit": {
+        "title": "재무제표 PIT inspection",
+        "purpose": "저장된 statement timing row와 EDGAR source payload shape를 UI에서 점검합니다.",
+        "targets": [
+            "finance_fundamental.nyse_financial_statement_values",
+            "finance_fundamental.nyse_fundamentals_statement",
+        ],
+        "used_by": ["Point-in-time validation", "Statement source review"],
+        "caveats": ["읽기 전용 inspection이며 live source sample은 대표 payload 확인용입니다."],
+        "next_action": "accepted_at / available_at 의미가 어긋나면 factor PIT 변환 경계를 먼저 점검하세요.",
+    },
     "collect_fundamentals": {
         "title": "Archived broad fundamentals manual collection",
         "purpose": "Archived legacy compatibility job for broad yfinance normalized fundamentals.",
@@ -1741,6 +1783,124 @@ def _job_metadata(
     return metadata
 
 
+def _diagnostic_state_key(action: str) -> str | None:
+    return {
+        "diagnose_price_stale": "price_stale_diagnosis_result",
+        "diagnose_statement_universe_coverage": "statement_universe_coverage_qa_result",
+        "diagnose_statement_coverage": "statement_coverage_diagnosis_result",
+        "inspect_statement_pit": "statement_pit_inspection_result",
+    }.get(action)
+
+
+def _diagnostic_status_to_job_status(status: Any) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized in {"ok", "success", "passed", "pass"}:
+        return "success"
+    if normalized in {"warning", "partial_success", "review", "needs_review"}:
+        return "partial_success"
+    return "failed"
+
+
+def _count_diagnostic_symbols(params: dict[str, Any]) -> int:
+    symbols = params.get("symbols")
+    if isinstance(symbols, str):
+        return len(_parse_csv_items(symbols))
+    if isinstance(symbols, (list, tuple, set)):
+        return len([symbol for symbol in symbols if str(symbol).strip()])
+    return 0
+
+
+def _build_diagnostic_job_result(
+    *,
+    action: str,
+    params: dict[str, Any],
+    diagnostic_result: dict[str, Any],
+    started_at: datetime,
+    finished_at: datetime,
+) -> JobResult:
+    status = _diagnostic_status_to_job_status(diagnostic_result.get("status"))
+    symbols_requested = _count_diagnostic_symbols(params)
+    return {
+        "job_name": action,
+        "status": status,
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "finished_at": finished_at.isoformat(timespec="seconds"),
+        "duration_sec": round((finished_at - started_at).total_seconds(), 3),
+        "rows_written": 0,
+        "symbols_requested": symbols_requested,
+        "symbols_processed": symbols_requested if status in {"success", "partial_success"} else 0,
+        "failed_symbols": [],
+        "message": diagnostic_result.get("message") or f"{_job_title(action)} completed.",
+        "details": {
+            "action": action,
+            "diagnostic_result": diagnostic_result,
+            "write_behavior": "read_only",
+        },
+    }
+
+
+def _dispatch_diagnostic_job(
+    action: str,
+    params: dict[str, Any],
+    *,
+    progress_callback: Any = None,
+) -> JobResult:
+    started_at = datetime.now()
+    if progress_callback:
+        progress_callback({"type": "stage_start", "stage": action, "stage_index": 1, "total_stages": 1})
+
+    if action == "diagnose_price_stale":
+        diagnostic_result = run_price_stale_diagnosis(
+            params.get("symbols") or [],
+            end=params.get("end"),
+            timeframe=params.get("timeframe", "1d"),
+        )
+    elif action == "diagnose_statement_universe_coverage":
+        diagnostic_result = run_statement_universe_coverage_qa(
+            universe_code=params.get("universe_code", "TOP1000"),
+            universe_limit=params.get("universe_limit"),
+            freq=params.get("freq", "annual"),
+            as_of_date=params.get("as_of_date"),
+        )
+    elif action == "diagnose_statement_coverage":
+        diagnostic_result = run_statement_coverage_diagnosis(
+            params.get("symbols") or [],
+            freq=params.get("freq", "quarterly"),
+            sample_size=int(params.get("sample_size", 2) or 2),
+        )
+    elif action == "inspect_statement_pit":
+        diagnostic_result = run_statement_pit_inspection(
+            symbols=params.get("symbols") or [],
+            inspect_freq=params.get("inspect_freq", "quarterly"),
+            audit_symbol_limit=int(params.get("audit_symbol_limit", 3) or 3),
+            audit_limit_per_symbol=int(params.get("audit_limit_per_symbol", 5) or 5),
+            source_symbol=params.get("source_symbol"),
+            source_sample_size=int(params.get("source_sample_size", 2) or 2),
+        )
+    else:
+        raise ValueError(f"Unsupported diagnostic action: {action}")
+
+    finished_at = datetime.now()
+    if progress_callback:
+        progress_callback({"type": "stage_complete", "stage": action, "stage_index": 1, "total_stages": 1})
+    return _build_diagnostic_job_result(
+        action=action,
+        params=params,
+        diagnostic_result=diagnostic_result,
+        started_at=started_at,
+        finished_at=finished_at,
+    )
+
+
+def _store_diagnostic_result_if_needed(result: JobResult) -> None:
+    state_key = _diagnostic_state_key(str(result.get("job_name") or ""))
+    if not state_key:
+        return
+    diagnostic_result = (result.get("details") or {}).get("diagnostic_result")
+    if diagnostic_result is not None:
+        st.session_state[state_key] = diagnostic_result
+
+
 def _clear_running_job() -> None:
     st.session_state.running_job = None
 
@@ -1749,6 +1909,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     action = job["action"]
     params = dict(job["params"])
 
+    if _diagnostic_state_key(action):
+        return _dispatch_diagnostic_job(action, params, progress_callback=progress_callback)
     if action == "pipeline_core_market_data":
         params["progress_callback"] = progress_callback
         return run_pipeline_core_market_data(**params)
@@ -1836,6 +1998,7 @@ def _run_scheduled_job(progress_callback: Any = None) -> None:
         }
 
     result["run_metadata"] = job.get("run_metadata") or {}
+    _store_diagnostic_result_if_needed(result)
     _push_result(result)
     st.session_state.last_completed_result = result
     if job.get("action") in {"extended_statement_refresh", "collect_financial_statements", "rebuild_statement_shadow"}:
@@ -2884,13 +3047,29 @@ def _render_price_stale_diagnosis_card() -> None:
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(diag_symbol_check),
         ):
-            with st.spinner("Running price stale diagnosis..."):
-                result = run_price_stale_diagnosis(
-                    diag_symbols_input,
-                    end=diag_end_input.isoformat(),
-                    timeframe="1d",
-                )
-            st.session_state.price_stale_diagnosis_result = result
+            _schedule_job(
+                {
+                    "action": "diagnose_price_stale",
+                    "job_name": "diagnose_price_stale",
+                    "spinner_text": "Running price stale diagnosis...",
+                    "params": {
+                        "symbols": diag_symbols_input,
+                        "end": diag_end_input.isoformat(),
+                        "timeframe": "1d",
+                    },
+                    "run_metadata": _job_metadata(
+                        pipeline_type="price_stale_diagnosis",
+                        execution_mode="diagnostic",
+                        symbol_source=diag_symbol_result.get("source_mode"),
+                        symbol_count=len(diag_symbols_input),
+                        execution_context="Read-only price stale diagnosis for selected symbols.",
+                        input_params={
+                            "end": diag_end_input.isoformat(),
+                            "timeframe": "1d",
+                        },
+                    ),
+                }
+            )
 
         result = st.session_state.get("price_stale_diagnosis_result")
         if result:
@@ -2942,14 +3121,32 @@ def _render_statement_universe_coverage_qa_card() -> None:
             use_container_width=True,
             disabled=_has_running_job(),
         ):
-            with st.spinner("Running DB-backed statement universe coverage QA..."):
-                result = run_statement_universe_coverage_qa(
-                    universe_code=universe_code,
-                    universe_limit=universe_limit or None,
-                    freq=qa_freq,
-                    as_of_date=qa_as_of.isoformat(),
-                )
-            st.session_state.statement_universe_coverage_qa_result = result
+            _schedule_job(
+                {
+                    "action": "diagnose_statement_universe_coverage",
+                    "job_name": "diagnose_statement_universe_coverage",
+                    "spinner_text": "Running DB-backed statement universe coverage QA...",
+                    "params": {
+                        "universe_code": universe_code,
+                        "universe_limit": universe_limit or None,
+                        "freq": qa_freq,
+                        "as_of_date": qa_as_of.isoformat(),
+                    },
+                    "run_metadata": _job_metadata(
+                        pipeline_type="statement_universe_coverage_qa",
+                        execution_mode="diagnostic",
+                        symbol_source=universe_code,
+                        symbol_count=universe_limit or None,
+                        execution_context="Read-only DB-backed statement universe coverage QA.",
+                        input_params={
+                            "universe_code": universe_code,
+                            "universe_limit": universe_limit or None,
+                            "freq": qa_freq,
+                            "as_of_date": qa_as_of.isoformat(),
+                        },
+                    ),
+                }
+            )
 
         result = st.session_state.get("statement_universe_coverage_qa_result")
         if result:
@@ -3012,13 +3209,29 @@ def _render_statement_coverage_diagnosis_card() -> None:
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(diag_symbol_check),
         ):
-            with st.spinner("Running statement coverage diagnosis..."):
-                result = run_statement_coverage_diagnosis(
-                    diag_symbols_input,
-                    freq=diag_freq_input,
-                    sample_size=diag_sample_size,
-                )
-            st.session_state.statement_coverage_diagnosis_result = result
+            _schedule_job(
+                {
+                    "action": "diagnose_statement_coverage",
+                    "job_name": "diagnose_statement_coverage",
+                    "spinner_text": "Running statement coverage diagnosis...",
+                    "params": {
+                        "symbols": diag_symbols_input,
+                        "freq": diag_freq_input,
+                        "sample_size": diag_sample_size,
+                    },
+                    "run_metadata": _job_metadata(
+                        pipeline_type="statement_coverage_diagnosis",
+                        execution_mode="diagnostic",
+                        symbol_source=diag_symbol_result.get("source_mode"),
+                        symbol_count=len(diag_symbols_input),
+                        execution_context="Read-only statement coverage diagnosis for selected symbols.",
+                        input_params={
+                            "freq": diag_freq_input,
+                            "sample_size": diag_sample_size,
+                        },
+                    ),
+                }
+            )
 
         result = st.session_state.get("statement_coverage_diagnosis_result")
         if result:
@@ -3113,17 +3326,35 @@ def _render_statement_pit_inspection_card() -> None:
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(inspect_symbol_check),
         ):
-            with st.spinner("Running statement PIT inspection..."):
-                result = run_statement_pit_inspection(
-                    symbols=inspect_symbols_input,
-                    inspect_freq=inspect_freq,
-                    audit_symbol_limit=audit_symbol_limit,
-                    audit_limit_per_symbol=audit_limit_per_symbol,
-                    source_symbol=source_symbol,
-                    source_sample_size=source_sample_size,
-                )
-
-            st.session_state.statement_pit_inspection_result = result
+            _schedule_job(
+                {
+                    "action": "inspect_statement_pit",
+                    "job_name": "inspect_statement_pit",
+                    "spinner_text": "Running statement PIT inspection...",
+                    "params": {
+                        "symbols": inspect_symbols_input,
+                        "inspect_freq": inspect_freq,
+                        "audit_symbol_limit": audit_symbol_limit,
+                        "audit_limit_per_symbol": audit_limit_per_symbol,
+                        "source_symbol": source_symbol,
+                        "source_sample_size": source_sample_size,
+                    },
+                    "run_metadata": _job_metadata(
+                        pipeline_type="statement_pit_inspection",
+                        execution_mode="diagnostic",
+                        symbol_source=inspect_symbol_result.get("source_mode"),
+                        symbol_count=len(inspect_symbols_input),
+                        execution_context="Read-only statement PIT inspection for selected symbols.",
+                        input_params={
+                            "inspect_freq": inspect_freq,
+                            "audit_symbol_limit": audit_symbol_limit,
+                            "audit_limit_per_symbol": audit_limit_per_symbol,
+                            "source_symbol": source_symbol,
+                            "source_sample_size": source_sample_size,
+                        },
+                    ),
+                }
+            )
 
         result = st.session_state.get("statement_pit_inspection_result")
         if result:
@@ -4924,15 +5155,35 @@ def _render_ingestion_manual_section() -> Any:
 
     with st.expander("가격 stale 원인 진단", expanded=False):
         _render_price_stale_diagnosis_card()
+    if _is_running_action("diagnose_price_stale"):
+        current_progress_callback = _build_progress_callback(
+            st.session_state.running_job,
+            label="Price Stale Diagnosis",
+        )
 
     with st.expander("재무제표 universe coverage QA", expanded=False):
         _render_statement_universe_coverage_qa_card()
+    if _is_running_action("diagnose_statement_universe_coverage"):
+        current_progress_callback = _build_progress_callback(
+            st.session_state.running_job,
+            label="Statement Universe Coverage QA",
+        )
 
     with st.expander("재무제표 coverage 원인 진단", expanded=False):
         _render_statement_coverage_diagnosis_card()
+    if _is_running_action("diagnose_statement_coverage"):
+        current_progress_callback = _build_progress_callback(
+            st.session_state.running_job,
+            label="Statement Coverage Diagnosis",
+        )
 
     with st.expander("재무제표 PIT inspection", expanded=False):
         _render_statement_pit_inspection_card()
+    if _is_running_action("inspect_statement_pit"):
+        current_progress_callback = _build_progress_callback(
+            st.session_state.running_job,
+            label="Statement PIT Inspection",
+        )
     return current_progress_callback
 
 
