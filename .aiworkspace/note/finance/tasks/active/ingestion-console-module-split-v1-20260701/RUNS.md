@@ -28,3 +28,12 @@
   - Result: PASS, 4 tests.
 - Compile: `.venv/bin/python -m py_compile app/web/ingestion/page.py app/web/ingestion/guides.py app/web/ingestion/results.py app/web/ingestion/styles.py app/web/ingestion_console.py`
   - Result: PASS.
+
+## 4차
+
+- RED: `.venv/bin/python -m unittest tests.test_ingestion_module_split_contracts -v`
+  - Result: expected failure. `app.web.ingestion.dispatcher` was not importable.
+- GREEN: `.venv/bin/python -m unittest tests.test_ingestion_module_split_contracts -v`
+  - Result: PASS, 5 tests.
+- Compile: `.venv/bin/python -m py_compile app/web/ingestion/page.py app/web/ingestion/dispatcher.py app/web/ingestion/guides.py app/web/ingestion/results.py app/web/ingestion/styles.py app/web/ingestion/registry.py app/web/ingestion_console.py`
+  - Result: PASS.

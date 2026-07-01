@@ -53,6 +53,32 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertEqual(summary["title"], "일별 가격 업데이트")
         self.assertIn("coverage gap", summary["attention"])
 
+    def test_ingestion_dispatcher_lives_in_dedicated_module(self) -> None:
+        from unittest.mock import patch
+
+        from app.web.ingestion import dispatcher
+        from app.web.ingestion import page
+
+        self.assertIs(page._dispatch_job, dispatcher.dispatch_job)
+        self.assertEqual(dispatcher.diagnostic_state_key("diagnose_price_stale"), "price_stale_diagnosis_result")
+
+        with patch(
+            "app.web.ingestion.dispatcher.run_price_stale_diagnosis",
+            return_value={"status": "ok", "message": "diagnosis ok", "details": {"rows": []}},
+        ) as diagnose:
+            result = dispatcher.dispatch_job(
+                {
+                    "action": "diagnose_price_stale",
+                    "job_name": "diagnose_price_stale",
+                    "params": {"symbols": ["AAPL"], "end": "2026-07-01", "timeframe": "1d"},
+                }
+            )
+
+        diagnose.assert_called_once_with(["AAPL"], end="2026-07-01", timeframe="1d")
+        self.assertEqual(result["job_name"], "diagnose_price_stale")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
