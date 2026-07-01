@@ -3976,7 +3976,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
         import ast
 
-        source = Path("app/web/backtest_compare.py").read_text(encoding="utf-8")
+        source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -3989,7 +3989,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.web.backtest_compare_components", imported_modules)
+        self.assertIn("app.web.backtest_compare.components", imported_modules)
         self.assertNotIn("_render_portfolio_mix_builder_css", function_names)
         self.assertNotIn("_render_portfolio_mix_flow_strip", function_names)
         self.assertNotIn("_render_portfolio_mix_section_head", function_names)
@@ -3997,7 +3997,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("_status_chip_tone", function_names)
 
     def test_backtest_compare_components_module_owns_visual_entrypoints(self) -> None:
-        from app.web.backtest_compare_components import (
+        from app.web.backtest_compare.components import (
             html_text,
             render_component_result_overview_cards,
             render_portfolio_mix_builder_css,

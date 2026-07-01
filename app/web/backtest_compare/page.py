@@ -20,7 +20,7 @@ from app.workspace_paths import REGISTRIES_DIR
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
 )
-from app.web.backtest_compare_components import (
+from app.web.backtest_compare.components import (
     html_text as _html_text,
     render_component_result_overview_cards,
     render_portfolio_mix_builder_css,

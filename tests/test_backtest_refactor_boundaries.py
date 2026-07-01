@@ -75,12 +75,14 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             {"gtaa": False, "equal_weight": False},
         )
 
-        compare_source = (PROJECT_ROOT / "app/web/backtest_compare.py").read_text()
+        compare_source = (PROJECT_ROOT / "app/web/backtest_compare/page.py").read_text()
         self.assertIn(
             "from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags",
             compare_source,
         )
         self.assertIn("return weighted_strategy_role_flags(strategy_names)", compare_source)
+        self.assertTrue((PROJECT_ROOT / "app/web/backtest_compare/__init__.py").exists())
+        self.assertTrue((PROJECT_ROOT / "app/web/backtest_compare/weight_builder.py").exists())
 
     def test_practical_validation_status_policy_is_service_owned(self) -> None:
         from app.services.backtest_validation_status_policy import (
