@@ -30,7 +30,7 @@ from app.web.backtest_final_review_helpers import (
     _build_final_review_validation,
     _is_final_review_eligible_validation_result,
 )
-from app.web.backtest_final_review_components import (
+from app.web.backtest_final_review.components import (
     render_fr_action_panel,
     render_fr_command_center,
     render_fr_flow,

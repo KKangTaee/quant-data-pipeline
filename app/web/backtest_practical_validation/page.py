@@ -26,7 +26,7 @@ from app.services.backtest_practical_validation_replay import (
     build_practical_validation_recheck_plan,
     run_practical_validation_actual_replay,
 )
-from app.web.backtest_practical_validation_components import (
+from app.web.backtest_practical_validation.components import (
     render_pv_alert_panel,
     render_pv_card_grid,
     render_pv_command_center,

@@ -201,6 +201,17 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             source = path.read_text()
             self.assertNotRegex(source, r"^def append_", msg=f"{path} should not own JSONL append helpers")
 
+    def test_validation_and_final_review_ui_packages_preserve_render_imports(self) -> None:
+        from app.web.backtest_final_review import render_final_review_workspace
+        from app.web.backtest_practical_validation import render_practical_validation_workspace
+
+        self.assertTrue(callable(render_practical_validation_workspace))
+        self.assertTrue(callable(render_final_review_workspace))
+        self.assertTrue((PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").exists())
+        self.assertTrue((PROJECT_ROOT / "app/web/backtest_practical_validation/evidence_boards.py").exists())
+        self.assertTrue((PROJECT_ROOT / "app/web/backtest_final_review/page.py").exists())
+        self.assertTrue((PROJECT_ROOT / "app/web/backtest_final_review/decision_cockpit.py").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
