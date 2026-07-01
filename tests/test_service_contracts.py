@@ -4170,6 +4170,39 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("복구용", profile_note)
         self.assertIn("EDGAR annual", statement_note)
 
+    def test_ingestion_action_registry_classifies_active_and_compatibility_actions(self) -> None:
+        from app.web.ingestion_console import (
+            INGESTION_ACTION_REGISTRY,
+            INGESTION_COLLECTION_MANUAL,
+            INGESTION_COLLECTION_OPERATIONAL,
+            _infer_ingestion_collection_section,
+        )
+
+        self.assertEqual(
+            INGESTION_ACTION_REGISTRY["daily_market_update"]["section"],
+            INGESTION_COLLECTION_OPERATIONAL,
+        )
+        self.assertEqual(
+            INGESTION_ACTION_REGISTRY["collect_ohlcv"]["section"],
+            INGESTION_COLLECTION_MANUAL,
+        )
+        self.assertEqual(
+            INGESTION_ACTION_REGISTRY["diagnose_price_stale"]["section"],
+            INGESTION_COLLECTION_MANUAL,
+        )
+        self.assertEqual(INGESTION_ACTION_REGISTRY["diagnose_price_stale"]["write_behavior"], "read_only")
+        self.assertIn(
+            "finance_price.nyse_price_history",
+            INGESTION_ACTION_REGISTRY["daily_market_update"]["target_tables"],
+        )
+        self.assertTrue(INGESTION_ACTION_REGISTRY["daily_market_update"]["active"])
+        self.assertFalse(INGESTION_ACTION_REGISTRY["weekly_fundamental_refresh"]["active"])
+        self.assertTrue(INGESTION_ACTION_REGISTRY["weekly_fundamental_refresh"]["compatibility"])
+        self.assertEqual(
+            _infer_ingestion_collection_section({"action": "diagnose_statement_coverage"}),
+            INGESTION_COLLECTION_MANUAL,
+        )
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
