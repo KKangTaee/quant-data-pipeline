@@ -1090,7 +1090,47 @@ def _display_result_header_value(value: Any) -> str:
     return text or "-"
 
 
-def _render_backtest_result_header(bundle: dict[str, Any]) -> None:
+def _format_result_kpi_value(row: pd.Series, column: str, formatter: Any) -> str:
+    try:
+        value = row[column]
+        if pd.isna(value):
+            return "-"
+        return formatter(float(value))
+    except (KeyError, TypeError, ValueError):
+        return "-"
+
+
+def _build_result_kpi_items(summary_df: pd.DataFrame) -> list[dict[str, str]]:
+    row = summary_df.iloc[0] if summary_df is not None and not summary_df.empty else pd.Series(dtype=object)
+    return [
+        {
+            "label": "End Balance",
+            "caption": "최종 평가액",
+            "value": _format_result_kpi_value(row, "End Balance", _format_currency),
+            "tone": "balance",
+        },
+        {
+            "label": "CAGR",
+            "caption": "연환산 수익률",
+            "value": _format_result_kpi_value(row, "CAGR", _format_percent),
+            "tone": "return",
+        },
+        {
+            "label": "Sharpe Ratio",
+            "caption": "위험 대비 성과",
+            "value": _format_result_kpi_value(row, "Sharpe Ratio", _format_ratio),
+            "tone": "ratio",
+        },
+        {
+            "label": "Maximum Drawdown",
+            "caption": "최대 낙폭",
+            "value": _format_result_kpi_value(row, "Maximum Drawdown", _format_percent),
+            "tone": "risk",
+        },
+    ]
+
+
+def _render_backtest_result_header(bundle: dict[str, Any], summary_df: pd.DataFrame) -> None:
     meta = dict(bundle.get("meta") or {})
     strategy_name = _display_result_header_value(bundle.get("strategy_name") or meta.get("strategy_name"))
     start = _display_result_header_value(meta.get("start"))
@@ -1102,28 +1142,37 @@ def _render_backtest_result_header(bundle: dict[str, Any]) -> None:
     tickers = list(meta.get("tickers") or [])
     ticker_label = f"{len(tickers)}개 종목" if tickers else "종목 수 미상"
     period_label = f"{start} -> {end}" if start != "-" and end != "-" else "기간 정보 제한"
-    actual_label = f"계산 기준 {actual_end}" if actual_end != "-" else "계산 기준 제한"
+    actual_label = actual_end if actual_end != "-" else "계산 기준 제한"
     headline = f"{strategy_name} 백테스트 결과"
     subtitle = (
-        "먼저 핵심 성과를 확인하고, 이어서 데이터 기준과 상세 결과를 봅니다. "
-        "실전 검증 이동 여부는 화면 하단에서 최종 확인합니다."
+        "핵심 성과를 먼저 보고, 바로 아래에서 이 성과가 어떤 데이터 기준으로 계산됐는지 확인합니다."
     )
-    chips = [
+    basis_items = [
         ("기간", period_label),
-        ("기준", actual_label),
+        ("계산 기준", actual_label),
         ("Universe", universe),
         ("구성", ticker_label),
         ("Data", data_mode),
         ("Execution", execution_mode),
     ]
-    chips_html = "".join(
+    basis_html = "".join(
         (
-            '<span class="backtest-result-hero__chip">'
+            '<span class="backtest-result-hero__basis-item">'
             f'<b>{escape(label)}</b>'
-            f'{escape(value)}'
+            f' {escape(value)}'
             '</span>'
         )
-        for label, value in chips
+        for label, value in basis_items
+    )
+    kpi_html = "".join(
+        (
+            f'<div class="backtest-result-hero__kpi backtest-result-hero__kpi--{escape(item["tone"])}">'
+            f'<div class="backtest-result-hero__kpi-label">{escape(item["label"])}</div>'
+            f'<div class="backtest-result-hero__kpi-value">{escape(item["value"])}</div>'
+            f'<div class="backtest-result-hero__kpi-caption">{escape(item["caption"])}</div>'
+            '</div>'
+        )
+        for item in _build_result_kpi_items(summary_df)
     )
     st.markdown(
         f"""
@@ -1132,9 +1181,10 @@ def _render_backtest_result_header(bundle: dict[str, Any]) -> None:
   border-left: 4px solid #ff4b4b;
   border-top: 1px solid rgba(148, 163, 184, 0.24);
   border-bottom: 1px solid rgba(148, 163, 184, 0.24);
-  padding: 1rem 1.1rem 0.95rem;
-  margin: 1.2rem 0 1rem;
-  background: linear-gradient(90deg, rgba(255, 75, 75, 0.09), rgba(255, 255, 255, 0));
+  padding: 1.05rem 1.15rem 0;
+  margin: 1.2rem 0 1.15rem;
+  background:
+    linear-gradient(90deg, rgba(255, 75, 75, 0.08), rgba(255, 255, 255, 0) 68%);
 }}
 .backtest-result-hero__eyebrow {{
   color: #ff6b6b;
@@ -1154,30 +1204,97 @@ def _render_backtest_result_header(bundle: dict[str, Any]) -> None:
   color: #667085;
   line-height: 1.5;
 }}
-.backtest-result-hero__chips {{
+.backtest-result-hero__basis {{
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.35rem 1.15rem;
   margin-top: 0.85rem;
+  color: #667085;
+  font-size: 0.84rem;
+  line-height: 1.35;
 }}
-.backtest-result-hero__chip {{
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  border-radius: 999px;
-  padding: 0.28rem 0.62rem;
+.backtest-result-hero__basis-item {{
+  min-width: 0;
+  overflow-wrap: anywhere;
+}}
+.backtest-result-hero__basis-item b {{
+  color: var(--text-color);
+  margin-right: 0.34rem;
+}}
+.backtest-result-hero__kpis {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+}}
+.backtest-result-hero__kpi {{
+  min-width: 0;
+  padding: 0.92rem 1rem 1rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+}}
+.backtest-result-hero__kpi:first-child {{
+  border-left: 0;
+  padding-left: 0;
+}}
+.backtest-result-hero__kpi-label {{
+  color: #475467;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+}}
+.backtest-result-hero__kpi-value {{
+  margin-top: 0.25rem;
+  color: var(--text-color);
+  font-size: 1.85rem;
+  font-weight: 760;
+  line-height: 1.12;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}}
+.backtest-result-hero__kpi-caption {{
+  margin-top: 0.25rem;
   color: #667085;
   font-size: 0.82rem;
-  line-height: 1.2;
+  line-height: 1.35;
 }}
-.backtest-result-hero__chip b {{
-  color: var(--text-color);
-  margin-right: 0.32rem;
+.backtest-result-hero__kpi--return .backtest-result-hero__kpi-value {{
+  color: #087f5b;
+}}
+.backtest-result-hero__kpi--risk .backtest-result-hero__kpi-value {{
+  color: #b54708;
+}}
+@media (max-width: 760px) {{
+  .backtest-result-hero__kpis {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .backtest-result-hero__kpi:nth-child(odd) {{
+    border-left: 0;
+    padding-left: 0;
+  }}
+  .backtest-result-hero__kpi:nth-child(n + 3) {{
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+  }}
+}}
+@media (max-width: 520px) {{
+  .backtest-result-hero__kpis {{
+    grid-template-columns: 1fr;
+  }}
+  .backtest-result-hero__kpi {{
+    border-left: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+    padding-left: 0;
+  }}
+  .backtest-result-hero__kpi:first-child {{
+    border-top: 0;
+  }}
 }}
 </style>
 <section class="backtest-result-hero">
   <div class="backtest-result-hero__eyebrow">백테스트 결과</div>
   <h3>{escape(headline)}</h3>
   <p>{escape(subtitle)}</p>
-  <div class="backtest-result-hero__chips">{chips_html}</div>
+  <div class="backtest-result-hero__basis">{basis_html}</div>
+  <div class="backtest-result-hero__kpis">{kpi_html}</div>
 </section>
         """,
         unsafe_allow_html=True,
@@ -1219,8 +1336,7 @@ def _render_last_run() -> None:
     has_real_money_details = bool(meta.get("real_money_hardening"))
     has_swing_details = bool(strategy_key == "risk_on_momentum_5d" or bundle.get("swing_trade_log_df") is not None)
 
-    _render_backtest_result_header(bundle)
-    _render_summary_metrics(summary_df)
+    _render_backtest_result_header(bundle, summary_df)
     _render_data_trust_summary(meta)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]

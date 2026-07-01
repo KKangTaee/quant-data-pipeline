@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Result KPI Band V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-result-kpi-band-v1-20260701/`에서 Run Backtest 결과 헤더와 핵심 성과 metric을 하나의 KPI band로 통합했다.
+  - 기존 pill-like 기준 정보는 보조 기준선으로 낮추고, 별도 metric row는 latest run 기본 path에서 제거했다.
+  - Strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
 - Backtest Result Flow Reorder V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-result-flow-reorder-v1-20260701/`에서 Run Backtest 직후 결과 화면을 `전략 결과 -> 핵심 성과 -> 데이터 기준 -> 상세 결과 -> 실전 검증 Handoff` 순서로 재정렬했다.
   - `Latest Backtest Run` 제목을 제거하고 전략명 기반 결과 헤더를 추가했다.

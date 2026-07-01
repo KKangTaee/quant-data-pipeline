@@ -7620,22 +7620,32 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         last_run_body = source[last_run_start:]
         last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
 
-        self.assertIn("_render_backtest_result_header(bundle)", last_run_body)
-        self.assertIn("_render_summary_metrics(summary_df)", last_run_body)
+        self.assertIn("_render_backtest_result_header(bundle, summary_df)", last_run_body)
+        self.assertNotIn("_render_summary_metrics(summary_df)", last_run_body)
         self.assertIn("_render_data_trust_summary(meta)", last_run_body)
         self.assertIn("_render_practical_validation_next_action(bundle)", last_run_body)
         self.assertNotIn("Latest Backtest Run", last_run_body)
 
-        header_pos = last_run_body.index("_render_backtest_result_header(bundle)")
-        metrics_pos = last_run_body.index("_render_summary_metrics(summary_df)")
+        header_pos = last_run_body.index("_render_backtest_result_header(bundle, summary_df)")
         data_trust_pos = last_run_body.index("_render_data_trust_summary(meta)")
         tabs_pos = last_run_body.index("tabs = st.tabs(tab_labels)")
         handoff_pos = last_run_body.index("_render_practical_validation_next_action(bundle)")
 
-        self.assertLess(header_pos, metrics_pos)
-        self.assertLess(metrics_pos, data_trust_pos)
+        self.assertLess(header_pos, data_trust_pos)
         self.assertLess(data_trust_pos, tabs_pos)
         self.assertLess(tabs_pos, handoff_pos)
+
+    def test_backtest_result_header_owns_integrated_kpi_band(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        header_start = source.index("def _render_backtest_result_header")
+        header_body = source[header_start:]
+        header_body = header_body[: header_body.index("\ndef ", 1)]
+
+        self.assertIn("summary_df: pd.DataFrame", header_body)
+        self.assertIn("_build_result_kpi_items(summary_df)", header_body)
+        self.assertIn("backtest-result-hero__kpis", header_body)
+        self.assertIn("backtest-result-hero__basis", header_body)
+        self.assertNotIn("backtest-result-hero__chips", header_body)
 
     def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
         from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation

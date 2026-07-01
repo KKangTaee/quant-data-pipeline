@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Backtest result header should absorb KPI metrics
+
+- User request: 결과 헤더 아래 pill 기준 정보와 별도 metric row가 어색해 보이므로 더 예쁘고 자연스럽게 정리할 수 있는지 질문 후 진행 승인.
+- Interpreted goal: 사용자는 결과 제목과 핵심 성과를 하나의 결과 surface로 읽고, 데이터 기준 요약으로 바로 이어지는 흐름을 원한다.
+- Analysis result: 별도 `_render_summary_metrics` row는 정보는 맞지만 결과 헤더와 Data Trust 사이를 끊어 보이게 했다. 최신 실행 화면에서는 KPI를 헤더 내부로 흡수하는 것이 더 자연스럽다.
+- Follow-up: latest run 결과 헤더가 `summary_df` 기반 End Balance / CAGR / Sharpe Ratio / Maximum Drawdown KPI band를 직접 렌더하게 하고, 기간 / 계산 기준 / Universe / Data / Execution은 보조 기준선으로 낮췄다.
+
 ### 2026-07-01 - Backtest result view should show result before interpretation and handoff
 
 - User request: Run Backtest 후 구조가 `Latest Backtest Run -> 데이터 기준 요약 -> Equal Weight -> 실전 검증 정보 -> 결과 tabs`처럼 보여 흐름이 어색하다고 지적하고 재정렬을 요청.
