@@ -484,12 +484,12 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
             "broad fundamentals / factors는 strict filing-time PIT source가 아닙니다.",
             "strict annual backtests use EDGAR statement shadow.",
         ],
-        "next_action": "새 financial statement coverage가 필요하면 EDGAR annual 재무제표 갱신을 먼저 실행하세요.",
+        "next_action": "새 financial statement coverage가 필요하면 EDGAR 재무제표 갱신을 먼저 실행하세요.",
     },
     "extended_statement_refresh": {
-        "title": "EDGAR annual 재무제표 갱신",
+        "title": "EDGAR 재무제표 갱신",
         "purpose": (
-            "EDGAR detailed statement ledger를 수집하고 statement shadow fundamentals / factors를 재구성하는 "
+            "EDGAR detailed annual / quarterly statement ledger를 수집하고 statement shadow fundamentals / factors를 재구성하는 "
             "primary financial statement refresh입니다."
         ),
         "targets": [
@@ -641,7 +641,7 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "targets": ["finance_price.nyse_price_history", "finance_fundamental.nyse_fundamentals", "finance_fundamental.nyse_factors"],
         "used_by": ["Old run history replay", "explicit legacy broad factor comparison"],
         "caveats": ["financial statement canonical refresh는 EDGAR annual path입니다."],
-        "next_action": "새 재무제표 / factor 준비는 EDGAR annual refresh와 statement shadow path를 사용하세요.",
+        "next_action": "새 재무제표 / factor 준비는 EDGAR refresh와 statement shadow path를 사용하세요.",
     },
     "collect_ohlcv": {
         "title": "가격 이력 수동 수집",
@@ -699,7 +699,7 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "targets": ["finance_fundamental.nyse_fundamentals"],
         "used_by": ["Old run history replay", "explicit legacy broad factor comparison"],
         "caveats": ["canonical financial statement source가 아닙니다."],
-        "next_action": "새 재무제표 source가 필요하면 EDGAR annual refresh를 사용하세요.",
+        "next_action": "새 재무제표 source가 필요하면 EDGAR refresh를 사용하세요.",
     },
     "calculate_factors": {
         "title": "Archived broad factor manual calculation",
@@ -1781,6 +1781,57 @@ def _job_metadata(
     if notes:
         metadata["notes"] = notes
     return metadata
+
+
+def _build_ohlcv_collection_params(
+    *,
+    symbols: list[str],
+    start: str | None,
+    end: str | None,
+    period: str | None,
+    interval: str,
+    execution_profile: str | None = None,
+    excluded_symbols: list[str] | None = None,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {
+        "symbols": symbols,
+        "start": start,
+        "end": end,
+        "period": period,
+        "interval": interval,
+    }
+    if execution_profile:
+        params["execution_profile"] = execution_profile
+    if excluded_symbols is not None:
+        params["excluded_symbols"] = excluded_symbols
+    return params
+
+
+def _build_asset_profile_job(
+    *,
+    action: str,
+    job_name: str,
+    spinner_text: str,
+    kinds: tuple[str, ...],
+    pipeline_type: str,
+    execution_mode: str,
+    execution_context: str,
+) -> dict[str, Any]:
+    resolved_kinds = kinds or ("stock", "etf")
+    return {
+        "action": action,
+        "job_name": job_name,
+        "spinner_text": spinner_text,
+        "params": {"kinds": resolved_kinds},
+        "run_metadata": _job_metadata(
+            pipeline_type=pipeline_type,
+            execution_mode=execution_mode,
+            symbol_source=None,
+            symbol_count=None,
+            execution_context=execution_context,
+            input_params={"kinds": resolved_kinds},
+        ),
+    }
 
 
 def _diagnostic_state_key(action: str) -> str | None:
@@ -3644,6 +3695,15 @@ def _render_ingestion_operational_section() -> Any:
             job_name="daily_market_update",
             symbols=daily_symbols_input,
         )
+        daily_collection_params = _build_ohlcv_collection_params(
+            symbols=daily_symbols_input,
+            start=daily_resolved_start,
+            end=daily_resolved_end,
+            period=daily_resolved_period,
+            interval=daily_interval_input,
+            execution_profile=daily_execution_profile,
+            excluded_symbols=daily_excluded_symbols,
+        )
         if st.button(
             "일별 가격 업데이트 실행",
             use_container_width=True,
@@ -3654,15 +3714,7 @@ def _render_ingestion_operational_section() -> Any:
                     "action": "daily_market_update",
                     "job_name": "daily_market_update",
                     "spinner_text": "Running daily market update...",
-                    "params": {
-                        "symbols": daily_symbols_input,
-                        "start": daily_resolved_start,
-                        "end": daily_resolved_end,
-                        "period": daily_resolved_period,
-                        "interval": daily_interval_input,
-                        "execution_profile": daily_execution_profile,
-                        "excluded_symbols": daily_excluded_symbols,
-                    },
+                    "params": daily_collection_params,
                     "run_metadata": _job_metadata(
                         pipeline_type="daily_market_update",
                         execution_mode="operational",
@@ -3679,6 +3731,7 @@ def _render_ingestion_operational_section() -> Any:
                             "interval": daily_interval_input,
                             "execution_profile": daily_execution_profile,
                             "exclude_non_plain_symbols": daily_filter_non_plain,
+                            "excluded_symbols": daily_excluded_symbols,
                         },
                     ),
                 }
@@ -3842,12 +3895,12 @@ def _render_ingestion_operational_section() -> Any:
             )
         _render_inline_last_completed_result("collect_market_sentiment")
 
-    with st.expander("EDGAR annual 재무제표 갱신", expanded=False):
+    with st.expander("EDGAR 재무제표 갱신", expanded=False):
         _render_job_brief("extended_statement_refresh")
         st.caption("권장 주기: 월 1회 또는 긴 기간 factor research / backtest 준비 전에 실행합니다.")
         st.caption("권장 source: `Profile Filtered Stocks`나 statement coverage preset부터 시작하세요.")
         st.caption(
-            "새 재무제표 coverage와 strict annual factor 준비는 이 EDGAR annual refresh에서 시작합니다. "
+            "새 재무제표 coverage와 strict factor 준비는 이 EDGAR refresh에서 시작합니다. "
             "수동 `Financial Statement Ingestion` card는 복구 / 진단용으로 남아 있습니다."
         )
         st.caption(
@@ -3891,7 +3944,7 @@ def _render_ingestion_operational_section() -> Any:
             symbols=ext_symbols_input,
         )
         if st.button(
-            "EDGAR annual 재무제표 갱신 실행",
+            "EDGAR 재무제표 갱신 실행",
             use_container_width=True,
             disabled=_has_running_job() or _is_blocking(ext_symbol_check) or not ext_run_allowed,
         ):
@@ -3899,7 +3952,7 @@ def _render_ingestion_operational_section() -> Any:
                 {
                     "action": "extended_statement_refresh",
                     "job_name": "extended_statement_refresh",
-                    "spinner_text": "Running EDGAR annual statement refresh...",
+                    "spinner_text": "Running EDGAR statement refresh...",
                     "params": {
                         "symbols": ext_symbols_input,
                         "freq": ext_period_input,
@@ -3911,7 +3964,7 @@ def _render_ingestion_operational_section() -> Any:
                         execution_mode="operational",
                         symbol_source=ext_symbol_result.get("source_mode"),
                         symbol_count=len(ext_symbols_input),
-                        execution_context="Primary EDGAR annual financial statement refresh and statement shadow rebuild.",
+                        execution_context="Primary EDGAR financial statement refresh and statement shadow rebuild.",
                         input_params={
                             "freq": ext_period_input,
                             "periods": int(ext_periods_input),
@@ -3947,24 +4000,15 @@ def _render_ingestion_operational_section() -> Any:
             disabled=_has_running_job() or _is_blocking(metadata_check),
         ):
             _schedule_job(
-                {
-                    "action": "metadata_refresh",
-                    "job_name": "metadata_refresh",
-                    "spinner_text": "Running metadata refresh...",
-                    "params": {
-                        "kinds": tuple(metadata_kind_options) if metadata_kind_options else ("stock", "etf"),
-                    },
-                    "run_metadata": _job_metadata(
-                        pipeline_type="metadata_refresh",
-                        execution_mode="operational",
-                        symbol_source=None,
-                        symbol_count=None,
-                        execution_context="Routine metadata refresh for tracked stock and ETF asset profiles.",
-                        input_params={
-                            "kinds": tuple(metadata_kind_options) if metadata_kind_options else ("stock", "etf"),
-                        },
-                    ),
-                }
+                _build_asset_profile_job(
+                    action="metadata_refresh",
+                    job_name="metadata_refresh",
+                    spinner_text="Running metadata refresh...",
+                    kinds=metadata_kinds,
+                    pipeline_type="metadata_refresh",
+                    execution_mode="operational",
+                    execution_context="Routine metadata refresh for tracked stock and ETF asset profiles.",
+                )
             )
         if _is_running_action("metadata_refresh"):
             current_progress_callback = _build_progress_callback(
@@ -4935,6 +4979,13 @@ def _render_ingestion_manual_section() -> Any:
             job_name="collect_ohlcv",
             symbols=ohlcv_symbols_input,
         )
+        ohlcv_collection_params = _build_ohlcv_collection_params(
+            symbols=ohlcv_symbols_input,
+            start=ohlcv_resolved_start,
+            end=ohlcv_resolved_end,
+            period=ohlcv_resolved_period,
+            interval=ohlcv_interval_input,
+        )
         if st.button(
             "가격 이력 수동 수집 실행",
             use_container_width=True,
@@ -4945,13 +4996,7 @@ def _render_ingestion_manual_section() -> Any:
                     "action": "collect_ohlcv",
                     "job_name": "collect_ohlcv",
                     "spinner_text": "Running OHLCV collection...",
-                    "params": {
-                        "symbols": ohlcv_symbols_input,
-                        "start": ohlcv_resolved_start,
-                        "end": ohlcv_resolved_end,
-                        "period": ohlcv_resolved_period,
-                        "interval": ohlcv_interval_input,
-                    },
+                    "params": ohlcv_collection_params,
                     "run_metadata": _job_metadata(
                         pipeline_type="manual_ohlcv_collection",
                         execution_mode="manual",
@@ -4996,14 +5041,15 @@ def _render_ingestion_manual_section() -> Any:
             disabled=_has_running_job() or _is_blocking(asset_profile_check),
         ):
             _schedule_job(
-                {
-                    "action": "collect_asset_profiles",
-                    "job_name": "collect_asset_profiles",
-                    "spinner_text": "Running asset profile collection...",
-                    "params": {
-                        "kinds": tuple(profile_kind_options) if profile_kind_options else ("stock", "etf"),
-                    },
-                }
+                _build_asset_profile_job(
+                    action="collect_asset_profiles",
+                    job_name="collect_asset_profiles",
+                    spinner_text="Running asset profile collection...",
+                    kinds=kinds,
+                    pipeline_type="manual_asset_profile_collection",
+                    execution_mode="manual",
+                    execution_context="Manual asset profile refresh for selected stock / ETF universe kinds.",
+                )
             )
         if _is_running_action("collect_asset_profiles"):
             current_progress_callback = _build_progress_callback(

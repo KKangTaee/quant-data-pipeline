@@ -4238,6 +4238,62 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn('with st.spinner("Running statement coverage diagnosis...")', source)
         self.assertNotIn('with st.spinner("Running statement PIT inspection...")', source)
 
+    def test_ingestion_ohlcv_collection_params_builder_aligns_daily_and_manual(self) -> None:
+        from app.web.ingestion_console import _build_ohlcv_collection_params
+
+        daily_params = _build_ohlcv_collection_params(
+            symbols=["AAPL", "MSFT"],
+            start="2026-01-01",
+            end="2026-02-01",
+            period=None,
+            interval="1d",
+            execution_profile="managed_safe",
+            excluded_symbols=["BRK.B"],
+        )
+        manual_params = _build_ohlcv_collection_params(
+            symbols=["AAPL"],
+            start=None,
+            end=None,
+            period="3mo",
+            interval="1d",
+        )
+
+        self.assertEqual(daily_params["symbols"], ["AAPL", "MSFT"])
+        self.assertEqual(daily_params["execution_profile"], "managed_safe")
+        self.assertEqual(daily_params["excluded_symbols"], ["BRK.B"])
+        self.assertEqual(manual_params["period"], "3mo")
+        self.assertNotIn("execution_profile", manual_params)
+        self.assertNotIn("excluded_symbols", manual_params)
+
+    def test_ingestion_asset_profile_job_builder_records_metadata(self) -> None:
+        from app.web.ingestion_console import _build_asset_profile_job
+
+        job = _build_asset_profile_job(
+            action="collect_asset_profiles",
+            job_name="collect_asset_profiles",
+            spinner_text="Running asset profile collection...",
+            kinds=("stock",),
+            pipeline_type="manual_asset_profile_collection",
+            execution_mode="manual",
+            execution_context="Manual asset profile refresh.",
+        )
+
+        self.assertEqual(job["params"]["kinds"], ("stock",))
+        self.assertEqual(job["run_metadata"]["pipeline_type"], "manual_asset_profile_collection")
+        self.assertEqual(job["run_metadata"]["execution_mode"], "manual")
+        self.assertEqual(job["run_metadata"]["input_params"]["kinds"], ("stock",))
+
+    def test_ingestion_edgar_statement_refresh_copy_is_frequency_neutral(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn('with st.expander("EDGAR 재무제표 갱신"', source)
+        self.assertIn('"EDGAR 재무제표 갱신 실행"', source)
+        self.assertIn('"Running EDGAR statement refresh..."', source)
+        self.assertIn("Primary EDGAR financial statement refresh", source)
+        self.assertNotIn('with st.expander("EDGAR annual 재무제표 갱신"', source)
+        self.assertNotIn('"EDGAR annual 재무제표 갱신 실행"', source)
+        self.assertNotIn('"Running EDGAR annual statement refresh..."', source)
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
