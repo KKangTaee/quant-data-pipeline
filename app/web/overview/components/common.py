@@ -5025,7 +5025,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-grid {
 	  display: grid;
-	  grid-template-columns: repeat(7, minmax(0, 1fr));
+	  grid-template-columns: repeat(6, minmax(0, 1fr));
 	  border-top: 1px solid var(--ov-mi-border-faint);
 	  border-bottom: 1px solid var(--ov-mi-border-faint);
 	}

@@ -10024,7 +10024,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["schema_version"], "market_mover_research_metrics_v1")
         items = {item["label"]: item for item in model["items"]}
         self.assertEqual(items["현재 시총"]["value"], "55.0억 달러")
-        self.assertEqual(items["시총 변화"]["value"], "계산 불가")
+        self.assertNotIn("시총 변화", items)
         self.assertEqual(items["올해 수익률"]["value"], "+25.00%")
         per_eps = items["PER / EPS"]
         self.assertEqual(per_eps["value"], "연간 / 분기 비교")

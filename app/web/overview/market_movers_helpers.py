@@ -2271,13 +2271,11 @@ def build_market_mover_research_snapshot_model(
         )
     snapshot = dict(research_snapshot or {})
     current_market_cap = dict(snapshot.get("current_market_cap") or {})
-    market_cap_change = dict(snapshot.get("market_cap_change") or {})
     ytd_return = dict(snapshot.get("ytd_return") or {})
     annual = dict(snapshot.get("annual_financials") or {})
     quarterly = dict(snapshot.get("quarterly_financials") or {})
 
     current_available = str(current_market_cap.get("status") or "").upper() == "OK"
-    market_change_available = str(market_cap_change.get("status") or "").upper() == "OK"
     ytd_available = str(ytd_return.get("status") or "").upper() == "OK"
 
     per_eps_rows = [
@@ -2316,13 +2314,6 @@ def build_market_mover_research_snapshot_model(
             str(current_market_cap.get("basis") or current_market_cap.get("reason") or "현재 asset profile 기준"),
             available=current_available,
             tone="positive" if current_available else "neutral",
-        ),
-        _research_metric_item(
-            "시총 변화",
-            _format_signed(market_cap_change.get("change_pct")) if market_change_available else "계산 불가",
-            str(market_cap_change.get("basis") or market_cap_change.get("reason") or "과거 시총 snapshot 필요"),
-            available=market_change_available,
-            tone="positive" if market_change_available else "neutral",
         ),
         _research_metric_item(
             "올해 수익률",
