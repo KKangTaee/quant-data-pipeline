@@ -4106,6 +4106,31 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("_render_recent_logs()", source)
         self.assertIn("_render_failure_csv_preview()", source)
 
+    def test_ingestion_console_dispatches_collection_sections_to_dedicated_renderers(self) -> None:
+        import ast
+
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        functions = {
+            node.name: node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("_render_ingestion_operational_section", functions)
+        self.assertIn("_render_ingestion_manual_section", functions)
+        self.assertIn("_render_selected_ingestion_collection_section", functions)
+
+        entrypoint = functions["render_ingestion_console"]
+        entrypoint_calls = {
+            node.func.id
+            for node in ast.walk(entrypoint)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn("_render_selected_ingestion_collection_section", entrypoint_calls)
+        self.assertNotIn("_render_price_stale_diagnosis_card", entrypoint_calls)
+        self.assertNotIn("_render_statement_pit_inspection_card", entrypoint_calls)
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
