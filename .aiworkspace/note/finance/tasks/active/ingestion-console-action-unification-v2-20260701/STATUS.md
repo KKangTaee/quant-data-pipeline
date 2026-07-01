@@ -1,11 +1,12 @@
 # Ingestion Console Action Unification V2 Status
 
-Status: Active
+Status: Completed
 Started: 2026-07-01
+Completed: 2026-07-01
 
 ## Current
 
-- 5차 완료: legacy compatibility action 경계를 helper로 정리하고 active action과 분리했다.
+- 1~6차 완료: Ingestion action registry / diagnostic scheduling / shared progress / legacy compatibility boundary / durable docs / Browser QA까지 닫았다.
 
 ## Done
 
@@ -15,7 +16,8 @@ Started: 2026-07-01
 - 3차 daily/manual OHLCV params builder 추가, metadata/manual asset profile job builder 통합, 수동 asset profile run_metadata 보강.
 - 4차 stage progress event helper 추가, futures/calendar/profile/lifecycle/source-map job callback 시그니처 보강, dispatcher와 UI progress allowlist 연결.
 - 5차 active / compatibility action helper 추가, legacy broad action이 active action 목록에 섞이지 않도록 테스트 고정.
+- 6차 durable docs, root handoff logs, Browser QA, final focused regression verification 완료.
 
 ## Next
 
-- 6차: durable docs / root handoff log를 동기화하고 Streamlit Browser QA로 화면 구조를 확인한다.
+- 다음 후속이 필요하면 실제 provider 실행 smoke는 소수 symbol / short window로 별도 task에서 수행한다.

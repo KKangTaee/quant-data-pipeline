@@ -8435,3 +8435,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 코드 변경 결과가 다음 세션의 source 선택 기준으로 남도록 `docs/`와 runbook에서 canonical / legacy / quarterly policy를 같은 의미로 정리해야 함.
 - Analysis result: canonical source는 EDGAR raw ledger + statement shadow tables이고, broad yfinance fundamentals / factors는 old replay와 explicit comparison compatibility로만 유지된다. Quarterly는 10-Q / 10-Q/A consumer gate를 유지하고 synthetic Q4 / Top2000-Nasdaq full coverage는 후속 결정이다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`에 있다.
+
+### 2026-07-01 - Ingestion 기능을 action registry와 세 section 흐름으로 정리한다
+
+- User request: Ingestion의 일상운영 / 검증데이터, 수동복구 / 진단, 실행기록 결과 기능을 검증하고, 중복 / 잘못된 수집 / 파편화된 기능을 정리하며 실행 중 화면 고정과 progress / 수집 시간을 표시해 달라고 요청함.
+- Interpreted goal: 새 진단 패널을 추가하는 것이 아니라, active 수집 action과 legacy compatibility action을 분리하고, 실행 / 결과 / 진단 / 기록이 한 흐름으로 보이게 해야 함.
+- Analysis result: active write jobs, read-only diagnostics, legacy broad yfinance compatibility action을 action registry로 분류했다. 진단 카드는 inline 실행에서 scheduled job으로 바꾸고, futures / calendar / lifecycle / profile job에도 progress callback boundary를 추가했다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/ingestion-console-action-unification-v2-20260701/`에 있다. Browser QA screenshot은 generated artifact로만 보존하고 커밋하지 않는다.

@@ -3,5 +3,6 @@
 ## 2026-07-01
 
 - Ingestion action execution boundary is `app/web/ingestion_console.py -> app/jobs/ingestion_jobs.py -> finance/data/*`.
-- Existing scheduled jobs preserve `collection_section` and `ui_started_at`, but read-only diagnostic cards still execute immediately with `st.spinner`.
-- Existing progress callback is strongest for OHLCV and statement ingestion; several shorter or stage-oriented collectors only return a result after completion.
+- Scheduled jobs preserve `collection_section` and `ui_started_at`; read-only diagnostic cards now use the same scheduled job / result history path.
+- Progress callback is event-driven. OHLCV and statement ingestion can report batch progress; shorter stage-oriented collectors emit stage start / complete events.
+- Active actions and legacy compatibility actions are separated by `INGESTION_ACTION_REGISTRY` helper functions. Broad yfinance fundamentals / factors remain old replay / explicit comparison compatibility only.

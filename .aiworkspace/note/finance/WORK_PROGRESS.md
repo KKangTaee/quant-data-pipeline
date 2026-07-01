@@ -5467,3 +5467,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`에서 source migration closeout docs를 완료했다.
   - Durable docs는 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 legacy compatibility로 정렬했다.
   - 다음 세션은 `.aiworkspace/note/finance/docs/data/README.md`, `DB_SCHEMA_MAP.md`, `DATA_FLOW_MAP.md`, `TABLE_SEMANTICS.md`, `EDGAR_FINANCIAL_STATEMENT_REFRESH.md`를 보면 source contract를 확인할 수 있다.
+- Ingestion Console Action Unification V2 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-action-unification-v2-20260701/`에서 Ingestion action registry, scheduled diagnostics, shared progress, active / compatibility action boundary를 1~6차로 정리했다.
+  - Ingestion workbench는 `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` 3개 section을 유지하고, read-only 진단도 공용 scheduled job / run history / progress 흐름을 탄다.
+  - Broad yfinance fundamentals / factors는 active UI가 아니라 old replay / explicit comparison compatibility로만 남긴다.

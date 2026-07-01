@@ -51,7 +51,7 @@ Last Verified: 2026-07-01
 | Area | Entry Point |
 |---|---|
 | Finance Console shell / navigation | `app/web/streamlit_app.py` |
-| Workspace > Ingestion console | `app/web/ingestion_console.py`; collection workbench sections are `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, and `실행 기록 / 결과` |
+| Workspace > Ingestion console | `app/web/ingestion_console.py`; collection workbench sections are `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, and `실행 기록 / 결과`. Active / legacy compatibility actions are classified by the local action registry, read-only diagnostics run through the same scheduled job / progress / run-history path as write jobs, and broad yfinance fundamentals / factors remain compatibility-only |
 | Workspace > Ingestion read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
 | Financial statement source migration path | EDGAR collection / raw ledger: `finance/data/financial_statements.py`; statement shadow rebuild: `finance/data/fundamentals.py`, `finance/data/factors.py`; loaders: `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`; Ingestion job orchestration: `app/jobs/ingestion_jobs.py`; UI entry: `app/web/ingestion_console.py` |
 | Finance workspace path constants | `app/workspace_paths.py` |
