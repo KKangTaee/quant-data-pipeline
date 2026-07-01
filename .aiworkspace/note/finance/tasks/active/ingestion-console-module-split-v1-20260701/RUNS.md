@@ -10,3 +10,12 @@
   - Result: PASS, 2 tests.
 - Compile: `.venv/bin/python -m py_compile app/web/ingestion_console.py app/web/ingestion/__init__.py app/web/ingestion/page.py`
   - Result: PASS.
+
+## 2차
+
+- RED: `.venv/bin/python -m unittest tests.test_ingestion_module_split_contracts -v`
+  - Result: expected failure. `app.web.ingestion.registry` was not importable.
+- GREEN: `.venv/bin/python -m unittest tests.test_ingestion_module_split_contracts -v`
+  - Result: PASS, 3 tests.
+- Compile: `.venv/bin/python -m py_compile app/web/ingestion/page.py app/web/ingestion/registry.py app/web/ingestion_console.py`
+  - Result: PASS.

@@ -16,6 +16,20 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertIn("app.web.ingestion.page", source)
         self.assertLess(source.count("\n"), 220)
 
+    def test_ingestion_action_registry_lives_in_registry_module(self) -> None:
+        from app.web.ingestion import page
+        from app.web.ingestion import registry
+        from app.web.ingestion_console import INGESTION_ACTION_REGISTRY
+
+        self.assertIs(page.INGESTION_ACTION_REGISTRY, registry.INGESTION_ACTION_REGISTRY)
+        self.assertIs(INGESTION_ACTION_REGISTRY, registry.INGESTION_ACTION_REGISTRY)
+        self.assertEqual(
+            registry.INGESTION_ACTION_REGISTRY["daily_market_update"]["section"],
+            registry.INGESTION_COLLECTION_OPERATIONAL,
+        )
+        self.assertIn("weekly_fundamental_refresh", registry.compatibility_ingestion_actions())
+        self.assertNotIn("weekly_fundamental_refresh", registry.active_ingestion_actions())
+
 
 if __name__ == "__main__":
     unittest.main()
