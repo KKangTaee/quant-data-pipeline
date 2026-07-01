@@ -5023,22 +5023,25 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  line-height: 1.1;
 	  white-space: nowrap;
 	}
-	.ov-mm-research-grid {
-	  display: grid;
-	  grid-template-columns: repeat(5, minmax(0, 1fr));
-	  border-top: 1px solid var(--ov-mi-border-faint);
-	  border-bottom: 1px solid var(--ov-mi-border-faint);
-	}
+		.ov-mm-research-grid {
+		  display: grid;
+		  grid-template-columns: repeat(6, minmax(0, 1fr));
+		  border-top: 1px solid var(--ov-mi-border-faint);
+		  border-bottom: 1px solid var(--ov-mi-border-faint);
+		}
 	.ov-mm-research-item {
 	  min-width: 0;
 	  padding: 0.46rem 0.52rem;
 	  border-left: 1px solid var(--ov-mi-border-faint);
-	  border-top: 3px solid color-mix(in srgb, var(--ov-research-tone, var(--ov-mi-color-neutral)) 78%, transparent);
-	  background: rgba(248,250,252,0.58);
-	}
-	.ov-mm-research-item:first-child {
-	  border-left: 0;
-	}
+		  border-top: 3px solid color-mix(in srgb, var(--ov-research-tone, var(--ov-mi-color-neutral)) 78%, transparent);
+		  background: rgba(248,250,252,0.58);
+		}
+		.ov-mm-research-item.has-rows {
+		  grid-column: span 2;
+		}
+		.ov-mm-research-item:first-child {
+		  border-left: 0;
+		}
 	.ov-mm-research-item.is-unavailable {
 	  border-top-color: color-mix(in srgb, var(--ov-mi-color-neutral) 38%, transparent);
 	  background: rgba(248,250,252,0.34);
@@ -5058,12 +5061,47 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  line-height: 1.14;
 	  overflow-wrap: anywhere;
 	}
-	.ov-mm-research-item.is-unavailable .ov-mm-research-value {
-	  color: var(--ov-mi-color-text-muted);
-	}
-	.ov-mm-research-detail {
-	  margin-top: 0.18rem;
-	}
+		.ov-mm-research-item.is-unavailable .ov-mm-research-value {
+		  color: var(--ov-mi-color-text-muted);
+		}
+		.ov-mm-research-table {
+		  min-width: 0;
+		  margin-top: 0.36rem;
+		  border-top: 1px solid var(--ov-mi-border-faint);
+		  border-bottom: 1px solid var(--ov-mi-border-faint);
+		}
+		.ov-mm-research-table-row {
+		  display: grid;
+		  grid-template-columns: minmax(2.8rem, 0.62fr) minmax(5.2rem, 1fr) minmax(3.6rem, 0.76fr) minmax(3.6rem, 0.76fr);
+		  gap: var(--ov-mi-gap-sm);
+		  align-items: baseline;
+		  min-width: 0;
+		  padding: 0.28rem 0;
+		  border-top: 1px solid var(--ov-mi-border-faint);
+		  color: var(--ov-mi-color-text);
+		  font-size: var(--ov-mi-font-caption);
+		  line-height: 1.16;
+		}
+		.ov-mm-research-table-row:first-child {
+		  border-top: 0;
+		}
+		.ov-mm-research-table-row.is-head {
+		  color: var(--ov-mi-color-text-muted);
+		  font-size: var(--ov-mi-font-xs);
+		  font-weight: var(--ov-mi-weight-label);
+		}
+		.ov-mm-research-table-row > span,
+		.ov-mm-research-table-row > strong {
+		  min-width: 0;
+		  overflow-wrap: anywhere;
+		}
+		.ov-mm-research-table-row > strong {
+		  color: var(--ov-mi-color-text);
+		  font-weight: var(--ov-mi-weight-heading);
+		}
+		.ov-mm-research-detail {
+		  margin-top: 0.18rem;
+		}
 	.ov-mm-research-boundary {
 	  margin-top: 0.48rem;
 	  padding: 0.38rem 0.46rem;
@@ -5116,9 +5154,12 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  .ov-mm-investigation-facts {
 	    grid-template-columns: repeat(2, minmax(0, 1fr));
 	  }
-	  .ov-mm-research-grid {
-	    grid-template-columns: 1fr;
-	  }
+		  .ov-mm-research-grid {
+		    grid-template-columns: 1fr;
+		  }
+		  .ov-mm-research-item.has-rows {
+		    grid-column: span 1;
+		  }
 	  .ov-mm-chart-fact,
 	  .ov-mm-research-item,
 	  .ov-mm-chart-fact:first-child {

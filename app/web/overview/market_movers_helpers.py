@@ -2141,14 +2141,18 @@ def _research_metric_item(
     *,
     available: bool,
     tone: str = "neutral",
+    rows: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    return {
+    item = {
         "label": label,
         "value": value if value else "계산 불가",
         "detail": detail,
         "available": bool(available),
         "tone": tone,
     }
+    if rows:
+        item["rows"] = rows
+    return item
 
 
 def _financial_period_label(item: dict[str, Any], fallback: str) -> str:
@@ -2186,19 +2190,19 @@ def _financial_source_detail(item: dict[str, Any], prefix: str) -> str:
     return " · ".join(str(part) for part in parts if str(part).strip())
 
 
-def _per_eps_line(item: dict[str, Any], prefix: str) -> str | None:
+def _per_eps_row(item: dict[str, Any], period_label: str) -> dict[str, str] | None:
     if str(item.get("status") or "").upper() != "OK":
         return None
-    parts: list[str] = []
     per = _format_per(item.get("per"))
     eps = _format_eps(item.get("eps"))
-    if per != "-":
-        parts.append(f"PER {per}")
-    if eps != "-":
-        parts.append(f"EPS {eps}")
-    if not parts:
+    if per == "-" and eps == "-":
         return None
-    return f"{prefix} " + " · ".join(parts)
+    return {
+        "period": period_label,
+        "date": _financial_period_label(item, "-"),
+        "per": per,
+        "eps": eps,
+    }
 
 
 def build_market_mover_research_snapshot_model(
@@ -2230,10 +2234,20 @@ def build_market_mover_research_snapshot_model(
     market_change_available = str(market_cap_change.get("status") or "").upper() == "OK"
     ytd_available = str(ytd_return.get("status") or "").upper() == "OK"
 
-    per_eps_primary = _per_eps_line(annual, "연간")
-    per_eps_secondary = _per_eps_line(quarterly, "분기")
-    per_eps_parts = [part for part in [per_eps_primary, per_eps_secondary] if part]
-    per_eps_available = bool(per_eps_parts)
+    per_eps_rows = [
+        row
+        for row in [
+            _per_eps_row(annual, "연간"),
+            _per_eps_row(quarterly, "분기"),
+        ]
+        if row
+    ]
+    per_eps_available = bool(per_eps_rows)
+    per_eps_value = (
+        f"{' / '.join(row['period'] for row in per_eps_rows)} {'비교' if len(per_eps_rows) > 1 else '기준'}"
+        if per_eps_rows
+        else "계산 불가"
+    )
     financial_detail_parts = [
         _financial_source_detail(annual, "연간") if annual else "",
         _financial_source_detail(quarterly, "분기") if quarterly else "",
@@ -2275,7 +2289,7 @@ def build_market_mover_research_snapshot_model(
         ),
         _research_metric_item(
             "PER / EPS",
-            " · ".join(per_eps_parts) if per_eps_available else "계산 불가",
+            per_eps_value,
             (
                 financial_detail
                 if per_eps_available
@@ -2283,6 +2297,7 @@ def build_market_mover_research_snapshot_model(
             ),
             available=per_eps_available,
             tone="neutral",
+            rows=per_eps_rows,
         ),
         _research_metric_item(
             "당기순이익",

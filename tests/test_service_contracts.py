@@ -9944,13 +9944,49 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(items["현재 시총"]["value"], "55.0억 달러")
         self.assertEqual(items["시총 변화"]["value"], "계산 불가")
         self.assertEqual(items["올해 수익률"]["value"], "+25.00%")
-        self.assertIn("PER 41.67x", items["PER / EPS"]["value"])
-        self.assertIn("EPS $3.00", items["PER / EPS"]["value"])
-        self.assertIn("EDGAR", items["PER / EPS"]["detail"])
-        self.assertIn("2026-02-20", items["PER / EPS"]["detail"])
+        per_eps = items["PER / EPS"]
+        self.assertEqual(per_eps["value"], "연간 / 분기 비교")
+        self.assertEqual(
+            per_eps["rows"],
+            [
+                {"period": "연간", "date": "2025-12-31", "per": "41.67x", "eps": "$3.00"},
+                {"period": "분기", "date": "2026-03-31", "per": "166.67x", "eps": "$0.75"},
+            ],
+        )
+        self.assertIn("EDGAR", per_eps["detail"])
+        self.assertIn("2026-02-20", per_eps["detail"])
         self.assertIn("연간 12.0억 달러", items["당기순이익"]["value"])
         self.assertIn("분기 3.0억 달러", items["당기순이익"]["value"])
         self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_mover_research_items_html_renders_per_eps_rows_as_table(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_items_html
+
+        html = _market_mover_research_items_html(
+            [
+                {
+                    "label": "PER / EPS",
+                    "value": "연간 / 분기 비교",
+                    "detail": "EDGAR statement shadow",
+                    "available": True,
+                    "tone": "neutral",
+                    "rows": [
+                        {"period": "연간", "date": "2025-12-31", "per": "41.67x", "eps": "$3.00"},
+                        {"period": "분기", "date": "2026-03-31", "per": "166.67x", "eps": "$0.75"},
+                    ],
+                }
+            ]
+        )
+
+        self.assertIn('class="ov-mm-research-table"', html)
+        self.assertIn("구분", html)
+        self.assertIn("날짜", html)
+        self.assertIn("PER", html)
+        self.assertIn("EPS", html)
+        self.assertIn("2025-12-31", html)
+        self.assertIn("2026-03-31", html)
+        self.assertIn("41.67x", html)
+        self.assertIn("$0.75", html)
 
     def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model

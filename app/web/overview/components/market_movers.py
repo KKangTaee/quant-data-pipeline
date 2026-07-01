@@ -299,15 +299,43 @@ def render_market_mover_investigation_pane(model: dict[str, Any]) -> None:
     )
 
 
+def _market_mover_research_rows_html(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return ""
+    html = [
+        '<div class="ov-mm-research-table" role="table" aria-label="PER EPS annual and quarterly comparison">',
+        '<div class="ov-mm-research-table-row is-head" role="row">',
+        '<span role="columnheader">구분</span>',
+        '<span role="columnheader">날짜</span>',
+        '<span role="columnheader">PER</span>',
+        '<span role="columnheader">EPS</span>',
+        "</div>",
+    ]
+    for row in rows:
+        html.append(
+            '<div class="ov-mm-research-table-row" role="row">'
+            f'<strong role="cell">{escape(_display_value(row.get("period")))}</strong>'
+            f'<span role="cell">{escape(_display_value(row.get("date")))}</span>'
+            f'<span role="cell">{escape(_display_value(row.get("per")))}</span>'
+            f'<span role="cell">{escape(_display_value(row.get("eps")))}</span>'
+            "</div>"
+        )
+    html.append("</div>")
+    return "".join(html)
+
+
 def _market_mover_research_items_html(items: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in items:
         tone_color = escape(_overview_tone_color(item.get("tone")))
         state_class = "is-available" if item.get("available") else "is-unavailable"
+        rows = [dict(row) for row in list(item.get("rows") or []) if isinstance(row, dict)]
+        row_class = " has-rows" if rows else ""
         html.append(
-            f'<article class="ov-mm-research-item {state_class}" style="--ov-research-tone:{tone_color};">'
+            f'<article class="ov-mm-research-item {state_class}{row_class}" style="--ov-research-tone:{tone_color};">'
             f'<div class="ov-mm-research-label">{escape(_display_value(item.get("label")))}</div>'
             f'<div class="ov-mm-research-value">{escape(_display_value(item.get("value")))}</div>'
+            f"{_market_mover_research_rows_html(rows)}"
             f'<div class="ov-mm-research-detail">{escape(_display_value(item.get("detail")))}</div>'
             "</article>"
         )
