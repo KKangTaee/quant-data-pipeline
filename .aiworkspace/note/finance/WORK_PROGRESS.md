@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Data Trust Heading Integrated V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-data-trust-heading-integrated-v1-20260701/`에서 standalone `데이터 기준 요약` heading을 제거하고 Data Trust custom panel 내부 title로 흡수했다.
+  - `먼저 볼 결론`은 panel 내부 읽기 cue로 유지해 KPI band와 Data Trust panel 사이의 시각적 이질감을 줄였다.
+  - Data Trust 계산 모델, strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
 - Backtest Result KPI Band V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-result-kpi-band-v1-20260701/`에서 Run Backtest 결과 헤더와 핵심 성과 metric을 하나의 KPI band로 통합했다.
   - 기존 pill-like 기준 정보는 보조 기준선으로 낮추고, 별도 metric row는 latest run 기본 path에서 제거했다.

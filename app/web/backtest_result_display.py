@@ -373,7 +373,7 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
   border-top: 1px solid rgba(148, 163, 184, 0.24);
   border-bottom: 1px solid rgba(148, 163, 184, 0.24);
   padding: 1.1rem 1.2rem 1rem;
-  margin: 0.5rem 0 1rem;
+  margin: 0.75rem 0 1rem;
   background: linear-gradient(90deg, var(--dt-soft), rgba(255, 255, 255, 0));
 }}
 .data-trust-brief--warning {{
@@ -394,7 +394,13 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
   gap: 1rem;
   align-items: flex-start;
 }}
-.data-trust-brief__eyebrow {{
+.data-trust-brief__section-title {{
+  color: var(--dt-accent);
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-bottom: 0.7rem;
+}}
+.data-trust-brief__section-kicker {{
   color: #667085;
   font-size: 0.92rem;
   font-weight: 800;
@@ -536,9 +542,10 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
 }}
 </style>
 <section class="data-trust-brief data-trust-brief--{escape(tone)}">
+  <div class="data-trust-brief__section-title">데이터 기준 요약</div>
   <div class="data-trust-brief__top">
     <div>
-      <div class="data-trust-brief__eyebrow">먼저 볼 결론</div>
+      <div class="data-trust-brief__section-kicker">먼저 볼 결론</div>
       <h4>{headline}</h4>
       <p>{subtitle}</p>
     </div>
@@ -555,7 +562,6 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
     brief = _build_data_trust_brief(meta)
 
-    st.markdown("#### 데이터 기준 요약")
     _render_data_trust_brief_panel(brief)
 
 def _data_trust_status_label(status: str | None) -> str:

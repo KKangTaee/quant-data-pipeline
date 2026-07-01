@@ -7593,6 +7593,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         function_body = source[source.index("def _render_data_trust_summary"):]
         function_body = function_body[: function_body.index("def _data_trust_status_label")]
+        panel_body = source[source.index("def _render_data_trust_brief_panel"):]
+        panel_body = panel_body[: panel_body.index("def _render_data_trust_summary")]
         last_run_start = source.index("def _render_last_run")
         last_run_body = source[last_run_start:]
         last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
@@ -7602,7 +7604,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_data_trust_issue_queue", source)
         self.assertIn("데이터 기준 요약", source)
         self.assertIn("data-trust-brief", source)
+        self.assertIn("data-trust-brief__section-title", panel_body)
+        self.assertIn("data-trust-brief__section-kicker", panel_body)
         self.assertIn("이번 실행 검토 큐", source)
+        self.assertNotIn('st.markdown("#### 데이터 기준 요약")', function_body)
         self.assertNotIn("render_status_card_grid", function_body)
         self.assertNotIn("render_badge_strip", function_body)
         self.assertNotIn("st.expander", function_body)

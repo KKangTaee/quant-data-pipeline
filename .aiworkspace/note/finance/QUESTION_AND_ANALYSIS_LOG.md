@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Data Trust title should live inside the custom panel
+
+- User request: CSS custom design 사이에 standalone `데이터 기준 요약` 제목이 이질적이므로 제거하고, 하단 `먼저 볼 결론` 쪽에 title을 추가하거나 다른 방식으로 정리해 달라고 요청.
+- Interpreted goal: 결과 KPI band와 Data Trust panel이 같은 custom visual 흐름으로 이어지고, 기본 Streamlit heading이 중간에서 흐름을 끊지 않아야 한다.
+- Analysis result: `_render_data_trust_summary`가 custom panel 전에 `st.markdown("#### 데이터 기준 요약")`를 별도 출력해 시각적 이질감이 생겼다.
+- Follow-up: standalone heading을 제거하고 Data Trust panel 내부에 `데이터 기준 요약` title과 `먼저 볼 결론` kicker를 함께 배치했다.
+
 ### 2026-07-01 - Backtest result header should absorb KPI metrics
 
 - User request: 결과 헤더 아래 pill 기준 정보와 별도 metric row가 어색해 보이므로 더 예쁘고 자연스럽게 정리할 수 있는지 질문 후 진행 승인.
