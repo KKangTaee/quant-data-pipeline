@@ -70,9 +70,11 @@ _runtime_loaded_at: datetime | None = None
 _runtime_git_sha: str | None = None
 INGESTION_COLLECTION_OPERATIONAL = "일상 운영 / 검증 데이터"
 INGESTION_COLLECTION_MANUAL = "수동 복구 / 진단"
+INGESTION_COLLECTION_RECORDS = "실행 기록 / 결과"
 INGESTION_COLLECTION_SECTIONS = (
     INGESTION_COLLECTION_OPERATIONAL,
     INGESTION_COLLECTION_MANUAL,
+    INGESTION_COLLECTION_RECORDS,
 )
 MANUAL_COLLECTION_ACTIONS = {
     "collect_ohlcv",
@@ -2071,6 +2073,20 @@ def _render_persistent_run_history() -> None:
     _render_run_history_inspector(history)
 
 
+def _render_ingestion_records_section() -> None:
+    st.info(
+        "실행 기록 / 결과: 현재 세션에서 끝난 수집, 저장된 누적 실행 기록, 관련 로그와 failure CSV를 한곳에서 확인합니다. "
+        "수집 실행 화면과 분리해, 완료 후 원인 파악과 재실행 payload 확인에 집중할 수 있게 했습니다."
+    )
+    _render_recent_results()
+    st.divider()
+    _render_persistent_run_history()
+    st.divider()
+    _render_recent_logs()
+    st.divider()
+    _render_failure_csv_preview()
+
+
 def _render_check_result(result: dict[str, Any]) -> None:
     status = result.get("status")
     message = result.get("message", "")
@@ -2927,12 +2943,12 @@ def render_ingestion_console() -> None:
     _render_ingestion_workflow_overview()
 
     current_progress_callback = None
-    col_left, col_right = st.columns([3, 2])
+    collection_body = st.container()
 
-    with col_left:
-        st.subheader("수집 작업")
+    with collection_body:
+        st.subheader("작업 영역")
         st.caption(
-            "정기적으로 돌리는 일상 업데이트와, 검증 데이터 보강 / 수동 복구 / 진단 작업을 분리했습니다. "
+            "정기적으로 돌리는 일상 업데이트, 검증 데이터 보강, 수동 복구 / 진단, 실행 기록 확인을 목적별로 분리했습니다. "
             "영어 job id는 실행 기록 추적용으로만 보시면 됩니다."
         )
 
@@ -4552,14 +4568,8 @@ def render_ingestion_console() -> None:
             with st.expander("재무제표 PIT inspection", expanded=False):
                 _render_statement_pit_inspection_card()
 
-    with col_right:
-        _render_recent_results()
-        st.divider()
-        _render_persistent_run_history()
-        st.divider()
-        _render_recent_logs()
-        st.divider()
-        _render_failure_csv_preview()
+        if selected_collection_section == INGESTION_COLLECTION_RECORDS:
+            _render_ingestion_records_section()
 
     if _has_running_job():
         _run_scheduled_job(progress_callback=current_progress_callback)

@@ -4093,6 +4093,19 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("st.pills(", source)
         self.assertNotIn('st.tabs(["일상 운영 / 검증 데이터", "수동 복구 / 진단"])', source)
 
+    def test_ingestion_console_moves_run_records_into_third_collection_section(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn('INGESTION_COLLECTION_RECORDS = "실행 기록 / 결과"', source)
+        self.assertIn("INGESTION_COLLECTION_RECORDS", source)
+        self.assertIn("def _render_ingestion_records_section", source)
+        self.assertIn("selected_collection_section == INGESTION_COLLECTION_RECORDS", source)
+        self.assertNotIn("col_left, col_right = st.columns([3, 2])", source)
+        self.assertIn("_render_recent_results()", source)
+        self.assertIn("_render_persistent_run_history()", source)
+        self.assertIn("_render_recent_logs()", source)
+        self.assertIn("_render_failure_csv_preview()", source)
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
