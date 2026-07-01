@@ -79,6 +79,14 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["rows_written"], 0)
 
+    def test_ingestion_collection_sections_live_in_dedicated_module(self) -> None:
+        from app.web.ingestion import page
+        from app.web.ingestion import sections
+
+        self.assertIs(page._render_ingestion_operational_section, sections.render_operational_section)
+        self.assertIs(page._render_ingestion_manual_section, sections.render_manual_section)
+        self.assertIs(page._render_selected_ingestion_collection_section, sections.render_selected_section)
+
 
 if __name__ == "__main__":
     unittest.main()

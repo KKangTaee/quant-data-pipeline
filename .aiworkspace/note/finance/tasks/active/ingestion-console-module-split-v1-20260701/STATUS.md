@@ -5,7 +5,7 @@ Started: 2026-07-01
 
 ## Current
 
-- 4차 완료: ingestion action dispatcher와 read-only diagnostic job wrapper를 `app/web/ingestion/dispatcher.py`로 분리했다.
+- 5차 완료: Ingestion collection workbench section renderer를 `app/web/ingestion/sections.py`로 분리해 `page.py`를 shell 중심으로 줄였다.
 
 ## Milestones
 
@@ -13,5 +13,5 @@ Started: 2026-07-01
 - Done: 2차 registry split
 - Done: 3차 guide / style / result split
 - Done: 4차 dispatcher split
-- Pending: 5차 section split
+- Done: 5차 section split
 - Pending: 6차 job package / docs sync
