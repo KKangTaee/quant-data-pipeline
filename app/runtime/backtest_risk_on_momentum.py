@@ -58,7 +58,7 @@ def _resolve_risk_on_momentum_universe(
     preset_name: str | None,
     universe_limit: int | None,
 ) -> tuple[list[str], str, str | None, int | None, str]:
-    from app.runtime.backtest import BacktestDataError, BacktestInputError
+    from app.runtime.backtest.common import BacktestDataError, BacktestInputError
 
     raw_mode = str(universe_mode or RISK_ON_MOMENTUM_DEFAULT_UNIVERSE_MODE).strip().lower()
     if raw_mode in {"manual", "manual_tickers"}:
@@ -256,7 +256,9 @@ def run_risk_on_momentum_5d_backtest_from_db(
     run_comparison_suite: bool = True,
     run_sensitivity_suite: bool = False,
 ) -> dict[str, Any]:
-    from app.runtime.backtest import BacktestDataError, _validate_backtest_date_range, inspect_strict_annual_price_freshness
+    from app.runtime.backtest import inspect_strict_annual_price_freshness
+    from app.runtime.backtest.common import BacktestDataError
+    from app.runtime.backtest.common import validate_backtest_date_range as _validate_backtest_date_range
 
     _validate_backtest_date_range(start, end)
     resolved_tickers, resolved_mode, resolved_preset, resolved_limit, universe_source = _resolve_risk_on_momentum_universe(

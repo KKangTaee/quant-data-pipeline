@@ -51,7 +51,7 @@ def _normalize_tickers(tickers: Sequence[str] | None) -> list[str]:
         normalized.append(symbol)
 
     if not normalized:
-        from app.runtime.backtest import BacktestInputError
+        from app.runtime.backtest.common import BacktestInputError
 
         raise BacktestInputError("At least one ticker must be provided.")
 

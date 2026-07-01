@@ -4016,7 +4016,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_runtime_facade_delegates_risk_on_momentum_to_dedicated_module(self) -> None:
         import ast
 
-        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        source = Path("app/runtime/backtest/facade.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -4042,7 +4042,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_runtime_facade_delegates_real_money_helpers_to_dedicated_module(self) -> None:
         import ast
 
-        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        source = Path("app/runtime/backtest/facade.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -4078,7 +4078,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_runtime_facade_delegates_strict_family_to_dedicated_module(self) -> None:
         import ast
 
-        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        source = Path("app/runtime/backtest/facade.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -7776,6 +7776,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_global_relative_strength_source_contract_includes_promotion_policy_defaults(self) -> None:
         from app.runtime import backtest as runtime_backtest
+        from app.runtime.backtest import facade as runtime_backtest_facade
         from app.runtime.backtest import (
             STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
             STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
@@ -7803,13 +7804,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         with (
             patch.object(
-                runtime_backtest,
+                runtime_backtest_facade,
                 "inspect_strict_annual_price_freshness",
                 return_value={"status": "ok", "message": "", "details": {}},
             ),
-            patch.object(runtime_backtest, "_preflight_price_strategy_data"),
-            patch.object(runtime_backtest, "get_global_relative_strength_from_db", return_value=result_df),
-            patch.object(runtime_backtest, "_apply_real_money_hardening", side_effect=_capture_hardening),
+            patch.object(runtime_backtest_facade, "_preflight_price_strategy_data"),
+            patch.object(runtime_backtest_facade, "get_global_relative_strength_from_db", return_value=result_df),
+            patch.object(runtime_backtest_facade, "_apply_real_money_hardening", side_effect=_capture_hardening),
         ):
             bundle = runtime_backtest.run_global_relative_strength_backtest_from_db(
                 tickers=["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"],

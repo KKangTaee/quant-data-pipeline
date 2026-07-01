@@ -151,6 +151,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("from app.runtime.backtest_runner_catalog import", execution_source)
         self.assertIn("from app.runtime.backtest_runner_catalog import", compare_source)
 
+    def test_runtime_backtest_package_preserves_public_imports(self) -> None:
+        from app.runtime import backtest
+        from app.runtime.backtest import BacktestDataError, BacktestInputError
+
+        self.assertIs(backtest.BacktestInputError, BacktestInputError)
+        self.assertIs(backtest.BacktestDataError, BacktestDataError)
+
+        for public_name in [
+            "run_equal_weight_backtest_from_db",
+            "run_gtaa_backtest_from_db",
+            "run_global_relative_strength_backtest_from_db",
+            "run_risk_parity_trend_backtest_from_db",
+            "run_dual_momentum_backtest_from_db",
+            "run_risk_on_momentum_5d_backtest_from_db",
+            "run_quality_snapshot_strict_annual_backtest_from_db",
+        ]:
+            self.assertTrue(callable(getattr(backtest, public_name)))
+
+        self.assertTrue((PROJECT_ROOT / "app/runtime/backtest").is_dir())
+        self.assertTrue((PROJECT_ROOT / "app/runtime/backtest/facade.py").exists())
+        self.assertTrue((PROJECT_ROOT / "app/runtime/backtest/common.py").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

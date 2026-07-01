@@ -69,13 +69,13 @@ from finance.sample import (
 
 
 def _input_error(message: str) -> Exception:
-    from app.runtime.backtest import BacktestInputError
+    from app.runtime.backtest.common import BacktestInputError
 
     return BacktestInputError(message)
 
 
 def _data_error(message: str) -> Exception:
-    from app.runtime.backtest import BacktestDataError
+    from app.runtime.backtest.common import BacktestDataError
 
     return BacktestDataError(message)
 

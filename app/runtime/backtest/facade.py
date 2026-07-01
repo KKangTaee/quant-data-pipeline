@@ -5,6 +5,8 @@ from typing import Any
 
 import pandas as pd
 
+from app.runtime.backtest.common import BacktestDataError, BacktestInputError
+from app.runtime.backtest.common import validate_backtest_date_range as _validate_backtest_date_range
 from app.runtime.backtest_result_bundle import build_backtest_result_bundle
 from app.runtime.backtest_risk_on_momentum import (
     RISK_ON_MOMENTUM_BENCHMARK_TICKERS,
@@ -141,14 +143,6 @@ from app.runtime.backtest_strict import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
-
-
-class BacktestInputError(ValueError):
-    """Raised when user-facing backtest input is structurally invalid."""
-
-
-class BacktestDataError(ValueError):
-    """Raised when the requested DB-backed backtest cannot find required market data."""
 
 
 def _resolve_dynamic_etf_promotion_policy_defaults(
@@ -464,16 +458,6 @@ def _summary_frequency(option: str, timeframe: str) -> str:
     return "M"
 
 
-
-
-def _validate_backtest_date_range(start: str | None, end: str | None) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
-    start_ts = pd.to_datetime(start) if start is not None else None
-    end_ts = pd.to_datetime(end) if end is not None else None
-
-    if start_ts is not None and end_ts is not None and start_ts > end_ts:
-        raise BacktestInputError("Start date must be earlier than or equal to end date.")
-
-    return start_ts, end_ts
 
 
 def _preflight_equal_weight_data(
