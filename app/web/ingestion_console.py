@@ -406,6 +406,26 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
 }
 
 
+def _active_ingestion_actions(*, section: str | None = None) -> tuple[str, ...]:
+    return tuple(
+        action
+        for action, definition in INGESTION_ACTION_REGISTRY.items()
+        if definition.get("active") is True and (section is None or definition.get("section") == section)
+    )
+
+
+def _compatibility_ingestion_actions() -> tuple[str, ...]:
+    return tuple(
+        action
+        for action, definition in INGESTION_ACTION_REGISTRY.items()
+        if definition.get("compatibility") is True
+    )
+
+
+def _is_compatibility_ingestion_action(action: str | None) -> bool:
+    return str(action or "") in _compatibility_ingestion_actions()
+
+
 def _set_runtime_context(*, runtime_marker: str, loaded_at: datetime, git_sha: str | None) -> None:
     global _runtime_marker, _runtime_loaded_at, _runtime_git_sha
     _runtime_marker = runtime_marker

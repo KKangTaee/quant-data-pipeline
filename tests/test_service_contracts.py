@@ -4203,6 +4203,37 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             INGESTION_COLLECTION_MANUAL,
         )
 
+    def test_ingestion_action_registry_helpers_separate_active_from_compatibility_actions(self) -> None:
+        from app.web.ingestion_console import (
+            INGESTION_COLLECTION_MANUAL,
+            INGESTION_COLLECTION_OPERATIONAL,
+            _active_ingestion_actions,
+            _compatibility_ingestion_actions,
+            _is_compatibility_ingestion_action,
+        )
+
+        active_actions = _active_ingestion_actions()
+        operational_actions = _active_ingestion_actions(section=INGESTION_COLLECTION_OPERATIONAL)
+        manual_actions = _active_ingestion_actions(section=INGESTION_COLLECTION_MANUAL)
+        compatibility_actions = _compatibility_ingestion_actions()
+
+        self.assertIn("daily_market_update", active_actions)
+        self.assertIn("collect_financial_statements", manual_actions)
+        self.assertIn("metadata_refresh", operational_actions)
+        self.assertNotIn("weekly_fundamental_refresh", active_actions)
+        self.assertNotIn("pipeline_core_market_data", operational_actions)
+        self.assertEqual(
+            compatibility_actions,
+            (
+                "pipeline_core_market_data",
+                "weekly_fundamental_refresh",
+                "collect_fundamentals",
+                "calculate_factors",
+            ),
+        )
+        self.assertTrue(_is_compatibility_ingestion_action("weekly_fundamental_refresh"))
+        self.assertFalse(_is_compatibility_ingestion_action("extended_statement_refresh"))
+
     def test_ingestion_diagnostic_actions_dispatch_as_job_results(self) -> None:
         from app.web import ingestion_console
 

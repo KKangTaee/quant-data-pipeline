@@ -5,7 +5,7 @@ Started: 2026-07-01
 
 ## Current
 
-- 4차 완료: futures / event / lifecycle / profile 계열 job의 progress callback coverage를 보강했다.
+- 5차 완료: legacy compatibility action 경계를 helper로 정리하고 active action과 분리했다.
 
 ## Done
 
@@ -14,7 +14,8 @@ Started: 2026-07-01
 - 2차 diagnostic action dispatcher 추가, 네 개 진단 카드의 inline 실행 제거, 기존 진단 result renderer와 run history 저장 흐름 연결.
 - 3차 daily/manual OHLCV params builder 추가, metadata/manual asset profile job builder 통합, 수동 asset profile run_metadata 보강.
 - 4차 stage progress event helper 추가, futures/calendar/profile/lifecycle/source-map job callback 시그니처 보강, dispatcher와 UI progress allowlist 연결.
+- 5차 active / compatibility action helper 추가, legacy broad action이 active action 목록에 섞이지 않도록 테스트 고정.
 
 ## Next
 
-- 5차: legacy compatibility action 경계를 helper로 정리하고 active UI에서 불필요 broad job이 노출되지 않도록 검증한다.
+- 6차: durable docs / root handoff log를 동기화하고 Streamlit Browser QA로 화면 구조를 확인한다.
