@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Ingestion Console Structure V1:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-structure-v1-20260701/`에서 Ingestion 수집 화면을 1~4차로 정리했다.
+  - collection workbench는 `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` 3개 section으로 나뉘고, 기존 우측 column의 최근 수집 / 누적 실행 기록 / 상세 / 로그 / 실패 artifact는 기록 section으로 이동했다.
+  - 공용 영역에는 최신 실행 결과 요약과 next action을 먼저 보여주고, 운영용 alias와 수동 복구 entry의 관계는 job brief에서 설명한다.
 - Ingestion Manual Job State And Elapsed Time V1:
   - `.aiworkspace/note/finance/tasks/active/ingestion-manual-job-state-elapsed-v1-20260701/`에서 수동 수집 섹션 선택 상태와 실행 경과 시간 표시를 보강했다.
   - Ingestion collection section은 `st.pills` 기반 session state로 유지하고, manual job scheduling은 `collection_section` / `ui_started_at`을 job state에 저장한다.

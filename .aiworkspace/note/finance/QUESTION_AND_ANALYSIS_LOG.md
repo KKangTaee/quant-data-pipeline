@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Ingestion collection workbench should become a three-section workflow
+
+- User request: Ingestion 수정을 이어서, 기존 `일상운영 / 검증데이터`, `수동복구 / 진단` 탭 옆에 새 탭을 만들고 우측 column의 세션 최근수집 / 누적실행기록 / 상세 / 수동수집 / 로그를 탭 내부로 관리하며, 공용 기능과 각 탭 기능을 코드 기준으로 파악한 뒤 1~4차 개발 / QA / 커밋 순으로 진행해 달라고 요청함.
+- Interpreted goal: Ingestion을 진단값 나열 화면이 아니라 공용 타이틀 / 공용 실행 결과 / 3개 collection section 구조로 읽히게 만들고, 운영 수집 entry와 수동 복구 entry의 중복처럼 보이는 관계를 사용자-facing copy로 구분해야 한다.
+- Analysis result: 기존 우측 column은 별도 `실행 기록 / 결과` section으로 옮기는 것이 가장 작고 안전한 구조 변경이다. 실행 결과 요약은 공용 영역에 두고, 실제 collection execution은 `일상 운영 / 검증 데이터`와 `수동 복구 / 진단` 안에 유지한다.
+- Follow-up: 상세 재무제표 수동 수집은 수동 복구 entry로 유지한다. 운영용 EDGAR annual refresh와 같은 canonical refresh는 운영 section에서 계속 먼저 노출한다.
+
 ### 2026-07-01 - Ingestion manual collection should keep operator context during rerun
 
 - User request: `수동 복구 / 진단 > 상세 재무제표 수동 수집 실행`을 누르면 처음 Ingestion 화면처럼 돌아가 보여 헷갈리므로 수정하고, 진행 중 처리 / progress와 함께 현재 경과 시간을 표시해 달라고 승인함.
