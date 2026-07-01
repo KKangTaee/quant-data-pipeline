@@ -30,6 +30,29 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertIn("weekly_fundamental_refresh", registry.compatibility_ingestion_actions())
         self.assertNotIn("weekly_fundamental_refresh", registry.active_ingestion_actions())
 
+    def test_ingestion_styles_and_result_summaries_live_in_dedicated_modules(self) -> None:
+        from app.web.ingestion import page
+        from app.web.ingestion import results
+        from app.web.ingestion import styles
+
+        self.assertIs(page._install_ingestion_responsive_styles, styles.install_ingestion_responsive_styles)
+        self.assertIs(page._build_common_last_result_summary, results.build_common_last_result_summary)
+        self.assertIs(page._build_statement_refresh_action_summary, results.build_statement_refresh_action_summary)
+
+        summary = results.build_common_last_result_summary(
+            {
+                "job_name": "daily_market_update",
+                "status": "partial_success",
+                "rows_written": 12,
+                "symbols_requested": 3,
+                "failed_symbols": ["BAD"],
+                "duration_sec": 1.25,
+                "message": "partial",
+            }
+        )
+        self.assertEqual(summary["title"], "일별 가격 업데이트")
+        self.assertIn("coverage gap", summary["attention"])
+
 
 if __name__ == "__main__":
     unittest.main()
