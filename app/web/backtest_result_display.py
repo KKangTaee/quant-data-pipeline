@@ -132,6 +132,77 @@ def _format_latest_date_spread(value: Any) -> str:
         return f"{value}d"
 
 
+def _data_trust_price_status_label(status: str) -> str:
+    mapping = {
+        "ok": "최신성 정상",
+        "warning": "최신성 확인",
+        "error": "가격 보강 필요",
+    }
+    return mapping.get(status, "기준 제한")
+
+
+def _split_data_trust_issue(value: str) -> tuple[str, str]:
+    text = str(value or "").strip()
+    for separator in (": ", ":"):
+        if separator in text:
+            title, detail = text.split(separator, 1)
+            if title.strip() and detail.strip():
+                return title.strip(), detail.strip()
+    return text or "검토 필요", "성과를 읽기 전에 함께 확인합니다."
+
+
+def _build_data_trust_issue_cards(
+    warnings: list[str],
+    *,
+    excluded_tickers: list[Any],
+    malformed_price_rows: list[Any],
+) -> list[dict[str, str]]:
+    issue_cards: list[dict[str, str]] = []
+    for warning in warnings:
+        title, detail = _split_data_trust_issue(warning)
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": title,
+                "detail": detail,
+                "tone": "warning",
+            }
+        )
+
+    if excluded_tickers:
+        sample = ", ".join(str(ticker) for ticker in excluded_tickers[:8])
+        suffix = "..." if len(excluded_tickers) > 8 else ""
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "제외 종목",
+                "detail": f"{len(excluded_tickers)}개 ticker가 이번 계산에서 빠졌습니다: {sample}{suffix}",
+                "tone": "warning",
+            }
+        )
+
+    if malformed_price_rows:
+        sample_symbols = [
+            str(row.get("ticker") or row.get("symbol") or "").strip()
+            for row in malformed_price_rows
+            if isinstance(row, dict)
+        ]
+        sample = ", ".join(symbol for symbol in sample_symbols[:6] if symbol)
+        detail = f"가격 결측 row {len(malformed_price_rows)}개가 있어 공통 계산 가능 기간을 줄일 수 있습니다."
+        if sample:
+            detail = f"{detail} 먼저 볼 ticker: {sample}"
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "결측 가격 row",
+                "detail": detail,
+                "tone": "warning",
+            }
+        )
+
+    return issue_cards
+
+
 def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     price_freshness = meta.get("price_freshness") or {}
     freshness_details = price_freshness.get("details") or {}
@@ -153,38 +224,37 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     result_rows = _format_data_trust_count(meta.get("result_rows"))
     symbol_count = len(tickers)
     symbol_label = f"{symbol_count}개 종목" if symbol_count else "종목 수 미상"
-    issue_count = len(warnings) + len(excluded_tickers) + len(malformed_price_rows)
+    issue_cards = _build_data_trust_issue_cards(
+        warnings,
+        excluded_tickers=excluded_tickers,
+        malformed_price_rows=malformed_price_rows,
+    )
 
     if status == "error":
         status_label = "자료 보강 필요"
         tone = "danger"
-        status_detail = "가격 데이터 오류가 있어 결과 해석 전에 보강이 필요합니다."
-        headline = f"가격 데이터 오류 때문에 {actual_end} 기준 결과를 바로 해석하기 어렵습니다."
-        price_answer = "가격 데이터 보강 필요"
+        headline = f"가격 데이터 보강 전까지 {actual_end} 기준 결과는 검토용으로만 봅니다."
+        price_tone = "danger"
     elif excluded_tickers or malformed_price_rows or status == "warning":
         status_label = "확인 필요"
         tone = "warning"
-        status_detail = "계산은 완료됐지만 제외 종목이나 결측 row를 함께 확인해야 합니다."
-        headline = f"백테스트는 {actual_end}까지 계산됐고, 일부 데이터 이슈 확인이 필요합니다."
-        price_answer = "가격 기준 확인 필요"
+        headline = f"백테스트는 {actual_end}까지 계산됐고, 데이터 기준을 함께 확인해야 합니다."
+        price_tone = "warning"
     elif warnings:
         status_label = "주의사항 있음"
         tone = "warning"
-        status_detail = "가격 기준은 맞지만 아래 주의사항을 함께 읽어야 합니다."
-        headline = f"백테스트는 {actual_end}까지 계산됐고, {len(warnings)}개 주의사항을 함께 확인해야 합니다."
-        price_answer = "가격 최신성 정상"
+        headline = f"백테스트는 {actual_end}까지 계산됐고, {len(warnings)}개 검토 큐가 있습니다."
+        price_tone = "positive" if status == "ok" else "neutral"
     elif status == "ok":
         status_label = "자료 정상"
         tone = "positive"
-        status_detail = "가격 기준과 구성 종목 coverage가 맞습니다."
         headline = f"백테스트는 {actual_end}까지 저장된 가격으로 정상 계산됐습니다."
-        price_answer = "가격 최신성 정상"
+        price_tone = "positive"
     else:
         status_label = "자료 제한"
         tone = "neutral"
-        status_detail = "가격 최신성 metadata가 제한적입니다."
         headline = f"백테스트는 {actual_end} 기준으로 계산됐지만 데이터 기준 정보가 제한적입니다."
-        price_answer = "가격 기준 정보 제한"
+        price_tone = "neutral"
 
     if requested_end != "-" and actual_end != "-" and requested_end != actual_end:
         subtitle = (
@@ -198,10 +268,10 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
 
     if warnings:
         next_check_value = f"주의사항 {len(warnings)}개"
-        next_check_detail = "아래 주의사항을 먼저 확인한 뒤 성과를 읽습니다."
+        next_check_detail = "검토 큐를 먼저 확인한 뒤 성과를 읽습니다."
     elif excluded_tickers or malformed_price_rows:
         next_check_value = "데이터 이슈 확인"
-        next_check_detail = "세부 데이터 기준에서 제외 종목과 결측 row를 확인합니다."
+        next_check_detail = "검토 큐에서 제외 종목과 결측 row를 확인합니다."
     elif status == "error":
         next_check_value = "데이터 보강"
         next_check_detail = "가격 수집 또는 DB 보강 후 다시 실행합니다."
@@ -210,43 +280,20 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         next_check_detail = "아래 성과 metric과 차트를 이어서 봅니다."
 
     summary_items = [
-        {"label": "자료 상태", "value": status_label, "detail": status_detail, "tone": tone},
-        {"label": "계산 기준일", "value": actual_end, "detail": f"요청 종료일 {requested_end}", "tone": "neutral"},
+        {"label": "계산 기준일", "value": actual_end, "detail": f"요청 {requested_end}", "tone": "neutral"},
+        {
+            "label": "가격 기준",
+            "value": _data_trust_price_status_label(status),
+            "detail": f"공통 {common_latest} · 최신 {newest_latest} · 차이 {spread_label}",
+            "tone": price_tone,
+        },
         {
             "label": "사용 데이터",
             "value": symbol_label,
-            "detail": f"제외 {len(excluded_tickers)}개 · 결측 row {len(malformed_price_rows)}개",
+            "detail": f"성과 row {result_rows} · 제외 {len(excluded_tickers)}개 · 결측 row {len(malformed_price_rows)}개",
             "tone": "positive" if not excluded_tickers and not malformed_price_rows else "warning",
         },
-        {"label": "확인할 점", "value": next_check_value, "detail": next_check_detail, "tone": tone},
-    ]
-    reading_rows = [
-        {
-            "step": "1",
-            "question": "어디까지 계산했나",
-            "answer": f"{actual_end}까지의 가격",
-            "detail": "성과 기간은 요청 종료일이 아니라 계산 가능한 공통 가격일을 기준으로 닫힙니다.",
-        },
-        {
-            "step": "2",
-            "question": "데이터는 충분한가",
-            "answer": price_answer,
-            "detail": f"공통 최신 가격일 {common_latest}, 종목 간 최신일 차이 {spread_label}입니다.",
-        },
-        {
-            "step": "3",
-            "question": "무엇을 먼저 볼까",
-            "answer": next_check_value,
-            "detail": next_check_detail,
-        },
-    ]
-    detail_rows = [
-        {"항목": "요청 종료일", "값": requested_end, "의미": "사용자가 선택한 백테스트 종료일"},
-        {"항목": "계산 기준일", "값": actual_end, "의미": "실제로 결과가 닫힌 마지막 날짜"},
-        {"항목": "공통 최신 가격일", "값": common_latest, "의미": "모든 구성 종목이 함께 가진 최신 가격일"},
-        {"항목": "최신 가격 차이", "값": spread_label, "의미": "구성 종목 간 최신 가격일 차이"},
-        {"항목": "결과 행 수", "값": result_rows, "의미": "성과 표에 포함된 기간 row 수"},
-        {"항목": "결측 가격 row", "값": str(len(malformed_price_rows)), "의미": "가격 결측으로 확인이 필요한 row 수"},
+        {"label": "검토 큐", "value": next_check_value, "detail": next_check_detail, "tone": tone},
     ]
 
     return {
@@ -255,15 +302,49 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         "headline": headline,
         "subtitle": subtitle,
         "summary_items": summary_items,
-        "reading_rows": reading_rows,
-        "detail_rows": detail_rows,
-        "issue_count": issue_count,
+        "issue_cards": issue_cards,
         "price_message": price_freshness.get("message"),
         "excluded_tickers": excluded_tickers,
         "malformed_price_rows": malformed_price_rows,
         "warnings": warnings,
         "newest_latest": newest_latest,
     }
+
+
+def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
+    issue_cards = list(brief.get("issue_cards") or [])
+    if not issue_cards:
+        return """
+  <div class="data-trust-brief__issues data-trust-brief__issues--empty">
+    <div class="data-trust-brief__issues-head">
+      <span>이번 실행 검토 큐</span>
+      <strong>추가 확인 없음</strong>
+    </div>
+    <p>현재 데이터 기준에서는 성과를 보기 전에 따로 볼 경고가 없습니다.</p>
+  </div>
+        """
+
+    issue_html = "".join(
+        (
+            f'<div class="data-trust-brief__issue data-trust-brief__issue--{escape(str(card.get("tone") or "warning"))}">'
+            f'<span class="data-trust-brief__issue-priority">{escape(str(card.get("priority") or "-"))}</span>'
+            '<div>'
+            f'<strong>{escape(str(card.get("title") or "-"))}</strong>'
+            f'<p>{escape(str(card.get("detail") or "-"))}</p>'
+            "</div>"
+            "</div>"
+        )
+        for card in issue_cards
+    )
+    return f"""
+  <div class="data-trust-brief__issues">
+    <div class="data-trust-brief__issues-head">
+      <span>이번 실행 검토 큐</span>
+      <strong>{len(issue_cards)}개 확인</strong>
+    </div>
+    <div class="data-trust-brief__issue-list">{issue_html}</div>
+  </div>
+    """
 
 
 def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
@@ -281,19 +362,7 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
         )
         for item in list(brief.get("summary_items") or [])
     )
-    reading_html = "".join(
-        (
-            '<div class="data-trust-brief__row">'
-            f'<div class="data-trust-brief__step">{escape(str(row.get("step") or "-"))}</div>'
-            '<div class="data-trust-brief__question">'
-            f'<span>{escape(str(row.get("question") or "-"))}</span>'
-            f'<strong>{escape(str(row.get("answer") or "-"))}</strong>'
-            "</div>"
-            f'<p>{escape(str(row.get("detail") or "-"))}</p>'
-            "</div>"
-        )
-        for row in list(brief.get("reading_rows") or [])
-    )
+    issue_queue_html = _render_data_trust_issue_queue(brief)
     st.markdown(
         f"""
 <style>
@@ -389,46 +458,60 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
   font-size: 0.82rem;
   line-height: 1.35;
 }}
-.data-trust-brief__rows {{
-  margin-top: 0.95rem;
+.data-trust-brief__issues {{
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
 }}
-.data-trust-brief__row {{
-  display: grid;
-  grid-template-columns: 2.4rem minmax(12rem, 0.45fr) minmax(0, 1fr);
-  gap: 0.85rem;
-  align-items: center;
-  padding: 0.78rem 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
-}}
-.data-trust-brief__row:last-child {{
-  border-bottom: 0;
-}}
-.data-trust-brief__step {{
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 999px;
+.data-trust-brief__issues-head {{
   display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   align-items: center;
-  justify-content: center;
-  color: var(--dt-accent);
-  background: var(--dt-soft);
-  font-weight: 900;
+  margin-bottom: 0.25rem;
 }}
-.data-trust-brief__question span {{
-  display: block;
+.data-trust-brief__issues-head span {{
   color: #667085;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 800;
 }}
-.data-trust-brief__question strong {{
+.data-trust-brief__issues-head strong {{
+  color: var(--dt-accent);
+  font-size: 0.9rem;
+}}
+.data-trust-brief__issue-list {{
+  margin-top: 0.45rem;
+}}
+.data-trust-brief__issue {{
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}}
+.data-trust-brief__issue:last-child {{
+  border-bottom: 0;
+}}
+.data-trust-brief__issue-priority {{
+  justify-self: start;
+  min-width: 3.8rem;
+  border-radius: 999px;
+  color: var(--dt-accent);
+  background: var(--dt-soft);
+  padding: 0.18rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}}
+.data-trust-brief__issue strong {{
   display: block;
   color: var(--text-color);
   font-size: 1.02rem;
   line-height: 1.3;
-  margin-top: 0.1rem;
 }}
-.data-trust-brief__row p {{
-  margin: 0;
+.data-trust-brief__issue p,
+.data-trust-brief__issues--empty p {{
+  margin: 0.14rem 0 0;
   color: #667085;
   line-height: 1.45;
 }}
@@ -446,11 +529,9 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
   .data-trust-brief__summary-item:nth-child(2) {{
     border-right: 0;
   }}
-  .data-trust-brief__row {{
-    grid-template-columns: 2.2rem minmax(0, 1fr);
-  }}
-  .data-trust-brief__row p {{
-    grid-column: 2;
+  .data-trust-brief__issue {{
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
   }}
 }}
 </style>
@@ -464,7 +545,7 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
     <div class="data-trust-brief__pill">{status_label}</div>
   </div>
   <div class="data-trust-brief__summary">{summary_html}</div>
-  <div class="data-trust-brief__rows">{reading_html}</div>
+{issue_queue_html}
 </section>
         """,
         unsafe_allow_html=True,
@@ -476,29 +557,6 @@ def _render_data_trust_summary(meta: dict[str, Any]) -> None:
 
     st.markdown("#### 데이터 기준 요약")
     _render_data_trust_brief_panel(brief)
-
-    with st.expander("세부 데이터 기준", expanded=False):
-        st.dataframe(pd.DataFrame(brief["detail_rows"]), use_container_width=True, hide_index=True)
-        if brief.get("price_message"):
-            st.caption(str(brief["price_message"]))
-        if brief.get("excluded_tickers"):
-            st.markdown("**제외 종목**")
-            st.caption("전략 계산에 필요한 가격 이력이나 파생 지표가 부족해 이번 실행에서 제외된 ticker입니다.")
-            st.code(", ".join(str(ticker) for ticker in brief["excluded_tickers"]))
-        if brief.get("malformed_price_rows"):
-            st.markdown("**결측 / 비정상 가격 row**")
-            st.caption("가격 컬럼에 결측이 있는 ticker입니다. 공통 계산 가능 날짜가 짧아질 수 있습니다.")
-            malformed_df = pd.DataFrame(brief["malformed_price_rows"]).rename(
-                columns={
-                    "ticker": "Ticker",
-                    "price_col": "Price Column",
-                    "count": "Missing Row Count",
-                    "first_date": "First Missing Date",
-                    "last_date": "Last Missing Date",
-                    "sample_dates": "Sample Missing Dates",
-                }
-            )
-            st.dataframe(malformed_df, use_container_width=True, hide_index=True)
 
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)
@@ -1023,6 +1081,10 @@ def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
             st.info("No generated swing artifact was attached.")
 
 
+def _render_backtest_input_warning(message: str) -> None:
+    st.warning(message)
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -1030,7 +1092,7 @@ def _render_last_run() -> None:
 
     if error:
         if error_kind == "input":
-            st.warning(error)
+            _render_backtest_input_warning(error)
         elif error_kind == "data":
             st.error(error)
             st.caption("Hint: run the ingestion pipeline for the requested tickers and date range, then try again.")
@@ -1044,7 +1106,6 @@ def _render_last_run() -> None:
     chart_df = bundle["chart_df"]
     result_df = bundle["result_df"]
     meta = bundle["meta"]
-    warnings = list(meta.get("warnings") or [])
 
     st.markdown("### Latest Backtest Run")
     strategy_key = meta.get("strategy_key")
@@ -1061,13 +1122,6 @@ def _render_last_run() -> None:
     has_swing_details = bool(strategy_key == "risk_on_momentum_5d" or bundle.get("swing_trade_log_df") is not None)
 
     _render_data_trust_summary(meta)
-
-    if warnings:
-        warning_lines = "\n".join(f"- {warning}" for warning in warnings)
-        st.warning(
-            "이번 실행에서 같이 봐야 할 주의 사항이 있습니다.\n\n"
-            + warning_lines
-        )
 
     st.markdown(f"#### {bundle['strategy_name']}")
     _render_summary_metrics(summary_df)

@@ -31,7 +31,7 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - Backtest Data Trust Summary Redesign V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-data-trust-summary-redesign-v1-20260701/`에서 `Latest Backtest Run`의 Data Trust 영역을 한국어 `데이터 기준 요약` 패널로 재구성했다.
-  - 기존 영어 metric card / raw badge 중심 표시를 제거하고, 결론 / 계산 기준일 / 사용 데이터 / 확인할 점 / 3단계 reading row를 먼저 보여준다.
+  - 기존 영어 metric card / raw badge 중심 표시와 중복 reading row / 세부 기준 expander를 제거하고, `계산 기준일 / 가격 기준 / 사용 데이터 / 검토 큐` 요약과 `이번 실행 검토 큐`를 같은 패널에 둔다.
   - Strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
 - Backtest Latest Run Cleanup V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-latest-run-cleanup-v1-20260701/`에서 Run Backtest 직후 결과 화면의 상단 `Execution Summary`와 Latest Run guide card를 제거했다.

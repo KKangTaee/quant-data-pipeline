@@ -8,8 +8,8 @@
 
 - `app/web/backtest_result_display.py`의 Data Trust Summary 렌더만 변경
 - 상단을 한국어 `데이터 기준 요약` 패널로 재구성
-- `자료 상태 / 계산 기준일 / 사용 데이터 / 확인할 점` 요약과 3단계 reading row 제공
-- raw date / row count / price freshness detail은 `세부 데이터 기준` expander로 이동
+- `계산 기준일 / 가격 기준 / 사용 데이터 / 검토 큐` 요약으로 중복 정보를 압축
+- raw guide row와 `세부 데이터 기준` expander를 기본 화면에서 제거하고, warnings / 제외 종목 / 결측 row는 같은 패널의 `이번 실행 검토 큐`로 통합
 - Strategy runtime, result bundle schema, run history, registry / saved, Practical Validation / Final Review persistence는 변경하지 않음
 
 ## Completion Criteria
