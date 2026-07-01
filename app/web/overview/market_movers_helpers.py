@@ -2159,6 +2159,24 @@ def _financial_period_label(item: dict[str, Any], fallback: str) -> str:
     return str(item.get("period_end") or fallback)
 
 
+def _financial_date_label(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if not pd.isna(timestamp):
+        return timestamp.strftime("%Y-%m-%d")
+    text = str(value).strip()
+    return text[:10] if text else "-"
+
+
+def _financial_disclosure_date_label(item: dict[str, Any]) -> str:
+    for key in ("available_at", "filing_date", "latest_available_at", "latest_filing_date"):
+        label = _financial_date_label(item.get(key))
+        if label != "-":
+            return label
+    return "-"
+
+
 def _financial_source_label(item: dict[str, Any]) -> str:
     source = str(item.get("financial_source") or "").strip()
     fallback_used = bool(item.get("fallback_used"))
@@ -2199,7 +2217,10 @@ def _financial_compact_source_detail(*items: dict[str, Any]) -> str:
     compact_parts = [parts[0][1]]
     for source_label, text in parts[1:]:
         compact_parts.append(text.removeprefix(f"{source_label} ") if source_label == first_label else text)
-    return "근거: " + ", ".join(compact_parts)
+    detail = "근거: " + ", ".join(compact_parts)
+    if any(_financial_disclosure_date_label(item) != "-" for item in items if item):
+        detail += " · 공시일 기준"
+    return detail
 
 
 def _financial_source_detail(item: dict[str, Any], prefix: str) -> str:
@@ -2232,7 +2253,8 @@ def _per_eps_row(item: dict[str, Any], period_label: str) -> dict[str, str] | No
         return None
     return {
         "period": period_label,
-        "date": _financial_period_label(item, "-"),
+        "period_end": _financial_period_label(item, "-"),
+        "disclosure_date": _financial_disclosure_date_label(item),
         "per": per,
         "eps": eps,
     }
@@ -2246,7 +2268,8 @@ def _income_row(item: dict[str, Any], period_label: str) -> dict[str, str] | Non
         return None
     return {
         "period": period_label,
-        "date": _financial_period_label(item, "-"),
+        "period_end": _financial_period_label(item, "-"),
+        "disclosure_date": _financial_disclosure_date_label(item),
         "net_income": _format_korean_money(net_income),
     }
 

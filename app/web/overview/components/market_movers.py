@@ -308,7 +308,8 @@ def _market_mover_research_rows_html(rows: list[dict[str, Any]]) -> str:
         table_label = "annual and quarterly net income comparison"
         columns = [
             ("period", "구분", True),
-            ("date", "날짜", False),
+            ("period_end", "회계기간", False),
+            ("disclosure_date", "공시일", False),
             ("net_income", "당기순이익", False),
         ]
     else:
@@ -316,7 +317,8 @@ def _market_mover_research_rows_html(rows: list[dict[str, Any]]) -> str:
         table_label = "PER EPS annual and quarterly comparison"
         columns = [
             ("period", "구분", True),
-            ("date", "날짜", False),
+            ("period_end", "회계기간", False),
+            ("disclosure_date", "공시일", False),
             ("per", "PER", False),
             ("eps", "EPS", False),
         ]

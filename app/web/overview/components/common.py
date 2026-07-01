@@ -5072,7 +5072,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-table-row {
 	  display: grid;
-	  grid-template-columns: minmax(2.8rem, 0.62fr) minmax(5.2rem, 1fr) minmax(3.6rem, 0.76fr) minmax(3.6rem, 0.76fr);
+	  grid-template-columns: minmax(2.7rem, 0.48fr) minmax(4.9rem, 0.96fr) minmax(4.9rem, 0.96fr) minmax(3.2rem, 0.72fr) minmax(3.2rem, 0.72fr);
 	  gap: var(--ov-mi-gap-sm);
 	  align-items: baseline;
 	  min-width: 0;
@@ -5083,7 +5083,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  line-height: 1.16;
 	}
 	.ov-mm-research-table.is-income .ov-mm-research-table-row {
-	  grid-template-columns: minmax(2.8rem, 0.62fr) minmax(5.2rem, 1fr) minmax(6.2rem, 1fr);
+	  grid-template-columns: minmax(2.7rem, 0.48fr) minmax(4.9rem, 0.96fr) minmax(4.9rem, 0.96fr) minmax(6rem, 1fr);
 	}
 	.ov-mm-research-table-row:first-child {
 	  border-top: 0;
