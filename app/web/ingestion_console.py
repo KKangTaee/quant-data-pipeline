@@ -82,6 +82,28 @@ MANUAL_COLLECTION_ACTIONS = {
     "collect_financial_statements",
     "rebuild_statement_shadow",
 }
+COLLECTION_ENTRY_RELATIONSHIPS = {
+    "daily_market_update": (
+        "운영용 가격 갱신 entry입니다. 같은 OHLCV writer를 쓰지만, 수동 가격 이력 수집보다 "
+        "운영 universe / execution profile / 결과 해석을 먼저 보게 합니다."
+    ),
+    "collect_ohlcv": (
+        "복구용 수동 가격 이력 수집 entry입니다. 일상 운영 전체 갱신보다 의심 심볼과 기간을 좁혀 실행할 때 사용합니다."
+    ),
+    "metadata_refresh": (
+        "운영용 종목 메타데이터 업데이트 entry입니다. 수동 자산 프로필 수집과 같은 asset profile collector를 쓰지만, "
+        "stock / ETF 운영 scope를 갱신하는 흐름입니다."
+    ),
+    "collect_asset_profiles": (
+        "복구용 수동 자산 프로필 수집 entry입니다. metadata refresh와 같은 저장 테이블을 쓰되 필요한 kind만 좁혀 재수집합니다."
+    ),
+    "extended_statement_refresh": (
+        "운영용 EDGAR annual 재무제표 갱신 entry입니다. raw statement 수집 뒤 statement shadow fundamentals / factors까지 이어서 준비합니다."
+    ),
+    "collect_financial_statements": (
+        "복구용 상세 재무제표 수동 수집 entry입니다. EDGAR annual 운영 refresh보다 낮은 수준의 raw ledger 재수집입니다."
+    ),
+}
 
 
 def _set_runtime_context(*, runtime_marker: str, loaded_at: datetime, git_sha: str | None) -> None:
@@ -1091,6 +1113,10 @@ def _status_label(status: str | None) -> str:
     }.get(str(status or ""), str(status or "-"))
 
 
+def _collection_entry_relationship_note(job_name: str | None) -> str:
+    return COLLECTION_ENTRY_RELATIONSHIPS.get(str(job_name or ""), "")
+
+
 def _render_job_brief(job_name: str) -> None:
     guide = _job_guide(job_name)
     if not guide:
@@ -1107,9 +1133,66 @@ def _render_job_brief(job_name: str) -> None:
         ]
     )
 
+    relationship_note = _collection_entry_relationship_note(job_name)
+    if relationship_note:
+        st.caption("흐름 구분: " + relationship_note)
+
     caveats = [str(item) for item in guide.get("caveats") or [] if str(item).strip()]
     if caveats:
         st.caption("데이터 품질 주의: " + " / ".join(caveats))
+
+
+def _build_common_last_result_summary(result: JobResult) -> dict[str, str]:
+    job_name = str(result.get("job_name") or "")
+    guide = _job_guide(job_name)
+    failed_count = len(result.get("failed_symbols") or [])
+    status = str(result.get("status") or "")
+    attention = ""
+    if status == "partial_success":
+        attention = "부분 성공은 pass가 아니므로 downstream validation에서 coverage gap으로 남을 수 있습니다."
+    elif status == "failed":
+        attention = "저장 row가 0이면 source 차단, 잘못된 입력, provider no-data를 먼저 구분하세요."
+    elif failed_count:
+        attention = "누락 / 실패 대상이 있으므로 상세 reason과 재실행 payload를 확인하세요."
+
+    return {
+        "title": _job_title(job_name),
+        "job_name": job_name,
+        "status": _status_label(status),
+        "raw_status": status,
+        "rows": _format_count(result.get("rows_written")),
+        "requested": _format_count(result.get("symbols_requested")),
+        "failed": _format_count(failed_count),
+        "duration": _format_duration(result.get("duration_sec")),
+        "message": str(result.get("message") or ""),
+        "next_action": str(guide.get("next_action") or "실행 기록 / 결과 탭에서 상세 payload와 관련 로그를 확인하세요."),
+        "attention": attention,
+    }
+
+
+def _render_common_last_result_summary() -> None:
+    recent_results = st.session_state.get("recent_results") or []
+    if not recent_results:
+        return
+
+    summary = _build_common_last_result_summary(recent_results[0])
+    with st.container(border=True):
+        st.markdown("#### 최근 실행 요약")
+        st.caption(f"{summary['title']} · 내부 job id: `{summary['job_name']}`")
+        _render_ingestion_stat_grid(
+            [
+                ("상태", summary["status"], summary["raw_status"]),
+                ("저장 Row", summary["rows"], None),
+                ("대상", summary["requested"], None),
+                ("누락 / 실패", summary["failed"], None),
+                ("소요 시간", summary["duration"], None),
+            ]
+        )
+        if summary["message"]:
+            st.caption(summary["message"])
+        if summary["attention"]:
+            st.warning(summary["attention"])
+        st.caption("다음 확인: " + summary["next_action"])
 
 
 def _render_result_guidance(result: JobResult) -> None:
@@ -4571,6 +4654,7 @@ def render_ingestion_console() -> None:
         "각 작업은 기존처럼 사용자가 심볼, 기간, 소스, 옵션을 직접 정하되, 무엇을 수집하고 어디에 쓰이는지 먼저 보여줍니다."
     )
     _render_ingestion_workflow_overview()
+    _render_common_last_result_summary()
 
     current_progress_callback = None
     collection_body = st.container()

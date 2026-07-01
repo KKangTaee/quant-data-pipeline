@@ -22,3 +22,11 @@
   - Result: PASS.
 - `git diff --check`
   - Result: PASS.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_common_last_result_summary_preserves_next_action_focus tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_job_briefs_explain_operational_alias_relationships`
+  - Result: RED before implementation. Missing `_build_common_last_result_summary` and `_collection_entry_relationship_note`.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_common_last_result_summary_preserves_next_action_focus tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_job_briefs_explain_operational_alias_relationships tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_console_dispatches_collection_sections_to_dedicated_renderers tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_console_moves_run_records_into_third_collection_section tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_collection_section_selector_is_stateful_across_reruns tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_running_jobs_preserve_section_and_show_elapsed_time tests.test_service_contracts.BoundaryContractHardeningTests.test_ingestion_ui_removes_legacy_broad_collection_cards_but_keeps_compatibility_actions`
+  - Result: first run failed because `metadata_refresh` relationship copy did not mention `수동 자산 프로필`; after copy correction PASS, 7 tests.
+- `.venv/bin/python -m py_compile app/web/ingestion_console.py tests/test_service_contracts.py`
+  - Result: PASS.
+- `git diff --check`
+  - Result: PASS.

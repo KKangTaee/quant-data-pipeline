@@ -4131,6 +4131,45 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("_render_price_stale_diagnosis_card", entrypoint_calls)
         self.assertNotIn("_render_statement_pit_inspection_card", entrypoint_calls)
 
+    def test_ingestion_common_last_result_summary_preserves_next_action_focus(self) -> None:
+        from app.web.ingestion_console import _build_common_last_result_summary
+
+        summary = _build_common_last_result_summary(
+            {
+                "job_name": "daily_market_update",
+                "status": "partial_success",
+                "rows_written": 120,
+                "symbols_requested": 4,
+                "failed_symbols": ["BAD"],
+                "duration_sec": 12.25,
+                "message": "Daily market update completed with partial success.",
+            }
+        )
+
+        self.assertEqual(summary["title"], "일별 가격 업데이트")
+        self.assertEqual(summary["status"], "부분 성공")
+        self.assertEqual(summary["failed"], "1")
+        self.assertEqual(summary["rows"], "120")
+        self.assertIn("Price Stale Diagnosis", summary["next_action"])
+        self.assertIn("coverage gap", summary["attention"])
+
+    def test_ingestion_job_briefs_explain_operational_alias_relationships(self) -> None:
+        from app.web.ingestion_console import _collection_entry_relationship_note
+
+        daily_note = _collection_entry_relationship_note("daily_market_update")
+        manual_note = _collection_entry_relationship_note("collect_ohlcv")
+        metadata_note = _collection_entry_relationship_note("metadata_refresh")
+        profile_note = _collection_entry_relationship_note("collect_asset_profiles")
+        statement_note = _collection_entry_relationship_note("collect_financial_statements")
+
+        self.assertIn("운영용", daily_note)
+        self.assertIn("수동 가격 이력 수집", daily_note)
+        self.assertIn("복구용", manual_note)
+        self.assertIn("운영용", metadata_note)
+        self.assertIn("수동 자산 프로필", metadata_note)
+        self.assertIn("복구용", profile_note)
+        self.assertIn("EDGAR annual", statement_note)
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
