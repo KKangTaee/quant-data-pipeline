@@ -7619,7 +7619,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("st.warning(", last_run_body)
         self.assertNotIn("이번 실행에서 같이 봐야 할 주의 사항", last_run_body)
 
-    def test_latest_backtest_run_prioritizes_result_then_data_trust_then_handoff(self) -> None:
+    def test_latest_backtest_run_prioritizes_result_then_data_trust_then_handoff_then_tabs(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         last_run_start = source.index("def _render_last_run")
         last_run_body = source[last_run_start:]
@@ -7637,8 +7637,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         handoff_pos = last_run_body.index("_render_practical_validation_next_action(bundle)")
 
         self.assertLess(header_pos, data_trust_pos)
-        self.assertLess(data_trust_pos, tabs_pos)
-        self.assertLess(tabs_pos, handoff_pos)
+        self.assertLess(data_trust_pos, handoff_pos)
+        self.assertLess(handoff_pos, tabs_pos)
 
     def test_backtest_result_header_owns_integrated_kpi_band(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")

@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Handoff Before Detail Tabs V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-before-detail-tabs-v1-20260702/`에서 Run Backtest 직후 `2차 실전성 검증 Handoff`를 상세 결과 탭 위로 올렸다.
+  - 현재 latest run 흐름은 `전략 결과/KPI -> 데이터 기준 요약 -> 실전성 검증 Handoff -> 상세 결과 탭`이다.
+  - Handoff scoring, Practical Validation source handoff, registry / saved / validation persistence는 변경하지 않았다.
 - Backtest Data Trust Heading Integrated V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-data-trust-heading-integrated-v1-20260701/`에서 standalone `데이터 기준 요약` heading을 제거하고 Data Trust custom panel 내부 title로 흡수했다.
   - `먼저 볼 결론`은 panel 내부 읽기 cue로 유지해 KPI band와 Data Trust panel 사이의 시각적 이질감을 줄였다.

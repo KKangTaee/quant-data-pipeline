@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-02 - Practical Validation handoff should precede detail tabs
+
+- User request: Run Backtest 결과에서 각종 상세 탭 다음에 `2차 실전성 검증 Handoff`가 나오는 순서를 다시 바꾸고, handoff의 promotion / 검증 원천 / 버튼 활성화 기준을 설명해 달라고 요청.
+- Interpreted goal: 사용자는 핵심 성과와 데이터 기준을 본 직후 다음 행동 가능 여부를 판단하고, 상세 탭은 이후 근거 확인으로 읽고 싶다.
+- Analysis result: `_render_last_run`에서 handoff 호출이 `st.tabs(...)` 구성과 tab content 렌더 이후에 있어 다음 행동이 화면 아래로 밀렸다. 버튼 활성화 자체는 `_build_next_step_readiness_evaluation(meta)`의 promotion / execution source / validation source blocker 기준을 유지한다.
+- Follow-up: latest run 순서를 `결과 헤더 -> 데이터 기준 요약 -> 실전성 검증 Handoff -> 상세 결과 탭`으로 변경했다.
+
 ### 2026-07-01 - Data Trust title should live inside the custom panel
 
 - User request: CSS custom design 사이에 standalone `데이터 기준 요약` 제목이 이질적이므로 제거하고, 하단 `먼저 볼 결론` 쪽에 title을 추가하거나 다른 방식으로 정리해 달라고 요청.

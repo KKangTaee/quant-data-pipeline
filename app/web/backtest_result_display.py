@@ -1344,6 +1344,7 @@ def _render_last_run() -> None:
 
     _render_backtest_result_header(bundle, summary_df)
     _render_data_trust_summary(meta)
+    _render_practical_validation_next_action(bundle)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
@@ -1694,8 +1695,6 @@ def _render_last_run() -> None:
         with right:
             st.markdown("##### Runtime Metadata")
             st.json(meta)
-
-    _render_practical_validation_next_action(bundle)
 
 def _build_balance_compare_view(bundles: list[dict]) -> pd.DataFrame:
     series_list = []
