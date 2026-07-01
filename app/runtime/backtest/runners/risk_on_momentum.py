@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+from app.runtime.backtest.result_bundle import build_backtest_result_bundle
 from app.workspace_paths import BACKTEST_ARTIFACT_DIR
 from finance.data.asset_profile import load_top_symbols_from_asset_profile
 from finance.data.market_intelligence import load_market_cap_universe_members

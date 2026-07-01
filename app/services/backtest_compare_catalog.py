@@ -33,7 +33,7 @@ from app.runtime.backtest import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
-from app.runtime.backtest_runner_catalog import get_runner_definition_for_display_name
+from app.runtime.backtest.runner_catalog import get_runner_definition_for_display_name
 from finance.sample import (
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS,

@@ -332,7 +332,7 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertEqual(payload["min_avg_dollar_volume_20d"], 20_000_000.0)
 
     def test_risk_on_momentum_sp500_universe_resolves_market_universe(self) -> None:
-        from app.runtime import backtest_risk_on_momentum as runtime
+        from app.runtime.backtest.runners import risk_on_momentum as runtime
 
         with (
             patch.object(
@@ -359,7 +359,7 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
 
     def test_risk_on_momentum_sp500_universe_requires_membership_rows(self) -> None:
         from app.runtime import backtest as facade_runtime
-        from app.runtime import backtest_risk_on_momentum as runtime
+        from app.runtime.backtest.runners import risk_on_momentum as runtime
 
         with (
             patch.object(runtime, "load_market_cap_universe_members", return_value=[]),
@@ -1220,7 +1220,7 @@ import sys
 import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
-import app.runtime.backtest_result_bundle
+import app.runtime.backtest.result_bundle
 import app.services.backtest_component_role_weight_audit
 import app.services.backtest_construction_risk_audit
 import app.services.backtest_data_coverage_audit
@@ -4023,19 +4023,25 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
         function_names = {
             node.name
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.runtime.backtest_risk_on_momentum", imported_modules)
+        self.assertIn("app.runtime.backtest.runners.risk_on_momentum", imported_modules)
         self.assertNotIn("run_risk_on_momentum_5d_backtest_from_db", function_names)
         self.assertNotIn("_resolve_risk_on_momentum_universe", function_names)
 
     def test_risk_on_momentum_runtime_module_owns_public_entrypoint(self) -> None:
         from app.runtime import backtest
-        from app.runtime.backtest_risk_on_momentum import run_risk_on_momentum_5d_backtest_from_db
+        from app.runtime.backtest.runners.risk_on_momentum import run_risk_on_momentum_5d_backtest_from_db
 
         self.assertIs(backtest.run_risk_on_momentum_5d_backtest_from_db, run_risk_on_momentum_5d_backtest_from_db)
 
@@ -4049,13 +4055,19 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
         function_names = {
             node.name
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.runtime.backtest_real_money", imported_modules)
+        self.assertIn("app.runtime.backtest.real_money", imported_modules)
         self.assertNotIn("_apply_real_money_hardening", function_names)
         self.assertNotIn("_build_deployment_readiness_contract", function_names)
         self.assertNotIn("_apply_transaction_cost_postprocess", function_names)
@@ -4063,7 +4075,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
     def test_real_money_runtime_module_owns_facade_helper_contracts(self) -> None:
         from app.runtime import backtest
-        from app.runtime.backtest_real_money import (
+        from app.runtime.backtest.real_money import (
             ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             _apply_real_money_hardening,
             _apply_transaction_cost_postprocess,
@@ -4085,13 +4097,19 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
         function_names = {
             node.name
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.runtime.backtest_strict", imported_modules)
+        self.assertIn("app.runtime.backtest.runners.strict_factor", imported_modules)
         self.assertNotIn("inspect_strict_annual_price_freshness", function_names)
         self.assertNotIn("run_quality_snapshot_strict_annual_backtest_from_db", function_names)
         self.assertNotIn("run_value_snapshot_strict_annual_backtest_from_db", function_names)
@@ -4100,7 +4118,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
     def test_strict_runtime_module_owns_facade_runner_contracts(self) -> None:
         from app.runtime import backtest
-        from app.runtime.backtest_strict import (
+        from app.runtime.backtest.runners.strict_factor import (
             inspect_strict_annual_price_freshness,
             run_quality_snapshot_strict_annual_backtest_from_db,
             run_quality_value_snapshot_strict_annual_backtest_from_db,
@@ -7667,19 +7685,19 @@ class BacktestRuntimeContractTests(unittest.TestCase):
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime
         from app.runtime import backtest as runtime_backtest
-        from app.runtime import backtest_result_bundle
+        from app.runtime.backtest import result_bundle
 
         self.assertIs(
             runtime_backtest.build_backtest_result_bundle,
-            backtest_result_bundle.build_backtest_result_bundle,
+            result_bundle.build_backtest_result_bundle,
         )
         self.assertIs(
             app.runtime.build_backtest_result_bundle,
-            backtest_result_bundle.build_backtest_result_bundle,
+            result_bundle.build_backtest_result_bundle,
         )
 
     def test_result_bundle_contract_sorts_dates_and_keeps_metadata(self) -> None:
-        from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+        from app.runtime.backtest.result_bundle import build_backtest_result_bundle
 
         bundle = build_backtest_result_bundle(
             pd.DataFrame(
@@ -7776,7 +7794,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_global_relative_strength_source_contract_includes_promotion_policy_defaults(self) -> None:
         from app.runtime import backtest as runtime_backtest
-        from app.runtime.backtest import facade as runtime_backtest_facade
+        from app.runtime.backtest.runners import global_relative_strength as grs_runtime
         from app.runtime.backtest import (
             STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
             STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
@@ -7804,13 +7822,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         with (
             patch.object(
-                runtime_backtest_facade,
+                grs_runtime,
                 "inspect_strict_annual_price_freshness",
                 return_value={"status": "ok", "message": "", "details": {}},
             ),
-            patch.object(runtime_backtest_facade, "_preflight_price_strategy_data"),
-            patch.object(runtime_backtest_facade, "get_global_relative_strength_from_db", return_value=result_df),
-            patch.object(runtime_backtest_facade, "_apply_real_money_hardening", side_effect=_capture_hardening),
+            patch.object(grs_runtime, "_preflight_price_strategy_data"),
+            patch.object(grs_runtime, "get_global_relative_strength_from_db", return_value=result_df),
+            patch.object(grs_runtime, "_apply_real_money_hardening", side_effect=_capture_hardening),
         ):
             bundle = runtime_backtest.run_global_relative_strength_backtest_from_db(
                 tickers=["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"],
@@ -7877,7 +7895,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("promotion_max_drawdown_gap_vs_benchmark", override)
 
     def test_result_bundle_rejects_missing_required_columns(self) -> None:
-        from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+        from app.runtime.backtest.result_bundle import build_backtest_result_bundle
 
         with self.assertRaisesRegex(ValueError, "missing required columns"):
             build_backtest_result_bundle(
