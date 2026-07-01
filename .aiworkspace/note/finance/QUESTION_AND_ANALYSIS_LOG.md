@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Ingestion manual collection should keep operator context during rerun
+
+- User request: `수동 복구 / 진단 > 상세 재무제표 수동 수집 실행`을 누르면 처음 Ingestion 화면처럼 돌아가 보여 헷갈리므로 수정하고, 진행 중 처리 / progress와 함께 현재 경과 시간을 표시해 달라고 승인함.
+- Interpreted goal: Streamlit rerun 자체는 유지하되, operator가 선택한 collection section과 실행 context를 UI state에 저장해 job scheduling 후에도 manual workflow 위치를 잃지 않게 해야 한다.
+- Analysis result: native `st.tabs` selection에 의존하지 않고 session-state `st.pills` selector로 바꾸는 것이 가장 작고 되돌리기 쉬운 수정이다. scheduled job에는 `collection_section`과 `ui_started_at`을 넣고, running banner / progress caption에서 elapsed time을 계산한다.
+- Follow-up: Browser QA에서는 실제 EDGAR 수집 버튼을 누르지 않았다. live elapsed progress를 눈으로 확인하려면 사람이 의도적으로 소량 수집 job을 실행해 확인할 수 있다.
+
 ### 2026-06-30 - Quarterly statement shadow must gate 10-K FY flow before production use
 
 - User request: 재무제표 source migration을 DEVELOPMENT_GUIDE 기준으로 1~9차 순차 진행하라고 승인함.

@@ -68,6 +68,18 @@ CSV_DIR = PROJECT_ROOT / "csv"
 _runtime_marker = "unknown"
 _runtime_loaded_at: datetime | None = None
 _runtime_git_sha: str | None = None
+INGESTION_COLLECTION_OPERATIONAL = "일상 운영 / 검증 데이터"
+INGESTION_COLLECTION_MANUAL = "수동 복구 / 진단"
+INGESTION_COLLECTION_SECTIONS = (
+    INGESTION_COLLECTION_OPERATIONAL,
+    INGESTION_COLLECTION_MANUAL,
+)
+MANUAL_COLLECTION_ACTIONS = {
+    "collect_ohlcv",
+    "collect_asset_profiles",
+    "collect_financial_statements",
+    "rebuild_statement_shadow",
+}
 
 
 def _set_runtime_context(*, runtime_marker: str, loaded_at: datetime, git_sha: str | None) -> None:
@@ -89,6 +101,35 @@ def _runtime_metadata() -> dict[str, Any]:
         "runtime_loaded_at": _runtime_loaded_at_text(),
         "git_sha": _runtime_git_sha,
     }
+
+
+def _infer_ingestion_collection_section(job: dict[str, Any] | None) -> str:
+    if not job:
+        return INGESTION_COLLECTION_OPERATIONAL
+    section = job.get("collection_section") or (job.get("run_metadata") or {}).get("collection_section")
+    if section in INGESTION_COLLECTION_SECTIONS:
+        return str(section)
+    if job.get("action") in MANUAL_COLLECTION_ACTIONS:
+        return INGESTION_COLLECTION_MANUAL
+    return INGESTION_COLLECTION_OPERATIONAL
+
+
+def _format_job_elapsed(job: dict[str, Any] | None, *, now: datetime | None = None) -> str:
+    started_at = (job or {}).get("ui_started_at")
+    if isinstance(started_at, datetime):
+        started_at_dt = started_at
+    elif started_at:
+        try:
+            started_at_dt = datetime.fromisoformat(str(started_at))
+        except ValueError:
+            return "00:00:00"
+    else:
+        return "00:00:00"
+
+    elapsed_seconds = max(int(((now or datetime.now()) - started_at_dt).total_seconds()), 0)
+    hours, remainder = divmod(elapsed_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
 JOB_GUIDE: dict[str, dict[str, Any]] = {
@@ -1274,7 +1315,15 @@ def _schedule_job(job: dict[str, Any]) -> None:
     if _has_running_job():
         st.warning("다른 Ingestion job이 실행 중입니다. 완료 후 새 작업을 시작하세요.")
         return
+    job = dict(job)
+    collection_section = _infer_ingestion_collection_section(job)
+    job["collection_section"] = collection_section
+    run_metadata = dict(job.get("run_metadata") or {})
+    run_metadata["collection_section"] = collection_section
+    job["run_metadata"] = run_metadata
+    job["ui_started_at"] = datetime.now().isoformat(timespec="seconds")
     st.session_state.pending_job = job
+    st.session_state.ingestion_collection_section_pending = collection_section
     st.rerun()
 
 
@@ -1412,8 +1461,9 @@ def _render_running_banner() -> None:
         return
     symbol_count = len(job.get("params", {}).get("symbols", []) or [])
     count_suffix = f" Target symbols: `{symbol_count}`." if symbol_count else ""
+    elapsed_suffix = f" 경과 `{_format_job_elapsed(job)}`."
     st.warning(
-        f'`{job["job_name"]}` is currently running. All execution buttons are temporarily disabled until it finishes.{count_suffix}'
+        f'`{job["job_name"]}` is currently running. All execution buttons are temporarily disabled until it finishes.{count_suffix}{elapsed_suffix}'
     )
 
 
@@ -1446,9 +1496,43 @@ def _render_ingestion_runtime_build_indicator() -> None:
         )
 
 
-def _render_inline_running_hint(action: str, label: str) -> None:
+def _render_inline_running_hint(action: str, label: str, *, job: dict[str, Any] | None = None) -> None:
     if _is_running_action(action):
-        st.info(f"`{label}` 실행 중입니다. 현재 실행은 동기 처리라 job이 끝난 뒤 화면이 다시 갱신됩니다.")
+        st.info(
+            f"`{label}` 실행 중입니다. 현재 실행은 동기 처리라 job이 끝난 뒤 화면이 다시 갱신됩니다. "
+            f"경과 `{_format_job_elapsed(job or st.session_state.running_job)}`."
+        )
+
+
+def _render_ingestion_collection_section_selector() -> str:
+    pending_section = st.session_state.get("ingestion_collection_section_pending")
+    if pending_section is not None:
+        del st.session_state["ingestion_collection_section_pending"]
+
+    running_or_pending_job = st.session_state.running_job or st.session_state.pending_job
+    forced_section = _infer_ingestion_collection_section(running_or_pending_job) if running_or_pending_job else None
+    selected_section = (
+        pending_section
+        or forced_section
+        or st.session_state.get("ingestion_collection_section_choice")
+        or INGESTION_COLLECTION_OPERATIONAL
+    )
+    if selected_section not in INGESTION_COLLECTION_SECTIONS:
+        selected_section = INGESTION_COLLECTION_OPERATIONAL
+
+    if forced_section or pending_section or "ingestion_collection_section_choice" not in st.session_state:
+        st.session_state.ingestion_collection_section_choice = selected_section
+
+    selected = st.pills(
+        "수집 작업 구분",
+        options=list(INGESTION_COLLECTION_SECTIONS),
+        key="ingestion_collection_section_choice",
+        label_visibility="collapsed",
+    )
+    if selected not in INGESTION_COLLECTION_SECTIONS:
+        selected = selected_section
+    st.session_state.ingestion_collection_section = selected
+    return str(selected)
 
 
 def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
@@ -1464,7 +1548,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
         "rebuild_statement_shadow",
         "collect_financial_statements",
     } or symbol_count < 100:
-        _render_inline_running_hint(action, label)
+        _render_inline_running_hint(action, label, job=job)
         return None
 
     progress_text = st.empty()
@@ -1472,11 +1556,11 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     progress_bar = st.progress(0)
 
     if action in {"collect_ohlcv", "daily_market_update"}:
-        progress_text.info(f"`{label}` 실행 중입니다. OHLCV batch 진행률을 표시합니다.")
+        progress_text.info(f"`{label}` 실행 중입니다. OHLCV batch 진행률과 경과 시간을 표시합니다.")
     elif action in {"extended_statement_refresh", "collect_financial_statements"}:
-        progress_text.info(f"`{label}` 실행 중입니다. statement ingestion 진행률을 표시합니다.")
+        progress_text.info(f"`{label}` 실행 중입니다. statement ingestion 진행률과 경과 시간을 표시합니다.")
     else:
-        progress_text.info(f"`{label}` 실행 중입니다. pipeline stage 진행률을 표시합니다.")
+        progress_text.info(f"`{label}` 실행 중입니다. pipeline stage 진행률과 경과 시간을 표시합니다.")
 
     def _callback(event: dict[str, Any]) -> None:
         event_type = event.get("event")
@@ -1490,6 +1574,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                 "처리 "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                f"경과 `{_format_job_elapsed(job)}` | "
                 f"저장 rows `{event.get('rows_written', 0)}` | "
                 f"rate-limited `{event.get('rate_limited_symbols', 0)}`"
             )
@@ -1502,6 +1587,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             progress_meta.caption(
                 f"처리 `{event.get('processed_symbols', 0)}/{event.get('total_symbols', symbol_count)}` symbols | "
                 f"cooldown `{event.get('cooldown_sec', 0)}` sec | "
+                f"경과 `{_format_job_elapsed(job)}` | "
                 f"next chunk `{event.get('current_chunk_size', 0)}` | "
                 f"workers `{event.get('current_max_workers', 0)}`"
             )
@@ -1516,13 +1602,13 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             if event_type == "stage_start":
                 percent = int(((stage_index - 1) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages}) | 경과 `{_format_job_elapsed(job)}`")
                 return
 
             if event_type == "stage_complete":
                 percent = int((stage_index / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages}) | 경과 `{_format_job_elapsed(job)}`")
                 return
 
             if event_type == "batch_progress":
@@ -1536,6 +1622,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                         "현재 stage: `OHLCV` | "
                         f"처리 `{processed_symbols}/{total_symbols}` symbols | "
                         f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                        f"경과 `{_format_job_elapsed(job)}` | "
                         f"저장 rows `{event.get('rows_written', 0)}`"
                     )
                 return
@@ -1549,6 +1636,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                 "처리 "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                f"경과 `{_format_job_elapsed(job)}` | "
                 f"values `{event.get('inserted_values', 0)}` | "
                 f"labels `{event.get('upserted_labels', 0)}` | "
                 f"filings `{event.get('upserted_filings', 0)}` | "
@@ -1563,11 +1651,11 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             if event_type == "stage_start":
                 percent = int(((stage_index - 1) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"현재 stage: `{stage}` ({stage_index}/{total_stages}) | 경과 `{_format_job_elapsed(job)}`")
             else:
                 percent = int((stage_index / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages})")
+                progress_meta.caption(f"완료 stage: `{stage}` ({stage_index}/{total_stages}) | 경과 `{_format_job_elapsed(job)}`")
 
     return _callback
 
@@ -2848,9 +2936,9 @@ def render_ingestion_console() -> None:
             "영어 job id는 실행 기록 추적용으로만 보시면 됩니다."
         )
 
-        operational_tab, manual_tab = st.tabs(["일상 운영 / 검증 데이터", "수동 복구 / 진단"])
+        selected_collection_section = _render_ingestion_collection_section_selector()
 
-        with operational_tab:
+        if selected_collection_section == INGESTION_COLLECTION_OPERATIONAL:
             st.info(
                 "일상 운영 / 검증 데이터: 백테스트와 Practical Validation, Overview가 DB에서 읽을 데이터를 채웁니다. "
                 "수집 결과가 부분 성공이면 downstream 화면에서도 coverage gap으로 남을 수 있습니다."
@@ -4175,7 +4263,7 @@ def render_ingestion_console() -> None:
                             )
                         _render_inline_last_completed_result("collect_computed_snapshot_lifecycle")
 
-        with manual_tab:
+        if selected_collection_section == INGESTION_COLLECTION_MANUAL:
             st.info(
                 "수동 복구 / 진단: 특정 심볼 재수집, 저수준 파이프라인 확인, PIT inspection 같은 보조 작업입니다. "
                 "정기 운영보다 느리거나 실험적인 작업은 이곳에서 필요한 범위만 좁혀 실행합니다."

@@ -4085,6 +4085,24 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("saved/history replay", source)
         self.assertIn("Quality Snapshot (Strict Annual)", source)
 
+    def test_ingestion_collection_section_selector_is_stateful_across_reruns(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("INGESTION_COLLECTION_SECTIONS", source)
+        self.assertIn("ingestion_collection_section_choice", source)
+        self.assertIn("st.pills(", source)
+        self.assertNotIn('st.tabs(["일상 운영 / 검증 데이터", "수동 복구 / 진단"])', source)
+
+    def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("collection_section", source)
+        self.assertIn('run_metadata["collection_section"]', source)
+        self.assertIn("ui_started_at", source)
+        self.assertIn("def _format_job_elapsed", source)
+        self.assertIn("경과", source)
+        self.assertIn("Financial Statement Ingestion", source)
+
     def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
         import ast
 

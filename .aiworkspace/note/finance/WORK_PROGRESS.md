@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Ingestion Manual Job State And Elapsed Time V1:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-manual-job-state-elapsed-v1-20260701/`에서 수동 수집 섹션 선택 상태와 실행 경과 시간 표시를 보강했다.
+  - Ingestion collection section은 `st.pills` 기반 session state로 유지하고, manual job scheduling은 `collection_section` / `ui_started_at`을 job state에 저장한다.
+  - Browser QA는 실제 EDGAR 수집 실행 없이 수동 섹션 전환과 화면 오류 부재를 확인했다.
 - Fundamental Source Migration P0-P3:
   - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p0-current-state-recheck/`부터 `p3-quarterly-correctness-gate/`까지 1~4차를 순차 진행했다.
   - Source contract는 `legacy_broad_yfinance`와 `sec_edgar_statement_shadow/strict`로 분리했고, Market Movers annual financials는 EDGAR statement shadow 우선으로 전환했다.
@@ -139,6 +143,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-07-01 - Ingestion manual collection section now survives job reruns
+- Completed `.aiworkspace/note/finance/tasks/active/ingestion-manual-job-state-elapsed-v1-20260701/` after the user approved fixing the manual financial statement collection UX.
+- Replaced the Ingestion collection `st.tabs` with a session-state `st.pills` selector and stored `collection_section` / `ui_started_at` on scheduled jobs.
+- Running job banner and large-job progress captions now include elapsed time.
+- Browser QA confirmed manual section selection renders the manual cards without the expanded daily operational body; screenshot is local generated artifact only.
 
 ### 2026-06-29 - GTAA result cadence now separates monthly valuation from rebalance cadence
 - Completed `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/` after the user clarified that non-rebalance months should still show new candidate signals.
