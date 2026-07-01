@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Latest Run Cleanup V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-latest-run-cleanup-v1-20260701/`에서 Run Backtest 직후 결과 화면의 상단 `Execution Summary`와 Latest Run guide card를 제거했다.
+  - 결과 화면은 `Data Trust Summary`, 전략 metric, next action, 조건부 결과 탭 중심으로 유지한다.
+  - Strategy runtime, result bundle, registry / saved / validation persistence는 변경하지 않았다.
 - Streamlit Native Pages Sidebar Fix:
   - `.aiworkspace/note/finance/tasks/active/streamlit-native-pages-sidebar-fix-20260630/`에서 cold/direct Backtest startup이 native Streamlit sidebar를 노출하던 원인을 정리했다.
   - Root cause는 `streamlit_app.py`의 top navigation과 `app/web/pages/backtest.py` legacy auto-discovery가 동시에 존재한 것이다.

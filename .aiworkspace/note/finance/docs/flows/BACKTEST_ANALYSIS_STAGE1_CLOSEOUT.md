@@ -37,8 +37,8 @@ Backtest Analysis
 ### Single Strategy
 
 - 사용자는 단일 전략을 실행한다.
-- Runtime Payload는 기본 검토 대상이 아니라 필요할 때 확인하는 상세 정보다.
-- Latest Backtest Run은 결과를 읽는 순서를 제공한다.
+- Runtime Payload는 기본 결과 화면에 노출하지 않는다.
+- Latest Backtest Run은 결과 자체를 먼저 보여주는 workspace이며, 반복 가이드는 Reference help에서 다룬다.
 - Data Trust Summary는 결과 기간, 가격 최신성, excluded ticker, warning을 먼저 확인하게 한다.
 - Real-Money / Candidate Readiness는 다음 단계로 넘겨도 되는지 보는 1차 gate다.
 - `실전성 검증으로 보내기`는 Promotion / execution source / validation source blocker가 없을 때만 활성화된다.

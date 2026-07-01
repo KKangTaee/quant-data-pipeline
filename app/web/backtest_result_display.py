@@ -15,7 +15,6 @@ from app.services.backtest_result_read_model import (
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_ui_components import (
     render_badge_strip,
-    render_checkpoint_strip,
     render_readiness_route_panel,
     render_status_card_grid,
 )
@@ -335,66 +334,6 @@ def _render_strategy_data_trust_snapshot(
         _render_strategy_data_trust_details(bundles)
     return rows
 
-
-def _availability_tone(is_available: bool) -> str:
-    return "positive" if is_available else "warning"
-
-
-def _render_latest_run_orientation(
-    *,
-    has_selection_history: bool,
-    has_dynamic_details: bool,
-    has_real_money_details: bool,
-) -> None:
-    st.caption(
-        "Backtest Analysis는 후보를 만드는 화면입니다. 아래 체크포인트는 결과 해석 순서이며, "
-        "최종 검증과 선택은 Practical Validation과 Final Review에서 이어집니다."
-    )
-    render_checkpoint_strip(
-        [
-            {
-                "label": "A",
-                "title": "Result Integrity",
-                "detail": "Data Trust로 기간, 가격 최신성, 제외 ticker를 먼저 확인합니다.",
-                "status": "Data Trust",
-                "tone": "positive",
-            },
-            {
-                "label": "B",
-                "title": "Performance Shape",
-                "detail": "Summary와 Equity Curve에서 수익률, 낙폭, 회복 구간을 봅니다.",
-                "status": "Summary / Curve",
-                "tone": "neutral",
-            },
-            {
-                "label": "C",
-                "title": "Candidate Readiness",
-                "detail": "Promotion policy signal과 blocker로 다음 검토 가능성을 봅니다.",
-                "status": "Policy Signal" if has_real_money_details else "Not available",
-                "tone": _availability_tone(has_real_money_details),
-            },
-            {
-                "label": "D",
-                "title": "Next Action",
-                "detail": "필요하면 Portfolio Mix Builder에서 조합하거나 Practical Validation 후보로 보냅니다.",
-                "status": "Action after metrics",
-                "tone": "neutral",
-            },
-        ]
-    )
-    render_badge_strip(
-        [
-            {"label": "Selection History", "value": "Available" if has_selection_history else "Strategy-specific", "tone": _availability_tone(has_selection_history)},
-            {"label": "Dynamic Universe", "value": "Available" if has_dynamic_details else "Not included", "tone": "positive" if has_dynamic_details else "neutral"},
-            {"label": "Policy Signal", "value": "Available" if has_real_money_details else "Not included", "tone": _availability_tone(has_real_money_details)},
-            {"label": "Meta", "value": "Available", "tone": "positive"},
-        ]
-    )
-    if not has_selection_history:
-        st.caption(
-            "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
-            "GTAA 같은 일부 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
-        )
 
 def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = bundle.get("meta") or {}
@@ -861,12 +800,6 @@ def _render_last_run() -> None:
     has_real_money_details = bool(meta.get("real_money_hardening"))
     has_swing_details = bool(strategy_key == "risk_on_momentum_5d" or bundle.get("swing_trade_log_df") is not None)
 
-    _render_latest_run_orientation(
-        has_selection_history=has_selection_history,
-        has_dynamic_details=has_dynamic_details,
-        has_real_money_details=has_real_money_details,
-    )
-
     _render_data_trust_summary(meta)
 
     if warnings:
@@ -886,7 +819,7 @@ def _render_last_run() -> None:
     if has_dynamic_details:
         tab_labels.append("Dynamic Universe")
     if has_real_money_details:
-        tab_labels.append("Policy Signal")
+        tab_labels.append("Policy Signal Meta")
     if has_swing_details:
         tab_labels.append("Swing Detail")
     tab_labels.extend(["Result Table", "Meta"])

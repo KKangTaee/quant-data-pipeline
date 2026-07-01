@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Run Backtest result view should prioritize the result, not guide cards
+
+- User request: Run Backtest 후 보이는 `Execution Summary`와 `Latest Backtest Run` guide card / 하단 근거 영역을 먼저 파악하고 개선 요청.
+- Interpreted goal: 실행 직후 화면은 payload preview나 반복 guide가 아니라 실제 결과, 데이터 신뢰도, 다음 action, 조건부 근거 탭을 먼저 보여줘야 한다.
+- Analysis result: `Execution Summary`는 `backtest_single_runner.py`에서 실행 전 payload를 노출했고, `Latest Backtest Run`의 checkpoint / availability block은 `backtest_result_display.py`에서 결과 위에 guide를 렌더링했다.
+- Follow-up: 기본 결과 화면에서 두 guide block을 제거하고, `Selection History`, `Dynamic Universe`, `Policy Signal Meta`는 result bundle 기반 조건부 결과 탭으로 유지했다.
+
 ### 2026-06-30 - Backtest cold startup should use Finance Console top navigation, not native Streamlit pages
 
 - User request: 앱 최초 시작 시 좌측 native sidebar에 `streamlit app` / `backtest`가 뜨고, 클릭 후에야 원래 top navigation 화면으로 돌아오는 원인 파악과 수정 요청.

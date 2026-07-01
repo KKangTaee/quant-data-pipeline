@@ -3932,6 +3932,21 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("전략 개발 참고", analysis_source)
         self.assertNotIn("backtest_analysis_show_research_reference_panels", analysis_source)
 
+    def test_backtest_latest_run_view_prioritizes_result_over_pre_result_guides(self) -> None:
+        runner_source = Path("app/web/backtest_single_runner.py").read_text(encoding="utf-8")
+        result_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("#### Execution Summary", runner_source)
+        self.assertNotIn("Developer Payload", runner_source)
+        self.assertNotIn("_render_latest_run_orientation", result_source)
+        self.assertNotIn("render_checkpoint_strip", result_source)
+        self.assertNotIn("아래 체크포인트는 결과 해석 순서", result_source)
+        self.assertNotIn("Performance Shape", result_source)
+        self.assertNotIn("Action after metrics", result_source)
+        self.assertIn('tab_labels.append("Selection History")', result_source)
+        self.assertIn('tab_labels.append("Dynamic Universe")', result_source)
+        self.assertIn('tab_labels.append("Policy Signal Meta")', result_source)
+
     def test_ingestion_console_module_owns_render_entrypoint(self) -> None:
         from app.web.ingestion_console import render_ingestion_page
 
