@@ -16,8 +16,8 @@ from .backtest import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
-from .history import BACKTEST_HISTORY_FILE, append_backtest_run_history, load_backtest_run_history
-from .candidate_registry import (
+from .backtest.stores.run_history import BACKTEST_HISTORY_FILE, append_backtest_run_history, load_backtest_run_history
+from .backtest.stores.candidate_registry import (
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
     PRE_LIVE_CANDIDATE_REGISTRY_FILE,
@@ -28,31 +28,31 @@ from .candidate_registry import (
     load_current_candidate_registry_latest,
     load_pre_live_candidate_registry_latest,
 )
-from .portfolio_store import (
+from .backtest.stores.portfolio_store import (
     SAVED_PORTFOLIO_FILE,
     delete_saved_portfolio,
     load_saved_portfolios,
     save_saved_portfolio,
 )
-from .portfolio_proposal import (
+from .backtest.stores.portfolio_proposal import (
     PORTFOLIO_PROPOSAL_REGISTRY_FILE,
     PORTFOLIO_PROPOSAL_SCHEMA_VERSION,
     append_portfolio_proposal,
     load_portfolio_proposals,
 )
-from .paper_portfolio_ledger import (
+from .backtest.stores.paper_portfolio_ledger import (
     PAPER_PORTFOLIO_LEDGER_FILE,
     PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION,
     append_paper_portfolio_ledger_row,
     load_paper_portfolio_ledger,
 )
-from .final_selection_decisions import (
+from .backtest.stores.final_selection_decisions import (
     FINAL_SELECTION_DECISION_REGISTRY_FILE,
     FINAL_SELECTION_DECISION_SCHEMA_VERSION,
     append_final_selection_decision,
     load_final_selection_decisions,
 )
-from .portfolio_selection_v2 import (
+from .backtest.stores.portfolio_selection import (
     FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
     FINAL_SELECTION_DECISION_FILE,
     PORTFOLIO_SELECTION_SOURCE_FILE,
@@ -75,7 +75,7 @@ from .portfolio_selection_v2 import (
     load_saved_portfolio_mixes,
     load_selected_portfolio_monitoring_logs,
 )
-from .final_selected_portfolios import (
+from .backtest.read_models.final_selected_portfolios import (
     SELECTED_ALLOCATION_DRIFT_BOUNDARY_ROUTE_LABELS,
     SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION,
     SELECTED_DASHBOARD_PORTFOLIO_SCHEMA_VERSION,

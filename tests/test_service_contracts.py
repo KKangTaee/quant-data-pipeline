@@ -690,12 +690,12 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(options[0]["source_id"], "validation-ready")
 
     def test_practical_validation_registry_serializes_db_scalar_payloads(self) -> None:
-        from app.runtime import portfolio_selection_v2
+        from app.runtime.backtest.stores import portfolio_selection
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             result_file = Path(tmp_dir) / "PRACTICAL_VALIDATION_RESULTS.jsonl"
-            with patch.object(portfolio_selection_v2, "PRACTICAL_VALIDATION_RESULT_FILE", result_file):
-                portfolio_selection_v2.append_practical_validation_result(
+            with patch.object(portfolio_selection, "PRACTICAL_VALIDATION_RESULT_FILE", result_file):
+                portfolio_selection.append_practical_validation_result(
                     {
                         "selection_source_id": "source-json-safe",
                         "input_evidence": {
@@ -1219,7 +1219,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
 import sys
 import app.runtime
 import app.runtime.backtest
-import app.runtime.candidate_library
+import app.runtime.backtest.read_models.candidate_library
 import app.runtime.backtest.result_bundle
 import app.services.backtest_component_role_weight_audit
 import app.services.backtest_construction_risk_audit
@@ -1254,7 +1254,7 @@ print("streamlit" in sys.modules)
 import sys
 import importlib.util
 import app.runtime
-import app.runtime.candidate_library
+import app.runtime.backtest.read_models.candidate_library
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.runtime") is None)
 """
@@ -17124,7 +17124,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         return row
 
     def test_selected_dashboard_monitoring_portfolio_saved_state_crud_is_soft_delete(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             add_selected_dashboard_portfolio_strategy,
             delete_selected_dashboard_portfolio,
             load_selected_dashboard_portfolios,
@@ -17212,7 +17212,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertEqual(deleted_rows[0]["deleted_at"], "2026-06-01T10:04:00")
 
     def test_selected_dashboard_portfolio_state_joins_selected_strategy_pool(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_final_selected_portfolio_dashboard_row,
             build_selected_dashboard_portfolio_state,
         )
@@ -17246,7 +17246,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(state["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_selected_dashboard_portfolio_state_marks_complete_strategy_slots_ready(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_final_selected_portfolio_dashboard_row,
             build_selected_dashboard_portfolio_state,
         )
@@ -17778,7 +17778,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         }
 
     def test_selected_dashboard_handoff_review_links_selected_final_review_rows(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION,
             build_selected_dashboard_handoff_review,
         )
@@ -17805,7 +17805,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
 
     def test_selected_dashboard_handoff_review_blocks_without_selected_route(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_dashboard_handoff_review
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
 
         row = dict(self._selected_row()["raw_decision"])
         row["decision_route"] = "HOLD_FOR_MORE_PAPER_TRACKING"
@@ -17824,7 +17824,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
 
     def test_selected_dashboard_handoff_review_surfaces_blocked_dashboard_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_dashboard_handoff_review
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
 
         row = dict(self._selected_row()["raw_decision"])
         row["selected_components"] = [
@@ -17875,7 +17875,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         }
 
     def test_monitoring_timeline_is_read_only_and_requires_recheck_input(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 
         timeline = build_selected_portfolio_monitoring_timeline(self._selected_row())
 
@@ -17898,7 +17898,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(timeline["source_contract"]["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_monitoring_timeline_surfaces_recheck_breach_and_drift_watch(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 
         timeline = build_selected_portfolio_monitoring_timeline(
             self._selected_row(),
@@ -17936,7 +17936,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(timeline["execution_boundary"]["auto_rebalance"])
 
     def test_allocation_drift_boundary_is_read_only_and_session_only(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION,
             build_selected_portfolio_allocation_drift_boundary,
             build_selected_portfolio_current_weight_inputs,
@@ -17987,7 +17987,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertFalse(execution_boundary["auto_rebalance"])
 
     def test_allocation_drift_boundary_surfaces_breach_without_rebalance_action(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_selected_portfolio_allocation_drift_boundary,
             build_selected_portfolio_drift_alert_preview,
             build_selected_portfolio_drift_check,
@@ -18035,7 +18035,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(boundary["execution_boundary"]["broker_sync"])
 
     def test_selected_continuity_check_requires_recheck_input_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_continuity_check
 
         continuity = build_selected_portfolio_continuity_check(self._selected_row())
 
@@ -18053,7 +18053,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(continuity["execution_boundary"]["live_approval"])
 
     def test_selected_continuity_check_blocks_mismatched_timeline_source_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_selected_portfolio_continuity_check,
             build_selected_portfolio_monitoring_timeline,
         )
@@ -18073,7 +18073,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(continuity["execution_boundary"]["registry_write"])
 
     def test_selected_continuity_check_blocks_non_selected_or_invalid_component_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_continuity_check
 
         row = self._selected_row()
         row["raw_decision"]["decision_route"] = "HOLD_FOR_MORE_PAPER_TRACKING"
@@ -18089,7 +18089,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(continuity["execution_boundary"]["order_instruction"])
 
     def test_recheck_comparison_requires_recheck_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_comparison
 
         comparison = build_selected_portfolio_recheck_comparison(self._selected_row())
 
@@ -18104,7 +18104,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(comparison["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_comparison_surfaces_breach_from_recheck_delta(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_comparison
 
         comparison = build_selected_portfolio_recheck_comparison(
             self._selected_row(),
@@ -18143,7 +18143,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(comparison["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_comparison_ready_when_thesis_holds(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_comparison
 
         comparison = build_selected_portfolio_recheck_comparison(
             self._selected_row(),
@@ -18179,7 +18179,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(comparison["metrics"]["needs_input_count"], 0)
 
     def test_review_signal_policy_ready_uses_recheck_comparison_rows(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_review_signal_policy
 
         policy = build_selected_portfolio_review_signal_policy(
             self._selected_row(),
@@ -18206,7 +18206,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         )
 
     def test_review_signal_policy_keeps_missing_recheck_and_data_gaps_out_of_clear(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_review_signal_policy
 
         policy = build_selected_portfolio_review_signal_policy(
             self._selected_row(),
@@ -18224,7 +18224,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(policy["execution_boundary"]["registry_write"])
 
     def test_review_signal_policy_surfaces_comparison_breach(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_review_signal_policy
 
         breached_result = self._ready_recheck_result()
         breached_result["verdict_route"] = "PERFORMANCE_WEAKENED"
@@ -18253,7 +18253,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(policy["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_readiness_blocks_missing_replay_contract_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_readiness
 
         readiness = build_selected_portfolio_recheck_readiness(
             self._selected_row(),
@@ -18271,7 +18271,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(readiness["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_recheck_readiness_ready_when_db_latest_and_replay_contract_exist(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_readiness
 
         readiness = build_selected_portfolio_recheck_readiness(
             self._selected_row(),
@@ -18303,7 +18303,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Default recheck period"]["Status"], "PASS")
 
     def test_recheck_readiness_uses_embedded_final_decision_contract_without_registry(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_readiness
 
         row = self._selected_row()
         row["raw_decision"]["selected_components"][0]["strategy_key"] = "equal_weight"
@@ -18330,7 +18330,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Selected replay contract"]["Status"], "PASS")
 
     def test_recheck_symbol_freshness_detects_missing_and_stale_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
 
         freshness = build_selected_portfolio_recheck_symbol_freshness(
             self._selected_row(),
@@ -18371,7 +18371,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(freshness["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_recheck_symbol_freshness_ready_when_all_symbols_recent(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
 
         freshness = build_selected_portfolio_recheck_symbol_freshness(
             self._selected_row(),
@@ -18408,7 +18408,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(freshness["execution_boundary"]["order_instruction"])
 
     def test_recheck_operations_preflight_ready_when_readiness_and_freshness_are_ready(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
 
         preflight = build_selected_portfolio_recheck_operations_preflight(
             self._selected_row(),
@@ -18436,7 +18436,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(preflight["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_operations_preflight_routes_missing_price_to_needs_data(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
 
         preflight = build_selected_portfolio_recheck_operations_preflight(
             self._selected_row(),
@@ -18456,7 +18456,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Symbol Freshness"]["Status"], "NEEDS_INPUT")
 
     def test_recheck_operations_preflight_blocks_missing_replay_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
 
         preflight = build_selected_portfolio_recheck_operations_preflight(
             self._selected_row(),
@@ -18473,7 +18473,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Symbol Freshness"]["Status"], "BLOCKED")
 
     def test_open_issue_followup_surfaces_final_review_open_items(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_open_issue_followup
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_open_issue_followup
 
         followup = build_selected_portfolio_open_issue_followup(self._selected_row_with_open_issue())
 
@@ -18488,7 +18488,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(followup["execution_boundary"]["live_approval"])
 
     def test_deployment_readiness_preflight_is_read_only_and_keeps_review_open(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_deployment_readiness_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_deployment_readiness_preflight
 
         preflight = build_selected_portfolio_deployment_readiness_preflight(
             self._selected_row_with_open_issue(),
@@ -18531,7 +18531,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(preflight["execution_boundary"]["auto_rebalance"])
 
     def test_selected_provider_evidence_ready_from_injected_provider_context(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -18606,7 +18606,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(evidence["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_selected_provider_evidence_surfaces_not_run_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -18668,7 +18668,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(evidence["execution_boundary"]["order_instruction"])
 
     def test_selected_provider_evidence_marks_component_fallback_as_review(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         row = self._selected_row()
         row["raw_decision"]["selected_components"][0]["universe"] = "SPY QQQ"
@@ -18727,7 +18727,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(evidence["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_selected_provider_evidence_downgrades_stale_actual_pass_to_review(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -18782,7 +18782,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertIn("freshness=stale", rows["ETF Holdings"]["Policy Reason"])
 
     def test_selected_provider_evidence_downgrades_partial_pass_to_review(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -18837,7 +18837,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Look-through Coverage"]["Status"], "REVIEW")
 
     def test_selected_provider_evidence_requires_core_provider_areas(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -18984,7 +18984,7 @@ class DecisionDossierContractTests(unittest.TestCase):
         self.assertIn("not live approval", dossier["markdown"])
 
     def test_decision_dossier_can_include_selected_monitoring_timeline(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
         from app.services.backtest_evidence_read_model import build_decision_dossier
 
         selected_row = {"raw_decision": self._final_decision_row()}
@@ -19016,7 +19016,7 @@ class DecisionDossierContractTests(unittest.TestCase):
         self.assertFalse(dossier["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_decision_dossier_surfaces_mismatched_timeline_source_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
         from app.services.backtest_evidence_read_model import build_decision_dossier
 
         selected_row = {"raw_decision": self._final_decision_row()}

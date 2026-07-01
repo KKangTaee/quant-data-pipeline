@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+"""Candidate Library table, snapshot, and replay payload read models."""
+
 import time
 from datetime import datetime
 from typing import Any
 
 import pandas as pd
 
-from .backtest import (
+from app.runtime.backtest import (
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
     run_global_relative_strength_backtest_from_db,
@@ -16,11 +18,11 @@ from .backtest import (
     run_risk_parity_trend_backtest_from_db,
     run_value_snapshot_strict_annual_backtest_from_db,
 )
-from .candidate_registry import (
+from app.runtime.backtest.stores.candidate_registry import (
     load_current_candidate_registry_latest,
     load_pre_live_candidate_registry_latest,
 )
-from .backtest import (
+from app.runtime.backtest import (
     BacktestDataError,
     BacktestInputError,
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,

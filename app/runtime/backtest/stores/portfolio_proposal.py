@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+"""Append/load helpers for portfolio proposal draft JSONL records."""
+
 import json
 from pathlib import Path
 from typing import Any
 
 from app.workspace_paths import REGISTRIES_DIR
 
-PAPER_PORTFOLIO_LEDGER_FILE = REGISTRIES_DIR / "PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl"
-PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION = 1
+PORTFOLIO_PROPOSAL_REGISTRY_FILE = REGISTRIES_DIR / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl"
+PORTFOLIO_PROPOSAL_SCHEMA_VERSION = 1
 
 
 def _read_jsonl_rows(path: Path) -> list[dict[str, Any]]:
@@ -28,16 +30,14 @@ def _read_jsonl_rows(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def append_paper_portfolio_ledger_row(row: dict[str, Any]) -> None:
-    """Append one explicit paper tracking record without mutating other registries."""
-    PAPER_PORTFOLIO_LEDGER_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with PAPER_PORTFOLIO_LEDGER_FILE.open("a", encoding="utf-8") as handle:
+def append_portfolio_proposal(row: dict[str, Any]) -> None:
+    PORTFOLIO_PROPOSAL_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with PORTFOLIO_PROPOSAL_REGISTRY_FILE.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def load_paper_portfolio_ledger(limit: int | None = 100) -> list[dict[str, Any]]:
-    """Load saved paper tracking records in recent-first order for UI review."""
-    rows = _read_jsonl_rows(PAPER_PORTFOLIO_LEDGER_FILE)
+def load_portfolio_proposals(limit: int | None = 50) -> list[dict[str, Any]]:
+    rows = _read_jsonl_rows(PORTFOLIO_PROPOSAL_REGISTRY_FILE)
     rows = sorted(
         rows,
         key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""),

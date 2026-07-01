@@ -176,13 +176,13 @@ def _recommended_next_action(*, display_name: str, status: str) -> str:
 
 
 def _load_default_run_history_rows() -> list[dict[str, Any]]:
-    from app.runtime.history import load_backtest_run_history
+    from app.runtime.backtest.stores.run_history import load_backtest_run_history
 
     return load_backtest_run_history(limit=200)
 
 
 def _load_default_selection_source_rows() -> list[dict[str, Any]]:
-    from app.runtime.portfolio_selection_v2 import load_portfolio_selection_sources
+    from app.runtime.backtest.stores.portfolio_selection import load_portfolio_selection_sources
 
     return load_portfolio_selection_sources(limit=200)
 

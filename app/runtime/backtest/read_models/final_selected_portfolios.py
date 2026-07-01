@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Selected Portfolio Dashboard read-only monitoring and replay read models."""
+
 import json
 import re
 from datetime import date, datetime
@@ -13,8 +15,8 @@ from app.workspace_paths import SAVED_DIR
 from finance.loaders import load_latest_market_date
 from finance.performance import portfolio_performance_summary
 
-from .candidate_registry import load_current_candidate_registry_latest
-from .portfolio_selection_v2 import (
+from app.runtime.backtest.stores.candidate_registry import load_current_candidate_registry_latest
+from app.runtime.backtest.stores.portfolio_selection import (
     FINAL_SELECTION_DECISION_FILE,
     load_current_final_selection_decisions,
 )
@@ -3046,7 +3048,7 @@ def _resolve_selected_recheck_contracts(
         candidate_load_error = ""
 
     try:
-        from .candidate_library import build_candidate_replay_payload
+        from app.runtime.backtest.read_models.candidate_library import build_candidate_replay_payload
 
         replay_builder_error = ""
     except Exception as exc:  # pragma: no cover - defensive import boundary
@@ -5025,7 +5027,7 @@ def build_selected_portfolio_performance_recheck(
         return {"status": "error", "error": "재검증할 active component가 없습니다."}
 
     try:
-        from .candidate_library import run_candidate_replay_payload
+        from app.runtime.backtest.read_models.candidate_library import run_candidate_replay_payload
     except Exception as exc:  # pragma: no cover - defensive import boundary
         return {"status": "error", "error": f"candidate replay helper import failed: {exc}"}
 

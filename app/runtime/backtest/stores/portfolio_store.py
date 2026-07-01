@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Append/load helpers for saved portfolio setup JSONL records."""
+
 import json
 from datetime import datetime
 from typing import Any

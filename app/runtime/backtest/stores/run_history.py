@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Append/load helpers for local Backtest run history JSONL records."""
+
 import json
 import re
 from datetime import datetime

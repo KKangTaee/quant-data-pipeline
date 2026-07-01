@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Append/load helpers for portfolio selection workflow JSONL records."""
+
 import json
 import shutil
 from datetime import date, datetime

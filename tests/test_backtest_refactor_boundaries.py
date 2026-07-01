@@ -178,6 +178,27 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertTrue((PROJECT_ROOT / "app/runtime/backtest/facade.py").exists())
         self.assertTrue((PROJECT_ROOT / "app/runtime/backtest/common.py").exists())
 
+    def test_runtime_stores_and_read_models_have_separate_boundaries(self) -> None:
+        store_paths = [
+            PROJECT_ROOT / "app/runtime/backtest/stores/run_history.py",
+            PROJECT_ROOT / "app/runtime/backtest/stores/candidate_registry.py",
+            PROJECT_ROOT / "app/runtime/backtest/stores/portfolio_selection.py",
+            PROJECT_ROOT / "app/runtime/backtest/stores/portfolio_store.py",
+            PROJECT_ROOT / "app/runtime/backtest/stores/final_selection_decisions.py",
+        ]
+        for path in store_paths:
+            source = path.read_text()
+            self.assertNotIn("import streamlit", source)
+            self.assertNotIn("finance.engine", source)
+            self.assertNotIn("finance.strategy", source)
+
+        for path in [
+            PROJECT_ROOT / "app/runtime/backtest/read_models/candidate_library.py",
+            PROJECT_ROOT / "app/runtime/backtest/read_models/final_selected_portfolios.py",
+        ]:
+            source = path.read_text()
+            self.assertNotRegex(source, r"^def append_", msg=f"{path} should not own JSONL append helpers")
+
 
 if __name__ == "__main__":
     unittest.main()

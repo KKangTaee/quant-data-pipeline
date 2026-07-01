@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Append/load helpers for candidate review and pre-live candidate JSONL records."""
+
 import json
 from pathlib import Path
 from typing import Any

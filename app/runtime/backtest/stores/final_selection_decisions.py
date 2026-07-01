@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Append/load helpers for final selection decision JSONL records."""
+
 import json
 from pathlib import Path
 from typing import Any
