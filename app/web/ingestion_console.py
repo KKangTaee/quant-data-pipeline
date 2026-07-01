@@ -764,6 +764,30 @@ EVENT_CALENDAR_JOBS = {
     "collect_earnings_calendar",
 }
 MACRO_CONTEXT_JOBS = {"collect_macro_market_context", "collect_market_sentiment"}
+DIAGNOSTIC_PROGRESS_JOBS = {
+    "diagnose_price_stale",
+    "diagnose_statement_universe_coverage",
+    "diagnose_statement_coverage",
+    "inspect_statement_pit",
+}
+PROGRESS_ENABLED_ACTIONS = (
+    PRICE_COLLECTION_JOBS
+    | COMPOSITE_PRICE_JOBS
+    | LIFECYCLE_EVIDENCE_JOBS
+    | ETF_PROVIDER_JOBS
+    | EVENT_CALENDAR_JOBS
+    | MACRO_CONTEXT_JOBS
+    | DIAGNOSTIC_PROGRESS_JOBS
+    | {
+        "weekly_fundamental_refresh",
+        "extended_statement_refresh",
+        "rebuild_statement_shadow",
+        "collect_financial_statements",
+        "collect_futures_ohlcv",
+        "metadata_refresh",
+        "collect_asset_profiles",
+    }
+)
 
 
 def _preset_csv(name: str, fallback_name: str = "US Statement Coverage 300") -> str:
@@ -1978,8 +2002,10 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         params["progress_callback"] = progress_callback
         return run_rebuild_statement_shadow(**params)
     if action == "metadata_refresh":
+        params["progress_callback"] = progress_callback
         return run_metadata_refresh(**params)
     if action == "discover_etf_provider_source_map":
+        params["progress_callback"] = progress_callback
         return run_discover_etf_provider_source_map(**params)
     if action == "collect_etf_operability_provider":
         params["progress_callback"] = progress_callback
@@ -1994,22 +2020,31 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         params["progress_callback"] = progress_callback
         return run_collect_market_sentiment(**params)
     if action == "collect_sec_form25_delistings":
+        params["progress_callback"] = progress_callback
         return run_collect_sec_form25_delistings(**params)
     if action == "collect_symbol_directory_snapshots":
+        params["progress_callback"] = progress_callback
         return run_collect_symbol_directory_snapshots(**params)
     if action == "collect_sec_company_ticker_crosscheck":
+        params["progress_callback"] = progress_callback
         return run_collect_sec_company_ticker_crosscheck(**params)
     if action == "collect_computed_snapshot_lifecycle":
+        params["progress_callback"] = progress_callback
         return run_collect_computed_snapshot_lifecycle(**params)
     if action == "collect_fomc_calendar":
+        params["progress_callback"] = progress_callback
         return run_collect_fomc_calendar(**params)
     if action == "collect_earnings_calendar":
+        params["progress_callback"] = progress_callback
         return run_collect_earnings_calendar(**params)
     if action == "collect_futures_ohlcv":
+        params["progress_callback"] = progress_callback
         return run_collect_futures_ohlcv(**params)
     if action == "collect_macro_calendar":
+        params["progress_callback"] = progress_callback
         return run_collect_macro_calendar(**params)
     if action == "import_bls_macro_calendar_ics":
+        params["progress_callback"] = progress_callback
         return run_import_bls_macro_calendar_ics(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
@@ -2019,6 +2054,7 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "calculate_factors":
         return run_calculate_factors(**params)
     if action == "collect_asset_profiles":
+        params["progress_callback"] = progress_callback
         return run_collect_asset_profiles(**params)
     if action == "collect_financial_statements":
         params["progress_callback"] = progress_callback
@@ -2142,15 +2178,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     action = job.get("action")
     symbol_count = len(job.get("params", {}).get("symbols", []) or [])
 
-    if action not in {
-        "collect_ohlcv",
-        "pipeline_core_market_data",
-        "daily_market_update",
-        "weekly_fundamental_refresh",
-        "extended_statement_refresh",
-        "rebuild_statement_shadow",
-        "collect_financial_statements",
-    } or symbol_count < 100:
+    if action not in PROGRESS_ENABLED_ACTIONS:
         _render_inline_running_hint(action, label, job=job)
         return None
 
@@ -2166,7 +2194,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
         progress_text.info(f"`{label}` 실행 중입니다. pipeline stage 진행률과 경과 시간을 표시합니다.")
 
     def _callback(event: dict[str, Any]) -> None:
-        event_type = event.get("event")
+        event_type = event.get("event") or event.get("type")
 
         if action in {"collect_ohlcv", "daily_market_update"} and event_type == "batch_progress":
             total_symbols = max(int(event.get("total_symbols", symbol_count) or symbol_count), 1)
@@ -3834,6 +3862,11 @@ def _render_ingestion_operational_section() -> Any:
                 }
             )
         _render_inline_last_completed_result("collect_futures_ohlcv")
+        if _is_running_action("collect_futures_ohlcv"):
+            current_progress_callback = _build_progress_callback(
+                st.session_state.running_job,
+                label="Futures OHLCV Collection",
+            )
 
     with st.expander("시장 심리 수집", expanded=False):
         _render_job_brief("collect_market_sentiment")
@@ -4300,7 +4333,24 @@ def _render_ingestion_operational_section() -> Any:
                         ),
                     }
                 )
-        _render_inline_last_completed_result("collect_fomc_calendar", "collect_macro_calendar", "collect_earnings_calendar")
+        event_progress_labels = {
+            "collect_fomc_calendar": "FOMC Calendar Collection",
+            "collect_macro_calendar": "Macro Calendar Collection",
+            "import_bls_macro_calendar_ics": "BLS Calendar ICS Import",
+            "collect_earnings_calendar": "Earnings Calendar Collection",
+        }
+        for event_action, event_label in event_progress_labels.items():
+            if _is_running_action(event_action):
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label=event_label,
+                )
+        _render_inline_last_completed_result(
+            "collect_fomc_calendar",
+            "collect_macro_calendar",
+            "import_bls_macro_calendar_ics",
+            "collect_earnings_calendar",
+        )
 
     with st.expander("Practical Validation 검증 데이터 보강", expanded=False):
         st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")
@@ -4790,6 +4840,11 @@ def _render_ingestion_operational_section() -> Any:
                                 },
                             ),
                         }
+                )
+                if _is_running_action("collect_symbol_directory_snapshots"):
+                    current_progress_callback = _build_progress_callback(
+                        st.session_state.running_job,
+                        label="Symbol Directory Snapshot Collection",
                     )
                 _render_inline_last_completed_result("collect_symbol_directory_snapshots")
 
@@ -4853,6 +4908,11 @@ def _render_ingestion_operational_section() -> Any:
                                 },
                             ),
                         }
+                )
+                if _is_running_action("collect_sec_company_ticker_crosscheck"):
+                    current_progress_callback = _build_progress_callback(
+                        st.session_state.running_job,
+                        label="SEC CIK / Ticker Crosscheck",
                     )
                 _render_inline_last_completed_result("collect_sec_company_ticker_crosscheck")
 
@@ -4914,6 +4974,11 @@ def _render_ingestion_operational_section() -> Any:
                                 },
                             ),
                         }
+                )
+                if _is_running_action("collect_computed_snapshot_lifecycle"):
+                    current_progress_callback = _build_progress_callback(
+                        st.session_state.running_job,
+                        label="Computed Snapshot Lifecycle",
                     )
                 _render_inline_last_completed_result("collect_computed_snapshot_lifecycle")
     return current_progress_callback

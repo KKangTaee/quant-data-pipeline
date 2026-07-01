@@ -4294,6 +4294,66 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn('"EDGAR annual 재무제표 갱신 실행"', source)
         self.assertNotIn('"Running EDGAR annual statement refresh..."', source)
 
+    def test_ingestion_stage_jobs_accept_progress_callback(self) -> None:
+        import inspect
+
+        from app.jobs import ingestion_jobs
+
+        progress_job_names = [
+            "run_collect_futures_ohlcv",
+            "run_collect_fomc_calendar",
+            "run_collect_earnings_calendar",
+            "run_collect_macro_calendar",
+            "run_import_bls_macro_calendar_ics",
+            "run_metadata_refresh",
+            "run_collect_asset_profiles",
+            "run_discover_etf_provider_source_map",
+            "run_collect_sec_form25_delistings",
+            "run_collect_symbol_directory_snapshots",
+            "run_collect_sec_company_ticker_crosscheck",
+            "run_collect_computed_snapshot_lifecycle",
+        ]
+
+        for function_name in progress_job_names:
+            with self.subTest(function_name=function_name):
+                signature = inspect.signature(getattr(ingestion_jobs, function_name))
+                self.assertIn("progress_callback", signature.parameters)
+
+    def test_ingestion_dispatcher_passes_progress_callback_to_stage_jobs(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        stage_actions = [
+            "metadata_refresh",
+            "discover_etf_provider_source_map",
+            "collect_sec_form25_delistings",
+            "collect_symbol_directory_snapshots",
+            "collect_sec_company_ticker_crosscheck",
+            "collect_computed_snapshot_lifecycle",
+            "collect_fomc_calendar",
+            "collect_earnings_calendar",
+            "collect_futures_ohlcv",
+            "collect_macro_calendar",
+            "import_bls_macro_calendar_ics",
+            "collect_asset_profiles",
+        ]
+
+        for action in stage_actions:
+            with self.subTest(action=action):
+                action_index = source.index(f'if action == "{action}":')
+                block = source[action_index : source.index("\n    if action ==", action_index + 1)]
+                self.assertIn('params["progress_callback"] = progress_callback', block)
+
+    def test_ingestion_progress_callback_allowlist_covers_stage_jobs_without_symbol_threshold(self) -> None:
+        from app.web.ingestion_console import PROGRESS_ENABLED_ACTIONS
+
+        self.assertIn("collect_futures_ohlcv", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("collect_fomc_calendar", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("collect_asset_profiles", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("diagnose_price_stale", PROGRESS_ENABLED_ACTIONS)
+
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        self.assertNotIn("symbol_count < 100", source)
+        self.assertIn("event.get(\"event\") or event.get(\"type\")", source)
+
     def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
         source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
 
