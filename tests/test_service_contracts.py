@@ -9962,6 +9962,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "financial_source": "sec_edgar_statement_shadow",
                     "available_at": "2026-02-20",
                     "form_type": "10-K",
+                    "accession_no": "0000000000-26-000001",
                     "eps": 3.0,
                     "per": 41.666666666666664,
                     "net_income": 1_200_000_000,
@@ -9969,6 +9970,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "quarterly_financials": {
                     "status": "OK",
                     "period_end": "2026-03-31",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "available_at": "2026-05-02",
+                    "form_type": "10-Q",
+                    "accession_no": "0000000000-26-000002",
                     "eps": 0.75,
                     "per": 166.66666666666666,
                     "net_income": 300_000_000,
@@ -9991,10 +9996,19 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 {"period": "분기", "date": "2026-03-31", "per": "166.67x", "eps": "$0.75"},
             ],
         )
-        self.assertIn("EDGAR", per_eps["detail"])
-        self.assertIn("2026-02-20", per_eps["detail"])
-        self.assertIn("연간 12.0억 달러", items["당기순이익"]["value"])
-        self.assertIn("분기 3.0억 달러", items["당기순이익"]["value"])
+        self.assertEqual(per_eps["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31")
+        self.assertNotIn("available", per_eps["detail"])
+        self.assertNotIn("accession", per_eps["detail"])
+        income = items["당기순이익"]
+        self.assertEqual(income["value"], "연간 / 분기 비교")
+        self.assertEqual(
+            income["rows"],
+            [
+                {"period": "연간", "date": "2025-12-31", "net_income": "12.0억 달러"},
+                {"period": "분기", "date": "2026-03-31", "net_income": "3.0억 달러"},
+            ],
+        )
+        self.assertEqual(income["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31")
         self.assertIn("context-only", model["boundary_note"].lower())
 
     def test_market_mover_research_items_html_renders_per_eps_rows_as_table(self) -> None:
@@ -10016,7 +10030,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             ]
         )
 
-        self.assertIn('class="ov-mm-research-table"', html)
+        self.assertIn('class="ov-mm-research-table is-per-eps"', html)
         self.assertIn("구분", html)
         self.assertIn("날짜", html)
         self.assertIn("PER", html)
@@ -10025,6 +10039,35 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("2026-03-31", html)
         self.assertIn("41.67x", html)
         self.assertIn("$0.75", html)
+
+    def test_market_mover_research_items_html_renders_income_rows_as_table(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_items_html
+
+        html = _market_mover_research_items_html(
+            [
+                {
+                    "label": "당기순이익",
+                    "value": "연간 / 분기 비교",
+                    "detail": "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31",
+                    "available": True,
+                    "tone": "neutral",
+                    "rows": [
+                        {"period": "연간", "date": "2025-12-31", "net_income": "12.0억 달러"},
+                        {"period": "분기", "date": "2026-03-31", "net_income": "3.0억 달러"},
+                    ],
+                }
+            ]
+        )
+
+        self.assertIn('class="ov-mm-research-table is-income"', html)
+        self.assertIn("구분", html)
+        self.assertIn("날짜", html)
+        self.assertIn("당기순이익", html)
+        self.assertIn("2025-12-31", html)
+        self.assertIn("2026-03-31", html)
+        self.assertIn("12.0억 달러", html)
+        self.assertIn("3.0억 달러", html)
+        self.assertNotIn("accession", html)
 
     def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model

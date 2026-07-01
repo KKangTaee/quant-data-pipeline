@@ -2169,6 +2169,39 @@ def _financial_source_label(item: dict[str, Any]) -> str:
     return source.replace("_", " ") if source else "source unknown"
 
 
+def _financial_compact_source_label(item: dict[str, Any]) -> str:
+    source = str(item.get("financial_source") or "").strip()
+    if source == "sec_edgar_statement_shadow":
+        return "EDGAR"
+    if source == "legacy_broad_yfinance":
+        return "legacy yfinance"
+    return source.replace("_", " ") if source else "source unknown"
+
+
+def _financial_compact_source_part(item: dict[str, Any]) -> tuple[str, str] | None:
+    if str(item.get("status") or "").upper() != "OK":
+        return None
+    source_label = _financial_compact_source_label(item)
+    form_type = str(item.get("form_type") or "").strip()
+    period = _financial_period_label(item, "-")
+    parts = [source_label]
+    if form_type:
+        parts.append(form_type)
+    parts.append(period)
+    return source_label, " ".join(part for part in parts if part and part != "-")
+
+
+def _financial_compact_source_detail(*items: dict[str, Any]) -> str:
+    parts = [part for part in (_financial_compact_source_part(item) for item in items if item) if part]
+    if not parts:
+        return "근거: 재무제표 snapshot 필요"
+    first_label = parts[0][0]
+    compact_parts = [parts[0][1]]
+    for source_label, text in parts[1:]:
+        compact_parts.append(text.removeprefix(f"{source_label} ") if source_label == first_label else text)
+    return "근거: " + ", ".join(compact_parts)
+
+
 def _financial_source_detail(item: dict[str, Any], prefix: str) -> str:
     status = str(item.get("status") or "").upper()
     period = _financial_period_label(item, "-")
@@ -2202,6 +2235,19 @@ def _per_eps_row(item: dict[str, Any], period_label: str) -> dict[str, str] | No
         "date": _financial_period_label(item, "-"),
         "per": per,
         "eps": eps,
+    }
+
+
+def _income_row(item: dict[str, Any], period_label: str) -> dict[str, str] | None:
+    if str(item.get("status") or "").upper() != "OK":
+        return None
+    net_income = item.get("net_income")
+    if net_income is None:
+        return None
+    return {
+        "period": period_label,
+        "date": _financial_period_label(item, "-"),
+        "net_income": _format_korean_money(net_income),
     }
 
 
@@ -2248,18 +2294,20 @@ def build_market_mover_research_snapshot_model(
         if per_eps_rows
         else "계산 불가"
     )
-    financial_detail_parts = [
-        _financial_source_detail(annual, "연간") if annual else "",
-        _financial_source_detail(quarterly, "분기") if quarterly else "",
+    financial_detail = _financial_compact_source_detail(annual, quarterly)
+    income_rows = [
+        row
+        for row in [
+            _income_row(annual, "연간"),
+            _income_row(quarterly, "분기"),
+        ]
+        if row
     ]
-    financial_detail = " / ".join(part for part in financial_detail_parts if part)
-    annual_income = annual.get("net_income") if str(annual.get("status") or "").upper() == "OK" else None
-    quarterly_income = quarterly.get("net_income") if str(quarterly.get("status") or "").upper() == "OK" else None
-    income_parts: list[str] = []
-    if annual_income is not None:
-        income_parts.append(f"연간 {_format_korean_money(annual_income)}")
-    if quarterly_income is not None:
-        income_parts.append(f"분기 {_format_korean_money(quarterly_income)}")
+    income_value = (
+        f"{' / '.join(row['period'] for row in income_rows)} {'비교' if len(income_rows) > 1 else '기준'}"
+        if income_rows
+        else "계산 불가"
+    )
 
     items = [
         _research_metric_item(
@@ -2301,14 +2349,15 @@ def build_market_mover_research_snapshot_model(
         ),
         _research_metric_item(
             "당기순이익",
-            " · ".join(income_parts) if income_parts else "계산 불가",
+            income_value,
             (
                 financial_detail
-                if income_parts
+                if income_rows
                 else str(annual.get("reason") or quarterly.get("reason") or "재무제표 snapshot 필요")
             ),
-            available=bool(income_parts),
+            available=bool(income_rows),
             tone="neutral",
+            rows=income_rows,
         ),
     ]
     return {

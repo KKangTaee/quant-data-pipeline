@@ -302,22 +302,39 @@ def render_market_mover_investigation_pane(model: dict[str, Any]) -> None:
 def _market_mover_research_rows_html(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
+    is_income = any("net_income" in row for row in rows)
+    if is_income:
+        table_class = "ov-mm-research-table is-income"
+        table_label = "annual and quarterly net income comparison"
+        columns = [
+            ("period", "구분", True),
+            ("date", "날짜", False),
+            ("net_income", "당기순이익", False),
+        ]
+    else:
+        table_class = "ov-mm-research-table is-per-eps"
+        table_label = "PER EPS annual and quarterly comparison"
+        columns = [
+            ("period", "구분", True),
+            ("date", "날짜", False),
+            ("per", "PER", False),
+            ("eps", "EPS", False),
+        ]
     html = [
-        '<div class="ov-mm-research-table" role="table" aria-label="PER EPS annual and quarterly comparison">',
+        f'<div class="{table_class}" role="table" aria-label="{table_label}">',
         '<div class="ov-mm-research-table-row is-head" role="row">',
-        '<span role="columnheader">구분</span>',
-        '<span role="columnheader">날짜</span>',
-        '<span role="columnheader">PER</span>',
-        '<span role="columnheader">EPS</span>',
+        "".join(f'<span role="columnheader">{escape(label)}</span>' for _, label, _ in columns),
         "</div>",
     ]
     for row in rows:
+        cells: list[str] = []
+        for key, _, strong in columns:
+            value = escape(_display_value(row.get(key)))
+            tag = "strong" if strong else "span"
+            cells.append(f'<{tag} role="cell">{value}</{tag}>')
         html.append(
             '<div class="ov-mm-research-table-row" role="row">'
-            f'<strong role="cell">{escape(_display_value(row.get("period")))}</strong>'
-            f'<span role="cell">{escape(_display_value(row.get("date")))}</span>'
-            f'<span role="cell">{escape(_display_value(row.get("per")))}</span>'
-            f'<span role="cell">{escape(_display_value(row.get("eps")))}</span>'
+            f"{''.join(cells)}"
             "</div>"
         )
     html.append("</div>")
