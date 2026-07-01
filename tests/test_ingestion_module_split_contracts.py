@@ -87,6 +87,25 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertIs(page._render_ingestion_manual_section, sections.render_manual_section)
         self.assertIs(page._render_selected_ingestion_collection_section, sections.render_selected_section)
 
+    def test_ingestion_job_common_helpers_live_in_ingestion_jobs_package(self) -> None:
+        from app.jobs import ingestion_jobs
+        from app.jobs.ingestion import common
+
+        self.assertIs(ingestion_jobs.parse_symbols, common.parse_symbols)
+        self.assertEqual(common.parse_symbols("aapl, MSFT\nspy"), ["AAPL", "MSFT", "SPY"])
+        self.assertEqual(common.split_valid_invalid_symbols("AAPL, bad symbol"), (["AAPL"], ["BAD SYMBOL"]))
+
+        result = common.build_result(
+            job_name="sample",
+            status="success",
+            started_at="2026-07-01 00:00:00",
+            finished_at="2026-07-01 00:00:01",
+            duration_sec=1.2345,
+            rows_written=2,
+        )
+        self.assertEqual(result["duration_sec"], 1.234)
+        self.assertEqual(result["rows_written"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

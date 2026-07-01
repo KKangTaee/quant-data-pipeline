@@ -46,3 +46,12 @@
   - Result: PASS, 6 tests.
 - Compile: `.venv/bin/python -m py_compile app/web/ingestion/page.py app/web/ingestion/sections.py app/web/ingestion/dispatcher.py app/web/ingestion/guides.py app/web/ingestion/results.py app/web/ingestion/styles.py app/web/ingestion/registry.py app/web/ingestion_console.py`
   - Result: PASS.
+
+## 6차
+
+- RED: `.venv/bin/python -m unittest tests.test_ingestion_module_split_contracts -v`
+  - Result: expected failure. `app.jobs.ingestion.common` was not importable.
+- GREEN: `.venv/bin/python -m unittest tests.test_ingestion_module_split_contracts -v`
+  - Result: PASS, 7 tests.
+- Compile: `.venv/bin/python -m py_compile app/jobs/ingestion_jobs.py app/jobs/ingestion/__init__.py app/jobs/ingestion/common.py app/web/ingestion/page.py app/web/ingestion/sections.py app/web/ingestion/dispatcher.py app/web/ingestion/guides.py app/web/ingestion/results.py app/web/ingestion/styles.py app/web/ingestion/registry.py app/web/ingestion_console.py`
+  - Result: PASS.

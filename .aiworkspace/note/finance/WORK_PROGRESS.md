@@ -5475,3 +5475,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-statement-collection-status-20260701/`에서 기본 지표 하단에 재무제표 수집 / 반영 상태 lane을 추가했다.
   - EDGAR filing ledger 최신 10-Q / 10-K report date와 statement shadow period를 비교해 미반영 공시는 `받아야 할 재무제표 있음`, 반영 완료는 OK로 표시한다.
   - Browser QA 중 GIS fiscal quarter false positive를 발견해 prediction-only quarter-end 비교에 14일 tolerance를 추가했다.
+- Ingestion Console Module Split V1 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-module-split-v1-20260701/`에서 Ingestion script structure refactor를 1~6차로 진행했다.
+  - `app/web/ingestion_console.py`는 compatibility facade가 되었고 active UI는 `app/web/ingestion/{page,registry,guides,styles,results,dispatcher,sections}.py`로 나뉘었다.
+  - `app/jobs/ingestion/common.py`가 symbol parsing, normalized result, progress/status helper를 소유하고 `app/jobs/ingestion_jobs.py`는 기존 import path를 유지한다.

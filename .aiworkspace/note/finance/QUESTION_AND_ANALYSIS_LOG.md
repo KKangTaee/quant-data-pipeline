@@ -8449,3 +8449,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: UI에서 provider를 직접 fetch하지 않고, 기존 EDGAR filing ledger와 statement shadow DB 상태를 비교해 사용자가 최신 공시 미반영 여부를 바로 알게 해야 함.
 - Analysis result: 실제 filing ledger에 최신 10-Q / 10-K가 있으면 그것을 우선 근거로 삼고, filing ledger가 비어 있을 때만 예상 제출 기한 기반 확인 필요 상태를 보조로 표시한다. Fiscal quarter end는 단순 월말이 아닐 수 있어 prediction-only 비교에는 14일 tolerance를 둔다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-statement-collection-status-20260701/`에 있다.
+
+### 2026-07-01 - Ingestion 대형 스크립트를 package 구조로 분리한다
+
+- User request: Ingestion도 한 파일에 5,000~6,000줄이 몰려 있는지 검토한 뒤, 1차부터 6차까지 개발 / QA / 커밋 순서로 구조 리팩토링을 진행해 달라고 요청함.
+- Interpreted goal: 수집 동작을 바꾸기보다 `Workspace > Ingestion` UI와 job wrapper의 책임을 package 단위로 나눠 이후 중복 수집 기능 제거 / 보강 / 진단 개선을 안전하게 해야 함.
+- Analysis result: `app/web/ingestion_console.py`가 5,370줄이었고 UI shell, action registry, result summary, dispatcher, section renderer가 섞여 있었다. 1~6차에서 facade, registry, guide/style/result, dispatcher, section renderer, job common helper로 물리 분리했다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/ingestion-console-module-split-v1-20260701/`에 있다. 후속은 `app/jobs/ingestion_jobs.py`를 domain별 jobs module로 더 나누는 작업이다.
