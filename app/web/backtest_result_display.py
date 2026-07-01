@@ -107,138 +107,398 @@ def _render_swing_curve_chart(curve_df: pd.DataFrame | None, *, title: str) -> N
     st.altair_chart(chart, use_container_width=True)
 
 
-def _data_trust_result_integrity(meta: dict[str, Any]) -> dict[str, str]:
+def _display_data_trust_value(value: Any) -> str:
+    if value is None:
+        return "-"
+    text = str(value).strip()
+    return text or "-"
+
+
+def _format_data_trust_count(value: Any) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return _display_data_trust_value(value)
+
+
+def _format_latest_date_spread(value: Any) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{int(value)}d"
+    except (TypeError, ValueError):
+        return f"{value}d"
+
+
+def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     price_freshness = meta.get("price_freshness") or {}
+    freshness_details = price_freshness.get("details") or {}
     status = str(price_freshness.get("status") or "").strip().lower()
     excluded_tickers = list(meta.get("excluded_tickers") or [])
     malformed_price_rows = list(meta.get("malformed_price_rows") or [])
-    warnings = list(meta.get("warnings") or [])
+    warnings = [str(warning) for warning in list(meta.get("warnings") or []) if str(warning).strip()]
+    tickers = list(meta.get("tickers") or [])
+    requested_end = _display_data_trust_value(meta.get("end"))
+    actual_end = _display_data_trust_value(
+        meta.get("actual_result_end")
+        or freshness_details.get("effective_end_date")
+        or freshness_details.get("common_latest_date")
+        or meta.get("end")
+    )
+    common_latest = _display_data_trust_value(freshness_details.get("common_latest_date") or actual_end)
+    newest_latest = _display_data_trust_value(freshness_details.get("newest_latest_date") or common_latest)
+    spread_label = _format_latest_date_spread(freshness_details.get("spread_days"))
+    result_rows = _format_data_trust_count(meta.get("result_rows"))
+    symbol_count = len(tickers)
+    symbol_label = f"{symbol_count}개 종목" if symbol_count else "종목 수 미상"
+    issue_count = len(warnings) + len(excluded_tickers) + len(malformed_price_rows)
 
     if status == "error":
-        return {
-            "label": "BLOCKED",
-            "tone": "danger",
-            "detail": "가격 최신성 오류가 있어 결과 해석 전에 데이터 보강이 필요합니다.",
-        }
-    if status == "warning" or excluded_tickers or malformed_price_rows or warnings:
-        return {
-            "label": "REVIEW",
-            "tone": "warning",
-            "detail": "결과는 읽을 수 있지만 기간, 제외 ticker, warning을 함께 확인해야 합니다.",
-        }
-    if status == "ok":
-        return {
-            "label": "OK",
-            "tone": "positive",
-            "detail": "요청 기간과 가격 최신성 기준에서 큰 차단 신호가 없습니다.",
-        }
+        status_label = "자료 보강 필요"
+        tone = "danger"
+        status_detail = "가격 데이터 오류가 있어 결과 해석 전에 보강이 필요합니다."
+        headline = f"가격 데이터 오류 때문에 {actual_end} 기준 결과를 바로 해석하기 어렵습니다."
+        price_answer = "가격 데이터 보강 필요"
+    elif excluded_tickers or malformed_price_rows or status == "warning":
+        status_label = "확인 필요"
+        tone = "warning"
+        status_detail = "계산은 완료됐지만 제외 종목이나 결측 row를 함께 확인해야 합니다."
+        headline = f"백테스트는 {actual_end}까지 계산됐고, 일부 데이터 이슈 확인이 필요합니다."
+        price_answer = "가격 기준 확인 필요"
+    elif warnings:
+        status_label = "주의사항 있음"
+        tone = "warning"
+        status_detail = "가격 기준은 맞지만 아래 주의사항을 함께 읽어야 합니다."
+        headline = f"백테스트는 {actual_end}까지 계산됐고, {len(warnings)}개 주의사항을 함께 확인해야 합니다."
+        price_answer = "가격 최신성 정상"
+    elif status == "ok":
+        status_label = "자료 정상"
+        tone = "positive"
+        status_detail = "가격 기준과 구성 종목 coverage가 맞습니다."
+        headline = f"백테스트는 {actual_end}까지 저장된 가격으로 정상 계산됐습니다."
+        price_answer = "가격 최신성 정상"
+    else:
+        status_label = "자료 제한"
+        tone = "neutral"
+        status_detail = "가격 최신성 metadata가 제한적입니다."
+        headline = f"백테스트는 {actual_end} 기준으로 계산됐지만 데이터 기준 정보가 제한적입니다."
+        price_answer = "가격 기준 정보 제한"
+
+    if requested_end != "-" and actual_end != "-" and requested_end != actual_end:
+        subtitle = (
+            f"요청 종료일 {requested_end}보다 실제 계산 기준일은 {actual_end}입니다. "
+            "저장 DB에서 모든 구성 종목이 함께 갖춘 최신 가격일을 기준으로 읽습니다."
+        )
+    elif requested_end != "-":
+        subtitle = f"요청 종료일 {requested_end}까지 저장된 가격 기준으로 읽습니다."
+    else:
+        subtitle = "저장 DB의 공통 최신 가격일을 기준으로 결과를 읽습니다."
+
+    if warnings:
+        next_check_value = f"주의사항 {len(warnings)}개"
+        next_check_detail = "아래 주의사항을 먼저 확인한 뒤 성과를 읽습니다."
+    elif excluded_tickers or malformed_price_rows:
+        next_check_value = "데이터 이슈 확인"
+        next_check_detail = "세부 데이터 기준에서 제외 종목과 결측 row를 확인합니다."
+    elif status == "error":
+        next_check_value = "데이터 보강"
+        next_check_detail = "가격 수집 또는 DB 보강 후 다시 실행합니다."
+    else:
+        next_check_value = "바로 성과 확인"
+        next_check_detail = "아래 성과 metric과 차트를 이어서 봅니다."
+
+    summary_items = [
+        {"label": "자료 상태", "value": status_label, "detail": status_detail, "tone": tone},
+        {"label": "계산 기준일", "value": actual_end, "detail": f"요청 종료일 {requested_end}", "tone": "neutral"},
+        {
+            "label": "사용 데이터",
+            "value": symbol_label,
+            "detail": f"제외 {len(excluded_tickers)}개 · 결측 row {len(malformed_price_rows)}개",
+            "tone": "positive" if not excluded_tickers and not malformed_price_rows else "warning",
+        },
+        {"label": "확인할 점", "value": next_check_value, "detail": next_check_detail, "tone": tone},
+    ]
+    reading_rows = [
+        {
+            "step": "1",
+            "question": "어디까지 계산했나",
+            "answer": f"{actual_end}까지의 가격",
+            "detail": "성과 기간은 요청 종료일이 아니라 계산 가능한 공통 가격일을 기준으로 닫힙니다.",
+        },
+        {
+            "step": "2",
+            "question": "데이터는 충분한가",
+            "answer": price_answer,
+            "detail": f"공통 최신 가격일 {common_latest}, 종목 간 최신일 차이 {spread_label}입니다.",
+        },
+        {
+            "step": "3",
+            "question": "무엇을 먼저 볼까",
+            "answer": next_check_value,
+            "detail": next_check_detail,
+        },
+    ]
+    detail_rows = [
+        {"항목": "요청 종료일", "값": requested_end, "의미": "사용자가 선택한 백테스트 종료일"},
+        {"항목": "계산 기준일", "값": actual_end, "의미": "실제로 결과가 닫힌 마지막 날짜"},
+        {"항목": "공통 최신 가격일", "값": common_latest, "의미": "모든 구성 종목이 함께 가진 최신 가격일"},
+        {"항목": "최신 가격 차이", "값": spread_label, "의미": "구성 종목 간 최신 가격일 차이"},
+        {"항목": "결과 행 수", "값": result_rows, "의미": "성과 표에 포함된 기간 row 수"},
+        {"항목": "결측 가격 row", "값": str(len(malformed_price_rows)), "의미": "가격 결측으로 확인이 필요한 row 수"},
+    ]
+
     return {
-        "label": "UNKNOWN",
-        "tone": "neutral",
-        "detail": "가격 최신성 metadata가 제한적입니다. 결과 기간과 row 수를 먼저 확인합니다.",
+        "tone": tone,
+        "status_label": status_label,
+        "headline": headline,
+        "subtitle": subtitle,
+        "summary_items": summary_items,
+        "reading_rows": reading_rows,
+        "detail_rows": detail_rows,
+        "issue_count": issue_count,
+        "price_message": price_freshness.get("message"),
+        "excluded_tickers": excluded_tickers,
+        "malformed_price_rows": malformed_price_rows,
+        "warnings": warnings,
+        "newest_latest": newest_latest,
     }
 
 
-def _price_freshness_display(status: str | None) -> tuple[str, str]:
-    normalized = str(status or "").strip().lower()
-    if normalized == "ok":
-        return "OK", "positive"
-    if normalized == "warning":
-        return "WARNING", "warning"
-    if normalized == "error":
-        return "ERROR", "danger"
-    return "NOT ATTACHED", "neutral"
+def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
+    tone = str(brief.get("tone") or "neutral")
+    status_label = escape(str(brief.get("status_label") or "-"))
+    headline = escape(str(brief.get("headline") or "-"))
+    subtitle = escape(str(brief.get("subtitle") or "-"))
+    summary_html = "".join(
+        (
+            f'<div class="data-trust-brief__summary-item data-trust-brief__summary-item--{escape(str(item.get("tone") or "neutral"))}">'
+            f'<span>{escape(str(item.get("label") or "-"))}</span>'
+            f'<strong>{escape(str(item.get("value") or "-"))}</strong>'
+            f'<small>{escape(str(item.get("detail") or "-"))}</small>'
+            "</div>"
+        )
+        for item in list(brief.get("summary_items") or [])
+    )
+    reading_html = "".join(
+        (
+            '<div class="data-trust-brief__row">'
+            f'<div class="data-trust-brief__step">{escape(str(row.get("step") or "-"))}</div>'
+            '<div class="data-trust-brief__question">'
+            f'<span>{escape(str(row.get("question") or "-"))}</span>'
+            f'<strong>{escape(str(row.get("answer") or "-"))}</strong>'
+            "</div>"
+            f'<p>{escape(str(row.get("detail") or "-"))}</p>'
+            "</div>"
+        )
+        for row in list(brief.get("reading_rows") or [])
+    )
+    st.markdown(
+        f"""
+<style>
+.data-trust-brief {{
+  --dt-accent: #0f8f83;
+  --dt-soft: rgba(15, 143, 131, 0.10);
+  border-left: 4px solid var(--dt-accent);
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 1.1rem 1.2rem 1rem;
+  margin: 0.5rem 0 1rem;
+  background: linear-gradient(90deg, var(--dt-soft), rgba(255, 255, 255, 0));
+}}
+.data-trust-brief--warning {{
+  --dt-accent: #b45309;
+  --dt-soft: rgba(180, 83, 9, 0.10);
+}}
+.data-trust-brief--danger {{
+  --dt-accent: #b42318;
+  --dt-soft: rgba(180, 35, 24, 0.10);
+}}
+.data-trust-brief--neutral {{
+  --dt-accent: #667085;
+  --dt-soft: rgba(102, 112, 133, 0.10);
+}}
+.data-trust-brief__top {{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}}
+.data-trust-brief__eyebrow {{
+  color: #667085;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+}}
+.data-trust-brief h4 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.35rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}}
+.data-trust-brief__top p {{
+  margin: 0.55rem 0 0;
+  color: #667085;
+  font-size: 1rem;
+  line-height: 1.55;
+}}
+.data-trust-brief__pill {{
+  flex: 0 0 auto;
+  border: 1px solid rgba(15, 143, 131, 0.38);
+  color: var(--dt-accent);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  padding: 0.34rem 0.72rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+}}
+.data-trust-brief__summary {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}}
+.data-trust-brief__summary-item {{
+  padding: 0.85rem 0.95rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.22);
+  min-width: 0;
+}}
+.data-trust-brief__summary-item:last-child {{
+  border-right: 0;
+}}
+.data-trust-brief__summary-item span {{
+  display: block;
+  color: var(--dt-accent);
+  font-size: 0.86rem;
+  font-weight: 800;
+}}
+.data-trust-brief__summary-item strong {{
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-color);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}}
+.data-trust-brief__summary-item small {{
+  display: block;
+  margin-top: 0.22rem;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}}
+.data-trust-brief__rows {{
+  margin-top: 0.95rem;
+}}
+.data-trust-brief__row {{
+  display: grid;
+  grid-template-columns: 2.4rem minmax(12rem, 0.45fr) minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.78rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}}
+.data-trust-brief__row:last-child {{
+  border-bottom: 0;
+}}
+.data-trust-brief__step {{
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dt-accent);
+  background: var(--dt-soft);
+  font-weight: 900;
+}}
+.data-trust-brief__question span {{
+  display: block;
+  color: #667085;
+  font-size: 0.9rem;
+  font-weight: 800;
+}}
+.data-trust-brief__question strong {{
+  display: block;
+  color: var(--text-color);
+  font-size: 1.02rem;
+  line-height: 1.3;
+  margin-top: 0.1rem;
+}}
+.data-trust-brief__row p {{
+  margin: 0;
+  color: #667085;
+  line-height: 1.45;
+}}
+@media (max-width: 900px) {{
+  .data-trust-brief__top {{
+    display: block;
+  }}
+  .data-trust-brief__pill {{
+    display: inline-block;
+    margin-top: 0.75rem;
+  }}
+  .data-trust-brief__summary {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .data-trust-brief__summary-item:nth-child(2) {{
+    border-right: 0;
+  }}
+  .data-trust-brief__row {{
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+  }}
+  .data-trust-brief__row p {{
+    grid-column: 2;
+  }}
+}}
+</style>
+<section class="data-trust-brief data-trust-brief--{escape(tone)}">
+  <div class="data-trust-brief__top">
+    <div>
+      <div class="data-trust-brief__eyebrow">먼저 볼 결론</div>
+      <h4>{headline}</h4>
+      <p>{subtitle}</p>
+    </div>
+    <div class="data-trust-brief__pill">{status_label}</div>
+  </div>
+  <div class="data-trust-brief__summary">{summary_html}</div>
+  <div class="data-trust-brief__rows">{reading_html}</div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
-    price_freshness = meta.get("price_freshness") or {}
-    freshness_details = price_freshness.get("details") or {}
-    excluded_tickers = list(meta.get("excluded_tickers") or [])
-    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
-    integrity = _data_trust_result_integrity(meta)
-    freshness_label, freshness_tone = _price_freshness_display(price_freshness.get("status"))
+    brief = _build_data_trust_brief(meta)
 
-    st.markdown("#### Data Trust Summary")
-    st.caption(
-        "Checkpoint A · Result Integrity. 성과를 보기 전에 이 백테스트 결과가 어떤 데이터 범위에서 계산됐는지 확인합니다."
-    )
+    st.markdown("#### 데이터 기준 요약")
+    _render_data_trust_brief_panel(brief)
 
-    render_status_card_grid(
-        [
-            {
-                "title": "Result Integrity",
-                "value": integrity["label"],
-                "detail": integrity["detail"],
-                "tone": integrity["tone"],
-            },
-            {
-                "title": "Price Freshness",
-                "value": freshness_label,
-                "detail": price_freshness.get("message") or "가격 최신성 metadata 기준",
-                "tone": freshness_tone,
-            },
-            {
-                "title": "Result Window",
-                "value": meta.get("actual_result_end") or "-",
-                "detail": f"Requested end: {meta.get('end') or '-'}",
-                "tone": "neutral",
-            },
-            {
-                "title": "Excluded Tickers",
-                "value": len(excluded_tickers),
-                "detail": "전략 계산에서 제외된 ticker 수",
-                "tone": "warning" if excluded_tickers else "positive",
-            },
-        ]
-    )
-
-    render_badge_strip(
-        [
-            {"label": "Requested End", "value": meta.get("end") or "-", "tone": "neutral"},
-            {"label": "Actual Result End", "value": meta.get("actual_result_end") or "-", "tone": "neutral"},
-            {"label": "Result Rows", "value": meta.get("result_rows", "-"), "tone": "neutral"},
-            {"label": "Malformed Rows", "value": len(malformed_price_rows), "tone": "warning" if malformed_price_rows else "positive"},
-        ]
-    )
-
-    if freshness_details:
-        render_badge_strip(
-            [
-                {"label": "Effective Trading End", "value": freshness_details.get("effective_end_date") or "-", "tone": "neutral"},
-                {"label": "Common Latest Price", "value": freshness_details.get("common_latest_date") or "-", "tone": "neutral"},
-                {"label": "Newest Latest Price", "value": freshness_details.get("newest_latest_date") or "-", "tone": "neutral"},
-                {"label": "Latest-Date Spread", "value": f"{freshness_details.get('spread_days', 0)}d", "tone": freshness_tone},
-            ]
-        )
-        status = str(price_freshness.get("status") or "").strip().lower()
-        message = price_freshness.get("message")
-        if status == "ok":
-            st.success(message or "가격 최신성 점검이 통과되었습니다.")
-        elif status == "warning":
-            st.warning(message or "가격 최신성 점검에서 주의가 필요합니다.")
-        elif status == "error":
-            st.error(message or "가격 최신성 점검에 실패했습니다.")
-
-    if excluded_tickers or malformed_price_rows:
-        with st.expander("Data Quality Details", expanded=False):
-            if excluded_tickers:
-                st.markdown("**Excluded Tickers**")
-                st.caption("전략 계산에 필요한 가격 이력이나 파생 지표가 부족해 이번 실행에서 제외된 ticker입니다.")
-                st.code(", ".join(excluded_tickers))
-            if malformed_price_rows:
-                st.markdown("**Malformed / Missing Price Rows**")
-                st.caption("가격 컬럼에 결측이 있는 ticker입니다. 공통 계산 가능 날짜가 짧아질 수 있습니다.")
-                malformed_df = pd.DataFrame(malformed_price_rows).rename(
-                    columns={
-                        "ticker": "Ticker",
-                        "price_col": "Price Column",
-                        "count": "Missing Row Count",
-                        "first_date": "First Missing Date",
-                        "last_date": "Last Missing Date",
-                        "sample_dates": "Sample Missing Dates",
-                    }
-                )
-                st.dataframe(malformed_df, use_container_width=True, hide_index=True)
+    with st.expander("세부 데이터 기준", expanded=False):
+        st.dataframe(pd.DataFrame(brief["detail_rows"]), use_container_width=True, hide_index=True)
+        if brief.get("price_message"):
+            st.caption(str(brief["price_message"]))
+        if brief.get("excluded_tickers"):
+            st.markdown("**제외 종목**")
+            st.caption("전략 계산에 필요한 가격 이력이나 파생 지표가 부족해 이번 실행에서 제외된 ticker입니다.")
+            st.code(", ".join(str(ticker) for ticker in brief["excluded_tickers"]))
+        if brief.get("malformed_price_rows"):
+            st.markdown("**결측 / 비정상 가격 row**")
+            st.caption("가격 컬럼에 결측이 있는 ticker입니다. 공통 계산 가능 날짜가 짧아질 수 있습니다.")
+            malformed_df = pd.DataFrame(brief["malformed_price_rows"]).rename(
+                columns={
+                    "ticker": "Ticker",
+                    "price_col": "Price Column",
+                    "count": "Missing Row Count",
+                    "first_date": "First Missing Date",
+                    "last_date": "Last Missing Date",
+                    "sample_dates": "Sample Missing Dates",
+                }
+            )
+            st.dataframe(malformed_df, use_container_width=True, hide_index=True)
 
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)

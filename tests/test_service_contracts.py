@@ -7547,6 +7547,66 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["실행 원천"]["value"], "통과")
         self.assertEqual(criteria["검증 원천"]["value"], "통과")
 
+    def test_data_trust_brief_model_uses_user_first_questions(self) -> None:
+        from app.web.backtest_result_display import _build_data_trust_brief
+
+        brief = _build_data_trust_brief(
+            {
+                "strategy_name": "Equal Weight",
+                "tickers": ["VIG", "SCHD", "DGRO", "GLD"],
+                "end": "2026-07-01",
+                "actual_result_end": "2026-06-26",
+                "result_rows": 126,
+                "warnings": ["validation caution", "operability watch"],
+                "excluded_tickers": [],
+                "malformed_price_rows": [],
+                "price_freshness": {
+                    "status": "ok",
+                    "message": "All symbols have price data through effective trading end `2026-06-26`.",
+                    "details": {
+                        "effective_end_date": "2026-06-26",
+                        "common_latest_date": "2026-06-26",
+                        "newest_latest_date": "2026-06-26",
+                        "spread_days": 0,
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(brief["status_label"], "주의사항 있음")
+        self.assertIn("2026-06-26까지", brief["headline"])
+        self.assertIn("요청 종료일 2026-07-01", brief["subtitle"])
+        self.assertEqual(
+            [item["label"] for item in brief["summary_items"]],
+            ["자료 상태", "계산 기준일", "사용 데이터", "확인할 점"],
+        )
+        self.assertEqual(brief["summary_items"][2]["value"], "4개 종목")
+        self.assertEqual(brief["summary_items"][3]["value"], "주의사항 2개")
+        self.assertEqual(
+            [row["question"] for row in brief["reading_rows"]],
+            ["어디까지 계산했나", "데이터는 충분한가", "무엇을 먼저 볼까"],
+        )
+        self.assertIn("아래 주의사항", brief["reading_rows"][2]["detail"])
+        self.assertEqual(
+            [row["항목"] for row in brief["detail_rows"]],
+            ["요청 종료일", "계산 기준일", "공통 최신 가격일", "최신 가격 차이", "결과 행 수", "결측 가격 row"],
+        )
+
+    def test_data_trust_summary_renderer_does_not_use_old_metric_cards(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        function_body = source[source.index("def _render_data_trust_summary"):]
+        function_body = function_body[: function_body.index("def _data_trust_status_label")]
+
+        self.assertIn("_build_data_trust_brief", function_body)
+        self.assertIn("_render_data_trust_brief_panel", function_body)
+        self.assertIn("데이터 기준 요약", source)
+        self.assertIn("data-trust-brief", source)
+        self.assertNotIn("render_status_card_grid", function_body)
+        self.assertNotIn("render_badge_strip", function_body)
+        self.assertNotIn("Checkpoint A", function_body)
+        self.assertNotIn("Result Integrity", function_body)
+        self.assertNotIn("Price Freshness", function_body)
+
     def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
         from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
 

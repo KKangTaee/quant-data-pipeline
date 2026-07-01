@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-01 - Data Trust Summary should answer user questions before raw metadata
+
+- User request: `Data Trust Summary`의 상단 정보가 처음 사용하는 사람에게 의미가 불명확하므로, 필요한 정보만 요약하고 더 시각적으로 정리해 달라고 요청.
+- Interpreted goal: 백테스트 성과를 보기 전에 `이 결과를 읽어도 되는가`, `어디까지 계산됐는가`, `무엇을 먼저 확인해야 하는가`를 한국어 결론 중심으로 보여줘야 한다.
+- Analysis result: 기존 UI는 `Result Integrity`, `Price Freshness`, `Result Window`, `Excluded Tickers` 카드와 raw date badge를 먼저 보여줘 데이터 기준의 의미를 사용자가 조합해야 했다.
+- Follow-up: `데이터 기준 요약` 패널로 재구성하고 raw 날짜 / row 수 / latest price detail은 `세부 데이터 기준` expander로 낮췄다.
+
 ### 2026-07-01 - Run Backtest result view should prioritize the result, not guide cards
 
 - User request: Run Backtest 후 보이는 `Execution Summary`와 `Latest Backtest Run` guide card / 하단 근거 영역을 먼저 파악하고 개선 요청.

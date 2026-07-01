@@ -543,18 +543,19 @@ component별 상세 결과는 weight를 정하기 위한 근거로 남기고, Pr
 
 ## Data Trust Summary 흐름
 
-Phase 27 이후 `Latest Backtest Run` 상단에는 `Data Trust Summary`를 둔다.
+Phase 27 이후 `Latest Backtest Run` 상단에는 `Data Trust Summary`를 둔다. 2026-07-01 redesign 이후 화면 제목은 한국어 `데이터 기준 요약`으로 표시한다.
 
 목적:
 
-- 요청 종료일과 실제 결과 종료일을 먼저 비교한다.
-- price freshness, common latest price, latest-date spread를 결과 해석 전에 보여준다.
-- excluded ticker와 malformed price row가 있으면 `Data Quality Details`에서 확인하게 한다.
+- 사용자가 성과 metric을 보기 전에 `이 결과를 읽어도 되는가`, `어디까지 계산됐는가`, `무엇을 먼저 확인해야 하는가`를 한 번에 판단하게 한다.
+- 상단은 한 줄 결론, 상태 pill, `자료 상태 / 계산 기준일 / 사용 데이터 / 확인할 점` 4개 요약, 3단계 reading row로 구성한다.
+- raw date / row count / common latest price / latest-date spread / malformed row 같은 세부값은 `세부 데이터 기준` expander에 둔다.
+- excluded ticker와 malformed price row가 있으면 같은 `세부 데이터 기준` expander에서 확인하게 한다.
 
 첫 적용 대상:
 
 - `Global Relative Strength` single strategy 실행 전 `Price Freshness Preflight`
-- `Latest Backtest Run`의 공통 `Data Trust Summary`
+- `Latest Backtest Run`의 공통 `데이터 기준 요약`
 
 5A 이후 GRS preflight는 cash proxy와 ticker benchmark처럼 실행에 반드시 필요한 가격 row를 blocking check한다.
 위험자산 ETF의 데이터 부족은 strategy 준비 단계의 exclusion / warning / Data Trust metadata로 남겨, 사용자가 excluded ticker와 실제 effective universe를 확인하게 한다.
