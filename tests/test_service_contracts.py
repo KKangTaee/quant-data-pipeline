@@ -3945,7 +3945,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("Action after metrics", result_source)
         self.assertIn('tab_labels.append("Selection History")', result_source)
         self.assertIn('tab_labels.append("Dynamic Universe")', result_source)
-        self.assertIn('tab_labels.append("Policy Signal Meta")', result_source)
+        self.assertIn('tab_labels.append("검증 신호 · Policy Signals")', result_source)
 
     def test_ingestion_console_module_owns_render_entrypoint(self) -> None:
         from app.web.ingestion_console import render_ingestion_page
@@ -7619,6 +7619,22 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("with st.container(border=True)", action_body)
         self.assertNotIn('st.markdown("##### 2차 실전성 검증 Handoff")', action_body)
         self.assertNotIn("bt-handoff-card", source)
+
+    def test_policy_signal_tab_prioritizes_grouped_signal_summary(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        real_money_start = source.index("def _render_real_money_details")
+        real_money_body = source[real_money_start:]
+        real_money_body = real_money_body[: real_money_body.index("\ndef ", 1)]
+
+        self.assertIn('tab_labels.append("검증 신호 · Policy Signals")', source)
+        self.assertNotIn('tab_labels.append("Policy Signal Meta")', source)
+        self.assertIn("def _render_policy_signal_summary_panel", source)
+        self.assertIn("_render_policy_signal_summary_panel(meta)", real_money_body)
+        self.assertIn("bt-policy-signal", source)
+        self.assertIn("기술 상세 · Technical Policy Meta", source)
+        self.assertIn('["현재 판단", "검토 근거", "실행 부담", "기술 상세"]', real_money_body)
+        self.assertNotIn("_render_next_step_readiness_box(meta)", real_money_body)
+        self.assertNotIn("Candidate Readiness Checkpoint", source)
 
     def test_data_trust_brief_model_compacts_basis_and_warning_queue(self) -> None:
         from app.web.backtest_result_display import _build_data_trust_brief
