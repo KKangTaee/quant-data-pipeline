@@ -779,9 +779,16 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
 
         self.assertEqual(source["handoff_readiness_snapshot"]["schema_version"], "backtest_handoff_readiness_snapshot_v1")
         self.assertTrue(source["handoff_readiness_snapshot"]["can_submit"])
+        self.assertEqual(source["entry_gate"]["schema_version"], "selection_source_entry_gate_v1")
+        self.assertTrue(source["entry_gate"]["can_enter_practical_validation"])
+        self.assertEqual(source["entry_gate"]["review_focus_count"], 0)
         self.assertEqual(
             source["components"][0]["replay_contract"]["handoff_readiness_snapshot"]["score"],
             10.0,
+        )
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["entry_gate"]["schema_version"],
+            "selection_source_entry_gate_v1",
         )
         self.assertEqual(
             source["cost_model_snapshot"]["cost_application_status"],
@@ -7752,11 +7759,71 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         snapshot = draft["handoff_readiness_snapshot"]
-        self.assertEqual(snapshot["schema_version"], "backtest_handoff_readiness_snapshot_v1")
+        self.assertEqual(snapshot["schema_version"], "backtest_handoff_readiness_snapshot_v2")
+        self.assertEqual(snapshot["policy"], "practical_validation_entry_gate_v2")
         self.assertTrue(snapshot["can_submit"])
+        self.assertTrue(snapshot["can_enter_practical_validation"])
+        self.assertTrue(snapshot["can_move_to_compare"])
         self.assertEqual(snapshot["score"], 10.0)
         self.assertEqual([group["label"] for group in snapshot["gate_groups"]], ["Promotion", "실행 원천", "검증 원천"])
         self.assertEqual(snapshot["action_items"], ["막는 항목 없음"])
+        self.assertEqual(snapshot["entry_blocking_reasons"], [])
+        self.assertEqual(snapshot["policy_signal_counts"]["block"], 0)
+
+    def test_candidate_review_draft_marks_hold_as_practical_validation_review_focus(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
+        from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
+
+        draft = _candidate_review_draft_from_bundle(
+            {
+                "strategy_name": "Equal Weight",
+                "summary_df": pd.DataFrame(
+                    [
+                        {
+                            "Name": "Equal Weight",
+                            "Start Date": "2020-01-01",
+                            "End Date": "2026-06-26",
+                            "End Balance": 1500.0,
+                            "CAGR": 0.1,
+                            "Sharpe Ratio": 1.0,
+                            "Maximum Drawdown": -0.2,
+                        }
+                    ]
+                ),
+                "meta": {
+                    "strategy_key": "equal_weight",
+                    "promotion_decision": "hold",
+                    "shortlist_status": "paper_probation",
+                    "deployment_readiness_status": "small_capital_ready",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                },
+            }
+        )
+
+        snapshot = draft["handoff_readiness_snapshot"]
+        self.assertTrue(snapshot["can_enter_practical_validation"])
+        self.assertFalse(snapshot["can_move_to_compare"])
+        self.assertEqual(snapshot["entry_blocking_reasons"], [])
+        self.assertIn("Promotion Decision이 hold이거나 비어 있음", snapshot["compare_blocking_reasons"])
+        self.assertEqual(snapshot["policy_signal_review_rows"][0]["signal"], "Promotion Decision")
+        self.assertEqual(snapshot["policy_signal_review_rows"][0]["status"], "hold")
+
+        source = build_selection_source_from_candidate_draft(draft)
+        self.assertTrue(source["entry_gate"]["can_enter_practical_validation"])
+        self.assertFalse(source["entry_gate"]["can_move_to_compare"])
+        self.assertEqual(source["entry_gate"]["review_focus_count"], 1)
+        self.assertEqual(source["entry_gate"]["review_focus_rows"][0]["signal"], "Promotion Decision")
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["entry_gate"]["review_focus_count"],
+            1,
+        )
 
     def test_data_trust_brief_model_compacts_basis_and_warning_queue(self) -> None:
         from app.web.backtest_result_display import _build_data_trust_brief

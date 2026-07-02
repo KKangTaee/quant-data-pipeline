@@ -907,13 +907,56 @@ def _net_cost_curve_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any
     }
 
 
+_POLICY_SIGNAL_SNAPSHOT_KEYS = (
+    "group",
+    "signal",
+    "status",
+    "effect",
+    "role",
+    "next_surface",
+    "meaning",
+    "source_key",
+)
+
+
+def _compact_policy_signal_rows(rows: list[dict[str, Any]], *, effect: str | None = None) -> list[dict[str, Any]]:
+    compact_rows: list[dict[str, Any]] = []
+    for row in rows:
+        row_dict = dict(row or {})
+        if effect is not None and row_dict.get("effect") != effect:
+            continue
+        compact_rows.append(
+            {
+                key: row_dict.get(key)
+                for key in _POLICY_SIGNAL_SNAPSHOT_KEYS
+                if row_dict.get(key) is not None
+            }
+        )
+    return compact_rows
+
+
 def _handoff_readiness_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
     summary = build_handoff_gate_summary(dict(data or {}))
     evaluation = dict(summary.get("evaluation") or {})
+    inventory = dict(evaluation.get("policy_signal_inventory") or {})
+    signal_rows = _compact_policy_signal_rows(list(inventory.get("rows") or []))
+    review_rows = [
+        row
+        for row in signal_rows
+        if row.get("effect") == "review" and row.get("role") != "context_only"
+    ]
+    blocker_rows = [
+        row
+        for row in signal_rows
+        if row.get("effect") == "block" and row.get("role") != "context_only"
+    ]
     return {
-        "schema_version": "backtest_handoff_readiness_snapshot_v1",
-        "policy": "promotion_execution_validation_gate_v1",
+        "schema_version": "backtest_handoff_readiness_snapshot_v2",
+        "policy": "practical_validation_entry_gate_v2",
+        "compare_policy": "portfolio_mix_strict_promotion_gate_v1",
         "can_submit": bool(summary.get("can_submit")),
+        "can_enter_practical_validation": bool(evaluation.get("can_enter_practical_validation")),
+        "can_move_to_compare": bool(evaluation.get("can_move_to_compare")),
         "score": evaluation.get("score"),
         "tone": evaluation.get("tone"),
         "verdict": evaluation.get("verdict"),
@@ -923,8 +966,13 @@ def _handoff_readiness_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, 
         "gate_groups": list(summary.get("gate_groups") or []),
         "action_items": list(summary.get("action_items") or []),
         "blocking_reasons": list(evaluation.get("blocking_reasons") or []),
+        "entry_blocking_reasons": list(evaluation.get("entry_blocking_reasons") or []),
+        "compare_blocking_reasons": list(evaluation.get("blocking_reasons") or []),
         "review_reasons": list(evaluation.get("review_reasons") or []),
         "criteria_rows": list(evaluation.get("criteria_rows") or []),
+        "policy_signal_counts": dict(inventory.get("counts") or {}),
+        "policy_signal_review_rows": review_rows,
+        "policy_signal_blocker_rows": blocker_rows,
     }
 
 

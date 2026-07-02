@@ -19,3 +19,9 @@
 - `.venv/bin/python -m py_compile app/web/backtest_result_display.py tests/test_service_contracts.py` 통과.
 - `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_tab_prioritizes_grouped_signal_summary tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_inventory_classifies_gate_review_and_context_rows` 통과.
 - `git diff --check` 통과.
+
+## V10
+
+- `.venv/bin/python -m py_compile app/web/backtest_candidate_review_helpers.py app/services/backtest_practical_validation_source.py tests/test_service_contracts.py` 통과.
+- `.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_captures_handoff_readiness_snapshot tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_marks_hold_as_practical_validation_review_focus tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_still_blocks_missing_source_basis` 통과.
+- `git diff --check` 통과.
