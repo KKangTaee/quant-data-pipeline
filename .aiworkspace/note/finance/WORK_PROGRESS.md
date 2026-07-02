@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers Tab Actions / Statement Refresh:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/`에서 선택 종목 조사 탭 액션을 분리했다.
+  - News 탭은 뉴스 / 한국어 뉴스 metadata만, SEC 공시 탭은 SEC metadata와 필요한 재무제표 수집 action을 소유한다.
+  - 재무제표 수집은 Overview UI direct fetch가 아니라 `app/jobs/overview_actions.py` selected-symbol facade를 통해 기존 Ingestion EDGAR statement refresh job으로 위임한다.
 - Ingestion Console Structure V1:
   - `.aiworkspace/note/finance/tasks/active/ingestion-console-structure-v1-20260701/`에서 Ingestion 수집 화면을 1~4차로 정리했다.
   - collection workbench는 `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` 3개 section으로 나뉘고, 기존 우측 column의 최근 수집 / 누적 실행 기록 / 상세 / 로그 / 실패 artifact는 기록 section으로 이동했다.
@@ -147,6 +151,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-07-02 - Market Movers investigation actions are tab-local
+- Completed `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/` after the user approved splitting selected-symbol investigation actions.
+- Replaced the combined `뉴스·공시 메타데이터 조회` action with News-tab metadata and SEC-tab metadata actions.
+- Added SEC-tab `필요 재무제표 수집` that calls `run_overview_market_mover_statement_refresh` for the selected symbol and keeps elapsed-time result context in place.
+- Verification passed: focused red-green contracts, compact metadata regressions, OverviewAutomation / OverviewMarketIntelligence contract classes, py_compile, `git diff --check`, and Browser QA without live EDGAR collection.
 
 ### 2026-07-01 - Ingestion manual collection section now survives job reruns
 - Completed `.aiworkspace/note/finance/tasks/active/ingestion-manual-job-state-elapsed-v1-20260701/` after the user approved fixing the manual financial statement collection UX.

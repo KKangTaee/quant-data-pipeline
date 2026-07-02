@@ -22,6 +22,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
     run_diagnose_market_quote_gaps,
+    run_extended_statement_refresh,
 )
 from app.jobs.overview_automation import run_overview_automation
 from app.jobs.run_history import append_run_history
@@ -263,6 +264,85 @@ def run_overview_market_movers_eod_history(
     result["details"] = details
     base_message = str(result.get("message") or "").strip()
     prefix = f"{normalized_period.title()} Market Movers 가격 이력 갱신"
+    result["message"] = f"{prefix}: {base_message}" if base_message else f"{prefix}을 실행했습니다."
+    return result
+
+
+def run_overview_market_mover_statement_refresh(
+    *,
+    symbol: str,
+    freq: str = "quarterly",
+    periods: int = 0,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Refresh EDGAR statement data for one Market Movers selected symbol through Ingestion."""
+
+    symbols = _normalize_action_symbols([symbol])
+    normalized_freq = str(freq or "quarterly").strip().lower()
+    if normalized_freq not in {"annual", "quarterly"}:
+        raise ValueError(f"Unsupported statement refresh frequency: {freq!r}")
+    normalized_periods = max(0, int(periods or 0))
+    if not symbols:
+        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_market_mover_statement_refresh",
+            "status": "failed",
+            "started_at": now_text,
+            "finished_at": now_text,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "failed_symbols": [],
+            "message": "Market Movers 재무제표 수집 대상 symbol이 없습니다.",
+            "details": {
+                "symbols": [],
+                "freq": normalized_freq,
+                "period": normalized_freq,
+                "periods": normalized_periods,
+                "target_tables": [
+                    "finance_fundamental.nyse_financial_statement_filings",
+                    "finance_fundamental.nyse_financial_statement_values",
+                    "finance_fundamental.nyse_fundamentals_statement",
+                    "finance_fundamental.nyse_factors_statement",
+                ],
+                "source": "SEC EDGAR statement ingestion",
+                "purpose": "Overview Market Movers selected-symbol financial statement refresh",
+            },
+        }
+
+    result = dict(
+        run_extended_statement_refresh(
+            symbols=symbols,
+            freq=normalized_freq,
+            period=normalized_freq,
+            periods=normalized_periods,
+            progress_callback=progress_callback,
+        )
+    )
+    source_job_name = str(result.get("job_name") or "extended_statement_refresh")
+    result["job_name"] = "overview_market_mover_statement_refresh"
+    details = dict(result.get("details") or {})
+    details.update(
+        {
+            "source_job_name": source_job_name,
+            "symbol": symbols[0],
+            "symbols": symbols,
+            "freq": normalized_freq,
+            "period": normalized_freq,
+            "periods": normalized_periods,
+            "target_tables": [
+                "finance_fundamental.nyse_financial_statement_filings",
+                "finance_fundamental.nyse_financial_statement_values",
+                "finance_fundamental.nyse_fundamentals_statement",
+                "finance_fundamental.nyse_factors_statement",
+            ],
+            "source": "SEC EDGAR statement ingestion",
+            "purpose": "Overview Market Movers selected-symbol financial statement refresh",
+        }
+    )
+    result["details"] = details
+    base_message = str(result.get("message") or "").strip()
+    prefix = f"{symbols[0]} {normalized_freq} 재무제표 수집"
     result["message"] = f"{prefix}: {base_message}" if base_message else f"{prefix}을 실행했습니다."
     return result
 

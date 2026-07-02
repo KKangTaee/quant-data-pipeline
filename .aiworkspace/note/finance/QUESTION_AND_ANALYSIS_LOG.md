@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-02 - Market Movers metadata and filing collection actions should follow tab ownership
+
+- User request: 기본 지표에서 받아야 할 재무제표가 보이면 하단 `뉴스`, `SEC 공시`, `메타` 탭의 조회 기능을 각 탭에 맞게 분리하고, SEC 공시 탭에서 해당 재무제표를 수집할 수 있게 해 달라고 승인함.
+- Interpreted goal: combined metadata action은 사용자가 어떤 자료를 조회하는지 흐리므로 News 탭은 뉴스 metadata, SEC 탭은 SEC filing metadata와 selected-symbol statement refresh를 소유해야 한다.
+- Analysis result: 뉴스 / 한국어 뉴스 / SEC filing metadata는 session-only lookup으로 유지하고, 재무제표 수집은 UI direct provider fetch가 아니라 `app/jobs/overview_actions.py` facade를 통해 기존 Ingestion EDGAR statement refresh job에 위임하는 것이 맞다.
+- Follow-up: Browser QA에서는 live EDGAR 수집 버튼을 실제 실행하지 않고 UI 위치 / 버튼 노출 / overflow만 확인한다. 실제 수집 시간은 사용자가 필요한 symbol에서 실행할 때 화면에 표시된다.
+
 ### 2026-07-01 - Ingestion collection workbench should become a three-section workflow
 
 - User request: Ingestion 수정을 이어서, 기존 `일상운영 / 검증데이터`, `수동복구 / 진단` 탭 옆에 새 탭을 만들고 우측 column의 세션 최근수집 / 누적실행기록 / 상세 / 수동수집 / 로그를 탭 내부로 관리하며, 공용 기능과 각 탭 기능을 코드 기준으로 파악한 뒤 1~4차 개발 / QA / 커밋 순으로 진행해 달라고 요청함.

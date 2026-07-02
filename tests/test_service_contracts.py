@@ -5052,6 +5052,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "build_market_mover_metadata_status_strip",
                 "build_market_mover_why_it_moved_read_model",
                 "fetch_market_mover_compact_metadata",
+                "fetch_market_mover_news_metadata",
+                "fetch_market_mover_sec_metadata",
+                "merge_market_mover_metadata",
                 "sort_market_mover_sec_filings_by_form_priority",
             ],
             "app.services.overview.ia": ["load_overview_ia_closeout_model"],
@@ -5131,6 +5134,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("def build_market_mover_catalyst_links", source)
         self.assertIn("def build_market_mover_why_it_moved_read_model", source)
         self.assertIn("def fetch_market_mover_compact_metadata", source)
+        self.assertIn("def fetch_market_mover_news_metadata", source)
+        self.assertIn("def fetch_market_mover_sec_metadata", source)
+        self.assertIn("def merge_market_mover_metadata", source)
         self.assertIn("WHY_IT_MOVED_STATUS_LABELS", source)
         self.assertNotIn("overview_market_intelligence", source)
 
@@ -7386,6 +7392,48 @@ class OverviewAutomationContractTests(unittest.TestCase):
             execution_profile="managed_safe",
         )
 
+    def test_overview_market_mover_statement_refresh_runs_selected_symbol_through_ingestion_job(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_extended_statement_refresh",
+            return_value={
+                "job_name": "extended_statement_refresh",
+                "status": "success",
+                "started_at": "2026-07-02 10:00:00",
+                "finished_at": "2026-07-02 10:00:03",
+                "duration_sec": 3.0,
+                "rows_written": 12,
+                "symbols_requested": 1,
+                "symbols_processed": 1,
+                "failed_symbols": [],
+                "message": "Statement refresh completed.",
+                "details": {"target_tables": ["finance_fundamental.nyse_financial_statement_filings"]},
+            },
+        ) as refresh:
+            result = overview_actions.run_overview_market_mover_statement_refresh(
+                symbol=" aaa ",
+                freq="quarterly",
+            )
+
+        self.assertEqual(result["job_name"], "overview_market_mover_statement_refresh")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 12)
+        self.assertEqual(result["details"]["source_job_name"], "extended_statement_refresh")
+        self.assertEqual(result["details"]["symbol"], "AAA")
+        self.assertEqual(result["details"]["symbols"], ["AAA"])
+        self.assertEqual(result["details"]["freq"], "quarterly")
+        self.assertEqual(result["details"]["period"], "quarterly")
+        self.assertIn("Overview Market Movers", result["details"]["purpose"])
+        refresh.assert_called_once_with(
+            symbols=["AAA"],
+            freq="quarterly",
+            period="quarterly",
+            periods=0,
+            progress_callback=None,
+        )
+
     def test_overview_automation_standard_plan_includes_symbol_directory_refresh(self) -> None:
         from app.jobs.overview_automation import build_overview_automation_plan
 
@@ -7547,18 +7595,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("선택 종목 원천 detail 표", helper_source)
         self.assertIn("build_market_mover_research_snapshot_model", helper_source)
         self.assertIn("render_market_mover_research_snapshot", helper_source)
-        self.assertIn("뉴스·공시 메타데이터 조회", helper_source)
+        self.assertIn("뉴스 메타데이터 조회", helper_source)
+        self.assertIn("SEC 공시 메타데이터 조회", helper_source)
+        self.assertIn("필요 재무제표 수집", helper_source)
+        self.assertIn("run_overview_market_mover_statement_refresh", helper_source)
+        self.assertIn("@st.fragment", helper_source)
         self.assertIn('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])', helper_source)
         self.assertNotIn('st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])', helper_source)
+        self.assertNotIn("뉴스·공시 메타데이터 조회", helper_source)
         tabs_index = helper_source.index('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])')
-        button_index = helper_source.index('"뉴스·공시 메타데이터 조회"', tabs_index)
+        news_button_index = helper_source.index('"뉴스 메타데이터 조회"', tabs_index)
         sec_tab_index = helper_source.index("with clue_tabs[2]:", tabs_index)
         news_tab_body = helper_source[helper_source.index("with clue_tabs[1]:", tabs_index) : sec_tab_index]
-        self.assertLess(button_index, sec_tab_index)
-        self.assertIn("metadata = fetch_market_mover_compact_metadata", news_tab_body)
+        sec_tab_body = helper_source[sec_tab_index : helper_source.index("with clue_tabs[3]:", tabs_index)]
+        self.assertLess(news_button_index, sec_tab_index)
+        self.assertIn("metadata_update = fetch_market_mover_news_metadata", news_tab_body)
+        self.assertIn("merge_market_mover_metadata", news_tab_body)
         self.assertIn('metadata.get("news")', news_tab_body)
         self.assertIn('metadata.get("korean_news")', news_tab_body)
+        self.assertNotIn("fetch_market_mover_sec_metadata", news_tab_body)
+        self.assertIn("metadata_update = fetch_market_mover_sec_metadata", sec_tab_body)
+        self.assertIn("run_overview_market_mover_statement_refresh(", sec_tab_body)
         self.assertNotIn("st.rerun()", news_tab_body)
+        self.assertNotIn("st.rerun()", sec_tab_body)
         self.assertIn("ov-mm-investigation-pane", common_source)
         self.assertIn("ov-mm-research-snapshot", common_source)
 
@@ -10785,7 +10844,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("뉴스 메타데이터", source)
         self.assertIn("한국어 뉴스", source)
         self.assertIn("SEC 공시", source)
-        self.assertIn("뉴스·공시 메타데이터 조회", source)
+        self.assertIn("뉴스 메타데이터 조회", source)
+        self.assertIn("SEC 공시 메타데이터 조회", source)
+        self.assertIn("필요 재무제표 수집", source)
+        self.assertNotIn("뉴스·공시 메타데이터 조회", source)
         self.assertIn("일반 뉴스와 한국어 뉴스를 같은 탭에서 확인합니다.", source)
         self.assertNotIn("선택 종목 원천 detail 표", source)
         self.assertNotIn("간단 메타데이터 조회", source)
@@ -10841,6 +10903,143 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(list(metadata["sec_filings"].columns), ["Form", "Filing Date", "Title", "URL"])
         self.assertEqual(metadata["sec_filings"].iloc[0]["Form"], "8-K")
         self.assertNotIn("Document", metadata["sec_filings"].columns)
+
+    def test_market_mover_news_metadata_fetcher_does_not_call_sec_fetcher(self) -> None:
+        import app.services.overview.why_it_moved as service
+        from app.services.overview.why_it_moved import fetch_market_mover_news_metadata
+
+        def news_fetcher(symbol: str, max_items: int) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(max_items, 1)
+            return [
+                {
+                    "title": "AAA shares rise after guidance update",
+                    "publisher": "Market Desk",
+                    "published_at": "2026-06-03T13:00:00Z",
+                    "url": "https://example.com/news/aaa",
+                }
+            ]
+
+        def korean_news_fetcher(
+            symbol: str,
+            name: str | None,
+            max_items: int,
+            request_timeout: float,
+        ) -> list[dict[str, object]]:
+            self.assertEqual((symbol, name, max_items), ("AAA", "AAA Corp", 1))
+            self.assertGreater(request_timeout, 0)
+            return [
+                {
+                    "title": "AAA 주가 상승",
+                    "source": "한국경제",
+                    "description": "AAA가 가이던스 이후 상승했습니다.",
+                    "pubDate": "Sat, 06 Jun 2026 09:15:00 GMT",
+                    "link": "https://news.google.com/rss/articles/aaa",
+                }
+            ]
+
+        with patch.object(service, "_fetch_sec_recent_filing_metadata", side_effect=AssertionError("SEC fetcher called")):
+            metadata = fetch_market_mover_news_metadata(
+                "aaa",
+                name="AAA Corp",
+                max_news=1,
+                max_korean_news=1,
+                news_fetcher=news_fetcher,
+                korean_news_fetcher=korean_news_fetcher,
+            )
+
+        self.assertEqual(metadata["status"], "OK")
+        self.assertEqual(metadata["requested_lanes"], ["news", "korean_news"])
+        self.assertFalse(metadata["news"].empty)
+        self.assertFalse(metadata["korean_news"].empty)
+        self.assertTrue(metadata["sec_filings"].empty)
+
+    def test_market_mover_sec_metadata_fetcher_does_not_call_news_fetchers(self) -> None:
+        import app.services.overview.why_it_moved as service
+        from app.services.overview.why_it_moved import fetch_market_mover_sec_metadata
+
+        def sec_fetcher(
+            symbol: str,
+            max_items: int,
+            user_agent: str | None,
+            request_timeout: float,
+        ) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(max_items, 1)
+            self.assertEqual(user_agent, "qa-agent")
+            self.assertGreater(request_timeout, 0)
+            return [
+                {
+                    "form": "10-Q",
+                    "filing_date": "2026-05-08",
+                    "title": "Quarterly report",
+                    "url": "https://www.sec.gov/Archives/edgar/data/1/0001/a10q.htm",
+                }
+            ]
+
+        with (
+            patch.object(service, "_fetch_yfinance_news_metadata", side_effect=AssertionError("news fetcher called")),
+            patch.object(
+                service,
+                "_fetch_google_news_kr_rss_metadata",
+                side_effect=AssertionError("Korean news fetcher called"),
+            ),
+        ):
+            metadata = fetch_market_mover_sec_metadata(
+                "aaa",
+                max_filings=1,
+                sec_fetcher=sec_fetcher,
+                user_agent="qa-agent",
+            )
+
+        self.assertEqual(metadata["status"], "OK")
+        self.assertEqual(metadata["requested_lanes"], ["sec_filings"])
+        self.assertTrue(metadata["news"].empty)
+        self.assertTrue(metadata["korean_news"].empty)
+        self.assertEqual(metadata["sec_filings"].iloc[0]["Form"], "10-Q")
+
+    def test_market_mover_metadata_merge_preserves_existing_lanes(self) -> None:
+        from app.services.overview.why_it_moved import (
+            fetch_market_mover_news_metadata,
+            fetch_market_mover_sec_metadata,
+            merge_market_mover_metadata,
+        )
+
+        news_metadata = fetch_market_mover_news_metadata(
+            "AAA",
+            name="AAA Corp",
+            max_news=1,
+            max_korean_news=0,
+            news_fetcher=lambda symbol, max_items: [
+                {
+                    "title": "AAA shares rise",
+                    "publisher": "Market Desk",
+                    "published_at": "2026-06-03T13:00:00Z",
+                    "url": "https://example.com/news/aaa",
+                }
+            ],
+            korean_news_fetcher=lambda symbol, name, max_items, request_timeout: [],
+        )
+        sec_metadata = fetch_market_mover_sec_metadata(
+            "AAA",
+            max_filings=1,
+            sec_fetcher=lambda symbol, max_items, user_agent, request_timeout: [
+                {
+                    "form": "8-K",
+                    "filing_date": "2026-06-02",
+                    "title": "Current report",
+                    "url": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+                }
+            ],
+        )
+
+        merged = merge_market_mover_metadata(news_metadata, sec_metadata)
+
+        self.assertEqual(merged["status"], "OK")
+        self.assertEqual(merged["requested_lanes"], ["news", "korean_news", "sec_filings"])
+        self.assertEqual(merged["news"].iloc[0]["Title"], "AAA shares rise")
+        self.assertTrue(merged["korean_news"].empty)
+        self.assertEqual(merged["sec_filings"].iloc[0]["Form"], "8-K")
 
     def test_market_mover_compact_metadata_fetcher_adds_korean_news_metadata_lane(self) -> None:
         from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata

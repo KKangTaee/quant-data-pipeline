@@ -64,6 +64,8 @@ WHY_IT_MOVED_KOREAN_NEWS_COLUMNS = ["Title", "Source", "Published At", "Snippet"
 
 WHY_IT_MOVED_SEC_COLUMNS = ["Form", "Filing Date", "Title", "URL"]
 
+WHY_IT_MOVED_METADATA_LANES = ("news", "korean_news", "sec_filings")
+
 GOOGLE_NEWS_KR_RSS_SEARCH_URL = "https://news.google.com/rss/search"
 
 WHY_IT_MOVED_STATUS_LABELS = {
@@ -1029,6 +1031,7 @@ def build_market_mover_metadata_not_requested_state(symbol: str | None = None) -
         "korean_news": _rows_frame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
         "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
         "messages": ["이번 세션에서 메타데이터 조회를 아직 실행하지 않았습니다."],
+        "requested_lanes": [],
     }
 
 def _count_metadata_rows(value: Any) -> int:
@@ -1476,6 +1479,237 @@ def _fetch_sec_recent_filing_metadata(
         )
     return rows
 
+def _metadata_empty_frame(lane: str) -> pd.DataFrame:
+    if lane == "news":
+        return _rows_frame([], columns=WHY_IT_MOVED_NEWS_COLUMNS)
+    if lane == "korean_news":
+        return _rows_frame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS)
+    if lane == "sec_filings":
+        return _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS)
+    return _rows_frame([], columns=[])
+
+def _metadata_frame(payload: dict[str, Any], lane: str) -> pd.DataFrame:
+    value = payload.get(lane)
+    if isinstance(value, pd.DataFrame):
+        return value.copy()
+    return _metadata_empty_frame(lane)
+
+def _normalize_metadata_lanes(values: Sequence[str] | None) -> list[str]:
+    normalized: list[str] = []
+    for value in values or []:
+        lane = str(value or "").strip()
+        if lane in WHY_IT_MOVED_METADATA_LANES and lane not in normalized:
+            normalized.append(lane)
+    return normalized
+
+def _metadata_had_failure(messages: Sequence[str]) -> bool:
+    return (
+        _metadata_provider_failed(list(messages), "News")
+        or _metadata_provider_failed(list(messages), "Korean News")
+        or _metadata_provider_failed(list(messages), "SEC")
+    )
+
+def _metadata_no_rows_message(symbol: str | None, requested_lanes: Sequence[str]) -> str:
+    normalized_symbol = str(symbol or "").strip().upper() or "선택 종목"
+    lanes = set(requested_lanes)
+    if lanes == {"news", "korean_news"}:
+        return f"{normalized_symbol}에 대해 간단 뉴스 또는 한국어 뉴스 메타데이터가 반환되지 않았습니다."
+    if lanes == {"sec_filings"}:
+        return f"{normalized_symbol}에 대해 SEC 공시 메타데이터가 반환되지 않았습니다."
+    return f"{normalized_symbol}에 대해 간단 뉴스, 한국어 뉴스 또는 SEC 공시 메타데이터가 반환되지 않았습니다."
+
+def _metadata_status(
+    *,
+    news: pd.DataFrame,
+    korean_news: pd.DataFrame,
+    sec_filings: pd.DataFrame,
+    messages: Sequence[str],
+    requested_lanes: Sequence[str],
+) -> str:
+    has_metadata = not news.empty or not korean_news.empty or not sec_filings.empty
+    had_failure = _metadata_had_failure(messages)
+    if has_metadata and had_failure:
+        return "PARTIAL"
+    if has_metadata:
+        return "OK"
+    if had_failure:
+        return "FAILED"
+    if requested_lanes:
+        return "NO_METADATA"
+    return "NOT_REQUESTED"
+
+def _build_market_mover_metadata_payload(
+    *,
+    symbol: str | None,
+    fetched_at_utc: str | None,
+    news: pd.DataFrame | None = None,
+    korean_news: pd.DataFrame | None = None,
+    sec_filings: pd.DataFrame | None = None,
+    messages: Sequence[str] | None = None,
+    requested_lanes: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    normalized_lanes = _normalize_metadata_lanes(requested_lanes)
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True)
+    payload_messages = [str(message).strip() for message in messages or [] if str(message).strip()]
+    news_frame = news.copy() if isinstance(news, pd.DataFrame) else _metadata_empty_frame("news")
+    korean_news_frame = (
+        korean_news.copy() if isinstance(korean_news, pd.DataFrame) else _metadata_empty_frame("korean_news")
+    )
+    sec_frame = sec_filings.copy() if isinstance(sec_filings, pd.DataFrame) else _metadata_empty_frame("sec_filings")
+    status = _metadata_status(
+        news=news_frame,
+        korean_news=korean_news_frame,
+        sec_filings=sec_frame,
+        messages=payload_messages,
+        requested_lanes=normalized_lanes,
+    )
+    if status == "NO_METADATA" and not payload_messages:
+        payload_messages.append(_metadata_no_rows_message(normalized_symbol, normalized_lanes))
+    return {
+        "status": status,
+        "symbol": normalized_symbol,
+        "fetched_at_utc": fetched_at_utc,
+        "news": news_frame,
+        "korean_news": korean_news_frame,
+        "sec_filings": sec_frame,
+        "messages": payload_messages,
+        "requested_lanes": normalized_lanes,
+    }
+
+def merge_market_mover_metadata(
+    existing: dict[str, Any] | None,
+    update: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge a tab-local metadata update without clearing lanes fetched in another tab."""
+
+    base = dict(existing or {})
+    patch = dict(update or {})
+    base_lanes = _normalize_metadata_lanes(base.get("requested_lanes"))
+    update_lanes = _normalize_metadata_lanes(patch.get("requested_lanes"))
+    if not update_lanes and patch:
+        update_lanes = list(WHY_IT_MOVED_METADATA_LANES)
+    merged_lanes = _normalize_metadata_lanes([*base_lanes, *update_lanes])
+    merged_frames: dict[str, pd.DataFrame] = {}
+    for lane in WHY_IT_MOVED_METADATA_LANES:
+        source = patch if lane in update_lanes else base
+        merged_frames[lane] = _metadata_frame(source, lane)
+
+    messages: list[str] = []
+    for message in [*(base.get("messages") or []), *(patch.get("messages") or [])]:
+        text = str(message).strip()
+        if not text or text == "이번 세션에서 메타데이터 조회를 아직 실행하지 않았습니다.":
+            continue
+        if text not in messages:
+            messages.append(text)
+
+    return _build_market_mover_metadata_payload(
+        symbol=patch.get("symbol") or base.get("symbol"),
+        fetched_at_utc=patch.get("fetched_at_utc") or base.get("fetched_at_utc"),
+        news=merged_frames["news"],
+        korean_news=merged_frames["korean_news"],
+        sec_filings=merged_frames["sec_filings"],
+        messages=messages,
+        requested_lanes=merged_lanes,
+    )
+
+def fetch_market_mover_news_metadata(
+    symbol: str,
+    *,
+    name: str | None = None,
+    max_news: int = 5,
+    max_korean_news: int = 5,
+    news_fetcher: Callable[[str, int], list[dict[str, Any]]] | None = None,
+    korean_news_fetcher: Callable[[str, str | None, int, float], list[dict[str, Any]]] | None = None,
+    request_timeout: float = 8.0,
+) -> dict[str, Any]:
+    """Fetch only news metadata lanes for the selected Market Mover."""
+
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True)
+    fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    if not normalized_symbol:
+        payload = _build_market_mover_metadata_payload(
+            symbol=None,
+            fetched_at_utc=fetched_at,
+            messages=["Symbol is required for compact metadata lookup."],
+            requested_lanes=["news", "korean_news"],
+        )
+        payload["status"] = "FAILED"
+        return payload
+
+    messages: list[str] = []
+    news_rows: list[dict[str, Any]] = []
+    korean_news_rows: list[dict[str, Any]] = []
+    normalized_name = _clean_optional_text(name)
+
+    try:
+        news_rows = (news_fetcher or _fetch_yfinance_news_metadata)(normalized_symbol, max(0, int(max_news)))
+    except Exception as exc:
+        messages.append(f"뉴스 메타데이터 조회 실패: {exc}")
+
+    try:
+        korean_news_rows = (korean_news_fetcher or _fetch_google_news_kr_rss_metadata)(
+            normalized_symbol,
+            normalized_name,
+            max(0, int(max_korean_news)),
+            float(request_timeout),
+        )
+    except Exception as exc:
+        messages.append(f"한국어 뉴스 메타데이터 조회 실패: {exc}")
+
+    return _build_market_mover_metadata_payload(
+        symbol=normalized_symbol,
+        fetched_at_utc=fetched_at,
+        news=_normalize_news_metadata(news_rows, max_items=max_news),
+        korean_news=_normalize_korean_news_metadata(korean_news_rows, max_items=max_korean_news),
+        sec_filings=_metadata_empty_frame("sec_filings"),
+        messages=messages,
+        requested_lanes=["news", "korean_news"],
+    )
+
+def fetch_market_mover_sec_metadata(
+    symbol: str,
+    *,
+    max_filings: int = 5,
+    sec_fetcher: Callable[[str, int, str | None, float], list[dict[str, Any]]] | None = None,
+    user_agent: str | None = None,
+    request_timeout: float = 8.0,
+) -> dict[str, Any]:
+    """Fetch only SEC filing metadata for the selected Market Mover."""
+
+    normalized_symbol = _clean_optional_text(symbol, uppercase=True)
+    fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    if not normalized_symbol:
+        payload = _build_market_mover_metadata_payload(
+            symbol=None,
+            fetched_at_utc=fetched_at,
+            messages=["Symbol is required for compact metadata lookup."],
+            requested_lanes=["sec_filings"],
+        )
+        payload["status"] = "FAILED"
+        return payload
+
+    messages: list[str] = []
+    sec_rows: list[dict[str, Any]] = []
+    try:
+        sec_rows = (sec_fetcher or _fetch_sec_recent_filing_metadata)(
+            normalized_symbol,
+            max(0, int(max_filings)),
+            user_agent,
+            float(request_timeout),
+        )
+    except Exception as exc:
+        messages.append(f"SEC 메타데이터 조회 실패: {exc}")
+
+    return _build_market_mover_metadata_payload(
+        symbol=normalized_symbol,
+        fetched_at_utc=fetched_at,
+        news=_metadata_empty_frame("news"),
+        korean_news=_metadata_empty_frame("korean_news"),
+        sec_filings=_normalize_sec_filing_metadata(sec_rows, max_items=max_filings),
+        messages=messages,
+        requested_lanes=["sec_filings"],
+    )
+
 def fetch_market_mover_compact_metadata(
     symbol: str,
     *,
@@ -1502,6 +1736,7 @@ def fetch_market_mover_compact_metadata(
             "korean_news": _rows_frame([], columns=WHY_IT_MOVED_KOREAN_NEWS_COLUMNS),
             "sec_filings": _rows_frame([], columns=WHY_IT_MOVED_SEC_COLUMNS),
             "messages": ["Symbol is required for compact metadata lookup."],
+            "requested_lanes": list(WHY_IT_MOVED_METADATA_LANES),
         }
 
     messages: list[str] = []
@@ -1561,6 +1796,7 @@ def fetch_market_mover_compact_metadata(
         "korean_news": korean_news,
         "sec_filings": sec_filings,
         "messages": messages,
+        "requested_lanes": list(WHY_IT_MOVED_METADATA_LANES),
     }
 
 __all__ = [
@@ -1570,5 +1806,8 @@ __all__ = [
     "build_market_mover_metadata_status_strip",
     "build_market_mover_why_it_moved_read_model",
     "fetch_market_mover_compact_metadata",
+    "fetch_market_mover_news_metadata",
+    "fetch_market_mover_sec_metadata",
+    "merge_market_mover_metadata",
     "sort_market_mover_sec_filings_by_form_priority",
 ]
