@@ -505,6 +505,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
     turnover_evidence = dict(draft.get("turnover_evidence_snapshot") or {})
     net_cost_curve = dict(draft.get("net_cost_curve_snapshot") or {})
     real_money = dict(draft.get("real_money_signal") or {})
+    handoff_readiness = dict(draft.get("handoff_readiness_snapshot") or {})
     selection_history = list(draft.get("selection_history_snapshot") or [])
     return {
         "schema_version": PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
@@ -537,6 +538,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
         "turnover_evidence_snapshot": turnover_evidence,
         "net_cost_curve_snapshot": net_cost_curve,
         "real_money_signal": real_money,
+        "handoff_readiness_snapshot": handoff_readiness,
         "components": [
             {
                 "component_id": f"{source_id}_component_1",
@@ -563,6 +565,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
                     "cost_model_snapshot": cost_model,
                     "turnover_evidence_snapshot": turnover_evidence,
                     "net_cost_curve_snapshot": net_cost_curve,
+                    "handoff_readiness_snapshot": handoff_readiness,
                     "source_kind": source_kind,
                 },
             }

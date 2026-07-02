@@ -766,9 +766,23 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
                     "net_end_balance": 1500.0,
                     "gross_net_end_balance_delta": 42.0,
                 },
+                "handoff_readiness_snapshot": {
+                    "schema_version": "backtest_handoff_readiness_snapshot_v1",
+                    "can_submit": True,
+                    "score": 10.0,
+                    "route_label": "Portfolio Mix Builder 또는 Practical Validation",
+                    "gate_groups": [{"label": "Promotion", "value": "통과", "status": "pass"}],
+                    "action_items": ["막는 항목 없음"],
+                },
             }
         )
 
+        self.assertEqual(source["handoff_readiness_snapshot"]["schema_version"], "backtest_handoff_readiness_snapshot_v1")
+        self.assertTrue(source["handoff_readiness_snapshot"]["can_submit"])
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["handoff_readiness_snapshot"]["score"],
+            10.0,
+        )
         self.assertEqual(
             source["cost_model_snapshot"]["cost_application_status"],
             "applied_to_result_curve",
@@ -7635,6 +7649,49 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn('["현재 판단", "검토 근거", "실행 부담", "기술 상세"]', real_money_body)
         self.assertNotIn("_render_next_step_readiness_box(meta)", real_money_body)
         self.assertNotIn("Candidate Readiness Checkpoint", source)
+
+    def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:
+        from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
+
+        draft = _candidate_review_draft_from_bundle(
+            {
+                "strategy_name": "Equal Weight",
+                "summary_df": pd.DataFrame(
+                    [
+                        {
+                            "Name": "Equal Weight",
+                            "Start Date": "2020-01-01",
+                            "End Date": "2026-06-26",
+                            "End Balance": 1500.0,
+                            "CAGR": 0.1,
+                            "Sharpe Ratio": 1.0,
+                            "Maximum Drawdown": -0.2,
+                        }
+                    ]
+                ),
+                "meta": {
+                    "strategy_key": "equal_weight",
+                    "promotion_decision": "real_money_candidate",
+                    "shortlist_status": "paper_probation",
+                    "deployment_readiness_status": "small_capital_ready",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                },
+            }
+        )
+
+        snapshot = draft["handoff_readiness_snapshot"]
+        self.assertEqual(snapshot["schema_version"], "backtest_handoff_readiness_snapshot_v1")
+        self.assertTrue(snapshot["can_submit"])
+        self.assertEqual(snapshot["score"], 10.0)
+        self.assertEqual([group["label"] for group in snapshot["gate_groups"]], ["Promotion", "실행 원천", "검증 원천"])
+        self.assertEqual(snapshot["action_items"], ["막는 항목 없음"])
 
     def test_data_trust_brief_model_compacts_basis_and_warning_queue(self) -> None:
         from app.web.backtest_result_display import _build_data_trust_brief

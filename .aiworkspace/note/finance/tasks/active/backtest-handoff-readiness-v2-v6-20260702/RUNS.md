@@ -34,6 +34,21 @@
 - `git diff --check`
   - Result: passed.
 
+## 2026-07-02 V5
+
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_captures_handoff_readiness_snapshot tests.test_service_contracts.PracticalValidationServiceContractTests.test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry`
+  - RED result: draft/source handoff readiness snapshot fields did not exist yet.
+- Same focused command after adding `handoff_readiness_snapshot` to candidate drafts, Practical Validation source, and component replay contract.
+  - Result: passed, 2 tests. Existing edgar deprecation warnings observed, unrelated.
+- `.venv/bin/python -m py_compile app/web/backtest_candidate_review_helpers.py app/services/backtest_practical_validation_source.py`
+  - Result: passed.
+- `.venv/bin/python -m unittest tests.test_service_contracts`
+  - Result: passed, 454 tests. Existing edgar deprecation warnings and Streamlit no-runtime cache warnings observed, unrelated.
+- `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries`
+  - Result: passed, 11 tests. Existing edgar deprecation warnings observed, unrelated.
+- `git diff --check`
+  - Result: passed.
+
 ## 2026-07-02 V4
 
 - `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_tab_prioritizes_grouped_signal_summary tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_uses_single_integrated_action_surface tests.test_service_contracts.BoundaryContractHardeningTests.test_backtest_latest_run_view_prioritizes_result_over_pre_result_guides`
