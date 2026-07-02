@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
+from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
 from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
 from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
@@ -28,7 +29,6 @@ from app.web.backtest_compare.components import (
     render_portfolio_mix_section_head,
 )
 from app.web.backtest_result_display import *  # noqa: F401,F403
-from app.web.backtest_result_display import _build_next_step_readiness_evaluation
 
 
 def _compare_preset_catalog() -> ComparePresetCatalog:
@@ -950,7 +950,7 @@ def _build_weighted_mix_candidate_readiness_evaluation(
     for bundle in component_bundles:
         strategy_name = str(bundle.get("strategy_name") or dict(bundle.get("meta") or {}).get("strategy_name") or "-")
         meta = dict(bundle.get("meta") or {})
-        readiness = _build_next_step_readiness_evaluation(meta)
+        readiness = build_next_step_readiness_evaluation(meta)
         component_scores.append(float(readiness.get("score") or 0.0))
         if not bool(readiness.get("can_move_to_compare")):
             component_blockers.extend(f"{strategy_name}: {reason}" for reason in readiness.get("blocking_reasons") or [])

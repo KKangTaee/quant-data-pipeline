@@ -7464,9 +7464,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(preview["deployment_check_fail_count"], 0)
 
     def test_candidate_readiness_scores_source_checks_not_legacy_deployment_status(self) -> None:
-        from app.web.backtest_result_display import _build_next_step_readiness_evaluation
+        from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
 
-        evaluation = _build_next_step_readiness_evaluation(
+        evaluation = build_next_step_readiness_evaluation(
             {
                 "promotion_decision": "real_money_candidate",
                 "deployment_readiness_status": "blocked",
@@ -7495,6 +7495,31 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}
         self.assertEqual(criteria["Execution Source Checks"]["현재 값"], "block 0 / review 2")
         self.assertEqual(criteria["Validation Source Checks"]["현재 값"], "block 0 / review 2")
+
+    def test_handoff_readiness_policy_lives_in_streamlit_free_service(self) -> None:
+        service_path = Path("app/services/backtest_handoff_readiness.py")
+        result_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
+
+        self.assertTrue(service_path.exists())
+        service_source = service_path.read_text(encoding="utf-8")
+
+        self.assertIn("def build_next_step_readiness_evaluation", service_source)
+        self.assertNotIn("import streamlit", service_source)
+        self.assertNotIn("from app.web", service_source)
+        self.assertNotIn("def _build_next_step_readiness_evaluation", result_source)
+        self.assertIn(
+            "from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation",
+            result_source,
+        )
+        self.assertIn(
+            "from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation",
+            compare_source,
+        )
+        self.assertNotIn(
+            "from app.web.backtest_result_display import _build_next_step_readiness_evaluation",
+            compare_source,
+        )
 
     def test_practical_validation_handoff_gate_blocks_hold_candidates(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
