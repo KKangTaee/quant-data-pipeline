@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 
+_PASS_STATUSES = {"", "normal", "ok", "pass", "passed", "fresh"}
+
+
 def _source_bucket(
     value: Any,
     *,
@@ -10,7 +13,7 @@ def _source_bucket(
     caution_blocks: bool = True,
 ) -> str:
     normalized = str(value or "").strip().lower()
-    if not normalized or normalized in {"normal", "ok", "pass", "passed", "fresh"}:
+    if normalized in _PASS_STATUSES:
         return "pass"
     if normalized in {"error", "missing"}:
         return "block"
@@ -21,6 +24,267 @@ def _source_bucket(
     if normalized in {"watch", "warning"}:
         return "review"
     return "review"
+
+
+def _signal_row(
+    *,
+    group: str,
+    signal: str,
+    status: Any,
+    role: str,
+    effect: str,
+    meaning: str,
+    next_surface: str,
+    source_key: str,
+) -> dict[str, Any]:
+    normalized = str(status or "").strip().lower()
+    return {
+        "group": group,
+        "signal": signal,
+        "status": normalized or "normal",
+        "role": role,
+        "effect": effect,
+        "meaning": meaning,
+        "next_surface": next_surface,
+        "source_key": source_key,
+    }
+
+
+def _status_signal_effect(
+    value: Any,
+    *,
+    unavailable_blocks: bool = True,
+    caution_blocks: bool = True,
+) -> str:
+    bucket = _source_bucket(
+        value,
+        unavailable_blocks=unavailable_blocks,
+        caution_blocks=caution_blocks,
+    )
+    if bucket == "block":
+        return "block"
+    if bucket == "review":
+        return "review"
+    return "pass"
+
+
+def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
+    """Classify Backtest policy signals by how they should be used in the workflow."""
+    promotion = str(meta.get("promotion_decision") or "").strip().lower()
+    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
+    turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+    net_cost_curve_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+    transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
+
+    rows: list[dict[str, Any]] = []
+    promotion_effect = "block" if promotion in {"", "hold"} else "pass"
+    rows.append(
+        _signal_row(
+            group="Promotion",
+            signal="Promotion Decision",
+            status=promotion or "missing",
+            role="entry_gate",
+            effect=promotion_effect,
+            meaning="Backtest 1차 후보로 다음 검증에 넘길 수 있는지 보는 신호",
+            next_surface="Backtest Analysis",
+            source_key="promotion_decision",
+        )
+    )
+
+    status_specs: list[dict[str, Any]] = [
+        {
+            "group": "Data Trust",
+            "signal": "Price Freshness",
+            "status": freshness_status,
+            "role": "entry_gate",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "결과가 해석 가능한 최신 가격 범위에서 계산됐는지 확인",
+            "next_surface": "Backtest Analysis",
+            "source_key": "price_freshness.status",
+        },
+        {
+            "group": "Execution Source",
+            "signal": "Liquidity Policy",
+            "status": meta.get("liquidity_policy_status"),
+            "role": "execution_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "유동성 필터와 clean coverage가 실전 해석에 충분한지 확인",
+            "next_surface": "Practical Validation",
+            "source_key": "liquidity_policy_status",
+        },
+        {
+            "group": "Execution Source",
+            "signal": "ETF Operability",
+            "status": meta.get("etf_operability_status"),
+            "role": "execution_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "ETF AUM / spread / provider profile 근거가 운용 가능성 해석에 충분한지 확인",
+            "next_surface": "Practical Validation",
+            "source_key": "etf_operability_status",
+        },
+        {
+            "group": "Validation Source",
+            "signal": "Benchmark Availability",
+            "status": "missing" if not bool(meta.get("benchmark_available")) else "normal",
+            "role": "validation_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "후속 검증에서 기준선과 비교할 수 있는 benchmark curve 존재 여부",
+            "next_surface": "Practical Validation",
+            "source_key": "benchmark_available",
+        },
+        {
+            "group": "Validation Source",
+            "signal": "Validation",
+            "status": meta.get("validation_status"),
+            "role": "validation_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "benchmark-relative drawdown / underperformance 진단 상태",
+            "next_surface": "Practical Validation",
+            "source_key": "validation_status",
+        },
+        {
+            "group": "Validation Source",
+            "signal": "Benchmark Policy",
+            "status": meta.get("benchmark_policy_status"),
+            "role": "validation_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "benchmark coverage와 net CAGR spread가 정책 기준을 충족하는지 확인",
+            "next_surface": "Practical Validation",
+            "source_key": "benchmark_policy_status",
+        },
+        {
+            "group": "Validation Source",
+            "signal": "Validation Policy",
+            "status": meta.get("validation_policy_status"),
+            "role": "validation_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "rolling underperformance 정책 기준을 충족하는지 확인",
+            "next_surface": "Practical Validation",
+            "source_key": "validation_policy_status",
+        },
+        {
+            "group": "Validation Source",
+            "signal": "Portfolio Guardrail Policy",
+            "status": meta.get("guardrail_policy_status"),
+            "role": "validation_source",
+            "unavailable_blocks": True,
+            "caution_blocks": True,
+            "meaning": "전략 낙폭과 benchmark 대비 낙폭 차이가 방어 기준 안에 있는지 확인",
+            "next_surface": "Practical Validation",
+            "source_key": "guardrail_policy_status",
+        },
+        {
+            "group": "Validation Review",
+            "signal": "Rolling Review",
+            "status": meta.get("rolling_review_status"),
+            "role": "practical_validation_review",
+            "unavailable_blocks": False,
+            "caution_blocks": False,
+            "meaning": "최근 구간 약화 여부를 2차에서 우선 확인할 review 신호",
+            "next_surface": "Practical Validation",
+            "source_key": "rolling_review_status",
+        },
+        {
+            "group": "Validation Review",
+            "signal": "Split-Period Check",
+            "status": meta.get("out_of_sample_review_status"),
+            "role": "practical_validation_review",
+            "unavailable_blocks": False,
+            "caution_blocks": False,
+            "meaning": "전후반 구간 성과 악화 여부를 2차에서 확인할 review 신호",
+            "next_surface": "Practical Validation",
+            "source_key": "out_of_sample_review_status",
+        },
+    ]
+
+    for spec in status_specs:
+        status = spec["status"]
+        effect = _status_signal_effect(
+            status,
+            unavailable_blocks=bool(spec["unavailable_blocks"]),
+            caution_blocks=bool(spec["caution_blocks"]),
+        )
+        rows.append(
+            _signal_row(
+                group=str(spec["group"]),
+                signal=str(spec["signal"]),
+                status=status,
+                role=str(spec["role"]),
+                effect=effect,
+                meaning=str(spec["meaning"]),
+                next_surface=str(spec["next_surface"]),
+                source_key=str(spec["source_key"]),
+            )
+        )
+
+    if transaction_cost_bps > 0.0 and turnover_status and turnover_status != "estimated_from_holdings":
+        rows.append(
+            _signal_row(
+                group="Execution Review",
+                signal="Turnover Estimate",
+                status=turnover_status,
+                role="practical_validation_review",
+                effect="review",
+                meaning="비용 해석에 필요한 holdings 기반 turnover 근거 부족 여부",
+                next_surface="Practical Validation",
+                source_key="turnover_estimation_status",
+            )
+        )
+    if net_cost_curve_status == "applied_without_turnover_estimate":
+        rows.append(
+            _signal_row(
+                group="Execution Review",
+                signal="Cost Curve",
+                status=net_cost_curve_status,
+                role="practical_validation_review",
+                effect="review",
+                meaning="net cost curve가 turnover 추정 없이 적용됐는지 여부",
+                next_surface="Practical Validation",
+                source_key="net_cost_curve_status",
+            )
+        )
+
+    for signal, key in [
+        ("Suggested Route", "shortlist_status"),
+        ("Execution Preview", "deployment_readiness_status"),
+        ("Monitoring Preview", "monitoring_status"),
+    ]:
+        value = meta.get(key)
+        if value:
+            rows.append(
+                _signal_row(
+                    group="Context",
+                    signal=signal,
+                    status=value,
+                    role="context_only",
+                    effect="context",
+                    meaning="후속 설명용 preview이며 2차 source 등록 버튼을 직접 막지 않음",
+                    next_surface="Reference / Practical Validation",
+                    source_key=key,
+                )
+            )
+
+    counts = {
+        "block": sum(1 for row in rows if row["effect"] == "block"),
+        "review": sum(1 for row in rows if row["effect"] == "review"),
+        "pass": sum(1 for row in rows if row["effect"] == "pass"),
+        "context": sum(1 for row in rows if row["effect"] == "context"),
+    }
+    return {
+        "schema_version": "backtest_policy_signal_inventory_v1",
+        "rows": rows,
+        "counts": counts,
+        "blocker_rows": [row for row in rows if row["effect"] == "block"],
+        "review_rows": [row for row in rows if row["effect"] == "review"],
+        "context_rows": [row for row in rows if row["effect"] == "context"],
+    }
 
 
 def _collect_source_reasons(
@@ -277,4 +541,8 @@ def build_handoff_gate_summary(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-__all__ = ["build_handoff_gate_summary", "build_next_step_readiness_evaluation"]
+__all__ = [
+    "build_handoff_gate_summary",
+    "build_next_step_readiness_evaluation",
+    "build_policy_signal_inventory",
+]

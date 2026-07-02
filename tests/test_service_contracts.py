@@ -7534,6 +7534,42 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             compare_source,
         )
 
+    def test_policy_signal_inventory_classifies_gate_review_and_context_rows(self) -> None:
+        from app.services.backtest_handoff_readiness import build_policy_signal_inventory
+
+        inventory = build_policy_signal_inventory(
+            {
+                "promotion_decision": "real_money_candidate",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "unavailable",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "price_freshness": {"status": "ok"},
+                "rolling_review_status": "caution",
+                "out_of_sample_review_status": "watch",
+                "transaction_cost_bps": 10.0,
+                "turnover_estimation_status": "not_estimated_missing_holdings",
+                "net_cost_curve_status": "applied_without_turnover_estimate",
+                "deployment_readiness_status": "blocked",
+            }
+        )
+
+        self.assertEqual(inventory["schema_version"], "backtest_policy_signal_inventory_v1")
+        rows_by_signal = {row["signal"]: row for row in inventory["rows"]}
+        self.assertEqual(rows_by_signal["Promotion Decision"]["effect"], "pass")
+        self.assertEqual(rows_by_signal["Liquidity Policy"]["effect"], "block")
+        self.assertEqual(rows_by_signal["Rolling Review"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Split-Period Check"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Turnover Estimate"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Cost Curve"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Execution Preview"]["effect"], "context")
+        self.assertEqual(rows_by_signal["Execution Preview"]["role"], "context_only")
+        self.assertEqual(inventory["counts"]["block"], 1)
+        self.assertGreaterEqual(inventory["counts"]["review"], 4)
+
     def test_handoff_gate_summary_groups_blockers_for_user_display(self) -> None:
         from app.services.backtest_handoff_readiness import build_handoff_gate_summary
 
