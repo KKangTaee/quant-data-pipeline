@@ -77,7 +77,12 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
     transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
 
     rows: list[dict[str, Any]] = []
-    promotion_effect = "block" if promotion in {"", "hold"} else "pass"
+    if not promotion:
+        promotion_effect = "block"
+    elif promotion == "hold":
+        promotion_effect = "review"
+    else:
+        promotion_effect = "pass"
     rows.append(
         _signal_row(
             group="Promotion",
@@ -85,8 +90,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             status=promotion or "missing",
             role="entry_gate",
             effect=promotion_effect,
-            meaning="Backtest 1차 후보로 다음 검증에 넘길 수 있는지 보는 신호",
-            next_surface="Backtest Analysis",
+            meaning="2차 검증으로 보낼 source인지와 실전 승격 전 보강이 필요한지 구분하는 신호",
+            next_surface="Backtest Analysis / Practical Validation",
             source_key="promotion_decision",
         )
     )
@@ -97,8 +102,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Price Freshness",
             "status": freshness_status,
             "role": "entry_gate",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "결과가 해석 가능한 최신 가격 범위에서 계산됐는지 확인",
             "next_surface": "Backtest Analysis",
             "source_key": "price_freshness.status",
@@ -108,8 +113,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Liquidity Policy",
             "status": meta.get("liquidity_policy_status"),
             "role": "execution_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "유동성 필터와 clean coverage가 실전 해석에 충분한지 확인",
             "next_surface": "Practical Validation",
             "source_key": "liquidity_policy_status",
@@ -119,8 +124,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "ETF Operability",
             "status": meta.get("etf_operability_status"),
             "role": "execution_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "ETF AUM / spread / provider profile 근거가 운용 가능성 해석에 충분한지 확인",
             "next_surface": "Practical Validation",
             "source_key": "etf_operability_status",
@@ -130,8 +135,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Benchmark Availability",
             "status": "missing" if not bool(meta.get("benchmark_available")) else "normal",
             "role": "validation_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "후속 검증에서 기준선과 비교할 수 있는 benchmark curve 존재 여부",
             "next_surface": "Practical Validation",
             "source_key": "benchmark_available",
@@ -141,8 +146,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Validation",
             "status": meta.get("validation_status"),
             "role": "validation_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "benchmark-relative drawdown / underperformance 진단 상태",
             "next_surface": "Practical Validation",
             "source_key": "validation_status",
@@ -152,8 +157,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Benchmark Policy",
             "status": meta.get("benchmark_policy_status"),
             "role": "validation_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "benchmark coverage와 net CAGR spread가 정책 기준을 충족하는지 확인",
             "next_surface": "Practical Validation",
             "source_key": "benchmark_policy_status",
@@ -163,8 +168,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Validation Policy",
             "status": meta.get("validation_policy_status"),
             "role": "validation_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "rolling underperformance 정책 기준을 충족하는지 확인",
             "next_surface": "Practical Validation",
             "source_key": "validation_policy_status",
@@ -174,8 +179,8 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
             "signal": "Portfolio Guardrail Policy",
             "status": meta.get("guardrail_policy_status"),
             "role": "validation_source",
-            "unavailable_blocks": True,
-            "caution_blocks": True,
+            "unavailable_blocks": False,
+            "caution_blocks": False,
             "meaning": "전략 낙폭과 benchmark 대비 낙폭 차이가 방어 기준 안에 있는지 확인",
             "next_surface": "Practical Validation",
             "source_key": "guardrail_policy_status",
@@ -336,6 +341,49 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
     if net_cost_curve_status == "applied_without_turnover_estimate":
         execution_reviews.append("Cost Curve: turnover estimate unavailable")
 
+    inventory = build_policy_signal_inventory(meta)
+    inventory_rows = list(inventory.get("rows") or [])
+    entry_blocker_rows = [
+        row
+        for row in inventory_rows
+        if row.get("effect") == "block" and row.get("role") in {"entry_gate", "validation_source"}
+    ]
+    entry_review_rows = [
+        row
+        for row in inventory_rows
+        if row.get("effect") == "review" and row.get("role") != "context_only"
+    ]
+    promotion_blockers = [
+        f"{row.get('signal')}: {row.get('status')}"
+        for row in entry_blocker_rows
+        if row.get("group") == "Promotion"
+    ]
+    promotion_reviews = [
+        f"{row.get('signal')}: {row.get('status')}"
+        for row in entry_review_rows
+        if row.get("group") == "Promotion"
+    ]
+    entry_execution_blockers = [
+        f"{row.get('signal')}: {row.get('status')}"
+        for row in entry_blocker_rows
+        if row.get("group") in {"Data Trust", "Execution Source", "Execution Review"}
+    ]
+    entry_execution_reviews = [
+        f"{row.get('signal')}: {row.get('status')}"
+        for row in entry_review_rows
+        if row.get("group") in {"Data Trust", "Execution Source", "Execution Review"}
+    ]
+    entry_validation_blockers = [
+        f"{row.get('signal')}: {row.get('status')}"
+        for row in entry_blocker_rows
+        if row.get("group") in {"Validation Source", "Validation Review"}
+    ]
+    entry_validation_reviews = [
+        f"{row.get('signal')}: {row.get('status')}"
+        for row in entry_review_rows
+        if row.get("group") in {"Validation Source", "Validation Review"}
+    ]
+
     if promotion == "real_money_candidate":
         promotion_score = 4.0
         promotion_judgment = "강한 handoff policy signal"
@@ -345,24 +393,27 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
     elif promotion and promotion != "hold":
         promotion_score = 2.0
         promotion_judgment = "비교 가능성은 있으나 보수적 확인 필요"
+    elif promotion == "hold":
+        promotion_score = 1.0
+        promotion_judgment = "2차 검증에서 hold 사유 확인 필요"
     else:
         promotion_score = 0.0
-        promotion_judgment = "hold 해결 전에는 다음 단계 보류"
+        promotion_judgment = "promotion signal 생성 전에는 source 등록 보류"
 
-    if execution_blockers:
+    if entry_execution_blockers:
         execution_score = 0.0
         execution_judgment = "실행 원천 blocker가 남아 있음"
-    elif execution_reviews:
+    elif entry_execution_reviews:
         execution_score = 2.0
         execution_judgment = "실행 부담은 검토 가능하지만 확인 항목 있음"
     else:
         execution_score = 3.0
         execution_judgment = "실행 부담 원천 지표가 양호함"
 
-    if validation_blockers:
+    if entry_validation_blockers:
         validation_score = 0.0
         validation_judgment = "검증 원천 blocker가 남아 있음"
-    elif validation_reviews:
+    elif entry_validation_reviews:
         validation_score = 2.0
         validation_judgment = "검증 근거는 있으나 후속 확인 필요"
     else:
@@ -370,27 +421,32 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
         validation_judgment = "검증 원천 지표가 양호함"
 
     score = round(promotion_score + execution_score + validation_score, 1)
+    can_enter_practical_validation = (
+        not promotion_blockers
+        and not entry_execution_blockers
+        and not entry_validation_blockers
+    )
     can_move_to_compare = (
         promotion not in {"", "hold"}
         and not execution_blockers
         and not validation_blockers
     )
 
-    if can_move_to_compare and score >= 8.0:
+    if can_enter_practical_validation and score >= 8.0 and not promotion_reviews:
         verdict = "후보 검토 진행 가능"
         tone = "success"
         route_label = "Portfolio Mix Builder 또는 Practical Validation"
         next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 검증 근거를 확인합니다."
-    elif can_move_to_compare:
-        verdict = "후보 검토 가능, 개선 항목 동시 확인"
+    elif can_enter_practical_validation:
+        verdict = "2차 검증 진입 가능, 확인 항목 있음"
         tone = "warning"
-        route_label = "조건부 후보 검토"
-        next_action = "Portfolio Mix Builder 또는 Practical Validation으로 넘기기 전에 watch / preview 항목을 함께 확인합니다."
+        route_label = "Practical Validation 조건부 진입"
+        next_action = "Practical Validation으로 넘긴 뒤 promotion hold 사유와 review 항목을 먼저 확인합니다."
     else:
-        verdict = "후보 보류: blocker 먼저 해결"
+        verdict = "2차 진입 보류: source blocker 먼저 해결"
         tone = "error"
         route_label = "Hold / Review"
-        next_action = "Hold 해결 가이드, 실행 부담 preview, 검토 근거의 caution 항목을 먼저 정리합니다."
+        next_action = "가격 / benchmark / promotion signal처럼 source 등록을 막는 항목을 먼저 정리합니다."
 
     blocking_reasons: list[str] = []
     if promotion in {"", "hold"}:
@@ -398,7 +454,15 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
     blocking_reasons.extend(execution_blockers)
     blocking_reasons.extend(validation_blockers)
 
-    review_reasons: list[str] = execution_reviews + validation_reviews
+    entry_blocking_reasons: list[str] = []
+    entry_blocking_reasons.extend(promotion_blockers)
+    entry_blocking_reasons.extend(entry_execution_blockers)
+    entry_blocking_reasons.extend(entry_validation_blockers)
+
+    review_reasons: list[str] = []
+    review_reasons.extend(promotion_reviews)
+    review_reasons.extend(entry_execution_reviews)
+    review_reasons.extend(entry_validation_reviews)
 
     criteria_rows = [
         {
@@ -409,13 +473,13 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
         },
         {
             "기준": "Execution Source Checks",
-            "현재 값": "정상" if not execution_blockers and not execution_reviews else f"block {len(execution_blockers)} / review {len(execution_reviews)}",
+            "현재 값": "정상" if not entry_execution_blockers and not entry_execution_reviews else f"block {len(entry_execution_blockers)} / review {len(entry_execution_reviews)}",
             "점수": f"{execution_score:g} / 3",
             "판단": execution_judgment,
         },
         {
             "기준": "Validation Source Checks",
-            "현재 값": "정상" if not validation_blockers and not validation_reviews else f"block {len(validation_blockers)} / review {len(validation_reviews)}",
+            "현재 값": "정상" if not entry_validation_blockers and not entry_validation_reviews else f"block {len(entry_validation_blockers)} / review {len(entry_validation_reviews)}",
             "점수": f"{validation_score:g} / 3",
             "판단": validation_judgment,
         },
@@ -427,19 +491,27 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
         "tone": tone,
         "route_label": route_label,
         "next_action": next_action,
+        "can_enter_practical_validation": can_enter_practical_validation,
         "can_move_to_compare": can_move_to_compare,
         "criteria_rows": criteria_rows,
         "blocking_reasons": blocking_reasons,
+        "entry_blocking_reasons": entry_blocking_reasons,
         "review_reasons": review_reasons,
         "execution_blockers": execution_blockers,
         "execution_reviews": execution_reviews,
         "validation_blockers": validation_blockers,
         "validation_reviews": validation_reviews,
-        "promotion_ok": promotion not in {"", "hold"},
-        "execution_blocker_count": len(execution_blockers),
-        "execution_review_count": len(execution_reviews),
-        "validation_blocker_count": len(validation_blockers),
-        "validation_review_count": len(validation_reviews),
+        "promotion_ok": not promotion_blockers,
+        "promotion_review_count": len(promotion_reviews),
+        "entry_execution_blockers": entry_execution_blockers,
+        "entry_execution_reviews": entry_execution_reviews,
+        "entry_validation_blockers": entry_validation_blockers,
+        "entry_validation_reviews": entry_validation_reviews,
+        "execution_blocker_count": len(entry_execution_blockers),
+        "execution_review_count": len(entry_execution_reviews),
+        "validation_blocker_count": len(entry_validation_blockers),
+        "validation_review_count": len(entry_validation_reviews),
+        "policy_signal_inventory": inventory,
     }
 
 
@@ -482,20 +554,30 @@ def _gate_group(
 def build_handoff_gate_summary(meta: dict[str, Any]) -> dict[str, Any]:
     """Build a grouped, user-facing handoff gate summary from result metadata."""
     evaluation = build_next_step_readiness_evaluation(meta)
-    promotion_ok = bool(evaluation.get("promotion_ok"))
-    promotion_blockers = [] if promotion_ok else ["Promotion signal이 보류 상태입니다. Promotion / policy 기준을 보강한 뒤 다시 실행하세요."]
-    execution_blockers = [str(item) for item in list(evaluation.get("execution_blockers") or [])]
-    execution_reviews = [str(item) for item in list(evaluation.get("execution_reviews") or [])]
-    validation_blockers = [str(item) for item in list(evaluation.get("validation_blockers") or [])]
-    validation_reviews = [str(item) for item in list(evaluation.get("validation_reviews") or [])]
+    inventory = dict(evaluation.get("policy_signal_inventory") or {})
+    promotion_rows = [dict(row) for row in list(inventory.get("rows") or []) if row.get("group") == "Promotion"]
+    promotion_blockers = [
+        "Promotion signal이 비어 있습니다. Backtest 결과를 다시 실행해 promotion signal을 생성하세요."
+        for row in promotion_rows
+        if row.get("effect") == "block"
+    ]
+    promotion_reviews = [
+        "Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요."
+        for row in promotion_rows
+        if row.get("effect") == "review"
+    ]
+    execution_blockers = [str(item) for item in list(evaluation.get("entry_execution_blockers") or [])]
+    execution_reviews = [str(item) for item in list(evaluation.get("entry_execution_reviews") or [])]
+    validation_blockers = [str(item) for item in list(evaluation.get("entry_validation_blockers") or [])]
+    validation_reviews = [str(item) for item in list(evaluation.get("entry_validation_reviews") or [])]
 
     gate_groups = [
         _gate_group(
             label="Promotion",
             pass_value="통과",
             blockers=promotion_blockers,
-            reviews=[],
-            block_value="보류",
+            reviews=promotion_reviews,
+            block_value="신호 없음",
         ),
         _gate_group(
             label="실행 원천",
@@ -514,6 +596,8 @@ def build_handoff_gate_summary(meta: dict[str, Any]) -> dict[str, Any]:
     action_items: list[str] = []
     if promotion_blockers:
         action_items.append(promotion_blockers[0])
+    elif promotion_reviews:
+        action_items.append(promotion_reviews[0])
     if execution_blockers:
         action_items.append(f"실행 원천 blocker {len(execution_blockers)}개를 먼저 해결하세요.")
     elif execution_reviews:
@@ -525,7 +609,7 @@ def build_handoff_gate_summary(meta: dict[str, Any]) -> dict[str, Any]:
     if not action_items:
         action_items.append("막는 항목 없음")
 
-    if not bool(evaluation.get("can_move_to_compare")):
+    if not bool(evaluation.get("can_enter_practical_validation")):
         reason_title = "먼저 해결할 항목"
     elif action_items == ["막는 항목 없음"]:
         reason_title = "상태"
@@ -533,7 +617,7 @@ def build_handoff_gate_summary(meta: dict[str, Any]) -> dict[str, Any]:
         reason_title = "다음 단계 확인 항목"
 
     return {
-        "can_submit": bool(evaluation.get("can_move_to_compare")),
+        "can_submit": bool(evaluation.get("can_enter_practical_validation")),
         "gate_groups": gate_groups,
         "action_items": action_items,
         "reason_title": reason_title,

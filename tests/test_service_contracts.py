@@ -7560,15 +7560,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(inventory["schema_version"], "backtest_policy_signal_inventory_v1")
         rows_by_signal = {row["signal"]: row for row in inventory["rows"]}
         self.assertEqual(rows_by_signal["Promotion Decision"]["effect"], "pass")
-        self.assertEqual(rows_by_signal["Liquidity Policy"]["effect"], "block")
+        self.assertEqual(rows_by_signal["Liquidity Policy"]["effect"], "review")
         self.assertEqual(rows_by_signal["Rolling Review"]["effect"], "review")
         self.assertEqual(rows_by_signal["Split-Period Check"]["effect"], "review")
         self.assertEqual(rows_by_signal["Turnover Estimate"]["effect"], "review")
         self.assertEqual(rows_by_signal["Cost Curve"]["effect"], "review")
         self.assertEqual(rows_by_signal["Execution Preview"]["effect"], "context")
         self.assertEqual(rows_by_signal["Execution Preview"]["role"], "context_only")
-        self.assertEqual(inventory["counts"]["block"], 1)
-        self.assertGreaterEqual(inventory["counts"]["review"], 4)
+        self.assertEqual(inventory["counts"]["block"], 0)
+        self.assertGreaterEqual(inventory["counts"]["review"], 5)
 
     def test_handoff_gate_summary_groups_blockers_for_user_display(self) -> None:
         from app.services.backtest_handoff_readiness import build_handoff_gate_summary
@@ -7588,16 +7588,16 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             }
         )
 
-        self.assertFalse(summary["can_submit"])
+        self.assertTrue(summary["can_submit"])
         self.assertEqual([group["label"] for group in summary["gate_groups"]], ["Promotion", "실행 원천", "검증 원천"])
-        self.assertEqual(summary["gate_groups"][0]["value"], "보류")
+        self.assertEqual(summary["gate_groups"][0]["value"], "review 1")
         self.assertEqual(summary["gate_groups"][1]["value"], "통과")
         self.assertEqual(summary["gate_groups"][2]["value"], "review 1")
-        self.assertIn("Promotion signal이 보류 상태입니다", summary["action_items"][0])
+        self.assertIn("Promotion은 hold 상태입니다", summary["action_items"][0])
         self.assertTrue(any("검증 원천 review 1개" in item for item in summary["action_items"]))
         self.assertFalse(any(str(item).startswith("Validation:") for item in summary["action_items"]))
 
-    def test_practical_validation_handoff_gate_blocks_hold_candidates(self) -> None:
+    def test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
 
         state = _build_practical_validation_handoff_state(
@@ -7616,11 +7616,35 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             }
         )
 
+        self.assertTrue(state["can_submit"])
+        self.assertEqual(state["status_label"], "조건부 진입 가능")
+        self.assertIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
+        criteria = {row["label"]: row for row in state["criteria"]}
+        self.assertEqual(criteria["Promotion"]["value"], "review 1")
+
+    def test_practical_validation_handoff_gate_still_blocks_missing_source_basis(self) -> None:
+        from app.web.backtest_result_display import _build_practical_validation_handoff_state
+
+        state = _build_practical_validation_handoff_state(
+            {
+                "meta": {
+                    "promotion_decision": "",
+                    "benchmark_available": False,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                }
+            }
+        )
+
         self.assertFalse(state["can_submit"])
         self.assertEqual(state["status_label"], "진입 보류")
-        self.assertIn("Promotion signal이 보류 상태입니다. Promotion / policy 기준을 보강한 뒤 다시 실행하세요.", state["display_reasons"])
-        criteria = {row["label"]: row for row in state["criteria"]}
-        self.assertEqual(criteria["Promotion"]["value"], "보류")
+        self.assertIn("Promotion signal이 비어 있습니다. Backtest 결과를 다시 실행해 promotion signal을 생성하세요.", state["display_reasons"])
+        self.assertTrue(any("검증 원천 blocker" in item for item in state["display_reasons"]))
 
     def test_practical_validation_handoff_gate_allows_ready_candidates(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state

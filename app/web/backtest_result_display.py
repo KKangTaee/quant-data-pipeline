@@ -666,7 +666,7 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
     meta = bundle.get("meta") or {}
     evaluation = build_next_step_readiness_evaluation(meta)
     gate_summary = build_handoff_gate_summary(meta)
-    can_submit = bool(evaluation.get("can_move_to_compare"))
+    can_submit = bool(evaluation.get("can_enter_practical_validation"))
     score = float(evaluation.get("score") or 0.0)
     blocking_reasons = [str(reason) for reason in list(evaluation.get("blocking_reasons") or [])]
     review_reasons = [str(reason) for reason in list(evaluation.get("review_reasons") or [])]
