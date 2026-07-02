@@ -5444,3 +5444,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-handoff-ui-integrated-v1-20260702/`에서 Latest Backtest Run의 `2차 실전성 검증 Handoff` 중복 UI를 단일 custom panel로 통합했다.
   - gate 판정, Practical Validation source 저장 경로, registry / saved JSONL, strategy runtime은 변경하지 않았다.
   - 후속 V2 후보는 handoff readiness policy의 service extraction과 `Policy Signal Meta` 역할 정리다.
+- Backtest Handoff Readiness V2-V6 2026-07-02:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-readiness-v2-v6-20260702/`에서 readiness policy service extraction, grouped gate display, `검증 신호 · Policy Signals` cleanup, Practical Validation source snapshot persistence, final QA/docs closeout을 완료했다.
+  - 버튼 활성화 기준은 보수적으로 유지했다: promotion hold, execution blocker, validation blocker가 있으면 source registration은 막힌다.
+  - Browser QA는 current worktree server `localhost:8502`에서 Equal Weight / Dividend ETFs 실행 후 확인했고, screenshot은 generated artifact로 커밋하지 않았다.

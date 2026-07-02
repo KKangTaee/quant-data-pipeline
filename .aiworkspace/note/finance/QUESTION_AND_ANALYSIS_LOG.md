@@ -8400,3 +8400,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 우선 화면 혼선을 줄이되, gate policy 의미 변경은 별도 V2로 분리해야 함.
 - Analysis result: 현재 버튼 활성화는 latest result bundle meta의 `promotion_decision`, execution source checks, validation source checks를 `_build_next_step_readiness_evaluation`으로 묶어 판단한다. UI 문제는 custom card와 별도 Streamlit container가 같은 handoff를 반복하는 구조였다.
 - Follow-up: V1에서는 중복 container / heading을 제거하고 단일 custom handoff panel로 통합한다. V2 후보는 readiness evaluation service extraction, duplicated promotion/source-check display 정리, `Policy Signal Meta` 역할 재정의다.
+
+### 2026-07-02 - Backtest Handoff readiness를 service / display / source evidence로 정리한다
+
+- User request: V2부터 V6까지 development -> QA -> commit 순서로 handoff gate 중복 / 파편화 개선을 진행해 달라고 요청함.
+- Interpreted goal: 2차 Practical Validation 진입 기준은 약화하지 않고, UI 표시와 source handoff evidence를 분리해 사용자가 왜 버튼이 열리거나 막히는지 이해하게 해야 함.
+- Analysis result: `promotion_decision`, execution source checks, validation source checks는 하나의 Streamlit-free readiness service에서 판단하는 것이 맞고, UI는 raw reason을 반복하기보다 `Promotion / 실행 원천 / 검증 원천`으로 묶어 보여주는 편이 안전하다.
+- Follow-up: V2-V6 완료. `Policy Signal Meta`는 `검증 신호 · Policy Signals`로 바뀌었고, Practical Validation source에는 compact `handoff_readiness_snapshot`이 저장된다. raw provider payload / full run history / screenshots는 workflow JSONL에 넣지 않는다.

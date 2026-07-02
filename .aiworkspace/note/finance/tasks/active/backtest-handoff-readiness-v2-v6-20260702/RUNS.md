@@ -34,6 +34,26 @@
 - `git diff --check`
   - Result: passed.
 
+## 2026-07-02 V6
+
+- `lsof -nP -iTCP:8501 -sTCP:LISTEN`
+  - Result: an existing Streamlit server was listening on 8501, but Browser QA showed it was serving older UI state.
+- `.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8502 --server.headless true`
+  - Result: current worktree app started on `http://localhost:8502`.
+- Browser QA at `http://localhost:8502/backtest`
+  - Result: Backtest entry showed Korean-first workflow tabs and no old Backtest guide / capability / reference panels.
+- Browser QA after running Equal Weight / Dividend ETFs
+  - Result: result header, `데이터 기준 요약`, `2차 실전성 검증 Handoff`, grouped Promotion / execution / validation chips, `검증 신호 · Policy Signals`, and `기술 상세 · Technical Policy Meta` rendered. Old `Policy Signal Meta` and `Latest Backtest Run` labels were not present.
+  - Screenshot: `backtest-handoff-readiness-v6-browser-qa.png` generated locally and intentionally not staged.
+- `.venv/bin/python -m unittest tests.test_service_contracts`
+  - Result: passed, 454 tests. Existing edgar deprecation warnings and Streamlit no-runtime cache warnings observed, unrelated.
+- `.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries`
+  - Result: passed, 11 tests. Existing edgar deprecation warnings observed, unrelated.
+- `.venv/bin/python -m py_compile app/services/backtest_handoff_readiness.py app/web/backtest_result_display.py app/web/backtest_candidate_review_helpers.py app/services/backtest_practical_validation_source.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+
 ## 2026-07-02 V5
 
 - `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_captures_handoff_readiness_snapshot tests.test_service_contracts.PracticalValidationServiceContractTests.test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry`
