@@ -6,4 +6,5 @@
 - V8 완료: `can_move_to_compare` strict 판단은 보존하고, 2차 Practical Validation source 등록용 `can_enter_practical_validation`을 분리했다. `hold`, liquidity / ETF / validation policy caution은 조건부 review로 낮추고, promotion missing / benchmark missing / price hard error는 source blocker로 유지한다.
 - V9 완료: `검증 신호 · Policy Signals` active render path를 compact evidence 화면으로 바꿨다. nested `현재 판단 / 검토 근거 / 실행 부담 / 기술 상세` 탭은 active 함수에서 제거하고, summary / policy rows / Practical Validation review rows / 접힌 상세 근거로 정리했다.
 - V10 완료: Candidate Review draft의 handoff snapshot을 `practical_validation_entry_gate_v2`로 올리고, Practical Validation source / component replay contract에 `entry_gate` 요약과 review focus row를 보존했다.
-- 다음: V11에서 durable docs, root handoff log, 최종 QA / Browser smoke를 정리한다.
+- V11 완료: durable flow / script map / root handoff log를 새 gate 구조에 맞췄고, focused compile / unit QA / Browser smoke를 완료했다.
+- 결과: V7-V11 policy signal gate 정리 작업은 완료됐다. 남은 후속 후보는 Practical Validation 내부에서 `entry_gate.review_focus_rows`를 더 적극적으로 보여줄지 별도 UX 단위로 판단하는 것이다.

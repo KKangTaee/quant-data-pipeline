@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Policy Signal Gate V7-V11:
+  - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-gate-v7-v11-20260703/`에서 `검증 신호 · Policy Signals`와 `2차 실전성 검증 Handoff`의 gate 의미를 정리했다.
+  - Practical Validation entry gate와 Portfolio Mix strict compare gate를 분리했고, `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus로 보존한다.
+  - Candidate draft / Practical Validation source / component replay contract는 `handoff_readiness_snapshot`과 `entry_gate`를 함께 보존한다.
 - Backtest Handoff Before Detail Tabs V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-handoff-before-detail-tabs-v1-20260702/`에서 Run Backtest 직후 `2차 실전성 검증 Handoff`를 상세 결과 탭 위로 올렸다.
   - 현재 latest run 흐름은 `전략 결과/KPI -> 데이터 기준 요약 -> 실전성 검증 Handoff -> 상세 결과 탭`이다.

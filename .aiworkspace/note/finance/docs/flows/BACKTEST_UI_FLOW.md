@@ -436,39 +436,40 @@ Stage:
 
 ## Promotion Policy Signal Candidate Readiness 흐름
 
-2026-07-02 handoff readiness V2-V6 이후 Promotion / 실행 원천 / 검증 원천 판단은
+2026-07-03 policy signal gate V7-V11 이후 Promotion / 실행 원천 / 검증 원천 판단은
 `app/services/backtest_handoff_readiness.py`가 Streamlit-free read model로 소유한다.
 결과 화면에서는 같은 policy를 두 번 설명하지 않고, `실전성 검증 Handoff` action panel과
-조건부 `검증 신호 · Policy Signals` 탭에서 같은 grouped gate summary를 읽는다.
+조건부 `검증 신호 · Policy Signals` 탭에서 같은 classified policy signal inventory를 읽는다.
 
 목적:
 
 - `Promotion`, execution source checks, validation source checks를 10점 척도로 요약한다.
-- 사용자가 이 결과를 Portfolio Mix Builder 또는 Practical Validation 후보로 넘겨도 되는지 먼저 판단하게 한다.
+- 사용자가 이 결과를 Practical Validation 후보 source로 넘길 수 있는지 먼저 판단하게 한다.
+- Portfolio Mix Builder strict comparison gate는 같은 신호를 더 보수적으로 읽되, Practical Validation entry gate와 혼동하지 않는다.
 - 이 평가는 live trading approval이나 주문 지시가 아니라 후보 검토 보조 신호다.
 - `Shortlist`는 독립 검증 단계로 보지 않고, `Promotion` 안의 `Suggested Route`로 표시한다.
-- Backtest Analysis에서는 `Probation`, `Monitoring`, `Deployment`를 시작한 것처럼 표시하지 않고, `Next Validation Focus`와 `Execution Preview`로 낮춰 보여준다.
+- Backtest Analysis에서는 `Probation`, `Monitoring`, `Deployment`를 시작한 것처럼 표시하지 않고, Practical Validation에서 먼저 확인할 review focus로 낮춰 보여준다.
 
 기준:
 
-- `Promotion Decision != hold`
-- 실행 원천 blocker 없음
-- 검증 원천 blocker 없음
+- Practical Validation entry: promotion signal이 존재하고, 가격 / benchmark / source hard blocker가 없어야 한다. `promotion_decision=hold`는 blocker가 아니라 2차 검증 review focus다.
+- Portfolio Mix strict compare: `Promotion Decision != hold`, 실행 원천 blocker 없음, 검증 원천 blocker 없음.
 
 점수 해석:
 
 - `8.0 / 10` 이상이면 깔끔하게 후보 검토가 가능한 상태다.
-- `8.0 / 10` 미만이어도 위 핵심 기준을 만족하면 조건부 후보 검토가 가능하지만, 개선 항목을 같이 확인한다.
+- `8.0 / 10` 미만이어도 Practical Validation entry 기준을 만족하면 조건부 후보 검토가 가능하지만, review focus를 같이 확인한다.
 - 위 핵심 기준을 만족하지 못하면 점수와 무관하게 blocker를 먼저 해결한다.
 
 표시:
 
 - `실전성 검증 Handoff`: 진입 상태, 10점 만점 readiness score, Promotion / 실행 원천 / 검증 원천 chip, grouped action item, source 등록 boundary를 한 panel에서 보여준다.
-- `검증 신호 · Policy Signals`: result tab 안에서 같은 handoff readiness summary를 먼저 보여주고, 기존 raw policy meta는 `기술 상세 · Technical Policy Meta` expander와 `현재 판단 / 검토 근거 / 실행 부담 / 기술 상세` 탭으로 낮춘다.
+- `검증 신호 · Policy Signals`: result tab 안에서 compact summary, entry criteria rows, Practical Validation review focus rows를 먼저 보여준다. Benchmark / execution / raw technical payload는 접힌 상세 근거로 낮추며 nested `현재 판단 / 검토 근거 / 실행 부담 / 기술 상세` 탭은 active render path에서 사용하지 않는다.
 - `Promotion Suggested Route`: `Hold / Review`, `Watchlist Review`, `Paper Observation Candidate`, `Small-Capital Review Candidate` 같은 추천 경로다.
-- `Next Validation Focus`: 다음 단계에서 확인할 benchmark, drawdown, liquidity, price freshness, regime / split-period 항목이다.
+- `Practical Validation review focus`: hold 사유, caution source, benchmark / drawdown / liquidity / price freshness / regime / split-period 확인 항목이다.
 - `Execution Preview`: 비용, 유동성, ETF 운용 가능성 같은 실행 부담 미리보기이며 배치 승인 아님.
-- `handoff_readiness_snapshot`: Latest / History result를 Practical Validation source로 넘길 때 당시 gate summary를 compact snapshot으로 저장한다. 이 snapshot은 source와 component replay contract에 남으며 raw provider payload나 full run history를 복제하지 않는다.
+- `handoff_readiness_snapshot`: Latest / History result를 Practical Validation source로 넘길 때 당시 gate summary를 compact snapshot으로 저장한다. V2 snapshot은 `can_enter_practical_validation`, `can_move_to_compare`, `entry_blocking_reasons`, `compare_blocking_reasons`, policy signal review / blocker rows를 분리한다.
+- `entry_gate`: Practical Validation source와 component replay contract에 저장되는 source-level 요약이다. 2차 진입 가능 여부, review focus count, blocker count, action items를 보존하며 raw provider payload나 full run history를 복제하지 않는다.
 
 ## Portfolio Mix Builder 흐름
 
@@ -671,7 +672,7 @@ Latest / Operations history result handoff:
 Latest Backtest Run 또는 Operations > Backtest Run History selected record
   -> Review As Candidate Draft
   -> Backtest > Candidate Review > 1. Draft 확인 / Review Note 저장
-  -> result snapshot / Real-Money signal / data trust snapshot / handoff readiness snapshot 확인
+  -> result snapshot / Real-Money signal / data trust snapshot / handoff readiness snapshot / entry gate 확인
   -> Candidate Packaging 저장 준비 확인
   -> Save Candidate Review Note
   -> CANDIDATE_REVIEW_NOTES.jsonl

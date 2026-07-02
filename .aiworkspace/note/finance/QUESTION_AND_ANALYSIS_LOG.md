@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-03 - Policy Signal gate separates 2차 entry from strict compare readiness
+
+- User request: `검증 신호 · Policy Signal`의 여러 탭 / 근거 / 승격 판단이 2차 실전성 검증에 필요한 기준인지, 중복이나 과보수 조건이 없는지 검토하고 V7부터 V11까지 개발 / QA / 커밋 순으로 진행 요청.
+- Interpreted goal: 사용자는 Backtest Analysis에서 다음 단계로 넘기는 기준을 실전 승격 확정처럼 보지 않고, 2차 검증 entry gate / review focus / strict compare gate로 분명히 나누길 원한다.
+- Analysis result: 기존 판단은 `promotion_decision=hold`를 strict blocker처럼 읽어 Practical Validation 진입까지 과보수로 막을 수 있었다. 반대로 benchmark missing, price hard error, promotion missing은 source 등록 blocker로 유지해야 한다.
+- Follow-up: `app/services/backtest_handoff_readiness.py`에 policy signal inventory를 추가하고, Practical Validation entry gate와 Portfolio Mix strict compare gate를 분리했다. `검증 신호 · Policy Signals` UI는 compact summary / review focus 중심으로 정리했고, Candidate draft / Practical Validation source는 `handoff_readiness_snapshot`과 `entry_gate`를 보존한다.
+
 ### 2026-07-02 - Practical Validation handoff should precede detail tabs
 
 - User request: Run Backtest 결과에서 각종 상세 탭 다음에 `2차 실전성 검증 Handoff`가 나오는 순서를 다시 바꾸고, handoff의 promotion / 검증 원천 / 버튼 활성화 기준을 설명해 달라고 요청.
