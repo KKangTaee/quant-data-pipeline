@@ -12,7 +12,10 @@ from app.services.backtest_result_read_model import (
     build_strategy_data_trust_rows,
     data_trust_status_label,
 )
-from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
+from app.services.backtest_handoff_readiness import (
+    build_handoff_gate_summary,
+    build_next_step_readiness_evaluation,
+)
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_ui_components import (
     render_badge_strip,
@@ -663,6 +666,7 @@ def _render_strategy_data_trust_snapshot(
 def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = bundle.get("meta") or {}
     evaluation = build_next_step_readiness_evaluation(meta)
+    gate_summary = build_handoff_gate_summary(meta)
     can_submit = bool(evaluation.get("can_move_to_compare"))
     score = float(evaluation.get("score") or 0.0)
     blocking_reasons = [str(reason) for reason in list(evaluation.get("blocking_reasons") or [])]
@@ -687,41 +691,9 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
         button_label = "진입 기준 확인 필요"
 
-    if blocking_reasons:
-        display_reasons = blocking_reasons[:3]
-        reason_title = "막는 이유"
-    elif review_reasons:
-        display_reasons = review_reasons[:3]
-        reason_title = "다음 단계 확인 항목"
-    else:
-        display_reasons = ["막는 항목 없음"]
-        reason_title = "상태"
-
-    criteria = [
-        {
-            "label": "Promotion",
-            "value": "통과" if bool(evaluation.get("promotion_ok")) else "보류",
-            "tone": "positive" if bool(evaluation.get("promotion_ok")) else "danger",
-        },
-        {
-            "label": "실행 원천",
-            "value": (
-                "통과"
-                if int(evaluation.get("execution_blocker_count") or 0) == 0
-                else f"block {int(evaluation.get('execution_blocker_count') or 0)}"
-            ),
-            "tone": "positive" if int(evaluation.get("execution_blocker_count") or 0) == 0 else "danger",
-        },
-        {
-            "label": "검증 원천",
-            "value": (
-                "통과"
-                if int(evaluation.get("validation_blocker_count") or 0) == 0
-                else f"block {int(evaluation.get('validation_blocker_count') or 0)}"
-            ),
-            "tone": "positive" if int(evaluation.get("validation_blocker_count") or 0) == 0 else "danger",
-        },
-    ]
+    display_reasons = [str(item) for item in list(gate_summary.get("action_items") or [])][:3]
+    reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
+    criteria = list(gate_summary.get("gate_groups") or [])
 
     return {
         "can_submit": can_submit,

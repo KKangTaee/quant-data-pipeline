@@ -167,6 +167,10 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
         "criteria_rows": criteria_rows,
         "blocking_reasons": blocking_reasons,
         "review_reasons": review_reasons,
+        "execution_blockers": execution_blockers,
+        "execution_reviews": execution_reviews,
+        "validation_blockers": validation_blockers,
+        "validation_reviews": validation_reviews,
         "promotion_ok": promotion not in {"", "hold"},
         "execution_blocker_count": len(execution_blockers),
         "execution_review_count": len(execution_reviews),
@@ -175,4 +179,102 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
     }
 
 
-__all__ = ["build_next_step_readiness_evaluation"]
+def _gate_group(
+    *,
+    label: str,
+    pass_value: str,
+    blockers: list[str],
+    reviews: list[str],
+    block_value: str | None = None,
+) -> dict[str, Any]:
+    if blockers:
+        return {
+            "label": label,
+            "value": block_value or f"block {len(blockers)}",
+            "tone": "danger",
+            "status": "block",
+            "blockers": blockers,
+            "reviews": reviews,
+        }
+    if reviews:
+        return {
+            "label": label,
+            "value": f"review {len(reviews)}",
+            "tone": "warning",
+            "status": "review",
+            "blockers": blockers,
+            "reviews": reviews,
+        }
+    return {
+        "label": label,
+        "value": pass_value,
+        "tone": "positive",
+        "status": "pass",
+        "blockers": blockers,
+        "reviews": reviews,
+    }
+
+
+def build_handoff_gate_summary(meta: dict[str, Any]) -> dict[str, Any]:
+    """Build a grouped, user-facing handoff gate summary from result metadata."""
+    evaluation = build_next_step_readiness_evaluation(meta)
+    promotion_ok = bool(evaluation.get("promotion_ok"))
+    promotion_blockers = [] if promotion_ok else ["Promotion signal이 보류 상태입니다. Promotion / policy 기준을 보강한 뒤 다시 실행하세요."]
+    execution_blockers = [str(item) for item in list(evaluation.get("execution_blockers") or [])]
+    execution_reviews = [str(item) for item in list(evaluation.get("execution_reviews") or [])]
+    validation_blockers = [str(item) for item in list(evaluation.get("validation_blockers") or [])]
+    validation_reviews = [str(item) for item in list(evaluation.get("validation_reviews") or [])]
+
+    gate_groups = [
+        _gate_group(
+            label="Promotion",
+            pass_value="통과",
+            blockers=promotion_blockers,
+            reviews=[],
+            block_value="보류",
+        ),
+        _gate_group(
+            label="실행 원천",
+            pass_value="통과",
+            blockers=execution_blockers,
+            reviews=execution_reviews,
+        ),
+        _gate_group(
+            label="검증 원천",
+            pass_value="통과",
+            blockers=validation_blockers,
+            reviews=validation_reviews,
+        ),
+    ]
+
+    action_items: list[str] = []
+    if promotion_blockers:
+        action_items.append(promotion_blockers[0])
+    if execution_blockers:
+        action_items.append(f"실행 원천 blocker {len(execution_blockers)}개를 먼저 해결하세요.")
+    elif execution_reviews:
+        action_items.append(f"실행 원천 review {len(execution_reviews)}개는 Practical Validation에서 비용 / 유동성 근거로 확인하세요.")
+    if validation_blockers:
+        action_items.append(f"검증 원천 blocker {len(validation_blockers)}개를 먼저 해결하세요.")
+    elif validation_reviews:
+        action_items.append(f"검증 원천 review {len(validation_reviews)}개는 Practical Validation에서 근거를 확인하세요.")
+    if not action_items:
+        action_items.append("막는 항목 없음")
+
+    if not bool(evaluation.get("can_move_to_compare")):
+        reason_title = "먼저 해결할 항목"
+    elif action_items == ["막는 항목 없음"]:
+        reason_title = "상태"
+    else:
+        reason_title = "다음 단계 확인 항목"
+
+    return {
+        "can_submit": bool(evaluation.get("can_move_to_compare")),
+        "gate_groups": gate_groups,
+        "action_items": action_items,
+        "reason_title": reason_title,
+        "evaluation": evaluation,
+    }
+
+
+__all__ = ["build_handoff_gate_summary", "build_next_step_readiness_evaluation"]
