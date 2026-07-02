@@ -672,16 +672,19 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         tone = "positive"
         summary = "1차 후보 판단을 통과했습니다."
         action_text = "이 결과를 2차 실전성 검증 입력 후보로 등록할 수 있습니다."
+        button_label = "2차 검증으로 보내기"
     elif can_submit:
         status_label = "조건부 진입 가능"
         tone = "warning"
         summary = "1차 후보 판단은 통과했지만, 다음 단계에서 확인할 review 신호가 있습니다."
         action_text = "Practical Validation으로 넘긴 뒤 표시된 review 신호를 우선 확인하세요."
+        button_label = "2차 검증으로 보내기"
     else:
         status_label = "진입 보류"
         tone = "danger"
         summary = "아직 1차 후보 판단을 통과하지 못했습니다."
         action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
+        button_label = "진입 기준 확인 필요"
 
     if blocking_reasons:
         display_reasons = blocking_reasons[:3]
@@ -725,6 +728,7 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         "tone": tone,
         "summary": summary,
         "action_text": action_text,
+        "button_label": button_label,
         "score": score,
         "reason_title": reason_title,
         "display_reasons": display_reasons,
@@ -733,14 +737,21 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
     }
 
 
-def _render_practical_validation_handoff_card(state: dict[str, Any]) -> None:
+def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
     tone = str(state.get("tone") or "neutral")
     status = escape(str(state.get("status_label") or "-"))
     summary = escape(str(state.get("summary") or "-"))
+    action_text = escape(str(state.get("action_text") or "-"))
     score = escape(f"{float(state.get('score') or 0.0):.1f} / 10")
     reason_title = escape(str(state.get("reason_title") or "상태"))
     reasons = list(state.get("display_reasons") or [])
     criteria = list(state.get("criteria") or [])
+    action_label = "등록 가능" if bool(state.get("can_submit")) else "기준 확인 필요"
+    action_detail = (
+        "아래 버튼을 누르면 이 결과를 Practical Validation이 읽는 current selection source로 등록합니다."
+        if bool(state.get("can_submit"))
+        else "막는 항목이 남아 있으면 source 등록 버튼은 비활성화됩니다."
+    )
     reason_items = "".join(f"<li>{escape(str(reason))}</li>" for reason in reasons)
     criteria_items = "".join(
         '<div class="bt-handoff-chip bt-handoff-chip-{tone}">'
@@ -756,158 +767,238 @@ def _render_practical_validation_handoff_card(state: dict[str, Any]) -> None:
     st.markdown(
         """
         <style>
-          .bt-handoff-card {
-            border: 1px solid rgba(49, 51, 63, 0.16);
-            border-left: 5px solid #64748b;
+          .bt-handoff-panel {
+            --bt-handoff-accent: #64748b;
+            --bt-handoff-soft: rgba(100, 116, 139, 0.10);
+            border-left: 4px solid var(--bt-handoff-accent);
+            border-top: 1px solid rgba(148, 163, 184, 0.24);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.24);
             border-radius: 8px;
-            padding: 1rem 1.05rem;
-            margin: 0.35rem 0 0.85rem 0;
-            background: #ffffff;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            padding: 1.1rem 1.2rem;
+            margin: 1rem 0 0.6rem 0;
+            background: linear-gradient(90deg, var(--bt-handoff-soft), rgba(255, 255, 255, 0));
           }
-          .bt-handoff-positive { border-left-color: #0f766e; background: #f8fffd; }
-          .bt-handoff-warning { border-left-color: #b45309; background: #fffaf0; }
-          .bt-handoff-danger { border-left-color: #b91c1c; background: #fffafa; }
+          .bt-handoff-panel--positive {
+            --bt-handoff-accent: #0f8f83;
+            --bt-handoff-soft: rgba(15, 143, 131, 0.10);
+          }
+          .bt-handoff-panel--warning {
+            --bt-handoff-accent: #b45309;
+            --bt-handoff-soft: rgba(180, 83, 9, 0.10);
+          }
+          .bt-handoff-panel--danger {
+            --bt-handoff-accent: #b42318;
+            --bt-handoff-soft: rgba(180, 35, 24, 0.10);
+          }
           .bt-handoff-head {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
-            gap: 0.65rem;
-            margin-bottom: 0.75rem;
+            gap: 0.85rem;
+            margin-bottom: 0.9rem;
+          }
+          .bt-handoff-kicker {
+            color: var(--bt-handoff-accent);
+            font-size: 0.88rem;
+            font-weight: 800;
+            margin-bottom: 0.24rem;
           }
           .bt-handoff-title {
-            font-size: 1.02rem;
-            font-weight: 750;
+            font-size: 1.2rem;
+            font-weight: 800;
             line-height: 1.35;
-            color: #111827;
+            color: var(--text-color);
+            margin: 0;
           }
           .bt-handoff-status {
-            padding: 0.26rem 0.58rem;
+            padding: 0.34rem 0.72rem;
             border-radius: 999px;
-            border: 1px solid rgba(49, 51, 63, 0.16);
-            font-size: 0.84rem;
-            font-weight: 750;
-            color: #111827;
-            background: #f8fafc;
+            border: 1px solid var(--bt-handoff-accent);
+            font-size: 0.86rem;
+            font-weight: 800;
+            color: var(--bt-handoff-accent);
+            background: rgba(255, 255, 255, 0.76);
           }
           .bt-handoff-main {
             display: grid;
             grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
-            gap: 0.8rem;
+            gap: 0.9rem;
             align-items: stretch;
           }
           .bt-handoff-summary {
-            font-size: 0.94rem;
-            line-height: 1.45;
-            color: #334155;
+            font-size: 1rem;
+            line-height: 1.55;
+            color: var(--text-color);
+            opacity: 0.74;
           }
           .bt-handoff-score {
-            margin-top: 0.55rem;
-            font-weight: 750;
-            color: #111827;
+            margin-top: 0.58rem;
+            font-weight: 800;
+            color: var(--text-color);
           }
           .bt-handoff-chips {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 0.5rem;
-            margin-top: 0.75rem;
+            margin-top: 0.82rem;
           }
           .bt-handoff-chip {
-            border: 1px solid rgba(49, 51, 63, 0.14);
+            border-right: 1px solid rgba(148, 163, 184, 0.22);
+            border-top: 1px solid rgba(148, 163, 184, 0.20);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.20);
+            border-left: 0;
             border-radius: 8px;
             padding: 0.62rem 0.68rem;
-            background: #ffffff;
+            background: var(--secondary-background-color);
             min-width: 0;
           }
-          .bt-handoff-chip-positive { border-color: rgba(15, 118, 110, 0.24); }
-          .bt-handoff-chip-danger { border-color: rgba(185, 28, 28, 0.24); }
+          .bt-handoff-chip-positive { border-top-color: rgba(15, 143, 131, 0.32); }
+          .bt-handoff-chip-danger { border-top-color: rgba(180, 35, 24, 0.32); }
           .bt-handoff-chip-label {
             display: block;
             font-size: 0.78rem;
-            color: #64748b;
-            font-weight: 650;
+            color: var(--text-color);
+            opacity: 0.68;
+            font-weight: 800;
             margin-bottom: 0.2rem;
           }
           .bt-handoff-chip-value {
             display: block;
             font-size: 0.96rem;
-            font-weight: 750;
-            color: #111827;
+            font-weight: 800;
+            color: var(--text-color);
             overflow-wrap: anywhere;
           }
           .bt-handoff-reasons {
             border-radius: 8px;
-            background: rgba(248, 250, 252, 0.9);
-            border: 1px solid rgba(49, 51, 63, 0.12);
-            padding: 0.72rem 0.82rem;
+            background: var(--secondary-background-color);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            padding: 0.76rem 0.86rem;
           }
           .bt-handoff-reason-title {
             font-size: 0.84rem;
-            color: #64748b;
-            font-weight: 700;
+            color: var(--bt-handoff-accent);
+            font-weight: 800;
             margin-bottom: 0.4rem;
           }
           .bt-handoff-reasons ul {
             margin: 0;
             padding-left: 1.05rem;
-            color: #334155;
+            color: var(--text-color);
+            opacity: 0.78;
             line-height: 1.45;
             font-size: 0.92rem;
+          }
+          .bt-handoff-action {
+            display: grid;
+            grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.2fr);
+            gap: 0.9rem;
+            margin-top: 0.95rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.24);
+          }
+          .bt-handoff-action-label {
+            color: var(--bt-handoff-accent);
+            font-size: 0.88rem;
+            font-weight: 800;
+            margin-bottom: 0.18rem;
+          }
+          .bt-handoff-action-text {
+            color: var(--text-color);
+            font-size: 1.02rem;
+            font-weight: 800;
+            line-height: 1.35;
+          }
+          .bt-handoff-boundary {
+            color: var(--text-color);
+            opacity: 0.76;
+            font-size: 0.92rem;
+            line-height: 1.45;
+          }
+          .bt-handoff-action-hint {
+            min-height: 2.45rem;
+            display: flex;
+            align-items: center;
+            border-left: 4px solid var(--bt-handoff-accent);
+            background: var(--bt-handoff-soft);
+            border-radius: 8px;
+            padding: 0.58rem 0.72rem;
+            color: var(--text-color);
+            opacity: 0.76;
+            font-size: 0.92rem;
+            line-height: 1.4;
+          }
+          .bt-handoff-action-hint--positive {
+            --bt-handoff-accent: #0f8f83;
+            --bt-handoff-soft: rgba(15, 143, 131, 0.10);
+          }
+          .bt-handoff-action-hint--warning {
+            --bt-handoff-accent: #b45309;
+            --bt-handoff-soft: rgba(180, 83, 9, 0.10);
+          }
+          .bt-handoff-action-hint--danger {
+            --bt-handoff-accent: #b42318;
+            --bt-handoff-soft: rgba(180, 35, 24, 0.10);
           }
           @media (max-width: 760px) {
             .bt-handoff-main { grid-template-columns: 1fr; }
             .bt-handoff-chips { grid-template-columns: 1fr; }
+            .bt-handoff-action { grid-template-columns: 1fr; }
           }
         </style>
         """,
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="bt-handoff-card bt-handoff-{tone}">'
+        f'<section class="bt-handoff-panel bt-handoff-panel--{tone}">'
         f'<div class="bt-handoff-head">'
-        f'<div class="bt-handoff-title">2차 실전성 검증 Handoff</div>'
+        f"<div><div class=\"bt-handoff-kicker\">2차 단계 진입 판단</div>"
+        f'<h4 class="bt-handoff-title">2차 실전성 검증 Handoff</h4></div>'
         f'<div class="bt-handoff-status">{status}</div>'
         f"</div>"
         f'<div class="bt-handoff-main">'
         f'<div><div class="bt-handoff-summary">{summary}</div>'
-        f'<div class="bt-handoff-score">Candidate Readiness {score}</div>'
+        f'<div class="bt-handoff-score">진입 준비도 {score}</div>'
         f'<div class="bt-handoff-chips">{criteria_items}</div></div>'
         f'<div class="bt-handoff-reasons"><div class="bt-handoff-reason-title">{reason_title}</div>'
         f"<ul>{reason_items}</ul></div>"
         f"</div>"
-        f"</div>",
+        f'<div class="bt-handoff-action">'
+        f"<div>"
+        f'<div class="bt-handoff-action-label">{escape(action_label)}</div>'
+        f'<div class="bt-handoff-action-text">{action_text}</div>'
+        f"</div>"
+        f'<div class="bt-handoff-boundary">{escape(action_detail)} '
+        f"이 단계는 검증 source 등록만 수행합니다. 최종 선택, 투자 추천, live 승인, 주문 지시는 발생하지 않습니다.</div>"
+        f"</div>"
+        f"</section>",
         unsafe_allow_html=True,
     )
 
 
 def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
     state = _build_practical_validation_handoff_state(bundle)
-    _render_practical_validation_handoff_card(state)
+    _render_practical_validation_handoff_panel(state)
 
-    with st.container(border=True):
-        st.markdown("##### 2차 실전성 검증 Handoff")
-        st.caption(
-            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 current selection source로 등록합니다."
+    handoff_cols = st.columns([0.28, 0.72], gap="small")
+    with handoff_cols[0]:
+        if st.button(
+            str(state.get("button_label") or "2차 검증으로 보내기"),
+            key="latest_run_candidate_review_draft",
+            width="stretch",
+            disabled=not bool(state["can_submit"]),
+            type="primary" if bool(state["can_submit"]) else "secondary",
+        ):
+            _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+            st.rerun()
+    with handoff_cols[1]:
+        st.markdown(
+            f'<div class="bt-handoff-action-hint bt-handoff-action-hint--{escape(str(state.get("tone") or "neutral"))}">'
+            f'Practical Validation에서 provider, data coverage, realism, robustness를 이어서 확인합니다.'
+            f"</div>",
+            unsafe_allow_html=True,
         )
-        handoff_cols = st.columns([0.3, 0.7], gap="small")
-        with handoff_cols[0]:
-            if st.button(
-                "실전성 검증으로 보내기",
-                key="latest_run_candidate_review_draft",
-                use_container_width=True,
-                disabled=not bool(state["can_submit"]),
-                type="primary" if bool(state["can_submit"]) else "secondary",
-            ):
-                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
-                st.rerun()
-        with handoff_cols[1]:
-            if bool(state["can_submit"]):
-                st.success(str(state["action_text"]))
-            else:
-                st.warning(str(state["action_text"]))
-            st.markdown("`Practical Validation`에서 provider / data coverage / realism / robustness를 확인합니다.")
-            st.caption("최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
 
 
 def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:

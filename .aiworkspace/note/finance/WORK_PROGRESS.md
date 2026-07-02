@@ -5440,3 +5440,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `docs/superpowers/plans/2026-07-01-backtest-final-boundary-refactor.md` 기준으로 runtime package, runners, stores/read_models, Single Strategy forms, Portfolio Mix Builder, Practical Validation, Final Review package split을 순차 완료했다.
   - 각 차수는 development -> QA -> commit으로 닫았고, V8에서 durable docs / root logs / task logs / full QA / Browser QA를 마무리했다.
   - 상세 완료 구조와 QA 기록은 `.aiworkspace/note/finance/tasks/active/backtest-boundary-refactor-v1/STATUS.md`와 `RUNS.md`를 보면 된다.
+- Backtest Handoff UI Integrated V1 2026-07-02:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-ui-integrated-v1-20260702/`에서 Latest Backtest Run의 `2차 실전성 검증 Handoff` 중복 UI를 단일 custom panel로 통합했다.
+  - gate 판정, Practical Validation source 저장 경로, registry / saved JSONL, strategy runtime은 변경하지 않았다.
+  - 후속 V2 후보는 handoff readiness policy의 service extraction과 `Policy Signal Meta` 역할 정리다.

@@ -7547,6 +7547,28 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["실행 원천"]["value"], "통과")
         self.assertEqual(criteria["검증 원천"]["value"], "통과")
 
+    def test_practical_validation_handoff_uses_single_integrated_action_surface(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        self.assertIn("def _render_practical_validation_handoff_panel", source)
+
+        panel_start = source.index("def _render_practical_validation_handoff_panel")
+        panel_body = source[panel_start:]
+        panel_body = panel_body[: panel_body.index("\ndef ", 1)]
+        action_start = source.index("def _render_practical_validation_next_action")
+        action_body = source[action_start:]
+        action_body = action_body[: action_body.index("\ndef ", 1)]
+
+        self.assertIn("_render_practical_validation_handoff_panel(state)", action_body)
+        self.assertIn("bt-handoff-panel", panel_body)
+        self.assertIn("bt-handoff-action", panel_body)
+        self.assertIn("bt-handoff-boundary", panel_body)
+        self.assertIn("2차 단계 진입 판단", panel_body)
+        self.assertIn("검증 source 등록만 수행합니다", panel_body)
+        self.assertNotIn("_render_practical_validation_handoff_card(state)", action_body)
+        self.assertNotIn("with st.container(border=True)", action_body)
+        self.assertNotIn('st.markdown("##### 2차 실전성 검증 Handoff")', action_body)
+        self.assertNotIn("bt-handoff-card", source)
+
     def test_data_trust_brief_model_compacts_basis_and_warning_queue(self) -> None:
         from app.web.backtest_result_display import _build_data_trust_brief
 

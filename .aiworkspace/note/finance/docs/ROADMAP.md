@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-25
+Last Verified: 2026-07-02
 
 ## Current State After Master Merge
 
@@ -28,10 +28,11 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`
-- 목적: `Workspace > Overview`의 남은 `legacy_dashboard.py` dependency를 helper cluster 단위로 제거하고, active page / tab / helper ownership을 명시적 모듈 구조로 닫는다.
-- 주요 변경: Market Context / Events / Sentiment / Market Movers / Futures Macro helper ownership을 `app/web/overview/*_helpers.py`로 옮기고, `app/web/overview/legacy_dashboard.py`를 삭제했다. `app/web/overview_dashboard.py`는 필요한 compatibility export만 명시적으로 제공한다.
-- 이번 차수에서 하지 않은 일: Overview product flow 재설계, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Latest completed task: `.aiworkspace/note/finance/tasks/active/backtest-handoff-ui-integrated-v1-20260702/`
+- 목적: `Run Backtest` 직후 `2차 실전성 검증 Handoff`가 custom card와 별도 Streamlit container로 중복 표시되는 문제를 정리한다.
+- 주요 변경: Latest Backtest Run 흐름에서 handoff 상태, blocker / review reason, source 등록 boundary, action hint를 단일 custom panel로 통합했다.
+- 이번 차수에서 하지 않은 일: promotion / execution / validation gate 판정 변경, Practical Validation source 저장 경로 변경, registry / saved JSONL / strategy runtime 변경.
+- Recent Overview cleanup task: `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`
 - Previous completed structure task: `.aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/`
 - 목적: Overview primary tab entrypoint가 직접 legacy helper를 호출하지 않도록, Market Context / Events / Futures Macro / Market Movers / Sentiment 각각의 tab-local helper bridge를 만든다.
 - 주요 변경: `app/web/overview/{market_context,events,futures_macro,market_movers,sentiment}_helpers.py`를 추가하고 active tab entry modules가 semantic helper functions를 호출하게 했다.

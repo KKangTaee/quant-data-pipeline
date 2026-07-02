@@ -8393,3 +8393,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: V1 경계 helper 위에 물리적 package 구조를 완성해 UI, service, runtime runner, JSONL store, read model ownership을 더 명확하게 나눠야 함.
 - Analysis result: 최종 구조는 `app/runtime/backtest/` package, `runners/`, `stores/`, `read_models/`, `app/web/backtest_single_forms/`, `backtest_compare/`, `backtest_practical_validation/`, `backtest_final_review/`로 정리했다. V8 중 legacy facade monkeypatch 호환이 깨지는 것을 발견해 runtime hook bridge로 복원했다.
 - Follow-up: V2-V8 완료. 남은 후보는 `backtest_common.py` 같은 transitional shared helper의 작은 후속 정리이며, strategy math / validation threshold / registry row format / provider DB semantics는 바꾸지 않았다.
+
+### 2026-07-02 - Backtest Handoff UI를 단일 action surface로 정리한다
+
+- User request: 사용자가 `2차 실전성 검증 Handoff`가 프로토타입처럼 보인다고 지적하고, 실전형 UI 개선과 gate 중복 / 파편화 리뷰를 요청한 뒤 V1 개선 진행을 승인함.
+- Interpreted goal: 우선 화면 혼선을 줄이되, gate policy 의미 변경은 별도 V2로 분리해야 함.
+- Analysis result: 현재 버튼 활성화는 latest result bundle meta의 `promotion_decision`, execution source checks, validation source checks를 `_build_next_step_readiness_evaluation`으로 묶어 판단한다. UI 문제는 custom card와 별도 Streamlit container가 같은 handoff를 반복하는 구조였다.
+- Follow-up: V1에서는 중복 container / heading을 제거하고 단일 custom handoff panel로 통합한다. V2 후보는 readiness evaluation service extraction, duplicated promotion/source-check display 정리, `Policy Signal Meta` 역할 재정의다.
