@@ -15,6 +15,7 @@ from app.services.backtest_result_read_model import (
 from app.services.backtest_handoff_readiness import (
     build_handoff_gate_summary,
     build_next_step_readiness_evaluation,
+    build_policy_signal_inventory,
 )
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_ui_components import (
@@ -2177,6 +2178,183 @@ def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(candidate_status_rows), use_container_width=True, hide_index=True)
 
 def _render_real_money_details(bundle: dict[str, Any]) -> None:
+    meta = bundle.get("meta") or {}
+    if not meta.get("real_money_hardening"):
+        st.caption("이 결과에는 promotion policy signal hardening 정보가 없습니다.")
+        return
+
+    result_df = bundle.get("result_df")
+    benchmark_chart_df = bundle.get("benchmark_chart_df")
+    benchmark_summary_df = bundle.get("benchmark_summary_df")
+    inventory = build_policy_signal_inventory(meta)
+    evaluation = build_next_step_readiness_evaluation(meta)
+    rows = list(inventory.get("rows") or [])
+    blocker_rows = [row for row in rows if row.get("effect") == "block"]
+    review_rows = [row for row in rows if row.get("effect") == "review"]
+    context_rows = [row for row in rows if row.get("effect") == "context"]
+
+    def _effect_label(value: Any) -> str:
+        mapping = {
+            "block": "먼저 해결",
+            "review": "2차 확인",
+            "pass": "통과",
+            "context": "참고",
+        }
+        return mapping.get(str(value or "").strip().lower(), str(value or "-"))
+
+    def _policy_rows(frame_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {
+                "구분": row.get("group") or "-",
+                "신호": row.get("signal") or "-",
+                "상태": row.get("status") or "-",
+                "판정": _effect_label(row.get("effect")),
+                "다음 위치": row.get("next_surface") or "-",
+                "의미": row.get("meaning") or "-",
+            }
+            for row in frame_rows
+        ]
+
+    def _value_list_caption(prefix: str, values: list[Any] | tuple[Any, ...] | None) -> None:
+        if values:
+            st.caption(prefix + ": " + ", ".join(f"`{value}`" for value in list(values)))
+
+    def _optional_pct(value: Any) -> str:
+        return f"{float(value):.2%}" if value is not None else "-"
+
+    _render_policy_signal_summary_panel(meta)
+
+    st.markdown("##### 진입 기준과 2차 확인 항목")
+    st.caption(
+        "이 영역은 버튼을 막는 source blocker와 Practical Validation에서 확인할 review 항목만 남겨 보여줍니다. "
+        "실전 승격 판단, 실행 preview, raw policy 숫자는 아래 상세 근거에 접어 두었습니다."
+    )
+    entry_ready = bool(evaluation.get("can_enter_practical_validation"))
+    entry_tone = "positive" if entry_ready and not review_rows else "warning" if entry_ready else "danger"
+    render_status_card_grid(
+        [
+            {
+                "title": "2차 진입",
+                "value": "가능" if entry_ready else "보류",
+                "detail": str(evaluation.get("route_label") or "-"),
+                "tone": entry_tone,
+            },
+            {
+                "title": "먼저 해결",
+                "value": str(len(blocker_rows)),
+                "detail": "source 등록을 막는 항목",
+                "tone": "danger" if blocker_rows else "positive",
+            },
+            {
+                "title": "2차 확인",
+                "value": str(len(review_rows)),
+                "detail": "Practical Validation에서 볼 항목",
+                "tone": "warning" if review_rows else "positive",
+            },
+            {
+                "title": "참고 신호",
+                "value": str(len(context_rows)),
+                "detail": "버튼을 직접 막지 않는 preview",
+                "tone": "neutral",
+            },
+        ]
+    )
+
+    primary_rows = [row for row in rows if row.get("effect") in {"block", "review", "pass"}]
+    if primary_rows:
+        st.dataframe(pd.DataFrame(_policy_rows(primary_rows)), use_container_width=True, hide_index=True)
+
+    if review_rows:
+        st.markdown("##### Practical Validation에서 먼저 볼 항목")
+        st.dataframe(pd.DataFrame(_policy_rows(review_rows)), use_container_width=True, hide_index=True)
+
+    if context_rows:
+        with st.expander("참고 preview 보기", expanded=False):
+            st.dataframe(pd.DataFrame(_policy_rows(context_rows)), use_container_width=True, hide_index=True)
+
+    with st.expander("성과 / Benchmark 근거", expanded=False):
+        metric_rows: list[dict[str, Any]] = []
+        for label, value in [
+            ("Benchmark", meta.get("benchmark_label") or meta.get("benchmark_ticker") or meta.get("benchmark_contract")),
+            ("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No"),
+            ("Benchmark CAGR", _optional_pct(meta.get("benchmark_cagr"))),
+            ("Net CAGR Spread", _optional_pct(meta.get("net_cagr_spread"))),
+            ("Benchmark Coverage", _optional_pct(meta.get("benchmark_row_coverage"))),
+            ("Validation Status", str(meta.get("validation_status") or "normal").upper()),
+            ("Rolling Review", str(meta.get("rolling_review_status") or "-").upper()),
+            ("Split-Period Check", str(meta.get("out_of_sample_review_status") or "-").upper()),
+        ]:
+            metric_rows.append({"항목": label, "값": value})
+        st.dataframe(pd.DataFrame(metric_rows), use_container_width=True, hide_index=True)
+        if benchmark_chart_df is not None and result_df is not None:
+            strategy_line = (
+                bundle["chart_df"][["Date", "Total Balance"]]
+                .rename(columns={"Total Balance": bundle["strategy_name"]})
+                .set_index("Date")
+            )
+            benchmark_line = (
+                benchmark_chart_df[["Date", "Benchmark Total Balance"]]
+                .rename(
+                    columns={
+                        "Benchmark Total Balance": str(
+                            meta.get("benchmark_label") or meta.get("benchmark_ticker") or "Benchmark"
+                        )
+                    }
+                )
+                .set_index("Date")
+            )
+            overlay_df = pd.concat([strategy_line, benchmark_line], axis=1).sort_index()
+            _render_compare_altair_chart(
+                overlay_df,
+                title="Net Strategy vs Benchmark",
+                y_title="Total Balance",
+                show_end_markers=True,
+            )
+            st.caption("전략은 비용 반영 후 net 곡선이고, benchmark는 reference curve입니다.")
+
+    with st.expander("실행 / 비용 / 유동성 근거", expanded=False):
+        turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+        net_cost_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+        execution_rows = [
+            {"항목": "Transaction Cost", "값": f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps"},
+            {"항목": "Turnover Estimate", "값": turnover_status or "-"},
+            {"항목": "Net Cost Curve", "값": net_cost_status or "-"},
+            {"항목": "Avg Turnover", "값": _optional_pct(meta.get("avg_turnover"))},
+            {"항목": "Estimated Cost Total", "값": f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}" if meta.get("estimated_cost_total") is not None else "-"},
+            {"항목": "Liquidity Policy", "값": str(meta.get("liquidity_policy_status") or "-").upper()},
+            {"항목": "Liquidity Clean Coverage", "값": _optional_pct(meta.get("liquidity_clean_coverage"))},
+            {"항목": "ETF Operability", "값": str(meta.get("etf_operability_status") or "-").upper()},
+            {"항목": "Guardrail Policy", "값": str(meta.get("guardrail_policy_status") or "-").upper()},
+        ]
+        st.dataframe(pd.DataFrame(execution_rows), use_container_width=True, hide_index=True)
+        _value_list_caption("Liquidity policy signals", meta.get("liquidity_policy_watch_signals"))
+        _value_list_caption("ETF operability signals", meta.get("etf_operability_watch_signals"))
+        _value_list_caption("Guardrail policy signals", meta.get("guardrail_policy_watch_signals"))
+
+    with st.expander("기술 원천 보기", expanded=False):
+        st.dataframe(pd.DataFrame(evaluation.get("criteria_rows") or []), use_container_width=True, hide_index=True)
+        if result_df is not None and "Estimated Cost" in result_df.columns:
+            detail_cols = [
+                column
+                for column in [
+                    "Date",
+                    "Gross Total Balance",
+                    "Total Balance",
+                    "Turnover",
+                    "Estimated Cost",
+                    "Cumulative Estimated Cost",
+                ]
+                if column in result_df.columns
+            ]
+            if detail_cols:
+                st.markdown("##### Cost Detail Preview")
+                st.dataframe(result_df[detail_cols].head(12), use_container_width=True, hide_index=True)
+        if benchmark_summary_df is not None:
+            st.markdown("##### Benchmark Summary")
+            st.dataframe(benchmark_summary_df, use_container_width=True, hide_index=True)
+
+
+def _render_real_money_details_legacy(bundle: dict[str, Any]) -> None:
     meta = bundle.get("meta") or {}
     if not meta.get("real_money_hardening"):
         st.caption("이 결과에는 Phase 12 promotion policy signal hardening 정보가 없습니다.")
