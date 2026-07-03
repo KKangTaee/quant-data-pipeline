@@ -9831,6 +9831,22 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("nonce: Date.now()", react_source)
         self.assertIn("onClick={() => emitAction(action)}", react_source)
 
+    def test_market_movers_react_action_strip_replaces_legacy_buttons_when_rendered(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("def _render_market_movers_react_refresh_companion", helper_source)
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("react_event = _render_market_movers_react_summary(snapshot, controls=controls)", render_body)
+        self.assertIn("_dispatch_market_movers_react_event(react_event, controls=controls)", render_body)
+        self.assertIn("if react_event is None:", render_body)
+        self.assertIn("_render_market_movers_refresh_bar(", render_body)
+        self.assertIn("_render_market_movers_react_refresh_companion(", render_body)
+        self.assertLess(render_body.index("if react_event is None:"), render_body.index("_render_market_movers_refresh_bar("))
+        self.assertLess(
+            render_body.index("_render_market_movers_refresh_bar("),
+            render_body.index("_render_market_movers_react_refresh_companion("),
+        )
+
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")

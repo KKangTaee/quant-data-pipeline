@@ -24,3 +24,9 @@
 - `_dispatch_market_movers_react_event` intentionally reuses the same `run_overview_*` facade functions and session result keys as the previous Streamlit buttons.
 - Event nonce consumption is required because custom component values can remain available after a rerun; without it, a clicked action could repeat on the next render.
 - Browser QA should use `reload` for bridge checks unless a later phase explicitly approves a live data collection click.
+
+## Phase 4 Action Integration
+
+- `render_market_movers_snapshot` now treats `react_event is None` as the fallback signal. Only that path renders the legacy Streamlit refresh bar.
+- The React-rendered path calls `_render_market_movers_react_refresh_companion` so action results and daily auto-refresh mode remain available without duplicating the main action buttons.
+- This phase intentionally does not migrate the top filter controls. Coverage, period, sector, top N, and ranking mode remain Streamlit-owned until the Phase 5 decision.

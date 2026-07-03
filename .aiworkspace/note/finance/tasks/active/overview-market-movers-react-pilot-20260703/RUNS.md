@@ -61,3 +61,15 @@
 - Browser QA: Streamlit on `http://localhost:8531`, Overview > Market Movers.
   - Result: passed; clicked only the React iframe `화면 새로고침` action, saw `Last DB snapshot reload request`, iframe remained 1174x274 and non-empty, console errors were empty.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase3.png` (generated/local artifact; not staged).
+
+## Phase 4 - 2026-07-03
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_action_strip_replaces_legacy_buttons_when_rendered`
+  - Result: failed as expected before the React-rendered path guarded the legacy refresh bar.
+- GREEN: same focused command.
+  - Result: passed.
+- `uv run python -m py_compile app/web/overview/market_movers_helpers.py`
+  - Result: passed.
+- Browser QA: Streamlit on `http://localhost:8531`, Overview > Market Movers.
+  - Result: passed; parent Streamlit buttons matching `일중 스냅샷 갱신`, `유니버스 갱신`, and `화면 새로고침` were `[]`, iframe still included those action labels, console errors were empty.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase4.png` (generated/local artifact; not staged).

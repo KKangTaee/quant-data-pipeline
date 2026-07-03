@@ -1866,6 +1866,33 @@ def _render_market_movers_refresh_bar(
     )
 
 
+def _render_market_movers_react_refresh_companion(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+) -> None:
+    if controls.period == "daily":
+        selected_mode = "manual"
+        auto_supported = controls.coverage in BROWSER_AUTO_REFRESH_JOB_CONFIG
+        if auto_supported:
+            control_cols = st.columns([0.75, 2.25], gap="small", vertical_alignment="bottom")
+            selected_mode = _select_market_refresh_mode(control_cols[0], auto_supported=True)
+        if selected_mode == "auto" and auto_supported:
+            _render_market_auto_refresh_summary(universe_code=controls.coverage)
+        if controls.coverage == "SP500":
+            _render_market_job_result("overview_sp500_universe_result")
+        if controls.coverage == "NASDAQ":
+            st.caption(
+                "Nasdaq coverage는 Nasdaq Symbol Directory current listing snapshot 기준입니다. "
+                "Nasdaq Composite 또는 Nasdaq-100 historical membership proof가 아닙니다."
+            )
+            _render_market_job_result("overview_nasdaq_symbol_directory_result")
+        _render_market_job_result(f"overview_{controls.coverage.lower()}_intraday_result")
+        return
+
+    _render_market_job_result(f"overview_{controls.coverage.lower()}_{controls.period}_eod_history_result")
+
+
 def _rank_token(value: Any, fallback: int) -> str:
     try:
         numeric = float(value)
@@ -3007,12 +3034,15 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
     )
     react_event = _render_market_movers_react_summary(snapshot, controls=controls)
     _dispatch_market_movers_react_event(react_event, controls=controls)
-    _render_market_movers_refresh_bar(
-        snapshot,
-        universe_code=controls.coverage,
-        universe_limit=controls.universe_limit,
-        period=controls.period,
-    )
+    if react_event is None:
+        _render_market_movers_refresh_bar(
+            snapshot,
+            universe_code=controls.coverage,
+            universe_limit=controls.universe_limit,
+            period=controls.period,
+        )
+    else:
+        _render_market_movers_react_refresh_companion(snapshot, controls=controls)
     _render_market_movers_coverage_trust(snapshot, controls=controls)
     _render_market_movers_snapshot_panel(
         snapshot,

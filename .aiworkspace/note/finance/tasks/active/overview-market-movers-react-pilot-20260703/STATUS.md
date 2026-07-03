@@ -28,3 +28,11 @@
 - Python dispatches React action events through the existing Overview action facade and the same session result keys used by the Streamlit buttons.
 - React events are consumed once by nonce-backed session tokens to avoid repeated execution after Streamlit reruns.
 - Browser QA used only the safe `화면 새로고침` action; provider collection actions were not clicked.
+
+## Phase 4 - Action Strip Integration
+
+- Status: complete.
+- When the React workbench renders, the legacy Streamlit refresh button bar is no longer rendered.
+- The fallback path still uses the legacy refresh bar when the React build is unavailable.
+- A lightweight companion path keeps existing action result messages and daily auto-refresh mode support available without duplicating action buttons.
+- Browser QA confirmed parent Streamlit action buttons were removed while React iframe action buttons remained visible.
