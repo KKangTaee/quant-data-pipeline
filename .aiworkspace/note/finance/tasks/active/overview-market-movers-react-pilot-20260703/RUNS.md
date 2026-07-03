@@ -73,3 +73,15 @@
 - Browser QA: Streamlit on `http://localhost:8531`, Overview > Market Movers.
   - Result: passed; parent Streamlit buttons matching `일중 스냅샷 갱신`, `유니버스 갱신`, and `화면 새로고침` were `[]`, iframe still included those action labels, console errors were empty.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase4.png` (generated/local artifact; not staged).
+
+## Phase 5 - 2026-07-03
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_controls_remain_streamlit_owned_for_pilot`
+  - Result: failed as expected with missing `control_ownership`.
+- GREEN: same focused command.
+  - Result: passed.
+- `npm run build`
+  - Result: passed; generated `component_static/index.html`, `component_static/assets/index-CqmWYMqX.css`, and `component_static/assets/index-BXFIdWF2.js`.
+- Browser QA: Streamlit on `http://localhost:8531`, Overview > Market Movers.
+  - Result: passed; iframe rendered `data-control-mode="streamlit_owned"`, schema `market_movers_react_workbench_v1`, width 1174, height 274, and no console errors.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase5.png` (generated/local artifact; not staged).

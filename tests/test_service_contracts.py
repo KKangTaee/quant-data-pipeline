@@ -9735,6 +9735,39 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["universe_code"], "SP500")
         self.assertEqual(plan["universe_limit"], 500)
 
+    def test_market_movers_react_controls_remain_streamlit_owned_for_pilot(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}}
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(payload["control_ownership"]["mode"], "streamlit_owned")
+        self.assertEqual(payload["control_ownership"]["migrated_controls"], ["summary_actions"])
+        self.assertEqual(
+            payload["control_ownership"]["deferred_controls"],
+            ["coverage", "period", "sector", "top_n", "mode", "refresh_mode"],
+        )
+        self.assertIn("control_ownership", react_source)
+        self.assertIn("data-control-mode={payload.control_ownership.mode}", react_source)
+
     def test_market_movers_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
         from app.web.overview.market_movers_react_component import (
             MARKET_MOVERS_REACT_COMPONENT_NAME,

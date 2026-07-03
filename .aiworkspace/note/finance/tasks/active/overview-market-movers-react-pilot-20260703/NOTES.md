@@ -30,3 +30,9 @@
 - `render_market_movers_snapshot` now treats `react_event is None` as the fallback signal. Only that path renders the legacy Streamlit refresh bar.
 - The React-rendered path calls `_render_market_movers_react_refresh_companion` so action results and daily auto-refresh mode remain available without duplicating the main action buttons.
 - This phase intentionally does not migrate the top filter controls. Coverage, period, sector, top N, and ranking mode remain Streamlit-owned until the Phase 5 decision.
+
+## Phase 5 Controls Decision
+
+- Decision: keep top filters Streamlit-owned in this pilot. They feed `_load_market_movers_snapshot` before the React workbench payload is built, so moving them now would require a second pre-load component and a separate state synchronization pass.
+- Applied contract: `control_ownership.mode == "streamlit_owned"`, `migrated_controls == ["summary_actions"]`, and deferred controls are `coverage`, `period`, `sector`, `top_n`, `mode`, and `refresh_mode`.
+- If a later pass migrates filters, it should start by introducing a dedicated pre-snapshot controls component rather than expanding the summary/action workbench payload in place.

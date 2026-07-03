@@ -8463,3 +8463,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 수집 동작을 바꾸기보다 `Workspace > Ingestion` UI와 job wrapper의 책임을 package 단위로 나눠 이후 중복 수집 기능 제거 / 보강 / 진단 개선을 안전하게 해야 함.
 - Analysis result: `app/web/ingestion_console.py`가 5,370줄이었고 UI shell, action registry, result summary, dispatcher, section renderer가 섞여 있었다. 1~6차에서 facade, registry, guide/style/result, dispatcher, section renderer, job common helper로 물리 분리했다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/ingestion-console-module-split-v1-20260701/`에 있다. 후속은 `app/jobs/ingestion_jobs.py`를 domain별 jobs module로 더 나누는 작업이다.
+
+### 2026-07-03 - Market Movers에 React custom component pilot을 적용한다
+
+- User request: Overview > Market Movers만 먼저 진단하고, 버튼이 HTML UI와 따로 놀지 않게 React component 적용 방향을 0차부터 5차까지 순차 개발 / QA / commit으로 진행해 달라고 요청함.
+- Interpreted goal: Streamlit 전체를 Next.js로 바꾸지 않고, Market Movers summary/action strip만 custom component로 이관해 시각/상호작용 일관성을 검증해야 함.
+- Analysis result: React component는 summary와 action strip에 적합했고, action execution은 기존 Python facade가 계속 소유하는 구조가 안전했다. 상단 filters는 snapshot 로드 전 입력이라 이번 pilot에서는 `streamlit_owned`로 유지하는 것이 맞다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/`에 있다. 다른 Overview 탭 확장은 이 pilot QA 결과를 확인한 뒤 별도 phase로 잡는다.

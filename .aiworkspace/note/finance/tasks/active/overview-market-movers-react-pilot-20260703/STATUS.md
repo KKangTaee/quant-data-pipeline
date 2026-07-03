@@ -36,3 +36,11 @@
 - The fallback path still uses the legacy refresh bar when the React build is unavailable.
 - A lightweight companion path keeps existing action result messages and daily auto-refresh mode support available without duplicating action buttons.
 - Browser QA confirmed parent Streamlit action buttons were removed while React iframe action buttons remained visible.
+
+## Phase 5 - Controls Migration Decision
+
+- Status: complete.
+- Top filters remain Streamlit-owned for this pilot because they determine the snapshot before the React workbench payload exists.
+- Added `control_ownership` to the React payload and `data-control-mode="streamlit_owned"` to the rendered workbench section.
+- Marked `summary_actions` as migrated and `coverage`, `period`, `sector`, `top_n`, `mode`, and `refresh_mode` as deferred.
+- Browser QA confirmed the control ownership data attribute renders inside the iframe with no console errors.

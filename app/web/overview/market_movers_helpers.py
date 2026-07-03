@@ -400,6 +400,11 @@ def build_market_movers_react_workbench_payload(
             "top_n": controls.top_n,
             "mode": controls.mode,
         },
+        "control_ownership": {
+            "mode": "streamlit_owned",
+            "migrated_controls": ["summary_actions"],
+            "deferred_controls": ["coverage", "period", "sector", "top_n", "mode", "refresh_mode"],
+        },
         "actions": _market_movers_react_actions(controls=controls),
     }
 

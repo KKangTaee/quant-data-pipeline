@@ -28,6 +28,11 @@ export type MarketMoversWorkbenchPayload = {
     top_n: number;
     mode: string;
   };
+  control_ownership: {
+    mode: "streamlit_owned";
+    migrated_controls: string[];
+    deferred_controls: string[];
+  };
   actions: MarketMoverAction[];
 };
 
@@ -56,7 +61,11 @@ function MarketMoversWorkbench({ args }: Props) {
   };
 
   return (
-    <section className="mm-workbench" data-schema-version={payload.schema_version}>
+    <section
+      className="mm-workbench"
+      data-control-mode={payload.control_ownership.mode}
+      data-schema-version={payload.schema_version}
+    >
       <div className="mm-workbench__head">
         <div>
           <div className="mm-workbench__kicker">Market Movers</div>

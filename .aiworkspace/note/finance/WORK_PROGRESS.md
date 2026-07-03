@@ -5489,3 +5489,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/ingestion-console-module-split-v1-20260701/`에서 Ingestion script structure refactor를 1~6차로 진행했다.
   - `app/web/ingestion_console.py`는 compatibility facade가 되었고 active UI는 `app/web/ingestion/{page,registry,guides,styles,results,dispatcher,sections}.py`로 나뉘었다.
   - `app/jobs/ingestion/common.py`가 symbol parsing, normalized result, progress/status helper를 소유하고 `app/jobs/ingestion_jobs.py`는 기존 import path를 유지한다.
+- Overview Market Movers React Pilot 2026-07-03:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/`에서 0~5차를 순차 개발 / QA / commit으로 완료했다.
+  - React custom component가 Market Movers summary와 action strip을 렌더링하고, action은 기존 Overview Python facade와 session result key로 dispatch된다.
+  - Top filters는 이번 pilot에서 `streamlit_owned`로 고정했다. 필터 React migration은 별도 pre-snapshot controls component가 필요하다.
