@@ -42,3 +42,10 @@
 - User feedback showed that leaving `방식` below the React card made the UI feel less coherent even after action buttons moved into the card.
 - Correction: treat `refresh_mode` as part of the action strip, not as a top filter. It now lives in React while Coverage / Period / Sector / Top N / ranking mode remain Streamlit-owned.
 - React emits `set_refresh_mode` with a value and nonce. Python validates the value against the current coverage/period options before updating `overview_market_movers_refresh_mode`.
+
+## Phase 7 Filter Bar Integration
+
+- User approved moving the remaining top filters into the same Market Movers UI after Phase 6 made the action strip feel coherent.
+- Boundary decision: React owns rendering and interaction affordances only. Python owns session-state normalization, dynamic sector options, snapshot loading, provider/job execution, and rerun timing.
+- Fallback decision: if `component_static/index.html` is missing, `_render_market_movers_controls` still renders the legacy Streamlit filter row so local development and degraded component builds remain usable.
+- Coverage changes reset Sector to `All` because sector options are coverage-dependent.

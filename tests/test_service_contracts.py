@@ -9738,7 +9738,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["universe_limit"], 500)
 
     @patch("app.web.overview.market_movers_helpers.st")
-    def test_market_movers_react_controls_remain_streamlit_owned_for_pilot(self, mock_st: MagicMock) -> None:
+    def test_market_movers_react_filters_live_inside_workbench_card(self, mock_st: MagicMock) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
             build_market_movers_react_workbench_payload,
@@ -9759,18 +9759,36 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             controls=controls,
             exploration_mode="상승",
         )
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         react_source = Path(
             "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertEqual(payload["control_ownership"]["mode"], "streamlit_owned")
-        self.assertEqual(payload["control_ownership"]["migrated_controls"], ["summary_actions", "refresh_mode"])
+        self.assertEqual(payload["control_ownership"]["mode"], "python_state_react_ui")
         self.assertEqual(
-            payload["control_ownership"]["deferred_controls"],
+            payload["control_ownership"]["migrated_controls"],
+            ["coverage", "period", "sector", "top_n", "mode", "summary_actions", "refresh_mode"],
+        )
+        self.assertEqual(payload["control_ownership"]["deferred_controls"], [])
+        filter_controls = payload["filter_controls"]
+        self.assertTrue(filter_controls["visible"])
+        self.assertEqual(
+            [item["id"] for item in filter_controls["items"]],
             ["coverage", "period", "sector", "top_n", "mode"],
         )
+        coverage_control = filter_controls["items"][0]
+        self.assertEqual(coverage_control["label"], "Coverage")
+        self.assertEqual(coverage_control["value"], "SP500")
+        self.assertIn({"value": "SP500", "label": "S&P 500"}, coverage_control["options"])
         self.assertIn("control_ownership", react_source)
         self.assertIn("data-control-mode={payload.control_ownership.mode}", react_source)
+        self.assertIn("payload.filter_controls.visible", react_source)
+        self.assertIn('className="mm-workbench__filters"', react_source)
+
+        controls_body = helper_source[helper_source.index("def _render_market_movers_controls") :]
+        controls_body = controls_body[: controls_body.index("def render_market_movers_header")]
+        self.assertIn("market_movers_react_component_available()", controls_body)
+        self.assertIn("_market_movers_controls_from_session_state()", controls_body)
 
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_refresh_mode_lives_inside_action_strip(self, mock_st: MagicMock) -> None:
@@ -9845,6 +9863,71 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         mock_st.rerun.reset_mock()
         self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
         mock_st.rerun.assert_not_called()
+
+    @patch("app.web.overview.market_movers_helpers.load_overview_market_mover_sectors")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_filter_event_updates_python_state_once(
+        self,
+        mock_st: MagicMock,
+        mock_load_sectors: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="Technology",
+            top_n=20,
+            mode="top_gainers",
+        )
+        mock_load_sectors.return_value = ["Technology", "Healthcare"]
+        mock_st.session_state = {
+            "overview_market_movers_coverage": "SP500",
+            "overview_market_movers_sector": "Technology",
+        }
+        event = {"event": {"id": "set_control", "control": "coverage", "value": "NASDAQ", "nonce": 789}}
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+        self.assertEqual(mock_st.session_state["overview_market_movers_coverage"], "NASDAQ")
+        self.assertEqual(mock_st.session_state["overview_market_movers_sector"], "All")
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
+        mock_st.rerun.assert_not_called()
+
+    @patch("app.web.overview.market_movers_helpers.load_overview_market_mover_sectors")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_filter_state_resolver_validates_options(
+        self,
+        mock_st: MagicMock,
+        mock_load_sectors: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import _market_movers_controls_from_session_state
+
+        mock_load_sectors.return_value = ["Technology", "Healthcare"]
+        mock_st.session_state = {
+            "overview_market_movers_coverage": "BROKEN",
+            "overview_market_movers_period": "weekly",
+            "overview_market_movers_sector": "Bad Sector",
+            "overview_market_movers_top_n": 999,
+            "overview_market_movers_mode": "volume_leaders",
+        }
+
+        controls = _market_movers_controls_from_session_state()
+
+        self.assertEqual(controls.coverage, "SP500")
+        self.assertEqual(controls.universe_limit, 500)
+        self.assertEqual(controls.period, "weekly")
+        self.assertEqual(controls.sector, "All")
+        self.assertEqual(controls.top_n, 20)
+        self.assertEqual(controls.mode, "volume_leaders")
+        self.assertEqual(mock_st.session_state["overview_market_movers_coverage"], "SP500")
+        self.assertEqual(mock_st.session_state["overview_market_movers_sector"], "All")
 
     def test_market_movers_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
         from app.web.overview.market_movers_react_component import (

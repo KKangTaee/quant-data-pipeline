@@ -8,6 +8,14 @@ export type MarketMoverAction = {
   kind: "primary" | "secondary" | "disabled";
 };
 
+export type MarketMoverFilterControl = {
+  id: string;
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  disabled?: boolean;
+};
+
 export type MarketMoversWorkbenchPayload = {
   schema_version: "market_movers_react_workbench_v1";
   component: "MarketMoversWorkbench";
@@ -28,6 +36,10 @@ export type MarketMoversWorkbenchPayload = {
     top_n: number;
     mode: string;
   };
+  filter_controls: {
+    visible: boolean;
+    items: MarketMoverFilterControl[];
+  };
   refresh_mode: {
     visible: boolean;
     label: string;
@@ -36,7 +48,7 @@ export type MarketMoversWorkbenchPayload = {
     disabled: boolean;
   };
   control_ownership: {
-    mode: "streamlit_owned";
+    mode: "python_state_react_ui";
     migrated_controls: string[];
     deferred_controls: string[];
   };
@@ -71,6 +83,12 @@ function MarketMoversWorkbench({ args }: Props) {
     Streamlit.setComponentValue({ event: { id: "set_refresh_mode", value, nonce: Date.now() } });
   };
 
+  const emitControl = (control: MarketMoverFilterControl, value: string) => {
+    Streamlit.setComponentValue({
+      event: { id: "set_control", control: control.id, value, nonce: Date.now() },
+    });
+  };
+
   return (
     <section
       className="mm-workbench"
@@ -89,6 +107,27 @@ function MarketMoversWorkbench({ args }: Props) {
           {payload.summary.trust_detail ? <small>{payload.summary.trust_detail}</small> : null}
         </div>
       </div>
+      {payload.filter_controls.visible ? (
+        <div className="mm-workbench__filters" aria-label="Market Movers filters">
+          {payload.filter_controls.items.map((control) => (
+            <label className="mm-workbench__filter" key={control.id}>
+              <span>{control.label}</span>
+              <select
+                className="mm-workbench__filter-select"
+                disabled={control.disabled}
+                onChange={(event) => emitControl(control, event.target.value)}
+                value={control.value}
+              >
+                {control.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      ) : null}
       <div className="mm-workbench__grid" aria-label="Market Movers summary">
         {payload.summary.items.map((item) => (
           <div className="mm-workbench__metric" key={`${item.label}-${item.value}`}>

@@ -68,7 +68,10 @@ from app.web.overview.components.market_movers import (
     render_market_refresh_status_bar,
     render_sector_breadth_market_map,
 )
-from app.web.overview.market_movers_react_component import render_market_movers_react_workbench
+from app.web.overview.market_movers_react_component import (
+    market_movers_react_component_available,
+    render_market_movers_react_workbench,
+)
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
@@ -178,6 +181,56 @@ def _market_refresh_mode_label(value: str) -> str:
     return {"manual": "수동 갱신", "auto": "자동 갱신"}.get(value, value)
 
 
+def _market_movers_sector_options(*, coverage: str, universe_limit: int) -> list[str]:
+    return ["All"] + load_overview_market_mover_sectors(
+        universe_code=coverage,
+        universe_limit=universe_limit,
+    )
+
+
+def _market_movers_select_options(
+    values: list[Any] | tuple[Any, ...],
+    label_func,
+) -> list[dict[str, str]]:
+    return [{"value": str(value), "label": str(label_func(value))} for value in values]
+
+
+def _market_movers_controls_from_session_state() -> MarketMoverControls:
+    coverage = str(st.session_state.get("overview_market_movers_coverage") or "SP500")
+    if coverage not in MARKET_COVERAGE_OPTIONS:
+        coverage = "SP500"
+    st.session_state["overview_market_movers_coverage"] = coverage
+
+    universe_limit = _universe_limit(coverage)
+    period = str(st.session_state.get("overview_market_movers_period") or "daily")
+    if period not in MARKET_MOVER_PERIOD_LABELS:
+        period = "daily"
+    st.session_state["overview_market_movers_period"] = period
+
+    sector_options = _market_movers_sector_options(coverage=coverage, universe_limit=universe_limit)
+    sector = str(st.session_state.get("overview_market_movers_sector") or "All")
+    if sector not in sector_options:
+        sector = "All"
+    st.session_state["overview_market_movers_sector"] = sector
+
+    top_n = st.session_state.get("overview_market_movers_top_n")
+    if top_n not in MARKET_MOVER_TOP_N_OPTIONS:
+        top_n = 20
+    st.session_state["overview_market_movers_top_n"] = top_n
+
+    mode = _normalize_market_mover_mode(st.session_state.get("overview_market_movers_mode"))
+    st.session_state["overview_market_movers_mode"] = mode
+
+    return MarketMoverControls(
+        coverage=coverage,
+        universe_limit=universe_limit,
+        period=period,
+        sector=sector,
+        top_n=int(top_n),
+        mode=mode,
+    )
+
+
 def _market_movers_refresh_mode_options(controls: MarketMoverControls) -> list[str]:
     auto_supported = controls.coverage in BROWSER_AUTO_REFRESH_JOB_CONFIG and controls.period == "daily"
     return ["manual", "auto"] if auto_supported else ["manual"]
@@ -197,6 +250,48 @@ def _market_movers_react_refresh_mode_config(controls: MarketMoverControls) -> d
         "value": _market_movers_selected_refresh_mode(controls),
         "options": [{"value": value, "label": _market_refresh_mode_label(value)} for value in refresh_options],
         "disabled": len(refresh_options) == 1,
+    }
+
+
+def _market_movers_react_filter_controls_config(controls: MarketMoverControls) -> dict[str, Any]:
+    sector_options = _market_movers_sector_options(
+        coverage=controls.coverage,
+        universe_limit=controls.universe_limit,
+    )
+    return {
+        "visible": True,
+        "items": [
+            {
+                "id": "coverage",
+                "label": "Coverage",
+                "value": controls.coverage,
+                "options": _market_movers_select_options(MARKET_COVERAGE_OPTIONS, _coverage_label),
+            },
+            {
+                "id": "period",
+                "label": "Period",
+                "value": controls.period,
+                "options": _market_movers_select_options(tuple(MARKET_MOVER_PERIOD_LABELS), _market_mover_period_label),
+            },
+            {
+                "id": "sector",
+                "label": "Sector",
+                "value": controls.sector,
+                "options": _market_movers_select_options(sector_options, str),
+            },
+            {
+                "id": "top_n",
+                "label": "Top N",
+                "value": str(controls.top_n),
+                "options": _market_movers_select_options(MARKET_MOVER_TOP_N_OPTIONS, lambda value: f"Top {value}"),
+            },
+            {
+                "id": "mode",
+                "label": "랭킹 기준",
+                "value": controls.mode,
+                "options": _market_movers_select_options(MARKET_MOVER_MODE_ORDER, _market_mover_mode_label),
+            },
+        ],
     }
 
 
@@ -422,11 +517,20 @@ def build_market_movers_react_workbench_payload(
             "top_n": controls.top_n,
             "mode": controls.mode,
         },
+        "filter_controls": _market_movers_react_filter_controls_config(controls),
         "refresh_mode": _market_movers_react_refresh_mode_config(controls),
         "control_ownership": {
-            "mode": "streamlit_owned",
-            "migrated_controls": ["summary_actions", "refresh_mode"],
-            "deferred_controls": ["coverage", "period", "sector", "top_n", "mode"],
+            "mode": "python_state_react_ui",
+            "migrated_controls": [
+                "coverage",
+                "period",
+                "sector",
+                "top_n",
+                "mode",
+                "summary_actions",
+                "refresh_mode",
+            ],
+            "deferred_controls": [],
         },
         "actions": _market_movers_react_actions(controls=controls),
     }
@@ -454,6 +558,8 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "reload_market_movers"}
     if action_id == "set_refresh_mode":
         return {"handler": "set_market_movers_refresh_mode"}
+    if action_id == "set_control":
+        return {"handler": "set_market_movers_control"}
     return {"handler": "noop", "action_id": action_id}
 
 
@@ -493,6 +599,46 @@ def _consume_market_movers_react_event(event: dict[str, Any] | None) -> bool:
     return True
 
 
+def _set_market_movers_control_state(control_id: str, requested_value: Any, *, controls: MarketMoverControls) -> None:
+    if control_id == "coverage":
+        coverage = str(requested_value or "SP500")
+        if coverage not in MARKET_COVERAGE_OPTIONS:
+            coverage = "SP500"
+        st.session_state["overview_market_movers_coverage"] = coverage
+        st.session_state["overview_market_movers_sector"] = "All"
+        return
+
+    if control_id == "period":
+        period = str(requested_value or "daily")
+        if period not in MARKET_MOVER_PERIOD_LABELS:
+            period = "daily"
+        st.session_state["overview_market_movers_period"] = period
+        if period != "daily":
+            st.session_state["overview_market_movers_refresh_mode"] = "manual"
+        return
+
+    if control_id == "sector":
+        options = _market_movers_sector_options(
+            coverage=controls.coverage,
+            universe_limit=controls.universe_limit,
+        )
+        sector = str(requested_value or "All")
+        st.session_state["overview_market_movers_sector"] = sector if sector in options else "All"
+        return
+
+    if control_id == "top_n":
+        try:
+            top_n = int(requested_value)
+        except (TypeError, ValueError):
+            top_n = 20
+        st.session_state["overview_market_movers_top_n"] = top_n if top_n in MARKET_MOVER_TOP_N_OPTIONS else 20
+        return
+
+    if control_id == "mode":
+        st.session_state["overview_market_movers_mode"] = _normalize_market_mover_mode(requested_value)
+        return
+
+
 def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, controls: MarketMoverControls) -> bool:
     action_id = _market_movers_react_event_action_id(event)
     if not action_id:
@@ -509,6 +655,12 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
         requested = str(payload.get("value") or "manual")
         options = _market_movers_refresh_mode_options(controls)
         st.session_state["overview_market_movers_refresh_mode"] = requested if requested in options else "manual"
+        st.rerun()
+        return True
+
+    if handler == "set_market_movers_control":
+        payload = _market_movers_react_event_payload(event)
+        _set_market_movers_control_state(str(payload.get("control") or ""), payload.get("value"), controls=controls)
         st.rerun()
         return True
 
@@ -1045,6 +1197,9 @@ def _render_market_auto_refresh_summary(*, universe_code: str) -> None:
 
 
 def _render_market_movers_controls() -> MarketMoverControls:
+    if market_movers_react_component_available():
+        return _market_movers_controls_from_session_state()
+
     render_overview_toolbar_label("조건")
     controls = st.columns([1.0, 0.92, 1.0, 0.78, 1.0], gap="small", vertical_alignment="bottom")
     coverage = str(
@@ -1123,7 +1278,7 @@ def render_market_movers_context_captions(controls: MarketMoverControls) -> None
     reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
     if reloaded_at:
         st.caption(f"Last DB snapshot reload request: {reloaded_at}")
-    if controls.period == "daily":
+    if controls.period == "daily" and not market_movers_react_component_available():
         st.caption(
             "Daily는 저장된 quote snapshot을 previous close와 비교합니다. 갱신 방식은 아래 데이터 갱신 영역에서 선택합니다."
         )

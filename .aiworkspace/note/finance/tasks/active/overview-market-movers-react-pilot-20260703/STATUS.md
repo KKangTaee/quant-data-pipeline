@@ -52,3 +52,11 @@
 - React now emits `set_refresh_mode` events and Python updates `overview_market_movers_refresh_mode` through the existing session-state boundary.
 - The React-rendered companion no longer renders the legacy Streamlit `방식` select below the card.
 - `control_ownership` now treats `refresh_mode` as migrated with `summary_actions`; top filters remain deferred.
+
+## Phase 7 - Filter Bar Integration
+
+- Status: complete.
+- Moved Coverage / Period / Sector / Top N / ranking mode into the React Market Movers workbench card.
+- Python remains the owner of validated session state, sector-option loading, snapshot loading, provider/job dispatch, and reruns.
+- React only renders select controls and emits `set_control` events with control id, value, and nonce.
+- The legacy Streamlit filter row remains as the fallback path when the React component build is unavailable.

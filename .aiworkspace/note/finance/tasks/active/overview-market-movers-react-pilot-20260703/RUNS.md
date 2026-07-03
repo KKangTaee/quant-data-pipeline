@@ -103,3 +103,21 @@
 - Browser QA: Streamlit on `http://localhost:8532`, Overview > Market Movers.
   - Result: passed; React iframe had one `.mm-workbench__action-row`, one `.mm-workbench__mode-select`, one `수동 갱신` option, one `자동 갱신` option, and one `화면 새로고침` button. Parent Streamlit action buttons were `[]`, and parent standalone `방식` label count was 0. Console errors were empty.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase6.png` (generated/local artifact; not staged).
+
+## Phase 7 - 2026-07-03
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_filters_live_inside_workbench_card tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_filter_event_updates_python_state_once tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_filter_state_resolver_validates_options`
+  - Result: failed as expected because the payload still reported `streamlit_owned`, `set_control` did not dispatch, and `_market_movers_controls_from_session_state` did not exist.
+- GREEN: same focused command.
+  - Result: passed.
+- `uv run python -m unittest` for the 11 Market Movers React pilot tests.
+  - Result: passed.
+- `npm run build`
+  - Result: passed; generated `component_static/index.html`, `component_static/assets/index-BvPC88_9.css`, and `component_static/assets/index-CPduP-Bh.js`.
+- `uv run python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/market_movers_react_component.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- Browser QA: Streamlit on `http://localhost:8533`, Overview > Market Movers.
+  - Result: passed; React iframe rendered 5 `.mm-workbench__filter-select` controls, one `.mm-workbench__action-row`, and one `.mm-workbench__mode-select`. Parent text no longer included the old `조건\nCoverage` row or old daily refresh caption. Changing Top N to `30` via the React select rerendered the summary detail to `Top 30`. Current `8533` console errors were empty.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase7.png` (generated/local artifact; not staged).
