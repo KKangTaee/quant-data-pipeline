@@ -357,6 +357,75 @@ def build_market_movers_unified_summary_model(
     }
 
 
+def _market_movers_react_actions(*, controls: MarketMoverControls) -> list[dict[str, Any]]:
+    if controls.period == "daily":
+        actions: list[dict[str, Any]] = [
+            {"id": "refresh_intraday", "label": "일중 스냅샷 갱신", "kind": "primary"},
+        ]
+        if controls.coverage == "SP500":
+            actions.append({"id": "refresh_universe", "label": "유니버스 갱신", "kind": "secondary"})
+        elif controls.coverage == "NASDAQ":
+            actions.append({"id": "refresh_nasdaq_directory", "label": "Nasdaq 목록 갱신", "kind": "secondary"})
+        else:
+            actions.append({"id": "universe_static", "label": "유니버스 기준", "kind": "disabled"})
+        actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
+        return actions
+
+    return [
+        {"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"},
+        {"id": "reload", "label": "화면 새로고침", "kind": "secondary"},
+    ]
+
+
+def build_market_movers_react_workbench_payload(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+    exploration_mode: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "market_movers_react_workbench_v1",
+        "component": "MarketMoversWorkbench",
+        "summary": build_market_movers_unified_summary_model(
+            snapshot,
+            controls=controls,
+            exploration_mode=exploration_mode,
+        ),
+        "controls": {
+            "coverage": controls.coverage,
+            "universe_limit": controls.universe_limit,
+            "period": controls.period,
+            "sector": controls.sector,
+            "top_n": controls.top_n,
+            "mode": controls.mode,
+        },
+        "actions": _market_movers_react_actions(controls=controls),
+    }
+
+
+def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverControls) -> dict[str, Any]:
+    if action_id == "refresh_intraday":
+        return {
+            "handler": "run_overview_market_intraday_snapshot",
+            "universe_code": controls.coverage,
+            "universe_limit": controls.universe_limit,
+        }
+    if action_id == "refresh_universe":
+        return {"handler": "run_overview_sp500_universe", "universe_code": controls.coverage}
+    if action_id == "refresh_nasdaq_directory":
+        return {"handler": "run_overview_nasdaq_symbol_directory", "universe_code": controls.coverage}
+    if action_id == "refresh_eod_history":
+        return {
+            "handler": "run_overview_market_movers_eod_history",
+            "universe_code": controls.coverage,
+            "universe_limit": controls.universe_limit,
+            "period": controls.period,
+        }
+    if action_id == "reload":
+        return {"handler": "reload_market_movers"}
+    return {"handler": "noop", "action_id": action_id}
+
+
 def build_market_movers_empty_state_model(
     snapshot: dict[str, Any],
     *,

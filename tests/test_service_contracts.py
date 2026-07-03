@@ -9685,6 +9685,56 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("Coverage", labels)
         self.assertNotIn("Period", labels)
 
+    def test_market_movers_react_pilot_contract_defines_payload_and_actions(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "PARTIAL",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 502,
+                "missing_count": 1,
+                "returnable_pct": 99.8,
+                "snapshot_time_utc": "2026-07-02 23:28",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "partial", "label": "Partial", "detail": "0m old, 1 missing"},
+            },
+        }
+
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertEqual(payload["schema_version"], "market_movers_react_workbench_v1")
+        self.assertEqual(payload["component"], "MarketMoversWorkbench")
+        self.assertEqual(payload["summary"]["title"], "변동 종목")
+        self.assertEqual(payload["summary"]["trust_state"], "Partial")
+        self.assertEqual(payload["summary"]["trust_detail"], "0m old, 1 missing")
+        self.assertEqual(payload["controls"]["coverage"], "SP500")
+        self.assertEqual(payload["controls"]["period"], "daily")
+        self.assertEqual(payload["actions"][0]["id"], "refresh_intraday")
+        self.assertEqual(payload["actions"][0]["label"], "일중 스냅샷 갱신")
+        self.assertIn({"id": "reload", "label": "화면 새로고침", "kind": "secondary"}, payload["actions"])
+
+        plan = market_movers_react_action_plan("refresh_intraday", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_intraday_snapshot")
+        self.assertEqual(plan["universe_code"], "SP500")
+        self.assertEqual(plan["universe_limit"], 500)
+
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
