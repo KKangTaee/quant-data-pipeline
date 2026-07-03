@@ -691,8 +691,18 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
         button_label = "진입 기준 확인 필요"
 
-    display_reasons = [str(item) for item in list(gate_summary.get("action_items") or [])][:3]
-    reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
+    if not can_submit:
+        display_reasons = [str(item) for item in list(gate_summary.get("action_items") or [])][:3]
+        reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
+    elif review_reasons:
+        display_reasons = [
+            f"2차 확인 항목 {len(review_reasons)}개가 source와 함께 Practical Validation으로 전달됩니다.",
+            "상세 항목은 2차 화면의 선택 후보 확인에서 이어서 봅니다.",
+        ]
+        reason_title = "2차 확인 전달"
+    else:
+        display_reasons = ["막는 항목 없음"]
+        reason_title = "상태"
     criteria = list(gate_summary.get("gate_groups") or [])
 
     return {
@@ -960,7 +970,16 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
     route_label = escape(str(evaluation.get("route_label") or "-"))
     verdict = escape(str(evaluation.get("verdict") or "-"))
     next_action = escape(str(evaluation.get("next_action") or "-"))
-    action_items = [str(item) for item in list(gate_summary.get("action_items") or [])] or ["막는 항목 없음"]
+    review_count = len(list(evaluation.get("review_reasons") or []))
+    if can_submit and review_count:
+        action_title = "2차 확인 전달"
+        action_items = [f"2차 확인 항목 {review_count}개는 Practical Validation 상단에서 확인합니다."]
+    elif can_submit:
+        action_title = "상태"
+        action_items = ["막는 항목 없음"]
+    else:
+        action_title = str(gate_summary.get("reason_title") or "상태")
+        action_items = [str(item) for item in list(gate_summary.get("action_items") or [])] or ["막는 항목 없음"]
     gate_groups = list(gate_summary.get("gate_groups") or [])
 
     chip_html = "".join(
@@ -1119,7 +1138,7 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
       <div class="bt-policy-signal__chips">{chip_html}</div>
     </div>
     <div class="bt-policy-signal__actions">
-      <span>{escape(str(gate_summary.get("reason_title") or "상태"))}</span>
+      <span>{escape(action_title)}</span>
       <ul>{action_html}</ul>
     </div>
   </div>
@@ -1191,7 +1210,7 @@ def _policy_signal_group_status(rows: list[dict[str, Any]]) -> tuple[str, str]:
 def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dict[str, Any]) -> None:
     sorted_rows = sorted([dict(row or {}) for row in rows], key=_policy_signal_row_sort_key)
     primary_rows = [row for row in sorted_rows if row.get("effect") in {"block", "review", "pass"}]
-    action_rows = [row for row in sorted_rows if row.get("effect") in {"block", "review"}]
+    action_rows = [row for row in sorted_rows if row.get("effect") == "block"]
     group_order = [
         "Promotion",
         "Data Trust",
@@ -1217,7 +1236,7 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
     entry_ready = bool(evaluation.get("can_enter_practical_validation"))
     board_tone = "positive" if entry_ready and not review_count else "warning" if entry_ready else "danger"
     headline = (
-        "2차 진입 가능, 확인 항목이 있습니다."
+        "2차 진입 가능, 확인 항목을 함께 넘깁니다."
         if entry_ready and review_count
         else "2차 진입 가능합니다."
         if entry_ready
@@ -1227,7 +1246,7 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
     summary_items = [
         ("2차 진입", "가능" if entry_ready else "보류", str(evaluation.get("route_label") or "-"), board_tone),
         ("먼저 해결", str(block_count), "source 등록 차단 항목", "danger" if block_count else "positive"),
-        ("2차 확인", str(review_count), "Practical Validation 확인 항목", "warning" if review_count else "positive"),
+        ("2차 확인", str(review_count), "source와 함께 2차로 전달", "warning" if review_count else "positive"),
         ("통과", str(pass_count), f"참고 {context_count}개 별도 보존", "positive"),
     ]
     summary_html = "".join(
@@ -1244,6 +1263,8 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
     group_html_parts: list[str] = []
     for group, group_rows in grouped_rows:
         group_status, group_tone = _policy_signal_group_status(group_rows)
+        visible_rows = [row for row in group_rows if row.get("effect") in {"block", "pass"}]
+        group_review_count = sum(1 for row in group_rows if row.get("effect") == "review")
         signal_html = "".join(
             (
                 f'<div class="bt-policy-gate__signal bt-policy-gate__signal--{escape(_policy_signal_effect_tone(row.get("effect")))}">'
@@ -1252,8 +1273,16 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
                 f'<em>{escape(_policy_signal_effect_label(row.get("effect")))}</em>'
                 "</div>"
             )
-            for row in group_rows
+            for row in visible_rows
         )
+        if group_review_count:
+            signal_html += (
+                '<div class="bt-policy-gate__signal bt-policy-gate__signal--warning">'
+                "<span>2차 확인 항목</span>"
+                f"<strong>{escape(str(group_review_count))}개</strong>"
+                "<em>상세는 Practical Validation에서 확인</em>"
+                "</div>"
+            )
         group_html_parts.append(
             f'<article class="bt-policy-gate__group bt-policy-gate__group--{escape(group_tone)}">'
             f'<div class="bt-policy-gate__group-head">'
@@ -1278,6 +1307,13 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
                 f"</div>"
             )
             for row in action_rows
+        )
+    elif review_count:
+        action_html = (
+            '<div class="bt-policy-queue__empty bt-policy-queue__empty--handoff">'
+            "<strong>2차 확인 항목은 Practical Validation 상단에서 확인합니다.</strong>"
+            f"<span>이 실행의 review 신호 {review_count}개는 source에 포함되어 2차 확인 큐로 전달됩니다.</span>"
+            "</div>"
         )
     else:
         action_html = (
@@ -1499,6 +1535,12 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
   color: #667085;
   margin-top: 0.2rem;
 }}
+.bt-policy-queue__empty--handoff {{
+  border-bottom-color: rgba(180, 83, 9, 0.24);
+}}
+.bt-policy-queue__empty--handoff strong {{
+  color: #b45309;
+}}
 @media (max-width: 1000px) {{
   .bt-policy-gate__metrics,
   .bt-policy-gate__groups {{
@@ -1545,8 +1587,8 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
 </section>
 <section class="bt-policy-queue">
   <div class="bt-policy-queue__title">
-    <strong>이번 실행 확인 큐</strong>
-    <span>먼저 해결 {block_count} · 2차 확인 {review_count} · 통과 {pass_count}</span>
+    <strong>1차 처리 결과</strong>
+    <span>먼저 해결 {block_count} · 2차 전달 {review_count} · 통과 {pass_count}</span>
   </div>
   {action_html}
 </section>

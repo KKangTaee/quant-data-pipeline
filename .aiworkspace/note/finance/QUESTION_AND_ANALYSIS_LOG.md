@@ -8414,3 +8414,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 2차 Practical Validation 진입 기준은 약화하지 않고, UI 표시와 source handoff evidence를 분리해 사용자가 왜 버튼이 열리거나 막히는지 이해하게 해야 함.
 - Analysis result: `promotion_decision`, execution source checks, validation source checks는 하나의 Streamlit-free readiness service에서 판단하는 것이 맞고, UI는 raw reason을 반복하기보다 `Promotion / 실행 원천 / 검증 원천`으로 묶어 보여주는 편이 안전하다.
 - Follow-up: V2-V6 완료. `Policy Signal Meta`는 `검증 신호 · Policy Signals`로 바뀌었고, Practical Validation source에는 compact `handoff_readiness_snapshot`이 저장된다. raw provider payload / full run history / screenshots는 workflow JSONL에 넣지 않는다.
+
+### 2026-07-03 - 2차 확인 항목은 Practical Validation에서 확인한다
+
+- User request: 사용자가 `2차 확인` 항목이 어차피 2차에서 확인할 목록이라면 1차 Backtest Analysis에서 명확히 확인 가능한 것만 남기고, 해당 검증은 2차로 옮기는 것이 맞지 않냐고 질문하고 진행을 승인함.
+- Interpreted goal: 1차 화면은 hard blocker / source 등록 가능 여부에 집중하고, hold / caution / watch 같은 review focus 상세는 source evidence로 전달해 Practical Validation에서 이어 확인해야 함.
+- Analysis result: 기존 `entry_gate.review_focus_rows`가 이미 handoff source에 저장되므로 policy 의미를 바꾸지 않고 표시 위치를 옮길 수 있었다. hard blocker는 계속 1차에서 source 등록을 막고, review focus는 2차 확인 큐로 해석한다.
+- Follow-up: Backtest Analysis handoff / Policy Signals는 `2차 확인 항목 N개` 요약만 표시하고, Practical Validation `1. 선택 후보 확인` 상단에서 `Backtest에서 넘어온 2차 확인 항목` 카드와 상세 테이블을 보여준다.

@@ -809,6 +809,137 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _entry_gate_effect_label(effect: Any) -> str:
+    mapping = {
+        "block": "먼저 해결",
+        "review": "2차 확인",
+        "pass": "통과",
+        "context": "참고",
+    }
+    effect_text = str(effect or "").strip().lower()
+    return mapping.get(effect_text, str(effect or "-"))
+
+
+def _entry_gate_effect_tone(effect: Any) -> str:
+    effect_text = str(effect or "").strip().lower()
+    if effect_text == "block":
+        return "danger"
+    if effect_text == "review":
+        return "warning"
+    if effect_text == "pass":
+        return "positive"
+    return "neutral"
+
+
+def _entry_gate_display_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def text(value: Any, fallback: str = "-") -> str:
+        value_text = str(value or "").strip()
+        return value_text or fallback
+
+    return [
+        {
+            "구분": text(row.get("group")),
+            "신호": text(row.get("signal")),
+            "상태": text(row.get("status")),
+            "판정": _entry_gate_effect_label(row.get("effect")),
+            "확인 위치": text(row.get("next_surface"), "Practical Validation"),
+            "의미": text(row.get("meaning")),
+        }
+        for row in rows
+    ]
+
+
+def _render_backtest_entry_gate_review_queue(source: dict[str, Any]) -> None:
+    entry_gate = dict(source.get("entry_gate") or {})
+    if not entry_gate:
+        return
+
+    review_rows = [dict(row or {}) for row in list(entry_gate.get("review_focus_rows") or [])]
+    blocker_rows = [dict(row or {}) for row in list(entry_gate.get("blocker_rows") or [])]
+    can_enter = bool(entry_gate.get("can_enter_practical_validation"))
+    review_count = int(entry_gate.get("review_focus_count") or len(review_rows))
+    blocker_count = int(entry_gate.get("blocker_count") or len(blocker_rows))
+    tone = "danger" if blocker_count or not can_enter else "warning" if review_count else "positive"
+
+    render_pv_alert_panel(
+        title="Backtest에서 넘어온 2차 확인 항목",
+        detail=(
+            "1차 화면에서는 source 등록을 막는 항목만 확인했고, "
+            "실전성 판단에 필요한 review 신호는 이 화면에서 이어서 확인합니다."
+        ),
+        tone=tone,
+    )
+    render_pv_card_grid(
+        [
+            {
+                "kicker": "Entry Gate",
+                "title": "2차 진입",
+                "status": "가능" if can_enter and not blocker_count else "보류",
+                "detail": entry_gate.get("verdict") or entry_gate.get("route_label") or "-",
+                "tone": "positive" if can_enter and not blocker_count else "danger",
+            },
+            {
+                "kicker": "먼저 해결",
+                "title": f"{blocker_count}개",
+                "status": "없음" if not blocker_count else "확인 필요",
+                "detail": "source 등록을 막는 hard blocker입니다.",
+                "tone": "positive" if not blocker_count else "danger",
+            },
+            {
+                "kicker": "2차 확인",
+                "title": f"{review_count}개",
+                "status": "검증 큐" if review_count else "없음",
+                "detail": "Promotion hold, 운용성, 검증 근거, 비용 / 기간 확인 항목입니다.",
+                "tone": "warning" if review_count else "positive",
+            },
+            {
+                "kicker": "Compare Gate",
+                "title": "가능" if entry_gate.get("can_move_to_compare") else "보류",
+                "status": "Portfolio Mix strict gate",
+                "detail": "Portfolio Mix 비교 가능성은 Practical Validation 진입 기준보다 보수적으로 봅니다.",
+                "tone": "positive" if entry_gate.get("can_move_to_compare") else "neutral",
+            },
+        ],
+        min_width=190,
+    )
+
+    if blocker_rows:
+        render_pv_card_grid(
+            [
+                {
+                    "kicker": row.get("group") or "Blocker",
+                    "title": row.get("signal") or "-",
+                    "status": row.get("status") or "-",
+                    "detail": row.get("meaning") or "source 등록 전 먼저 해결해야 하는 항목입니다.",
+                    "meta": row.get("next_surface") or "Backtest Analysis",
+                    "tone": "danger",
+                }
+                for row in blocker_rows
+            ],
+            min_width=250,
+        )
+
+    if review_rows:
+        render_pv_card_grid(
+            [
+                {
+                    "kicker": row.get("group") or "Review",
+                    "title": row.get("signal") or "-",
+                    "status": row.get("status") or "-",
+                    "detail": row.get("meaning") or "Practical Validation에서 확인할 review 신호입니다.",
+                    "meta": row.get("next_surface") or "Practical Validation",
+                    "tone": _entry_gate_effect_tone(row.get("effect")),
+                }
+                for row in review_rows
+            ],
+            min_width=250,
+        )
+        with st.expander("2차 확인 항목 상세 테이블", expanded=False):
+            st.dataframe(pd.DataFrame(_entry_gate_display_rows(review_rows)), width="stretch", hide_index=True)
+    elif not blocker_rows:
+        st.success("Backtest에서 넘어온 2차 확인 항목이 없습니다. 아래 source snapshot과 최신 재검증을 이어서 확인하세요.")
+
+
 def _table_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for row in rows:
@@ -2311,6 +2442,7 @@ def render_practical_validation_workspace() -> None:
             detail="Practical Validation이 읽는 current selection source와 component snapshot을 먼저 확인합니다.",
             tone="neutral",
         )
+        _render_backtest_entry_gate_review_queue(source)
         _render_source_summary(source)
 
     with st.container(border=True):

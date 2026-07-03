@@ -5452,3 +5452,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-handoff-readiness-v2-v6-20260702/`에서 readiness policy service extraction, grouped gate display, `검증 신호 · Policy Signals` cleanup, Practical Validation source snapshot persistence, final QA/docs closeout을 완료했다.
   - 버튼 활성화 기준은 보수적으로 유지했다: promotion hold, execution blocker, validation blocker가 있으면 source registration은 막힌다.
   - Browser QA는 current worktree server `localhost:8502`에서 Equal Weight / Dividend ETFs 실행 후 확인했고, screenshot은 generated artifact로 커밋하지 않았다.
+- Backtest 2차 확인 큐 이동 2026-07-03:
+  - Backtest Analysis의 `2차 확인` review focus 상세를 1차 처리 항목처럼 펼치지 않고, compact count / handoff notice로 낮췄다.
+  - Practical Validation `1. 선택 후보 확인` 상단에서 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 이어 보게 했다.
+  - hard blocker / source 등록 기준은 유지했고, review focus의 책임 위치만 2차 화면으로 옮겼다.

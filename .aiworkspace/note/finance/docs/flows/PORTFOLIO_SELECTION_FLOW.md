@@ -47,7 +47,7 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 |---|---|---|
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
-| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation source로 넘겨도 되는지 확인한다. `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus이며, Portfolio Mix strict compare gate는 별도로 더 보수적으로 읽는다 |
+| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation source로 넘겨도 되는지 확인한다. `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus이며, Backtest Analysis에서는 상세 review row를 펼치지 않고 count / handoff notice로 표시한다. Portfolio Mix strict compare gate는 별도로 더 보수적으로 읽는다 |
 | Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, selected-route preflight, provider, data coverage, realism, robustness, construction risk 검증 |
 | Final Decision Gate | Final Review | selection hard blocker와 open review item을 분리해 최종 관찰 후보로 저장 가능한지 판단 |
 | Monitoring Check | Operations > Portfolio Monitoring | 모니터링 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
@@ -73,12 +73,12 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
 - `Operations > Operations Overview`는 선정 후 monitoring / system health의 Operations Console 입구이며, Backtest 후보 생성 단계가 아니다. Today action queue는 검토 우선순위만 안내하고 주문 / 자동 리밸런싱을 만들지 않는다. Backtest Run History와 Candidate Library archive 화면은 현재 Operations 상단 탭에 노출하지 않는다.
-- Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다.
+- Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다. hard blocker는 1차 source 등록을 막고, `2차 확인` review focus는 source의 `entry_gate.review_focus_rows`로 Practical Validation에 전달한다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.
 - Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리한다.
-- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 먼저 보여줘 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
+- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 먼저 보여주고, 이어 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 확인해 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
 - 기존 source처럼 selection history snapshot이 없는 기록은 `3. 최신 데이터 기준 전략 재검증`을 실행하면 가능한 범위에서 runtime replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
 - Practical Validation은 전용 workbench shell의 Control Center에서 후보 / profile / latest replay / gate를 먼저 요약한다.
 - Practical Validation의 `시장 심리 Context Overlay`는 저장된 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여준다. 이 overlay는 `context_only`이며 Final Review Gate, selected-route preflight, PASS / BLOCKER, registry 저장, saved setup, live approval / broker order / auto rebalance에 영향을 주지 않는다.

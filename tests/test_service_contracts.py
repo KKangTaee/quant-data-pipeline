@@ -7625,7 +7625,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertTrue(state["can_submit"])
         self.assertEqual(state["status_label"], "조건부 진입 가능")
-        self.assertIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
+        self.assertIn("2차 확인 항목 1개가 source와 함께 Practical Validation으로 전달됩니다.", state["display_reasons"])
+        self.assertNotIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
         criteria = {row["label"]: row for row in state["criteria"]}
         self.assertEqual(criteria["Promotion"]["value"], "review 1")
 
@@ -7716,7 +7717,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("bt-policy-signal", source)
         self.assertIn("bt-policy-gate", source)
         self.assertIn("검증 기준 보드", source)
-        self.assertIn("이번 실행 확인 큐", source)
+        self.assertIn("1차 처리 결과", source)
+        self.assertIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
+        self.assertNotIn("이번 실행 확인 큐", source)
         self.assertIn("진입 준비도", source)
         self.assertIn("기술 원천 보기", real_money_body)
         self.assertNotIn("render_status_card_grid(", real_money_body)
@@ -7727,6 +7730,18 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Execution Preview", real_money_body)
         self.assertNotIn("_render_next_step_readiness_box(meta)", real_money_body)
         self.assertNotIn("Candidate Readiness Checkpoint", source)
+
+    def test_practical_validation_step1_receives_backtest_review_focus_queue(self) -> None:
+        source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        workspace_start = source.index("def render_practical_validation_workspace")
+        workspace_body = source[workspace_start:]
+
+        self.assertIn("def _render_backtest_entry_gate_review_queue", source)
+        self.assertIn("_render_backtest_entry_gate_review_queue(source)", workspace_body)
+        self.assertIn("Backtest에서 넘어온 2차 확인 항목", source)
+        self.assertIn("review_focus_rows", source)
+        self.assertIn("2차 확인 항목 상세 테이블", source)
+        self.assertIn("can_move_to_compare", source)
 
     def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:
         from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
