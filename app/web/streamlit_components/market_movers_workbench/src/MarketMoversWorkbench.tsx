@@ -28,6 +28,13 @@ export type MarketMoversWorkbenchPayload = {
     top_n: number;
     mode: string;
   };
+  refresh_mode: {
+    visible: boolean;
+    label: string;
+    value: string;
+    options: Array<{ value: string; label: string }>;
+    disabled: boolean;
+  };
   control_ownership: {
     mode: "streamlit_owned";
     migrated_controls: string[];
@@ -60,6 +67,10 @@ function MarketMoversWorkbench({ args }: Props) {
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
 
+  const emitRefreshMode = (value: string) => {
+    Streamlit.setComponentValue({ event: { id: "set_refresh_mode", value, nonce: Date.now() } });
+  };
+
   return (
     <section
       className="mm-workbench"
@@ -87,18 +98,39 @@ function MarketMoversWorkbench({ args }: Props) {
           </div>
         ))}
       </div>
-      <div className="mm-workbench__actions" aria-label="Market Movers actions">
-        {payload.actions.map((action) => (
-          <button
-            className={`mm-workbench__action mm-workbench__action--${action.kind}`}
-            disabled={action.kind === "disabled"}
-            key={action.id}
-            onClick={() => emitAction(action)}
-            type="button"
-          >
-            {action.label}
-          </button>
-        ))}
+      <div className="mm-workbench__action-row">
+        {payload.refresh_mode.visible ? (
+          <label className="mm-workbench__mode">
+            <span>{payload.refresh_mode.label}</span>
+            <select
+              className="mm-workbench__mode-select"
+              disabled={payload.refresh_mode.disabled}
+              onChange={(event) => emitRefreshMode(event.target.value)}
+              value={payload.refresh_mode.value}
+            >
+              {payload.refresh_mode.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div />
+        )}
+        <div className="mm-workbench__actions" aria-label="Market Movers actions">
+          {payload.actions.map((action) => (
+            <button
+              className={`mm-workbench__action mm-workbench__action--${action.kind}`}
+              disabled={action.kind === "disabled"}
+              key={action.id}
+              onClick={() => emitAction(action)}
+              type="button"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );

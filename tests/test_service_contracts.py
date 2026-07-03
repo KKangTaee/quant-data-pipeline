@@ -9685,13 +9685,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("Coverage", labels)
         self.assertNotIn("Period", labels)
 
-    def test_market_movers_react_pilot_contract_defines_payload_and_actions(self) -> None:
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_pilot_contract_defines_payload_and_actions(self, mock_st: MagicMock) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
             build_market_movers_react_workbench_payload,
             market_movers_react_action_plan,
         )
 
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
         controls = MarketMoverControls(
             coverage="SP500",
             universe_limit=500,
@@ -9735,12 +9737,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["universe_code"], "SP500")
         self.assertEqual(plan["universe_limit"], 500)
 
-    def test_market_movers_react_controls_remain_streamlit_owned_for_pilot(self) -> None:
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_controls_remain_streamlit_owned_for_pilot(self, mock_st: MagicMock) -> None:
         from app.web.overview.market_movers_helpers import (
             MarketMoverControls,
             build_market_movers_react_workbench_payload,
         )
 
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
         controls = MarketMoverControls(
             coverage="SP500",
             universe_limit=500,
@@ -9760,13 +9764,87 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertEqual(payload["control_ownership"]["mode"], "streamlit_owned")
-        self.assertEqual(payload["control_ownership"]["migrated_controls"], ["summary_actions"])
+        self.assertEqual(payload["control_ownership"]["migrated_controls"], ["summary_actions", "refresh_mode"])
         self.assertEqual(
             payload["control_ownership"]["deferred_controls"],
-            ["coverage", "period", "sector", "top_n", "mode", "refresh_mode"],
+            ["coverage", "period", "sector", "top_n", "mode"],
         )
         self.assertIn("control_ownership", react_source)
         self.assertIn("data-control-mode={payload.control_ownership.mode}", react_source)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_refresh_mode_lives_inside_action_strip(self, mock_st: MagicMock) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        payload = build_market_movers_react_workbench_payload(
+            {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}},
+            controls=controls,
+            exploration_mode="상승",
+        )
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(payload["refresh_mode"]["value"], "manual")
+        self.assertEqual(
+            payload["refresh_mode"]["options"],
+            [{"value": "manual", "label": "수동 갱신"}, {"value": "auto", "label": "자동 갱신"}],
+        )
+        self.assertFalse(payload["refresh_mode"]["disabled"])
+        self.assertIn("def _market_movers_react_refresh_mode_config", helper_source)
+        self.assertIn("set_refresh_mode", helper_source)
+        self.assertIn("payload.refresh_mode.visible", react_source)
+        self.assertIn("emitRefreshMode", react_source)
+        self.assertIn('className="mm-workbench__action-row"', react_source)
+        self.assertIn('className="mm-workbench__mode-select"', react_source)
+        self.assertIn(".mm-workbench__action-row", react_style)
+        self.assertIn(".mm-workbench__mode-select", react_style)
+
+        companion_body = helper_source[helper_source.index("def _render_market_movers_react_refresh_companion") :]
+        companion_body = companion_body[: companion_body.index("def _rank_token")]
+        self.assertNotIn("_select_market_refresh_mode", companion_body)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_refresh_mode_event_updates_session_once(self, mock_st: MagicMock) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "set_refresh_mode", "value": "auto", "nonce": 456}}
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+        self.assertEqual(mock_st.session_state["overview_market_movers_refresh_mode"], "auto")
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
+        mock_st.rerun.assert_not_called()
 
     def test_market_movers_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
         from app.web.overview.market_movers_react_component import (

@@ -178,6 +178,28 @@ def _market_refresh_mode_label(value: str) -> str:
     return {"manual": "수동 갱신", "auto": "자동 갱신"}.get(value, value)
 
 
+def _market_movers_refresh_mode_options(controls: MarketMoverControls) -> list[str]:
+    auto_supported = controls.coverage in BROWSER_AUTO_REFRESH_JOB_CONFIG and controls.period == "daily"
+    return ["manual", "auto"] if auto_supported else ["manual"]
+
+
+def _market_movers_selected_refresh_mode(controls: MarketMoverControls) -> str:
+    options = _market_movers_refresh_mode_options(controls)
+    selected = str(st.session_state.get("overview_market_movers_refresh_mode") or "manual")
+    return selected if selected in options else "manual"
+
+
+def _market_movers_react_refresh_mode_config(controls: MarketMoverControls) -> dict[str, Any]:
+    refresh_options = _market_movers_refresh_mode_options(controls)
+    return {
+        "visible": controls.period == "daily",
+        "label": "방식",
+        "value": _market_movers_selected_refresh_mode(controls),
+        "options": [{"value": value, "label": _market_refresh_mode_label(value)} for value in refresh_options],
+        "disabled": len(refresh_options) == 1,
+    }
+
+
 def _positive_return_domain(values: pd.Series) -> list[float]:
     numeric = pd.to_numeric(values, errors="coerce").dropna()
     max_value = max(1.0, float(numeric.max()) if not numeric.empty else 1.0)
@@ -400,10 +422,11 @@ def build_market_movers_react_workbench_payload(
             "top_n": controls.top_n,
             "mode": controls.mode,
         },
+        "refresh_mode": _market_movers_react_refresh_mode_config(controls),
         "control_ownership": {
             "mode": "streamlit_owned",
-            "migrated_controls": ["summary_actions"],
-            "deferred_controls": ["coverage", "period", "sector", "top_n", "mode", "refresh_mode"],
+            "migrated_controls": ["summary_actions", "refresh_mode"],
+            "deferred_controls": ["coverage", "period", "sector", "top_n", "mode"],
         },
         "actions": _market_movers_react_actions(controls=controls),
     }
@@ -429,6 +452,8 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         }
     if action_id == "reload":
         return {"handler": "reload_market_movers"}
+    if action_id == "set_refresh_mode":
+        return {"handler": "set_market_movers_refresh_mode"}
     return {"handler": "noop", "action_id": action_id}
 
 
@@ -479,6 +504,14 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
 
     universe_code = str(plan.get("universe_code") or controls.coverage)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    if handler == "set_market_movers_refresh_mode":
+        payload = _market_movers_react_event_payload(event)
+        requested = str(payload.get("value") or "manual")
+        options = _market_movers_refresh_mode_options(controls)
+        st.session_state["overview_market_movers_refresh_mode"] = requested if requested in options else "manual"
+        st.rerun()
+        return True
+
     if handler == "run_overview_market_intraday_snapshot":
         result_key = f"overview_{universe_code.lower()}_intraday_result"
         with st.spinner(f"Updating {universe_label} quote snapshot..."):
@@ -1877,11 +1910,8 @@ def _render_market_movers_react_refresh_companion(
     controls: MarketMoverControls,
 ) -> None:
     if controls.period == "daily":
-        selected_mode = "manual"
         auto_supported = controls.coverage in BROWSER_AUTO_REFRESH_JOB_CONFIG
-        if auto_supported:
-            control_cols = st.columns([0.75, 2.25], gap="small", vertical_alignment="bottom")
-            selected_mode = _select_market_refresh_mode(control_cols[0], auto_supported=True)
+        selected_mode = _market_movers_selected_refresh_mode(controls)
         if selected_mode == "auto" and auto_supported:
             _render_market_auto_refresh_summary(universe_code=controls.coverage)
         if controls.coverage == "SP500":

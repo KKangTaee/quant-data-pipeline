@@ -85,3 +85,21 @@
 - Browser QA: Streamlit on `http://localhost:8531`, Overview > Market Movers.
   - Result: passed; iframe rendered `data-control-mode="streamlit_owned"`, schema `market_movers_react_workbench_v1`, width 1174, height 274, and no console errors.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase5.png` (generated/local artifact; not staged).
+
+## Phase 6 - 2026-07-03
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_controls_remain_streamlit_owned_for_pilot tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_refresh_mode_lives_inside_action_strip tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_refresh_mode_event_updates_session_once`
+  - Result: failed as expected because `refresh_mode` was not in the payload, `set_refresh_mode` did not dispatch, and `refresh_mode` was still deferred in the ownership contract.
+- GREEN: same focused command.
+  - Result: passed.
+- `uv run python -m unittest` for the 9 Market Movers React pilot tests.
+  - Result: passed.
+- `npm run build`
+  - Result: passed; generated `component_static/index.html`, `component_static/assets/index-DqTag6uW.css`, and `component_static/assets/index-B5JKtRtr.js`.
+- `uv run python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/market_movers_react_component.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- Browser QA: Streamlit on `http://localhost:8532`, Overview > Market Movers.
+  - Result: passed; React iframe had one `.mm-workbench__action-row`, one `.mm-workbench__mode-select`, one `수동 갱신` option, one `자동 갱신` option, and one `화면 새로고침` button. Parent Streamlit action buttons were `[]`, and parent standalone `방식` label count was 0. Console errors were empty.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase6.png` (generated/local artifact; not staged).

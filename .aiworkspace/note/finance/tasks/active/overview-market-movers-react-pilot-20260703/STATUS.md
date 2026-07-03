@@ -44,3 +44,11 @@
 - Added `control_ownership` to the React payload and `data-control-mode="streamlit_owned"` to the rendered workbench section.
 - Marked `summary_actions` as migrated and `coverage`, `period`, `sector`, `top_n`, `mode`, and `refresh_mode` as deferred.
 - Browser QA confirmed the control ownership data attribute renders inside the iframe with no console errors.
+
+## Phase 6 - Refresh Mode Integration Fix
+
+- Status: complete.
+- Moved the `방식` / refresh-mode selector into the React workbench action row.
+- React now emits `set_refresh_mode` events and Python updates `overview_market_movers_refresh_mode` through the existing session-state boundary.
+- The React-rendered companion no longer renders the legacy Streamlit `방식` select below the card.
+- `control_ownership` now treats `refresh_mode` as migrated with `summary_actions`; top filters remain deferred.

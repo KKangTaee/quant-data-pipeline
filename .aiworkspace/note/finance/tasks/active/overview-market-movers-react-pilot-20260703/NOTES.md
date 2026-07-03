@@ -34,5 +34,11 @@
 ## Phase 5 Controls Decision
 
 - Decision: keep top filters Streamlit-owned in this pilot. They feed `_load_market_movers_snapshot` before the React workbench payload is built, so moving them now would require a second pre-load component and a separate state synchronization pass.
-- Applied contract: `control_ownership.mode == "streamlit_owned"`, `migrated_controls == ["summary_actions"]`, and deferred controls are `coverage`, `period`, `sector`, `top_n`, `mode`, and `refresh_mode`.
+- Initial contract kept only `summary_actions` migrated; Phase 6 supersedes that by moving `refresh_mode` into the React action strip as well.
 - If a later pass migrates filters, it should start by introducing a dedicated pre-snapshot controls component rather than expanding the summary/action workbench payload in place.
+
+## Phase 6 Refresh Mode Correction
+
+- User feedback showed that leaving `방식` below the React card made the UI feel less coherent even after action buttons moved into the card.
+- Correction: treat `refresh_mode` as part of the action strip, not as a top filter. It now lives in React while Coverage / Period / Sector / Top N / ranking mode remain Streamlit-owned.
+- React emits `set_refresh_mode` with a value and nonce. Python validates the value against the current coverage/period options before updating `overview_market_movers_refresh_mode`.
