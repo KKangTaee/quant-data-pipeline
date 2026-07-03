@@ -45,3 +45,19 @@
   - Fix: set Vite `base: "./"` and rebuilt.
   - Retest result: passed; iframe width 1174, height 274, `rootChildren: 1`, text included `변동 종목`, `Universe`, `Returnable`, `Missing`, `일중 스냅샷 갱신`, `유니버스 갱신`, and `화면 새로고침`.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase2.png` (generated/local artifact; not staged).
+
+## Phase 3 - 2026-07-03
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_event_bridge_dispatches_existing_actions_once tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_component_emits_action_events`
+  - Result: failed as expected before `_dispatch_market_movers_react_event` and `Streamlit.setComponentValue` existed.
+- GREEN: same focused command.
+  - Result: passed.
+- `npm run build`
+  - Result: passed; generated `component_static/index.html`, `component_static/assets/index-CqmWYMqX.css`, and `component_static/assets/index-C3BFdUbT.js`.
+- `uv run python -m py_compile app/web/overview/market_movers_helpers.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- Browser QA: Streamlit on `http://localhost:8531`, Overview > Market Movers.
+  - Result: passed; clicked only the React iframe `화면 새로고침` action, saw `Last DB snapshot reload request`, iframe remained 1174x274 and non-empty, console errors were empty.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase3.png` (generated/local artifact; not staged).

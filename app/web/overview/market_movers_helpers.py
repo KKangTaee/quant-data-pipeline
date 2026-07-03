@@ -427,6 +427,106 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
     return {"handler": "noop", "action_id": action_id}
 
 
+def _market_movers_react_event_payload(event: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    if isinstance(nested, dict):
+        return nested
+    return event
+
+
+def _market_movers_react_event_action_id(event: dict[str, Any] | None) -> str | None:
+    payload = _market_movers_react_event_payload(event)
+    action_id = payload.get("id") or payload.get("action_id")
+    normalized = str(action_id or "").strip()
+    return normalized or None
+
+
+def _market_movers_react_event_token(event: dict[str, Any] | None) -> str | None:
+    action_id = _market_movers_react_event_action_id(event)
+    if not action_id:
+        return None
+    payload = _market_movers_react_event_payload(event)
+    nonce = payload.get("nonce") or payload.get("token") or action_id
+    return f"{action_id}:{nonce}"
+
+
+def _consume_market_movers_react_event(event: dict[str, Any] | None) -> bool:
+    token = _market_movers_react_event_token(event)
+    if not token:
+        return False
+    state_key = "overview_market_movers_last_react_event_token"
+    if st.session_state.get(state_key) == token:
+        return False
+    st.session_state[state_key] = token
+    return True
+
+
+def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, controls: MarketMoverControls) -> bool:
+    action_id = _market_movers_react_event_action_id(event)
+    if not action_id:
+        return False
+    plan = market_movers_react_action_plan(action_id, controls=controls)
+    handler = str(plan.get("handler") or "noop")
+    if handler == "noop" or not _consume_market_movers_react_event(event):
+        return False
+
+    universe_code = str(plan.get("universe_code") or controls.coverage)
+    universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    if handler == "run_overview_market_intraday_snapshot":
+        result_key = f"overview_{universe_code.lower()}_intraday_result"
+        with st.spinner(f"Updating {universe_label} quote snapshot..."):
+            _store_overview_job_result(
+                result_key,
+                run_overview_market_intraday_snapshot(
+                    universe_code=universe_code,
+                    universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
+                ),
+            )
+        st.rerun()
+        return True
+
+    if handler == "run_overview_sp500_universe":
+        with st.spinner("Refreshing S&P 500 universe..."):
+            _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
+        st.rerun()
+        return True
+
+    if handler == "run_overview_nasdaq_symbol_directory":
+        with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
+            _store_overview_job_result(
+                "overview_nasdaq_symbol_directory_result",
+                run_overview_nasdaq_symbol_directory(),
+            )
+        st.rerun()
+        return True
+
+    if handler == "run_overview_market_movers_eod_history":
+        period = str(plan.get("period") or controls.period)
+        period_label = _market_mover_period_label(period)
+        result_key = f"overview_{universe_code.lower()}_{period}_eod_history_result"
+        with st.spinner(f"{universe_label} {period_label} EOD 가격 이력을 수집하는 중입니다..."):
+            _store_overview_job_result(
+                result_key,
+                run_overview_market_movers_eod_history(
+                    universe_code=universe_code,
+                    universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
+                    period=period,
+                ),
+            )
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+        return True
+
+    if handler == "reload_market_movers":
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+        return True
+
+    return False
+
+
 def _render_market_movers_react_summary(
     snapshot: dict[str, Any],
     *,
@@ -2905,7 +3005,8 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         top_n=controls.top_n,
         sector=controls.sector,
     )
-    _render_market_movers_react_summary(snapshot, controls=controls)
+    react_event = _render_market_movers_react_summary(snapshot, controls=controls)
+    _dispatch_market_movers_react_event(react_event, controls=controls)
     _render_market_movers_refresh_bar(
         snapshot,
         universe_code=controls.coverage,

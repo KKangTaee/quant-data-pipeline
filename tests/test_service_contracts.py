@@ -11,7 +11,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -9778,6 +9778,58 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
         self.assertIn("_render_market_movers_react_summary(", render_body)
         self.assertNotIn("render_market_movers_unified_summary(", render_body)
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_intraday_snapshot")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_existing_actions_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_intraday: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+            _market_movers_react_event_action_id,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "refresh_intraday", "nonce": 123}}
+        mock_st.session_state = {}
+        mock_run_intraday.return_value = {"status": "success", "rows_written": 503}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+
+        self.assertEqual(_market_movers_react_event_action_id(event), "refresh_intraday")
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_intraday.assert_called_once_with(universe_code="SP500", universe_limit=500)
+        mock_store_result.assert_called_once_with("overview_sp500_intraday_result", mock_run_intraday.return_value)
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
+        mock_st.rerun.assert_not_called()
+
+    def test_market_movers_react_component_emits_action_events(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("def _dispatch_market_movers_react_event", helper_source)
+        self.assertIn("_dispatch_market_movers_react_event(react_event, controls=controls)", helper_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("nonce: Date.now()", react_source)
+        self.assertIn("onClick={() => emitAction(action)}", react_source)
 
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")

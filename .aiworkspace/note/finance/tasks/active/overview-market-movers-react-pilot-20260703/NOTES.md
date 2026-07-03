@@ -17,3 +17,10 @@
 - The React component renders the same summary contract that the existing HTML UI used: title, context, trust state, trust detail, five metric cells, and the action labels.
 - Phase 2 keeps action buttons display-only. Python action execution and Streamlit rerun handling remain Phase 3 scope.
 - Vite must use `base: "./"` for Streamlit custom components. Without it, the component iframe requests `/assets/...` from the Streamlit root and receives HTML, causing a strict MIME module load failure.
+
+## Phase 3 Event Bridge
+
+- React emits only action ids plus a nonce. Python remains the owner of provider calls, DB writes, run-history recording, and reruns.
+- `_dispatch_market_movers_react_event` intentionally reuses the same `run_overview_*` facade functions and session result keys as the previous Streamlit buttons.
+- Event nonce consumption is required because custom component values can remain available after a rerun; without it, a clicked action could repeat on the next render.
+- Browser QA should use `reload` for bridge checks unless a later phase explicitly approves a live data collection click.

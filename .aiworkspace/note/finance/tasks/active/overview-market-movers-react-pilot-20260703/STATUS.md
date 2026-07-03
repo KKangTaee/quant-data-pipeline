@@ -20,3 +20,11 @@
 - Kept the existing HTML summary as the fallback path when `component_static/index.html` is unavailable.
 - Rendered the summary metrics and action strip inside React as a display-only pilot; action execution is still reserved for Phase 3.
 - Browser QA confirmed the iframe renders non-empty text and the Vite bundle uses relative assets under Streamlit's component path.
+
+## Phase 3 - React Event Bridge
+
+- Status: complete.
+- React action buttons now emit `{event: {id, nonce}}` through `Streamlit.setComponentValue`.
+- Python dispatches React action events through the existing Overview action facade and the same session result keys used by the Streamlit buttons.
+- React events are consumed once by nonce-backed session tokens to avoid repeated execution after Streamlit reruns.
+- Browser QA used only the safe `화면 새로고침` action; provider collection actions were not clicked.

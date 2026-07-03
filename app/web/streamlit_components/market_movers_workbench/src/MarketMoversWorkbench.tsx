@@ -48,6 +48,13 @@ function MarketMoversWorkbench({ args }: Props) {
     return null;
   }
 
+  const emitAction = (action: MarketMoverAction) => {
+    if (action.kind === "disabled") {
+      return;
+    }
+    Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
+  };
+
   return (
     <section className="mm-workbench" data-schema-version={payload.schema_version}>
       <div className="mm-workbench__head">
@@ -77,6 +84,7 @@ function MarketMoversWorkbench({ args }: Props) {
             className={`mm-workbench__action mm-workbench__action--${action.kind}`}
             disabled={action.kind === "disabled"}
             key={action.id}
+            onClick={() => emitAction(action)}
             type="button"
           >
             {action.label}
