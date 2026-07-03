@@ -9735,6 +9735,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["universe_code"], "SP500")
         self.assertEqual(plan["universe_limit"], 500)
 
+    def test_market_movers_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.market_movers_react_component import (
+            MARKET_MOVERS_REACT_COMPONENT_NAME,
+            market_movers_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/market_movers_workbench")
+
+        self.assertEqual(MARKET_MOVERS_REACT_COMPONENT_NAME, "market_movers_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "src" / "MarketMoversWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(market_movers_react_component_available(component_root / "missing-dist"))
+
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
